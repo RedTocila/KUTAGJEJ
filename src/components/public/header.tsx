@@ -1,14 +1,16 @@
 'use client';
 
 import * as React from 'react';
-import Box from '@mui/material/Box';
-import Container from '@mui/material/Container';
-import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
-import Drawer from '@mui/material/Drawer';
-import Stack from '@mui/material/Stack';
-import Divider from '@mui/material/Divider';
-import MuiLink from '@mui/material/Link';
+import {
+  Box,
+  Button,
+  Container,
+  Divider,
+  Drawer,
+  IconButton,
+  Link as MuiLink,
+  Stack,
+} from '@mui/material';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { List as ListIcon, X as XIcon } from '@phosphor-icons/react/dist/ssr';

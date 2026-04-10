@@ -1,9 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type { SxProps, Theme } from '@mui/material/styles';
-import Box, { type BoxProps } from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
+import { Box, Typography, type BoxProps, type SxProps, type Theme } from '@mui/material';
 
 import { brandLogoSrc, config } from '@/config';
 

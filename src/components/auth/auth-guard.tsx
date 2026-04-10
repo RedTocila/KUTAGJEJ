@@ -2,9 +2,7 @@
 
 import * as React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
-import CircularProgress from '@mui/material/CircularProgress';
+import { Alert, Box, CircularProgress } from '@mui/material';
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';
 

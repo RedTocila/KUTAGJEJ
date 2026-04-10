@@ -1,10 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Avatar from '@mui/material/Avatar';
-import Box from '@mui/material/Box';
-import IconButton from '@mui/material/IconButton';
-import Stack from '@mui/material/Stack';
+import { Avatar, Box, IconButton, Stack } from '@mui/material';
 import { List as ListIcon } from '@phosphor-icons/react/dist/ssr/List';
 import { usePopover } from '@/hooks/use-popover';
 import { useUser } from '@/hooks/use-user';

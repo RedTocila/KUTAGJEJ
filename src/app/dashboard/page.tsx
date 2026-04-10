@@ -1,13 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
-import Chip from '@mui/material/Chip';
+import { Box, Card, CardContent, Chip, Grid, Stack, Typography } from '@mui/material';
 import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';

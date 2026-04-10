@@ -1,7 +1,5 @@
 import * as React from 'react';
-import Box from '@mui/material/Box';
-import Container from '@mui/material/Container';
-import GlobalStyles from '@mui/material/GlobalStyles';
+import { Box, Container, GlobalStyles } from '@mui/material';
 import type { Metadata } from 'next';
 import { config } from '@/config';
 

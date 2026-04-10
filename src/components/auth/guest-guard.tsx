@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import Alert from '@mui/material/Alert';
+import { Alert } from '@mui/material';
 
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';

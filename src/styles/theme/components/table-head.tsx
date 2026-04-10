@@ -1,5 +1,5 @@
 import type { Components } from '@mui/material/styles';
-import { tableCellClasses } from '@mui/material/TableCell';
+import { tableCellClasses } from '@mui/material';
 
 import type { Theme } from '../types';
 

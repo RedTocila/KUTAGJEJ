@@ -1,9 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Box from '@mui/material/Box';
-import IconButton from '@mui/material/IconButton';
-import Tooltip from '@mui/material/Tooltip';
+import { Box, IconButton, Tooltip } from '@mui/material';
 import { useColorScheme } from '@mui/material/styles';
 import { Moon as MoonIcon } from '@phosphor-icons/react/dist/ssr/Moon';
 import { Sun as SunIcon } from '@phosphor-icons/react/dist/ssr/Sun';

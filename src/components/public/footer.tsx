@@ -1,11 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Box from '@mui/material/Box';
-import Container from '@mui/material/Container';
-import Typography from '@mui/material/Typography';
-import Stack from '@mui/material/Stack';
-import MuiLink from '@mui/material/Link';
+import { Box, Container, Link as MuiLink, Stack, Typography } from '@mui/material';
 import NextLink from 'next/link';
 
 import { BrandLogo } from '@/components/brand/brand-logo';

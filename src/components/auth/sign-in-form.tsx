@@ -77,7 +77,7 @@ export function SignInForm() {
               </Typography>
               <OutlinedInput
                 {...props.field}
-                placeholder="email@domeni.com"
+                placeholder="Email"
                 type="email"
                 sx={{
                   color: 'common.white',

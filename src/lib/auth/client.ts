@@ -41,7 +41,7 @@ class AuthClient {
       localStorage.setItem('custom-auth-token', data.token);
       localStorage.setItem('user-data', JSON.stringify(data.admin));
       return { role: data.admin.role };
-    } catch (error) {
+    } catch (_error) {
       return { error: 'Nuk u arrit lidhja me serverin. Kontrollo rrjetin ose adresën e API-së.' };
     }
   }
@@ -62,7 +62,7 @@ class AuthClient {
       const data = await res.json();
       localStorage.setItem('user-data', JSON.stringify(data.admin));
       return { data: { ...data.admin, userType: 'admin' } };
-    } catch (error) {
+    } catch (_error) {
       return { data: null };
     }
   }

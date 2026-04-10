@@ -4,12 +4,10 @@ import * as React from 'react';
 import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Collapse from '@mui/material/Collapse';
-import { ArrowSquareUpRight as ArrowSquareUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowSquareUpRight';
 import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 
@@ -91,12 +89,12 @@ interface NavItemProps extends Omit<NavItemConfig, 'key'> {
   itemKey: string;
 }
 
-function NavItem({ disabled, external, href, icon, matcher, pathname, title, children, itemKey }: NavItemProps) {
+function NavItem({ disabled, external, href, icon, matcher, pathname, title, subItems, itemKey: _itemKey }: NavItemProps) {
   const [open, setOpen] = React.useState(false);
-  const hasChildren = children && children.length > 0;
+  const hasChildren = subItems && subItems.length > 0;
   
   // Check if any child is active to auto-expand the parent
-  const isChildActive = hasChildren && children.some(child => 
+  const isChildActive = hasChildren && subItems.some(child => 
     isNavItemActive({ disabled: child.disabled, external: child.external, href: child.href, matcher: child.matcher, pathname })
   );
   
@@ -194,7 +192,7 @@ function NavItem({ disabled, external, href, icon, matcher, pathname, title, chi
               mb: 0.5
             }}
           >
-            {children.map((child) => (
+            {subItems.map((child) => (
               <NavItem 
                 key={child.key} 
                 itemKey={child.key}
@@ -205,6 +203,7 @@ function NavItem({ disabled, external, href, icon, matcher, pathname, title, chi
                 icon={child.icon}
                 matcher={child.matcher}
                 title={child.title}
+                subItems={child.subItems}
               />
             ))}
           </Stack>

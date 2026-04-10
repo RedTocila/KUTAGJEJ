@@ -93,7 +93,7 @@ export default function SignInPage() {
                 </Box>
 
                 <Stack spacing={2.25} sx={{ maxWidth: 280 }}>
-                  <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
                     <Box
                       sx={{
                         color: 'primary.light',
@@ -114,7 +114,7 @@ export default function SignInPage() {
                       Mirë se u kthyet, admin
                     </Typography>
                   </Stack>
-                  <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
                     <Box
                       sx={{
                         color: 'primary.light',

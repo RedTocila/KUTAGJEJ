@@ -32,7 +32,7 @@ export function MainNav() {
           <Avatar onClick={userPopover.handleOpen} ref={userPopover.anchorRef} sx={{ cursor: 'pointer', bgcolor: 'primary.main', fontSize: '0.875rem', fontWeight: 600 }}>{getInitials()}</Avatar>
         </Stack>
       </Box>
-      <UserPopover anchorEl={userPopover.anchorRef.current} onClose={userPopover.handleClose} open={userPopover.open} />
+      <UserPopover anchorEl={userPopover.anchorEl} onClose={userPopover.handleClose} open={userPopover.open} />
       <MobileNav onClose={() => setOpenNav(false)} open={openNav} />
     </>
   );

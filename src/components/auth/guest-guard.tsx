@@ -20,7 +20,7 @@ export function GuestGuard({ children }: GuestGuardProps) {
   const { user, error, isLoading } = useUser();
   const [isChecking, setIsChecking] = React.useState<boolean>(true);
 
-  const checkPermissions = async (): Promise<void> => {
+  const checkPermissions = React.useCallback(async (): Promise<void> => {
     if (isLoading) {
       return;
     }
@@ -36,11 +36,11 @@ export function GuestGuard({ children }: GuestGuardProps) {
     }
 
     setIsChecking(false);
-  };
+  }, [error, isLoading, router, user]);
 
   React.useEffect(() => {
-    checkPermissions();
-  }, [user, error, isLoading]);
+    void checkPermissions();
+  }, [checkPermissions]);
 
   if (isChecking) {
     return null;

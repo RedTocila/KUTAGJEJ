@@ -5,8 +5,9 @@ const mongoose = require('mongoose');
 const { getMongoUri } = require('./lib/get-mongo-uri');
 
 const app = express();
+const corsMiddleware = require('./middleware/cors');
 
-app.use(require('./middleware/cors'));
+app.use(corsMiddleware);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

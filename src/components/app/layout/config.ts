@@ -1,5 +1,3 @@
-import { paths } from '@/paths';
-
 export const navItems = [
   { key: 'overview', title: 'Dashboard', href: '/app', icon: 'chart-pie' },
   { key: 'composer', title: 'Krijo Post', href: '/app/composer', icon: 'pencil' },

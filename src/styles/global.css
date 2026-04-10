@@ -1,0 +1,22 @@
+/* Variables */
+:root {
+  --icon-fontSize-sm: 1rem;
+  --icon-fontSize-md: 1.25rem;
+  --icon-fontSize-lg: 1.5rem;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--mui-palette-primary-main);
+}
+
+html {
+  height: 100%;
+  background-color: var(--mui-palette-background-default, #f7faf4);
+}
+
+body {
+  height: 100%;
+  margin: 0;
+  background-color: var(--mui-palette-background-default, #f7faf4);
+  color: var(--mui-palette-text-primary, #1a2118);
+}

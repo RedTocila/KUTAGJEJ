@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "server.js"
+    }
+  ],
+  "env": {
+    "MONGODB_URI": "mongodb+srv://iagent:Letmeindex1234%21%25@cluster0.khzjxdg.mongodb.net/iagent?retryWrites=true&w=majority&appName=Cluster0",
+    "JWT_SECRET": "50c905762a3b47a7ebc3e657f92cc36843e6b093aa13102906d9c9f375132d1b9d8f0049652614545bbec51df1acffed2866638d5899ea2649fc011217a532eb"
+  }
+} 

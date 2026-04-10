@@ -1,0 +1,141 @@
+import type { ColorSystemOptions } from '@mui/material/styles';
+
+import { california, iAgentGold, kepple, neonBlue, nevada, redOrange, shakespeare, stormGrey } from './colors';
+import type { ColorScheme } from './types';
+
+export const colorSchemes = {
+  dark: {
+    palette: {
+      action: { disabledBackground: 'rgba(0, 0, 0, 0.2)' },
+      background: {
+        default: 'var(--mui-palette-neutral-950)',
+        defaultChannel: '5 13 6',
+        paper: 'var(--mui-palette-neutral-900)',
+        paperChannel: '15 34 16',
+        level1: 'var(--mui-palette-neutral-800)',
+        level2: 'var(--mui-palette-neutral-700)',
+        level3: 'var(--mui-palette-neutral-600)',
+      },
+      common: { black: '#000000', white: '#ffffff' },
+      divider: 'var(--mui-palette-neutral-700)',
+      dividerChannel: '45 74 48',
+      error: {
+        ...redOrange,
+        light: redOrange[300],
+        main: redOrange[400],
+        dark: redOrange[500],
+        contrastText: 'var(--mui-palette-common-black)',
+      },
+      info: {
+        ...shakespeare,
+        light: shakespeare[300],
+        main: shakespeare[400],
+        dark: shakespeare[500],
+        contrastText: 'var(--mui-palette-common-black)',
+      },
+      neutral: { ...nevada },
+      primary: {
+        ...iAgentGold,
+        light: iAgentGold[300],
+        main: iAgentGold[500],
+        dark: iAgentGold[800],
+        contrastText: 'var(--mui-palette-common-black)',
+      },
+      secondary: {
+        ...neonBlue,
+        light: neonBlue[300],
+        main: neonBlue[500],
+        dark: neonBlue[700],
+        contrastText: 'var(--mui-palette-common-white)',
+      },
+      success: {
+        ...kepple,
+        light: kepple[300],
+        main: kepple[400],
+        dark: kepple[600],
+        contrastText: 'var(--mui-palette-common-black)',
+      },
+      text: {
+        primary: 'var(--mui-palette-neutral-50)',
+        primaryChannel: '232 245 228',
+        secondary: 'var(--mui-palette-neutral-300)',
+        secondaryChannel: '156 188 150',
+        disabled: 'var(--mui-palette-neutral-600)',
+      },
+      warning: {
+        ...california,
+        light: california[300],
+        main: california[400],
+        dark: california[500],
+        contrastText: 'var(--mui-palette-common-black)',
+      },
+    },
+  },
+  light: {
+    palette: {
+      action: { disabledBackground: 'rgba(26, 67, 1, 0.06)' },
+      background: {
+        default: '#f7faf4',
+        defaultChannel: '247 250 244',
+        paper: '#ffffff',
+        paperChannel: '255 255 255',
+        level1: 'var(--mui-palette-neutral-50)',
+        level2: 'var(--mui-palette-neutral-100)',
+        level3: 'var(--mui-palette-neutral-200)',
+      },
+      common: { black: '#000000', white: '#ffffff' },
+      divider: 'var(--mui-palette-neutral-200)',
+      dividerChannel: '217 228 208',
+      error: {
+        ...redOrange,
+        light: redOrange[400],
+        main: redOrange[500],
+        dark: redOrange[600],
+        contrastText: 'var(--mui-palette-common-white)',
+      },
+      info: {
+        ...shakespeare,
+        light: shakespeare[400],
+        main: shakespeare[500],
+        dark: shakespeare[600],
+        contrastText: 'var(--mui-palette-common-white)',
+      },
+      neutral: { ...stormGrey },
+      primary: {
+        ...iAgentGold,
+        light: iAgentGold[400],
+        main: iAgentGold[600],
+        dark: iAgentGold[900],
+        contrastText: 'var(--mui-palette-common-black)',
+      },
+      secondary: {
+        ...neonBlue,
+        light: neonBlue[400],
+        main: neonBlue[600],
+        dark: neonBlue[800],
+        contrastText: 'var(--mui-palette-common-white)',
+      },
+      success: {
+        ...kepple,
+        light: kepple[400],
+        main: kepple[500],
+        dark: kepple[700],
+        contrastText: 'var(--mui-palette-common-white)',
+      },
+      text: {
+        primary: 'var(--mui-palette-neutral-900)',
+        primaryChannel: '26 33 24',
+        secondary: 'var(--mui-palette-neutral-600)',
+        secondaryChannel: '77 93 70',
+        disabled: 'var(--mui-palette-neutral-400)',
+      },
+      warning: {
+        ...california,
+        light: california[400],
+        main: california[500],
+        dark: california[600],
+        contrastText: 'var(--mui-palette-common-white)',
+      },
+    },
+  },
+} as unknown as Partial<Record<ColorScheme, ColorSystemOptions>>;

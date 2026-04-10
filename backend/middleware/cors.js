@@ -1,6 +1,8 @@
 // CORS middleware configuration
 const allowedOrigins = [
   'http://localhost:3000',
+  'https://ku-ta-gjej.vercel.app',
+  'https://ku-ta-gjej-front.vercel.app',
 ];
 
 const corsHandler = (req, res, next) => {

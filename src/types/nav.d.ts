@@ -8,6 +8,8 @@ export interface NavItemConfig {
   href?: string;
   /** Nested nav entries (not React `children`). */
   subItems?: NavItemConfig[];
+  /** If true, only platform admins (`accountType === 'admin'`) see this item. */
+  platformAdminOnly?: boolean;
   // Matcher cannot be a function in order
   // to be able to use it on the server.
   // If you need to match multiple paths,

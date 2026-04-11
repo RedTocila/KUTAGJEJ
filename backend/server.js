@@ -15,6 +15,8 @@ app.use(express.urlencoded({ extended: true }));
 function registerModels() {
   require('./models/Admin');
   require('./models/BusinessUser');
+  require('./models/Role');
+  require('./models/ManagedUser');
 }
 
 const connectDB = async () => {
@@ -72,6 +74,8 @@ app.get('/api/health', async (_req, res) => {
 });
 
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/admin/roles', require('./routes/admin-roles'));
+app.use('/api/admin/users', require('./routes/admin-users'));
 app.use('/api/listings', require('./routes/listings'));
 
 const startServer = async () => {

@@ -2,13 +2,14 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 const BusinessUser = require('../models/BusinessUser');
+const ManagedUser = require('../models/ManagedUser');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 
 /** Dashboard profile & password routes: admin role only (not business users). */
 function requireAdminRole(req, res, next) {
-  if (!req.admin || req.admin.role !== 'admin') {
+  if (!req.admin || req.admin.constructor.modelName !== 'Admin') {
     return res.status(403).json({ message: 'Vetëm administratorët mund ta përdorin këtë funksion.' });
   }
   next();
@@ -22,6 +23,12 @@ const formatUser = (user) => ({
   role: user.role,
   createdAt: user.createdAt,
   lastLogin: user.lastLogin,
+  accountType:
+    user.constructor.modelName === 'Admin'
+      ? 'admin'
+      : user.constructor.modelName === 'ManagedUser'
+        ? 'managed'
+        : 'business',
 });
 
 router.post('/login', async (req, res) => {
@@ -31,13 +38,19 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Emaili dhe fjalëkalimi janë të detyrueshëm.' });
     }
 
-    let user = await Admin.findOne({ email: email.toLowerCase() });
-    if (!user) user = await BusinessUser.findOne({ email: email.toLowerCase() });
+    const emailNorm = email.toLowerCase();
+    let user = await Admin.findOne({ email: emailNorm });
+    if (!user) user = await BusinessUser.findOne({ email: emailNorm });
+    if (!user) user = await ManagedUser.findOne({ email: emailNorm });
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: 'Email ose fjalëkalim i pasaktë.' });
     }
 
-    if (user.role === 'admin') {
+    if (user.constructor.modelName === 'ManagedUser' && user.isActive === false) {
+      return res.status(401).json({ message: 'Llogaria është çaktivizuar.' });
+    }
+
+    if (user.constructor.modelName === 'Admin' || user.constructor.modelName === 'ManagedUser') {
       user.lastLogin = new Date();
       await user.save();
     }

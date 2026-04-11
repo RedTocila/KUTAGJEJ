@@ -26,11 +26,16 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const isAdminRoute = pathname.startsWith('/dashboard');
     const isBusinessRoute = pathname.startsWith('/app');
 
-    if (isAdminRoute && user.role !== 'admin') {
+    const dashboardAccess =
+      user.accountType === 'admin' ||
+      user.accountType === 'managed' ||
+      (!user.accountType && user.role === 'admin');
+
+    if (isAdminRoute && !dashboardAccess) {
       router.replace('/app');
       return;
     }
-    if (isBusinessRoute && user.role === 'admin') {
+    if (isBusinessRoute && dashboardAccess) {
       router.replace('/dashboard');
       return;
     }

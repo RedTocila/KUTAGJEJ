@@ -13,8 +13,9 @@ import { isNavItemActive } from '@/lib/is-nav-item-active';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
 
-import { navItems } from './config';
+import { getDashboardNavItemsForAccount } from './config';
 import { navIcons } from './nav-icons';
+import { useUser } from '@/hooks/use-user';
 
 export interface MobileNavProps {
   onClose?: () => void;
@@ -22,8 +23,14 @@ export interface MobileNavProps {
   items?: NavItemConfig[];
 }
 
-export function MobileNav({ open, onClose }: MobileNavProps) {
+export function MobileNav({ open, onClose, items: itemsProp }: MobileNavProps) {
   const pathname = usePathname();
+  const { user } = useUser();
+  const filteredNav = React.useMemo(
+    () => getDashboardNavItemsForAccount(user?.accountType, user?.role === 'admin'),
+    [user?.accountType, user?.role],
+  );
+  const navItems = itemsProp ?? filteredNav;
 
   return (
     <Drawer

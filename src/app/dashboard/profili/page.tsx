@@ -98,6 +98,50 @@ export default function AdminProfilePage() {
     return null;
   }
 
+  const isManagedStaff = user.accountType === 'managed';
+
+  if (isManagedStaff) {
+    return (
+      <Stack spacing={3}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+            Profili im
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Llogaria juaj menaxhohet nga administratori i platformës.
+          </Typography>
+        </Box>
+        <Alert severity="info">
+          Përditësimet e emailit, fjalëkalimit dhe të dhënave të tjera bëhen vetëm nga një administrator KuTaGjej.
+        </Alert>
+        <Card>
+          <CardContent sx={{ p: 3 }}>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Email
+              </Typography>
+              <Typography variant="body1">{user.email}</Typography>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
+                Roli
+              </Typography>
+              <Typography variant="body1">{user.role}</Typography>
+              {(user.firstName || user.lastName) ? (
+                <>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
+                    Emri
+                  </Typography>
+                  <Typography variant="body1">
+                    {[user.firstName, user.lastName].filter(Boolean).join(' ')}
+                  </Typography>
+                </>
+              ) : null}
+            </Stack>
+          </CardContent>
+        </Card>
+      </Stack>
+    );
+  }
+
   return (
     <Stack spacing={3}>
       <Box>

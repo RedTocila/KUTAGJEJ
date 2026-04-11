@@ -13,11 +13,17 @@ import { isNavItemActive } from '@/lib/is-nav-item-active';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
 
-import { navItems } from './config';
+import { getDashboardNavItemsForAccount } from './config';
+import { useUser } from '@/hooks/use-user';
 import { navIcons } from './nav-icons';
 
 export function SideNav() {
   const pathname = usePathname();
+  const { user } = useUser();
+  const navItems = React.useMemo(
+    () => getDashboardNavItemsForAccount(user?.accountType, user?.role === 'admin'),
+    [user?.accountType, user?.role],
+  );
 
   return (
     <Box

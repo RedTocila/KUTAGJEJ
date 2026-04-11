@@ -2,6 +2,11 @@
 
 import type { User } from '@/types/user';
 
+function persistUserProfile(profile: unknown): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('user-data', JSON.stringify(profile));
+}
+
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
 
 function authHeaders(): HeadersInit {
@@ -39,7 +44,7 @@ class AuthClient {
       const data = await res.json();
       if (!res.ok) return { error: loginErrorSq(data.message) };
       localStorage.setItem('custom-auth-token', data.token);
-      localStorage.setItem('user-data', JSON.stringify(data.admin));
+      persistUserProfile(data.admin);
       return { role: data.admin.role };
     } catch (_error) {
       return { error: 'Nuk u arrit lidhja me serverin. Kontrollo rrjetin ose adresën e API-së.' };
@@ -60,8 +65,8 @@ class AuthClient {
         return { data: null };
       }
       const data = await res.json();
-      localStorage.setItem('user-data', JSON.stringify(data.admin));
-      return { data: { ...data.admin, userType: 'admin' } };
+      persistUserProfile(data.admin);
+      return { data: data.admin as User };
     } catch (_error) {
       return { data: null };
     }
@@ -85,7 +90,7 @@ class AuthClient {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Përditësimi dështoi.' };
-      if (data.admin) localStorage.setItem('user-data', JSON.stringify(data.admin));
+      if (data.admin) persistUserProfile(data.admin);
       return { admin: data.admin };
     } catch {
       return { error: 'Nuk u arrit lidhja me serverin.' };

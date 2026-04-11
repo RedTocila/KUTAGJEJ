@@ -65,9 +65,9 @@ app.get('/api/health', async (_req, res) => {
         body.adminCount = await Admin.countDocuments();
       }
     } catch {
-      // ignore count errors
     }
   }
+  body.jwtConfigured = Boolean(String(process.env.JWT_SECRET || '').trim());
   res.status(ready ? 200 : 503).json(body);
 });
 
@@ -77,6 +77,12 @@ app.use('/api/listings', require('./routes/listings'));
 const startServer = async () => {
   try {
     await connectDB();
+    if (!String(process.env.JWT_SECRET || '').trim()) {
+      console.error(
+        'FATAL: JWT_SECRET is missing or empty. Set it in backend/.env locally, or in Vercel → Settings → Environment Variables for production.',
+      );
+      process.exit(1);
+    }
     const PORT = Number(process.env.PORT) || 5000;
     app.listen(PORT, () => {
       console.log(`KuTaGjej API listening on http://localhost:${PORT}`);

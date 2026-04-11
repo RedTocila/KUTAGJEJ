@@ -42,9 +42,20 @@ router.post('/login', async (req, res) => {
       await user.save();
     }
 
-    const token = jwt.sign({ id: user._id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    const secret = String(process.env.JWT_SECRET || '').trim();
+    if (!secret) {
+      console.error('Login blocked: JWT_SECRET is not set');
+      return res.status(500).json({ message: 'Gabim serveri.' });
+    }
+
+    const token = jwt.sign(
+      { id: String(user._id), email: user.email, role: user.role },
+      secret,
+      { expiresIn: '7d' },
+    );
     res.json({ token, admin: formatUser(user) });
   } catch (error) {
+    console.error('POST /login error:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
 });

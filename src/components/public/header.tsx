@@ -87,10 +87,12 @@ export function PublicHeader() {
               <BrandLogo
                 height={40}
                 showWordmark
+                wordmarkPresentation="plain"
                 wordmarkSx={{
                   color: 'white',
                   fontWeight: 700,
                   fontSize: '1.25rem',
+                  letterSpacing: '-0.02em',
                   display: { xs: 'none', sm: 'inline' },
                 }}
               />
@@ -214,7 +216,13 @@ export function PublicHeader() {
             <BrandLogo
               height={36}
               showWordmark
-              wordmarkSx={{ color: 'white', fontWeight: 700, fontSize: '1.25rem' }}
+              wordmarkPresentation="plain"
+              wordmarkSx={{
+                color: 'white',
+                fontWeight: 700,
+                fontSize: '1.25rem',
+                letterSpacing: '-0.02em',
+              }}
             />
           </Box>
 

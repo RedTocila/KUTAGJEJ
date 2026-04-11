@@ -57,7 +57,13 @@ export function PublicFooter() {
               <BrandLogo
                 height={36}
                 showWordmark
-                wordmarkSx={{ color: 'white', fontWeight: 700, fontSize: '1.25rem' }}
+                wordmarkPresentation="plain"
+                wordmarkSx={{
+                  color: 'white',
+                  fontWeight: 700,
+                  fontSize: '1.25rem',
+                  letterSpacing: '-0.02em',
+                }}
               />
             </Box>
             <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Box, Collapse, Divider, Stack, Typography } from '@mui/material';
+import { alpha, Box, Collapse, Divider, Stack, Typography } from '@mui/material';
 import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 
@@ -55,14 +55,38 @@ export function SideNav() {
         '&::-webkit-scrollbar': { display: 'none' },
       }}
     >
-      <Stack spacing={2} sx={{ p: 3 }}>
-        <Box component={RouterLink} href={paths.home} sx={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+      <Stack spacing={1.5} sx={{ px: 3, pt: 2.5, pb: 2 }}>
+        <Box
+          component={RouterLink}
+          href={paths.home}
+          sx={{
+            display: 'inline-flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            alignSelf: 'flex-start',
+            textDecoration: 'none',
+            color: 'inherit',
+            borderRadius: 2,
+            outline: 'none',
+            transition: 'opacity 0.15s ease',
+            '&:visited': { color: 'inherit' },
+            '&:hover': { opacity: 0.9 },
+            '&:focus-visible': {
+              boxShadow: (theme) => `0 0 0 2px ${alpha(theme.palette.primary.main, 0.45)}`,
+            },
+          }}
+        >
           <BrandLogo
-            height={28}
+            height={36}
             showWordmark
+            wordmarkPresentation="brand"
+            markSx={{
+              borderRadius: 2,
+              p: 0.75,
+              bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.14 : 0.08),
+            }}
             wordmarkSx={{
-              color: 'var(--mui-palette-primary-main)',
-              fontSize: '1.05rem',
+              fontSize: '1.125rem',
             }}
           />
         </Box>

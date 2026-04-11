@@ -15,12 +15,24 @@ export function SideNav() {
 
   return (
     <Box sx={{ bgcolor: 'white', display: { xs: 'none', lg: 'flex' }, flexDirection: 'column', height: '100%', left: 0, position: 'fixed', top: 0, width: 'var(--SideNav-width)', borderRight: '1px solid', borderColor: 'divider' }}>
-      <Stack spacing={2} sx={{ p: 3 }}>
-        <Box component={RouterLink} href="/app">
+      <Stack spacing={1.5} sx={{ px: 3, pt: 2.5, pb: 2 }}>
+        <Box
+          component={RouterLink}
+          href="/app"
+          sx={{
+            display: 'inline-flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            textDecoration: 'none',
+            color: 'inherit',
+            '&:visited': { color: 'inherit' },
+          }}
+        >
           <BrandLogo
-            height={28}
+            height={32}
             showWordmark
-            wordmarkSx={{ color: 'primary.main', fontWeight: 700, fontSize: '1rem' }}
+            wordmarkPresentation="brand"
+            wordmarkSx={{ fontSize: '1rem' }}
           />
           <Typography variant="caption" color="text.secondary">
             Workspace

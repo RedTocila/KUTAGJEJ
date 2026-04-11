@@ -14,6 +14,11 @@ export const brandLogoSrc = `/${brand.logoFileName}` as const;
 export interface Config {
   site: {
     name: string;
+    /**
+     * Optional two-part wordmark in the UI when `wordmarkPresentation="brand"` is used.
+     * Must concatenate to `name` (e.g. ["KuTa","Gjej"] for "KuTaGjej").
+     */
+    wordmarkSegments?: readonly [string, string];
     /** English tagline shown next to the product name where needed (e.g. admin sign-in). */
     taglineEn: string;
     description: string;
@@ -25,6 +30,7 @@ export interface Config {
 export const config: Config = {
   site: {
     name: 'KuTaGjej',
+    wordmarkSegments: ['KuTa', 'Gjej'],
     taglineEn: 'WhereToFind',
     description: 'KuTaGjej (WhereToFind) — platformë njoftimesh me panel administrimi.',
     themeColor: '#76ba1b',

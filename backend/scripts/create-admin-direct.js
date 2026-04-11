@@ -11,9 +11,7 @@ async function createAdmin() {
     }
     await mongoose.connect(uri);
     console.log('Connected to MongoDB');
-
-    // Admin details
-    const email = 'admin@kutagjej.com';
+    const email = 'admin@kutagjej.al';
     const password = 'admin123';
     const firstName = 'Admin';
     const lastName = 'User';
@@ -42,7 +40,7 @@ async function createAdmin() {
     console.log('Password:', password);
     console.log('ID:', admin._id);
     console.log('\nYou can now login with:');
-    console.log('Email: admin@kutagjej.com');
+    console.log('Email: admin@kutagjej.al');
     console.log('Password: admin123');
 
     process.exit(0);

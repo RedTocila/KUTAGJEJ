@@ -51,12 +51,24 @@ app.get('/', (_req, res) => {
   res.json({ ok: true, name: 'KuTaGjej API', version: '1' });
 });
 
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', async (_req, res) => {
   const ready = mongoose.connection.readyState === 1;
-  res.status(ready ? 200 : 503).json({
+  const body = {
     ok: ready,
     mongo: ready ? 'connected' : 'disconnected',
-  });
+  };
+  if (ready && mongoose.connection.db) {
+    body.dbName = mongoose.connection.db.databaseName;
+    try {
+      const Admin = mongoose.connection.models.Admin;
+      if (Admin) {
+        body.adminCount = await Admin.countDocuments();
+      }
+    } catch {
+      // ignore count errors
+    }
+  }
+  res.status(ready ? 200 : 503).json(body);
 });
 
 app.use('/api/auth', require('./routes/auth'));

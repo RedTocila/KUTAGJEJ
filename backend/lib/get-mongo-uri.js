@@ -1,7 +1,3 @@
-/**
- * Prefer `MONGODB_URI` if set. Otherwise build from parts so the password is never
- * hand-encoded in the URI (avoids `bad auth` from wrong `%21` / `%40` etc.).
- */
 function getMongoUri() {
   const fromEnv = process.env.MONGODB_URI?.trim();
   if (fromEnv) {

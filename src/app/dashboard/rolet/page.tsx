@@ -6,6 +6,7 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -18,6 +19,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { PencilSimple as PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
@@ -75,7 +77,9 @@ export default function RolesPage() {
             Rolet
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Përcaktoni emrat e roleve këtu; pastaj zgjidhni një rol kur krijoni përdorues në faqen Përdoruesit.
+            <strong>Individual</strong> dhe <strong>Biznes</strong> janë rolet kryesore të platformës (krijohen
+            automatikisht). Shtoni role shtesë sipas nevojës; pastaj zgjidhni një rol kur krijoni përdorues në
+            Përdoruesit.
           </Typography>
         </Box>
         <Button variant="contained" onClick={() => setCreateOpen(true)}>
@@ -106,15 +110,34 @@ export default function RolesPage() {
             ) : (
               roles.map((row) => (
                 <TableRow key={row.id} hover>
-                  <TableCell>{row.name}</TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      <Typography component="span" variant="body2" sx={{ fontWeight: 600 }}>
+                        {row.name}
+                      </Typography>
+                      {row.isCore ? (
+                        <Chip size="small" label="Kryesor" color="primary" variant="outlined" sx={{ height: 22 }} />
+                      ) : null}
+                    </Box>
+                  </TableCell>
                   <TableCell>{row.description || '—'}</TableCell>
                   <TableCell align="right">
                     <IconButton aria-label="Ndrysho" size="small" onClick={() => setEditRole(row)}>
                       {React.createElement(PencilSimpleIcon, { size: 20 })}
                     </IconButton>
-                    <IconButton aria-label="Fshi" size="small" color="error" onClick={() => setDeleteRoleState(row)}>
-                      {React.createElement(TrashIcon, { size: 20 })}
-                    </IconButton>
+                    {row.isCore ? (
+                      <Tooltip title="Rolet kryesore të platformës nuk mund të fshihen">
+                        <span>
+                          <IconButton aria-label="Fshi" size="small" color="error" disabled>
+                            {React.createElement(TrashIcon, { size: 20 })}
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    ) : (
+                      <IconButton aria-label="Fshi" size="small" color="error" onClick={() => setDeleteRoleState(row)}>
+                        {React.createElement(TrashIcon, { size: 20 })}
+                      </IconButton>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -241,10 +264,12 @@ function RoleEditDialog(props: {
     setError(null);
     setPending(true);
     try {
-      const { error: err } = await updateRole(role.id, {
-        name: name.trim(),
-        description: description.trim(),
-      });
+      const { error: err } = await updateRole(
+        role.id,
+        role.isCore
+          ? { description: description.trim() }
+          : { name: name.trim(), description: description.trim() },
+      );
       if (err) {
         setError(err);
         return;
@@ -262,7 +287,20 @@ function RoleEditDialog(props: {
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {error ? <Alert severity="error">{error}</Alert> : null}
-            <TextField label="Emri i rolit" value={name} onChange={(ev) => setName(ev.target.value)} required fullWidth />
+            {role?.isCore ? (
+              <Alert severity="info">
+                Ky është rol kryesor i platformës. Mund të ndryshoni vetëm përshkrimin, jo emrin.
+              </Alert>
+            ) : null}
+            <TextField
+              label="Emri i rolit"
+              value={name}
+              onChange={(ev) => setName(ev.target.value)}
+              required
+              fullWidth
+              disabled={Boolean(role?.isCore)}
+              helperText={role?.isCore ? 'Emrat «Individual» dhe «Biznes» janë të fiksuar.' : undefined}
+            />
             <TextField
               label="Përshkrimi"
               value={description}

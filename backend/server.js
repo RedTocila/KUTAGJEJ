@@ -3,6 +3,9 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const { getMongoUri } = require('./lib/get-mongo-uri');
+const { ensureListingCategories } = require('./lib/ensure-listing-categories');
+const { ensureCoreRoles } = require('./lib/core-roles');
+const { ensureReferralProgram } = require('./lib/ensure-referral-program');
 
 const app = express();
 const corsMiddleware = require('./middleware/cors');
@@ -17,6 +20,9 @@ function registerModels() {
   require('./models/BusinessUser');
   require('./models/Role');
   require('./models/ManagedUser');
+  require('./models/ListingCategory');
+  require('./models/Contract');
+  require('./models/ReferralProgram');
 }
 
 const connectDB = async () => {
@@ -33,6 +39,9 @@ const connectDB = async () => {
     });
     console.log('Connected to MongoDB');
     registerModels();
+    await ensureListingCategories();
+    await ensureCoreRoles();
+    await ensureReferralProgram();
   } catch (error) {
     console.error('MongoDB connection failed:', error.message);
     const msg = String(error.message || '');
@@ -76,6 +85,11 @@ app.get('/api/health', async (_req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin/roles', require('./routes/admin-roles'));
 app.use('/api/admin/users', require('./routes/admin-users'));
+app.use('/api/admin/categories', require('./routes/admin-categories'));
+app.use('/api/admin/contracts', require('./routes/admin-contracts'));
+app.use('/api/admin/referral-program', require('./routes/admin-referral-program'));
+app.use('/api/referral-program', require('./routes/referral-program'));
+app.use('/api/categories', require('./routes/categories'));
 app.use('/api/listings', require('./routes/listings'));
 
 const startServer = async () => {

@@ -17,6 +17,9 @@ import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/s
 import { FileText as FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
 import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 import { BookOpen as BookOpenIcon } from '@phosphor-icons/react/dist/ssr/BookOpen';
+import { Scroll as ScrollIcon } from '@phosphor-icons/react/dist/ssr/Scroll';
+import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
+import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
 
 /** React 19 JSX expects components that return `Element | null`, not loose `ReactNode` (Phosphor's `Icon` type). */
 export type NavIconComponent = React.ComponentType<{
@@ -46,4 +49,7 @@ export const navIcons = {
   'file-text': FileTextIcon,
   'package': PackageIcon,
   'book-open': BookOpenIcon,
+  'squares-four': SquaresFourIcon,
+  scroll: ScrollIcon,
+  handshake: HandshakeIcon,
 } as Record<string, NavIconComponent>;

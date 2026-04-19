@@ -24,6 +24,26 @@ export const navItems = [
     platformAdminOnly: true,
   },
   {
+    key: 'categories',
+    title: 'Kategoritë',
+    href: paths.dashboard.kategorite,
+    icon: 'squares-four',
+    platformAdminOnly: true,
+  },
+  {
+    key: 'contracts',
+    title: 'Kontratat',
+    href: paths.dashboard.kontratat,
+    icon: 'scroll',
+    platformAdminOnly: true,
+  },
+  {
+    key: 'referral',
+    title: 'Referimi',
+    href: paths.dashboard.referral,
+    icon: 'handshake',
+  },
+  {
     key: 'profile',
     title: 'Profili im',
     href: paths.dashboard.profile,

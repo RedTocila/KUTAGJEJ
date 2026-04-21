@@ -1,5 +1,6 @@
 'use client';
 
+import type { DirectoryUser } from '@/types/directory-user';
 import type { ManagedUser } from '@/types/managed-user';
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
@@ -11,12 +12,12 @@ function authHeaders(): HeadersInit {
   return headers;
 }
 
-export async function listManagedUsers(): Promise<{ users?: ManagedUser[]; error?: string }> {
+export async function listManagedUsers(): Promise<{ users?: DirectoryUser[]; error?: string }> {
   try {
     const res = await fetch(`${API_URL}/admin/users`, { headers: authHeaders() });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista dështoi.' };
-    return { users: data.users as ManagedUser[] };
+    return { users: data.users as DirectoryUser[] };
   } catch {
     return { error: 'Nuk u arrit lidhja me serverin.' };
   }

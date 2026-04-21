@@ -26,6 +26,16 @@ export async function createContract(body: {
   title: string;
   content?: string;
   roleIds: string[];
+  listingCategoryKey: string;
+  subscriberKind: 'agent' | 'company';
+  refreshEveryHours: number;
+  glowBadgeEnabled: boolean;
+  boostCredits: number;
+  dailyBoostAccess: boolean;
+  price1Month: number | null;
+  price3Months: number | null;
+  price6Months: number | null;
+  price12Months: number | null;
 }): Promise<{ contract?: Contract; error?: string }> {
   try {
     const res = await fetch(`${API_URL}/admin/contracts`, {
@@ -43,7 +53,21 @@ export async function createContract(body: {
 
 export async function updateContract(
   id: string,
-  body: Partial<{ title: string; content: string; roleIds: string[] }>,
+  body: Partial<{
+    title: string;
+    content: string;
+    roleIds: string[];
+    listingCategoryKey: string;
+    subscriberKind: 'agent' | 'company';
+    refreshEveryHours: number;
+    glowBadgeEnabled: boolean;
+    boostCredits: number;
+    dailyBoostAccess: boolean;
+    price1Month: number | null;
+    price3Months: number | null;
+    price6Months: number | null;
+    price12Months: number | null;
+  }>,
 ): Promise<{ contract?: Contract; error?: string }> {
   try {
     const res = await fetch(`${API_URL}/admin/contracts/${encodeURIComponent(id)}`, {

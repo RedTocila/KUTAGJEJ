@@ -32,6 +32,7 @@ import { PencilSimple as PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { paths } from '@/paths';
+import type { DirectoryUser } from '@/types/directory-user';
 import type { ManagedUser } from '@/types/managed-user';
 import type { Role } from '@/types/role';
 import { listRoles } from '@/lib/admin-roles-client';
@@ -43,11 +44,28 @@ import {
 } from '@/lib/admin-users-client';
 import { useUser } from '@/hooks/use-user';
 
+function directoryRowToManagedUser(row: DirectoryUser): ManagedUser {
+  return {
+    id: row.id,
+    email: row.email,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    roleId: row.roleId,
+    role: row.role,
+    roleDescription: row.roleDescription,
+    isActive: row.isActive,
+    createdBy: row.createdBy,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    lastLogin: row.lastLogin,
+  };
+}
+
 export default function StaffUsersPage() {
   const router = useRouter();
   const { user } = useUser();
 
-  const [users, setUsers] = React.useState<ManagedUser[]>([]);
+  const [users, setUsers] = React.useState<DirectoryUser[]>([]);
   const [roles, setRoles] = React.useState<Role[]>([]);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -96,7 +114,9 @@ export default function StaffUsersPage() {
             Përdoruesit
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Zgjidhni një rol nga katalogu në Rolet. Së pari krijoni rolet, pastaj përdoruesit.
+            Lista përfshin të gjithë përdoruesit e portalit (individë dhe biznese) dhe stafin e mbështetjes. Ndryshoni ose
+            fshini vetëm përdoruesit e stafit; për staf, së pari përcaktoni rolet te{' '}
+            <RouterLink href={paths.dashboard.roles}>Rolet</RouterLink>.
           </Typography>
         </Box>
         <Button variant="contained" onClick={() => setCreateOpen(true)} disabled={roles.length === 0}>
@@ -123,7 +143,8 @@ export default function StaffUsersPage() {
           <TableHead>
             <TableRow>
               <TableCell>Email</TableCell>
-              <TableCell>Roli</TableCell>
+              <TableCell>Lloji</TableCell>
+              <TableCell>Roli (staf)</TableCell>
               <TableCell>Emri</TableCell>
               <TableCell>Statusi</TableCell>
               <TableCell align="right">Veprime</TableCell>
@@ -132,19 +153,48 @@ export default function StaffUsersPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5}>Duke u ngarkuar…</TableCell>
+                <TableCell colSpan={6}>Duke u ngarkuar…</TableCell>
               </TableRow>
             ) : users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5}>Nuk ka përdorues të regjistruar.</TableCell>
+                <TableCell colSpan={6}>Nuk ka përdorues të regjistruar.</TableCell>
               </TableRow>
             ) : (
               users.map((row) => (
-                <TableRow key={row.id} hover>
+                <TableRow key={`${row.accountKind}-${row.id}`} hover>
                   <TableCell>{row.email}</TableCell>
-                  <TableCell>{row.role}</TableCell>
                   <TableCell>
-                    {[row.firstName, row.lastName].filter(Boolean).join(' ') || '—'}
+                    <Chip
+                      size="small"
+                      label={row.roleLabel}
+                      color={
+                        row.accountKind === 'support' ? 'primary' : row.accountKind === 'business' ? 'secondary' : 'info'
+                      }
+                      variant="outlined"
+                      sx={{ fontWeight: 600 }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {row.accountKind === 'support' && row.staffRoleName ? (
+                      <Typography variant="body2">{row.staffRoleName}</Typography>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        —
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Stack spacing={0.25}>
+                      <Typography variant="body2">
+                        {[row.firstName, row.lastName].filter(Boolean).join(' ') || '—'}
+                      </Typography>
+                      {row.accountKind === 'business' && row.businessName ? (
+                        <Typography variant="caption" color="text.secondary">
+                          {row.businessName}
+                          {row.nipt ? ` · NIPT ${row.nipt}` : ''}
+                        </Typography>
+                      ) : null}
+                    </Stack>
                   </TableCell>
                   <TableCell>
                     <Chip
@@ -155,21 +205,29 @@ export default function StaffUsersPage() {
                     />
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton
-                      aria-label="Ndrysho"
-                      size="small"
-                      onClick={() => setEditUser(row)}
-                    >
-                      {React.createElement(PencilSimpleIcon, { size: 20 })}
-                    </IconButton>
-                    <IconButton
-                      aria-label="Fshi"
-                      size="small"
-                      color="error"
-                      onClick={() => setDeleteUser(row)}
-                    >
-                      {React.createElement(TrashIcon, { size: 20 })}
-                    </IconButton>
+                    {row.manageable ? (
+                      <>
+                        <IconButton
+                          aria-label="Ndrysho"
+                          size="small"
+                          onClick={() => setEditUser(directoryRowToManagedUser(row))}
+                        >
+                          {React.createElement(PencilSimpleIcon, { size: 20 })}
+                        </IconButton>
+                        <IconButton
+                          aria-label="Fshi"
+                          size="small"
+                          color="error"
+                          onClick={() => setDeleteUser(directoryRowToManagedUser(row))}
+                        >
+                          {React.createElement(TrashIcon, { size: 20 })}
+                        </IconButton>
+                      </>
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">
+                        —
+                      </Typography>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

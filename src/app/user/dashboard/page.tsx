@@ -3,10 +3,13 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import {
+  Alert,
   Box,
   Button,
   Card,
   CardContent,
+  Chip,
+  CircularProgress,
   Grid,
   Stack,
   Typography,
@@ -19,10 +22,38 @@ import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGea
 
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';
+import { listPublicContracts } from '@/lib/public-contracts-client';
 import { getUserPortalAccountCategoryLabel } from '@/lib/user-portal-account-label';
+import type { PublicContract } from '@/types/contract';
 
 export default function UserDashboardPage() {
   const { user } = useUser();
+
+  const subscriberKindFilter = user?.accountType === 'business' || user?.role === 'business-user' ? 'company' : 'agent';
+  const [plans, setPlans] = React.useState<PublicContract[]>([]);
+  const [plansLoading, setPlansLoading] = React.useState(true);
+  const [plansError, setPlansError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    setPlansLoading(true);
+    setPlansError(null);
+    void (async () => {
+      const { contracts, error } = await listPublicContracts({ subscriberKind: subscriberKindFilter });
+      if (cancelled) return;
+      if (error) {
+        setPlansError(error);
+        setPlans([]);
+      } else {
+        setPlans(contracts ?? []);
+      }
+      setPlansLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, subscriberKindFilter]);
 
   const greetingName =
     user?.firstName && user?.lastName
@@ -175,6 +206,69 @@ export default function UserDashboardPage() {
                   • Ndërroni modalitetin e temës nga shiriti i sipërm nëse dëshironi.
                 </Typography>
               </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12 }}>
+          <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                Çmimet e planeve për ju
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Shfaqen vetëm afatet që ka caktuar administratori (p.sh. vetëm mujore, ose mujore dhe vjetore).
+              </Typography>
+              {plansLoading ? (
+                <Box sx={{ py: 2, display: 'flex', justifyContent: 'center' }}>
+                  <CircularProgress size={28} />
+                </Box>
+              ) : null}
+              {plansError ? (
+                <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
+                  {plansError}
+                </Alert>
+              ) : null}
+              {!plansLoading && !plansError && plans.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  Për momentin nuk ka plan aktiv me çmim për llogarinë tuaj.
+                </Typography>
+              ) : null}
+              {!plansLoading && !plansError && plans.length > 0 ? (
+                <Stack spacing={2}>
+                  {plans.map((plan) => (
+                    <Box
+                      key={plan.id}
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'action.hover',
+                      }}
+                    >
+                      <Typography sx={{ fontWeight: 700 }}>{plan.title}</Typography>
+                      {plan.listingCategoryTitle ? (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                          {plan.listingCategoryTitle}
+                        </Typography>
+                      ) : null}
+                      <Stack direction="row" sx={{ flexWrap: 'wrap', mt: 1.5, gap: 1 }}>
+                        {plan.priceOptions.map((opt) => (
+                          <Chip
+                            key={opt.months}
+                            size="small"
+                            label={`${opt.labelSq}: ${opt.price} €`}
+                            color="primary"
+                            variant="outlined"
+                            sx={{ fontWeight: 600 }}
+                          />
+                        ))}
+                      </Stack>
+                    </Box>
+                  ))}
+                </Stack>
+              ) : null}
             </CardContent>
           </Card>
         </Grid>

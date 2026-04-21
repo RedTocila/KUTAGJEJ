@@ -49,7 +49,7 @@ export function UserMobileNav({ open, onClose }: UserMobileNavProps) {
       onClose={onClose}
       open={open}
     >
-      <Stack spacing={1.5} sx={{ px: 3, pt: 2.5, pb: 2 }}>
+      <Stack spacing={1.5} sx={{ px: 3, pt: 0, pb: 2 }}>
         <Box
           component={RouterLink}
           href={paths.home}

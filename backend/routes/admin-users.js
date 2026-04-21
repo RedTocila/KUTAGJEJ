@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const ManagedUser = require('../models/ManagedUser');
 const Admin = require('../models/Admin');
 const BusinessUser = require('../models/BusinessUser');
+const IndividualUser = require('../models/IndividualUser');
 const Role = require('../models/Role');
 const authMiddleware = require('../middleware/auth');
 
@@ -17,14 +18,15 @@ function requirePlatformAdmin(req, res, next) {
 
 async function isEmailInUse(email, excludeManagedUserId) {
   const e = String(email).toLowerCase().trim();
-  const [fromAdmin, fromBusiness, fromManaged] = await Promise.all([
+  const [fromAdmin, fromBusiness, fromIndividual, fromManaged] = await Promise.all([
     Admin.findOne({ email: e }),
     BusinessUser.findOne({ email: e }),
+    IndividualUser.findOne({ email: e }),
     excludeManagedUserId
       ? ManagedUser.findOne({ email: e, _id: { $ne: excludeManagedUserId } })
       : ManagedUser.findOne({ email: e }),
   ]);
-  return Boolean(fromAdmin || fromBusiness || fromManaged);
+  return Boolean(fromAdmin || fromBusiness || fromIndividual || fromManaged);
 }
 
 function formatManagedUser(doc) {
@@ -45,17 +47,77 @@ function formatManagedUser(doc) {
   };
 }
 
+function formatDirectoryIndividual(doc) {
+  return {
+    ...formatManagedUser({
+      ...doc,
+      roleId: null,
+      role: 'individual-user',
+      createdBy: null,
+    }),
+    roleDescription: '',
+    accountKind: 'individual',
+    roleLabel: 'Individ',
+    staffRoleName: null,
+    manageable: false,
+    businessName: null,
+    nipt: null,
+  };
+}
+
+function formatDirectoryBusiness(doc) {
+  return {
+    ...formatManagedUser({
+      ...doc,
+      roleId: null,
+      role: 'business-user',
+      lastLogin: undefined,
+      createdBy: null,
+    }),
+    roleDescription: '',
+    accountKind: 'business',
+    roleLabel: 'Biznes',
+    staffRoleName: null,
+    manageable: false,
+    businessName: doc.businessName ?? null,
+    nipt: doc.nipt ?? null,
+  };
+}
+
+function formatDirectoryStaff(doc) {
+  const base = formatManagedUser(doc);
+  return {
+    ...base,
+    accountKind: 'support',
+    roleLabel: 'Mbështetje',
+    staffRoleName: base.role,
+    manageable: true,
+    businessName: null,
+    nipt: null,
+  };
+}
+
+function sortKey(u) {
+  const t = u.updatedAt || u.createdAt;
+  return t ? new Date(t).getTime() : 0;
+}
+
 router.use(authMiddleware, requirePlatformAdmin);
 
-/** List managed users (no passwords). */
+/** List all platform users: individuals, businesses, and staff (support), newest first. */
 router.get('/', async (_req, res) => {
   try {
-    const users = await ManagedUser.find()
-      .sort({ createdAt: -1 })
-      .select('-password')
-      .populate('roleId', 'name description')
-      .lean();
-    res.json({ users: users.map((u) => formatManagedUser(u)) });
+    const [individuals, businesses, staff] = await Promise.all([
+      IndividualUser.find().sort({ createdAt: -1 }).select('-password').lean(),
+      BusinessUser.find().sort({ createdAt: -1 }).select('-password').lean(),
+      ManagedUser.find().sort({ createdAt: -1 }).select('-password').populate('roleId', 'name description').lean(),
+    ]);
+    const rows = [
+      ...individuals.map((u) => formatDirectoryIndividual(u)),
+      ...businesses.map((u) => formatDirectoryBusiness(u)),
+      ...staff.map((u) => formatDirectoryStaff(u)),
+    ].sort((a, b) => sortKey(b) - sortKey(a));
+    res.json({ users: rows });
   } catch (error) {
     console.error('GET /admin/users:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });

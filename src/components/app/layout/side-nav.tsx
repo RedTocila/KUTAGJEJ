@@ -15,7 +15,7 @@ export function SideNav() {
 
   return (
     <Box sx={{ bgcolor: 'white', display: { xs: 'none', lg: 'flex' }, flexDirection: 'column', height: '100%', left: 0, position: 'fixed', top: 0, width: 'var(--SideNav-width)', borderRight: '1px solid', borderColor: 'divider' }}>
-      <Stack spacing={1.5} sx={{ px: 3, pt: 2.5, pb: 2 }}>
+      <Stack spacing={1.5} sx={{ px: 3, pt: 0, pb: 2 }}>
         <Box
           component={RouterLink}
           href="/app"

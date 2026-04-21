@@ -88,6 +88,7 @@ app.use('/api/admin/roles', require('./routes/admin-roles'));
 app.use('/api/admin/users', require('./routes/admin-users'));
 app.use('/api/admin/categories', require('./routes/admin-categories'));
 app.use('/api/admin/contracts', require('./routes/admin-contracts'));
+app.use('/api/contracts', require('./routes/contracts'));
 app.use('/api/admin/referral-program', require('./routes/admin-referral-program'));
 app.use('/api/referral-program', require('./routes/referral-program'));
 app.use('/api/categories', require('./routes/categories'));

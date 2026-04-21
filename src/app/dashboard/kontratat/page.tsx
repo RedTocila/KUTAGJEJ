@@ -18,12 +18,20 @@ import {
   Divider,
   FormControlLabel,
   FormGroup,
+  Grid,
   IconButton,
+  InputAdornment,
   Paper,
+  Radio,
+  RadioGroup,
   Skeleton,
+  Stack,
+  Switch,
   Table,
   TableBody,
   TableCell,
+  ToggleButton,
+  ToggleButtonGroup,
   TableContainer,
   TableHead,
   TableRow,
@@ -39,6 +47,7 @@ import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { paths } from '@/paths';
 import type { Contract } from '@/types/contract';
+import type { ListingCategory } from '@/types/listing-category';
 import type { Role } from '@/types/role';
 import {
   createContract,
@@ -46,8 +55,10 @@ import {
   listContracts,
   updateContract,
 } from '@/lib/admin-contracts-client';
+import { listCategoriesAdmin } from '@/lib/admin-categories-client';
 import { listRoles } from '@/lib/admin-roles-client';
 import { useUser } from '@/hooks/use-user';
+import { getActiveContractPriceOptions } from '@/lib/contract-pricing';
 
 export default function KontratatPage() {
   const theme = useTheme();
@@ -55,6 +66,7 @@ export default function KontratatPage() {
   const { user } = useUser();
 
   const [contracts, setContracts] = React.useState<Contract[]>([]);
+  const [categories, setCategories] = React.useState<ListingCategory[]>([]);
   const [roles, setRoles] = React.useState<Role[]>([]);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -68,7 +80,11 @@ export default function KontratatPage() {
 
   const refresh = React.useCallback(async () => {
     setLoadError(null);
-    const [contractsRes, rolesRes] = await Promise.all([listContracts(), listRoles()]);
+    const [contractsRes, rolesRes, categoriesRes] = await Promise.all([
+      listContracts(),
+      listRoles(),
+      listCategoriesAdmin(),
+    ]);
     if (contractsRes.error) {
       setLoadError(contractsRes.error);
       setContracts([]);
@@ -77,6 +93,9 @@ export default function KontratatPage() {
     }
     if (!rolesRes.error) {
       setRoles(rolesRes.roles ?? []);
+    }
+    if (!categoriesRes.error) {
+      setCategories(categoriesRes.categories ?? []);
     }
     setLoading(false);
   }, []);
@@ -137,18 +156,11 @@ export default function KontratatPage() {
               {React.createElement(ScrollIcon, { size: 30, weight: 'duotone' })}
             </Box>
             <Box sx={{ minWidth: 0 }}>
-              <Typography
-                variant="overline"
-                sx={{ letterSpacing: '0.12em', color: 'info.main', fontWeight: 800 }}
-              >
-                Dokumente & role
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: '-0.03em', mt: 0.25 }}>
+              <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: '-0.03em' }}>
                 Kontratat
               </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mt: 1, maxWidth: 640, lineHeight: 1.65 }}>
-                Krijoni kontrata dhe lidhni me rolet nga katalogu — përdoruesit me ato role do t’i përdorin sipas
-                rregullave të platformës.
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, maxWidth: 520 }}>
+                Plane për kategori (p.sh. real estate) — agjent ose kompani, rifreskim, boost, glow.
               </Typography>
             </Box>
           </Box>
@@ -307,7 +319,12 @@ export default function KontratatPage() {
                 }}
               >
                 <TableCell>Kontrata</TableCell>
-                <TableCell>Rolet e lidhura</TableCell>
+                <TableCell>Kategoria</TableCell>
+                <TableCell>Lloji</TableCell>
+                <TableCell>Rifreskimi</TableCell>
+                <TableCell>Boost</TableCell>
+                <TableCell sx={{ minWidth: 120 }}>Çmimet</TableCell>
+                <TableCell>Rolet</TableCell>
                 <TableCell align="right" width={120}>
                   Veprime
                 </TableCell>
@@ -318,7 +335,7 @@ export default function KontratatPage() {
                 <>
                   {[0, 1, 2].map((i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={3} sx={{ py: 2 }}>
+                      <TableCell colSpan={8} sx={{ py: 2 }}>
                         <Skeleton variant="rounded" height={56} sx={{ borderRadius: 1 }} />
                       </TableCell>
                     </TableRow>
@@ -326,7 +343,7 @@ export default function KontratatPage() {
                 </>
               ) : contracts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} sx={{ border: 'none' }}>
+                  <TableCell colSpan={8} sx={{ border: 'none' }}>
                     <Box
                       sx={{
                         py: 6,
@@ -380,8 +397,8 @@ export default function KontratatPage() {
                       transition: 'background-color 0.15s ease',
                     }}
                   >
-                    <TableCell sx={{ py: 2, maxWidth: { xs: 200, md: 360 } }}>
-                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                    <TableCell sx={{ py: 2, maxWidth: { xs: 160, md: 220 } }}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                         <Typography
                           variant="caption"
                           sx={{
@@ -389,37 +406,78 @@ export default function KontratatPage() {
                             fontWeight: 700,
                             color: 'text.disabled',
                             mt: 0.25,
-                            minWidth: 24,
+                            minWidth: 22,
                           }}
                         >
                           {String(idx + 1).padStart(2, '0')}
                         </Typography>
                         <Box sx={{ minWidth: 0 }}>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.35 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.35 }}>
                             {row.title}
                           </Typography>
                           {row.content ? (
                             <Typography
-                              variant="body2"
+                              variant="caption"
                               color="text.secondary"
                               sx={{
-                                mt: 0.75,
+                                mt: 0.5,
                                 display: '-webkit-box',
-                                WebkitLineClamp: 2,
+                                WebkitLineClamp: 1,
                                 WebkitBoxOrient: 'vertical',
                                 overflow: 'hidden',
-                                lineHeight: 1.5,
                               }}
                             >
                               {row.content}
                             </Typography>
-                          ) : (
-                            <Typography variant="caption" color="text.disabled" sx={{ mt: 0.75, display: 'block' }}>
-                              Pa përmbajtje ende
-                            </Typography>
-                          )}
+                          ) : null}
                         </Box>
                       </Box>
+                    </TableCell>
+                    <TableCell sx={{ py: 2, verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {row.listingCategoryTitle ?? '—'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ py: 2, verticalAlign: 'top' }}>
+                      <Typography variant="body2">
+                        {row.subscriberKind === 'company' ? 'Kompani' : row.subscriberKind === 'agent' ? 'Agjent' : '—'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ py: 2, verticalAlign: 'top' }}>
+                      <Typography variant="body2">
+                        {row.refreshEveryHours != null ? `Çdo ${row.refreshEveryHours} orë` : '—'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ py: 2, verticalAlign: 'top' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {row.boostCredits != null ? row.boostCredits : '—'}
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                        {row.glowBadgeEnabled ? (
+                          <Chip size="small" label="Glow" sx={{ height: 22, fontSize: '0.7rem' }} />
+                        ) : null}
+                        {row.dailyBoostAccess ? (
+                          <Chip size="small" label="Ditore" sx={{ height: 22, fontSize: '0.7rem' }} />
+                        ) : null}
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ py: 2, verticalAlign: 'top' }}>
+                      {getActiveContractPriceOptions(row).length === 0 ? (
+                        <Typography variant="caption" color="text.secondary">
+                          Pa çmime
+                        </Typography>
+                      ) : (
+                        <Stack spacing={0.35}>
+                          {getActiveContractPriceOptions(row).map((opt) => (
+                            <Typography key={opt.months} variant="caption" sx={{ lineHeight: 1.35 }}>
+                              {opt.labelSq}:{' '}
+                              <Box component="span" sx={{ fontWeight: 700 }}>
+                                {opt.price} €
+                              </Box>
+                            </Typography>
+                          ))}
+                        </Stack>
+                      )}
                     </TableCell>
                     <TableCell sx={{ py: 2, verticalAlign: 'top' }}>
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
@@ -472,6 +530,7 @@ export default function KontratatPage() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         roles={roles}
+        categories={categories}
         onSaved={async () => {
           setCreateOpen(false);
           await refresh();
@@ -482,6 +541,7 @@ export default function KontratatPage() {
         contract={editContract}
         onClose={() => setEditContract(null)}
         roles={roles}
+        categories={categories}
         onSaved={async () => {
           setEditContract(null);
           await refresh();
@@ -505,6 +565,7 @@ function ContractFormDialog(props: {
   contract?: Contract | null;
   onClose: () => void;
   roles: Role[];
+  categories: ListingCategory[];
   onSaved: () => void | Promise<void>;
 }) {
   const theme = useTheme();
@@ -512,6 +573,17 @@ function ContractFormDialog(props: {
   const open = isEdit ? Boolean(props.contract) : Boolean(props.open);
   const infoMain = theme.palette.info.main;
 
+  const [createStep, setCreateStep] = React.useState(0);
+  const [listingCategoryKey, setListingCategoryKey] = React.useState('');
+  const [subscriberKind, setSubscriberKind] = React.useState<'agent' | 'company'>('agent');
+  const [refreshEveryHours, setRefreshEveryHours] = React.useState('12');
+  const [glowBadgeEnabled, setGlowBadgeEnabled] = React.useState(false);
+  const [boostCredits, setBoostCredits] = React.useState('0');
+  const [dailyBoostAccess, setDailyBoostAccess] = React.useState(false);
+  const [price1Month, setPrice1Month] = React.useState('');
+  const [price3Months, setPrice3Months] = React.useState('');
+  const [price6Months, setPrice6Months] = React.useState('');
+  const [price12Months, setPrice12Months] = React.useState('');
   const [title, setTitle] = React.useState('');
   const [content, setContent] = React.useState('');
   const [roleIds, setRoleIds] = React.useState<string[]>([]);
@@ -521,10 +593,32 @@ function ContractFormDialog(props: {
   React.useEffect(() => {
     if (!open) return;
     if (props.contract) {
+      setCreateStep(0);
+      setListingCategoryKey(props.contract.listingCategoryKey ?? '');
+      setSubscriberKind(props.contract.subscriberKind === 'company' ? 'company' : 'agent');
+      setRefreshEveryHours(String(props.contract.refreshEveryHours ?? 12));
+      setGlowBadgeEnabled(Boolean(props.contract.glowBadgeEnabled));
+      setBoostCredits(String(props.contract.boostCredits ?? 0));
+      setDailyBoostAccess(Boolean(props.contract.dailyBoostAccess));
+      setPrice1Month(String(props.contract.price1Month ?? ''));
+      setPrice3Months(String(props.contract.price3Months ?? ''));
+      setPrice6Months(String(props.contract.price6Months ?? ''));
+      setPrice12Months(String(props.contract.price12Months ?? ''));
       setTitle(props.contract.title);
       setContent(props.contract.content ?? '');
       setRoleIds(props.contract.roles.map((r) => r.id));
     } else {
+      setCreateStep(0);
+      setListingCategoryKey('');
+      setSubscriberKind('agent');
+      setRefreshEveryHours('12');
+      setGlowBadgeEnabled(false);
+      setBoostCredits('0');
+      setDailyBoostAccess(false);
+      setPrice1Month('');
+      setPrice3Months('');
+      setPrice6Months('');
+      setPrice12Months('');
       setTitle('');
       setContent('');
       setRoleIds([]);
@@ -536,9 +630,63 @@ function ContractFormDialog(props: {
     setRoleIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
+  const showPlanFields = isEdit || createStep === 1;
+  const headerSubtitle = isEdit ? 'Përditësim' : createStep === 0 ? 'Hapi 1 · Kategoria' : 'Hapi 2 · Plani';
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!isEdit && createStep === 0) {
+      if (!listingCategoryKey) {
+        setError('Zgjidhni një kategori kontrate.');
+        return;
+      }
+      const cat = props.categories.find((c) => c.key === listingCategoryKey);
+      const kindLabel = subscriberKind === 'agent' ? 'Agjent' : 'Kompani';
+      if (cat) setTitle(`${cat.title} · ${kindLabel}`);
+      setCreateStep(1);
+      return;
+    }
+
+    const refreshH = Number(refreshEveryHours);
+    const boost = Number(boostCredits);
+    if (!Number.isFinite(refreshH) || refreshH < 1) {
+      setError('Rifreskimi duhet të jetë të paktën 1 orë.');
+      return;
+    }
+    if (!Number.isFinite(boost) || boost < 0) {
+      setError('Kreditet boost duhet të jenë numër ≥ 0.');
+      return;
+    }
+    if (!listingCategoryKey) {
+      setError('Mungon kategoria.');
+      return;
+    }
+
+    const readOptionalPrice = (raw: string, labelSq: string): number | null | '__bad__' => {
+      const s = String(raw).trim();
+      if (s === '') return null;
+      const n = Number(s);
+      if (!Number.isFinite(n) || n < 0) {
+        setError(`${labelSq}: vendos numër ≥ 0 ose lëre bosh.`);
+        return '__bad__';
+      }
+      return n;
+    };
+    const p1 = readOptionalPrice(price1Month, 'Çmimi 1 muaj');
+    if (p1 === '__bad__') return;
+    const p3 = readOptionalPrice(price3Months, 'Çmimi 3 muaj');
+    if (p3 === '__bad__') return;
+    const p6 = readOptionalPrice(price6Months, 'Çmimi 6 muaj');
+    if (p6 === '__bad__') return;
+    const p12 = readOptionalPrice(price12Months, 'Çmimi 12 muaj');
+    if (p12 === '__bad__') return;
+    if (p1 === null && p3 === null && p6 === null && p12 === null) {
+      setError('Vendosni të paktën një çmim. Fushat e tjera mund të mbeten bosh.');
+      return;
+    }
+
     setPending(true);
     try {
       if (isEdit && props.contract) {
@@ -546,6 +694,16 @@ function ContractFormDialog(props: {
           title: title.trim(),
           content,
           roleIds,
+          listingCategoryKey,
+          subscriberKind,
+          refreshEveryHours: refreshH,
+          glowBadgeEnabled,
+          boostCredits: boost,
+          dailyBoostAccess,
+          price1Month: p1,
+          price3Months: p3,
+          price6Months: p6,
+          price12Months: p12,
         });
         if (err) {
           setError(err);
@@ -556,6 +714,16 @@ function ContractFormDialog(props: {
           title: title.trim(),
           content,
           roleIds,
+          listingCategoryKey,
+          subscriberKind,
+          refreshEveryHours: refreshH,
+          glowBadgeEnabled,
+          boostCredits: boost,
+          dailyBoostAccess,
+          price1Month: p1,
+          price3Months: p3,
+          price6Months: p6,
+          price12Months: p12,
         });
         if (err) {
           setError(err);
@@ -574,6 +742,7 @@ function ContractFormDialog(props: {
       onClose={props.onClose}
       fullWidth
       maxWidth="md"
+      scroll="paper"
       slotProps={{
         paper: {
           elevation: 0,
@@ -581,119 +750,377 @@ function ContractFormDialog(props: {
             borderRadius: 2,
             border: '1px solid',
             borderColor: 'divider',
+            maxHeight: 'calc(100dvh - 24px)',
+            display: 'flex',
+            flexDirection: 'column',
             overflow: 'hidden',
           },
         },
       }}
     >
-      <Box component="form" onSubmit={(ev) => void submit(ev)}>
+      <Box
+        component="form"
+        onSubmit={(ev) => void submit(ev)}
+        sx={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto', overflow: 'hidden' }}
+      >
         <Box
           sx={{
             px: 3,
-            pt: 2.5,
-            pb: 2,
+            pt: 2,
+            pb: 1.5,
+            flexShrink: 0,
             background: `linear-gradient(135deg, ${alpha(infoMain, 0.12)} 0%, transparent 70%)`,
             borderBottom: '1px solid',
             borderColor: 'divider',
           }}
         >
-          <Typography variant="overline" sx={{ color: 'info.main', fontWeight: 800, letterSpacing: '0.1em' }}>
-            {isEdit ? 'Përditësim' : 'E re'}
+          <Typography variant="caption" sx={{ color: 'info.main', fontWeight: 800, letterSpacing: '0.08em' }}>
+            {headerSubtitle}
           </Typography>
-          <DialogTitle sx={{ p: 0, pt: 0.5, fontSize: '1.35rem', fontWeight: 800 }}>
-            {isEdit ? 'Ndrysho kontratën' : 'Kontratë e re'}
+          <DialogTitle sx={{ p: 0, pt: 0.25, fontSize: '1.2rem', fontWeight: 800 }}>
+            {isEdit ? 'Kontrata' : createStep === 0 ? 'Zgjidh kategorinë' : 'Detajet e planit'}
           </DialogTitle>
         </Box>
-        <DialogContent sx={{ px: 3, pt: 3 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+        <DialogContent
+          sx={{
+            px: 3,
+            pt: 2.5,
+            pb: 2,
+            flex: '1 1 auto',
+            minHeight: 0,
+            overflowY: 'auto',
+          }}
+        >
+          <Stack spacing={2.5}>
             {error ? (
               <Alert severity="error" sx={{ borderRadius: 1.5 }}>
                 {error}
               </Alert>
             ) : null}
-            <TextField
-              label="Titulli"
-              value={title}
-              onChange={(ev) => setTitle(ev.target.value)}
-              required
-              fullWidth
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
-            />
-            <TextField
-              label="Përmbajtja"
-              value={content}
-              onChange={(ev) => setContent(ev.target.value)}
-              fullWidth
-              multiline
-              minRows={7}
-              placeholder="Kushtet, përshkrimi, klauzolat e kontratës…"
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
-            />
-            <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>
-                Rolet që zbatohen
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-                Zgjidhni një ose më shumë role — përdoruesit me këto role lidhen me këtë kontratë.
-              </Typography>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 2,
-                  borderRadius: 1.5,
-                  border: '1px dashed',
-                  borderColor: 'divider',
-                  maxHeight: 240,
-                  overflow: 'auto',
-                  bgcolor: alpha(theme.palette.primary.main, 0.02),
-                }}
-              >
-                <FormGroup sx={{ gap: 0.25 }}>
-                  {props.roles.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">
-                      Nuk ka role. Shtoni në faqen Rolet.
-                    </Typography>
-                  ) : (
-                    props.roles.map((r) => (
-                      <FormControlLabel
-                        key={r.id}
-                        sx={{
-                          mx: 0,
-                          py: 0.5,
-                          px: 1,
-                          borderRadius: 1,
-                          '&:hover': { bgcolor: 'action.hover' },
-                        }}
-                        control={
-                          <Checkbox
-                            checked={roleIds.includes(r.id)}
-                            onChange={() => toggleRole(r.id)}
-                            color="primary"
+
+            {!showPlanFields ? (
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                  Së pari zgjidh vertikalin (p.sh. Real Estate). Hapi tjetër: agjent vs kompani, rifreskim, boost.
+                </Typography>
+                {props.categories.length === 0 ? (
+                  <Alert severity="warning">
+                    Nuk ka kategori.{' '}
+                    <Box
+                      component={RouterLink}
+                      href={paths.dashboard.kategorite}
+                      sx={{ fontWeight: 700, color: 'inherit' }}
+                    >
+                      Kategoritë
+                    </Box>
+                  </Alert>
+                ) : (
+                  <RadioGroup
+                    value={listingCategoryKey}
+                    onChange={(ev) => setListingCategoryKey(ev.target.value)}
+                  >
+                    <Stack spacing={1}>
+                      {props.categories.map((c) => (
+                        <Paper
+                          key={c.key}
+                          variant="outlined"
+                          sx={{
+                            px: 2,
+                            py: 1.25,
+                            borderRadius: 1.5,
+                            borderColor: listingCategoryKey === c.key ? 'primary.main' : 'divider',
+                            bgcolor: listingCategoryKey === c.key ? alpha(theme.palette.primary.main, 0.06) : 'transparent',
+                          }}
+                        >
+                          <FormControlLabel
+                            value={c.key}
+                            control={<Radio size="small" />}
+                            label={<Typography sx={{ fontWeight: 700 }}>{c.title}</Typography>}
+                            sx={{ m: 0 }}
                           />
-                        }
-                        label={<Typography sx={{ fontWeight: 600 }}>{r.name}</Typography>}
+                        </Paper>
+                      ))}
+                    </Stack>
+                  </RadioGroup>
+                )}
+              </Box>
+            ) : (
+              <>
+                {isEdit ? (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 700 }}>
+                      Kategoria
+                    </Typography>
+                    <RadioGroup
+                      row
+                      value={listingCategoryKey}
+                      onChange={(ev) => setListingCategoryKey(ev.target.value)}
+                      sx={{ flexWrap: 'wrap', gap: 0.5 }}
+                    >
+                      {props.categories.map((c) => (
+                        <FormControlLabel
+                          key={c.key}
+                          value={c.key}
+                          control={<Radio size="small" />}
+                          label={c.title}
+                        />
+                      ))}
+                    </RadioGroup>
+                  </Box>
+                ) : null}
+
+                {!isEdit ? (
+                  <Button
+                    type="button"
+                    size="small"
+                    onClick={() => setCreateStep(0)}
+                    sx={{ alignSelf: 'flex-start' }}
+                  >
+                    ← Ndrysho kategorinë
+                  </Button>
+                ) : null}
+
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 700 }}>
+                    Lloji i abonentit
+                  </Typography>
+                  <ToggleButtonGroup
+                    exclusive
+                    size="small"
+                    value={subscriberKind}
+                    onChange={(_, v) => v && setSubscriberKind(v)}
+                  >
+                    <ToggleButton value="agent">Agjent</ToggleButton>
+                    <ToggleButton value="company">Kompani</ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
+
+                <TextField
+                  label="Rifreskimi çdo sa orë"
+                  type="number"
+                  value={refreshEveryHours}
+                  onChange={(ev) => setRefreshEveryHours(ev.target.value)}
+                  required
+                  fullWidth
+                  slotProps={{
+                    input: {
+                      inputProps: { min: 1 },
+                      endAdornment: <InputAdornment position="end">orë</InputAdornment>,
+                    },
+                  }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                />
+
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={glowBadgeEnabled}
+                      onChange={(ev) => setGlowBadgeEnabled(ev.target.checked)}
+                      color="primary"
+                    />
+                  }
+                  label="Glow + badge"
+                />
+
+                <TextField
+                  label="Kreditet boost"
+                  type="number"
+                  value={boostCredits}
+                  onChange={(ev) => setBoostCredits(ev.target.value)}
+                  required
+                  fullWidth
+                  slotProps={{ input: { inputProps: { min: 0 } } }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                />
+
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={dailyBoostAccess}
+                      onChange={(ev) => setDailyBoostAccess(ev.target.checked)}
+                      color="primary"
+                    />
+                  }
+                  label="Qasje në boost ditor"
+                />
+
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 700 }}>
+                    Çmimet e abonimit (€)
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                    Plotësoni vetëm afatet që ofroni (p.sh. vetëm mujore, ose mujore + vjetore). Të paktën një çmim.
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <TextField
+                        label="1 muaj"
+                        type="number"
+                        value={price1Month}
+                        onChange={(ev) => setPrice1Month(ev.target.value)}
+                        fullWidth
+                        size="small"
+                        slotProps={{
+                          input: {
+                            inputProps: { min: 0, step: '0.01' },
+                            endAdornment: <InputAdornment position="end">€</InputAdornment>,
+                          },
+                        }}
+                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
                       />
-                    ))
-                  )}
-                </FormGroup>
-              </Paper>
-            </Box>
-          </Box>
+                    </Grid>
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <TextField
+                        label="3 muaj"
+                        type="number"
+                        value={price3Months}
+                        onChange={(ev) => setPrice3Months(ev.target.value)}
+                        fullWidth
+                        size="small"
+                        slotProps={{
+                          input: {
+                            inputProps: { min: 0, step: '0.01' },
+                            endAdornment: <InputAdornment position="end">€</InputAdornment>,
+                          },
+                        }}
+                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <TextField
+                        label="6 muaj"
+                        type="number"
+                        value={price6Months}
+                        onChange={(ev) => setPrice6Months(ev.target.value)}
+                        fullWidth
+                        size="small"
+                        slotProps={{
+                          input: {
+                            inputProps: { min: 0, step: '0.01' },
+                            endAdornment: <InputAdornment position="end">€</InputAdornment>,
+                          },
+                        }}
+                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <TextField
+                        label="12 muaj"
+                        type="number"
+                        value={price12Months}
+                        onChange={(ev) => setPrice12Months(ev.target.value)}
+                        fullWidth
+                        size="small"
+                        slotProps={{
+                          input: {
+                            inputProps: { min: 0, step: '0.01' },
+                            endAdornment: <InputAdornment position="end">€</InputAdornment>,
+                          },
+                        }}
+                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                <TextField
+                  label="Titulli"
+                  value={title}
+                  onChange={(ev) => setTitle(ev.target.value)}
+                  required
+                  fullWidth
+                  size="small"
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                />
+                <TextField
+                  label="Shënime"
+                  value={content}
+                  onChange={(ev) => setContent(ev.target.value)}
+                  fullWidth
+                  multiline
+                  minRows={2}
+                  placeholder="Opsionale"
+                  size="small"
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                />
+
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>
+                    Rolet
+                  </Typography>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      borderRadius: 1.5,
+                      border: '1px dashed',
+                      borderColor: 'divider',
+                      maxHeight: 220,
+                      overflow: 'auto',
+                      bgcolor: alpha(theme.palette.primary.main, 0.02),
+                    }}
+                  >
+                    <FormGroup sx={{ gap: 0.25 }}>
+                      {props.roles.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          Nuk ka role në katalog.
+                        </Typography>
+                      ) : (
+                        props.roles.map((r) => (
+                          <FormControlLabel
+                            key={r.id}
+                            sx={{
+                              mx: 0,
+                              py: 0.5,
+                              px: 1,
+                              borderRadius: 1,
+                              '&:hover': { bgcolor: 'action.hover' },
+                            }}
+                            control={
+                              <Checkbox
+                                checked={roleIds.includes(r.id)}
+                                onChange={() => toggleRole(r.id)}
+                                color="primary"
+                                size="small"
+                              />
+                            }
+                            label={<Typography variant="body2" sx={{ fontWeight: 600 }}>{r.name}</Typography>}
+                          />
+                        ))
+                      )}
+                    </FormGroup>
+                  </Paper>
+                </Box>
+              </>
+            )}
+          </Stack>
         </DialogContent>
-        <Divider />
-        <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+        <Divider sx={{ flexShrink: 0 }} />
+        <DialogActions sx={{ px: 3, py: 2, gap: 1, flexShrink: 0 }}>
           <Button onClick={props.onClose} size="large" sx={{ borderRadius: 2 }}>
             Anulo
           </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            size="large"
-            disabled={pending || roleIds.length === 0}
-            sx={{ minWidth: 140, borderRadius: 2, px: 3 }}
-          >
-            {pending ? 'Duke u ruajtur…' : 'Ruaj'}
-          </Button>
+          {!isEdit && createStep === 0 ? (
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={pending || !listingCategoryKey || props.categories.length === 0}
+              sx={{ minWidth: 140, borderRadius: 2, px: 3 }}
+            >
+              Vazhdu
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={pending || roleIds.length === 0 || !title.trim()}
+              sx={{ minWidth: 140, borderRadius: 2, px: 3 }}
+            >
+              {pending ? 'Duke u ruajtur…' : 'Ruaj'}
+            </Button>
+          )}
         </DialogActions>
       </Box>
     </Dialog>

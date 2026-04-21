@@ -36,7 +36,7 @@ function ProfileRow({
     <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start', py: 1.5 }}>
       <Box sx={{ color: 'text.secondary', display: 'flex', pt: 0.25 }}>{icon}</Box>
       <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block' }}>
           {label}
         </Typography>
         <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
@@ -108,7 +108,7 @@ export default function UserProfilePage() {
         <Grid size={{ xs: 12, md: 5 }}>
           <Card sx={{ height: '100%' }}>
             <CardContent sx={{ p: 3 }}>
-              <Typography variant="overline" color="text.secondary" fontWeight={700} letterSpacing={0.5}>
+              <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: 0.5 }}>
                 Kategoria e llogarisë
               </Typography>
               <Box sx={{ mt: 2, mb: 1 }}>

@@ -213,11 +213,8 @@ export default function UserDashboardPage() {
         <Grid size={{ xs: 12 }}>
           <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
             <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-                Çmimet e planeve për ju
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Shfaqen vetëm afatet që ka caktuar administratori (p.sh. vetëm mujore, ose mujore dhe vjetore).
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                {isBusiness ? 'Paketat për ju' : 'Paketat për ty'}
               </Typography>
               {plansLoading ? (
                 <Box sx={{ py: 2, display: 'flex', justifyContent: 'center' }}>

@@ -77,9 +77,8 @@ const referralProgramSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-referralProgramSchema.pre('save', function (next) {
+referralProgramSchema.pre('save', function () {
   this.updatedAt = new Date();
-  next();
 });
 
 module.exports = mongoose.model('ReferralProgram', referralProgramSchema);

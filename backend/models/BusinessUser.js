@@ -19,13 +19,9 @@ const businessUserSchema = new mongoose.Schema({
 });
 
 businessUserSchema.pre('save', async function () {
+  this.updatedAt = Date.now();
   if (!this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 10);
-});
-
-businessUserSchema.pre('save', function (next) {
-  this.updatedAt = Date.now();
-  next();
 });
 
 businessUserSchema.methods.comparePassword = async function (candidatePassword) {

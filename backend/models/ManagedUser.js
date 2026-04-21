@@ -22,13 +22,9 @@ const managedUserSchema = new mongoose.Schema({
 });
 
 managedUserSchema.pre('save', async function () {
+  this.updatedAt = Date.now();
   if (!this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 10);
-});
-
-managedUserSchema.pre('save', function (next) {
-  this.updatedAt = Date.now();
-  next();
 });
 
 managedUserSchema.methods.comparePassword = async function (candidatePassword) {

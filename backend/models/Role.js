@@ -9,9 +9,8 @@ const roleSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-roleSchema.pre('save', function (next) {
+roleSchema.pre('save', function () {
   this.updatedAt = Date.now();
-  next();
 });
 
 module.exports = mongoose.model('Role', roleSchema);

@@ -25,9 +25,8 @@ const contractSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-contractSchema.pre('save', function (next) {
+contractSchema.pre('save', function () {
   this.updatedAt = Date.now();
-  next();
 });
 
 module.exports = mongoose.model('Contract', contractSchema);

@@ -23,9 +23,8 @@ const listingCategorySchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-listingCategorySchema.pre('save', function (next) {
+listingCategorySchema.pre('save', function () {
   this.updatedAt = Date.now();
-  next();
 });
 
 module.exports = mongoose.model('ListingCategory', listingCategorySchema);

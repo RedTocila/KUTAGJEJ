@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert } from '@mui/material';
 
-import { paths } from '@/paths';
+import { getDefaultAuthenticatedPath } from '@/lib/auth/post-login-path';
 import { useUser } from '@/hooks/use-user';
 
 export interface GuestGuardProps {
@@ -31,7 +31,7 @@ export function GuestGuard({ children }: GuestGuardProps) {
     }
 
     if (user) {
-      router.replace(paths.dashboard.overview);
+      router.replace(getDefaultAuthenticatedPath(user));
       return;
     }
 

@@ -17,18 +17,25 @@ export function AuthProvider({
   const pathname = usePathname();
 
   useEffect(() => {
-    // Skip auth check for login pages
-    if (pathname === paths.auth.signIn) {
+    if (pathname === paths.auth.signIn || pathname === paths.user.auth) {
       return;
     }
 
-    // Check auth for dashboard routes
     if (pathname.startsWith('/dashboard')) {
       const token = localStorage.getItem('custom-auth-token');
       const userData = localStorage.getItem('user-data');
 
       if (!token || !userData) {
         router.replace(paths.auth.signIn);
+      }
+    }
+
+    if (pathname.startsWith('/user/dashboard')) {
+      const token = localStorage.getItem('custom-auth-token');
+      const userData = localStorage.getItem('user-data');
+
+      if (!token || !userData) {
+        router.replace(paths.user.auth);
       }
     }
   }, [pathname, router]);

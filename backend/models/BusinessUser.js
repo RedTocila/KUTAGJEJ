@@ -6,6 +6,11 @@ const businessUserSchema = new mongoose.Schema({
   password: { type: String, required: true },
   firstName: { type: String, trim: true },
   lastName: { type: String, trim: true },
+  /** Albania tax ID (NIPT) — unique when set. */
+  nipt: { type: String, trim: true, sparse: true, unique: true },
+  businessName: { type: String, trim: true },
+  businessOwner: { type: String, trim: true },
+  businessCategory: { type: String, trim: true },
   role: { type: String, default: 'business-user' },
   isActive: { type: Boolean, default: true },
   lastActive: { type: Date, default: Date.now },

@@ -1,5 +1,8 @@
 'use client';
 
+import Cookies from 'js-cookie';
+
+import { getPostSignOutPath } from '@/lib/auth/post-login-path';
 import type { User } from '@/types/user';
 
 function persistUserProfile(profile: unknown): void {
@@ -28,13 +31,36 @@ const loginErrorSq = (message: string | undefined): string => {
   return map[key] ?? (key || 'Identifikimi dështoi. Provoni përsëri.');
 };
 
+const registerErrorSq = (message: string | undefined): string => {
+  const key = (message || '').trim();
+  return key || 'Regjistrimi dështoi. Provoni përsëri.';
+};
+
 export interface SignInParams {
   email: string;
   password: string;
 }
 
+export type RegisterParams =
+  | {
+      userType: 'individual';
+      firstName: string;
+      lastName: string;
+      email: string;
+      password: string;
+    }
+  | {
+      userType: 'business';
+      nipt: string;
+      businessName: string;
+      businessOwner: string;
+      businessCategory: string;
+      email: string;
+      password: string;
+    };
+
 class AuthClient {
-  async signIn(params: SignInParams): Promise<{ error?: string; role?: string }> {
+  async signIn(params: SignInParams): Promise<{ error?: string; user?: User }> {
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
@@ -45,7 +71,24 @@ class AuthClient {
       if (!res.ok) return { error: loginErrorSq(data.message) };
       localStorage.setItem('custom-auth-token', data.token);
       persistUserProfile(data.admin);
-      return { role: data.admin.role };
+      return { user: data.admin as User };
+    } catch (_error) {
+      return { error: 'Nuk u arrit lidhja me serverin. Kontrollo rrjetin ose adresën e API-së.' };
+    }
+  }
+
+  async register(params: RegisterParams): Promise<{ error?: string; user?: User }> {
+    try {
+      const res = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      const data = await res.json();
+      if (!res.ok) return { error: registerErrorSq(data.message) };
+      localStorage.setItem('custom-auth-token', data.token);
+      persistUserProfile(data.admin);
+      return { user: data.admin as User };
     } catch (_error) {
       return { error: 'Nuk u arrit lidhja me serverin. Kontrollo rrjetin ose adresën e API-së.' };
     }
@@ -72,9 +115,33 @@ class AuthClient {
     }
   }
 
-  async signOut(): Promise<void> {
+  /**
+   * Clears session and navigates away. Portal users go to `/user/auth`; admin/staff to `/auth/sign-in`.
+   * Pass `redirectTo` to override (e.g. tests).
+   */
+  async signOut(redirectTo?: string): Promise<void> {
+    if (typeof window === 'undefined') return;
+
+    let target = redirectTo;
+    if (!target) {
+      let u: User | null = null;
+      try {
+        const raw = localStorage.getItem('user-data');
+        u = raw ? (JSON.parse(raw) as User) : null;
+      } catch {
+        u = null;
+      }
+      target = getPostSignOutPath(u, window.location.pathname);
+    }
+
     localStorage.removeItem('custom-auth-token');
     localStorage.removeItem('user-data');
+    localStorage.removeItem('user');
+    Cookies.remove('custom-auth-token');
+    Cookies.remove('user-data');
+    Cookies.remove('user');
+
+    window.location.href = target;
   }
 
   async updateAdminProfile(body: {
@@ -103,6 +170,25 @@ class AuthClient {
   }): Promise<{ error?: string; ok?: boolean }> {
     try {
       const res = await fetch(`${API_URL}/auth/admin/change-password`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Ndryshimi i fjalëkalimit dështoi.' };
+      return { ok: true };
+    } catch {
+      return { error: 'Nuk u arrit lidhja me serverin.' };
+    }
+  }
+
+  /** Individual / business portal users (`/user/...`). */
+  async changePortalPassword(body: {
+    currentPassword: string;
+    newPassword: string;
+  }): Promise<{ error?: string; ok?: boolean }> {
+    try {
+      const res = await fetch(`${API_URL}/auth/portal/change-password`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify(body),

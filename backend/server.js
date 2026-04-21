@@ -18,6 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 function registerModels() {
   require('./models/Admin');
   require('./models/BusinessUser');
+  require('./models/IndividualUser');
   require('./models/Role');
   require('./models/ManagedUser');
   require('./models/ListingCategory');

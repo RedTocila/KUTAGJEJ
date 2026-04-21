@@ -17,6 +17,7 @@ import type { ControllerFieldState, ControllerRenderProps, UseFormStateReturn } 
 import { Controller, useForm } from 'react-hook-form';
 import { z as zod } from 'zod';
 import { authClient } from '@/lib/auth/client';
+import { getDefaultAuthenticatedPath } from '@/lib/auth/post-login-path';
 
 const schema = zod.object({
   email: zod.string().min(1, { message: 'Emaili është i detyrueshëm' }).email('Email i pavlefshëm'),
@@ -42,9 +43,10 @@ export function SignInForm() {
   const onSubmit = React.useCallback(async (values: Values) => {
     try {
       setIsPending(true);
-      const { error } = await authClient.signIn(values);
+      const { error, user } = await authClient.signIn(values);
       if (error) { setError('root', { type: 'server', message: error }); return; }
-      window.location.href = '/dashboard';
+      if (!user) { setError('root', { type: 'server', message: 'Identifikimi dështoi.' }); return; }
+      window.location.href = getDefaultAuthenticatedPath(user);
     } catch (error) {
       setError('root', {
         type: 'server',

@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 const BusinessUser = require('../models/BusinessUser');
+const IndividualUser = require('../models/IndividualUser');
 const ManagedUser = require('../models/ManagedUser');
 
 module.exports = async (req, res, next) => {
@@ -11,6 +12,7 @@ module.exports = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     let user = await Admin.findById(decoded.id);
     if (!user) user = await BusinessUser.findById(decoded.id);
+    if (!user) user = await IndividualUser.findById(decoded.id);
     if (!user) user = await ManagedUser.findById(decoded.id);
     if (!user) return res.status(401).json({ message: 'Invalid token' });
 
@@ -18,7 +20,10 @@ module.exports = async (req, res, next) => {
       await user.populate('roleId', 'name');
     }
 
-    if (user.constructor.modelName === 'ManagedUser' && user.isActive === false) {
+    if (
+      (user.constructor.modelName === 'ManagedUser' || user.constructor.modelName === 'IndividualUser') &&
+      user.isActive === false
+    ) {
       return res.status(401).json({ message: 'Llogaria është çaktivizuar.' });
     }
 

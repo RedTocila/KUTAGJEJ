@@ -1,6 +1,6 @@
 import type { UserRole } from '@/lib/permissions';
 
-export type AccountType = 'admin' | 'managed' | 'business';
+export type AccountType = 'admin' | 'managed' | 'business' | 'individual';
 
 export interface User {
   id: string;
@@ -13,6 +13,11 @@ export interface User {
   lastName?: string;
   createdAt?: string;
   lastLogin?: string;
+  /** Business portal (`accountType === 'business'`) */
+  nipt?: string;
+  businessName?: string;
+  businessOwner?: string;
+  businessCategory?: string;
 
   [key: string]: unknown;
 }

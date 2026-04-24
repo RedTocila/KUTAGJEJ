@@ -44,7 +44,7 @@ export default function UserRealEstateListingPage() {
           <RealEstateListingForm
             onSuccess={() => router.push(paths.user.myRealEstateListings)}
             backHref={paths.user.myRealEstateListings}
-            backLabel="Shpalljet e mia"
+            backLabel="Listimet e mia"
           />
         </CardContent>
       </Card>

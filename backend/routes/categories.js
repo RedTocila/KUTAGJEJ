@@ -9,6 +9,7 @@ function format(doc) {
     title: doc.title,
     slug: doc.slug,
     listingTypes: (doc.listingTypes || []).map((t) => ({ slug: t.slug, label: t.label })),
+    apartmentTypes: (doc.apartmentTypes || []).map((t) => ({ slug: t.slug, label: t.label })),
     updatedAt: doc.updatedAt,
   };
 }

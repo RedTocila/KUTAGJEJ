@@ -10,5 +10,7 @@ export interface ListingCategory {
   title: string;
   slug: string;
   listingTypes: ListingTypeOption[];
+  /** Real-estate only: sub-types for the "Apartment" property category. */
+  apartmentTypes?: ListingTypeOption[];
   updatedAt?: string;
 }

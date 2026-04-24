@@ -24,7 +24,12 @@ export async function listCategoriesAdmin(): Promise<{ categories?: ListingCateg
 
 export async function updateCategory(
   key: ListingCategoryKey,
-  body: Partial<{ title: string; slug: string; listingTypes: { slug: string; label: string }[] }>,
+  body: Partial<{
+    title: string;
+    slug: string;
+    listingTypes: { slug: string; label: string }[];
+    apartmentTypes: { slug: string; label: string }[];
+  }>,
 ): Promise<{ category?: ListingCategory; error?: string }> {
   try {
     const res = await fetch(`${API_URL}/admin/categories/${encodeURIComponent(key)}`, {
@@ -34,6 +39,9 @@ export async function updateCategory(
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Përditësimi dështoi.' };
+    if (!data?.category) {
+      return { error: 'Përgjigje e pavlefshme nga serveri (mungon kategoria).' };
+    }
     return { category: data.category as ListingCategory };
   } catch {
     return { error: 'Nuk u arrit lidhja me serverin.' };

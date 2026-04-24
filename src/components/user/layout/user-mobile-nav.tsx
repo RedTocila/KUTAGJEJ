@@ -10,8 +10,9 @@ import { paths } from '@/paths';
 import { isNavItemActive } from '@/lib/is-nav-item-active';
 import { BrandLogo } from '@/components/brand/brand-logo';
 
-import { USER_PORTAL_NAV_ITEMS } from './user-nav-config';
+import { getUserPortalNavItemsForUser } from './user-nav-config';
 import { userPortalNavIcons } from './user-portal-nav-icons';
+import { useUser } from '@/hooks/use-user';
 
 export interface UserMobileNavProps {
   onClose?: () => void;
@@ -20,6 +21,8 @@ export interface UserMobileNavProps {
 
 export function UserMobileNav({ open, onClose }: UserMobileNavProps) {
   const pathname = usePathname();
+  const { user } = useUser();
+  const navItems = React.useMemo(() => getUserPortalNavItemsForUser(user ?? null), [user]);
 
   return (
     <Drawer
@@ -81,7 +84,7 @@ export function UserMobileNav({ open, onClose }: UserMobileNavProps) {
       <Divider />
       <Box component="nav" sx={{ flex: '1 1 auto', p: '12px', overflowY: 'auto' }}>
         <Stack component="ul" spacing={1} sx={{ listStyle: 'none', m: 0, p: 0 }}>
-          {USER_PORTAL_NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <UserMobileNavRow key={item.key} item={item} pathname={pathname} onNavigate={onClose} />
           ))}
         </Stack>

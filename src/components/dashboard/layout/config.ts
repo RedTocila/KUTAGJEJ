@@ -31,6 +31,13 @@ export const navItems = [
     platformAdminOnly: true,
   },
   {
+    key: 'real-estate-locations',
+    title: 'Vendndodhjet (pasuri)',
+    href: paths.dashboard.realEstateLocations,
+    icon: 'map-pin',
+    platformAdminOnly: true,
+  },
+  {
     key: 'contracts',
     title: 'Kontratat',
     href: paths.dashboard.kontratat,

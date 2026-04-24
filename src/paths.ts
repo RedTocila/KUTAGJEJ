@@ -5,6 +5,10 @@ export const paths = {
     auth: '/user/auth',
     dashboard: '/user/dashboard',
     profile: '/user/dashboard/profili',
+    /** Immovable property — add listing (individual / business portal). */
+    realEstateListing: '/user/dashboard/pasuri-te-paluajtshme',
+    /** Saved real-estate listings for the signed-in user. */
+    myRealEstateListings: '/user/dashboard/listimet-e-mia',
   },
   dashboard: {
     overview: '/dashboard',
@@ -15,6 +19,8 @@ export const paths = {
     roles: '/dashboard/rolet',
     /** Category slugs + listing types per vertical (platform admin only). */
     kategorite: '/dashboard/kategorite',
+    /** Cities & zones for real-estate listings (platform admin only). */
+    realEstateLocations: '/dashboard/vendndodhjet-pasurie',
     /** Contracts linked to catalog roles (platform admin only). */
     kontratat: '/dashboard/kontratat',
     /** Referral rewards program (all users); numbers editable by platform admin. */

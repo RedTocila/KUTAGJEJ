@@ -1,0 +1,157 @@
+/**
+ * Canonical property category slugs (English) — must match frontend.
+ */
+const PROPERTY_SLUGS = [
+  'apartment',
+  'villa',
+  'penthouse-duplex',
+  'part-of-villa',
+  'room-studio-attic',
+  'parking',
+  'shop',
+  'office',
+  'industrial-shed',
+  'commercial-local',
+  'warehouse',
+  'business-space',
+  'building-plot',
+  'agricultural-land',
+];
+
+const CONDITION_SLUGS = ['new', 'in-construction', 'renovated', 'good-condition'];
+const FURNISHING_SLUGS = ['furnished', 'unfurnished', 'partially-furnished', 'kitchen-only'];
+
+function needsCondition(cat) {
+  const no = new Set(['parking', 'warehouse', 'building-plot', 'agricultural-land', 'villa']);
+  return !no.has(cat);
+}
+
+function needsApartmentType(cat) {
+  return cat === 'apartment';
+}
+
+function needsFloor(cat) {
+  return cat === 'apartment';
+}
+
+function needsTotalFloors(cat) {
+  return cat === 'villa';
+}
+
+function needsParkingFloor(cat) {
+  return cat === 'parking';
+}
+
+function needsBedroomsBathFurnishing(cat) {
+  return new Set(['apartment', 'villa', 'penthouse-duplex', 'part-of-villa', 'room-studio-attic']).has(cat);
+}
+
+function needsYearBuilt(cat) {
+  return cat === 'apartment';
+}
+
+/**
+ * Returns { ok: true } or { ok: false, message }.
+ */
+function validateRealEstatePayload(body, apartmentTypeSlugs) {
+  const cat = String(body?.propertyCategory || '')
+    .trim()
+    .toLowerCase();
+  if (!PROPERTY_SLUGS.includes(cat)) {
+    return { ok: false, message: 'Invalid property category.' };
+  }
+
+  const title = String(body?.title || '').trim();
+  const description = String(body?.description || '').trim();
+  if (!title) return { ok: false, message: 'Title is required.' };
+  if (!description) return { ok: false, message: 'Description is required.' };
+
+  const transactionType = body?.transactionType;
+  if (transactionType !== 'rent' && transactionType !== 'sale') {
+    return { ok: false, message: 'Transaction type must be rent or sale.' };
+  }
+
+  const price = Number(body?.price);
+  if (!Number.isFinite(price) || price < 0) return { ok: false, message: 'Price must be a valid number.' };
+
+  const currency = body?.currency;
+  if (currency !== 'EUR' && currency !== 'LEK') {
+    return { ok: false, message: 'Currency must be EUR or LEK.' };
+  }
+
+  const surfaceM2 = Number(body?.surfaceM2);
+  if (!Number.isFinite(surfaceM2) || surfaceM2 <= 0) {
+    return { ok: false, message: 'Surface (m²) must be a positive number.' };
+  }
+
+  if (!body?.cityId || !body?.zoneId) {
+    return { ok: false, message: 'City and zone are required.' };
+  }
+
+  if (needsCondition(cat)) {
+    const c = body?.condition;
+    if (!CONDITION_SLUGS.includes(c)) {
+      return { ok: false, message: 'Condition is required for this category.' };
+    }
+  }
+
+  if (needsApartmentType(cat)) {
+    const at = String(body?.apartmentTypeSlug || '')
+      .trim()
+      .toLowerCase();
+    if (!at || !apartmentTypeSlugs.includes(at)) {
+      return { ok: false, message: 'Apartment type is required.' };
+    }
+  }
+
+  if (needsFloor(cat)) {
+    const f = Number(body?.floor);
+    if (!Number.isInteger(f)) return { ok: false, message: 'Floor must be a whole number.' };
+  }
+
+  if (needsTotalFloors(cat)) {
+    const tf = Number(body?.totalFloors);
+    if (!Number.isInteger(tf) || tf < 1) {
+      return { ok: false, message: 'Total floors must be a positive integer.' };
+    }
+  }
+
+  if (needsParkingFloor(cat)) {
+    const pf = Number(body?.parkingFloor);
+    if (!Number.isInteger(pf)) return { ok: false, message: 'Parking floor level must be a whole number (can be negative).' };
+  }
+
+  if (needsBedroomsBathFurnishing(cat)) {
+    const br = Number(body?.bedrooms);
+    const ba = Number(body?.bathrooms);
+    if (!Number.isInteger(br) || br < 0) return { ok: false, message: 'Bedrooms must be a non-negative integer.' };
+    if (!Number.isInteger(ba) || ba < 0) return { ok: false, message: 'Bathrooms must be a non-negative integer.' };
+    const fur = body?.furnishing;
+    if (!FURNISHING_SLUGS.includes(fur)) {
+      return { ok: false, message: 'Furnishing is required for this category.' };
+    }
+  }
+
+  if (needsYearBuilt(cat)) {
+    const y = Number(body?.yearBuilt);
+    if (!Number.isInteger(y) || y < 1800 || y > 2100) {
+      return { ok: false, message: 'Year built must be a valid year.' };
+    }
+  }
+
+  return { ok: true };
+}
+
+module.exports = {
+  PROPERTY_SLUGS,
+  CONDITION_SLUGS,
+  FURNISHING_SLUGS,
+  needsCondition,
+  needsApartmentType,
+  needsFloor,
+  needsTotalFloors,
+  needsParkingFloor,
+  needsBedroomsBathFurnishing,
+  needsYearBuilt,
+  validateRealEstatePayload,
+};

@@ -19,6 +19,7 @@ import { ChartLine as ChartLineIcon } from '@phosphor-icons/react/dist/ssr/Chart
 import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGear';
+import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';
@@ -62,6 +63,11 @@ export default function UserDashboardPage() {
 
   const categoryLabel = getUserPortalAccountCategoryLabel(user ?? null);
   const isBusiness = user?.accountType === 'business' || user?.role === 'business-user';
+  const showRealEstateListing =
+    Boolean(user) &&
+    (user?.accountType === 'individual' ||
+      user?.accountType === 'business' ||
+      user?.role === 'business-user');
 
   return (
     <Stack spacing={3}>
@@ -75,6 +81,57 @@ export default function UserDashboardPage() {
       </Box>
 
       <Grid container spacing={3}>
+        {showRealEstateListing ? (
+          <Grid size={{ xs: 12 }}>
+            <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
+              <CardContent
+                sx={{
+                  p: 3,
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  alignItems: { xs: 'flex-start', sm: 'center' },
+                  gap: 2,
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+                  <Box
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                    }}
+                  >
+                    {React.createElement(BuildingsIcon, { size: 26, weight: 'duotone' })}
+                  </Box>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      Immovable property
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Pasuri të paluajtshme — use the dedicated page to complete the listing (English fields; choices
+                      depend on category).
+                    </Typography>
+                  </Box>
+                </Stack>
+                <Button
+                  variant="contained"
+                  component={RouterLink}
+                  href={paths.user.realEstateListing}
+                  sx={{ flexShrink: 0 }}
+                >
+                  Add listing
+                </Button>
+              </CardContent>
+            </Card>
+          </Grid>
+        ) : null}
+
         <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
           <Card
             sx={{
@@ -313,6 +370,7 @@ export default function UserDashboardPage() {
           </Card>
         </Grid>
       </Grid>
+
     </Stack>
   );
 }

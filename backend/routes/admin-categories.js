@@ -18,6 +18,7 @@ function format(doc) {
     title: doc.title,
     slug: doc.slug,
     listingTypes: (doc.listingTypes || []).map((t) => ({ slug: t.slug, label: t.label })),
+    apartmentTypes: (doc.apartmentTypes || []).map((t) => ({ slug: t.slug, label: t.label })),
     updatedAt: doc.updatedAt,
   };
 }
@@ -58,7 +59,7 @@ router.patch('/:key', async (req, res) => {
     const doc = await ListingCategory.findOne({ key });
     if (!doc) return res.status(404).json({ message: 'Kategoria nuk u gjet.' });
 
-    const { title, slug, listingTypes } = req.body;
+    const { title, slug, listingTypes, apartmentTypes } = req.body;
 
     if (title !== undefined) {
       const t = String(title).trim();
@@ -98,6 +99,32 @@ router.patch('/:key', async (req, res) => {
         next.push({ slug: ls, label });
       }
       doc.listingTypes = next;
+    }
+
+    if (apartmentTypes !== undefined) {
+      if (key !== 'real-estate') {
+        return res.status(400).json({ message: 'apartmentTypes applies only to the real-estate vertical.' });
+      }
+      if (!Array.isArray(apartmentTypes)) {
+        return res.status(400).json({ message: 'apartmentTypes must be an array.' });
+      }
+      const seenA = new Set();
+      const nextA = [];
+      for (const row of apartmentTypes) {
+        const label = String(row?.label ?? '').trim();
+        let rawSlug = String(row?.slug ?? '').trim();
+        if (!rawSlug) rawSlug = label;
+        const ls = normalizeListingTypeSlug(rawSlug);
+        if (!label) return res.status(400).json({ message: 'Each apartment type must have a label.' });
+        if (!ls) return res.status(400).json({ message: `Invalid apartment type slug for: ${label}` });
+        if (!SLUG_RE.test(ls)) {
+          return res.status(400).json({ message: `Invalid apartment type slug for «${label}».` });
+        }
+        if (seenA.has(ls)) return res.status(400).json({ message: `Duplicate apartment type slug: ${ls}` });
+        seenA.add(ls);
+        nextA.push({ slug: ls, label });
+      }
+      doc.apartmentTypes = nextA;
     }
 
     await doc.save();

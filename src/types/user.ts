@@ -18,6 +18,8 @@ export interface User {
   businessName?: string;
   businessOwner?: string;
   businessCategory?: string;
+  /** Optional; used for listings contact and profile. */
+  phone?: string;
 
   [key: string]: unknown;
 }

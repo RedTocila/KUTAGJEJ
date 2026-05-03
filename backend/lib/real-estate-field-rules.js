@@ -26,10 +26,6 @@ function needsCondition(cat) {
   return !no.has(cat);
 }
 
-function needsApartmentType(cat) {
-  return cat === 'apartment';
-}
-
 function needsFloor(cat) {
   return cat === 'apartment';
 }
@@ -53,7 +49,7 @@ function needsYearBuilt(cat) {
 /**
  * Returns { ok: true } or { ok: false, message }.
  */
-function validateRealEstatePayload(body, apartmentTypeSlugs) {
+function validateRealEstatePayload(body) {
   const cat = String(body?.propertyCategory || '')
     .trim()
     .toLowerCase();
@@ -88,19 +84,21 @@ function validateRealEstatePayload(body, apartmentTypeSlugs) {
     return { ok: false, message: 'City and zone are required.' };
   }
 
+  const contactPhone = String(body?.contactPhone ?? '').trim();
+  if (contactPhone.length < 6) {
+    return { ok: false, message: 'Phone number is required (at least 6 characters).' };
+  }
+  if (contactPhone.length > 40) {
+    return { ok: false, message: 'Phone number is too long.' };
+  }
+  if (!/^[\d+\s().-]{6,40}$/.test(contactPhone)) {
+    return { ok: false, message: 'Phone number contains invalid characters.' };
+  }
+
   if (needsCondition(cat)) {
     const c = body?.condition;
     if (!CONDITION_SLUGS.includes(c)) {
       return { ok: false, message: 'Condition is required for this category.' };
-    }
-  }
-
-  if (needsApartmentType(cat)) {
-    const at = String(body?.apartmentTypeSlug || '')
-      .trim()
-      .toLowerCase();
-    if (!at || !apartmentTypeSlugs.includes(at)) {
-      return { ok: false, message: 'Apartment type is required.' };
     }
   }
 
@@ -147,7 +145,6 @@ module.exports = {
   CONDITION_SLUGS,
   FURNISHING_SLUGS,
   needsCondition,
-  needsApartmentType,
   needsFloor,
   needsTotalFloors,
   needsParkingFloor,

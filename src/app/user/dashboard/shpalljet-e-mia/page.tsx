@@ -26,6 +26,7 @@ import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { CurrencyEur as CurrencyEurIcon } from '@phosphor-icons/react/dist/ssr/CurrencyEur';
 import { HouseLine as HouseLineIcon } from '@phosphor-icons/react/dist/ssr/HouseLine';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
+import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Stack as StackIcon } from '@phosphor-icons/react/dist/ssr/Stack';
 import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
@@ -150,6 +151,11 @@ function ListingCard({ listing }: { listing: RealEstateMineListing }) {
             <strong>{listing.surfaceM2}</strong> m² surface
           </DetailRow>
           <DetailRow icon={MapPinIcon}>{location}</DetailRow>
+          {listing.contactPhone ? (
+            <DetailRow icon={PhoneIcon}>
+              <strong>Phone:</strong> {listing.contactPhone}
+            </DetailRow>
+          ) : null}
           <DetailRow icon={CalendarBlankIcon}>
             Listed {format(new Date(listing.createdAt), 'd MMM yyyy')}
           </DetailRow>

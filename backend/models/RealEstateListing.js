@@ -13,6 +13,8 @@ const realEstateListingSchema = new mongoose.Schema(
     surfaceM2: { type: Number, required: true },
     cityId: { type: mongoose.Schema.Types.ObjectId, required: true },
     zoneId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    /** Contact phone shown to interested parties (may differ from account phone). */
+    contactPhone: { type: String, trim: true },
     condition: {
       type: String,
       enum: ['new', 'in-construction', 'renovated', 'good-condition'],

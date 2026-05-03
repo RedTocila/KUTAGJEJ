@@ -111,11 +111,10 @@ export default function UserDashboardPage() {
                   </Box>
                   <Box>
                     <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                      Immovable property
+                      Posto njoftim
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Pasuri të paluajtshme — use the dedicated page to complete the listing (English fields; choices
-                      depend on category).
+                      Zgjidh kategorinë e njoftimit, pastaj plotëso formularin (fushat në anglisht për pasuri të paluajtshme).
                     </Typography>
                   </Box>
                 </Stack>

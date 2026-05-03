@@ -10,6 +10,7 @@ export interface RealEstateMineListing {
   surfaceM2: number;
   cityName: string | null;
   zoneName: string | null;
+  contactPhone: string | null;
   condition: string | null;
   apartmentTypeSlug: string | null;
   floor: number | null;

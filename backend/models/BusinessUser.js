@@ -11,6 +11,8 @@ const businessUserSchema = new mongoose.Schema({
   businessName: { type: String, trim: true },
   businessOwner: { type: String, trim: true },
   businessCategory: { type: String, trim: true },
+  /** Optional contact number (e.g. for listings). */
+  phone: { type: String, trim: true, default: '' },
   role: { type: String, default: 'business-user' },
   isActive: { type: Boolean, default: true },
   lastActive: { type: Date, default: Date.now },

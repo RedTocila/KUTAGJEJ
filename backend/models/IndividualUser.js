@@ -6,6 +6,8 @@ const individualUserSchema = new mongoose.Schema({
   password: { type: String, required: true },
   firstName: { type: String, required: true, trim: true },
   lastName: { type: String, required: true, trim: true },
+  /** Optional contact number (e.g. for listings). */
+  phone: { type: String, trim: true, default: '' },
   role: { type: String, default: 'individual-user' },
   isActive: { type: Boolean, default: true },
   lastLogin: { type: Date },

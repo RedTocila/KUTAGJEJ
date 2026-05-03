@@ -61,10 +61,6 @@ export function needsCondition(cat: RealEstatePropertySlug | ''): boolean {
   return !no.has(cat);
 }
 
-export function needsApartmentType(cat: RealEstatePropertySlug | ''): boolean {
-  return cat === 'apartment';
-}
-
 export function needsFloor(cat: RealEstatePropertySlug | ''): boolean {
   return cat === 'apartment';
 }

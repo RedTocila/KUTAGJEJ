@@ -47,6 +47,7 @@ const individualRegisterSchema = zod
   .object({
     firstName: zod.string().min(1, { message: 'Emri është i detyrueshëm' }),
     lastName: zod.string().min(1, { message: 'Mbiemri është i detyrueshëm' }),
+    phone: zod.string().max(40, { message: 'Numri i telefonit është shumë i gjatë' }),
     email: zod.string().min(1, { message: 'Emaili është i detyrueshëm' }).email('Email i pavlefshëm'),
     password: zod.string().min(6, { message: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere' }),
     confirmPassword: zod.string().min(1, { message: 'Konfirmo fjalëkalimin' }),
@@ -62,6 +63,7 @@ const businessRegisterSchema = zod
     businessName: zod.string().min(1, { message: 'Emri i biznesit është i detyrueshëm' }),
     businessOwner: zod.string().min(1, { message: 'Pronari i biznesit është i detyrueshëm' }),
     businessCategory: zod.string().min(1, { message: 'Kategoria është e detyrueshme' }),
+    phone: zod.string().max(40, { message: 'Numri i telefonit është shumë i gjatë' }),
     email: zod.string().min(1, { message: 'Emaili është i detyrueshëm' }).email('Email i pavlefshëm'),
     password: zod.string().min(6, { message: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere' }),
     confirmPassword: zod.string().min(1, { message: 'Konfirmo fjalëkalimin' }),
@@ -199,6 +201,28 @@ function RegisterFieldsIndividual({
       </Box>
       <Controller
         control={control}
+        name="phone"
+        render={({ field }) => (
+          <FormControl error={Boolean(errors.phone)} fullWidth>
+            <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.phone))}>
+              Numri i telefonit{' '}
+              <Typography component="span" variant="caption" sx={{ fontWeight: 400, opacity: 0.75 }}>
+                (opsional)
+              </Typography>
+            </Typography>
+            <OutlinedInput
+              {...field}
+              autoComplete="tel"
+              placeholder="+355 69 …"
+              type="tel"
+              sx={outlinedDarkSx}
+            />
+            {errors.phone ? <FormHelperText>{errors.phone.message}</FormHelperText> : null}
+          </FormControl>
+        )}
+      />
+      <Controller
+        control={control}
         name="email"
         render={({ field }) => (
           <FormControl error={Boolean(errors.email)} fullWidth>
@@ -331,6 +355,22 @@ function RegisterFieldsBusiness({
       />
       <Controller
         control={control}
+        name="phone"
+        render={({ field }) => (
+          <FormControl error={Boolean(errors.phone)} fullWidth>
+            <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.phone))}>
+              Numri i telefonit{' '}
+              <Typography component="span" variant="caption" sx={{ fontWeight: 400, opacity: 0.75 }}>
+                (opsional)
+              </Typography>
+            </Typography>
+            <OutlinedInput {...field} autoComplete="tel" placeholder="+355 69 …" type="tel" sx={outlinedDarkSx} />
+            {errors.phone ? <FormHelperText>{errors.phone.message}</FormHelperText> : null}
+          </FormControl>
+        )}
+      />
+      <Controller
+        control={control}
         name="email"
         render={({ field }) => (
           <FormControl error={Boolean(errors.email)} fullWidth>
@@ -412,6 +452,7 @@ export function UserAuthView() {
     defaultValues: {
       firstName: '',
       lastName: '',
+      phone: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -425,6 +466,7 @@ export function UserAuthView() {
       businessName: '',
       businessOwner: '',
       businessCategory: '',
+      phone: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -453,6 +495,7 @@ export function UserAuthView() {
       lastName: values.lastName,
       email: values.email,
       password: values.password,
+      phone: values.phone.trim() || undefined,
     });
     if (error) {
       individualForm.setError('root', { type: 'server', message: error });
@@ -475,6 +518,7 @@ export function UserAuthView() {
       businessCategory: values.businessCategory,
       email: values.email,
       password: values.password,
+      phone: values.phone.trim() || undefined,
     });
     if (error) {
       businessForm.setError('root', { type: 'server', message: error });

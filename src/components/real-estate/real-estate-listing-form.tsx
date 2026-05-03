@@ -8,7 +8,6 @@ import {
   Divider,
   FormControl,
   FormControlLabel,
-  FormHelperText,
   FormLabel,
   InputAdornment,
   InputLabel,
@@ -26,7 +25,6 @@ import {
   CONDITION_OPTIONS,
   CURRENCY_OPTIONS,
   FURNISHING_OPTIONS,
-  needsApartmentType,
   needsBedroomsBathFurnishing,
   needsCondition,
   needsFloor,
@@ -37,13 +35,21 @@ import {
   TRANSACTION_OPTIONS,
 } from '@/lib/real-estate-constants';
 import type { RealEstatePropertySlug } from '@/lib/real-estate-constants';
-import {
-  createRealEstateListing,
-  listCategoriesPublic,
-  type RealEstateListingPayload,
-} from '@/lib/listings-client';
+import { useUser } from '@/hooks/use-user';
+import { createRealEstateListing, type RealEstateListingPayload } from '@/lib/listings-client';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
-import type { ListingTypeOption } from '@/types/listing-category';
+
+function contactPhoneInitialFromStorage(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const raw = localStorage.getItem('user-data');
+    if (!raw) return '';
+    const u = JSON.parse(raw) as { phone?: string };
+    return typeof u.phone === 'string' ? u.phone.trim() : '';
+  } catch {
+    return '';
+  }
+}
 
 export interface RealEstateListingFormProps {
   /** Called after a successful save (e.g. redirect to dashboard). */
@@ -64,7 +70,6 @@ type FormState = {
   zoneId: string;
   currency: '' | 'EUR' | 'LEK';
   condition: (typeof CONDITION_OPTIONS)[number]['value'] | '';
-  apartmentTypeSlug: string;
   floor: string;
   totalFloors: string;
   parkingFloor: string;
@@ -72,6 +77,7 @@ type FormState = {
   bathrooms: string;
   furnishing: (typeof FURNISHING_OPTIONS)[number]['value'] | '';
   yearBuilt: string;
+  contactPhone: string;
 };
 
 function emptyForm(): FormState {
@@ -86,7 +92,6 @@ function emptyForm(): FormState {
     zoneId: '',
     currency: '',
     condition: '',
-    apartmentTypeSlug: '',
     floor: '',
     totalFloors: '',
     parkingFloor: '',
@@ -94,6 +99,7 @@ function emptyForm(): FormState {
     bathrooms: '',
     furnishing: '',
     yearBuilt: '',
+    contactPhone: '',
   };
 }
 
@@ -110,11 +116,8 @@ function parseFloatStrict(s: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function validateForm(
-  f: FormState,
-  apartmentTypeOptions: ListingTypeOption[],
-): string | null {
-  if (!f.propertyCategory) return 'Please choose a property category.';
+function validateForm(f: FormState): string | null {
+  if (!f.propertyCategory) return 'Please choose a property type.';
   if (!f.title.trim()) return 'Title is required.';
   if (!f.description.trim()) return 'Description is required.';
   if (f.transactionType !== 'rent' && f.transactionType !== 'sale') {
@@ -132,15 +135,6 @@ function validateForm(
   if (needsCondition(cat)) {
     const ok = CONDITION_OPTIONS.some((o) => o.value === f.condition);
     if (!ok) return 'Please select the condition.';
-  }
-
-    if (needsApartmentType(cat)) {
-      if (apartmentTypeOptions.length === 0) {
-        return 'No apartment type options are available. A platform admin must add rows under Dashboard → Kategoritë → Real estate (either «Apartment types (listing form)» or «Llojet e listimit»).';
-      }
-    if (!apartmentTypeOptions.some((o) => o.slug === f.apartmentTypeSlug)) {
-      return 'Please select an apartment type.';
-    }
   }
 
   if (needsFloor(cat)) {
@@ -172,6 +166,13 @@ function validateForm(
     if (y === null || y < 1800 || y > 2100) return 'Year built must be a valid year.';
   }
 
+  const phone = f.contactPhone.trim();
+  if (phone.length < 6) return 'Enter a valid phone number (at least 6 characters).';
+  if (phone.length > 40) return 'Phone number is too long.';
+  if (!/^[\d+\s().-]{6,40}$/.test(phone)) {
+    return 'Phone number may only include digits, spaces, and + ( ) . -';
+  }
+
   return null;
 }
 
@@ -187,9 +188,9 @@ function buildPayload(f: FormState): RealEstateListingPayload {
     surfaceM2: parseFloatStrict(f.surfaceM2)!,
     cityId: f.cityId,
     zoneId: f.zoneId,
+    contactPhone: f.contactPhone.trim(),
   };
   if (needsCondition(cat)) payload.condition = f.condition as RealEstateListingPayload['condition'];
-  if (needsApartmentType(cat)) payload.apartmentTypeSlug = f.apartmentTypeSlug;
   if (needsFloor(cat)) payload.floor = parseIntStrict(f.floor)!;
   if (needsTotalFloors(cat)) payload.totalFloors = parseIntStrict(f.totalFloors)!;
   if (needsParkingFloor(cat)) payload.parkingFloor = parseIntStrict(f.parkingFloor)!;
@@ -204,11 +205,12 @@ function buildPayload(f: FormState): RealEstateListingPayload {
 
 export function RealEstateListingForm(props: RealEstateListingFormProps) {
   const { onSuccess, backHref, backLabel = 'Back' } = props;
-  const [form, setForm] = React.useState<FormState>(() => emptyForm());
+  const { user } = useUser();
+  const [form, setForm] = React.useState<FormState>(() => ({
+    ...emptyForm(),
+    contactPhone: contactPhoneInitialFromStorage(),
+  }));
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
-  const [apartmentTypes, setApartmentTypes] = React.useState<ListingTypeOption[]>([]);
-  /** True when dedicated `apartmentTypes` is empty but we use `listingTypes` from the same category (legacy admin data). */
-  const [apartmentTypesFromListingFallback, setApartmentTypesFromListingFallback] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [loadingRefs, setLoadingRefs] = React.useState(false);
@@ -221,33 +223,18 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
 
   React.useEffect(() => {
     let cancelled = false;
-    setForm(emptyForm());
+    setForm((prev) => ({ ...emptyForm(), contactPhone: prev.contactPhone }));
     setLoadError(null);
     setSubmitError(null);
     setLoadingRefs(true);
     void (async () => {
-      const [locRes, catRes] = await Promise.all([listRealEstateLocationsPublic(), listCategoriesPublic()]);
+      const locRes = await listRealEstateLocationsPublic();
       if (cancelled) return;
-      if (locRes.error || catRes.error) {
-        setLoadError(locRes.error ?? catRes.error ?? 'Failed to load form data.');
+      if (locRes.error) {
+        setLoadError(locRes.error ?? 'Failed to load form data.');
         setCities([]);
-        setApartmentTypes([]);
-        setApartmentTypesFromListingFallback(false);
       } else {
         setCities(locRes.cities ?? []);
-        const re = (catRes.categories ?? []).find((c) => c.key === 'real-estate');
-        const dedicated = re?.apartmentTypes ?? [];
-        const listing = re?.listingTypes ?? [];
-        if (dedicated.length > 0) {
-          setApartmentTypes(dedicated);
-          setApartmentTypesFromListingFallback(false);
-        } else if (listing.length > 0) {
-          setApartmentTypes(listing);
-          setApartmentTypesFromListingFallback(true);
-        } else {
-          setApartmentTypes([]);
-          setApartmentTypesFromListingFallback(false);
-        }
       }
       setLoadingRefs(false);
     })();
@@ -255,6 +242,21 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
       cancelled = true;
     };
   }, []);
+
+  React.useEffect(() => {
+    if (!user) return;
+    const isPortal =
+      user.accountType === 'individual' ||
+      user.accountType === 'business' ||
+      user.role === 'business-user';
+    if (!isPortal) return;
+    const p = typeof user.phone === 'string' ? user.phone.trim() : '';
+    if (!p) return;
+    setForm((prev) => {
+      if (prev.contactPhone.trim()) return prev;
+      return { ...prev, contactPhone: p };
+    });
+  }, [user]);
 
   const onField =
     (key: keyof FormState) =>
@@ -276,7 +278,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
   const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     setSubmitError(null);
-    const err = validateForm(form, apartmentTypes);
+    const err = validateForm(form);
     if (err) {
       setSubmitError(err);
       return;
@@ -300,7 +302,8 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
   return (
     <Stack component="form" spacing={2.5} onSubmit={(e) => void handleSubmit(e)}>
       <Typography variant="body2" color="text.secondary">
-        Immovable property — all fields use English for now. Required fields depend on the category you pick.
+        Immovable property — use English for now. Fill in title, description, and property type first; other fields depend
+        on the type you choose.
       </Typography>
 
       {loadError ? (
@@ -314,11 +317,22 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         </Alert>
       ) : null}
 
+      <TextField label="Title" value={form.title} onChange={onField('title')} required fullWidth />
+      <TextField
+        label="Description"
+        value={form.description}
+        onChange={onField('description')}
+        required
+        fullWidth
+        multiline
+        minRows={3}
+      />
+
       <FormControl fullWidth required disabled={loadingRefs}>
-        <InputLabel id="re-cat-label">Property category</InputLabel>
+        <InputLabel id="re-cat-label">Property type</InputLabel>
         <Select<string>
           labelId="re-cat-label"
-          label="Property category"
+          label="Property type"
           value={form.propertyCategory}
           onChange={onSelect('propertyCategory')}
         >
@@ -332,17 +346,6 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           ))}
         </Select>
       </FormControl>
-
-      <TextField label="Title" value={form.title} onChange={onField('title')} required fullWidth />
-      <TextField
-        label="Description"
-        value={form.description}
-        onChange={onField('description')}
-        required
-        fullWidth
-        multiline
-        minRows={3}
-      />
 
       <FormControl disabled={loadingRefs}>
         <FormLabel>Transaction type</FormLabel>
@@ -467,52 +470,6 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         </FormControl>
       ) : null}
 
-      {needsApartmentType(cat) ? (
-        <Stack spacing={1}>
-          {!loadingRefs && apartmentTypes.length === 0 ? (
-            <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
-              <strong>Apartment type</strong> has no options: both <strong>Apartment types (listing form)</strong> and{' '}
-              <strong>Llojet e listimit</strong> are empty for real estate. Add at least one row in either table under{' '}
-              <strong>Dashboard → Kategoritë → Real estate</strong>, click <strong>Ruaj ndryshimet</strong>, then reload
-              this page.
-            </Alert>
-          ) : null}
-          {!loadingRefs && apartmentTypesFromListingFallback ? (
-            <Alert severity="info" sx={{ borderRadius: 1.5 }}>
-              Options below come from <strong>Llojet e listimit</strong> because <strong>Apartment types (listing form)</strong>{' '}
-              is still empty. That is why your «Apartament / Vila» rows did not show before. Add dedicated apartment types
-              (e.g. Studio, Two-bedroom) in admin when you want English sub-types only for apartments.
-            </Alert>
-          ) : null}
-          <FormControl fullWidth required disabled={loadingRefs}>
-            <InputLabel id="re-apt-type-label">Apartment type</InputLabel>
-            <Select<string>
-              labelId="re-apt-type-label"
-              label="Apartment type"
-              value={form.apartmentTypeSlug}
-              onChange={onSelect('apartmentTypeSlug')}
-            >
-              <MenuItem value="">
-                <em>Select…</em>
-              </MenuItem>
-              {!loadingRefs && apartmentTypes.length === 0 ? (
-                <MenuItem disabled value="__no-types__" sx={{ whiteSpace: 'normal', py: 1.5 }}>
-                  No types available — see warning above
-                </MenuItem>
-              ) : null}
-              {apartmentTypes.map((t) => (
-                <MenuItem key={t.slug} value={t.slug}>
-                  {t.label}
-                </MenuItem>
-              ))}
-            </Select>
-            {!loadingRefs && apartmentTypes.length === 0 ? (
-              <FormHelperText>Add rows in admin, save, reload this page.</FormHelperText>
-            ) : null}
-          </FormControl>
-        </Stack>
-      ) : null}
-
       {needsFloor(cat) ? (
         <TextField
           label="Floor"
@@ -607,6 +564,18 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           fullWidth
         />
       ) : null}
+
+      <TextField
+        label="Phone number"
+        type="tel"
+        inputMode="tel"
+        autoComplete="tel"
+        value={form.contactPhone}
+        onChange={onField('contactPhone')}
+        required
+        fullWidth
+        helperText="Shown to interested parties for this listing. Pre-filled from your account if you added a phone when registering or in your profile — you can change it here."
+      />
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ pt: 1, justifyContent: 'flex-end' }}>
         {backHref ? (

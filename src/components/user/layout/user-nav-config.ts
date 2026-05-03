@@ -12,7 +12,7 @@ export const USER_PORTAL_NAV_ITEMS = [
   },
   {
     key: 'real-estate',
-    title: 'Pasuri të paluajtshme',
+    title: 'Posto njoftim',
     href: paths.user.realEstateListing,
     icon: 'buildings',
     matcher: { type: 'startsWith', href: paths.user.realEstateListing } as const,

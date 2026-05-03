@@ -26,6 +26,9 @@ function registerModels() {
   require('./models/ReferralProgram');
   require('./models/RealEstateCity');
   require('./models/RealEstateListing');
+  require('./models/CarListing');
+  require('./models/JobListing');
+  require('./models/MarketplaceListing');
 }
 
 const connectDB = async () => {
@@ -97,6 +100,9 @@ app.use('/api/categories', require('./routes/categories'));
 app.use('/api/real-estate/locations', require('./routes/real-estate-locations'));
 app.use('/api/admin/real-estate/locations', require('./routes/admin-real-estate-locations'));
 app.use('/api/listings', require('./routes/listings'));
+app.use('/api/listings/cars', require('./routes/car-listings'));
+app.use('/api/listings/jobs', require('./routes/job-listings'));
+app.use('/api/listings/marketplace', require('./routes/marketplace-listings'));
 
 const startServer = async () => {
   try {

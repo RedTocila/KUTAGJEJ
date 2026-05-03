@@ -48,13 +48,44 @@ function ProfileRow({
 }
 
 export default function UserProfilePage() {
-  const { user } = useUser();
+  const { user, checkSession } = useUser();
+
+  const [phoneInput, setPhoneInput] = React.useState('');
+  const [phoneSaving, setPhoneSaving] = React.useState(false);
+  const [phoneMsg, setPhoneMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [passwordMsg, setPasswordMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [savingPassword, setSavingPassword] = React.useState(false);
+
+  React.useEffect(() => {
+    setPhoneInput(typeof user?.phone === 'string' ? user.phone : '');
+  }, [user?.id, user?.phone]);
+
+  const onSavePhone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    const canEditPhone =
+      user.accountType === 'individual' ||
+      user.accountType === 'business' ||
+      user.role === 'business-user';
+    if (!canEditPhone) return;
+    setPhoneMsg(null);
+    setPhoneSaving(true);
+    try {
+      const { error } = await authClient.updatePortalProfile({ phone: phoneInput.trim() });
+      if (error) {
+        setPhoneMsg({ type: 'error', text: error });
+        return;
+      }
+      setPhoneMsg({ type: 'success', text: 'Numri i telefonit u ruajt.' });
+      await checkSession();
+    } finally {
+      setPhoneSaving(false);
+    }
+  };
 
   const onChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,6 +123,8 @@ export default function UserProfilePage() {
 
   const categoryLabel = getUserPortalAccountCategoryLabel(user);
   const isBusiness = user.accountType === 'business' || user.role === 'business-user';
+  const canEditPhone =
+    user.accountType === 'individual' || user.accountType === 'business' || user.role === 'business-user';
 
   return (
     <Stack spacing={3}>
@@ -206,6 +239,41 @@ export default function UserProfilePage() {
             </CardContent>
           </Card>
         </Grid>
+
+        {canEditPhone ? (
+          <Grid size={{ xs: 12 }}>
+            <Card component="form" onSubmit={onSavePhone}>
+              <CardContent sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                  Numri i telefonit
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Ruhet në llogarinë tuaj dhe plotësohet automatikisht te forma e njoftimit; mund ta ndryshoni atje për çdo
+                  njoftim veç e veç.
+                </Typography>
+                {phoneMsg ? (
+                  <Alert severity={phoneMsg.type} sx={{ mb: 2 }}>
+                    {phoneMsg.text}
+                  </Alert>
+                ) : null}
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'flex-end' } }}>
+                  <TextField
+                    label="Telefoni"
+                    type="tel"
+                    value={phoneInput}
+                    onChange={(ev) => setPhoneInput(ev.target.value)}
+                    fullWidth
+                    slotProps={{ htmlInput: { maxLength: 40 } }}
+                    autoComplete="tel"
+                  />
+                  <Button type="submit" variant="contained" disabled={phoneSaving} sx={{ flexShrink: 0 }}>
+                    {phoneSaving ? 'Duke ruajtur…' : 'Ruaj'}
+                  </Button>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+        ) : null}
 
         <Grid size={{ xs: 12 }}>
           <Card component="form" onSubmit={onChangePassword}>

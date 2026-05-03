@@ -1,6 +1,15 @@
 import type { ColorSystemOptions } from '@mui/material/styles';
 
-import { california, iAgentGold, kepple, neonBlue, nevada, redOrange, shakespeare, stormGrey } from './colors';
+import {
+  california,
+  iAgentGold,
+  kepple,
+  neonBlue,
+  neutralInk,
+  redOrange,
+  shakespeare,
+  stormGrey,
+} from './colors';
 import type { ColorScheme } from './types';
 
 export const colorSchemes = {
@@ -9,16 +18,16 @@ export const colorSchemes = {
       action: { disabledBackground: 'rgba(0, 0, 0, 0.2)' },
       background: {
         default: 'var(--mui-palette-neutral-950)',
-        defaultChannel: '5 13 6',
+        defaultChannel: '10 10 10',
         paper: 'var(--mui-palette-neutral-900)',
-        paperChannel: '15 34 16',
+        paperChannel: '23 23 23',
         level1: 'var(--mui-palette-neutral-800)',
         level2: 'var(--mui-palette-neutral-700)',
         level3: 'var(--mui-palette-neutral-600)',
       },
       common: { black: '#000000', white: '#ffffff' },
       divider: 'var(--mui-palette-neutral-700)',
-      dividerChannel: '45 74 48',
+      dividerChannel: '64 64 64',
       error: {
         ...redOrange,
         light: redOrange[300],
@@ -33,7 +42,7 @@ export const colorSchemes = {
         dark: shakespeare[500],
         contrastText: 'var(--mui-palette-common-black)',
       },
-      neutral: { ...nevada },
+      neutral: { ...neutralInk },
       primary: {
         ...iAgentGold,
         light: iAgentGold[300],
@@ -57,9 +66,9 @@ export const colorSchemes = {
       },
       text: {
         primary: 'var(--mui-palette-neutral-50)',
-        primaryChannel: '232 245 228',
+        primaryChannel: '250 250 250',
         secondary: 'var(--mui-palette-neutral-300)',
-        secondaryChannel: '156 188 150',
+        secondaryChannel: '212 212 212',
         disabled: 'var(--mui-palette-neutral-600)',
       },
       warning: {

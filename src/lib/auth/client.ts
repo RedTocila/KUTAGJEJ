@@ -48,6 +48,8 @@ export type RegisterParams =
       lastName: string;
       email: string;
       password: string;
+      /** Optional; saved on the account for listing contact prefill. */
+      phone?: string;
     }
   | {
       userType: 'business';
@@ -57,6 +59,7 @@ export type RegisterParams =
       businessCategory: string;
       email: string;
       password: string;
+      phone?: string;
     };
 
 class AuthClient {
@@ -177,6 +180,23 @@ class AuthClient {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Ndryshimi i fjalëkalimit dështoi.' };
       return { ok: true };
+    } catch {
+      return { error: 'Nuk u arrit lidhja me serverin.' };
+    }
+  }
+
+  /** Individual / business portal — update optional profile fields (e.g. phone). */
+  async updatePortalProfile(body: { phone: string }): Promise<{ admin?: User; error?: string }> {
+    try {
+      const res = await fetch(`${API_URL}/auth/portal/update-profile`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Përditësimi dështoi.' };
+      if (data.admin) persistUserProfile(data.admin);
+      return { admin: data.admin as User };
     } catch {
       return { error: 'Nuk u arrit lidhja me serverin.' };
     }

@@ -8,7 +8,7 @@ export const paths = {
     /** Immovable property — add listing (individual / business portal). */
     realEstateListing: '/user/dashboard/pasuri-te-paluajtshme',
     /** Saved real-estate listings for the signed-in user. */
-    myRealEstateListings: '/user/dashboard/listimet-e-mia',
+    myRealEstateListings: '/user/dashboard/shpalljet-e-mia',
   },
   dashboard: {
     overview: '/dashboard',

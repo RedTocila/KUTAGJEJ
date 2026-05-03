@@ -22,6 +22,7 @@ export interface RealEstateListingPayload {
   surfaceM2: number;
   cityId: string;
   zoneId: string;
+  contactPhone: string;
   condition?: string;
   apartmentTypeSlug?: string;
   floor?: number;
@@ -69,6 +70,80 @@ export async function createRealEstateListing(
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
+    return { id: data.listing?.id as string | undefined };
+  } catch {
+    return { error: 'Could not reach the server.' };
+  }
+}
+
+export interface JobListingPayload {
+  title: string;
+  description: string;
+  industry: string;
+  cityId: string;
+  education: string;
+  experience: string;
+  jobType: string;
+  workLocation: string;
+  salary: number | null;
+  currency: string | null;
+  contactPhone: string;
+}
+
+export async function createJobListing(body: JobListingPayload): Promise<{ id?: string; error?: string }> {
+  try {
+    const res = await fetch(`${API_URL}/listings/jobs`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
+    return { id: data.listing?.id as string | undefined };
+  } catch {
+    return { error: 'Could not reach the server.' };
+  }
+}
+
+export interface MarketplaceListingPayload {
+  transactionType: string;
+  title: string;
+  description: string;
+  category: string;
+  condition: string | null;
+  price: number | null;
+  currency: string | null;
+  cityId: string;
+  contactPhone: string;
+}
+
+export async function createMarketplaceListing(body: MarketplaceListingPayload): Promise<{ id?: string; error?: string }> {
+  try {
+    const res = await fetch(`${API_URL}/listings/marketplace`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
+    return { id: data.listing?.id as string | undefined };
+  } catch {
+    return { error: 'Could not reach the server.' };
+  }
+}
+
+export async function createCarListing(formData: FormData): Promise<{ id?: string; error?: string }> {
+  try {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(`${API_URL}/listings/cars`, {
+      method: 'POST',
+      headers,
+      body: formData,
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };

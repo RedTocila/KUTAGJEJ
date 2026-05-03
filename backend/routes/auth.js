@@ -38,7 +38,9 @@ const formatUser = (user) => {
   };
   if (model === 'Admin') return { ...base, accountType: 'admin' };
   if (model === 'ManagedUser') return { ...base, accountType: 'managed' };
-  if (model === 'IndividualUser') return { ...base, accountType: 'individual' };
+  if (model === 'IndividualUser') {
+    return { ...base, accountType: 'individual', phone: user.phone || '' };
+  }
   if (model === 'BusinessUser') {
     return {
       ...base,
@@ -47,6 +49,7 @@ const formatUser = (user) => {
       businessName: user.businessName,
       businessOwner: user.businessOwner,
       businessCategory: user.businessCategory,
+      phone: user.phone || '',
     };
   }
   return { ...base, accountType: 'business' };
@@ -137,11 +140,13 @@ router.post('/register', async (req, res) => {
       if (!firstName || !lastName) {
         return res.status(400).json({ message: 'Emri dhe mbiemri janë të detyrueshëm.' });
       }
+      const phone = String(req.body.phone || '').trim().slice(0, 40);
       const doc = await IndividualUser.create({
         email: emailNorm,
         password,
         firstName,
         lastName,
+        ...(phone ? { phone } : {}),
       });
       const token = jwt.sign(
         { id: String(doc._id), email: doc.email, role: doc.role },
@@ -166,6 +171,7 @@ router.post('/register', async (req, res) => {
         return res.status(400).json({ message: 'Ky NIPT është tashmë i regjistruar.' });
       }
       const parts = businessOwner.split(/\s+/).filter(Boolean);
+      const phone = String(req.body.phone || '').trim().slice(0, 40);
       const doc = await BusinessUser.create({
         email: emailNorm,
         password,
@@ -175,6 +181,7 @@ router.post('/register', async (req, res) => {
         businessCategory,
         firstName: parts[0] || businessOwner,
         lastName: parts.slice(1).join(' ') || '',
+        ...(phone ? { phone } : {}),
       });
       const token = jwt.sign(
         { id: String(doc._id), email: doc.email, role: doc.role },
@@ -247,6 +254,18 @@ router.put('/admin/change-password', authMiddleware, requireAdminRole, async (re
     await req.admin.save();
     res.json({ message: 'Fjalëkalimi u ndryshua.' });
   } catch (error) {
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+router.put('/portal/update-profile', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    const phone = String(req.body.phone ?? '').trim().slice(0, 40);
+    req.admin.phone = phone;
+    await req.admin.save();
+    res.json({ message: 'Profili u përditësua.', admin: formatUser(req.admin) });
+  } catch (error) {
+    console.error('PUT /portal/update-profile:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
 });

@@ -61,7 +61,7 @@ export const stormGrey = {
   950: '#0f140d',
 } satisfies PaletteRange;
 
-/** Dark UI neutrals — forest charcoal (logo deep greens). */
+/** Dark UI neutrals — forest charcoal (legacy); prefer {@link neutralInk} for dark mode backgrounds. */
 export const nevada = {
   50: '#e8f5e4',
   100: '#c8e4bf',
@@ -74,6 +74,21 @@ export const nevada = {
   800: '#1a3618',
   900: '#0f2210',
   950: '#050d06',
+} satisfies PaletteRange;
+
+/** Dark UI neutrals — neutral grey (no green cast); use with brand primary greens for accents only. */
+export const neutralInk = {
+  50: '#fafafa',
+  100: '#f5f5f5',
+  200: '#e5e5e5',
+  300: '#d4d4d4',
+  400: '#a3a3a3',
+  500: '#737373',
+  600: '#525252',
+  700: '#404040',
+  800: '#262626',
+  900: '#171717',
+  950: '#0a0a0a',
 } satisfies PaletteRange;
 
 export const redOrange = {

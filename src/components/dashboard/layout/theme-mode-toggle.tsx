@@ -25,7 +25,7 @@ export function ThemeModeToggle() {
   }
 
   return (
-    <Tooltip title={resolved === 'dark' ? 'Kal në modalitet të çelët' : 'Kal në modalitet të errët'}>
+    <Tooltip title={resolved === 'dark' ? 'Kalo në modalitet të çelët' : 'Kalo në modalitet të errët'}>
       <IconButton
         size="large"
         onClick={() => {

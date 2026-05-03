@@ -1,13 +1,11 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const authMiddleware = require('../middleware/auth');
-const ListingCategory = require('../models/ListingCategory');
 const RealEstateCity = require('../models/RealEstateCity');
 const RealEstateListing = require('../models/RealEstateListing');
 const {
   validateRealEstatePayload,
   needsCondition,
-  needsApartmentType,
   needsFloor,
   needsTotalFloors,
   needsParkingFloor,
@@ -47,6 +45,7 @@ function formatMineListing(doc, cityById) {
     surfaceM2: doc.surfaceM2,
     cityName: city?.name ?? null,
     zoneName: zone?.name ?? null,
+    contactPhone: doc.contactPhone ?? null,
     condition: doc.condition ?? null,
     apartmentTypeSlug: doc.apartmentTypeSlug ?? null,
     floor: doc.floor ?? null,
@@ -85,22 +84,9 @@ router.get('/real-estate/mine', authMiddleware, requirePortalUser, async (req, r
   }
 });
 
-function effectiveApartmentTypeSlugs(catDoc) {
-  const dedicated = (catDoc?.apartmentTypes || [])
-    .map((t) => String(t.slug || '').trim().toLowerCase())
-    .filter(Boolean);
-  if (dedicated.length) return dedicated;
-  return (catDoc?.listingTypes || [])
-    .map((t) => String(t.slug || '').trim().toLowerCase())
-    .filter(Boolean);
-}
-
 router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) => {
   try {
-    const catDoc = await ListingCategory.findOne({ key: 'real-estate' }).lean();
-    const apartmentTypeSlugs = effectiveApartmentTypeSlugs(catDoc);
-
-    const v = validateRealEstatePayload(req.body, apartmentTypeSlugs);
+    const v = validateRealEstatePayload(req.body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
     const cityId = req.body.cityId;
@@ -117,6 +103,7 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
 
     const propertyCategory = String(req.body.propertyCategory).trim().toLowerCase();
     const posterModel = req.user.constructor.modelName;
+    const contactPhone = String(req.body.contactPhone ?? '').trim();
 
     const doc = await RealEstateListing.create({
       posterId: req.user._id,
@@ -130,10 +117,8 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
       surfaceM2: Number(req.body.surfaceM2),
       cityId,
       zoneId,
+      contactPhone,
       condition: needsCondition(propertyCategory) ? req.body.condition : undefined,
-      apartmentTypeSlug: needsApartmentType(propertyCategory)
-        ? String(req.body.apartmentTypeSlug).trim().toLowerCase()
-        : undefined,
       floor: needsFloor(propertyCategory) ? Number(req.body.floor) : undefined,
       totalFloors: needsTotalFloors(propertyCategory) ? Number(req.body.totalFloors) : undefined,
       parkingFloor: needsParkingFloor(propertyCategory) ? Number(req.body.parkingFloor) : undefined,

@@ -59,19 +59,29 @@ router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
     const posterModel = req.user.constructor.modelName;
     const docs = await MarketplaceListing.find({ posterId: req.user._id, posterModel })
       .sort({ createdAt: -1 }).lean();
+
+    const cityIds = [...new Set(docs.map((d) => String(d.cityId)).filter(Boolean))];
+    const cityObjectIds = cityIds.filter((id) => mongoose.isValidObjectId(id)).map((id) => new mongoose.Types.ObjectId(id));
+    const cities = cityObjectIds.length > 0 ? await RealEstateCity.find({ _id: { $in: cityObjectIds } }).lean() : [];
+    const cityById = new Map(cities.map((c) => [String(c._id), c]));
+
     res.json({
-      listings: docs.map((d) => ({
-        id: String(d._id),
-        transactionType: d.transactionType,
-        title: d.title,
-        category: d.category,
-        condition: d.condition ?? null,
-        price: d.price ?? null,
-        currency: d.currency ?? null,
-        cityId: d.cityId ? String(d.cityId) : null,
-        contactPhone: d.contactPhone ?? null,
-        createdAt: d.createdAt,
-      })),
+      listings: docs.map((d) => {
+        const city = cityById.get(String(d.cityId));
+        return {
+          id: String(d._id),
+          transactionType: d.transactionType,
+          title: d.title,
+          category: d.category,
+          condition: d.condition ?? null,
+          price: d.price ?? null,
+          currency: d.currency ?? null,
+          cityId: d.cityId ? String(d.cityId) : null,
+          cityName: city?.name ?? null,
+          contactPhone: d.contactPhone ?? null,
+          createdAt: d.createdAt,
+        };
+      }),
     });
   } catch (err) {
     console.error('GET /listings/marketplace/mine:', err?.message || err);

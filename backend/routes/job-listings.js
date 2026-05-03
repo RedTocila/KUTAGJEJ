@@ -15,13 +15,15 @@ function requirePortalUser(req, res, next) {
   next();
 }
 
-function formatMineListing(doc) {
+function formatMineListing(doc, cityById) {
+  const city = cityById?.get(String(doc.cityId));
   return {
     id: String(doc._id),
     title: doc.title,
     description: doc.description,
     industry: doc.industry,
     cityId: doc.cityId ? String(doc.cityId) : null,
+    cityName: city?.name ?? null,
     education: doc.education,
     experience: doc.experience,
     jobType: doc.jobType,
@@ -41,7 +43,13 @@ router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
     const docs = await JobListing.find({ posterId: req.user._id, posterModel })
       .sort({ createdAt: -1 })
       .lean();
-    res.json({ listings: docs.map(formatMineListing) });
+
+    const cityIds = [...new Set(docs.map((d) => String(d.cityId)).filter(Boolean))];
+    const cityObjectIds = cityIds.filter((id) => mongoose.isValidObjectId(id)).map((id) => new mongoose.Types.ObjectId(id));
+    const cities = cityObjectIds.length > 0 ? await RealEstateCity.find({ _id: { $in: cityObjectIds } }).lean() : [];
+    const cityById = new Map(cities.map((c) => [String(c._id), c]));
+
+    res.json({ listings: docs.map((d) => formatMineListing(d, cityById)) });
   } catch (err) {
     console.error('GET /listings/jobs/mine:', err?.message || err);
     res.status(500).json({ message: 'Server error' });

@@ -45,6 +45,61 @@ export async function listCategoriesPublic(): Promise<{ categories?: ListingCate
   }
 }
 
+// ---------------------------------------------------------------------------
+// Types for "my listings" responses
+// ---------------------------------------------------------------------------
+
+export interface CarMineListing {
+  id: string;
+  make: string;
+  model: string;
+  variant: string;
+  year: number;
+  kilometers: number;
+  transmission: string;
+  fuelType: string;
+  price: number;
+  currency: string;
+  color: string;
+  finish: string[];
+  cityName: string | null;
+  contactPhone: string | null;
+  imageUrls: string[];
+  createdAt: string;
+}
+
+export interface JobMineListing {
+  id: string;
+  title: string;
+  description: string;
+  industry: string;
+  cityName: string | null;
+  education: string;
+  experience: string;
+  jobType: string;
+  workLocation: string;
+  salary: number | null;
+  currency: string | null;
+  contactPhone: string | null;
+  createdAt: string;
+}
+
+export interface MarketplaceMineListing {
+  id: string;
+  title: string;
+  category: string;
+  condition: string | null;
+  price: number | null;
+  currency: string | null;
+  cityName: string | null;
+  contactPhone: string | null;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Fetch helpers
+// ---------------------------------------------------------------------------
+
 export async function listMyRealEstateListings(): Promise<{
   listings?: RealEstateMineListing[];
   error?: string;
@@ -74,6 +129,39 @@ export async function createRealEstateListing(
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
     return { id: data.listing?.id as string | undefined };
+  } catch {
+    return { error: 'Could not reach the server.' };
+  }
+}
+
+export async function listMyCarListings(): Promise<{ listings?: CarMineListing[]; error?: string }> {
+  try {
+    const res = await fetch(`${API_URL}/listings/cars/mine`, { headers: authHeaders(), cache: 'no-store' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not load car listings.' };
+    return { listings: data.listings as CarMineListing[] };
+  } catch {
+    return { error: 'Could not reach the server.' };
+  }
+}
+
+export async function listMyJobListings(): Promise<{ listings?: JobMineListing[]; error?: string }> {
+  try {
+    const res = await fetch(`${API_URL}/listings/jobs/mine`, { headers: authHeaders(), cache: 'no-store' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not load job listings.' };
+    return { listings: data.listings as JobMineListing[] };
+  } catch {
+    return { error: 'Could not reach the server.' };
+  }
+}
+
+export async function listMyMarketplaceListings(): Promise<{ listings?: MarketplaceMineListing[]; error?: string }> {
+  try {
+    const res = await fetch(`${API_URL}/listings/marketplace/mine`, { headers: authHeaders(), cache: 'no-store' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not load marketplace listings.' };
+    return { listings: data.listings as MarketplaceMineListing[] };
   } catch {
     return { error: 'Could not reach the server.' };
   }

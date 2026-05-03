@@ -738,7 +738,7 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
         />
 
         {images.length > 0 ? (
-          <Stack direction="row" flexWrap="wrap" gap={1.5}>
+          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.5 }}>
             {images.map((img, idx) => (
               <ImagePreview
                 key={`${img.name}-${idx}`}

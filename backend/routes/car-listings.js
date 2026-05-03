@@ -77,7 +77,8 @@ function parseFinish(fields) {
   return arr.map((f) => String(f).trim()).filter((f) => FINISH_VALUES.includes(f));
 }
 
-function formatMineListing(doc) {
+function formatMineListing(doc, cityById) {
+  const city = cityById?.get(String(doc.cityId));
   return {
     id: String(doc._id),
     make: doc.make,
@@ -95,6 +96,7 @@ function formatMineListing(doc) {
     extras: doc.extras ?? [],
     contactPhone: doc.contactPhone ?? null,
     cityId: doc.cityId ? String(doc.cityId) : null,
+    cityName: city?.name ?? null,
     imageUrls: doc.imageUrls ?? [],
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
@@ -111,7 +113,13 @@ router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
     const docs = await CarListing.find({ posterId: req.user._id, posterModel })
       .sort({ createdAt: -1 })
       .lean();
-    res.json({ listings: docs.map(formatMineListing) });
+
+    const cityIds = [...new Set(docs.map((d) => String(d.cityId)).filter(Boolean))];
+    const cityObjectIds = cityIds.filter((id) => mongoose.isValidObjectId(id)).map((id) => new mongoose.Types.ObjectId(id));
+    const cities = cityObjectIds.length > 0 ? await RealEstateCity.find({ _id: { $in: cityObjectIds } }).lean() : [];
+    const cityById = new Map(cities.map((c) => [String(c._id), c]));
+
+    res.json({ listings: docs.map((d) => formatMineListing(d, cityById)) });
   } catch (err) {
     console.error('GET /listings/cars/mine:', err?.message || err);
     res.status(500).json({ message: 'Server error' });

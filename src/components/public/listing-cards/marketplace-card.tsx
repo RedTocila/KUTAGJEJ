@@ -28,8 +28,8 @@ export function MarketplaceCard({ listing }: { listing: PublicMarketplaceListing
 
   const specs: Spec[] = [
     { Icon: TagIcon, label: categoryLabel, title: 'Kategoria' },
-    conditionLabel ? { Icon: conditionIcon(listing.condition), label: conditionLabel, title: 'Gjendja' } : null,
-  ].filter((s): s is Spec => s !== null);
+    ...(conditionLabel ? [{ Icon: conditionIcon(listing.condition), label: conditionLabel, title: 'Gjendja' }] : []),
+  ];
 
   return (
     <CardShell>

@@ -30,8 +30,8 @@ export function CarCard({ listing }: { listing: PublicCarListing }) {
     { Icon: GaugeIcon, label: formatKilometers(listing.kilometers), title: 'Kilometrazh' },
     { Icon: GasPumpIcon, label: fuelLabel, title: 'Karburant' },
     { Icon: GearSixIcon, label: transmissionLabel, title: 'Transmision' },
-    listing.color ? { Icon: PaintBucketIcon, label: colourLabel, title: 'Ngjyra' } : null,
-  ].filter((s): s is Spec => s !== null);
+    ...(listing.color ? [{ Icon: PaintBucketIcon, label: colourLabel, title: 'Ngjyra' }] : []),
+  ];
 
   return (
     <CardShell>

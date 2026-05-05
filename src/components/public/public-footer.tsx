@@ -193,7 +193,7 @@ export function PublicFooter() {
           sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
         >
           <Typography variant="body2" color="text.secondary">
-            © {new Date().getFullYear()} {config.site.name} — {config.site.taglineEn}. Të gjitha të drejtat e rezervuara.
+            © {new Date().getFullYear()} {config.site.name} — Ku Ta Gjej. Të gjitha të drejtat e rezervuara.
           </Typography>
           <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap' }}>
             <Link

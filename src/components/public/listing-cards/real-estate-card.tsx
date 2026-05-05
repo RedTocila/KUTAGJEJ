@@ -33,17 +33,17 @@ export function RealEstateCard({ listing }: { listing: PublicRealEstateListing }
   const transactionLabel = listing.transactionType === 'rent' ? 'Me qira' : 'Në shitje';
 
   const specs: Spec[] = [
-    listing.bedrooms != null ? { Icon: BedIcon, label: `${listing.bedrooms}`, title: 'Dhoma gjumi' } : null,
-    listing.bathrooms != null ? { Icon: BathtubIcon, label: `${listing.bathrooms}`, title: 'Banjo' } : null,
+    ...(listing.bedrooms != null ? [{ Icon: BedIcon, label: `${listing.bedrooms}`, title: 'Dhoma gjumi' }] : []),
+    ...(listing.bathrooms != null ? [{ Icon: BathtubIcon, label: `${listing.bathrooms}`, title: 'Banjo' }] : []),
     { Icon: RulerIcon, label: `${listing.surfaceM2} m²`, title: 'Sipërfaqe' },
-    listing.floor != null ? { Icon: StairsIcon, label: `Kati ${listing.floor}`, title: 'Kati' } : null,
-    listing.yearBuilt != null
-      ? { Icon: CalendarIcon, label: String(listing.yearBuilt), title: 'Viti i ndërtimit' }
-      : null,
-    listing.furnishing
-      ? { Icon: CouchIcon, label: FURNISHING_LABEL[listing.furnishing] ?? listing.furnishing, title: 'Mobilim' }
-      : null,
-  ].filter((s): s is Spec => s !== null);
+    ...(listing.floor != null ? [{ Icon: StairsIcon, label: `Kati ${listing.floor}`, title: 'Kati' }] : []),
+    ...(listing.yearBuilt != null
+      ? [{ Icon: CalendarIcon, label: String(listing.yearBuilt), title: 'Viti i ndërtimit' }]
+      : []),
+    ...(listing.furnishing
+      ? [{ Icon: CouchIcon, label: FURNISHING_LABEL[listing.furnishing] ?? listing.furnishing, title: 'Mobilim' }]
+      : []),
+  ];
 
   return (
     <CardShell>

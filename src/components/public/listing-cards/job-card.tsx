@@ -47,10 +47,10 @@ export function JobCard({ listing }: { listing: PublicJobListing }) {
     { Icon: ClockIcon, label: jobTypeLabel, title: 'Tipi i punës' },
     { Icon: WorkLocationIcon, label: workLocationLabel, title: 'Vendi i punës' },
     { Icon: StarIcon, label: experienceLabel, title: 'Eksperienca' },
-    listing.education && listing.education !== 'no-requirement'
-      ? { Icon: GraduationCapIcon, label: educationLabel, title: 'Arsimi' }
-      : null,
-  ].filter((s): s is Spec => s !== null);
+    ...(listing.education && listing.education !== 'no-requirement'
+      ? [{ Icon: GraduationCapIcon, label: educationLabel, title: 'Arsimi' }]
+      : []),
+  ];
 
   return (
     <CardShell>

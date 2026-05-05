@@ -14,13 +14,7 @@ export const brandLogoSrc = `/${brand.logoFileName}` as const;
 export interface Config {
   site: {
     name: string;
-    /**
-     * Optional two-part wordmark in the UI when `wordmarkPresentation="brand"` is used.
-     * Must concatenate to `name` (e.g. ["KuTa","Gjej"] for "KuTaGjej").
-     */
     wordmarkSegments?: readonly [string, string];
-    /** English tagline shown next to the product name where needed (e.g. admin sign-in). */
-    taglineEn: string;
     description: string;
     themeColor: string;
     url: string;
@@ -31,8 +25,8 @@ export const config: Config = {
   site: {
     name: 'KuTaGjej',
     wordmarkSegments: ['KuTa', 'Gjej'],
-    taglineEn: 'WhereToFind',
-    description: 'KuTaGjej (WhereToFind) — platformë njoftimesh me panel administrimi.',
+    description:
+      'KuTaGjej është platforma shqiptare e njoftimeve falas: apartamente me qira dhe shitje, vetura të reja dhe të përdorura, oferta pune në Tiranë, Durrës, Vlorë e gjithë Shqipërinë, si dhe artikuj të rinj e të dorës së dytë në tregun online. Posto njoftimin tënd dhe gjej saktësisht atë që do — shpejt e thjesht.',
     themeColor: '#76ba1b',
     url: getSiteURL(),
   },

@@ -27,6 +27,8 @@ const jobListingSchema = new mongoose.Schema(
     currency: { type: String, enum: ['EUR', 'LEK', null], default: null },
 
     contactPhone: { type: String, trim: true },
+    /** Optional cover/company images. */
+    imageUrls: [{ type: String, trim: true }],
   },
   { timestamps: true },
 );

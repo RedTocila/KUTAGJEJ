@@ -19,8 +19,8 @@ import { ChartLine as ChartLineIcon } from '@phosphor-icons/react/dist/ssr/Chart
 import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGear';
-import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 
+import { VerticalIcon } from '@/components/public/vertical-icon';
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';
 import { listPublicContracts } from '@/lib/public-contracts-client';
@@ -97,17 +97,18 @@ export default function UserDashboardPage() {
                 <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
                   <Box
                     sx={{
-                      width: 48,
-                      height: 48,
+                      width: 56,
+                      height: 56,
                       borderRadius: 2,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      bgcolor: 'primary.main',
-                      color: 'primary.contrastText',
+                      bgcolor: (theme) =>
+                        theme.palette.mode === 'dark' ? 'rgba(118, 186, 27, 0.15)' : 'rgba(118, 186, 27, 0.12)',
+                      p: 1,
                     }}
                   >
-                    {React.createElement(BuildingsIcon, { size: 26, weight: 'duotone' })}
+                    <VerticalIcon verticalId="real-estate" size={36} decorative />
                   </Box>
                   <Box>
                     <Typography variant="h6" sx={{ fontWeight: 700 }}>

@@ -20,6 +20,8 @@ const marketplaceListingSchema = new mongoose.Schema(
 
     cityId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
     contactPhone: { type: String, trim: true },
+    /** Up to 5 product photos. */
+    imageUrls: [{ type: String, trim: true }],
   },
   { timestamps: true },
 );

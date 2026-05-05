@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "create-admin": "node scripts/create-admin-direct.js"
+    "create-admin": "node scripts/create-admin-direct.js",
+    "seed-listings": "node scripts/seed-listings.js"
   },
   "dependencies": {
     "@vercel/blob": "^2.3.3",

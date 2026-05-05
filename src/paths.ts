@@ -1,5 +1,16 @@
 export const paths = {
   home: '/',
+  /** Public-facing browse pages — wired from the homepage and footer. */
+  public: {
+    realEstate: '/pasuri-te-paluajtshme',
+    cars: '/automjete',
+    jobs: '/pune',
+    marketplace: '/tregu',
+    about: '/rreth-nesh',
+    terms: '/kushtet',
+    privacy: '/privatesia',
+    contact: '/kontakt',
+  },
   auth: { signIn: '/auth/sign-in' },
   user: {
     auth: '/user/auth',

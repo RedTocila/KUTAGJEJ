@@ -30,6 +30,8 @@ const realEstateListingSchema = new mongoose.Schema(
       enum: ['furnished', 'unfurnished', 'partially-furnished', 'kitchen-only'],
     },
     yearBuilt: { type: Number },
+    /** Vercel Blob URLs of uploaded images (up to 8). */
+    imageUrls: [{ type: String, trim: true }],
   },
   { timestamps: true },
 );

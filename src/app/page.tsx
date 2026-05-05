@@ -82,7 +82,7 @@ export default async function HomePage() {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: config.site.name,
-    alternateName: config.site.taglineEn,
+    alternateName: 'Ku Ta Gjej',
     url: config.site.url,
     description: config.site.description,
     inLanguage: 'sq-AL',

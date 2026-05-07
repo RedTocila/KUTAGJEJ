@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { alpha, Box, Container, Divider, IconButton, Link, Stack, Typography } from '@mui/material';
+import { Box, Container, Divider, IconButton, Link, Stack, Typography } from '@mui/material';
 import { FacebookLogo as FacebookIcon } from '@phosphor-icons/react/dist/ssr/FacebookLogo';
 import { InstagramLogo as InstagramIcon } from '@phosphor-icons/react/dist/ssr/InstagramLogo';
 import { LinkedinLogo as LinkedinIcon } from '@phosphor-icons/react/dist/ssr/LinkedinLogo';
@@ -11,6 +11,7 @@ import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { config } from '@/config';
+import { primaryMainAlpha, secondaryMainAlpha } from '@/lib/css-var-alpha';
 import { paths } from '@/paths';
 
 const COLUMNS = [
@@ -64,7 +65,7 @@ export function PublicFooter() {
         bgcolor: (theme) =>
           theme.palette.mode === 'dark'
             ? 'var(--mui-palette-background-paper)'
-            : alpha(theme.palette.primary.main, 0.04),
+            : primaryMainAlpha(0.04),
         borderTop: '1px solid',
         borderColor: 'divider',
       }}
@@ -74,11 +75,9 @@ export function PublicFooter() {
         sx={{
           position: 'absolute',
           inset: 0,
-          background: (theme) =>
-            `radial-gradient(circle at 0% 0%, ${alpha(theme.palette.primary.main, 0.08)}, transparent 45%), radial-gradient(circle at 100% 100%, ${alpha(
-              theme.palette.secondary.main,
-              0.06,
-            )}, transparent 45%)`,
+          background: `radial-gradient(circle at 0% 0%, ${primaryMainAlpha(0.08)}, transparent 45%), radial-gradient(circle at 100% 100%, ${secondaryMainAlpha(
+            0.06,
+          )}, transparent 45%)`,
           pointerEvents: 'none',
         }}
       />
@@ -98,7 +97,7 @@ export function PublicFooter() {
                   borderRadius: 2,
                   p: 0.75,
                   bgcolor: (theme) =>
-                    alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.18 : 0.12),
+                    primaryMainAlpha(theme.palette.mode === 'dark' ? 0.18 : 0.12),
                 }}
                 wordmarkSx={{ fontSize: '1.25rem' }}
               />
@@ -140,10 +139,10 @@ export function PublicFooter() {
                   size="small"
                   sx={{
                     color: 'text.secondary',
-                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06),
+                    bgcolor: primaryMainAlpha(0.06),
                     '&:hover': {
                       color: 'primary.main',
-                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
+                      bgcolor: primaryMainAlpha(0.12),
                     },
                   }}
                 >

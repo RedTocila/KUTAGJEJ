@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  alpha,
   Box,
   Button,
   IconButton,
@@ -14,6 +13,7 @@ import {
 } from '@mui/material';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { HOME_VERTICALS, type HomeVerticalId } from '@/lib/home-categories';
 
 import { HeroCategoryCircles } from './hero-category-circles';
@@ -111,7 +111,7 @@ export function HeroSearch({ defaultVertical = 'real-estate', onNavigate }: Hero
                 borderRadius: 2,
                 '&.Mui-focused': {
                   bgcolor: (theme) =>
-                    alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.12 : 0.06),
+                    primaryMainAlpha(theme.palette.mode === 'dark' ? 0.12 : 0.06),
                 },
               },
             }}
@@ -130,7 +130,7 @@ export function HeroSearch({ defaultVertical = 'real-estate', onNavigate }: Hero
               textTransform: 'none',
               background: (theme) =>
                 `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-              boxShadow: (theme) => `0 12px 32px -10px ${alpha(theme.palette.primary.main, 0.6)}`,
+              boxShadow: `0 12px 32px -10px ${primaryMainAlpha(0.6)}`,
               '&:hover': {
                 background: (theme) =>
                   `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,

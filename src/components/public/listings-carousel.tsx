@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { alpha, Box, IconButton, useTheme } from '@mui/material';
+import { Box, IconButton } from '@mui/material';
 import { CaretLeft as CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 
@@ -26,7 +26,6 @@ export interface ListingsCarouselProps {
 }
 
 export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps) {
-  const theme = useTheme();
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const [canScrollPrev, setCanScrollPrev] = React.useState(false);
   const [canScrollNext, setCanScrollNext] = React.useState(false);
@@ -129,7 +128,7 @@ export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps)
             color: 'text.primary',
             border: '1px solid',
             borderColor: 'divider',
-            boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.12)}`,
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.12)',
             width: 36,
             height: 36,
             '&:hover': { bgcolor: 'background.paper', borderColor: 'primary.main', color: 'primary.main' },
@@ -154,7 +153,7 @@ export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps)
             color: 'text.primary',
             border: '1px solid',
             borderColor: 'divider',
-            boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.12)}`,
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.12)',
             width: 36,
             height: 36,
             '&:hover': { bgcolor: 'background.paper', borderColor: 'primary.main', color: 'primary.main' },

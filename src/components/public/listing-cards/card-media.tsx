@@ -1,7 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { alpha, Box, Chip, IconButton, Stack, Typography } from '@mui/material';
+import { Box, Chip, IconButton, Stack, Typography } from '@mui/material';
+
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 
@@ -47,7 +49,7 @@ export function CardMedia({
         flexShrink: 0,
         borderBottom: '1px solid',
         borderColor: 'divider',
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06),
+        bgcolor: primaryMainAlpha(0.06),
         overflow: 'hidden',
       }}
     >

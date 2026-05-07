@@ -3,7 +3,7 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
-import { alpha, Box, Drawer, IconButton, Stack, Typography } from '@mui/material';
+import { Box, Drawer, IconButton, Stack, Typography } from '@mui/material';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
@@ -12,6 +12,7 @@ import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/Use
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { useUser } from '@/hooks/use-user';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { paths } from '@/paths';
 
 import { HeroSearch } from './hero-search';
@@ -122,7 +123,7 @@ export function MobileBottomNav() {
                   cursor: 'pointer',
                   borderRadius: 2,
                   color: active ? 'primary.main' : 'text.secondary',
-                  bgcolor: active ? (theme) => alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                  bgcolor: active ? primaryMainAlpha(0.1) : 'transparent',
                   font: 'inherit',
                   padding: 0,
                   appearance: 'none',
@@ -151,7 +152,7 @@ export function MobileBottomNav() {
                 textDecoration: 'none',
                 borderRadius: 2,
                 color: active ? 'primary.main' : 'text.secondary',
-                bgcolor: active ? (theme) => alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                bgcolor: active ? primaryMainAlpha(0.1) : 'transparent',
               }}
             >
               <Icon size={21} weight={active ? 'fill' : 'regular'} />

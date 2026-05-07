@@ -2,8 +2,9 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { alpha, Box, Grid, Stack, Typography } from '@mui/material';
+import { Box, Grid, Stack, Typography } from '@mui/material';
 
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { HOME_VERTICALS, type HomeVerticalId } from '@/lib/home-categories';
 
 import { VerticalIcon } from './vertical-icon';
@@ -37,7 +38,7 @@ export function CategoryTiles({ totals }: CategoryTilesProps) {
                 transition: 'border-color 0.15s, background-color 0.15s',
                 '&:hover': {
                   borderColor: 'primary.main',
-                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
+                  bgcolor: primaryMainAlpha(0.04),
                 },
               }}
             >

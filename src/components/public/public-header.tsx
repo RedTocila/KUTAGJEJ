@@ -2,9 +2,7 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { usePathname } from 'next/navigation';
 import {
-  alpha,
   AppBar,
   Box,
   Button,
@@ -22,10 +20,8 @@ import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/Use
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
 import { useUser } from '@/hooks/use-user';
-import type { HomeVerticalId } from '@/lib/home-categories';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { paths } from '@/paths';
-
-import { VerticalIcon } from './vertical-icon';
 
 const TOOLBAR_MIN_HEIGHT = { xs: 64, md: 76 } as const;
 
@@ -66,17 +62,7 @@ function useHeaderScrollHidden() {
   return hidden;
 }
 
-const NAV_ITEMS: ReadonlyArray<{ label: string; href: string; verticalId: HomeVerticalId }> = [
-  { label: 'Pasuri', href: paths.public.realEstate, verticalId: 'real-estate' },
-  { label: 'Makina', href: paths.public.cars, verticalId: 'cars' },
-  { label: 'Punë', href: paths.public.jobs, verticalId: 'jobs' },
-  { label: 'Tregu', href: paths.public.marketplace, verticalId: 'marketplace' },
-  { label: 'Biznese', href: paths.public.businesses, verticalId: 'businesses' },
-  { label: 'Profesionistë', href: paths.public.professionals, verticalId: 'professionals' },
-] as const;
-
 export function PublicHeader() {
-  const pathname = usePathname();
   const { user } = useUser();
   const elevated = useScrollTrigger({ disableHysteresis: true, threshold: 8 });
   const headerHidden = useHeaderScrollHidden();
@@ -156,7 +142,7 @@ export function PublicHeader() {
                   borderRadius: 2,
                   p: 0.75,
                   bgcolor: (theme) =>
-                    alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.16 : 0.1),
+                    primaryMainAlpha(theme.palette.mode === 'dark' ? 0.16 : 0.1),
                 }}
                 wordmarkSx={{ fontSize: { xs: '1.05rem', md: '1.2rem' } }}
               />
@@ -164,45 +150,13 @@ export function PublicHeader() {
 
             <Stack
               direction="row"
-              spacing={0.5}
-              sx={{
-                display: { xs: 'none', md: 'flex' },
-                ml: 2,
-                flex: 1,
-              }}
-            >
-              {NAV_ITEMS.map((item) => {
-                const active = pathname === item.href || pathname?.startsWith(`${item.href}/`);
-                return (
-                  <Button
-                    key={item.href}
-                    component={RouterLink}
-                    href={item.href}
-                    startIcon={<VerticalIcon verticalId={item.verticalId} size={30} decorative />}
-                    sx={{
-                      px: 1.75,
-                      py: 1,
-                      borderRadius: 2,
-                      color: active ? 'primary.main' : 'text.secondary',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      fontSize: '0.95rem',
-                      '&:hover': {
-                        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
-                        color: 'primary.main',
-                      },
-                    }}
-                  >
-                    {item.label}
-                  </Button>
-                );
-              })}
-            </Stack>
-
-            <Stack
-              direction="row"
               spacing={1}
-              sx={{ alignItems: 'center', display: { xs: 'none', md: 'flex' }, flexShrink: 0 }}
+              sx={{
+                alignItems: 'center',
+                display: { xs: 'none', md: 'flex' },
+                flexShrink: 0,
+                ml: { md: 'auto' },
+              }}
             >
               <ThemeModeToggle />
               {user ? (

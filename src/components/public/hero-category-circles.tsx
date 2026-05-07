@@ -3,7 +3,7 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
-import { alpha, Box, Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 
 import { HOME_VERTICALS } from '@/lib/home-categories';
 
@@ -71,7 +71,9 @@ export function HeroCategoryCircles({
           '&::-webkit-scrollbar': { height: 5 },
           '&::-webkit-scrollbar-thumb': {
             borderRadius: 2.5,
-            bgcolor: (theme) => alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.2 : 0.18),
+            // Can't use alpha(palette.text.primary): in CssVarsProvider it's a CSS `var()`, not a color MUI can parse.
+            bgcolor: (theme) =>
+              theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(26, 33, 24, 0.18)',
           },
         }}
       >

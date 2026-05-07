@@ -2,7 +2,9 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { alpha, Box, Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
+
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 
 import { HOME_SUBCATEGORIES } from '@/lib/home-subcategories';
 import type { HomeVerticalId } from '@/lib/home-categories';
@@ -63,7 +65,7 @@ export function SubcategoryPills({ verticalId }: { verticalId: HomeVerticalId })
                 '&:hover': {
                   borderColor: 'primary.main',
                   color: 'primary.main',
-                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06),
+                  bgcolor: primaryMainAlpha(0.06),
                 },
               }}
             >
@@ -77,7 +79,7 @@ export function SubcategoryPills({ verticalId }: { verticalId: HomeVerticalId })
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: 'primary.main',
-                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+                  bgcolor: primaryMainAlpha(0.1),
                 }}
               >
                 <Icon size={13} weight="duotone" />

@@ -1,7 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { alpha, Box, Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
+
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 export interface Spec {
@@ -47,7 +49,8 @@ export function SpecRow({ specs }: { specs: Spec[] }) {
             borderRadius: 1,
             border: '1px solid',
             borderColor: 'divider',
-            bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.12 : 0.07),
+            bgcolor: (theme) =>
+              primaryMainAlpha(theme.palette.mode === 'dark' ? 0.12 : 0.07),
             color: 'primary.main',
           }}
         >

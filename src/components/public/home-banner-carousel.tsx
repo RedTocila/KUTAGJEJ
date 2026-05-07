@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { alpha, Box, Button, Stack, Typography } from '@mui/material';
+import { Box, Button, Stack, Typography } from '@mui/material';
 import { CaretLeft as CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 
@@ -82,8 +82,8 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
           sx={{
             position: 'absolute',
             inset: 0,
-            background: (theme) =>
-              `linear-gradient(95deg, ${alpha(theme.palette.common.black, 0.58)} 0%, ${alpha(theme.palette.common.black, 0.24)} 52%, ${alpha(theme.palette.common.black, 0.14)} 100%)`,
+            background:
+              'linear-gradient(95deg, rgba(0, 0, 0, 0.58) 0%, rgba(0, 0, 0, 0.24) 52%, rgba(0, 0, 0, 0.14) 100%)',
           }}
         />
 

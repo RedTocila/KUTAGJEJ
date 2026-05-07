@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const CATEGORY_KEYS = ['real-estate', 'job-listings', 'cars', 'marketplace'];
+const CATEGORY_KEYS = ['real-estate', 'job-listings', 'cars', 'marketplace', 'businesses', 'professionals'];
 
 const listingTypeSchema = new mongoose.Schema(
   {

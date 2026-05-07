@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { alpha, Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
+import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 
 import { findVertical, type HomeVerticalId } from '@/lib/home-categories';
@@ -39,22 +39,7 @@ export function PublicCategoryHero({
           sx={{ alignItems: { sm: 'flex-end' }, justifyContent: 'space-between' }}
         >
           <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
-            <Box
-              aria-hidden
-              sx={{
-                width: 52,
-                height: 52,
-                borderRadius: 1.75,
-                flexShrink: 0,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-                p: 0.75,
-              }}
-            >
-              <VerticalIcon verticalId={verticalId} size={36} decorative />
-            </Box>
+            <VerticalIcon verticalId={verticalId} size={54} decorative />
             <Stack spacing={0.25} sx={{ minWidth: 0 }}>
               <Typography
                 component="h1"

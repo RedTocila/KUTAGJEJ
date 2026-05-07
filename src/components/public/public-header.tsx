@@ -9,20 +9,15 @@ import {
   Box,
   Button,
   Container,
-  Divider,
-  Drawer,
   IconButton,
   Stack,
   Toolbar,
   Tooltip,
-  Typography,
   useScrollTrigger,
 } from '@mui/material';
-import { List as ListIcon } from '@phosphor-icons/react/dist/ssr/List';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { SignIn as SignInIcon } from '@phosphor-icons/react/dist/ssr/SignIn';
 import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle';
-import { X as CloseIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
@@ -32,30 +27,75 @@ import { paths } from '@/paths';
 
 import { VerticalIcon } from './vertical-icon';
 
+const TOOLBAR_MIN_HEIGHT = { xs: 64, md: 76 } as const;
+
+/**
+ * Hides the header while scrolling down, shows it when scrolling up (or when
+ * near the top of the page). Uses a small delta threshold to ignore tiny jitters.
+ */
+function useHeaderScrollHidden() {
+  const [hidden, setHidden] = React.useState(false);
+  const lastY = React.useRef(0);
+
+  React.useEffect(() => {
+    const deltaThreshold = 6;
+    const alwaysShowBelowY = 56;
+
+    const onScroll = () => {
+      const y = window.scrollY;
+      const prev = lastY.current;
+      const delta = y - prev;
+      lastY.current = y;
+
+      if (y <= alwaysShowBelowY) {
+        setHidden(false);
+        return;
+      }
+      if (delta > deltaThreshold) {
+        setHidden(true);
+      } else if (delta < -deltaThreshold) {
+        setHidden(false);
+      }
+    };
+
+    lastY.current = window.scrollY;
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return hidden;
+}
+
 const NAV_ITEMS: ReadonlyArray<{ label: string; href: string; verticalId: HomeVerticalId }> = [
   { label: 'Pasuri', href: paths.public.realEstate, verticalId: 'real-estate' },
-  { label: 'Automjete', href: paths.public.cars, verticalId: 'cars' },
+  { label: 'Makina', href: paths.public.cars, verticalId: 'cars' },
   { label: 'Punë', href: paths.public.jobs, verticalId: 'jobs' },
   { label: 'Tregu', href: paths.public.marketplace, verticalId: 'marketplace' },
+  { label: 'Biznese', href: paths.public.businesses, verticalId: 'businesses' },
+  { label: 'Profesionistë', href: paths.public.professionals, verticalId: 'professionals' },
 ] as const;
 
 export function PublicHeader() {
-  const [drawerOpen, setDrawerOpen] = React.useState(false);
   const pathname = usePathname();
   const { user } = useUser();
   const elevated = useScrollTrigger({ disableHysteresis: true, threshold: 8 });
+  const headerHidden = useHeaderScrollHidden();
 
   const dashboardHref =
     user?.accountType === 'admin' ? paths.dashboard.overview : paths.user.dashboard;
   const postHref = paths.user.realEstateListing;
+  const mobilePostHref = user ? postHref : paths.user.auth;
 
   return (
     <>
       <AppBar
-        position="sticky"
+        position="fixed"
         elevation={0}
         component="header"
         sx={{
+          top: 0,
+          left: 0,
+          right: 0,
           color: 'text.primary',
           backgroundColor: (theme) =>
             elevated
@@ -65,17 +105,48 @@ export function PublicHeader() {
           WebkitBackdropFilter: 'saturate(180%) blur(14px)',
           borderBottom: '1px solid',
           borderColor: 'divider',
-          transition: 'background-color 0.2s ease, border-color 0.2s ease',
+          transform: headerHidden ? 'translateY(-100%)' : 'translateY(0)',
+          transition: (theme) =>
+            theme.transitions.create(['transform', 'background-color', 'border-color'], {
+              duration: 220,
+              easing: theme.transitions.easing.easeInOut,
+            }),
           zIndex: (theme) => theme.zIndex.appBar,
+          willChange: 'transform',
+          '@media (prefers-reduced-motion: reduce)': {
+            transition: 'background-color 0.2s ease, border-color 0.2s ease',
+          },
         }}
       >
         <Container maxWidth="xl">
           <Toolbar disableGutters sx={{ minHeight: { xs: 64, md: 76 }, gap: 2 }}>
+            <Stack
+              direction="row"
+              sx={{ alignItems: 'center', display: { xs: 'flex', md: 'none' }, width: 44, flexShrink: 0 }}
+            >
+              <Tooltip title="Posto njoftim">
+                <IconButton
+                  component={RouterLink}
+                  href={mobilePostHref}
+                  aria-label="Posto njoftim"
+                  sx={{ color: 'text.primary' }}
+                >
+                  {React.createElement(PlusIcon, { size: 24, weight: 'bold' })}
+                </IconButton>
+              </Tooltip>
+            </Stack>
+
             <Box
               component={RouterLink}
               href={paths.home}
               aria-label="KuTaGjej — kreu"
-              sx={{ display: 'inline-flex', textDecoration: 'none', color: 'inherit', flexShrink: 0 }}
+              sx={{
+                display: 'inline-flex',
+                textDecoration: 'none',
+                color: 'inherit',
+                flexShrink: 0,
+                mx: { xs: 'auto', md: 0 },
+              }}
             >
               <BrandLogo
                 height={40}
@@ -107,7 +178,7 @@ export function PublicHeader() {
                     key={item.href}
                     component={RouterLink}
                     href={item.href}
-                    startIcon={<VerticalIcon verticalId={item.verticalId} size={20} decorative />}
+                    startIcon={<VerticalIcon verticalId={item.verticalId} size={30} decorative />}
                     sx={{
                       px: 1.75,
                       py: 1,
@@ -187,112 +258,29 @@ export function PublicHeader() {
             <Stack
               direction="row"
               spacing={0.5}
-              sx={{ alignItems: 'center', display: { xs: 'flex', md: 'none' }, ml: 'auto' }}
+              sx={{
+                alignItems: 'center',
+                display: { xs: 'flex', md: 'none' },
+                width: 44,
+                justifyContent: 'flex-end',
+                flexShrink: 0,
+              }}
             >
               <ThemeModeToggle />
-              <IconButton
-                aria-label="Hap menynë"
-                onClick={() => setDrawerOpen(true)}
-                sx={{ color: 'text.primary' }}
-              >
-                {React.createElement(ListIcon, { size: 26 })}
-              </IconButton>
             </Stack>
           </Toolbar>
         </Container>
       </AppBar>
-
-      <Drawer
-        anchor="right"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        slotProps={{ paper: { sx: { width: 320, p: 2 } } }}
-      >
-        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-          <BrandLogo height={32} showWordmark wordmarkPresentation="brand" />
-          <IconButton onClick={() => setDrawerOpen(false)} aria-label="Mbyll menynë">
-            {React.createElement(CloseIcon, { size: 22 })}
-          </IconButton>
-        </Stack>
-        <Divider sx={{ mb: 1.5 }} />
-        <Stack spacing={0.5}>
-          {NAV_ITEMS.map((item) => (
-            <Button
-              key={item.href}
-              component={RouterLink}
-              href={item.href}
-              onClick={() => setDrawerOpen(false)}
-              startIcon={<VerticalIcon verticalId={item.verticalId} size={22} decorative />}
-              sx={{
-                justifyContent: 'flex-start',
-                px: 1.5,
-                py: 1.25,
-                borderRadius: 2,
-                color: 'text.primary',
-                fontWeight: 600,
-                textTransform: 'none',
-                fontSize: '1rem',
-              }}
-            >
-              {item.label}
-            </Button>
-          ))}
-        </Stack>
-        <Divider sx={{ my: 2 }} />
-        <Stack spacing={1}>
-          {user ? (
-            <>
-              <Button
-                component={RouterLink}
-                href={dashboardHref}
-                onClick={() => setDrawerOpen(false)}
-                variant="outlined"
-                startIcon={React.createElement(UserCircleIcon, { size: 20 })}
-                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-              >
-                Paneli im
-              </Button>
-              <Button
-                component={RouterLink}
-                href={postHref}
-                onClick={() => setDrawerOpen(false)}
-                variant="contained"
-                startIcon={React.createElement(PlusIcon, { size: 20, weight: 'bold' })}
-                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
-              >
-                Posto njoftim
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                component={RouterLink}
-                href={paths.user.auth}
-                onClick={() => setDrawerOpen(false)}
-                variant="outlined"
-                startIcon={React.createElement(SignInIcon, { size: 20 })}
-                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-              >
-                Hyr / Regjistrohu
-              </Button>
-              <Button
-                component={RouterLink}
-                href={paths.user.realEstateListing}
-                onClick={() => setDrawerOpen(false)}
-                variant="contained"
-                startIcon={React.createElement(PlusIcon, { size: 20, weight: 'bold' })}
-                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
-              >
-                Posto njoftim falas
-              </Button>
-            </>
-          )}
-        </Stack>
-        <Box sx={{ flex: 1 }} />
-        <Typography variant="caption" color="text.disabled" sx={{ textAlign: 'center', mt: 3 }}>
-          © {new Date().getFullYear()} KuTaGjej
-        </Typography>
-      </Drawer>
+      {/* Keeps document flow under `position: fixed` so content is not covered */}
+      <Toolbar
+        disableGutters
+        aria-hidden
+        sx={{
+          minHeight: TOOLBAR_MIN_HEIGHT,
+          visibility: 'hidden',
+          pointerEvents: 'none',
+        }}
+      />
     </>
   );
 }

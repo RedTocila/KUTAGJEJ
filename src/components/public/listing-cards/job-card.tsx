@@ -10,6 +10,7 @@ import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Path as PathIcon } from '@phosphor-icons/react/dist/ssr/Path';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
+import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 
 import {
   JOB_EDUCATION_OPTIONS,
@@ -23,7 +24,7 @@ import type { PublicJobListing } from '@/lib/public-listings-client';
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
-import { findOptionLabel, formatPrice, relativeAlbanianDate } from './format-helpers';
+import { findOptionLabel, formatPrice, pseudoRandomMetric, relativeAlbanianDate } from './format-helpers';
 import { SpecRow, type Spec } from './spec-row';
 
 function workLocationIcon(value: string) {
@@ -33,6 +34,10 @@ function workLocationIcon(value: string) {
 }
 
 export function JobCard({ listing }: { listing: PublicJobListing }) {
+  const viewCount = React.useMemo(
+    () => pseudoRandomMetric(`job:${listing.id}:${listing.createdAt}`, 120, 9800),
+    [listing.id, listing.createdAt],
+  );
   const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const jobTypeLabel = findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType);
   const workLocationLabel = findOptionLabel(WORK_LOCATION_OPTIONS, listing.workLocation);
@@ -101,9 +106,17 @@ export function JobCard({ listing }: { listing: PublicJobListing }) {
             </Typography>
           </Stack>
         ) : null}
-        <Typography variant="caption" color="text.disabled">
-          {relativeAlbanianDate(listing.createdAt)}
-        </Typography>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="caption" color="text.disabled">
+            {relativeAlbanianDate(listing.createdAt)}
+          </Typography>
+          <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+            <EyeIcon size={14} weight="regular" />
+            <Typography variant="caption" color="text.disabled">
+              {new Intl.NumberFormat('en-GB').format(viewCount)}
+            </Typography>
+          </Stack>
+        </Stack>
       </Stack>
     </CardShell>
   );

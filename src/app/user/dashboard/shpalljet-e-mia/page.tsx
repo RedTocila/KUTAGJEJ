@@ -305,7 +305,7 @@ export default function UserMyListingsPage() {
 
   const tabs = [
     { label: 'Pasuri', icon: <BuildingsIcon size={16} weight="duotone" />, count: reListings.length },
-    { label: 'Automjete', icon: <CarIcon size={16} weight="duotone" />, count: carListings.length },
+    { label: 'Makina', icon: <CarIcon size={16} weight="duotone" />, count: carListings.length },
     { label: 'Punë', icon: <BriefcaseIcon size={16} weight="duotone" />, count: jobListings.length },
     { label: 'Tregu', icon: <StorefrontIcon size={16} weight="duotone" />, count: mktListings.length },
   ];

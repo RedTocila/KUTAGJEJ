@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { alpha, Box, Chip, Stack } from '@mui/material';
+import { alpha, Box, Chip, IconButton, Stack, Typography } from '@mui/material';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
+import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 
 export interface CardMediaProps {
   /** Primary image to render — `null` falls back to a tinted icon panel. */
@@ -33,6 +34,11 @@ export function CardMedia({
   topRightBadge,
   height = 170,
 }: CardMediaProps) {
+  const seed = `${imageUrl ?? ''}|${alt}|${topLeftBadge ?? ''}|${topRightBadge ?? ''}`;
+  const baseSavedCount = React.useMemo(() => pseudoRandomCount(seed), [seed]);
+  const [saved, setSaved] = React.useState(false);
+  const visibleSavedCount = saved ? baseSavedCount + 1 : baseSavedCount;
+
   return (
     <Box
       sx={{
@@ -114,6 +120,51 @@ export function CardMedia({
           }}
         />
       ) : null}
+
+      <Stack sx={{ position: 'absolute', top: 8, right: 8, alignItems: 'center' }}>
+        <IconButton
+          aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
+          onClick={() => setSaved((prev) => !prev)}
+          sx={{
+            width: 42,
+            height: 42,
+            bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.92)',
+            color: saved ? 'primary.main' : 'text.primary',
+            border: '1px solid',
+            borderColor: saved ? 'primary.main' : 'divider',
+            position: 'relative',
+            '&:hover': {
+              bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.98)',
+            },
+          }}
+        >
+          <BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} style={{ transform: 'translateY(-5px)' }} />
+          <Typography
+            component="span"
+            sx={{
+              position: 'absolute',
+              bottom: 5,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              fontWeight: 700,
+              fontSize: '0.62rem',
+              lineHeight: 1,
+              color: saved ? 'primary.main' : 'text.primary',
+              pointerEvents: 'none',
+            }}
+          >
+            {visibleSavedCount}
+          </Typography>
+        </IconButton>
+      </Stack>
     </Box>
   );
+}
+
+function pseudoRandomCount(seed: string): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return 8 + (hash % 493);
 }

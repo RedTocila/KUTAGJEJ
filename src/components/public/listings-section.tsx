@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { alpha, Box, Button, Container, Stack, Typography } from '@mui/material';
+import { Box, Button, Container, Stack, Typography } from '@mui/material';
 import { ArrowRight as ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 
 import { findVertical, type HomeVerticalId } from '@/lib/home-categories';
@@ -34,22 +34,7 @@ export function ListingsSection({ verticalId, total, children, isEmpty }: Listin
           sx={{ alignItems: 'baseline', justifyContent: 'space-between', mb: { xs: 1.5, md: 2 } }}
         >
           <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
-            <Box
-              aria-hidden
-              sx={{
-                width: 36,
-                height: 36,
-                borderRadius: 1.5,
-                flexShrink: 0,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-                p: 0.5,
-              }}
-            >
-              <VerticalIcon verticalId={verticalId} size={26} decorative />
-            </Box>
+            <VerticalIcon verticalId={verticalId} size={42} decorative />
             <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', minWidth: 0 }}>
               <Typography
                 id={`section-${verticalId}`}
@@ -110,21 +95,7 @@ function EmptyPlaceholder({ verticalId }: { verticalId: HomeVerticalId }) {
       }}
     >
       <Stack spacing={1.5} sx={{ alignItems: 'center' }}>
-        <Box
-          aria-hidden
-          sx={{
-            width: 64,
-            height: 64,
-            borderRadius: 2,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-            p: 1,
-          }}
-        >
-          <VerticalIcon verticalId={verticalId} size={44} decorative />
-        </Box>
+        <VerticalIcon verticalId={verticalId} size={64} decorative />
         <Typography variant="body2" color="text.secondary">
           Nuk ka njoftime ende në {vertical.label.toLowerCase()}.
         </Typography>

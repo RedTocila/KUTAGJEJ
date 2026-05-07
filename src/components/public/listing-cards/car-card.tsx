@@ -9,6 +9,7 @@ import { Gauge as GaugeIcon } from '@phosphor-icons/react/dist/ssr/Gauge';
 import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { PaintBucket as PaintBucketIcon } from '@phosphor-icons/react/dist/ssr/PaintBucket';
+import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 
 import { CAR_COLOUR_OPTIONS, FUEL_TYPE_OPTIONS, TRANSMISSION_OPTIONS } from '@/lib/car-constants';
 import type { PublicCarListing } from '@/lib/public-listings-client';
@@ -16,11 +17,15 @@ import type { PublicCarListing } from '@/lib/public-listings-client';
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
-import { findOptionLabel, formatKilometers, formatPrice, relativeAlbanianDate } from './format-helpers';
+import { findOptionLabel, formatKilometers, formatPrice, pseudoRandomMetric, relativeAlbanianDate } from './format-helpers';
 import { SpecRow, type Spec } from './spec-row';
 
 export function CarCard({ listing }: { listing: PublicCarListing }) {
   const title = [listing.make, listing.model, listing.variant].filter(Boolean).join(' ');
+  const viewCount = React.useMemo(
+    () => pseudoRandomMetric(`car:${listing.id}:${listing.createdAt}`, 120, 9800),
+    [listing.id, listing.createdAt],
+  );
   const fuelLabel = findOptionLabel(FUEL_TYPE_OPTIONS, listing.fuelType);
   const transmissionLabel = findOptionLabel(TRANSMISSION_OPTIONS, listing.transmission);
   const colourLabel = findOptionLabel(CAR_COLOUR_OPTIONS, listing.color);
@@ -77,9 +82,17 @@ export function CarCard({ listing }: { listing: PublicCarListing }) {
             </Typography>
           </Stack>
         ) : null}
-        <Typography variant="caption" color="text.disabled">
-          {relativeAlbanianDate(listing.createdAt)}
-        </Typography>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="caption" color="text.disabled">
+            {relativeAlbanianDate(listing.createdAt)}
+          </Typography>
+          <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+            <EyeIcon size={14} weight="regular" />
+            <Typography variant="caption" color="text.disabled">
+              {new Intl.NumberFormat('en-GB').format(viewCount)}
+            </Typography>
+          </Stack>
+        </Stack>
       </Stack>
     </CardShell>
   );

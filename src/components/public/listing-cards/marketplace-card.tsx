@@ -7,6 +7,7 @@ import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { ShoppingBag as ShoppingBagIcon } from '@phosphor-icons/react/dist/ssr/ShoppingBag';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
+import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import type { PublicMarketplaceListing } from '@/lib/public-listings-client';
@@ -14,7 +15,7 @@ import type { PublicMarketplaceListing } from '@/lib/public-listings-client';
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
-import { findOptionLabel, formatPrice, relativeAlbanianDate } from './format-helpers';
+import { findOptionLabel, formatPrice, pseudoRandomMetric, relativeAlbanianDate } from './format-helpers';
 import { SpecRow, type Spec } from './spec-row';
 
 function conditionIcon(condition: string | null) {
@@ -23,6 +24,10 @@ function conditionIcon(condition: string | null) {
 }
 
 export function MarketplaceCard({ listing }: { listing: PublicMarketplaceListing }) {
+  const viewCount = React.useMemo(
+    () => pseudoRandomMetric(`mk:${listing.id}:${listing.createdAt}`, 120, 9800),
+    [listing.id, listing.createdAt],
+  );
   const categoryLabel = findOptionLabel(MARKETPLACE_CATEGORY_OPTIONS, listing.category);
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
 
@@ -80,9 +85,17 @@ export function MarketplaceCard({ listing }: { listing: PublicMarketplaceListing
             </Typography>
           </Stack>
         ) : null}
-        <Typography variant="caption" color="text.disabled">
-          {relativeAlbanianDate(listing.createdAt)}
-        </Typography>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="caption" color="text.disabled">
+            {relativeAlbanianDate(listing.createdAt)}
+          </Typography>
+          <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+            <EyeIcon size={14} weight="regular" />
+            <Typography variant="caption" color="text.disabled">
+              {new Intl.NumberFormat('en-GB').format(viewCount)}
+            </Typography>
+          </Stack>
+        </Stack>
       </Stack>
     </CardShell>
   );

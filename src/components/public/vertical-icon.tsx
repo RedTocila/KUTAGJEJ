@@ -6,20 +6,24 @@ import type { SxProps, Theme } from '@mui/material/styles';
 
 import type { HomeVerticalId } from '@/lib/home-categories';
 
-/** Source paths for the four brand category icons (live in `public/`). */
+/** Source paths for brand category icons (live in `public/`). */
 export const VERTICAL_ICON_SRC: Record<HomeVerticalId, string> = {
   'real-estate': '/real-estate-icon.png',
   cars: '/cars-icon.png',
   jobs: '/jobs-icon.png',
   marketplace: '/market-icon.png',
+  businesses: '/businesses.png',
+  professionals: '/professionals.png',
 };
 
 /** Albanian alt text — used for accessibility and SEO. */
 export const VERTICAL_ICON_ALT: Record<HomeVerticalId, string> = {
-  'real-estate': 'Pasuri të paluajtshme',
-  cars: 'Automjete',
+  'real-estate': 'Prona',
+  cars: 'Makina',
   jobs: 'Punë',
   marketplace: 'Tregu',
+  businesses: 'Biznese',
+  professionals: 'Profesionistë',
 };
 
 export interface VerticalIconProps {
@@ -38,8 +42,7 @@ export interface VerticalIconProps {
 }
 
 /**
- * Renders the brand PNG icon for one of the four homepage verticals
- * (real-estate, cars, jobs, marketplace). Lives in `public/` so it ships as
+ * Renders the brand PNG icon for a homepage vertical. Lives in `public/` so it ships as
  * a plain static asset — no `next/image` remote-patterns config required.
  *
  * Always renders a square: pass `size` for both width and height.

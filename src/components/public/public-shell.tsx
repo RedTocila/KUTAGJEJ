@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Box } from '@mui/material';
 
+import { MobileBottomNav } from './mobile-bottom-nav';
 import { PublicFooter } from './public-footer';
 import { PublicHeader } from './public-header';
 
@@ -15,10 +16,11 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <PublicHeader />
-      <Box component="main" sx={{ flex: '1 1 auto' }}>
+      <Box component="main" sx={{ flex: '1 1 auto', pb: { xs: '72px', md: 0 } }}>
         {children}
       </Box>
       <PublicFooter />
+      <MobileBottomNav />
     </Box>
   );
 }

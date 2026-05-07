@@ -7,9 +7,11 @@ import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Build
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { CarSimple as CarSimpleIcon } from '@phosphor-icons/react/dist/ssr/CarSimple';
 import { Code as CodeIcon } from '@phosphor-icons/react/dist/ssr/Code';
+import { Coffee as CoffeeIcon } from '@phosphor-icons/react/dist/ssr/Coffee';
 import { Couch as CouchIcon } from '@phosphor-icons/react/dist/ssr/Couch';
 import { DeviceMobile as DeviceMobileIcon } from '@phosphor-icons/react/dist/ssr/DeviceMobile';
 import { ForkKnife as ForkKnifeIcon } from '@phosphor-icons/react/dist/ssr/ForkKnife';
+import { BeerBottle as BeerBottleIcon } from '@phosphor-icons/react/dist/ssr/BeerBottle';
 import { GasPump as GasPumpIcon } from '@phosphor-icons/react/dist/ssr/GasPump';
 import { Hammer as HammerIcon } from '@phosphor-icons/react/dist/ssr/Hammer';
 import { Headphones as HeadphonesIcon } from '@phosphor-icons/react/dist/ssr/Headphones';
@@ -26,6 +28,8 @@ import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Sto
 import { TShirt as TShirtIcon } from '@phosphor-icons/react/dist/ssr/TShirt';
 import { Toolbox as ToolboxIcon } from '@phosphor-icons/react/dist/ssr/Toolbox';
 import { Tree as TreeIcon } from '@phosphor-icons/react/dist/ssr/Tree';
+import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle';
+import { Pizza as PizzaIcon } from '@phosphor-icons/react/dist/ssr/Pizza';
 import { Warehouse as WarehouseIcon } from '@phosphor-icons/react/dist/ssr/Warehouse';
 import { Wrench as WrenchIcon } from '@phosphor-icons/react/dist/ssr/Wrench';
 
@@ -88,6 +92,23 @@ export const HOME_SUBCATEGORIES: Record<HomeVerticalId, readonly SubcategoryItem
     { label: 'Ushqim', Icon: ForkKnifeIcon, href: `${paths.public.marketplace}?cat=ushqime-bujqesi` },
     { label: 'Shërbime', Icon: ToolboxIcon, href: `${paths.public.marketplace}?cat=sherbime` },
     { label: 'Të tjera', Icon: ShoppingBagIcon, href: `${paths.public.marketplace}?cat=te-tjera` },
+  ],
+  businesses: [
+    { label: 'Restorant', Icon: ForkKnifeIcon, href: `${paths.public.businesses}?type=restorant` },
+    { label: 'Bar & pub', Icon: BeerBottleIcon, href: `${paths.public.businesses}?type=bar` },
+    { label: 'Kafene', Icon: CoffeeIcon, href: `${paths.public.businesses}?type=kafe` },
+    { label: 'Brunch', Icon: ForkKnifeIcon, href: `${paths.public.businesses}?type=brunch` },
+    { label: 'Piceri', Icon: PizzaIcon, href: `${paths.public.businesses}?type=piceri-fast-food` },
+    { label: 'Pastiçeri', Icon: StorefrontIcon, href: `${paths.public.businesses}?type=pasticeri` },
+  ],
+  professionals: [
+    { label: 'Freelance', Icon: UserCircleIcon, href: `${paths.public.professionals}?type=freelance` },
+    { label: 'Konsulence', Icon: BriefcaseIcon, href: `${paths.public.professionals}?type=konsulent` },
+    { label: 'Dizajn & IT', Icon: CodeIcon, href: `${paths.public.professionals}?type=dizajn-it` },
+    { label: 'Marketing', Icon: MegaphoneIcon, href: `${paths.public.professionals}?type=marketing` },
+    { label: 'Mjekësi', Icon: HospitalIcon, href: `${paths.public.professionals}?type=mjekesi` },
+    { label: 'Arsim', Icon: BookOpenIcon, href: `${paths.public.professionals}?type=arsim` },
+    { label: 'Të tjera', Icon: HeadphonesIcon, href: paths.public.professionals },
   ],
 } as const;
 

@@ -9,6 +9,7 @@ import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calenda
 import { Couch as CouchIcon } from '@phosphor-icons/react/dist/ssr/Couch';
 import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
+import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Stairs as StairsIcon } from '@phosphor-icons/react/dist/ssr/Stairs';
 
@@ -18,7 +19,7 @@ import { propertyCategoryLabel } from '@/lib/real-estate-constants';
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
-import { formatPrice, relativeAlbanianDate } from './format-helpers';
+import { formatPrice, pseudoRandomMetric, relativeAlbanianDate } from './format-helpers';
 import { SpecRow, type Spec } from './spec-row';
 
 const FURNISHING_LABEL: Record<string, string> = {
@@ -31,6 +32,10 @@ const FURNISHING_LABEL: Record<string, string> = {
 export function RealEstateCard({ listing }: { listing: PublicRealEstateListing }) {
   const location = [listing.zoneName, listing.cityName].filter(Boolean).join(', ');
   const transactionLabel = listing.transactionType === 'rent' ? 'Me qira' : 'Në shitje';
+  const viewCount = React.useMemo(
+    () => pseudoRandomMetric(`re:${listing.id}:${listing.createdAt}`, 120, 9800),
+    [listing.id, listing.createdAt],
+  );
 
   const specs: Spec[] = [
     ...(listing.bedrooms != null ? [{ Icon: BedIcon, label: `${listing.bedrooms}`, title: 'Dhoma gjumi' }] : []),
@@ -99,9 +104,17 @@ export function RealEstateCard({ listing }: { listing: PublicRealEstateListing }
             </Typography>
           </Stack>
         ) : null}
-        <Typography variant="caption" color="text.disabled">
-          {relativeAlbanianDate(listing.createdAt)}
-        </Typography>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="caption" color="text.disabled">
+            {relativeAlbanianDate(listing.createdAt)}
+          </Typography>
+          <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+            <EyeIcon size={14} weight="regular" />
+            <Typography variant="caption" color="text.disabled">
+              {new Intl.NumberFormat('en-GB').format(viewCount)}
+            </Typography>
+          </Stack>
+        </Stack>
       </Stack>
     </CardShell>
   );

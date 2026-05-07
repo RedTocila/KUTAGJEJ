@@ -28,8 +28,10 @@ import {
   useTheme,
 } from '@mui/material';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
+import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist/ssr/BuildingOffice';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
+import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
@@ -39,15 +41,26 @@ import type { ListingCategory, ListingCategoryKey } from '@/types/listing-catego
 import { listCategoriesAdmin, updateCategory } from '@/lib/admin-categories-client';
 import { useUser } from '@/hooks/use-user';
 
-const TAB_ORDER: ListingCategoryKey[] = ['real-estate', 'job-listings', 'cars', 'marketplace'];
+const TAB_ORDER: ListingCategoryKey[] = [
+  'real-estate',
+  'job-listings',
+  'cars',
+  'marketplace',
+  'businesses',
+  'professionals',
+];
 
 const CATEGORY_HELP: Record<ListingCategoryKey, string> = {
   'real-estate':
     '«Lloji i parë» që përdoruesi zgjedh për një shpallje pasurie (p.sh. Apartament, Vila, Penthouse). Slug-i përdoret në URL.',
   'job-listings':
     'Llojet e njoftimeve të punës (p.sh. Full-time, Praktikë). Slug-i përdoret në URL.',
-  cars: 'Llojet e automjeteve (p.sh. Vetura, SUV). Slug-i përdoret në URL.',
+  cars: 'Llojet e makinave (p.sh. Vetura, SUV). Slug-i përdoret në URL.',
   marketplace: 'Seksionet e tregut (p.sh. Elektronikë, Mobilje). Slug-i përdoret në URL.',
+  businesses:
+    'Llojet e vendeve (p.sh. Restorant, Bar, Kafene, Brunch). Slug-i përdoret në URL — nuk janë shpallje pasurie.',
+  professionals:
+    'Llojet e ofertave profesionale / freelance (p.sh. konsulence, shërbime). Slug-i përdoret në URL.',
 };
 
 const CATEGORY_VISUAL: Record<
@@ -58,6 +71,8 @@ const CATEGORY_VISUAL: Record<
   'job-listings': { Icon: BriefcaseIcon, accent: 'info' },
   cars: { Icon: CarIcon, accent: 'warning' },
   marketplace: { Icon: StorefrontIcon, accent: 'success' },
+  businesses: { Icon: BuildingOfficeIcon, accent: 'info' },
+  professionals: { Icon: UsersIcon, accent: 'primary' },
 };
 
 export default function KategoritePage() {
@@ -146,7 +161,7 @@ export default function KategoritePage() {
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mt: 1, maxWidth: 720, lineHeight: 1.65 }}>
             Katër vertikale fikse — secila me slug për URL dhe lloje listimi që përdoruesit zgjedhin kur publikojnë
-            (p.sh. Apartament, Vila për pasuri të paluajtshme).
+            (p.sh. Apartament, Vila për prona).
           </Typography>
         </Box>
       </Paper>

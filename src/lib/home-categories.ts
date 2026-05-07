@@ -1,12 +1,18 @@
 /**
- * Single source of truth describing the four marketplace verticals shown on
+ * Single source of truth describing the marketplace verticals shown on
  * the homepage (category tiles, latest-ads sections, hero search). Keeping
  * this in one place keeps the homepage, header dropdowns and footer in sync.
  */
 
 import { paths } from '@/paths';
 
-export type HomeVerticalId = 'real-estate' | 'cars' | 'jobs' | 'marketplace';
+export type HomeVerticalId =
+  | 'real-estate'
+  | 'cars'
+  | 'jobs'
+  | 'marketplace'
+  | 'businesses'
+  | 'professionals';
 
 export interface HomeVertical {
   id: HomeVerticalId;
@@ -29,22 +35,22 @@ export interface HomeVertical {
 export const HOME_VERTICALS: readonly HomeVertical[] = [
   {
     id: 'real-estate',
-    label: 'Pasuri të paluajtshme',
+    label: 'Prona',
     tagline: 'Apartamente, vila, ambiente biznesi dhe toka',
     gradient: ['#76ba1b', '#3a8c00'] as const,
     iconKey: 'buildings',
     href: paths.public.realEstate,
-    postHref: '/user/dashboard/pasuri-te-paluajtshme',
+    postHref: '/user/dashboard/prona',
     searchPlaceholder: 'Kërko apartament, qytet, zonë…',
   },
   {
     id: 'cars',
-    label: 'Automjete',
+    label: 'Makina',
     tagline: 'Makina, motora, mjete pune dhe pjesë',
     gradient: ['#2563EB', '#1E3A8A'] as const,
     iconKey: 'car',
     href: paths.public.cars,
-    postHref: '/user/dashboard/automjete',
+    postHref: '/user/dashboard/makina',
     searchPlaceholder: 'Kërko marka, model, vit…',
   },
   {
@@ -66,6 +72,26 @@ export const HOME_VERTICALS: readonly HomeVertical[] = [
     href: paths.public.marketplace,
     postHref: '/user/dashboard/tregu',
     searchPlaceholder: 'Kërko çfarëdo që ke në mendje…',
+  },
+  {
+    id: 'businesses',
+    label: 'Biznese',
+    tagline: 'Restorante, bar, kafene — orare, rezervime dhe shërbime',
+    gradient: ['#0ea5e9', '#0369a1'] as const,
+    iconKey: 'storefront',
+    href: paths.public.businesses,
+    postHref: '/user/dashboard/biznese',
+    searchPlaceholder: 'Kërko restorant, bar, qytet…',
+  },
+  {
+    id: 'professionals',
+    label: 'Profesionistë',
+    tagline: 'Freelance, konsulence dhe shërbime profesionale',
+    gradient: ['#14b8a6', '#0f766e'] as const,
+    iconKey: 'briefcase',
+    href: paths.public.professionals,
+    postHref: '/user/dashboard/profesioniste',
+    searchPlaceholder: 'Kërko profesion, shërbim, qytet…',
   },
 ] as const;
 

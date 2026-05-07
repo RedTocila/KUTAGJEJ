@@ -8,8 +8,8 @@ async function ensureListingCategories() {
   const defaults = [
     {
       key: 'real-estate',
-      title: 'Pasuri të paluajtshme',
-      slug: 'pasuri-te-paluajtshme',
+      title: 'Prona',
+      slug: 'prona',
       listingTypes: [
         { slug: 'apartament', label: 'Apartament' },
         { slug: 'vila', label: 'Vila' },
@@ -28,8 +28,8 @@ async function ensureListingCategories() {
     },
     {
       key: 'cars',
-      title: 'Automjete',
-      slug: 'automjete',
+      title: 'Makina',
+      slug: 'makina',
       listingTypes: [
         { slug: 'vetura', label: 'Vetura' },
         { slug: 'suv', label: 'SUV' },
@@ -44,6 +44,30 @@ async function ensureListingCategories() {
         { slug: 'elektronike', label: 'Elektronikë' },
         { slug: 'mobilje', label: 'Mobilje' },
         { slug: 'veshje', label: 'Veshje' },
+      ],
+    },
+    {
+      key: 'businesses',
+      title: 'Biznese',
+      slug: 'biznese',
+      listingTypes: [
+        { slug: 'restorant', label: 'Restorant' },
+        { slug: 'bar', label: 'Bar & pub' },
+        { slug: 'kafe', label: 'Kafene' },
+        { slug: 'brunch', label: 'Brunch & mëngjes' },
+        { slug: 'piceri-fast-food', label: 'Piceri & fast food' },
+        { slug: 'pasticeri', label: 'Pastiçeri & ëmbëlsira' },
+      ],
+    },
+    {
+      key: 'professionals',
+      title: 'Profesionistë',
+      slug: 'profesioniste',
+      listingTypes: [
+        { slug: 'konsulent', label: 'Konsulence' },
+        { slug: 'freelance', label: 'Freelance' },
+        { slug: 'sherbim', label: 'Shërbime profesionale' },
+        { slug: 'kurse', label: 'Kurse & trajnim' },
       ],
     },
   ];

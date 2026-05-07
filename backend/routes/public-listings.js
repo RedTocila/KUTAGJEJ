@@ -4,7 +4,28 @@ const RealEstateListing = require('../models/RealEstateListing');
 const CarListing = require('../models/CarListing');
 const JobListing = require('../models/JobListing');
 const MarketplaceListing = require('../models/MarketplaceListing');
+const DirectoryListing = require('../models/DirectoryListing');
 const RealEstateCity = require('../models/RealEstateCity');
+
+/** Venue & service categories for Biznese (not commercial real estate). */
+const BUSINESS_CATEGORY_LABELS = {
+  restorant: 'Restorant',
+  bar: 'Bar & pub',
+  kafe: 'Kafene',
+  brunch: 'Brunch & mëngjes',
+  'piceri-fast-food': 'Piceri & fast food',
+  pasticeri: 'Pastiçeri & ëmbëlsira',
+};
+const PROFESSIONAL_CATEGORY_LABELS = {
+  konsulent: 'Konsulence',
+  freelance: 'Freelance',
+  sherbim: 'Shërbime profesionale',
+  kurse: 'Kurse & trajnim',
+  'dizajn-it': 'Dizajn & IT',
+  marketing: 'Marketing',
+  mjekesi: 'Mjekësi',
+  arsim: 'Arsim',
+};
 
 const router = express.Router();
 
@@ -138,6 +159,53 @@ function formatMarketplace(doc, cityById) {
   };
 }
 
+function directoryCategoryLabel(vertical, categorySlug) {
+  const map = vertical === 'businesses' ? BUSINESS_CATEGORY_LABELS : PROFESSIONAL_CATEGORY_LABELS;
+  return map[categorySlug] ?? categorySlug;
+}
+
+function formatDirectory(doc, cityById) {
+  const city = cityById.get(String(doc.cityId));
+  const vertical = doc.vertical;
+  const categorySlug = doc.category;
+  const base = {
+    id: String(doc._id),
+    kind: vertical,
+    title: doc.title,
+    description: snippet(doc.description),
+    category: categorySlug,
+    categoryLabel: directoryCategoryLabel(vertical, categorySlug),
+    cityName: city?.name ?? null,
+    contactPhone: doc.contactPhone ?? null,
+    imageUrl: pickImage(doc),
+    imageUrls: doc.imageUrls ?? [],
+    createdAt: doc.createdAt,
+  };
+  if (vertical === 'businesses') {
+    const oh = doc.openingHours != null ? String(doc.openingHours).replace(/\s+/g, ' ').trim() : '';
+    return {
+      ...base,
+      condition: null,
+      price: null,
+      currency: null,
+      openingHours: oh || null,
+      reservationsEnabled: Boolean(doc.reservationsEnabled),
+      reservationUrl: doc.reservationUrl?.trim() || null,
+      servicesHighlight: doc.servicesHighlight?.replace(/\s+/g, ' ').trim() || null,
+    };
+  }
+  return {
+    ...base,
+    condition: doc.condition ?? null,
+    price: doc.price ?? null,
+    currency: doc.currency ?? null,
+    openingHours: null,
+    reservationsEnabled: false,
+    reservationUrl: null,
+    servicesHighlight: null,
+  };
+}
+
 async function latestRealEstate(limit) {
   const docs = await RealEstateListing.find().sort({ createdAt: -1 }).limit(limit).lean();
   const cityById = await buildCityIndex(docs);
@@ -162,32 +230,49 @@ async function latestMarketplace(limit) {
   return docs.map((d) => formatMarketplace(d, cityById));
 }
 
+async function latestDirectory(vertical, limit) {
+  const docs = await DirectoryListing.find({ vertical })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
+  const cityById = await buildCityIndex(docs);
+  return docs.map((d) => formatDirectory(d, cityById));
+}
+
 /** GET /api/public/listings/latest — newest listings per vertical (homepage). */
 router.get('/latest', async (req, res) => {
   try {
     const limit = clampLimit(req.query.limit);
-    const [realEstate, cars, jobs, marketplace] = await Promise.all([
+    const [realEstate, cars, jobs, marketplace, businesses, professionals] = await Promise.all([
       latestRealEstate(limit),
       latestCars(limit),
       latestJobs(limit),
       latestMarketplace(limit),
+      latestDirectory('businesses', limit),
+      latestDirectory('professionals', limit),
     ]);
     const counts = await Promise.all([
       RealEstateListing.estimatedDocumentCount(),
       CarListing.estimatedDocumentCount(),
       JobListing.estimatedDocumentCount(),
       MarketplaceListing.estimatedDocumentCount(),
+      DirectoryListing.countDocuments({ vertical: 'businesses' }),
+      DirectoryListing.countDocuments({ vertical: 'professionals' }),
     ]);
     res.json({
       realEstate,
       cars,
       jobs,
       marketplace,
+      businesses,
+      professionals,
       totals: {
         realEstate: counts[0],
         cars: counts[1],
         jobs: counts[2],
         marketplace: counts[3],
+        businesses: counts[4],
+        professionals: counts[5],
       },
     });
   } catch (err) {
@@ -232,6 +317,26 @@ router.get('/marketplace', async (req, res) => {
     res.json({ listings: await latestMarketplace(limit) });
   } catch (err) {
     console.error('GET /public/listings/marketplace:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/businesses', async (req, res) => {
+  try {
+    const limit = clampLimit(req.query.limit);
+    res.json({ listings: await latestDirectory('businesses', limit) });
+  } catch (err) {
+    console.error('GET /public/listings/businesses:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/professionals', async (req, res) => {
+  try {
+    const limit = clampLimit(req.query.limit);
+    res.json({ listings: await latestDirectory('professionals', limit) });
+  } catch (err) {
+    console.error('GET /public/listings/professionals:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });

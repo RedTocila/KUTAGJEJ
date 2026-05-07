@@ -41,21 +41,7 @@ export function CategoryTiles({ totals }: CategoryTilesProps) {
                 },
               }}
             >
-              <Box
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 1.5,
-                  flexShrink: 0,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-                  p: 0.5,
-                }}
-              >
-                <VerticalIcon verticalId={vertical.id} size={28} decorative />
-              </Box>
+              <VerticalIcon verticalId={vertical.id} size={46} decorative />
               <Stack spacing={0.1} sx={{ minWidth: 0, flex: 1 }}>
                 <Typography
                   sx={{ fontWeight: 600, fontSize: '0.95rem', lineHeight: 1.25, color: 'text.primary' }}

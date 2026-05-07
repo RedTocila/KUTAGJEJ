@@ -1,11 +1,16 @@
-'use client';
-
 import * as React from 'react';
 import { Box, Container, Stack, Typography } from '@mui/material';
 
-import { HeroSearch } from './hero-search';
+import type { HomeBannerDto } from '@/lib/home-banners-client';
 
-export function HeroSection() {
+import { HeroCategoryCircles } from './hero-category-circles';
+import { HomeBannerCarousel } from './home-banner-carousel';
+
+export interface HeroSectionProps {
+  banners: HomeBannerDto[];
+}
+
+export function HeroSection({ banners }: HeroSectionProps) {
   return (
     <Box
       component="header"
@@ -19,6 +24,7 @@ export function HeroSection() {
             id="hero-title"
             component="h1"
             sx={{
+              display: 'none',
               fontWeight: 800,
               fontSize: { xs: '1.6rem', sm: '1.9rem', md: '2.4rem' },
               lineHeight: { xs: 1.2, md: 1.15 },
@@ -34,6 +40,7 @@ export function HeroSection() {
             component="p"
             color="text.secondary"
             sx={{
+              display: 'none',
               fontSize: { xs: '0.95rem', md: '1.05rem' },
               fontWeight: 500,
               lineHeight: 1.55,
@@ -48,6 +55,7 @@ export function HeroSection() {
             component="p"
             color="text.disabled"
             sx={{
+              display: 'none',
               fontSize: { xs: '0.85rem', md: '0.9rem' },
               fontWeight: 500,
               fontStyle: 'italic',
@@ -57,9 +65,8 @@ export function HeroSection() {
             kërko shpejt, dhe gjej saktësisht atë që do.
           </Typography>
 
-          <Box sx={{ width: '100%' }}>
-            <HeroSearch />
-          </Box>
+          <HeroCategoryCircles variant="links" />
+          <HomeBannerCarousel banners={banners} />
         </Stack>
       </Container>
     </Box>

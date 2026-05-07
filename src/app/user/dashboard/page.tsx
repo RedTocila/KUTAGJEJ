@@ -95,27 +95,13 @@ export default function UserDashboardPage() {
                 }}
               >
                 <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
-                  <Box
-                    sx={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: 2,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: (theme) =>
-                        theme.palette.mode === 'dark' ? 'rgba(118, 186, 27, 0.15)' : 'rgba(118, 186, 27, 0.12)',
-                      p: 1,
-                    }}
-                  >
-                    <VerticalIcon verticalId="real-estate" size={36} decorative />
-                  </Box>
+                  <VerticalIcon verticalId="real-estate" size={54} decorative />
                   <Box>
                     <Typography variant="h6" sx={{ fontWeight: 700 }}>
                       Posto njoftim
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Zgjidh kategorinë e njoftimit, pastaj plotëso formularin (fushat në anglisht për pasuri të paluajtshme).
+                      Zgjidh kategorinë e njoftimit, pastaj plotëso formularin (fushat në anglisht për prona).
                     </Typography>
                   </Box>
                 </Stack>

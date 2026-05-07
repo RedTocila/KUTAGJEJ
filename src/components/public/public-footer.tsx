@@ -17,10 +17,12 @@ const COLUMNS = [
   {
     title: 'Kategoritë',
     links: [
-      { label: 'Pasuri të paluajtshme', href: paths.public.realEstate },
-      { label: 'Automjete', href: paths.public.cars },
+      { label: 'Prona', href: paths.public.realEstate },
+      { label: 'Makina', href: paths.public.cars },
       { label: 'Punë', href: paths.public.jobs },
       { label: 'Tregu', href: paths.public.marketplace },
+      { label: 'Biznese', href: paths.public.businesses },
+      { label: 'Profesionistë', href: paths.public.professionals },
     ],
   },
   {
@@ -102,7 +104,7 @@ export function PublicFooter() {
               />
             </RouterLink>
             <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-              {config.site.description} Posto, kërko dhe gjej shpejt — pasuri, automjete, punë dhe shumë më tepër, në një vend.
+              {config.site.description} Posto, kërko dhe gjej shpejt — prona, makina, punë dhe shumë më tepër, në një vend.
             </Typography>
             <Stack spacing={1}>
               <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>

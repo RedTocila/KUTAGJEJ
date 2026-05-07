@@ -12,12 +12,12 @@ import { paths } from '@/paths';
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: 'Pasuri të paluajtshme — Apartamente, vila & ambiente biznesi',
+  title: 'Prona — Apartamente, vila & ambiente biznesi',
   description:
     'Shfleto njoftimet e fundit për shtëpi, apartamente, vila, ambiente biznesi, dyqane dhe toka në KuTaGjej. Posto njoftim falas dhe gjej blerës ose qiramarrës shpejt.',
   alternates: { canonical: paths.public.realEstate },
   openGraph: {
-    title: `Pasuri të paluajtshme | ${config.site.name}`,
+    title: `Prona | ${config.site.name}`,
     description: 'Apartamente, vila, dyqane dhe toka në Shqipëri — të gjitha në KuTaGjej.',
     url: `${config.site.url}${paths.public.realEstate}`,
     type: 'website',

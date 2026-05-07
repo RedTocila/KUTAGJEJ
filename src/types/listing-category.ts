@@ -1,4 +1,10 @@
-export type ListingCategoryKey = 'real-estate' | 'job-listings' | 'cars' | 'marketplace';
+export type ListingCategoryKey =
+  | 'real-estate'
+  | 'job-listings'
+  | 'cars'
+  | 'marketplace'
+  | 'businesses'
+  | 'professionals';
 
 export interface ListingTypeOption {
   slug: string;

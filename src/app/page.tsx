@@ -1,8 +1,7 @@
 import * as React from 'react';
 import type { Metadata } from 'next';
-import { Box, Container } from '@mui/material';
+import { Box } from '@mui/material';
 
-import { CategoryTiles } from '@/components/public/category-tiles';
 import { HeroSection } from '@/components/public/hero-section';
 import { HomepageBanner } from '@/components/public/homepage-banner';
 import { PublicShell } from '@/components/public/public-shell';
@@ -11,13 +10,16 @@ import { ListingsSection } from '@/components/public/listings-section';
 import { SeoIntroSection } from '@/components/public/seo-intro-section';
 import { CarCard } from '@/components/public/listing-cards/car-card';
 import { JobCard } from '@/components/public/listing-cards/job-card';
+import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { config } from '@/config';
 import { HOME_VERTICALS } from '@/lib/home-categories';
+import { fetchHomeBanners } from '@/lib/home-banners-client';
 import {
   fetchHomepageListings,
   type PublicCarListing,
+  type PublicDirectoryListing,
   type PublicJobListing,
   type PublicMarketplaceListing,
   type PublicRealEstateListing,
@@ -27,13 +29,13 @@ import { paths } from '@/paths';
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: `${config.site.name} — Njoftime falas: pasuri, automjete, punë dhe tregu në Shqipëri`,
+  title: `${config.site.name} — Njoftime falas: prona, makina, punë dhe tregu në Shqipëri`,
   description:
     'KuTaGjej, platforma shqiptare e njoftimeve. Shfleto apartamente me qira e shitje, vetura të reja dhe të përdorura, oferta pune në Tiranë, Durrës e gjithë Shqipërinë, dhe tregun online — ose posto njoftim falas në sekonda.',
   keywords: [
     'KuTaGjej',
     'njoftime Shqipëri',
-    'pasuri të paluajtshme Shqipëri',
+    'prona Shqipëri',
     'apartamente me qira Tiranë',
     'apartamente me qira Durrës',
     'shitje shtëpie Tiranë',
@@ -54,14 +56,14 @@ export const metadata: Metadata = {
     siteName: config.site.name,
     title: `${config.site.name} — Njoftime falas në Shqipëri`,
     description:
-      'Posto, kërko dhe gjej në KuTaGjej — pasuri të paluajtshme, automjete, vende pune dhe artikuj. Falas dhe shumë i shpejtë.',
+      'Posto, kërko dhe gjej në KuTaGjej — prona, makina, vende pune dhe artikuj. Falas dhe shumë i shpejtë.',
     images: [{ url: '/KuTaGjejLogo.png', alt: config.site.name, width: 512, height: 512 }],
   },
   twitter: {
     card: 'summary_large_image',
     title: `${config.site.name} — Njoftime në një vend`,
     description:
-      'Posto, kërko dhe gjej shpejt: pasuri, automjete, punë dhe tregu — të gjitha në KuTaGjej.',
+      'Posto, kërko dhe gjej shpejt: prona, makina, punë dhe tregu — të gjitha në KuTaGjej.',
     images: ['/KuTaGjejLogo.png'],
   },
   robots: {
@@ -72,10 +74,17 @@ export const metadata: Metadata = {
   category: 'classifieds',
 };
 
-const PLACEHOLDER_TOTALS = { realEstate: 0, cars: 0, jobs: 0, marketplace: 0 };
+const PLACEHOLDER_TOTALS = {
+  realEstate: 0,
+  cars: 0,
+  jobs: 0,
+  marketplace: 0,
+  businesses: 0,
+  professionals: 0,
+};
 
 export default async function HomePage() {
-  const bundle = await fetchHomepageListings(8);
+  const [bundle, homeBanners] = await Promise.all([fetchHomepageListings(8), fetchHomeBanners()]);
   const totals = bundle.totals ?? PLACEHOLDER_TOTALS;
 
   const jsonLd = {
@@ -127,6 +136,12 @@ export default async function HomePage() {
           return bundle.jobs.map((l) => jobItem(l));
         case 'marketplace':
           return bundle.marketplace.map((l) => marketplaceItem(l));
+        case 'businesses':
+          return bundle.businesses.map((l) => directoryItem(l));
+        case 'professionals':
+          return bundle.professionals.map((l) => directoryItem(l));
+        default:
+          return [];
       }
     })();
     return {
@@ -153,20 +168,7 @@ export default async function HomePage() {
         <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       ))}
 
-      <HeroSection />
-
-      <Box component="section" aria-label="Kategoritë" sx={{ py: { xs: 2, md: 3 } }}>
-        <Container maxWidth="xl">
-          <CategoryTiles
-            totals={{
-              'real-estate': totals.realEstate,
-              cars: totals.cars,
-              jobs: totals.jobs,
-              marketplace: totals.marketplace,
-            }}
-          />
-        </Container>
-      </Box>
+      <HeroSection banners={homeBanners} />
 
       <ListingsSection
         verticalId="real-estate"
@@ -192,16 +194,22 @@ export default async function HomePage() {
         variant="secondary"
         eyebrow="Komuniteti i KuTaGjej"
         title="Mijëra njoftime, çdo ditë — të gjitha në një vend"
-        subtitle="Pasuri të paluajtshme, automjete, vende pune dhe artikuj për tregun. Bashkohu me përdoruesit që po e ndërtojnë komunitetin më të madh të njoftimeve në Shqipëri."
+        subtitle="Prona, makina, vende pune dhe artikuj për tregun. Bashkohu me përdoruesit që po e ndërtojnë komunitetin më të madh të njoftimeve në Shqipëri."
         primaryAction={{ label: 'Eksploro njoftimet', href: paths.public.realEstate }}
         secondaryAction={{ label: 'Posto falas', href: paths.user.realEstateListing }}
         stats={[
           {
-            value: totals.realEstate + totals.cars + totals.jobs + totals.marketplace,
+            value:
+              totals.realEstate +
+              totals.cars +
+              totals.jobs +
+              totals.marketplace +
+              totals.businesses +
+              totals.professionals,
             suffix: '+',
             label: 'Njoftime aktive',
           },
-          { value: 4, label: 'Kategori kryesore' },
+          { value: 6, label: 'Kategori kryesore' },
           { value: 12, suffix: '+', label: 'Qytete të mbuluara' },
         ]}
       />
@@ -222,6 +230,30 @@ export default async function HomePage() {
         <ListingsCarousel>
           {bundle.marketplace.map((listing) => (
             <MarketplaceCard key={listing.id} listing={listing} />
+          ))}
+        </ListingsCarousel>
+      </ListingsSection>
+
+      <ListingsSection
+        verticalId="businesses"
+        total={totals.businesses}
+        isEmpty={bundle.businesses.length === 0}
+      >
+        <ListingsCarousel>
+          {bundle.businesses.map((listing) => (
+            <DirectoryListingCard key={listing.id} listing={listing} />
+          ))}
+        </ListingsCarousel>
+      </ListingsSection>
+
+      <ListingsSection
+        verticalId="professionals"
+        total={totals.professionals}
+        isEmpty={bundle.professionals.length === 0}
+      >
+        <ListingsCarousel>
+          {bundle.professionals.map((listing) => (
+            <DirectoryListingCard key={listing.id} listing={listing} />
           ))}
         </ListingsCarousel>
       </ListingsSection>
@@ -350,6 +382,48 @@ function marketplaceItem(l: PublicMarketplaceListing) {
               availability: 'https://schema.org/InStock',
               areaServed: l.cityName ?? 'AL',
             }
+          : undefined,
+    },
+  };
+}
+
+function directoryItem(l: PublicDirectoryListing) {
+  if (l.kind === 'businesses') {
+    return {
+      item: {
+        '@type': 'Restaurant',
+        name: l.title,
+        description: l.description,
+        image: l.imageUrl ?? undefined,
+        address: l.cityName
+          ? {
+              '@type': 'PostalAddress',
+              addressLocality: l.cityName,
+              addressCountry: 'AL',
+            }
+          : undefined,
+        telephone: l.contactPhone ?? undefined,
+        openingHours: l.openingHours ?? undefined,
+        servesCuisine: l.servicesHighlight ?? undefined,
+      },
+    };
+  }
+  return {
+    item: {
+      '@type': 'ProfessionalService',
+      name: l.title,
+      description: l.description,
+      image: l.imageUrl ?? undefined,
+      address: l.cityName
+        ? {
+            '@type': 'PostalAddress',
+            addressLocality: l.cityName,
+            addressCountry: 'AL',
+          }
+        : undefined,
+      priceRange:
+        l.price != null
+          ? `${l.price} ${l.currency === 'LEK' ? 'ALL' : l.currency ?? 'EUR'}`
           : undefined,
     },
   };

@@ -2,10 +2,14 @@ export const paths = {
   home: '/',
   /** Public-facing browse pages — wired from the homepage and footer. */
   public: {
-    realEstate: '/pasuri-te-paluajtshme',
-    cars: '/automjete',
+    realEstate: '/prona',
+    cars: '/makina',
     jobs: '/pune',
     marketplace: '/tregu',
+    /** Business listings (lokal, zyrë, shërbime biznesi). */
+    businesses: '/biznese',
+    /** Professionals & freelance services. */
+    professionals: '/profesioniste',
     about: '/rreth-nesh',
     terms: '/kushtet',
     privacy: '/privatesia',
@@ -17,7 +21,9 @@ export const paths = {
     dashboard: '/user/dashboard',
     profile: '/user/dashboard/profili',
     /** Immovable property — add listing (individual / business portal). */
-    realEstateListing: '/user/dashboard/pasuri-te-paluajtshme',
+    realEstateListing: '/user/dashboard/prona',
+    businessesListing: '/user/dashboard/biznese',
+    professionalsListing: '/user/dashboard/profesioniste',
     /** Saved real-estate listings for the signed-in user. */
     myRealEstateListings: '/user/dashboard/shpalljet-e-mia',
   },

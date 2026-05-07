@@ -6,6 +6,7 @@ const { getMongoUri } = require('./lib/get-mongo-uri');
 const { ensureListingCategories } = require('./lib/ensure-listing-categories');
 const { ensureCoreRoles } = require('./lib/core-roles');
 const { ensureReferralProgram } = require('./lib/ensure-referral-program');
+const { ensureHomeBanners } = require('./lib/ensure-home-banners');
 
 const app = express();
 const corsMiddleware = require('./middleware/cors');
@@ -29,6 +30,8 @@ function registerModels() {
   require('./models/CarListing');
   require('./models/JobListing');
   require('./models/MarketplaceListing');
+  require('./models/DirectoryListing');
+  require('./models/HomeBanner');
 }
 
 const connectDB = async () => {
@@ -48,6 +51,7 @@ const connectDB = async () => {
     await ensureListingCategories();
     await ensureCoreRoles();
     await ensureReferralProgram();
+    await ensureHomeBanners();
   } catch (error) {
     console.error('MongoDB connection failed:', error.message);
     const msg = String(error.message || '');
@@ -95,6 +99,7 @@ app.use('/api/admin/categories', require('./routes/admin-categories'));
 app.use('/api/admin/contracts', require('./routes/admin-contracts'));
 app.use('/api/contracts', require('./routes/contracts'));
 app.use('/api/admin/referral-program', require('./routes/admin-referral-program'));
+app.use('/api/admin/home-banners', require('./routes/admin-home-banners'));
 app.use('/api/referral-program', require('./routes/referral-program'));
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/real-estate/locations', require('./routes/real-estate-locations'));
@@ -104,6 +109,7 @@ app.use('/api/listings/cars', require('./routes/car-listings'));
 app.use('/api/listings/jobs', require('./routes/job-listings'));
 app.use('/api/listings/marketplace', require('./routes/marketplace-listings'));
 app.use('/api/public/listings', require('./routes/public-listings'));
+app.use('/api/public/home-banners', require('./routes/public-home-banners'));
 
 const startServer = async () => {
   try {

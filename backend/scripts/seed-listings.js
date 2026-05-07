@@ -1,8 +1,7 @@
 /**
- * Seeds 6 demo listings per vertical (real-estate, cars, jobs, marketplace) so
- * the homepage has something to render. Idempotent: re-running the script
- * removes the previous batch (recognised by the demo poster's email) before
- * re-inserting.
+ * Seeds 6 demo listings per vertical (real-estate, cars, jobs, marketplace,
+ * biznese, profesionistë). Idempotent: re-running removes the previous batch
+ * (demo poster email) before re-inserting.
  *
  * Usage:  node scripts/seed-listings.js
  */
@@ -17,6 +16,7 @@ const RealEstateListing = require('../models/RealEstateListing');
 const CarListing = require('../models/CarListing');
 const JobListing = require('../models/JobListing');
 const MarketplaceListing = require('../models/MarketplaceListing');
+const DirectoryListing = require('../models/DirectoryListing');
 const IndividualUser = require('../models/IndividualUser');
 
 const DEMO_EMAIL = 'demo@kutagjej.al';
@@ -68,6 +68,24 @@ const MARKETPLACE_IMAGES = [
   unsplash('photo-1512820790803-83ca734da794'), // books stack
   unsplash('photo-1485965120184-e220f721d03e'), // mountain bike
   unsplash('photo-1558060370-d644479cb6f7'), // lego/toys
+];
+
+const BUSINESS_DIRECTORY_IMAGES = [
+  unsplash('photo-1517248135467-4c7edcad34c4'), // restaurant dining
+  unsplash('photo-1543007630-9710e4a00a20'), // bar interior
+  unsplash('photo-1501339847302-ac426a4a7cbb'), // speciality coffee
+  unsplash('photo-1559339352-11d035aa65de'), // brunch / cafe table
+  unsplash('photo-1565299624946-b28f40a0ae38'), // pizza / food
+  unsplash('photo-1558618666-fcd25c85cd64'), // pastry / dessert
+];
+
+const PROFESSIONAL_DIRECTORY_IMAGES = [
+  unsplash('photo-1522071820081-009f0129c71c'), // team collaboration
+  unsplash('photo-1573496359132-6a29656c1867'), // professional portrait
+  unsplash('photo-1552664730-d307ca884978'), // workshop
+  unsplash('photo-1551434678-e076c223a692'), // developers
+  unsplash('photo-1504384308090-c894fdcc538d'), // presentation
+  unsplash('photo-1523240795612-9a054b0db644'), // training / classroom
 ];
 
 // ---------------------------------------------------------------------------
@@ -449,6 +467,156 @@ function jobSeeds(loc) {
   ];
 }
 
+function businessDirectorySeeds(loc) {
+  const cityId = (slug) => loc.bySlug.get(slug)._id;
+  return [
+    {
+      vertical: 'businesses',
+      cityId: cityId('tirane'),
+      title: 'Gjelbër — kuzhinë mesdhetare & verandë',
+      description:
+        'Menù me peshk të freskët, makarona të përditësuara dhe verë rajonale. Tavolina në pemë gjatë verës. Fëmijë mirëpritur.',
+      category: 'restorant',
+      servicesHighlight: 'Tavolina me rezervim · Verandë · Muzikë live të premteve',
+      openingHours: 'Hën–Die 12:00–24:00 · Diele: brunch 10:00–15:00, darkë 18:00–23:00',
+      reservationsEnabled: true,
+      reservationUrl: 'https://example.com/rezervo-gjelber',
+    },
+    {
+      vertical: 'businesses',
+      cityId: cityId('durres'),
+      title: 'Radio Bar Durres — kokteje & vinyl',
+      description:
+        'Kokteje me përberës vendorë, birrë craft në tap dhe lista vinili çdo të mërkurë. Hyni pa vesh kode — vetëm gjallëri e mirë.',
+      category: 'bar',
+      servicesHighlight: 'Kokteje signature · DJ · Tarracë me det',
+      openingHours: 'Mar–Die 18:00–02:00 · Hën: pushim',
+      reservationsEnabled: true,
+      reservationUrl: null,
+    },
+    {
+      vertical: 'businesses',
+      cityId: cityId('tirane'),
+      title: 'Kafe Komuna — speciality & brunch i shpejtë',
+      description:
+        'Pjekje ditore, espresso bar dhe sanduiçe për në rrugë. Ushqyes për punonjësit e Bllokut — radhë e shpejtë në mëngjes.',
+      category: 'kafe',
+      servicesHighlight: 'Espresso · Croissant · Wi‑Fi · Ngjitësa USB',
+      openingHours: 'Hën–Die 07:00–21:00 · Diele 08:00–20:00',
+      reservationsEnabled: false,
+      reservationUrl: null,
+    },
+    {
+      vertical: 'businesses',
+      cityId: cityId('tirane'),
+      title: 'Mëngjesi i Parisit — brunch çdo fundjavë',
+      description:
+        'Pancake, brioche, vezë benedikt dhe leng të shtrydhur. Muzikë e butë dhe tavolina për miqësi. Përpiqu të vish herët.',
+      category: 'brunch',
+      servicesHighlight: 'Brunch · Mimoza · Tavolina jashtë (stinës)',
+      openingHours: 'Sht–Die 09:00–15:00 (fundjavë)',
+      reservationsEnabled: true,
+      reservationUrl: null,
+    },
+    {
+      vertical: 'businesses',
+      cityId: cityId('vlore'),
+      title: 'Pizza Lungomare — furre druri & porosi',
+      description:
+        'Brum i fermentuar 48 orë, mozzarella dhe domate San Marzano. Porosi për në plazh ose ha në tarracë me pamje deti.',
+      category: 'piceri-fast-food',
+      servicesHighlight: 'Porosi & take-away · Vegjetariane & pa gluten (kërko)',
+      openingHours: 'Çdo ditë 11:00–00:00',
+      reservationsEnabled: false,
+      reservationUrl: null,
+    },
+    {
+      vertical: 'businesses',
+      cityId: cityId('shkoder'),
+      title: 'Ëmbëlsira Rozafa — bakllava & torta porosi',
+      description:
+        'Traditë familjare që nga vitet ’90. Bakllava me arra, tulumba dhe torta për dasma në 48 orë paralajmërim.',
+      category: 'pasticeri',
+      servicesHighlight: 'Torta dasmash · ëmbëlsira orientale · kafe turke',
+      openingHours: 'Hën–Sht 08:00–20:00 · Diele 09:00–14:00',
+      reservationsEnabled: false,
+      reservationUrl: null,
+    },
+  ];
+}
+
+function professionalDirectorySeeds(loc) {
+  const cityId = (slug) => loc.bySlug.get(slug)._id;
+  return [
+    {
+      vertical: 'professionals',
+      cityId: cityId('tirane'),
+      title: 'Konsulent financiar — plane biznesi & investime',
+      description:
+        'MBA me 10+ vite përvojë. Ndihmë në buxhetim, pitch për investitorë dhe analiza të tregut. Anglisht / italisht.',
+      category: 'konsulent',
+      condition: null,
+      price: 80,
+      currency: 'EUR',
+    },
+    {
+      vertical: 'professionals',
+      cityId: cityId('tirane'),
+      title: 'Full-stack Developer (Node, React) — remote & onsite',
+      description:
+        'Zhvillim aplikacionesh web dhe API. Punë me sprint, kod i dokumentuar, support pas dorëzimit.',
+      category: 'freelance',
+      condition: null,
+      price: 45,
+      currency: 'EUR',
+    },
+    {
+      vertical: 'professionals',
+      cityId: cityId('durres'),
+      title: 'Avokat civil & biznes — mënyrime dhe kontrata',
+      description:
+        'Konsulencë në të drejtë tregtare, themelim shoqëri, kontrata pune. Takime në zyrë ose online.',
+      category: 'sherbim',
+      condition: null,
+      price: null,
+      currency: null,
+    },
+    {
+      vertical: 'professionals',
+      cityId: cityId('vlore'),
+      title: 'Fotograf dasmash & eventesh — pako foto + video',
+      description:
+        'Portfolio 8 vite. Drone opsional, editim në 2 javë. Disponueshmëri maj–shtator (rezervim paraprak).',
+      category: 'freelance',
+      condition: null,
+      price: 750,
+      currency: 'EUR',
+    },
+    {
+      vertical: 'professionals',
+      cityId: cityId('tirane'),
+      title: 'Kurse Excel për biznes — grup 6 persona',
+      description:
+        '4 seanca praktike: pivot, automate, raporte. Certifikatë pjesëmarrjeje. Materiale të përfshira.',
+      category: 'kurse',
+      condition: null,
+      price: 12000,
+      currency: 'LEK',
+    },
+    {
+      vertical: 'professionals',
+      cityId: cityId('shkoder'),
+      title: 'Kontabilist i certifikuar — tatime & listë pagash',
+      description:
+        'Shërbim mujor për SME, deklarata TVSH dhe konsulencë përmes telefonit. Referenca nga 20+ klientë.',
+      category: 'sherbim',
+      condition: null,
+      price: 350,
+      currency: 'EUR',
+    },
+  ];
+}
+
 function marketplaceSeeds(loc) {
   const cityId = (slug) => loc.bySlug.get(slug)._id;
   return [
@@ -549,9 +717,10 @@ async function run() {
     CarListing.deleteMany(wipeFilter),
     JobListing.deleteMany(wipeFilter),
     MarketplaceListing.deleteMany(wipeFilter),
+    DirectoryListing.deleteMany(wipeFilter),
   ]);
   console.log(
-    `✓ Cleared previous demo data (re=${wiped[0].deletedCount} cars=${wiped[1].deletedCount} jobs=${wiped[2].deletedCount} mkt=${wiped[3].deletedCount})`,
+    `✓ Cleared previous demo data (re=${wiped[0].deletedCount} cars=${wiped[1].deletedCount} jobs=${wiped[2].deletedCount} mkt=${wiped[3].deletedCount} dir=${wiped[4].deletedCount})`,
   );
 
   const baseDoc = { posterId: demoUser._id, posterModel: 'IndividualUser', contactPhone: DEMO_PHONE };
@@ -602,6 +771,26 @@ async function run() {
   }));
   await MarketplaceListing.insertMany(mktDocs, { timestamps: false });
   console.log(`✓ Inserted ${mktDocs.length} marketplace listings`);
+
+  const bizDocs = businessDirectorySeeds(loc).map((d, i) => ({
+    ...baseDoc,
+    ...d,
+    imageUrls: pickImage(BUSINESS_DIRECTORY_IMAGES, i),
+    createdAt: stagger(i),
+    updatedAt: stagger(i),
+  }));
+  await DirectoryListing.insertMany(bizDocs, { timestamps: false });
+  console.log(`✓ Inserted ${bizDocs.length} business directory listings`);
+
+  const profDocs = professionalDirectorySeeds(loc).map((d, i) => ({
+    ...baseDoc,
+    ...d,
+    imageUrls: pickImage(PROFESSIONAL_DIRECTORY_IMAGES, i),
+    createdAt: stagger(i),
+    updatedAt: stagger(i),
+  }));
+  await DirectoryListing.insertMany(profDocs, { timestamps: false });
+  console.log(`✓ Inserted ${profDocs.length} professional directory listings`);
 
   console.log('\nAll done — refresh the homepage to see the seeded listings.');
 }

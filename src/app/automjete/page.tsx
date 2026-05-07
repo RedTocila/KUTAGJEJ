@@ -12,12 +12,12 @@ import { paths } from '@/paths';
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: 'Automjete — Makina, motora dhe mjete pune për shitje',
+  title: 'Makina — Makina, motora dhe mjete pune për shitje',
   description:
-    'Eksploro shitjet e automjeteve në Shqipëri — makina, motora, mjete pune dhe pjesë këmbimi. Foto, çmime dhe specifika në KuTaGjej.',
+    'Eksploro shitjet e makinave në Shqipëri — makina, motora, mjete pune dhe pjesë këmbimi. Foto, çmime dhe specifika në KuTaGjej.',
   alternates: { canonical: paths.public.cars },
   openGraph: {
-    title: `Automjete | ${config.site.name}`,
+    title: `Makina | ${config.site.name}`,
     description: 'Makina për shitje, motora dhe mjete pune — të gjitha në KuTaGjej.',
     url: `${config.site.url}${paths.public.cars}`,
     type: 'website',

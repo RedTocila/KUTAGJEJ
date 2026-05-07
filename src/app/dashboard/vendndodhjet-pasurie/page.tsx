@@ -183,7 +183,7 @@ export default function RealEstateLocationsAdminPage() {
         }}
       >
         <Typography variant="overline" sx={{ letterSpacing: '0.12em', color: 'primary.main', fontWeight: 700 }}>
-          Pasuri të paluajtshme
+          Prona
         </Typography>
         <Typography variant="h4" sx={{ fontWeight: 800, mt: 0.5 }}>
           Cities & zones

@@ -34,3 +34,11 @@ export function findOptionLabel<T extends { value: string; label: string }>(
   if (!value) return '—';
   return options.find((option) => option.value === value)?.label ?? value;
 }
+
+export function pseudoRandomMetric(seed: string, min: number, span: number): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return min + (hash % Math.max(1, span));
+}

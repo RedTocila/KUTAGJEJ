@@ -87,16 +87,43 @@ export interface PublicMarketplaceListing {
   createdAt: string;
 }
 
+export interface PublicDirectoryListing {
+  id: string;
+  kind: 'businesses' | 'professionals';
+  title: string;
+  description: string;
+  category: string;
+  categoryLabel: string;
+  condition: string | null;
+  price: number | null;
+  currency: 'EUR' | 'LEK' | null;
+  cityName: string | null;
+  contactPhone: string | null;
+  imageUrl: string | null;
+  imageUrls: string[];
+  createdAt: string;
+  /** Biznese venues only — opening times as plain text. */
+  openingHours: string | null;
+  reservationsEnabled: boolean;
+  reservationUrl: string | null;
+  /** Short “what we offer” line for venues. */
+  servicesHighlight: string | null;
+}
+
 export interface PublicListingsBundle {
   realEstate: PublicRealEstateListing[];
   cars: PublicCarListing[];
   jobs: PublicJobListing[];
   marketplace: PublicMarketplaceListing[];
+  businesses: PublicDirectoryListing[];
+  professionals: PublicDirectoryListing[];
   totals: {
     realEstate: number;
     cars: number;
     jobs: number;
     marketplace: number;
+    businesses: number;
+    professionals: number;
   };
 }
 
@@ -137,7 +164,9 @@ const EMPTY_BUNDLE: PublicListingsBundle = {
   cars: [],
   jobs: [],
   marketplace: [],
-  totals: { realEstate: 0, cars: 0, jobs: 0, marketplace: 0 },
+  businesses: [],
+  professionals: [],
+  totals: { realEstate: 0, cars: 0, jobs: 0, marketplace: 0, businesses: 0, professionals: 0 },
 };
 
 export async function fetchHomepageListings(limit = 8): Promise<PublicListingsBundle> {
@@ -148,6 +177,8 @@ export async function fetchHomepageListings(limit = 8): Promise<PublicListingsBu
     cars: data.cars ?? [],
     jobs: data.jobs ?? [],
     marketplace: data.marketplace ?? [],
+    businesses: data.businesses ?? [],
+    professionals: data.professionals ?? [],
     totals: data.totals ?? EMPTY_BUNDLE.totals,
   };
 }
@@ -172,6 +203,20 @@ export async function fetchLatestJobs(limit = 12): Promise<PublicJobListing[]> {
 export async function fetchLatestMarketplace(limit = 12): Promise<PublicMarketplaceListing[]> {
   const data = await safeJson<{ listings: PublicMarketplaceListing[] }>(
     `/public/listings/marketplace?limit=${limit}`,
+  );
+  return data?.listings ?? [];
+}
+
+export async function fetchLatestBusinesses(limit = 12): Promise<PublicDirectoryListing[]> {
+  const data = await safeJson<{ listings: PublicDirectoryListing[] }>(
+    `/public/listings/businesses?limit=${limit}`,
+  );
+  return data?.listings ?? [];
+}
+
+export async function fetchLatestProfessionals(limit = 12): Promise<PublicDirectoryListing[]> {
+  const data = await safeJson<{ listings: PublicDirectoryListing[] }>(
+    `/public/listings/professionals?limit=${limit}`,
   );
   return data?.listings ?? [];
 }

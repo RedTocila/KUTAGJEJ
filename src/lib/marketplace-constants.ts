@@ -11,7 +11,7 @@ export const MARKETPLACE_CATEGORY_OPTIONS = [
   { value: 'libra-shkolla', label: 'Libra & Materiale shkollore' },
   { value: 'sport-hobi', label: 'Sport & Hobi' },
   { value: 'lodra', label: 'Lodra & Fëmijë' },
-  { value: 'automjete-pjese', label: 'Automjete & Pjesë këmbimi' },
+  { value: 'automjete-pjese', label: 'Makina & Pjesë këmbimi' },
   { value: 'ushqime-bujqesi', label: 'Ushqime & Bujqësi' },
   { value: 'sherbime', label: 'Shërbime' },
   { value: 'te-tjera', label: 'Të tjera' },

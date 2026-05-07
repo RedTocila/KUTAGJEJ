@@ -14,9 +14,11 @@ import {
   Typography,
 } from '@mui/material';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
+import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist/ssr/BuildingOffice';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
+import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 
 import { RealEstateListingForm } from '@/components/real-estate/real-estate-listing-form';
 import { CarListingForm } from '@/components/cars/car-listing-form';
@@ -39,6 +41,10 @@ function categoryIcon(key: ListingCategoryKey) {
       return CarIcon;
     case 'marketplace':
       return StorefrontIcon;
+    case 'businesses':
+      return BuildingOfficeIcon;
+    case 'professionals':
+      return UsersIcon;
     default:
       return BuildingsIcon;
   }
@@ -184,7 +190,11 @@ export default function UserPostListingPage() {
                                     ? 'Postoni një njoftim pune — plotësoni industrinë, kërkesat dhe pagën.'
                                     : cat.key === 'marketplace'
                                       ? 'Shisni, blini ose jepni me qira artikuj — plotësoni formularin e tregut.'
-                                      : 'Postimi për këtë kategori do të aktivizohet së shpejti.'}
+                                      : cat.key === 'businesses'
+                                        ? 'Biznese dhe lokale — formulari i dedikuar aktivizohet së shpejti.'
+                                        : cat.key === 'professionals'
+                                          ? 'Profesionistë dhe freelance — formulari i dedikuar aktivizohet së shpejti.'
+                                          : 'Postimi për këtë kategori do të aktivizohet së shpejti.'}
                             </Typography>
                           </Stack>
                         </Stack>
@@ -330,7 +340,7 @@ export default function UserPostListingPage() {
           </Stack>
           <Alert severity="info" sx={{ borderRadius: 1.5 }}>
             Kategoria <strong>{picked.title}</strong> ende nuk ofron formular postimi nga portali. Për momentin mund të
-            postoni vetëm njoftime për <strong>pasuri të paluajtshme</strong>.
+            postoni vetëm njoftime për <strong>prona</strong>.
           </Alert>
           {categories.some((c) => c.key === 'real-estate') ? (
             <Button
@@ -340,7 +350,7 @@ export default function UserPostListingPage() {
                 if (re) handlePickCategory(re);
               }}
             >
-              Kal te pasuri të paluajtshme
+              Kal te prona
             </Button>
           ) : null}
         </Stack>

@@ -210,11 +210,27 @@ export default async function HomePage() {
       </ListingsSection>
 
       <ListingsSection verticalId="cars" total={totals.cars} isEmpty={bundle.cars.length === 0} useMuiVerticalIcon>
-        <ListingsCarousel>
-          {bundle.cars.map((listing) => (
-            <CarCard key={listing.id} listing={listing} />
-          ))}
-        </ListingsCarousel>
+        <>
+          <Box
+            sx={{
+              display: { xs: 'none', md: 'grid' },
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: 2,
+              alignItems: 'stretch',
+            }}
+          >
+            {bundle.cars.slice(0, 3).map((listing) => (
+              <CarCard key={listing.id} listing={listing} variant="featured" />
+            ))}
+          </Box>
+          <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+            <ListingsCarousel>
+              {bundle.cars.map((listing) => (
+                <CarCard key={listing.id} listing={listing} />
+              ))}
+            </ListingsCarousel>
+          </Box>
+        </>
       </ListingsSection>
 
       <HomepageBanner
@@ -242,11 +258,27 @@ export default async function HomePage() {
       />
 
       <ListingsSection verticalId="jobs" total={totals.jobs} isEmpty={bundle.jobs.length === 0} useMuiVerticalIcon>
-        <ListingsCarousel>
-          {bundle.jobs.map((listing) => (
-            <JobCard key={listing.id} listing={listing} />
-          ))}
-        </ListingsCarousel>
+        <>
+          <Box
+            sx={{
+              display: { xs: 'none', md: 'grid' },
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: 2,
+              alignItems: 'stretch',
+            }}
+          >
+            {bundle.jobs.slice(0, 3).map((listing) => (
+              <JobCard key={listing.id} listing={listing} variant="featured" />
+            ))}
+          </Box>
+          <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+            <ListingsCarousel>
+              {bundle.jobs.map((listing) => (
+                <JobCard key={listing.id} listing={listing} />
+              ))}
+            </ListingsCarousel>
+          </Box>
+        </>
       </ListingsSection>
 
       <ListingsSection
@@ -255,11 +287,27 @@ export default async function HomePage() {
         isEmpty={bundle.marketplace.length === 0}
         useMuiVerticalIcon
       >
-        <ListingsCarousel>
-          {bundle.marketplace.map((listing) => (
-            <MarketplaceCard key={listing.id} listing={listing} />
-          ))}
-        </ListingsCarousel>
+        <>
+          <Box
+            sx={{
+              display: { xs: 'none', md: 'grid' },
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: 2,
+              alignItems: 'stretch',
+            }}
+          >
+            {bundle.marketplace.slice(0, 3).map((listing) => (
+              <MarketplaceCard key={listing.id} listing={listing} variant="featured" />
+            ))}
+          </Box>
+          <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+            <ListingsCarousel>
+              {bundle.marketplace.map((listing) => (
+                <MarketplaceCard key={listing.id} listing={listing} />
+              ))}
+            </ListingsCarousel>
+          </Box>
+        </>
       </ListingsSection>
 
       <ListingsSection
@@ -268,11 +316,27 @@ export default async function HomePage() {
         isEmpty={bundle.businesses.length === 0}
         useMuiVerticalIcon
       >
-        <ListingsCarousel>
-          {bundle.businesses.map((listing) => (
-            <DirectoryListingCard key={listing.id} listing={listing} />
-          ))}
-        </ListingsCarousel>
+        <>
+          <Box
+            sx={{
+              display: { xs: 'none', md: 'grid' },
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: 2,
+              alignItems: 'stretch',
+            }}
+          >
+            {bundle.businesses.slice(0, 3).map((listing) => (
+              <DirectoryListingCard key={listing.id} listing={listing} variant="featured" />
+            ))}
+          </Box>
+          <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+            <ListingsCarousel>
+              {bundle.businesses.map((listing) => (
+                <DirectoryListingCard key={listing.id} listing={listing} />
+              ))}
+            </ListingsCarousel>
+          </Box>
+        </>
       </ListingsSection>
 
       <ListingsSection
@@ -281,11 +345,27 @@ export default async function HomePage() {
         isEmpty={bundle.professionals.length === 0}
         useMuiVerticalIcon
       >
-        <ListingsCarousel>
-          {bundle.professionals.map((listing) => (
-            <DirectoryListingCard key={listing.id} listing={listing} />
-          ))}
-        </ListingsCarousel>
+        <>
+          <Box
+            sx={{
+              display: { xs: 'none', md: 'grid' },
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: 2,
+              alignItems: 'stretch',
+            }}
+          >
+            {bundle.professionals.slice(0, 3).map((listing) => (
+              <DirectoryListingCard key={listing.id} listing={listing} variant="featured" />
+            ))}
+          </Box>
+          <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+            <ListingsCarousel>
+              {bundle.professionals.map((listing) => (
+                <DirectoryListingCard key={listing.id} listing={listing} />
+              ))}
+            </ListingsCarousel>
+          </Box>
+        </>
       </ListingsSection>
 
       <HomepageBanner

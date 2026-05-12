@@ -6,21 +6,29 @@ import Link from 'next/link';
 import { IconButton, Box, Typography, Avatar, Skeleton, Stack, ButtonBase } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
+import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
-import { Heart as HeartIcon } from '@phosphor-icons/react/dist/ssr/Heart';
+import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
+import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
+import { ShoppingBag as ShoppingBagIcon } from '@phosphor-icons/react/dist/ssr/ShoppingBag';
+import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
+import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import type { ListingGalleryPlaceholderKey } from '@/lib/listing-gallery-placeholder';
 import { paths } from '@/paths';
 
-/** Serializable from Server Components (no passing icon components across the boundary). */
-export type ListingGalleryPlaceholderIcon = 'house' | 'buildings';
+export type { ListingGalleryPlaceholderKey };
+
+/** @deprecated Use `ListingGalleryPlaceholderKey`. */
+export type ListingGalleryPlaceholderIcon = Extract<ListingGalleryPlaceholderKey, 'house' | 'buildings'>;
 
 export function RealEstateListingGallery(props: {
   title: string;
   imageUrls: string[];
-  placeholderIcon?: ListingGalleryPlaceholderIcon;
+  placeholderIcon?: ListingGalleryPlaceholderKey;
   /** Default: `/prona` */
   browseListHref?: string;
   browseListAriaLabel?: string;
@@ -48,7 +56,16 @@ export function RealEstateListingGallery(props: {
   const current = urls[active] ?? null;
   const showPlaceholder = urls.length === 0;
 
-  const PlaceholderSvg = placeholderIcon === 'house' ? HouseIcon : BuildingsIcon;
+  const PLACEHOLDER_BY_KEY: Record<ListingGalleryPlaceholderKey, typeof HouseIcon> = {
+    house: HouseIcon,
+    buildings: BuildingsIcon,
+    car: CarIcon,
+    briefcase: BriefcaseIcon,
+    shopping: ShoppingBagIcon,
+    storefront: StorefrontIcon,
+    professional: UserCircleIcon,
+  };
+  const PlaceholderSvg = PLACEHOLDER_BY_KEY[placeholderIcon];
 
   const shared = React.useCallback(async () => {
     try {
@@ -111,21 +128,25 @@ export function RealEstateListingGallery(props: {
               '&:hover': { bgcolor: alpha('#000', 0.62) },
             }}
           >
-            <ShareNetworkIcon size={20} weight="regular" />
+            <ShareNetworkIcon size={20} weight="regular" color="currentColor" />
           </IconButton>
           <IconButton
             size="medium"
-            aria-label="Preferuar"
+            aria-label="Ruaj njoftimin"
             disabled
             sx={{
               bgcolor: alpha('#000', 0.45),
               color: '#fff',
               backdropFilter: 'blur(10px)',
-              opacity: 0.7,
               '&:hover': { bgcolor: alpha('#000', 0.62) },
+              '&.Mui-disabled': {
+                bgcolor: alpha('#000', 0.45),
+                color: '#fff',
+                opacity: 1,
+              },
             }}
           >
-            <HeartIcon size={20} weight="regular" />
+            <BookmarkSimpleIcon size={20} weight="regular" color="currentColor" />
           </IconButton>
         </Stack>
       </Stack>

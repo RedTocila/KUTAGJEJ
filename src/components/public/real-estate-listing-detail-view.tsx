@@ -36,6 +36,11 @@ import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { PublicRealEstateListing, PublicRealEstateListingDetail } from '@/lib/public-listings-client';
 import { listingRealEstatePublicHref, paths } from '@/paths';
 
+import {
+  LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
+  LISTING_DETAIL_HERO_IMAGE_SIZES,
+} from '@/lib/listing-detail-layout';
+
 const CONDITION_SQ: Record<string, string> = {
   new: 'E re',
   'in-construction': 'Në ndërtim',
@@ -485,7 +490,14 @@ export function RealEstateListingDetailView({
             }}
           >
             <Stack direction={{ xs: 'column', md: 'row' }} sx={{ alignItems: { md: 'stretch' }, minHeight: 0 }}>
-              <Box sx={{ flex: { md: '1 1 0%' }, minWidth: 0, width: { xs: '100%', md: 'auto' } }}>
+              <Box
+                sx={{
+                  flex: { md: `0 1 ${LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX}px` },
+                  maxWidth: { md: LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX },
+                  minWidth: 0,
+                  width: { xs: '100%', md: 'auto' },
+                }}
+              >
                 <RealEstateListingGallery
                   title={listing.title}
                   imageUrls={listing.imageUrls}
@@ -494,7 +506,7 @@ export function RealEstateListingDetailView({
                   }
                   browseListHref={paths.public.realEstate}
                   browseListAriaLabel="Prapa te lista e pronës"
-                  heroSizes="(max-width: 899px) 100vw, min(800px, 64vw)"
+                  heroSizes={LISTING_DETAIL_HERO_IMAGE_SIZES}
                 />
               </Box>
               <Box

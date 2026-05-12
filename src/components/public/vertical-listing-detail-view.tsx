@@ -29,6 +29,11 @@ import {
 } from '@/lib/job-constants';
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import { whatsappHref } from '@/lib/listing-contact';
+import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
+import {
+  LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
+  LISTING_DETAIL_HERO_IMAGE_SIZES,
+} from '@/lib/listing-detail-layout';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { AnyPublicListingDetail } from '@/lib/public-listings-client';
 
@@ -245,14 +250,21 @@ export function VerticalListingDetailView(props: {
             }}
           >
             <Stack direction={{ xs: 'column', md: 'row' }} sx={{ alignItems: { md: 'stretch' }, minHeight: 0 }}>
-              <Box sx={{ flex: { md: '1 1 0%' }, minWidth: 0, width: { xs: '100%', md: 'auto' } }}>
+              <Box
+                sx={{
+                  flex: { md: `0 1 ${LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX}px` },
+                  maxWidth: { md: LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX },
+                  minWidth: 0,
+                  width: { xs: '100%', md: 'auto' },
+                }}
+              >
                 <RealEstateListingGallery
                   title={listingTitle(listing)}
                   imageUrls={listing.imageUrls}
-                  placeholderIcon="buildings"
+                  placeholderIcon={listingDetailGalleryPlaceholder(listing)}
                   browseListHref={browseHref}
                   browseListAriaLabel="Prapa te lista"
-                  heroSizes="(max-width: 899px) 100vw, min(800px, 64vw)"
+                  heroSizes={LISTING_DETAIL_HERO_IMAGE_SIZES}
                 />
               </Box>
               <Box

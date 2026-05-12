@@ -1,9 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import Favorite from '@mui/icons-material/Favorite';
-import FavoriteBorder from '@mui/icons-material/FavoriteBorder';
 import { Box, Chip, IconButton, Stack } from '@mui/material';
+import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -156,21 +155,21 @@ export function CardMedia({
           ...(isFeatured
             ? {
                 bgcolor: 'rgba(0,0,0,0.28)',
-                color: saved ? '#f87171' : '#fff',
+                color: saved ? 'primary.main' : '#fff',
                 border: 'none',
                 backdropFilter: 'blur(4px)',
                 '&:hover': { bgcolor: 'rgba(0,0,0,0.42)' },
               }
             : {
                 bgcolor: 'rgba(255,255,255,0.95)',
-                color: saved ? 'error.main' : 'text.primary',
+                color: saved ? 'primary.main' : 'text.primary',
                 border: '1px solid',
                 borderColor: 'divider',
                 '&:hover': { bgcolor: '#fff' },
               }),
         }}
       >
-        {saved ? <Favorite sx={{ fontSize: 22 }} /> : <FavoriteBorder sx={{ fontSize: 22 }} />}
+        <BookmarkSimpleIcon size={22} weight={saved ? 'fill' : 'regular'} color="currentColor" />
       </IconButton>
     </Box>
   );

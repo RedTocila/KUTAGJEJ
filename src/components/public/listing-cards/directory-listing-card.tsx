@@ -21,64 +21,128 @@ import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
 import { findOptionLabel, formatPrice, pseudoRandomMetric, relativeAlbanianDate } from './format-helpers';
+import { ListingCardFeaturedImageFooter } from './listing-card-featured-overlay';
 import { SpecRow, type Spec } from './spec-row';
 
 const iconSm = { fontSize: 14 } as const;
+const iconFeatured = { fontSize: 17 } as const;
 
-function conditionIconNode(condition: string | null) {
-  if (condition === 'i-ri' || condition === 'si-i-ri') return <AutoAwesomeOutlined sx={iconSm} />;
-  return <CheckCircleOutlineOutlined sx={iconSm} />;
+function conditionIconNode(condition: string | null, size: 'sm' | 'feat') {
+  const sx = size === 'feat' ? iconFeatured : iconSm;
+  if (condition === 'i-ri' || condition === 'si-i-ri') return <AutoAwesomeOutlined sx={sx} />;
+  return <CheckCircleOutlineOutlined sx={sx} />;
 }
 
-function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing }) {
+function BusinessVenueCardBody({ listing, variant = 'default' }: { listing: PublicDirectoryListing; variant?: 'default' | 'featured' }) {
   const viewCount = React.useMemo(
     () => pseudoRandomMetric(`dir:${listing.id}:${listing.createdAt}`, 80, 4200),
     [listing.id, listing.createdAt],
   );
 
-  const specs: Spec[] = [{ icon: <LabelOutlined sx={iconSm} />, label: listing.categoryLabel, title: 'Lloji' }];
+  const locationLine = listing.cityName ? `${listing.cityName}, Shqipëri` : null;
+
+  const hoursTeaser =
+    listing.openingHours && listing.openingHours.trim()
+      ? listing.openingHours.trim().split('\n')[0].slice(0, 48) + (listing.openingHours.length > 48 ? '…' : '')
+      : null;
+
+  const specs: Spec[] =
+    variant === 'featured'
+      ? [
+          { icon: <LabelOutlined sx={iconFeatured} />, label: listing.categoryLabel, title: 'Lloji' },
+          {
+            icon: <AccessTimeOutlined sx={iconFeatured} />,
+            label: hoursTeaser ?? 'Orari — kontakto',
+            title: 'Orari',
+          },
+          {
+            icon: <StorefrontOutlined sx={iconFeatured} />,
+            label: listing.reservationsEnabled ? 'Rezervim' : 'Biznes',
+            title: 'Lloji',
+          },
+        ]
+      : [{ icon: <LabelOutlined sx={iconSm} />, label: listing.categoryLabel, title: 'Lloji' }];
 
   const topBadge = listing.reservationsEnabled ? 'Rezervim' : undefined;
+
+  const mediaHeight = variant === 'featured' ? 268 : 170;
+  const shellSx = variant === 'featured' ? { borderRadius: 3, '&:hover': { transform: 'translateY(-4px)' } } : undefined;
+
+  const bizPriceLine =
+    listing.price != null
+      ? formatPrice(listing.price, listing.currency)
+      : listing.servicesHighlight?.trim() || 'Ofertë biznesi';
+
+  const featuredImageFooter =
+    variant === 'featured' ? (
+      <ListingCardFeaturedImageFooter
+        listingId={listing.id}
+        priceLine={bizPriceLine}
+        title={listing.title}
+        locationLine={locationLine}
+      />
+    ) : null;
 
   return (
     <Link
       href={listingBusinessPublicHref(listing)}
       prefetch={false}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
+      aria-labelledby={`listing-card-title-${listing.id}`}
     >
-      <CardShell>
-        <CardMedia imageUrl={listing.imageUrl} FallbackIcon={StorefrontOutlined} alt={listing.title} topLeftBadge={topBadge} />
-        <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
-          >
-            {listing.categoryLabel}
-          </Typography>
-          <Typography
-            component="h3"
-            sx={{
-              fontWeight: 700,
-              fontSize: '0.95rem',
-              lineHeight: 1.4,
-              color: 'text.primary',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {listing.title}
-          </Typography>
+      <CardShell sx={shellSx}>
+        <CardMedia
+          imageUrl={listing.imageUrl}
+          FallbackIcon={StorefrontOutlined}
+          alt={listing.title}
+          topLeftBadge={topBadge}
+          height={mediaHeight}
+          bottomOverlay={featuredImageFooter}
+          visualVariant={variant === 'featured' ? 'featured' : 'default'}
+        />
+        <Stack
+          className="listing-card-body"
+          spacing={variant === 'featured' ? 0 : 1}
+          sx={{
+            p: { xs: 1.75, sm: 2 },
+            pt: variant === 'featured' ? 1.75 : undefined,
+          }}
+        >
+          {variant === 'featured' ? null : (
+            <>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
+              >
+                {listing.categoryLabel}
+              </Typography>
+              <Typography
+                component="h3"
+                id={`listing-card-title-${listing.id}`}
+                sx={{
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  lineHeight: 1.4,
+                  color: 'text.primary',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {listing.title}
+              </Typography>
+            </>
+          )}
 
-          {listing.servicesHighlight ? (
+          {variant === 'default' && listing.servicesHighlight ? (
             <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600, lineHeight: 1.35 }}>
               {listing.servicesHighlight}
             </Typography>
           ) : null}
 
-          {listing.openingHours ? (
+          {variant === 'default' && listing.openingHours ? (
             <Stack direction="row" spacing={0.75} sx={{ alignItems: 'flex-start', color: 'text.secondary' }}>
               <Box sx={{ pt: 0.15, flexShrink: 0, display: 'flex' }}>
                 <AccessTimeOutlined sx={{ fontSize: 16 }} />
@@ -100,7 +164,7 @@ function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing })
             </Stack>
           ) : null}
 
-          {listing.reservationsEnabled ? (
+          {variant === 'default' && listing.reservationsEnabled ? (
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
               <EventAvailableOutlined sx={{ fontSize: 14 }} />
               <Typography variant="caption" sx={{ fontWeight: 600, color: 'success.main' }}>
@@ -109,13 +173,12 @@ function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing })
             </Stack>
           ) : null}
 
-          <CardDescription text={listing.description} />
+          {variant === 'default' ? <CardDescription text={listing.description} /> : null}
+          {variant === 'default' ? <Box sx={{ flex: 1 }} /> : null}
 
-          <Box sx={{ flex: 1 }} />
+          <SpecRow specs={specs} variant={variant === 'featured' ? 'featured' : 'default'} />
 
-          <SpecRow specs={specs} />
-
-          {listing.cityName ? (
+          {variant === 'default' && listing.cityName ? (
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
               <LocationOnOutlined sx={{ fontSize: 14 }} />
               <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
@@ -123,7 +186,7 @@ function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing })
               </Typography>
             </Stack>
           ) : null}
-          {listing.reservationUrl ? (
+          {variant === 'default' && listing.reservationUrl ? (
             <Typography
               component="span"
               role="link"
@@ -145,82 +208,126 @@ function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing })
               Hap faqen e rezervimit →
             </Typography>
           ) : null}
-          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="caption" color="text.disabled">
-              {relativeAlbanianDate(listing.createdAt)}
-            </Typography>
-            <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-              <VisibilityOutlined sx={{ fontSize: 14 }} />
+          {variant === 'default' ? (
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
               <Typography variant="caption" color="text.disabled">
-                {new Intl.NumberFormat('en-GB').format(viewCount)}
+                {relativeAlbanianDate(listing.createdAt)}
               </Typography>
+              <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+                <VisibilityOutlined sx={{ fontSize: 14 }} />
+                <Typography variant="caption" color="text.disabled">
+                  {new Intl.NumberFormat('en-GB').format(viewCount)}
+                </Typography>
+              </Stack>
             </Stack>
-          </Stack>
+          ) : null}
         </Stack>
       </CardShell>
     </Link>
   );
 }
 
-function ProfessionalListingCardBody({ listing }: { listing: PublicDirectoryListing }) {
+function ProfessionalListingCardBody({ listing, variant = 'default' }: { listing: PublicDirectoryListing; variant?: 'default' | 'featured' }) {
   const viewCount = React.useMemo(
     () => pseudoRandomMetric(`dir:${listing.id}:${listing.createdAt}`, 80, 4200),
     [listing.id, listing.createdAt],
   );
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
 
-  const specs: Spec[] = [
-    { icon: <LabelOutlined sx={iconSm} />, label: listing.categoryLabel, title: 'Kategoria' },
-    ...(conditionLabel ? [{ icon: conditionIconNode(listing.condition), label: conditionLabel, title: 'Gjendja' }] : []),
-  ];
+  const locationLine = listing.cityName ? `${listing.cityName}, Shqipëri` : null;
+
+  const specs: Spec[] =
+    variant === 'featured'
+      ? [
+          { icon: <LabelOutlined sx={iconFeatured} />, label: listing.categoryLabel, title: 'Kategoria' },
+          ...(conditionLabel
+            ? [{ icon: conditionIconNode(listing.condition, 'feat'), label: conditionLabel, title: 'Gjendja' }]
+            : []),
+          { icon: <Work sx={iconFeatured} />, label: 'Profesionist', title: 'Lloji' },
+        ]
+      : [
+          { icon: <LabelOutlined sx={iconSm} />, label: listing.categoryLabel, title: 'Kategoria' },
+          ...(conditionLabel ? [{ icon: conditionIconNode(listing.condition, 'sm'), label: conditionLabel, title: 'Gjendja' }] : []),
+        ];
+
+  const mediaHeight = variant === 'featured' ? 268 : 170;
+  const shellSx = variant === 'featured' ? { borderRadius: 3, '&:hover': { transform: 'translateY(-4px)' } } : undefined;
+
+  const priceFeatured =
+    listing.price != null ? formatPrice(listing.price, listing.currency) : 'Çmim me marrëveshje';
+
+  const featuredImageFooter =
+    variant === 'featured' ? (
+      <ListingCardFeaturedImageFooter
+        listingId={listing.id}
+        priceLine={priceFeatured}
+        title={listing.title}
+        locationLine={locationLine}
+      />
+    ) : null;
 
   return (
     <Link
       href={listingProfessionalPublicHref(listing)}
       prefetch={false}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
+      aria-labelledby={`listing-card-title-${listing.id}`}
     >
-      <CardShell>
+      <CardShell sx={shellSx}>
         <CardMedia
           imageUrl={listing.imageUrl}
           FallbackIcon={Work}
           alt={listing.title}
           topLeftBadge={conditionLabel ?? undefined}
+          height={mediaHeight}
+          bottomOverlay={featuredImageFooter}
+          visualVariant={variant === 'featured' ? 'featured' : 'default'}
         />
-        <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
-          >
-            {listing.categoryLabel}
-          </Typography>
-          <Typography
-            component="h3"
-            sx={{
-              fontWeight: 700,
-              fontSize: '0.95rem',
-              lineHeight: 1.4,
-              color: 'text.primary',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {listing.title}
-          </Typography>
-          <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: 'primary.main', lineHeight: 1.2 }}>
-            {formatPrice(listing.price, listing.currency)}
-          </Typography>
+        <Stack
+          className="listing-card-body"
+          spacing={variant === 'featured' ? 0 : 1}
+          sx={{
+            p: { xs: 1.75, sm: 2 },
+            pt: variant === 'featured' ? 1.75 : undefined,
+          }}
+        >
+          {variant === 'featured' ? null : (
+            <>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
+              >
+                {listing.categoryLabel}
+              </Typography>
+              <Typography
+                component="h3"
+                id={`listing-card-title-${listing.id}`}
+                sx={{
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  lineHeight: 1.4,
+                  color: 'text.primary',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {listing.title}
+              </Typography>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: 'primary.main', lineHeight: 1.2 }}>
+                {formatPrice(listing.price, listing.currency)}
+              </Typography>
+            </>
+          )}
 
-          <CardDescription text={listing.description} />
+          {variant === 'default' ? <CardDescription text={listing.description} /> : null}
+          {variant === 'default' ? <Box sx={{ flex: 1 }} /> : null}
 
-          <Box sx={{ flex: 1 }} />
+          <SpecRow specs={specs} variant={variant === 'featured' ? 'featured' : 'default'} />
 
-          <SpecRow specs={specs} />
-
-          {listing.cityName ? (
+          {variant === 'default' && listing.cityName ? (
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
               <LocationOnOutlined sx={{ fontSize: 14 }} />
               <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
@@ -228,26 +335,34 @@ function ProfessionalListingCardBody({ listing }: { listing: PublicDirectoryList
               </Typography>
             </Stack>
           ) : null}
-          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="caption" color="text.disabled">
-              {relativeAlbanianDate(listing.createdAt)}
-            </Typography>
-            <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-              <VisibilityOutlined sx={{ fontSize: 14 }} />
+          {variant === 'default' ? (
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
               <Typography variant="caption" color="text.disabled">
-                {new Intl.NumberFormat('en-GB').format(viewCount)}
+                {relativeAlbanianDate(listing.createdAt)}
               </Typography>
+              <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+                <VisibilityOutlined sx={{ fontSize: 14 }} />
+                <Typography variant="caption" color="text.disabled">
+                  {new Intl.NumberFormat('en-GB').format(viewCount)}
+                </Typography>
+              </Stack>
             </Stack>
-          </Stack>
+          ) : null}
         </Stack>
       </CardShell>
     </Link>
   );
 }
 
-export function DirectoryListingCard({ listing }: { listing: PublicDirectoryListing }) {
+export function DirectoryListingCard({
+  listing,
+  variant = 'default',
+}: {
+  listing: PublicDirectoryListing;
+  variant?: 'default' | 'featured';
+}) {
   if (listing.kind === 'businesses') {
-    return <BusinessVenueCardBody listing={listing} />;
+    return <BusinessVenueCardBody listing={listing} variant={variant} />;
   }
-  return <ProfessionalListingCardBody listing={listing} />;
+  return <ProfessionalListingCardBody listing={listing} variant={variant} />;
 }

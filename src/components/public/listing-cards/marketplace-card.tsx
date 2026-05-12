@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { Box, Stack, Typography } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
@@ -11,6 +12,7 @@ import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import type { PublicMarketplaceListing } from '@/lib/public-listings-client';
+import { listingMarketplacePublicHref } from '@/paths';
 
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
@@ -37,7 +39,12 @@ export function MarketplaceCard({ listing }: { listing: PublicMarketplaceListing
   ];
 
   return (
-    <CardShell>
+    <Link
+      href={listingMarketplacePublicHref(listing)}
+      prefetch={false}
+      style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
+    >
+      <CardShell>
       <CardMedia
         imageUrl={listing.imageUrl}
         FallbackIcon={ShoppingBagIcon}
@@ -98,5 +105,6 @@ export function MarketplaceCard({ listing }: { listing: PublicMarketplaceListing
         </Stack>
       </Stack>
     </CardShell>
+    </Link>
   );
 }

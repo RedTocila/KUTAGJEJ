@@ -9,6 +9,16 @@ const config = {
         hostname: 'retireesystem-backend.vercel.app',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.public.blob.vercel-storage.com',
+        pathname: '/**',
+      },
     ],
     unoptimized: process.env.NODE_ENV !== 'production',
   },

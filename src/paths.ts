@@ -46,3 +46,64 @@ export const paths = {
   app: {},
   errors: {},
 } as const;
+
+/** Canonical public URL for real-estate listings: `/prona/{slug}-{mongoId}.html`. */
+export function pathsPublicRealEstateListingDetail(permalinkPath: string): string {
+  const p = String(permalinkPath ?? '').trim();
+  if (!p) return `/prona/`;
+  return `/prona/${encodeURIComponent(p)}`;
+}
+
+/** `/makina/{segment}`, `/pune/{segment}`, etc. — `segment` is `slug-{id}.html` or legacy id. */
+export function pathsPublicVerticalListingDetail(
+  basePublicPath: string,
+  permalinkPathOrId: string,
+): string {
+  const base = basePublicPath.replace(/\/$/, '') || '';
+  const seg = String(permalinkPathOrId ?? '').trim();
+  if (!seg) return `${base}/`;
+  return `${base}/${encodeURIComponent(seg)}`;
+}
+
+/**
+ * Prefer server `permalinkPath`; fall back to legacy bare ObjectId (handled by `[permalink]` resolver).
+ */
+export function listingCarPublicHref(entry: { permalinkPath?: string | null; id: string }): string {
+  const raw = typeof entry.permalinkPath === 'string' ? entry.permalinkPath.trim() : '';
+  if (raw) return pathsPublicVerticalListingDetail(paths.public.cars, raw);
+  return pathsPublicVerticalListingDetail(paths.public.cars, entry.id);
+}
+
+export function listingJobPublicHref(entry: { permalinkPath?: string | null; id: string }): string {
+  const raw = typeof entry.permalinkPath === 'string' ? entry.permalinkPath.trim() : '';
+  if (raw) return pathsPublicVerticalListingDetail(paths.public.jobs, raw);
+  return pathsPublicVerticalListingDetail(paths.public.jobs, entry.id);
+}
+
+export function listingMarketplacePublicHref(entry: { permalinkPath?: string | null; id: string }): string {
+  const raw = typeof entry.permalinkPath === 'string' ? entry.permalinkPath.trim() : '';
+  if (raw) return pathsPublicVerticalListingDetail(paths.public.marketplace, raw);
+  return pathsPublicVerticalListingDetail(paths.public.marketplace, entry.id);
+}
+
+export function listingBusinessPublicHref(entry: { permalinkPath?: string | null; id: string }): string {
+  const raw = typeof entry.permalinkPath === 'string' ? entry.permalinkPath.trim() : '';
+  if (raw) return pathsPublicVerticalListingDetail(paths.public.businesses, raw);
+  return pathsPublicVerticalListingDetail(paths.public.businesses, entry.id);
+}
+
+export function listingProfessionalPublicHref(entry: { permalinkPath?: string | null; id: string }): string {
+  const raw = typeof entry.permalinkPath === 'string' ? entry.permalinkPath.trim() : '';
+  if (raw) return pathsPublicVerticalListingDetail(paths.public.professionals, raw);
+  return pathsPublicVerticalListingDetail(paths.public.professionals, entry.id);
+}
+
+/**
+ * Prefer server `permalinkPath`; fall back to legacy bare ObjectId (handled by `[permalink]` resolver).
+ */
+export function listingRealEstatePublicHref(entry: { permalinkPath?: string | null; id: string }): string {
+  const raw = typeof entry.permalinkPath === 'string' ? entry.permalinkPath.trim() : '';
+  if (raw) return pathsPublicRealEstateListingDetail(raw);
+  return `/prona/${encodeURIComponent(entry.id.replace(/\s+/g, ''))}`;
+}
+

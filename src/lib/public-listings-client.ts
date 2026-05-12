@@ -29,6 +29,46 @@ export interface PublicRealEstateListing {
   imageUrl: string | null;
   imageUrls: string[];
   createdAt: string;
+  /** SEO path segment: `{slug}-{mongoId}.html` — use with `/prona/`. Omit if API lagging. */
+  permalinkPath?: string;
+}
+
+export interface PublicRealEstateListingSeller {
+  kind: 'individual' | 'business';
+  displayName: string;
+  phone: string | null;
+  memberSince: string;
+}
+
+/** Single listing for `/prona/{permalink}` — full description, seller summary. */
+export interface PublicRealEstateListingDetail {
+  id: string;
+  kind: 'real-estate';
+  title: string;
+  description: string;
+  propertyCategory: string;
+  transactionType: 'rent' | 'sale';
+  price: number;
+  currency: 'EUR' | 'LEK';
+  surfaceM2: number;
+  cityName: string | null;
+  zoneName: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  floor: number | null;
+  totalFloors: number | null;
+  parkingFloor: number | null;
+  apartmentTypeSlug: string | null;
+  furnishing: string | null;
+  yearBuilt: number | null;
+  condition: string | null;
+  contactPhone: string | null;
+  imageUrl: string | null;
+  imageUrls: string[];
+  createdAt: string;
+  updatedAt: string;
+  seller: PublicRealEstateListingSeller | null;
+  permalinkPath?: string;
 }
 
 export interface PublicCarListing {
@@ -50,6 +90,16 @@ export interface PublicCarListing {
   imageUrl: string | null;
   imageUrls: string[];
   createdAt: string;
+  permalinkPath?: string;
+}
+
+export interface PublicCarListingDetail extends Omit<PublicCarListing, 'description'> {
+  description: string;
+  title: string;
+  extras: string[];
+  finish?: string[];
+  seller: PublicRealEstateListingSeller | null;
+  updatedAt: string;
 }
 
 export interface PublicJobListing {
@@ -69,11 +119,20 @@ export interface PublicJobListing {
   imageUrl: string | null;
   imageUrls: string[];
   createdAt: string;
+  permalinkPath?: string;
+}
+
+/** Full job listing for `/pune/[permalink]`. */
+export interface PublicJobListingDetail extends Omit<PublicJobListing, 'description'> {
+  description: string;
+  seller: PublicRealEstateListingSeller | null;
+  updatedAt: string;
 }
 
 export interface PublicMarketplaceListing {
   id: string;
   kind: 'marketplace';
+  transactionType: 'shes';
   title: string;
   description: string;
   category: string;
@@ -85,6 +144,14 @@ export interface PublicMarketplaceListing {
   imageUrl: string | null;
   imageUrls: string[];
   createdAt: string;
+  permalinkPath?: string;
+}
+
+/** Full marketplace listing for `/tregu/[permalink]`. */
+export interface PublicMarketplaceListingDetail extends Omit<PublicMarketplaceListing, 'description'> {
+  description: string;
+  seller: PublicRealEstateListingSeller | null;
+  updatedAt: string;
 }
 
 export interface PublicDirectoryListing {
@@ -102,6 +169,7 @@ export interface PublicDirectoryListing {
   imageUrl: string | null;
   imageUrls: string[];
   createdAt: string;
+  permalinkPath?: string;
   /** Biznese venues only — opening times as plain text. */
   openingHours: string | null;
   reservationsEnabled: boolean;
@@ -109,6 +177,19 @@ export interface PublicDirectoryListing {
   /** Short “what we offer” line for venues. */
   servicesHighlight: string | null;
 }
+
+/** Full Biznese / Profesionistë listing detail. */
+export interface PublicDirectoryListingDetail extends Omit<PublicDirectoryListing, 'description'> {
+  description: string;
+  seller: PublicRealEstateListingSeller | null;
+  updatedAt: string;
+}
+
+export type AnyPublicListingDetail =
+  | PublicCarListingDetail
+  | PublicJobListingDetail
+  | PublicMarketplaceListingDetail
+  | PublicDirectoryListingDetail;
 
 export interface PublicListingsBundle {
   realEstate: PublicRealEstateListing[];
@@ -219,4 +300,60 @@ export async function fetchLatestProfessionals(limit = 12): Promise<PublicDirect
     `/public/listings/professionals?limit=${limit}`,
   );
   return data?.listings ?? [];
+}
+
+const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
+
+export async function fetchPublicRealEstateListingById(id: string): Promise<PublicRealEstateListingDetail | null> {
+  const raw = typeof id === 'string' ? id.trim() : '';
+  if (!OBJECT_ID_RE.test(raw)) return null;
+  const data = await safeJson<{ listing?: PublicRealEstateListingDetail }>(
+    `/public/listings/real-estate/${encodeURIComponent(raw)}`,
+  );
+  return data?.listing ?? null;
+}
+
+export async function fetchPublicCarListingById(id: string): Promise<PublicCarListingDetail | null> {
+  const raw = typeof id === 'string' ? id.trim() : '';
+  if (!OBJECT_ID_RE.test(raw)) return null;
+  const data = await safeJson<{ listing?: PublicCarListingDetail }>(
+    `/public/listings/cars/${encodeURIComponent(raw)}`,
+  );
+  return data?.listing ?? null;
+}
+
+export async function fetchPublicJobListingById(id: string): Promise<PublicJobListingDetail | null> {
+  const raw = typeof id === 'string' ? id.trim() : '';
+  if (!OBJECT_ID_RE.test(raw)) return null;
+  const data = await safeJson<{ listing?: PublicJobListingDetail }>(
+    `/public/listings/jobs/${encodeURIComponent(raw)}`,
+  );
+  return data?.listing ?? null;
+}
+
+export async function fetchPublicMarketplaceListingById(id: string): Promise<PublicMarketplaceListingDetail | null> {
+  const raw = typeof id === 'string' ? id.trim() : '';
+  if (!OBJECT_ID_RE.test(raw)) return null;
+  const data = await safeJson<{ listing?: PublicMarketplaceListingDetail }>(
+    `/public/listings/marketplace/${encodeURIComponent(raw)}`,
+  );
+  return data?.listing ?? null;
+}
+
+export async function fetchPublicBusinessListingById(id: string): Promise<PublicDirectoryListingDetail | null> {
+  const raw = typeof id === 'string' ? id.trim() : '';
+  if (!OBJECT_ID_RE.test(raw)) return null;
+  const data = await safeJson<{ listing?: PublicDirectoryListingDetail }>(
+    `/public/listings/businesses/${encodeURIComponent(raw)}`,
+  );
+  return data?.listing ?? null;
+}
+
+export async function fetchPublicProfessionalListingById(id: string): Promise<PublicDirectoryListingDetail | null> {
+  const raw = typeof id === 'string' ? id.trim() : '';
+  if (!OBJECT_ID_RE.test(raw)) return null;
+  const data = await safeJson<{ listing?: PublicDirectoryListingDetail }>(
+    `/public/listings/professionals/${encodeURIComponent(raw)}`,
+  );
+  return data?.listing ?? null;
 }

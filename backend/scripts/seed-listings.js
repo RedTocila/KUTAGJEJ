@@ -728,14 +728,21 @@ async function run() {
   // Stagger createdAt so listings sort nicely (newest first).
   const stagger = (i) => new Date(Date.now() - i * 60 * 1000); // 1 minute apart
 
-  // Curated cover image per seed; cycles to the start if a vertical ever
-  // grows past the curated list.
-  const pickImage = (gallery, i) => [gallery[i % gallery.length]];
+  // Several distinct photos per listing (rotating through curated Unsplash URLs).
+  function pickGalleryImages(gallery, i, desiredCount = 6) {
+    if (!gallery.length) return [];
+    const n = Math.min(Math.max(desiredCount, 1), gallery.length, 8);
+    const urls = [];
+    for (let k = 0; k < n; k += 1) {
+      urls.push(gallery[(i + k) % gallery.length]);
+    }
+    return urls;
+  }
 
   const realEstateDocs = realEstateSeeds(loc).map((d, i) => ({
     ...baseDoc,
     ...d,
-    imageUrls: pickImage(REAL_ESTATE_IMAGES, i),
+    imageUrls: pickGalleryImages(REAL_ESTATE_IMAGES, i, 6),
     createdAt: stagger(i),
     updatedAt: stagger(i),
   }));
@@ -745,7 +752,7 @@ async function run() {
   const carDocs = carSeeds(loc).map((d, i) => ({
     ...baseDoc,
     ...d,
-    imageUrls: pickImage(CAR_IMAGES, i),
+    imageUrls: pickGalleryImages(CAR_IMAGES, i, 6),
     createdAt: stagger(i),
     updatedAt: stagger(i),
   }));
@@ -755,7 +762,7 @@ async function run() {
   const jobDocs = jobSeeds(loc).map((d, i) => ({
     ...baseDoc,
     ...d,
-    imageUrls: pickImage(JOB_IMAGES, i),
+    imageUrls: pickGalleryImages(JOB_IMAGES, i, 6),
     createdAt: stagger(i),
     updatedAt: stagger(i),
   }));
@@ -765,7 +772,7 @@ async function run() {
   const mktDocs = marketplaceSeeds(loc).map((d, i) => ({
     ...baseDoc,
     ...d,
-    imageUrls: pickImage(MARKETPLACE_IMAGES, i),
+    imageUrls: pickGalleryImages(MARKETPLACE_IMAGES, i, 6),
     createdAt: stagger(i),
     updatedAt: stagger(i),
   }));
@@ -775,7 +782,7 @@ async function run() {
   const bizDocs = businessDirectorySeeds(loc).map((d, i) => ({
     ...baseDoc,
     ...d,
-    imageUrls: pickImage(BUSINESS_DIRECTORY_IMAGES, i),
+    imageUrls: pickGalleryImages(BUSINESS_DIRECTORY_IMAGES, i, 6),
     createdAt: stagger(i),
     updatedAt: stagger(i),
   }));
@@ -785,7 +792,7 @@ async function run() {
   const profDocs = professionalDirectorySeeds(loc).map((d, i) => ({
     ...baseDoc,
     ...d,
-    imageUrls: pickImage(PROFESSIONAL_DIRECTORY_IMAGES, i),
+    imageUrls: pickGalleryImages(PROFESSIONAL_DIRECTORY_IMAGES, i, 6),
     createdAt: stagger(i),
     updatedAt: stagger(i),
   }));

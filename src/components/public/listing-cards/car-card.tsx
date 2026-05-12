@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { Box, Stack, Typography } from '@mui/material';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
@@ -13,6 +14,7 @@ import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 
 import { CAR_COLOUR_OPTIONS, FUEL_TYPE_OPTIONS, TRANSMISSION_OPTIONS } from '@/lib/car-constants';
 import type { PublicCarListing } from '@/lib/public-listings-client';
+import { listingCarPublicHref } from '@/paths';
 
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
@@ -39,6 +41,7 @@ export function CarCard({ listing }: { listing: PublicCarListing }) {
   ];
 
   return (
+    <Link href={listingCarPublicHref(listing)} prefetch={false} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
     <CardShell>
       <CardMedia imageUrl={listing.imageUrl} FallbackIcon={CarIcon} alt={title} topLeftBadge={`${listing.year}`} />
       <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
@@ -95,5 +98,6 @@ export function CarCard({ listing }: { listing: PublicCarListing }) {
         </Stack>
       </Stack>
     </CardShell>
+    </Link>
   );
 }

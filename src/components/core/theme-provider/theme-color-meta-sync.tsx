@@ -10,20 +10,23 @@ const THEME_COLOR_DARK = '#0a0a0a';
 const THEME_COLOR_META_ID = 'kutagjej-theme-color';
 
 /**
- * Keeps Safari / Chrome mobile UI (status bar, overscroll) aligned with the **app** theme from MUI,
- * not only `prefers-color-scheme`. Uses one stable `#kutagjej-theme-color` tag (also set in layout boot
- * script). Never `remove()` Next/React-managed `<meta name="theme-color">` — that breaks reconciliation.
+ * Syncs `#kutagjej-theme-color`, `<meta name="color-scheme">`, and `documentElement` class + `colorScheme`
+ * from the **resolved** MUI color scheme. MUI also toggles `.light`/`.dark`, but we mirror it so CSS
+ * variables always match `localStorage` (avoids stuck `:root` light tokens when the library effect lags).
  */
 export function ThemeColorMetaSync() {
-  const { mode, systemMode } = useColorScheme();
-
-  const appliedMode = React.useMemo(() => {
-    if (mode === 'system') return systemMode ?? 'light';
-    return mode ?? 'light';
-  }, [mode, systemMode]);
+  const { colorScheme } = useColorScheme();
 
   React.useLayoutEffect(() => {
-    const isDark = appliedMode === 'dark';
+    if (colorScheme !== 'light' && colorScheme !== 'dark') {
+      return;
+    }
+
+    const root = document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(colorScheme);
+
+    const isDark = colorScheme === 'dark';
     const color = isDark ? THEME_COLOR_DARK : THEME_COLOR_LIGHT;
 
     let meta = document.getElementById(THEME_COLOR_META_ID);
@@ -43,8 +46,8 @@ export function ThemeColorMetaSync() {
     }
     schemeMeta.setAttribute('content', isDark ? 'dark' : 'light');
 
-    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
-  }, [appliedMode]);
+    root.style.colorScheme = isDark ? 'dark' : 'light';
+  }, [colorScheme]);
 
   return null;
 }

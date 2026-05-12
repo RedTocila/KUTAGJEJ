@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { Box, Stack, Typography } from '@mui/material';
 import { Bathtub as BathtubIcon } from '@phosphor-icons/react/dist/ssr/Bathtub';
 import { Bed as BedIcon } from '@phosphor-icons/react/dist/ssr/Bed';
@@ -15,6 +16,7 @@ import { Stairs as StairsIcon } from '@phosphor-icons/react/dist/ssr/Stairs';
 
 import type { PublicRealEstateListing } from '@/lib/public-listings-client';
 import { propertyCategoryLabel } from '@/lib/real-estate-constants';
+import { listingRealEstatePublicHref } from '@/paths';
 
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
@@ -51,14 +53,24 @@ export function RealEstateCard({ listing }: { listing: PublicRealEstateListing }
   ];
 
   return (
-    <CardShell>
-      <CardMedia
-        imageUrl={listing.imageUrl}
-        FallbackIcon={listing.propertyCategory === 'villa' ? HouseIcon : BuildingsIcon}
-        alt={listing.title}
-        topLeftBadge={transactionLabel}
-      />
-      <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
+    <Link
+      href={listingRealEstatePublicHref(listing)}
+      style={{
+        height: '100%',
+        display: 'block',
+        textDecoration: 'none',
+        color: 'inherit',
+      }}
+      aria-labelledby={`listing-card-title-${listing.id}`}
+    >
+      <CardShell>
+        <CardMedia
+          imageUrl={listing.imageUrl}
+          FallbackIcon={listing.propertyCategory === 'villa' ? HouseIcon : BuildingsIcon}
+          alt={listing.title}
+          topLeftBadge={transactionLabel}
+        />
+        <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
         <Typography
           variant="caption"
           color="text.secondary"
@@ -68,6 +80,7 @@ export function RealEstateCard({ listing }: { listing: PublicRealEstateListing }
         </Typography>
         <Typography
           component="h3"
+          id={`listing-card-title-${listing.id}`}
           sx={{
             fontWeight: 700,
             fontSize: '0.95rem',
@@ -115,7 +128,8 @@ export function RealEstateCard({ listing }: { listing: PublicRealEstateListing }
             </Typography>
           </Stack>
         </Stack>
-      </Stack>
-    </CardShell>
+        </Stack>
+      </CardShell>
+    </Link>
   );
 }

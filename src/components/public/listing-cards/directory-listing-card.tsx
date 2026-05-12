@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Link as MuiLink, Stack, Typography } from '@mui/material';
+import Link from 'next/link';
+import { Box, Stack, Typography } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { CalendarCheck as CalendarCheckIcon } from '@phosphor-icons/react/dist/ssr/CalendarCheck';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
@@ -14,6 +15,7 @@ import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 
 import { MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import type { PublicDirectoryListing } from '@/lib/public-listings-client';
+import { listingBusinessPublicHref, listingProfessionalPublicHref } from '@/paths';
 
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
@@ -38,7 +40,12 @@ function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing })
   const topBadge = listing.reservationsEnabled ? 'Rezervim' : undefined;
 
   return (
-    <CardShell>
+    <Link
+      href={listingBusinessPublicHref(listing)}
+      prefetch={false}
+      style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
+    >
+      <CardShell>
       <CardMedia
         imageUrl={listing.imageUrl}
         FallbackIcon={StorefrontIcon}
@@ -121,15 +128,26 @@ function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing })
           </Stack>
         ) : null}
         {listing.reservationUrl ? (
-          <MuiLink
-            href={listing.reservationUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Typography
+            component="span"
+            role="link"
+            tabIndex={0}
             variant="caption"
-            sx={{ fontWeight: 600 }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              window.open(listing.reservationUrl!, '_blank', 'noopener,noreferrer');
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              e.preventDefault();
+              e.stopPropagation();
+              window.open(listing.reservationUrl!, '_blank', 'noopener,noreferrer');
+            }}
+            sx={{ fontWeight: 600, cursor: 'pointer', color: 'primary.main', textDecoration: 'underline' }}
           >
             Hap faqen e rezervimit →
-          </MuiLink>
+          </Typography>
         ) : null}
         <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="caption" color="text.disabled">
@@ -144,6 +162,7 @@ function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing })
         </Stack>
       </Stack>
     </CardShell>
+    </Link>
   );
 }
 
@@ -161,7 +180,12 @@ function ProfessionalListingCardBody({ listing }: { listing: PublicDirectoryList
   ];
 
   return (
-    <CardShell>
+    <Link
+      href={listingProfessionalPublicHref(listing)}
+      prefetch={false}
+      style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
+    >
+      <CardShell>
       <CardMedia
         imageUrl={listing.imageUrl}
         FallbackIcon={BriefcaseIcon}
@@ -222,6 +246,7 @@ function ProfessionalListingCardBody({ listing }: { listing: PublicDirectoryList
         </Stack>
       </Stack>
     </CardShell>
+    </Link>
   );
 }
 

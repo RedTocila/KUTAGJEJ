@@ -14,11 +14,18 @@ export interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const theme = createTheme();
+  const theme = React.useMemo(() => createTheme(), []);
 
   return (
     <EmotionCache options={{ key: 'mui' }}>
-      <CssVarsProvider theme={theme} defaultMode="dark" modeStorageKey="kutagjej-color-scheme">
+      <CssVarsProvider
+        theme={theme}
+        defaultMode="dark"
+        modeStorageKey="kutagjej-color-scheme"
+        forceThemeRerender
+        // @ts-expect-error supported by MUI runtime; omitted from exported prop types in this version
+        noSsr
+      >
         <CssBaseline />
         <ThemeColorMetaSync />
         {children}

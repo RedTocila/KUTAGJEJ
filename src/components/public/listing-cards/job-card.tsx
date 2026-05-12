@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { Box, Stack, Typography } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
@@ -20,6 +21,7 @@ import {
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
 import type { PublicJobListing } from '@/lib/public-listings-client';
+import { listingJobPublicHref } from '@/paths';
 
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
@@ -58,7 +60,8 @@ export function JobCard({ listing }: { listing: PublicJobListing }) {
   ];
 
   return (
-    <CardShell>
+    <Link href={listingJobPublicHref(listing)} prefetch={false} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
+      <CardShell>
       <CardMedia
         imageUrl={listing.imageUrl}
         FallbackIcon={BriefcaseIcon}
@@ -119,5 +122,6 @@ export function JobCard({ listing }: { listing: PublicJobListing }) {
         </Stack>
       </Stack>
     </CardShell>
+    </Link>
   );
 }

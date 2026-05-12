@@ -1,0 +1,95 @@
+'use client';
+
+import * as React from 'react';
+import RouterLink from 'next/link';
+import ArrowForward from '@mui/icons-material/ArrowForward';
+import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
+
+import { HOME_VERTICALS } from '@/lib/home-categories';
+import { paths } from '@/paths';
+
+import { VerticalMuiIcon } from './vertical-mui-icon';
+
+export function HomeCategoriesStrip() {
+  return (
+    <Box
+      component="section"
+      aria-labelledby="home-categories-title"
+      sx={{ display: { xs: 'none', md: 'block' }, py: 3 }}
+    >
+      <Container maxWidth="xl" sx={{ px: { md: 3, lg: 4 } }}>
+        <Stack direction="row" sx={{ mb: 2.5, alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <Typography
+            id="home-categories-title"
+            component="h2"
+            sx={{ fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.02em' }}
+          >
+            Zbulo sipas kategorisë
+          </Typography>
+          <Button
+            component={RouterLink}
+            href={paths.public.realEstate}
+            size="small"
+            endIcon={<ArrowForward sx={{ fontSize: 18 }} />}
+            sx={{ textTransform: 'none', fontWeight: 700, color: 'primary.main' }}
+          >
+            Shfleto të gjitha
+          </Button>
+        </Stack>
+
+        <Grid container spacing={2}>
+          {HOME_VERTICALS.map((v) => (
+            <Grid key={v.id} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
+              <Stack
+                component={RouterLink}
+                href={v.href}
+                spacing={1.75}
+                direction="row"
+                sx={{
+                  height: '100%',
+                  p: 2,
+                  borderRadius: 3,
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  bgcolor: (theme) =>
+                    theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  transition: 'transform 0.15s ease, border-color 0.15s ease',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    transform: 'translateY(-2px)',
+                  },
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: 2,
+                    display: 'grid',
+                    placeItems: 'center',
+                    flexShrink: 0,
+                    color: 'primary.main',
+                    bgcolor: (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
+                        : 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)',
+                  }}
+                >
+                  <VerticalMuiIcon verticalId={v.id} sx={{ fontSize: 32 }} />
+                </Box>
+                <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+                  <Typography sx={{ fontWeight: 800, fontSize: '1rem' }}>{v.label}</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4, fontWeight: 500 }}>
+                    {v.tagline}
+                  </Typography>
+                </Stack>
+              </Stack>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+    </Box>
+  );
+}

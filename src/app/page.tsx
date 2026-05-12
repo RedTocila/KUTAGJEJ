@@ -168,21 +168,48 @@ export default async function HomePage() {
         <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       ))}
 
-      <HeroSection banners={homeBanners} />
+      <HeroSection
+        banners={homeBanners}
+        stats={{
+          realEstate: totals.realEstate,
+          cars: totals.cars,
+          jobs: totals.jobs,
+        }}
+      />
 
       <ListingsSection
         verticalId="real-estate"
         total={totals.realEstate}
         isEmpty={bundle.realEstate.length === 0}
+        titleOverride="Njoftimet e fundit"
+        useMuiVerticalIcon
+        hideTotal
+        hideVerticalIcon
       >
-        <ListingsCarousel>
-          {bundle.realEstate.map((listing) => (
-            <RealEstateCard key={listing.id} listing={listing} />
-          ))}
-        </ListingsCarousel>
+        <>
+          <Box
+            sx={{
+              display: { xs: 'none', md: 'grid' },
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: 2,
+              alignItems: 'stretch',
+            }}
+          >
+            {bundle.realEstate.slice(0, 3).map((listing) => (
+              <RealEstateCard key={listing.id} listing={listing} variant="featured" />
+            ))}
+          </Box>
+          <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+            <ListingsCarousel>
+              {bundle.realEstate.map((listing) => (
+                <RealEstateCard key={listing.id} listing={listing} />
+              ))}
+            </ListingsCarousel>
+          </Box>
+        </>
       </ListingsSection>
 
-      <ListingsSection verticalId="cars" total={totals.cars} isEmpty={bundle.cars.length === 0}>
+      <ListingsSection verticalId="cars" total={totals.cars} isEmpty={bundle.cars.length === 0} useMuiVerticalIcon>
         <ListingsCarousel>
           {bundle.cars.map((listing) => (
             <CarCard key={listing.id} listing={listing} />
@@ -214,7 +241,7 @@ export default async function HomePage() {
         ]}
       />
 
-      <ListingsSection verticalId="jobs" total={totals.jobs} isEmpty={bundle.jobs.length === 0}>
+      <ListingsSection verticalId="jobs" total={totals.jobs} isEmpty={bundle.jobs.length === 0} useMuiVerticalIcon>
         <ListingsCarousel>
           {bundle.jobs.map((listing) => (
             <JobCard key={listing.id} listing={listing} />
@@ -226,6 +253,7 @@ export default async function HomePage() {
         verticalId="marketplace"
         total={totals.marketplace}
         isEmpty={bundle.marketplace.length === 0}
+        useMuiVerticalIcon
       >
         <ListingsCarousel>
           {bundle.marketplace.map((listing) => (
@@ -238,6 +266,7 @@ export default async function HomePage() {
         verticalId="businesses"
         total={totals.businesses}
         isEmpty={bundle.businesses.length === 0}
+        useMuiVerticalIcon
       >
         <ListingsCarousel>
           {bundle.businesses.map((listing) => (
@@ -250,6 +279,7 @@ export default async function HomePage() {
         verticalId="professionals"
         total={totals.professionals}
         isEmpty={bundle.professionals.length === 0}
+        useMuiVerticalIcon
       >
         <ListingsCarousel>
           {bundle.professionals.map((listing) => (

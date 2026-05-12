@@ -1,33 +1,28 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Chip, IconButton, Stack, Typography } from '@mui/material';
+import Favorite from '@mui/icons-material/Favorite';
+import FavoriteBorder from '@mui/icons-material/FavoriteBorder';
+import { Box, Chip, IconButton, Stack } from '@mui/material';
+import type { SvgIconProps } from '@mui/material/SvgIcon';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
-import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 
 export interface CardMediaProps {
-  /** Primary image to render — `null` falls back to a tinted icon panel. */
   imageUrl: string | null;
-  /** Phosphor icon used in the fallback panel. */
-  FallbackIcon: PhosphorIcon;
-  /** Alt text for the image. Empty alts are allowed for decorative covers. */
+  FallbackIcon: React.ElementType<SvgIconProps>;
   alt: string;
-  /** Optional small chip rendered top-left over the media (e.g. "Me qira"). */
   topLeftBadge?: string;
-  /** Optional small chip rendered top-right over the media (e.g. "I ri"). */
   topRightBadge?: string;
-  /** Cover height — desktop default is 170px. */
   height?: number;
+  /** Content pinned to the bottom of the image (e.g. price + title) inside a dark gradient. */
+  bottomOverlay?: React.ReactNode;
+  /**
+   * `featured` — favorite control reads on photos (translucent), no divider under media.
+   */
+  visualVariant?: 'default' | 'featured';
 }
 
-/**
- * Shared media slot for the public listing cards. Shows the listing's first
- * photo when available and falls back to a quiet, theme-aware icon panel
- * otherwise. Optional top badges let each card surface its key fact (e.g.
- * "Me qira", "I ri") without competing with the typography below.
- */
 export function CardMedia({
   imageUrl,
   FallbackIcon,
@@ -35,11 +30,11 @@ export function CardMedia({
   topLeftBadge,
   topRightBadge,
   height = 170,
+  bottomOverlay,
+  visualVariant = 'default',
 }: CardMediaProps) {
-  const seed = `${imageUrl ?? ''}|${alt}|${topLeftBadge ?? ''}|${topRightBadge ?? ''}`;
-  const baseSavedCount = React.useMemo(() => pseudoRandomCount(seed), [seed]);
   const [saved, setSaved] = React.useState(false);
-  const visibleSavedCount = saved ? baseSavedCount + 1 : baseSavedCount;
+  const isFeatured = visualVariant === 'featured';
 
   return (
     <Box
@@ -47,7 +42,7 @@ export function CardMedia({
         position: 'relative',
         height,
         flexShrink: 0,
-        borderBottom: '1px solid',
+        borderBottom: isFeatured ? 'none' : '1px solid',
         borderColor: 'divider',
         bgcolor: primaryMainAlpha(0.06),
         overflow: 'hidden',
@@ -81,9 +76,28 @@ export function CardMedia({
             opacity: 0.55,
           }}
         >
-          <FallbackIcon size={42} weight="duotone" />
+          <FallbackIcon sx={{ fontSize: 42 }} />
         </Stack>
       )}
+
+      {bottomOverlay ? (
+        <Box
+          sx={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1,
+            pt: 5,
+            pb: 1.75,
+            px: 2,
+            pointerEvents: 'none',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.45) 45%, rgba(0,0,0,0) 100%)',
+          }}
+        >
+          {bottomOverlay}
+        </Box>
+      ) : null}
 
       {topLeftBadge ? (
         <Chip
@@ -91,16 +105,16 @@ export function CardMedia({
           size="small"
           sx={{
             position: 'absolute',
-            top: 8,
-            left: 8,
-            height: 22,
-            fontSize: '0.7rem',
-            fontWeight: 600,
-            bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.92)',
-            color: 'text.primary',
-            border: '1px solid',
-            borderColor: 'divider',
-            '& .MuiChip-label': { px: 1 },
+            top: 10,
+            left: 10,
+            height: 26,
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            bgcolor: 'rgba(0,0,0,0.55)',
+            color: '#fff',
+            border: 'none',
+            zIndex: 2,
+            '& .MuiChip-label': { px: 1.25 },
           }}
         />
       ) : null}
@@ -111,62 +125,53 @@ export function CardMedia({
           size="small"
           sx={{
             position: 'absolute',
-            top: 8,
-            right: 8,
-            height: 22,
-            fontSize: '0.7rem',
-            fontWeight: 600,
+            top: 10,
+            right: isFeatured ? 48 : 52,
+            height: 26,
+            fontSize: '0.72rem',
+            fontWeight: 700,
             bgcolor: 'primary.main',
             color: 'primary.contrastText',
+            zIndex: 2,
             '& .MuiChip-label': { px: 1 },
           }}
         />
       ) : null}
 
-      <Stack sx={{ position: 'absolute', top: 8, right: 8, alignItems: 'center' }}>
-        <IconButton
-          aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
-          onClick={() => setSaved((prev) => !prev)}
-          sx={{
-            width: 42,
-            height: 42,
-            bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.92)',
-            color: saved ? 'primary.main' : 'text.primary',
-            border: '1px solid',
-            borderColor: saved ? 'primary.main' : 'divider',
-            position: 'relative',
-            '&:hover': {
-              bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.98)',
-            },
-          }}
-        >
-          <BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} style={{ transform: 'translateY(-5px)' }} />
-          <Typography
-            component="span"
-            sx={{
-              position: 'absolute',
-              bottom: 5,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              fontWeight: 700,
-              fontSize: '0.62rem',
-              lineHeight: 1,
-              color: saved ? 'primary.main' : 'text.primary',
-              pointerEvents: 'none',
-            }}
-          >
-            {visibleSavedCount}
-          </Typography>
-        </IconButton>
-      </Stack>
+      <IconButton
+        aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setSaved((prev) => !prev);
+        }}
+        size="small"
+        sx={{
+          position: 'absolute',
+          top: 8,
+          right: 8,
+          zIndex: 2,
+          width: isFeatured ? 42 : 40,
+          height: isFeatured ? 42 : 40,
+          ...(isFeatured
+            ? {
+                bgcolor: 'rgba(0,0,0,0.28)',
+                color: saved ? '#f87171' : '#fff',
+                border: 'none',
+                backdropFilter: 'blur(4px)',
+                '&:hover': { bgcolor: 'rgba(0,0,0,0.42)' },
+              }
+            : {
+                bgcolor: 'rgba(255,255,255,0.95)',
+                color: saved ? 'error.main' : 'text.primary',
+                border: '1px solid',
+                borderColor: 'divider',
+                '&:hover': { bgcolor: '#fff' },
+              }),
+        }}
+      >
+        {saved ? <Favorite sx={{ fontSize: 22 }} /> : <FavoriteBorder sx={{ fontSize: 22 }} />}
+      </IconButton>
     </Box>
   );
-}
-
-function pseudoRandomCount(seed: string): number {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  return 8 + (hash % 493);
 }

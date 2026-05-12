@@ -3,8 +3,8 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import { Box, Button, Stack, Typography } from '@mui/material';
-import { CaretLeft as CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft';
-import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
+import ChevronLeft from '@mui/icons-material/ChevronLeft';
+import ChevronRight from '@mui/icons-material/ChevronRight';
 
 import type { HomeBannerDto } from '@/lib/home-banners-client';
 
@@ -142,7 +142,7 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
                 '&:hover': { bgcolor: 'rgba(0,0,0,0.72)' },
               }}
             >
-              <CaretLeftIcon size={24} weight="fill" />
+              <ChevronLeft sx={{ fontSize: 24 }} />
             </Button>
             <Button
               aria-label="Banner i ardhshëm"
@@ -165,7 +165,7 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
                 '&:hover': { bgcolor: 'rgba(0,0,0,0.72)' },
               }}
             >
-              <CaretRightIcon size={24} weight="fill" />
+              <ChevronRight sx={{ fontSize: 24 }} />
             </Button>
             <Stack
               direction="row"

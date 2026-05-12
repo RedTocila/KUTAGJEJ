@@ -2,39 +2,75 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
+import ArrowForward from '@mui/icons-material/ArrowForward';
 import { Box, Button, Container, Stack, Typography } from '@mui/material';
-import { ArrowRight as ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 
 import { findVertical, type HomeVerticalId } from '@/lib/home-categories';
 
 import { SubcategoryPills } from './subcategory-pills';
 import { VerticalIcon } from './vertical-icon';
+import { VerticalMuiIcon } from './vertical-mui-icon';
 
 export interface ListingsSectionProps {
   verticalId: HomeVerticalId;
-  /** Total listings count from the API — appended to the section title. */
   total?: number;
-  /**
-   * The card grid for this section. When `isEmpty` is true a quiet placeholder
-   * is rendered instead, so first-time visitors still see the layout.
-   */
   children?: React.ReactNode;
   isEmpty: boolean;
+  /** Override the H2 label (e.g. homepage “Njoftimet e fundit”). */
+  titleOverride?: string;
+  /** Use `@mui/icons-material` category icons instead of PNG assets. */
+  useMuiVerticalIcon?: boolean;
+  /** Hide numeric total next to the title. */
+  hideTotal?: boolean;
+  /** Title + CTA only (no category icon tile) — matches compact section headers. */
+  hideVerticalIcon?: boolean;
 }
 
-export function ListingsSection({ verticalId, total, children, isEmpty }: ListingsSectionProps) {
+export function ListingsSection({
+  verticalId,
+  total,
+  children,
+  isEmpty,
+  titleOverride,
+  useMuiVerticalIcon = false,
+  hideTotal = false,
+  hideVerticalIcon = false,
+}: ListingsSectionProps) {
   const vertical = findVertical(verticalId);
+  const title = titleOverride ?? vertical.label;
 
   return (
     <Box component="section" aria-labelledby={`section-${verticalId}`} sx={{ py: { xs: 3, md: 4 } }}>
-      <Container maxWidth="xl">
+      <Container maxWidth="xl" sx={{ px: { xs: 2, md: 3, lg: 4 } }}>
         <Stack
           direction="row"
           spacing={2}
           sx={{ alignItems: 'baseline', justifyContent: 'space-between', mb: { xs: 1.5, md: 2 } }}
         >
           <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
-            <VerticalIcon verticalId={verticalId} size={42} decorative />
+            {!hideVerticalIcon ? (
+              useMuiVerticalIcon ? (
+                <Box
+                  sx={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 2,
+                    display: 'grid',
+                    placeItems: 'center',
+                    flexShrink: 0,
+                    color: 'primary.main',
+                    bgcolor: (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
+                        : 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
+                  }}
+                >
+                  <VerticalMuiIcon verticalId={verticalId} sx={{ fontSize: 26 }} />
+                </Box>
+              ) : (
+                <VerticalIcon verticalId={verticalId} size={42} decorative />
+              )
+            ) : null}
             <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', minWidth: 0 }}>
               <Typography
                 id={`section-${verticalId}`}
@@ -46,9 +82,9 @@ export function ListingsSection({ verticalId, total, children, isEmpty }: Listin
                   letterSpacing: '-0.01em',
                 }}
               >
-                {vertical.label}
+                {title}
               </Typography>
-              {typeof total === 'number' && total > 0 ? (
+              {!hideTotal && typeof total === 'number' && total > 0 ? (
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
                   {total.toLocaleString('en-GB')}
                 </Typography>
@@ -59,7 +95,7 @@ export function ListingsSection({ verticalId, total, children, isEmpty }: Listin
             component={RouterLink}
             href={vertical.href}
             size="small"
-            endIcon={React.createElement(ArrowRightIcon, { size: 14, weight: 'bold' })}
+            endIcon={<ArrowForward sx={{ fontSize: 18 }} />}
             sx={{
               textTransform: 'none',
               fontWeight: 600,

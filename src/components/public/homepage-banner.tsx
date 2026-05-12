@@ -2,15 +2,14 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
+import ArrowForward from '@mui/icons-material/ArrowForward';
+import AttachMoney from '@mui/icons-material/AttachMoney';
+import AutoAwesome from '@mui/icons-material/AutoAwesome';
+import ElectricBolt from '@mui/icons-material/ElectricBolt';
+import Savings from '@mui/icons-material/Savings';
+import TaskAlt from '@mui/icons-material/TaskAlt';
+import VerifiedUser from '@mui/icons-material/VerifiedUser';
 import { Box, Button, Container, Stack, Typography } from '@mui/material';
-import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
-import { ArrowRight as ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
-import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
-import { CurrencyEur as CurrencyEurIcon } from '@phosphor-icons/react/dist/ssr/CurrencyEur';
-import { HandCoins as HandCoinsIcon } from '@phosphor-icons/react/dist/ssr/HandCoins';
-import { Lightning as LightningIcon } from '@phosphor-icons/react/dist/ssr/Lightning';
-import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
-import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 
 /**
  * Allowed icon keys for banner feature pills. We use string keys instead of
@@ -26,13 +25,13 @@ export type BannerIconKey =
   | 'check-circle'
   | 'hand-coins';
 
-const ICON_BY_KEY: Record<BannerIconKey, PhosphorIcon> = {
-  'currency-eur': CurrencyEurIcon,
-  lightning: LightningIcon,
-  'shield-check': ShieldCheckIcon,
-  sparkle: SparkleIcon,
-  'check-circle': CheckCircleIcon,
-  'hand-coins': HandCoinsIcon,
+const ICON_BY_KEY: Record<BannerIconKey, React.ElementType> = {
+  'currency-eur': AttachMoney,
+  lightning: ElectricBolt,
+  'shield-check': VerifiedUser,
+  sparkle: AutoAwesome,
+  'check-circle': TaskAlt,
+  'hand-coins': Savings,
 };
 
 interface BannerAction {
@@ -359,7 +358,7 @@ export function HomepageBanner({
                 href={primaryAction.href}
                 variant="contained"
                 size="large"
-                endIcon={<ArrowRightIcon size={16} weight="bold" />}
+                endIcon={<ArrowForward sx={{ fontSize: 18 }} />}
                 sx={{
                   textTransform: 'none',
                   fontWeight: 700,
@@ -416,7 +415,7 @@ export function HomepageBanner({
                 }}
               >
                 {features.map(({ iconKey, label }) => {
-                  const Icon = ICON_BY_KEY[iconKey];
+                  const Cmp = ICON_BY_KEY[iconKey];
                   return (
                     <Stack
                       key={label}
@@ -434,7 +433,7 @@ export function HomepageBanner({
                       }}
                     >
                       <Box sx={{ color: 'primary.main', display: 'inline-flex' }}>
-                        <Icon size={14} weight="bold" />
+                        <Cmp sx={{ fontSize: 16 }} />
                       </Box>
                       <Typography
                         variant="caption"

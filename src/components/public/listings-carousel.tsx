@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import { Box, IconButton } from '@mui/material';
-import { CaretLeft as CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft';
-import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
+import ChevronLeft from '@mui/icons-material/ChevronLeft';
+import ChevronRight from '@mui/icons-material/ChevronRight';
 
 /**
  * Horizontal one-line carousel for the homepage listings.
@@ -134,7 +134,7 @@ export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps)
             '&:hover': { bgcolor: 'background.paper', borderColor: 'primary.main', color: 'primary.main' },
           }}
         >
-          <CaretLeftIcon size={18} weight="bold" />
+          <ChevronLeft sx={{ fontSize: 20 }} />
         </IconButton>
       ) : null}
 
@@ -159,7 +159,7 @@ export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps)
             '&:hover': { bgcolor: 'background.paper', borderColor: 'primary.main', color: 'primary.main' },
           }}
         >
-          <CaretRightIcon size={18} weight="bold" />
+          <ChevronRight sx={{ fontSize: 20 }} />
         </IconButton>
       ) : null}
     </Box>

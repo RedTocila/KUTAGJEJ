@@ -4,27 +4,58 @@ import * as React from 'react';
 import { Box, Stack, Typography } from '@mui/material';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 export interface Spec {
-  /** Pre-bound Phosphor icon component (the SSR variant). */
-  Icon: PhosphorIcon;
-  /** Short label rendered next to the icon (e.g. "75 m²", "3"). */
+  icon: React.ReactNode;
   label: string;
-  /** Optional accessible title — shown on hover; defaults to `label`. */
   title?: string;
 }
 
-/**
- * Inline row of icon + label pills used inside the public listing cards.
- * Each pill is a small bordered chip with a soft background that calls
- * attention to the property's specs without competing with the price or
- * title. Wraps to a second line on narrow widths so cards stay readable on
- * mobile.
- */
-export function SpecRow({ specs }: { specs: Spec[] }) {
+export function SpecRow({ specs, variant = 'default' }: { specs: Spec[]; variant?: 'default' | 'featured' }) {
   const filtered = specs.filter((s) => Boolean(s.label));
   if (filtered.length === 0) return null;
+
+  if (variant === 'featured') {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          width: '100%',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: { xs: 1, sm: 1.5 },
+        }}
+      >
+        {filtered.map(({ icon, label, title }, index) => (
+          <Stack
+            key={`${label}-${index}`}
+            direction="row"
+            spacing={0.75}
+            title={title ?? label}
+            sx={{ flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Box component="span" aria-hidden sx={{ display: 'inline-flex', flexShrink: 0, color: 'text.secondary' }}>
+              {icon}
+            </Box>
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.primary',
+                lineHeight: 1.25,
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {label}
+            </Typography>
+          </Stack>
+        ))}
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -36,7 +67,7 @@ export function SpecRow({ specs }: { specs: Spec[] }) {
         alignItems: 'center',
       }}
     >
-      {filtered.map(({ Icon, label, title }, index) => (
+      {filtered.map(({ icon, label, title }, index) => (
         <Box
           key={`${label}-${index}`}
           title={title ?? label}
@@ -49,17 +80,12 @@ export function SpecRow({ specs }: { specs: Spec[] }) {
             borderRadius: 1,
             border: '1px solid',
             borderColor: 'divider',
-            bgcolor: (theme) =>
-              primaryMainAlpha(theme.palette.mode === 'dark' ? 0.12 : 0.07),
-            color: 'primary.main',
+            bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.12 : 0.07),
+            color: 'text.secondary',
           }}
         >
-          <Box
-            component="span"
-            aria-hidden
-            sx={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
-          >
-            <Icon size={14} weight="bold" />
+          <Box component="span" aria-hidden sx={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0, color: 'primary.main' }}>
+            {icon}
           </Box>
           <Typography
             variant="caption"

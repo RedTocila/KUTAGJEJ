@@ -78,30 +78,43 @@ export function PublicHeader() {
         position="fixed"
         elevation={0}
         component="header"
-        sx={{
-          top: 0,
-          left: 0,
-          right: 0,
-          color: 'text.primary',
-          backgroundColor: (theme) =>
-            elevated
-              ? `rgb(var(--mui-palette-background-paperChannel) / ${theme.palette.mode === 'dark' ? 0.92 : 0.96})`
-              : `rgb(var(--mui-palette-background-paperChannel) / ${theme.palette.mode === 'dark' ? 0.7 : 0.85})`,
-          backdropFilter: 'saturate(180%) blur(14px)',
-          WebkitBackdropFilter: 'saturate(180%) blur(14px)',
-          borderBottom: '1px solid',
-          borderColor: 'divider',
-          transform: headerHidden ? 'translateY(-100%)' : 'translateY(0)',
-          transition: (theme) =>
-            theme.transitions.create(['transform', 'background-color', 'border-color'], {
+        sx={(theme) => {
+          const paperAlpha = theme.palette.mode === 'dark' ? 0.92 : 0.96;
+          const paperAlphaRest = theme.palette.mode === 'dark' ? 0.7 : 0.85;
+          const frosted = `rgb(var(--mui-palette-background-paperChannel) / ${paperAlpha})`;
+          const frostedRest = `rgb(var(--mui-palette-background-paperChannel) / ${paperAlphaRest})`;
+
+          return {
+            top: 0,
+            left: 0,
+            right: 0,
+            color: 'text.primary',
+            backgroundColor: {
+              xs: elevated ? frosted : 'transparent',
+              md: elevated ? frosted : frostedRest,
+            },
+            backdropFilter: {
+              xs: elevated ? 'saturate(180%) blur(14px)' : 'none',
+              md: 'saturate(180%) blur(14px)',
+            },
+            WebkitBackdropFilter: {
+              xs: elevated ? 'saturate(180%) blur(14px)' : 'none',
+              md: 'saturate(180%) blur(14px)',
+            },
+            borderBottom: 'none',
+            boxShadow: 'none',
+            backgroundImage: 'none',
+            transform: headerHidden ? 'translateY(-100%)' : 'translateY(0)',
+            transition: theme.transitions.create(['transform', 'background-color'], {
               duration: 220,
               easing: theme.transitions.easing.easeInOut,
             }),
-          zIndex: (theme) => theme.zIndex.appBar,
-          willChange: 'transform',
-          '@media (prefers-reduced-motion: reduce)': {
-            transition: 'background-color 0.2s ease, border-color 0.2s ease',
-          },
+            zIndex: theme.zIndex.appBar,
+            willChange: 'transform',
+            '@media (prefers-reduced-motion: reduce)': {
+              transition: 'background-color 0.2s ease',
+            },
+          };
         }}
       >
         <Container maxWidth="xl">

@@ -21,7 +21,15 @@ export function HeroSection({ banners, stats }: HeroSectionProps) {
         <HomeCategoriesStrip />
       </Box>
 
-      <Box sx={{ display: { xs: 'block', md: 'none' }, pt: { xs: 4, md: 6 }, pb: { xs: 3, md: 4 } }}>
+      <Box
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          mt: { xs: -8, md: 0 },
+          pt: { xs: 10, md: 6 },
+          pb: { xs: 3, md: 4 },
+          bgcolor: 'background.default',
+        }}
+      >
         <Container maxWidth="md">
           <Stack spacing={{ xs: 2.25, md: 2.75 }} sx={{ alignItems: 'center', textAlign: 'center' }}>
             <Typography

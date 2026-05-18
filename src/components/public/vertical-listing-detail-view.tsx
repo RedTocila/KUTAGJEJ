@@ -46,6 +46,8 @@ import {
   pseudoRandomMetric,
   relativeAlbanianDate,
 } from '@/components/public/listing-cards/format-helpers';
+import { JobListingCountdown } from '@/components/public/listing-cards/job-listing-countdown';
+import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 
 /** Tiny strip card for related listings — plain links, no theme callbacks crossing RSC boundaries. */
 export interface VerticalListingSimilarItem {
@@ -321,7 +323,16 @@ export function VerticalListingDetailView(props: {
               <Stack direction="row" sx={{ flexWrap: 'wrap', gap: { xs: 1.25, sm: 2 }, color: 'text.secondary' }}>
                 {subtitleLine(listing)}
                 <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewSeed)} shikime</Typography>
-                <Typography variant="body2">{relativeAlbanianDate(listing.updatedAt ?? listing.createdAt)}</Typography>
+                {listing.kind === 'job' ? (
+                  <JobListingCountdown
+                    expiresAt={
+                      listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString()
+                    }
+                    chipSx={{ height: 28, fontSize: '0.8rem' }}
+                  />
+                ) : (
+                  <Typography variant="body2">{relativeAlbanianDate(listing.updatedAt ?? listing.createdAt)}</Typography>
+                )}
               </Stack>
             </Stack>
 

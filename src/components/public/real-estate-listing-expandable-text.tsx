@@ -11,8 +11,17 @@ export function RealEstateListingExpandableText(props: {
   text: string;
   /** When omitted, follows MUI `text.primary` (light/dark shells). */
   color?: string;
+  readMoreLabel?: string;
+  readLessLabel?: string;
+  fontSize?: string | number;
 }) {
-  const { text, color = 'text.primary' } = props;
+  const {
+    text,
+    color = 'text.primary',
+    readMoreLabel = 'Shfaq më shumë',
+    readLessLabel = 'Shfaq më pak',
+    fontSize,
+  } = props;
   const [open, setOpen] = React.useState(false);
 
   const long = text.length > COLLAPSED_LEN;
@@ -25,10 +34,11 @@ export function RealEstateListingExpandableText(props: {
         variant="body1"
         sx={{
           color,
-          lineHeight: 1.75,
+          lineHeight: 1.65,
           whiteSpace: 'pre-wrap',
           fontWeight: 400,
           opacity: 0.94,
+          ...(fontSize != null ? { fontSize } : {}),
         }}
       >
         {shown}
@@ -46,13 +56,14 @@ export function RealEstateListingExpandableText(props: {
             fontWeight: 700,
             color: 'primary.main',
             typography: 'body2',
+            ...(fontSize != null ? { fontSize } : {}),
             border: 'none',
             bgcolor: 'transparent',
             padding: 0,
             '&:hover': { color: 'primary.light' },
           }}
         >
-          {open ? 'Shfaq më pak' : 'Shfaq më shumë'}
+          {open ? readLessLabel : readMoreLabel}
         </Link>
       ) : null}
     </Stack>

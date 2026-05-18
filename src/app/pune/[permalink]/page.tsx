@@ -3,12 +3,11 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
 import { PublicShell } from '@/components/public/public-shell';
-import { VerticalListingDetailView } from '@/components/public/vertical-listing-detail-view';
+import { JobListingDetailView } from '@/components/public/job-listing-detail-view';
 import { config } from '@/config';
 import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
 import { fetchLatestJobs, fetchPublicJobListingById } from '@/lib/public-listings-client';
-import { mapJobsToSimilarStrip } from '@/lib/vertical-detail-similar-strip';
 import { paths, pathsPublicVerticalListingDetail } from '@/paths';
 
 export const revalidate = 60;
@@ -52,8 +51,13 @@ export default async function JobListingPage({ params }: PageProps): Promise<Rea
   const id = mongoIdFromPublicListingSegment(permalink);
   if (!id) notFound();
 
-  const [listing, pool] = await Promise.all([fetchPublicJobListingById(id), fetchLatestJobs(28)]);
+  const [listing, jobsPool] = await Promise.all([
+    fetchPublicJobListingById(id),
+    fetchLatestJobs(28),
+  ]);
   if (!listing) notFound();
+
+  const similar = jobsPool.filter((l) => l.id !== listing.id).slice(0, 10);
 
   const requestedNorm = normalizeListingPermalinkSegment(permalink);
   const canonRaw = listing.permalinkPath?.trim() ?? '';
@@ -68,17 +72,9 @@ export default async function JobListingPage({ params }: PageProps): Promise<Rea
     ? pathsPublicVerticalListingDetail(paths.public.jobs, canonRaw)
     : pathsPublicVerticalListingDetail(paths.public.jobs, listing.id);
   const canonicalUrl = `${config.site.url.replace(/\/$/, '')}${pathHref}`;
-  const similar = mapJobsToSimilarStrip(pool, listing.id);
-
   return (
     <PublicShell hideHeaderBelowMd>
-      <VerticalListingDetailView
-        listing={listing}
-        canonicalUrl={canonicalUrl}
-        browseHref={paths.public.jobs}
-        similarSectionTitle="Pozicione të fundit"
-        similar={similar}
-      />
+      <JobListingDetailView listing={listing} canonicalUrl={canonicalUrl} similar={similar} />
     </PublicShell>
   );
 }

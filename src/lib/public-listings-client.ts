@@ -119,6 +119,8 @@ export interface PublicJobListing {
   imageUrl: string | null;
   imageUrls: string[];
   createdAt: string;
+  /** ISO timestamp when the listing is removed from public browse (15 days after posting). */
+  expiresAt: string;
   permalinkPath?: string;
 }
 

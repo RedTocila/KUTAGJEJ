@@ -64,14 +64,18 @@ export function HeroCategoryCircles({
           overflowY: 'hidden',
           WebkitOverflowScrolling: 'touch',
           scrollSnapType: { xs: 'x proximity', sm: 'none' },
-          scrollbarGutter: 'stable',
-          pb: 0.75,
+          // Mobile: scroll still works via swipe; hide the scrollbar track/thumb.
+          scrollbarWidth: { xs: 'none', sm: 'auto' },
+          pb: { xs: 0, sm: 0.75 },
           mx: { xs: -1, sm: 0 },
           px: { xs: 1, sm: 0 },
-          '&::-webkit-scrollbar': { height: 5 },
+          '&::-webkit-scrollbar': {
+            display: { xs: 'none', sm: 'block' },
+            height: { sm: 5 },
+          },
           '&::-webkit-scrollbar-thumb': {
+            display: { xs: 'none', sm: 'block' },
             borderRadius: 2.5,
-            // Can't use alpha(palette.text.primary): in CssVarsProvider it's a CSS `var()`, not a color MUI can parse.
             bgcolor: (theme) =>
               theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(26, 33, 24, 0.18)',
           },

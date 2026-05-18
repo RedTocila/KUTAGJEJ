@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import * as React from 'react';
-import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
+import Script from 'next/script';
 
 import { brandLogoSrc, config } from '@/config';
 
@@ -10,10 +9,8 @@ import { AppProviders } from './app-providers';
  * Do not set `themeColor` here: Next injects `<meta name="theme-color">` nodes that React owns.
  * Our boot script + `ThemeColorMetaSync` update a single `#kutagjej-theme-color` tag in place.
  *
- * `InitColorSchemeScript` runs first and sets `.light` / `.dark` on `<html>` from localStorage
- * (`colorSchemeSelector: 'class'` in `create-theme.ts`).
- *
- * `theme-color-boot.js` runs next for `theme-color` + `color-scheme` without using inline React scripts.
+ * `theme-color-boot.js` (beforeInteractive) sets `.light` / `.dark` on `<html>`, theme-color meta,
+ * and `color-scheme` from localStorage — no inline React scripts (React 19 safe).
  */
 export const viewport = {
   width: 'device-width',
@@ -40,25 +37,12 @@ export const metadata = {
 } satisfies Metadata;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return React.createElement(
-    'html',
-    {
-      lang: 'sq-AL',
-      suppressHydrationWarning: true,
-    },
-    React.createElement(
-      'head',
-      null,
-      React.createElement(InitColorSchemeScript, {
-        attribute: 'class',
-        defaultMode: 'dark',
-        modeStorageKey: 'kutagjej-color-scheme',
-      }),
-      React.createElement('script', {
-        src: '/theme-color-boot.js',
-        suppressHydrationWarning: true,
-      }),
-    ),
-    React.createElement('body', { suppressHydrationWarning: true }, React.createElement(AppProviders, null, children)),
+  return (
+    <html lang="sq-AL" suppressHydrationWarning>
+      <body suppressHydrationWarning>
+        <Script src="/theme-color-boot.js" strategy="beforeInteractive" />
+        <AppProviders>{children}</AppProviders>
+      </body>
+    </html>
   );
 }

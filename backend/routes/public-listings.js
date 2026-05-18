@@ -35,6 +35,22 @@ const router = express.Router();
 
 const DEFAULT_LIMIT = 8;
 const MAX_LIMIT = 24;
+/** Job listings are hidden from public browse after this many days. */
+const JOB_LISTING_VISIBLE_DAYS = 15;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function jobListingExpiresAt(createdAt) {
+  const posted = createdAt instanceof Date ? createdAt : new Date(createdAt);
+  return new Date(posted.getTime() + JOB_LISTING_VISIBLE_DAYS * MS_PER_DAY);
+}
+
+function isJobListingActive(doc) {
+  return Date.now() < jobListingExpiresAt(doc.createdAt).getTime();
+}
+
+function activeJobCreatedAtFilter() {
+  return { createdAt: { $gte: new Date(Date.now() - JOB_LISTING_VISIBLE_DAYS * MS_PER_DAY) } };
+}
 
 function clampLimit(value) {
   const n = Number.parseInt(String(value ?? ''), 10);
@@ -220,6 +236,7 @@ function formatJob(doc, cityById) {
     imageUrl: pickImage(doc),
     imageUrls: doc.imageUrls ?? [],
     createdAt: doc.createdAt,
+    expiresAt: jobListingExpiresAt(doc.createdAt),
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc._id),
   };
 }
@@ -360,9 +377,16 @@ async function latestCars(limit) {
 }
 
 async function latestJobs(limit) {
-  const docs = await JobListing.find().sort({ createdAt: -1 }).limit(limit).lean();
+  const docs = await JobListing.find(activeJobCreatedAtFilter())
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
   const cityById = await buildCityIndex(docs);
   return docs.map((d) => formatJob(d, cityById));
+}
+
+async function countActiveJobs() {
+  return JobListing.countDocuments(activeJobCreatedAtFilter());
 }
 
 async function latestMarketplace(limit) {
@@ -395,7 +419,7 @@ router.get('/latest', async (req, res) => {
     const counts = await Promise.all([
       RealEstateListing.estimatedDocumentCount(),
       CarListing.estimatedDocumentCount(),
-      JobListing.estimatedDocumentCount(),
+      countActiveJobs(),
       MarketplaceListing.estimatedDocumentCount(),
       DirectoryListing.countDocuments({ vertical: 'businesses' }),
       DirectoryListing.countDocuments({ vertical: 'professionals' }),
@@ -473,7 +497,7 @@ router.get('/jobs/:id', async (req, res) => {
       return;
     }
     const doc = await JobListing.findById(rawId).lean();
-    if (!doc) {
+    if (!doc || !isJobListingActive(doc)) {
       res.status(404).json({ message: 'Not found' });
       return;
     }

@@ -26,6 +26,9 @@
       document.head.appendChild(m);
     }
     m.setAttribute('content', c);
-    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+    var root = document.documentElement;
+    root.style.colorScheme = dark ? 'dark' : 'light';
+    root.classList.remove('light', 'dark');
+    root.classList.add(dark ? 'dark' : 'light');
   } catch (e) {}
 })();

@@ -1,17 +1,18 @@
 'use client';
 
 import * as React from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import BusinessOutlined from '@mui/icons-material/BusinessOutlined';
-import HomeOutlined from '@mui/icons-material/HomeOutlined';
-import HubOutlined from '@mui/icons-material/HubOutlined';
-import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
-import SchoolOutlined from '@mui/icons-material/SchoolOutlined';
-import ScheduleOutlined from '@mui/icons-material/ScheduleOutlined';
-import StarOutlineOutlined from '@mui/icons-material/StarOutlineOutlined';
-import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
-import Work from '@mui/icons-material/Work';
 import { Box, Stack, Typography } from '@mui/material';
+import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
+import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
+import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
+import { GraduationCap as GraduationCapIcon } from '@phosphor-icons/react/dist/ssr/GraduationCap';
+import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
+import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
+import { Path as PathIcon } from '@phosphor-icons/react/dist/ssr/Path';
+import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
+import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 
 import {
   JOB_EDUCATION_OPTIONS,
@@ -26,27 +27,24 @@ import { listingJobPublicHref } from '@/paths';
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
-import { findOptionLabel, formatPrice, pseudoRandomMetric, relativeAlbanianDate } from './format-helpers';
-import { ListingCardFeaturedImageFooter } from './listing-card-featured-overlay';
+import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
+
+import { findOptionLabel, formatPrice, pseudoRandomMetric } from './format-helpers';
+import { JobListingCountdownPlaceholder } from './job-listing-countdown';
 import { SpecRow, type Spec } from './spec-row';
 
-const iconSm = { fontSize: 14 } as const;
-const iconFeatured = { fontSize: 17 } as const;
+const JobListingCountdown = dynamic(
+  () => import('./job-listing-countdown').then((m) => m.JobListingCountdown),
+  { ssr: false, loading: () => <JobListingCountdownPlaceholder /> },
+);
 
-function WorkLocationMuiIcon({ value, size }: { value: string; size: 'sm' | 'feat' }) {
-  const sx = size === 'feat' ? iconFeatured : iconSm;
-  if (value === 'remote') return <HomeOutlined sx={sx} />;
-  if (value === 'hybrid') return <HubOutlined sx={sx} />;
-  return <BusinessOutlined sx={sx} />;
+function workLocationIcon(value: string) {
+  if (value === 'remote') return HouseIcon;
+  if (value === 'hybrid') return PathIcon;
+  return BuildingsIcon;
 }
 
-export function JobCard({
-  listing,
-  variant = 'default',
-}: {
-  listing: PublicJobListing;
-  variant?: 'default' | 'featured';
-}) {
+export function JobCard({ listing }: { listing: PublicJobListing }) {
   const viewCount = React.useMemo(
     () => pseudoRandomMetric(`job:${listing.id}:${listing.createdAt}`, 120, 9800),
     [listing.id, listing.createdAt],
@@ -58,141 +56,80 @@ export function JobCard({
   const educationLabel = findOptionLabel(JOB_EDUCATION_OPTIONS, listing.education);
   const salary =
     listing.salary != null ? `${formatPrice(listing.salary, listing.currency)} / muaj` : 'Pagë e diskutueshme';
+  const expiresAt = listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
 
-  const locationLine = listing.cityName ? `${listing.cityName}, Shqipëri` : null;
+  const WorkLocationIcon = workLocationIcon(listing.workLocation);
 
-  const specs: Spec[] =
-    variant === 'featured'
-      ? [
-          { icon: <ScheduleOutlined sx={iconFeatured} />, label: jobTypeLabel, title: 'Tipi i punës' },
-          {
-            icon: <WorkLocationMuiIcon value={listing.workLocation} size="feat" />,
-            label: workLocationLabel,
-            title: 'Vendi i punës',
-          },
-          { icon: <StarOutlineOutlined sx={iconFeatured} />, label: experienceLabel, title: 'Eksperienca' },
-        ]
-      : [
-          { icon: <ScheduleOutlined sx={iconSm} />, label: jobTypeLabel, title: 'Tipi i punës' },
-          {
-            icon: <WorkLocationMuiIcon value={listing.workLocation} size="sm" />,
-            label: workLocationLabel,
-            title: 'Vendi i punës',
-          },
-          { icon: <StarOutlineOutlined sx={iconSm} />, label: experienceLabel, title: 'Eksperienca' },
-          ...(listing.education && listing.education !== 'no-requirement'
-            ? [{ icon: <SchoolOutlined sx={iconSm} />, label: educationLabel, title: 'Arsimi' }]
-            : []),
-        ];
-
-  const mediaHeight = variant === 'featured' ? 268 : 170;
-  const shellSx = variant === 'featured' ? { borderRadius: 3, '&:hover': { transform: 'translateY(-4px)' } } : undefined;
-
-  const featuredImageFooter =
-    variant === 'featured' ? (
-      <ListingCardFeaturedImageFooter
-        listingId={listing.id}
-        priceLine={
-          listing.salary != null ? (
-            <>
-              {formatPrice(listing.salary, listing.currency)}
-              <Typography
-                component="span"
-                sx={{ ml: 0.5, fontSize: '0.78rem', fontWeight: 600, color: 'rgba(255,255,255,0.72)' }}
-              >
-                / muaj
-              </Typography>
-            </>
-          ) : (
-            'Pagë e diskutueshme'
-          )
-        }
-        title={listing.title}
-        locationLine={locationLine}
-      />
-    ) : null;
+  const specs: Spec[] = [
+    { Icon: ClockIcon, label: jobTypeLabel, title: 'Tipi i punës' },
+    { Icon: WorkLocationIcon, label: workLocationLabel, title: 'Vendi i punës' },
+    { Icon: StarIcon, label: experienceLabel, title: 'Eksperienca' },
+    ...(listing.education && listing.education !== 'no-requirement'
+      ? [{ Icon: GraduationCapIcon, label: educationLabel, title: 'Arsimi' }]
+      : []),
+  ];
 
   return (
-    <Link
-      href={listingJobPublicHref(listing)}
-      prefetch={false}
-      style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
-      aria-labelledby={`listing-card-title-${listing.id}`}
-    >
-      <CardShell sx={shellSx}>
-        <CardMedia
-          imageUrl={listing.imageUrl}
-          FallbackIcon={Work}
-          alt={listing.title}
-          topLeftBadge={jobTypeLabel}
-          height={mediaHeight}
-          bottomOverlay={featuredImageFooter}
-          visualVariant={variant === 'featured' ? 'featured' : 'default'}
-        />
-        <Stack
-          className="listing-card-body"
-          spacing={variant === 'featured' ? 0 : 1}
+    <Link href={listingJobPublicHref(listing)} prefetch={false} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
+      <CardShell>
+      <CardMedia
+        imageUrl={listing.imageUrl}
+        FallbackIcon={BriefcaseIcon}
+        alt={listing.title}
+        topLeftBadge={jobTypeLabel}
+      />
+      <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
+        >
+          {industryLabel}
+        </Typography>
+        <Typography
+          component="h3"
           sx={{
-            p: { xs: 1.75, sm: 2 },
-            pt: variant === 'featured' ? 1.75 : undefined,
+            fontWeight: 700,
+            fontSize: '0.95rem',
+            lineHeight: 1.4,
+            color: 'text.primary',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
           }}
         >
-          {variant === 'featured' ? null : (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
-            >
-              {industryLabel}
+          {listing.title}
+        </Typography>
+        <Typography sx={{ fontWeight: 800, fontSize: '1rem', color: 'primary.main', lineHeight: 1.2 }}>
+          {salary}
+        </Typography>
+
+        <CardDescription text={listing.description} />
+
+        <Box sx={{ flex: 1 }} />
+
+        <SpecRow specs={specs} />
+
+        {listing.cityName ? (
+          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+            <MapPinIcon size={14} weight="regular" />
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+              {listing.cityName}
             </Typography>
-          )}
-          {variant === 'featured' ? null : (
-            <Typography
-              component="h3"
-              id={`listing-card-title-${listing.id}`}
-              sx={{
-                fontWeight: 700,
-                fontSize: '0.95rem',
-                lineHeight: 1.4,
-                color: 'text.primary',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-              }}
-            >
-              {listing.title}
+          </Stack>
+        ) : null}
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          <JobListingCountdown expiresAt={expiresAt} />
+          <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+            <EyeIcon size={14} weight="regular" />
+            <Typography variant="caption" color="text.disabled">
+              {new Intl.NumberFormat('en-GB').format(viewCount)}
             </Typography>
-          )}
-          {variant === 'default' ? (
-            <Typography sx={{ fontWeight: 800, fontSize: '1rem', color: 'primary.main', lineHeight: 1.2 }}>{salary}</Typography>
-          ) : null}
-          {variant === 'default' ? <CardDescription text={listing.description} /> : null}
-          {variant === 'default' ? <Box sx={{ flex: 1 }} /> : null}
-          <SpecRow specs={specs} variant={variant === 'featured' ? 'featured' : 'default'} />
-          {variant === 'default' && listing.cityName ? (
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
-              <LocationOnOutlined sx={{ fontSize: 14 }} />
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                {listing.cityName}
-              </Typography>
-            </Stack>
-          ) : null}
-          {variant === 'default' ? (
-            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="caption" color="text.disabled">
-                {relativeAlbanianDate(listing.createdAt)}
-              </Typography>
-              <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-                <VisibilityOutlined sx={{ fontSize: 14 }} />
-                <Typography variant="caption" color="text.disabled">
-                  {new Intl.NumberFormat('en-GB').format(viewCount)}
-                </Typography>
-              </Stack>
-            </Stack>
-          ) : null}
+          </Stack>
         </Stack>
-      </CardShell>
+      </Stack>
+    </CardShell>
     </Link>
   );
 }

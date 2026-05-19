@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import {
   Avatar,
   Box,
@@ -20,7 +19,6 @@ import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { Couch as CouchIcon } from '@phosphor-icons/react/dist/ssr/Couch';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
-import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import { Lightning as LightningIcon } from '@phosphor-icons/react/dist/ssr/Lightning';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
@@ -30,11 +28,13 @@ import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr
 
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
+import { ListingsCarousel } from '@/components/public/listings-carousel';
+import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { formatPrice, pseudoRandomMetric, relativeAlbanianDate } from '@/components/public/listing-cards/format-helpers';
 import { whatsappHref } from '@/lib/listing-contact';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { PublicRealEstateListing, PublicRealEstateListingDetail } from '@/lib/public-listings-client';
-import { listingRealEstatePublicHref, paths } from '@/paths';
+import { paths } from '@/paths';
 
 import {
   LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
@@ -475,27 +475,43 @@ export function RealEstateListingDetailView({
     <>
       {/* JSON-LD is emitted from the route; keep article semantics for headings + listing body. */}
       <Box component="article" sx={{ bgcolor: 'background.default' }}>
-        <Container maxWidth={false} sx={{ px: { xs: 0, md: 3 }, pt: { md: 2 }, bgcolor: 'background.default' }}>
-          <Box
-            sx={{
-              mx: 'auto',
-              maxWidth: { md: 1320 },
-              borderRadius: { xs: 0, md: 3 },
-              overflow: 'hidden',
-              bgcolor: 'background.paper',
-              boxShadow: (theme) => ({
-                xs: 'none',
-                md: theme.palette.mode === 'dark' ? `0 20px 50px ${alpha(theme.palette.common.black, 0.35)}` : theme.shadows[6],
-              }),
-            }}
-          >
-            <Stack direction={{ xs: 'column', md: 'row' }} sx={{ alignItems: { md: 'stretch' }, minHeight: 0 }}>
+        <Container
+          maxWidth="lg"
+          sx={{
+            px: { xs: 0, md: 3 },
+            pt: { md: 2 },
+            pb: { xs: 0, md: 2 },
+            bgcolor: 'background.default',
+          }}
+        >
+          <Stack spacing={{ xs: 0, md: 4 }}>
+            <Box
+              sx={(theme) => ({
+                width: '100%',
+                borderRadius: { xs: 0, md: 3 },
+                overflow: 'hidden',
+                bgcolor: 'background.paper',
+                border: 'none',
+                boxShadow: {
+                  xs: 'none',
+                  md:
+                    theme.palette.mode === 'dark'
+                      ? `0 20px 50px ${alpha(theme.palette.common.black, 0.35)}`
+                      : theme.shadows[6],
+                },
+              })}
+            >
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              sx={{ alignItems: { md: 'stretch' }, minHeight: 0, width: '100%' }}
+            >
               <Box
                 sx={{
-                  flex: { md: `0 1 ${LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX}px` },
+                  flex: { md: `1 1 ${LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX}px` },
                   maxWidth: { md: LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX },
                   minWidth: 0,
-                  width: { xs: '100%', md: 'auto' },
+                  width: '100%',
+                  overflow: 'hidden',
                 }}
               >
                 <RealEstateListingGallery
@@ -517,8 +533,6 @@ export function RealEstateListingDetailView({
                   width: { md: 'min(340px, 34%)' },
                   minWidth: { md: 280 },
                   maxWidth: { md: 380 },
-                  borderLeft: 1,
-                  borderColor: 'divider',
                   bgcolor: 'background.paper',
                   p: 2.5,
                   justifyContent: 'flex-start',
@@ -533,8 +547,16 @@ export function RealEstateListingDetailView({
                     displayPhone={displayPhone}
                     whatsappInquireHref={whatsappInquireHref}
                   />
-                  <Divider flexItem />
-                  <Paper variant="outlined" sx={{ borderRadius: 2.5, borderColor: 'divider', bgcolor: 'background.paper', p: 2 }}>
+                  <Divider flexItem sx={{ borderColor: 'rgba(var(--mui-palette-dividerChannel) / 0.35)' }} />
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      borderRadius: 2.5,
+                      border: 'none',
+                      bgcolor: 'rgba(var(--mui-palette-background-defaultChannel) / 0.55)',
+                      p: 2,
+                    }}
+                  >
                     <RealEstateSellerCardContents
                       sellerSectionHeadingId="re-seller-heading-hero"
                       listing={listing}
@@ -544,11 +566,9 @@ export function RealEstateListingDetailView({
                 </Stack>
               </Box>
             </Stack>
-          </Box>
-        </Container>
+            </Box>
 
-        <Container maxWidth="lg" sx={{ pt: { xs: 3, sm: 3.5 }, pb: { xs: 18, md: 8 } }}>
-          <Stack spacing={{ xs: 3, md: 3.5 }}>
+            <Stack spacing={{ xs: 3, md: 3.5 }} sx={{ px: { xs: 2, sm: 3, md: 0 }, pb: { xs: 18, md: 6 }, width: '100%' }}>
             <Stack spacing={1.75}>
               <Typography
                 variant="h3"
@@ -740,127 +760,27 @@ export function RealEstateListingDetailView({
                   <Typography variant="caption" sx={{ color: 'text.secondary', mt: '-0.5rem !important' }}>
                     Lista e përditësuar automatikisht.
                   </Typography>
-                  <Stack
-                    direction="row"
-                    spacing={2}
+                  <Box
                     sx={{
-                      overflowX: 'auto',
-                      pb: 1,
-                      px: { xs: 1.75, sm: 2 },
-                      scrollbarWidth: 'thin',
-                      scrollSnapType: 'x proximity',
+                      mx: { xs: -2, sm: -3, md: 0 },
+                      '& > div > div': { py: '8px 0 0 !important' },
                     }}
                   >
-                    {similar.map((s) => (
-                      <Box
-                        key={s.id}
-                        sx={{
-                          flex: '0 0 min(296px, 86vw)',
-                          scrollSnapAlign: 'start',
-                        }}
-                      >
-                        <SimilarCardMini listing={s} />
-                      </Box>
-                    ))}
-                  </Stack>
+                    <ListingsCarousel>
+                      {similar.map((s) => (
+                        <RealEstateCard key={s.id} listing={s} />
+                      ))}
+                    </ListingsCarousel>
+                  </Box>
                 </Stack>
               </>
             ) : null}
+            </Stack>
           </Stack>
         </Container>
       </Box>
 
       <StickyContactBar phone={displayPhone} whatsappInquireHref={whatsappInquireHref} />
     </>
-  );
-}
-
-function SimilarCardMini({ listing }: { listing: PublicRealEstateListing }) {
-  const href = listingRealEstatePublicHref(listing);
-  const thumb = listing.imageUrl ?? listing.imageUrls[0];
-  const loc = [listing.zoneName, listing.cityName].filter(Boolean).join(', ');
-  const txLabel = listing.transactionType === 'rent' ? 'Qira' : 'Shitet';
-
-  return (
-    <Link href={href} prefetch={false} scroll={false} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-      <Stack
-        direction="row"
-        spacing={0}
-        sx={{
-          minHeight: 104,
-          borderRadius: 2.5,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
-          overflow: 'hidden',
-          height: '100%',
-          transition: (theme) => theme.transitions.create(['border-color', 'box-shadow'], { duration: 200 }),
-          '&:hover': {
-            borderColor: 'primary.main',
-            boxShadow: (theme) =>
-              theme.palette.mode === 'dark'
-                ? `0 14px 36px ${alpha(theme.palette.common.black, 0.4)}`
-                : theme.shadows[4],
-          },
-        }}
-      >
-        <Box
-          sx={{
-            position: 'relative',
-            width: { xs: 112, sm: 128 },
-            flexShrink: 0,
-            bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.200'),
-          }}
-        >
-          {thumb ? (
-            // eslint-disable-next-line @next/next/no-img-element -- small horizontal strip; avoids extra remotePatterns setup
-            <img src={thumb} alt={`${listing.title} — foto`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <Box sx={{ color: 'text.disabled', display: 'flex', justifyContent: 'center', py: 3 }}>
-              <HouseIcon size={42} weight="regular" aria-hidden />
-            </Box>
-          )}
-          <Typography
-            variant="caption"
-            sx={{
-              position: 'absolute',
-              top: 6,
-              left: 6,
-              bgcolor: (theme) => alpha(theme.palette.common.black, 0.52),
-              color: 'primary.main',
-              px: 0.75,
-              py: 0.15,
-              borderRadius: 0.75,
-              fontWeight: 800,
-              fontSize: '0.65rem',
-            }}
-          >
-            {txLabel}
-          </Typography>
-        </Box>
-        <Stack spacing={1} sx={{ px: { xs: 1.35, sm: 1.5 }, py: 1.35, justifyContent: 'center', alignItems: 'flex-start', minWidth: 0 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 850, fontSize: '0.975rem', lineHeight: 1.35, color: 'text.primary' }}>
-            {formatPrice(listing.price, listing.currency)}
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              color: 'text.primary',
-              fontWeight: 700,
-              opacity: 0.92,
-              overflow: 'hidden',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-            }}
-          >
-            {listing.title}
-          </Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }} noWrap>
-            {loc}
-          </Typography>
-        </Stack>
-      </Stack>
-    </Link>
   );
 }

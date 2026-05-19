@@ -17,10 +17,17 @@ import { MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import type { PublicDirectoryListing } from '@/lib/public-listings-client';
 import { listingBusinessPublicHref, listingProfessionalPublicHref } from '@/paths';
 
+import { BusinessPromoBanner } from './business-promo-banner';
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
-import { findOptionLabel, formatPrice, pseudoRandomMetric, relativeAlbanianDate } from './format-helpers';
+import {
+  findOptionLabel,
+  formatBusinessOpeningHoursForCard,
+  formatPrice,
+  pseudoRandomMetric,
+  relativeAlbanianDate,
+} from './format-helpers';
 import { SpecRow, type Spec } from './spec-row';
 
 function conditionIcon(condition: string | null) {
@@ -28,14 +35,16 @@ function conditionIcon(condition: string | null) {
   return CheckCircleIcon;
 }
 
-/** Biznese = venues (eat, drink, reserve) — not rent/sale listings. */
+/** Biznese = venues (eat, drink, reserve) — minimal card layout. */
 function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing }) {
   const viewCount = React.useMemo(
     () => pseudoRandomMetric(`dir:${listing.id}:${listing.createdAt}`, 80, 4200),
     [listing.id, listing.createdAt],
   );
 
-  const specs: Spec[] = [{ Icon: TagIcon, label: listing.categoryLabel, title: 'Lloji' }];
+  const openingHoursLabel = listing.openingHours
+    ? formatBusinessOpeningHoursForCard(listing.openingHours)
+    : null;
 
   const topBadge = listing.reservationsEnabled ? 'Rezervim' : undefined;
 
@@ -46,122 +55,100 @@ function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing })
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
       <CardShell>
-      <CardMedia
-        imageUrl={listing.imageUrl}
-        FallbackIcon={StorefrontIcon}
-        alt={listing.title}
-        topLeftBadge={topBadge}
-      />
-      <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
-        >
-          {listing.categoryLabel}
-        </Typography>
-        <Typography
-          component="h3"
-          sx={{
-            fontWeight: 700,
-            fontSize: '0.95rem',
-            lineHeight: 1.4,
-            color: 'text.primary',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {listing.title}
-        </Typography>
-
-        {listing.servicesHighlight ? (
-          <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600, lineHeight: 1.35 }}>
-            {listing.servicesHighlight}
-          </Typography>
-        ) : null}
-
-        {listing.openingHours ? (
-          <Stack direction="row" spacing={0.75} sx={{ alignItems: 'flex-start', color: 'text.secondary' }}>
-            <Box sx={{ pt: 0.15, flexShrink: 0 }}>
-              <ClockIcon size={16} weight="regular" />
-            </Box>
-            <Typography
-              variant="caption"
-              sx={{
-                color: 'text.secondary',
-                fontWeight: 500,
-                display: '-webkit-box',
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-                lineHeight: 1.45,
-              }}
-            >
-              {listing.openingHours}
-            </Typography>
-          </Stack>
-        ) : null}
-
-        {listing.reservationsEnabled ? (
-          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-            <CalendarCheckIcon size={14} weight="bold" />
-            <Typography variant="caption" sx={{ fontWeight: 600, color: 'success.main' }}>
-              {listing.reservationUrl ? 'Rezervim online ose telefon' : 'Rezervim me telefon'}
-            </Typography>
-          </Stack>
-        ) : null}
-
-        <CardDescription text={listing.description} />
-
-        <Box sx={{ flex: 1 }} />
-
-        <SpecRow specs={specs} />
-
-        {listing.cityName ? (
-          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
-            <MapPinIcon size={14} weight="regular" />
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-              {listing.cityName}
-            </Typography>
-          </Stack>
-        ) : null}
-        {listing.reservationUrl ? (
+        <CardMedia
+          imageUrl={listing.imageUrl}
+          FallbackIcon={StorefrontIcon}
+          alt={listing.title}
+          topLeftBadge={topBadge}
+          bottomOverlay={
+            listing.reservationsEnabled ? (
+              <BusinessPromoBanner servicesHighlight={listing.servicesHighlight} variant="card" overlay />
+            ) : undefined
+          }
+        />
+        <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
           <Typography
-            component="span"
-            role="link"
-            tabIndex={0}
             variant="caption"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              window.open(listing.reservationUrl!, '_blank', 'noopener,noreferrer');
-            }}
-            onKeyDown={(e) => {
-              if (e.key !== 'Enter' && e.key !== ' ') return;
-              e.preventDefault();
-              e.stopPropagation();
-              window.open(listing.reservationUrl!, '_blank', 'noopener,noreferrer');
-            }}
-            sx={{ fontWeight: 600, cursor: 'pointer', color: 'primary.main', textDecoration: 'underline' }}
+            color="text.secondary"
+            sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
           >
-            Hap faqen e rezervimit →
+            {listing.categoryLabel}
           </Typography>
-        ) : null}
-        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="caption" color="text.disabled">
-            {relativeAlbanianDate(listing.createdAt)}
+          <Typography
+            component="h3"
+            sx={{
+              fontWeight: 700,
+              fontSize: '0.95rem',
+              lineHeight: 1.4,
+              color: 'text.primary',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {listing.title}
           </Typography>
-          <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-            <EyeIcon size={14} weight="regular" />
-            <Typography variant="caption" color="text.disabled">
-              {new Intl.NumberFormat('en-GB').format(viewCount)}
+
+          {listing.servicesHighlight ? (
+            <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600, lineHeight: 1.35 }}>
+              {listing.servicesHighlight}
             </Typography>
+          ) : null}
+
+          {openingHoursLabel ? (
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+              <ClockIcon size={14} weight="regular" color="var(--mui-palette-text-disabled)" />
+              <Typography
+                variant="caption"
+                noWrap
+                sx={{
+                  color: 'text.disabled',
+                  fontWeight: 500,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  minWidth: 0,
+                  flex: 1,
+                }}
+              >
+                {openingHoursLabel}
+              </Typography>
+            </Stack>
+          ) : null}
+
+          {listing.reservationsEnabled ? (
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+              <CalendarCheckIcon size={14} weight="bold" />
+              <Typography variant="caption" sx={{ fontWeight: 600, color: 'success.main' }}>
+                {listing.reservationUrl ? 'Rezervim online' : 'Rezervim me telefon'}
+              </Typography>
+            </Stack>
+          ) : null}
+
+          <Box sx={{ flex: 1 }} />
+
+          {listing.cityName ? (
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+              <MapPinIcon size={14} weight="regular" />
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                {listing.cityName}
+              </Typography>
+            </Stack>
+          ) : null}
+
+          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="caption" color="text.disabled">
+              {relativeAlbanianDate(listing.createdAt)}
+            </Typography>
+            <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+              <EyeIcon size={14} weight="regular" />
+              <Typography variant="caption" color="text.disabled">
+                {new Intl.NumberFormat('en-GB').format(viewCount)}
+              </Typography>
+            </Stack>
           </Stack>
         </Stack>
-      </Stack>
-    </CardShell>
+      </CardShell>
     </Link>
   );
 }
@@ -186,66 +173,66 @@ function ProfessionalListingCardBody({ listing }: { listing: PublicDirectoryList
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
       <CardShell>
-      <CardMedia
-        imageUrl={listing.imageUrl}
-        FallbackIcon={BriefcaseIcon}
-        alt={listing.title}
-        topLeftBadge={conditionLabel ?? undefined}
-      />
-      <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
-        >
-          {listing.categoryLabel}
-        </Typography>
-        <Typography
-          component="h3"
-          sx={{
-            fontWeight: 700,
-            fontSize: '0.95rem',
-            lineHeight: 1.4,
-            color: 'text.primary',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {listing.title}
-        </Typography>
-        <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: 'primary.main', lineHeight: 1.2 }}>
-          {formatPrice(listing.price, listing.currency)}
-        </Typography>
-
-        <CardDescription text={listing.description} />
-
-        <Box sx={{ flex: 1 }} />
-
-        <SpecRow specs={specs} />
-
-        {listing.cityName ? (
-          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
-            <MapPinIcon size={14} weight="regular" />
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-              {listing.cityName}
-            </Typography>
-          </Stack>
-        ) : null}
-        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="caption" color="text.disabled">
-            {relativeAlbanianDate(listing.createdAt)}
+        <CardMedia
+          imageUrl={listing.imageUrl}
+          FallbackIcon={BriefcaseIcon}
+          alt={listing.title}
+          topLeftBadge={conditionLabel ?? undefined}
+        />
+        <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
+          >
+            {listing.categoryLabel}
           </Typography>
-          <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-            <EyeIcon size={14} weight="regular" />
+          <Typography
+            component="h3"
+            sx={{
+              fontWeight: 700,
+              fontSize: '0.95rem',
+              lineHeight: 1.4,
+              color: 'text.primary',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {listing.title}
+          </Typography>
+          <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: 'primary.main', lineHeight: 1.2 }}>
+            {formatPrice(listing.price, listing.currency)}
+          </Typography>
+
+          <CardDescription text={listing.description} />
+
+          <Box sx={{ flex: 1 }} />
+
+          <SpecRow specs={specs} />
+
+          {listing.cityName ? (
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+              <MapPinIcon size={14} weight="regular" />
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                {listing.cityName}
+              </Typography>
+            </Stack>
+          ) : null}
+          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="caption" color="text.disabled">
-              {new Intl.NumberFormat('en-GB').format(viewCount)}
+              {relativeAlbanianDate(listing.createdAt)}
             </Typography>
+            <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+              <EyeIcon size={14} weight="regular" />
+              <Typography variant="caption" color="text.disabled">
+                {new Intl.NumberFormat('en-GB').format(viewCount)}
+              </Typography>
+            </Stack>
           </Stack>
         </Stack>
-      </Stack>
-    </CardShell>
+      </CardShell>
     </Link>
   );
 }

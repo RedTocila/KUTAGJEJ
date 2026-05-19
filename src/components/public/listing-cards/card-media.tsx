@@ -8,6 +8,8 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 
+import { ListingMediaActionButton, pseudoRandomListingActionCount } from '@/components/public/listing-media-action-button';
+
 export interface CardMediaProps {
   /** Primary image to render — `null` falls back to a tinted icon panel. */
   imageUrl: string | null;
@@ -21,6 +23,8 @@ export interface CardMediaProps {
   topRightBadge?: string;
   /** Cover height — desktop default is 170px. */
   height?: number;
+  /** Rendered flush along the bottom edge of the image (e.g. promo ticker). */
+  bottomOverlay?: React.ReactNode;
 }
 
 /**
@@ -36,10 +40,11 @@ export function CardMedia({
   topLeftBadge,
   topRightBadge,
   height = 170,
+  bottomOverlay,
 }: CardMediaProps) {
   const seed = `${imageUrl ?? ''}|${alt}|${topLeftBadge ?? ''}|${topRightBadge ?? ''}`;
-  const baseSavedCount = React.useMemo(() => pseudoRandomCount(seed), [seed]);
-  const shareCount = React.useMemo(() => pseudoRandomCount(`${seed}|share`), [seed]);
+  const baseSavedCount = React.useMemo(() => pseudoRandomListingActionCount(seed), [seed]);
+  const shareCount = React.useMemo(() => pseudoRandomListingActionCount(`${seed}|share`), [seed]);
   const [saved, setSaved] = React.useState(false);
   const visibleSavedCount = saved ? baseSavedCount + 1 : baseSavedCount;
 
@@ -148,18 +153,34 @@ export function CardMedia({
         />
       ) : null}
 
+      {bottomOverlay ? (
+        <Box
+          sx={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 2,
+            pointerEvents: 'none',
+            '& > *': { pointerEvents: 'auto' },
+          }}
+        >
+          {bottomOverlay}
+        </Box>
+      ) : null}
+
       <Stack
         direction="row"
         spacing={0.75}
-        sx={{ position: 'absolute', top: 8, right: 8, alignItems: 'center' }}
+        sx={{ position: 'absolute', top: 8, right: 8, alignItems: 'center', zIndex: 3 }}
       >
-        <MediaActionButton
+        <ListingMediaActionButton
           aria-label="Ndaj njoftimin"
           count={shareCount}
           icon={<ShareNetworkIcon size={17} weight="regular" />}
           onClick={handleShare}
         />
-        <MediaActionButton
+        <ListingMediaActionButton
           aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
           count={visibleSavedCount}
           active={saved}
@@ -175,65 +196,3 @@ export function CardMedia({
   );
 }
 
-function MediaActionButton({
-  'aria-label': ariaLabel,
-  count,
-  icon,
-  active = false,
-  onClick,
-}: {
-  'aria-label': string;
-  count: number;
-  icon: React.ReactNode;
-  active?: boolean;
-  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
-}) {
-  return (
-    <IconButton
-      aria-label={ariaLabel}
-      onClick={onClick}
-      sx={{
-        display: 'inline-flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 0.5,
-        minWidth: 0,
-        height: 32,
-        px: 1,
-        py: 0.5,
-        borderRadius: 999,
-        bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.92)',
-        color: active ? 'primary.main' : 'text.primary',
-        border: '1px solid',
-        borderColor: active ? 'primary.main' : 'divider',
-        '&:hover': {
-          bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.98)',
-        },
-      }}
-    >
-      <Box component="span" aria-hidden sx={{ display: 'inline-flex', flexShrink: 0, lineHeight: 0 }}>
-        {icon}
-      </Box>
-      <Typography
-        component="span"
-        sx={{
-          fontWeight: 700,
-          fontSize: '0.72rem',
-          lineHeight: 1,
-          color: active ? 'primary.main' : 'text.primary',
-          pointerEvents: 'none',
-        }}
-      >
-        {count}
-      </Typography>
-    </IconButton>
-  );
-}
-
-function pseudoRandomCount(seed: string): number {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  return 8 + (hash % 493);
-}

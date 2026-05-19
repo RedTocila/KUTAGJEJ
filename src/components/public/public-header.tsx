@@ -65,6 +65,11 @@ export function PublicHeader() {
   const { user } = useUser();
   const elevated = useScrollTrigger({ disableHysteresis: true, threshold: 8 });
   const headerHidden = useHeaderScrollHidden();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const dashboardHref =
     user?.accountType === 'admin' ? paths.dashboard.overview : paths.user.dashboard;
@@ -77,29 +82,37 @@ export function PublicHeader() {
         position="fixed"
         elevation={0}
         component="header"
+        suppressHydrationWarning
         sx={(theme) => {
           const paperAlpha = theme.palette.mode === 'dark' ? 0.92 : 0.96;
           const paperAlphaRest = theme.palette.mode === 'dark' ? 0.7 : 0.85;
           const frosted = `rgb(var(--mui-palette-background-paperChannel) / ${paperAlpha})`;
           const frostedRest = `rgb(var(--mui-palette-background-paperChannel) / ${paperAlphaRest})`;
+          const blur = 'saturate(180%) blur(14px)';
+          const isLight = theme.palette.mode === 'light';
+
+          const backgroundColor = !mounted
+            ? 'transparent'
+            : {
+                xs: elevated ? frosted : 'transparent',
+                md: elevated ? frosted : isLight ? 'transparent' : frostedRest,
+              };
+
+          const backdrop = !mounted
+            ? 'none'
+            : {
+                xs: elevated ? blur : 'none',
+                md: elevated ? blur : isLight ? 'none' : blur,
+              };
 
           return {
             top: 0,
             left: 0,
             right: 0,
             color: 'text.primary',
-            backgroundColor: {
-              xs: elevated ? frosted : 'transparent',
-              md: elevated ? frosted : frostedRest,
-            },
-            backdropFilter: {
-              xs: elevated ? 'saturate(180%) blur(14px)' : 'none',
-              md: 'saturate(180%) blur(14px)',
-            },
-            WebkitBackdropFilter: {
-              xs: elevated ? 'saturate(180%) blur(14px)' : 'none',
-              md: 'saturate(180%) blur(14px)',
-            },
+            backgroundColor,
+            backdropFilter: backdrop,
+            WebkitBackdropFilter: backdrop,
             borderBottom: 'none',
             boxShadow: 'none',
             backgroundImage: 'none',

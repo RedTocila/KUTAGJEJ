@@ -35,6 +35,15 @@ export function findOptionLabel<T extends { value: string; label: string }>(
   return options.find((option) => option.value === value)?.label ?? value;
 }
 
+/**
+ * Minimal opening hours for business cards — primary schedule only, one short line.
+ */
+export function formatBusinessOpeningHoursForCard(raw: string): string {
+  const normalized = raw.replace(/\s+/g, ' ').trim().replace(/\bDiele\b/gi, 'Dielë');
+  const primary = normalized.split('·')[0]?.trim() ?? normalized;
+  return primary.replace(/,\s*.*/, '').trim();
+}
+
 export function pseudoRandomMetric(seed: string, min: number, span: number): number {
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) {

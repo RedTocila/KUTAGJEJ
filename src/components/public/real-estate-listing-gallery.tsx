@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { IconButton, Box, Typography, Avatar, Skeleton, Stack, ButtonBase } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
+import { CaretLeft as CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft';
+import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
@@ -16,6 +18,7 @@ import { ShoppingBag as ShoppingBagIcon } from '@phosphor-icons/react/dist/ssr/S
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle';
 
+import { ListingMediaActionButton, pseudoRandomListingActionCount } from '@/components/public/listing-media-action-button';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { ListingGalleryPlaceholderKey } from '@/lib/listing-gallery-placeholder';
 import { paths } from '@/paths';
@@ -24,6 +27,25 @@ export type { ListingGalleryPlaceholderKey };
 
 /** @deprecated Use `ListingGalleryPlaceholderKey`. */
 export type ListingGalleryPlaceholderIcon = Extract<ListingGalleryPlaceholderKey, 'house' | 'buildings'>;
+
+const SLIDE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
+const SLIDE_DURATION_MS = 620;
+const SWIPE_COMMIT_RATIO = 0.18;
+const SWIPE_COMMIT_MIN_PX = 56;
+
+function usePrefersReducedMotion(): boolean {
+  const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(false);
+
+  React.useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => setPrefersReducedMotion(mediaQuery.matches);
+    sync();
+    mediaQuery.addEventListener('change', sync);
+    return () => mediaQuery.removeEventListener('change', sync);
+  }, []);
+
+  return prefersReducedMotion;
+}
 
 export function RealEstateListingGallery(props: {
   title: string;
@@ -37,6 +59,13 @@ export function RealEstateListingGallery(props: {
    * Default `'100vw'`.
    */
   heroSizes?: string;
+  /** When set, enables the bookmark control (styling unchanged). */
+  bookmark?: {
+    saved: boolean;
+    onToggle: () => void;
+    ariaLabelSave?: string;
+    ariaLabelSaved?: string;
+  };
 }) {
   const {
     title,
@@ -45,16 +74,45 @@ export function RealEstateListingGallery(props: {
     browseListHref = paths.public.realEstate,
     browseListAriaLabel = 'Prapa te lista e pronës',
     heroSizes = '100vw',
+    bookmark,
   } = props;
   const urls = urlsRaw.filter(Boolean);
+  const metricsSeed = `${title}|${urls.join('|')}|${browseListHref}`;
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const showPlaceholder = urls.length === 0;
 
   const [active, setActive] = React.useState(0);
+  const [dragOffset, setDragOffset] = React.useState(0);
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [viewportWidth, setViewportWidth] = React.useState(0);
+
+  const viewportRef = React.useRef<HTMLDivElement>(null);
+  const dragStartRef = React.useRef<{ x: number; pointerId: number } | null>(null);
+  const thumbnailRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
+
   React.useEffect(() => {
     setActive(0);
+    setDragOffset(0);
+    setIsDragging(false);
+    dragStartRef.current = null;
   }, [urls.join('|')]);
 
-  const current = urls[active] ?? null;
-  const showPlaceholder = urls.length === 0;
+  React.useLayoutEffect(() => {
+    const node = viewportRef.current;
+    if (!node) return;
+
+    const syncWidth = () => setViewportWidth(node.clientWidth);
+    syncWidth();
+
+    const observer = new ResizeObserver(syncWidth);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [urls.length, showPlaceholder]);
+
+  React.useEffect(() => {
+    const thumb = thumbnailRefs.current[active];
+    thumb?.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', inline: 'center', block: 'nearest' });
+  }, [active, prefersReducedMotion]);
 
   const PLACEHOLDER_BY_KEY: Record<ListingGalleryPlaceholderKey, typeof HouseIcon> = {
     house: HouseIcon,
@@ -67,91 +125,151 @@ export function RealEstateListingGallery(props: {
   };
   const PlaceholderSvg = PLACEHOLDER_BY_KEY[placeholderIcon];
 
-  const shared = React.useCallback(async () => {
-    try {
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        await navigator.share({ title, text: title, url: window.location.href });
-        return true;
+  const baseSavedCount = React.useMemo(() => pseudoRandomListingActionCount(metricsSeed), [metricsSeed]);
+  const shareCount = React.useMemo(() => pseudoRandomListingActionCount(`${metricsSeed}|share`), [metricsSeed]);
+  const visibleSavedCount = bookmark?.saved ? baseSavedCount + 1 : baseSavedCount;
+
+  const hasMultipleImages = urls.length > 1;
+
+  const goToIndex = React.useCallback(
+    (index: number) => {
+      if (urls.length === 0) return;
+      const normalized = ((index % urls.length) + urls.length) % urls.length;
+      setActive(normalized);
+    },
+    [urls.length],
+  );
+
+  const goToPrevious = React.useCallback(() => {
+    setActive((index) => (index - 1 + urls.length) % urls.length);
+  }, [urls.length]);
+
+  const goToNext = React.useCallback(() => {
+    setActive((index) => (index + 1) % urls.length);
+  }, [urls.length]);
+
+  const slideTransition = prefersReducedMotion
+    ? `transform ${Math.round(SLIDE_DURATION_MS * 0.25)}ms ease`
+    : `transform ${SLIDE_DURATION_MS}ms ${SLIDE_EASING}`;
+
+  const slideWidthPx = viewportWidth > 0 ? viewportWidth : null;
+  const trackTransform =
+    slideWidthPx != null
+      ? `translate3d(${-active * slideWidthPx + dragOffset}px, 0, 0)`
+      : `translate3d(calc((-${active} * 100% / ${Math.max(urls.length, 1)}) + ${dragOffset}px), 0, 0)`;
+
+  const finishDrag = React.useCallback(
+    (clientX: number, pointerId: number, target: HTMLElement) => {
+      const start = dragStartRef.current;
+      if (!start || start.pointerId !== pointerId) return;
+
+      const delta = clientX - start.x;
+      const threshold = Math.max(SWIPE_COMMIT_MIN_PX, viewportWidth * SWIPE_COMMIT_RATIO);
+
+      if (delta <= -threshold) goToNext();
+      else if (delta >= threshold) goToPrevious();
+
+      dragStartRef.current = null;
+      setIsDragging(false);
+      setDragOffset(0);
+
+      if (target.hasPointerCapture(pointerId)) {
+        target.releasePointerCapture(pointerId);
       }
-    } catch {
-      /* noop */
+    },
+    [goToNext, goToPrevious, viewportWidth],
+  );
+
+  const isGalleryControlTarget = (target: EventTarget | null) =>
+    target instanceof Element && Boolean(target.closest('[data-gallery-control]'));
+
+  const handleViewportPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!hasMultipleImages || event.button !== 0 || isGalleryControlTarget(event.target)) return;
+
+    dragStartRef.current = { x: event.clientX, pointerId: event.pointerId };
+    setIsDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleViewportPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const start = dragStartRef.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+
+    setDragOffset(event.clientX - start.x);
+  };
+
+  const handleViewportPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    finishDrag(event.clientX, event.pointerId, event.currentTarget);
+  };
+
+  const handleViewportPointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
+    finishDrag(event.clientX, event.pointerId, event.currentTarget);
+  };
+
+  const handleViewportKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!hasMultipleImages) return;
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      goToPrevious();
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      goToNext();
     }
-    return false;
-  }, [title]);
+  };
+
+  const heroNavButtonSx = {
+    position: 'absolute',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    zIndex: 5,
+    pointerEvents: 'auto',
+    bgcolor: alpha('#000', 0.45),
+    color: '#fff',
+    backdropFilter: 'blur(10px)',
+    '&:hover': { bgcolor: alpha('#000', 0.62) },
+  } as const;
+
+  const stopGalleryControlEvent = (event: React.SyntheticEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleShare = React.useCallback(
+    async (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      try {
+        if (typeof navigator !== 'undefined' && navigator.share) {
+          await navigator.share({ title, text: title, url: window.location.href });
+          return;
+        }
+      } catch {
+        /* noop */
+      }
+      try {
+        if (typeof navigator !== 'undefined') {
+          await navigator.clipboard.writeText(window.location.href);
+        }
+      } catch {
+        /* noop */
+      }
+    },
+    [title],
+  );
 
   return (
     <Box sx={{ position: 'relative', width: '100%', bgcolor: 'background.default' }}>
-      <Stack
-        direction="row"
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          p: { xs: 1, sm: 1.75 },
-          zIndex: 2,
-          pointerEvents: 'none',
-          '& .MuiIconButton-root': { pointerEvents: 'auto' },
-        }}
-      >
-        <IconButton
-          component={Link}
-          href={browseListHref}
-          aria-label={browseListAriaLabel}
-          size="medium"
-          sx={{
-            bgcolor: alpha('#000', 0.45),
-            color: '#fff',
-            backdropFilter: 'blur(10px)',
-            '&:hover': { bgcolor: alpha('#000', 0.62) },
-          }}
-        >
-          <ArrowLeftIcon size={22} weight="regular" />
-        </IconButton>
-        <Stack direction="row" spacing={0.75}>
-          <IconButton
-            size="medium"
-            aria-label="Ndaj"
-            onClick={async () => {
-              const ok = await shared();
-              if (ok || typeof navigator === 'undefined') return;
-              try {
-                await navigator.clipboard.writeText(window.location.href);
-              } catch {
-                /* noop */
-              }
-            }}
-            sx={{
-              bgcolor: alpha('#000', 0.45),
-              color: '#fff',
-              backdropFilter: 'blur(10px)',
-              '&:hover': { bgcolor: alpha('#000', 0.62) },
-            }}
-          >
-            <ShareNetworkIcon size={20} weight="regular" color="currentColor" />
-          </IconButton>
-          <IconButton
-            size="medium"
-            aria-label="Ruaj njoftimin"
-            disabled
-            sx={{
-              bgcolor: alpha('#000', 0.45),
-              color: '#fff',
-              backdropFilter: 'blur(10px)',
-              '&:hover': { bgcolor: alpha('#000', 0.62) },
-              '&.Mui-disabled': {
-                bgcolor: alpha('#000', 0.45),
-                color: '#fff',
-                opacity: 1,
-              },
-            }}
-          >
-            <BookmarkSimpleIcon size={20} weight="regular" color="currentColor" />
-          </IconButton>
-        </Stack>
-      </Stack>
-
       <Box
+        ref={viewportRef}
+        role={hasMultipleImages ? 'group' : undefined}
+        aria-roledescription={hasMultipleImages ? 'carousel' : undefined}
+        aria-label={hasMultipleImages ? `Galeria e fotove, ${active + 1} nga ${urls.length}` : undefined}
+        tabIndex={hasMultipleImages ? 0 : undefined}
+        onKeyDown={handleViewportKeyDown}
+        onPointerDown={handleViewportPointerDown}
+        onPointerMove={handleViewportPointerMove}
+        onPointerUp={handleViewportPointerUp}
+        onPointerCancel={handleViewportPointerCancel}
         sx={{
           position: 'relative',
           width: '100%',
@@ -159,6 +277,15 @@ export function RealEstateListingGallery(props: {
           maxHeight: { sm: 'min(520px, 68vh)', md: 560 },
           overflow: 'hidden',
           mx: 'auto',
+          touchAction: hasMultipleImages ? 'pan-y pinch-zoom' : 'auto',
+          cursor: isDragging ? 'grabbing' : hasMultipleImages ? 'grab' : 'default',
+          userSelect: isDragging ? 'none' : 'auto',
+          outline: 'none',
+          '&:focus-visible': hasMultipleImages
+            ? {
+                boxShadow: (theme) => `inset 0 0 0 2px ${alpha(theme.palette.primary.main, 0.55)}`,
+              }
+            : undefined,
         }}
       >
         {showPlaceholder ? (
@@ -194,13 +321,155 @@ export function RealEstateListingGallery(props: {
               {title}
             </Typography>
           </Stack>
-        ) : current ? (
+        ) : hasMultipleImages ? (
+          <Box
+            sx={{
+              display: 'flex',
+              height: '100%',
+              width: slideWidthPx != null ? slideWidthPx * urls.length : `${urls.length * 100}%`,
+              transform: trackTransform,
+              transition: isDragging ? 'none' : slideTransition,
+              willChange: 'transform',
+            }}
+          >
+            {urls.map((url, idx) => {
+              const isNearActive = Math.abs(idx - active) <= 1;
+              return (
+                <Box
+                  key={`${url}-${idx}`}
+                  sx={{
+                    position: 'relative',
+                    flexShrink: 0,
+                    width:
+                      slideWidthPx != null
+                        ? slideWidthPx
+                        : `calc(100% / ${Math.max(urls.length, 1)})`,
+                    height: '100%',
+                    overflow: 'hidden',
+                  }}
+                  aria-hidden={idx !== active}
+                >
+                  <Image
+                    src={url}
+                    alt={idx === active ? title : ''}
+                    fill
+                    sizes={heroSizes}
+                    draggable={false}
+                    style={{ objectFit: 'cover', pointerEvents: 'none' }}
+                    {...(idx === 0
+                      ? { priority: true }
+                      : { loading: isNearActive ? ('eager' as const) : ('lazy' as const) })}
+                  />
+                </Box>
+              );
+            })}
+          </Box>
+        ) : urls[0] ? (
           <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-            <Image src={current} alt={title} fill priority sizes={heroSizes} style={{ objectFit: 'cover' }} />
+            <Image src={urls[0]} alt={title} fill priority sizes={heroSizes} style={{ objectFit: 'cover' }} />
           </Box>
         ) : (
           <Skeleton variant="rectangular" sx={{ position: 'absolute', inset: 0, height: 1 }} />
         )}
+
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 4,
+            pointerEvents: 'none',
+            '& [data-gallery-control]': { pointerEvents: 'auto' },
+          }}
+        >
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              p: { xs: 1, sm: 1.75 },
+            }}
+          >
+            <IconButton
+              component={Link}
+              href={browseListHref}
+              aria-label={browseListAriaLabel}
+              size="medium"
+              data-gallery-control
+              onPointerDown={stopGalleryControlEvent}
+              sx={{
+                bgcolor: alpha('#000', 0.45),
+                color: '#fff',
+                backdropFilter: 'blur(10px)',
+                '&:hover': { bgcolor: alpha('#000', 0.62) },
+              }}
+            >
+              <ArrowLeftIcon size={22} weight="regular" />
+            </IconButton>
+            <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+              <Box data-gallery-control component="span" sx={{ display: 'inline-flex' }}>
+                <ListingMediaActionButton
+                  aria-label="Ndaj njoftimin"
+                  count={shareCount}
+                  surface="hero"
+                  icon={<ShareNetworkIcon size={17} weight="regular" />}
+                  onClick={handleShare}
+                />
+              </Box>
+              <Box data-gallery-control component="span" sx={{ display: 'inline-flex' }}>
+              <ListingMediaActionButton
+                aria-label={
+                  bookmark
+                    ? bookmark.saved
+                      ? (bookmark.ariaLabelSaved ?? 'Hiq nga të ruajturat')
+                      : (bookmark.ariaLabelSave ?? 'Ruaj njoftimin')
+                    : 'Ruaj njoftimin'
+                }
+                count={visibleSavedCount}
+                surface="hero"
+                active={bookmark?.saved}
+                disabled={!bookmark}
+                icon={<BookmarkSimpleIcon size={17} weight={bookmark?.saved ? 'fill' : 'regular'} />}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  bookmark?.onToggle();
+                }}
+              />
+              </Box>
+            </Stack>
+          </Stack>
+
+          {!showPlaceholder && hasMultipleImages ? (
+            <>
+              <IconButton
+                aria-label="Fotoja e mëparshme"
+                size="medium"
+                data-gallery-control
+                onPointerDown={stopGalleryControlEvent}
+                onClick={(event) => {
+                  stopGalleryControlEvent(event);
+                  goToPrevious();
+                }}
+                sx={{ ...heroNavButtonSx, left: { xs: 8, sm: 12 } }}
+              >
+                <CaretLeftIcon size={22} weight="bold" />
+              </IconButton>
+              <IconButton
+                aria-label="Fotoja tjetër"
+                size="medium"
+                data-gallery-control
+                onPointerDown={stopGalleryControlEvent}
+                onClick={(event) => {
+                  stopGalleryControlEvent(event);
+                  goToNext();
+                }}
+                sx={{ ...heroNavButtonSx, right: { xs: 8, sm: 12 } }}
+              >
+                <CaretRightIcon size={22} weight="bold" />
+              </IconButton>
+            </>
+          ) : null}
+        </Box>
 
         {!showPlaceholder ? (
           <Typography
@@ -242,19 +511,27 @@ export function RealEstateListingGallery(props: {
           {urls.map((url, idx) => (
             <ButtonBase
               key={url}
+              ref={(node) => {
+                thumbnailRefs.current[idx] = node;
+              }}
               focusRipple
               aria-label={`Fotoja ${idx + 1}`}
               aria-pressed={idx === active}
-              onClick={() => setActive(idx)}
+              onClick={() => goToIndex(idx)}
               sx={{
                 flex: '0 0 auto',
                 borderRadius: 1.25,
                 overflow: 'hidden',
-                outline: idx === active ? '2px solid' : '1px solid',
-                outlineOffset: 2,
-                outlineColor: idx === active ? 'primary.main' : 'divider',
+                outline: idx === active ? '2px solid' : 'none',
+                outlineOffset: idx === active ? 2 : 0,
+                outlineColor: idx === active ? 'primary.main' : 'transparent',
                 width: { xs: 72, sm: 88 },
                 height: { xs: 52, sm: 62 },
+                opacity: idx === active ? 1 : 0.72,
+                transform: idx === active ? 'scale(1)' : 'scale(0.98)',
+                transition: prefersReducedMotion
+                  ? 'none'
+                  : `opacity 280ms ease, transform 280ms ${SLIDE_EASING}, outline-color 280ms ease`,
               }}
             >
               <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>

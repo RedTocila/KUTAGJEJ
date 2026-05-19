@@ -30,5 +30,7 @@
     root.style.colorScheme = dark ? 'dark' : 'light';
     root.classList.remove('light', 'dark');
     root.classList.add(dark ? 'dark' : 'light');
+    document.cookie =
+      'kutagjej-color-scheme=' + (dark ? 'dark' : 'light') + ';path=/;max-age=31536000;SameSite=Lax';
   } catch (e) {}
 })();

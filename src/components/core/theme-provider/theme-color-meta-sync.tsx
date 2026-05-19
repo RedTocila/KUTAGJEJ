@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { useColorScheme } from '@mui/material/styles';
 
+import { setColorSchemeCookie } from '@/lib/color-scheme';
+
 /** Matches `color-schemes.ts` background.default for each mode. */
 const THEME_COLOR_LIGHT = '#f7faf4';
 const THEME_COLOR_DARK = '#0a0a0a';
@@ -47,6 +49,7 @@ export function ThemeColorMetaSync() {
     schemeMeta.setAttribute('content', isDark ? 'dark' : 'light');
 
     root.style.colorScheme = isDark ? 'dark' : 'light';
+    setColorSchemeCookie(colorScheme);
   }, [colorScheme]);
 
   return null;

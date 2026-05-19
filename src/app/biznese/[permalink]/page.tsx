@@ -3,12 +3,11 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
 import { PublicShell } from '@/components/public/public-shell';
-import { VerticalListingDetailView } from '@/components/public/vertical-listing-detail-view';
+import { BusinessListingDetailView } from '@/components/public/business-listing-detail-view';
 import { config } from '@/config';
 import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
 import { fetchLatestBusinesses, fetchPublicBusinessListingById } from '@/lib/public-listings-client';
-import { mapDirectoryToSimilarStrip } from '@/lib/vertical-detail-similar-strip';
 import { paths, pathsPublicVerticalListingDetail } from '@/paths';
 
 export const revalidate = 60;
@@ -71,17 +70,11 @@ export default async function BusinessListingPage({ params }: PageProps): Promis
     ? pathsPublicVerticalListingDetail(paths.public.businesses, canonRaw)
     : pathsPublicVerticalListingDetail(paths.public.businesses, listing.id);
   const canonicalUrl = `${config.site.url.replace(/\/$/, '')}${pathHref}`;
-  const similar = mapDirectoryToSimilarStrip(pool, listing.id, 'businesses');
+  const similar = pool.filter((l) => l.id !== listing.id).slice(0, 10);
 
   return (
     <PublicShell hideHeaderBelowMd>
-      <VerticalListingDetailView
-        listing={listing}
-        canonicalUrl={canonicalUrl}
-        browseHref={paths.public.businesses}
-        similarSectionTitle="Biznese të fundit"
-        similar={similar}
-      />
+      <BusinessListingDetailView listing={listing} canonicalUrl={canonicalUrl} similar={similar} />
     </PublicShell>
   );
 }

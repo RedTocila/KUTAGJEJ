@@ -48,6 +48,7 @@ import {
 } from '@/lib/job-listing-detail-content';
 import { whatsappHref } from '@/lib/listing-contact';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
+import { JobListingDetailDesktop } from '@/components/public/job-listing-detail-desktop';
 import { paths } from '@/paths';
 
 const SAVED_JOBS_KEY = 'kutagjej-saved-jobs';
@@ -204,13 +205,24 @@ export function JobListingDetailView({
   };
 
   return (
-    <Box
-      sx={{
-        bgcolor: 'background.default',
-        minHeight: '100vh',
-        pb: scrollPadBottom,
-      }}
-    >
+    <>
+      <JobListingDetailDesktop
+        listing={listing}
+        similar={similar}
+        saved={saved}
+        onToggleSave={toggleSave}
+        onShare={() => void handleShare()}
+        applyHref={applyHref}
+      />
+
+      <Box
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          bgcolor: 'background.default',
+          minHeight: '100vh',
+          pb: scrollPadBottom,
+        }}
+      >
       {/* Top bar */}
       <Box
         sx={{
@@ -565,5 +577,6 @@ export function JobListingDetailView({
         </Stack>
       </Box>
     </Box>
+    </>
   );
 }

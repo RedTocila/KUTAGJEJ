@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import Script from 'next/script';
 
 import { brandLogoSrc, config } from '@/config';
+import { COLOR_SCHEME_COOKIE_NAME, parseColorScheme } from '@/lib/color-scheme';
 
 import { AppProviders } from './app-providers';
 
@@ -36,12 +38,15 @@ export const metadata = {
   },
 } satisfies Metadata;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const initialColorScheme = parseColorScheme(cookieStore.get(COLOR_SCHEME_COOKIE_NAME)?.value);
+
   return (
-    <html lang="sq-AL" suppressHydrationWarning>
+    <html lang="sq-AL" className={initialColorScheme} suppressHydrationWarning>
       <body suppressHydrationWarning>
         <Script src="/theme-color-boot.js" strategy="beforeInteractive" />
-        <AppProviders>{children}</AppProviders>
+        <AppProviders initialColorScheme={initialColorScheme}>{children}</AppProviders>
       </body>
     </html>
   );

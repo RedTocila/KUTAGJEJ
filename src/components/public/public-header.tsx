@@ -20,7 +20,6 @@ import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/Use
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
 import { useUser } from '@/hooks/use-user';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { paths } from '@/paths';
 
 const TOOLBAR_MIN_HEIGHT = { xs: 64, md: 76 } as const;
@@ -148,15 +147,10 @@ export function PublicHeader() {
               }}
             >
               <BrandLogo
-                height={40}
+                height={52}
                 showWordmark
                 wordmarkPresentation="brand"
-                markSx={{
-                  borderRadius: 2,
-                  p: 0.75,
-                  bgcolor: (theme) =>
-                    primaryMainAlpha(theme.palette.mode === 'dark' ? 0.16 : 0.1),
-                }}
+                sx={{ gap: 0.5 }}
                 wordmarkSx={{ fontSize: { xs: '1.05rem', md: '1.2rem' } }}
               />
             </Box>

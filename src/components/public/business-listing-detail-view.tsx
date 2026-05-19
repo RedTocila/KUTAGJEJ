@@ -39,6 +39,7 @@ import {
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { BusinessListingDetailDesktop } from '@/components/public/business-listing-detail-desktop';
+import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { paths } from '@/paths';
 
 const SAVED_BUSINESSES_KEY = 'kutagjej-saved-businesses';
@@ -173,10 +174,9 @@ export function BusinessListingDetailView({
     });
   };
 
-  const mobileBottomNavOffset = 'calc(64px + env(safe-area-inset-bottom, 0px))';
   const stickyFooterHeight = '88px';
   const scrollPadBottom = {
-    xs: `calc(${stickyFooterHeight} + ${mobileBottomNavOffset})`,
+    xs: `calc(${stickyFooterHeight} + ${MOBILE_BOTTOM_NAV_OFFSET})`,
     md: `calc(${stickyFooterHeight} + env(safe-area-inset-bottom, 0px))`,
   };
 
@@ -571,11 +571,11 @@ export function BusinessListingDetailView({
           position: 'fixed',
           left: 0,
           right: 0,
-          bottom: { xs: mobileBottomNavOffset, md: 0 },
+          bottom: { xs: MOBILE_BOTTOM_NAV_OFFSET, md: 0 },
           zIndex: 25,
           px: 2,
           pt: 1.25,
-          pb: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+          pb: 1.25,
           bgcolor: 'rgba(var(--mui-palette-background-defaultChannel) / 0.96)',
           backdropFilter: 'blur(14px)',
           borderTop: '1px solid',

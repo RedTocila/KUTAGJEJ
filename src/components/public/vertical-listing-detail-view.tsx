@@ -48,6 +48,7 @@ import {
 } from '@/components/public/listing-cards/format-helpers';
 import { JobListingCountdown } from '@/components/public/listing-cards/job-listing-countdown';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
+import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 
 /** Tiny strip card for related listings — plain links, no theme callbacks crossing RSC boundaries. */
 export interface VerticalListingSimilarItem {
@@ -73,7 +74,7 @@ function StickyListingContact(props: {
         left: 0,
         right: 0,
         zIndex: 1200,
-        bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+        bottom: MOBILE_BOTTOM_NAV_OFFSET,
         justifyContent: 'center',
         px: { xs: 1.5, sm: 3 },
       }}

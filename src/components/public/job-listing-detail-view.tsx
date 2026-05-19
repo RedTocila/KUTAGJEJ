@@ -49,6 +49,7 @@ import {
 import { whatsappHref } from '@/lib/listing-contact';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { JobListingDetailDesktop } from '@/components/public/job-listing-detail-desktop';
+import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { paths } from '@/paths';
 
 const SAVED_JOBS_KEY = 'kutagjej-saved-jobs';
@@ -196,11 +197,10 @@ export function JobListingDetailView({
     }
   };
 
-  const mobileBottomNavOffset = 'calc(64px + env(safe-area-inset-bottom, 0px))';
   /** Sticky Ruaj/Apliko bar — safe-area counted once via nav offset on mobile. */
   const stickyFooterHeight = '96px';
   const scrollPadBottom = {
-    xs: `calc(${stickyFooterHeight} + ${mobileBottomNavOffset})`,
+    xs: `calc(${stickyFooterHeight} + ${MOBILE_BOTTOM_NAV_OFFSET})`,
     md: `calc(${stickyFooterHeight} + env(safe-area-inset-bottom, 0px))`,
   };
 
@@ -508,11 +508,11 @@ export function JobListingDetailView({
           position: 'fixed',
           left: 0,
           right: 0,
-          bottom: { xs: mobileBottomNavOffset, md: 0 },
+          bottom: { xs: MOBILE_BOTTOM_NAV_OFFSET, md: 0 },
           zIndex: 25,
           px: 2,
           pt: 1.5,
-          pb: 'calc(12px + env(safe-area-inset-bottom, 0px))',
+          pb: 1.5,
           bgcolor: 'rgba(var(--mui-palette-background-defaultChannel) / 0.96)',
           backdropFilter: 'blur(14px)',
           borderTop: '1px solid',

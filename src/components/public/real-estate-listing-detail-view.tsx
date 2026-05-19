@@ -40,6 +40,7 @@ import {
   LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
   LISTING_DETAIL_HERO_IMAGE_SIZES,
 } from '@/lib/listing-detail-layout';
+import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 
 const CONDITION_SQ: Record<string, string> = {
   new: 'E re',
@@ -369,7 +370,7 @@ function StickyContactBar(props: { phone?: string | null; whatsappInquireHref: s
         right: 0,
         zIndex: 1200,
         bottom: {
-          xs: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+          xs: MOBILE_BOTTOM_NAV_OFFSET,
           md: 'calc(24px + env(safe-area-inset-bottom, 0px))',
         },
         justifyContent: 'center',

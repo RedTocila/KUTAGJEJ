@@ -18,7 +18,8 @@ import { paths } from '@/paths';
 import { HeroSearch } from './hero-search';
 
 interface NavItem {
-  label: string;
+  id: string;
+  ariaLabel: string;
   href: string;
   activeWhen: (pathname: string | null) => boolean;
   icon: React.ComponentType<{ size?: number; weight?: 'fill' | 'regular' }>;
@@ -33,19 +34,22 @@ export function MobileBottomNav() {
   const items: NavItem[] = React.useMemo(
     () => [
       {
-        label: 'Home',
+        id: 'home',
+        ariaLabel: 'Kreu',
         href: paths.home,
         activeWhen: (p) => p === paths.home,
         icon: HouseIcon,
       },
       {
-        label: 'Saved',
+        id: 'saved',
+        ariaLabel: 'Të ruajturat',
         href: isAuthed ? paths.user.myRealEstateListings : paths.user.auth,
         activeWhen: (p) => Boolean(p?.startsWith(paths.user.myRealEstateListings)),
         icon: BookmarkSimpleIcon,
       },
       {
-        label: 'Search',
+        id: 'search',
+        ariaLabel: 'Kërko',
         href: paths.public.realEstate,
         activeWhen: (p) =>
           Boolean(
@@ -59,13 +63,15 @@ export function MobileBottomNav() {
         icon: MagnifyingGlassIcon,
       },
       {
-        label: 'Messages',
+        id: 'messages',
+        ariaLabel: 'Mesazhet',
         href: isAuthed ? paths.user.dashboard : paths.user.auth,
         activeWhen: (p) => Boolean(p?.startsWith(paths.user.dashboard)),
         icon: ChatsCircleIcon,
       },
       {
-        label: 'Profile',
+        id: 'profile',
+        ariaLabel: 'Profili',
         href: isAuthed ? paths.user.profile : paths.user.auth,
         activeWhen: (p) => Boolean(p?.startsWith(paths.user.profile)),
         icon: UserCircleIcon,
@@ -95,70 +101,67 @@ export function MobileBottomNav() {
             : 'rgb(var(--mui-palette-background-paperChannel) / 0.96)',
       })}
     >
-      <Stack direction="row" sx={{ justifyContent: 'space-around', px: 1, py: 0.75 }}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: 'space-around',
+          px: 1,
+          pt: 0.75,
+          pb: 'calc(6px + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
         {items.map((item) => {
           const Icon = item.icon;
           const active =
-            item.label === 'Search'
-              ? searchOpen || item.activeWhen(pathname)
-              : item.activeWhen(pathname);
+            item.id === 'search' ? searchOpen || item.activeWhen(pathname) : item.activeWhen(pathname);
 
-          if (item.label === 'Search') {
+          const itemSx = {
+            width: 52,
+            minHeight: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 2,
+            color: active ? 'primary.main' : 'text.secondary',
+            bgcolor: active ? primaryMainAlpha(0.1) : 'transparent',
+          } as const;
+
+          if (item.id === 'search') {
             return (
               <Stack
-                key={item.label}
+                key={item.id}
                 component="button"
                 type="button"
-                spacing={0.25}
                 onClick={() => setSearchOpen(true)}
                 aria-expanded={searchOpen}
                 aria-controls="mobile-hero-search-sheet"
-                aria-label="Hap kërkimin"
+                aria-label={item.ariaLabel}
                 sx={{
-                  width: 68,
-                  minHeight: 48,
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  ...itemSx,
                   border: 0,
                   cursor: 'pointer',
-                  borderRadius: 2,
-                  color: active ? 'primary.main' : 'text.secondary',
-                  bgcolor: active ? primaryMainAlpha(0.1) : 'transparent',
                   font: 'inherit',
                   padding: 0,
                   appearance: 'none',
                   WebkitAppearance: 'none',
                 }}
               >
-                <Icon size={21} weight={active ? 'fill' : 'regular'} />
-                <Typography sx={{ fontSize: '0.72rem', fontWeight: active ? 700 : 600, lineHeight: 1 }}>
-                  {item.label}
-                </Typography>
+                <Icon size={24} weight={active ? 'fill' : 'regular'} />
               </Stack>
             );
           }
 
           return (
             <Stack
-              key={item.label}
+              key={item.id}
               component={RouterLink}
               href={item.href}
-              spacing={0.25}
+              aria-label={item.ariaLabel}
               sx={{
-                width: 68,
-                minHeight: 48,
-                alignItems: 'center',
-                justifyContent: 'center',
+                ...itemSx,
                 textDecoration: 'none',
-                borderRadius: 2,
-                color: active ? 'primary.main' : 'text.secondary',
-                bgcolor: active ? primaryMainAlpha(0.1) : 'transparent',
               }}
             >
-              <Icon size={21} weight={active ? 'fill' : 'regular'} />
-              <Typography sx={{ fontSize: '0.72rem', fontWeight: active ? 700 : 600, lineHeight: 1 }}>
-                {item.label}
-              </Typography>
+              <Icon size={24} weight={active ? 'fill' : 'regular'} />
             </Stack>
           );
         })}

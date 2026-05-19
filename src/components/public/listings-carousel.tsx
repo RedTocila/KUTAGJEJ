@@ -15,14 +15,17 @@ import ChevronRight from '@mui/icons-material/ChevronRight';
  * Each direct child gets wrapped in a fixed-width slot so cards are perfectly
  * aligned across browsers regardless of their internal markup.
  */
+const DEFAULT_SLOT_WIDTH = { xs: 260, sm: 280, md: 300 } as const;
+
 export interface ListingsCarouselProps {
   /** Pre-rendered listing cards (one per slide). */
   children: React.ReactNode;
   /**
    * Slot width in pixels per breakpoint. Tuned so 4 cards fit on a 1280px
    * desktop and ~1.2 cards peek on a 360px phone (encouraging swipe).
+   * Omitted keys fall back to the homepage defaults.
    */
-  slotWidth?: { xs: number; sm: number; md: number };
+  slotWidth?: Partial<Record<keyof typeof DEFAULT_SLOT_WIDTH, number>>;
 }
 
 export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps) {
@@ -30,7 +33,7 @@ export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps)
   const [canScrollPrev, setCanScrollPrev] = React.useState(false);
   const [canScrollNext, setCanScrollNext] = React.useState(false);
 
-  const widths = slotWidth ?? { xs: 260, sm: 280, md: 300 };
+  const widths = { ...DEFAULT_SLOT_WIDTH, ...slotWidth };
 
   const refresh = React.useCallback(() => {
     const el = scrollRef.current;

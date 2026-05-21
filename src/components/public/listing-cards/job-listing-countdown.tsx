@@ -9,7 +9,7 @@ import {
   type JobListingCountdownUrgency,
 } from '@/lib/job-listing-expiry';
 
-const PLACEHOLDER_LABEL = '0h 00m 00s';
+const PLACEHOLDER_LABEL = '0d 0h 00m 00s';
 
 const baseChipSx: SxProps<Theme> = {
   height: 24,

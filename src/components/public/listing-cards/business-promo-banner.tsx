@@ -39,10 +39,16 @@ function BusinessPromoCardStrip({
         gap: 1,
         py: 0.85,
         px: 1.25,
-        border: '1px solid',
-        borderColor: GOLD,
-        borderRadius: overlay ? 0 : 1.5,
-        borderBottom: overlay ? 'none' : undefined,
+        ...(overlay
+          ? {
+              border: 0,
+              borderTop: `1px solid ${GOLD}`,
+              borderRadius: 0,
+            }
+          : {
+              border: `1px solid ${GOLD}`,
+              borderRadius: 1.5,
+            }),
         bgcolor: overlay ? alpha('#000', 0.72) : alpha(GOLD, 0.06),
         overflow: 'hidden',
         width: '100%',

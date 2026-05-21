@@ -3,8 +3,6 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import { Box, Button, Stack, Typography } from '@mui/material';
-import ChevronLeft from '@mui/icons-material/ChevronLeft';
-import ChevronRight from '@mui/icons-material/ChevronRight';
 
 import type { HomeBannerDto } from '@/lib/home-banners-client';
 
@@ -30,27 +28,28 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
 
   return (
     <Box component="section" aria-label="Banner kryesor" sx={{ width: '100%' }}>
-      <Box
-        sx={{
-          position: 'relative',
-          borderRadius: { xs: 3, md: 4 },
-          overflow: 'hidden',
-          minHeight: { xs: 210, md: 290 },
-          border: '1px solid',
-          borderColor: 'divider',
-          backgroundColor: 'background.paper',
-          backgroundImage: visual.bg,
-          '@keyframes particleFloat': {
-            '0%': { transform: 'translate3d(0, 0, 0) scale(1)', opacity: 0.2 },
-            '50%': { transform: 'translate3d(10px, -22px, 0) scale(1.2)', opacity: 0.75 },
-            '100%': { transform: 'translate3d(-8px, -45px, 0) scale(0.95)', opacity: 0.1 },
-          },
-          '@keyframes pulseGlow': {
-            '0%,100%': { opacity: 0.36 },
-            '50%': { opacity: 0.66 },
-          },
-        }}
-      >
+      <Stack spacing={1.25} sx={{ width: '100%' }}>
+        <Box
+          sx={{
+            position: 'relative',
+            borderRadius: 2,
+            overflow: 'hidden',
+            minHeight: { xs: 210, md: 290 },
+            border: '1px solid',
+            borderColor: 'divider',
+            backgroundColor: 'background.paper',
+            backgroundImage: visual.bg,
+            '@keyframes particleFloat': {
+              '0%': { transform: 'translate3d(0, 0, 0) scale(1)', opacity: 0.2 },
+              '50%': { transform: 'translate3d(10px, -22px, 0) scale(1.2)', opacity: 0.75 },
+              '100%': { transform: 'translate3d(-8px, -45px, 0) scale(0.95)', opacity: 0.1 },
+            },
+            '@keyframes pulseGlow': {
+              '0%,100%': { opacity: 0.36 },
+              '50%': { opacity: 0.66 },
+            },
+          }}
+        >
         <Box
           sx={{
             position: 'absolute',
@@ -118,78 +117,43 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
             </Box>
           ) : null}
         </Stack>
+        </Box>
 
         {slides.length > 1 ? (
-          <>
-            <Button
-              aria-label="Banner i mëparshëm"
-              onClick={() => setIdx((prev) => (prev - 1 + slides.length) % slides.length)}
-              sx={{
-                minWidth: 0,
-                position: 'absolute',
-                left: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: 42,
-                height: 42,
-                borderRadius: '50%',
-                bgcolor: 'rgba(0,0,0,0.58)',
-                color: 'white',
-                p: 0,
-                border: '1px solid',
-                borderColor: 'rgba(255,255,255,0.24)',
-                backdropFilter: 'blur(6px)',
-                '&:hover': { bgcolor: 'rgba(0,0,0,0.72)' },
-              }}
-            >
-              <ChevronLeft sx={{ fontSize: 24 }} />
-            </Button>
-            <Button
-              aria-label="Banner i ardhshëm"
-              onClick={() => setIdx((prev) => (prev + 1) % slides.length)}
-              sx={{
-                minWidth: 0,
-                position: 'absolute',
-                right: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: 42,
-                height: 42,
-                borderRadius: '50%',
-                bgcolor: 'rgba(0,0,0,0.58)',
-                color: 'white',
-                p: 0,
-                border: '1px solid',
-                borderColor: 'rgba(255,255,255,0.24)',
-                backdropFilter: 'blur(6px)',
-                '&:hover': { bgcolor: 'rgba(0,0,0,0.72)' },
-              }}
-            >
-              <ChevronRight sx={{ fontSize: 24 }} />
-            </Button>
-            <Stack
-              direction="row"
-              spacing={0.8}
-              sx={{ position: 'absolute', left: '50%', bottom: 14, transform: 'translateX(-50%)', zIndex: 2 }}
-            >
-              {slides.map((_, i) => (
-                <Box
-                  key={i}
-                  onClick={() => setIdx(i)}
-                  sx={{
-                    width: i === safeIdx ? 20 : 8,
-                    height: 8,
-                    borderRadius: 99,
-                    bgcolor: i === safeIdx ? 'white' : 'rgba(255,255,255,0.45)',
-                    cursor: 'pointer',
-                    transition: 'all .2s ease',
-                  }}
-                />
-              ))}
-            </Stack>
-          </>
+          <Stack
+            direction="row"
+            spacing={0.8}
+            role="tablist"
+            aria-label="Banner slides"
+            sx={{ justifyContent: 'center', pt: 0.25 }}
+          >
+            {slides.map((_, i) => (
+              <Box
+                key={i}
+                component="button"
+                type="button"
+                role="tab"
+                aria-selected={i === safeIdx}
+                aria-label={`Banner ${i + 1}`}
+                onClick={() => setIdx(i)}
+                sx={{
+                  width: i === safeIdx ? 20 : 8,
+                  height: 8,
+                  borderRadius: 99,
+                  border: 0,
+                  p: 0,
+                  cursor: 'pointer',
+                  transition: 'all .2s ease',
+                  bgcolor: i === safeIdx ? 'primary.main' : 'action.disabled',
+                  '&:hover': {
+                    bgcolor: i === safeIdx ? 'primary.dark' : 'action.active',
+                  },
+                }}
+              />
+            ))}
+          </Stack>
         ) : null}
-      </Box>
+      </Stack>
     </Box>
   );
 }

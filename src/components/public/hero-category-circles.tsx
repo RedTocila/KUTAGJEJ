@@ -5,9 +5,34 @@ import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Box, Stack, Typography } from '@mui/material';
 
-import { HOME_VERTICALS } from '@/lib/home-categories';
+import { HOME_VERTICALS, type HomeVerticalId } from '@/lib/home-categories';
 
-import { VerticalIcon } from './vertical-icon';
+const HERO_CATEGORY_ICON_SRC: Record<HomeVerticalId, string> = {
+  'real-estate': '/house.svg',
+  cars: '/car.svg',
+  jobs: '/suitcase.svg',
+  marketplace: '/shopping-cart.svg',
+  businesses: '/margarita.svg',
+  professionals: '/people.svg',
+};
+
+function HeroCategoryIcon({ verticalId }: { verticalId: HomeVerticalId }) {
+  const src = HERO_CATEGORY_ICON_SRC[verticalId];
+
+  return (
+    <Box
+      aria-hidden
+      sx={{
+        width: { xs: 23, sm: 25 },
+        height: { xs: 23, sm: 25 },
+        flexShrink: 0,
+        bgcolor: 'primary.main',
+        mask: `url(${src}) no-repeat center / contain`,
+        WebkitMask: `url(${src}) no-repeat center / contain`,
+      }}
+    />
+  );
+}
 
 export type HeroCategoryCirclesVariant = 'links' | 'tabs';
 
@@ -64,7 +89,6 @@ export function HeroCategoryCircles({
           overflowY: 'hidden',
           WebkitOverflowScrolling: 'touch',
           scrollSnapType: { xs: 'x proximity', sm: 'none' },
-          // Mobile: scroll still works via swipe; hide the scrollbar track/thumb.
           scrollbarWidth: { xs: 'none', sm: 'auto' },
           pb: { xs: 0, sm: 0.75 },
           mx: { xs: -1, sm: 0 },
@@ -87,26 +111,18 @@ export function HeroCategoryCircles({
             <>
               <Box
                 sx={{
-                  width: { xs: 56, sm: 64 },
-                  height: { xs: 56, sm: 64 },
+                  width: { xs: 50, sm: 56 },
+                  height: { xs: 50, sm: 56 },
                   borderRadius: '50%',
-                  overflow: 'hidden',
                   display: 'grid',
                   placeItems: 'center',
-                  bgcolor: 'transparent',
+                  bgcolor: 'background.paper',
+                  border: '1px solid',
+                  borderColor: selected ? 'primary.main' : 'divider',
+                  transition: 'border-color 0.15s ease, background-color 0.15s ease',
                 }}
               >
-                <VerticalIcon
-                  verticalId={v.id}
-                  size={64}
-                  decorative
-                  sx={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    transform: 'scale(1.32)',
-                  }}
-                />
+                <HeroCategoryIcon verticalId={v.id} />
               </Box>
               <Typography
                 variant="caption"

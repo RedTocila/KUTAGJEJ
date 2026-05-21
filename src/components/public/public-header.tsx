@@ -22,6 +22,8 @@ import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
 
+import { HeaderMobileSearch } from './header-mobile-search';
+
 const TOOLBAR_MIN_HEIGHT = { xs: 64, md: 76 } as const;
 
 /**
@@ -129,24 +131,11 @@ export function PublicHeader() {
           };
         }}
       >
-        <Container maxWidth="xl">
-          <Toolbar disableGutters sx={{ minHeight: { xs: 64, md: 76 }, gap: 2 }}>
-            <Stack
-              direction="row"
-              sx={{ alignItems: 'center', display: { xs: 'flex', md: 'none' }, width: 44, flexShrink: 0 }}
-            >
-              <Tooltip title="Posto njoftim">
-                <IconButton
-                  component={RouterLink}
-                  href={mobilePostHref}
-                  aria-label="Posto njoftim"
-                  sx={{ color: 'text.primary' }}
-                >
-                  {React.createElement(PlusIcon, { size: 24, weight: 'bold' })}
-                </IconButton>
-              </Tooltip>
-            </Stack>
-
+        <Container
+          maxWidth="xl"
+          sx={{ pl: { xs: 1, sm: 2, md: 3 }, pr: { xs: 1.5, sm: 2, md: 3 } }}
+        >
+          <Toolbar disableGutters sx={{ minHeight: { xs: 64, md: 76 }, gap: { xs: 1, md: 2 } }}>
             <Box
               component={RouterLink}
               href={paths.home}
@@ -156,7 +145,7 @@ export function PublicHeader() {
                 textDecoration: 'none',
                 color: 'inherit',
                 flexShrink: 0,
-                mx: { xs: 'auto', md: 0 },
+                ml: { xs: -0.25, md: 0 },
               }}
             >
               <BrandLogo
@@ -167,6 +156,8 @@ export function PublicHeader() {
                 wordmarkSx={{ fontSize: { xs: '1.05rem', md: '1.2rem' } }}
               />
             </Box>
+
+            <HeaderMobileSearch />
 
             <Stack
               direction="row"
@@ -235,12 +226,26 @@ export function PublicHeader() {
               sx={{
                 alignItems: 'center',
                 display: { xs: 'flex', md: 'none' },
-                width: 44,
-                justifyContent: 'flex-end',
                 flexShrink: 0,
+                ml: 'auto',
               }}
             >
-              <ThemeModeToggle />
+              <Tooltip title="Posto njoftim">
+                <IconButton
+                  component={RouterLink}
+                  href={mobilePostHref}
+                  aria-label="Posto njoftim"
+                  sx={{
+                    width: 34,
+                    height: 34,
+                    bgcolor: 'primary.main',
+                    color: 'grey.900',
+                    '&:hover': { bgcolor: 'primary.dark' },
+                  }}
+                >
+                  {React.createElement(PlusIcon, { size: 16, weight: 'bold' })}
+                </IconButton>
+              </Tooltip>
             </Stack>
           </Toolbar>
         </Container>

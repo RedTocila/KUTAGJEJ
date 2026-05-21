@@ -24,19 +24,13 @@ export function isJobListingActive(createdAt: string | Date, now: Date = new Dat
   return now.getTime() < getJobListingExpiresAt(createdAt).getTime();
 }
 
-/** Time remaining until the listing is hidden (`Hh Mm Ss`, hours include full multi-day remainder). */
+/** Time remaining until the listing is hidden (`Dd Hh Mm Ss`). */
 export function formatJobListingCountdown(expiresAt: string | Date, now: Date = new Date()): string {
-  const expires = expiresAt instanceof Date ? expiresAt : new Date(expiresAt);
-  const remainingMs = expires.getTime() - now.getTime();
+  const parts = getJobCountdownParts(expiresAt, now);
 
-  if (remainingMs <= 0) return 'Skaduar';
+  if (parts.expired) return 'Skaduar';
 
-  const totalSeconds = Math.floor(remainingMs / MS_PER_SECOND);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return `${hours}h ${pad2(minutes)}m ${pad2(seconds)}s`;
+  return `${parts.days}d ${parts.hours}h ${pad2(parts.minutes)}m ${pad2(parts.seconds)}s`;
 }
 
 export type JobListingCountdownUrgency = 'normal' | 'warning' | 'critical';

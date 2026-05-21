@@ -5,7 +5,7 @@ import { getSiteURL } from '@/lib/get-site-url';
  * To swap the logo: put the new file in `public/` and set `logoFileName` to match (e.g. `KuTaGjejLogo.png`).
  */
 export const brand = {
-  logoFileName: 'KuTaGjejLogo.png',
+  logoFileName: '0C2047C5-3987-4BC7-9238-642687049E6C.png',
 } as const;
 
 /** Public URL for {@link brand.logoFileName} (Next serves `public/` at `/`). */

@@ -23,8 +23,8 @@ function HeroCategoryIcon({ verticalId }: { verticalId: HomeVerticalId }) {
     <Box
       aria-hidden
       sx={{
-        width: { xs: 23, sm: 25 },
-        height: { xs: 23, sm: 25 },
+        width: { xs: 26, sm: 28 },
+        height: { xs: 26, sm: 28 },
         flexShrink: 0,
         bgcolor: 'primary.main',
         mask: `url(${src}) no-repeat center / contain`,
@@ -72,8 +72,6 @@ export function HeroCategoryCircles({
     <Box
       sx={{
         width: '100%',
-        maxWidth: 920,
-        mx: 'auto',
       }}
     >
       <Box
@@ -84,15 +82,13 @@ export function HeroCategoryCircles({
           flexDirection: 'row',
           flexWrap: 'nowrap',
           gap: { xs: 1.25, sm: 2 },
-          justifyContent: { xs: 'flex-start', sm: 'center' },
+          justifyContent: 'flex-start',
           overflowX: 'auto',
           overflowY: 'hidden',
           WebkitOverflowScrolling: 'touch',
           scrollSnapType: { xs: 'x proximity', sm: 'none' },
           scrollbarWidth: { xs: 'none', sm: 'auto' },
           pb: { xs: 0, sm: 0.75 },
-          mx: { xs: -1, sm: 0 },
-          px: { xs: 1, sm: 0 },
           '&::-webkit-scrollbar': {
             display: { xs: 'none', sm: 'block' },
             height: { sm: 5 },
@@ -111,8 +107,8 @@ export function HeroCategoryCircles({
             <>
               <Box
                 sx={{
-                  width: { xs: 50, sm: 56 },
-                  height: { xs: 50, sm: 56 },
+                  width: { xs: 52, sm: 58 },
+                  height: { xs: 52, sm: 58 },
                   borderRadius: '50%',
                   display: 'grid',
                   placeItems: 'center',

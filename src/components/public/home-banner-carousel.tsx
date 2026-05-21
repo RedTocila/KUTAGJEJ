@@ -10,113 +10,229 @@ export interface HomeBannerCarouselProps {
   banners?: HomeBannerDto[];
 }
 
-export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
-  const slides = banners.length > 0 ? banners.slice(0, 3) : FALLBACK_BANNERS;
-  const [idx, setIdx] = React.useState(0);
+const SLIDE_MS = 480;
+const SWIPE_THRESHOLD = 48;
 
-  React.useEffect(() => {
+function resolveSlides(banners: HomeBannerDto[]): HomeBannerDto[] {
+  const fromApi = banners.slice(0, 3);
+  if (fromApi.length >= 2) return fromApi;
+  if (fromApi.length === 1) {
+    const extra = FALLBACK_BANNERS.find((b) => b.title !== fromApi[0].title) ?? FALLBACK_BANNERS[1];
+    return [fromApi[0], { ...extra, id: `pad-${extra.id}` }];
+  }
+  return FALLBACK_BANNERS.slice(0, 2);
+}
+
+function BannerSlidePanel({ slide, visualIndex }: { slide: HomeBannerDto; visualIndex: number }) {
+  const visual = VISUALS[visualIndex % VISUALS.length];
+
+  return (
+    <Box
+      sx={{
+        position: 'relative',
+        width: '100%',
+        minHeight: { xs: 210, md: 290 },
+        backgroundColor: 'background.paper',
+        backgroundImage: visual.bg,
+        '@keyframes particleFloat': {
+          '0%': { transform: 'translate3d(0, 0, 0) scale(1)', opacity: 0.2 },
+          '50%': { transform: 'translate3d(10px, -22px, 0) scale(1.2)', opacity: 0.75 },
+          '100%': { transform: 'translate3d(-8px, -45px, 0) scale(0.95)', opacity: 0.1 },
+        },
+        '@keyframes pulseGlow': {
+          '0%,100%': { opacity: 0.36 },
+          '50%': { opacity: 0.66 },
+        },
+      }}
+    >
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 85% 70%, rgba(255,255,255,0.14), transparent 32%)',
+          animation: 'pulseGlow 4.8s ease-in-out infinite',
+        }}
+      />
+      {PARTICLES.map((p, i) => (
+        <Box
+          key={i}
+          sx={{
+            position: 'absolute',
+            left: `${p.left}%`,
+            top: `${p.top}%`,
+            width: p.size,
+            height: p.size,
+            borderRadius: '50%',
+            bgcolor: p.color,
+            filter: 'blur(0.4px)',
+            animation: `particleFloat ${p.duration}s ease-in-out ${p.delay}s infinite`,
+            zIndex: 0,
+            pointerEvents: 'none',
+          }}
+        />
+      ))}
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'linear-gradient(95deg, rgba(0, 0, 0, 0.58) 0%, rgba(0, 0, 0, 0.24) 52%, rgba(0, 0, 0, 0.14) 100%)',
+        }}
+      />
+
+      <Stack
+        spacing={1.4}
+        sx={{
+          position: 'relative',
+          zIndex: 1,
+          color: 'common.white',
+          p: { xs: 2.2, sm: 2.8, md: 3.8 },
+          maxWidth: { xs: '100%', md: '62%' },
+        }}
+      >
+        <Typography
+          component="h2"
+          sx={{ fontWeight: 900, fontSize: { xs: '1.25rem', md: '2.05rem' }, lineHeight: 1.12 }}
+        >
+          {slide.title}
+        </Typography>
+        {slide.subtitle ? (
+          <Typography sx={{ color: 'rgba(255,255,255,0.92)', fontSize: { xs: '0.94rem', md: '1.05rem' } }}>
+            {slide.subtitle}
+          </Typography>
+        ) : null}
+        {slide.ctaLabel && slide.ctaHref ? (
+          <Box>
+            <Button
+              component={RouterLink}
+              href={slide.ctaHref}
+              variant="contained"
+              sx={{ textTransform: 'none', fontWeight: 800, borderRadius: 99, px: 3, py: 1.1 }}
+            >
+              {slide.ctaLabel}
+            </Button>
+          </Box>
+        ) : null}
+      </Stack>
+    </Box>
+  );
+}
+
+export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
+  const slides = React.useMemo(() => resolveSlides(banners), [banners]);
+  const [idx, setIdx] = React.useState(0);
+  const [dragOffset, setDragOffset] = React.useState(0);
+  const [isDragging, setIsDragging] = React.useState(false);
+  const touchStartX = React.useRef<number | null>(null);
+  const timerRef = React.useRef<number | null>(null);
+
+  const startAutoPlay = React.useCallback(() => {
+    if (timerRef.current) window.clearInterval(timerRef.current);
     if (slides.length < 2) return;
-    const timer = window.setInterval(() => {
+    timerRef.current = window.setInterval(() => {
       setIdx((prev) => (prev + 1) % slides.length);
     }, 5000);
-    return () => window.clearInterval(timer);
   }, [slides.length]);
 
+  React.useEffect(() => {
+    startAutoPlay();
+    return () => {
+      if (timerRef.current) window.clearInterval(timerRef.current);
+    };
+  }, [startAutoPlay]);
+
+  const goToSlide = React.useCallback(
+    (next: number) => {
+      setIdx(((next % slides.length) + slides.length) % slides.length);
+      startAutoPlay();
+    },
+    [slides.length, startAutoPlay],
+  );
+
+  const handleTouchStart = (event: React.TouchEvent) => {
+    touchStartX.current = event.touches[0]?.clientX ?? null;
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (event: React.TouchEvent) => {
+    if (touchStartX.current == null || slides.length < 2) return;
+    const currentX = event.touches[0]?.clientX;
+    if (currentX == null) return;
+    setDragOffset(currentX - touchStartX.current);
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent) => {
+    if (touchStartX.current == null) return;
+    const endX = event.changedTouches[0]?.clientX;
+    if (endX != null) {
+      const delta = endX - touchStartX.current;
+      if (delta <= -SWIPE_THRESHOLD) {
+        goToSlide(idx + 1);
+      } else if (delta >= SWIPE_THRESHOLD) {
+        goToSlide(idx - 1);
+      }
+    }
+    touchStartX.current = null;
+    setDragOffset(0);
+    setIsDragging(false);
+  };
+
+  const handleTouchCancel = () => {
+    touchStartX.current = null;
+    setDragOffset(0);
+    setIsDragging(false);
+  };
+
   const safeIdx = slides.length > 0 ? idx % slides.length : 0;
-  const active = slides[safeIdx] ?? FALLBACK_BANNERS[0];
-  const visual = VISUALS[safeIdx % VISUALS.length];
+  const slideBasis = slides.length > 0 ? 100 / slides.length : 100;
 
   return (
     <Box component="section" aria-label="Banner kryesor" sx={{ width: '100%' }}>
       <Stack spacing={1.25} sx={{ width: '100%' }}>
         <Box
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
           sx={{
             position: 'relative',
             borderRadius: 2,
             overflow: 'hidden',
-            minHeight: { xs: 210, md: 290 },
             border: '1px solid',
             borderColor: 'divider',
-            backgroundColor: 'background.paper',
-            backgroundImage: visual.bg,
-            '@keyframes particleFloat': {
-              '0%': { transform: 'translate3d(0, 0, 0) scale(1)', opacity: 0.2 },
-              '50%': { transform: 'translate3d(10px, -22px, 0) scale(1.2)', opacity: 0.75 },
-              '100%': { transform: 'translate3d(-8px, -45px, 0) scale(0.95)', opacity: 0.1 },
-            },
-            '@keyframes pulseGlow': {
-              '0%,100%': { opacity: 0.36 },
-              '50%': { opacity: 0.66 },
-            },
+            touchAction: 'pan-y',
+            cursor: slides.length > 1 ? 'grab' : undefined,
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
           }}
         >
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            background:
-              'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 85% 70%, rgba(255,255,255,0.14), transparent 32%)',
-            animation: 'pulseGlow 4.8s ease-in-out infinite',
-          }}
-        />
-        {PARTICLES.map((p, i) => (
           <Box
-            key={i}
             sx={{
-              position: 'absolute',
-              left: `${p.left}%`,
-              top: `${p.top}%`,
-              width: p.size,
-              height: p.size,
-              borderRadius: '50%',
-              bgcolor: p.color,
-              filter: 'blur(0.4px)',
-              animation: `particleFloat ${p.duration}s ease-in-out ${p.delay}s infinite`,
-              zIndex: 0,
-              pointerEvents: 'none',
+              display: 'flex',
+              width: `${slides.length * 100}%`,
+              transform: `translate3d(calc(-${safeIdx * slideBasis}% + ${dragOffset}px), 0, 0)`,
+              transition: isDragging
+                ? 'none'
+                : `transform ${SLIDE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+              willChange: 'transform',
+              '@media (prefers-reduced-motion: reduce)': {
+                transition: 'none',
+              },
             }}
-          />
-        ))}
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            background:
-              'linear-gradient(95deg, rgba(0, 0, 0, 0.58) 0%, rgba(0, 0, 0, 0.24) 52%, rgba(0, 0, 0, 0.14) 100%)',
-          }}
-        />
-
-        <Stack
-          spacing={1.4}
-          sx={{
-            position: 'relative',
-            zIndex: 1,
-            color: 'common.white',
-            p: { xs: 2.2, sm: 2.8, md: 3.8 },
-            maxWidth: { xs: '100%', md: '62%' },
-          }}
-        >
-          <Typography component="h2" sx={{ fontWeight: 900, fontSize: { xs: '1.25rem', md: '2.05rem' }, lineHeight: 1.12 }}>
-            {active.title}
-          </Typography>
-          {active.subtitle ? (
-            <Typography sx={{ color: 'rgba(255,255,255,0.92)', fontSize: { xs: '0.94rem', md: '1.05rem' } }}>
-              {active.subtitle}
-            </Typography>
-          ) : null}
-          {active.ctaLabel && active.ctaHref ? (
-            <Box>
-              <Button
-                component={RouterLink}
-                href={active.ctaHref}
-                variant="contained"
-                sx={{ textTransform: 'none', fontWeight: 800, borderRadius: 99, px: 3, py: 1.1 }}
+          >
+            {slides.map((slide, i) => (
+              <Box
+                key={slide.id}
+                sx={{
+                  flex: `0 0 ${slideBasis}%`,
+                  minWidth: 0,
+                }}
               >
-                {active.ctaLabel}
-              </Button>
-            </Box>
-          ) : null}
-        </Stack>
+                <BannerSlidePanel slide={slide} visualIndex={i} />
+              </Box>
+            ))}
+          </Box>
         </Box>
 
         {slides.length > 1 ? (
@@ -135,7 +251,7 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
                 role="tab"
                 aria-selected={i === safeIdx}
                 aria-label={`Banner ${i + 1}`}
-                onClick={() => setIdx(i)}
+                onClick={() => goToSlide(i)}
                 sx={{
                   width: i === safeIdx ? 20 : 8,
                   height: 8,
@@ -143,7 +259,7 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
                   border: 0,
                   p: 0,
                   cursor: 'pointer',
-                  transition: 'all .2s ease',
+                  transition: 'all .25s cubic-bezier(0.22, 1, 0.36, 1)',
                   bgcolor: i === safeIdx ? 'primary.main' : 'action.disabled',
                   '&:hover': {
                     bgcolor: i === safeIdx ? 'primary.dark' : 'action.active',

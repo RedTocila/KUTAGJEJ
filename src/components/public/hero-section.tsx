@@ -31,7 +31,7 @@ export function HeroSection({ banners, stats }: HeroSectionProps) {
         }}
       >
         <Container maxWidth="md">
-          <Stack spacing={{ xs: 2.25, md: 2.75 }} sx={{ alignItems: 'center', textAlign: 'center' }}>
+          <Stack spacing={{ xs: 2.25, md: 2.75 }} sx={{ alignItems: { xs: 'stretch', md: 'center' }, textAlign: 'center' }}>
             <Typography
               id="home-hero-heading"
               component="h1"

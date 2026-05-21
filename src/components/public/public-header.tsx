@@ -152,8 +152,9 @@ export function PublicHeader() {
                 height={52}
                 showWordmark
                 wordmarkPresentation="brand"
-                sx={{ gap: 0.5 }}
-                wordmarkSx={{ fontSize: { xs: '1.05rem', md: '1.2rem' } }}
+                sx={{ gap: 0.25 }}
+                imgSx={{ mr: -0.5 }}
+                wordmarkSx={{ fontSize: { xs: '1.05rem', md: '1.2rem' }, ml: -0.25 }}
               />
             </Box>
 

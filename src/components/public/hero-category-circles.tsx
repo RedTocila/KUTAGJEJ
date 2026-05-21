@@ -23,8 +23,8 @@ function HeroCategoryIcon({ verticalId }: { verticalId: HomeVerticalId }) {
     <Box
       aria-hidden
       sx={{
-        width: { xs: 26, sm: 28 },
-        height: { xs: 26, sm: 28 },
+        width: { xs: 32, sm: 28 },
+        height: { xs: 32, sm: 28 },
         flexShrink: 0,
         bgcolor: 'primary.main',
         mask: `url(${src}) no-repeat center / contain`,
@@ -107,8 +107,8 @@ export function HeroCategoryCircles({
             <>
               <Box
                 sx={{
-                  width: { xs: 52, sm: 58 },
-                  height: { xs: 52, sm: 58 },
+                  width: { xs: 60, sm: 58 },
+                  height: { xs: 60, sm: 58 },
                   borderRadius: '50%',
                   display: 'grid',
                   placeItems: 'center',

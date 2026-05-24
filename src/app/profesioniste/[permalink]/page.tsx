@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
 import { PublicShell } from '@/components/public/public-shell';
-import { VerticalListingDetailView } from '@/components/public/vertical-listing-detail-view';
+import { ProfessionalListingDetailView } from '@/components/public/professional-listing-detail-view';
 import { config } from '@/config';
 import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
@@ -75,11 +75,9 @@ export default async function ProfessionalListingPage({ params }: PageProps): Pr
 
   return (
     <PublicShell hideHeaderBelowMd>
-      <VerticalListingDetailView
+      <ProfessionalListingDetailView
         listing={listing}
         canonicalUrl={canonicalUrl}
-        browseHref={paths.public.professionals}
-        similarSectionTitle="Profesionistë të ngjashëm"
         similar={similar}
       />
     </PublicShell>

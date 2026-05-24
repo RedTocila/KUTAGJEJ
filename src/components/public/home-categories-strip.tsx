@@ -8,7 +8,7 @@ import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
 import { HOME_VERTICALS } from '@/lib/home-categories';
 import { paths } from '@/paths';
 
-import { VerticalMuiIcon } from './vertical-mui-icon';
+import { HomeVerticalIcon } from './home-vertical-icon';
 
 export function HomeCategoriesStrip() {
   return (
@@ -77,7 +77,7 @@ export function HomeCategoriesStrip() {
                         : 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)',
                   }}
                 >
-                  <VerticalMuiIcon verticalId={v.id} sx={{ fontSize: 32 }} />
+                  <HomeVerticalIcon verticalId={v.id} size={32} />
                 </Box>
                 <Stack spacing={0.5} sx={{ minWidth: 0 }}>
                   <Typography sx={{ fontWeight: 800, fontSize: '1rem' }}>{v.label}</Typography>

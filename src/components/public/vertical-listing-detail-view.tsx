@@ -15,6 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
+import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
 import {
   CAR_COLOUR_OPTIONS,
   FUEL_TYPE_OPTIONS,
@@ -113,9 +114,7 @@ function StickyListingContact(props: {
             }}
             aria-label="WhatsApp"
           >
-            <Typography component="span" sx={{ fontWeight: 800 }}>
-              WhatsApp
-            </Typography>
+            <WhatsappLogoIcon weight="regular" size={26} />
           </Button>
         ) : null}
       </Stack>
@@ -169,15 +168,14 @@ function ListingContactAside(props: {
       <Divider />
       <Stack spacing={1.25}>
         {displayPhone ? (
-          <>
+          <Stack direction="row" spacing={1.25}>
             <Button
               component="a"
               href={`tel:${displayPhone.replace(/\s/g, '')}`}
               variant="contained"
               disableElevation
-              fullWidth
               size="large"
-              sx={{ borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.2 }}
+              sx={{ flex: 1, borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.2 }}
             >
               Kontakto shitësin
             </Button>
@@ -188,20 +186,20 @@ function ListingContactAside(props: {
                 rel="noopener noreferrer"
                 target="_blank"
                 variant="outlined"
-                fullWidth
                 size="large"
                 sx={{
+                  px: 1.85,
+                  minWidth: 'auto',
+                  flexShrink: 0,
                   borderRadius: 2,
-                  fontWeight: 800,
-                  textTransform: 'none',
-                  py: 1.2,
                   ...whatsappOutlinedButtonSx,
                 }}
+                aria-label="WhatsApp"
               >
-                WhatsApp
+                <WhatsappLogoIcon weight="regular" size={26} />
               </Button>
             ) : null}
-          </>
+          </Stack>
         ) : (
           <Button variant="contained" disabled fullWidth sx={{ borderRadius: 2 }}>
             Nr. kontakti i padisponueshëm
@@ -632,7 +630,6 @@ function SellerProfileInner({ listing: l }: { listing: AnyPublicListingDetail })
           disabled={!displayPhone}
           variant="contained"
           disableElevation
-          fullWidth
           sx={{ flex: 1, borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.1 }}
         >
           Telefon
@@ -643,12 +640,17 @@ function SellerProfileInner({ listing: l }: { listing: AnyPublicListingDetail })
           rel="noopener noreferrer"
           disabled={!whatsappListingHref}
           target="_blank"
-          variant="contained"
-          disableElevation
-          fullWidth
-          sx={{ flex: 1, borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.1 }}
+          variant="outlined"
+          sx={{
+            px: 1.85,
+            minWidth: 'auto',
+            flexShrink: 0,
+            borderRadius: 2,
+            ...whatsappOutlinedButtonSx,
+          }}
+          aria-label="WhatsApp"
         >
-          WhatsApp
+          <WhatsappLogoIcon weight="regular" size={26} />
         </Button>
       </Stack>
     </>

@@ -380,7 +380,7 @@ export function JobListingDetailView({
               </Stack>
             </Box>
 
-            {/* Meta 2×2 grid */}
+            {/* Meta — single row */}
             <Grid
               container
               sx={{
@@ -394,20 +394,41 @@ export function JobListingDetailView({
                 return (
                   <Grid
                     key={row.label}
-                    size={6}
+                    size={3}
                     sx={{
-                      py: 1.5,
-                      px: 1.5,
-                      borderRight: index % 2 === 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
-                      borderBottom: index < 2 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                      py: 1.25,
+                      px: 0.75,
+                      minWidth: 0,
+                      borderRight: index < metaRows.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
                     }}
                   >
-                    <Stack spacing={0.5}>
-                      <Icon sx={{ fontSize: 20, color: 'primary.main' }} />
-                      <Typography sx={{ fontWeight: 700, fontSize: FONT_BODY, color: '#fff', lineHeight: 1.3 }}>
+                    <Stack spacing={0.35} sx={{ minWidth: 0 }}>
+                      <Icon sx={{ fontSize: 18, color: 'primary.main' }} />
+                      <Typography
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: '0.6875rem',
+                          color: '#fff',
+                          lineHeight: 1.25,
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                        }}
+                      >
                         {row.value}
                       </Typography>
-                      <Typography sx={{ color: 'rgba(255,255,255,0.55)', fontSize: FONT_CAPTION }}>
+                      <Typography
+                        sx={{
+                          color: 'rgba(255,255,255,0.55)',
+                          fontSize: '0.625rem',
+                          lineHeight: 1.2,
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                        }}
+                      >
                         {row.label}
                       </Typography>
                     </Stack>

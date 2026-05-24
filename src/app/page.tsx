@@ -187,6 +187,7 @@ export default async function HomePage() {
         hideVerticalIcon
         hideSubcategoryPills
         hideBrowseAction
+        compactTop
       >
         <ListingsCarousel>
           {latestMixed.map((item) => (

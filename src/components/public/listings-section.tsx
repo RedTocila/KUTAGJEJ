@@ -8,8 +8,8 @@ import { Box, Button, Container, Stack, Typography } from '@mui/material';
 import { findVertical, type HomeVerticalId } from '@/lib/home-categories';
 
 import { SubcategoryPills } from './subcategory-pills';
+import { HomeVerticalIcon } from './home-vertical-icon';
 import { VerticalIcon } from './vertical-icon';
-import { VerticalMuiIcon } from './vertical-mui-icon';
 
 export interface ListingsSectionProps {
   verticalId: HomeVerticalId;
@@ -28,6 +28,8 @@ export interface ListingsSectionProps {
   hideSubcategoryPills?: boolean;
   /** Hide the “Shfleto të gjitha” action (e.g. when there is no single browse target). */
   hideBrowseAction?: boolean;
+  /** Drop top padding — e.g. first section directly under the hero. */
+  compactTop?: boolean;
 }
 
 export function ListingsSection({
@@ -41,12 +43,17 @@ export function ListingsSection({
   hideVerticalIcon = false,
   hideSubcategoryPills = false,
   hideBrowseAction = false,
+  compactTop = false,
 }: ListingsSectionProps) {
   const vertical = findVertical(verticalId);
   const title = titleOverride ?? vertical.label;
 
   return (
-    <Box component="section" aria-labelledby={`section-${verticalId}`} sx={{ py: { xs: 3, md: 4 } }}>
+    <Box
+      component="section"
+      aria-labelledby={`section-${verticalId}`}
+      sx={compactTop ? { pt: 0, pb: { xs: 3, md: 4 } } : { py: { xs: 3, md: 4 } }}
+    >
       <Container maxWidth="xl" sx={{ px: { xs: 2, md: 3, lg: 4 } }}>
         <Stack
           direction="row"
@@ -71,7 +78,7 @@ export function ListingsSection({
                         : 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
                   }}
                 >
-                  <VerticalMuiIcon verticalId={verticalId} sx={{ fontSize: 26 }} />
+                  <HomeVerticalIcon verticalId={verticalId} size={26} />
                 </Box>
               ) : (
                 <VerticalIcon verticalId={verticalId} size={42} decorative />
@@ -139,7 +146,7 @@ function EmptyPlaceholder({ verticalId }: { verticalId: HomeVerticalId }) {
       }}
     >
       <Stack spacing={1.5} sx={{ alignItems: 'center' }}>
-        <VerticalIcon verticalId={verticalId} size={64} decorative />
+        <HomeVerticalIcon verticalId={verticalId} size={48} />
         <Typography variant="body2" color="text.secondary">
           Nuk ka njoftime ende në {vertical.label.toLowerCase()}.
         </Typography>

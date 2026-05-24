@@ -1,7 +1,8 @@
 /**
- * Seeds 6 demo listings per vertical (real-estate, cars, jobs, marketplace,
- * biznese, profesionistë). Idempotent: re-running removes the previous batch
- * (demo poster email) before re-inserting.
+ * Seeds demo listings per vertical (real-estate, cars, jobs, marketplace,
+ * biznese, profesionistë). Marketplace (tregu) gets ≥15 ads per category.
+ * Idempotent: re-running removes the previous batch (demo poster email)
+ * before re-inserting.
  *
  * Usage:  node scripts/seed-listings.js
  */
@@ -68,7 +69,227 @@ const MARKETPLACE_IMAGES = [
   unsplash('photo-1512820790803-83ca734da794'), // books stack
   unsplash('photo-1485965120184-e220f721d03e'), // mountain bike
   unsplash('photo-1558060370-d644479cb6f7'), // lego/toys
+  unsplash('photo-1511707171634-5f897ff02aa9'), // phone on desk
+  unsplash('photo-1498049794561-7780e7231661'), // laptop
+  unsplash('photo-1586023492125-27b2c045efd7'), // armchair
+  unsplash('photo-1445205170230-053b83016050'), // clothes rack
+  unsplash('photo-1503676260728-1c00da094a0b'), // school supplies
+  unsplash('photo-1571019613454-1cb2f99b2d8b'), // gym
+  unsplash('photo-1566576912321-d58ddd7a6088'), // toys
+  unsplash('photo-1486262715619-67b85e0b08d3'), // car parts
+  unsplash('photo-1464226184884-fa280b87d399'), // farm produce
+  unsplash('photo-1454165804606-c3d57bc86b40'), // services desk
+  unsplash('photo-1516321318423-f06f85e504b3'), // misc items
 ];
+
+/** Minimum marketplace listings per category (tregu browse). */
+const MARKETPLACE_PER_CATEGORY = 15;
+
+const MARKETPLACE_CATEGORIES = [
+  'elektronike',
+  'mobilje-shtepi',
+  'veshje-aksesore',
+  'libra-shkolla',
+  'sport-hobi',
+  'lodra',
+  'automjete-pjese',
+  'ushqime-bujqesi',
+  'sherbime',
+  'te-tjera',
+];
+
+const MARKETPLACE_CATEGORY_CATALOG = {
+  elektronike: {
+    items: [
+      ['iPhone 13 Pro 256GB', 'Telefon Apple, bateri 89%, kuti origjinale.', 650],
+      ['Samsung Galaxy S23 Ultra', '128GB, ekran i paprekur, me garanci.', 720],
+      ['MacBook Air M1 2020', '8GB RAM, 256GB SSD, përdorim i lehtë.', 780],
+      ['iPad Air 5 — Wi‑Fi', '64GB, me cover dhe stylus.', 420],
+      ['Sony WH-1000XM4', 'Kufje noise-cancelling, gjendje perfekte.', 180],
+      ['LG OLED 55" C1', 'Smart TV, përdorur 1 vit, pa burn-in.', 890],
+      ['PlayStation 5 + 2 lojëra', 'Disk edition, 2 kontrolle DualSense.', 520],
+      ['Dell Monitor 27" 4K', 'USB-C, ideal për punë nga shtëpia.', 240],
+      ['Canon EOS 2000D', 'Body + objektiv 18-55mm, 12k foto.', 310],
+      ['Apple Watch Series 8', '45mm, GPS, bateri e mirë.', 260],
+      ['JBL Charge 5', 'Speaker Bluetooth, rezistent ndaj ujit.', 85],
+      ['Kindle Paperwhite', 'Ekran 6.8", pa reklama, me cover.', 95],
+      ['Router TP-Link AX3000', 'Wi‑Fi 6, i ri në kuti.', 55],
+      ['GoPro Hero 11', 'Me aksesorë mount, përdorur në pushime.', 290],
+      ['Nintendo Switch OLED', 'Me case transporti dhe 3 lojëra.', 340],
+    ],
+  },
+  'mobilje-shtepi': {
+    items: [
+      ['Divan 3 vendësh + 2 kolltukë', 'Set modern, pëlhurë e pastër, pa njolla.', 180],
+      ['Krevat dopio me materac', '160×200, me hapësirë ruajtjeje.', 220],
+      ['Tavolinë ngrënieje + 6 karrige', 'Druri masiv, gjendje e mirë.', 350],
+      ['Raft librash IKEA Billy', '3 module, ngjyrë e bardhë.', 45],
+      ['Kuzhinë e kompletuar', 'L-shaped, me lavaman dhe pllaka.', 1200],
+      ['Dollap garderobe 3-dyertsh', 'Me pasqyrë, ngjyrë antracit.', 280],
+      ['Tavolinë kafe + TV stand', 'Set minimal, ideal për apartament.', 90],
+      ['Karrige zyre ergonomike', 'Mesh back, rregullim lartësie.', 75],
+      ['Komodinë + lampë nate', 'Set për dhomë gjumi, stil skandinav.', 60],
+      ['Set banjo — lavaman + kabinet', 'I ri, i papërdorur (projekt i ndryshuar).', 190],
+      ['Perde blackout 2×2.5m', '4 copë, ngjyrë bezhë.', 35],
+      ['Tapet laminat 25 m²', 'Ngjyrë druri, mbetje nga renovimi.', 120],
+      ['Karrige lëkure vintage', 'Restauruar, shumë komode.', 110],
+      ['Raft kuzhine me çanta', 'Organizim i mirë, montim i lehtë.', 40],
+      ['Krevat fëmijësh me shtresa', '90×200, me gardhë, ngjyrë blu.', 95],
+    ],
+  },
+  'veshje-aksesore': {
+    items: [
+      ['Xhup dimëri unisex — i ri', 'Masa M, etiketa ende të vendosura.', 45],
+      ['Nike Air Max 90', 'Masa 42, pak përdorur, pa gërvishtje.', 65],
+      ['Çantë lëkure Michael Kors', 'Origjinale, ngjyrë e zezë.', 85],
+      ['Palë syze dielli Ray-Ban', 'Aviator, me case origjinal.', 70],
+      ['Xhaketë lëkure vintage', 'Masa L, stil klasik.', 55],
+      ['Fustan i veçantë — i ri', 'Masa S, etiketë, ngjyrë e kuqe.', 40],
+      ['Adidas tracksuit', 'Komplet, masa M, përdorur 2 herë.', 35],
+      ['Orë Casio G-Shock', 'Rezistente, me kutinë origjinale.', 90],
+      ['Rrip lëkure i zi', 'I ri, i papërdorur.', 15],
+      ['Kapele bucket — koleksion', '3 copë, stile të ndryshme.', 20],
+      ['Veshje bebe 0–6 muaj', 'Set 12 copë, të pastra.', 25],
+      ['Palë çizme UGG', 'Masa 38, gjendje shumë e mirë.', 50],
+      ['Byzylyk argjendi 925', 'I vogël, i pastër, me certifikatë.', 30],
+      ['Xhaketë jeans Levis', 'Masa 32/32, pak e zbehur.', 28],
+      ['Fular cashmere', 'Ngjyrë krem, i butë, i ri.', 38],
+    ],
+  },
+  'libra-shkolla': {
+    items: [
+      ['Set librash Inxhinieri Elektrike', '15 libra universitarë, gjendje e mirë.', 30],
+      ['Enciklopedi për fëmijë — 12 vëllime', 'Ilustruar, i papërdorur.', 45],
+      ['Libra shkollorë klasa 9', 'Matematikë, Fizikë, Kimi — të gjitha.', 18],
+      ['Roman shqip — koleksion', '8 libra autorësh shqiptarë.', 22],
+      ['Libra anglisht — IELTS prep', 'Cambridge + praktikë, me shënime.', 25],
+      ['Atlas gjeografik + harta', 'I ri, për shkollë/mësim.', 12],
+      ['Libra mjekësie — anatomi', '3 vëllime, foto me ngjyra.', 55],
+      ['Fletore + stilolapsa — paketë', '20 fletore A4, stilolapsa Pilot.', 8],
+      ['Kalkulator shkencor Casio', 'fx-991EX, i papërdorur.', 28],
+      ['Libra letërsi — bestseller', '6 libra në anglisht, paperback.', 15],
+      ['Ditar + planner akademik', '2025–2026, i ri në folie.', 10],
+      ['Libra histori Shqipërie', '4 vëllime, hardcover.', 35],
+      ['Materiale arti — vizatim', 'Ngjyra akuarel, brusha, canvas.', 20],
+      ['Libra programimi', 'JavaScript, Python, React — 5 libra.', 40],
+      ['Abacus + libra matematikë fëmijë', 'Për moshë 6–10 vjeç.', 14],
+    ],
+  },
+  'sport-hobi': {
+    items: [
+      ['Biçikletë sportive Trek Marlin 7', 'Masa L, goma të reja, frenat hidraulike.', 220],
+      ['Set peshash 20 kg', 'Dumbbells adjustable, me stand.', 85],
+      ['Tavolinë ping-pong', 'Palosje, me rrjetë dhe 4 raketa.', 120],
+      ['Kajak dy-vendësh', 'Me pedra dhe vest, përdorur 2 sezon.', 350],
+      ['Kamera filmi Pentax K1000', 'Analog, me objektiv 50mm.', 95],
+      ['Set golf — 7 shkopinj', 'Për fillestarë, me çantë transporti.', 110],
+      ['Rollerblade inline — masa 42', 'Me mbrojtës, gjendje e mirë.', 45],
+      ['Tentë kampingu 4 persona', 'Waterproof, me shtroja.', 75],
+      ['Skis + shkopinj — 170 cm', 'Për nivel mesatar, servisuar.', 180],
+      ['Set peshëkim — 12 copë', 'Me kapëse dhe linja.', 55],
+      ['Yoga mat + bllok', 'Premium, pak përdorur.', 18],
+      ['Drone DJI Mini 2', 'Me 2 bateri, fluturim i testuar.', 320],
+      ['Gitarë akustike Yamaha', 'Për fillestarë, me case.', 140],
+      ['Tavolinë bilardo mini', 'Për shtëpi, 120 cm.', 200],
+      ['Set lojëra board — 8 lojëra', 'Catan, Monopoly, Scrabble etj.', 35],
+    ],
+  },
+  lodra: {
+    items: [
+      ['LEGO Technic Bugatti Chiron', 'Set 42083, kuti e mbyllur, i ri.', 320],
+      ['Doll Barbie — koleksion', '5 kukulla me veshje, të pastra.', 25],
+      ['Makinë RC off-road', 'Me 2 bateri dhe charger.', 45],
+      ['Set Play-Doh — 24 ngjyra', 'I papërdorur, i sigurt për fëmijë.', 18],
+      ['Karrige lëkundjeje për bebe', 'Me muzikë dhe vibrim.', 35],
+      ['Lojëra edukative Montessori', 'Druri, për moshë 2–4 vjeç.', 30],
+      ['Hot Wheels — 30 makina', 'Koleksion, me garazh.', 22],
+      ['Puzzle 1000 copë — peizazh', 'I ri, i papërdorur.', 12],
+      ['Set ndërtimi magnetic', '120 copë, për moshë 3+.', 28],
+      ['Kukull interaktive — fluturon', 'Me bateri, funksionon.', 40],
+      ['Lojëra video për fëmijë — Switch', 'Mario Kart, Pokémon — 3 lojëra.', 55],
+      ['Trampolinë 1.2m', 'Me rrjetë sigurie, për oborr.', 65],
+      ['Set shkencor për fëmijë', 'Mikroskop + eksperimente.', 38],
+      ['Kostum Halloween — superhero', 'Masa 8–10 vjeç, i përdorur 1 herë.', 15],
+      ['Lojëra LEGO City — stacion zjarrfikësish', 'I montuar, me kutinë.', 42],
+    ],
+  },
+  'automjete-pjese': {
+    items: [
+      ['Goma verore 205/55 R16 — set 4', 'Michelin, tread 7mm, 1 sezon.', 180],
+      ['Bateri makine 70Ah', 'Varta, e testuar, 6 muaj garanci.', 65],
+      ['Set frenash — para', 'BMW E90, disqe + pads, të reja.', 120],
+      ['Navigim Android Auto', '7" touch, me kamera mbrapa.', 85],
+      ['Amortizatorë — 2 copë', 'VW Golf 7, origjinalë OEM.', 95],
+      ['Karrige fëmije ISOFIX', 'Grup 1/2/3, gjendje e mirë.', 55],
+      ['Box bagazhi — 480L', 'Thule, me çelësin.', 110],
+      ['Set llambash LED H7', '6000K, homologuar.', 25],
+      ['Filter ajri + vaji — set servisi', 'Për Mercedes W204.', 35],
+      ['Radio Pioneer Bluetooth', 'Me USB, pa defekte.', 70],
+      ['Set chain dimerë', 'Për SUV, masa 225/65 R17.', 45],
+      ['Alternator i riuturuar', 'Opel Astra H 1.7 CDTI.', 90],
+      ['Kondicioner klimatizimi — recharge', 'Servis + gaz, në vend.', 40],
+      ['Tapiceri lëkure — sedilje', 'Custom, për 2 sedilje para.', 200],
+      ['Kamerë dashcam 4K', 'Me GPS, night vision.', 60],
+    ],
+  },
+  'ushqime-bujqesi': {
+    items: [
+      ['Vaj ulliri extra virgin — 20L', 'Berat, i prodhuar 2024, i filtruar.', 85],
+      ['Mjalte natyrale — 5 kg', 'Malësore, pa përpunim.', 35],
+      ['Arra të thata — 10 kg', 'Tirana, të freskëta, të thara.', 45],
+      ['Domate konservë — 24 kavanoza', 'Recetë familjare, pa aditivë.', 28],
+      ['Mish viçi — ngrirë 15 kg', 'Fermë lokale, i certifikuar.', 120],
+      ['Verë e kuqe — 12 shishe', 'Korçë, viti 2019, koleksion.', 95],
+      ['Rrush i thatë — 8 kg', 'Musht, pa farë, për konsum.', 22],
+      ['Djathë i bardhë — 5 kg', 'Gjirokastër, i freskët.', 40],
+      ['Farë perimesh — paketë', 'Domate, speca, patëllxhan — bio.', 12],
+      ['Makinë kositjeje — e vjetër', 'Funksionale, për oborr/kopsht.', 150],
+      ['Ullinj — 50 kg', 'Për prodhim vaji, sezoni 2025.', 180],
+      ['Mëllaga — 3 koshere', 'Organike, nga malësia.', 55],
+      ['Pemë frutore — 10 copë', 'Mollë, kumbull, qershi — fidanë.', 65],
+      ['Miell integral — 25 kg', 'Grurë lokal, i bluar fresk.', 18],
+      ['Pajisje ujitjeje — drip system', 'Për kopsht 200 m², i ri.', 75],
+    ],
+  },
+  sherbime: {
+    items: [
+      ['Pastrim apartamenti — çmim fiks', 'Apartament 2+1, materiale të përfshira.', 45],
+      ['Transport dhe ngarkim', 'Kamion me lift, brenda Tiranës.', 50],
+      ['Riparim telefonash', 'Ekran, bateri, charging port — garanci.', 0],
+      ['Kurs anglisht — 10 seanca', 'Online ose në zyrë, nivel fillestar.', 120],
+      ['Montim mobiljesh IKEA', 'Çdo lloj, me garanci montimi.', 35],
+      ['Fotograf produktesh', '10 foto, editim, për e-commerce.', 80],
+      ['Kujdes për kafshë — ditore', 'Qen ose mace, me raport ditor.', 15],
+      ['Dizajn logo + kartvizita', 'Paketë fillestare për biznes të ri.', 150],
+      ['Kopje dhe printim — A4/A3', '100 faqe, ngjyra ose bardhë e zi.', 12],
+      ['Instalim kondicioneri', 'Split 12000 BTU, me materiale.', 60],
+      ['Traductim shqip–anglisht', 'Dokumente, 5 faqe, i certifikuar.', 40],
+      ['Organizim eventi — konsulencë', 'Dasmë ose ditëlindje, plan 2 orë.', 100],
+      ['Riparim biçikletash', 'Servis i plotë + goma.', 25],
+      ['Kursi drejtimi — orë shtesë', 'Instruktor me 10 vjet përvojë.', 20],
+      ['Menaxhim social media — 1 muaj', '4 postime, 2 story/set javë.', 200],
+    ],
+  },
+  'te-tjera': {
+    items: [
+      ['Kuti lëvizjeje — 20 copë', 'Karton i fortë, me shirit.', 25],
+      ['Instrument muzikor — violinë', 'Për fillestarë, me case.', 95],
+      ['Koleksion monedhash', 'Shqipëri + Evropë, 50 copë.', 120],
+      ['Antik — orë mur', 'Vit 1960, funksionale.', 75],
+      ['Akuarium 100L + peshq', 'Me filter dhe dritë LED.', 85],
+      ['Set kopshtarie — lopata, secetë', 'Stainless steel, i ri.', 30],
+      ['Valixhe cabin size', '4 rrota, TSA lock, ngjyrë blu.', 40],
+      ['Koleksion pullash', '200 pulla, album i përfshirë.', 35],
+      ['Piano digital Yamaha', '88 taste, me bench dhe pedal.', 450],
+      ['Kafshë shtëpiake — hamster', 'Me kafaz, ushqim 1 muaj.', 20],
+      ['Set gatimi profesional', '10 pjesë, inox, i papërdorur.', 55],
+      ['Llamba dekor — 3 copë', 'Industrial style, E27.', 28],
+      ['Skulpturë druri — dekor', 'E punuar me dorë, 40 cm.', 65],
+      ['Koleksion vinylesh', '15 disqe, rock & jazz.', 90],
+      ['Generator 2.5 kW', 'Benzinë, i testuar, i mirëmbajtur.', 280],
+    ],
+  },
+};
 
 const BUSINESS_DIRECTORY_IMAGES = [
   unsplash('photo-1517248135467-4c7edcad34c4'), // restaurant dining
@@ -619,74 +840,38 @@ function professionalDirectorySeeds(loc) {
 
 function marketplaceSeeds(loc) {
   const cityId = (slug) => loc.bySlug.get(slug)._id;
-  return [
-    {
-      cityId: cityId('tirane'),
-      transactionType: 'shes',
-      title: 'iPhone 13 Pro 256GB — Si i ri',
-      description:
-        'iPhone 13 Pro Sierra Blue, 256GB, përdorur me kujdes, pa gërvishtje. Vjen me kuti origjinale dhe karikues.',
-      category: 'elektronike',
-      condition: 'si-i-ri',
-      price: 650,
-      currency: 'EUR',
-    },
-    {
-      cityId: cityId('durres'),
-      transactionType: 'shes',
-      title: 'Divan 3 vendësh + 2 kolltukë',
-      description:
-        'Set divani modern, përdorur 2 vjet, gjendje shumë e mirë, pa njolla. Mund të transportohet brenda Durrësit.',
-      category: 'mobilje-shtepi',
-      condition: 'mire',
-      price: 180,
-      currency: 'EUR',
-    },
-    {
-      cityId: cityId('tirane'),
-      transactionType: 'shes',
-      title: 'Xhup dimëri unisex — i ri',
-      description:
-        'Xhup dimëri me kapuç i markës Geographical Norway, masa M, ngjyrë blu. Etiketa ende të vendosura.',
-      category: 'veshje-aksesore',
-      condition: 'i-ri',
-      price: 45,
-      currency: 'EUR',
-    },
-    {
-      cityId: cityId('tirane'),
-      transactionType: 'shes',
-      title: 'Set librash universitar (Inxhinieri)',
-      description:
-        'Koleksion librash për inxhinieri elektrike (15 libra), në gjuhën angleze dhe shqipe, gjendje e mirë.',
-      category: 'libra-shkolla',
-      condition: 'mire',
-      price: 30,
-      currency: 'EUR',
-    },
-    {
-      cityId: cityId('vlore'),
-      transactionType: 'shes',
-      title: 'Biçikletë sportive Trek Marlin 7',
-      description:
-        'Trek Marlin 7, masa L, përdorur 1 sezon, gomat e reja, frenat hidraulike. Ideale për mountain biking.',
-      category: 'sport-hobi',
-      condition: 'shume-mire',
-      price: 220,
-      currency: 'EUR',
-    },
-    {
-      cityId: cityId('tirane'),
-      transactionType: 'shes',
-      title: 'LEGO Technic Bugatti Chiron — set i pahapur',
-      description:
-        'Set origjinal LEGO Technic 42083 Bugatti Chiron, kuti ende e mbyllur, ideale për koleksionarë.',
-      category: 'lodra',
-      condition: 'i-ri',
-      price: 320,
-      currency: 'EUR',
-    },
-  ];
+  const citySlugs = ['tirane', 'durres', 'vlore', 'shkoder'];
+  const conditions = ['i-ri', 'si-i-ri', 'shume-mire', 'mire', 'me-defekte'];
+  const seeds = [];
+
+  for (const category of MARKETPLACE_CATEGORIES) {
+    const catalog = MARKETPLACE_CATEGORY_CATALOG[category];
+    if (!catalog) {
+      throw new Error(`Missing marketplace catalog for category: ${category}`);
+    }
+
+    const items = catalog.items.slice(0, MARKETPLACE_PER_CATEGORY);
+    while (items.length < MARKETPLACE_PER_CATEGORY) {
+      const base = catalog.items[items.length % catalog.items.length];
+      items.push([`${base[0]} (${items.length + 1})`, base[1], base[2]]);
+    }
+
+    items.forEach(([title, description, price], index) => {
+      const isService = category === 'sherbime';
+      seeds.push({
+        cityId: cityId(citySlugs[(seeds.length + index) % citySlugs.length]),
+        transactionType: 'shes',
+        title,
+        description,
+        category,
+        condition: isService ? null : conditions[index % conditions.length],
+        price: price > 0 ? price : null,
+        currency: price > 0 ? 'EUR' : null,
+      });
+    });
+  }
+
+  return seeds;
 }
 
 // ---------------------------------------------------------------------------
@@ -777,7 +962,9 @@ async function run() {
     updatedAt: stagger(i),
   }));
   await MarketplaceListing.insertMany(mktDocs, { timestamps: false });
-  console.log(`✓ Inserted ${mktDocs.length} marketplace listings`);
+  console.log(
+    `✓ Inserted ${mktDocs.length} marketplace listings (${MARKETPLACE_PER_CATEGORY} per category × ${MARKETPLACE_CATEGORIES.length} categories)`,
+  );
 
   const bizDocs = businessDirectorySeeds(loc).map((d, i) => ({
     ...baseDoc,

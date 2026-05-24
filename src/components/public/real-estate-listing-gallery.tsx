@@ -66,6 +66,8 @@ export function RealEstateListingGallery(props: {
     ariaLabelSave?: string;
     ariaLabelSaved?: string;
   };
+  /** Hide the bottom-right `1/3` slide counter on the hero. */
+  hideSlideCount?: boolean;
 }) {
   const {
     title,
@@ -75,6 +77,7 @@ export function RealEstateListingGallery(props: {
     browseListAriaLabel = 'Prapa te lista e pronës',
     heroSizes = '100vw',
     bookmark,
+    hideSlideCount = false,
   } = props;
   const urls = urlsRaw.filter(Boolean);
   const metricsSeed = `${title}|${urls.join('|')}|${browseListHref}`;
@@ -471,7 +474,7 @@ export function RealEstateListingGallery(props: {
           ) : null}
         </Box>
 
-        {!showPlaceholder ? (
+        {!showPlaceholder && !hideSlideCount ? (
           <Typography
             component="span"
             sx={{

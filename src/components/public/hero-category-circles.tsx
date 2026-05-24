@@ -5,34 +5,9 @@ import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Box, Stack, Typography } from '@mui/material';
 
-import { HOME_VERTICALS, type HomeVerticalId } from '@/lib/home-categories';
+import { HOME_VERTICALS } from '@/lib/home-categories';
 
-const HERO_CATEGORY_ICON_SRC: Record<HomeVerticalId, string> = {
-  'real-estate': '/house.svg',
-  cars: '/car.svg',
-  jobs: '/suitcase.svg',
-  marketplace: '/shopping-cart.svg',
-  businesses: '/margarita.svg',
-  professionals: '/people.svg',
-};
-
-function HeroCategoryIcon({ verticalId }: { verticalId: HomeVerticalId }) {
-  const src = HERO_CATEGORY_ICON_SRC[verticalId];
-
-  return (
-    <Box
-      aria-hidden
-      sx={{
-        width: { xs: 32, sm: 28 },
-        height: { xs: 32, sm: 28 },
-        flexShrink: 0,
-        bgcolor: 'primary.main',
-        mask: `url(${src}) no-repeat center / contain`,
-        WebkitMask: `url(${src}) no-repeat center / contain`,
-      }}
-    />
-  );
-}
+import { HomeVerticalIcon } from './home-vertical-icon';
 
 export type HeroCategoryCirclesVariant = 'links' | 'tabs';
 
@@ -118,7 +93,7 @@ export function HeroCategoryCircles({
                   transition: 'border-color 0.15s ease, background-color 0.15s ease',
                 }}
               >
-                <HeroCategoryIcon verticalId={v.id} />
+                <HomeVerticalIcon verticalId={v.id} size={34} />
               </Box>
               <Typography
                 variant="caption"

@@ -1,15 +1,10 @@
 'use client';
 
-import * as React from 'react';
-import DirectionsCarOutlined from '@mui/icons-material/DirectionsCarOutlined';
-import GroupsOutlined from '@mui/icons-material/GroupsOutlined';
-import HomeOutlined from '@mui/icons-material/HomeOutlined';
-import ShoppingCartOutlined from '@mui/icons-material/ShoppingCartOutlined';
-import StorefrontOutlined from '@mui/icons-material/StorefrontOutlined';
-import Work from '@mui/icons-material/Work';
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 
 import type { HomeVerticalId } from '@/lib/home-categories';
+
+import { HomeVerticalIcon } from './home-vertical-icon';
 
 export interface VerticalMuiIconProps {
   verticalId: HomeVerticalId;
@@ -17,23 +12,21 @@ export interface VerticalMuiIconProps {
   sx?: SvgIconProps['sx'];
 }
 
+/** @deprecated Name kept for callers — renders {@link HomeVerticalIcon} (Phosphor bold). */
 export function VerticalMuiIcon({ verticalId, fontSize = 'medium', sx }: VerticalMuiIconProps) {
-  const shared = { 'aria-hidden': true as const, sx, fontSize };
+  const sizeFromFontSize =
+    typeof fontSize === 'number'
+      ? fontSize
+      : fontSize === 'small'
+        ? 20
+        : fontSize === 'large'
+          ? 35
+          : 24;
 
-  switch (verticalId) {
-    case 'real-estate':
-      return <HomeOutlined {...shared} />;
-    case 'cars':
-      return <DirectionsCarOutlined {...shared} />;
-    case 'jobs':
-      return <Work {...shared} />;
-    case 'marketplace':
-      return <ShoppingCartOutlined {...shared} />;
-    case 'businesses':
-      return <StorefrontOutlined {...shared} />;
-    case 'professionals':
-      return <GroupsOutlined {...shared} />;
-    default:
-      return <HomeOutlined {...shared} />;
-  }
+  const sizeFromSx =
+    sx && typeof sx === 'object' && !Array.isArray(sx) && typeof sx.fontSize === 'number'
+      ? sx.fontSize
+      : undefined;
+
+  return <HomeVerticalIcon verticalId={verticalId} size={sizeFromSx ?? sizeFromFontSize} />;
 }

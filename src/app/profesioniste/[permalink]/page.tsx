@@ -8,7 +8,6 @@ import { config } from '@/config';
 import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
 import { fetchLatestProfessionals, fetchPublicProfessionalListingById } from '@/lib/public-listings-client';
-import { mapDirectoryToSimilarStrip } from '@/lib/vertical-detail-similar-strip';
 import { paths, pathsPublicVerticalListingDetail } from '@/paths';
 
 export const revalidate = 60;
@@ -71,7 +70,7 @@ export default async function ProfessionalListingPage({ params }: PageProps): Pr
     ? pathsPublicVerticalListingDetail(paths.public.professionals, canonRaw)
     : pathsPublicVerticalListingDetail(paths.public.professionals, listing.id);
   const canonicalUrl = `${config.site.url.replace(/\/$/, '')}${pathHref}`;
-  const similar = mapDirectoryToSimilarStrip(pool, listing.id, 'professionals');
+  const similar = pool.filter((l) => l.id !== listing.id).slice(0, 10);
 
   return (
     <PublicShell hideHeaderBelowMd>

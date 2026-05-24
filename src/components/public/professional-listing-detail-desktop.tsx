@@ -413,7 +413,7 @@ export function ProfessionalListingDetailDesktop({
           {similar.length > 0 ? (
             <Stack spacing={1.5}>
               <Typography sx={{ fontWeight: 800, fontSize: '1.05rem' }}>Profesionistë të ngjashëm</Typography>
-              <ListingsCarousel slotWidth={{ md: 300, lg: 320 }}>
+              <ListingsCarousel slotWidth={{ md: 320 }}>
                 {similar.map((item) => (
                   <DirectoryListingCard key={item.id} listing={item} />
                 ))}

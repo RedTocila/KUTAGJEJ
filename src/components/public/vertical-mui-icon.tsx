@@ -13,8 +13,8 @@ export interface VerticalMuiIconProps {
 }
 
 /** @deprecated Name kept for callers — renders {@link HomeVerticalIcon} (Phosphor bold). */
-export function VerticalMuiIcon({ verticalId, fontSize = 'medium', sx }: VerticalMuiIconProps) {
-  const sizeFromFontSize =
+export function VerticalMuiIcon({ verticalId, fontSize = 'medium' }: VerticalMuiIconProps) {
+  const size =
     typeof fontSize === 'number'
       ? fontSize
       : fontSize === 'small'
@@ -23,10 +23,5 @@ export function VerticalMuiIcon({ verticalId, fontSize = 'medium', sx }: Vertica
           ? 35
           : 24;
 
-  const sizeFromSx =
-    sx && typeof sx === 'object' && !Array.isArray(sx) && typeof sx.fontSize === 'number'
-      ? sx.fontSize
-      : undefined;
-
-  return <HomeVerticalIcon verticalId={verticalId} size={sizeFromSx ?? sizeFromFontSize} />;
+  return <HomeVerticalIcon verticalId={verticalId} size={size} />;
 }

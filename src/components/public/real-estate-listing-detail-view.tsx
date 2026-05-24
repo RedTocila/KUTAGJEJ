@@ -28,6 +28,7 @@ import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr
 
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
+import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { formatPrice, pseudoRandomMetric, relativeAlbanianDate } from '@/components/public/listing-cards/format-helpers';
@@ -225,9 +226,7 @@ function RealEstatePriceContactAside(props: {
                   fontWeight: 800,
                   textTransform: 'none',
                   py: 1.2,
-                  borderColor: 'divider',
-                  borderWidth: 2,
-                  '&:hover': { borderColor: 'primary.light', bgcolor: 'action.hover' },
+                  ...whatsappOutlinedButtonSx,
                 }}
               >
                 WhatsApp
@@ -414,10 +413,7 @@ function StickyContactBar(props: { phone?: string | null; whatsappInquireHref: s
               px: 1.85,
               minWidth: 'auto',
               borderRadius: 2,
-              borderColor: 'divider',
-              borderWidth: 2,
-              color: 'primary.main',
-              '&:hover': { borderColor: 'primary.light', bgcolor: 'action.hover' },
+              ...whatsappOutlinedButtonSx,
             }}
             aria-label="WhatsApp"
           >

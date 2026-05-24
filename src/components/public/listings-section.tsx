@@ -24,6 +24,10 @@ export interface ListingsSectionProps {
   hideTotal?: boolean;
   /** Title + CTA only (no category icon tile) — matches compact section headers. */
   hideVerticalIcon?: boolean;
+  /** Hide subcategory pill row (e.g. mixed “Njoftimet e fundit”). */
+  hideSubcategoryPills?: boolean;
+  /** Hide the “Shfleto të gjitha” action (e.g. when there is no single browse target). */
+  hideBrowseAction?: boolean;
 }
 
 export function ListingsSection({
@@ -35,6 +39,8 @@ export function ListingsSection({
   useMuiVerticalIcon = false,
   hideTotal = false,
   hideVerticalIcon = false,
+  hideSubcategoryPills = false,
+  hideBrowseAction = false,
 }: ListingsSectionProps) {
   const vertical = findVertical(verticalId);
   const title = titleOverride ?? vertical.label;
@@ -91,6 +97,7 @@ export function ListingsSection({
               ) : null}
             </Stack>
           </Stack>
+          {!hideBrowseAction ? (
           <Button
             component={RouterLink}
             href={vertical.href}
@@ -106,9 +113,10 @@ export function ListingsSection({
           >
             Shfleto të gjitha
           </Button>
+          ) : null}
         </Stack>
 
-        <SubcategoryPills verticalId={verticalId} />
+        {!hideSubcategoryPills ? <SubcategoryPills verticalId={verticalId} /> : null}
 
         {isEmpty ? <EmptyPlaceholder verticalId={verticalId} /> : <Box>{children}</Box>}
       </Container>

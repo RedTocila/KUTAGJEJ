@@ -273,8 +273,8 @@ export function RealEstateListingGallery(props: {
         sx={{
           position: 'relative',
           width: '100%',
-          aspectRatio: { xs: '4 / 5', sm: '16 / 10' },
-          maxHeight: { sm: 'min(520px, 68vh)', md: 560 },
+          aspectRatio: '16 / 10',
+          maxHeight: { xs: 'min(300px, 44vh)', sm: 'min(520px, 68vh)', md: 560 },
           overflow: 'hidden',
           mx: 'auto',
           touchAction: hasMultipleImages ? 'pan-y pinch-zoom' : 'auto',

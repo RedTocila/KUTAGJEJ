@@ -3,9 +3,11 @@ import type { Metadata } from 'next';
 import { HeroSection } from '@/components/public/hero-section';
 import { HomepageBanner } from '@/components/public/homepage-banner';
 import { PublicShell } from '@/components/public/public-shell';
+import { HomepageMixedListingCard, mixedListingKey } from '@/components/public/homepage-mixed-listing-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { ListingsSection } from '@/components/public/listings-section';
 import { SeoIntroSection } from '@/components/public/seo-intro-section';
+import { buildHomepageMixedLatest } from '@/lib/homepage-latest-listings';
 import { CarCard } from '@/components/public/listing-cards/car-card';
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
@@ -84,6 +86,7 @@ const PLACEHOLDER_TOTALS = {
 export default async function HomePage() {
   const [bundle, homeBanners] = await Promise.all([fetchHomepageListings(8), fetchHomeBanners()]);
   const totals = bundle.totals ?? PLACEHOLDER_TOTALS;
+  const latestMixed = buildHomepageMixedLatest(bundle, 8);
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -177,12 +180,26 @@ export default async function HomePage() {
 
       <ListingsSection
         verticalId="real-estate"
-        total={totals.realEstate}
-        isEmpty={bundle.realEstate.length === 0}
+        isEmpty={latestMixed.length === 0}
         titleOverride="Njoftimet e fundit"
         useMuiVerticalIcon
         hideTotal
         hideVerticalIcon
+        hideSubcategoryPills
+        hideBrowseAction
+      >
+        <ListingsCarousel>
+          {latestMixed.map((item) => (
+            <HomepageMixedListingCard key={mixedListingKey(item)} item={item} />
+          ))}
+        </ListingsCarousel>
+      </ListingsSection>
+
+      <ListingsSection
+        verticalId="real-estate"
+        total={totals.realEstate}
+        isEmpty={bundle.realEstate.length === 0}
+        useMuiVerticalIcon
       >
         <ListingsCarousel>
           {bundle.realEstate.map((listing) => (

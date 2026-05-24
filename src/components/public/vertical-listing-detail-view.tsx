@@ -39,6 +39,7 @@ import type { AnyPublicListingDetail } from '@/lib/public-listings-client';
 
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
+import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
 import {
   findOptionLabel,
   formatKilometers,
@@ -108,10 +109,7 @@ function StickyListingContact(props: {
               px: 1.85,
               minWidth: 'auto',
               borderRadius: 2,
-              borderWidth: 2,
-              borderColor: 'divider',
-              color: 'primary.main',
-              '&:hover': { borderColor: 'primary.light', bgcolor: 'action.hover' },
+              ...whatsappOutlinedButtonSx,
             }}
             aria-label="WhatsApp"
           >
@@ -197,8 +195,7 @@ function ListingContactAside(props: {
                   fontWeight: 800,
                   textTransform: 'none',
                   py: 1.2,
-                  borderWidth: 2,
-                  borderColor: 'divider',
+                  ...whatsappOutlinedButtonSx,
                 }}
               >
                 WhatsApp

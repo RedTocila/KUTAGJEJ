@@ -46,6 +46,7 @@ import {
 } from '@/lib/listing-detail-layout';
 import {
   professionalAvatarUrl,
+  professionalCoverImageUrls,
   professionalDisplayName,
   professionalInitials,
   professionalPortfolioItems,
@@ -107,6 +108,7 @@ export function ProfessionalListingDetailDesktop({
   const priceFrom = React.useMemo(() => professionalPriceFromLine(listing), [listing]);
   const serviceTags = React.useMemo(() => professionalServiceTags(listing), [listing]);
   const portfolio = React.useMemo(() => professionalPortfolioItems(listing), [listing]);
+  const coverImageUrls = React.useMemo(() => professionalCoverImageUrls(listing), [listing]);
   const reviews = React.useMemo(() => professionalReviews(listing), [listing]);
   const avatarUrl = React.useMemo(() => professionalAvatarUrl(listing), [listing]);
   const initials = React.useMemo(() => professionalInitials(listing), [listing]);
@@ -149,12 +151,13 @@ export function ProfessionalListingDetailDesktop({
               >
                 <RealEstateListingGallery
                   title={displayName}
-                  imageUrls={listing.imageUrls}
+                  imageUrls={coverImageUrls}
                   placeholderIcon={listingDetailGalleryPlaceholder(listing)}
                   browseListHref={paths.public.professionals}
                   browseListAriaLabel="Prapa te lista e profesionistëve"
                   heroSizes={LISTING_DETAIL_HERO_IMAGE_SIZES}
                   bookmark={{ saved, onToggle: onToggleSave }}
+                  hideSlideCount
                 />
               </Box>
 

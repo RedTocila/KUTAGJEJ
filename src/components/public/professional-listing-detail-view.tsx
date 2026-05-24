@@ -41,6 +41,7 @@ import { whatsappHref } from '@/lib/listing-contact';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import {
   professionalAvatarUrl,
+  professionalCoverImageUrls,
   professionalDisplayName,
   professionalInitials,
   professionalPortfolioItems,
@@ -142,6 +143,7 @@ export function ProfessionalListingDetailView({
   const priceFrom = React.useMemo(() => professionalPriceFromLine(listing), [listing]);
   const serviceTags = React.useMemo(() => professionalServiceTags(listing), [listing]);
   const portfolio = React.useMemo(() => professionalPortfolioItems(listing), [listing]);
+  const coverImageUrls = React.useMemo(() => professionalCoverImageUrls(listing), [listing]);
   const reviews = React.useMemo(() => professionalReviews(listing), [listing]);
   const avatarUrl = React.useMemo(() => professionalAvatarUrl(listing), [listing]);
   const initials = React.useMemo(() => professionalInitials(listing), [listing]);
@@ -199,7 +201,7 @@ export function ProfessionalListingDetailView({
         <Box sx={{ position: 'relative' }}>
           <RealEstateListingGallery
             title={displayName}
-            imageUrls={listing.imageUrls}
+            imageUrls={coverImageUrls}
             placeholderIcon={listingDetailGalleryPlaceholder(listing)}
             browseListHref={paths.public.professionals}
             browseListAriaLabel="Prapa te lista e profesionistëve"

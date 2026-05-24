@@ -65,8 +65,15 @@ const PORTFOLIO_TITLE_SEEDS = [
   'Ambient Minimal',
 ] as const;
 
-export function professionalPortfolioItems(listing: PublicDirectoryListingDetail): ProfessionalPortfolioItem[] {
+export function professionalCoverImageUrls(listing: PublicDirectoryListingDetail): string[] {
   const images = listing.imageUrls.filter(Boolean);
+  if (images.length > 0) return [images[0]!];
+  if (listing.imageUrl) return [listing.imageUrl];
+  return [];
+}
+
+export function professionalPortfolioItems(listing: PublicDirectoryListingDetail): ProfessionalPortfolioItem[] {
+  const images = listing.imageUrls.filter(Boolean).slice(1);
   if (images.length === 0) return [];
 
   const location = listing.cityName ? `${listing.cityName}, Shqipëri` : null;

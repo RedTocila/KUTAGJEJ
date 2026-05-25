@@ -289,7 +289,6 @@ export function JobListingDetailDesktop({
                   sx={{
                     width: 48,
                     height: 48,
-                    borderRadius: 2,
                     bgcolor: 'background.paper',
                     color: 'primary.main',
                     fontWeight: 800,

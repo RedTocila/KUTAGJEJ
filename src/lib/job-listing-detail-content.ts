@@ -118,3 +118,28 @@ export function jobDetailMetaRows(listing: PublicJobListingDetail) {
     { label: 'Përvoja', value: findOptionLabel(JOB_EXPERIENCE_OPTIONS, listing.experience) },
   ] as const;
 }
+
+/** Hero gallery — first photo only (workplace / cover). */
+export function jobCoverImageUrls(listing: PublicJobListingDetail): string[] {
+  const images = listing.imageUrls.filter(Boolean);
+  if (images.length > 0) return [images[0]!];
+  if (listing.imageUrl) return [listing.imageUrl];
+  return [];
+}
+
+/** Company logo for the overlapping avatar — second photo when present. */
+export function jobCompanyAvatarUrl(listing: PublicJobListingDetail): string | null {
+  const images = listing.imageUrls.filter(Boolean);
+  return images.length > 1 ? images[1]! : null;
+}
+
+export function jobCompanyInitials(companyName: string): string {
+  return (
+    companyName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('') || 'K'
+  );
+}

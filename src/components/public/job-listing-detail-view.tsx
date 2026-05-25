@@ -2,20 +2,17 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   Avatar,
   Box,
   Button,
   Chip,
   Grid,
-  IconButton,
   Stack,
   Typography,
 } from '@mui/material';
-import ArrowBackOutlined from '@mui/icons-material/ArrowBackOutlined';
-import ArrowForwardOutlined from '@mui/icons-material/ArrowForwardOutlined';
 import CalendarTodayOutlined from '@mui/icons-material/CalendarTodayOutlined';
+import ArrowForwardOutlined from '@mui/icons-material/ArrowForwardOutlined';
 import CheckCircleOutlined from '@mui/icons-material/CheckCircleOutlined';
 import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
 import EventAvailableOutlined from '@mui/icons-material/EventAvailableOutlined';
@@ -24,17 +21,16 @@ import LockOutlined from '@mui/icons-material/LockOutlined';
 import PaymentsOutlined from '@mui/icons-material/PaymentsOutlined';
 import ScheduleOutlined from '@mui/icons-material/ScheduleOutlined';
 import SchoolOutlined from '@mui/icons-material/SchoolOutlined';
-import ShareOutlined from '@mui/icons-material/ShareOutlined';
 import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import TrendingUpOutlined from '@mui/icons-material/TrendingUpOutlined';
 import WorkOutlineOutlined from '@mui/icons-material/WorkOutlineOutlined';
 import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
-import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
+import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
 import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
 import { findOptionLabel, formatPrice } from '@/components/public/listing-cards/format-helpers';
 import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
@@ -43,10 +39,14 @@ import {
   buildJobDetailSections,
   formatJobListingId,
   isJobListingNew,
+  jobCompanyAvatarUrl,
+  jobCompanyInitials,
+  jobCoverImageUrls,
   jobDetailMetaRows,
   type JobDetailBenefit,
 } from '@/lib/job-listing-detail-content';
 import { whatsappHref } from '@/lib/listing-contact';
+import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { JobListingDetailDesktop } from '@/components/public/job-listing-detail-desktop';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
@@ -58,6 +58,7 @@ const SAVED_JOBS_KEY = 'kutagjej-saved-jobs';
 const FONT_BODY = '0.875rem';
 const FONT_CAPTION = '0.75rem';
 const FONT_SECTION = '1rem';
+const CONTENT_MAX = 480;
 
 const surfaceCardSx = {
   p: 2,
@@ -139,7 +140,6 @@ export function JobListingDetailView({
   canonicalUrl: string;
   similar?: PublicJobListing[];
 }) {
-  const router = useRouter();
   const [saved, setSaved] = React.useState(false);
 
   const expiresAt = listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
@@ -148,7 +148,9 @@ export function JobListingDetailView({
   const companyName = listing.seller?.displayName ?? findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const phone = listing.contactPhone ?? listing.seller?.phone ?? null;
   const applyHref = phone ? `tel:${phone.replace(/\s/g, '')}` : whatsappHref(listing.contactPhone ?? listing.seller?.phone);
-  const heroImage = listing.imageUrl ?? listing.imageUrls[0] ?? null;
+  const coverImageUrls = React.useMemo(() => jobCoverImageUrls(listing), [listing]);
+  const companyAvatarUrl = React.useMemo(() => jobCompanyAvatarUrl(listing), [listing]);
+  const companyInitials = React.useMemo(() => jobCompanyInitials(companyName), [companyName]);
   const isNew = isJobListingNew(listing.createdAt);
 
   const metaIcons = [
@@ -221,222 +223,204 @@ export function JobListingDetailView({
           bgcolor: 'background.default',
           minHeight: '100vh',
           pb: scrollPadBottom,
+          overflow: 'visible',
         }}
       >
-      {/* Top bar */}
+        <Box sx={{ position: 'relative', zIndex: 0 }}>
+        <RealEstateListingGallery
+          title={listing.title}
+          imageUrls={coverImageUrls}
+          placeholderIcon={listingDetailGalleryPlaceholder(listing)}
+          browseListHref={paths.public.jobs}
+          browseListAriaLabel="Prapa te lista e punës"
+          bookmark={{ saved, onToggle: toggleSave }}
+          hideSlideCount
+        />
+        </Box>
+
       <Box
         sx={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 20,
           px: 2,
-          py: 1.25,
-          bgcolor: 'rgba(var(--mui-palette-background-defaultChannel) / 0.92)',
-          backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid',
-          borderColor: 'divider',
+          pb: 0,
+          maxWidth: CONTENT_MAX,
+          mx: 'auto',
+          width: '100%',
+          minWidth: 0,
+          boxSizing: 'border-box',
+          position: 'relative',
+          zIndex: 2,
+          overflow: 'visible',
         }}
       >
-        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-          <IconButton aria-label="Kthehu" onClick={() => router.back()} edge="start" size="small">
-            <ArrowBackOutlined />
-          </IconButton>
-          <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Detajet e punës</Typography>
-          <Stack direction="row" spacing={0.25}>
-            <IconButton aria-label="Ndaj" onClick={() => void handleShare()} size="small">
-              <ShareOutlined fontSize="small" />
-            </IconButton>
-            <IconButton
-              aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj'}
-              onClick={toggleSave}
-              size="small"
-              sx={{ color: saved ? 'primary.main' : 'text.primary' }}
+        <Stack spacing={2} sx={{ minWidth: 0, width: '100%', overflow: 'visible' }}>
+          <Stack spacing={0.75} sx={{ mt: -1.5, alignItems: 'flex-start', width: '100%', overflow: 'visible' }}>
+            <Stack
+              direction="row"
+              spacing={1.25}
+              sx={{ alignItems: 'center', width: '100%', position: 'relative', zIndex: 2 }}
             >
-              <BookmarkSimpleIcon size={20} weight={saved ? 'fill' : 'regular'} />
-            </IconButton>
-          </Stack>
-        </Stack>
-      </Box>
+              <Avatar
+                src={companyAvatarUrl ?? undefined}
+                alt={companyName}
+                sx={{
+                  width: 72,
+                  height: 72,
+                  flexShrink: 0,
+                  mt: -5.5,
+                  border: '3px solid',
+                  borderColor: 'background.default',
+                  bgcolor: 'grey.900',
+                  color: 'primary.main',
+                  fontWeight: 800,
+                  fontSize: FONT_BODY,
+                }}
+              >
+                {companyInitials}
+              </Avatar>
 
-      {/* Scrollable content */}
-      <Box sx={{ px: 2, pt: 1.5, pb: 0, maxWidth: 560, mx: 'auto', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-        <Stack spacing={2} sx={{ minWidth: 0, width: '100%' }}>
-          {/* Hero */}
-          <Box
-            sx={{
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-              borderRadius: 3,
-              overflow: 'hidden',
-              bgcolor: 'grey.900',
-            }}
-          >
-            <Box sx={{ position: 'relative', minHeight: 200 }}>
-              {heroImage ? (
-                <Box
-                  component="img"
-                  src={heroImage}
-                  alt={listing.title}
-                  sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              ) : (
+              <Stack
+                direction="row"
+                spacing={0.75}
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  mt: -1.25,
+                }}
+              >
                 <Box
                   sx={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'grid',
-                    placeItems: 'center',
-                    bgcolor: 'grey.900',
-                    color: 'primary.main',
-                    opacity: 0.35,
+                    flexShrink: 1,
+                    width: 'max-content',
+                    maxWidth: 'calc(100% - 140px)',
+                    height: 24,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    px: 1.25,
+                    borderRadius: 999,
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
                   }}
                 >
-                  <BriefcaseIcon size={64} weight="duotone" />
-                </Box>
-              )}
-              <Box
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  background:
-                    'linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.5) 55%, rgba(0,0,0,0.88) 100%)',
-                }}
-              />
-              <Stack spacing={1.25} sx={{ position: 'relative', zIndex: 1, p: 2, pt: 2.5 }}>
-                <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
-                  <Avatar
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 2,
-                      bgcolor: 'background.paper',
-                      color: 'primary.main',
-                      fontWeight: 800,
-                      fontSize: FONT_BODY,
-                    }}
-                  >
-                    {companyName.charAt(0).toUpperCase()}
-                  </Avatar>
-                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0, color: 'inherit' }}>
                     <Typography
                       sx={{
                         fontWeight: 700,
-                        fontSize: FONT_BODY,
-                        color: 'rgba(255,255,255,0.95)',
+                        fontSize: FONT_CAPTION,
+                        lineHeight: 1,
+                        minWidth: 0,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
+                        color: 'inherit',
                       }}
                     >
                       {companyName}
                     </Typography>
                     {listing.seller?.kind === 'business' ? (
-                      <CheckCircleOutlined sx={{ fontSize: 18, color: 'primary.main', flexShrink: 0 }} />
+                      <CheckCircleOutlined sx={{ fontSize: 16, color: 'inherit', flexShrink: 0, opacity: 0.9 }} />
                     ) : null}
                   </Stack>
-                </Stack>
+                </Box>
 
-                <Typography
-                  component="h1"
-                  sx={{
-                    fontWeight: 800,
-                    fontSize: { xs: '1.375rem', sm: '1.5rem' },
-                    lineHeight: 1.2,
-                    color: '#fff',
-                    letterSpacing: '-0.02em',
-                  }}
-                >
-                  {listing.title}
-                </Typography>
-
-                <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap' }}>
+                <Stack direction="row" spacing={0.75} sx={{ flexShrink: 0, ml: 'auto', alignItems: 'center' }}>
                   {isNew ? (
-                    <Chip
-                      label="E re"
-                      size="small"
-                      sx={{
-                        height: 24,
-                        fontSize: FONT_CAPTION,
-                        fontWeight: 700,
-                        bgcolor: 'primary.main',
-                        color: 'primary.contrastText',
-                      }}
-                    />
+                    <Chip label="E re" size="small" color="primary" sx={{ height: 24, fontSize: FONT_CAPTION, fontWeight: 700 }} />
                   ) : null}
                   <Chip
                     label={`ID: ${formatJobListingId(listing.id)}`}
                     size="small"
-                    sx={{
+                    sx={(theme) => ({
                       height: 24,
                       fontSize: FONT_CAPTION,
                       fontWeight: 600,
-                      bgcolor: 'rgba(255,255,255,0.12)',
-                      color: 'rgba(255,255,255,0.9)',
-                      border: '1px solid rgba(255,255,255,0.18)',
-                    }}
+                      bgcolor: '#fff',
+                      color: '#000',
+                      border: '1px solid',
+                      borderColor: 'rgba(0,0,0,0.12)',
+                      ...theme.applyStyles('dark', {
+                        bgcolor: '#000',
+                        color: '#fff',
+                        borderColor: 'rgba(255,255,255,0.35)',
+                      }),
+                    })}
                   />
                 </Stack>
               </Stack>
-            </Box>
+            </Stack>
 
-            {/* Meta — single row */}
-            <Grid
-              container
+            <Typography
+              component="h1"
               sx={{
-                bgcolor: 'rgba(0,0,0,0.55)',
-                backdropFilter: 'blur(8px)',
-                borderTop: '1px solid rgba(255,255,255,0.08)',
+                fontWeight: 600,
+                fontSize: '1.125rem',
+                lineHeight: 1.15,
+                letterSpacing: '-0.02em',
               }}
             >
-              {metaRows.map((row, index) => {
-                const Icon = metaIcons[index];
-                return (
-                  <Grid
-                    key={row.label}
-                    size={3}
-                    sx={{
-                      py: 1.25,
-                      px: 0.75,
-                      minWidth: 0,
-                      borderRight: index < metaRows.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
-                    }}
-                  >
-                    <Stack spacing={0.35} sx={{ minWidth: 0 }}>
-                      <Icon sx={{ fontSize: 18, color: 'primary.main' }} />
-                      <Typography
-                        sx={{
-                          fontWeight: 700,
-                          fontSize: '0.6875rem',
-                          color: '#fff',
-                          lineHeight: 1.25,
-                          overflow: 'hidden',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                        }}
-                      >
-                        {row.value}
-                      </Typography>
-                      <Typography
-                        sx={{
-                          color: 'rgba(255,255,255,0.55)',
-                          fontSize: '0.625rem',
-                          lineHeight: 1.2,
-                          overflow: 'hidden',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                        }}
-                      >
-                        {row.label}
-                      </Typography>
-                    </Stack>
-                  </Grid>
-                );
-              })}
-            </Grid>
-          </Box>
+              {listing.title}
+            </Typography>
+          </Stack>
+
+          {/* Meta — single row */}
+          <Grid
+            container
+            sx={{
+              borderRadius: 2.5,
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
+              overflow: 'hidden',
+            }}
+          >
+            {metaRows.map((row, index) => {
+              const Icon = metaIcons[index];
+              return (
+                <Grid
+                  key={row.label}
+                  size={3}
+                  sx={{
+                    py: 1.25,
+                    px: 0.75,
+                    minWidth: 0,
+                    borderRight: index < metaRows.length - 1 ? '1px solid' : 'none',
+                    borderColor: 'divider',
+                  }}
+                >
+                  <Stack spacing={0.35} sx={{ minWidth: 0, alignItems: 'center', textAlign: 'center' }}>
+                    <Icon sx={{ fontSize: 18, color: 'primary.main' }} />
+                    <Typography
+                      sx={{
+                        fontWeight: 700,
+                        fontSize: '0.6875rem',
+                        lineHeight: 1.25,
+                        overflow: 'hidden',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                      }}
+                    >
+                      {row.value}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: 'text.secondary',
+                        fontSize: '0.625rem',
+                        lineHeight: 1.2,
+                        overflow: 'hidden',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                      }}
+                    >
+                      {row.label}
+                    </Typography>
+                  </Stack>
+                </Grid>
+              );
+            })}
+          </Grid>
 
           <JobListingDetailCountdown expiresAt={expiresAt} />
 

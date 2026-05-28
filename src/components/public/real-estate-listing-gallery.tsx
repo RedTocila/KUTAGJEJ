@@ -68,6 +68,8 @@ export function RealEstateListingGallery(props: {
   };
   /** Hide the bottom-right `1/3` slide counter on the hero. */
   hideSlideCount?: boolean;
+  /** Share / save chip surface — `glass` is soft dark transparent on photo heroes. */
+  mediaActionSurface?: 'hero' | 'glass' | 'card';
 }) {
   const {
     title,
@@ -78,6 +80,7 @@ export function RealEstateListingGallery(props: {
     heroSizes = '100vw',
     bookmark,
     hideSlideCount = false,
+    mediaActionSurface = 'hero',
   } = props;
   const urls = urlsRaw.filter(Boolean);
   const metricsSeed = `${title}|${urls.join('|')}|${browseListHref}`;
@@ -413,7 +416,7 @@ export function RealEstateListingGallery(props: {
                 <ListingMediaActionButton
                   aria-label="Ndaj njoftimin"
                   count={shareCount}
-                  surface="hero"
+                  surface={mediaActionSurface}
                   icon={<ShareNetworkIcon size={17} weight="regular" />}
                   onClick={handleShare}
                 />
@@ -428,7 +431,7 @@ export function RealEstateListingGallery(props: {
                     : 'Ruaj njoftimin'
                 }
                 count={visibleSavedCount}
-                surface="hero"
+                surface={mediaActionSurface}
                 active={bookmark?.saved}
                 disabled={!bookmark}
                 icon={<BookmarkSimpleIcon size={17} weight={bookmark?.saved ? 'fill' : 'regular'} />}

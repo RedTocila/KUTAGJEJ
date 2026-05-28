@@ -9,3 +9,6 @@ export const LISTING_DETAIL_HERO_IMAGE_SIZES = `(max-width: 899px) 100vw, min(${
 
 /** Sticky sidebar offset on desktop listing detail pages (public header + breathing room). */
 export const LISTING_DETAIL_STICKY_TOP_MD = 'calc(76px + 20px)';
+
+/** Mobile `h1` below gallery — matches biznese / njoftime pune / profesionistë detail pages. */
+export const LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE = '1.375rem';

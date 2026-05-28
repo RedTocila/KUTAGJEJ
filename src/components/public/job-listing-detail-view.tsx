@@ -37,7 +37,6 @@ import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import {
   buildJobDetailSections,
-  formatJobListingId,
   isJobListingNew,
   jobCompanyAvatarUrl,
   jobCompanyInitials,
@@ -49,6 +48,8 @@ import { whatsappHref } from '@/lib/listing-contact';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { JobListingDetailDesktop } from '@/components/public/job-listing-detail-desktop';
+import { ListingVerifiedShieldBadge } from '@/components/public/professional-listing-detail-ui';
+import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { paths } from '@/paths';
 
@@ -235,6 +236,7 @@ export function JobListingDetailView({
           browseListAriaLabel="Prapa te lista e punës"
           bookmark={{ saved, onToggle: toggleSave }}
           hideSlideCount
+          mediaActionSurface="glass"
         />
         </Box>
 
@@ -278,89 +280,68 @@ export function JobListingDetailView({
                 {companyInitials}
               </Avatar>
 
-              <Stack
-                direction="row"
-                spacing={0.75}
-                sx={{
-                  flex: 1,
-                  minWidth: 0,
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  mt: -1.25,
-                }}
-              >
-                <Box
-                  sx={{
-                    flexShrink: 1,
-                    width: 'max-content',
-                    maxWidth: 'calc(100% - 140px)',
-                    height: 24,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    px: 1.25,
-                    borderRadius: 999,
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                  }}
-                >
-                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0, color: 'inherit' }}>
-                    <Typography
-                      sx={{
-                        fontWeight: 700,
-                        fontSize: FONT_CAPTION,
-                        lineHeight: 1,
-                        minWidth: 0,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        color: 'inherit',
-                      }}
-                    >
-                      {companyName}
-                    </Typography>
-                    {listing.seller?.kind === 'business' ? (
-                      <CheckCircleOutlined sx={{ fontSize: 16, color: 'inherit', flexShrink: 0, opacity: 0.9 }} />
-                    ) : null}
-                  </Stack>
-                </Box>
-
-                <Stack direction="row" spacing={0.75} sx={{ flexShrink: 0, ml: 'auto', alignItems: 'center' }}>
-                  {isNew ? (
-                    <Chip label="E re" size="small" color="primary" sx={{ height: 24, fontSize: FONT_CAPTION, fontWeight: 700 }} />
-                  ) : null}
-                  <Chip
-                    label={`ID: ${formatJobListingId(listing.id)}`}
-                    size="small"
-                    sx={(theme) => ({
-                      height: 24,
-                      fontSize: FONT_CAPTION,
-                      fontWeight: 600,
-                      bgcolor: '#fff',
-                      color: '#000',
-                      border: '1px solid',
-                      borderColor: 'rgba(0,0,0,0.12)',
-                      ...theme.applyStyles('dark', {
-                        bgcolor: '#000',
-                        color: '#fff',
-                        borderColor: 'rgba(255,255,255,0.35)',
-                      }),
-                    })}
-                  />
-                </Stack>
-              </Stack>
+              {isNew ? (
+                <Chip
+                  label="E re"
+                  size="small"
+                  color="primary"
+                  sx={{ height: 24, fontSize: FONT_CAPTION, fontWeight: 700, ml: 'auto', mt: -1.25 }}
+                />
+              ) : null}
             </Stack>
 
             <Typography
               component="h1"
               sx={{
-                fontWeight: 600,
-                fontSize: '1.125rem',
-                lineHeight: 1.15,
+                fontWeight: 800,
+                fontSize: LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE,
+                lineHeight: 1.2,
                 letterSpacing: '-0.02em',
               }}
             >
               {listing.title}
             </Typography>
+
+            <Box
+              sx={{
+                width: 'max-content',
+                maxWidth: '100%',
+                height: 24,
+                display: 'inline-flex',
+                alignItems: 'center',
+                px: 1.25,
+                borderRadius: 999,
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+              }}
+            >
+              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0, color: 'inherit' }}>
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: FONT_CAPTION,
+                    lineHeight: 1,
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    color: 'inherit',
+                  }}
+                >
+                  {companyName}
+                </Typography>
+                {listing.seller ? <ListingVerifiedShieldBadge size={16} color="inherit" /> : null}
+              </Stack>
+            </Box>
+
+            {listing.seller ? (
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                <LockOutlined sx={{ fontSize: 14, color: 'text.disabled' }} />
+                <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.disabled' }}>
+                  Kjo punë është e verifikuar dhe e sigurt
+                </Typography>
+              </Stack>
+            ) : null}
           </Stack>
 
           {/* Meta — single row */}
@@ -572,12 +553,6 @@ export function JobListingDetailView({
                 Apliko tani
               </Button>
             )}
-          </Stack>
-          <Stack direction="row" spacing={0.75} sx={{ justifyContent: 'center', alignItems: 'center' }}>
-            <LockOutlined sx={{ fontSize: 14, color: 'text.disabled' }} />
-            <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.disabled' }}>
-              Kjo punë është e verifikuar dhe e sigurt
-            </Typography>
           </Stack>
         </Stack>
       </Box>

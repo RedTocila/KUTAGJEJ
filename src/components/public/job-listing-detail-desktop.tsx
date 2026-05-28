@@ -45,11 +45,11 @@ import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import {
   buildJobDetailSections,
-  formatJobListingId,
   isJobListingNew,
   jobDetailMetaRows,
   type JobDetailBenefit,
 } from '@/lib/job-listing-detail-content';
+import { ListingVerifiedShieldBadge } from '@/components/public/professional-listing-detail-ui';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { LISTING_DETAIL_STICKY_TOP_MD } from '@/lib/listing-detail-layout';
 import { paths } from '@/paths';
@@ -247,7 +247,7 @@ export function JobListingDetailDesktop({
                     <ListingMediaActionButton
                       aria-label="Ndaj njoftimin"
                       count={shareCount}
-                      surface="hero"
+                      surface="glass"
                       icon={<ShareNetworkIcon size={17} weight="regular" />}
                       onClick={(event) => {
                         event.preventDefault();
@@ -260,7 +260,7 @@ export function JobListingDetailDesktop({
                     <ListingMediaActionButton
                       aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
                       count={visibleSavedCount}
-                      surface="hero"
+                      surface="glass"
                       active={saved}
                       icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} />}
                       onClick={(event) => {
@@ -296,14 +296,13 @@ export function JobListingDetailDesktop({
                 >
                   {companyName.charAt(0).toUpperCase()}
                 </Avatar>
-                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                  <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: 'rgba(255,255,255,0.95)' }}>
-                    {companyName}
-                  </Typography>
-                  {listing.seller?.kind === 'business' ? (
-                    <CheckCircleOutlined sx={{ fontSize: 20, color: 'primary.main' }} />
-                  ) : null}
-                </Stack>
+                {isNew ? (
+                  <Chip
+                    label="E re"
+                    size="small"
+                    sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}
+                  />
+                ) : null}
               </Stack>
               <Typography
                 component="h1"
@@ -311,21 +310,45 @@ export function JobListingDetailDesktop({
               >
                 {listing.title}
               </Typography>
-              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
-                {isNew ? (
-                  <Chip label="E re" size="small" sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }} />
-                ) : null}
-                <Chip
-                  label={`ID: ${formatJobListingId(listing.id)}`}
-                  size="small"
-                  sx={{
-                    fontWeight: 600,
-                    bgcolor: 'rgba(255,255,255,0.12)',
-                    color: 'rgba(255,255,255,0.9)',
-                    border: '1px solid rgba(255,255,255,0.18)',
-                  }}
-                />
-              </Stack>
+              <Box
+                sx={{
+                  width: 'max-content',
+                  maxWidth: '100%',
+                  height: 28,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  px: 1.5,
+                  borderRadius: 999,
+                  bgcolor: 'primary.main',
+                  color: 'primary.contrastText',
+                }}
+              >
+                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0, color: 'inherit' }}>
+                  <Typography
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: '0.8125rem',
+                      lineHeight: 1,
+                      minWidth: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      color: 'inherit',
+                    }}
+                  >
+                    {companyName}
+                  </Typography>
+                  {listing.seller ? <ListingVerifiedShieldBadge size={18} color="inherit" /> : null}
+                </Stack>
+              </Box>
+              {listing.seller ? (
+                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                  <LockOutlined sx={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }} />
+                  <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)' }}>
+                    Kjo punë është e verifikuar dhe e sigurt
+                  </Typography>
+                </Stack>
+              ) : null}
             </Stack>
             </Box>
 
@@ -469,12 +492,6 @@ export function JobListingDetailDesktop({
                           Apliko tani
                         </Button>
                       )}
-                    </Stack>
-                    <Stack direction="row" spacing={0.75} sx={{ justifyContent: 'center', alignItems: 'center' }}>
-                      <LockOutlined sx={{ fontSize: 14, color: 'text.disabled' }} />
-                      <Typography sx={{ fontSize: '0.75rem', color: 'text.disabled' }}>
-                        Kjo punë është e verifikuar dhe e sigurt
-                      </Typography>
                     </Stack>
                   </Stack>
                 </Paper>

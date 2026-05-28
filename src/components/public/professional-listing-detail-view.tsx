@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   Avatar,
@@ -22,7 +21,6 @@ import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { PaintBrush as PaintBrushIcon } from '@phosphor-icons/react/dist/ssr/PaintBrush';
 import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
-import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
 
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
@@ -32,12 +30,16 @@ import { RealEstateListingGallery } from '@/components/public/real-estate-listin
 import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
 import { ProfessionalListingDetailDesktop } from '@/components/public/professional-listing-detail-desktop';
 import {
-  ProfessionalRatingBadge,
+  ProfessionalFiveStarRating,
+  ProfessionalPortfolioSection,
+  ProfessionalRatingSummary,
   ProfessionalReviewsSectionHeader,
   ProfessionalVerifiedBadge,
+  professionalMetaStatCellSx,
 } from '@/components/public/professional-listing-detail-ui';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import { whatsappHref } from '@/lib/listing-contact';
+import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import {
   professionalAvatarUrl,
@@ -106,21 +108,6 @@ function MetaStat({
       >
         {value}
       </Typography>
-    </Stack>
-  );
-}
-
-function ReviewStars({ rating }: { rating: number }) {
-  return (
-    <Stack direction="row" spacing={0.25} aria-label={`${rating} yje`}>
-      {Array.from({ length: 5 }, (_, i) => (
-        <StarIcon
-          key={i}
-          size={14}
-          weight={i < rating ? 'fill' : 'regular'}
-          color={i < rating ? 'var(--mui-palette-primary-main)' : 'var(--mui-palette-text-disabled)'}
-        />
-      ))}
     </Stack>
   );
 }
@@ -208,26 +195,6 @@ export function ProfessionalListingDetailView({
             bookmark={{ saved, onToggle: toggleSave }}
             hideSlideCount
           />
-          <Box
-            sx={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 28,
-              zIndex: 2,
-              px: 2,
-              maxWidth: CONTENT_MAX,
-              mx: 'auto',
-              width: '100%',
-              boxSizing: 'border-box',
-              display: 'flex',
-              justifyContent: 'flex-end',
-              pointerEvents: 'none',
-              '& > *': { pointerEvents: 'auto' },
-            }}
-          >
-            <ProfessionalRatingBadge rating={rating.rating} reviewCount={rating.reviews} />
-          </Box>
         </Box>
 
         <Box sx={{ px: 2, maxWidth: CONTENT_MAX, mx: 'auto', width: '100%', boxSizing: 'border-box' }}>
@@ -263,8 +230,8 @@ export function ProfessionalListingDetailView({
                     component="h1"
                     sx={{
                       fontWeight: 800,
-                      fontSize: '1.125rem',
-                      lineHeight: 1.15,
+                      fontSize: LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE,
+                      lineHeight: 1.2,
                       minWidth: 0,
                       flex: '1 1 auto',
                       overflow: 'hidden',
@@ -280,25 +247,52 @@ export function ProfessionalListingDetailView({
                 <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', lineHeight: 1.35, textAlign: 'left' }}>
                   {subtitle}
                 </Typography>
-                {locationLine ? (
-                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
-                    <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
-                    <Typography sx={{ fontSize: FONT_CAPTION, fontWeight: 600 }}>{locationLine}</Typography>
-                  </Stack>
-                ) : null}
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: 'center', justifyContent: 'space-between', width: '100%', minWidth: 0 }}
+                >
+                  {locationLine ? (
+                    <Stack
+                      direction="row"
+                      spacing={0.5}
+                      sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0, flex: 1 }}
+                    >
+                      <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
+                      <Typography
+                        sx={{
+                          fontSize: FONT_CAPTION,
+                          fontWeight: 600,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {locationLine}
+                      </Typography>
+                    </Stack>
+                  ) : (
+                    <Box sx={{ flex: 1 }} />
+                  )}
+                  <ProfessionalRatingSummary
+                    rating={rating.rating}
+                    reviewCount={rating.reviews}
+                    starSize={14}
+                  />
+                </Stack>
               </Stack>
             </Stack>
 
             {/* Key stats row */}
             <Box sx={surfaceSx}>
-              <Grid container spacing={1.5}>
-                <Grid size={4}>
+              <Grid container sx={{ overflow: 'hidden' }}>
+                <Grid size={4} sx={professionalMetaStatCellSx(0, 3)}>
                   <MetaStat icon={BriefcaseIcon} label="Specializimi" value={listing.categoryLabel} />
                 </Grid>
-                <Grid size={4}>
+                <Grid size={4} sx={professionalMetaStatCellSx(1, 3)}>
                   <MetaStat icon={ClockIcon} label="Përgjigjet shpejt" value={responseTime} />
                 </Grid>
-                <Grid size={4}>
+                <Grid size={4} sx={professionalMetaStatCellSx(2, 3)}>
                   <MetaStat icon={CurrencyEurIcon} label="Çmimi nga" value={priceFrom} />
                 </Grid>
               </Grid>
@@ -343,52 +337,7 @@ export function ProfessionalListingDetailView({
               </Stack>
             ) : null}
 
-            {/* Portfolio */}
-            {portfolio.length > 0 ? (
-              <Stack spacing={1.25}>
-                <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Portofoli</Typography>
-                <Stack
-                  direction="row"
-                  spacing={1.25}
-                  sx={{
-                    overflowX: 'auto',
-                    pb: 0.5,
-                    mx: -2,
-                    px: 2,
-                    scrollbarWidth: 'none',
-                    '&::-webkit-scrollbar': { display: 'none' },
-                  }}
-                >
-                  {portfolio.map((item) => (
-                    <Box
-                      key={item.id}
-                      sx={{
-                        flex: '0 0 148px',
-                        borderRadius: 2.5,
-                        overflow: 'hidden',
-                        bgcolor: 'background.paper',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                      }}
-                    >
-                      <Box sx={{ position: 'relative', height: 112 }}>
-                        <Image src={item.imageUrl} alt={item.title} fill sizes="148px" style={{ objectFit: 'cover' }} />
-                      </Box>
-                      <Stack spacing={0.25} sx={{ p: 1 }}>
-                        <Typography sx={{ fontWeight: 800, fontSize: FONT_CAPTION, lineHeight: 1.25 }} noWrap>
-                          {item.title}
-                        </Typography>
-                        {item.location ? (
-                          <Typography sx={{ fontSize: '0.625rem', color: 'text.secondary' }} noWrap>
-                            {item.location}
-                          </Typography>
-                        ) : null}
-                      </Stack>
-                    </Box>
-                  ))}
-                </Stack>
-              </Stack>
-            ) : null}
+            <ProfessionalPortfolioSection items={portfolio} />
 
             {/* Reviews */}
             {reviews.length > 0 ? (
@@ -417,7 +366,7 @@ export function ProfessionalListingDetailView({
                               {review.dateLabel}
                             </Typography>
                           </Stack>
-                          <ReviewStars rating={review.rating} />
+                          <ProfessionalFiveStarRating value={review.rating} size={14} />
                           <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', lineHeight: 1.45 }}>
                             {review.text}
                           </Typography>

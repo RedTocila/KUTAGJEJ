@@ -26,11 +26,48 @@ export function ListingMediaActionButton({
   icon: React.ReactNode;
   active?: boolean;
   disabled?: boolean;
-  /** `hero` — dark glass over gallery photos; `card` — listing card chips. */
-  surface?: 'hero' | 'card';
+  /** `hero` — solid dark glass; `glass` — softer dark transparent; `card` — listing card chips. */
+  surface?: 'hero' | 'glass' | 'card';
   onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
-  const isHero = surface === 'hero';
+  const surfaceStyles =
+    surface === 'hero'
+      ? {
+          bgcolor: alpha('#000', 0.45),
+          color: active ? 'primary.main' : '#fff',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid',
+          borderColor: active ? 'primary.main' : alpha('#fff', 0.18),
+          '&:hover': { bgcolor: alpha('#000', 0.62) },
+          '&.Mui-disabled': {
+            bgcolor: alpha('#000', 0.45),
+            color: '#fff',
+            opacity: 1,
+          },
+        }
+      : surface === 'glass'
+        ? {
+            bgcolor: alpha('#000', 0.28),
+            color: active ? 'primary.main' : '#fff',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid',
+            borderColor: active ? 'primary.main' : alpha('#fff', 0.14),
+            '&:hover': { bgcolor: alpha('#000', 0.38) },
+            '&.Mui-disabled': {
+              bgcolor: alpha('#000', 0.28),
+              color: '#fff',
+              opacity: 0.85,
+            },
+          }
+        : {
+            bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.92)',
+            color: active ? 'primary.main' : 'text.primary',
+            border: '1px solid',
+            borderColor: active ? 'primary.main' : 'divider',
+            '&:hover': {
+              bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.98)',
+            },
+          };
 
   return (
     <IconButton
@@ -47,29 +84,7 @@ export function ListingMediaActionButton({
         px: 1,
         py: 0.5,
         borderRadius: 999,
-        ...(isHero
-          ? {
-              bgcolor: alpha('#000', 0.45),
-              color: active ? 'primary.main' : '#fff',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid',
-              borderColor: active ? 'primary.main' : alpha('#fff', 0.18),
-              '&:hover': { bgcolor: alpha('#000', 0.62) },
-              '&.Mui-disabled': {
-                bgcolor: alpha('#000', 0.45),
-                color: '#fff',
-                opacity: 1,
-              },
-            }
-          : {
-              bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.92)',
-              color: active ? 'primary.main' : 'text.primary',
-              border: '1px solid',
-              borderColor: active ? 'primary.main' : 'divider',
-              '&:hover': {
-                bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.98)',
-              },
-            }),
+        ...surfaceStyles,
       }}
     >
       <Box component="span" aria-hidden sx={{ display: 'inline-flex', flexShrink: 0, lineHeight: 0 }}>

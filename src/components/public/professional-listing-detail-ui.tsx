@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Box, Button, Grid, Stack, Typography } from '@mui/material';
 import { alpha, type SxProps, type Theme } from '@mui/material/styles';
 import type { ProfessionalPortfolioItem } from '@/lib/professional-listing-detail-content';
+import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import { StarHalf as StarHalfIcon } from '@phosphor-icons/react/dist/ssr/StarHalf';
@@ -262,7 +263,7 @@ export function ProfessionalMetaStat({
   value,
   iconSize = 18,
 }: {
-  icon: React.ComponentType<{ size?: number; weight?: string; color?: string; 'aria-hidden'?: boolean }>;
+  icon: typeof BriefcaseIcon;
   label: string;
   value: string;
   iconSize?: number;

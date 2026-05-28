@@ -21,7 +21,7 @@ import { alpha } from '@mui/material/styles';
 import { ArrowRight as ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
-import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
+import { BusinessVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
@@ -227,7 +227,7 @@ export function BusinessListingDetailDesktop({
                     <Typography component="h1" sx={{ fontWeight: 800, fontSize: '1.35rem', lineHeight: 1.2, flex: 1 }}>
                       {listing.title}
                     </Typography>
-                    <CheckCircleIcon size={22} weight="fill" color="var(--mui-palette-primary-main)" aria-hidden />
+                    <BusinessVerifiedBadge />
                   </Stack>
                   <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', lineHeight: 1.4 }}>{categoryLine}</Typography>
                   <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', alignItems: 'center' }}>

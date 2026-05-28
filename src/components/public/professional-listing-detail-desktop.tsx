@@ -34,6 +34,7 @@ import { RealEstateListingGallery } from '@/components/public/real-estate-listin
 import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
 import {
   ProfessionalFiveStarRating,
+  ProfessionalMetaStat,
   ProfessionalPortfolioSection,
   ProfessionalRatingSummary,
   ProfessionalReviewsSectionHeader,
@@ -71,24 +72,6 @@ const surfaceSx = {
 } as const;
 
 const SERVICE_TAG_ICONS = [HammerIcon, PaintBrushIcon, RulerIcon, SparkleIcon, BriefcaseIcon] as const;
-
-function MetaStat({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof BriefcaseIcon;
-  label: string;
-  value: string;
-}) {
-  return (
-    <Stack spacing={0.75}>
-      <Icon size={22} weight="duotone" color="var(--mui-palette-primary-main)" aria-hidden />
-      <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', fontWeight: 600 }}>{label}</Typography>
-      <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.3 }}>{value}</Typography>
-    </Stack>
-  );
-}
 
 export function ProfessionalListingDetailDesktop({
   listing,
@@ -251,13 +234,23 @@ export function ProfessionalListingDetailDesktop({
 
                   <Grid container sx={{ overflow: 'hidden' }}>
                     <Grid size={4} sx={professionalMetaStatCellSx(0, 3)}>
-                      <MetaStat icon={BriefcaseIcon} label="Specializimi" value={listing.categoryLabel} />
+                      <ProfessionalMetaStat
+                        icon={BriefcaseIcon}
+                        label="Specializimi"
+                        value={listing.categoryLabel}
+                        iconSize={22}
+                      />
                     </Grid>
                     <Grid size={4} sx={professionalMetaStatCellSx(1, 3)}>
-                      <MetaStat icon={ClockIcon} label="Përgjigjet shpejt" value={responseTime} />
+                      <ProfessionalMetaStat
+                        icon={ClockIcon}
+                        label="Përgjigjet shpejt"
+                        value={responseTime}
+                        iconSize={22}
+                      />
                     </Grid>
                     <Grid size={4} sx={professionalMetaStatCellSx(2, 3)}>
-                      <MetaStat icon={CurrencyEurIcon} label="Çmimi nga" value={priceFrom} />
+                      <ProfessionalMetaStat icon={CurrencyEurIcon} label="Çmimi nga" value={priceFrom} iconSize={22} />
                     </Grid>
                   </Grid>
 

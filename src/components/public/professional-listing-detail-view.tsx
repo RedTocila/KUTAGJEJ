@@ -31,6 +31,7 @@ import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-
 import { ProfessionalListingDetailDesktop } from '@/components/public/professional-listing-detail-desktop';
 import {
   ProfessionalFiveStarRating,
+  ProfessionalMetaStat,
   ProfessionalPortfolioSection,
   ProfessionalRatingSummary,
   ProfessionalReviewsSectionHeader,
@@ -72,45 +73,6 @@ const surfaceSx = {
 } as const;
 
 const SERVICE_TAG_ICONS = [HammerIcon, PaintBrushIcon, RulerIcon, SparkleIcon, BriefcaseIcon] as const;
-
-function MetaStat({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof BriefcaseIcon;
-  label: string;
-  value: string;
-}) {
-  return (
-    <Stack spacing={0.5} sx={{ minWidth: 0, alignItems: 'flex-start' }}>
-      <Icon size={18} weight="duotone" color="var(--mui-palette-primary-main)" aria-hidden />
-      <Typography
-        sx={{
-          fontSize: '0.6875rem',
-          color: 'text.secondary',
-          fontWeight: 600,
-          lineHeight: 1.2,
-        }}
-      >
-        {label}
-      </Typography>
-      <Typography
-        sx={{
-          fontWeight: 800,
-          fontSize: FONT_CAPTION,
-          lineHeight: 1.25,
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}
-      >
-        {value}
-      </Typography>
-    </Stack>
-  );
-}
 
 export function ProfessionalListingDetailView({
   listing,
@@ -287,13 +249,13 @@ export function ProfessionalListingDetailView({
             <Box sx={surfaceSx}>
               <Grid container sx={{ overflow: 'hidden' }}>
                 <Grid size={4} sx={professionalMetaStatCellSx(0, 3)}>
-                  <MetaStat icon={BriefcaseIcon} label="Specializimi" value={listing.categoryLabel} />
+                  <ProfessionalMetaStat icon={BriefcaseIcon} label="Specializimi" value={listing.categoryLabel} />
                 </Grid>
                 <Grid size={4} sx={professionalMetaStatCellSx(1, 3)}>
-                  <MetaStat icon={ClockIcon} label="Përgjigjet shpejt" value={responseTime} />
+                  <ProfessionalMetaStat icon={ClockIcon} label="Përgjigjet shpejt" value={responseTime} />
                 </Grid>
                 <Grid size={4} sx={professionalMetaStatCellSx(2, 3)}>
-                  <MetaStat icon={CurrencyEurIcon} label="Çmimi nga" value={priceFrom} />
+                  <ProfessionalMetaStat icon={CurrencyEurIcon} label="Çmimi nga" value={priceFrom} />
                 </Grid>
               </Grid>
             </Box>

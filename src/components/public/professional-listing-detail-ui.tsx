@@ -19,6 +19,9 @@ export function professionalMetaStatCellSx(index: number, total: number): SxProp
     px: { xs: 1, sm: 1.25 },
     minWidth: 0,
     position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     ...(index < total - 1
       ? {
           '&::after': {
@@ -155,26 +158,35 @@ export function ListingVerifiedShieldBadge({
   );
 }
 
+/** Shared verified shield for listing detail headers. */
+export function ListingVerifiedBadge({
+  size = 20,
+  color,
+  'aria-label': ariaLabel = 'I verifikuar',
+}: {
+  size?: number;
+  color?: string;
+  'aria-label'?: string;
+}) {
+  return <ListingVerifiedShieldBadge size={size} color={color} aria-label={ariaLabel} />;
+}
+
 export function ProfessionalVerifiedBadge() {
-  return (
-    <Box
-      aria-label="Profesionist i verifikuar"
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-        width: 26,
-        height: 26,
-        borderRadius: 1.25,
-        bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)',
-        border: '1px solid',
-        borderColor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.35)',
-      }}
-    >
-      <ListingVerifiedShieldBadge size={18} decorative />
-    </Box>
-  );
+  return <ListingVerifiedBadge aria-label="Profesionist i verifikuar" />;
+}
+
+export function BusinessVerifiedBadge() {
+  return <ListingVerifiedBadge aria-label="Biznes i verifikuar" size={22} />;
+}
+
+export function JobVerifiedBadge({
+  size = 20,
+  color,
+}: {
+  size?: number;
+  color?: string;
+} = {}) {
+  return <ListingVerifiedBadge aria-label="Punë e verifikuar" size={size} color={color} />;
 }
 
 /** Compact rating chip — matches profile header mockup (dark box, score + count). */
@@ -240,6 +252,47 @@ export function ProfessionalReviewsSectionHeader({
         starSize={16}
         showReviewLabel
       />
+    </Stack>
+  );
+}
+
+export function ProfessionalMetaStat({
+  icon: Icon,
+  label,
+  value,
+  iconSize = 18,
+}: {
+  icon: React.ComponentType<{ size?: number; weight?: string; color?: string; 'aria-hidden'?: boolean }>;
+  label: string;
+  value: string;
+  iconSize?: number;
+}) {
+  return (
+    <Stack spacing={0.5} sx={{ minWidth: 0, width: '100%', alignItems: 'center', textAlign: 'center' }}>
+      <Icon size={iconSize} weight="duotone" color="var(--mui-palette-primary-main)" aria-hidden />
+      <Typography
+        sx={{
+          fontSize: iconSize >= 20 ? '0.75rem' : '0.6875rem',
+          color: 'text.secondary',
+          fontWeight: 600,
+          lineHeight: 1.2,
+        }}
+      >
+        {label}
+      </Typography>
+      <Typography
+        sx={{
+          fontWeight: 800,
+          fontSize: iconSize >= 20 ? '0.9rem' : FONT_CAPTION,
+          lineHeight: 1.25,
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
+      >
+        {value}
+      </Typography>
     </Stack>
   );
 }

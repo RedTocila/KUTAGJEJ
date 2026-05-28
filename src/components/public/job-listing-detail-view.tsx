@@ -48,7 +48,7 @@ import { whatsappHref } from '@/lib/listing-contact';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { JobListingDetailDesktop } from '@/components/public/job-listing-detail-desktop';
-import { ListingVerifiedShieldBadge } from '@/components/public/professional-listing-detail-ui';
+import { JobVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { paths } from '@/paths';
@@ -302,37 +302,34 @@ export function JobListingDetailView({
               {listing.title}
             </Typography>
 
-            <Box
-              sx={{
-                width: 'max-content',
-                maxWidth: '100%',
-                height: 24,
-                display: 'inline-flex',
-                alignItems: 'center',
-                px: 1.25,
-                borderRadius: 999,
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-              }}
-            >
-              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0, color: 'inherit' }}>
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+              <Box
+                sx={{
+                  width: 'max-content',
+                  flexShrink: 0,
+                  height: 24,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  px: 1.25,
+                  borderRadius: 999,
+                  bgcolor: 'primary.main',
+                  color: 'primary.contrastText',
+                }}
+              >
                 <Typography
                   sx={{
                     fontWeight: 700,
                     fontSize: FONT_CAPTION,
                     lineHeight: 1,
-                    minWidth: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
                     color: 'inherit',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {companyName}
                 </Typography>
-                {listing.seller ? <ListingVerifiedShieldBadge size={16} color="inherit" /> : null}
-              </Stack>
-            </Box>
+              </Box>
+              {listing.seller ? <JobVerifiedBadge size={20} /> : null}
+            </Stack>
 
             {listing.seller ? (
               <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>

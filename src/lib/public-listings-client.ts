@@ -188,17 +188,38 @@ export interface PublicDirectoryListing extends ListingMetricsFields {
   permalinkPath?: string;
   /** Biznese venues only — opening times as plain text. */
   openingHours: string | null;
+  /** Computed open/closed line for detail header. */
+  openStatusLine?: string | null;
+  ratingAverage?: number | null;
+  reviewCount?: number;
   reservationsEnabled: boolean;
   reservationUrl: string | null;
   /** Short “what we offer” line for venues. */
   servicesHighlight: string | null;
 }
 
+export type PublicBusinessMenuCategory = { id: string; name: string; sortOrder: number };
+export type PublicBusinessMenuItem = {
+  id: string;
+  categoryId: string;
+  name: string;
+  description: string;
+  price: number;
+  currency: 'EUR' | 'LEK';
+  imageUrl: string | null;
+  sortOrder: number;
+};
+
 /** Full Biznese / Profesionistë listing detail. */
 export interface PublicDirectoryListingDetail extends Omit<PublicDirectoryListing, 'description'> {
   description: string;
   seller: PublicRealEstateListingSeller | null;
   updatedAt: string;
+  weeklyHours?: { dayOfWeek: number; closed: boolean; open: string | null; close: string | null }[];
+  menuCategories?: PublicBusinessMenuCategory[];
+  menuItems?: PublicBusinessMenuItem[];
+  reservationTimeSlots?: string[];
+  reservationPartySizes?: number[];
 }
 
 export type AnyPublicListingDetail =

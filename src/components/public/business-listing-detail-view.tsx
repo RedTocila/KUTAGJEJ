@@ -3,7 +3,9 @@
 import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
+  Alert,
   Box,
   Button,
   ButtonBase,
@@ -11,6 +13,7 @@ import {
   MenuItem,
   Select,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
@@ -31,11 +34,18 @@ import { RealEstateListingGallery } from '@/components/public/real-estate-listin
 import {
   businessCategorySubtitle,
   businessGalleryThumbs,
-  businessMenuCategories,
-  businessMenuItems,
+  businessMenuCategoryNames,
+  businessMenuItemsForCategory,
   businessOpenStatusLine,
   businessRatingDisplay,
+  reservationDateOptions,
 } from '@/lib/business-listing-detail-content';
+import { createBusinessReservation } from '@/lib/business-reservations-client';
+import { BusinessReviewSection } from '@/components/businesses/business-review-section';
+import {
+  DEFAULT_RESERVATION_PARTY_SIZES,
+  DEFAULT_RESERVATION_TIME_SLOTS,
+} from '@/lib/business-constants';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { BusinessListingDetailDesktop } from '@/components/public/business-listing-detail-desktop';
@@ -58,25 +68,6 @@ const surfaceSx = {
   borderColor: 'divider',
 } as const;
 
-function reservationDateOptions(): { value: string; label: string }[] {
-  const out: { value: string; label: string }[] = [];
-  const today = new Date();
-  for (let i = 0; i < 14; i += 1) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    const value = d.toISOString().slice(0, 10);
-    const label = d.toLocaleDateString('sq-AL', {
-      weekday: i === 0 ? 'short' : undefined,
-      day: 'numeric',
-      month: 'short',
-    });
-    out.push({ value, label: i === 0 ? `Sot, ${label}` : label });
-  }
-  return out;
-}
-
-const TIME_OPTIONS = ['12:00', '13:00', '14:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
-const PEOPLE_OPTIONS = [1, 2, 3, 4, 5, 6, 8, 10];
 
 function selectFieldSx() {
   return {
@@ -101,6 +92,7 @@ export function BusinessListingDetailView({
   canonicalUrl?: string;
   similar?: PublicDirectoryListing[];
 }) {
+  const router = useRouter();
   const { saved, saveCount, toggleSave } = useListingBookmark('businesses', listing.id, {
     saved: listing.saved,
     saveCount: listing.saveCount,
@@ -109,37 +101,74 @@ export function BusinessListingDetailView({
   const [reserveDate, setReserveDate] = React.useState('');
   const [reserveTime, setReserveTime] = React.useState('');
   const [reservePeople, setReservePeople] = React.useState('2');
+  const [reserveGuestName, setReserveGuestName] = React.useState('');
+  const [reserveGuestPhone, setReserveGuestPhone] = React.useState('');
+  const [reserveFeedback, setReserveFeedback] = React.useState<string | null>(null);
+  const [reserveSubmitting, setReserveSubmitting] = React.useState(false);
   const [savedMenuHearts, setSavedMenuHearts] = React.useState<Set<string>>(() => new Set());
+  const [reviewRefresh, setReviewRefresh] = React.useState(0);
 
   const phone = listing.contactPhone ?? listing.seller?.phone ?? null;
   const telHref = phone ? `tel:${phone.replace(/\s/g, '')}` : null;
-  const rating = React.useMemo(() => businessRatingDisplay(listing), [listing]);
+  const rating = React.useMemo(() => businessRatingDisplay(listing), [listing, reviewRefresh]);
   const categoryLine = React.useMemo(() => businessCategorySubtitle(listing), [listing]);
-  const statusLine = React.useMemo(() => businessOpenStatusLine(listing.openingHours), [listing.openingHours]);
-  const menuCategories = React.useMemo(() => businessMenuCategories(listing), [listing]);
-  const activeMenuCategory = menuCategory || menuCategories[0] || 'Të rekomanduara';
+  const statusLine = React.useMemo(() => businessOpenStatusLine(listing), [listing]);
+  const menuCategories = React.useMemo(() => businessMenuCategoryNames(listing), [listing]);
+  const activeMenuCategory = menuCategory || menuCategories[0] || '';
   const menuItems = React.useMemo(
-    () => businessMenuItems(listing, activeMenuCategory),
+    () => (activeMenuCategory ? businessMenuItemsForCategory(listing, activeMenuCategory) : []),
     [listing, activeMenuCategory],
   );
   const gallery = React.useMemo(() => businessGalleryThumbs(listing.imageUrls, 4), [listing.imageUrls]);
   const dateOptions = React.useMemo(() => reservationDateOptions(), []);
+  const timeOptions =
+    listing.reservationTimeSlots?.length ? listing.reservationTimeSlots : DEFAULT_RESERVATION_TIME_SLOTS;
+  const peopleOptions =
+    listing.reservationPartySizes?.length ? listing.reservationPartySizes : DEFAULT_RESERVATION_PARTY_SIZES;
 
   const showReservation = listing.reservationsEnabled;
+  const usePlatformReservation = showReservation && !listing.reservationUrl?.trim();
   const reserveHref = listing.reservationUrl?.trim() || telHref;
 
   React.useEffect(() => {
     if (!reserveDate && dateOptions[0]) setReserveDate(dateOptions[0].value);
-    if (!reserveTime) setReserveTime(TIME_OPTIONS[4] ?? '19:00');
-  }, [dateOptions, reserveDate, reserveTime]);
+    if (!reserveTime && timeOptions[0]) setReserveTime(timeOptions[0]);
+    if (!reservePeople && peopleOptions[0]) setReservePeople(String(peopleOptions[0]));
+  }, [dateOptions, reserveDate, reserveTime, reservePeople, timeOptions, peopleOptions]);
 
-  const handleReserve = () => {
+  const handleReserve = async () => {
     if (listing.reservationUrl?.trim()) {
       const url = new URL(listing.reservationUrl.trim());
       if (reserveDate) url.searchParams.set('date', reserveDate);
       if (reserveTime) url.searchParams.set('time', reserveTime);
       if (reservePeople) url.searchParams.set('guests', reservePeople);
       window.open(url.toString(), '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (usePlatformReservation) {
+      const name = reserveGuestName.trim();
+      const phone = reserveGuestPhone.trim();
+      if (name.length < 2) {
+        setReserveFeedback('Shkruani emrin e plotë.');
+        return;
+      }
+      if (phone.length < 6) {
+        setReserveFeedback('Shkruani numrin e telefonit.');
+        return;
+      }
+      setReserveSubmitting(true);
+      setReserveFeedback(null);
+      const res = await createBusinessReservation({
+        listingId: listing.id,
+        guestName: name,
+        guestPhone: phone,
+        partySize: Number.parseInt(reservePeople, 10) || 1,
+        reservationDate: reserveDate,
+        timeSlot: reserveTime,
+      });
+      setReserveSubmitting(false);
+      if (res.error) setReserveFeedback(res.error);
+      else setReserveFeedback('Rezervimi u dërgua. Biznesi do t’ju kontaktojë.');
       return;
     }
     if (telHref) window.location.href = telHref;
@@ -178,9 +207,16 @@ export function BusinessListingDetailView({
         onReserveTime={setReserveTime}
         onReservePeople={setReservePeople}
         dateOptions={dateOptions}
-        timeOptions={TIME_OPTIONS}
-        peopleOptions={PEOPLE_OPTIONS}
-        onReserve={handleReserve}
+        timeOptions={timeOptions}
+        peopleOptions={peopleOptions}
+        reserveGuestName={reserveGuestName}
+        reserveGuestPhone={reserveGuestPhone}
+        onReserveGuestName={setReserveGuestName}
+        onReserveGuestPhone={setReserveGuestPhone}
+        usePlatformReservation={usePlatformReservation}
+        reserveFeedback={reserveFeedback}
+        reserveSubmitting={reserveSubmitting}
+        onReserve={() => void handleReserve()}
         menuCategory={menuCategory}
         onMenuCategory={setMenuCategory}
         savedMenuHearts={savedMenuHearts}
@@ -228,15 +264,17 @@ export function BusinessListingDetailView({
                 spacing={1.5}
                 sx={{ flexWrap: 'wrap', alignItems: 'center', rowGap: 0.75, columnGap: 1.5 }}
               >
-                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                  <StarIcon size={16} weight="fill" color="var(--mui-palette-primary-main)" />
-                  <Typography sx={{ fontSize: FONT_BODY, fontWeight: 700 }}>
-                    {rating.rating}
-                  </Typography>
-                  <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary' }}>
-                    ({rating.reviews} vlerësime)
-                  </Typography>
-                </Stack>
+                {rating.rating ? (
+                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                    <StarIcon size={16} weight="fill" color="var(--mui-palette-primary-main)" />
+                    <Typography sx={{ fontSize: FONT_BODY, fontWeight: 700 }}>
+                      {rating.rating}
+                    </Typography>
+                    <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary' }}>
+                      ({rating.reviews} vlerësime)
+                    </Typography>
+                  </Stack>
+                ) : null}
                 {listing.cityName ? (
                   <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
                     <MapPinIcon size={16} weight="regular" />
@@ -272,6 +310,16 @@ export function BusinessListingDetailView({
                   />
                 </Box>
               ) : null}
+
+              <BusinessReviewSection
+                listingId={listing.id}
+                ratingAverage={listing.ratingAverage}
+                reviewCount={listing.reviewCount}
+                onReviewSubmitted={() => {
+                  setReviewRefresh((n) => n + 1);
+                  router.refresh();
+                }}
+              />
             </Stack>
 
             {/* Promo */}
@@ -313,7 +361,7 @@ export function BusinessListingDetailView({
                         onChange={(e) => setReserveTime(e.target.value)}
                         inputProps={{ 'aria-label': 'Ora' }}
                       >
-                        {TIME_OPTIONS.map((t) => (
+                        {timeOptions.map((t) => (
                           <MenuItem key={t} value={t}>
                             {t}
                           </MenuItem>
@@ -326,7 +374,7 @@ export function BusinessListingDetailView({
                         onChange={(e) => setReservePeople(e.target.value)}
                         inputProps={{ 'aria-label': 'Persona' }}
                       >
-                        {PEOPLE_OPTIONS.map((n) => (
+                        {peopleOptions.map((n) => (
                           <MenuItem key={n} value={String(n)}>
                             {n}
                           </MenuItem>
@@ -334,11 +382,34 @@ export function BusinessListingDetailView({
                       </Select>
                     </FormControl>
                   </Stack>
+                  {usePlatformReservation ? (
+                    <Stack spacing={1}>
+                      <TextField
+                        size="small"
+                        label="Emri i plotë"
+                        value={reserveGuestName}
+                        onChange={(e) => setReserveGuestName(e.target.value)}
+                        fullWidth
+                      />
+                      <TextField
+                        size="small"
+                        label="Telefoni"
+                        value={reserveGuestPhone}
+                        onChange={(e) => setReserveGuestPhone(e.target.value)}
+                        fullWidth
+                      />
+                    </Stack>
+                  ) : null}
+                  {reserveFeedback ? (
+                    <Alert severity={reserveFeedback.includes('dërgua') ? 'success' : 'warning'} sx={{ py: 0 }}>
+                      {reserveFeedback}
+                    </Alert>
+                  ) : null}
                   <Button
                     variant="contained"
                     fullWidth
-                    onClick={handleReserve}
-                    disabled={!reserveHref}
+                    onClick={() => void handleReserve()}
+                    disabled={usePlatformReservation ? reserveSubmitting : !reserveHref}
                     sx={{
                       py: 1.35,
                       borderRadius: 2.5,
@@ -348,7 +419,7 @@ export function BusinessListingDetailView({
                       boxShadow: 'none',
                     }}
                   >
-                    Rezervo tani
+                    {reserveSubmitting ? 'Duke dërguar…' : 'Rezervo tani'}
                   </Button>
                 </Stack>
               </Box>
@@ -461,7 +532,7 @@ export function BusinessListingDetailView({
                             {item.description}
                           </Typography>
                           <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY, color: 'primary.main', pt: 0.25 }}>
-                            {formatPrice(item.price, 'LEK')}
+                            {formatPrice(item.price, item.currency)}
                           </Typography>
                         </Stack>
                         <ButtonBase

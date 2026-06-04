@@ -12,6 +12,8 @@ const { realEstatePermalink } = require('../lib/real-estate-permalink');
 const { listingPermalinkFromSlugSource } = require('../lib/listing-permalink');
 const { attachMetricsToListings, attachMetricsToListing, fetchMetricsMap, saverFromUser } = require('../lib/listing-metrics');
 const { isJobsEmployerVerified } = require('../lib/job-employer-verification');
+const { computeOpenStatus, formatWeeklyHoursLine } = require('../lib/business-hours');
+const { reviewStatsByListingIds } = require('../lib/business-review-stats');
 const optionalAuth = require('../middleware/optional-auth');
 
 /** Venue & service categories for Biznese (not commercial real estate). */
@@ -279,7 +281,35 @@ function directoryCategoryLabel(vertical, categorySlug) {
   return map[categorySlug] ?? categorySlug;
 }
 
-function formatDirectory(doc, cityById) {
+function businessReviewFields(doc, reviewStats) {
+  const stats = reviewStats?.get(String(doc._id));
+  return {
+    ratingAverage: stats?.ratingAverage ?? null,
+    reviewCount: stats?.reviewCount ?? 0,
+  };
+}
+
+function formatBusinessMenuPayload(doc) {
+  return {
+    menuCategories: (doc.menuCategories ?? []).map((c) => ({
+      id: String(c.id),
+      name: String(c.name),
+      sortOrder: c.sortOrder ?? 0,
+    })),
+    menuItems: (doc.menuItems ?? []).map((item) => ({
+      id: String(item.id),
+      categoryId: String(item.categoryId),
+      name: String(item.name),
+      description: String(item.description || ''),
+      price: item.price,
+      currency: item.currency === 'LEK' ? 'LEK' : 'EUR',
+      imageUrl: item.imageUrl?.trim() || null,
+      sortOrder: item.sortOrder ?? 0,
+    })),
+  };
+}
+
+function formatDirectory(doc, cityById, reviewStats) {
   const city = cityById.get(String(doc.cityId));
   const vertical = doc.vertical;
   const categorySlug = doc.category;
@@ -298,13 +328,18 @@ function formatDirectory(doc, cityById) {
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc._id),
   };
   if (vertical === 'businesses') {
-    const oh = doc.openingHours != null ? String(doc.openingHours).replace(/\s+/g, ' ').trim() : '';
+    const weekly = doc.weeklyHours ?? [];
+    const legacyOh = doc.openingHours != null ? String(doc.openingHours).replace(/\s+/g, ' ').trim() : '';
+    const oh = legacyOh || formatWeeklyHoursLine(weekly) || null;
+    const { label: openStatusLine } = computeOpenStatus(weekly, legacyOh);
     return {
       ...base,
       condition: null,
       price: null,
       currency: null,
-      openingHours: oh || null,
+      openingHours: oh,
+      openStatusLine,
+      ...businessReviewFields(doc, reviewStats),
       reservationsEnabled: Boolean(doc.reservationsEnabled),
       reservationUrl: doc.reservationUrl?.trim() || null,
       servicesHighlight: doc.servicesHighlight?.replace(/\s+/g, ' ').trim() || null,
@@ -365,15 +400,25 @@ function formatMarketplaceDetail(doc, cityById, seller) {
   };
 }
 
-function formatDirectoryDetail(doc, cityById, seller) {
-  const card = formatDirectory(doc, cityById);
-  return {
+function formatDirectoryDetail(doc, cityById, seller, reviewStats) {
+  const card = formatDirectory(doc, cityById, reviewStats);
+  const base = {
     ...card,
     description: String(doc.description || '').trim(),
     seller,
     updatedAt: doc.updatedAt ?? doc.createdAt,
     permalinkPath: card.permalinkPath,
   };
+  if (doc.vertical === 'businesses') {
+    return {
+      ...base,
+      weeklyHours: doc.weeklyHours ?? [],
+      ...formatBusinessMenuPayload(doc),
+      reservationTimeSlots: doc.reservationTimeSlots ?? [],
+      reservationPartySizes: doc.reservationPartySizes ?? [],
+    };
+  }
+  return base;
 }
 
 async function latestRealEstate(limit) {
@@ -413,7 +458,9 @@ async function latestDirectory(vertical, limit) {
     .limit(limit)
     .lean();
   const cityById = await buildCityIndex(docs);
-  return attachMetricsToListings(docs.map((d) => formatDirectory(d, cityById)));
+  const reviewStats =
+    vertical === 'businesses' ? await reviewStatsByListingIds(docs.map((d) => d._id)) : null;
+  return attachMetricsToListings(docs.map((d) => formatDirectory(d, cityById, reviewStats)));
 }
 
 async function attachDetailMetrics(req, listing) {
@@ -570,7 +617,8 @@ router.get('/businesses/:id', optionalAuth, async (req, res) => {
     }
     const seller = await loadPosterBrief(doc.posterModel, doc.posterId);
     const cityById = await buildCityIndex([doc]);
-    const listing = await attachDetailMetrics(req, formatDirectoryDetail(doc, cityById, seller));
+    const reviewStats = await reviewStatsByListingIds([doc._id]);
+    const listing = await attachDetailMetrics(req, formatDirectoryDetail(doc, cityById, seller, reviewStats));
     res.json({ listing });
   } catch (err) {
     console.error('GET /public/listings/businesses/:id:', err?.message || err);

@@ -26,8 +26,38 @@ const directoryListingSchema = new mongoose.Schema(
 
     /** Biznese (venues): profile fields — not property listings. */
     openingHours: { type: String, trim: true, default: null },
+    /** Monday=0 … Sunday=6; when set, drives open/closed status and openingHours summary. */
+    weeklyHours: [
+      {
+        dayOfWeek: { type: Number, min: 0, max: 6 },
+        closed: { type: Boolean, default: false },
+        open: { type: String, trim: true, default: null },
+        close: { type: String, trim: true, default: null },
+      },
+    ],
+    menuCategories: [
+      {
+        id: { type: String, required: true },
+        name: { type: String, required: true, trim: true },
+        sortOrder: { type: Number, default: 0 },
+      },
+    ],
+    menuItems: [
+      {
+        id: { type: String, required: true },
+        categoryId: { type: String, required: true },
+        name: { type: String, required: true, trim: true },
+        description: { type: String, trim: true, default: '' },
+        price: { type: Number, required: true, min: 0 },
+        currency: { type: String, enum: ['EUR', 'LEK'], default: 'EUR' },
+        imageUrl: { type: String, trim: true, default: null },
+        sortOrder: { type: Number, default: 0 },
+      },
+    ],
     reservationsEnabled: { type: Boolean, default: false },
     reservationUrl: { type: String, trim: true, default: null },
+    reservationTimeSlots: [{ type: String, trim: true }],
+    reservationPartySizes: [{ type: Number }],
     /** Short line of what the venue offers (e.g. brunch, kokteje, muzikë live). */
     servicesHighlight: { type: String, trim: true, default: null },
 

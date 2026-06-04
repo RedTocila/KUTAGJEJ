@@ -1,11 +1,11 @@
-import { pseudoRandomMetric } from '@/components/public/listing-cards/format-helpers';
 import type { PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 
-export type BusinessMenuItem = {
+export type BusinessMenuItemView = {
   id: string;
   name: string;
   description: string;
   price: number;
+  currency: 'EUR' | 'LEK';
   imageUrl: string | null;
 };
 
@@ -23,81 +23,50 @@ export function businessCategorySubtitle(listing: PublicDirectoryListingDetail):
 }
 
 export function businessRatingDisplay(listing: PublicDirectoryListingDetail): {
-  rating: string;
+  rating: string | null;
   reviews: number;
 } {
-  const tenths = pseudoRandomMetric(`biz-rating:${listing.id}`, 42, 9);
-  const rating = (4.2 + tenths / 10).toFixed(1);
-  const reviews = pseudoRandomMetric(`biz-reviews:${listing.id}`, 48, 900);
-  return { rating, reviews };
+  const reviews = listing.reviewCount ?? 0;
+  if (reviews === 0 || listing.ratingAverage == null) {
+    return { rating: null, reviews: 0 };
+  }
+  const avg = Number(listing.ratingAverage);
+  return { rating: Number.isFinite(avg) ? avg.toFixed(1) : null, reviews };
 }
 
-/** Compact status for detail header — e.g. "Hapur • Mbyllet 24:00". */
-export function businessOpenStatusLine(openingHours: string | null): string | null {
-  if (!openingHours?.trim()) return null;
-  const ranges = [...openingHours.matchAll(/(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/g)];
+export function businessOpenStatusLine(listing: PublicDirectoryListingDetail): string | null {
+  if (listing.openStatusLine?.trim()) return listing.openStatusLine.trim();
+  if (!listing.openingHours?.trim()) return null;
+  const ranges = [...listing.openingHours.matchAll(/(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/g)];
   const last = ranges.at(-1);
   if (last?.[2]) return `Hapur • Mbyllet ${last[2]}`;
   return 'Hapur';
 }
 
-export function businessMenuCategories(listing: PublicDirectoryListingDetail): string[] {
-  const recommended = 'Të rekomanduara';
-  if (listing.servicesHighlight) {
-    const fromServices = listing.servicesHighlight
-      .split('·')
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .slice(0, 4);
-    return [recommended, ...fromServices];
-  }
-  const byCategory: Record<string, string[]> = {
-    restorant: [recommended, 'Antipasta', 'Pjata kryesore', 'Ëmbëlsira'],
-    bar: [recommended, 'Kokteje', 'Birra & verë', 'Snacks'],
-    kafe: [recommended, 'Kafe', 'Çaj & pije', 'Ëmbëlsira'],
-  };
-  return byCategory[listing.category] ?? [recommended, 'Menu', 'Pije'];
+export function businessMenuCategoryNames(listing: PublicDirectoryListingDetail): string[] {
+  const cats = listing.menuCategories ?? [];
+  if (cats.length === 0) return [];
+  return [...cats].sort((a, b) => a.sortOrder - b.sortOrder).map((c) => c.name);
 }
 
-function sentenceToDishName(sentence: string): string {
-  const chunk = sentence.split(/[,;–—]/)[0]?.trim() ?? sentence;
-  const words = chunk.split(/\s+/).slice(0, 5).join(' ');
-  return words.length > 42 ? `${words.slice(0, 39)}…` : words;
-}
-
-/** Menu rows derived from listing copy until a dedicated menu API exists. */
-export function businessMenuItems(
+export function businessMenuItemsForCategory(
   listing: PublicDirectoryListingDetail,
-  _activeCategory: string,
-): BusinessMenuItem[] {
-  const sentences = listing.description
-    .split(/[.!?]+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 10);
-
-  const fallback = [
-    listing.servicesHighlight,
-    listing.description,
-  ]
-    .filter(Boolean)
-    .flatMap((block) =>
-      String(block)
-        .split('·')
-        .map((s) => s.trim())
-        .filter((s) => s.length > 4),
-    );
-
-  const lines = sentences.length > 0 ? sentences : fallback;
-  const images = listing.imageUrls.length > 0 ? listing.imageUrls : listing.imageUrl ? [listing.imageUrl] : [];
-  const priceSeeds = [1200, 850, 1450, 950, 1100, 780];
-
-  return lines.slice(0, 6).map((line, index) => ({
-    id: `${listing.id}-menu-${index}`,
-    name: sentenceToDishName(line),
-    description: line,
-    price: priceSeeds[index % priceSeeds.length]!,
-    imageUrl: images[index % Math.max(images.length, 1)] ?? null,
-  }));
+  activeCategoryName: string,
+): BusinessMenuItemView[] {
+  const cats = listing.menuCategories ?? [];
+  const cat = cats.find((c) => c.name === activeCategoryName);
+  if (!cat) return [];
+  return (listing.menuItems ?? [])
+    .filter((item) => item.categoryId === cat.id)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      currency: item.currency,
+      imageUrl: item.imageUrl,
+    }));
 }
 
 export function businessGalleryThumbs(imageUrls: string[], maxVisible = 4): {
@@ -112,4 +81,21 @@ export function businessGalleryThumbs(imageUrls: string[], maxVisible = 4): {
     visible: urls.slice(0, maxVisible - 1),
     extraCount: urls.length - (maxVisible - 1),
   };
+}
+
+export function reservationDateOptions(): { value: string; label: string }[] {
+  const out: { value: string; label: string }[] = [];
+  const today = new Date();
+  for (let i = 0; i < 14; i += 1) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const value = d.toISOString().slice(0, 10);
+    const label = d.toLocaleDateString('sq-AL', {
+      weekday: i === 0 ? 'short' : undefined,
+      day: 'numeric',
+      month: 'short',
+    });
+    out.push({ value, label: i === 0 ? `Sot, ${label}` : label });
+  }
+  return out;
 }

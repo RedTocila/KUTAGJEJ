@@ -26,12 +26,21 @@ import { JobListingForm } from '@/components/jobs/job-listing-form';
 import { JobEmployerVerificationCard } from '@/components/jobs/job-employer-verification-card';
 import { MarketplaceListingForm } from '@/components/marketplace/marketplace-listing-form';
 import { BusinessListingForm } from '@/components/businesses/business-listing-form';
+import { ProfessionalListingForm } from '@/components/professionals/professional-listing-form';
 import { listCategoriesPublic } from '@/lib/listings-client';
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';
 import type { ListingCategory, ListingCategoryKey } from '@/types/listing-category';
 
-type Phase = 'choose' | 'real-estate-form' | 'cars-form' | 'jobs-form' | 'marketplace-form' | 'businesses-form' | 'unsupported';
+type Phase =
+  | 'choose'
+  | 'real-estate-form'
+  | 'cars-form'
+  | 'jobs-form'
+  | 'marketplace-form'
+  | 'businesses-form'
+  | 'professionals-form'
+  | 'unsupported';
 
 function categoryIcon(key: ListingCategoryKey) {
   switch (key) {
@@ -108,6 +117,8 @@ export default function UserPostListingPage() {
       setPhase('marketplace-form');
     } else if (cat.key === 'businesses') {
       setPhase('businesses-form');
+    } else if (cat.key === 'professionals') {
+      setPhase('professionals-form');
     } else {
       setPhase('unsupported');
     }
@@ -328,6 +339,36 @@ export default function UserPostListingPage() {
                 onSuccess={() => router.push(paths.user.businessesListing)}
                 backHref={paths.user.businessesListing}
                 backLabel="Biznese"
+              />
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
+
+      {phase === 'professionals-form' ? (
+        <>
+          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+            <Stack spacing={0.5}>
+              <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
+                Posto profil profesionisti
+              </Typography>
+              {picked ? (
+                <Typography variant="body2" color="text.secondary">
+                  Kategoria: <strong>{picked.title}</strong>
+                </Typography>
+              ) : null}
+            </Stack>
+            <Button variant="outlined" onClick={handleBackToCategories} sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}>
+              Ndrysho kategorinë
+            </Button>
+          </Stack>
+
+          <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              <ProfessionalListingForm
+                onSuccess={() => router.push(paths.user.professionalsListing)}
+                backHref={paths.user.professionalsListing}
+                backLabel="Profesionistë"
               />
             </CardContent>
           </Card>

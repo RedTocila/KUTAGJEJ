@@ -156,7 +156,8 @@ export function JobListingDetailView({
   const expiresAt = listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
   const sections = React.useMemo(() => buildJobDetailSections(listing), [listing]);
   const metaRows = React.useMemo(() => jobDetailMetaRows(listing), [listing]);
-  const companyName = listing.seller?.displayName ?? findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
+  const companyName =
+    listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const phone = listing.contactPhone ?? listing.seller?.phone ?? null;
   const applyHref = phone ? `tel:${phone.replace(/\s/g, '')}` : whatsappHref(listing.contactPhone ?? listing.seller?.phone);
   const coverImageUrls = React.useMemo(() => jobCoverImageUrls(listing), [listing]);

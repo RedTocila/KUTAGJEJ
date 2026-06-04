@@ -39,7 +39,7 @@ export interface PublicRealEstateListing extends ListingMetricsFields {
 
 export interface PublicRealEstateListingSeller {
   kind: 'individual' | 'business';
-  displayName: string;
+  displayName: string | null;
   phone: string | null;
   memberSince: string;
   /** Punë — admin-approved employer profile. */
@@ -196,9 +196,20 @@ export interface PublicDirectoryListing extends ListingMetricsFields {
   reservationUrl: string | null;
   /** Short “what we offer” line for venues. */
   servicesHighlight: string | null;
+  /** Profesionistë — typical response time (hours). */
+  responseTimeHours?: number | null;
 }
 
 export type PublicBusinessMenuCategory = { id: string; name: string; sortOrder: number };
+export type PublicProfessionalPortfolioItem = {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  location: string | null;
+  sortOrder: number;
+};
+
 export type PublicBusinessMenuItem = {
   id: string;
   categoryId: string;
@@ -220,6 +231,7 @@ export interface PublicDirectoryListingDetail extends Omit<PublicDirectoryListin
   menuItems?: PublicBusinessMenuItem[];
   reservationTimeSlots?: string[];
   reservationPartySizes?: number[];
+  portfolioItems?: PublicProfessionalPortfolioItem[];
 }
 
 export type AnyPublicListingDetail =

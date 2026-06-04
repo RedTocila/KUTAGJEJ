@@ -137,7 +137,8 @@ export function JobListingDetailDesktop({
 }) {
   const sections = React.useMemo(() => buildJobDetailSections(listing), [listing]);
   const metaRows = React.useMemo(() => jobDetailMetaRows(listing), [listing]);
-  const companyName = listing.seller?.displayName ?? findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
+  const companyName =
+    listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const heroImage = listing.imageUrl ?? listing.imageUrls[0] ?? null;
   const isNew = isJobListingNew(listing.createdAt);
   const expiresAt = listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();

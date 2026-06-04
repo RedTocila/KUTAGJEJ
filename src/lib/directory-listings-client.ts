@@ -143,6 +143,82 @@ export async function listBusinessReservations(
   }
 }
 
+export type ProfessionalPortfolioItem = {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  location: string | null;
+  sortOrder: number;
+};
+
+export interface ProfessionalListingPayload {
+  title: string;
+  description: string;
+  category: string;
+  cityId: string;
+  contactPhone: string;
+  imageUrls: string[];
+  responseTimeHours: number | null;
+  portfolioItems: ProfessionalPortfolioItem[];
+  price: number | null;
+  currency: 'EUR' | 'LEK' | null;
+  condition: string | null;
+  servicesHighlight: string | null;
+}
+
+export interface ProfessionalMineListing extends ListingMetrics {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  condition: string | null;
+  price: number | null;
+  currency: string | null;
+  cityName: string | null;
+  contactPhone: string | null;
+  imageUrls: string[];
+  responseTimeHours: number | null;
+  portfolioItems: ProfessionalPortfolioItem[];
+  servicesHighlight: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listMyProfessionalListings(): Promise<{
+  listings?: ProfessionalMineListing[];
+  error?: string;
+}> {
+  try {
+    const res = await fetch(`${API_URL}/listings/directory/professionals/mine`, {
+      headers: authHeaders(),
+      cache: 'no-store',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not load listings.' };
+    return { listings: data.listings as ProfessionalMineListing[] };
+  } catch {
+    return { error: 'Could not reach the server.' };
+  }
+}
+
+export async function createProfessionalListing(
+  body: ProfessionalListingPayload,
+): Promise<{ id?: string; error?: string }> {
+  try {
+    const res = await fetch(`${API_URL}/listings/directory/professionals`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
+    return { id: data.listing?.id as string | undefined };
+  } catch {
+    return { error: 'Could not reach the server.' };
+  }
+}
+
 export async function patchBusinessReservationStatus(
   reservationId: string,
   status: 'pending' | 'confirmed' | 'cancelled',

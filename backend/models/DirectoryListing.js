@@ -61,6 +61,19 @@ const directoryListingSchema = new mongoose.Schema(
     /** Short line of what the venue offers (e.g. brunch, kokteje, muzikë live). */
     servicesHighlight: { type: String, trim: true, default: null },
 
+    /** Profesionistë: typical response time in hours (shown as "Brenda X orësh"). */
+    responseTimeHours: { type: Number, min: 1, max: 168, default: null },
+    portfolioItems: [
+      {
+        id: { type: String, required: true },
+        title: { type: String, required: true, trim: true },
+        description: { type: String, trim: true, default: '' },
+        imageUrl: { type: String, trim: true, required: true },
+        location: { type: String, trim: true, default: null },
+        sortOrder: { type: Number, default: 0 },
+      },
+    ],
+
     cityId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
     contactPhone: { type: String, trim: true },
     imageUrls: [{ type: String, trim: true }],

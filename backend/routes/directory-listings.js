@@ -5,6 +5,10 @@ const DirectoryListing = require('../models/DirectoryListing');
 const BusinessReservation = require('../models/BusinessReservation');
 const RealEstateCity = require('../models/RealEstateCity');
 const { validateBusinessPayload, BUSINESS_CATEGORIES } = require('../lib/directory-business-validation');
+const {
+  validateProfessionalPayload,
+  PROFESSIONAL_CATEGORIES,
+} = require('../lib/directory-professional-validation');
 const { attachOwnerMetrics } = require('../lib/listing-metrics');
 
 const router = express.Router();
@@ -247,6 +251,151 @@ router.patch('/businesses/reservations/:reservationId', authMiddleware, requireP
     });
   } catch (err) {
     console.error('PATCH reservations:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+function formatMineProfessional(doc, cityById) {
+  const city = cityById?.get(String(doc.cityId));
+  return {
+    id: String(doc._id),
+    vertical: doc.vertical,
+    title: doc.title,
+    description: doc.description,
+    category: doc.category,
+    condition: doc.condition ?? null,
+    price: doc.price ?? null,
+    currency: doc.currency ?? null,
+    cityId: doc.cityId ? String(doc.cityId) : null,
+    cityName: city?.name ?? null,
+    contactPhone: doc.contactPhone ?? null,
+    imageUrls: doc.imageUrls ?? [],
+    responseTimeHours: doc.responseTimeHours ?? null,
+    portfolioItems: doc.portfolioItems ?? [],
+    servicesHighlight: doc.servicesHighlight ?? null,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  };
+}
+
+/** GET /api/listings/directory/professionals/mine */
+router.get('/professionals/mine', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    const posterModel = req.user.constructor.modelName;
+    const docs = await DirectoryListing.find({
+      posterId: req.user._id,
+      posterModel,
+      vertical: 'professionals',
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const cityIds = [...new Set(docs.map((d) => String(d.cityId)).filter(Boolean))];
+    const cityObjectIds = cityIds
+      .filter((id) => mongoose.isValidObjectId(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+    const cities =
+      cityObjectIds.length > 0 ? await RealEstateCity.find({ _id: { $in: cityObjectIds } }).lean() : [];
+    const cityById = new Map(cities.map((c) => [String(c._id), c]));
+
+    const listings = docs.map((d) => formatMineProfessional(d, cityById));
+    res.json({ listings: await attachOwnerMetrics(listings, 'professionals') });
+  } catch (err) {
+    console.error('GET /listings/directory/professionals/mine:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/** POST /api/listings/directory/professionals */
+router.post('/professionals', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    const body = req.body;
+    const v = validateProfessionalPayload(body);
+    if (!v.ok) return res.status(400).json({ message: v.message });
+
+    const cityId = String(body.cityId).trim();
+    const city = await RealEstateCity.findById(cityId).lean();
+    if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+
+    const posterModel = req.user.constructor.modelName;
+    const imageUrls = v.imageUrls ?? [];
+
+    const doc = await DirectoryListing.create({
+      vertical: 'professionals',
+      posterId: req.user._id,
+      posterModel,
+      title: String(body.title).trim(),
+      description: String(body.description).trim(),
+      category: body.category,
+      cityId: new mongoose.Types.ObjectId(cityId),
+      contactPhone: String(body.contactPhone || '').trim(),
+      imageUrls,
+      condition: v.condition,
+      price: v.price,
+      currency: v.currency,
+      responseTimeHours: v.responseTimeHours,
+      portfolioItems: v.portfolioItems,
+      servicesHighlight: v.servicesHighlight,
+    });
+
+    res.status(201).json({
+      listing: { id: String(doc._id), title: doc.title, createdAt: doc.createdAt },
+    });
+  } catch (err) {
+    console.error('POST /listings/directory/professionals:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/** PUT /api/listings/directory/professionals/:id */
+router.put('/professionals/:id', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    const rawId = String(req.params.id ?? '').trim();
+    if (!mongoose.isValidObjectId(rawId)) {
+      return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
+    }
+
+    const posterModel = req.user.constructor.modelName;
+    const doc = await DirectoryListing.findOne({
+      _id: rawId,
+      posterId: req.user._id,
+      posterModel,
+      vertical: 'professionals',
+    });
+    if (!doc) return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
+
+    const body = req.body;
+    const v = validateProfessionalPayload(body, { partial: true });
+    if (!v.ok) return res.status(400).json({ message: v.message });
+
+    if (body.title != null) doc.title = String(body.title).trim();
+    if (body.description != null) doc.description = String(body.description).trim();
+    if (body.category != null) {
+      if (!PROFESSIONAL_CATEGORIES.has(body.category)) {
+        return res.status(400).json({ message: 'Kategoria nuk është e vlefshme.' });
+      }
+      doc.category = body.category;
+    }
+    if (body.cityId != null) {
+      const cityId = String(body.cityId).trim();
+      const city = await RealEstateCity.findById(cityId).lean();
+      if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+      doc.cityId = new mongoose.Types.ObjectId(cityId);
+    }
+    if (body.contactPhone != null) doc.contactPhone = String(body.contactPhone).trim();
+
+    doc.responseTimeHours = v.responseTimeHours;
+    doc.portfolioItems = v.portfolioItems;
+    doc.price = v.price;
+    doc.currency = v.currency;
+    doc.condition = v.condition;
+    doc.servicesHighlight = v.servicesHighlight;
+    if (v.imageUrls != null) doc.imageUrls = v.imageUrls;
+
+    await doc.save();
+    res.json({ listing: { id: String(doc._id), title: doc.title, updatedAt: doc.updatedAt } });
+  } catch (err) {
+    console.error('PUT /listings/directory/professionals/:id:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });

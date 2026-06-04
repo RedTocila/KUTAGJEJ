@@ -44,6 +44,7 @@ export const paths = {
     referral: '/dashboard/referral',
     /** Punë — employer verification requests (platform admin). */
     jobEmployerVerification: '/dashboard/verifikimet-pune',
+    professionalVerification: '/dashboard/verifikimet-profesioniste',
   },
   app: {},
   errors: {},

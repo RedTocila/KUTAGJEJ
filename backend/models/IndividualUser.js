@@ -14,6 +14,7 @@ const individualUserSchema = new mongoose.Schema({
   lastActive: { type: Date, default: Date.now },
   /** Approved employer badge for Punë listings (`JobVerifiedBadge`). */
   jobsEmployerVerifiedAt: { type: Date, default: null },
+  professionalsVerifiedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

@@ -51,12 +51,13 @@ import {
   professionalPriceFromLine,
   professionalRatingDisplay,
   professionalResponseTime,
-  professionalReviews,
   professionalServiceTags,
   professionalSubtitle,
 } from '@/lib/professional-listing-detail-content';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
+import { ProfessionalReviewSection } from '@/components/professionals/professional-review-section';
 import { paths } from '@/paths';
+import { useRouter } from 'next/navigation';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 
@@ -96,8 +97,8 @@ export function ProfessionalListingDetailView({
   const serviceTags = React.useMemo(() => professionalServiceTags(listing), [listing]);
   const portfolio = React.useMemo(() => professionalPortfolioItems(listing), [listing]);
   const coverImageUrls = React.useMemo(() => professionalCoverImageUrls(listing), [listing]);
-  const reviews = React.useMemo(() => professionalReviews(listing), [listing]);
   const avatarUrl = React.useMemo(() => professionalAvatarUrl(listing), [listing]);
+  const router = useRouter();
   const initials = React.useMemo(() => professionalInitials(listing), [listing]);
 
   const phone = listing.contactPhone ?? listing.seller?.phone ?? null;
@@ -114,7 +115,7 @@ export function ProfessionalListingDetailView({
   };
 
   const locationLine = listing.cityName ? `${listing.cityName}, Shqipëri` : null;
-  const isVerified = Boolean(listing.seller);
+  const isVerified = Boolean(listing.seller?.verified);
 
   return (
     <>
@@ -222,11 +223,13 @@ export function ProfessionalListingDetailView({
                   ) : (
                     <Box sx={{ flex: 1 }} />
                   )}
-                  <ProfessionalRatingSummary
-                    rating={rating.rating}
-                    reviewCount={rating.reviews}
-                    starSize={14}
-                  />
+                  {rating.rating ? (
+                    <ProfessionalRatingSummary
+                      rating={rating.rating}
+                      reviewCount={rating.reviews}
+                      starSize={14}
+                    />
+                  ) : null}
                 </Stack>
               </Stack>
             </Stack>
@@ -237,9 +240,11 @@ export function ProfessionalListingDetailView({
                 <Grid size={4} sx={professionalMetaStatCellSx(0, 3)}>
                   <ProfessionalMetaStat icon={BriefcaseIcon} label="Specializimi" value={listing.categoryLabel} />
                 </Grid>
-                <Grid size={4} sx={professionalMetaStatCellSx(1, 3)}>
-                  <ProfessionalMetaStat icon={ClockIcon} label="Përgjigjet shpejt" value={responseTime} />
-                </Grid>
+                {responseTime ? (
+                  <Grid size={4} sx={professionalMetaStatCellSx(1, 3)}>
+                    <ProfessionalMetaStat icon={ClockIcon} label="Përgjigjet shpejt" value={responseTime} />
+                  </Grid>
+                ) : null}
                 <Grid size={4} sx={professionalMetaStatCellSx(2, 3)}>
                   <ProfessionalMetaStat icon={CurrencyEurIcon} label="Çmimi nga" value={priceFrom} />
                 </Grid>
@@ -287,44 +292,12 @@ export function ProfessionalListingDetailView({
 
             <ProfessionalPortfolioSection items={portfolio} />
 
-            {/* Reviews */}
-            {reviews.length > 0 ? (
-              <Stack spacing={1.5}>
-                <ProfessionalReviewsSectionHeader rating={rating.rating} reviewCount={rating.reviews} />
-                <Stack spacing={1.25}>
-                  {reviews.map((review) => (
-                    <Box key={review.id} sx={surfaceSx}>
-                      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start' }}>
-                        <Avatar
-                          sx={{
-                            width: 36,
-                            height: 36,
-                            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.14),
-                            color: 'primary.main',
-                            fontWeight: 800,
-                            fontSize: FONT_CAPTION,
-                          }}
-                        >
-                          {review.initials}
-                        </Avatar>
-                        <Stack spacing={0.75} sx={{ flex: 1, minWidth: 0 }}>
-                          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                            <Typography sx={{ fontWeight: 800, fontSize: FONT_CAPTION }}>{review.author}</Typography>
-                            <Typography sx={{ fontSize: '0.625rem', color: 'text.disabled', flexShrink: 0 }}>
-                              {review.dateLabel}
-                            </Typography>
-                          </Stack>
-                          <ProfessionalFiveStarRating value={review.rating} size={14} />
-                          <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', lineHeight: 1.45 }}>
-                            {review.text}
-                          </Typography>
-                        </Stack>
-                      </Stack>
-                    </Box>
-                  ))}
-                </Stack>
-              </Stack>
-            ) : null}
+            <ProfessionalReviewSection
+              listingId={listing.id}
+              ratingAverage={listing.ratingAverage}
+              reviewCount={listing.reviewCount}
+              onReviewSubmitted={() => router.refresh()}
+            />
 
             {/* Similar */}
             {similar.length > 0 ? (

@@ -12,6 +12,8 @@ const { realEstatePermalink } = require('../lib/real-estate-permalink');
 const { listingPermalinkFromSlugSource } = require('../lib/listing-permalink');
 const { attachMetricsToListings, attachMetricsToListing, fetchMetricsMap, saverFromUser } = require('../lib/listing-metrics');
 const { isJobsEmployerVerified } = require('../lib/job-employer-verification');
+const { isProfessionalVerified } = require('../lib/professional-verification');
+const { professionalReviewStatsByListingIds } = require('../lib/professional-review-stats');
 const { computeOpenStatus, formatWeeklyHoursLine } = require('../lib/business-hours');
 const { reviewStatsByListingIds } = require('../lib/business-review-stats');
 const optionalAuth = require('../middleware/optional-auth');
@@ -124,40 +126,55 @@ function formatRealEstate(doc, cityById) {
   };
 }
 
-async function loadPosterBrief(posterModel, posterId) {
+/** @param {'jobs'|'professionals'|null} verifiedContext */
+async function loadPosterBrief(posterModel, posterId, verifiedContext = 'jobs') {
   try {
     if (!posterId || !mongoose.Types.ObjectId.isValid(posterId)) return null;
     if (posterModel === 'IndividualUser') {
       const u = await IndividualUser.findById(posterId)
-        .select('firstName lastName phone createdAt jobsEmployerVerifiedAt')
+        .select('firstName lastName phone createdAt jobsEmployerVerifiedAt professionalsVerifiedAt')
         .lean();
       if (!u) return null;
       const displayName =
-        `${u.firstName || ''} ${u.lastName || ''}`.replace(/\s+/g, ' ').trim() || 'Përdorues';
+        `${u.firstName || ''} ${u.lastName || ''}`.replace(/\s+/g, ' ').trim() || null;
+      const verified =
+        verifiedContext === 'professionals'
+          ? isProfessionalVerified(u)
+          : verifiedContext === 'jobs'
+            ? isJobsEmployerVerified(u)
+            : false;
       return {
         kind: 'individual',
         displayName,
         phone: u.phone?.trim() || null,
         memberSince: u.createdAt,
-        verified: isJobsEmployerVerified(u),
+        verified,
       };
     }
     if (posterModel === 'BusinessUser') {
       const u = await BusinessUser.findById(posterId)
-        .select('firstName lastName phone createdAt businessName businessOwner jobsEmployerVerifiedAt')
+        .select(
+          'firstName lastName phone createdAt businessName businessOwner jobsEmployerVerifiedAt professionalsVerifiedAt',
+        )
         .lean();
       if (!u) return null;
       const displayName =
         (u.businessName && String(u.businessName).trim()) ||
         (u.businessOwner && String(u.businessOwner).trim()) ||
         `${u.firstName || ''} ${u.lastName || ''}`.replace(/\s+/g, ' ').trim() ||
-        'Biznes';
+        null;
+      const verified =
+        verifiedContext === 'professionals'
+          ? isProfessionalVerified(u)
+          : verifiedContext === 'jobs'
+            ? isJobsEmployerVerified(u)
+            : false;
       return {
         kind: 'business',
         displayName,
         phone: u.phone?.trim() || null,
         memberSince: u.createdAt,
-        verified: isJobsEmployerVerified(u),
+        verified,
       };
     }
   } catch (e) {
@@ -281,11 +298,24 @@ function directoryCategoryLabel(vertical, categorySlug) {
   return map[categorySlug] ?? categorySlug;
 }
 
-function businessReviewFields(doc, reviewStats) {
+function directoryReviewFields(doc, reviewStats) {
   const stats = reviewStats?.get(String(doc._id));
   return {
     ratingAverage: stats?.ratingAverage ?? null,
     reviewCount: stats?.reviewCount ?? 0,
+  };
+}
+
+function formatProfessionalPortfolioPayload(doc) {
+  return {
+    portfolioItems: (doc.portfolioItems ?? []).map((item) => ({
+      id: String(item.id),
+      title: String(item.title),
+      description: String(item.description || ''),
+      imageUrl: String(item.imageUrl),
+      location: item.location?.trim() || null,
+      sortOrder: item.sortOrder ?? 0,
+    })),
   };
 }
 
@@ -339,10 +369,24 @@ function formatDirectory(doc, cityById, reviewStats) {
       currency: null,
       openingHours: oh,
       openStatusLine,
-      ...businessReviewFields(doc, reviewStats),
+      ...directoryReviewFields(doc, reviewStats),
       reservationsEnabled: Boolean(doc.reservationsEnabled),
       reservationUrl: doc.reservationUrl?.trim() || null,
       servicesHighlight: doc.servicesHighlight?.replace(/\s+/g, ' ').trim() || null,
+    };
+  }
+  if (vertical === 'professionals') {
+    return {
+      ...base,
+      condition: doc.condition ?? null,
+      price: doc.price ?? null,
+      currency: doc.currency ?? null,
+      ...directoryReviewFields(doc, reviewStats),
+      responseTimeHours: doc.responseTimeHours ?? null,
+      servicesHighlight: doc.servicesHighlight?.replace(/\s+/g, ' ').trim() || null,
+      openingHours: null,
+      reservationsEnabled: false,
+      reservationUrl: null,
     };
   }
   return {
@@ -418,6 +462,12 @@ function formatDirectoryDetail(doc, cityById, seller, reviewStats) {
       reservationPartySizes: doc.reservationPartySizes ?? [],
     };
   }
+  if (doc.vertical === 'professionals') {
+    return {
+      ...base,
+      ...formatProfessionalPortfolioPayload(doc),
+    };
+  }
   return base;
 }
 
@@ -458,8 +508,12 @@ async function latestDirectory(vertical, limit) {
     .limit(limit)
     .lean();
   const cityById = await buildCityIndex(docs);
-  const reviewStats =
-    vertical === 'businesses' ? await reviewStatsByListingIds(docs.map((d) => d._id)) : null;
+  let reviewStats = null;
+  if (vertical === 'businesses') {
+    reviewStats = await reviewStatsByListingIds(docs.map((d) => d._id));
+  } else if (vertical === 'professionals') {
+    reviewStats = await professionalReviewStatsByListingIds(docs.map((d) => d._id));
+  }
   return attachMetricsToListings(docs.map((d) => formatDirectory(d, cityById, reviewStats)));
 }
 
@@ -615,7 +669,7 @@ router.get('/businesses/:id', optionalAuth, async (req, res) => {
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(doc.posterModel, doc.posterId);
+    const seller = await loadPosterBrief(doc.posterModel, doc.posterId, null);
     const cityById = await buildCityIndex([doc]);
     const reviewStats = await reviewStatsByListingIds([doc._id]);
     const listing = await attachDetailMetrics(req, formatDirectoryDetail(doc, cityById, seller, reviewStats));
@@ -641,9 +695,10 @@ router.get('/professionals/:id', optionalAuth, async (req, res) => {
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(doc.posterModel, doc.posterId);
+    const seller = await loadPosterBrief(doc.posterModel, doc.posterId, 'professionals');
     const cityById = await buildCityIndex([doc]);
-    const listing = await attachDetailMetrics(req, formatDirectoryDetail(doc, cityById, seller));
+    const reviewStats = await professionalReviewStatsByListingIds([doc._id]);
+    const listing = await attachDetailMetrics(req, formatDirectoryDetail(doc, cityById, seller, reviewStats));
     res.json({ listing });
   } catch (err) {
     console.error('GET /public/listings/professionals/:id:', err?.message || err);

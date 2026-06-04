@@ -52,6 +52,13 @@ export const navItems = [
     platformAdminOnly: true,
   },
   {
+    key: 'professional-verification',
+    title: 'Verifikimet (Prof.)',
+    href: paths.dashboard.professionalVerification,
+    icon: 'shield-check',
+    platformAdminOnly: true,
+  },
+  {
     key: 'referral',
     title: 'Referimi',
     href: paths.dashboard.referral,

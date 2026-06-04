@@ -1,39 +1,42 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Chip, IconButton, Stack, Typography } from '@mui/material';
+import { useRouter } from 'next/navigation';
+import { Box, Chip, Stack } from '@mui/material';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 
-import { ListingMediaActionButton, pseudoRandomListingActionCount } from '@/components/public/listing-media-action-button';
+import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
+import { useUser } from '@/hooks/use-user';
+import {
+  recordListingMetricEvent,
+  toggleListingSave,
+  type ListingMetricKind,
+} from '@/lib/listing-metrics';
+import { paths } from '@/paths';
 
 export interface CardMediaProps {
+  listingKind: ListingMetricKind;
+  listingId: string;
   /** Primary image to render — `null` falls back to a tinted icon panel. */
   imageUrl: string | null;
-  /** Phosphor icon used in the fallback panel. */
   FallbackIcon: PhosphorIcon;
-  /** Alt text for the image. Empty alts are allowed for decorative covers. */
   alt: string;
-  /** Optional small chip rendered top-left over the media (e.g. "Me qira"). */
   topLeftBadge?: string;
-  /** Optional small chip rendered top-right over the media (e.g. "I ri"). */
   topRightBadge?: string;
-  /** Cover height — desktop default is 170px. */
   height?: number;
-  /** Rendered flush along the bottom edge of the image (e.g. promo ticker). */
   bottomOverlay?: React.ReactNode;
+  shareCount?: number;
+  saveCount?: number;
+  saved?: boolean;
 }
 
-/**
- * Shared media slot for the public listing cards. Shows the listing's first
- * photo when available and falls back to a quiet, theme-aware icon panel
- * otherwise. Optional top badges let each card surface its key fact (e.g.
- * "Me qira", "I ri") without competing with the typography below.
- */
 export function CardMedia({
+  listingKind,
+  listingId,
   imageUrl,
   FallbackIcon,
   alt,
@@ -41,12 +44,27 @@ export function CardMedia({
   topRightBadge,
   height = 170,
   bottomOverlay,
+  shareCount: initialShareCount = 0,
+  saveCount: initialSaveCount = 0,
+  saved: initialSaved,
 }: CardMediaProps) {
-  const seed = `${imageUrl ?? ''}|${alt}|${topLeftBadge ?? ''}|${topRightBadge ?? ''}`;
-  const baseSavedCount = React.useMemo(() => pseudoRandomListingActionCount(seed), [seed]);
-  const shareCount = React.useMemo(() => pseudoRandomListingActionCount(`${seed}|share`), [seed]);
-  const [saved, setSaved] = React.useState(false);
-  const visibleSavedCount = saved ? baseSavedCount + 1 : baseSavedCount;
+  const router = useRouter();
+  const { user } = useUser();
+  const [shareCount, setShareCount] = React.useState(initialShareCount);
+  const [saveCount, setSaveCount] = React.useState(initialSaveCount);
+  const [saved, setSaved] = React.useState(Boolean(initialSaved));
+
+  React.useEffect(() => {
+    setShareCount(initialShareCount);
+  }, [initialShareCount]);
+
+  React.useEffect(() => {
+    setSaveCount(initialSaveCount);
+  }, [initialSaveCount]);
+
+  React.useEffect(() => {
+    if (initialSaved !== undefined) setSaved(initialSaved);
+  }, [initialSaved]);
 
   const handleShare = React.useCallback(
     async (event: React.MouseEvent) => {
@@ -55,20 +73,33 @@ export function CardMedia({
       try {
         if (typeof navigator !== 'undefined' && navigator.share) {
           await navigator.share({ title: alt, text: alt, url: window.location.href });
-          return;
-        }
-      } catch {
-        /* noop */
-      }
-      try {
-        if (typeof navigator !== 'undefined') {
+        } else if (typeof navigator !== 'undefined') {
           await navigator.clipboard.writeText(window.location.href);
         }
       } catch {
-        /* noop */
+        /* cancelled or blocked */
+      }
+      const metrics = await recordListingMetricEvent(listingKind, listingId, 'share');
+      if (metrics) setShareCount(metrics.shareCount);
+    },
+    [alt, listingKind, listingId],
+  );
+
+  const handleSave = React.useCallback(
+    async (event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!user) {
+        router.push(paths.user.auth);
+        return;
+      }
+      const metrics = await toggleListingSave(listingKind, listingId);
+      if (metrics) {
+        setSaved(metrics.saved);
+        setSaveCount(metrics.saveCount);
       }
     },
-    [alt],
+    [listingKind, listingId, router, user],
   );
 
   return (
@@ -182,17 +213,12 @@ export function CardMedia({
         />
         <ListingMediaActionButton
           aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
-          count={visibleSavedCount}
+          count={saveCount}
           active={saved}
           icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} />}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            setSaved((prev) => !prev);
-          }}
+          onClick={handleSave}
         />
       </Stack>
     </Box>
   );
 }
-

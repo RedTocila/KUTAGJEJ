@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
+import { ListingCardLink } from '@/components/public/listing-card-link';
 import { Box, Stack, Typography } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
@@ -17,7 +17,7 @@ import { listingMarketplacePublicHref } from '@/paths';
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
-import { findOptionLabel, formatPrice, pseudoRandomMetric, relativeAlbanianDate } from './format-helpers';
+import { findOptionLabel, formatPrice, relativeAlbanianDate } from './format-helpers';
 import { SpecRow, type Spec } from './spec-row';
 
 function conditionIcon(condition: string | null) {
@@ -26,10 +26,7 @@ function conditionIcon(condition: string | null) {
 }
 
 export function MarketplaceCard({ listing }: { listing: PublicMarketplaceListing }) {
-  const viewCount = React.useMemo(
-    () => pseudoRandomMetric(`mk:${listing.id}:${listing.createdAt}`, 120, 9800),
-    [listing.id, listing.createdAt],
-  );
+  const viewCount = listing.viewCount ?? 0;
   const categoryLabel = findOptionLabel(MARKETPLACE_CATEGORY_OPTIONS, listing.category);
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
 
@@ -39,17 +36,24 @@ export function MarketplaceCard({ listing }: { listing: PublicMarketplaceListing
   ];
 
   return (
-    <Link
+    <ListingCardLink
+      listingKind="marketplace"
+      listingId={listing.id}
       href={listingMarketplacePublicHref(listing)}
       prefetch={false}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
       <CardShell>
       <CardMedia
+        listingKind="marketplace"
+        listingId={listing.id}
         imageUrl={listing.imageUrl}
         FallbackIcon={ShoppingBagIcon}
         alt={listing.title}
         topLeftBadge={conditionLabel ?? undefined}
+        shareCount={listing.shareCount}
+        saveCount={listing.saveCount}
+        saved={listing.saved}
       />
       <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
         <Typography
@@ -105,6 +109,6 @@ export function MarketplaceCard({ listing }: { listing: PublicMarketplaceListing
         </Stack>
       </Stack>
     </CardShell>
-    </Link>
+    </ListingCardLink>
   );
 }

@@ -120,6 +120,7 @@ export function BusinessListingDetailDesktop({
   listing,
   similar,
   saved,
+  saveCount,
   onToggleSave,
   showReservation,
   reserveHref,
@@ -141,6 +142,7 @@ export function BusinessListingDetailDesktop({
   listing: PublicDirectoryListingDetail;
   similar: PublicDirectoryListing[];
   saved: boolean;
+  saveCount: number;
   onToggleSave: () => void;
   showReservation: boolean;
   reserveHref: string | null;
@@ -206,6 +208,10 @@ export function BusinessListingDetailDesktop({
                 browseListHref={paths.public.businesses}
                 browseListAriaLabel="Prapa te lista e bizneseve"
                 heroSizes={LISTING_DETAIL_HERO_IMAGE_SIZES}
+                listingKind="businesses"
+                listingId={listing.id}
+                shareCount={listing.shareCount}
+                saveCount={saveCount}
                 bookmark={{ saved, onToggle: onToggleSave }}
               />
             </Box>

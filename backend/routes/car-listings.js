@@ -6,6 +6,7 @@ const authMiddleware = require('../middleware/auth');
 const CarListing = require('../models/CarListing');
 const RealEstateCity = require('../models/RealEstateCity');
 const { validateCarPayload, FINISH_VALUES } = require('../lib/car-field-rules');
+const { attachOwnerMetrics } = require('../lib/listing-metrics');
 
 const router = express.Router();
 
@@ -119,7 +120,8 @@ router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
     const cities = cityObjectIds.length > 0 ? await RealEstateCity.find({ _id: { $in: cityObjectIds } }).lean() : [];
     const cityById = new Map(cities.map((c) => [String(c._id), c]));
 
-    res.json({ listings: docs.map((d) => formatMineListing(d, cityById)) });
+    const listings = docs.map((d) => formatMineListing(d, cityById));
+    res.json({ listings: await attachOwnerMetrics(listings, 'car') });
   } catch (err) {
     console.error('GET /listings/cars/mine:', err?.message || err);
     res.status(500).json({ message: 'Server error' });

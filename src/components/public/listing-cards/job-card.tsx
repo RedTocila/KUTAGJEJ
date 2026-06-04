@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
+import { ListingCardLink } from '@/components/public/listing-card-link';
 import { Box, Stack, Typography } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
@@ -29,7 +29,7 @@ import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 
-import { findOptionLabel, formatPrice, pseudoRandomMetric } from './format-helpers';
+import { findOptionLabel, formatPrice } from './format-helpers';
 import { JobListingCountdownPlaceholder } from './job-listing-countdown';
 import { SpecRow, type Spec } from './spec-row';
 
@@ -45,10 +45,7 @@ function workLocationIcon(value: string) {
 }
 
 export function JobCard({ listing }: { listing: PublicJobListing }) {
-  const viewCount = React.useMemo(
-    () => pseudoRandomMetric(`job:${listing.id}:${listing.createdAt}`, 120, 9800),
-    [listing.id, listing.createdAt],
-  );
+  const viewCount = listing.viewCount ?? 0;
   const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const jobTypeLabel = findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType);
   const workLocationLabel = findOptionLabel(WORK_LOCATION_OPTIONS, listing.workLocation);
@@ -70,13 +67,24 @@ export function JobCard({ listing }: { listing: PublicJobListing }) {
   ];
 
   return (
-    <Link href={listingJobPublicHref(listing)} prefetch={false} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
+    <ListingCardLink
+      listingKind="job"
+      listingId={listing.id}
+      href={listingJobPublicHref(listing)}
+      prefetch={false}
+      style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
+    >
       <CardShell>
       <CardMedia
+        listingKind="job"
+        listingId={listing.id}
         imageUrl={listing.imageUrl}
         FallbackIcon={BriefcaseIcon}
         alt={listing.title}
         topLeftBadge={jobTypeLabel}
+        shareCount={listing.shareCount}
+        saveCount={listing.saveCount}
+        saved={listing.saved}
       />
       <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
         <Typography
@@ -130,6 +138,6 @@ export function JobCard({ listing }: { listing: PublicJobListing }) {
         </Stack>
       </Stack>
     </CardShell>
-    </Link>
+    </ListingCardLink>
   );
 }

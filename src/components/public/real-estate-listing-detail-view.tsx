@@ -31,7 +31,9 @@ import { RealEstateListingGallery } from '@/components/public/real-estate-listin
 import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
-import { formatPrice, pseudoRandomMetric, relativeAlbanianDate } from '@/components/public/listing-cards/format-helpers';
+import { formatPrice, relativeAlbanianDate } from '@/components/public/listing-cards/format-helpers';
+import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
+import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { whatsappHref } from '@/lib/listing-contact';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { PublicRealEstateListing, PublicRealEstateListingDetail } from '@/lib/public-listings-client';
@@ -438,7 +440,11 @@ export function RealEstateListingDetailView({
   const displayPhone =
     listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
 
-  const viewCount = pseudoRandomMetric(`re-detail:${listing.id}:${listing.updatedAt}`, 120, 9800);
+  const viewCount = listing.viewCount ?? 0;
+  const { saved, saveCount, toggleSave } = useListingBookmark('real-estate', listing.id, {
+    saved: listing.saved,
+    saveCount: listing.saveCount,
+  });
 
   const transactionLabel = listing.transactionType === 'rent' ? 'Me qira' : 'Për shitje';
   const wa = whatsappHref(displayPhone);
@@ -470,6 +476,7 @@ export function RealEstateListingDetailView({
 
   return (
     <>
+      <ListingMetricsTracker listingKind="real-estate" listingId={listing.id} />
       {/* JSON-LD is emitted from the route; keep article semantics for headings + listing body. */}
       <Box component="article" sx={{ bgcolor: 'background.default' }}>
         <Container
@@ -520,6 +527,11 @@ export function RealEstateListingDetailView({
                   browseListHref={paths.public.realEstate}
                   browseListAriaLabel="Prapa te lista e pronës"
                   heroSizes={LISTING_DETAIL_HERO_IMAGE_SIZES}
+                  listingKind="real-estate"
+                  listingId={listing.id}
+                  shareCount={listing.shareCount}
+                  saveCount={saveCount}
+                  bookmark={{ saved, onToggle: () => void toggleSave() }}
                 />
               </Box>
               <Box

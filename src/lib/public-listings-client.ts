@@ -1,3 +1,7 @@
+import type { ListingMetrics } from '@/lib/listing-metrics';
+
+export type ListingMetricsFields = ListingMetrics;
+
 /**
  * Server-friendly client for the platform's public listing endpoints.
  *
@@ -7,7 +11,7 @@
  * a vertical may have no listings yet.
  */
 
-export interface PublicRealEstateListing {
+export interface PublicRealEstateListing extends ListingMetricsFields {
   id: string;
   kind: 'real-estate';
   title: string;
@@ -41,7 +45,7 @@ export interface PublicRealEstateListingSeller {
 }
 
 /** Single listing for `/prona/{permalink}` — full description, seller summary. */
-export interface PublicRealEstateListingDetail {
+export interface PublicRealEstateListingDetail extends ListingMetricsFields {
   id: string;
   kind: 'real-estate';
   title: string;
@@ -71,7 +75,7 @@ export interface PublicRealEstateListingDetail {
   permalinkPath?: string;
 }
 
-export interface PublicCarListing {
+export interface PublicCarListing extends ListingMetricsFields {
   id: string;
   kind: 'car';
   description: string;
@@ -102,7 +106,7 @@ export interface PublicCarListingDetail extends Omit<PublicCarListing, 'descript
   updatedAt: string;
 }
 
-export interface PublicJobListing {
+export interface PublicJobListing extends ListingMetricsFields {
   id: string;
   kind: 'job';
   title: string;
@@ -131,7 +135,7 @@ export interface PublicJobListingDetail extends Omit<PublicJobListing, 'descript
   updatedAt: string;
 }
 
-export interface PublicMarketplaceListing {
+export interface PublicMarketplaceListing extends ListingMetricsFields {
   id: string;
   kind: 'marketplace';
   transactionType: 'shes';
@@ -156,7 +160,7 @@ export interface PublicMarketplaceListingDetail extends Omit<PublicMarketplaceLi
   updatedAt: string;
 }
 
-export interface PublicDirectoryListing {
+export interface PublicDirectoryListing extends ListingMetricsFields {
   id: string;
   kind: 'businesses' | 'professionals';
   title: string;

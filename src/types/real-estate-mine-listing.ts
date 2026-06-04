@@ -1,5 +1,7 @@
+import type { ListingMetrics } from '@/lib/listing-metrics';
+
 /** One row from `GET /api/listings/real-estate/mine`. */
-export interface RealEstateMineListing {
+export interface RealEstateMineListing extends ListingMetrics {
   id: string;
   title: string;
   description: string;

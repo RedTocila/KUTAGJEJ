@@ -35,7 +35,7 @@ import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Brief
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 
-import { ListingMediaActionButton, pseudoRandomListingActionCount } from '@/components/public/listing-media-action-button';
+import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
@@ -119,6 +119,8 @@ export function JobListingDetailDesktop({
   listing,
   similar,
   saved,
+  saveCount,
+  shareCount,
   onToggleSave,
   onShare,
   applyHref,
@@ -126,6 +128,8 @@ export function JobListingDetailDesktop({
   listing: PublicJobListingDetail;
   similar: PublicJobListing[];
   saved: boolean;
+  saveCount: number;
+  shareCount: number;
   onToggleSave: () => void;
   onShare: () => void;
   applyHref: string | null | undefined;
@@ -136,11 +140,6 @@ export function JobListingDetailDesktop({
   const heroImage = listing.imageUrl ?? listing.imageUrls[0] ?? null;
   const isNew = isJobListingNew(listing.createdAt);
   const expiresAt = listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
-
-  const metricsSeed = `${listing.title}|${heroImage ?? ''}|${listing.id}`;
-  const baseSavedCount = React.useMemo(() => pseudoRandomListingActionCount(metricsSeed), [metricsSeed]);
-  const shareCount = React.useMemo(() => pseudoRandomListingActionCount(`${metricsSeed}|share`), [metricsSeed]);
-  const visibleSavedCount = saved ? baseSavedCount + 1 : baseSavedCount;
 
   const heroControlButtonSx = {
     bgcolor: alpha('#000', 0.45),
@@ -259,7 +258,7 @@ export function JobListingDetailDesktop({
                   <Box data-hero-control component="span" sx={{ display: 'inline-flex' }}>
                     <ListingMediaActionButton
                       aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
-                      count={visibleSavedCount}
+                      count={saveCount}
                       surface="glass"
                       active={saved}
                       icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} />}

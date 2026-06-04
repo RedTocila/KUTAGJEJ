@@ -77,12 +77,14 @@ export function ProfessionalListingDetailDesktop({
   listing,
   similar,
   saved,
+  saveCount,
   onToggleSave,
   canonicalUrl,
 }: {
   listing: PublicDirectoryListingDetail;
   similar: PublicDirectoryListing[];
   saved: boolean;
+  saveCount: number;
   onToggleSave: () => void;
   canonicalUrl: string;
 }) {
@@ -141,6 +143,10 @@ export function ProfessionalListingDetailDesktop({
                   browseListHref={paths.public.professionals}
                   browseListAriaLabel="Prapa te lista e profesionistëve"
                   heroSizes={LISTING_DETAIL_HERO_IMAGE_SIZES}
+                  listingKind="professionals"
+                  listingId={listing.id}
+                  shareCount={listing.shareCount}
+                  saveCount={saveCount}
                   bookmark={{ saved, onToggle: onToggleSave }}
                   hideSlideCount
                 />

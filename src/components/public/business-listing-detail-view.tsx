@@ -41,8 +41,8 @@ import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib
 import { BusinessListingDetailDesktop } from '@/components/public/business-listing-detail-desktop';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { paths } from '@/paths';
-
-const SAVED_BUSINESSES_KEY = 'kutagjej-saved-businesses';
+import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
+import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 
 const FONT_BODY = '0.875rem';
 const FONT_CAPTION = '0.75rem';
@@ -101,7 +101,10 @@ export function BusinessListingDetailView({
   canonicalUrl?: string;
   similar?: PublicDirectoryListing[];
 }) {
-  const [saved, setSaved] = React.useState(false);
+  const { saved, saveCount, toggleSave } = useListingBookmark('businesses', listing.id, {
+    saved: listing.saved,
+    saveCount: listing.saveCount,
+  });
   const [menuCategory, setMenuCategory] = React.useState('');
   const [reserveDate, setReserveDate] = React.useState('');
   const [reserveTime, setReserveTime] = React.useState('');
@@ -126,32 +129,9 @@ export function BusinessListingDetailView({
   const reserveHref = listing.reservationUrl?.trim() || telHref;
 
   React.useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SAVED_BUSINESSES_KEY);
-      const ids: string[] = raw ? (JSON.parse(raw) as string[]) : [];
-      setSaved(ids.includes(listing.id));
-    } catch {
-      /* noop */
-    }
-  }, [listing.id]);
-
-  React.useEffect(() => {
     if (!reserveDate && dateOptions[0]) setReserveDate(dateOptions[0].value);
     if (!reserveTime) setReserveTime(TIME_OPTIONS[4] ?? '19:00');
   }, [dateOptions, reserveDate, reserveTime]);
-
-  const toggleSave = () => {
-    try {
-      const raw = localStorage.getItem(SAVED_BUSINESSES_KEY);
-      const ids = new Set<string>(raw ? (JSON.parse(raw) as string[]) : []);
-      if (ids.has(listing.id)) ids.delete(listing.id);
-      else ids.add(listing.id);
-      localStorage.setItem(SAVED_BUSINESSES_KEY, JSON.stringify([...ids]));
-      setSaved(ids.has(listing.id));
-    } catch {
-      /* noop */
-    }
-  };
 
   const handleReserve = () => {
     if (listing.reservationUrl?.trim()) {
@@ -182,11 +162,13 @@ export function BusinessListingDetailView({
 
   return (
     <>
+      <ListingMetricsTracker listingKind="businesses" listingId={listing.id} />
       <BusinessListingDetailDesktop
         listing={listing}
         similar={similar}
         saved={saved}
-        onToggleSave={toggleSave}
+        saveCount={saveCount}
+        onToggleSave={() => void toggleSave()}
         showReservation={showReservation}
         reserveHref={reserveHref}
         reserveDate={reserveDate}
@@ -213,9 +195,13 @@ export function BusinessListingDetailView({
           placeholderIcon={listingDetailGalleryPlaceholder(listing)}
           browseListHref={paths.public.businesses}
           browseListAriaLabel="Prapa te lista e bizneseve"
+          listingKind="businesses"
+          listingId={listing.id}
+          shareCount={listing.shareCount}
+          saveCount={saveCount}
           bookmark={{
             saved,
-            onToggle: toggleSave,
+            onToggle: () => void toggleSave(),
           }}
         />
 

@@ -45,12 +45,14 @@ import {
   findOptionLabel,
   formatKilometers,
   formatPrice,
-  pseudoRandomMetric,
   relativeAlbanianDate,
 } from '@/components/public/listing-cards/format-helpers';
 import { JobListingCountdown } from '@/components/public/listing-cards/job-listing-countdown';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
+import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
+import { useListingBookmark } from '@/hooks/use-listing-bookmark';
+import type { ListingMetricKind } from '@/lib/listing-metrics';
 
 /** Tiny strip card for related listings — plain links, no theme callbacks crossing RSC boundaries. */
 export interface VerticalListingSimilarItem {
@@ -226,7 +228,12 @@ export function VerticalListingDetailView(props: {
     ? `${wa}?text=${encodeURIComponent(`Përshëndetje, jam i interesuari për: «${listingTitle(listing)}» (${canonicalUrl}).`)}`
     : undefined;
 
-  const viewSeed = pseudoRandomMetric(`vd:${listing.id}:${listing.updatedAt}`, 110, 6200);
+  const viewCount = listing.viewCount ?? 0;
+  const metricKind = listing.kind as ListingMetricKind;
+  const { saved, saveCount, toggleSave } = useListingBookmark(metricKind, listing.id, {
+    saved: 'saved' in listing ? listing.saved : undefined,
+    saveCount: listing.saveCount,
+  });
 
   let mapQuery: string | null = null;
   if ('cityName' in listing && listing.cityName) {
@@ -235,6 +242,7 @@ export function VerticalListingDetailView(props: {
 
   return (
     <>
+      <ListingMetricsTracker listingKind={metricKind} listingId={listing.id} />
       <Box component="article" sx={{ bgcolor: 'background.default', pb: { xs: 14, md: 6 } }}>
         <Container maxWidth={false} sx={{ px: { xs: 0, md: 3 }, bgcolor: 'background.default' }}>
           <Box
@@ -263,6 +271,11 @@ export function VerticalListingDetailView(props: {
                   browseListHref={browseHref}
                   browseListAriaLabel="Prapa te lista"
                   heroSizes={LISTING_DETAIL_HERO_IMAGE_SIZES}
+                  listingKind={metricKind}
+                  listingId={listing.id}
+                  shareCount={listing.shareCount}
+                  saveCount={saveCount}
+                  bookmark={{ saved, onToggle: () => void toggleSave() }}
                 />
               </Box>
               <Box
@@ -318,7 +331,7 @@ export function VerticalListingDetailView(props: {
 
               <Stack direction="row" sx={{ flexWrap: 'wrap', gap: { xs: 1.25, sm: 2 }, color: 'text.secondary' }}>
                 {subtitleLine(listing)}
-                <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewSeed)} shikime</Typography>
+                <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)} shikime</Typography>
                 {listing.kind === 'job' ? (
                   <JobListingCountdown
                     expiresAt={

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const authMiddleware = require('../middleware/auth');
 const RealEstateCity = require('../models/RealEstateCity');
 const RealEstateListing = require('../models/RealEstateListing');
+const { attachOwnerMetrics } = require('../lib/listing-metrics');
 const {
   validateRealEstatePayload,
   needsCondition,
@@ -77,7 +78,8 @@ router.get('/real-estate/mine', authMiddleware, requirePortalUser, async (req, r
       cityObjectIds.length > 0 ? await RealEstateCity.find({ _id: { $in: cityObjectIds } }).lean() : [];
     const cityById = new Map(cities.map((c) => [String(c._id), c]));
 
-    res.json({ listings: docs.map((d) => formatMineListing(d, cityById)) });
+    const listings = docs.map((d) => formatMineListing(d, cityById));
+    res.json({ listings: await attachOwnerMetrics(listings, 'real-estate') });
   } catch (error) {
     console.error('GET /listings/real-estate/mine:', error?.message || error);
     res.status(500).json({ message: 'Server error' });

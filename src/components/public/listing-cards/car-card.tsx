@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
+import { ListingCardLink } from '@/components/public/listing-card-link';
 import { Box, Stack, Typography } from '@mui/material';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
@@ -19,15 +19,12 @@ import { listingCarPublicHref } from '@/paths';
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
-import { findOptionLabel, formatKilometers, formatPrice, pseudoRandomMetric, relativeAlbanianDate } from './format-helpers';
+import { findOptionLabel, formatKilometers, formatPrice, relativeAlbanianDate } from './format-helpers';
 import { SpecRow, type Spec } from './spec-row';
 
 export function CarCard({ listing }: { listing: PublicCarListing }) {
   const title = [listing.make, listing.model, listing.variant].filter(Boolean).join(' ');
-  const viewCount = React.useMemo(
-    () => pseudoRandomMetric(`car:${listing.id}:${listing.createdAt}`, 120, 9800),
-    [listing.id, listing.createdAt],
-  );
+  const viewCount = listing.viewCount ?? 0;
   const fuelLabel = findOptionLabel(FUEL_TYPE_OPTIONS, listing.fuelType);
   const transmissionLabel = findOptionLabel(TRANSMISSION_OPTIONS, listing.transmission);
   const colourLabel = findOptionLabel(CAR_COLOUR_OPTIONS, listing.color);
@@ -41,9 +38,25 @@ export function CarCard({ listing }: { listing: PublicCarListing }) {
   ];
 
   return (
-    <Link href={listingCarPublicHref(listing)} prefetch={false} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
+    <ListingCardLink
+      listingKind="car"
+      listingId={listing.id}
+      href={listingCarPublicHref(listing)}
+      prefetch={false}
+      style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
+    >
     <CardShell>
-      <CardMedia imageUrl={listing.imageUrl} FallbackIcon={CarIcon} alt={title} topLeftBadge={`${listing.year}`} />
+      <CardMedia
+        listingKind="car"
+        listingId={listing.id}
+        imageUrl={listing.imageUrl}
+        FallbackIcon={CarIcon}
+        alt={title}
+        topLeftBadge={`${listing.year}`}
+        shareCount={listing.shareCount}
+        saveCount={listing.saveCount}
+        saved={listing.saved}
+      />
       <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
         <Typography
           variant="caption"
@@ -98,6 +111,6 @@ export function CarCard({ listing }: { listing: PublicCarListing }) {
         </Stack>
       </Stack>
     </CardShell>
-    </Link>
+    </ListingCardLink>
   );
 }

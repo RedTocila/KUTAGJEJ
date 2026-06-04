@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
+import { ListingCardLink } from '@/components/public/listing-card-link';
 import { Box, Stack, Typography } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { CalendarCheck as CalendarCheckIcon } from '@phosphor-icons/react/dist/ssr/CalendarCheck';
@@ -25,7 +25,6 @@ import {
   findOptionLabel,
   formatBusinessOpeningHoursForCard,
   formatPrice,
-  pseudoRandomMetric,
   relativeAlbanianDate,
 } from './format-helpers';
 import { SpecRow, type Spec } from './spec-row';
@@ -37,10 +36,7 @@ function conditionIcon(condition: string | null) {
 
 /** Biznese = venues (eat, drink, reserve) — minimal card layout. */
 function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing }) {
-  const viewCount = React.useMemo(
-    () => pseudoRandomMetric(`dir:${listing.id}:${listing.createdAt}`, 80, 4200),
-    [listing.id, listing.createdAt],
-  );
+  const viewCount = listing.viewCount ?? 0;
 
   const openingHoursLabel = listing.openingHours
     ? formatBusinessOpeningHoursForCard(listing.openingHours)
@@ -49,17 +45,24 @@ function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing })
   const topBadge = listing.reservationsEnabled ? 'Rezervim' : undefined;
 
   return (
-    <Link
+    <ListingCardLink
+      listingKind="businesses"
+      listingId={listing.id}
       href={listingBusinessPublicHref(listing)}
       prefetch={false}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
       <CardShell>
         <CardMedia
+          listingKind="businesses"
+          listingId={listing.id}
           imageUrl={listing.imageUrl}
           FallbackIcon={StorefrontIcon}
           alt={listing.title}
           topLeftBadge={topBadge}
+          shareCount={listing.shareCount}
+          saveCount={listing.saveCount}
+          saved={listing.saved}
           bottomOverlay={
             listing.reservationsEnabled ? (
               <BusinessPromoBanner servicesHighlight={listing.servicesHighlight} variant="card" overlay />
@@ -149,16 +152,13 @@ function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing })
           </Stack>
         </Stack>
       </CardShell>
-    </Link>
+    </ListingCardLink>
   );
 }
 
 /** Profesionistë — hourly/project rates (keeps price line). */
 function ProfessionalListingCardBody({ listing }: { listing: PublicDirectoryListing }) {
-  const viewCount = React.useMemo(
-    () => pseudoRandomMetric(`dir:${listing.id}:${listing.createdAt}`, 80, 4200),
-    [listing.id, listing.createdAt],
-  );
+  const viewCount = listing.viewCount ?? 0;
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
 
   const specs: Spec[] = [
@@ -167,17 +167,24 @@ function ProfessionalListingCardBody({ listing }: { listing: PublicDirectoryList
   ];
 
   return (
-    <Link
+    <ListingCardLink
+      listingKind="professionals"
+      listingId={listing.id}
       href={listingProfessionalPublicHref(listing)}
       prefetch={false}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
       <CardShell>
         <CardMedia
+          listingKind="professionals"
+          listingId={listing.id}
           imageUrl={listing.imageUrl}
           FallbackIcon={BriefcaseIcon}
           alt={listing.title}
           topLeftBadge={conditionLabel ?? undefined}
+          shareCount={listing.shareCount}
+          saveCount={listing.saveCount}
+          saved={listing.saved}
         />
         <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
           <Typography
@@ -233,7 +240,7 @@ function ProfessionalListingCardBody({ listing }: { listing: PublicDirectoryList
           </Stack>
         </Stack>
       </CardShell>
-    </Link>
+    </ListingCardLink>
   );
 }
 

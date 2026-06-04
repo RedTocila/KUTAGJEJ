@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const authMiddleware = require('../middleware/auth');
 const MarketplaceListing = require('../models/MarketplaceListing');
 const RealEstateCity = require('../models/RealEstateCity');
+const { attachOwnerMetrics } = require('../lib/listing-metrics');
 
 const router = express.Router();
 
@@ -65,24 +66,23 @@ router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
     const cities = cityObjectIds.length > 0 ? await RealEstateCity.find({ _id: { $in: cityObjectIds } }).lean() : [];
     const cityById = new Map(cities.map((c) => [String(c._id), c]));
 
-    res.json({
-      listings: docs.map((d) => {
-        const city = cityById.get(String(d.cityId));
-        return {
-          id: String(d._id),
-          transactionType: d.transactionType,
-          title: d.title,
-          category: d.category,
-          condition: d.condition ?? null,
-          price: d.price ?? null,
-          currency: d.currency ?? null,
-          cityId: d.cityId ? String(d.cityId) : null,
-          cityName: city?.name ?? null,
-          contactPhone: d.contactPhone ?? null,
-          createdAt: d.createdAt,
-        };
-      }),
+    const listings = docs.map((d) => {
+      const city = cityById.get(String(d.cityId));
+      return {
+        id: String(d._id),
+        transactionType: d.transactionType,
+        title: d.title,
+        category: d.category,
+        condition: d.condition ?? null,
+        price: d.price ?? null,
+        currency: d.currency ?? null,
+        cityId: d.cityId ? String(d.cityId) : null,
+        cityName: city?.name ?? null,
+        contactPhone: d.contactPhone ?? null,
+        createdAt: d.createdAt,
+      };
     });
+    res.json({ listings: await attachOwnerMetrics(listings, 'marketplace') });
   } catch (err) {
     console.error('GET /listings/marketplace/mine:', err?.message || err);
     res.status(500).json({ message: 'Server error' });

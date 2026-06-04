@@ -47,6 +47,8 @@ import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS, WORK_LOCATION_OPTIONS } from '@
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import { useUser } from '@/hooks/use-user';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
+import { ListingOwnerMetrics } from '@/components/user/listing-owner-metrics';
+import type { ListingMetrics } from '@/lib/listing-metrics';
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -76,11 +78,12 @@ function Row({ icon: Icon, children }: { icon: PhosphorIcon; children: React.Rea
   );
 }
 
-function BaseCard({ title, chips, children, createdAt }: {
+function BaseCard({ title, chips, children, createdAt, metrics }: {
   title: string;
   chips?: React.ReactNode;
   children: React.ReactNode;
   createdAt: string;
+  metrics?: Partial<ListingMetrics>;
 }) {
   return (
     <Card elevation={0} sx={{
@@ -96,6 +99,7 @@ function BaseCard({ title, chips, children, createdAt }: {
         <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5 }}>
           {format(new Date(createdAt), 'd MMM yyyy')}
         </Typography>
+        {metrics ? <ListingOwnerMetrics metrics={metrics} /> : null}
       </CardContent>
     </Card>
   );
@@ -113,6 +117,7 @@ function RealEstateCard({ l }: { l: RealEstateMineListing }) {
     <BaseCard
       title={l.title}
       createdAt={l.createdAt}
+      metrics={l}
       chips={<>
         <Chip size="small" label={l.transactionType === 'rent' ? 'Rent' : 'Sale'} color={l.transactionType === 'rent' ? 'info' : 'secondary'} variant="outlined" sx={{ fontWeight: 600 }} />
         <Chip size="small" label={propertyCategoryLabel(l.propertyCategory)} variant="outlined" sx={{ fontWeight: 600 }} />
@@ -140,6 +145,7 @@ function CarCard({ l }: { l: CarMineListing }) {
     <BaseCard
       title={title}
       createdAt={l.createdAt}
+      metrics={l}
       chips={<>
         <Chip size="small" label={l.year} variant="outlined" sx={{ fontWeight: 600 }} />
         <Chip size="small" label={l.transmission} variant="outlined" sx={{ fontWeight: 600 }} />
@@ -167,6 +173,7 @@ function JobCard({ l }: { l: JobMineListing }) {
     <BaseCard
       title={l.title}
       createdAt={l.createdAt}
+      metrics={l}
       chips={<>
         <Chip size="small" label={jobTypeLabel} variant="outlined" sx={{ fontWeight: 600 }} />
         <Chip size="small" label={workLocLabel} variant="outlined" color="info" sx={{ fontWeight: 600 }} />
@@ -192,6 +199,7 @@ function MarketplaceCard({ l }: { l: MarketplaceMineListing }) {
     <BaseCard
       title={l.title}
       createdAt={l.createdAt}
+      metrics={l}
       chips={<>
         <Chip size="small" label={categoryLabel} variant="outlined" sx={{ fontWeight: 600 }} />
         {l.condition ? <Chip size="small" label={conditionLabel} variant="outlined" color="success" sx={{ fontWeight: 600 }} /> : null}

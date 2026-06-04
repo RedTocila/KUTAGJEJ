@@ -18,8 +18,9 @@ import { ShoppingBag as ShoppingBagIcon } from '@phosphor-icons/react/dist/ssr/S
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle';
 
-import { ListingMediaActionButton, pseudoRandomListingActionCount } from '@/components/public/listing-media-action-button';
+import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { recordListingMetricEvent, type ListingMetricKind } from '@/lib/listing-metrics';
 import type { ListingGalleryPlaceholderKey } from '@/lib/listing-gallery-placeholder';
 import { paths } from '@/paths';
 
@@ -70,6 +71,10 @@ export function RealEstateListingGallery(props: {
   hideSlideCount?: boolean;
   /** Share / save chip surface — `glass` is soft dark transparent on photo heroes. */
   mediaActionSurface?: 'hero' | 'glass' | 'card';
+  listingKind?: ListingMetricKind;
+  listingId?: string;
+  shareCount?: number;
+  saveCount?: number;
 }) {
   const {
     title,
@@ -81,10 +86,23 @@ export function RealEstateListingGallery(props: {
     bookmark,
     hideSlideCount = false,
     mediaActionSurface = 'hero',
+    listingKind,
+    listingId,
+    shareCount: initialShareCount = 0,
+    saveCount: initialSaveCount = 0,
   } = props;
   const urls = urlsRaw.filter(Boolean);
-  const metricsSeed = `${title}|${urls.join('|')}|${browseListHref}`;
+  const [shareCount, setShareCount] = React.useState(initialShareCount);
+  const [saveCount, setSaveCount] = React.useState(initialSaveCount);
   const prefersReducedMotion = usePrefersReducedMotion();
+
+  React.useEffect(() => {
+    setShareCount(initialShareCount);
+  }, [initialShareCount]);
+
+  React.useEffect(() => {
+    setSaveCount(initialSaveCount);
+  }, [initialSaveCount]);
   const showPlaceholder = urls.length === 0;
 
   const [active, setActive] = React.useState(0);
@@ -130,10 +148,6 @@ export function RealEstateListingGallery(props: {
     professional: UserCircleIcon,
   };
   const PlaceholderSvg = PLACEHOLDER_BY_KEY[placeholderIcon];
-
-  const baseSavedCount = React.useMemo(() => pseudoRandomListingActionCount(metricsSeed), [metricsSeed]);
-  const shareCount = React.useMemo(() => pseudoRandomListingActionCount(`${metricsSeed}|share`), [metricsSeed]);
-  const visibleSavedCount = bookmark?.saved ? baseSavedCount + 1 : baseSavedCount;
 
   const hasMultipleImages = urls.length > 1;
 
@@ -259,8 +273,12 @@ export function RealEstateListingGallery(props: {
       } catch {
         /* noop */
       }
+      if (listingKind && listingId) {
+        const metrics = await recordListingMetricEvent(listingKind, listingId, 'share');
+        if (metrics) setShareCount(metrics.shareCount);
+      }
     },
-    [title],
+    [title, listingKind, listingId],
   );
 
   return (
@@ -430,7 +448,7 @@ export function RealEstateListingGallery(props: {
                       : (bookmark.ariaLabelSave ?? 'Ruaj njoftimin')
                     : 'Ruaj njoftimin'
                 }
-                count={visibleSavedCount}
+                count={saveCount}
                 surface={mediaActionSurface}
                 active={bookmark?.saved}
                 disabled={!bookmark}

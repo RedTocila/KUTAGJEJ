@@ -10,6 +10,8 @@ const DirectoryListing = require('../models/DirectoryListing');
 const RealEstateCity = require('../models/RealEstateCity');
 const { realEstatePermalink } = require('../lib/real-estate-permalink');
 const { listingPermalinkFromSlugSource } = require('../lib/listing-permalink');
+const { attachMetricsToListings, attachMetricsToListing, fetchMetricsMap, saverFromUser } = require('../lib/listing-metrics');
+const optionalAuth = require('../middleware/optional-auth');
 
 /** Venue & service categories for Biznese (not commercial real estate). */
 const BUSINESS_CATEGORY_LABELS = {
@@ -367,13 +369,13 @@ function formatDirectoryDetail(doc, cityById, seller) {
 async function latestRealEstate(limit) {
   const docs = await RealEstateListing.find().sort({ createdAt: -1 }).limit(limit).lean();
   const cityById = await buildCityIndex(docs);
-  return docs.map((d) => formatRealEstate(d, cityById));
+  return attachMetricsToListings(docs.map((d) => formatRealEstate(d, cityById)));
 }
 
 async function latestCars(limit) {
   const docs = await CarListing.find().sort({ createdAt: -1 }).limit(limit).lean();
   const cityById = await buildCityIndex(docs);
-  return docs.map((d) => formatCar(d, cityById));
+  return attachMetricsToListings(docs.map((d) => formatCar(d, cityById)));
 }
 
 async function latestJobs(limit) {
@@ -382,7 +384,7 @@ async function latestJobs(limit) {
     .limit(limit)
     .lean();
   const cityById = await buildCityIndex(docs);
-  return docs.map((d) => formatJob(d, cityById));
+  return attachMetricsToListings(docs.map((d) => formatJob(d, cityById)));
 }
 
 async function countActiveJobs() {
@@ -392,7 +394,7 @@ async function countActiveJobs() {
 async function latestMarketplace(limit) {
   const docs = await MarketplaceListing.find().sort({ createdAt: -1 }).limit(limit).lean();
   const cityById = await buildCityIndex(docs);
-  return docs.map((d) => formatMarketplace(d, cityById));
+  return attachMetricsToListings(docs.map((d) => formatMarketplace(d, cityById)));
 }
 
 async function latestDirectory(vertical, limit) {
@@ -401,7 +403,13 @@ async function latestDirectory(vertical, limit) {
     .limit(limit)
     .lean();
   const cityById = await buildCityIndex(docs);
-  return docs.map((d) => formatDirectory(d, cityById));
+  return attachMetricsToListings(docs.map((d) => formatDirectory(d, cityById)));
+}
+
+async function attachDetailMetrics(req, listing) {
+  const saver = saverFromUser(req.user);
+  const map = await fetchMetricsMap([{ kind: listing.kind, listingId: listing.id }], saver);
+  return attachMetricsToListing(listing, map, saver);
 }
 
 /** GET /api/public/listings/latest — newest listings per vertical (homepage). */
@@ -447,7 +455,7 @@ router.get('/latest', async (req, res) => {
 });
 
 /** GET /api/public/listings/real-estate/:id — detail + seller summary (SSR / SEO page). */
-router.get('/real-estate/:id', async (req, res) => {
+router.get('/real-estate/:id', optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
     if (!mongoose.isValidObjectId(rawId)) {
@@ -461,14 +469,15 @@ router.get('/real-estate/:id', async (req, res) => {
     }
     const seller = await loadPosterBrief(doc.posterModel, doc.posterId);
     const cityById = await buildCityIndex([doc]);
-    res.json({ listing: formatRealEstateDetail(doc, cityById, seller) });
+    const listing = await attachDetailMetrics(req, formatRealEstateDetail(doc, cityById, seller));
+    res.json({ listing });
   } catch (err) {
     console.error('GET /public/listings/real-estate/:id:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-router.get('/cars/:id', async (req, res) => {
+router.get('/cars/:id', optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
     if (!mongoose.isValidObjectId(rawId)) {
@@ -482,14 +491,15 @@ router.get('/cars/:id', async (req, res) => {
     }
     const seller = await loadPosterBrief(doc.posterModel, doc.posterId);
     const cityById = await buildCityIndex([doc]);
-    res.json({ listing: formatCarDetail(doc, cityById, seller) });
+    const listing = await attachDetailMetrics(req, formatCarDetail(doc, cityById, seller));
+    res.json({ listing });
   } catch (err) {
     console.error('GET /public/listings/cars/:id:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-router.get('/jobs/:id', async (req, res) => {
+router.get('/jobs/:id', optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
     if (!mongoose.isValidObjectId(rawId)) {
@@ -503,14 +513,15 @@ router.get('/jobs/:id', async (req, res) => {
     }
     const seller = await loadPosterBrief(doc.posterModel, doc.posterId);
     const cityById = await buildCityIndex([doc]);
-    res.json({ listing: formatJobDetail(doc, cityById, seller) });
+    const listing = await attachDetailMetrics(req, formatJobDetail(doc, cityById, seller));
+    res.json({ listing });
   } catch (err) {
     console.error('GET /public/listings/jobs/:id:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-router.get('/marketplace/:id', async (req, res) => {
+router.get('/marketplace/:id', optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
     if (!mongoose.isValidObjectId(rawId)) {
@@ -524,14 +535,15 @@ router.get('/marketplace/:id', async (req, res) => {
     }
     const seller = await loadPosterBrief(doc.posterModel, doc.posterId);
     const cityById = await buildCityIndex([doc]);
-    res.json({ listing: formatMarketplaceDetail(doc, cityById, seller) });
+    const listing = await attachDetailMetrics(req, formatMarketplaceDetail(doc, cityById, seller));
+    res.json({ listing });
   } catch (err) {
     console.error('GET /public/listings/marketplace/:id:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-router.get('/businesses/:id', async (req, res) => {
+router.get('/businesses/:id', optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
     if (!mongoose.isValidObjectId(rawId)) {
@@ -548,14 +560,15 @@ router.get('/businesses/:id', async (req, res) => {
     }
     const seller = await loadPosterBrief(doc.posterModel, doc.posterId);
     const cityById = await buildCityIndex([doc]);
-    res.json({ listing: formatDirectoryDetail(doc, cityById, seller) });
+    const listing = await attachDetailMetrics(req, formatDirectoryDetail(doc, cityById, seller));
+    res.json({ listing });
   } catch (err) {
     console.error('GET /public/listings/businesses/:id:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-router.get('/professionals/:id', async (req, res) => {
+router.get('/professionals/:id', optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
     if (!mongoose.isValidObjectId(rawId)) {
@@ -572,7 +585,8 @@ router.get('/professionals/:id', async (req, res) => {
     }
     const seller = await loadPosterBrief(doc.posterModel, doc.posterId);
     const cityById = await buildCityIndex([doc]);
-    res.json({ listing: formatDirectoryDetail(doc, cityById, seller) });
+    const listing = await attachDetailMetrics(req, formatDirectoryDetail(doc, cityById, seller));
+    res.json({ listing });
   } catch (err) {
     console.error('GET /public/listings/professionals/:id:', err?.message || err);
     res.status(500).json({ message: 'Server error' });

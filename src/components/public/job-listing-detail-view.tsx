@@ -50,10 +50,11 @@ import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-list
 import { JobListingDetailDesktop } from '@/components/public/job-listing-detail-desktop';
 import { JobVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
+import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
+import { useListingBookmark } from '@/hooks/use-listing-bookmark';
+import { recordListingMetricEvent } from '@/lib/listing-metrics';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { paths } from '@/paths';
-
-const SAVED_JOBS_KEY = 'kutagjej-saved-jobs';
 
 /** 14px body — standard readable size on mobile. */
 const FONT_BODY = '0.875rem';
@@ -141,7 +142,15 @@ export function JobListingDetailView({
   canonicalUrl: string;
   similar?: PublicJobListing[];
 }) {
-  const [saved, setSaved] = React.useState(false);
+  const { saved, saveCount, toggleSave } = useListingBookmark('job', listing.id, {
+    saved: listing.saved,
+    saveCount: listing.saveCount,
+  });
+  const [shareCount, setShareCount] = React.useState(listing.shareCount ?? 0);
+
+  React.useEffect(() => {
+    setShareCount(listing.shareCount ?? 0);
+  }, [listing.shareCount]);
 
   const expiresAt = listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
   const sections = React.useMemo(() => buildJobDetailSections(listing), [listing]);
@@ -161,43 +170,18 @@ export function JobListingDetailView({
     ScheduleOutlined,
   ] as const;
 
-  React.useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SAVED_JOBS_KEY);
-      const ids: string[] = raw ? (JSON.parse(raw) as string[]) : [];
-      setSaved(ids.includes(listing.id));
-    } catch {
-      /* noop */
-    }
-  }, [listing.id]);
-
-  const toggleSave = () => {
-    try {
-      const raw = localStorage.getItem(SAVED_JOBS_KEY);
-      const ids = new Set<string>(raw ? (JSON.parse(raw) as string[]) : []);
-      if (ids.has(listing.id)) ids.delete(listing.id);
-      else ids.add(listing.id);
-      localStorage.setItem(SAVED_JOBS_KEY, JSON.stringify([...ids]));
-      setSaved(ids.has(listing.id));
-    } catch {
-      /* noop */
-    }
-  };
-
   const handleShare = async () => {
     try {
       if (navigator.share) {
         await navigator.share({ title: listing.title, text: listing.title, url: canonicalUrl });
-        return;
+      } else {
+        await navigator.clipboard.writeText(canonicalUrl);
       }
     } catch {
       /* noop */
     }
-    try {
-      await navigator.clipboard.writeText(canonicalUrl);
-    } catch {
-      /* noop */
-    }
+    const metrics = await recordListingMetricEvent('job', listing.id, 'share');
+    if (metrics) setShareCount(metrics.shareCount);
   };
 
   /** Sticky Ruaj/Apliko bar — safe-area counted once via nav offset on mobile. */
@@ -209,11 +193,14 @@ export function JobListingDetailView({
 
   return (
     <>
+      <ListingMetricsTracker listingKind="job" listingId={listing.id} />
       <JobListingDetailDesktop
         listing={listing}
         similar={similar}
         saved={saved}
-        onToggleSave={toggleSave}
+        saveCount={saveCount}
+        shareCount={shareCount}
+        onToggleSave={() => void toggleSave()}
         onShare={() => void handleShare()}
         applyHref={applyHref}
       />
@@ -234,7 +221,11 @@ export function JobListingDetailView({
           placeholderIcon={listingDetailGalleryPlaceholder(listing)}
           browseListHref={paths.public.jobs}
           browseListAriaLabel="Prapa te lista e punës"
-          bookmark={{ saved, onToggle: toggleSave }}
+          bookmark={{ saved, onToggle: () => void toggleSave() }}
+          listingKind="job"
+          listingId={listing.id}
+          shareCount={shareCount}
+          saveCount={saveCount}
           hideSlideCount
           mediaActionSurface="glass"
         />

@@ -1,6 +1,7 @@
 'use client';
 
 import type { ListingCategory } from '@/types/listing-category';
+import type { ListingMetrics } from '@/lib/listing-metrics';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
@@ -49,7 +50,7 @@ export async function listCategoriesPublic(): Promise<{ categories?: ListingCate
 // Types for "my listings" responses
 // ---------------------------------------------------------------------------
 
-export interface CarMineListing {
+export interface CarMineListing extends ListingMetrics {
   id: string;
   make: string;
   model: string;
@@ -68,7 +69,7 @@ export interface CarMineListing {
   createdAt: string;
 }
 
-export interface JobMineListing {
+export interface JobMineListing extends ListingMetrics {
   id: string;
   title: string;
   description: string;
@@ -84,7 +85,7 @@ export interface JobMineListing {
   createdAt: string;
 }
 
-export interface MarketplaceMineListing {
+export interface MarketplaceMineListing extends ListingMetrics {
   id: string;
   title: string;
   category: string;

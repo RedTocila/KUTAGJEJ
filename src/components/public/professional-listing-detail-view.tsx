@@ -57,8 +57,8 @@ import {
 } from '@/lib/professional-listing-detail-content';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { paths } from '@/paths';
-
-const SAVED_PROFESSIONALS_KEY = 'kutagjej-saved-professionals';
+import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
+import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 
 const FONT_BODY = '0.875rem';
 const FONT_CAPTION = '0.75rem';
@@ -83,7 +83,10 @@ export function ProfessionalListingDetailView({
   canonicalUrl: string;
   similar?: PublicDirectoryListing[];
 }) {
-  const [saved, setSaved] = React.useState(false);
+  const { saved, saveCount, toggleSave } = useListingBookmark('professionals', listing.id, {
+    saved: listing.saved,
+    saveCount: listing.saveCount,
+  });
 
   const displayName = React.useMemo(() => professionalDisplayName(listing), [listing]);
   const subtitle = React.useMemo(() => professionalSubtitle(listing), [listing]);
@@ -104,29 +107,6 @@ export function ProfessionalListingDetailView({
     ? `${wa}?text=${encodeURIComponent(`Përshëndetje, jam i interesuar për shërbimet tuaja «${displayName}» (${canonicalUrl}).`)}`
     : undefined;
 
-  React.useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SAVED_PROFESSIONALS_KEY);
-      const ids: string[] = raw ? (JSON.parse(raw) as string[]) : [];
-      setSaved(ids.includes(listing.id));
-    } catch {
-      /* noop */
-    }
-  }, [listing.id]);
-
-  const toggleSave = () => {
-    try {
-      const raw = localStorage.getItem(SAVED_PROFESSIONALS_KEY);
-      const ids = new Set<string>(raw ? (JSON.parse(raw) as string[]) : []);
-      if (ids.has(listing.id)) ids.delete(listing.id);
-      else ids.add(listing.id);
-      localStorage.setItem(SAVED_PROFESSIONALS_KEY, JSON.stringify([...ids]));
-      setSaved(ids.has(listing.id));
-    } catch {
-      /* noop */
-    }
-  };
-
   const stickyFooterHeight = '76px';
   const scrollPadBottom = {
     xs: `calc(${stickyFooterHeight} + ${MOBILE_BOTTOM_NAV_OFFSET})`,
@@ -138,11 +118,13 @@ export function ProfessionalListingDetailView({
 
   return (
     <>
+      <ListingMetricsTracker listingKind="professionals" listingId={listing.id} />
       <ProfessionalListingDetailDesktop
         listing={listing}
         similar={similar}
         saved={saved}
-        onToggleSave={toggleSave}
+        saveCount={saveCount}
+        onToggleSave={() => void toggleSave()}
         canonicalUrl={canonicalUrl}
       />
 
@@ -154,7 +136,11 @@ export function ProfessionalListingDetailView({
             placeholderIcon={listingDetailGalleryPlaceholder(listing)}
             browseListHref={paths.public.professionals}
             browseListAriaLabel="Prapa te lista e profesionistëve"
-            bookmark={{ saved, onToggle: toggleSave }}
+            listingKind="professionals"
+            listingId={listing.id}
+            shareCount={listing.shareCount}
+            saveCount={saveCount}
+            bookmark={{ saved, onToggle: () => void toggleSave() }}
             hideSlideCount
           />
         </Box>

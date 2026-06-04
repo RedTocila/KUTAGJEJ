@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
+import { ListingCardLink } from '@/components/public/listing-card-link';
 import { Box, Stack, Typography } from '@mui/material';
 import { Bathtub as BathtubIcon } from '@phosphor-icons/react/dist/ssr/Bathtub';
 import { Bed as BedIcon } from '@phosphor-icons/react/dist/ssr/Bed';
@@ -21,7 +21,7 @@ import { listingRealEstatePublicHref } from '@/paths';
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
-import { formatPrice, pseudoRandomMetric, relativeAlbanianDate } from './format-helpers';
+import { formatPrice, relativeAlbanianDate } from './format-helpers';
 import { SpecRow, type Spec } from './spec-row';
 
 const FURNISHING_LABEL: Record<string, string> = {
@@ -34,10 +34,7 @@ const FURNISHING_LABEL: Record<string, string> = {
 export function RealEstateCard({ listing }: { listing: PublicRealEstateListing }) {
   const location = [listing.zoneName, listing.cityName].filter(Boolean).join(', ');
   const transactionLabel = listing.transactionType === 'rent' ? 'Me qira' : 'Në shitje';
-  const viewCount = React.useMemo(
-    () => pseudoRandomMetric(`re:${listing.id}:${listing.createdAt}`, 120, 9800),
-    [listing.id, listing.createdAt],
-  );
+  const viewCount = listing.viewCount ?? 0;
 
   const specs: Spec[] = [
     ...(listing.bedrooms != null ? [{ Icon: BedIcon, label: `${listing.bedrooms}`, title: 'Dhoma gjumi' }] : []),
@@ -53,7 +50,9 @@ export function RealEstateCard({ listing }: { listing: PublicRealEstateListing }
   ];
 
   return (
-    <Link
+    <ListingCardLink
+      listingKind="real-estate"
+      listingId={listing.id}
       href={listingRealEstatePublicHref(listing)}
       style={{
         height: '100%',
@@ -65,10 +64,15 @@ export function RealEstateCard({ listing }: { listing: PublicRealEstateListing }
     >
       <CardShell>
         <CardMedia
+          listingKind="real-estate"
+          listingId={listing.id}
           imageUrl={listing.imageUrl}
           FallbackIcon={listing.propertyCategory === 'villa' ? HouseIcon : BuildingsIcon}
           alt={listing.title}
           topLeftBadge={transactionLabel}
+          shareCount={listing.shareCount}
+          saveCount={listing.saveCount}
+          saved={listing.saved}
         />
         <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
         <Typography
@@ -130,6 +134,6 @@ export function RealEstateCard({ listing }: { listing: PublicRealEstateListing }
         </Stack>
         </Stack>
       </CardShell>
-    </Link>
+    </ListingCardLink>
   );
 }

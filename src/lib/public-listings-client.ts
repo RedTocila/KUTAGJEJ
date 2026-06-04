@@ -42,6 +42,13 @@ export interface PublicRealEstateListingSeller {
   displayName: string;
   phone: string | null;
   memberSince: string;
+  /** Punë — admin-approved employer profile. */
+  verified?: boolean;
+}
+
+export interface JobListingBenefit {
+  id: string;
+  label: string;
 }
 
 /** Single listing for `/prona/{permalink}` — full description, seller summary. */
@@ -126,6 +133,9 @@ export interface PublicJobListing extends ListingMetricsFields {
   /** ISO timestamp when the listing is removed from public browse (15 days after posting). */
   expiresAt: string;
   permalinkPath?: string;
+  responsibilities?: string[];
+  requirements?: string[];
+  benefits?: JobListingBenefit[];
 }
 
 /** Full job listing for `/pune/[permalink]`. */

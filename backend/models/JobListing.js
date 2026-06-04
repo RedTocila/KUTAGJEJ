@@ -29,6 +29,15 @@ const jobListingSchema = new mongoose.Schema(
     contactPhone: { type: String, trim: true },
     /** Optional cover/company images. */
     imageUrls: [{ type: String, trim: true }],
+
+    responsibilities: [{ type: String, trim: true }],
+    requirements: [{ type: String, trim: true }],
+    benefits: [
+      {
+        id: { type: String, required: true, trim: true },
+        label: { type: String, required: true, trim: true },
+      },
+    ],
   },
   { timestamps: true },
 );

@@ -11,6 +11,7 @@ const RealEstateCity = require('../models/RealEstateCity');
 const { realEstatePermalink } = require('../lib/real-estate-permalink');
 const { listingPermalinkFromSlugSource } = require('../lib/listing-permalink');
 const { attachMetricsToListings, attachMetricsToListing, fetchMetricsMap, saverFromUser } = require('../lib/listing-metrics');
+const { isJobsEmployerVerified } = require('../lib/job-employer-verification');
 const optionalAuth = require('../middleware/optional-auth');
 
 /** Venue & service categories for Biznese (not commercial real estate). */
@@ -125,7 +126,9 @@ async function loadPosterBrief(posterModel, posterId) {
   try {
     if (!posterId || !mongoose.Types.ObjectId.isValid(posterId)) return null;
     if (posterModel === 'IndividualUser') {
-      const u = await IndividualUser.findById(posterId).select('firstName lastName phone createdAt').lean();
+      const u = await IndividualUser.findById(posterId)
+        .select('firstName lastName phone createdAt jobsEmployerVerifiedAt')
+        .lean();
       if (!u) return null;
       const displayName =
         `${u.firstName || ''} ${u.lastName || ''}`.replace(/\s+/g, ' ').trim() || 'Përdorues';
@@ -134,11 +137,12 @@ async function loadPosterBrief(posterModel, posterId) {
         displayName,
         phone: u.phone?.trim() || null,
         memberSince: u.createdAt,
+        verified: isJobsEmployerVerified(u),
       };
     }
     if (posterModel === 'BusinessUser') {
       const u = await BusinessUser.findById(posterId)
-        .select('firstName lastName phone createdAt businessName businessOwner')
+        .select('firstName lastName phone createdAt businessName businessOwner jobsEmployerVerifiedAt')
         .lean();
       if (!u) return null;
       const displayName =
@@ -151,6 +155,7 @@ async function loadPosterBrief(posterModel, posterId) {
         displayName,
         phone: u.phone?.trim() || null,
         memberSince: u.createdAt,
+        verified: isJobsEmployerVerified(u),
       };
     }
   } catch (e) {
@@ -240,6 +245,11 @@ function formatJob(doc, cityById) {
     createdAt: doc.createdAt,
     expiresAt: jobListingExpiresAt(doc.createdAt),
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc._id),
+    responsibilities: Array.isArray(doc.responsibilities) ? doc.responsibilities.filter(Boolean) : [],
+    requirements: Array.isArray(doc.requirements) ? doc.requirements.filter(Boolean) : [],
+    benefits: Array.isArray(doc.benefits)
+      ? doc.benefits.map((b) => ({ id: String(b.id), label: String(b.label) }))
+      : [],
   };
 }
 

@@ -42,6 +42,8 @@ export const paths = {
     kontratat: '/dashboard/kontratat',
     /** Referral rewards program (all users); numbers editable by platform admin. */
     referral: '/dashboard/referral',
+    /** Punë — employer verification requests (platform admin). */
+    jobEmployerVerification: '/dashboard/verifikimet-pune',
   },
   app: {},
   errors: {},

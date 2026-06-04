@@ -38,36 +38,6 @@ export function formatJobListingId(id: string): string {
   return id.slice(-6).toUpperCase();
 }
 
-function parseBulletLines(description: string): string[] {
-  return description
-    .split(/\n+/)
-    .map((line) => line.replace(/^[\s•\-–*]+/, '').trim())
-    .filter((line) => line.length > 8);
-}
-
-function defaultResponsibilities(listing: PublicJobListingDetail): string[] {
-  const industry = findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
-  return [
-    `Kryej detyrat kryesore në fushën e ${industry}.`,
-    'Punon në ekip dhe raporton progresin sipas objektivave.',
-    'Mban komunikim të qartë me menaxherin dhe kolegët.',
-    'Respekton standardet e kompanisë dhe afatet e caktuara.',
-    'Kontribuon në përmirësimin e proceseve të punës.',
-  ];
-}
-
-function defaultRequirements(listing: PublicJobListingDetail): string[] {
-  const items: string[] = [];
-  if (listing.education && listing.education !== 'no-requirement') {
-    items.push(`Arsimi: ${findOptionLabel(JOB_EDUCATION_OPTIONS, listing.education)}.`);
-  }
-  items.push(`Eksperienca: ${findOptionLabel(JOB_EXPERIENCE_OPTIONS, listing.experience)}.`);
-  items.push(`Vendi i punës: ${findOptionLabel(WORK_LOCATION_OPTIONS, listing.workLocation)}.`);
-  items.push(`Lloji i punës: ${findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType)}.`);
-  items.push('Aftësi të mira komunikimi dhe punë në ekip.');
-  return items.slice(0, 5);
-}
-
 export interface JobDetailBenefit {
   id: string;
   label: string;
@@ -81,32 +51,19 @@ export interface JobDetailSections {
 }
 
 export function buildJobDetailSections(listing: PublicJobListingDetail): JobDetailSections {
-  const bullets = parseBulletLines(listing.description);
-  const intro =
-    bullets.length > 0
-      ? listing.description
-          .split(/\n+/)
-          .filter((line) => !/^[\s•\-–*]/.test(line))
-          .join(' ')
-          .trim() || bullets[0]
-      : listing.description.trim();
-
   const responsibilities =
-    bullets.length >= 3 ? bullets.slice(0, Math.ceil(bullets.length / 2)).slice(0, 5) : defaultResponsibilities(listing);
-  const requirements =
-    bullets.length >= 4 ? bullets.slice(Math.ceil(bullets.length / 2)).slice(0, 5) : defaultRequirements(listing);
+    listing.responsibilities?.filter((line) => line.trim().length > 0) ?? [];
+  const requirements = listing.requirements?.filter((line) => line.trim().length > 0) ?? [];
+  const benefits =
+    listing.benefits?.filter((b) => b.id && b.label?.trim()).map((b) => ({ id: b.id, label: b.label.trim() })) ??
+    [];
 
-  const benefits: JobDetailBenefit[] = [
-    {
-      id: 'pay',
-      label: listing.salary != null ? 'Pagë konkurruese' : 'Pagë e diskutueshme',
-    },
-    { id: 'growth', label: 'Mundësi zhvillimi profesional' },
-    { id: 'health', label: 'Sigurim shëndetësor' },
-    { id: 'flex', label: 'Orar fleksibël' },
-  ];
-
-  return { intro, responsibilities, requirements, benefits };
+  return {
+    intro: listing.description.trim(),
+    responsibilities,
+    requirements,
+    benefits,
+  };
 }
 
 export function jobDetailMetaRows(listing: PublicJobListingDetail) {
@@ -119,7 +76,6 @@ export function jobDetailMetaRows(listing: PublicJobListingDetail) {
   ] as const;
 }
 
-/** Hero gallery — first photo only (workplace / cover). */
 export function jobCoverImageUrls(listing: PublicJobListingDetail): string[] {
   const images = listing.imageUrls.filter(Boolean);
   if (images.length > 0) return [images[0]!];
@@ -127,7 +83,6 @@ export function jobCoverImageUrls(listing: PublicJobListingDetail): string[] {
   return [];
 }
 
-/** Company logo for the overlapping avatar — second photo when present. */
 export function jobCompanyAvatarUrl(listing: PublicJobListingDetail): string | null {
   const images = listing.imageUrls.filter(Boolean);
   return images.length > 1 ? images[1]! : null;

@@ -32,6 +32,9 @@ function formatMineListing(doc, cityById) {
     salary: doc.salary ?? null,
     currency: doc.currency ?? null,
     contactPhone: doc.contactPhone ?? null,
+    responsibilities: doc.responsibilities ?? [],
+    requirements: doc.requirements ?? [],
+    benefits: doc.benefits ?? [],
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
@@ -89,6 +92,9 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       salary: hasSalary ? Number(body.salary) : null,
       currency: hasSalary ? body.currency : null,
       contactPhone: String(body.contactPhone || '').trim(),
+      responsibilities: v.responsibilities,
+      requirements: v.requirements,
+      benefits: v.benefits,
     });
 
     res.status(201).json({

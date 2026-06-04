@@ -66,3 +66,18 @@ export const WORK_LOCATION_OPTIONS = [
   { value: 'hybrid', label: 'Hybrid (Hibrid)' },
   { value: 'remote', label: 'Remote (Nga shtëpia)' },
 ] as const;
+
+/** Preset benefits for job create form and detail icons. */
+export const JOB_BENEFIT_PRESETS = [
+  { id: 'pay', label: 'Pagë konkurruese' },
+  { id: 'negotiable-pay', label: 'Pagë e diskutueshme' },
+  { id: 'growth', label: 'Mundësi zhvillimi profesional' },
+  { id: 'health', label: 'Sigurim shëndetësor' },
+  { id: 'flex', label: 'Orar fleksibël' },
+  { id: 'bonus', label: 'Bonus performancë' },
+  { id: 'training', label: 'Trajnim i paguar' },
+  { id: 'meals', label: 'Vakt pune' },
+  { id: 'transport', label: 'Transport / parkim' },
+] as const;
+
+export type JobBenefitId = (typeof JOB_BENEFIT_PRESETS)[number]['id'] | 'custom';

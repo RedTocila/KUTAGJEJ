@@ -82,6 +82,9 @@ export interface JobMineListing extends ListingMetrics {
   salary: number | null;
   currency: string | null;
   contactPhone: string | null;
+  responsibilities: string[];
+  requirements: string[];
+  benefits: { id: string; label: string }[];
   createdAt: string;
 }
 
@@ -168,6 +171,11 @@ export async function listMyMarketplaceListings(): Promise<{ listings?: Marketpl
   }
 }
 
+export interface JobListingBenefitPayload {
+  id: string;
+  label: string;
+}
+
 export interface JobListingPayload {
   title: string;
   description: string;
@@ -180,6 +188,9 @@ export interface JobListingPayload {
   salary: number | null;
   currency: string | null;
   contactPhone: string;
+  responsibilities: string[];
+  requirements: string[];
+  benefits: JobListingBenefitPayload[];
 }
 
 export async function createJobListing(body: JobListingPayload): Promise<{ id?: string; error?: string }> {

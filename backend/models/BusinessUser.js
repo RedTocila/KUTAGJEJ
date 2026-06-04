@@ -16,6 +16,7 @@ const businessUserSchema = new mongoose.Schema({
   role: { type: String, default: 'business-user' },
   isActive: { type: Boolean, default: true },
   lastActive: { type: Date, default: Date.now },
+  jobsEmployerVerifiedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

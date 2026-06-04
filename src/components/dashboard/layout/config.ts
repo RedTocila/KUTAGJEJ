@@ -45,6 +45,13 @@ export const navItems = [
     platformAdminOnly: true,
   },
   {
+    key: 'job-employer-verification',
+    title: 'Verifikimet (Punë)',
+    href: paths.dashboard.jobEmployerVerification,
+    icon: 'shield-check',
+    platformAdminOnly: true,
+  },
+  {
     key: 'referral',
     title: 'Referimi',
     href: paths.dashboard.referral,

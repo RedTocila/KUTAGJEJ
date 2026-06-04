@@ -6,8 +6,10 @@ import {
   Alert,
   Button,
   Divider,
+  Checkbox,
   FormControl,
   FormControlLabel,
+  FormGroup,
   FormLabel,
   InputAdornment,
   InputLabel,
@@ -25,9 +27,11 @@ import {
   JOB_EDUCATION_OPTIONS,
   JOB_EXPERIENCE_OPTIONS,
   JOB_INDUSTRY_OPTIONS,
+  JOB_BENEFIT_PRESETS,
   JOB_TYPE_OPTIONS,
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
+import { JobFormStringList } from '@/components/jobs/job-form-string-list';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { useUser } from '@/hooks/use-user';
@@ -78,6 +82,10 @@ type JobFormState = {
   salary: string;
   currency: '' | 'EUR' | 'LEK';
   contactPhone: string;
+  responsibilities: string[];
+  requirements: string[];
+  benefitIds: string[];
+  customBenefit: string;
 };
 
 function emptyForm(): JobFormState {
@@ -93,7 +101,28 @@ function emptyForm(): JobFormState {
     salary: '',
     currency: '',
     contactPhone: '',
+    responsibilities: [''],
+    requirements: [''],
+    benefitIds: [],
+    customBenefit: '',
   };
+}
+
+function normalizeLines(lines: string[]): string[] {
+  return lines.map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+}
+
+function buildBenefitsPayload(f: JobFormState): { id: string; label: string }[] {
+  const items: { id: string; label: string }[] = [];
+  for (const id of f.benefitIds) {
+    const preset = JOB_BENEFIT_PRESETS.find((p) => p.id === id);
+    if (preset) items.push({ id: preset.id, label: preset.label });
+  }
+  const custom = f.customBenefit.replace(/\s+/g, ' ').trim();
+  if (custom.length >= 3) {
+    items.push({ id: 'custom', label: custom });
+  }
+  return items;
 }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +151,17 @@ function validateForm(f: JobFormState): string | null {
   if (!/^[\d+\s().-]{6,40}$/.test(phone)) {
     return 'Numri i telefonit mund të përmbajë vetëm shifra, hapësira dhe + ( ) . -';
   }
+
+  const responsibilities = normalizeLines(f.responsibilities);
+  if (responsibilities.length < 1) return 'Shtoni të paktën një detyrë.';
+  if (responsibilities.some((l) => l.length < 8)) return 'Çdo detyrë duhet të ketë të paktën 8 karaktere.';
+
+  const requirements = normalizeLines(f.requirements);
+  if (requirements.length < 1) return 'Shtoni të paktën një kërkesë.';
+  if (requirements.some((l) => l.length < 8)) return 'Çdo kërkesë duhet të ketë të paktën 8 karaktere.';
+
+  const benefits = buildBenefitsPayload(f);
+  if (benefits.length < 1) return 'Zgjidhni të paktën një përfitim ose shtoni një të personalizuar.';
 
   return null;
 }
@@ -209,6 +249,9 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
         salary: form.salary.trim() ? parseFloatStrict(form.salary) : null,
         currency: form.salary.trim() ? form.currency : null,
         contactPhone: form.contactPhone.trim(),
+        responsibilities: normalizeLines(form.responsibilities),
+        requirements: normalizeLines(form.requirements),
+        benefits: buildBenefitsPayload(form),
       };
 
       const { error } = await createJobListing(payload);
@@ -250,14 +293,69 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
         />
 
         <TextField
-          label="Përshkrimi"
+          label="Përshkrimi i shkurtër"
           value={form.description}
           onChange={onField('description')}
           required
           fullWidth
           multiline
-          minRows={5}
-          placeholder="Përshkruani detyrat, kërkesat dhe çdo informacion tjetër të rëndësishëm…"
+          minRows={3}
+          placeholder="Prezantim i pozicionit — 2–3 fjali për kandidatët…"
+          helperText="Detyrat, kërkesat dhe përfitimet plotësohen më poshtë si seksione të veçanta."
+        />
+      </Stack>
+
+      <Divider />
+
+      <JobFormStringList
+        label="Detyrat dhe përgjegjësitë"
+        hint="Lista e detyrave kryesore (të shfaqen në faqen e njoftimit)."
+        items={form.responsibilities}
+        onChange={(responsibilities) => setForm((p) => ({ ...p, responsibilities }))}
+      />
+
+      <Divider />
+
+      <JobFormStringList
+        label="Kërkesat"
+        hint="Kualifikimet dhe aftësitë e kërkuara."
+        items={form.requirements}
+        onChange={(requirements) => setForm((p) => ({ ...p, requirements }))}
+      />
+
+      <Divider />
+
+      <Stack spacing={1.5}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
+          Përfitimet
+        </Typography>
+        <FormGroup>
+          {JOB_BENEFIT_PRESETS.map((preset) => (
+            <FormControlLabel
+              key={preset.id}
+              control={
+                <Checkbox
+                  checked={form.benefitIds.includes(preset.id)}
+                  onChange={(e) => {
+                    setForm((p) => ({
+                      ...p,
+                      benefitIds: e.target.checked
+                        ? [...p.benefitIds, preset.id]
+                        : p.benefitIds.filter((id) => id !== preset.id),
+                    }));
+                  }}
+                />
+              }
+              label={preset.label}
+            />
+          ))}
+        </FormGroup>
+        <TextField
+          label="Përfitim tjetër (opsional)"
+          value={form.customBenefit}
+          onChange={onField('customBenefit')}
+          fullWidth
+          placeholder="p.sh. Ditë pushimi shtesë"
         />
       </Stack>
 
@@ -316,10 +414,10 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
 
       <Divider />
 
-      {/* ── Kërkesat ────────────────────────────────────────────────────── */}
+      {/* ── Arsimi & eksperienca ─────────────────────────────────────────── */}
       <Stack spacing={2}>
         <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-          Kërkesat
+          Arsimi dhe eksperienca
         </Typography>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>

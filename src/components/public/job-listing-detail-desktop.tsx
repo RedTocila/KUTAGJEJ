@@ -66,6 +66,7 @@ function benefitIcon(id: JobDetailBenefit['id']) {
   const iconSx = { fontSize: 28, color: 'primary.main' };
   switch (id) {
     case 'pay':
+    case 'negotiable-pay':
       return <PaymentsOutlined sx={iconSx} />;
     case 'growth':
       return <TrendingUpOutlined sx={iconSx} />;
@@ -335,7 +336,7 @@ export function JobListingDetailDesktop({
                     {companyName}
                   </Typography>
                 </Box>
-                {listing.seller ? <JobVerifiedBadge size={20} /> : null}
+                {listing.seller?.verified ? <JobVerifiedBadge size={20} /> : null}
               </Stack>
               {listing.seller ? (
                 <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>

@@ -1,5 +1,7 @@
 /** Server-side validation for job listings (mirrors frontend job-constants.ts). */
 
+const { validateJobSections } = require('./job-listing-sections');
+
 const INDUSTRY_VALUES = [
   'biznes-menaxhim', 'horeka', 'instalime-mirembajtje', 'ligjore',
   'prokurim-logjistike', 'shitje-zhvillim', 'finance', 'ndertim-industri',
@@ -83,7 +85,15 @@ function validateJobPayload(body) {
     return { ok: false, message: 'Numri i telefonit përmban karaktere të pavlefshme.' };
   }
 
-  return { ok: true };
+  const sections = validateJobSections(body);
+  if (!sections.ok) return sections;
+
+  return {
+    ok: true,
+    responsibilities: sections.responsibilities,
+    requirements: sections.requirements,
+    benefits: sections.benefits,
+  };
 }
 
 module.exports = {

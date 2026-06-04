@@ -23,6 +23,7 @@ import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import { RealEstateListingForm } from '@/components/real-estate/real-estate-listing-form';
 import { CarListingForm } from '@/components/cars/car-listing-form';
 import { JobListingForm } from '@/components/jobs/job-listing-form';
+import { JobEmployerVerificationCard } from '@/components/jobs/job-employer-verification-card';
 import { MarketplaceListingForm } from '@/components/marketplace/marketplace-listing-form';
 import { listCategoriesPublic } from '@/lib/listings-client';
 import { paths } from '@/paths';
@@ -285,6 +286,8 @@ export default function UserPostListingPage() {
               Ndrysho kategorinë
             </Button>
           </Stack>
+
+          <JobEmployerVerificationCard />
 
           <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
             <CardContent sx={{ p: { xs: 2, sm: 3 } }}>

@@ -22,6 +22,7 @@ import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 import { authClient } from '@/lib/auth/client';
 import { useUser } from '@/hooks/use-user';
 import { getUserPortalAccountCategoryLabel } from '@/lib/user-portal-account-label';
+import { JobEmployerVerificationCard } from '@/components/jobs/job-employer-verification-card';
 
 function ProfileRow({
   icon,
@@ -239,6 +240,12 @@ export default function UserProfilePage() {
             </CardContent>
           </Card>
         </Grid>
+
+        {canEditPhone ? (
+          <Grid size={{ xs: 12 }}>
+            <JobEmployerVerificationCard />
+          </Grid>
+        ) : null}
 
         {canEditPhone ? (
           <Grid size={{ xs: 12 }}>

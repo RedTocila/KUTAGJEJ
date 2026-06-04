@@ -35,6 +35,7 @@ function registerModels() {
   require('./models/ListingEngagement');
   require('./models/SavedListing');
   require('./models/ListingMetricDedup');
+  require('./models/JobEmployerVerificationRequest');
 }
 
 const connectDB = async () => {
@@ -113,6 +114,8 @@ app.use('/api/listings/jobs', require('./routes/job-listings'));
 app.use('/api/listings/marketplace', require('./routes/marketplace-listings'));
 app.use('/api/public/listings', require('./routes/public-listings'));
 app.use('/api/listing-metrics', require('./routes/listing-metrics'));
+app.use('/api/job-employer-verification', require('./routes/job-employer-verification'));
+app.use('/api/admin/job-employer-verification', require('./routes/admin-job-employer-verification'));
 app.use('/api/public/home-banners', require('./routes/public-home-banners'));
 
 const startServer = async () => {

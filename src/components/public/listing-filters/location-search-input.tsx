@@ -21,6 +21,7 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { cleanLocationPart } from '@/lib/location-display';
+import { normalizeZoneIds } from '@/lib/listing-filters';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 
 const pillSx = {
@@ -64,6 +65,11 @@ function normalize(value: string): string {
   return value.trim().toLowerCase();
 }
 
+function safeLabel(value: string | null | undefined): string {
+  if (value == null) return '';
+  return cleanLocationPart(String(value));
+}
+
 function LocationChip({
   label,
   onRemove,
@@ -98,6 +104,9 @@ function LocationChip({
   );
 }
 
+type CityOption = { cityId: string; label: string };
+type ZoneOption = { zoneId: string; label: string; cityId: string; cityName: string };
+
 export function LocationSearchInput({
   cities,
   cityId,
@@ -108,7 +117,7 @@ export function LocationSearchInput({
 }: {
   cities: RealEstateCityDto[];
   cityId?: string;
-  zoneIds?: string[];
+  zoneIds?: string[] | string;
   enableZones?: boolean;
   placeholder?: string;
   onChange: (nextCityId?: string, nextZoneIds?: string[]) => void;
@@ -118,38 +127,64 @@ export function LocationSearchInput({
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
 
-  const selectedCity = cities.find((c) => c.id === cityId) ?? null;
-  const cityName = selectedCity ? cleanLocationPart(selectedCity.name) : '';
-  const active = Boolean(cityId || zoneIds.length);
-  const zoneMode = Boolean(enableZones && cityId);
+  const safeZoneIds = React.useMemo(() => normalizeZoneIds(zoneIds), [zoneIds]);
+  const selectedCity = React.useMemo(
+    () => cities.find((c) => c.id === cityId) ?? null,
+    [cities, cityId],
+  );
+  const cityName = selectedCity ? safeLabel(selectedCity.name) : '';
+  const cityZones = selectedCity?.zones ?? [];
+  const active = Boolean(cityId || safeZoneIds.length);
+  const zoneMode = Boolean(enableZones && cityId && selectedCity);
 
   const cityOptions = React.useMemo(() => {
     const q = normalize(query);
-    const all = cities.map((c) => ({ cityId: c.id, label: cleanLocationPart(c.name) }));
+    const all: CityOption[] = cities.map((c) => ({ cityId: c.id, label: safeLabel(c.name) }));
     if (!q) return all.slice(0, 10);
     return all.filter((c) => normalize(c.label).includes(q)).slice(0, 12);
   }, [cities, query]);
 
   const zoneOptions = React.useMemo(() => {
-    if (!selectedCity) return [];
+    if (!zoneMode) return [] as ZoneOption[];
     const q = normalize(query);
-    const all = selectedCity.zones.map((z) => ({
+    const all: ZoneOption[] = cityZones.map((z) => ({
       zoneId: z.id,
-      label: cleanLocationPart(z.name),
+      label: safeLabel(z.name),
+      cityId: selectedCity!.id,
+      cityName,
     }));
     if (!q) return all;
     return all.filter((z) => normalize(z.label).includes(q));
-  }, [selectedCity, query]);
+  }, [zoneMode, cityZones, query, selectedCity, cityName]);
+
+  const globalZoneOptions = React.useMemo(() => {
+    if (!enableZones || cityId || !normalize(query)) return [] as ZoneOption[];
+    const q = normalize(query);
+    const rows: ZoneOption[] = [];
+    for (const city of cities) {
+      for (const zone of city.zones ?? []) {
+        const label = safeLabel(zone.name);
+        if (!normalize(label).includes(q)) continue;
+        rows.push({
+          zoneId: zone.id,
+          label,
+          cityId: city.id,
+          cityName: safeLabel(city.name),
+        });
+      }
+    }
+    return rows.slice(0, 16);
+  }, [enableZones, cityId, query, cities]);
 
   const selectedZoneChips = React.useMemo(() => {
     if (!selectedCity) return [];
-    return zoneIds
+    return safeZoneIds
       .map((id) => {
-        const zone = selectedCity.zones.find((z) => z.id === id);
-        return zone ? { id, label: cleanLocationPart(zone.name) } : null;
+        const zone = cityZones.find((z) => z.id === id);
+        return zone ? { id, label: safeLabel(zone.name) } : null;
       })
       .filter((chip): chip is { id: string; label: string } => Boolean(chip));
-  }, [selectedCity, zoneIds]);
+  }, [selectedCity, safeZoneIds, cityZones]);
 
   const closeDropdown = () => setOpen(false);
 
@@ -165,6 +200,13 @@ export function LocationSearchInput({
     inputRef.current?.blur();
   };
 
+  const handleSelectZoneWithCity = (nextCityId: string, nextZoneId: string) => {
+    onChange(nextCityId, [nextZoneId]);
+    setQuery('');
+    setOpen(true);
+    window.setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
   const handleRemoveCity = () => {
     onChange(undefined, undefined);
     setQuery('');
@@ -173,9 +215,9 @@ export function LocationSearchInput({
 
   const handleToggleZone = (zoneId: string) => {
     if (!cityId) return;
-    const nextZones = zoneIds.includes(zoneId)
-      ? zoneIds.filter((id) => id !== zoneId)
-      : [...zoneIds, zoneId];
+    const nextZones = safeZoneIds.includes(zoneId)
+      ? safeZoneIds.filter((id) => id !== zoneId)
+      : [...safeZoneIds, zoneId];
     onChange(cityId, nextZones.length ? nextZones : undefined);
     setQuery('');
     setOpen(true);
@@ -184,7 +226,7 @@ export function LocationSearchInput({
 
   const handleRemoveZone = (zoneId: string) => {
     if (!cityId) return;
-    const nextZones = zoneIds.filter((id) => id !== zoneId);
+    const nextZones = safeZoneIds.filter((id) => id !== zoneId);
     onChange(cityId, nextZones.length ? nextZones : undefined);
   };
 
@@ -193,6 +235,8 @@ export function LocationSearchInput({
   const showZoneScroller = zoneMode && hasSelectedZones;
   const showInput = !cityId || zoneMode;
   const zoneInputCollapsed = zoneMode && hasSelectedZones && !query;
+  const showGlobalZones = globalZoneOptions.length > 0;
+  const anchorEl = rootRef.current;
 
   return (
     <ClickAwayListener onClickAway={closeDropdown}>
@@ -233,7 +277,7 @@ export function LocationSearchInput({
             <SearchIcon size={14} color="var(--mui-palette-primary-main)" style={{ flexShrink: 0 }} />
           ) : null}
 
-          {cityId ? (
+          {cityId && cityName ? (
             <LocationChip
               label={cityName}
               onRemove={handleRemoveCity}
@@ -297,10 +341,10 @@ export function LocationSearchInput({
         </Box>
 
         <Popper
-          open={open}
-          anchorEl={rootRef.current}
+          open={open && Boolean(anchorEl)}
+          anchorEl={anchorEl}
           placement="bottom-start"
-          sx={{ zIndex: 1400, width: Math.max(rootRef.current?.offsetWidth ?? 220, 220) }}
+          sx={{ zIndex: 1400, width: Math.max(anchorEl?.offsetWidth ?? 220, 220) }}
         >
           <Paper
             elevation={8}
@@ -313,17 +357,92 @@ export function LocationSearchInput({
               borderColor: 'divider',
             }}
           >
-            {!zoneMode ? (
+            {zoneMode ? (
+              <>
+                <Typography
+                  variant="caption"
+                  sx={{ display: 'block', px: 1.5, pt: 1.25, pb: 0.5, color: 'text.secondary', fontWeight: 600 }}
+                >
+                  Zgjidh zona në {cityName}
+                </Typography>
+                <List dense disablePadding>
+                  {zoneOptions.map((option) => (
+                    <ListItemButton
+                      key={option.zoneId}
+                      selected={safeZoneIds.includes(option.zoneId)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handleToggleZone(option.zoneId)}
+                      sx={{ py: 0.45, px: 1.25 }}
+                    >
+                      <Checkbox
+                        size="small"
+                        checked={safeZoneIds.includes(option.zoneId)}
+                        tabIndex={-1}
+                        disableRipple
+                        sx={{ p: 0.5, mr: 0.75 }}
+                      />
+                      <MapPinAreaIcon size={14} style={{ marginRight: 8, flexShrink: 0 }} />
+                      <ListItemText
+                        primary={option.label}
+                        slotProps={{ primary: { sx: { fontSize: '0.84rem', fontWeight: 600 } } }}
+                      />
+                    </ListItemButton>
+                  ))}
+                </List>
+                {zoneOptions.length === 0 ? (
+                  <Typography sx={{ px: 1.5, py: 1.5, fontSize: '0.84rem', color: 'text.secondary' }}>
+                    Nuk u gjet asnjë zonë
+                  </Typography>
+                ) : null}
+              </>
+            ) : (
               <>
                 {!query ? (
                   <Typography
                     variant="caption"
                     sx={{ display: 'block', px: 1.5, pt: 1.25, pb: 0.5, color: 'text.secondary', fontWeight: 600 }}
                   >
-                    Shkruaj qytetin
+                    Shkruaj qytetin{enableZones ? ' ose zonën' : ''}
                   </Typography>
                 ) : null}
                 <List dense disablePadding>
+                  {showGlobalZones ? (
+                    <>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: 'block',
+                          px: 1.5,
+                          py: 0.5,
+                          color: 'text.secondary',
+                          fontWeight: 700,
+                          letterSpacing: '0.04em',
+                          textTransform: 'uppercase',
+                          fontSize: '0.62rem',
+                        }}
+                      >
+                        Zona
+                      </Typography>
+                      {globalZoneOptions.map((option) => (
+                        <ListItemButton
+                          key={`${option.cityId}-${option.zoneId}`}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleSelectZoneWithCity(option.cityId, option.zoneId)}
+                          sx={{ py: 0.45, px: 1.25 }}
+                        >
+                          <MapPinAreaIcon size={14} style={{ marginRight: 8, flexShrink: 0 }} />
+                          <ListItemText
+                            primary={option.label}
+                            secondary={option.cityName}
+                            slotProps={{
+                              primary: { sx: { fontSize: '0.84rem', fontWeight: 600 } },
+                              secondary: { sx: { fontSize: '0.72rem' } },
+                            }}
+                          />
+                        </ListItemButton>
+                      ))}
+                    </>
+                  ) : null}
                   <Typography
                     variant="caption"
                     sx={{
@@ -355,47 +474,9 @@ export function LocationSearchInput({
                     </ListItemButton>
                   ))}
                 </List>
-                {query && cityOptions.length === 0 ? (
+                {query && cityOptions.length === 0 && !showGlobalZones ? (
                   <Typography sx={{ px: 1.5, py: 1.5, fontSize: '0.84rem', color: 'text.secondary' }}>
-                    Nuk u gjet asnjë qytet
-                  </Typography>
-                ) : null}
-              </>
-            ) : (
-              <>
-                <Typography
-                  variant="caption"
-                  sx={{ display: 'block', px: 1.5, pt: 1.25, pb: 0.5, color: 'text.secondary', fontWeight: 600 }}
-                >
-                  Zgjidh zona në {cityName}
-                </Typography>
-                <List dense disablePadding>
-                  {zoneOptions.map((option) => (
-                    <ListItemButton
-                      key={option.zoneId}
-                      selected={zoneIds.includes(option.zoneId)}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => handleToggleZone(option.zoneId)}
-                      sx={{ py: 0.45, px: 1.25 }}
-                    >
-                      <Checkbox
-                        size="small"
-                        checked={zoneIds.includes(option.zoneId)}
-                        tabIndex={-1}
-                        disableRipple
-                        sx={{ p: 0.5, mr: 0.75 }}
-                      />
-                      <MapPinAreaIcon size={14} style={{ marginRight: 8, flexShrink: 0 }} />
-                      <ListItemText
-                        primary={option.label}
-                        slotProps={{ primary: { sx: { fontSize: '0.84rem', fontWeight: 600 } } }}
-                      />
-                    </ListItemButton>
-                  ))}
-                </List>
-                {zoneOptions.length === 0 ? (
-                  <Typography sx={{ px: 1.5, py: 1.5, fontSize: '0.84rem', color: 'text.secondary' }}>
-                    Nuk u gjet asnjë zonë
+                    Nuk u gjet asnjë qytet{enableZones ? ' apo zonë' : ''}
                   </Typography>
                 ) : null}
               </>

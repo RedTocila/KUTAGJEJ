@@ -16,6 +16,7 @@ import {
   parseBrowseSearchParams,
   parseBrowsePage,
   PROFESSIONAL_FILTER_OPTIONS,
+  normalizeZoneIds,
   type BrowseCarFilters,
   type BrowseDirectoryFilters,
   type BrowseFilters,
@@ -108,9 +109,11 @@ function formatLocationPhrase(cities: RealEstateCityDto[], cityId?: string, zone
   const city = cities.find((c) => c.id === cityId);
   if (!city) return null;
 
+  const cityZones = city.zones ?? [];
+
   if (zoneIds?.length) {
-    const zones = zoneIds
-      .map((id) => city.zones.find((z) => z.id === id))
+    const zones = normalizeZoneIds(zoneIds)
+      .map((id) => cityZones.find((z) => z.id === id))
       .filter((zone): zone is NonNullable<typeof zone> => Boolean(zone))
       .map((zone) => ({ name: zone.name, slug: zone.slug }));
     if (zones.length) return formatBrowseLocationPhrase(zones, city.name);

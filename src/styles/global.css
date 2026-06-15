@@ -20,3 +20,21 @@ body {
   background-color: var(--mui-palette-background-default, #f7faf4);
   color: var(--mui-palette-text-primary, #1a2118);
 }
+
+/*
+ * iOS Safari auto-zooms focused fields when font-size < 16px.
+ * Keep mobile inputs at 16px so search bars, filters and forms do not jump.
+ */
+@media screen and (max-width: 899px) {
+  input:not(
+      [type='checkbox']
+    ):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']):not([type='button']):not(
+      [type='submit']
+    ):not([type='reset']):not([type='image']),
+  select,
+  textarea,
+  .MuiInputBase-input,
+  .MuiSelect-select {
+    font-size: 16px !important;
+  }
+}

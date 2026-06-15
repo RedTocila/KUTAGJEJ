@@ -21,6 +21,7 @@ export interface BrowseRealEstateFilters {
   maxPrice?: string;
   minSurface?: string;
   bedrooms?: string;
+  q?: string;
   sort?: BrowseSort;
 }
 
@@ -34,6 +35,7 @@ export interface BrowseCarFilters {
   minYear?: string;
   maxYear?: string;
   maxKm?: string;
+  q?: string;
   sort?: BrowseSort;
 }
 
@@ -44,6 +46,7 @@ export interface BrowseJobFilters {
   education?: string;
   experience?: string;
   city?: string;
+  q?: string;
   sort?: BrowseSort;
 }
 
@@ -53,6 +56,7 @@ export interface BrowseMarketplaceFilters {
   city?: string;
   minPrice?: string;
   maxPrice?: string;
+  q?: string;
   sort?: BrowseSort;
 }
 
@@ -111,6 +115,14 @@ function allParams(value: string | string[] | undefined): string[] {
   return single ? [single] : [];
 }
 
+/** URL / draft may expose `zone` as a string or array — always normalize for UI logic. */
+export function normalizeZoneIds(zone: string[] | string | undefined): string[] {
+  if (!zone) return [];
+  if (Array.isArray(zone)) return zone.map((v) => String(v).trim()).filter(Boolean);
+  const single = String(zone).trim();
+  return single ? [single] : [];
+}
+
 /** Preserves repeated query keys (e.g. multiple `zone` values). */
 export function searchParamsToRecord(params: URLSearchParams): SearchParamsInput {
   const record: SearchParamsInput = {};
@@ -149,6 +161,7 @@ export function parseBrowseSearchParams(
 ): BrowseFilters {
   const sort = parseSort(firstParam(searchParams.sort));
   const city = firstParam(searchParams.city).trim() || undefined;
+  const q = firstParam(searchParams.q).trim() || undefined;
 
   switch (verticalId) {
     case 'real-estate': {
@@ -162,6 +175,7 @@ export function parseBrowseSearchParams(
         maxPrice: firstParam(searchParams.maxPrice).trim() || undefined,
         minSurface: firstParam(searchParams.minSurface).trim() || undefined,
         bedrooms: firstParam(searchParams.bedrooms).trim() || undefined,
+        q,
         sort,
       };
     }
@@ -176,6 +190,7 @@ export function parseBrowseSearchParams(
         minYear: firstParam(searchParams.minYear).trim() || undefined,
         maxYear: firstParam(searchParams.maxYear).trim() || undefined,
         maxKm: firstParam(searchParams.maxKm).trim() || undefined,
+        q,
         sort,
       };
     case 'jobs':
@@ -186,6 +201,7 @@ export function parseBrowseSearchParams(
         education: firstParam(searchParams.education).trim() || undefined,
         experience: firstParam(searchParams.experience).trim() || undefined,
         city,
+        q,
         sort,
       };
     case 'marketplace':
@@ -195,6 +211,7 @@ export function parseBrowseSearchParams(
         city,
         minPrice: firstParam(searchParams.minPrice).trim() || undefined,
         maxPrice: firstParam(searchParams.maxPrice).trim() || undefined,
+        q,
         sort,
       };
     case 'businesses':
@@ -202,7 +219,7 @@ export function parseBrowseSearchParams(
       return {
         type: firstParam(searchParams.type).trim() || undefined,
         city,
-        q: firstParam(searchParams.q).trim() || undefined,
+        q,
         sort,
       };
     default:
@@ -286,6 +303,7 @@ export function getActiveFilterChips(
       if (f.maxPrice) push('maxPrice', `Max ${f.maxPrice}`);
       if (f.minSurface) push('minSurface', `≥ ${f.minSurface} m²`);
       if (f.bedrooms) push('bedrooms', `≥ ${f.bedrooms} dhoma`);
+      if (f.q) push('q', `"${f.q}"`);
       break;
     }
     case 'cars': {
@@ -300,6 +318,7 @@ export function getActiveFilterChips(
       if (f.minYear) push('minYear', `Nga ${f.minYear}`);
       if (f.maxYear) push('maxYear', `Deri ${f.maxYear}`);
       if (f.maxKm) push('maxKm', `≤ ${f.maxKm} km`);
+      if (f.q) push('q', `"${f.q}"`);
       break;
     }
     case 'jobs': {
@@ -314,6 +333,7 @@ export function getActiveFilterChips(
       if (education) push('education', education);
       const experience = findLabel(JOB_EXPERIENCE_OPTIONS, f.experience);
       if (experience) push('experience', experience);
+      if (f.q) push('q', `"${f.q}"`);
       break;
     }
     case 'marketplace': {
@@ -324,6 +344,7 @@ export function getActiveFilterChips(
       if (condition) push('condition', condition);
       if (f.minPrice) push('minPrice', `Min ${f.minPrice}`);
       if (f.maxPrice) push('maxPrice', `Max ${f.maxPrice}`);
+      if (f.q) push('q', `"${f.q}"`);
       break;
     }
     case 'businesses': {

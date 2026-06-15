@@ -61,6 +61,18 @@ function escapeRegex(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function applyTextSearch(filter, query, fields) {
+  const q = String(query.q ?? '').trim();
+  if (q.length < 2 || q.length > 80) return;
+  const pattern = { $regex: escapeRegex(q), $options: 'i' };
+  const clauses = fields.map((field) => ({ [field]: pattern }));
+  if (clauses.length === 1) {
+    Object.assign(filter, clauses[0]);
+    return;
+  }
+  filter.$or = clauses;
+}
+
 function applyPriceRange(filter, minPrice, maxPrice) {
   const min = parsePositiveInt(minPrice);
   const max = parsePositiveInt(maxPrice);
@@ -103,6 +115,8 @@ function parseRealEstateFilters(query) {
   const bedrooms = parsePositiveInt(query.bedrooms);
   if (bedrooms != null) filter.bedrooms = { $gte: bedrooms };
 
+  applyTextSearch(filter, query, ['title', 'description']);
+
   const sort = parseSort(query.sort);
   return { filter, sort: buildPriceSort(sort) };
 }
@@ -134,6 +148,8 @@ function parseCarFilters(query) {
   const maxKm = parsePositiveInt(query.maxKm);
   if (maxKm != null) filter.kilometers = { $lte: maxKm };
 
+  applyTextSearch(filter, query, ['title', 'description', 'make', 'model', 'trim']);
+
   const sort = parseSort(query.sort);
   return { filter, sort: buildPriceSort(sort) };
 }
@@ -159,6 +175,8 @@ function parseJobFilters(query) {
   const cityId = parseObjectId(query.city);
   if (cityId) filter.cityId = cityId;
 
+  applyTextSearch(filter, query, ['title', 'description']);
+
   const sort = parseSort(query.sort);
   return { filter, sort: buildPriceSort(sort, 'salary') };
 }
@@ -175,6 +193,8 @@ function parseMarketplaceFilters(query) {
   if (cityId) filter.cityId = cityId;
 
   applyPriceRange(filter, query.minPrice, query.maxPrice);
+
+  applyTextSearch(filter, query, ['title', 'description']);
 
   const sort = parseSort(query.sort);
   return { filter, sort: buildPriceSort(sort) };
@@ -193,10 +213,7 @@ function parseDirectoryFilters(query, vertical) {
   const cityId = parseObjectId(query.city);
   if (cityId) filter.cityId = cityId;
 
-  const q = String(query.q ?? '').trim();
-  if (q.length >= 2 && q.length <= 80) {
-    filter.title = { $regex: escapeRegex(q), $options: 'i' };
-  }
+  applyTextSearch(filter, query, ['title', 'description']);
 
   const sort = parseSort(query.sort);
   return { filter, sort: buildPriceSort(sort) };

@@ -21,6 +21,7 @@ import {
   countActiveBrowseFilters,
   getActiveFilterChips,
   hasActiveBrowseFilters,
+  normalizeZoneIds,
   parseBrowseSearchParams,
   removeBrowseFilterKey,
   searchParamsToRecord,
@@ -116,23 +117,32 @@ export function CategoryBrowseControls({
   const hasPendingChanges = !filtersEqual(draft, applied);
   const sortValue = (draft as { sort?: string }).sort ?? 'newest';
   const cityValue = (draft as { city?: string }).city ?? '';
-  const zoneValue = verticalId === 'real-estate' ? ((draft as BrowseRealEstateFilters).zone ?? []) : [];
+  const zoneValue =
+    verticalId === 'real-estate' ? normalizeZoneIds((draft as BrowseRealEstateFilters).zone) : [];
 
-  const applyLocation = (nextCity?: string, nextZones?: string[]) => {
-    if (verticalId === 'real-estate') {
-      const next = {
-        ...draft,
-        city: nextCity || undefined,
-        zone: nextZones?.length ? nextZones : undefined,
-      } as BrowseFilters;
+  const applyLocation = React.useCallback(
+    (nextCity?: string, nextZones?: string[]) => {
+      const normalizedZones = normalizeZoneIds(nextZones);
+      if (verticalId === 'real-estate') {
+        const next = {
+          ...draft,
+          city: nextCity || undefined,
+          zone: normalizedZones.length ? normalizedZones : undefined,
+        } as BrowseFilters;
+        setDraft(next);
+        React.startTransition(() => {
+          router.push(`${pathname}${buildBrowseUrlQuery(next)}`);
+        });
+        return;
+      }
+      const next = { ...draft, city: nextCity || undefined } as BrowseFilters;
       setDraft(next);
-      applyDraft(next);
-      return;
-    }
-    const next = { ...draft, city: nextCity || undefined } as BrowseFilters;
-    setDraft(next);
-    applyDraft(next);
-  };
+      React.startTransition(() => {
+        router.push(`${pathname}${buildBrowseUrlQuery(next)}`);
+      });
+    },
+    [draft, pathname, router, verticalId],
+  );
 
   return (
     <>

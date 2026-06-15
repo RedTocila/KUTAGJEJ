@@ -5,26 +5,52 @@ import { useRouter } from 'next/navigation';
 import { Box, IconButton, InputAdornment, TextField } from '@mui/material';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 
-import { paths } from '@/paths';
+import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { buildSmartSearchUrl, parseSmartSearchQuery } from '@/lib/smart-search';
+
+let citiesCache: RealEstateCityDto[] | null = null;
+let citiesPromise: Promise<RealEstateCityDto[]> | null = null;
+
+function loadCitiesForSearch(): Promise<RealEstateCityDto[]> {
+  if (citiesCache) return Promise.resolve(citiesCache);
+  if (!citiesPromise) {
+    citiesPromise = listRealEstateLocationsPublic().then((res) => {
+      citiesCache = res.cities ?? [];
+      return citiesCache;
+    });
+  }
+  return citiesPromise;
+}
 
 export function HeaderMobileSearch() {
   const router = useRouter();
   const [query, setQuery] = React.useState('');
+  const [submitting, setSubmitting] = React.useState(false);
   const hasQuery = query.trim().length > 0;
 
-  const submit = (event?: React.FormEvent) => {
+  React.useEffect(() => {
+    void loadCitiesForSearch();
+  }, []);
+
+  const submit = async (event?: React.FormEvent) => {
     event?.preventDefault();
     const trimmed = query.trim();
-    if (!trimmed) return;
-    const params = new URLSearchParams();
-    params.set('q', trimmed);
-    router.push(`${paths.public.realEstate}?${params.toString()}`);
+    if (!trimmed || submitting) return;
+
+    setSubmitting(true);
+    try {
+      const cities = await loadCitiesForSearch();
+      const result = parseSmartSearchQuery(trimmed, cities);
+      router.push(buildSmartSearchUrl(result));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <Box
       component="form"
-      onSubmit={submit}
+      onSubmit={(event) => void submit(event)}
       sx={{ flex: 1, minWidth: 0, display: { xs: 'block', md: 'none' } }}
     >
       <TextField
@@ -33,6 +59,7 @@ export function HeaderMobileSearch() {
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Kërko prona, makina, punë…"
         aria-label="Kërko prona, makina, punë"
+        disabled={submitting}
         slotProps={{
           input: {
             endAdornment: hasQuery ? (
@@ -41,6 +68,7 @@ export function HeaderMobileSearch() {
                   type="submit"
                   aria-label="Kërko"
                   size="small"
+                  disabled={submitting}
                   sx={{
                     width: 28,
                     height: 28,
@@ -60,7 +88,7 @@ export function HeaderMobileSearch() {
             height: 36,
             borderRadius: 999,
             bgcolor: 'action.hover',
-            fontSize: '0.8125rem',
+            fontSize: { xs: '1rem', md: '0.8125rem' },
             fontWeight: 500,
             pl: 1.25,
             pr: hasQuery ? 0.5 : 1.25,

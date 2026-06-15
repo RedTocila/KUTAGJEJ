@@ -24,6 +24,7 @@ import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
 
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
+import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
@@ -382,6 +383,15 @@ export function ProfessionalListingDetailView({
                 <WhatsappLogoIcon weight="regular" size={26} />
               </Button>
             ) : null}
+            <ListingMessageButton
+              listingKind="professionals"
+              listingId={listing.id}
+              aria-label="Dërgo mesazh"
+              variant="outlined"
+              sx={{ px: 1.85, minWidth: 'auto', flexShrink: 0, borderRadius: 2, py: 1.35 }}
+            >
+              <ChatsCircleIcon weight="regular" size={26} />
+            </ListingMessageButton>
           </Stack>
         </Box>
       </Box>

@@ -17,7 +17,6 @@ import { Bed as BedIcon } from '@phosphor-icons/react/dist/ssr/Bed';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
-import { Couch as CouchIcon } from '@phosphor-icons/react/dist/ssr/Couch';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { Lightning as LightningIcon } from '@phosphor-icons/react/dist/ssr/Lightning';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
@@ -33,6 +32,7 @@ import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { formatPrice, relativeAlbanianDate } from '@/components/public/listing-cards/format-helpers';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
+import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { whatsappHref } from '@/lib/listing-contact';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -208,7 +208,7 @@ function RealEstatePriceContactAside(props: {
               disableElevation
               fullWidth
               size="large"
-              startIcon={<ChatsCircleIcon weight="regular" size={22} />}
+              startIcon={<PhoneIcon weight="regular" size={22} />}
               sx={{ borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.2 }}
             >
               Kontakto shitësin
@@ -234,6 +234,23 @@ function RealEstatePriceContactAside(props: {
                 WhatsApp
               </Button>
             ) : null}
+            <ListingMessageButton
+              listingKind="real-estate"
+              listingId={listing.id}
+              variant="outlined"
+              fullWidth
+              size="large"
+              sx={{
+                borderRadius: 2,
+                fontWeight: 800,
+                textTransform: 'none',
+                py: 1.2,
+                borderColor: 'divider',
+                borderWidth: 2,
+                color: 'text.primary',
+                '&:hover': { borderColor: 'primary.light', bgcolor: 'action.hover' },
+              }}
+            />
           </>
         ) : (
           <Button variant="contained" disabled fullWidth size="large" sx={{ borderRadius: 2 }}>
@@ -333,15 +350,11 @@ function RealEstateSellerCardContents({
             WhatsApp
           </Button>
         </Stack>
-        <Button
-          component="a"
-          href={whatsappListingHref ?? '#'}
-          rel="noopener noreferrer"
-          target="_blank"
-          disabled={!whatsappListingHref}
+        <ListingMessageButton
+          listingKind="real-estate"
+          listingId={listing.id}
           variant="outlined"
           fullWidth
-          startIcon={<CouchIcon weight="regular" size={20} />}
           sx={{
             borderRadius: 2,
             fontWeight: 800,
@@ -352,16 +365,18 @@ function RealEstateSellerCardContents({
             color: 'text.primary',
             '&:hover': { borderColor: 'primary.light', bgcolor: 'action.hover' },
           }}
-        >
-          Dërgo mesazh
-        </Button>
+        />
       </Stack>
     </>
   );
 }
 
-function StickyContactBar(props: { phone?: string | null; whatsappInquireHref: string | undefined | null }) {
-  const { phone, whatsappInquireHref } = props;
+function StickyContactBar(props: {
+  phone?: string | null;
+  whatsappInquireHref: string | undefined | null;
+  listingId: string;
+}) {
+  const { phone, whatsappInquireHref, listingId } = props;
   return (
     <Box
       sx={{
@@ -386,7 +401,7 @@ function StickyContactBar(props: { phone?: string | null; whatsappInquireHref: s
             variant="contained"
             disableElevation
             size="large"
-            startIcon={<ChatsCircleIcon weight="regular" size={22} />}
+            startIcon={<PhoneIcon weight="regular" size={22} />}
             sx={{
               flex: 1,
               borderRadius: 2,
@@ -396,13 +411,28 @@ function StickyContactBar(props: { phone?: string | null; whatsappInquireHref: s
               py: 1.35,
             }}
           >
-            Kontakto shitësin
+            Telefon
           </Button>
         ) : (
           <Button variant="contained" disabled sx={{ flex: 1 }}>
             Nr. kontakti i padisponueshëm
           </Button>
         )}
+        <ListingMessageButton
+          listingKind="real-estate"
+          listingId={listingId}
+          aria-label="Dërgo mesazh"
+          variant="outlined"
+          sx={{
+            px: 1.85,
+            minWidth: 'auto',
+            flexShrink: 0,
+            borderRadius: 2,
+            py: 1.35,
+          }}
+        >
+          <ChatsCircleIcon weight="regular" size={26} />
+        </ListingMessageButton>
         {whatsappInquireHref ? (
           <Button
             component="a"
@@ -789,7 +819,7 @@ export function RealEstateListingDetailView({
         </Container>
       </Box>
 
-      <StickyContactBar phone={displayPhone} whatsappInquireHref={whatsappInquireHref} />
+      <StickyContactBar phone={displayPhone} whatsappInquireHref={whatsappInquireHref} listingId={listing.id} />
     </>
   );
 }

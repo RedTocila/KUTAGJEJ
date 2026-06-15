@@ -28,6 +28,7 @@ import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
+import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
@@ -328,6 +329,13 @@ export function ProfessionalListingDetailDesktop({
                         Nr. kontakti i padisponueshëm
                       </Button>
                     )}
+                    <ListingMessageButton
+                      listingKind="professionals"
+                      listingId={listing.id}
+                      fullWidth
+                      variant="outlined"
+                      sx={{ borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.15 }}
+                    />
                   </Stack>
                 </Stack>
               </Box>

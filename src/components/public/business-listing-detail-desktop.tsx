@@ -26,6 +26,7 @@ import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
+import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
 import { formatPrice } from '@/components/public/listing-cards/format-helpers';
@@ -400,6 +401,13 @@ export function BusinessListingDetailDesktop({
                     </Button>
                   </Stack>
                 )}
+                <ListingMessageButton
+                  listingKind="businesses"
+                  listingId={listing.id}
+                  fullWidth
+                  variant="outlined"
+                  sx={{ borderRadius: 2.5, fontWeight: 800, textTransform: 'none', py: 1.1 }}
+                />
               </Stack>
             </Box>
           </Stack>

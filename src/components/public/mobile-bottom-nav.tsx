@@ -65,8 +65,8 @@ export function MobileBottomNav() {
       {
         id: 'messages',
         ariaLabel: 'Mesazhet',
-        href: isAuthed ? paths.user.dashboard : paths.user.auth,
-        activeWhen: (p) => Boolean(p?.startsWith(paths.user.dashboard)),
+        href: isAuthed ? paths.user.messages : paths.user.auth,
+        activeWhen: (p) => Boolean(p?.startsWith(paths.user.messages)),
         icon: ChatsCircleIcon,
       },
       {

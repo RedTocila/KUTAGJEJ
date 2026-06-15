@@ -28,6 +28,8 @@ export const paths = {
     myRealEstateListings: '/user/dashboard/shpalljet-e-mia',
     /** Bookmarked listings from across the platform. */
     savedListings: '/user/dashboard/te-ruajturat',
+    /** In-app messages tied to listings. */
+    messages: '/user/dashboard/mesazhet',
   },
   dashboard: {
     overview: '/dashboard',

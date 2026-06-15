@@ -14,6 +14,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
 import {
@@ -38,6 +39,7 @@ import {
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { AnyPublicListingDetail } from '@/lib/public-listings-client';
 
+import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
 import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
@@ -52,6 +54,7 @@ import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
+import { metricKindToConversationKind } from '@/lib/conversations-client';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 
 /** Tiny strip card for related listings — plain links, no theme callbacks crossing RSC boundaries. */
@@ -68,8 +71,10 @@ export interface VerticalListingSimilarItem {
 function StickyListingContact(props: {
   phone?: string | null;
   whatsappInquireHref?: string | null | undefined;
+  listingKind: ReturnType<typeof metricKindToConversationKind>;
+  listingId: string;
 }) {
-  const { phone, whatsappInquireHref } = props;
+  const { phone, whatsappInquireHref, listingKind, listingId } = props;
   return (
     <Box
       sx={{
@@ -119,6 +124,16 @@ function StickyListingContact(props: {
             <WhatsappLogoIcon weight="regular" size={26} />
           </Button>
         ) : null}
+        <ListingMessageButton
+          listingKind={listingKind}
+          listingId={listingId}
+          aria-label="Dërgo mesazh"
+          variant="outlined"
+          size="large"
+          sx={{ px: 1.85, minWidth: 'auto', flexShrink: 0, borderRadius: 2, py: 1.35 }}
+        >
+          <ChatsCircleIcon weight="regular" size={26} />
+        </ListingMessageButton>
       </Stack>
     </Box>
   );
@@ -207,6 +222,14 @@ function ListingContactAside(props: {
             Nr. kontakti i padisponueshëm
           </Button>
         )}
+        <ListingMessageButton
+          listingKind={metricKindToConversationKind(listing.kind as ListingMetricKind)}
+          listingId={listing.id}
+          variant="outlined"
+          fullWidth
+          size="large"
+          sx={{ borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.2 }}
+        />
       </Stack>
     </Stack>
   );
@@ -401,7 +424,12 @@ export function VerticalListingDetailView(props: {
         </Container>
       </Box>
 
-      <StickyListingContact phone={displayPhone} whatsappInquireHref={whatsappInquireHref} />
+      <StickyListingContact
+        phone={displayPhone}
+        whatsappInquireHref={whatsappInquireHref}
+        listingKind={metricKindToConversationKind(metricKind)}
+        listingId={listing.id}
+      />
     </>
   );
 }
@@ -636,14 +664,14 @@ function SellerProfileInner({ listing: l }: { listing: AnyPublicListingDetail })
           ) : null}
         </Stack>
       </Stack>
-      <Stack direction="row" spacing={1.25} sx={{ mt: 2 }}>
+      <Stack direction="row" spacing={1.25} sx={{ mt: 2, flexWrap: 'wrap' }}>
         <Button
           component={displayPhone ? 'a' : 'button'}
           href={displayPhone ? `tel:${displayPhone.replace(/\s/g, '')}` : undefined}
           disabled={!displayPhone}
           variant="contained"
           disableElevation
-          sx={{ flex: 1, borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.1 }}
+          sx={{ flex: 1, borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.1, minWidth: 120 }}
         >
           Telefon
         </Button>
@@ -665,6 +693,12 @@ function SellerProfileInner({ listing: l }: { listing: AnyPublicListingDetail })
         >
           <WhatsappLogoIcon weight="regular" size={26} />
         </Button>
+        <ListingMessageButton
+          listingKind={metricKindToConversationKind(l.kind as ListingMetricKind)}
+          listingId={l.id}
+          variant="outlined"
+          sx={{ flex: 1, borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.1, minWidth: 120 }}
+        />
       </Stack>
     </>
   );

@@ -15,8 +15,6 @@ export function BrowsePagination({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  if (totalPages <= 1) return null;
-
   const hrefForPage = React.useCallback(
     (targetPage: number) => {
       const qs = new URLSearchParams(searchParams.toString());
@@ -27,6 +25,8 @@ export function BrowsePagination({
     },
     [pathname, searchParams],
   );
+
+  if (totalPages <= 1) return null;
 
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', pt: { xs: 2, md: 3 } }}>

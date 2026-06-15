@@ -50,6 +50,8 @@ function registerModels() {
   require('./models/ProfessionalListingReview');
   require('./models/ProfessionalVerificationRequest');
   require('./models/AdminNotification');
+  require('./models/Conversation');
+  require('./models/Message');
 }
 
 const connectDB = async () => {
@@ -134,6 +136,7 @@ app.use('/api/listings/marketplace', require('./routes/marketplace-listings'));
 app.use('/api/listings/directory', require('./routes/directory-listings'));
 app.use('/api/business-reviews', require('./routes/business-listing-reviews'));
 app.use('/api/business-reservations', require('./routes/business-reservations'));
+app.use('/api/conversations', require('./routes/conversations'));
 app.use('/api/professional-reviews', require('./routes/professional-listing-reviews'));
 app.use('/api/professional-verification', require('./routes/professional-verification'));
 app.use('/api/admin/professional-verification', require('./routes/admin-professional-verification'));

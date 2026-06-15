@@ -16,6 +16,7 @@ import {
 import { alpha } from '@mui/material/styles';
 import { ArrowRight as ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
+import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
 import { BusinessVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
@@ -23,6 +24,7 @@ import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
+import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
 import { formatPrice } from '@/components/public/listing-cards/format-helpers';
@@ -663,6 +665,15 @@ export function BusinessListingDetailView({
           >
             Rezervo tani
           </Button>
+          <ListingMessageButton
+            listingKind="businesses"
+            listingId={listing.id}
+            aria-label="Dërgo mesazh"
+            variant="outlined"
+            sx={{ px: 1.5, minWidth: 'auto', flexShrink: 0, borderRadius: 2.5, py: 1.25 }}
+          >
+            <ChatsCircleIcon weight="regular" size={24} />
+          </ListingMessageButton>
         </Stack>
       </Box>
 

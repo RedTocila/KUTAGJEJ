@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { listingModerationFields } = require('../lib/listing-moderation-fields');
 
 const jobListingSchema = new mongoose.Schema(
   {
@@ -38,6 +39,7 @@ const jobListingSchema = new mongoose.Schema(
         label: { type: String, required: true, trim: true },
       },
     ],
+    ...listingModerationFields,
   },
   { timestamps: true },
 );

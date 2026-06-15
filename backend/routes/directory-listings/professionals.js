@@ -11,6 +11,7 @@ const {
 const { attachOwnerMetrics } = require('../../lib/listing-metrics');
 const { buildCityIndexFromDocs } = require('../../lib/directory-listings/city-index');
 const { formatMineProfessional } = require('../../lib/directory-listings/format-mine');
+const { notifyAdminsListingSubmitted } = require('../../lib/listing-moderation');
 
 const router = express.Router();
 
@@ -67,8 +68,11 @@ router.post('/professionals', authMiddleware, requirePortalUser, async (req, res
       servicesHighlight: v.servicesHighlight,
     });
 
+    await notifyAdminsListingSubmitted('professionals', doc._id, doc.title);
+
     res.status(201).json({
-      listing: { id: String(doc._id), title: doc.title, createdAt: doc.createdAt },
+      message: 'Njoftimi u dërgua për aprovim..',
+      listing: { id: String(doc._id), title: doc.title, status: doc.status, createdAt: doc.createdAt },
     });
   } catch (err) {
     console.error('POST /listings/directory/professionals:', err?.message || err);

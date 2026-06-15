@@ -19,6 +19,7 @@ function formatMineBusiness(doc, cityById) {
     reservationTimeSlots: doc.reservationTimeSlots ?? [],
     reservationPartySizes: doc.reservationPartySizes ?? [],
     servicesHighlight: doc.servicesHighlight ?? null,
+    status: doc.status || 'pending',
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
@@ -42,6 +43,7 @@ function formatMineProfessional(doc, cityById) {
     responseTimeHours: doc.responseTimeHours ?? null,
     portfolioItems: doc.portfolioItems ?? [],
     servicesHighlight: doc.servicesHighlight ?? null,
+    status: doc.status || 'pending',
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };

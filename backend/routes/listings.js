@@ -13,6 +13,7 @@ const {
   needsBedroomsBathFurnishing,
   needsYearBuilt,
 } = require('../lib/real-estate-field-rules');
+const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 
 const router = express.Router();
 
@@ -56,6 +57,7 @@ function formatMineListing(doc, cityById) {
     bathrooms: doc.bathrooms ?? null,
     furnishing: doc.furnishing ?? null,
     yearBuilt: doc.yearBuilt ?? null,
+    status: doc.status || 'pending',
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
@@ -130,11 +132,15 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
       yearBuilt: needsYearBuilt(propertyCategory) ? Number(req.body.yearBuilt) : undefined,
     });
 
+    await notifyAdminsListingSubmitted('real-estate', doc._id, doc.title);
+
     res.status(201).json({
+      message: 'Njoftimi u dërgua për aprovim..',
       listing: {
         id: String(doc._id),
         propertyCategory: doc.propertyCategory,
         title: doc.title,
+        status: doc.status,
         createdAt: doc.createdAt,
       },
     });

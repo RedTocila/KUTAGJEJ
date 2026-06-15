@@ -22,6 +22,7 @@ export interface RealEstateMineListing extends ListingMetrics {
   bathrooms: number | null;
   furnishing: string | null;
   yearBuilt: number | null;
+  status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
   updatedAt: string;
 }

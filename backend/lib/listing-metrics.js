@@ -315,6 +315,15 @@ async function toggleSavedListing(req, { kind, listingId }) {
   };
 }
 
+async function enrichListingsSaverState(listings, saver) {
+  if (!saver || !Array.isArray(listings) || listings.length === 0) return listings;
+  const refs = listings
+    .filter((l) => l?.id && l?.kind)
+    .map((l) => ({ kind: l.kind, listingId: l.id }));
+  const map = await fetchMetricsMap(refs, saver);
+  return listings.map((l) => attachMetricsToListing(l, map, saver));
+}
+
 module.exports = {
   LISTING_KINDS,
   isValidKind,
@@ -325,6 +334,7 @@ module.exports = {
   attachMetricsToListing,
   attachMetricsToListings,
   attachOwnerMetrics,
+  enrichListingsSaverState,
   recordListingEvent,
   toggleSavedListing,
 };

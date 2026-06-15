@@ -14,6 +14,7 @@ import {
   buildBrowseUrlQuery,
   BUSINESS_FILTER_OPTIONS,
   parseBrowseSearchParams,
+  parseBrowsePage,
   PROFESSIONAL_FILTER_OPTIONS,
   type BrowseCarFilters,
   type BrowseDirectoryFilters,
@@ -292,22 +293,25 @@ export function buildBrowsePageMetadata({
   filters,
   cities,
   basePath,
+  page = 1,
 }: {
   verticalId: HomeVerticalId;
   filters: BrowseFilters;
   cities: RealEstateCityDto[];
   basePath: string;
+  page?: number;
 }): Metadata {
   const defaults = DEFAULT_SEO[verticalId];
   const hasFilters = hasSeoBrowseFilters(filters);
   const { title, description } = hasFilters ? buildFilteredSeo(verticalId, filters, cities) : defaults;
+  const pageTitle = page > 1 ? `${title} — Faqja ${page}` : title;
 
-  const canonicalPath = `${basePath}${buildBrowseUrlQuery(filters)}`;
+  const canonicalPath = `${basePath}${buildBrowseUrlQuery(filters, page)}`;
   const canonicalUrl = new URL(canonicalPath.replace(/^\//, ''), config.site.url).toString();
-  const fullTitle = `${title} | ${config.site.name}`;
+  const fullTitle = `${pageTitle} | ${config.site.name}`;
 
   return {
-    title,
+    title: pageTitle,
     description,
     robots: { index: true, follow: true },
     alternates: { canonical: canonicalPath },
@@ -333,6 +337,7 @@ export async function generateBrowseMetadata(
   basePath: string,
 ): Promise<Metadata> {
   const filters = parseBrowseSearchParams(verticalId, searchParams);
+  const page = parseBrowsePage(searchParams);
   const cities = await fetchPublicCities();
-  return buildBrowsePageMetadata({ verticalId, filters, cities, basePath });
+  return buildBrowsePageMetadata({ verticalId, filters, cities, basePath, page });
 }

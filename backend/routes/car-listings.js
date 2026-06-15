@@ -7,6 +7,7 @@ const CarListing = require('../models/CarListing');
 const RealEstateCity = require('../models/RealEstateCity');
 const { validateCarPayload, FINISH_VALUES } = require('../lib/car-field-rules');
 const { attachOwnerMetrics } = require('../lib/listing-metrics');
+const { notifyAdminsListingSubmitted, listingTitle } = require('../lib/listing-moderation');
 
 const router = express.Router();
 
@@ -99,6 +100,7 @@ function formatMineListing(doc, cityById) {
     cityId: doc.cityId ? String(doc.cityId) : null,
     cityName: city?.name ?? null,
     imageUrls: doc.imageUrls ?? [],
+    status: doc.status || 'pending',
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
@@ -181,13 +183,17 @@ router.post(
         imageUrls,
       });
 
+      await notifyAdminsListingSubmitted('cars', doc._id, listingTitle('cars', doc));
+
       res.status(201).json({
+        message: 'Njoftimi u dërgua për aprovim..',
         listing: {
           id: String(doc._id),
           make: doc.make,
           model: doc.model,
           variant: doc.variant,
           year: doc.year,
+          status: doc.status,
           createdAt: doc.createdAt,
         },
       });

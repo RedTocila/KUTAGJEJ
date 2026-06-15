@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { listingModerationFields } = require('../lib/listing-moderation-fields');
 
 /**
  * Unified model for "Biznese" and "Profesionistë" public verticals.
@@ -77,6 +78,7 @@ const directoryListingSchema = new mongoose.Schema(
     cityId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
     contactPhone: { type: String, trim: true },
     imageUrls: [{ type: String, trim: true }],
+    ...listingModerationFields,
   },
   { timestamps: true },
 );

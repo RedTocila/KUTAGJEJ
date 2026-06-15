@@ -1,8 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Avatar, Badge, Box, IconButton, Stack, Tooltip } from '@mui/material';
-import { Bell as BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
+import { Avatar, Box, IconButton, Stack, Tooltip } from '@mui/material';
 import { List as ListIcon } from '@phosphor-icons/react/dist/ssr/List';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
@@ -11,6 +10,7 @@ import { usePopover } from '@/hooks/use-popover';
 import { MobileNav } from './mobile-nav';
 import { ThemeModeToggle } from './theme-mode-toggle';
 import { UserPopover } from './user-popover';
+import { AdminNotificationsMenu } from './admin-notifications-menu';
 
 export function MainNav() {
   const [openNav, setOpenNav] = React.useState<boolean>(false);
@@ -53,11 +53,7 @@ export function MainNav() {
             <Tooltip title="Kontakte">
               <IconButton>{React.createElement(UsersIcon, { size: 22 })}</IconButton>
             </Tooltip>
-            <Tooltip title="Njoftime">
-              <Badge badgeContent={4} color="success" variant="dot">
-                <IconButton>{React.createElement(BellIcon, { size: 22 })}</IconButton>
-              </Badge>
-            </Tooltip>
+            <AdminNotificationsMenu />
             <Avatar
               onClick={userPopover.handleOpen}
               ref={userPopover.anchorRef}

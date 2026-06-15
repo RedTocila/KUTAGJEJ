@@ -1,8 +1,9 @@
 /**
- * Seeds demo listings per vertical (real-estate, cars, jobs, marketplace,
- * biznese, profesionistë). Marketplace (tregu) gets ≥15 ads per category.
+ * Seeds demo listings per vertical for filter/browse testing.
  * Idempotent: re-running removes the previous batch (demo poster email)
  * before re-inserting.
+ *
+ * Totals: 25 listings per vertical × 6 categories = 150 demo listings
  *
  * Usage:  node scripts/seed-listings.js
  */
@@ -23,6 +24,15 @@ const IndividualUser = require('../models/IndividualUser');
 const DEMO_EMAIL = 'demo@kutagjej.al';
 const DEMO_PASSWORD = 'demo123456';
 const DEMO_PHONE = '+355 69 200 0000';
+const LISTINGS_PER_CATEGORY = 25;
+
+function padToCount(base, count, build) {
+  const out = base.map((item) => ({ ...item }));
+  for (let i = out.length; i < count; i += 1) {
+    out.push(build(i));
+  }
+  return out.slice(0, count);
+}
 
 /**
  * Curated, royalty-free Unsplash photos used as cover images for demo
@@ -36,12 +46,18 @@ function unsplash(photoId) {
 }
 
 const REAL_ESTATE_IMAGES = [
-  unsplash('photo-1522708323590-d24dbb6b0267'), // modern apartment interior
-  unsplash('photo-1613977257363-707ba9348227'), // luxury villa exterior
-  unsplash('photo-1493809842364-78817add7ffb'), // penthouse view
-  unsplash('photo-1502672260266-1c1ef2d93688'), // cozy living room
-  unsplash('photo-1604719312566-8912e9227c6a'), // shop front
-  unsplash('photo-1500382017468-9049fed747ef'), // open land
+  unsplash('photo-1522708323590-d24dbb6b0267'),
+  unsplash('photo-1613977257363-707ba9348227'),
+  unsplash('photo-1493809842364-78817add7ffb'),
+  unsplash('photo-1502672260266-1c1ef2d93688'),
+  unsplash('photo-1604719312566-8912e9227c6a'),
+  unsplash('photo-1500382017468-9049fed747ef'),
+  unsplash('photo-1560448204-e02f11c2d0e2'),
+  unsplash('photo-1484154218962-a197022b5858'),
+  unsplash('photo-1600585154340-be6161a56a0c'),
+  unsplash('photo-1600607687939-ce8a6c25118c'),
+  unsplash('photo-1600566753190-17f0baa2a6c3'),
+  unsplash('photo-1600047509807-ba8f8d28e08c'),
 ];
 
 const CAR_IMAGES = [
@@ -82,8 +98,8 @@ const MARKETPLACE_IMAGES = [
   unsplash('photo-1516321318423-f06f85e504b3'), // misc items
 ];
 
-/** Minimum marketplace listings per category (tregu browse). */
-const MARKETPLACE_PER_CATEGORY = 15;
+/** Listings per vertical for filter/browse testing. */
+const MARKETPLACE_FILTER_SAMPLES = LISTINGS_PER_CATEGORY;
 
 const MARKETPLACE_CATEGORIES = [
   'elektronike',
@@ -319,6 +335,10 @@ const DEMO_CITIES = [
     slug: 'tirane',
     zones: [
       { name: 'Bllok', slug: 'bllok' },
+      { name: 'Sheshi Skënderbej', slug: 'sheshi-skenderbej' },
+      { name: 'Pazari i Ri', slug: 'pazari-i-ri' },
+      { name: 'Myslym Shyri', slug: 'myslym-shyri' },
+      { name: '21-Dhjetori', slug: '21-dhjetori' },
       { name: 'Komuna e Parisit', slug: 'komuna-e-parisit' },
       { name: 'Lundër', slug: 'lunder' },
       { name: 'Farkë', slug: 'farke' },
@@ -351,6 +371,16 @@ const DEMO_CITIES = [
     ],
   },
 ];
+
+function collectLocationPairs() {
+  const pairs = [];
+  for (const city of DEMO_CITIES) {
+    for (const zone of city.zones) {
+      pairs.push([city.slug, zone.slug]);
+    }
+  }
+  return pairs;
+}
 
 async function ensureCities() {
   for (const c of DEMO_CITIES) {
@@ -410,7 +440,7 @@ async function loadCities() {
 // ---------------------------------------------------------------------------
 
 function realEstateSeeds(loc) {
-  return [
+  const base = [
     {
       ...loc.pick('tirane', 'komuna-e-parisit'),
       propertyCategory: 'apartment',
@@ -498,13 +528,146 @@ function realEstateSeeds(loc) {
       currency: 'EUR',
       surfaceM2: 1500,
     },
+    {
+      ...loc.pick('tirane', 'sheshi-skenderbej'),
+      propertyCategory: 'apartment',
+      title: 'Studio modern pranë Sheshit Skënderbej',
+      description: 'Studio i rinovuar 38 m², kati i 3-të, ashensor, ideal për investim me qira afatgjatë.',
+      transactionType: 'sale',
+      price: 68000,
+      currency: 'EUR',
+      surfaceM2: 38,
+      condition: 'renovated',
+      floor: 3,
+      bedrooms: 0,
+      bathrooms: 1,
+      furnishing: 'unfurnished',
+      yearBuilt: 1975,
+    },
+    {
+      ...loc.pick('tirane', 'pazari-i-ri'),
+      propertyCategory: 'apartment',
+      title: 'Apartament 2+1 me qira — Pazari i Ri',
+      description: 'Banese e qetë 68 m², kuzhinë e hapur, 2 dhoma, parkim në oborr. Qera mujore.',
+      transactionType: 'rent',
+      price: 380,
+      currency: 'EUR',
+      surfaceM2: 68,
+      condition: 'good-condition',
+      floor: 2,
+      bedrooms: 2,
+      bathrooms: 1,
+      furnishing: 'partially-furnished',
+      yearBuilt: 2005,
+    },
+    {
+      ...loc.pick('tirane', 'myslym-shyri'),
+      propertyCategory: 'office',
+      title: 'Zyrë 95 m² në Myslym Shyri',
+      description: 'Hapësirë zyre me ndarje open-space, klimë, internet fibër. Kontratë qiraje 12+ muaj.',
+      transactionType: 'rent',
+      price: 850,
+      currency: 'EUR',
+      surfaceM2: 95,
+      condition: 'new',
+      floor: 5,
+      furnishing: 'unfurnished',
+      yearBuilt: 2022,
+    },
+    {
+      ...loc.pick('tirane', '21-dhjetori'),
+      propertyCategory: 'apartment',
+      title: 'Apartament 1+1 ekonomik — 21-Dhjetori',
+      description: 'Apartament i vogël por funksional, afër linjave të autobusit dhe marketeve.',
+      transactionType: 'rent',
+      price: 280,
+      currency: 'EUR',
+      surfaceM2: 42,
+      condition: 'good-condition',
+      floor: 1,
+      bedrooms: 1,
+      bathrooms: 1,
+      furnishing: 'unfurnished',
+      yearBuilt: 1990,
+    },
+    {
+      ...loc.pick('tirane', 'astir'),
+      propertyCategory: 'apartment',
+      title: 'Apartament familjar 3+1 në Astir',
+      description: 'Banese 92 m² me ballkon, 2 banjo, ngrohje individuale. Shitje me dokumentacion të plotë.',
+      transactionType: 'sale',
+      price: 105000,
+      currency: 'EUR',
+      surfaceM2: 92,
+      condition: 'good-condition',
+      floor: 7,
+      bedrooms: 3,
+      bathrooms: 2,
+      furnishing: 'partially-furnished',
+      yearBuilt: 2015,
+    },
+    {
+      ...loc.pick('tirane', 'bllok'),
+      propertyCategory: 'parking',
+      title: 'Vendparkim të mbuluar në Bllok',
+      description: 'Garazh i sigurt me kartë hyrje, i përshtatshëm për banorë të zonës.',
+      transactionType: 'sale',
+      price: 22000,
+      currency: 'EUR',
+      surfaceM2: 14,
+      parkingFloor: -1,
+    },
   ];
+
+  const pairs = collectLocationPairs();
+  const extraCategories = [
+    'apartment',
+    'room-studio-attic',
+    'shop',
+    'office',
+    'commercial-local',
+    'warehouse',
+    'part-of-villa',
+  ];
+  const conditions = ['new', 'renovated', 'good-condition', 'in-construction'];
+  const furnishings = ['furnished', 'unfurnished', 'partially-furnished', 'kitchen-only'];
+
+  return padToCount(base, LISTINGS_PER_CATEGORY, (n) => {
+    const [citySlug, zoneSlug] = pairs[n % pairs.length];
+    const category = extraCategories[n % extraCategories.length];
+    const tx = n % 4 === 0 ? 'rent' : 'sale';
+    const surfaceM2 = 32 + (n * 19) % 420;
+    const price = tx === 'rent' ? 260 + (n * 41) % 950 : 42000 + (n * 9300) % 480000;
+    const doc = {
+      ...loc.pick(citySlug, zoneSlug),
+      propertyCategory: category,
+      title: `${category === 'apartment' ? 'Apartament' : category} demo #${n + 1} — ${zoneSlug.replace(/-/g, ' ')}`,
+      description: `Listim demo #${n + 1} për testim filtrash. ${tx === 'rent' ? 'Me qira' : 'Në shitje'}, ${surfaceM2} m².`,
+      transactionType: tx,
+      price,
+      currency: 'EUR',
+      surfaceM2,
+    };
+
+    if (['apartment', 'room-studio-attic', 'part-of-villa'].includes(category)) {
+      doc.condition = conditions[n % conditions.length];
+      doc.furnishing = furnishings[n % furnishings.length];
+      doc.bedrooms = n % 4;
+      doc.bathrooms = 1 + (n % 2);
+      doc.yearBuilt = 1992 + (n % 30);
+      if (category === 'apartment') doc.floor = 1 + (n % 9);
+    } else if (['shop', 'office', 'commercial-local', 'warehouse'].includes(category)) {
+      doc.condition = conditions[n % conditions.length];
+      if (category === 'office') doc.floor = 1 + (n % 8);
+    }
+
+    return doc;
+  });
 }
 
 function carSeeds(loc) {
-  // Cars only need cityId; pick the demo city directly.
   const cityId = (slug) => loc.bySlug.get(slug)._id;
-  return [
+  const base = [
     {
       cityId: cityId('tirane'),
       make: 'BMW',
@@ -601,12 +764,91 @@ function carSeeds(loc) {
       finish: ['metallic'],
       extras: ['Panoramic roof', 'Heated windshield', 'LED headlights', 'Adaptive lighting'],
     },
+    {
+      cityId: cityId('tirane'),
+      make: 'Ford',
+      model: 'Fiesta',
+      variant: '1.0 EcoBoost',
+      description: 'Makinë ekonomike për qytet, konsum i ulët, letra të rregullta, pa defekte.',
+      year: 2015,
+      kilometers: 210000,
+      transmission: 'manual',
+      fuelType: 'petrol',
+      price: 6200,
+      currency: 'EUR',
+      color: 'red',
+      finish: ['metallic'],
+      extras: ['ABS', 'Bluetooth'],
+    },
+    {
+      cityId: cityId('durres'),
+      make: 'Hyundai',
+      model: 'Kona',
+      variant: 'Electric',
+      description: 'SUV elektrik me autonomi 400 km, karikues AC/DC, garanci baterie aktive.',
+      year: 2022,
+      kilometers: 34000,
+      transmission: 'automatic',
+      fuelType: 'electric',
+      price: 26500,
+      currency: 'EUR',
+      color: 'green',
+      finish: ['metallic'],
+      extras: ['LED headlights', 'Lane change assist'],
+    },
   ];
+
+  const citySlugs = ['tirane', 'durres', 'vlore', 'shkoder'];
+  const makeModels = [
+    ['Audi', 'A4', '2.0 TDI'],
+    ['Peugeot', '208', 'GT Line'],
+    ['Renault', 'Clio', 'Intens'],
+    ['Skoda', 'Octavia', 'Style'],
+    ['Nissan', 'Qashqai', 'Tekna'],
+    ['Kia', 'Sportage', 'GT-Line'],
+    ['Mazda', 'CX-5', 'Skyactiv'],
+    ['Volvo', 'XC60', 'Momentum'],
+    ['Opel', 'Corsa', 'Edition'],
+    ['Seat', 'Leon', 'FR'],
+    ['Honda', 'Civic', 'Elegance'],
+    ['Jeep', 'Compass', 'Limited'],
+    ['Dacia', 'Duster', 'Comfort'],
+    ['Mini', 'Cooper', 'Classic'],
+    ['Porsche', 'Macan', 'S'],
+    ['Lexus', 'IS300h', 'F Sport'],
+    ['Citroën', 'C3', 'Feel'],
+    ['Fiat', '500', 'Lounge'],
+    ['Subaru', 'Forester', 'Premium'],
+    ['Suzuki', 'Vitara', 'GLX'],
+  ];
+  const fuels = ['petrol', 'diesel', 'electric', 'hybrid-petrol', 'hybrid-diesel', 'lpg'];
+  const transmissions = ['automatic', 'manual'];
+  const colors = ['white', 'black', 'grey', 'blue', 'red', 'silver', 'green'];
+
+  return padToCount(base, LISTINGS_PER_CATEGORY, (n) => {
+    const mm = makeModels[n % makeModels.length];
+    return {
+      cityId: cityId(citySlugs[n % citySlugs.length]),
+      make: mm[0],
+      model: mm[1],
+      variant: mm[2],
+      description: `Makinë demo #${n + 1} — e mirëmbajtur, dokumentacion i plotë.`,
+      year: 2011 + (n % 13),
+      kilometers: 28000 + (n * 12400) % 240000,
+      transmission: transmissions[n % transmissions.length],
+      fuelType: fuels[n % fuels.length],
+      price: 4800 + (n * 1750) % 48000,
+      currency: 'EUR',
+      color: colors[n % colors.length],
+      finish: n % 2 === 0 ? ['metallic'] : ['matte'],
+      extras: n % 3 === 0 ? ['Panoramic roof', 'LED headlights'] : ['ABS', 'Bluetooth'],
+    };
+  });
 }
 
 function jobSeeds(loc) {
   const cityId = (slug) => loc.bySlug.get(slug)._id;
-  return [
+  const base = [
     {
       cityId: cityId('tirane'),
       title: 'Senior Frontend Developer (React / Next.js)',
@@ -686,11 +928,68 @@ function jobSeeds(loc) {
       currency: 'EUR',
     },
   ];
+
+  const citySlugs = ['tirane', 'durres', 'vlore', 'shkoder'];
+  const industries = [
+    'teknologji-informacioni',
+    'horeka',
+    'shitje-zhvillim',
+    'ndertim-industri',
+    'marketing-produkte',
+    'sherbim-klienti',
+    'finance',
+    'burime-njerezore',
+    'administrim',
+    'mjekesore-shendetesore',
+    'prodhim',
+    'retail',
+    'ligjore',
+    'prokurim-logjistike',
+    'instalime-mirembajtje',
+  ];
+  const educations = ['no-requirement', 'secondary', 'bachelor', 'master', 'vocational'];
+  const experiences = ['no-experience', '1-2', '2-3', '3-5', '5-10'];
+  const jobTypes = ['full-time', 'part-time', 'remote', 'internship', 'freelance'];
+  const workLocations = ['onsite', 'hybrid', 'remote'];
+  const titles = [
+    'Specialist Operacionesh',
+    'Koordinator Projektesh',
+    'Analist të Dhënash',
+    'Menaxher Depo',
+    'Gazetar Digital',
+    'Instruktor Trajnimi',
+    'Inxhinier Prodhimi',
+    'Agjent Sigurimesh',
+    'Dizajner Grafik',
+    'Kujdestar të Moshuarish',
+    'Teknik Laboratori',
+    'Operator Call Center',
+    'Arkivist Dokumentesh',
+    'Menaxher Social Media',
+    'Konsulent IT',
+    'Specialist Blerjesh',
+    'Supervizor Magazinë',
+    'Kontrollor Cilësie',
+    'Asistent Menaxher',
+  ];
+
+  return padToCount(base, LISTINGS_PER_CATEGORY, (n) => ({
+    cityId: cityId(citySlugs[n % citySlugs.length]),
+    title: `${titles[n % titles.length]} — pozicion #${n + 1}`,
+    description: `Punë demo #${n + 1} për testim filtrash. Përshkrim i detajuar i rolit dhe kërkesave.`,
+    industry: industries[n % industries.length],
+    education: educations[n % educations.length],
+    experience: experiences[n % experiences.length],
+    jobType: jobTypes[n % jobTypes.length],
+    workLocation: workLocations[n % workLocations.length],
+    salary: 450 + (n * 95) % 2200,
+    currency: n % 5 === 0 ? 'LEK' : 'EUR',
+  }));
 }
 
 function businessDirectorySeeds(loc) {
   const cityId = (slug) => loc.bySlug.get(slug)._id;
-  return [
+  const base = [
     {
       vertical: 'businesses',
       cityId: cityId('tirane'),
@@ -764,11 +1063,52 @@ function businessDirectorySeeds(loc) {
       reservationUrl: null,
     },
   ];
+
+  const citySlugs = ['tirane', 'durres', 'vlore', 'shkoder'];
+  const categories = ['restorant', 'bar', 'kafe', 'brunch', 'piceri-fast-food', 'pasticeri'];
+  const names = [
+    'Odisea',
+    'Veranda',
+    'Stacioni',
+    'Aromat',
+    'Panorama',
+    'Zgara',
+    'Fiori',
+    'Deti Blu',
+    'Kodra',
+    'Era',
+    'Shtëpia',
+    'Tradita',
+    'Nova',
+    'Luna',
+    'Rrapi',
+    'Ulliri',
+    'Valbona',
+    'Shpresa',
+    'Arti',
+  ];
+
+  return padToCount(base, LISTINGS_PER_CATEGORY, (n) => {
+    const category = categories[n % categories.length];
+    const citySlug = citySlugs[n % citySlugs.length];
+    const name = names[n % names.length];
+    return {
+      vertical: 'businesses',
+      cityId: cityId(citySlug),
+      title: `${name} — ${category.replace(/-/g, ' ')} demo #${n + 1}`,
+      description: `Biznes demo #${n + 1} për testim filtrash. Shërbim lokal me stil unik dhe klientelë të rregullt.`,
+      category,
+      servicesHighlight: 'Wi‑Fi · Take-away · Tavolina jashtë',
+      openingHours: 'Hën–Die 09:00–22:00',
+      reservationsEnabled: n % 3 === 0,
+      reservationUrl: n % 3 === 0 ? 'https://example.com/rezervo' : null,
+    };
+  });
 }
 
 function professionalDirectorySeeds(loc) {
   const cityId = (slug) => loc.bySlug.get(slug)._id;
-  return [
+  const base = [
     {
       vertical: 'professionals',
       cityId: cityId('tirane'),
@@ -836,42 +1176,70 @@ function professionalDirectorySeeds(loc) {
       currency: 'EUR',
     },
   ];
+
+  const citySlugs = ['tirane', 'durres', 'vlore', 'shkoder'];
+  const categories = ['konsulent', 'freelance', 'sherbim', 'kurse', 'dizajn-it', 'marketing', 'mjekesi', 'arsim'];
+  const titles = [
+    'Konsulent biznesi',
+    'Dizajner UX/UI',
+    'Mësues privat matematike',
+    'Fotograf produktesh',
+    'Trajner fitness',
+    'Përkthyes juridik',
+    'Social media manager',
+    'Arkitekt i brendshëm',
+    'Konsulent tatimesh',
+    'Zhvillues WordPress',
+    'Mami doula',
+    'Kurs gitare',
+    'Konsulent HR',
+    'Videomaker',
+    'Nutricionist',
+    'Copywriter',
+    'Konsulent eksporti',
+    'Mësues anglishtje',
+    'Ilustrues',
+  ];
+
+  return padToCount(base, LISTINGS_PER_CATEGORY, (n) => ({
+    vertical: 'professionals',
+    cityId: cityId(citySlugs[n % citySlugs.length]),
+    title: `${titles[n % titles.length]} — profesionist demo #${n + 1}`,
+    description: `Profesionist demo #${n + 1} për testim filtrash. Përvojë e verifikuar dhe referenca të disponueshme.`,
+    category: categories[n % categories.length],
+    condition: null,
+    price: n % 4 === 0 ? null : 25 + (n * 37) % 900,
+    currency: n % 4 === 0 ? null : n % 6 === 0 ? 'LEK' : 'EUR',
+  }));
 }
 
 function marketplaceSeeds(loc) {
   const cityId = (slug) => loc.bySlug.get(slug)._id;
   const citySlugs = ['tirane', 'durres', 'vlore', 'shkoder'];
   const conditions = ['i-ri', 'si-i-ri', 'shume-mire', 'mire', 'me-defekte'];
-  const seeds = [];
+  const flat = [];
 
   for (const category of MARKETPLACE_CATEGORIES) {
     const catalog = MARKETPLACE_CATEGORY_CATALOG[category];
-    if (!catalog) {
-      throw new Error(`Missing marketplace catalog for category: ${category}`);
+    if (!catalog) continue;
+    for (const [title, description, price] of catalog.items) {
+      flat.push({ category, title, description, price });
     }
-
-    const items = catalog.items.slice(0, MARKETPLACE_PER_CATEGORY);
-    while (items.length < MARKETPLACE_PER_CATEGORY) {
-      const base = catalog.items[items.length % catalog.items.length];
-      items.push([`${base[0]} (${items.length + 1})`, base[1], base[2]]);
-    }
-
-    items.forEach(([title, description, price], index) => {
-      const isService = category === 'sherbime';
-      seeds.push({
-        cityId: cityId(citySlugs[(seeds.length + index) % citySlugs.length]),
-        transactionType: 'shes',
-        title,
-        description,
-        category,
-        condition: isService ? null : conditions[index % conditions.length],
-        price: price > 0 ? price : null,
-        currency: price > 0 ? 'EUR' : null,
-      });
-    });
   }
 
-  return seeds;
+  return flat.slice(0, LISTINGS_PER_CATEGORY).map((item, i) => {
+    const isService = item.category === 'sherbime';
+    return {
+      cityId: cityId(citySlugs[i % citySlugs.length]),
+      transactionType: 'shes',
+      title: item.title,
+      description: item.description,
+      category: item.category,
+      condition: isService ? null : conditions[i % conditions.length],
+      price: item.price > 0 ? item.price : null,
+      currency: item.price > 0 ? 'EUR' : null,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -908,7 +1276,7 @@ async function run() {
     `✓ Cleared previous demo data (re=${wiped[0].deletedCount} cars=${wiped[1].deletedCount} jobs=${wiped[2].deletedCount} mkt=${wiped[3].deletedCount} dir=${wiped[4].deletedCount})`,
   );
 
-  const baseDoc = { posterId: demoUser._id, posterModel: 'IndividualUser', contactPhone: DEMO_PHONE };
+  const baseDoc = { posterId: demoUser._id, posterModel: 'IndividualUser', contactPhone: DEMO_PHONE, status: 'approved' };
 
   // Stagger createdAt so listings sort nicely (newest first).
   const stagger = (i) => new Date(Date.now() - i * 60 * 1000); // 1 minute apart
@@ -919,7 +1287,7 @@ async function run() {
     const n = Math.min(Math.max(desiredCount, 1), gallery.length, 8);
     const urls = [];
     for (let k = 0; k < n; k += 1) {
-      urls.push(gallery[(i + k) % gallery.length]);
+      urls.push(gallery[(i * 2 + k) % gallery.length]);
     }
     return urls;
   }
@@ -963,7 +1331,7 @@ async function run() {
   }));
   await MarketplaceListing.insertMany(mktDocs, { timestamps: false });
   console.log(
-    `✓ Inserted ${mktDocs.length} marketplace listings (${MARKETPLACE_PER_CATEGORY} per category × ${MARKETPLACE_CATEGORIES.length} categories)`,
+    `✓ Inserted ${mktDocs.length} marketplace listings (${LISTINGS_PER_CATEGORY} diverse samples)`,
   );
 
   const bizDocs = businessDirectorySeeds(loc).map((d, i) => ({

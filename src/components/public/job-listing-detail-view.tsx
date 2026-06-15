@@ -52,7 +52,7 @@ import { JobVerifiedBadge } from '@/components/public/professional-listing-detai
 import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
-import { recordListingMetricEvent } from '@/lib/listing-metrics';
+import { shareListing } from '@/lib/listing-metrics';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { paths } from '@/paths';
 
@@ -173,16 +173,12 @@ export function JobListingDetailView({
   ] as const;
 
   const handleShare = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: listing.title, text: listing.title, url: canonicalUrl });
-      } else {
-        await navigator.clipboard.writeText(canonicalUrl);
-      }
-    } catch {
-      /* noop */
-    }
-    const metrics = await recordListingMetricEvent('job', listing.id, 'share');
+    const metrics = await shareListing({
+      title: listing.title,
+      listingKind: 'job',
+      listingId: listing.id,
+      url: canonicalUrl,
+    });
     if (metrics) setShareCount(metrics.shareCount);
   };
 

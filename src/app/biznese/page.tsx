@@ -5,7 +5,12 @@ import { Grid } from '@mui/material';
 import { CategoryBrowseGrid, CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { generateBrowseMetadata } from '@/lib/browse-page-seo';
-import { hasActiveBrowseFilters, parseBrowseSearchParams } from '@/lib/listing-filters';
+import {
+  BROWSE_PAGE_SIZE,
+  hasActiveBrowseFilters,
+  parseBrowsePage,
+  parseBrowseSearchParams,
+} from '@/lib/listing-filters';
 import { fetchBrowseBusinesses } from '@/lib/public-listings-client';
 import { fetchPublicCities } from '@/lib/real-estate-locations-server';
 import { paths } from '@/paths';
@@ -23,10 +28,11 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 export default async function BusinessesBrowsePage({ searchParams }: PageProps) {
   const sp = (await searchParams) ?? {};
   const filters = parseBrowseSearchParams('businesses', sp);
+  const page = parseBrowsePage(sp);
   const hasFilters = hasActiveBrowseFilters(filters);
 
-  const [{ listings, total }, cities] = await Promise.all([
-    fetchBrowseBusinesses(24, filters),
+  const [{ listings, total, page: currentPage, totalPages }, cities] = await Promise.all([
+    fetchBrowseBusinesses(BROWSE_PAGE_SIZE, filters, page),
     fetchPublicCities(),
   ]);
 
@@ -35,6 +41,9 @@ export default async function BusinessesBrowsePage({ searchParams }: PageProps) 
       verticalId="businesses"
       total={total}
       shownCount={listings.length}
+      page={currentPage}
+      totalPages={totalPages}
+      pageSize={BROWSE_PAGE_SIZE}
       hasFilters={hasFilters}
       cities={cities}
     >

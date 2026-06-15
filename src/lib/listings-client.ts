@@ -60,6 +60,7 @@ export interface CarMineListing extends ListingMetrics {
   cityName: string | null;
   contactPhone: string | null;
   imageUrls: string[];
+  status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
 }
 
@@ -79,6 +80,7 @@ export interface JobMineListing extends ListingMetrics {
   responsibilities: string[];
   requirements: string[];
   benefits: { id: string; label: string }[];
+  status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
 }
 
@@ -91,6 +93,7 @@ export interface MarketplaceMineListing extends ListingMetrics {
   currency: string | null;
   cityName: string | null;
   contactPhone: string | null;
+  status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
 }
 
@@ -115,9 +118,16 @@ export async function listMyRealEstateListings(): Promise<{
   }
 }
 
+export type ListingCreateResult = {
+  id?: string;
+  status?: 'pending' | 'approved' | 'rejected';
+  message?: string;
+  error?: string;
+};
+
 export async function createRealEstateListing(
   body: RealEstateListingPayload,
-): Promise<{ id?: string; error?: string }> {
+): Promise<ListingCreateResult> {
   try {
     const res = await fetch(getApiUrl('/listings/real-estate'), {
       method: 'POST',
@@ -126,7 +136,11 @@ export async function createRealEstateListing(
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
-    return { id: data.listing?.id as string | undefined };
+    return {
+      id: data.listing?.id as string | undefined,
+      status: data.listing?.status,
+      message: typeof data.message === 'string' ? data.message : undefined,
+    };
   } catch {
     return { error: 'Could not reach the server.' };
   }
@@ -187,7 +201,7 @@ export interface JobListingPayload {
   benefits: JobListingBenefitPayload[];
 }
 
-export async function createJobListing(body: JobListingPayload): Promise<{ id?: string; error?: string }> {
+export async function createJobListing(body: JobListingPayload): Promise<ListingCreateResult> {
   try {
     const res = await fetch(getApiUrl('/listings/jobs'), {
       method: 'POST',
@@ -196,7 +210,11 @@ export async function createJobListing(body: JobListingPayload): Promise<{ id?: 
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
-    return { id: data.listing?.id as string | undefined };
+    return {
+      id: data.listing?.id as string | undefined,
+      status: data.listing?.status,
+      message: typeof data.message === 'string' ? data.message : undefined,
+    };
   } catch {
     return { error: 'Could not reach the server.' };
   }
@@ -214,7 +232,7 @@ export interface MarketplaceListingPayload {
   contactPhone: string;
 }
 
-export async function createMarketplaceListing(body: MarketplaceListingPayload): Promise<{ id?: string; error?: string }> {
+export async function createMarketplaceListing(body: MarketplaceListingPayload): Promise<ListingCreateResult> {
   try {
     const res = await fetch(getApiUrl('/listings/marketplace'), {
       method: 'POST',
@@ -223,13 +241,17 @@ export async function createMarketplaceListing(body: MarketplaceListingPayload):
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
-    return { id: data.listing?.id as string | undefined };
+    return {
+      id: data.listing?.id as string | undefined,
+      status: data.listing?.status,
+      message: typeof data.message === 'string' ? data.message : undefined,
+    };
   } catch {
     return { error: 'Could not reach the server.' };
   }
 }
 
-export async function createCarListing(formData: FormData): Promise<{ id?: string; error?: string }> {
+export async function createCarListing(formData: FormData): Promise<ListingCreateResult> {
   try {
     const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
     const headers: Record<string, string> = {};
@@ -241,7 +263,11 @@ export async function createCarListing(formData: FormData): Promise<{ id?: strin
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
-    return { id: data.listing?.id as string | undefined };
+    return {
+      id: data.listing?.id as string | undefined,
+      status: data.listing?.status,
+      message: typeof data.message === 'string' ? data.message : undefined,
+    };
   } catch {
     return { error: 'Could not reach the server.' };
   }

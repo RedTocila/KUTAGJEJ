@@ -1,6 +1,6 @@
 import type { ListingMetrics } from '@/lib/listing-metrics';
 import type { BrowseFilters } from '@/lib/listing-filters';
-import { buildBrowseApiQuery } from '@/lib/listing-filters';
+import { BROWSE_PAGE_SIZE, buildBrowseApiQuery } from '@/lib/listing-filters';
 import { safeServerJson } from '@/lib/server-fetch';
 
 export type ListingMetricsFields = ListingMetrics;
@@ -291,66 +291,122 @@ export async function fetchHomepageListings(limit = 8): Promise<PublicListingsBu
 export interface BrowseListingsResult<T> {
   listings: T[];
   total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export async function fetchBrowseRealEstate(
-  limit = 24,
+  limit = BROWSE_PAGE_SIZE,
   filters: BrowseFilters = {},
+  page = 1,
 ): Promise<BrowseListingsResult<PublicRealEstateListing>> {
-  const data = await safeJson<{ listings: PublicRealEstateListing[]; total?: number }>(
-    `/public/listings/real-estate${buildBrowseApiQuery(filters, limit)}`,
-  );
-  return { listings: data?.listings ?? [], total: data?.total ?? data?.listings?.length ?? 0 };
+  const data = await safeJson<{
+    listings: PublicRealEstateListing[];
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  }>(`/public/listings/real-estate${buildBrowseApiQuery(filters, limit, page)}`);
+  return parseBrowseResult(data, limit, page);
+}
+
+function parseBrowseResult<T>(
+  data: {
+    listings?: T[];
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  } | null,
+  limit: number,
+  page: number,
+): BrowseListingsResult<T> {
+  const listings = data?.listings ?? [];
+  const total = data?.total ?? listings.length;
+  const resolvedLimit = data?.limit ?? limit;
+  return {
+    listings,
+    total,
+    page: data?.page ?? page,
+    limit: resolvedLimit,
+    totalPages: data?.totalPages ?? Math.max(1, Math.ceil(total / resolvedLimit)),
+  };
 }
 
 export async function fetchBrowseCars(
-  limit = 24,
+  limit = BROWSE_PAGE_SIZE,
   filters: BrowseFilters = {},
+  page = 1,
 ): Promise<BrowseListingsResult<PublicCarListing>> {
-  const data = await safeJson<{ listings: PublicCarListing[]; total?: number }>(
-    `/public/listings/cars${buildBrowseApiQuery(filters, limit)}`,
-  );
-  return { listings: data?.listings ?? [], total: data?.total ?? data?.listings?.length ?? 0 };
+  const data = await safeJson<{
+    listings: PublicCarListing[];
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  }>(`/public/listings/cars${buildBrowseApiQuery(filters, limit, page)}`);
+  return parseBrowseResult(data, limit, page);
 }
 
 export async function fetchBrowseJobs(
-  limit = 24,
+  limit = BROWSE_PAGE_SIZE,
   filters: BrowseFilters = {},
+  page = 1,
 ): Promise<BrowseListingsResult<PublicJobListing>> {
-  const data = await safeJson<{ listings: PublicJobListing[]; total?: number }>(
-    `/public/listings/jobs${buildBrowseApiQuery(filters, limit)}`,
-  );
-  return { listings: data?.listings ?? [], total: data?.total ?? data?.listings?.length ?? 0 };
+  const data = await safeJson<{
+    listings: PublicJobListing[];
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  }>(`/public/listings/jobs${buildBrowseApiQuery(filters, limit, page)}`);
+  return parseBrowseResult(data, limit, page);
 }
 
 export async function fetchBrowseMarketplace(
-  limit = 24,
+  limit = BROWSE_PAGE_SIZE,
   filters: BrowseFilters = {},
+  page = 1,
 ): Promise<BrowseListingsResult<PublicMarketplaceListing>> {
-  const data = await safeJson<{ listings: PublicMarketplaceListing[]; total?: number }>(
-    `/public/listings/marketplace${buildBrowseApiQuery(filters, limit)}`,
-  );
-  return { listings: data?.listings ?? [], total: data?.total ?? data?.listings?.length ?? 0 };
+  const data = await safeJson<{
+    listings: PublicMarketplaceListing[];
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  }>(`/public/listings/marketplace${buildBrowseApiQuery(filters, limit, page)}`);
+  return parseBrowseResult(data, limit, page);
 }
 
 export async function fetchBrowseBusinesses(
-  limit = 24,
+  limit = BROWSE_PAGE_SIZE,
   filters: BrowseFilters = {},
+  page = 1,
 ): Promise<BrowseListingsResult<PublicDirectoryListing>> {
-  const data = await safeJson<{ listings: PublicDirectoryListing[]; total?: number }>(
-    `/public/listings/businesses${buildBrowseApiQuery(filters, limit)}`,
-  );
-  return { listings: data?.listings ?? [], total: data?.total ?? data?.listings?.length ?? 0 };
+  const data = await safeJson<{
+    listings: PublicDirectoryListing[];
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  }>(`/public/listings/businesses${buildBrowseApiQuery(filters, limit, page)}`);
+  return parseBrowseResult(data, limit, page);
 }
 
 export async function fetchBrowseProfessionals(
-  limit = 24,
+  limit = BROWSE_PAGE_SIZE,
   filters: BrowseFilters = {},
+  page = 1,
 ): Promise<BrowseListingsResult<PublicDirectoryListing>> {
-  const data = await safeJson<{ listings: PublicDirectoryListing[]; total?: number }>(
-    `/public/listings/professionals${buildBrowseApiQuery(filters, limit)}`,
-  );
-  return { listings: data?.listings ?? [], total: data?.total ?? data?.listings?.length ?? 0 };
+  const data = await safeJson<{
+    listings: PublicDirectoryListing[];
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  }>(`/public/listings/professionals${buildBrowseApiQuery(filters, limit, page)}`);
+  return parseBrowseResult(data, limit, page);
 }
 
 export async function fetchLatestRealEstate(limit = 12): Promise<PublicRealEstateListing[]> {

@@ -43,8 +43,8 @@ export function MobileBottomNav() {
       {
         id: 'saved',
         ariaLabel: 'Të ruajturat',
-        href: isAuthed ? paths.user.myRealEstateListings : paths.user.auth,
-        activeWhen: (p) => Boolean(p?.startsWith(paths.user.myRealEstateListings)),
+        href: isAuthed ? paths.user.savedListings : paths.user.auth,
+        activeWhen: (p) => Boolean(p?.startsWith(paths.user.savedListings)),
         icon: BookmarkSimpleIcon,
       },
       {

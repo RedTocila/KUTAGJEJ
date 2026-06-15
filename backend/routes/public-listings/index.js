@@ -8,7 +8,7 @@ const DirectoryListing = require('../../models/DirectoryListing');
 const optionalAuth = require('../../middleware/optional-auth');
 const publicCache = require('../../middleware/public-cache');
 const { loadPosterBrief } = require('../../lib/public-listings/load-poster-brief');
-const { clampLimit, buildCityIndex, isJobListingActive } = require('../../lib/public-listings/query-helpers');
+const { clampLimit, buildCityIndex, isJobListingActive, parsePagination, buildPaginatedResponse } = require('../../lib/public-listings/query-helpers');
 const {
   formatRealEstateDetail,
   formatCarDetail,
@@ -44,15 +44,22 @@ const {
 } = require('../../lib/public-listings/listing-filters');
 const { reviewStatsByListingIds } = require('../../lib/business-review-stats');
 const { professionalReviewStatsByListingIds } = require('../../lib/professional-review-stats');
+const { PUBLIC_LISTING_STATUS_FILTER } = require('../../lib/listing-moderation');
+const { saverFromUser, enrichListingsSaverState } = require('../../lib/listing-metrics');
 
 const router = express.Router();
+
+function isPublicListing(doc) {
+  return Boolean(doc && doc.status === 'approved');
+}
 
 router.use(publicCache(60));
 
 /** GET /api/public/listings/latest — newest listings per vertical (homepage). */
-router.get('/latest', async (req, res) => {
+router.get('/latest', optionalAuth, async (req, res) => {
   try {
     const limit = clampLimit(req.query.limit);
+    const saver = saverFromUser(req.user);
     const [realEstate, cars, jobs, marketplace, businesses, professionals] = await Promise.all([
       latestRealEstate(limit),
       latestCars(limit),
@@ -61,21 +68,27 @@ router.get('/latest', async (req, res) => {
       latestDirectory('businesses', limit),
       latestDirectory('professionals', limit),
     ]);
+    const bundle = { realEstate, cars, jobs, marketplace, businesses, professionals };
+    if (saver) {
+      for (const key of Object.keys(bundle)) {
+        bundle[key] = await enrichListingsSaverState(bundle[key], saver);
+      }
+    }
     const counts = await Promise.all([
-      RealEstateListing.estimatedDocumentCount(),
-      CarListing.estimatedDocumentCount(),
+      RealEstateListing.countDocuments(PUBLIC_LISTING_STATUS_FILTER),
+      CarListing.countDocuments(PUBLIC_LISTING_STATUS_FILTER),
       countActiveJobs(),
-      MarketplaceListing.estimatedDocumentCount(),
-      DirectoryListing.countDocuments({ vertical: 'businesses' }),
-      DirectoryListing.countDocuments({ vertical: 'professionals' }),
+      MarketplaceListing.countDocuments(PUBLIC_LISTING_STATUS_FILTER),
+      DirectoryListing.countDocuments({ ...PUBLIC_LISTING_STATUS_FILTER, vertical: 'businesses' }),
+      DirectoryListing.countDocuments({ ...PUBLIC_LISTING_STATUS_FILTER, vertical: 'professionals' }),
     ]);
     res.json({
-      realEstate,
-      cars,
-      jobs,
-      marketplace,
-      businesses,
-      professionals,
+      realEstate: bundle.realEstate,
+      cars: bundle.cars,
+      jobs: bundle.jobs,
+      marketplace: bundle.marketplace,
+      businesses: bundle.businesses,
+      professionals: bundle.professionals,
       totals: {
         realEstate: counts[0],
         cars: counts[1],
@@ -100,7 +113,7 @@ router.get('/real-estate/:id', optionalAuth, async (req, res) => {
       return;
     }
     const doc = await RealEstateListing.findById(rawId).lean();
-    if (!doc) {
+    if (!isPublicListing(doc)) {
       res.status(404).json({ message: 'Not found' });
       return;
     }
@@ -122,7 +135,7 @@ router.get('/cars/:id', optionalAuth, async (req, res) => {
       return;
     }
     const doc = await CarListing.findById(rawId).lean();
-    if (!doc) {
+    if (!isPublicListing(doc)) {
       res.status(404).json({ message: 'Not found' });
       return;
     }
@@ -144,7 +157,7 @@ router.get('/jobs/:id', optionalAuth, async (req, res) => {
       return;
     }
     const doc = await JobListing.findById(rawId).lean();
-    if (!doc || !isJobListingActive(doc)) {
+    if (!isPublicListing(doc) || !isJobListingActive(doc)) {
       res.status(404).json({ message: 'Not found' });
       return;
     }
@@ -166,7 +179,7 @@ router.get('/marketplace/:id', optionalAuth, async (req, res) => {
       return;
     }
     const doc = await MarketplaceListing.findById(rawId).lean();
-    if (!doc) {
+    if (!isPublicListing(doc)) {
       res.status(404).json({ message: 'Not found' });
       return;
     }
@@ -190,6 +203,7 @@ router.get('/businesses/:id', optionalAuth, async (req, res) => {
     const doc = await DirectoryListing.findOne({
       _id: rawId,
       vertical: 'businesses',
+      status: 'approved',
     }).lean();
     if (!doc) {
       res.status(404).json({ message: 'Not found' });
@@ -216,6 +230,7 @@ router.get('/professionals/:id', optionalAuth, async (req, res) => {
     const doc = await DirectoryListing.findOne({
       _id: rawId,
       vertical: 'professionals',
+      status: 'approved',
     }).lean();
     if (!doc) {
       res.status(404).json({ message: 'Not found' });
@@ -232,90 +247,90 @@ router.get('/professionals/:id', optionalAuth, async (req, res) => {
   }
 });
 
-router.get('/real-estate', async (req, res) => {
+router.get('/real-estate', optionalAuth, async (req, res) => {
   try {
-    const limit = clampLimit(req.query.limit);
+    const { limit, page, skip } = parsePagination(req.query);
     const { filter, sort } = parseRealEstateFilters(req.query);
-    const [listings, total] = await Promise.all([
-      queryRealEstate(limit, filter, sort),
-      countRealEstate(filter),
-    ]);
-    res.json({ listings, total });
+    const total = await countRealEstate(filter);
+    let listings = await queryRealEstate(limit, filter, sort, skip);
+    const saver = saverFromUser(req.user);
+    if (saver) listings = await enrichListingsSaverState(listings, saver);
+    res.json(buildPaginatedResponse(listings, total, limit, page));
   } catch (err) {
     console.error('GET /public/listings/real-estate:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-router.get('/cars', async (req, res) => {
+router.get('/cars', optionalAuth, async (req, res) => {
   try {
-    const limit = clampLimit(req.query.limit);
+    const { limit, page, skip } = parsePagination(req.query);
     const { filter, sort } = parseCarFilters(req.query);
-    const [listings, total] = await Promise.all([
-      queryCars(limit, filter, sort),
-      countCars(filter),
-    ]);
-    res.json({ listings, total });
+    const total = await countCars(filter);
+    let listings = await queryCars(limit, filter, sort, skip);
+    const saver = saverFromUser(req.user);
+    if (saver) listings = await enrichListingsSaverState(listings, saver);
+    res.json(buildPaginatedResponse(listings, total, limit, page));
   } catch (err) {
     console.error('GET /public/listings/cars:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-router.get('/jobs', async (req, res) => {
+router.get('/jobs', optionalAuth, async (req, res) => {
   try {
-    const limit = clampLimit(req.query.limit);
+    const { limit, page, skip } = parsePagination(req.query);
     const { filter, sort } = parseJobFilters(req.query);
-    const [listings, total] = await Promise.all([
-      queryJobs(limit, filter, sort),
-      countJobs(filter),
-    ]);
-    res.json({ listings, total });
+    const total = await countJobs(filter);
+    let listings = await queryJobs(limit, filter, sort, skip);
+    const saver = saverFromUser(req.user);
+    if (saver) listings = await enrichListingsSaverState(listings, saver);
+    res.json(buildPaginatedResponse(listings, total, limit, page));
   } catch (err) {
     console.error('GET /public/listings/jobs:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-router.get('/marketplace', async (req, res) => {
+router.get('/marketplace', optionalAuth, async (req, res) => {
   try {
-    const limit = clampLimit(req.query.limit);
+    const { limit, page, skip } = parsePagination(req.query);
     const { filter, sort } = parseMarketplaceFilters(req.query);
-    const [listings, total] = await Promise.all([
-      queryMarketplace(limit, filter, sort),
-      countMarketplace(filter),
-    ]);
-    res.json({ listings, total });
+    const total = await countMarketplace(filter);
+    let listings = await queryMarketplace(limit, filter, sort, skip);
+    const saver = saverFromUser(req.user);
+    if (saver) listings = await enrichListingsSaverState(listings, saver);
+    res.json(buildPaginatedResponse(listings, total, limit, page));
   } catch (err) {
     console.error('GET /public/listings/marketplace:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-router.get('/businesses', async (req, res) => {
+router.get('/businesses', optionalAuth, async (req, res) => {
   try {
-    const limit = clampLimit(req.query.limit);
+    const { limit, page, skip } = parsePagination(req.query);
     const { filter, sort } = parseDirectoryFilters(req.query, 'businesses');
-    const [listings, total] = await Promise.all([
-      queryDirectory('businesses', limit, filter, sort),
-      countDirectory(filter),
-    ]);
-    res.json({ listings, total });
+    const total = await countDirectory(filter);
+    let listings = await queryDirectory('businesses', limit, filter, sort, skip);
+    const saver = saverFromUser(req.user);
+    if (saver) listings = await enrichListingsSaverState(listings, saver);
+    res.json(buildPaginatedResponse(listings, total, limit, page));
   } catch (err) {
     console.error('GET /public/listings/businesses:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-router.get('/professionals', async (req, res) => {
+router.get('/professionals', optionalAuth, async (req, res) => {
   try {
-    const limit = clampLimit(req.query.limit);
+    const { limit, page, skip } = parsePagination(req.query);
     const { filter, sort } = parseDirectoryFilters(req.query, 'professionals');
-    const [listings, total] = await Promise.all([
-      queryDirectory('professionals', limit, filter, sort),
-      countDirectory(filter),
-    ]);
-    res.json({ listings, total });
+    const total = await countDirectory(filter);
+    let listings = await queryDirectory('professionals', limit, filter, sort, skip);
+    const saver = saverFromUser(req.user);
+    if (saver) listings = await enrichListingsSaverState(listings, saver);
+    res.json(buildPaginatedResponse(listings, total, limit, page));
   } catch (err) {
     console.error('GET /public/listings/professionals:', err?.message || err);
     res.status(500).json({ message: 'Server error' });

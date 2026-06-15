@@ -7,7 +7,9 @@ const {
   recordListingEvent,
   toggleSavedListing,
   fetchMetricsMap,
+  saverFromUser,
 } = require('../lib/listing-metrics');
+const { getSavedKeysForSaver, listSavedListingsForSaver } = require('../lib/saved-listings-query');
 
 const router = express.Router();
 const metricsRateLimit = rateLimit({ windowMs: 60_000, max: 120 });
@@ -31,6 +33,32 @@ router.post('/event', metricsRateLimit, optionalAuth, async (req, res) => {
     res.json(result.metrics);
   } catch (err) {
     console.error('POST /listing-metrics/event:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/** GET /api/listing-metrics/saved/keys — all bookmark keys for the signed-in portal user. */
+router.get('/saved/keys', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    const saver = saverFromUser(req.user);
+    const keys = await getSavedKeysForSaver(saver);
+    res.json({ keys });
+  } catch (err) {
+    console.error('GET /listing-metrics/saved/keys:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/** GET /api/listing-metrics/saved?page=1&limit=24 — paginated saved listings with card payloads. */
+router.get('/saved', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    const saver = saverFromUser(req.user);
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(48, Math.max(1, Number(req.query.limit) || 24));
+    const result = await listSavedListingsForSaver(saver, { page, limit });
+    res.json(result);
+  } catch (err) {
+    console.error('GET /listing-metrics/saved:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });

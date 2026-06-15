@@ -33,6 +33,7 @@ import {
   type BusinessMenuItem,
 } from '@/lib/directory-listings-client';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 import { useUser } from '@/hooks/use-user';
 
 function contactPhoneInitialFromStorage(): string {
@@ -63,6 +64,7 @@ export function BusinessListingForm({ onSuccess, backHref, backLabel }: Business
   const { user } = useUser();
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
 
   const [title, setTitle] = React.useState('');
@@ -165,6 +167,7 @@ export function BusinessListingForm({ onSuccess, backHref, backLabel }: Business
       setError(res.error);
       return;
     }
+    setSuccess(true);
     onSuccess?.();
   };
 
@@ -172,6 +175,7 @@ export function BusinessListingForm({ onSuccess, backHref, backLabel }: Business
     <Box component="form" onSubmit={(e) => void handleSubmit(e)}>
       <Stack spacing={3}>
         {error ? <Alert severity="error">{error}</Alert> : null}
+        {success ? <ListingSubmittedPendingAlert /> : null}
 
         <Stack spacing={2}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>

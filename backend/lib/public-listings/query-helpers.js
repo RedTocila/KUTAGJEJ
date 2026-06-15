@@ -21,6 +21,28 @@ function clampLimit(value) {
   return Math.min(n, MAX_LIMIT);
 }
 
+function parsePagination(query) {
+  const limit = clampLimit(query.limit);
+  const pageRaw = Number.parseInt(String(query.page ?? ''), 10);
+  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
+  const skip = (page - 1) * limit;
+  return { limit, page, skip };
+}
+
+function calcTotalPages(total, limit) {
+  return Math.max(1, Math.ceil(total / limit) || 1);
+}
+
+function buildPaginatedResponse(listings, total, limit, page) {
+  return {
+    listings,
+    total,
+    page,
+    limit,
+    totalPages: calcTotalPages(total, limit),
+  };
+}
+
 async function buildCityIndex(docs) {
   const cityIds = [
     ...new Set(
@@ -41,5 +63,7 @@ module.exports = {
   isJobListingActive,
   activeJobCreatedAtFilter,
   clampLimit,
+  parsePagination,
+  buildPaginatedResponse,
   buildCityIndex,
 };

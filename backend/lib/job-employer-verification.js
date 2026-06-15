@@ -1,6 +1,7 @@
 const IndividualUser = require('../models/IndividualUser');
 const BusinessUser = require('../models/BusinessUser');
 const JobEmployerVerificationRequest = require('../models/JobEmployerVerificationRequest');
+const { createAdminNotification } = require('./listing-moderation');
 
 function isJobsEmployerVerified(userDoc) {
   return Boolean(userDoc?.jobsEmployerVerifiedAt);
@@ -112,6 +113,15 @@ async function submitVerificationRequest(user, message) {
     status: 'pending',
     message: note,
     applicantSnapshot: buildApplicantSnapshot(portal, modelName),
+  });
+
+  const snap = buildApplicantSnapshot(portal, modelName);
+  await createAdminNotification({
+    type: 'job_employer_verification',
+    refKind: 'jobs',
+    refId: doc._id,
+    title: 'Kërkesë verifikimi punëdhënësi',
+    message: `${snap.displayName || 'Përdorues'} dërgoi një kërkesë verifikimi për Punë.`,
   });
 
   return { ok: true, request: formatVerificationRequest(doc) };

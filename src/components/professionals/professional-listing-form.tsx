@@ -20,6 +20,7 @@ import { PROFESSIONAL_CATEGORY_OPTIONS } from '@/lib/professional-constants';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { createProfessionalListing, type ProfessionalPortfolioItem } from '@/lib/directory-listings-client';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 
 function newId(): string {
   return typeof crypto !== 'undefined' && crypto.randomUUID
@@ -38,6 +39,7 @@ export function ProfessionalListingForm({
 }) {
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
 
   const [title, setTitle] = React.useState('');
@@ -109,13 +111,17 @@ export function ProfessionalListingForm({
     });
     setSubmitting(false);
     if (res.error) setError(res.error);
-    else onSuccess?.();
+    else {
+      setSuccess(true);
+      onSuccess?.();
+    }
   };
 
   return (
     <Box component="form" onSubmit={(e) => void handleSubmit(e)}>
       <Stack spacing={3}>
         {error ? <Alert severity="error">{error}</Alert> : null}
+        {success ? <ListingSubmittedPendingAlert /> : null}
 
         <TextField label="Titulli i profilit" value={title} onChange={(e) => setTitle(e.target.value)} required fullWidth />
         <SearchableSelect

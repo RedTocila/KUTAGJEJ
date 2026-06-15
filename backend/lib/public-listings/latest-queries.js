@@ -7,6 +7,7 @@ const { attachMetricsToListings, attachMetricsToListing, fetchMetricsMap, saverF
 const { reviewStatsByListingIds } = require('../business-review-stats');
 const { professionalReviewStatsByListingIds } = require('../professional-review-stats');
 const { activeJobCreatedAtFilter, buildCityIndex } = require('./query-helpers');
+const { mergePublicFilter } = require('../listing-moderation');
 const {
   formatRealEstate,
   formatCar,
@@ -15,52 +16,57 @@ const {
   formatDirectory,
 } = require('./formatters');
 
-async function queryRealEstate(limit, filter = {}, sort = { createdAt: -1 }) {
-  const docs = await RealEstateListing.find(filter).sort(sort).limit(limit).lean();
+async function queryRealEstate(limit, filter = {}, sort = { createdAt: -1 }, skip = 0) {
+  const merged = mergePublicFilter(filter);
+  const docs = await RealEstateListing.find(merged).sort(sort).skip(skip).limit(limit).lean();
   const cityById = await buildCityIndex(docs);
   return attachMetricsToListings(docs.map((d) => formatRealEstate(d, cityById)));
 }
 
 async function countRealEstate(filter = {}) {
-  return RealEstateListing.countDocuments(filter);
+  return RealEstateListing.countDocuments(mergePublicFilter(filter));
 }
 
-async function queryCars(limit, filter = {}, sort = { createdAt: -1 }) {
-  const docs = await CarListing.find(filter).sort(sort).limit(limit).lean();
+async function queryCars(limit, filter = {}, sort = { createdAt: -1 }, skip = 0) {
+  const merged = mergePublicFilter(filter);
+  const docs = await CarListing.find(merged).sort(sort).skip(skip).limit(limit).lean();
   const cityById = await buildCityIndex(docs);
   return attachMetricsToListings(docs.map((d) => formatCar(d, cityById)));
 }
 
 async function countCars(filter = {}) {
-  return CarListing.countDocuments(filter);
+  return CarListing.countDocuments(mergePublicFilter(filter));
 }
 
-async function queryJobs(limit, filter = activeJobCreatedAtFilter(), sort = { createdAt: -1 }) {
-  const docs = await JobListing.find(filter).sort(sort).limit(limit).lean();
+async function queryJobs(limit, filter, sort = { createdAt: -1 }, skip = 0) {
+  const merged = mergePublicFilter(filter ?? activeJobCreatedAtFilter());
+  const docs = await JobListing.find(merged).sort(sort).skip(skip).limit(limit).lean();
   const cityById = await buildCityIndex(docs);
   return attachMetricsToListings(docs.map((d) => formatJob(d, cityById)));
 }
 
-async function countJobs(filter = activeJobCreatedAtFilter()) {
-  return JobListing.countDocuments(filter);
+async function countJobs(filter) {
+  return JobListing.countDocuments(mergePublicFilter(filter ?? activeJobCreatedAtFilter()));
 }
 
 async function countActiveJobs() {
   return countJobs(activeJobCreatedAtFilter());
 }
 
-async function queryMarketplace(limit, filter = {}, sort = { createdAt: -1 }) {
-  const docs = await MarketplaceListing.find(filter).sort(sort).limit(limit).lean();
+async function queryMarketplace(limit, filter = {}, sort = { createdAt: -1 }, skip = 0) {
+  const merged = mergePublicFilter(filter);
+  const docs = await MarketplaceListing.find(merged).sort(sort).skip(skip).limit(limit).lean();
   const cityById = await buildCityIndex(docs);
   return attachMetricsToListings(docs.map((d) => formatMarketplace(d, cityById)));
 }
 
 async function countMarketplace(filter = {}) {
-  return MarketplaceListing.countDocuments(filter);
+  return MarketplaceListing.countDocuments(mergePublicFilter(filter));
 }
 
-async function queryDirectory(vertical, limit, filter = { vertical }, sort = { createdAt: -1 }) {
-  const docs = await DirectoryListing.find(filter).sort(sort).limit(limit).lean();
+async function queryDirectory(vertical, limit, filter = { vertical }, sort = { createdAt: -1 }, skip = 0) {
+  const merged = mergePublicFilter(filter);
+  const docs = await DirectoryListing.find(merged).sort(sort).skip(skip).limit(limit).lean();
   const cityById = await buildCityIndex(docs);
   let reviewStats = null;
   if (vertical === 'businesses') {
@@ -72,7 +78,7 @@ async function queryDirectory(vertical, limit, filter = { vertical }, sort = { c
 }
 
 async function countDirectory(filter = {}) {
-  return DirectoryListing.countDocuments(filter);
+  return DirectoryListing.countDocuments(mergePublicFilter(filter));
 }
 
 async function latestRealEstate(limit) {

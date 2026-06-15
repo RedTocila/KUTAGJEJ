@@ -23,6 +23,13 @@ import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGea
 import { VerticalIcon } from '@/components/public/vertical-icon';
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';
+import {
+  listMyCarListings,
+  listMyJobListings,
+  listMyMarketplaceListings,
+  listMyRealEstateListings,
+} from '@/lib/listings-client';
+import { normalizeListingModerationStatus } from '@/lib/listing-moderation-status';
 import { listPublicContracts } from '@/lib/public-contracts-client';
 import { getUserPortalAccountCategoryLabel } from '@/lib/user-portal-account-label';
 import type { PublicContract } from '@/types/contract';
@@ -34,6 +41,7 @@ export default function UserDashboardPage() {
   const [plans, setPlans] = React.useState<PublicContract[]>([]);
   const [plansLoading, setPlansLoading] = React.useState(true);
   const [plansError, setPlansError] = React.useState<string | null>(null);
+  const [pendingListings, setPendingListings] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     if (!user) return;
@@ -55,6 +63,37 @@ export default function UserDashboardPage() {
       cancelled = true;
     };
   }, [user, subscriberKindFilter]);
+
+  React.useEffect(() => {
+    if (!user) return;
+    const canPublish =
+      user.accountType === 'individual' ||
+      user.accountType === 'business' ||
+      user.role === 'business-user';
+    if (!canPublish) {
+      setPendingListings(null);
+      return;
+    }
+    let cancelled = false;
+    void Promise.all([
+      listMyRealEstateListings(),
+      listMyCarListings(),
+      listMyJobListings(),
+      listMyMarketplaceListings(),
+    ]).then(([re, cars, jobs, mkt]) => {
+      if (cancelled) return;
+      const all = [
+        ...(re.listings ?? []),
+        ...(cars.listings ?? []),
+        ...(jobs.listings ?? []),
+        ...(mkt.listings ?? []),
+      ];
+      setPendingListings(all.filter((l) => normalizeListingModerationStatus(l.status) === 'pending').length);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const greetingName =
     user?.firstName && user?.lastName
@@ -196,8 +235,29 @@ export default function UserDashboardPage() {
                 </Typography>
               </Stack>
               <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
-                Statistikat dhe historiku i aktivitetit do të shfaqen këtu sapo të jenë gati në platformë.
+                {pendingListings && pendingListings > 0
+                  ? `Keni ${pendingListings} ${pendingListings === 1 ? 'njoftim' : 'njoftime'} në pritje të miratimit.`
+                  : 'Statistikat dhe historiku i aktivitetit do të shfaqen këtu sapo të jenë gati në platformë.'}
               </Typography>
+              {pendingListings && pendingListings > 0 ? (
+                <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', gap: 1 }}>
+                  <Button
+                    component={RouterLink}
+                    href={paths.user.myRealEstateListings}
+                    endIcon={React.createElement(ArrowRightIcon, { size: 18 })}
+                  >
+                    Shpalljet e mia
+                  </Button>
+                  <Button
+                    component={RouterLink}
+                    href={paths.user.savedListings}
+                    variant="outlined"
+                    endIcon={React.createElement(ArrowRightIcon, { size: 18 })}
+                  >
+                    Të ruajturat
+                  </Button>
+                </Stack>
+              ) : (
               <Box
                 sx={{
                   mt: 2,
@@ -212,6 +272,7 @@ export default function UserDashboardPage() {
                   Nuk ka të dhëna për të shfaqur ende.
                 </Typography>
               </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>

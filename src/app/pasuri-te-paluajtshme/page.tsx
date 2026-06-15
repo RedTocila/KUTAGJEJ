@@ -5,7 +5,12 @@ import { Grid } from '@mui/material';
 import { CategoryBrowseGrid, CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { generateBrowseMetadata } from '@/lib/browse-page-seo';
-import { hasActiveBrowseFilters, parseBrowseSearchParams } from '@/lib/listing-filters';
+import {
+  BROWSE_PAGE_SIZE,
+  hasActiveBrowseFilters,
+  parseBrowsePage,
+  parseBrowseSearchParams,
+} from '@/lib/listing-filters';
 import { fetchBrowseRealEstate } from '@/lib/public-listings-client';
 import { fetchPublicCities } from '@/lib/real-estate-locations-server';
 import { paths } from '@/paths';
@@ -23,10 +28,11 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 export default async function RealEstateBrowsePage({ searchParams }: PageProps) {
   const sp = (await searchParams) ?? {};
   const filters = parseBrowseSearchParams('real-estate', sp);
+  const page = parseBrowsePage(sp);
   const hasFilters = hasActiveBrowseFilters(filters);
 
-  const [{ listings, total }, cities] = await Promise.all([
-    fetchBrowseRealEstate(24, filters),
+  const [{ listings, total, page: currentPage, totalPages }, cities] = await Promise.all([
+    fetchBrowseRealEstate(BROWSE_PAGE_SIZE, filters, page),
     fetchPublicCities(),
   ]);
 
@@ -35,6 +41,9 @@ export default async function RealEstateBrowsePage({ searchParams }: PageProps) 
       verticalId="real-estate"
       total={total}
       shownCount={listings.length}
+      page={currentPage}
+      totalPages={totalPages}
+      pageSize={BROWSE_PAGE_SIZE}
       hasFilters={hasFilters}
       cities={cities}
     >

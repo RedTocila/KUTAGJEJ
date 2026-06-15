@@ -24,8 +24,10 @@ export const paths = {
     realEstateListing: '/user/dashboard/prona',
     businessesListing: '/user/dashboard/biznese',
     professionalsListing: '/user/dashboard/profesioniste',
-    /** Saved real-estate listings for the signed-in user. */
+    /** Listings the user has posted (portal). */
     myRealEstateListings: '/user/dashboard/shpalljet-e-mia',
+    /** Bookmarked listings from across the platform. */
+    savedListings: '/user/dashboard/te-ruajturat',
   },
   dashboard: {
     overview: '/dashboard',
@@ -45,6 +47,8 @@ export const paths = {
     /** Punë — employer verification requests (platform admin). */
     jobEmployerVerification: '/dashboard/verifikimet-pune',
     professionalVerification: '/dashboard/verifikimet-profesioniste',
+    /** Listing moderation queue (platform admin). */
+    listingModeration: '/dashboard/njoftimet',
   },
   app: {},
   errors: {},

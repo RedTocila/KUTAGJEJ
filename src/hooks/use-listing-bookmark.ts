@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 
+import { useSavedListingsOptional } from '@/contexts/saved-listings-context';
+import { useListingSavedState } from '@/hooks/use-listing-saved-state';
 import { useUser } from '@/hooks/use-user';
 import { toggleListingSave, type ListingMetricKind } from '@/lib/listing-metrics';
 import { paths } from '@/paths';
@@ -14,12 +16,9 @@ export function useListingBookmark(
 ) {
   const router = useRouter();
   const { user } = useUser();
-  const [saved, setSaved] = React.useState(Boolean(initial?.saved));
+  const savedCtx = useSavedListingsOptional();
+  const hydratedSaved = useListingSavedState(listingKind, listingId, initial?.saved);
   const [saveCount, setSaveCount] = React.useState(initial?.saveCount ?? 0);
-
-  React.useEffect(() => {
-    if (initial?.saved !== undefined) setSaved(initial.saved);
-  }, [initial?.saved]);
 
   React.useEffect(() => {
     if (initial?.saveCount !== undefined) setSaveCount(initial.saveCount);
@@ -30,12 +29,14 @@ export function useListingBookmark(
       router.push(paths.user.auth);
       return;
     }
-    const metrics = await toggleListingSave(listingKind, listingId);
-    if (metrics) {
-      setSaved(metrics.saved);
-      setSaveCount(metrics.saveCount);
+    if (savedCtx) {
+      const result = await savedCtx.toggleSaved(listingKind, listingId);
+      if (result) setSaveCount(result.saveCount);
+      return;
     }
-  }, [listingKind, listingId, router, user]);
+    const metrics = await toggleListingSave(listingKind, listingId);
+    if (metrics) setSaveCount(metrics.saveCount);
+  }, [listingKind, listingId, router, savedCtx, user]);
 
-  return { saved, saveCount, toggleSave };
+  return { saved: hydratedSaved, saveCount, toggleSave };
 }

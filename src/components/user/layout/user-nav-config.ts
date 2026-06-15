@@ -25,6 +25,13 @@ export const USER_PORTAL_NAV_ITEMS = [
     matcher: { type: 'equals', href: paths.user.myRealEstateListings } as const,
   },
   {
+    key: 'saved-listings',
+    title: 'Të ruajturat',
+    href: paths.user.savedListings,
+    icon: 'bookmark',
+    matcher: { type: 'equals', href: paths.user.savedListings } as const,
+  },
+  {
     key: 'profile',
     title: 'Profili im',
     href: paths.user.profile,
@@ -41,7 +48,7 @@ export function getUserPortalNavItemsForUser(user: User | null | undefined): Nav
       user.accountType === 'business' ||
       user.role === 'business-user');
   return USER_PORTAL_NAV_ITEMS.filter((item) => {
-    if (item.key === 'real-estate' || item.key === 'my-listings') return canRealEstate;
+    if (item.key === 'real-estate' || item.key === 'my-listings' || item.key === 'saved-listings') return canRealEstate;
     return true;
   });
 }

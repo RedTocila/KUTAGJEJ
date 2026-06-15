@@ -11,9 +11,11 @@ import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
+import { useSavedListingsOptional } from '@/contexts/saved-listings-context';
+import { useListingSavedState } from '@/hooks/use-listing-saved-state';
 import { useUser } from '@/hooks/use-user';
 import {
-  recordListingMetricEvent,
+  shareListing,
   toggleListingSave,
   type ListingMetricKind,
 } from '@/lib/listing-metrics';
@@ -51,9 +53,10 @@ export function CardMedia({
 }: CardMediaProps) {
   const router = useRouter();
   const { user } = useUser();
+  const savedCtx = useSavedListingsOptional();
+  const saved = useListingSavedState(listingKind, listingId, initialSaved);
   const [shareCount, setShareCount] = React.useState(initialShareCount);
   const [saveCount, setSaveCount] = React.useState(initialSaveCount);
-  const [saved, setSaved] = React.useState(Boolean(initialSaved));
 
   React.useEffect(() => {
     setShareCount(initialShareCount);
@@ -63,24 +66,11 @@ export function CardMedia({
     setSaveCount(initialSaveCount);
   }, [initialSaveCount]);
 
-  React.useEffect(() => {
-    if (initialSaved !== undefined) setSaved(initialSaved);
-  }, [initialSaved]);
-
   const handleShare = React.useCallback(
     async (event: React.MouseEvent) => {
       event.preventDefault();
       event.stopPropagation();
-      try {
-        if (typeof navigator !== 'undefined' && navigator.share) {
-          await navigator.share({ title: alt, text: alt, url: window.location.href });
-        } else if (typeof navigator !== 'undefined') {
-          await navigator.clipboard.writeText(window.location.href);
-        }
-      } catch {
-        /* cancelled or blocked */
-      }
-      const metrics = await recordListingMetricEvent(listingKind, listingId, 'share');
+      const metrics = await shareListing({ title: alt, listingKind, listingId });
       if (metrics) setShareCount(metrics.shareCount);
     },
     [alt, listingKind, listingId],
@@ -94,13 +84,15 @@ export function CardMedia({
         router.push(paths.user.auth);
         return;
       }
-      const metrics = await toggleListingSave(listingKind, listingId);
-      if (metrics) {
-        setSaved(metrics.saved);
-        setSaveCount(metrics.saveCount);
+      if (savedCtx) {
+        const result = await savedCtx.toggleSaved(listingKind, listingId);
+        if (result) setSaveCount(result.saveCount);
+        return;
       }
+      const metrics = await toggleListingSave(listingKind, listingId);
+      if (metrics) setSaveCount(metrics.saveCount);
     },
-    [listingKind, listingId, router, user],
+    [listingKind, listingId, router, savedCtx, user],
   );
 
   return (

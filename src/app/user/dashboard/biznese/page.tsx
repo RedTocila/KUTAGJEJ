@@ -7,12 +7,14 @@ import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 
 import { BusinessOwnerReservations } from '@/components/businesses/business-owner-reservations';
 import { BusinessListingForm } from '@/components/businesses/business-listing-form';
+import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 import { paths } from '@/paths';
 
 type Tab = 'post' | 'reservations';
 
 export default function UserBusinessesDashboardPage() {
   const [tab, setTab] = React.useState<Tab>('post');
+  const [submittedPending, setSubmittedPending] = React.useState(false);
 
   return (
     <Stack spacing={3}>
@@ -37,11 +39,16 @@ export default function UserBusinessesDashboardPage() {
         </Button>
       </Stack>
 
+      {submittedPending ? <ListingSubmittedPendingAlert /> : null}
+
       {tab === 'post' ? (
         <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
           <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <BusinessListingForm
-              onSuccess={() => setTab('reservations')}
+              onSuccess={() => {
+                setSubmittedPending(true);
+                setTab('reservations');
+              }}
               backHref={paths.user.dashboard}
               backLabel="Paneli"
             />

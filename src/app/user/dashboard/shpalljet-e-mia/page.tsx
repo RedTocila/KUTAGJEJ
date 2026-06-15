@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import {
   Alert,
@@ -48,6 +48,9 @@ import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/l
 import { useUser } from '@/hooks/use-user';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
 import { ListingOwnerMetrics } from '@/components/user/listing-owner-metrics';
+import { ListingModerationStatusChip } from '@/components/user/listing-moderation-status-chip';
+import { ListingModerationNotice, ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
+import { normalizeListingModerationStatus } from '@/lib/listing-moderation-status';
 import type { ListingMetrics } from '@/lib/listing-metrics';
 
 // ---------------------------------------------------------------------------
@@ -78,22 +81,30 @@ function Row({ icon: Icon, children }: { icon: PhosphorIcon; children: React.Rea
   );
 }
 
-function BaseCard({ title, chips, children, createdAt, metrics }: {
+function BaseCard({ title, chips, children, createdAt, metrics, status }: {
   title: string;
   chips?: React.ReactNode;
   children: React.ReactNode;
   createdAt: string;
   metrics?: Partial<ListingMetrics>;
+  status?: string | null;
 }) {
+  const moderationStatus = normalizeListingModerationStatus(status ?? undefined);
+  const isPublic = moderationStatus === 'approved';
   return (
     <Card elevation={0} sx={{
-      height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden',
+      height: '100%', border: '1px solid', borderColor: isPublic ? 'divider' : 'warning.light', borderRadius: 2, overflow: 'hidden',
+      opacity: isPublic ? 1 : 0.92,
       transition: 'box-shadow 0.2s, border-color 0.2s',
-      '&:hover': { borderColor: 'primary.light', boxShadow: (t) => `0 8px 24px ${t.palette.mode === 'dark' ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.08)'}` },
+      '&:hover': { borderColor: isPublic ? 'primary.light' : 'warning.main', boxShadow: (t) => `0 8px 24px ${t.palette.mode === 'dark' ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.08)'}` },
     }}>
       <CardContent sx={{ p: { xs: 2, sm: 2.5 }, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-        <Typography variant="h6" component="h2" sx={{ fontWeight: 700, lineHeight: 1.35 }}>{title}</Typography>
+        <Stack direction="row" sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+          <Typography variant="h6" component="h2" sx={{ fontWeight: 700, lineHeight: 1.35, flex: 1 }}>{title}</Typography>
+          <ListingModerationStatusChip status={moderationStatus} />
+        </Stack>
         {chips ? <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.75 }}>{chips}</Stack> : null}
+        {!isPublic ? <ListingModerationNotice status={moderationStatus} /> : null}
         <Divider sx={{ my: 0.25 }} />
         <Stack spacing={0.1}>{children}</Stack>
         <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5 }}>
@@ -118,6 +129,7 @@ function RealEstateCard({ l }: { l: RealEstateMineListing }) {
       title={l.title}
       createdAt={l.createdAt}
       metrics={l}
+      status={l.status}
       chips={<>
         <Chip size="small" label={l.transactionType === 'rent' ? 'Rent' : 'Sale'} color={l.transactionType === 'rent' ? 'info' : 'secondary'} variant="outlined" sx={{ fontWeight: 600 }} />
         <Chip size="small" label={propertyCategoryLabel(l.propertyCategory)} variant="outlined" sx={{ fontWeight: 600 }} />
@@ -146,6 +158,7 @@ function CarCard({ l }: { l: CarMineListing }) {
       title={title}
       createdAt={l.createdAt}
       metrics={l}
+      status={l.status}
       chips={<>
         <Chip size="small" label={l.year} variant="outlined" sx={{ fontWeight: 600 }} />
         <Chip size="small" label={l.transmission} variant="outlined" sx={{ fontWeight: 600 }} />
@@ -174,6 +187,7 @@ function JobCard({ l }: { l: JobMineListing }) {
       title={l.title}
       createdAt={l.createdAt}
       metrics={l}
+      status={l.status}
       chips={<>
         <Chip size="small" label={jobTypeLabel} variant="outlined" sx={{ fontWeight: 600 }} />
         <Chip size="small" label={workLocLabel} variant="outlined" color="info" sx={{ fontWeight: 600 }} />
@@ -200,6 +214,7 @@ function MarketplaceCard({ l }: { l: MarketplaceMineListing }) {
       title={l.title}
       createdAt={l.createdAt}
       metrics={l}
+      status={l.status}
       chips={<>
         <Chip size="small" label={categoryLabel} variant="outlined" sx={{ fontWeight: 600 }} />
         {l.condition ? <Chip size="small" label={conditionLabel} variant="outlined" color="success" sx={{ fontWeight: 600 }} /> : null}
@@ -264,8 +279,10 @@ function TabGrid<T>({ loading, error, items, renderCard }: {
 
 export default function UserMyListingsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useUser();
   const [tab, setTab] = React.useState(0);
+  const [showSubmittedAlert, setShowSubmittedAlert] = React.useState(false);
 
   const [reListings, setReListings] = React.useState<RealEstateMineListing[]>([]);
   const [carListings, setCarListings] = React.useState<CarMineListing[]>([]);
@@ -285,6 +302,13 @@ export default function UserMyListingsPage() {
     if (!user) return;
     if (!canView) router.replace(paths.user.dashboard);
   }, [user, canView, router]);
+
+  React.useEffect(() => {
+    if (searchParams.get('submitted') === 'pending') {
+      setShowSubmittedAlert(true);
+      router.replace(paths.user.myRealEstateListings);
+    }
+  }, [searchParams, router]);
 
   React.useEffect(() => {
     if (!user?.id || !canView) return;
@@ -311,11 +335,14 @@ export default function UserMyListingsPage() {
 
   if (!user || !canView) return null;
 
+  const allListings = [...reListings, ...carListings, ...jobListings, ...mktListings];
+  const pendingCount = allListings.filter((l) => normalizeListingModerationStatus(l.status) === 'pending').length;
+
   const tabs = [
-    { label: 'Pasuri', icon: <BuildingsIcon size={16} weight="duotone" />, count: reListings.length },
-    { label: 'Makina', icon: <CarIcon size={16} weight="duotone" />, count: carListings.length },
-    { label: 'Punë', icon: <BriefcaseIcon size={16} weight="duotone" />, count: jobListings.length },
-    { label: 'Tregu', icon: <StorefrontIcon size={16} weight="duotone" />, count: mktListings.length },
+    { label: 'Pasuri', icon: <BuildingsIcon size={16} weight="duotone" />, count: reListings.length, pending: reListings.filter((l) => l.status === 'pending').length },
+    { label: 'Makina', icon: <CarIcon size={16} weight="duotone" />, count: carListings.length, pending: carListings.filter((l) => l.status === 'pending').length },
+    { label: 'Punë', icon: <BriefcaseIcon size={16} weight="duotone" />, count: jobListings.length, pending: jobListings.filter((l) => l.status === 'pending').length },
+    { label: 'Tregu', icon: <StorefrontIcon size={16} weight="duotone" />, count: mktListings.length, pending: mktListings.filter((l) => l.status === 'pending').length },
   ];
 
   return (
@@ -326,13 +353,21 @@ export default function UserMyListingsPage() {
             Shpalljet e mia
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Të gjitha njoftimet e tua të ruajtura, sipas kategorisë.
+            Njoftimet që keni postuar në platformë, sipas kategorisë.
           </Typography>
         </Stack>
         <Button variant="contained" component={RouterLink} href={paths.user.realEstateListing}>
           + Posto njoftim
         </Button>
       </Stack>
+
+      {showSubmittedAlert ? <ListingSubmittedPendingAlert /> : null}
+
+      {!loading && pendingCount > 0 ? (
+        <Alert severity="info" sx={{ borderRadius: 2 }}>
+          Keni <strong>{pendingCount}</strong> {pendingCount === 1 ? 'njoftim' : 'njoftime'} në pritje të miratimit nga administratori.
+        </Alert>
+      ) : null}
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={tab} onChange={(_, v: number) => setTab(v)} variant="scrollable" scrollButtons="auto">
@@ -345,6 +380,9 @@ export default function UserMyListingsPage() {
                   <span>{t.label}</span>
                   {!loading && t.count > 0 ? (
                     <Chip size="small" label={t.count} sx={{ height: 18, fontSize: '0.7rem', fontWeight: 700, pointerEvents: 'none' }} />
+                  ) : null}
+                  {!loading && t.pending > 0 ? (
+                    <Chip size="small" color="warning" label={`${t.pending} në pritje`} sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, pointerEvents: 'none' }} />
                   ) : null}
                 </Stack>
               }

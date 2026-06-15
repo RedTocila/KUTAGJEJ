@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { listingModerationFields } = require('../lib/listing-moderation-fields');
 
 const marketplaceListingSchema = new mongoose.Schema(
   {
@@ -22,6 +23,7 @@ const marketplaceListingSchema = new mongoose.Schema(
     contactPhone: { type: String, trim: true },
     /** Up to 5 product photos. */
     imageUrls: [{ type: String, trim: true }],
+    ...listingModerationFields,
   },
   { timestamps: true },
 );

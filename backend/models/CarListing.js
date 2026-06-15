@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { listingModerationFields } = require('../lib/listing-moderation-fields');
 
 const carListingSchema = new mongoose.Schema(
   {
@@ -48,6 +49,7 @@ const carListingSchema = new mongoose.Schema(
 
     /** Vercel Blob URLs of uploaded images (up to 5). */
     imageUrls: [{ type: String, trim: true }],
+    ...listingModerationFields,
   },
   { timestamps: true },
 );

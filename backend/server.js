@@ -8,6 +8,7 @@ const { ensureCoreRoles } = require('./lib/core-roles');
 const { ensureReferralProgram } = require('./lib/ensure-referral-program');
 const { ensureHomeBanners } = require('./lib/ensure-home-banners');
 const { ensureListingIndexes } = require('./lib/ensure-listing-indexes');
+const { ensureListingModeration } = require('./lib/ensure-listing-moderation');
 
 const app = express();
 const corsMiddleware = require('./middleware/cors');
@@ -48,6 +49,7 @@ function registerModels() {
   require('./models/BusinessReservation');
   require('./models/ProfessionalListingReview');
   require('./models/ProfessionalVerificationRequest');
+  require('./models/AdminNotification');
 }
 
 const connectDB = async () => {
@@ -69,6 +71,7 @@ const connectDB = async () => {
     await ensureReferralProgram();
     await ensureHomeBanners();
     await ensureListingIndexes();
+    await ensureListingModeration();
   } catch (error) {
     console.error('MongoDB connection failed:', error.message);
     const msg = String(error.message || '');
@@ -109,6 +112,9 @@ app.get('/api/health', async (_req, res) => {
   res.status(ready ? 200 : 503).json(body);
 });
 
+app.use('/api/admin/stats', require('./routes/admin-stats'));
+app.use('/api/admin/listings', require('./routes/admin-listings'));
+app.use('/api/admin/notifications', require('./routes/admin-notifications'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin/roles', require('./routes/admin-roles'));
 app.use('/api/admin/users', require('./routes/admin-users'));

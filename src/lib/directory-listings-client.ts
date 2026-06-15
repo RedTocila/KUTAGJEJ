@@ -1,5 +1,6 @@
 'use client';
 
+import type { ListingCreateResult } from '@/lib/listings-client';
 import type { ListingMetrics } from '@/lib/listing-metrics';
 import type { WeeklyHourRow } from '@/lib/business-constants';
 import { authHeaders } from '@/lib/api-client';
@@ -52,6 +53,7 @@ export interface BusinessMineListing extends ListingMetrics {
   reservationTimeSlots: string[];
   reservationPartySizes: number[];
   servicesHighlight: string | null;
+  status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
   updatedAt: string;
 }
@@ -86,7 +88,7 @@ export async function listMyBusinessListings(): Promise<{
 
 export async function createBusinessListing(
   body: BusinessListingPayload,
-): Promise<{ id?: string; error?: string }> {
+): Promise<ListingCreateResult> {
   try {
     const res = await fetch(getApiUrl('/listings/directory/businesses'), {
       method: 'POST',
@@ -95,7 +97,11 @@ export async function createBusinessListing(
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
-    return { id: data.listing?.id as string | undefined };
+    return {
+      id: data.listing?.id as string | undefined,
+      status: data.listing?.status,
+      message: typeof data.message === 'string' ? data.message : undefined,
+    };
   } catch {
     return { error: 'Could not reach the server.' };
   }
@@ -175,6 +181,7 @@ export interface ProfessionalMineListing extends ListingMetrics {
   responseTimeHours: number | null;
   portfolioItems: ProfessionalPortfolioItem[];
   servicesHighlight: string | null;
+  status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
   updatedAt: string;
 }
@@ -198,7 +205,7 @@ export async function listMyProfessionalListings(): Promise<{
 
 export async function createProfessionalListing(
   body: ProfessionalListingPayload,
-): Promise<{ id?: string; error?: string }> {
+): Promise<ListingCreateResult> {
   try {
     const res = await fetch(getApiUrl('/listings/directory/professionals'), {
       method: 'POST',
@@ -207,7 +214,11 @@ export async function createProfessionalListing(
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
-    return { id: data.listing?.id as string | undefined };
+    return {
+      id: data.listing?.id as string | undefined,
+      status: data.listing?.status,
+      message: typeof data.message === 'string' ? data.message : undefined,
+    };
   } catch {
     return { error: 'Could not reach the server.' };
   }

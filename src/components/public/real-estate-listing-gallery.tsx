@@ -20,7 +20,7 @@ import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/Use
 
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { recordListingMetricEvent, type ListingMetricKind } from '@/lib/listing-metrics';
+import { shareListing, type ListingMetricKind } from '@/lib/listing-metrics';
 import type { ListingGalleryPlaceholderKey } from '@/lib/listing-gallery-placeholder';
 import { paths } from '@/paths';
 
@@ -258,25 +258,9 @@ export function RealEstateListingGallery(props: {
     async (event: React.MouseEvent<HTMLButtonElement>) => {
       event.preventDefault();
       event.stopPropagation();
-      try {
-        if (typeof navigator !== 'undefined' && navigator.share) {
-          await navigator.share({ title, text: title, url: window.location.href });
-          return;
-        }
-      } catch {
-        /* noop */
-      }
-      try {
-        if (typeof navigator !== 'undefined') {
-          await navigator.clipboard.writeText(window.location.href);
-        }
-      } catch {
-        /* noop */
-      }
-      if (listingKind && listingId) {
-        const metrics = await recordListingMetricEvent(listingKind, listingId, 'share');
-        if (metrics) setShareCount(metrics.shareCount);
-      }
+      if (!listingKind || !listingId) return;
+      const metrics = await shareListing({ title, listingKind, listingId });
+      if (metrics) setShareCount(metrics.shareCount);
     },
     [title, listingKind, listingId],
   );

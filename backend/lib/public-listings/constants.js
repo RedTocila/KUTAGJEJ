@@ -20,7 +20,7 @@ const PROFESSIONAL_CATEGORY_LABELS = {
 };
 
 const DEFAULT_LIMIT = 8;
-const MAX_LIMIT = 24;
+const MAX_LIMIT = 48;
 /** Job listings are hidden from public browse after this many days. */
 const JOB_LISTING_VISIBLE_DAYS = 15;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;

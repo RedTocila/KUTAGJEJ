@@ -70,6 +70,8 @@ export type BrowseFilters =
   | BrowseMarketplaceFilters
   | BrowseDirectoryFilters;
 
+export const BROWSE_PAGE_SIZE = 24;
+
 export const BROWSE_SORT_OPTIONS = [
   { value: 'newest', label: 'Më të rejat' },
   { value: 'price-asc', label: 'Çmimi ↑' },
@@ -134,6 +136,11 @@ function appendQueryValues(qs: URLSearchParams, key: string, value: string | str
 function parseSort(value: string): BrowseSort | undefined {
   if (value === 'newest' || value === 'price-asc' || value === 'price-desc') return value;
   return undefined;
+}
+
+export function parseBrowsePage(searchParams: SearchParamsInput): number {
+  const n = Number.parseInt(firstParam(searchParams.page), 10);
+  return Number.isFinite(n) && n > 0 ? n : 1;
 }
 
 export function parseBrowseSearchParams(
@@ -204,9 +211,10 @@ export function parseBrowseSearchParams(
 }
 
 
-export function buildBrowseApiQuery(filters: BrowseFilters, limit = 24): string {
+export function buildBrowseApiQuery(filters: BrowseFilters, limit = BROWSE_PAGE_SIZE, page = 1): string {
   const qs = new URLSearchParams();
   qs.set('limit', String(limit));
+  if (page > 1) qs.set('page', String(page));
 
   for (const [key, value] of Object.entries(filters)) {
     appendQueryValues(qs, key, value as string | string[] | undefined);
@@ -215,11 +223,12 @@ export function buildBrowseApiQuery(filters: BrowseFilters, limit = 24): string 
   return `?${qs.toString()}`;
 }
 
-export function buildBrowseUrlQuery(filters: BrowseFilters): string {
+export function buildBrowseUrlQuery(filters: BrowseFilters, page = 1): string {
   const qs = new URLSearchParams();
   for (const [key, value] of Object.entries(filters)) {
     appendQueryValues(qs, key, value as string | string[] | undefined);
   }
+  if (page > 1) qs.set('page', String(page));
   const s = qs.toString();
   return s ? `?${s}` : '';
 }

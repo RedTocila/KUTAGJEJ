@@ -5,6 +5,7 @@ const {
   buildApplicantSnapshot,
   formatVerificationRequest,
 } = require('./job-employer-verification');
+const { createAdminNotification } = require('./listing-moderation');
 
 function isProfessionalVerified(userDoc) {
   return Boolean(userDoc?.professionalsVerifiedAt);
@@ -67,6 +68,15 @@ async function submitVerificationRequest(user, message) {
     status: 'pending',
     message: note,
     applicantSnapshot: buildApplicantSnapshot(portal, modelName),
+  });
+
+  const snap = buildApplicantSnapshot(portal, modelName);
+  await createAdminNotification({
+    type: 'professional_verification',
+    refKind: 'professionals',
+    refId: doc._id,
+    title: 'Kërkesë verifikimi profesionisti',
+    message: `${snap.displayName || 'Përdorues'} dërgoi një kërkesë verifikimi për Profesionistë.`,
   });
 
   return { ok: true, request: formatVerificationRequest(doc) };

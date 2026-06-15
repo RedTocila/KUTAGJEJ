@@ -21,6 +21,7 @@ import { Scroll as ScrollIcon } from '@phosphor-icons/react/dist/ssr/Scroll';
 import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
+import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
 
 /** React 19 JSX expects components that return `Element | null`, not loose `ReactNode` (Phosphor's `Icon` type). */
 export type NavIconComponent = React.ComponentType<{
@@ -52,6 +53,7 @@ export const navIcons = {
   'book-open': BookOpenIcon,
   'squares-four': SquaresFourIcon,
   'map-pin': MapPinIcon,
+  megaphone: MegaphoneIcon,
   scroll: ScrollIcon,
   handshake: HandshakeIcon,
 } as Record<string, NavIconComponent>;

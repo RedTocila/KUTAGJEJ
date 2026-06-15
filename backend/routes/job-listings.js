@@ -5,6 +5,7 @@ const JobListing = require('../models/JobListing');
 const RealEstateCity = require('../models/RealEstateCity');
 const { validateJobPayload } = require('../lib/job-field-rules');
 const { attachOwnerMetrics } = require('../lib/listing-metrics');
+const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 
 const router = express.Router();
 
@@ -35,6 +36,7 @@ function formatMineListing(doc, cityById) {
     responsibilities: doc.responsibilities ?? [],
     requirements: doc.requirements ?? [],
     benefits: doc.benefits ?? [],
+    status: doc.status || 'pending',
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
@@ -97,11 +99,15 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       benefits: v.benefits,
     });
 
+    await notifyAdminsListingSubmitted('jobs', doc._id, doc.title);
+
     res.status(201).json({
+      message: 'Njoftimi u dërgua për aprovim..',
       listing: {
         id: String(doc._id),
         title: doc.title,
         industry: doc.industry,
+        status: doc.status,
         createdAt: doc.createdAt,
       },
     });

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { listingModerationFields } = require('../lib/listing-moderation-fields');
 
 const realEstateListingSchema = new mongoose.Schema(
   {
@@ -32,6 +33,7 @@ const realEstateListingSchema = new mongoose.Schema(
     yearBuilt: { type: Number },
     /** Vercel Blob URLs of uploaded images (up to 8). */
     imageUrls: [{ type: String, trim: true }],
+    ...listingModerationFields,
   },
   { timestamps: true },
 );

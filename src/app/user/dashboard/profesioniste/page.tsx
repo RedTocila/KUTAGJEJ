@@ -6,9 +6,12 @@ import { Button, Card, CardContent, Stack, Typography } from '@mui/material';
 
 import { ProfessionalListingForm } from '@/components/professionals/professional-listing-form';
 import { ProfessionalVerificationCard } from '@/components/professionals/professional-verification-card';
+import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 import { paths } from '@/paths';
 
 export default function UserProfessionalsDashboardPage() {
+  const [submittedPending, setSubmittedPending] = React.useState(false);
+
   return (
     <Stack spacing={3}>
       <Stack spacing={0.5}>
@@ -22,6 +25,8 @@ export default function UserProfessionalsDashboardPage() {
 
       <ProfessionalVerificationCard />
 
+      {submittedPending ? <ListingSubmittedPendingAlert /> : null}
+
       <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
         <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -33,7 +38,7 @@ export default function UserProfessionalsDashboardPage() {
             </Button>
           </Stack>
           <ProfessionalListingForm
-            onSuccess={() => undefined}
+            onSuccess={() => setSubmittedPending(true)}
             backHref={paths.user.dashboard}
             backLabel="Paneli"
           />

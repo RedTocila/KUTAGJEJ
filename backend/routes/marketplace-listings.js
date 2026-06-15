@@ -4,6 +4,7 @@ const authMiddleware = require('../middleware/auth');
 const MarketplaceListing = require('../models/MarketplaceListing');
 const RealEstateCity = require('../models/RealEstateCity');
 const { attachOwnerMetrics } = require('../lib/listing-metrics');
+const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 
 const router = express.Router();
 
@@ -79,6 +80,7 @@ router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
         cityId: d.cityId ? String(d.cityId) : null,
         cityName: city?.name ?? null,
         contactPhone: d.contactPhone ?? null,
+        status: d.status || 'pending',
         createdAt: d.createdAt,
       };
     });
@@ -117,7 +119,12 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       contactPhone: String(body.contactPhone || '').trim(),
     });
 
-    res.status(201).json({ listing: { id: String(doc._id), title: doc.title, createdAt: doc.createdAt } });
+    await notifyAdminsListingSubmitted('marketplace', doc._id, doc.title);
+
+    res.status(201).json({
+      message: 'Njoftimi u dërgua për aprovim..',
+      listing: { id: String(doc._id), title: doc.title, status: doc.status, createdAt: doc.createdAt },
+    });
   } catch (err) {
     console.error('POST /listings/marketplace:', err?.message || err);
     res.status(500).json({ message: 'Server error' });

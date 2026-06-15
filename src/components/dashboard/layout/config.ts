@@ -10,6 +10,13 @@ export const navItems = [
     icon: 'chart-pie',
   },
   {
+    key: 'listing-moderation',
+    title: 'Njoftimet',
+    href: paths.dashboard.listingModeration,
+    icon: 'megaphone',
+    platformAdminOnly: true,
+  },
+  {
     key: 'staff-users',
     title: 'Përdoruesit',
     href: paths.dashboard.staffUsers,

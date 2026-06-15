@@ -244,7 +244,7 @@ export default function UserPostListingPage() {
           <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
             <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <RealEstateListingForm
-                onSuccess={() => router.push(paths.user.myRealEstateListings)}
+                onSuccess={() => router.push(`${paths.user.myRealEstateListings}?submitted=pending`)}
                 backHref={paths.user.myRealEstateListings}
                 backLabel="Listimet e mia"
               />
@@ -274,7 +274,7 @@ export default function UserPostListingPage() {
           <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
             <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <CarListingForm
-                onSuccess={() => router.push(paths.user.myRealEstateListings)}
+                onSuccess={() => router.push(`${paths.user.myRealEstateListings}?submitted=pending`)}
                 backHref={paths.user.myRealEstateListings}
                 backLabel="Listimet e mia"
               />
@@ -306,7 +306,7 @@ export default function UserPostListingPage() {
           <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
             <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <JobListingForm
-                onSuccess={() => router.push(paths.user.myRealEstateListings)}
+                onSuccess={() => router.push(`${paths.user.myRealEstateListings}?submitted=pending`)}
                 backHref={paths.user.myRealEstateListings}
                 backLabel="Listimet e mia"
               />
@@ -396,7 +396,7 @@ export default function UserPostListingPage() {
           <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
             <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <MarketplaceListingForm
-                onSuccess={() => router.push(paths.user.myRealEstateListings)}
+                onSuccess={() => router.push(`${paths.user.myRealEstateListings}?submitted=pending`)}
                 backHref={paths.user.myRealEstateListings}
                 backLabel="Listimet e mia"
               />

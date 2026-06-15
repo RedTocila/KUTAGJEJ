@@ -1,21 +1,15 @@
 'use client';
 
 import type { JobEmployerVerificationRequest } from '@/lib/job-employer-verification-client';
+import { authHeaders } from '@/lib/api-client';
+import { getApiUrl } from '@/lib/api-config';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
-
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
 
 export async function listJobEmployerVerificationRequests(
   status: 'pending' | 'approved' | 'rejected' | 'all' = 'pending',
 ): Promise<{ requests?: JobEmployerVerificationRequest[]; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/job-employer-verification?status=${status}`, {
+    const res = await fetch(getApiUrl(`/admin/job-employer-verification?status=${status}`), {
       headers: authHeaders(),
       cache: 'no-store',
     });
@@ -33,7 +27,7 @@ export async function reviewJobEmployerVerificationRequest(
   adminNote?: string,
 ): Promise<{ request?: JobEmployerVerificationRequest; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/job-employer-verification/${encodeURIComponent(id)}`, {
+    const res = await fetch(getApiUrl(`/admin/job-employer-verification/${encodeURIComponent(id)}`), {
       method: 'PATCH',
       headers: authHeaders(),
       body: JSON.stringify({ decision, adminNote: adminNote?.trim() || '' }),

@@ -12,12 +12,8 @@ import {
   FormGroup,
   FormLabel,
   InputAdornment,
-  InputLabel,
-  MenuItem,
   Radio,
   RadioGroup,
-  Select,
-  type SelectChangeEvent,
   Stack,
   TextField,
   Typography,
@@ -31,6 +27,7 @@ import {
   JOB_TYPE_OPTIONS,
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
+import { SearchableSelect } from '@/components/core/searchable-select';
 import { JobFormStringList } from '@/components/jobs/job-form-string-list';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
@@ -215,12 +212,6 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
       setForm((prev) => ({ ...prev, [key]: ev.target.value }));
     };
 
-  const onSelect =
-    (key: keyof JobFormState) =>
-    (ev: SelectChangeEvent<string>) => {
-      setForm((prev) => ({ ...prev, [key]: ev.target.value }));
-    };
-
   // -------------------------------------------------------------------------
   // Submit
   // -------------------------------------------------------------------------
@@ -367,43 +358,24 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
           Industria dhe vendndodhja
         </Typography>
 
-        <FormControl fullWidth required>
-          <InputLabel id="job-industry-label">Industria</InputLabel>
-          <Select<string>
-            labelId="job-industry-label"
-            label="Industria"
-            value={form.industry}
-            onChange={onSelect('industry')}
-          >
-            <MenuItem value="">
-              <em>Zgjidhni industrinë…</em>
-            </MenuItem>
-            {JOB_INDUSTRY_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <SearchableSelect
+          label="Industria"
+          value={form.industry}
+          onChange={(v) => setForm((p) => ({ ...p, industry: v }))}
+          options={JOB_INDUSTRY_OPTIONS}
+          emptyLabel="Zgjidhni industrinë…"
+          required
+        />
 
-        <FormControl fullWidth required disabled={loadingCities || cities.length === 0}>
-          <InputLabel id="job-city-label">Qyteti</InputLabel>
-          <Select<string>
-            labelId="job-city-label"
-            label="Qyteti"
-            value={form.cityId}
-            onChange={onSelect('cityId')}
-          >
-            <MenuItem value="">
-              <em>Zgjidhni qytetin…</em>
-            </MenuItem>
-            {cities.map((c) => (
-              <MenuItem key={c.id} value={c.id}>
-                {c.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <SearchableSelect
+          label="Qyteti"
+          value={form.cityId}
+          onChange={(v) => setForm((p) => ({ ...p, cityId: v }))}
+          options={cities.map((c) => ({ value: c.id, label: c.name }))}
+          emptyLabel="Zgjidhni qytetin…"
+          required
+          disabled={loadingCities || cities.length === 0}
+        />
 
         {!loadingCities && cities.length === 0 ? (
           <Typography variant="caption" color="text.secondary">
@@ -421,43 +393,23 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
         </Typography>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <FormControl fullWidth required>
-            <InputLabel id="job-edu-label">Edukimi</InputLabel>
-            <Select<string>
-              labelId="job-edu-label"
-              label="Edukimi"
-              value={form.education}
-              onChange={onSelect('education')}
-            >
-              <MenuItem value="">
-                <em>Zgjidhni nivelin…</em>
-              </MenuItem>
-              {JOB_EDUCATION_OPTIONS.map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <SearchableSelect
+            label="Edukimi"
+            value={form.education}
+            onChange={(v) => setForm((p) => ({ ...p, education: v }))}
+            options={JOB_EDUCATION_OPTIONS}
+            emptyLabel="Zgjidhni nivelin…"
+            required
+          />
 
-          <FormControl fullWidth required>
-            <InputLabel id="job-exp-label">Eksperienca</InputLabel>
-            <Select<string>
-              labelId="job-exp-label"
-              label="Eksperienca"
-              value={form.experience}
-              onChange={onSelect('experience')}
-            >
-              <MenuItem value="">
-                <em>Zgjidhni eksperiencën…</em>
-              </MenuItem>
-              {JOB_EXPERIENCE_OPTIONS.map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <SearchableSelect
+            label="Eksperienca"
+            value={form.experience}
+            onChange={(v) => setForm((p) => ({ ...p, experience: v }))}
+            options={JOB_EXPERIENCE_OPTIONS}
+            emptyLabel="Zgjidhni eksperiencën…"
+            required
+          />
         </Stack>
       </Stack>
 
@@ -528,24 +480,14 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
               },
             }}
           />
-          <FormControl fullWidth disabled={!form.salary.trim()}>
-            <InputLabel id="job-cur-label">Monedha</InputLabel>
-            <Select<string>
-              labelId="job-cur-label"
-              label="Monedha"
-              value={form.currency}
-              onChange={onSelect('currency')}
-            >
-              <MenuItem value="">
-                <em>Zgjidhni…</em>
-              </MenuItem>
-              {CURRENCY_OPTIONS.map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <SearchableSelect
+            label="Monedha"
+            value={form.currency}
+            onChange={(v) => setForm((p) => ({ ...p, currency: v as JobFormState['currency'] }))}
+            options={CURRENCY_OPTIONS}
+            emptyLabel="Zgjidhni…"
+            disabled={!form.salary.trim()}
+          />
         </Stack>
 
         <TextField

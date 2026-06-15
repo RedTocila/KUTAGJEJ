@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Box, Stack, Typography } from '@mui/material';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -16,6 +17,21 @@ import type { HomeVerticalId } from '@/lib/home-categories';
  */
 export function SubcategoryPills({ verticalId }: { verticalId: HomeVerticalId }) {
   const items = HOME_SUBCATEGORIES[verticalId];
+  const searchParams = useSearchParams();
+
+  const isPillActive = React.useCallback(
+    (href: string) => {
+      const [, query = ''] = href.split('?');
+      if (!query) return searchParams.toString() === '';
+      const target = new URLSearchParams(query);
+      for (const [key, value] of target.entries()) {
+        if (searchParams.get(key) !== value) return false;
+      }
+      return true;
+    },
+    [searchParams],
+  );
+
   if (!items || items.length === 0) return null;
 
   return (
@@ -24,7 +40,7 @@ export function SubcategoryPills({ verticalId }: { verticalId: HomeVerticalId })
       aria-label="Nënkategoritë"
       sx={{
         mt: { xs: 1.5, md: 2 },
-        mb: { xs: 1.5, md: 2 },
+        mb: 0,
         // Allow horizontal scroll on small screens; trim the scrollbar so it stays clean.
         overflowX: 'auto',
         WebkitOverflowScrolling: 'touch',
@@ -40,6 +56,7 @@ export function SubcategoryPills({ verticalId }: { verticalId: HomeVerticalId })
       <Stack direction="row" spacing={1} sx={{ pr: 3, width: 'max-content' }}>
         {items.map((item) => {
           const Icon = item.Icon;
+          const active = isPillActive(item.href);
           return (
             <Box
               key={`${item.href}-${item.label}`}
@@ -53,9 +70,9 @@ export function SubcategoryPills({ verticalId }: { verticalId: HomeVerticalId })
                 py: 0.75,
                 borderRadius: 999,
                 border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-                color: 'text.primary',
+                borderColor: active ? 'primary.main' : 'divider',
+                bgcolor: active ? primaryMainAlpha(0.08) : 'background.paper',
+                color: active ? 'primary.main' : 'text.primary',
                 textDecoration: 'none',
                 whiteSpace: 'nowrap',
                 fontSize: '0.825rem',

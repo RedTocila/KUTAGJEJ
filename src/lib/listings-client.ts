@@ -3,15 +3,9 @@
 import type { ListingCategory } from '@/types/listing-category';
 import type { ListingMetrics } from '@/lib/listing-metrics';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
+import { authHeaders } from '@/lib/api-client';
+import { getApiUrl } from '@/lib/api-config';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
-
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
 
 export interface RealEstateListingPayload {
   propertyCategory: string;
@@ -37,7 +31,7 @@ export interface RealEstateListingPayload {
 
 export async function listCategoriesPublic(): Promise<{ categories?: ListingCategory[]; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/categories`, { cache: 'no-store' });
+    const res = await fetch(getApiUrl('/categories'), { cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Failed to load categories.' };
     return { categories: data.categories as ListingCategory[] };
@@ -109,7 +103,7 @@ export async function listMyRealEstateListings(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(`${API_URL}/listings/real-estate/mine`, {
+    const res = await fetch(getApiUrl('/listings/real-estate/mine'), {
       headers: authHeaders(),
       cache: 'no-store',
     });
@@ -125,7 +119,7 @@ export async function createRealEstateListing(
   body: RealEstateListingPayload,
 ): Promise<{ id?: string; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/listings/real-estate`, {
+    const res = await fetch(getApiUrl('/listings/real-estate'), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(body),
@@ -140,7 +134,7 @@ export async function createRealEstateListing(
 
 export async function listMyCarListings(): Promise<{ listings?: CarMineListing[]; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/listings/cars/mine`, { headers: authHeaders(), cache: 'no-store' });
+    const res = await fetch(getApiUrl('/listings/cars/mine'), { headers: authHeaders(), cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not load car listings.' };
     return { listings: data.listings as CarMineListing[] };
@@ -151,7 +145,7 @@ export async function listMyCarListings(): Promise<{ listings?: CarMineListing[]
 
 export async function listMyJobListings(): Promise<{ listings?: JobMineListing[]; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/listings/jobs/mine`, { headers: authHeaders(), cache: 'no-store' });
+    const res = await fetch(getApiUrl('/listings/jobs/mine'), { headers: authHeaders(), cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not load job listings.' };
     return { listings: data.listings as JobMineListing[] };
@@ -162,7 +156,7 @@ export async function listMyJobListings(): Promise<{ listings?: JobMineListing[]
 
 export async function listMyMarketplaceListings(): Promise<{ listings?: MarketplaceMineListing[]; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/listings/marketplace/mine`, { headers: authHeaders(), cache: 'no-store' });
+    const res = await fetch(getApiUrl('/listings/marketplace/mine'), { headers: authHeaders(), cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not load marketplace listings.' };
     return { listings: data.listings as MarketplaceMineListing[] };
@@ -195,7 +189,7 @@ export interface JobListingPayload {
 
 export async function createJobListing(body: JobListingPayload): Promise<{ id?: string; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/listings/jobs`, {
+    const res = await fetch(getApiUrl('/listings/jobs'), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(body),
@@ -222,7 +216,7 @@ export interface MarketplaceListingPayload {
 
 export async function createMarketplaceListing(body: MarketplaceListingPayload): Promise<{ id?: string; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/listings/marketplace`, {
+    const res = await fetch(getApiUrl('/listings/marketplace'), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(body),
@@ -240,7 +234,7 @@ export async function createCarListing(formData: FormData): Promise<{ id?: strin
     const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
     const headers: Record<string, string> = {};
     if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(`${API_URL}/listings/cars`, {
+    const res = await fetch(getApiUrl('/listings/cars'), {
       method: 'POST',
       headers,
       body: formData,

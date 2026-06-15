@@ -1,13 +1,7 @@
 'use client';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
-
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
+import { authHeaders } from '@/lib/api-client';
+import { getApiUrl } from '@/lib/api-config';
 
 export interface JobEmployerApplicantSnapshot {
   displayName: string;
@@ -45,7 +39,7 @@ export async function fetchJobEmployerVerificationStatus(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(`${API_URL}/job-employer-verification/status`, {
+    const res = await fetch(getApiUrl('/job-employer-verification/status'), {
       headers: authHeaders(),
       cache: 'no-store',
     });
@@ -61,7 +55,7 @@ export async function submitJobEmployerVerificationRequest(
   message?: string,
 ): Promise<{ request?: JobEmployerVerificationRequest; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/job-employer-verification/request`, {
+    const res = await fetch(getApiUrl('/job-employer-verification/request'), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ message: message?.trim() || '' }),

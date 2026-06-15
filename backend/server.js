@@ -7,13 +7,21 @@ const { ensureListingCategories } = require('./lib/ensure-listing-categories');
 const { ensureCoreRoles } = require('./lib/core-roles');
 const { ensureReferralProgram } = require('./lib/ensure-referral-program');
 const { ensureHomeBanners } = require('./lib/ensure-home-banners');
+const { ensureListingIndexes } = require('./lib/ensure-listing-indexes');
 
 const app = express();
 const corsMiddleware = require('./middleware/cors');
+const helmet = require('helmet');
 
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }),
+);
 app.use(corsMiddleware);
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 /** Load models once so Mongoose registers schemas before routes run. */
 function registerModels() {
@@ -60,6 +68,7 @@ const connectDB = async () => {
     await ensureCoreRoles();
     await ensureReferralProgram();
     await ensureHomeBanners();
+    await ensureListingIndexes();
   } catch (error) {
     console.error('MongoDB connection failed:', error.message);
     const msg = String(error.message || '');

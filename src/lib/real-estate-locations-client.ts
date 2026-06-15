@@ -1,6 +1,7 @@
 'use client';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
+import { authHeaders } from '@/lib/api-client';
+import { getApiUrl } from '@/lib/api-config';
 
 export interface RealEstateZoneDto {
   id: string;
@@ -15,19 +16,12 @@ export interface RealEstateCityDto {
   zones: RealEstateZoneDto[];
 }
 
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
-
 export async function listRealEstateLocationsPublic(): Promise<{
   cities?: RealEstateCityDto[];
   error?: string;
 }> {
   try {
-    const res = await fetch(`${API_URL}/real-estate/locations`, { cache: 'no-store' });
+    const res = await fetch(getApiUrl('/real-estate/locations'), { cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Failed to load locations.' };
     return { cities: data.cities as RealEstateCityDto[] };
@@ -41,7 +35,7 @@ export async function listRealEstateLocationsAdmin(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(`${API_URL}/admin/real-estate/locations`, { headers: authHeaders() });
+    const res = await fetch(getApiUrl('/admin/real-estate/locations'), { headers: authHeaders() });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Failed to load cities.' };
     return { cities: data.cities as RealEstateCityDto[] };
@@ -56,7 +50,7 @@ export async function createRealEstateCity(body: {
   zones: { name: string; slug?: string }[];
 }): Promise<{ city?: RealEstateCityDto; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/real-estate/locations`, {
+    const res = await fetch(getApiUrl('/admin/real-estate/locations'), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(body),
@@ -74,7 +68,7 @@ export async function updateRealEstateCity(
   body: Partial<{ name: string; slug: string; zones: { name: string; slug?: string }[] }>,
 ): Promise<{ city?: RealEstateCityDto; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/real-estate/locations/${encodeURIComponent(id)}`, {
+    const res = await fetch(getApiUrl(`/admin/real-estate/locations/${encodeURIComponent(id)}`), {
       method: 'PATCH',
       headers: authHeaders(),
       body: JSON.stringify(body),
@@ -89,7 +83,7 @@ export async function updateRealEstateCity(
 
 export async function deleteRealEstateCity(id: string): Promise<{ ok?: boolean; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/real-estate/locations/${encodeURIComponent(id)}`, {
+    const res = await fetch(getApiUrl(`/admin/real-estate/locations/${encodeURIComponent(id)}`), {
       method: 'DELETE',
       headers: authHeaders(),
     });

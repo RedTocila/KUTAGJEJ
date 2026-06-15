@@ -1,6 +1,7 @@
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
 const optionalAuth = require('../middleware/optional-auth');
+const rateLimit = require('../middleware/rate-limit');
 const {
   isValidKind,
   recordListingEvent,
@@ -9,6 +10,7 @@ const {
 } = require('../lib/listing-metrics');
 
 const router = express.Router();
+const metricsRateLimit = rateLimit({ windowMs: 60_000, max: 120 });
 
 function requirePortalUser(req, res, next) {
   const model = req.user?.constructor?.modelName;
@@ -19,7 +21,7 @@ function requirePortalUser(req, res, next) {
 }
 
 /** POST /api/listing-metrics/event — view | click | share (anonymous or signed-in). */
-router.post('/event', optionalAuth, async (req, res) => {
+router.post('/event', metricsRateLimit, optionalAuth, async (req, res) => {
   try {
     const kind = String(req.body?.listingKind ?? '').trim();
     const listingId = String(req.body?.listingId ?? '').trim();
@@ -48,7 +50,7 @@ router.post('/save', authMiddleware, requirePortalUser, async (req, res) => {
 });
 
 /** GET /api/listing-metrics/batch?items=kind:id,kind:id */
-router.get('/batch', optionalAuth, async (req, res) => {
+router.get('/batch', metricsRateLimit, optionalAuth, async (req, res) => {
   try {
     const raw = String(req.query.items ?? '').trim();
     if (!raw) return res.json({ metrics: {} });

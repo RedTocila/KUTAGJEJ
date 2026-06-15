@@ -3,12 +3,19 @@ const allowedOrigins = [
   'http://localhost:3000',
   'https://ku-ta-gjej.vercel.app',
   'https://ku-ta-gjej-front.vercel.app',
+  ...(process.env.CORS_EXTRA_ORIGINS || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean),
 ];
 
 function isAllowedOrigin(origin) {
   if (!origin) return true;
   if (allowedOrigins.includes(origin)) return true;
-  if (origin.includes('.vercel.app')) return true;
+  // Preview deployments: only when explicitly enabled (default off in production).
+  if (process.env.CORS_ALLOW_VERCEL_PREVIEWS === 'true' && origin.endsWith('.vercel.app')) {
+    return true;
+  }
   // Local dev: any port on localhost / 127.0.0.1 / *.test (e.g. Laragon)
   try {
     const u = new URL(origin);

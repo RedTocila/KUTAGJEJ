@@ -7,11 +7,7 @@ import {
   Box,
   Button,
   Divider,
-  FormControl,
   IconButton,
-  InputLabel,
-  MenuItem,
-  Select,
   Stack,
   TextField,
   Typography,
@@ -19,6 +15,7 @@ import {
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
+import { SearchableSelect } from '@/components/core/searchable-select';
 import { PROFESSIONAL_CATEGORY_OPTIONS } from '@/lib/professional-constants';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { createProfessionalListing, type ProfessionalPortfolioItem } from '@/lib/directory-listings-client';
@@ -121,26 +118,22 @@ export function ProfessionalListingForm({
         {error ? <Alert severity="error">{error}</Alert> : null}
 
         <TextField label="Titulli i profilit" value={title} onChange={(e) => setTitle(e.target.value)} required fullWidth />
-        <FormControl fullWidth required>
-          <InputLabel>Kategoria</InputLabel>
-          <Select label="Kategoria" value={category} onChange={(e) => setCategory(e.target.value)}>
-            {PROFESSIONAL_CATEGORY_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <FormControl fullWidth required>
-          <InputLabel>Qyteti</InputLabel>
-          <Select label="Qyteti" value={cityId} onChange={(e) => setCityId(e.target.value)}>
-            {cities.map((c) => (
-              <MenuItem key={c.id} value={c.id}>
-                {c.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <SearchableSelect
+          label="Kategoria"
+          value={category}
+          onChange={setCategory}
+          options={PROFESSIONAL_CATEGORY_OPTIONS}
+          emptyLabel="Zgjidhni kategorinë…"
+          required
+        />
+        <SearchableSelect
+          label="Qyteti"
+          value={cityId}
+          onChange={setCityId}
+          options={cities.map((c) => ({ value: c.id, label: c.name }))}
+          emptyLabel="Zgjidhni qytetin…"
+          required
+        />
         <TextField label="Përshkrimi" value={description} onChange={(e) => setDescription(e.target.value)} required fullWidth multiline minRows={4} />
         <TextField label="Shërbimet (opsionale)" value={servicesHighlight} onChange={(e) => setServicesHighlight(e.target.value)} fullWidth placeholder="p.sh. Dizajn · Branding · Web" />
         <TextField label="Telefon" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} required fullWidth />
@@ -154,17 +147,14 @@ export function ProfessionalListingForm({
         />
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <TextField label="Çmimi nga (opsionale)" value={price} onChange={(e) => setPrice(e.target.value)} fullWidth />
-          <FormControl fullWidth sx={{ minWidth: 120 }}>
-            <InputLabel>Monedha</InputLabel>
-            <Select label="Monedha" value={currency} onChange={(e) => setCurrency(e.target.value as 'EUR' | 'LEK' | '')}>
-              <MenuItem value="">—</MenuItem>
-              {CURRENCY_OPTIONS.map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <SearchableSelect
+            label="Monedha"
+            value={currency}
+            onChange={(v) => setCurrency(v as '' | 'EUR' | 'LEK')}
+            options={CURRENCY_OPTIONS}
+            emptyLabel="—"
+            sx={{ minWidth: 120 }}
+          />
         </Stack>
         <TextField label="URL foto profili / kopertinë" value={imageUrlsText} onChange={(e) => setImageUrlsText(e.target.value)} fullWidth multiline minRows={2} />
 

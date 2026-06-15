@@ -1,19 +1,13 @@
 'use client';
 
 import type { ListingCategory, ListingCategoryKey } from '@/types/listing-category';
+import { authHeaders } from '@/lib/api-client';
+import { getApiUrl } from '@/lib/api-config';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
-
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
 
 export async function listCategoriesAdmin(): Promise<{ categories?: ListingCategory[]; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/categories`, { headers: authHeaders() });
+    const res = await fetch(getApiUrl('/admin/categories'), { headers: authHeaders() });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista e kategorive dështoi.' };
     return { categories: data.categories as ListingCategory[] };
@@ -32,7 +26,7 @@ export async function updateCategory(
   }>,
 ): Promise<{ category?: ListingCategory; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/categories/${encodeURIComponent(key)}`, {
+    const res = await fetch(getApiUrl(`/admin/categories/${encodeURIComponent(key)}`), {
       method: 'PATCH',
       headers: authHeaders(),
       body: JSON.stringify(body),

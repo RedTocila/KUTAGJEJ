@@ -8,13 +8,9 @@ import {
   Button,
   Checkbox,
   Divider,
-  FormControl,
   FormControlLabel,
   FormGroup,
   IconButton,
-  InputLabel,
-  MenuItem,
-  Select,
   Stack,
   TextField,
   Typography,
@@ -22,6 +18,7 @@ import {
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
+import { SearchableSelect } from '@/components/core/searchable-select';
 import {
   BUSINESS_CATEGORY_OPTIONS,
   BUSINESS_DAY_LABELS,
@@ -181,26 +178,22 @@ export function BusinessListingForm({ onSuccess, backHref, backLabel }: Business
             Informacioni bazë
           </Typography>
           <TextField label="Emri i biznesit" value={title} onChange={(e) => setTitle(e.target.value)} required fullWidth />
-          <FormControl fullWidth required>
-            <InputLabel>Kategoria</InputLabel>
-            <Select label="Kategoria" value={category} onChange={(e) => setCategory(e.target.value)}>
-              {BUSINESS_CATEGORY_OPTIONS.map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl fullWidth required>
-            <InputLabel>Qyteti</InputLabel>
-            <Select label="Qyteti" value={cityId} onChange={(e) => setCityId(e.target.value)}>
-              {cities.map((c) => (
-                <MenuItem key={c.id} value={c.id}>
-                  {c.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <SearchableSelect
+            label="Kategoria"
+            value={category}
+            onChange={setCategory}
+            options={BUSINESS_CATEGORY_OPTIONS}
+            emptyLabel="Zgjidhni kategorinë…"
+            required
+          />
+          <SearchableSelect
+            label="Qyteti"
+            value={cityId}
+            onChange={setCityId}
+            options={cities.map((c) => ({ value: c.id, label: c.name }))}
+            emptyLabel="Zgjidhni qytetin…"
+            required
+          />
           <TextField
             label="Përshkrimi"
             value={description}
@@ -345,21 +338,21 @@ export function BusinessListingForm({ onSuccess, backHref, backLabel }: Business
                           }}
                           sx={{ flex: 1 }}
                         />
-                        <FormControl size="small" sx={{ minWidth: 90 }}>
-                          <InputLabel>Mon.</InputLabel>
-                          <Select
-                            label="Mon."
-                            value={item.currency}
-                            onChange={(e) => {
-                              const next = [...menuItems];
-                              next[ii] = { ...item, currency: e.target.value as 'EUR' | 'LEK' };
-                              setMenuItems(next);
-                            }}
-                          >
-                            <MenuItem value="EUR">EUR</MenuItem>
-                            <MenuItem value="LEK">LEK</MenuItem>
-                          </Select>
-                        </FormControl>
+                        <SearchableSelect
+                          label="Mon."
+                          value={item.currency}
+                          onChange={(v) => {
+                            const next = [...menuItems];
+                            next[ii] = { ...item, currency: v as 'EUR' | 'LEK' };
+                            setMenuItems(next);
+                          }}
+                          options={[
+                            { value: 'EUR', label: 'EUR' },
+                            { value: 'LEK', label: 'LEK' },
+                          ]}
+                          emptyLabel="—"
+                          sx={{ minWidth: 90, flex: '0 0 auto' }}
+                        />
                       </Stack>
                       <TextField
                         size="small"

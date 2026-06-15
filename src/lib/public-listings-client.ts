@@ -1,4 +1,7 @@
 import type { ListingMetrics } from '@/lib/listing-metrics';
+import type { BrowseFilters } from '@/lib/listing-filters';
+import { buildBrowseApiQuery } from '@/lib/listing-filters';
+import { safeServerJson } from '@/lib/server-fetch';
 
 export type ListingMetricsFields = ListingMetrics;
 
@@ -257,36 +260,8 @@ export interface PublicListingsBundle {
   };
 }
 
-/** Resolve the API base URL for both server and browser execution. */
-function apiBase(): string {
-  // On the server we can also accept an internal-only URL via API_URL.
-  const fromServer = typeof process !== 'undefined' ? process.env.API_URL : undefined;
-  const fromPublic = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_API_URL : undefined;
-  return (fromServer && fromServer.trim()) || (fromPublic && fromPublic.trim()) || 'http://localhost:5000';
-}
-
-/**
- * Cheap, resilient JSON fetch.
- * - 4 second timeout so a stalled API never blocks a SSR render.
- * - Always returns an object; never throws.
- */
 async function safeJson<T>(path: string, init?: RequestInit): Promise<T | null> {
-  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  const timer = controller ? setTimeout(() => controller.abort(), 4000) : null;
-  try {
-    const res = await fetch(`${apiBase()}/api${path}`, {
-      ...init,
-      // Lightly cached on the server so a refresh doesn't hammer Mongo.
-      next: { revalidate: 60 },
-      signal: controller?.signal,
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
+  return safeServerJson<T>(path, init);
 }
 
 const EMPTY_BUNDLE: PublicListingsBundle = {
@@ -313,42 +288,99 @@ export async function fetchHomepageListings(limit = 8): Promise<PublicListingsBu
   };
 }
 
-export async function fetchLatestRealEstate(limit = 12): Promise<PublicRealEstateListing[]> {
-  const data = await safeJson<{ listings: PublicRealEstateListing[] }>(
-    `/public/listings/real-estate?limit=${limit}`,
+export interface BrowseListingsResult<T> {
+  listings: T[];
+  total: number;
+}
+
+export async function fetchBrowseRealEstate(
+  limit = 24,
+  filters: BrowseFilters = {},
+): Promise<BrowseListingsResult<PublicRealEstateListing>> {
+  const data = await safeJson<{ listings: PublicRealEstateListing[]; total?: number }>(
+    `/public/listings/real-estate${buildBrowseApiQuery(filters, limit)}`,
   );
-  return data?.listings ?? [];
+  return { listings: data?.listings ?? [], total: data?.total ?? data?.listings?.length ?? 0 };
+}
+
+export async function fetchBrowseCars(
+  limit = 24,
+  filters: BrowseFilters = {},
+): Promise<BrowseListingsResult<PublicCarListing>> {
+  const data = await safeJson<{ listings: PublicCarListing[]; total?: number }>(
+    `/public/listings/cars${buildBrowseApiQuery(filters, limit)}`,
+  );
+  return { listings: data?.listings ?? [], total: data?.total ?? data?.listings?.length ?? 0 };
+}
+
+export async function fetchBrowseJobs(
+  limit = 24,
+  filters: BrowseFilters = {},
+): Promise<BrowseListingsResult<PublicJobListing>> {
+  const data = await safeJson<{ listings: PublicJobListing[]; total?: number }>(
+    `/public/listings/jobs${buildBrowseApiQuery(filters, limit)}`,
+  );
+  return { listings: data?.listings ?? [], total: data?.total ?? data?.listings?.length ?? 0 };
+}
+
+export async function fetchBrowseMarketplace(
+  limit = 24,
+  filters: BrowseFilters = {},
+): Promise<BrowseListingsResult<PublicMarketplaceListing>> {
+  const data = await safeJson<{ listings: PublicMarketplaceListing[]; total?: number }>(
+    `/public/listings/marketplace${buildBrowseApiQuery(filters, limit)}`,
+  );
+  return { listings: data?.listings ?? [], total: data?.total ?? data?.listings?.length ?? 0 };
+}
+
+export async function fetchBrowseBusinesses(
+  limit = 24,
+  filters: BrowseFilters = {},
+): Promise<BrowseListingsResult<PublicDirectoryListing>> {
+  const data = await safeJson<{ listings: PublicDirectoryListing[]; total?: number }>(
+    `/public/listings/businesses${buildBrowseApiQuery(filters, limit)}`,
+  );
+  return { listings: data?.listings ?? [], total: data?.total ?? data?.listings?.length ?? 0 };
+}
+
+export async function fetchBrowseProfessionals(
+  limit = 24,
+  filters: BrowseFilters = {},
+): Promise<BrowseListingsResult<PublicDirectoryListing>> {
+  const data = await safeJson<{ listings: PublicDirectoryListing[]; total?: number }>(
+    `/public/listings/professionals${buildBrowseApiQuery(filters, limit)}`,
+  );
+  return { listings: data?.listings ?? [], total: data?.total ?? data?.listings?.length ?? 0 };
+}
+
+export async function fetchLatestRealEstate(limit = 12): Promise<PublicRealEstateListing[]> {
+  const { listings } = await fetchBrowseRealEstate(limit);
+  return listings;
 }
 
 export async function fetchLatestCars(limit = 12): Promise<PublicCarListing[]> {
-  const data = await safeJson<{ listings: PublicCarListing[] }>(`/public/listings/cars?limit=${limit}`);
-  return data?.listings ?? [];
+  const { listings } = await fetchBrowseCars(limit);
+  return listings;
 }
 
 export async function fetchLatestJobs(limit = 12): Promise<PublicJobListing[]> {
-  const data = await safeJson<{ listings: PublicJobListing[] }>(`/public/listings/jobs?limit=${limit}`);
-  return data?.listings ?? [];
+  const { listings } = await fetchBrowseJobs(limit);
+  return listings;
 }
 
 export async function fetchLatestMarketplace(limit = 12): Promise<PublicMarketplaceListing[]> {
-  const data = await safeJson<{ listings: PublicMarketplaceListing[] }>(
-    `/public/listings/marketplace?limit=${limit}`,
-  );
-  return data?.listings ?? [];
+  const { listings } = await fetchBrowseMarketplace(limit);
+  return listings;
 }
 
 export async function fetchLatestBusinesses(limit = 12): Promise<PublicDirectoryListing[]> {
-  const data = await safeJson<{ listings: PublicDirectoryListing[] }>(
-    `/public/listings/businesses?limit=${limit}`,
-  );
-  return data?.listings ?? [];
+  const { listings } = await fetchBrowseBusinesses(limit);
+  return listings;
 }
 
 export async function fetchLatestProfessionals(limit = 12): Promise<PublicDirectoryListing[]> {
-  const data = await safeJson<{ listings: PublicDirectoryListing[] }>(
-    `/public/listings/professionals?limit=${limit}`,
-  );
-  return data?.listings ?? [];
+  const { listings } = await fetchBrowseProfessionals(limit);
+  return listings;
 }
 
 const OBJECT_ID_RE = /^[a-f\d]{24}$/i;

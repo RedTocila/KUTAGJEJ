@@ -2,19 +2,13 @@
 
 import type { DirectoryUser } from '@/types/directory-user';
 import type { ManagedUser } from '@/types/managed-user';
+import { authHeaders } from '@/lib/api-client';
+import { getApiUrl } from '@/lib/api-config';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
-
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
 
 export async function listManagedUsers(): Promise<{ users?: DirectoryUser[]; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/users`, { headers: authHeaders() });
+    const res = await fetch(getApiUrl('/admin/users'), { headers: authHeaders() });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista dështoi.' };
     return { users: data.users as DirectoryUser[] };
@@ -31,7 +25,7 @@ export async function createManagedUser(body: {
   lastName?: string;
 }): Promise<{ user?: ManagedUser; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/users`, {
+    const res = await fetch(getApiUrl('/admin/users'), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(body),
@@ -56,7 +50,7 @@ export async function updateManagedUser(
   }>,
 ): Promise<{ user?: ManagedUser; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/users/${encodeURIComponent(id)}`, {
+    const res = await fetch(getApiUrl(`/admin/users/${encodeURIComponent(id)}`), {
       method: 'PATCH',
       headers: authHeaders(),
       body: JSON.stringify(body),
@@ -71,7 +65,7 @@ export async function updateManagedUser(
 
 export async function deleteManagedUser(id: string): Promise<{ error?: string; ok?: boolean }> {
   try {
-    const res = await fetch(`${API_URL}/admin/users/${encodeURIComponent(id)}`, {
+    const res = await fetch(getApiUrl(`/admin/users/${encodeURIComponent(id)}`), {
       method: 'DELETE',
       headers: authHeaders(),
     });

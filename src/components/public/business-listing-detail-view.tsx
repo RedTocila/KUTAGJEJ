@@ -9,9 +9,6 @@ import {
   Box,
   Button,
   ButtonBase,
-  FormControl,
-  MenuItem,
-  Select,
   Stack,
   TextField,
   Typography,
@@ -25,6 +22,7 @@ import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 
+import { SearchableSelect } from '@/components/core/searchable-select';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
 import { formatPrice } from '@/components/public/listing-cards/format-helpers';
@@ -341,46 +339,30 @@ export function BusinessListingDetailView({
                 </Stack>
                 <Stack spacing={1.25}>
                   <Stack direction="row" spacing={1}>
-                    <FormControl size="small" sx={selectFieldSx()}>
-                      <Select
-                        value={reserveDate}
-                        onChange={(e) => setReserveDate(e.target.value)}
-                        displayEmpty
-                        inputProps={{ 'aria-label': 'Data' }}
-                      >
-                        {dateOptions.map((opt) => (
-                          <MenuItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    <FormControl size="small" sx={selectFieldSx()}>
-                      <Select
-                        value={reserveTime}
-                        onChange={(e) => setReserveTime(e.target.value)}
-                        inputProps={{ 'aria-label': 'Ora' }}
-                      >
-                        {timeOptions.map((t) => (
-                          <MenuItem key={t} value={t}>
-                            {t}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    <FormControl size="small" sx={selectFieldSx()}>
-                      <Select
-                        value={reservePeople}
-                        onChange={(e) => setReservePeople(e.target.value)}
-                        inputProps={{ 'aria-label': 'Persona' }}
-                      >
-                        {peopleOptions.map((n) => (
-                          <MenuItem key={n} value={String(n)}>
-                            {n}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                    <SearchableSelect
+                      label="Data"
+                      value={reserveDate}
+                      onChange={setReserveDate}
+                      options={dateOptions}
+                      emptyLabel="Zgjidhni datën…"
+                      sx={selectFieldSx()}
+                    />
+                    <SearchableSelect
+                      label="Ora"
+                      value={reserveTime}
+                      onChange={setReserveTime}
+                      options={timeOptions.map((t) => ({ value: t, label: t }))}
+                      emptyLabel="Zgjidhni orën…"
+                      sx={selectFieldSx()}
+                    />
+                    <SearchableSelect
+                      label="Persona"
+                      value={reservePeople}
+                      onChange={setReservePeople}
+                      options={peopleOptions.map((n) => ({ value: String(n), label: String(n) }))}
+                      emptyLabel="Zgjidhni…"
+                      sx={selectFieldSx()}
+                    />
                   </Stack>
                   {usePlatformReservation ? (
                     <Stack spacing={1}>

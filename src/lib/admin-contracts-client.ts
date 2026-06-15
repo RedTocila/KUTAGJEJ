@@ -1,19 +1,13 @@
 'use client';
 
 import type { Contract } from '@/types/contract';
+import { authHeaders } from '@/lib/api-client';
+import { getApiUrl } from '@/lib/api-config';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
-
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
 
 export async function listContracts(): Promise<{ contracts?: Contract[]; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/contracts`, { headers: authHeaders() });
+    const res = await fetch(getApiUrl('/admin/contracts'), { headers: authHeaders() });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista e kontratave dështoi.' };
     return { contracts: data.contracts as Contract[] };
@@ -38,7 +32,7 @@ export async function createContract(body: {
   price12Months: number | null;
 }): Promise<{ contract?: Contract; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/contracts`, {
+    const res = await fetch(getApiUrl('/admin/contracts'), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(body),
@@ -70,7 +64,7 @@ export async function updateContract(
   }>,
 ): Promise<{ contract?: Contract; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/contracts/${encodeURIComponent(id)}`, {
+    const res = await fetch(getApiUrl(`/admin/contracts/${encodeURIComponent(id)}`), {
       method: 'PATCH',
       headers: authHeaders(),
       body: JSON.stringify(body),
@@ -85,7 +79,7 @@ export async function updateContract(
 
 export async function deleteContract(id: string): Promise<{ error?: string; ok?: boolean }> {
   try {
-    const res = await fetch(`${API_URL}/admin/contracts/${encodeURIComponent(id)}`, {
+    const res = await fetch(getApiUrl(`/admin/contracts/${encodeURIComponent(id)}`), {
       method: 'DELETE',
       headers: authHeaders(),
     });

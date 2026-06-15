@@ -1,7 +1,9 @@
 const express = require('express');
 const HomeBanner = require('../models/HomeBanner');
+const publicCache = require('../middleware/public-cache');
 
 const router = express.Router();
+router.use(publicCache(60));
 
 function format(doc) {
   return {

@@ -1,13 +1,7 @@
 'use client';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
-
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
+import { authHeaders } from '@/lib/api-client';
+import { getApiUrl } from '@/lib/api-config';
 
 export interface ProfessionalReview {
   id: string;
@@ -24,7 +18,7 @@ export async function listProfessionalReviews(listingId: string): Promise<{
 }> {
   try {
     const res = await fetch(
-      `${API_URL}/professional-reviews?listingId=${encodeURIComponent(listingId)}`,
+      getApiUrl(`/professional-reviews?listingId=${encodeURIComponent(listingId)}`),
       { cache: 'no-store' },
     );
     const data = await res.json().catch(() => ({}));
@@ -41,7 +35,7 @@ export async function submitProfessionalReview(
   comment: string,
 ): Promise<{ review?: ProfessionalReview; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/professional-reviews`, {
+    const res = await fetch(getApiUrl('/professional-reviews'), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ listingId, rating, comment }),

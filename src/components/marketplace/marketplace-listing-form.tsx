@@ -6,17 +6,13 @@ import {
   Alert,
   Button,
   Divider,
-  FormControl,
   InputAdornment,
-  InputLabel,
-  MenuItem,
-  Select,
-  type SelectChangeEvent,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 
+import { SearchableSelect } from '@/components/core/searchable-select';
 import {
   MARKETPLACE_CATEGORY_OPTIONS,
   MARKETPLACE_CONDITION_OPTIONS,
@@ -140,12 +136,6 @@ export function MarketplaceListingForm({ onSuccess, backHref, backLabel = 'Mbrap
       setForm((prev) => ({ ...prev, [key]: ev.target.value }));
     };
 
-  const onSelect =
-    (key: keyof MarketplaceFormState) =>
-    (ev: SelectChangeEvent<string>) => {
-      setForm((prev) => ({ ...prev, [key]: ev.target.value }));
-    };
-
   const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     setSubmitError(null);
@@ -207,35 +197,23 @@ export function MarketplaceListingForm({ onSuccess, backHref, backLabel = 'Mbrap
             />
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <FormControl fullWidth required>
-                <InputLabel id="mkt-cat-label">Kategoria</InputLabel>
-                <Select<string>
-                  labelId="mkt-cat-label"
-                  label="Kategoria"
-                  value={form.category}
-                  onChange={onSelect('category')}
-                >
-                  <MenuItem value=""><em>Zgjidhni kategorinë…</em></MenuItem>
-                  {MARKETPLACE_CATEGORY_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <SearchableSelect
+                label="Kategoria"
+                value={form.category}
+                onChange={(v) => setForm((p) => ({ ...p, category: v }))}
+                options={MARKETPLACE_CATEGORY_OPTIONS}
+                emptyLabel="Zgjidhni kategorinë…"
+                required
+              />
 
-              <FormControl fullWidth required>
-                <InputLabel id="mkt-cond-label">Gjendja</InputLabel>
-                <Select<string>
-                  labelId="mkt-cond-label"
-                  label="Gjendja"
-                  value={form.condition}
-                  onChange={onSelect('condition')}
-                >
-                  <MenuItem value=""><em>Zgjidhni gjendjen…</em></MenuItem>
-                  {MARKETPLACE_CONDITION_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <SearchableSelect
+                label="Gjendja"
+                value={form.condition}
+                onChange={(v) => setForm((p) => ({ ...p, condition: v }))}
+                options={MARKETPLACE_CONDITION_OPTIONS}
+                emptyLabel="Zgjidhni gjendjen…"
+                required
+              />
             </Stack>
           </Stack>
 
@@ -259,36 +237,25 @@ export function MarketplaceListingForm({ onSuccess, backHref, backLabel = 'Mbrap
               helperText="Opsionale — lëreni bosh nëse është me marrëveshje."
               slotProps={{ input: { endAdornment: <InputAdornment position="end">/ copë</InputAdornment> } }}
             />
-            <FormControl fullWidth disabled={!form.price.trim()}>
-              <InputLabel id="mkt-cur-label">Monedha</InputLabel>
-              <Select<string>
-                labelId="mkt-cur-label"
-                label="Monedha"
-                value={form.currency}
-                onChange={onSelect('currency')}
-              >
-                <MenuItem value=""><em>Zgjidhni…</em></MenuItem>
-                {CURRENCY_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <SearchableSelect
+              label="Monedha"
+              value={form.currency}
+              onChange={(v) => setForm((p) => ({ ...p, currency: v as MarketplaceFormState['currency'] }))}
+              options={CURRENCY_OPTIONS}
+              emptyLabel="Zgjidhni…"
+              disabled={!form.price.trim()}
+            />
           </Stack>
 
-            <FormControl fullWidth required disabled={loadingCities || cities.length === 0}>
-              <InputLabel id="mkt-city-label">Qyteti</InputLabel>
-              <Select<string>
-                labelId="mkt-city-label"
-                label="Qyteti"
-                value={form.cityId}
-                onChange={onSelect('cityId')}
-              >
-                <MenuItem value=""><em>Zgjidhni qytetin…</em></MenuItem>
-                {cities.map((c) => (
-                  <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <SearchableSelect
+              label="Qyteti"
+              value={form.cityId}
+              onChange={(v) => setForm((p) => ({ ...p, cityId: v }))}
+              options={cities.map((c) => ({ value: c.id, label: c.name }))}
+              emptyLabel="Zgjidhni qytetin…"
+              required
+              disabled={loadingCities || cities.length === 0}
+            />
 
             <TextField
               label="Numri i telefonit"

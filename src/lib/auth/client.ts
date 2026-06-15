@@ -2,21 +2,14 @@
 
 import Cookies from 'js-cookie';
 
+import { authHeaders } from '@/lib/api-client';
+import { getApiUrl } from '@/lib/api-config';
 import { getPostSignOutPath } from '@/lib/auth/post-login-path';
 import type { User } from '@/types/user';
 
 function persistUserProfile(profile: unknown): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem('user-data', JSON.stringify(profile));
-}
-
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
-
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
 }
 
 const loginErrorSq = (message: string | undefined): string => {
@@ -65,7 +58,7 @@ export type RegisterParams =
 class AuthClient {
   async signIn(params: SignInParams): Promise<{ error?: string; user?: User }> {
     try {
-      const res = await fetch(`${API_URL}/auth/login`, {
+      const res = await fetch(getApiUrl('/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
@@ -82,7 +75,7 @@ class AuthClient {
 
   async register(params: RegisterParams): Promise<{ error?: string; user?: User }> {
     try {
-      const res = await fetch(`${API_URL}/auth/register`, {
+      const res = await fetch(getApiUrl('/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
@@ -102,7 +95,7 @@ class AuthClient {
     if (!token) return { data: null };
     
     try {
-      const res = await fetch(`${API_URL}/auth/admin/me`, {
+      const res = await fetch(getApiUrl('/auth/admin/me'), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -153,7 +146,7 @@ class AuthClient {
     email?: string;
   }): Promise<{ admin?: User; error?: string }> {
     try {
-      const res = await fetch(`${API_URL}/auth/admin/update-profile`, {
+      const res = await fetch(getApiUrl('/auth/admin/update-profile'), {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify(body),
@@ -172,7 +165,7 @@ class AuthClient {
     newPassword: string;
   }): Promise<{ error?: string; ok?: boolean }> {
     try {
-      const res = await fetch(`${API_URL}/auth/admin/change-password`, {
+      const res = await fetch(getApiUrl('/auth/admin/change-password'), {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify(body),
@@ -188,7 +181,7 @@ class AuthClient {
   /** Individual / business portal — update optional profile fields (e.g. phone). */
   async updatePortalProfile(body: { phone: string }): Promise<{ admin?: User; error?: string }> {
     try {
-      const res = await fetch(`${API_URL}/auth/portal/update-profile`, {
+      const res = await fetch(getApiUrl('/auth/portal/update-profile'), {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify(body),
@@ -208,7 +201,7 @@ class AuthClient {
     newPassword: string;
   }): Promise<{ error?: string; ok?: boolean }> {
     try {
-      const res = await fetch(`${API_URL}/auth/portal/change-password`, {
+      const res = await fetch(getApiUrl('/auth/portal/change-password'), {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify(body),

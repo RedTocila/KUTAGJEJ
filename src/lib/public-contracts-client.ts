@@ -1,8 +1,8 @@
 'use client';
 
 import type { PublicContract } from '@/types/contract';
+import { getApiUrl } from '@/lib/api-config';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
 
 export async function listPublicContracts(params?: {
   categoryKey?: string;
@@ -13,7 +13,7 @@ export async function listPublicContracts(params?: {
     if (params?.categoryKey) sp.set('categoryKey', params.categoryKey);
     if (params?.subscriberKind) sp.set('subscriberKind', params.subscriberKind);
     const q = sp.toString();
-    const url = `${API_URL}/contracts${q ? `?${q}` : ''}`;
+    const url = getApiUrl(q ? `/contracts?${q}` : '/contracts');
     const res = await fetch(url);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista dështoi.' };

@@ -14,12 +14,8 @@ import {
   FormLabel,
   IconButton,
   InputAdornment,
-  InputLabel,
-  MenuItem,
   Radio,
   RadioGroup,
-  Select,
-  type SelectChangeEvent,
   Stack,
   TextField,
   Typography,
@@ -37,6 +33,7 @@ import {
 } from '@/lib/car-constants';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { SearchableSelect } from '@/components/core/searchable-select';
 import { useUser } from '@/hooks/use-user';
 import { createCarListing } from '@/lib/listings-client';
 
@@ -274,12 +271,6 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
       setForm((prev) => ({ ...prev, [key]: ev.target.value }));
     };
 
-  const onSelect =
-    (key: keyof CarFormState) =>
-    (ev: SelectChangeEvent<string>) => {
-      setForm((prev) => ({ ...prev, [key]: ev.target.value }));
-    };
-
   const toggleExtra = (extra: string) => {
     setForm((prev) => {
       const has = prev.extras.includes(extra);
@@ -378,24 +369,14 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
         </Typography>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <FormControl fullWidth required>
-            <InputLabel id="car-make-label">Make</InputLabel>
-            <Select<string>
-              labelId="car-make-label"
-              label="Make"
-              value={form.make}
-              onChange={onSelect('make')}
-            >
-              <MenuItem value="">
-                <em>Select make…</em>
-              </MenuItem>
-              {CAR_MAKES.map((m) => (
-                <MenuItem key={m} value={m}>
-                  {m}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <SearchableSelect
+            label="Make"
+            value={form.make}
+            onChange={(v) => setForm((p) => ({ ...p, make: v }))}
+            options={CAR_MAKES.map((m) => ({ value: m, label: m }))}
+            emptyLabel="Select make…"
+            required
+          />
 
           <TextField
             label="Model"
@@ -437,24 +418,14 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
         </Typography>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <FormControl fullWidth required>
-            <InputLabel id="car-year-label">Year</InputLabel>
-            <Select<string>
-              labelId="car-year-label"
-              label="Year"
-              value={form.year}
-              onChange={onSelect('year')}
-            >
-              <MenuItem value="">
-                <em>Select year…</em>
-              </MenuItem>
-              {YEAR_OPTIONS.map((y) => (
-                <MenuItem key={y} value={String(y)}>
-                  {y}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <SearchableSelect
+            label="Year"
+            value={form.year}
+            onChange={(v) => setForm((p) => ({ ...p, year: v }))}
+            options={YEAR_OPTIONS.map((y) => ({ value: String(y), label: String(y) }))}
+            emptyLabel="Select year…"
+            required
+          />
 
           <TextField
             label="Kilometres"
@@ -488,24 +459,14 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
           </RadioGroup>
         </FormControl>
 
-        <FormControl fullWidth required>
-          <InputLabel id="car-fuel-label">Fuel type</InputLabel>
-          <Select<string>
-            labelId="car-fuel-label"
-            label="Fuel type"
-            value={form.fuelType}
-            onChange={onSelect('fuelType')}
-          >
-            <MenuItem value="">
-              <em>Select fuel type…</em>
-            </MenuItem>
-            {FUEL_TYPE_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <SearchableSelect
+          label="Fuel type"
+          value={form.fuelType}
+          onChange={(v) => setForm((p) => ({ ...p, fuelType: v }))}
+          options={FUEL_TYPE_OPTIONS}
+          emptyLabel="Select fuel type…"
+          required
+        />
       </Stack>
 
       <Divider />
@@ -526,24 +487,14 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
             required
             fullWidth
           />
-          <FormControl fullWidth required>
-            <InputLabel id="car-cur-label">Currency</InputLabel>
-            <Select<string>
-              labelId="car-cur-label"
-              label="Currency"
-              value={form.currency}
-              onChange={onSelect('currency')}
-            >
-              <MenuItem value="">
-                <em>Select…</em>
-              </MenuItem>
-              {CURRENCY_OPTIONS.map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <SearchableSelect
+            label="Currency"
+            value={form.currency}
+            onChange={(v) => setForm((p) => ({ ...p, currency: v as CarFormState['currency'] }))}
+            options={CURRENCY_OPTIONS}
+            emptyLabel="Select…"
+            required
+          />
         </Stack>
 
         <TextField
@@ -689,24 +640,15 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
           Location
         </Typography>
 
-        <FormControl fullWidth required disabled={loadingCities || cities.length === 0}>
-          <InputLabel id="car-city-label">City</InputLabel>
-          <Select<string>
-            labelId="car-city-label"
-            label="City"
-            value={form.cityId}
-            onChange={onSelect('cityId')}
-          >
-            <MenuItem value="">
-              <em>Select city…</em>
-            </MenuItem>
-            {cities.map((c) => (
-              <MenuItem key={c.id} value={c.id}>
-                {c.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <SearchableSelect
+          label="City"
+          value={form.cityId}
+          onChange={(v) => setForm((p) => ({ ...p, cityId: v }))}
+          options={cities.map((c) => ({ value: c.id, label: c.name }))}
+          emptyLabel="Select city…"
+          required
+          disabled={loadingCities || cities.length === 0}
+        />
 
         {!loadingCities && cities.length === 0 ? (
           <Typography variant="caption" color="text.secondary">

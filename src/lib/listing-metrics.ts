@@ -1,5 +1,8 @@
 'use client';
 
+import { authHeaders } from '@/lib/api-client';
+import { getApiUrl } from '@/lib/api-config';
+
 export type ListingMetricKind =
   | 'real-estate'
   | 'car'
@@ -23,7 +26,6 @@ export const EMPTY_LISTING_METRICS: ListingMetrics = {
   saveCount: 0,
 };
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
 const VISITOR_KEY = 'kutagjej-visitor-id';
 
 export function getVisitorId(): string {
@@ -40,13 +42,7 @@ export function getVisitorId(): string {
 }
 
 function metricHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'X-Visitor-Id': getVisitorId(),
-  };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
+  return authHeaders({ 'X-Visitor-Id': getVisitorId() });
 }
 
 export function metricsFromListing(
@@ -67,7 +63,7 @@ export async function recordListingMetricEvent(
   event: 'view' | 'click' | 'share',
 ): Promise<ListingMetrics | null> {
   try {
-    const res = await fetch(`${API_URL}/listing-metrics/event`, {
+    const res = await fetch(getApiUrl('/listing-metrics/event'), {
       method: 'POST',
       headers: metricHeaders(),
       body: JSON.stringify({ listingKind, listingId, event }),
@@ -85,7 +81,7 @@ export async function toggleListingSave(
   listingId: string,
 ): Promise<(ListingMetrics & { saved: boolean }) | null> {
   try {
-    const res = await fetch(`${API_URL}/listing-metrics/save`, {
+    const res = await fetch(getApiUrl('/listing-metrics/save'), {
       method: 'POST',
       headers: metricHeaders(),
       body: JSON.stringify({ listingKind, listingId }),

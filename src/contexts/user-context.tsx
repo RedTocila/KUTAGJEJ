@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname } from 'next/navigation';
 
 import type { User } from '@/types/user';
 import { authClient } from '@/lib/auth/client';
@@ -24,7 +23,6 @@ export interface UserProviderProps {
  * Manages authentication state and user data
  */
 export function UserProvider({ children }: UserProviderProps) {
-  const pathname = usePathname();
   const [state, setState] = React.useState<{ user: User | null; error: string | null; isLoading: boolean }>({
     user: null,
     error: null,
@@ -50,7 +48,7 @@ export function UserProvider({ children }: UserProviderProps) {
 
   React.useEffect(() => {
     checkSession();
-  }, [pathname, checkSession]);
+  }, [checkSession]);
 
   return <UserContext.Provider value={{ ...state, checkSession }}>{children}</UserContext.Provider>;
 }

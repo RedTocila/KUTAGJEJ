@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Box, Chip, Stack } from '@mui/material';
 
@@ -115,20 +116,12 @@ export function CardMedia({
       }}
     >
       {imageUrl ? (
-        <Box
-          component="img"
+        <Image
           src={imageUrl}
           alt={alt}
-          loading="lazy"
-          decoding="async"
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-          }}
+          fill
+          sizes="(max-width: 600px) 100vw, 320px"
+          style={{ objectFit: 'cover' }}
         />
       ) : (
         <Stack

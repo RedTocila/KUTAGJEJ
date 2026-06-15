@@ -8,10 +8,6 @@ import {
   Card,
   CardContent,
   Chip,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   Stack,
   Table,
   TableBody,
@@ -20,6 +16,8 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
+
+import { SearchableSelect } from '@/components/core/searchable-select';
 
 import {
   listBusinessReservations,
@@ -91,16 +89,16 @@ export function BusinessOwnerReservations() {
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
             Rezervimet
           </Typography>
-          <FormControl size="small" sx={{ maxWidth: 360 }}>
-            <InputLabel>Biznesi</InputLabel>
-            <Select label="Biznesi" value={listingId} onChange={(e) => setListingId(e.target.value)}>
-              {listings.map((l) => (
-                <MenuItem key={l.id} value={l.id}>
-                  {l.title}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <SearchableSelect
+            label="Biznesi"
+            value={listingId}
+            onChange={setListingId}
+            options={listings.map((l) => ({ value: l.id, label: l.title }))}
+            emptyLabel="Zgjidh biznesin"
+            fullWidth={false}
+            sx={{ maxWidth: 360 }}
+            minOptionsForSearch={4}
+          />
           {error ? <Alert severity="error">{error}</Alert> : null}
           {rows.length === 0 ? (
             <Typography variant="body2" color="text.secondary">

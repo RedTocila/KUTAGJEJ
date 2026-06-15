@@ -12,12 +12,8 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControl,
   FormControlLabel,
   IconButton,
-  InputLabel,
-  MenuItem,
-  Select,
   Stack,
   Switch,
   Table,
@@ -31,6 +27,7 @@ import {
 import { PencilSimple as PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
+import { SearchableSelect } from '@/components/core/searchable-select';
 import { paths } from '@/paths';
 import type { DirectoryUser } from '@/types/directory-user';
 import type { ManagedUser } from '@/types/managed-user';
@@ -346,21 +343,15 @@ function CreateUserDialog(props: {
               autoComplete="new-password"
               helperText="Të paktën 6 karaktere"
             />
-            <FormControl fullWidth required disabled={roles.length === 0}>
-              <InputLabel id="create-user-role-label">Roli</InputLabel>
-              <Select
-                labelId="create-user-role-label"
-                label="Roli"
-                value={roleId}
-                onChange={(ev) => setRoleId(String(ev.target.value))}
-              >
-                {roles.map((r) => (
-                  <MenuItem key={r.id} value={r.id}>
-                    {r.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <SearchableSelect
+              label="Roli"
+              value={roleId}
+              onChange={setRoleId}
+              options={roles.map((r) => ({ value: r.id, label: r.name }))}
+              emptyLabel="Zgjidhni një rol…"
+              required
+              disabled={roles.length === 0}
+            />
             <TextField label="Emri" value={firstName} onChange={(ev) => setFirstName(ev.target.value)} fullWidth />
             <TextField label="Mbiemri" value={lastName} onChange={(ev) => setLastName(ev.target.value)} fullWidth />
           </Stack>
@@ -450,21 +441,15 @@ function EditUserDialog(props: {
           <Stack spacing={2} sx={{ mt: 1 }}>
             {error ? <Alert severity="error">{error}</Alert> : null}
             <TextField label="Email" type="email" value={email} onChange={(ev) => setEmail(ev.target.value)} required fullWidth />
-            <FormControl fullWidth required disabled={roles.length === 0}>
-              <InputLabel id="edit-user-role-label">Roli</InputLabel>
-              <Select
-                labelId="edit-user-role-label"
-                label="Roli"
-                value={roleId}
-                onChange={(ev) => setRoleId(String(ev.target.value))}
-              >
-                {roles.map((r) => (
-                  <MenuItem key={r.id} value={r.id}>
-                    {r.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <SearchableSelect
+              label="Roli"
+              value={roleId}
+              onChange={setRoleId}
+              options={roles.map((r) => ({ value: r.id, label: r.name }))}
+              emptyLabel="Zgjidhni një rol…"
+              required
+              disabled={roles.length === 0}
+            />
             <TextField label="Emri" value={firstName} onChange={(ev) => setFirstName(ev.target.value)} fullWidth />
             <TextField label="Mbiemri" value={lastName} onChange={(ev) => setLastName(ev.target.value)} fullWidth />
             <TextField

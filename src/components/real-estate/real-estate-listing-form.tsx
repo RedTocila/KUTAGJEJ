@@ -10,12 +10,8 @@ import {
   FormControlLabel,
   FormLabel,
   InputAdornment,
-  InputLabel,
-  MenuItem,
   Radio,
   RadioGroup,
-  Select,
-  type SelectChangeEvent,
   Stack,
   TextField,
   Typography,
@@ -34,6 +30,7 @@ import {
   REAL_ESTATE_PROPERTY_CATEGORIES,
   TRANSACTION_OPTIONS,
 } from '@/lib/real-estate-constants';
+import { SearchableSelect } from '@/components/core/searchable-select';
 import type { RealEstatePropertySlug } from '@/lib/real-estate-constants';
 import { useUser } from '@/hooks/use-user';
 import { createRealEstateListing, type RealEstateListingPayload } from '@/lib/listings-client';
@@ -264,17 +261,6 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
       setForm((prev) => ({ ...prev, [key]: ev.target.value }));
     };
 
-  const onSelect =
-    (key: keyof FormState) =>
-    (ev: SelectChangeEvent<string>) => {
-      const v = ev.target.value;
-      setForm((prev) => {
-        const next = { ...prev, [key]: v } as FormState;
-        if (key === 'cityId') next.zoneId = '';
-        return next;
-      });
-    };
-
   const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     setSubmitError(null);
@@ -328,24 +314,15 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         minRows={3}
       />
 
-      <FormControl fullWidth required disabled={loadingRefs}>
-        <InputLabel id="re-cat-label">Property type</InputLabel>
-        <Select<string>
-          labelId="re-cat-label"
-          label="Property type"
-          value={form.propertyCategory}
-          onChange={onSelect('propertyCategory')}
-        >
-          <MenuItem value="">
-            <em>Select…</em>
-          </MenuItem>
-          {REAL_ESTATE_PROPERTY_CATEGORIES.map((c) => (
-            <MenuItem key={c.slug} value={c.slug}>
-              {c.label}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+      <SearchableSelect
+        label="Property type"
+        value={form.propertyCategory}
+        onChange={(v) => setForm((p) => ({ ...p, propertyCategory: v as RealEstatePropertySlug | '' }))}
+        options={REAL_ESTATE_PROPERTY_CATEGORIES.map((c) => ({ value: c.slug, label: c.label }))}
+        emptyLabel="Select…"
+        required
+        disabled={loadingRefs}
+      />
 
       <FormControl disabled={loadingRefs}>
         <FormLabel>Transaction type</FormLabel>
@@ -370,53 +347,36 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           required
           fullWidth
         />
-        <FormControl fullWidth required disabled={loadingRefs}>
-          <InputLabel id="re-cur-label">Currency</InputLabel>
-          <Select<string>
-            labelId="re-cur-label"
-            label="Currency"
-            value={form.currency}
-            onChange={onSelect('currency')}
-          >
-            <MenuItem value="">
-              <em>Select…</em>
-            </MenuItem>
-            {CURRENCY_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <SearchableSelect
+          label="Currency"
+          value={form.currency}
+          onChange={(v) => setForm((p) => ({ ...p, currency: v as FormState['currency'] }))}
+          options={CURRENCY_OPTIONS}
+          emptyLabel="Select…"
+          required
+          disabled={loadingRefs}
+        />
       </Stack>
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-        <FormControl fullWidth required disabled={loadingRefs || cities.length === 0}>
-          <InputLabel id="re-city-label">City</InputLabel>
-          <Select<string> labelId="re-city-label" label="City" value={form.cityId} onChange={onSelect('cityId')}>
-            <MenuItem value="">
-              <em>Select…</em>
-            </MenuItem>
-            {cities.map((c) => (
-              <MenuItem key={c.id} value={c.id}>
-                {c.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <FormControl fullWidth required disabled={loadingRefs || !form.cityId || zonesForCity.length === 0}>
-          <InputLabel id="re-zone-label">Zone</InputLabel>
-          <Select<string> labelId="re-zone-label" label="Zone" value={form.zoneId} onChange={onSelect('zoneId')}>
-            <MenuItem value="">
-              <em>Select…</em>
-            </MenuItem>
-            {zonesForCity.map((z) => (
-              <MenuItem key={z.id} value={z.id}>
-                {z.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <SearchableSelect
+          label="City"
+          value={form.cityId}
+          onChange={(v) => setForm((p) => ({ ...p, cityId: v, zoneId: '' }))}
+          options={cities.map((c) => ({ value: c.id, label: c.name }))}
+          emptyLabel="Select…"
+          required
+          disabled={loadingRefs || cities.length === 0}
+        />
+        <SearchableSelect
+          label="Zone"
+          value={form.zoneId}
+          onChange={(v) => setForm((p) => ({ ...p, zoneId: v }))}
+          options={zonesForCity.map((z) => ({ value: z.id, label: z.name }))}
+          emptyLabel="Select…"
+          required
+          disabled={loadingRefs || !form.cityId || zonesForCity.length === 0}
+        />
       </Stack>
       {!loadingRefs && cities.length === 0 ? (
         <Typography variant="caption" color="text.secondary">
@@ -450,24 +410,15 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
       ) : null}
 
       {needsCondition(cat) ? (
-        <FormControl fullWidth required disabled={loadingRefs}>
-          <InputLabel id="re-cond-label">Condition</InputLabel>
-          <Select<string>
-            labelId="re-cond-label"
-            label="Condition"
-            value={form.condition}
-            onChange={onSelect('condition')}
-          >
-            <MenuItem value="">
-              <em>Select…</em>
-            </MenuItem>
-            {CONDITION_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <SearchableSelect
+          label="Condition"
+          value={form.condition}
+          onChange={(v) => setForm((p) => ({ ...p, condition: v as FormState['condition'] }))}
+          options={CONDITION_OPTIONS}
+          emptyLabel="Select…"
+          required
+          disabled={loadingRefs}
+        />
       ) : null}
 
       {needsFloor(cat) ? (
@@ -533,24 +484,15 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
       ) : null}
 
       {needsBedroomsBathFurnishing(cat) ? (
-        <FormControl fullWidth required disabled={loadingRefs}>
-          <InputLabel id="re-furn-label">Furnishing</InputLabel>
-          <Select<string>
-            labelId="re-furn-label"
-            label="Furnishing"
-            value={form.furnishing}
-            onChange={onSelect('furnishing')}
-          >
-            <MenuItem value="">
-              <em>Select…</em>
-            </MenuItem>
-            {FURNISHING_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <SearchableSelect
+          label="Furnishing"
+          value={form.furnishing}
+          onChange={(v) => setForm((p) => ({ ...p, furnishing: v as FormState['furnishing'] }))}
+          options={FURNISHING_OPTIONS}
+          emptyLabel="Select…"
+          required
+          disabled={loadingRefs}
+        />
       ) : null}
 
       {needsYearBuilt(cat) ? (

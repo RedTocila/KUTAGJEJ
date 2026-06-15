@@ -1,8 +1,5 @@
 const jwt = require('jsonwebtoken');
-const Admin = require('../models/Admin');
-const BusinessUser = require('../models/BusinessUser');
-const IndividualUser = require('../models/IndividualUser');
-const ManagedUser = require('../models/ManagedUser');
+const { resolveUserFromToken, isUserInactive, touchLastActive } = require('../lib/resolve-user');
 
 module.exports = async (req, res, next) => {
   try {
@@ -10,25 +7,18 @@ module.exports = async (req, res, next) => {
     if (!token) return res.status(401).json({ message: 'Auth required' });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    let user = await Admin.findById(decoded.id);
-    if (!user) user = await BusinessUser.findById(decoded.id);
-    if (!user) user = await IndividualUser.findById(decoded.id);
-    if (!user) user = await ManagedUser.findById(decoded.id);
+    const user = await resolveUserFromToken(decoded);
     if (!user) return res.status(401).json({ message: 'Invalid token' });
 
     if (user.constructor.modelName === 'ManagedUser' && user.roleId) {
       await user.populate('roleId', 'name');
     }
 
-    if (
-      (user.constructor.modelName === 'ManagedUser' || user.constructor.modelName === 'IndividualUser') &&
-      user.isActive === false
-    ) {
+    if (isUserInactive(user)) {
       return res.status(401).json({ message: 'Llogaria është çaktivizuar.' });
     }
 
-    user.lastActive = new Date();
-    await user.save();
+    await touchLastActive(user);
 
     req.admin = user;
     req.user = user;

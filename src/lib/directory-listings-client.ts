@@ -2,15 +2,9 @@
 
 import type { ListingMetrics } from '@/lib/listing-metrics';
 import type { WeeklyHourRow } from '@/lib/business-constants';
+import { authHeaders } from '@/lib/api-client';
+import { getApiUrl } from '@/lib/api-config';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
-
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
 
 export type BusinessMenuCategory = { id: string; name: string; sortOrder: number };
 export type BusinessMenuItem = {
@@ -78,7 +72,7 @@ export async function listMyBusinessListings(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(`${API_URL}/listings/directory/businesses/mine`, {
+    const res = await fetch(getApiUrl('/listings/directory/businesses/mine'), {
       headers: authHeaders(),
       cache: 'no-store',
     });
@@ -94,7 +88,7 @@ export async function createBusinessListing(
   body: BusinessListingPayload,
 ): Promise<{ id?: string; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/listings/directory/businesses`, {
+    const res = await fetch(getApiUrl('/listings/directory/businesses'), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(body),
@@ -112,7 +106,7 @@ export async function updateBusinessListing(
   body: BusinessListingPayload,
 ): Promise<{ error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/listings/directory/businesses/${encodeURIComponent(id)}`, {
+    const res = await fetch(getApiUrl(`/listings/directory/businesses/${encodeURIComponent(id)}`), {
       method: 'PUT',
       headers: authHeaders(),
       body: JSON.stringify(body),
@@ -132,7 +126,7 @@ export async function listBusinessReservations(
   try {
     const q = status === 'pending' ? '?status=pending' : '';
     const res = await fetch(
-      `${API_URL}/listings/directory/businesses/${encodeURIComponent(listingId)}/reservations${q}`,
+      getApiUrl(`/listings/directory/businesses/${encodeURIComponent(listingId)}/reservations${q}`),
       { headers: authHeaders(), cache: 'no-store' },
     );
     const data = await res.json().catch(() => ({}));
@@ -190,7 +184,7 @@ export async function listMyProfessionalListings(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(`${API_URL}/listings/directory/professionals/mine`, {
+    const res = await fetch(getApiUrl('/listings/directory/professionals/mine'), {
       headers: authHeaders(),
       cache: 'no-store',
     });
@@ -206,7 +200,7 @@ export async function createProfessionalListing(
   body: ProfessionalListingPayload,
 ): Promise<{ id?: string; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/listings/directory/professionals`, {
+    const res = await fetch(getApiUrl('/listings/directory/professionals'), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(body),
@@ -225,7 +219,7 @@ export async function patchBusinessReservationStatus(
 ): Promise<{ error?: string }> {
   try {
     const res = await fetch(
-      `${API_URL}/listings/directory/businesses/reservations/${encodeURIComponent(reservationId)}`,
+      getApiUrl(`/listings/directory/businesses/reservations/${encodeURIComponent(reservationId)}`),
       {
         method: 'PATCH',
         headers: authHeaders(),

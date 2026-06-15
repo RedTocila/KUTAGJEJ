@@ -1,26 +1,28 @@
 'use client';
 
 import * as React from 'react';
+import { Suspense } from 'react';
 import RouterLink from 'next/link';
 import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
-import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 
 import { findVertical, type HomeVerticalId } from '@/lib/home-categories';
+import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 
-import { SubcategoryPills } from './subcategory-pills';
+import { CategoryBrowseControls } from './listing-filters/category-browse-controls';
 import { VerticalIcon } from './vertical-icon';
 
 /**
  * Quiet header used by every public browse page (Real Estate, Cars, Jobs,
- * Marketplace) — page title, count, and a single "post" CTA. Visually
- * consistent with the homepage's restrained aesthetic.
+ * Marketplace) — page title, count, and browse controls.
  */
 export function PublicCategoryHero({
   verticalId,
   total,
+  cities,
 }: {
   verticalId: HomeVerticalId;
   total: number;
+  cities: RealEstateCityDto[];
 }) {
   const vertical = findVertical(verticalId);
   return (
@@ -33,48 +35,30 @@ export function PublicCategoryHero({
       }}
     >
       <Container maxWidth="xl">
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={{ xs: 2, sm: 3 }}
-          sx={{ alignItems: { sm: 'flex-end' }, justifyContent: 'space-between' }}
-        >
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
-            <VerticalIcon verticalId={verticalId} size={54} decorative />
-            <Stack spacing={0.25} sx={{ minWidth: 0 }}>
-              <Typography
-                component="h1"
-                sx={{
-                  fontWeight: 700,
-                  fontSize: { xs: '1.4rem', md: '1.75rem' },
-                  lineHeight: 1.2,
-                  letterSpacing: '-0.015em',
-                }}
-              >
-                {vertical.label}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {total > 0 ? `${total.toLocaleString('en-GB')} njoftime` : 'Asnjë njoftim ende'}
-              </Typography>
-            </Stack>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start', minWidth: 0 }}>
+          <VerticalIcon verticalId={verticalId} size={54} decorative />
+          <Stack spacing={0.25} sx={{ flex: 1, minWidth: 0 }}>
+            <Typography
+              component="h1"
+              sx={{
+                fontWeight: 700,
+                fontSize: { xs: '1.4rem', md: '1.75rem' },
+                lineHeight: 1.2,
+                letterSpacing: '-0.015em',
+                minWidth: 0,
+              }}
+            >
+              {vertical.label}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {total > 0 ? `${total.toLocaleString('en-GB')} njoftime` : 'Asnjë njoftim ende'}
+            </Typography>
           </Stack>
-          <Button
-            component={RouterLink}
-            href={vertical.postHref}
-            variant="contained"
-            size="medium"
-            startIcon={React.createElement(PlusIcon, { size: 16, weight: 'bold' })}
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 600,
-              alignSelf: { xs: 'flex-start', sm: 'auto' },
-            }}
-          >
-            Posto njoftim
-          </Button>
         </Stack>
 
-        <SubcategoryPills verticalId={verticalId} />
+        <Suspense fallback={null}>
+          <CategoryBrowseControls verticalId={verticalId} cities={cities} />
+        </Suspense>
       </Container>
     </Box>
   );

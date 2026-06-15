@@ -2,20 +2,25 @@
 
 import * as React from 'react';
 import { Box, IconButton, Tooltip } from '@mui/material';
-import { useColorScheme, useTheme } from '@mui/material/styles';
+import { useColorScheme } from '@mui/material/styles';
 import { Moon as MoonIcon } from '@phosphor-icons/react/dist/ssr/Moon';
 import { Sun as SunIcon } from '@phosphor-icons/react/dist/ssr/Sun';
 
+function resolveColorScheme(colorScheme: ReturnType<typeof useColorScheme>['colorScheme']): 'light' | 'dark' {
+  if (colorScheme === 'dark' || colorScheme === 'light') return colorScheme;
+  if (typeof document !== 'undefined' && document.documentElement.classList.contains('dark')) return 'dark';
+  return 'light';
+}
+
 export function ThemeModeToggle() {
-  const { setMode } = useColorScheme();
-  const theme = useTheme();
+  const { setMode, colorScheme } = useColorScheme();
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
-  const resolved: 'light' | 'dark' = theme.palette.mode;
+  const resolved = resolveColorScheme(colorScheme);
 
   if (!mounted) {
     return (

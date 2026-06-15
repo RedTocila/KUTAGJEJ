@@ -1,19 +1,13 @@
 'use client';
 
 import type { Role } from '@/types/role';
+import { authHeaders } from '@/lib/api-client';
+import { getApiUrl } from '@/lib/api-config';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
-
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
 
 export async function listRoles(): Promise<{ roles?: Role[]; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/roles`, { headers: authHeaders() });
+    const res = await fetch(getApiUrl('/admin/roles'), { headers: authHeaders() });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista e roleve dështoi.' };
     return { roles: data.roles as Role[] };
@@ -24,7 +18,7 @@ export async function listRoles(): Promise<{ roles?: Role[]; error?: string }> {
 
 export async function createRole(body: { name: string; description?: string }): Promise<{ role?: Role; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/roles`, {
+    const res = await fetch(getApiUrl('/admin/roles'), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(body),
@@ -42,7 +36,7 @@ export async function updateRole(
   body: Partial<{ name: string; description: string }>,
 ): Promise<{ role?: Role; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/admin/roles/${encodeURIComponent(id)}`, {
+    const res = await fetch(getApiUrl(`/admin/roles/${encodeURIComponent(id)}`), {
       method: 'PATCH',
       headers: authHeaders(),
       body: JSON.stringify(body),
@@ -57,7 +51,7 @@ export async function updateRole(
 
 export async function deleteRole(id: string): Promise<{ error?: string; ok?: boolean }> {
   try {
-    const res = await fetch(`${API_URL}/admin/roles/${encodeURIComponent(id)}`, {
+    const res = await fetch(getApiUrl(`/admin/roles/${encodeURIComponent(id)}`), {
       method: 'DELETE',
       headers: authHeaders(),
     });

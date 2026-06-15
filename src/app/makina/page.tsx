@@ -1,2 +1,2 @@
-export { metadata } from '../automjete/page';
+export { generateMetadata } from '../automjete/page';
 export { default } from '../automjete/page';

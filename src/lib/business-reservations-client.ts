@@ -1,6 +1,6 @@
 'use client';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
+import { getApiUrl } from '@/lib/api-config';
 
 export interface CreateBusinessReservationInput {
   listingId: string;
@@ -15,7 +15,7 @@ export async function createBusinessReservation(
   body: CreateBusinessReservationInput,
 ): Promise<{ id?: string; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/business-reservations`, {
+    const res = await fetch(getApiUrl('/business-reservations'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

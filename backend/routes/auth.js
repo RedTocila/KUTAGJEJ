@@ -7,6 +7,9 @@ const ManagedUser = require('../models/ManagedUser');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
+const rateLimit = require('../middleware/rate-limit');
+
+const authRateLimit = rateLimit({ windowMs: 60_000, max: 15 });
 
 /** Dashboard profile & password routes: admin role only (not business users). */
 function requireAdminRole(req, res, next) {
@@ -63,7 +66,7 @@ async function isEmailRegistered(emailNorm) {
   return false;
 }
 
-router.post('/login', async (req, res) => {
+router.post('/login', authRateLimit, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -102,7 +105,12 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: String(user._id), email: user.email, role: user.role },
+      {
+        id: String(user._id),
+        email: user.email,
+        role: user.role,
+        userType: user.constructor.modelName,
+      },
       secret,
       { expiresIn: '7d' },
     );
@@ -113,7 +121,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/register', async (req, res) => {
+router.post('/register', authRateLimit, async (req, res) => {
   try {
     const { userType, email, password } = req.body;
     if (!email || !password) {
@@ -149,7 +157,12 @@ router.post('/register', async (req, res) => {
         ...(phone ? { phone } : {}),
       });
       const token = jwt.sign(
-        { id: String(doc._id), email: doc.email, role: doc.role },
+        {
+          id: String(doc._id),
+          email: doc.email,
+          role: doc.role,
+          userType: doc.constructor.modelName,
+        },
         secret,
         { expiresIn: '7d' },
       );
@@ -184,7 +197,12 @@ router.post('/register', async (req, res) => {
         ...(phone ? { phone } : {}),
       });
       const token = jwt.sign(
-        { id: String(doc._id), email: doc.email, role: doc.role },
+        {
+          id: String(doc._id),
+          email: doc.email,
+          role: doc.role,
+          userType: doc.constructor.modelName,
+        },
         secret,
         { expiresIn: '7d' },
       );

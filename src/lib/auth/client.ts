@@ -43,6 +43,7 @@ export type RegisterParams =
       password: string;
       /** Optional; saved on the account for listing contact prefill. */
       phone?: string;
+      referralCode?: string;
     }
   | {
       userType: 'business';
@@ -53,6 +54,7 @@ export type RegisterParams =
       email: string;
       password: string;
       phone?: string;
+      referralCode?: string;
     };
 
 class AuthClient {

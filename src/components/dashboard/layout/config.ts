@@ -72,6 +72,13 @@ export const navItems = [
     icon: 'handshake',
   },
   {
+    key: 'referral-tracking',
+    title: 'Gjurmimi referimesh',
+    href: paths.dashboard.referralTracking,
+    icon: 'users',
+    platformAdminOnly: true,
+  },
+  {
     key: 'profile',
     title: 'Profili im',
     href: paths.dashboard.profile,

@@ -39,6 +39,13 @@ export const USER_PORTAL_NAV_ITEMS = [
     matcher: { type: 'equals', href: paths.user.messages } as const,
   },
   {
+    key: 'referral',
+    title: 'Referimi',
+    href: paths.user.referral,
+    icon: 'handshake',
+    matcher: { type: 'equals', href: paths.user.referral } as const,
+  },
+  {
     key: 'profile',
     title: 'Profili im',
     href: paths.user.profile,
@@ -55,7 +62,7 @@ export function getUserPortalNavItemsForUser(user: User | null | undefined): Nav
       user.accountType === 'business' ||
       user.role === 'business-user');
   return USER_PORTAL_NAV_ITEMS.filter((item) => {
-    if (item.key === 'real-estate' || item.key === 'my-listings' || item.key === 'saved-listings' || item.key === 'messages') return canRealEstate;
+    if (item.key === 'real-estate' || item.key === 'my-listings' || item.key === 'saved-listings' || item.key === 'messages' || item.key === 'referral') return canRealEstate;
     return true;
   });
 }

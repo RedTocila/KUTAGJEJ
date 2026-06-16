@@ -5,6 +5,12 @@ const BusinessUser = require('../models/BusinessUser');
 const IndividualUser = require('../models/IndividualUser');
 const ManagedUser = require('../models/ManagedUser');
 const authMiddleware = require('../middleware/auth');
+const {
+  allocateUniqueReferralCode,
+  processReferralOnSignup,
+  ensureUserReferralCode,
+  referralFieldsForUser,
+} = require('../lib/referrals');
 
 const router = express.Router();
 const rateLimit = require('../middleware/rate-limit');
@@ -42,7 +48,7 @@ const formatUser = (user) => {
   if (model === 'Admin') return { ...base, accountType: 'admin' };
   if (model === 'ManagedUser') return { ...base, accountType: 'managed' };
   if (model === 'IndividualUser') {
-    return { ...base, accountType: 'individual', phone: user.phone || '' };
+    return { ...base, accountType: 'individual', phone: user.phone || '', ...referralFieldsForUser(user) };
   }
   if (model === 'BusinessUser') {
     return {
@@ -53,6 +59,7 @@ const formatUser = (user) => {
       businessOwner: user.businessOwner,
       businessCategory: user.businessCategory,
       phone: user.phone || '',
+      ...referralFieldsForUser(user),
     };
   }
   return { ...base, accountType: 'business' };
@@ -149,13 +156,18 @@ router.post('/register', authRateLimit, async (req, res) => {
         return res.status(400).json({ message: 'Emri dhe mbiemri janë të detyrueshëm.' });
       }
       const phone = String(req.body.phone || '').trim().slice(0, 40);
+      const referralCode = await allocateUniqueReferralCode();
       const doc = await IndividualUser.create({
         email: emailNorm,
         password,
         firstName,
         lastName,
+        referralCode,
         ...(phone ? { phone } : {}),
       });
+      const refRaw = req.body.referralCode ?? req.body.ref;
+      if (refRaw) await processReferralOnSignup(doc, refRaw);
+      await ensureUserReferralCode(doc);
       const token = jwt.sign(
         {
           id: String(doc._id),
@@ -185,6 +197,7 @@ router.post('/register', authRateLimit, async (req, res) => {
       }
       const parts = businessOwner.split(/\s+/).filter(Boolean);
       const phone = String(req.body.phone || '').trim().slice(0, 40);
+      const referralCode = await allocateUniqueReferralCode();
       const doc = await BusinessUser.create({
         email: emailNorm,
         password,
@@ -194,8 +207,12 @@ router.post('/register', authRateLimit, async (req, res) => {
         businessCategory,
         firstName: parts[0] || businessOwner,
         lastName: parts.slice(1).join(' ') || '',
+        referralCode,
         ...(phone ? { phone } : {}),
       });
+      const refRaw = req.body.referralCode ?? req.body.ref;
+      if (refRaw) await processReferralOnSignup(doc, refRaw);
+      await ensureUserReferralCode(doc);
       const token = jwt.sign(
         {
           id: String(doc._id),

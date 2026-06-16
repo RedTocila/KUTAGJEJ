@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Box,
@@ -437,10 +438,20 @@ function RegisterFieldsBusiness({
 }
 
 export function UserAuthView() {
-  const [tab, setTab] = React.useState(0);
+  const searchParams = useSearchParams();
+  const refFromUrl = (searchParams.get('ref') ?? '').trim().toUpperCase();
+  const [tab, setTab] = React.useState(refFromUrl ? 1 : 0);
   const [registerKind, setRegisterKind] = React.useState<'individual' | 'business'>('individual');
   const [showPwSignIn, setShowPwSignIn] = React.useState(false);
   const [showPwReg, setShowPwReg] = React.useState(false);
+  const [referralCode, setReferralCode] = React.useState(refFromUrl);
+
+  React.useEffect(() => {
+    if (refFromUrl) {
+      setReferralCode(refFromUrl);
+      setTab(1);
+    }
+  }, [refFromUrl]);
 
   const signInForm = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
@@ -496,6 +507,7 @@ export function UserAuthView() {
       email: values.email,
       password: values.password,
       phone: values.phone.trim() || undefined,
+      referralCode: referralCode.trim() || undefined,
     });
     if (error) {
       individualForm.setError('root', { type: 'server', message: error });
@@ -519,6 +531,7 @@ export function UserAuthView() {
       email: values.email,
       password: values.password,
       phone: values.phone.trim() || undefined,
+      referralCode: referralCode.trim() || undefined,
     });
     if (error) {
       businessForm.setError('root', { type: 'server', message: error });
@@ -658,6 +671,23 @@ export function UserAuthView() {
                         Biznes
                       </ToggleButton>
                     </ToggleButtonGroup>
+
+                    <FormControl fullWidth sx={{ mb: 2 }}>
+                      <Typography component="label" variant="caption" sx={fieldLabelSx(false)}>
+                        Kodi i referimit (opsional)
+                      </Typography>
+                      <OutlinedInput
+                        value={referralCode}
+                        onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                        placeholder="P.sh. A1B2C3D4"
+                        sx={outlinedDarkSx}
+                      />
+                      {refFromUrl ? (
+                        <FormHelperText sx={{ color: 'primary.light' }}>
+                          U aplikua automatikisht nga linku i ftesës.
+                        </FormHelperText>
+                      ) : null}
+                    </FormControl>
 
                     {registerKind === 'individual' ? (
                       <Box component="form" onSubmit={onRegisterIndividual} noValidate>

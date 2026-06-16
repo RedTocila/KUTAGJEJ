@@ -30,6 +30,8 @@ export const paths = {
     savedListings: '/user/dashboard/te-ruajturat',
     /** In-app messages tied to listings. */
     messages: '/user/dashboard/mesazhet',
+    /** Referral program — invite link and stats. */
+    referral: '/user/dashboard/referral',
   },
   dashboard: {
     overview: '/dashboard',
@@ -46,6 +48,8 @@ export const paths = {
     kontratat: '/dashboard/kontratat',
     /** Referral rewards program (all users); numbers editable by platform admin. */
     referral: '/dashboard/referral',
+    /** Admin view: who referred whom, credits awarded. */
+    referralTracking: '/dashboard/referral-tracking',
     /** Punë — employer verification requests (platform admin). */
     jobEmployerVerification: '/dashboard/verifikimet-pune',
     professionalVerification: '/dashboard/verifikimet-profesioniste',

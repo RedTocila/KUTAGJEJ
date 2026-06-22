@@ -34,7 +34,11 @@ import {
 } from '@/lib/directory-listings-client';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
+import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import { uploadListingImages } from '@/lib/uploads-client';
 import { useUser } from '@/hooks/use-user';
+
+const MAX_BUSINESS_IMAGES = 8;
 
 function contactPhoneInitialFromStorage(): string {
   if (typeof window === 'undefined') return '';
@@ -73,7 +77,7 @@ export function BusinessListingForm({ onSuccess, backHref, backLabel }: Business
   const [cityId, setCityId] = React.useState('');
   const [contactPhone, setContactPhone] = React.useState('');
   const [servicesHighlight, setServicesHighlight] = React.useState('');
-  const [imageUrlsText, setImageUrlsText] = React.useState('');
+  const [images, setImages] = React.useState<File[]>([]);
   const [weeklyHours, setWeeklyHours] = React.useState<WeeklyHourRow[]>(defaultWeeklyHours);
   const [menuCategories, setMenuCategories] = React.useState<BusinessMenuCategory[]>([]);
   const [menuItems, setMenuItems] = React.useState<BusinessMenuItem[]>([]);
@@ -130,11 +134,6 @@ export function BusinessListingForm({ onSuccess, backHref, backLabel }: Business
         sortOrder: i,
       }));
 
-    const imageUrls = imageUrlsText
-      .split(/\n|,/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-
     const reservationTimeSlots = timeSlotsText
       .split(/[,;\s]+/)
       .map((s) => s.trim())
@@ -146,6 +145,16 @@ export function BusinessListingForm({ onSuccess, backHref, backLabel }: Business
       .filter((n) => Number.isInteger(n) && n >= 1);
 
     setSubmitting(true);
+    let imageUrls: string[] = [];
+    if (images.length) {
+      const up = await uploadListingImages(images, 'businesses');
+      if (up.error) {
+        setSubmitting(false);
+        setError(up.error);
+        return;
+      }
+      imageUrls = up.urls;
+    }
     const res = await createBusinessListing({
       title: title.trim(),
       description: description.trim(),
@@ -215,13 +224,12 @@ export function BusinessListingForm({ onSuccess, backHref, backLabel }: Business
             placeholder="p.sh. Brunch · Terracë · Muzikë live"
           />
           <TextField label="Telefon" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} required fullWidth />
-          <TextField
-            label="URL fotosh (një për rresht ose ndarë me presje)"
-            value={imageUrlsText}
-            onChange={(e) => setImageUrlsText(e.target.value)}
-            fullWidth
-            multiline
-            minRows={2}
+          <ListingImagePicker
+            value={images}
+            onChange={setImages}
+            max={MAX_BUSINESS_IMAGES}
+            label="Foto të biznesit"
+            disabled={submitting}
           />
         </Stack>
 

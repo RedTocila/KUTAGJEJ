@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
+import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import {
   MARKETPLACE_CATEGORY_OPTIONS,
   MARKETPLACE_CONDITION_OPTIONS,
@@ -21,6 +22,9 @@ import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { useUser } from '@/hooks/use-user';
 import { createMarketplaceListing } from '@/lib/listings-client';
+import { uploadListingImages } from '@/lib/uploads-client';
+
+const MAX_MARKETPLACE_IMAGES = 5;
 
 function contactPhoneInitialFromStorage(): string {
   if (typeof window === 'undefined') return '';
@@ -105,6 +109,7 @@ export function MarketplaceListingForm({ onSuccess, backHref, backLabel = 'Mbrap
     contactPhone: contactPhoneInitialFromStorage(),
   }));
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
+  const [images, setImages] = React.useState<File[]>([]);
   const [loadingCities, setLoadingCities] = React.useState(true);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -145,6 +150,12 @@ export function MarketplaceListingForm({ onSuccess, backHref, backLabel = 'Mbrap
     setSubmitting(true);
     try {
       const hasPrice = Boolean(form.price.trim());
+      let imageUrls: string[] = [];
+      if (images.length) {
+        const up = await uploadListingImages(images, 'marketplace');
+        if (up.error) { setSubmitError(up.error); return; }
+        imageUrls = up.urls;
+      }
       const payload = {
         transactionType: 'shes',
         title: form.title.trim(),
@@ -155,6 +166,7 @@ export function MarketplaceListingForm({ onSuccess, backHref, backLabel = 'Mbrap
         currency: hasPrice ? form.currency : null,
         cityId: form.cityId,
         contactPhone: form.contactPhone.trim(),
+        imageUrls,
       };
       const { error } = await createMarketplaceListing(payload);
       if (error) { setSubmitError(error); return; }
@@ -269,6 +281,17 @@ export function MarketplaceListingForm({ onSuccess, backHref, backLabel = 'Mbrap
               helperText="Do të shfaqet tek të interesuarit për këtë njoftim."
             />
           </Stack>
+
+          <Divider />
+
+          {/* ── Foto ─────────────────────────────────────────────────────── */}
+          <ListingImagePicker
+            value={images}
+            onChange={setImages}
+            max={MAX_MARKETPLACE_IMAGES}
+            label="Foto të artikullit"
+            disabled={submitting}
+          />
 
           {/* ── Veprimet ─────────────────────────────────────────────────── */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ pt: 1, justifyContent: 'flex-end' }}>

@@ -21,6 +21,10 @@ import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { createProfessionalListing, type ProfessionalPortfolioItem } from '@/lib/directory-listings-client';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
+import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import { uploadListingImages } from '@/lib/uploads-client';
+
+const MAX_PROFESSIONAL_IMAGES = 8;
 
 function newId(): string {
   return typeof crypto !== 'undefined' && crypto.randomUUID
@@ -51,7 +55,7 @@ export function ProfessionalListingForm({
   const [responseTimeHours, setResponseTimeHours] = React.useState('2');
   const [price, setPrice] = React.useState('');
   const [currency, setCurrency] = React.useState<'' | 'EUR' | 'LEK'>('');
-  const [imageUrlsText, setImageUrlsText] = React.useState('');
+  const [images, setImages] = React.useState<File[]>([]);
   const [portfolio, setPortfolio] = React.useState<ProfessionalPortfolioItem[]>([]);
 
   React.useEffect(() => {
@@ -86,15 +90,20 @@ export function ProfessionalListingForm({
         sortOrder: i,
       }));
 
-    const imageUrls = imageUrlsText
-      .split(/\n|,/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-
     const hours = Number.parseInt(responseTimeHours, 10);
     const hasPrice = price.trim() !== '';
 
     setSubmitting(true);
+    let imageUrls: string[] = [];
+    if (images.length) {
+      const up = await uploadListingImages(images, 'professionals');
+      if (up.error) {
+        setSubmitting(false);
+        setError(up.error);
+        return;
+      }
+      imageUrls = up.urls;
+    }
     const res = await createProfessionalListing({
       title: title.trim(),
       description: description.trim(),
@@ -162,7 +171,13 @@ export function ProfessionalListingForm({
             sx={{ minWidth: 120 }}
           />
         </Stack>
-        <TextField label="URL foto profili / kopertinë" value={imageUrlsText} onChange={(e) => setImageUrlsText(e.target.value)} fullWidth multiline minRows={2} />
+        <ListingImagePicker
+          value={images}
+          onChange={setImages}
+          max={MAX_PROFESSIONAL_IMAGES}
+          label="Foto profili / kopertinë"
+          disabled={submitting}
+        />
 
         <Divider />
 

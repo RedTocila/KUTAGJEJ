@@ -14,8 +14,11 @@ const {
   needsYearBuilt,
 } = require('../lib/real-estate-field-rules');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
+const { sanitizeImageUrls } = require('../lib/image-upload');
 
 const router = express.Router();
+
+const MAX_REAL_ESTATE_IMAGES = 8;
 
 function requirePortalUser(req, res, next) {
   const model = req.user?.constructor?.modelName;
@@ -130,6 +133,7 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
       bathrooms: needsBedroomsBathFurnishing(propertyCategory) ? Number(req.body.bathrooms) : undefined,
       furnishing: needsBedroomsBathFurnishing(propertyCategory) ? req.body.furnishing : undefined,
       yearBuilt: needsYearBuilt(propertyCategory) ? Number(req.body.yearBuilt) : undefined,
+      imageUrls: sanitizeImageUrls(req.body.imageUrls, MAX_REAL_ESTATE_IMAGES),
     });
 
     await notifyAdminsListingSubmitted('real-estate', doc._id, doc.title);

@@ -6,8 +6,11 @@ const RealEstateCity = require('../models/RealEstateCity');
 const { validateJobPayload } = require('../lib/job-field-rules');
 const { attachOwnerMetrics } = require('../lib/listing-metrics');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
+const { sanitizeImageUrls } = require('../lib/image-upload');
 
 const router = express.Router();
+
+const MAX_JOB_IMAGES = 5;
 
 function requirePortalUser(req, res, next) {
   const model = req.user?.constructor?.modelName;
@@ -97,6 +100,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       responsibilities: v.responsibilities,
       requirements: v.requirements,
       benefits: v.benefits,
+      imageUrls: sanitizeImageUrls(body.imageUrls, MAX_JOB_IMAGES),
     });
 
     await notifyAdminsListingSubmitted('jobs', doc._id, doc.title);

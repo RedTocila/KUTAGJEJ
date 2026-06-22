@@ -31,10 +31,14 @@ import {
   TRANSACTION_OPTIONS,
 } from '@/lib/real-estate-constants';
 import { SearchableSelect } from '@/components/core/searchable-select';
+import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import type { RealEstatePropertySlug } from '@/lib/real-estate-constants';
 import { useUser } from '@/hooks/use-user';
 import { createRealEstateListing, type RealEstateListingPayload } from '@/lib/listings-client';
+import { uploadListingImages } from '@/lib/uploads-client';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+
+const MAX_REAL_ESTATE_IMAGES = 8;
 
 function contactPhoneInitialFromStorage(): string {
   if (typeof window === 'undefined') return '';
@@ -208,6 +212,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
     contactPhone: contactPhoneInitialFromStorage(),
   }));
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
+  const [images, setImages] = React.useState<File[]>([]);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [loadingRefs, setLoadingRefs] = React.useState(false);
@@ -272,6 +277,14 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
     setSubmitting(true);
     try {
       const payload = buildPayload(form);
+      if (images.length) {
+        const up = await uploadListingImages(images, 'real-estate');
+        if (up.error) {
+          setSubmitError(up.error);
+          return;
+        }
+        payload.imageUrls = up.urls;
+      }
       const { error } = await createRealEstateListing(payload);
       if (error) {
         setSubmitError(error);
@@ -517,6 +530,15 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         required
         fullWidth
         helperText="Shown to interested parties for this listing. Pre-filled from your account if you added a phone when registering or in your profile — you can change it here."
+      />
+
+      <Divider sx={{ my: 1 }} />
+      <ListingImagePicker
+        value={images}
+        onChange={setImages}
+        max={MAX_REAL_ESTATE_IMAGES}
+        label="Foto"
+        disabled={submitting}
       />
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ pt: 1, justifyContent: 'flex-end' }}>

@@ -5,8 +5,11 @@ const MarketplaceListing = require('../models/MarketplaceListing');
 const RealEstateCity = require('../models/RealEstateCity');
 const { attachOwnerMetrics } = require('../lib/listing-metrics');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
+const { sanitizeImageUrls } = require('../lib/image-upload');
 
 const router = express.Router();
+
+const MAX_MARKETPLACE_IMAGES = 5;
 
 const TRANSACTION_VALUES = ['shes'];
 const CATEGORY_VALUES = [
@@ -117,6 +120,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       currency: hasPrice ? body.currency : null,
       cityId: new mongoose.Types.ObjectId(cityId),
       contactPhone: String(body.contactPhone || '').trim(),
+      imageUrls: sanitizeImageUrls(body.imageUrls, MAX_MARKETPLACE_IMAGES),
     });
 
     await notifyAdminsListingSubmitted('marketplace', doc._id, doc.title);

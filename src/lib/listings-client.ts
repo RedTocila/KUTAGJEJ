@@ -27,6 +27,7 @@ export interface RealEstateListingPayload {
   bathrooms?: number;
   furnishing?: string;
   yearBuilt?: number;
+  imageUrls?: string[];
 }
 
 export async function listCategoriesPublic(): Promise<{ categories?: ListingCategory[]; error?: string }> {
@@ -199,6 +200,7 @@ export interface JobListingPayload {
   responsibilities: string[];
   requirements: string[];
   benefits: JobListingBenefitPayload[];
+  imageUrls?: string[];
 }
 
 export async function createJobListing(body: JobListingPayload): Promise<ListingCreateResult> {
@@ -230,6 +232,7 @@ export interface MarketplaceListingPayload {
   currency: string | null;
   cityId: string;
   contactPhone: string;
+  imageUrls?: string[];
 }
 
 export async function createMarketplaceListing(body: MarketplaceListingPayload): Promise<ListingCreateResult> {

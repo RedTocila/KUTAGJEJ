@@ -29,10 +29,14 @@ import {
 } from '@/lib/job-constants';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { JobFormStringList } from '@/components/jobs/job-form-string-list';
+import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { useUser } from '@/hooks/use-user';
 import { createJobListing } from '@/lib/listings-client';
+import { uploadListingImages } from '@/lib/uploads-client';
+
+const MAX_JOB_IMAGES = 5;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -175,6 +179,7 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
     contactPhone: contactPhoneInitialFromStorage(),
   }));
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
+  const [images, setImages] = React.useState<File[]>([]);
   const [loadingCities, setLoadingCities] = React.useState(true);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -228,6 +233,15 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
 
     setSubmitting(true);
     try {
+      let imageUrls: string[] = [];
+      if (images.length) {
+        const up = await uploadListingImages(images, 'jobs');
+        if (up.error) {
+          setSubmitError(up.error);
+          return;
+        }
+        imageUrls = up.urls;
+      }
       const payload = {
         title: form.title.trim(),
         description: form.description.trim(),
@@ -243,6 +257,7 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
         responsibilities: normalizeLines(form.responsibilities),
         requirements: normalizeLines(form.requirements),
         benefits: buildBenefitsPayload(form),
+        imageUrls,
       };
 
       const { error } = await createJobListing(payload);
@@ -502,6 +517,17 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
           helperText="Do të shfaqet tek kandidatët e interesuar për këtë njoftim."
         />
       </Stack>
+
+      <Divider />
+
+      {/* ── Foto (opsionale) ─────────────────────────────────────────────── */}
+      <ListingImagePicker
+        value={images}
+        onChange={setImages}
+        max={MAX_JOB_IMAGES}
+        label="Foto (logo / kopertinë — opsionale)"
+        disabled={submitting}
+      />
 
       {/* ── Veprimet ─────────────────────────────────────────────────────── */}
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ pt: 1, justifyContent: 'flex-end' }}>

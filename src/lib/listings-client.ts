@@ -81,6 +81,7 @@ export interface JobMineListing extends ListingMetrics {
   responsibilities: string[];
   requirements: string[];
   benefits: { id: string; label: string }[];
+  imageUrls: string[];
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
 }
@@ -94,6 +95,7 @@ export interface MarketplaceMineListing extends ListingMetrics {
   currency: string | null;
   cityName: string | null;
   contactPhone: string | null;
+  imageUrls: string[];
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
 }

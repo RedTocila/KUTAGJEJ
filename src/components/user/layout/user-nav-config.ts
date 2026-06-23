@@ -19,7 +19,7 @@ export const USER_PORTAL_NAV_ITEMS = [
   },
   {
     key: 'my-listings',
-    title: 'Listimet e mia',
+    title: 'Njoftimet e mia',
     href: paths.user.myRealEstateListings,
     icon: 'list-bullets',
     matcher: { type: 'equals', href: paths.user.myRealEstateListings } as const,

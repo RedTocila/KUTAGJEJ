@@ -9,7 +9,6 @@ import {
   Chip,
   Container,
   Divider,
-  Link as MuiLink,
   Paper,
   Stack,
   Typography,
@@ -40,6 +39,7 @@ import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { AnyPublicListingDetail } from '@/lib/public-listings-client';
 
 import { ListingMessageButton } from '@/components/public/listing-message-button';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
 import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
@@ -389,16 +389,12 @@ export function VerticalListingDetailView(props: {
             </Stack>
 
             {mapQuery ? (
-              <MuiLink
-                component={Link}
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                variant="subtitle2"
-                sx={{ fontWeight: 800 }}
-              >
-                Shiko zonën në hartë
-              </MuiLink>
+              <Stack spacing={1.5}>
+                <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800, letterSpacing: '0.1em' }}>
+                  Vendndodhja
+                </Typography>
+                <LocationMapEmbed query={mapQuery} linkLabel="Shiko zonën në hartë" />
+              </Stack>
             ) : null}
 
             <Box sx={{ display: { xs: 'block', md: 'none' } }}>{sellerBlock(listing)}</Box>

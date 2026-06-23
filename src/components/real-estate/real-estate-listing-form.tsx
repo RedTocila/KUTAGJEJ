@@ -118,60 +118,60 @@ function parseFloatStrict(s: string): number | null {
 }
 
 function validateForm(f: FormState): string | null {
-  if (!f.propertyCategory) return 'Please choose a property type.';
-  if (!f.title.trim()) return 'Title is required.';
-  if (!f.description.trim()) return 'Description is required.';
+  if (!f.propertyCategory) return 'Ju lutemi zgjidhni llojin e pronës.';
+  if (!f.title.trim()) return 'Titulli është i detyrueshëm.';
+  if (!f.description.trim()) return 'Përshkrimi është i detyrueshëm.';
   if (f.transactionType !== 'rent' && f.transactionType !== 'sale') {
-    return 'Please choose rent or sale.';
+    return 'Ju lutemi zgjidhni me qira ose në shitje.';
   }
   const price = parseFloatStrict(f.price);
-  if (price === null || price < 0) return 'Enter a valid price.';
-  if (f.currency !== 'EUR' && f.currency !== 'LEK') return 'Please choose a currency.';
+  if (price === null || price < 0) return 'Vendosni një çmim të vlefshëm.';
+  if (f.currency !== 'EUR' && f.currency !== 'LEK') return 'Ju lutemi zgjidhni monedhën.';
   const surface = parseFloatStrict(f.surfaceM2);
-  if (surface === null || surface <= 0) return 'Surface must be a positive number (m²).';
-  if (!f.cityId || !f.zoneId) return 'Please select a city and a zone.';
+  if (surface === null || surface <= 0) return 'Sipërfaqja duhet të jetë numër pozitiv (m²).';
+  if (!f.cityId || !f.zoneId) return 'Ju lutemi zgjidhni qytetin dhe zonën.';
 
   const cat = f.propertyCategory;
 
   if (needsCondition(cat)) {
     const ok = CONDITION_OPTIONS.some((o) => o.value === f.condition);
-    if (!ok) return 'Please select the condition.';
+    if (!ok) return 'Ju lutemi zgjidhni gjendjen.';
   }
 
   if (needsFloor(cat)) {
     const fl = parseIntStrict(f.floor);
-    if (fl === null) return 'Floor must be a whole number (e.g. 1, 2, …).';
+    if (fl === null) return 'Kati duhet të jetë numër i plotë (p.sh. 1, 2, …).';
   }
 
   if (needsTotalFloors(cat)) {
     const tf = parseIntStrict(f.totalFloors);
-    if (tf === null || tf < 1) return 'Total floors must be a positive whole number.';
+    if (tf === null || tf < 1) return 'Numri i kateve duhet të jetë numër i plotë pozitiv.';
   }
 
   if (needsParkingFloor(cat)) {
     const pf = parseIntStrict(f.parkingFloor);
-    if (pf === null) return 'Parking level must be a whole number (negative for underground).';
+    if (pf === null) return 'Niveli i parkimit duhet të jetë numër i plotë (negativ për nëntokë).';
   }
 
   if (needsBedroomsBathFurnishing(cat)) {
     const br = parseIntStrict(f.bedrooms);
     const ba = parseIntStrict(f.bathrooms);
-    if (br === null || br < 0) return 'Bedrooms must be a whole number (0 or more).';
-    if (ba === null || ba < 0) return 'Bathrooms must be a whole number (0 or more).';
+    if (br === null || br < 0) return 'Dhomat e gjumit duhet të jenë numër i plotë (0 ose më shumë).';
+    if (ba === null || ba < 0) return 'Banjot duhet të jenë numër i plotë (0 ose më shumë).';
     const okF = FURNISHING_OPTIONS.some((o) => o.value === f.furnishing);
-    if (!okF) return 'Please select furnishing.';
+    if (!okF) return 'Ju lutemi zgjidhni mobilimin.';
   }
 
   if (needsYearBuilt(cat)) {
     const y = parseIntStrict(f.yearBuilt);
-    if (y === null || y < 1800 || y > 2100) return 'Year built must be a valid year.';
+    if (y === null || y < 1800 || y > 2100) return 'Viti i ndërtimit duhet të jetë vit i vlefshëm.';
   }
 
   const phone = f.contactPhone.trim();
-  if (phone.length < 6) return 'Enter a valid phone number (at least 6 characters).';
-  if (phone.length > 40) return 'Phone number is too long.';
+  if (phone.length < 6) return 'Vendosni një numër telefoni të vlefshëm (të paktën 6 karaktere).';
+  if (phone.length > 40) return 'Numri i telefonit është shumë i gjatë.';
   if (!/^[\d+\s().-]{6,40}$/.test(phone)) {
-    return 'Phone number may only include digits, spaces, and + ( ) . -';
+    return 'Numri i telefonit mund të përmbajë vetëm shifra, hapësira dhe + ( ) . -';
   }
 
   return null;
@@ -205,7 +205,7 @@ function buildPayload(f: FormState): RealEstateListingPayload {
 }
 
 export function RealEstateListingForm(props: RealEstateListingFormProps) {
-  const { onSuccess, backHref, backLabel = 'Back' } = props;
+  const { onSuccess, backHref, backLabel = 'Prapa' } = props;
   const { user } = useUser();
   const [form, setForm] = React.useState<FormState>(() => ({
     ...emptyForm(),
@@ -233,7 +233,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
       const locRes = await listRealEstateLocationsPublic();
       if (cancelled) return;
       if (locRes.error) {
-        setLoadError(locRes.error ?? 'Failed to load form data.');
+        setLoadError(locRes.error ?? 'Të dhënat e formularit nuk u ngarkuan.');
         setCities([]);
       } else {
         setCities(locRes.cities ?? []);
@@ -301,8 +301,8 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
   return (
     <Stack component="form" spacing={2.5} onSubmit={(e) => void handleSubmit(e)}>
       <Typography variant="body2" color="text.secondary">
-        Immovable property — use English for now. Fill in title, description, and property type first; other fields depend
-        on the type you choose.
+        Pasuri e paluajtshme. Plotësoni fillimisht titullin, përshkrimin dhe llojin e pronës; fushat e tjera varen nga
+        lloji që zgjidhni.
       </Typography>
 
       {loadError ? (
@@ -316,9 +316,9 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         </Alert>
       ) : null}
 
-      <TextField label="Title" value={form.title} onChange={onField('title')} required fullWidth />
+      <TextField label="Titulli" value={form.title} onChange={onField('title')} required fullWidth />
       <TextField
-        label="Description"
+        label="Përshkrimi"
         value={form.description}
         onChange={onField('description')}
         required
@@ -328,17 +328,17 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
       />
 
       <SearchableSelect
-        label="Property type"
+        label="Lloji i pronës"
         value={form.propertyCategory}
         onChange={(v) => setForm((p) => ({ ...p, propertyCategory: v as RealEstatePropertySlug | '' }))}
         options={REAL_ESTATE_PROPERTY_CATEGORIES.map((c) => ({ value: c.slug, label: c.label }))}
-        emptyLabel="Select…"
+        emptyLabel="Zgjidh…"
         required
         disabled={loadingRefs}
       />
 
       <FormControl disabled={loadingRefs}>
-        <FormLabel>Transaction type</FormLabel>
+        <FormLabel>Lloji i transaksionit</FormLabel>
         <RadioGroup
           row
           value={form.transactionType}
@@ -352,7 +352,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
         <TextField
-          label="Price"
+          label="Çmimi"
           type="text"
           inputMode="decimal"
           value={form.price}
@@ -361,11 +361,11 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           fullWidth
         />
         <SearchableSelect
-          label="Currency"
+          label="Monedha"
           value={form.currency}
           onChange={(v) => setForm((p) => ({ ...p, currency: v as FormState['currency'] }))}
           options={CURRENCY_OPTIONS}
-          emptyLabel="Select…"
+          emptyLabel="Zgjidh…"
           required
           disabled={loadingRefs}
         />
@@ -373,39 +373,39 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
         <SearchableSelect
-          label="City"
+          label="Qyteti"
           value={form.cityId}
           onChange={(v) => setForm((p) => ({ ...p, cityId: v, zoneId: '' }))}
           options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Select…"
+          emptyLabel="Zgjidh…"
           required
           disabled={loadingRefs || cities.length === 0}
         />
         <SearchableSelect
-          label="Zone"
+          label="Zona"
           value={form.zoneId}
           onChange={(v) => setForm((p) => ({ ...p, zoneId: v }))}
           options={zonesForCity.map((z) => ({ value: z.id, label: z.name }))}
-          emptyLabel="Select…"
+          emptyLabel="Zgjidh…"
           required
           disabled={loadingRefs || !form.cityId || zonesForCity.length === 0}
         />
       </Stack>
       {!loadingRefs && cities.length === 0 ? (
         <Typography variant="caption" color="text.secondary">
-          No cities yet — a platform admin must add cities and zones under Dashboard → Vendndodhjet (pasuri).
+          Ende nuk ka qytete — një administrator i platformës duhet të shtojë qytete dhe zona te Paneli → Vendndodhjet (pasuri).
         </Typography>
       ) : null}
 
       <TextField
-        label="Surface"
+        label="Sipërfaqja"
         type="text"
         inputMode="decimal"
         value={form.surfaceM2}
         onChange={onField('surfaceM2')}
         required
         fullWidth
-        helperText="Interior or plot area in square metres (m²)."
+        helperText="Sipërfaqja e brendshme ose e truallit në metra katrorë (m²)."
         slotProps={{
           input: {
             endAdornment: <InputAdornment position="end">m²</InputAdornment>,
@@ -417,18 +417,18 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         <>
           <Divider sx={{ my: 1 }} />
           <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 700 }}>
-            Category-specific details
+            Detaje sipas kategorisë
           </Typography>
         </>
       ) : null}
 
       {needsCondition(cat) ? (
         <SearchableSelect
-          label="Condition"
+          label="Gjendja"
           value={form.condition}
           onChange={(v) => setForm((p) => ({ ...p, condition: v as FormState['condition'] }))}
           options={CONDITION_OPTIONS}
-          emptyLabel="Select…"
+          emptyLabel="Zgjidh…"
           required
           disabled={loadingRefs}
         />
@@ -436,47 +436,47 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
 
       {needsFloor(cat) ? (
         <TextField
-          label="Floor"
+          label="Kati"
           type="text"
           inputMode="numeric"
           value={form.floor}
           onChange={onField('floor')}
           required
           fullWidth
-          helperText="Which floor the unit is on (e.g. 1 = first floor)."
+          helperText="Në cilin kat ndodhet njësia (p.sh. 1 = kati i parë)."
         />
       ) : null}
 
       {needsTotalFloors(cat) ? (
         <TextField
-          label="Total floors (property)"
+          label="Numri i kateve (prona)"
           type="text"
           inputMode="numeric"
           value={form.totalFloors}
           onChange={onField('totalFloors')}
           required
           fullWidth
-          helperText="How many levels the villa has in total."
+          helperText="Sa kate ka vila në total."
         />
       ) : null}
 
       {needsParkingFloor(cat) ? (
         <TextField
-          label="Parking level"
+          label="Niveli i parkimit"
           type="text"
           inputMode="numeric"
           value={form.parkingFloor}
           onChange={onField('parkingFloor')}
           required
           fullWidth
-          helperText="Use negative numbers for underground levels (e.g. -1, -2)."
+          helperText="Përdorni numra negativë për nivelet nëntokësore (p.sh. -1, -2)."
         />
       ) : null}
 
       {needsBedroomsBathFurnishing(cat) ? (
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <TextField
-            label="Bedrooms"
+            label="Dhoma gjumi"
             type="text"
             inputMode="numeric"
             value={form.bedrooms}
@@ -485,7 +485,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
             fullWidth
           />
           <TextField
-            label="Bathrooms"
+            label="Banjo"
             type="text"
             inputMode="numeric"
             value={form.bathrooms}
@@ -498,11 +498,11 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
 
       {needsBedroomsBathFurnishing(cat) ? (
         <SearchableSelect
-          label="Furnishing"
+          label="Mobilimi"
           value={form.furnishing}
           onChange={(v) => setForm((p) => ({ ...p, furnishing: v as FormState['furnishing'] }))}
           options={FURNISHING_OPTIONS}
-          emptyLabel="Select…"
+          emptyLabel="Zgjidh…"
           required
           disabled={loadingRefs}
         />
@@ -510,7 +510,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
 
       {needsYearBuilt(cat) ? (
         <TextField
-          label="Year built"
+          label="Viti i ndërtimit"
           type="text"
           inputMode="numeric"
           value={form.yearBuilt}
@@ -521,7 +521,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
       ) : null}
 
       <TextField
-        label="Phone number"
+        label="Numri i telefonit"
         type="tel"
         inputMode="tel"
         autoComplete="tel"
@@ -529,7 +529,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         onChange={onField('contactPhone')}
         required
         fullWidth
-        helperText="Shown to interested parties for this listing. Pre-filled from your account if you added a phone when registering or in your profile — you can change it here."
+        helperText="I shfaqet personave të interesuar për këtë njoftim. Është paraplotësuar nga llogaria juaj nëse keni shtuar një numër gjatë regjistrimit ose në profil — mund ta ndryshoni këtu."
       />
 
       <Divider sx={{ my: 1 }} />
@@ -548,7 +548,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           </Button>
         ) : null}
         <Button type="submit" variant="contained" disabled={submitting || loadingRefs}>
-          {submitting ? 'Saving…' : 'Save listing'}
+          {submitting ? 'Po ruhet…' : 'Ruaj njoftimin'}
         </Button>
       </Stack>
     </Stack>

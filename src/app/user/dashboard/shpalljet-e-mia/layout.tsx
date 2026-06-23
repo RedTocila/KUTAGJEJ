@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { config } from '@/config';
 
 export const metadata: Metadata = {
-  title: `Listimet e mia | Paneli im | ${config.site.name}`,
+  title: `Njoftimet e mia | Paneli im | ${config.site.name}`,
 };
 
 export default function UserMyListingsLayout({ children }: { children: ReactNode }) {

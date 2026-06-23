@@ -99,10 +99,10 @@ export function UserReferralView() {
         <HandshakeIcon size={28} weight="duotone" />
         <Stack spacing={0.25}>
           <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-            Referimi im
+            Referimi
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Fto miqtë të regjistrohen dhe fito Boost Credits sipas programit të platformës.
+            Fto miqtë, ndiq statistikat dhe shiko programin e platformës.
           </Typography>
         </Stack>
       </Stack>
@@ -174,6 +174,20 @@ export function UserReferralView() {
             </CardContent>
           </Card>
 
+          {program ? (
+            <Stack spacing={1}>
+              <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                Programi i referimit
+              </Typography>
+              <ProgramDisplay
+                program={program}
+                referralCount={stats.referralCount}
+                paidReferralCount={stats.paidReferralCount}
+                reviewCount={stats.reviewCount}
+              />
+            </Stack>
+          ) : null}
+
           <Stack spacing={1}>
             <Typography variant="h6" sx={{ fontWeight: 800 }}>
               Personat që keni referuar
@@ -212,15 +226,6 @@ export function UserReferralView() {
             )}
           </Stack>
         </>
-      ) : null}
-
-      {program ? (
-        <Stack spacing={1}>
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
-            Rregullat e programit
-          </Typography>
-          <ProgramDisplay program={program} />
-        </Stack>
       ) : null}
 
       <Button variant="outlined" onClick={() => void load()} disabled={loading}>

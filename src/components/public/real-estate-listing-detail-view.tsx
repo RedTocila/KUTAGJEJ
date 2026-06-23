@@ -33,6 +33,7 @@ import { RealEstateCard } from '@/components/public/listing-cards/real-estate-ca
 import { formatPrice, relativeAlbanianDate } from '@/components/public/listing-cards/format-helpers';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { whatsappHref } from '@/lib/listing-contact';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -483,11 +484,6 @@ export function RealEstateListingDetailView({
     ? `${wa}?text=${encodeURIComponent(`Përshëndetje, jam i interesuari për: «${listing.title}» (${canonicalUrl}).`)}`
     : undefined;
 
-  const mapLink =
-    locationFull.length > 0
-      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationFull)}`
-      : null;
-
   const detailRows: Array<{ label: string; value: string } | null> = [
     { label: 'Lloji', value: propertyCategoryLabelSq(listing.propertyCategory) },
     listing.condition ? { label: 'Gjendja', value: CONDITION_SQ[listing.condition] ?? listing.condition } : null,
@@ -773,18 +769,7 @@ export function RealEstateListingDetailView({
                     {listing.zoneName && listing.cityName ? `${listing.zoneName}, ${listing.cityName}` : listing.cityName ?? listing.zoneName}
                     {listing.cityName || listing.zoneName ? ', Shqipëri.' : '.'}
                   </Typography>
-                  {mapLink ? (
-                    <Typography
-                      component="a"
-                      href={mapLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      variant="subtitle2"
-                      sx={{ fontWeight: 850, color: 'primary.main' }}
-                    >
-                      Shiko në hartë
-                    </Typography>
-                  ) : null}
+                  <LocationMapEmbed query={locationFull} linkLabel="Shiko në hartë" />
                 </>
               ) : (
                 <Typography sx={{ color: 'text.secondary' }}>Vendndodhja do të përditësohet së shpejti.</Typography>

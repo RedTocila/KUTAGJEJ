@@ -83,6 +83,7 @@ router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
         cityId: d.cityId ? String(d.cityId) : null,
         cityName: city?.name ?? null,
         contactPhone: d.contactPhone ?? null,
+        imageUrls: d.imageUrls ?? [],
         status: d.status || 'pending',
         createdAt: d.createdAt,
       };

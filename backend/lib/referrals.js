@@ -3,6 +3,9 @@ const IndividualUser = require('../models/IndividualUser');
 const BusinessUser = require('../models/BusinessUser');
 const ReferralProgram = require('../models/ReferralProgram');
 const ReferralSignup = require('../models/ReferralSignup');
+const DirectoryListing = require('../models/DirectoryListing');
+const BusinessListingReview = require('../models/BusinessListingReview');
+const ProfessionalListingReview = require('../models/ProfessionalListingReview');
 const { ensureReferralProgram } = require('./ensure-referral-program');
 
 const PORTAL_MODELS = [IndividualUser, BusinessUser];
@@ -89,6 +92,29 @@ async function countFreeReferrals(referrerId, referrerModel) {
     referrerModel,
     kind: 'free-signup',
   });
+}
+
+/** Referrals that converted into a paid package (recorded with kind 'paid'). */
+async function countPaidReferrals(referrerId, referrerModel) {
+  return ReferralSignup.countDocuments({
+    referrerId,
+    referrerModel,
+    kind: 'paid',
+  });
+}
+
+/** Total reviews received across all of a user's directory listings (businesses + professionals). */
+async function countReceivedReviews(userId, userModel) {
+  const listings = await DirectoryListing.find({ posterId: userId, posterModel: userModel })
+    .select('_id')
+    .lean();
+  if (listings.length === 0) return 0;
+  const listingIds = listings.map((l) => l._id);
+  const [businessReviews, professionalReviews] = await Promise.all([
+    BusinessListingReview.countDocuments({ listingId: { $in: listingIds } }),
+    ProfessionalListingReview.countDocuments({ listingId: { $in: listingIds } }),
+  ]);
+  return businessReviews + professionalReviews;
 }
 
 async function awardReferralTierCredits(referrer) {
@@ -205,6 +231,8 @@ module.exports = {
   loadPortalUserBrief,
   buildReferralLink,
   countFreeReferrals,
+  countPaidReferrals,
+  countReceivedReviews,
   processReferralOnSignup,
   ensureUserReferralCode,
   backfillMissingReferralCodes,

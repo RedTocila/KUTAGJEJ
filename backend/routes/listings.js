@@ -60,6 +60,7 @@ function formatMineListing(doc, cityById) {
     bathrooms: doc.bathrooms ?? null,
     furnishing: doc.furnishing ?? null,
     yearBuilt: doc.yearBuilt ?? null,
+    imageUrls: doc.imageUrls ?? [],
     status: doc.status || 'pending',
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,

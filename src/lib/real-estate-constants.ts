@@ -1,20 +1,20 @@
-/** English labels for the real-estate listing form (i18n later). */
+/** Albanian labels for the real-estate listing form. */
 
 export const REAL_ESTATE_PROPERTY_CATEGORIES = [
-  { slug: 'apartment', label: 'Apartment' },
-  { slug: 'villa', label: 'Villa' },
-  { slug: 'penthouse-duplex', label: 'Penthouse / duplex' },
-  { slug: 'part-of-villa', label: 'Part of a villa' },
-  { slug: 'room-studio-attic', label: 'Room / studio / attic' },
+  { slug: 'apartment', label: 'Apartament' },
+  { slug: 'villa', label: 'Vilë' },
+  { slug: 'penthouse-duplex', label: 'Penthouse / dupleks' },
+  { slug: 'part-of-villa', label: 'Pjesë vile' },
+  { slug: 'room-studio-attic', label: 'Dhomë / studio / papafingo' },
   { slug: 'parking', label: 'Parking' },
-  { slug: 'shop', label: 'Shop' },
-  { slug: 'office', label: 'Office' },
-  { slug: 'industrial-shed', label: 'Industrial shed' },
-  { slug: 'commercial-local', label: 'Commercial unit (bar / restaurant)' },
-  { slug: 'warehouse', label: 'Warehouse' },
-  { slug: 'business-space', label: 'Business space / structure' },
-  { slug: 'building-plot', label: 'Building plot' },
-  { slug: 'agricultural-land', label: 'Agricultural land' },
+  { slug: 'shop', label: 'Dyqan' },
+  { slug: 'office', label: 'Zyrë' },
+  { slug: 'industrial-shed', label: 'Kapanon industrial' },
+  { slug: 'commercial-local', label: 'Lokal (bar / restorant)' },
+  { slug: 'warehouse', label: 'Magazinë' },
+  { slug: 'business-space', label: 'Hapësirë / strukturë biznesi' },
+  { slug: 'building-plot', label: 'Truall ndërtimi' },
+  { slug: 'agricultural-land', label: 'Tokë bujqësore' },
 ] as const;
 
 export type RealEstatePropertySlug = (typeof REAL_ESTATE_PROPERTY_CATEGORIES)[number]['slug'];
@@ -25,8 +25,8 @@ export function propertyCategoryLabel(slug: string): string {
 }
 
 export const TRANSACTION_OPTIONS = [
-  { value: 'rent', label: 'Rent' },
-  { value: 'sale', label: 'Sale' },
+  { value: 'rent', label: 'Me qira' },
+  { value: 'sale', label: 'Në shitje' },
 ] as const;
 
 export const CURRENCY_OPTIONS = [
@@ -35,17 +35,17 @@ export const CURRENCY_OPTIONS = [
 ] as const;
 
 export const CONDITION_OPTIONS = [
-  { value: 'new', label: 'New' },
-  { value: 'in-construction', label: 'In construction' },
-  { value: 'renovated', label: 'Renovated' },
-  { value: 'good-condition', label: 'In good condition' },
+  { value: 'new', label: 'I ri' },
+  { value: 'in-construction', label: 'Në ndërtim' },
+  { value: 'renovated', label: 'I rinovuar' },
+  { value: 'good-condition', label: 'Në gjendje të mirë' },
 ] as const;
 
 export const FURNISHING_OPTIONS = [
-  { value: 'furnished', label: 'Furnished' },
-  { value: 'unfurnished', label: 'Unfurnished' },
-  { value: 'partially-furnished', label: 'Partially furnished' },
-  { value: 'kitchen-only', label: 'Kitchen only' },
+  { value: 'furnished', label: 'I mobiluar' },
+  { value: 'unfurnished', label: 'Pa mobilim' },
+  { value: 'partially-furnished', label: 'Pjesërisht i mobiluar' },
+  { value: 'kitchen-only', label: 'Vetëm kuzhinë' },
 ] as const;
 
 /** Which extra fields apply for a property category (mirrors backend rules). */

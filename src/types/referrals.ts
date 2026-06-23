@@ -27,6 +27,8 @@ export interface MyReferralStats {
   code: string;
   link: string;
   referralCount: number;
+  paidReferralCount: number;
+  reviewCount: number;
   boostCredits: number;
   tiersClaimed: number[];
   nextTier: ReferralNextTier | null;

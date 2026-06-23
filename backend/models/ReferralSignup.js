@@ -6,7 +6,7 @@ const referralSignupSchema = new mongoose.Schema(
     referrerModel: { type: String, enum: ['IndividualUser', 'BusinessUser'], required: true },
     referredUserId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
     referredUserModel: { type: String, enum: ['IndividualUser', 'BusinessUser'], required: true },
-    kind: { type: String, enum: ['free-signup'], default: 'free-signup', index: true },
+    kind: { type: String, enum: ['free-signup', 'paid'], default: 'free-signup', index: true },
     /** Boost credits awarded to referrer for this signup (tier bonuses triggered). */
     creditsAwarded: { type: Number, default: 0, min: 0 },
     referralCodeUsed: { type: String, trim: true, default: '' },

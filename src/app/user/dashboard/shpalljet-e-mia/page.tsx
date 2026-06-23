@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Image from 'next/image';
 import RouterLink from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
@@ -21,11 +22,8 @@ import {
 } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
-import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
-import { GasPump as GasPumpIcon } from '@phosphor-icons/react/dist/ssr/GasPump';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
-import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
@@ -42,7 +40,7 @@ import {
   type JobMineListing,
   type MarketplaceMineListing,
 } from '@/lib/listings-client';
-import { propertyCategoryLabel, CONDITION_OPTIONS, FURNISHING_OPTIONS } from '@/lib/real-estate-constants';
+import { propertyCategoryLabel } from '@/lib/real-estate-constants';
 import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS, WORK_LOCATION_OPTIONS } from '@/lib/job-constants';
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import { useUser } from '@/hooks/use-user';
@@ -68,46 +66,93 @@ function findLabel<T extends { value: string; label: string }>(options: readonly
   return options.find((o) => o.value === value)?.label ?? value;
 }
 
+const chipSx = { fontWeight: 600, height: 20, fontSize: '0.68rem', '& .MuiChip-label': { px: 0.85 } } as const;
+
 function Row({ icon: Icon, children }: { icon: PhosphorIcon; children: React.ReactNode }) {
   return (
-    <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start', py: 0.3 }}>
-      <Box component="span" sx={{ color: 'primary.main', display: 'inline-flex', mt: 0.15, flexShrink: 0 }}>
-        {React.createElement(Icon, { size: 18, weight: 'duotone' })}
+    <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', py: 0.15 }}>
+      <Box component="span" sx={{ color: 'primary.main', display: 'inline-flex', flexShrink: 0 }}>
+        {React.createElement(Icon, { size: 15, weight: 'duotone' })}
       </Box>
-      <Typography variant="body2" color="text.primary" sx={{ lineHeight: 1.5 }}>
+      <Typography variant="caption" color="text.primary" sx={{ lineHeight: 1.4, fontSize: '0.78rem' }} noWrap>
         {children}
       </Typography>
     </Stack>
   );
 }
 
-function BaseCard({ title, chips, children, createdAt, metrics, status }: {
+function CardImageHeader({ imageUrl, fallbackIcon: FallbackIcon, alt, status }: {
+  imageUrl: string | null;
+  fallbackIcon: PhosphorIcon;
+  alt: string;
+  status: ReturnType<typeof normalizeListingModerationStatus>;
+}) {
+  return (
+    <Box sx={{
+      position: 'relative',
+      height: 130,
+      flexShrink: 0,
+      borderBottom: '1px solid',
+      borderColor: 'divider',
+      bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'),
+      overflow: 'hidden',
+    }}>
+      {imageUrl ? (
+        <Image src={imageUrl} alt={alt} fill sizes="(max-width: 600px) 100vw, 280px" style={{ objectFit: 'cover' }} />
+      ) : (
+        <Stack aria-hidden sx={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', color: 'primary.main', opacity: 0.45 }}>
+          {React.createElement(FallbackIcon, { size: 40, weight: 'duotone' })}
+        </Stack>
+      )}
+      <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 2, transform: 'scale(0.85)', transformOrigin: 'top right' }}>
+        <ListingModerationStatusChip status={status} />
+      </Box>
+    </Box>
+  );
+}
+
+function BaseCard({ title, chips, children, createdAt, metrics, status, imageUrl, fallbackIcon }: {
   title: string;
   chips?: React.ReactNode;
   children: React.ReactNode;
   createdAt: string;
   metrics?: Partial<ListingMetrics>;
   status?: string | null;
+  imageUrl: string | null;
+  fallbackIcon: PhosphorIcon;
 }) {
   const moderationStatus = normalizeListingModerationStatus(status ?? undefined);
   const isPublic = moderationStatus === 'approved';
   return (
     <Card elevation={0} sx={{
-      height: '100%', border: '1px solid', borderColor: isPublic ? 'divider' : 'warning.light', borderRadius: 2, overflow: 'hidden',
+      height: '100%', display: 'flex', flexDirection: 'column',
+      border: '1px solid', borderColor: isPublic ? 'divider' : 'warning.light', borderRadius: 2, overflow: 'hidden',
       opacity: isPublic ? 1 : 0.92,
       transition: 'box-shadow 0.2s, border-color 0.2s',
       '&:hover': { borderColor: isPublic ? 'primary.light' : 'warning.main', boxShadow: (t) => `0 8px 24px ${t.palette.mode === 'dark' ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.08)'}` },
     }}>
-      <CardContent sx={{ p: { xs: 2, sm: 2.5 }, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-        <Stack direction="row" sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
-          <Typography variant="h6" component="h2" sx={{ fontWeight: 700, lineHeight: 1.35, flex: 1 }}>{title}</Typography>
-          <ListingModerationStatusChip status={moderationStatus} />
-        </Stack>
-        {chips ? <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.75 }}>{chips}</Stack> : null}
+      <CardImageHeader imageUrl={imageUrl} fallbackIcon={fallbackIcon} alt={title} status={moderationStatus} />
+      <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 }, display: 'flex', flexDirection: 'column', gap: 0.85, flex: 1 }}>
+        <Typography
+          component="h2"
+          sx={{
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            lineHeight: 1.3,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {title}
+        </Typography>
+        {chips ? <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>{chips}</Stack> : null}
         {!isPublic ? <ListingModerationNotice status={moderationStatus} /> : null}
-        <Divider sx={{ my: 0.25 }} />
-        <Stack spacing={0.1}>{children}</Stack>
-        <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5 }}>
+        <Divider sx={{ my: 0.15 }} />
+        <Stack spacing={0}>{children}</Stack>
+        <Box sx={{ flex: 1 }} />
+        <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.68rem' }}>
           {format(new Date(createdAt), 'd MMM yyyy')}
         </Typography>
         {metrics ? <ListingOwnerMetrics metrics={metrics} /> : null}
@@ -116,32 +161,34 @@ function BaseCard({ title, chips, children, createdAt, metrics, status }: {
   );
 }
 
+/** First usable image from a listing's gallery, or null for a fallback panel. */
+function coverImage(imageUrls?: string[] | null): string | null {
+  if (!Array.isArray(imageUrls)) return null;
+  return imageUrls.find((url) => typeof url === 'string' && url.trim().length > 0) ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Real-estate card
 // ---------------------------------------------------------------------------
 
 function RealEstateCard({ l }: { l: RealEstateMineListing }) {
   const location = [l.cityName, l.zoneName].filter(Boolean).join(' · ') || '—';
-  const condition = CONDITION_OPTIONS.find((o) => o.value === l.condition)?.label ?? null;
-  const furnishing = FURNISHING_OPTIONS.find((o) => o.value === l.furnishing)?.label ?? null;
   return (
     <BaseCard
       title={l.title}
       createdAt={l.createdAt}
       metrics={l}
       status={l.status}
+      imageUrl={coverImage(l.imageUrls)}
+      fallbackIcon={BuildingsIcon}
       chips={<>
-        <Chip size="small" label={l.transactionType === 'rent' ? 'Rent' : 'Sale'} color={l.transactionType === 'rent' ? 'info' : 'secondary'} variant="outlined" sx={{ fontWeight: 600 }} />
-        <Chip size="small" label={propertyCategoryLabel(l.propertyCategory)} variant="outlined" sx={{ fontWeight: 600 }} />
+        <Chip size="small" label={l.transactionType === 'rent' ? 'Me qira' : 'Në shitje'} color={l.transactionType === 'rent' ? 'info' : 'secondary'} variant="outlined" sx={chipSx} />
+        <Chip size="small" label={propertyCategoryLabel(l.propertyCategory)} variant="outlined" sx={chipSx} />
       </>}
     >
       <Row icon={TagIcon}><strong>{formatPrice(l.price, l.currency)}</strong></Row>
-      <Row icon={RulerIcon}><strong>{l.surfaceM2}</strong> m²</Row>
+      <Row icon={RulerIcon}><strong>{l.surfaceM2}</strong> m²{l.bedrooms != null ? ` · ${l.bedrooms} dhoma · ${l.bathrooms ?? 0} banjo` : ''}</Row>
       <Row icon={MapPinIcon}>{location}</Row>
-      {l.bedrooms != null ? <Row icon={BuildingsIcon}>{l.bedrooms} dhoma gjumi · {l.bathrooms ?? 0} banjo</Row> : null}
-      {condition ? <Row icon={TagIcon}>Gjendja: {condition}</Row> : null}
-      {furnishing ? <Row icon={TagIcon}>Mobilim: {furnishing}</Row> : null}
-      {l.contactPhone ? <Row icon={PhoneIcon}>{l.contactPhone}</Row> : null}
     </BaseCard>
   );
 }
@@ -152,24 +199,22 @@ function RealEstateCard({ l }: { l: RealEstateMineListing }) {
 
 function CarCard({ l }: { l: CarMineListing }) {
   const title = [l.make, l.model, l.variant].filter(Boolean).join(' ');
-  const finish = l.finish.length > 0 ? ` · ${l.finish.join(', ')}` : '';
   return (
     <BaseCard
       title={title}
       createdAt={l.createdAt}
       metrics={l}
       status={l.status}
+      imageUrl={coverImage(l.imageUrls)}
+      fallbackIcon={CarIcon}
       chips={<>
-        <Chip size="small" label={l.year} variant="outlined" sx={{ fontWeight: 600 }} />
-        <Chip size="small" label={l.transmission} variant="outlined" sx={{ fontWeight: 600 }} />
+        <Chip size="small" label={l.year} variant="outlined" sx={chipSx} />
+        <Chip size="small" label={l.transmission} variant="outlined" sx={chipSx} />
       </>}
     >
       <Row icon={TagIcon}><strong>{formatPrice(l.price, l.currency)}</strong></Row>
-      <Row icon={SpeedometerIcon}><strong>{new Intl.NumberFormat('en-GB').format(l.kilometers)}</strong> km</Row>
-      <Row icon={GasPumpIcon}>{l.fuelType}</Row>
-      <Row icon={CarIcon}>{l.color}{finish}</Row>
+      <Row icon={SpeedometerIcon}><strong>{new Intl.NumberFormat('en-GB').format(l.kilometers)}</strong> km · {l.fuelType}</Row>
       {l.cityName ? <Row icon={MapPinIcon}>{l.cityName}</Row> : null}
-      {l.contactPhone ? <Row icon={PhoneIcon}>{l.contactPhone}</Row> : null}
     </BaseCard>
   );
 }
@@ -188,16 +233,16 @@ function JobCard({ l }: { l: JobMineListing }) {
       createdAt={l.createdAt}
       metrics={l}
       status={l.status}
+      imageUrl={coverImage(l.imageUrls)}
+      fallbackIcon={BriefcaseIcon}
       chips={<>
-        <Chip size="small" label={jobTypeLabel} variant="outlined" sx={{ fontWeight: 600 }} />
-        <Chip size="small" label={workLocLabel} variant="outlined" color="info" sx={{ fontWeight: 600 }} />
+        <Chip size="small" label={jobTypeLabel} variant="outlined" sx={chipSx} />
+        <Chip size="small" label={workLocLabel} variant="outlined" color="info" sx={chipSx} />
       </>}
     >
       <Row icon={BriefcaseIcon}>{industryLabel}</Row>
       {l.salary != null ? <Row icon={TagIcon}><strong>{formatPrice(l.salary, l.currency)}</strong> / muaj</Row> : null}
       {l.cityName ? <Row icon={MapPinIcon}>{l.cityName}</Row> : null}
-      <Row icon={CalendarBlankIcon}>{l.experience} · {l.education}</Row>
-      {l.contactPhone ? <Row icon={PhoneIcon}>{l.contactPhone}</Row> : null}
     </BaseCard>
   );
 }
@@ -215,14 +260,15 @@ function MarketplaceCard({ l }: { l: MarketplaceMineListing }) {
       createdAt={l.createdAt}
       metrics={l}
       status={l.status}
+      imageUrl={coverImage(l.imageUrls)}
+      fallbackIcon={StorefrontIcon}
       chips={<>
-        <Chip size="small" label={categoryLabel} variant="outlined" sx={{ fontWeight: 600 }} />
-        {l.condition ? <Chip size="small" label={conditionLabel} variant="outlined" color="success" sx={{ fontWeight: 600 }} /> : null}
+        <Chip size="small" label={categoryLabel} variant="outlined" sx={chipSx} />
+        {l.condition ? <Chip size="small" label={conditionLabel} variant="outlined" color="success" sx={chipSx} /> : null}
       </>}
     >
       {l.price != null ? <Row icon={TagIcon}><strong>{formatPrice(l.price, l.currency)}</strong></Row> : <Row icon={TagIcon}>Çmimi me marrëveshje</Row>}
       {l.cityName ? <Row icon={MapPinIcon}>{l.cityName}</Row> : null}
-      {l.contactPhone ? <Row icon={PhoneIcon}>{l.contactPhone}</Row> : null}
     </BaseCard>
   );
 }
@@ -239,10 +285,10 @@ function TabGrid<T>({ loading, error, items, renderCard }: {
 }) {
   if (loading) {
     return (
-      <Grid container spacing={2}>
-        {[0, 1, 2].map((k) => (
-          <Grid size={{ xs: 12, md: 6, lg: 4 }} key={k}>
-            <Skeleton variant="rounded" height={260} sx={{ borderRadius: 2 }} />
+      <Grid container spacing={1.5}>
+        {[0, 1, 2, 3].map((k) => (
+          <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={k}>
+            <Skeleton variant="rounded" height={300} sx={{ borderRadius: 2 }} />
           </Grid>
         ))}
       </Grid>
@@ -263,9 +309,9 @@ function TabGrid<T>({ loading, error, items, renderCard }: {
     );
   }
   return (
-    <Grid container spacing={2}>
+    <Grid container spacing={1.5}>
       {items.map((item, idx) => (
-        <Grid size={{ xs: 12, md: 6, lg: 4 }} key={idx}>
+        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={idx}>
           {renderCard(item)}
         </Grid>
       ))}

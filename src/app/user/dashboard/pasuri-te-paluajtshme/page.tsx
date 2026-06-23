@@ -246,7 +246,7 @@ export default function UserPostListingPage() {
               <RealEstateListingForm
                 onSuccess={() => router.push(`${paths.user.myRealEstateListings}?submitted=pending`)}
                 backHref={paths.user.myRealEstateListings}
-                backLabel="Listimet e mia"
+                backLabel="Njoftimet e mia"
               />
             </CardContent>
           </Card>
@@ -276,7 +276,7 @@ export default function UserPostListingPage() {
               <CarListingForm
                 onSuccess={() => router.push(`${paths.user.myRealEstateListings}?submitted=pending`)}
                 backHref={paths.user.myRealEstateListings}
-                backLabel="Listimet e mia"
+                backLabel="Njoftimet e mia"
               />
             </CardContent>
           </Card>
@@ -308,7 +308,7 @@ export default function UserPostListingPage() {
               <JobListingForm
                 onSuccess={() => router.push(`${paths.user.myRealEstateListings}?submitted=pending`)}
                 backHref={paths.user.myRealEstateListings}
-                backLabel="Listimet e mia"
+                backLabel="Njoftimet e mia"
               />
             </CardContent>
           </Card>
@@ -398,7 +398,7 @@ export default function UserPostListingPage() {
               <MarketplaceListingForm
                 onSuccess={() => router.push(`${paths.user.myRealEstateListings}?submitted=pending`)}
                 backHref={paths.user.myRealEstateListings}
-                backLabel="Listimet e mia"
+                backLabel="Njoftimet e mia"
               />
             </CardContent>
           </Card>

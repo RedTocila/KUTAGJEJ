@@ -39,6 +39,7 @@ function formatMineListing(doc, cityById) {
     responsibilities: doc.responsibilities ?? [],
     requirements: doc.requirements ?? [],
     benefits: doc.benefits ?? [],
+    imageUrls: doc.imageUrls ?? [],
     status: doc.status || 'pending',
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,

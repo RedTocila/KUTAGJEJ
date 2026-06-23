@@ -8,6 +8,8 @@ const {
   ensureUserReferralCode,
   buildReferralLink,
   countFreeReferrals,
+  countPaidReferrals,
+  countReceivedReviews,
   loadPortalUserBrief,
 } = require('../lib/referrals');
 
@@ -19,7 +21,12 @@ router.get('/me', auth, requirePortalUser, async (req, res) => {
     const user = req.user;
     await ensureUserReferralCode(user);
     const code = user.referralCode;
-    const referralCount = await countFreeReferrals(user._id, user.constructor.modelName);
+    const posterModel = user.constructor.modelName;
+    const [referralCount, paidReferralCount, reviewCount] = await Promise.all([
+      countFreeReferrals(user._id, posterModel),
+      countPaidReferrals(user._id, posterModel),
+      countReceivedReviews(user._id, posterModel),
+    ]);
 
     const referredBy =
       user.referredById && user.referredByModel
@@ -62,6 +69,8 @@ router.get('/me', auth, requirePortalUser, async (req, res) => {
         code,
         link: buildReferralLink(code),
         referralCount,
+        paidReferralCount,
+        reviewCount,
         boostCredits: user.boostCredits ?? 0,
         tiersClaimed: user.referralTiersClaimed || [],
         nextTier: nextTier

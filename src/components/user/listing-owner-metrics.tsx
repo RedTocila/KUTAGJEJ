@@ -11,10 +11,10 @@ import type { ListingMetrics } from '@/lib/listing-metrics';
 
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
-    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+    <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', color: 'text.secondary' }} title={label}>
       {icon}
-      <Typography variant="caption" sx={{ fontWeight: 600 }}>
-        {new Intl.NumberFormat('en-GB').format(value)} {label}
+      <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem' }}>
+        {new Intl.NumberFormat('en-GB').format(value)}
       </Typography>
     </Stack>
   );
@@ -29,12 +29,12 @@ export function ListingOwnerMetrics({ metrics }: { metrics: Partial<ListingMetri
   return (
     <Stack
       direction="row"
-      sx={{ flexWrap: 'wrap', gap: { xs: 1, sm: 1.5 }, pt: 0.5, borderTop: 1, borderColor: 'divider' }}
+      sx={{ flexWrap: 'wrap', gap: 1.25, pt: 0.6, mt: 0.2, borderTop: 1, borderColor: 'divider' }}
     >
-      <Stat icon={<EyeIcon size={14} />} label="shikime" value={viewCount} />
-      <Stat icon={<ClickIcon size={14} />} label="klikime" value={clickCount} />
-      <Stat icon={<ShareIcon size={14} />} label="ndarje" value={shareCount} />
-      <Stat icon={<BookmarkIcon size={14} />} label="ruajtje" value={saveCount} />
+      <Stat icon={<EyeIcon size={13} />} label="shikime" value={viewCount} />
+      <Stat icon={<ClickIcon size={13} />} label="klikime" value={clickCount} />
+      <Stat icon={<ShareIcon size={13} />} label="ndarje" value={shareCount} />
+      <Stat icon={<BookmarkIcon size={13} />} label="ruajtje" value={saveCount} />
     </Stack>
   );
 }

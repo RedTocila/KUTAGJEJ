@@ -25,6 +25,7 @@
     "@mui/material": "9.0.1",
     "@mui/system": "9.0.1",
     "@mui/utils": "9.0.1",
+    "@nebula-ltd/pok-payments-js": "^2.0.1",
     "@phosphor-icons/react": "2.1.10",
     "date-fns": "^4.1.0",
     "js-cookie": "^3.0.8",

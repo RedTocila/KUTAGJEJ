@@ -32,6 +32,10 @@ export const paths = {
     messages: '/user/dashboard/mesazhet',
     /** Referral program — invite link and stats. */
     referral: '/user/dashboard/referral',
+    /** Buy boost credits with POK Payments. */
+    credits: '/user/dashboard/kredite',
+    /** The user's own payments + active subscriptions. */
+    payments: '/user/dashboard/pagesat',
   },
   dashboard: {
     overview: '/dashboard',
@@ -46,6 +50,10 @@ export const paths = {
     realEstateLocations: '/dashboard/vendndodhjet-pasurie',
     /** Contracts linked to catalog roles (platform admin only). */
     kontratat: '/dashboard/kontratat',
+    /** All payments across the platform (platform admin only). */
+    payments: '/dashboard/pagesat',
+    /** Boost-credit packages catalog (platform admin only). */
+    creditPackages: '/dashboard/paketat-kredite',
     /** Referral rewards program (all users); numbers editable by platform admin. */
     referral: '/dashboard/referral',
     /** Admin view: who referred whom, credits awarded. */

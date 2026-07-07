@@ -46,6 +46,20 @@ export const USER_PORTAL_NAV_ITEMS = [
     matcher: { type: 'equals', href: paths.user.referral } as const,
   },
   {
+    key: 'credits',
+    title: 'Bli kredite',
+    href: paths.user.credits,
+    icon: 'coins',
+    matcher: { type: 'startsWith', href: paths.user.credits } as const,
+  },
+  {
+    key: 'payments',
+    title: 'Pagesat e mia',
+    href: paths.user.payments,
+    icon: 'receipt',
+    matcher: { type: 'startsWith', href: paths.user.payments } as const,
+  },
+  {
     key: 'profile',
     title: 'Profili im',
     href: paths.user.profile,
@@ -62,7 +76,16 @@ export function getUserPortalNavItemsForUser(user: User | null | undefined): Nav
       user.accountType === 'business' ||
       user.role === 'business-user');
   return USER_PORTAL_NAV_ITEMS.filter((item) => {
-    if (item.key === 'real-estate' || item.key === 'my-listings' || item.key === 'saved-listings' || item.key === 'messages' || item.key === 'referral') return canRealEstate;
+    if (
+      item.key === 'real-estate' ||
+      item.key === 'my-listings' ||
+      item.key === 'saved-listings' ||
+      item.key === 'messages' ||
+      item.key === 'referral' ||
+      item.key === 'credits' ||
+      item.key === 'payments'
+    )
+      return canRealEstate;
     return true;
   });
 }

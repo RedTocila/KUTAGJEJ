@@ -22,6 +22,8 @@ import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/S
 import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
+import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
+import { Coins as CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins';
 
 /** React 19 JSX expects components that return `Element | null`, not loose `ReactNode` (Phosphor's `Icon` type). */
 export type NavIconComponent = React.ComponentType<{
@@ -56,4 +58,6 @@ export const navIcons = {
   megaphone: MegaphoneIcon,
   scroll: ScrollIcon,
   handshake: HandshakeIcon,
+  'credit-card': CreditCardIcon,
+  coins: CoinsIcon,
 } as Record<string, NavIconComponent>;

@@ -6,6 +6,7 @@ const { getMongoUri } = require('./lib/get-mongo-uri');
 const { ensureListingCategories } = require('./lib/ensure-listing-categories');
 const { ensureCoreRoles } = require('./lib/core-roles');
 const { ensureReferralProgram } = require('./lib/ensure-referral-program');
+const { ensureCreditPackages } = require('./lib/ensure-credit-packages');
 const { ensureHomeBanners } = require('./lib/ensure-home-banners');
 const { ensureListingIndexes } = require('./lib/ensure-listing-indexes');
 const { ensureListingModeration } = require('./lib/ensure-listing-moderation');
@@ -54,6 +55,9 @@ function registerModels() {
   require('./models/ReferralSignup');
   require('./models/Conversation');
   require('./models/Message');
+  require('./models/Payment');
+  require('./models/UserSubscription');
+  require('./models/CreditPackage');
 }
 
 const connectDB = async () => {
@@ -73,6 +77,7 @@ const connectDB = async () => {
     await ensureListingCategories();
     await ensureCoreRoles();
     await ensureReferralProgram();
+    await ensureCreditPackages();
     await ensureHomeBanners();
     await ensureListingIndexes();
     await ensureListingModeration();
@@ -126,6 +131,9 @@ app.use('/api/admin/users', require('./routes/admin-users'));
 app.use('/api/admin/categories', require('./routes/admin-categories'));
 app.use('/api/admin/contracts', require('./routes/admin-contracts'));
 app.use('/api/contracts', require('./routes/contracts'));
+app.use('/api/admin/payments', require('./routes/admin-payments'));
+app.use('/api/admin/credit-packages', require('./routes/admin-credit-packages'));
+app.use('/api/payments', require('./routes/payments'));
 app.use('/api/admin/referral-program', require('./routes/admin-referral-program'));
 app.use('/api/admin/home-banners', require('./routes/admin-home-banners'));
 app.use('/api/referral-program', require('./routes/referral-program'));

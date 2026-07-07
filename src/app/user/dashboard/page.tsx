@@ -5,6 +5,7 @@ import RouterLink from 'next/link';
 import {
   Alert,
   Box,
+  Button,
   Chip,
   CircularProgress,
   Grid,
@@ -27,10 +28,12 @@ import {
   listMyMarketplaceListings,
   listMyRealEstateListings,
 } from '@/lib/listings-client';
-import { normalizeListingModerationStatus } from '@/lib/listing-moderation-status';
 import { listPublicContracts } from '@/lib/public-contracts-client';
+import { createSubscriptionOrder } from '@/lib/payments-client';
 import { getUserPortalAccountCategoryLabel } from '@/lib/user-portal-account-label';
 import type { PublicContract } from '@/types/contract';
+import type { ContractPriceOption } from '@/lib/contract-pricing';
+import { PokCheckoutDialog } from '@/components/payments/pok-checkout-dialog';
 
 // NOTE: Posting/premium caps come from the user's active subscription once that
 // backend exists. Until then these are placeholder caps; the "used" values are real.
@@ -155,14 +158,20 @@ function QuotaStat({
   );
 }
 
+type PendingPlanCheckout = {
+  contract: PublicContract;
+  option: ContractPriceOption;
+};
+
 export default function UserDashboardPage() {
-  const { user } = useUser();
+  const { user, checkSession } = useUser();
 
   const subscriberKindFilter = user?.accountType === 'business' || user?.role === 'business-user' ? 'company' : 'agent';
   const [plans, setPlans] = React.useState<PublicContract[]>([]);
   const [plansLoading, setPlansLoading] = React.useState(true);
   const [plansError, setPlansError] = React.useState<string | null>(null);
   const [postedListings, setPostedListings] = React.useState<number | null>(null);
+  const [planCheckout, setPlanCheckout] = React.useState<PendingPlanCheckout | null>(null);
 
   const canPublish =
     Boolean(user) &&
@@ -270,7 +279,7 @@ export default function UserDashboardPage() {
           <ActionTile href={paths.user.myRealEstateListings} label="Njoftimet e mia" icon={ListBulletsIcon} gradient={GRADIENTS.green} />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
-          <ActionTile href={paths.user.referral} label="Bli Kredite" icon={CoinsIcon} gradient={GRADIENTS.orange} />
+          <ActionTile href={paths.user.credits} label="Bli Kredite" icon={CoinsIcon} gradient={GRADIENTS.orange} />
         </Grid>
       </Grid>
 
@@ -352,14 +361,15 @@ export default function UserDashboardPage() {
                 ) : null}
                 <Stack direction="row" sx={{ flexWrap: 'wrap', mt: 1.5, gap: 1 }}>
                   {plan.priceOptions.map((opt) => (
-                    <Chip
+                    <Button
                       key={opt.months}
                       size="small"
-                      label={`${opt.labelSq}: ${opt.price} €`}
-                      color="primary"
                       variant="outlined"
-                      sx={{ fontWeight: 600 }}
-                    />
+                      onClick={() => setPlanCheckout({ contract: plan, option: opt })}
+                      sx={{ fontWeight: 700, textTransform: 'none', borderRadius: 999 }}
+                    >
+                      {`${opt.labelSq} · ${opt.price} € — Blej`}
+                    </Button>
                   ))}
                 </Stack>
               </Box>
@@ -367,6 +377,36 @@ export default function UserDashboardPage() {
           </Stack>
         ) : null}
       </Box>
+
+      {planCheckout ? (
+        <PokCheckoutDialog
+          open={Boolean(planCheckout)}
+          onClose={() => setPlanCheckout(null)}
+          title="Abonohu në plan"
+          summary={
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.4 }}>
+                  Abonim
+                </Typography>
+                <Typography sx={{ fontWeight: 700, lineHeight: 1.25 }}>{planCheckout.contract.title}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {planCheckout.option.labelSq} · {planCheckout.option.months} muaj
+                </Typography>
+              </Box>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', whiteSpace: 'nowrap' }}>
+                {planCheckout.option.price} €
+              </Typography>
+            </Stack>
+          }
+          createOrder={() =>
+            createSubscriptionOrder(planCheckout.contract.id, planCheckout.option.months)
+          }
+          onPaid={() => {
+            void checkSession();
+          }}
+        />
+      ) : null}
     </Stack>
   );
 }

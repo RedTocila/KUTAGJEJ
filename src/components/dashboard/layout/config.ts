@@ -52,6 +52,20 @@ export const navItems = [
     platformAdminOnly: true,
   },
   {
+    key: 'payments',
+    title: 'Pagesat',
+    href: paths.dashboard.payments,
+    icon: 'credit-card',
+    platformAdminOnly: true,
+  },
+  {
+    key: 'credit-packages',
+    title: 'Paketat e krediteve',
+    href: paths.dashboard.creditPackages,
+    icon: 'coins',
+    platformAdminOnly: true,
+  },
+  {
     key: 'job-employer-verification',
     title: 'Verifikimet (Punë)',
     href: paths.dashboard.jobEmployerVerification,

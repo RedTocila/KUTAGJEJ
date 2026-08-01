@@ -38,8 +38,6 @@ const config = {
 
   poweredByHeader: false,
 
-  output: 'standalone',
-
   productionBrowserSourceMaps: false,
 };
 

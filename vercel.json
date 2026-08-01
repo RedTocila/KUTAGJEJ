@@ -1,6 +1,30 @@
 {
-  "version": 2,
-  "buildCommand": "npm run build",
-  "framework": "nextjs",
-  "installCommand": "npm install"
+  "services": {
+    "frontend": {
+      "root": ".",
+      "framework": "nextjs",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "backend",
+          "format": "url",
+          "env": "API_URL"
+        }
+      ]
+    },
+    "backend": {
+      "root": "backend",
+      "framework": "express"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": { "service": "backend" }
+    },
+    {
+      "source": "/(.*)",
+      "destination": { "service": "frontend" }
+    }
+  ]
 }

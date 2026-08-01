@@ -24,13 +24,14 @@ app.use(corsMiddleware);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-const bootstrap = async () => {
+let bootPromise = null;
+
+async function bootstrap() {
   if (!isSupabaseConfigured()) {
     throw new Error(
       'Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (see backend/.env.example).',
     );
   }
-  // Touch client once so misconfig fails fast.
   getSupabaseAdmin();
   console.log('Connected to Supabase');
   await ensureListingCategories();
@@ -40,10 +41,38 @@ const bootstrap = async () => {
   await ensureContractPackages();
   await ensureHomeBanners();
   await backfillMissingReferralCodes();
-};
+}
 
-app.get('/', (_req, res) => {
-  res.json({ ok: true, name: 'KuTaGjej API', version: '2', db: 'supabase' });
+function ensureBooted() {
+  if (!bootPromise) {
+    bootPromise = bootstrap().catch((err) => {
+      bootPromise = null;
+      throw err;
+    });
+  }
+  return bootPromise;
+}
+
+/** On Vercel, boot before handling traffic so a missing env surfaces as 503 JSON. */
+app.use(async (req, res, next) => {
+  if (req.path === '/' || req.path === '/api/health' || req.path.endsWith('/health')) return next();
+  try {
+    await ensureBooted();
+    next();
+  } catch (err) {
+    console.error('bootstrap:', err?.message || err);
+    res.status(503).json({ ok: false, message: err?.message || 'API not ready' });
+  }
+});
+
+app.get('/', async (_req, res) => {
+  res.json({
+    ok: true,
+    name: 'KuTaGjej API',
+    version: '2',
+    db: 'supabase',
+    supabase: isSupabaseConfigured() ? 'configured' : 'missing_env',
+  });
 });
 
 app.get('/api/health', async (_req, res) => {
@@ -54,16 +83,19 @@ app.get('/api/health', async (_req, res) => {
   };
   if (configured) {
     try {
+      await ensureBooted();
       const { count, error } = await getSupabaseAdmin()
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .eq('account_type', 'admin');
       if (!error) body.adminCount = count ?? 0;
-    } catch {
-      /* ignore */
+      else body.dbError = error.message;
+    } catch (err) {
+      body.ok = false;
+      body.bootError = err?.message || String(err);
     }
   }
-  res.status(configured ? 200 : 503).json(body);
+  res.status(body.ok ? 200 : 503).json(body);
 });
 
 app.use('/api/admin/stats', require('./routes/admin-stats'));
@@ -107,7 +139,7 @@ app.use('/api/public/home-banners', require('./routes/public-home-banners'));
 
 const startServer = async () => {
   try {
-    await bootstrap();
+    await ensureBooted();
     const PORT = Number(process.env.PORT) || 5001;
     app.listen(PORT, () => {
       console.log(`KuTaGjej API listening on http://localhost:${PORT}`);
@@ -118,4 +150,13 @@ const startServer = async () => {
   }
 };
 
-startServer();
+module.exports = app;
+
+// Local / non-Vercel: listen. On Vercel the platform mounts the exported app.
+if (!process.env.VERCEL) {
+  startServer();
+} else {
+  ensureBooted().catch((err) => {
+    console.error('Vercel bootstrap warning:', err?.message || err);
+  });
+}

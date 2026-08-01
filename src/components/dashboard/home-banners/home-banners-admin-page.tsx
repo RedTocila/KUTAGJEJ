@@ -146,7 +146,7 @@ function BannerDialog({
             onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
             fullWidth
             required
-            inputProps={{ maxLength: 140 }}
+            slotProps={{ htmlInput: { maxLength: 140 } }}
           />
           <TextField
             label="Nëntitulli"
@@ -155,7 +155,7 @@ function BannerDialog({
             fullWidth
             multiline
             minRows={2}
-            inputProps={{ maxLength: 280 }}
+            slotProps={{ htmlInput: { maxLength: 280 } }}
           />
           <TextField
             label="Linku (e gjithë karta)"

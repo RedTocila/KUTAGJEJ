@@ -3,6 +3,7 @@ const CarListing = require('../../models/CarListing');
 const JobListing = require('../../models/JobListing');
 const MarketplaceListing = require('../../models/MarketplaceListing');
 const DirectoryListing = require('../../models/DirectoryListing');
+const ListingEngagement = require('../../models/ListingEngagement');
 const { attachMetricsToListings, attachMetricsToListing, fetchMetricsMap, saverFromUser } = require('../listing-metrics');
 const { reviewStatsByListingIds } = require('../business-review-stats');
 const { professionalReviewStatsByListingIds } = require('../professional-review-stats');
@@ -15,6 +16,98 @@ const {
   formatMarketplace,
   formatDirectory,
 } = require('./formatters');
+
+const MODEL_BY_KIND = {
+  'real-estate': RealEstateListing,
+  car: CarListing,
+  job: JobListing,
+  marketplace: MarketplaceListing,
+  businesses: DirectoryListing,
+  professionals: DirectoryListing,
+};
+
+function baseFilterForKind(kind) {
+  if (kind === 'job') return activeJobCreatedAtFilter();
+  if (kind === 'businesses' || kind === 'professionals') return { vertical: kind };
+  return {};
+}
+
+async function formatDocsForKind(kind, docs) {
+  const cityById = await buildCityIndex(docs);
+  if (kind === 'real-estate') {
+    return attachMetricsToListings(docs.map((d) => formatRealEstate(d, cityById)));
+  }
+  if (kind === 'car') {
+    return attachMetricsToListings(docs.map((d) => formatCar(d, cityById)));
+  }
+  if (kind === 'job') {
+    return attachMetricsToListings(docs.map((d) => formatJob(d, cityById)));
+  }
+  if (kind === 'marketplace') {
+    return attachMetricsToListings(docs.map((d) => formatMarketplace(d, cityById)));
+  }
+  let reviewStats = null;
+  if (kind === 'businesses') {
+    reviewStats = await reviewStatsByListingIds(docs.map((d) => d._id));
+  } else if (kind === 'professionals') {
+    reviewStats = await professionalReviewStatsByListingIds(docs.map((d) => d._id));
+  }
+  return attachMetricsToListings(docs.map((d) => formatDirectory(d, cityById, reviewStats)));
+}
+
+/**
+ * Top listings for a vertical by view count (ListingEngagement).
+ * Falls back to newest approved listings when engagement data is sparse.
+ */
+async function topViewedByKind(kind, limit) {
+  const Model = MODEL_BY_KIND[kind];
+  if (!Model || limit <= 0) return [];
+
+  const baseFilter = baseFilterForKind(kind);
+  const engagements = await ListingEngagement.find({
+    listingKind: kind,
+    viewCount: { $gt: 0 },
+  })
+    .sort({ viewCount: -1 })
+    .limit(Math.max(limit * 3, limit))
+    .select('listingId viewCount')
+    .lean();
+
+  const orderedDocs = [];
+  const seen = new Set();
+
+  if (engagements.length > 0) {
+    const ids = engagements.map((e) => e.listingId);
+    const docs = await Model.find(mergePublicFilter({ ...baseFilter, _id: { $in: ids } })).lean();
+    const byId = new Map(docs.map((d) => [String(d._id), d]));
+    for (const e of engagements) {
+      const doc = byId.get(String(e.listingId));
+      if (!doc) continue;
+      const id = String(doc._id);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      orderedDocs.push(doc);
+      if (orderedDocs.length >= limit) break;
+    }
+  }
+
+  if (orderedDocs.length < limit) {
+    const fillers = await Model.find(mergePublicFilter(baseFilter))
+      .sort({ createdAt: -1 })
+      .limit(limit * 2)
+      .lean();
+    for (const doc of fillers) {
+      const id = String(doc._id);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      orderedDocs.push(doc);
+      if (orderedDocs.length >= limit) break;
+    }
+  }
+
+  if (orderedDocs.length === 0) return [];
+  return formatDocsForKind(kind, orderedDocs);
+}
 
 async function queryRealEstate(limit, filter = {}, sort = { createdAt: -1 }, skip = 0) {
   const merged = mergePublicFilter(filter);
@@ -124,5 +217,6 @@ module.exports = {
   countActiveJobs,
   latestMarketplace,
   latestDirectory,
+  topViewedByKind,
   attachDetailMetrics,
 };

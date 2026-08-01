@@ -51,7 +51,38 @@ async function loadListingForConversation(kind, listingId) {
     imageUrl,
     posterId: doc.posterId,
     posterModel: doc.posterModel,
+    contactPhone: doc.contactPhone?.trim?.() || doc.contactPhone || null,
   };
+}
+
+/**
+ * Newest public listing for a poster — used to start a profile contact chat.
+ * @returns {Promise<{ kind: string, listingId: string } | null>}
+ */
+async function findContactListingForPoster(posterId, posterModel) {
+  if (!posterId || !mongoose.isValidObjectId(posterId)) return null;
+  if (posterModel !== 'IndividualUser' && posterModel !== 'BusinessUser') return null;
+
+  const kinds = ['real-estate', 'cars', 'jobs', 'marketplace', 'businesses', 'professionals'];
+  let best = null;
+
+  for (const kind of kinds) {
+    const cfg = getKindConfig(kind);
+    if (!cfg) continue;
+    const filter = mergePublicFilter({
+      posterId,
+      posterModel,
+      ...(cfg.extraFilter || {}),
+    });
+    const doc = await cfg.model.findOne(filter).sort({ createdAt: -1 }).select('_id createdAt').lean();
+    if (!doc) continue;
+    const createdAt = doc.createdAt ? new Date(doc.createdAt).getTime() : 0;
+    if (!best || createdAt > best.createdAt) {
+      best = { kind, listingId: String(doc._id), createdAt };
+    }
+  }
+
+  return best ? { kind: best.kind, listingId: best.listingId } : null;
 }
 
 async function loadPortalUserDisplayName(userId, userModel) {
@@ -76,6 +107,15 @@ async function loadPortalUserDisplayName(userId, userModel) {
   return null;
 }
 
+async function loadPortalUserPhone(userId, userModel) {
+  if (!userId || !mongoose.isValidObjectId(userId)) return null;
+  if (userModel !== 'IndividualUser' && userModel !== 'BusinessUser') return null;
+  const Model = userModel === 'BusinessUser' ? BusinessUser : IndividualUser;
+  const u = await Model.findById(userId).select('phone').lean();
+  const phone = u?.phone?.trim?.() || '';
+  return phone || null;
+}
+
 module.exports = {
   VALID_KINDS,
   portalUserRef,
@@ -83,5 +123,7 @@ module.exports = {
   userParticipatesInConversation,
   userRoleInConversation,
   loadListingForConversation,
+  findContactListingForPoster,
   loadPortalUserDisplayName,
+  loadPortalUserPhone,
 };

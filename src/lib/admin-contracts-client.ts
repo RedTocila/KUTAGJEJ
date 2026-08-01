@@ -1,9 +1,32 @@
 'use client';
 
-import type { Contract } from '@/types/contract';
+import type { Contract, ContractPlanCode, ContractSubscriberKind } from '@/types/contract';
 import { authHeaders } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
 
+export type ContractInput = {
+  title: string;
+  content?: string;
+  roleIds: string[];
+  listingCategoryKey: string | null;
+  subscriberKind: ContractSubscriberKind;
+  refreshEveryHours: number;
+  glowBadgeEnabled: boolean;
+  boostCredits: number;
+  dailyBoostAccess: boolean;
+  maxListAllCategories: number;
+  maxJobListings: number;
+  maxCarListings: number;
+  maxApartmentListings: number;
+  maxProductListings: number;
+  maxPremiumListings: number;
+  price1Month: number | null;
+  price3Months: number | null;
+  price6Months: number | null;
+  price12Months: number | null;
+  planCode?: ContractPlanCode | null;
+  sortOrder?: number;
+};
 
 export async function listContracts(): Promise<{ contracts?: Contract[]; error?: string }> {
   try {
@@ -16,21 +39,7 @@ export async function listContracts(): Promise<{ contracts?: Contract[]; error?:
   }
 }
 
-export async function createContract(body: {
-  title: string;
-  content?: string;
-  roleIds: string[];
-  listingCategoryKey: string;
-  subscriberKind: 'agent' | 'company';
-  refreshEveryHours: number;
-  glowBadgeEnabled: boolean;
-  boostCredits: number;
-  dailyBoostAccess: boolean;
-  price1Month: number | null;
-  price3Months: number | null;
-  price6Months: number | null;
-  price12Months: number | null;
-}): Promise<{ contract?: Contract; error?: string }> {
+export async function createContract(body: ContractInput): Promise<{ contract?: Contract; error?: string }> {
   try {
     const res = await fetch(getApiUrl('/admin/contracts'), {
       method: 'POST',
@@ -47,21 +56,7 @@ export async function createContract(body: {
 
 export async function updateContract(
   id: string,
-  body: Partial<{
-    title: string;
-    content: string;
-    roleIds: string[];
-    listingCategoryKey: string;
-    subscriberKind: 'agent' | 'company';
-    refreshEveryHours: number;
-    glowBadgeEnabled: boolean;
-    boostCredits: number;
-    dailyBoostAccess: boolean;
-    price1Month: number | null;
-    price3Months: number | null;
-    price6Months: number | null;
-    price12Months: number | null;
-  }>,
+  body: Partial<ContractInput>,
 ): Promise<{ contract?: Contract; error?: string }> {
   try {
     const res = await fetch(getApiUrl(`/admin/contracts/${encodeURIComponent(id)}`), {

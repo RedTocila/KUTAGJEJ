@@ -40,7 +40,7 @@ export function SubcategoryPills({ verticalId }: { verticalId: HomeVerticalId })
       aria-label="Nënkategoritë"
       sx={{
         mt: { xs: 1.5, md: 2 },
-        mb: 0,
+        mb: 1.5,
         // Allow horizontal scroll on small screens; trim the scrollbar so it stays clean.
         overflowX: 'auto',
         WebkitOverflowScrolling: 'touch',

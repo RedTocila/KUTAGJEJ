@@ -22,6 +22,17 @@ function buildPriceOptions(doc) {
   return out;
 }
 
+function formatQuotas(doc) {
+  return {
+    maxListAllCategories: Number(doc.maxListAllCategories) || 0,
+    maxJobListings: Number(doc.maxJobListings) || 0,
+    maxCarListings: Number(doc.maxCarListings) || 0,
+    maxApartmentListings: Number(doc.maxApartmentListings) || 0,
+    maxProductListings: Number(doc.maxProductListings) || 0,
+    maxPremiumListings: Number(doc.maxPremiumListings) || 0,
+  };
+}
+
 async function categoryTitleMapForKeys(keys) {
   const uniq = [...new Set((keys || []).filter(Boolean))];
   if (uniq.length === 0) return {};
@@ -36,6 +47,8 @@ function formatPublicContract(doc, categoryTitleByKey) {
     id: String(doc._id),
     title: doc.title,
     content: doc.content || '',
+    planCode: doc.planCode || null,
+    sortOrder: doc.sortOrder ?? 0,
     listingCategoryKey: catKey,
     listingCategoryTitle: catKey ? categoryTitleByKey[catKey] || catKey : null,
     subscriberKind: doc.subscriberKind || null,
@@ -43,6 +56,7 @@ function formatPublicContract(doc, categoryTitleByKey) {
     glowBadgeEnabled: Boolean(doc.glowBadgeEnabled),
     boostCredits: doc.boostCredits ?? null,
     dailyBoostAccess: Boolean(doc.dailyBoostAccess),
+    ...formatQuotas(doc),
     price1Month: doc.price1Month ?? null,
     price3Months: doc.price3Months ?? null,
     price6Months: doc.price6Months ?? null,
@@ -51,21 +65,22 @@ function formatPublicContract(doc, categoryTitleByKey) {
   };
 }
 
-/** Public catalog: only contracts that have at least one price. */
+/** Public catalog: only contracts that have at least one price (incl. €0 free tier). */
 router.get('/', async (req, res) => {
   try {
     const { categoryKey, subscriberKind } = req.query;
     const query = {};
 
     if (categoryKey && typeof categoryKey === 'string' && CATEGORY_KEYS.includes(categoryKey.trim())) {
-      query.listingCategoryKey = categoryKey.trim();
+      // Platform-wide packages (null category) + matching vertical packages.
+      query.$or = [{ listingCategoryKey: categoryKey.trim() }, { listingCategoryKey: null }];
     }
 
     if (subscriberKind === 'agent' || subscriberKind === 'company') {
       query.subscriberKind = subscriberKind;
     }
 
-    const docs = await Contract.find(query).sort({ updatedAt: -1 }).lean();
+    const docs = await Contract.find(query).sort({ sortOrder: 1, updatedAt: -1 }).lean();
     const withPrices = docs.filter((d) => buildPriceOptions(d).length > 0);
     const titleByKey = await categoryTitleMapForKeys(withPrices.map((d) => d.listingCategoryKey));
     res.json({ contracts: withPrices.map((d) => formatPublicContract(d, titleByKey)) });

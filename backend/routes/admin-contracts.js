@@ -4,6 +4,7 @@ const Contract = require('../models/Contract');
 const ListingCategory = require('../models/ListingCategory');
 const Role = require('../models/Role');
 const { CATEGORY_KEYS } = ListingCategory;
+const { PLAN_CODES } = Contract;
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
@@ -13,6 +14,17 @@ function requirePlatformAdmin(req, res, next) {
     return res.status(403).json({ message: 'Vetëm administratorët e platformës mund ta përdorin këtë funksion.' });
   }
   next();
+}
+
+function formatQuotas(doc) {
+  return {
+    maxListAllCategories: Number(doc.maxListAllCategories) || 0,
+    maxJobListings: Number(doc.maxJobListings) || 0,
+    maxCarListings: Number(doc.maxCarListings) || 0,
+    maxApartmentListings: Number(doc.maxApartmentListings) || 0,
+    maxProductListings: Number(doc.maxProductListings) || 0,
+    maxPremiumListings: Number(doc.maxPremiumListings) || 0,
+  };
 }
 
 function formatContract(doc, categoryTitleByKey = {}) {
@@ -30,6 +42,8 @@ function formatContract(doc, categoryTitleByKey = {}) {
     id: String(doc._id),
     title: doc.title,
     content: doc.content || '',
+    planCode: doc.planCode || null,
+    sortOrder: doc.sortOrder ?? 0,
     listingCategoryKey: catKey,
     listingCategoryTitle: catKey ? categoryTitleByKey[catKey] || catKey : null,
     subscriberKind: doc.subscriberKind || null,
@@ -37,6 +51,7 @@ function formatContract(doc, categoryTitleByKey = {}) {
     glowBadgeEnabled: Boolean(doc.glowBadgeEnabled),
     boostCredits: doc.boostCredits ?? null,
     dailyBoostAccess: Boolean(doc.dailyBoostAccess),
+    ...formatQuotas(doc),
     price1Month: doc.price1Month ?? null,
     price3Months: doc.price3Months ?? null,
     price6Months: doc.price6Months ?? null,
@@ -54,15 +69,6 @@ async function categoryTitleMapForKeys(keys) {
   return Object.fromEntries(docs.map((d) => [d.key, d.title]));
 }
 
-function parseNonNegativePrice(value, fieldLabelSq) {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n < 0) {
-    return { ok: false, message: `${fieldLabelSq} duhet të jetë numër ≥ 0.` };
-  }
-  return { ok: true, n };
-}
-
-/** Empty / null / undefined → null; otherwise must be ≥ 0. */
 function parseOptionalPrice(value, fieldLabelSq) {
   if (value === null || value === undefined) return { ok: true, n: null };
   const s = String(value).trim();
@@ -97,11 +103,42 @@ function normalizeRoleIds(ids) {
   return out;
 }
 
+function parseNonNegInt(value, labelSq, { required = false } = {}) {
+  if (value === null || value === undefined || value === '') {
+    if (required) return { ok: false, message: `${labelSq} është i detyrueshëm.` };
+    return { ok: true, n: 0 };
+  }
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
+    return { ok: false, message: `${labelSq} duhet të jetë numër i plotë ≥ 0.` };
+  }
+  return { ok: true, n };
+}
+
+function parseQuotaBody(body) {
+  const fields = [
+    ['maxListAllCategories', 'Lista në të gjitha kategoritë'],
+    ['maxJobListings', 'Kuota e vendeve të punës'],
+    ['maxCarListings', 'Kuota e makinave'],
+    ['maxApartmentListings', 'Kuota e apartamenteve'],
+    ['maxProductListings', 'Kuota e produkteve'],
+    ['maxPremiumListings', 'Kuota e njoftimeve premium'],
+  ];
+  const out = {};
+  for (const [key, label] of fields) {
+    if (body[key] === undefined) continue;
+    const r = parseNonNegInt(body[key], label);
+    if (!r.ok) return { ok: false, message: r.message };
+    out[key] = r.n;
+  }
+  return { ok: true, quotas: out };
+}
+
 router.use(authMiddleware, requirePlatformAdmin);
 
 router.get('/', async (_req, res) => {
   try {
-    const docs = await Contract.find().sort({ updatedAt: -1 }).populate('roleIds', 'name').lean();
+    const docs = await Contract.find().sort({ sortOrder: 1, updatedAt: -1 }).populate('roleIds', 'name').lean();
     const titleByKey = await categoryTitleMapForKeys(docs.map((d) => d.listingCategoryKey));
     res.json({ contracts: docs.map((d) => formatContract(d, titleByKey)) });
   } catch (error) {
@@ -126,6 +163,8 @@ router.post('/', async (req, res) => {
       price3Months,
       price6Months,
       price12Months,
+      planCode,
+      sortOrder,
     } = req.body;
 
     const p1 = parseOptionalPrice(price1Month, 'Çmimi 1 muaj');
@@ -143,9 +182,16 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const catKey = String(listingCategoryKey || '').trim();
-    if (!catKey || !CATEGORY_KEYS.includes(catKey)) {
-      return res.status(400).json({ message: 'Zgjidhni një kategori kontrate.' });
+    let catKey = null;
+    if (listingCategoryKey != null && String(listingCategoryKey).trim() !== '') {
+      catKey = String(listingCategoryKey).trim();
+      if (!CATEGORY_KEYS.includes(catKey)) {
+        return res.status(400).json({ message: 'Zgjidhni një kategori kontrate.' });
+      }
+      const cat = await ListingCategory.findOne({ key: catKey }).select('key').lean();
+      if (!cat) {
+        return res.status(400).json({ message: 'Kategoria nuk ekziston.' });
+      }
     }
 
     const kind = String(subscriberKind || '').trim();
@@ -163,6 +209,9 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Kreditet boost duhet të jenë numër jo negativ.' });
     }
 
+    const quotaParse = parseQuotaBody(req.body);
+    if (!quotaParse.ok) return res.status(400).json({ message: quotaParse.message });
+
     const t = String(title || '').trim();
     if (!t) {
       return res.status(400).json({ message: 'Titulli është i detyrueshëm.' });
@@ -178,20 +227,31 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Një ose më shumë role nuk ekzistojnë.' });
     }
 
-    const cat = await ListingCategory.findOne({ key: catKey }).select('key').lean();
-    if (!cat) {
-      return res.status(400).json({ message: 'Kategoria nuk ekziston.' });
+    let code = null;
+    if (planCode != null && String(planCode).trim() !== '') {
+      code = String(planCode).trim().toLowerCase();
+      if (!PLAN_CODES.includes(code)) {
+        return res.status(400).json({ message: 'Kodi i planit është i pavlefshëm.' });
+      }
+    }
+
+    const sort = sortOrder === undefined || sortOrder === '' ? 0 : Number(sortOrder);
+    if (!Number.isFinite(sort)) {
+      return res.status(400).json({ message: 'Renditja duhet të jetë numër.' });
     }
 
     const contract = new Contract({
       title: t,
       content: content !== undefined ? String(content) : '',
+      planCode: code,
+      sortOrder: sort,
       listingCategoryKey: catKey,
       subscriberKind: kind,
       refreshEveryHours: refreshH,
       glowBadgeEnabled: Boolean(glowBadgeEnabled),
       boostCredits: boost,
       dailyBoostAccess: Boolean(dailyBoostAccess),
+      ...quotaParse.quotas,
       price1Month: p1.n,
       price3Months: p3.n,
       price6Months: p6.n,
@@ -204,6 +264,9 @@ router.post('/', async (req, res) => {
     const titleByKey = await categoryTitleMapForKeys([populated.listingCategoryKey]);
     res.status(201).json({ contract: formatContract(populated, titleByKey) });
   } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(400).json({ message: 'Ky plan (kod + lloj abonenti) ekziston tashmë.' });
+    }
     console.error('POST /admin/contracts:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
@@ -231,6 +294,8 @@ router.patch('/:id', async (req, res) => {
       price3Months,
       price6Months,
       price12Months,
+      planCode,
+      sortOrder,
     } = req.body;
 
     if (title !== undefined) {
@@ -240,14 +305,38 @@ router.patch('/:id', async (req, res) => {
     }
     if (content !== undefined) contract.content = String(content);
 
-    if (listingCategoryKey !== undefined) {
-      const catKey = String(listingCategoryKey || '').trim();
-      if (!catKey || !CATEGORY_KEYS.includes(catKey)) {
-        return res.status(400).json({ message: 'Kategori e pavlefshme.' });
+    if (planCode !== undefined) {
+      if (planCode === null || String(planCode).trim() === '') {
+        contract.planCode = null;
+      } else {
+        const code = String(planCode).trim().toLowerCase();
+        if (!PLAN_CODES.includes(code)) {
+          return res.status(400).json({ message: 'Kodi i planit është i pavlefshëm.' });
+        }
+        contract.planCode = code;
       }
-      const cat = await ListingCategory.findOne({ key: catKey }).select('key').lean();
-      if (!cat) return res.status(400).json({ message: 'Kategoria nuk ekziston.' });
-      contract.listingCategoryKey = catKey;
+    }
+
+    if (sortOrder !== undefined) {
+      const sort = Number(sortOrder);
+      if (!Number.isFinite(sort)) {
+        return res.status(400).json({ message: 'Renditja duhet të jetë numër.' });
+      }
+      contract.sortOrder = sort;
+    }
+
+    if (listingCategoryKey !== undefined) {
+      if (listingCategoryKey === null || String(listingCategoryKey).trim() === '') {
+        contract.listingCategoryKey = null;
+      } else {
+        const catKey = String(listingCategoryKey).trim();
+        if (!CATEGORY_KEYS.includes(catKey)) {
+          return res.status(400).json({ message: 'Kategori e pavlefshme.' });
+        }
+        const cat = await ListingCategory.findOne({ key: catKey }).select('key').lean();
+        if (!cat) return res.status(400).json({ message: 'Kategoria nuk ekziston.' });
+        contract.listingCategoryKey = catKey;
+      }
     }
 
     if (subscriberKind !== undefined) {
@@ -276,6 +365,10 @@ router.patch('/:id', async (req, res) => {
       }
       contract.boostCredits = boost;
     }
+
+    const quotaParse = parseQuotaBody(req.body);
+    if (!quotaParse.ok) return res.status(400).json({ message: quotaParse.message });
+    Object.assign(contract, quotaParse.quotas);
 
     if (price1Month !== undefined) {
       if (price1Month === null || price1Month === '') {
@@ -342,6 +435,9 @@ router.patch('/:id', async (req, res) => {
     const titleByKey = await categoryTitleMapForKeys([populated.listingCategoryKey]);
     res.json({ contract: formatContract(populated, titleByKey) });
   } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(400).json({ message: 'Ky plan (kod + lloj abonenti) ekziston tashmë.' });
+    }
     console.error('PATCH /admin/contracts/:id:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }

@@ -7,13 +7,15 @@ const mongoose = require('mongoose');
  */
 const creditPackageSchema = new mongoose.Schema(
   {
-    /** Boost credits the buyer receives. */
+    /** Base boost credits (BC) included in the package. */
     credits: { type: Number, required: true, min: 1 },
+    /** Bonus BC granted on top of `credits`. */
+    bonusCredits: { type: Number, default: 0, min: 0 },
     /** Price in EUR (major unit). */
     priceEur: { type: Number, required: true, min: 0 },
-    /** Short label shown to buyers (Albanian), e.g. "250 kredite". */
+    /** Short label shown to buyers, e.g. "Starter". */
     labelSq: { type: String, required: true, trim: true },
-    /** Optional highlight badge, e.g. "Popullore". */
+    /** Optional highlight badge, e.g. "+40 BC". */
     badgeSq: { type: String, trim: true, default: '' },
     active: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },

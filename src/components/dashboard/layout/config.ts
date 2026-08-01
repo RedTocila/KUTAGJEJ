@@ -17,6 +17,13 @@ export const navItems = [
     platformAdminOnly: true,
   },
   {
+    key: 'home-banners',
+    title: 'Bannerat',
+    href: paths.dashboard.homeBanners,
+    icon: 'image',
+    platformAdminOnly: true,
+  },
+  {
     key: 'staff-users',
     title: 'Përdoruesit',
     href: paths.dashboard.staffUsers,

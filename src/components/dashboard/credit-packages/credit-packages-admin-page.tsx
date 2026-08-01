@@ -38,7 +38,8 @@ import type { AdminCreditPackage, CreditPackageInput } from '@/types/payment';
 
 const EMPTY_FORM: CreditPackageInput = {
   credits: 100,
-  priceEur: 5,
+  bonusCredits: 0,
+  priceEur: 9,
   labelSq: '',
   badgeSq: '',
   active: true,
@@ -66,6 +67,7 @@ function PackageDialog({
     if (initial) {
       setForm({
         credits: initial.credits,
+        bonusCredits: initial.bonusCredits || 0,
         priceEur: initial.priceEur,
         labelSq: initial.labelSq,
         badgeSq: initial.badgeSq || '',
@@ -106,10 +108,17 @@ function PackageDialog({
             </Alert>
           ) : null}
           <TextField
-            label="Kredite"
+            label="Kredite (bazë BC)"
             type="number"
             value={form.credits}
             onChange={(e) => setForm((f) => ({ ...f, credits: Number(e.target.value) }))}
+            fullWidth
+          />
+          <TextField
+            label="Bonus BC"
+            type="number"
+            value={form.bonusCredits}
+            onChange={(e) => setForm((f) => ({ ...f, bonusCredits: Number(e.target.value) }))}
             fullWidth
           />
           <TextField
@@ -121,14 +130,14 @@ function PackageDialog({
           />
           <TextField
             label="Etiketa"
-            placeholder="p.sh. 250 kredite"
+            placeholder="p.sh. Starter"
             value={form.labelSq}
             onChange={(e) => setForm((f) => ({ ...f, labelSq: e.target.value }))}
             fullWidth
           />
           <TextField
             label="Badge (opsional)"
-            placeholder="p.sh. Popullore"
+            placeholder="p.sh. +40 BC"
             value={form.badgeSq}
             onChange={(e) => setForm((f) => ({ ...f, badgeSq: e.target.value }))}
             fullWidth
@@ -236,7 +245,8 @@ export function CreditPackagesAdminPage() {
             <TableHead>
               <TableRow>
                 <TableCell>Etiketa</TableCell>
-                <TableCell align="right">Kredite</TableCell>
+                <TableCell align="right">BC</TableCell>
+                <TableCell align="right">Bonus</TableCell>
                 <TableCell align="right">Çmimi</TableCell>
                 <TableCell>Badge</TableCell>
                 <TableCell align="center">Statusi</TableCell>
@@ -248,6 +258,11 @@ export function CreditPackagesAdminPage() {
                 <TableRow key={p.id} hover>
                   <TableCell sx={{ fontWeight: 600 }}>{p.labelSq}</TableCell>
                   <TableCell align="right">{new Intl.NumberFormat('en-US').format(p.credits)}</TableCell>
+                  <TableCell align="right">
+                    {(p.bonusCredits || 0) > 0
+                      ? `+${new Intl.NumberFormat('en-US').format(p.bonusCredits)}`
+                      : '0'}
+                  </TableCell>
                   <TableCell align="right">{p.priceEur} €</TableCell>
                   <TableCell>{p.badgeSq || '—'}</TableCell>
                   <TableCell align="center">

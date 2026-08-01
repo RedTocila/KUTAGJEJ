@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import {
   Avatar,
   Box,
@@ -16,7 +17,6 @@ import { Bathtub as BathtubIcon } from '@phosphor-icons/react/dist/ssr/Bathtub';
 import { Bed as BedIcon } from '@phosphor-icons/react/dist/ssr/Bed';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
-import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { Lightning as LightningIcon } from '@phosphor-icons/react/dist/ssr/Lightning';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
@@ -34,17 +34,17 @@ import { formatPrice, relativeAlbanianDate } from '@/components/public/listing-c
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
+import { StickyListingContact } from '@/components/public/sticky-listing-contact';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { whatsappHref } from '@/lib/listing-contact';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { PublicRealEstateListing, PublicRealEstateListingDetail } from '@/lib/public-listings-client';
-import { paths } from '@/paths';
+import { paths, pathsPublicMemberProfile } from '@/paths';
 
 import {
   LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
   LISTING_DETAIL_HERO_IMAGE_SIZES,
 } from '@/lib/listing-detail-layout';
-import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 
 const CONDITION_SQ: Record<string, string> = {
   new: 'E re',
@@ -265,19 +265,14 @@ function RealEstatePriceContactAside(props: {
 
 function RealEstateSellerCardContents({
   listing,
-  displayPhone,
   sellerSectionHeadingId,
 }: {
   listing: PublicRealEstateListingDetail;
-  displayPhone: string;
   /** Unique `id` for the heading (hero + scroll panels both render in the DOM). */
   sellerSectionHeadingId?: string;
 }) {
-  const whatsappListingHref = (() => {
-    const wa = whatsappHref(displayPhone);
-    return wa ? `${wa}?text=${encodeURIComponent(`Përshëndetje, për njoftimin «${listing.title}» në KuTaGjej.`)}` : undefined;
-  })();
   const memberYear = listing.seller?.memberSince ? new Date(listing.seller.memberSince).getFullYear() : undefined;
+  const profileHref = listing.seller?.id ? pathsPublicMemberProfile(listing.seller.id) : null;
 
   return (
     <>
@@ -317,145 +312,33 @@ function RealEstateSellerCardContents({
           </Typography>
         </Stack>
       </Stack>
-      <Stack spacing={1.25} sx={{ mt: { xs: 2, sm: 2.25 } }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
-          <Button
-            component={displayPhone ? 'a' : 'button'}
-            href={displayPhone ? `tel:${displayPhone.replace(/\s/g, '')}` : undefined}
-            disabled={!displayPhone}
-            variant="contained"
-            disableElevation
-            fullWidth
-            startIcon={<PhoneIcon weight="regular" size={20} />}
-            sx={{ borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.15 }}
-          >
-            Telefon
-          </Button>
-          <Button
-            component="a"
-            href={whatsappListingHref ?? '#'}
-            rel="noopener noreferrer"
-            disabled={!whatsappListingHref}
-            target="_blank"
-            variant="contained"
-            disableElevation
-            fullWidth
-            startIcon={<WhatsappLogoIcon weight="regular" size={20} />}
-            sx={{
-              borderRadius: 2,
-              fontWeight: 800,
-              textTransform: 'none',
-              py: 1.15,
-            }}
-          >
-            WhatsApp
-          </Button>
-        </Stack>
-        <ListingMessageButton
-          listingKind="real-estate"
-          listingId={listing.id}
-          variant="outlined"
-          fullWidth
-          sx={{
-            borderRadius: 2,
-            fontWeight: 800,
-            textTransform: 'none',
-            py: 1.15,
-            borderColor: 'divider',
-            borderWidth: 2,
-            color: 'text.primary',
-            '&:hover': { borderColor: 'primary.light', bgcolor: 'action.hover' },
-          }}
-        />
-      </Stack>
+      <Button
+        component={profileHref ? Link : 'button'}
+        href={profileHref ?? undefined}
+        disabled={!profileHref}
+        variant="contained"
+        disableElevation
+        fullWidth
+        sx={{
+          mt: { xs: 2, sm: 2.25 },
+          borderRadius: 999,
+          fontWeight: 800,
+          textTransform: 'none',
+          py: 1.25,
+          color: 'common.black',
+          boxShadow: 'none',
+          '&:hover': { color: 'common.black' },
+          '& .MuiButton-startIcon': { color: 'inherit' },
+        }}
+      >
+        Shiko profilin
+      </Button>
     </>
   );
 }
 
-function StickyContactBar(props: {
-  phone?: string | null;
-  whatsappInquireHref: string | undefined | null;
-  listingId: string;
-}) {
-  const { phone, whatsappInquireHref, listingId } = props;
-  return (
-    <Box
-      sx={{
-        display: { xs: 'flex', md: 'none' },
-        position: 'fixed',
-        left: 0,
-        right: 0,
-        zIndex: 1200,
-        bottom: {
-          xs: MOBILE_BOTTOM_NAV_OFFSET,
-          md: 'calc(24px + env(safe-area-inset-bottom, 0px))',
-        },
-        justifyContent: 'center',
-        px: { xs: 1.5, sm: 3 },
-      }}
-    >
-      <Stack direction="row" spacing={1.25} sx={{ width: '100%', maxWidth: 560 }}>
-        {phone ? (
-          <Button
-            component="a"
-            href={`tel:${phone.replace(/\s/g, '')}`}
-            variant="contained"
-            disableElevation
-            size="large"
-            startIcon={<PhoneIcon weight="regular" size={22} />}
-            sx={{
-              flex: 1,
-              borderRadius: 2,
-              fontWeight: 800,
-              textTransform: 'none',
-              fontSize: '1rem',
-              py: 1.35,
-            }}
-          >
-            Telefon
-          </Button>
-        ) : (
-          <Button variant="contained" disabled sx={{ flex: 1 }}>
-            Nr. kontakti i padisponueshëm
-          </Button>
-        )}
-        <ListingMessageButton
-          listingKind="real-estate"
-          listingId={listingId}
-          aria-label="Dërgo mesazh"
-          variant="outlined"
-          sx={{
-            px: 1.85,
-            minWidth: 'auto',
-            flexShrink: 0,
-            borderRadius: 2,
-            py: 1.35,
-          }}
-        >
-          <ChatsCircleIcon weight="regular" size={26} />
-        </ListingMessageButton>
-        {whatsappInquireHref ? (
-          <Button
-            component="a"
-            href={whatsappInquireHref}
-            rel="noopener noreferrer"
-            target="_blank"
-            variant="outlined"
-            size="large"
-            sx={{
-              px: 1.85,
-              minWidth: 'auto',
-              borderRadius: 2,
-              ...whatsappOutlinedButtonSx,
-            }}
-            aria-label="WhatsApp"
-          >
-            <WhatsappLogoIcon weight="regular" size={26} />
-          </Button>
-        ) : null}
-      </Stack>
-    </Box>
-  );
+function StickyContactBar(props: { listingId: string }) {
+  return <StickyListingContact listingKind="real-estate" listingId={props.listingId} />;
 }
 
 export function RealEstateListingDetailView({
@@ -595,7 +478,6 @@ export function RealEstateListingDetailView({
                     <RealEstateSellerCardContents
                       sellerSectionHeadingId="re-seller-heading-hero"
                       listing={listing}
-                      displayPhone={displayPhone}
                     />
                   </Paper>
                 </Stack>
@@ -755,7 +637,6 @@ export function RealEstateListingDetailView({
                   <RealEstateSellerCardContents
                     sellerSectionHeadingId="re-seller-heading-scroll"
                     listing={listing}
-                    displayPhone={displayPhone}
                   />
                 </Paper>
               </Stack>
@@ -804,7 +685,7 @@ export function RealEstateListingDetailView({
         </Container>
       </Box>
 
-      <StickyContactBar phone={displayPhone} whatsappInquireHref={whatsappInquireHref} listingId={listing.id} />
+      <StickyContactBar listingId={listing.id} />
     </>
   );
 }

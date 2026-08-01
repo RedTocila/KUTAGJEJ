@@ -45,6 +45,10 @@ export interface ConversationSummary {
   otherParticipantId: string;
   otherParticipantModel: 'IndividualUser' | 'BusinessUser';
   otherParticipantName: string | null;
+  /** Account phone of the other participant, when available. */
+  otherParticipantPhone?: string | null;
+  /** Listing contact phone (seller number shown on the ad). */
+  listingContactPhone?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,6 +71,17 @@ export async function startConversation(
     method: 'POST',
     body: JSON.stringify({ listingKind, listingId }),
   });
+  if (!res.ok) return { error: res.error ?? 'Nuk u krijua biseda.' };
+  return { conversation: res.data?.conversation };
+}
+
+export async function startConversationWithMember(
+  memberId: string,
+): Promise<{ conversation?: ConversationSummary; error?: string }> {
+  const res = await clientFetch<{ conversation: ConversationSummary }>(
+    `/conversations/with-member/${encodeURIComponent(memberId)}`,
+    { method: 'POST' },
+  );
   if (!res.ok) return { error: res.error ?? 'Nuk u krijua biseda.' };
   return { conversation: res.data?.conversation };
 }

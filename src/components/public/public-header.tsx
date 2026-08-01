@@ -73,7 +73,7 @@ export function PublicHeader() {
     setMounted(true);
   }, []);
 
-  const dashboardHref =
+  const accountHref =
     user?.accountType === 'admin' ? paths.dashboard.overview : paths.user.dashboard;
   const postHref = paths.user.realEstateListing;
   const mobilePostHref = user ? postHref : paths.user.auth;
@@ -173,10 +173,10 @@ export function PublicHeader() {
               <ThemeModeToggle />
               {user ? (
                 <>
-                  <Tooltip title="Shko në panelin tim">
+                  <Tooltip title="Paneli im">
                     <IconButton
                       component={RouterLink}
-                      href={dashboardHref}
+                      href={accountHref}
                       sx={{ color: 'text.secondary' }}
                     >
                       {React.createElement(UserCircleIcon, { size: 24 })}
@@ -240,8 +240,8 @@ export function PublicHeader() {
                     width: 34,
                     height: 34,
                     bgcolor: 'primary.main',
-                    color: 'grey.900',
-                    '&:hover': { bgcolor: 'primary.dark' },
+                    color: 'common.black',
+                    '&:hover': { bgcolor: 'primary.dark', color: 'common.black' },
                   }}
                 >
                   {React.createElement(PlusIcon, { size: 16, weight: 'bold' })}

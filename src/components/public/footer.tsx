@@ -7,7 +7,7 @@ import NextLink from 'next/link';
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { config } from '@/config';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 interface NavPage {
   title: string;

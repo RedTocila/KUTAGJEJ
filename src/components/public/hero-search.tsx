@@ -127,14 +127,10 @@ export function HeroSearch({ defaultVertical = 'real-estate', onNavigate }: Hero
               py: 1.5,
               fontWeight: 700,
               fontSize: '1rem',
-              textTransform: 'none',
-              background: (theme) =>
-                `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-              boxShadow: `0 12px 32px -10px ${primaryMainAlpha(0.6)}`,
-              '&:hover': {
-                background: (theme) =>
-                  `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
-              },
+              color: 'common.black',
+              boxShadow: 'none',
+              '&:hover': { boxShadow: 'none', color: 'common.black' },
+              '& .MuiButton-startIcon': { color: 'inherit' },
             }}
           >
             Kërko

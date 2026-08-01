@@ -11,8 +11,12 @@ const {
   userParticipatesInConversation,
   userRoleInConversation,
   loadListingForConversation,
+  findContactListingForPoster,
   loadPortalUserDisplayName,
+  loadPortalUserPhone,
 } = require('../lib/listing-conversations');
+const IndividualUser = require('../models/IndividualUser');
+const BusinessUser = require('../models/BusinessUser');
 
 const router = express.Router();
 
@@ -43,14 +47,24 @@ function formatConversation(conv, userRef) {
   };
 }
 
-async function attachOtherParticipantNames(items) {
-  const names = await Promise.all(
-    items.map((item) => loadPortalUserDisplayName(item.otherParticipantId, item.otherParticipantModel)),
+async function attachOtherParticipantDetails(items) {
+  const enriched = await Promise.all(
+    items.map(async (item) => {
+      const [otherParticipantName, otherParticipantPhone, listing] = await Promise.all([
+        loadPortalUserDisplayName(item.otherParticipantId, item.otherParticipantModel),
+        loadPortalUserPhone(item.otherParticipantId, item.otherParticipantModel),
+        loadListingForConversation(item.listingKind, item.listingId),
+      ]);
+      const listingContactPhone = listing?.contactPhone ? String(listing.contactPhone).trim() : null;
+      return {
+        ...item,
+        otherParticipantName,
+        otherParticipantPhone: otherParticipantPhone || null,
+        listingContactPhone: listingContactPhone || null,
+      };
+    }),
   );
-  return items.map((item, i) => ({
-    ...item,
-    otherParticipantName: names[i],
-  }));
+  return enriched;
 }
 
 async function findConversationForUser(id, userRef) {
@@ -105,7 +119,7 @@ router.post('/', auth, requirePortalUser, async (req, res) => {
     }
 
     const formatted = formatConversation(conv.toObject ? conv.toObject() : conv, userRef);
-    const [withName] = await attachOtherParticipantNames([formatted]);
+    const [withName] = await attachOtherParticipantDetails([formatted]);
     res.status(201).json({ conversation: withName });
   } catch (err) {
     if (err?.code === 11000) {
@@ -118,11 +132,101 @@ router.post('/', auth, requirePortalUser, async (req, res) => {
       }).lean();
       if (conv) {
         const formatted = formatConversation(conv, userRef);
-        const [withName] = await attachOtherParticipantNames([formatted]);
+        const [withName] = await attachOtherParticipantDetails([formatted]);
         return res.status(200).json({ conversation: withName });
       }
     }
     console.error('POST /conversations:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+async function resolveMemberPosterModel(memberId) {
+  if (await IndividualUser.exists({ _id: memberId })) return 'IndividualUser';
+  if (await BusinessUser.exists({ _id: memberId })) return 'BusinessUser';
+  return null;
+}
+
+/** POST /api/conversations/with-member/:memberId — open chat with a public profile member. */
+router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) => {
+  try {
+    const memberId = String(req.params.memberId || '').trim();
+    if (!mongoose.isValidObjectId(memberId)) {
+      return res.status(404).json({ message: 'Profili nuk u gjet.' });
+    }
+
+    const userRef = portalUserRef(req.user);
+    const posterModel = await resolveMemberPosterModel(memberId);
+    if (!posterModel) return res.status(404).json({ message: 'Profili nuk u gjet.' });
+
+    if (isSamePortalUser({ id: memberId, model: posterModel }, userRef)) {
+      return res.status(400).json({ message: 'Nuk mund të dërgoni mesazh te profili juaj.' });
+    }
+
+    const existing = await Conversation.findOne({
+      $or: [
+        {
+          posterId: memberId,
+          posterModel,
+          inquirerId: userRef.id,
+          inquirerModel: userRef.model,
+        },
+        {
+          posterId: userRef.id,
+          posterModel: userRef.model,
+          inquirerId: memberId,
+          inquirerModel: posterModel,
+        },
+      ],
+    })
+      .sort({ lastMessageAt: -1 })
+      .lean();
+
+    if (existing) {
+      const formatted = formatConversation(existing, userRef);
+      const [withName] = await attachOtherParticipantDetails([formatted]);
+      return res.status(200).json({ conversation: withName });
+    }
+
+    const contact = await findContactListingForPoster(memberId, posterModel);
+    if (!contact) {
+      return res.status(400).json({
+        message: 'Ky anëtar nuk ka njoftime aktive për të nisur bisedën.',
+      });
+    }
+
+    const listing = await loadListingForConversation(contact.kind, contact.listingId);
+    if (!listing) {
+      return res.status(400).json({
+        message: 'Ky anëtar nuk ka njoftime aktive për të nisur bisedën.',
+      });
+    }
+
+    let conv = await Conversation.findOne({
+      listingKind: contact.kind,
+      listingId: contact.listingId,
+      inquirerId: userRef.id,
+      inquirerModel: userRef.model,
+    });
+
+    if (!conv) {
+      conv = await Conversation.create({
+        listingKind: contact.kind,
+        listingId: contact.listingId,
+        listingTitle: listing.title,
+        listingImageUrl: listing.imageUrl,
+        posterId: listing.posterId,
+        posterModel: listing.posterModel,
+        inquirerId: userRef.id,
+        inquirerModel: userRef.model,
+      });
+    }
+
+    const formatted = formatConversation(conv.toObject ? conv.toObject() : conv, userRef);
+    const [withName] = await attachOtherParticipantDetails([formatted]);
+    return res.status(201).json({ conversation: withName });
+  } catch (err) {
+    console.error('POST /conversations/with-member/:memberId', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -147,7 +251,7 @@ router.get('/', auth, requirePortalUser, async (req, res) => {
       Conversation.countDocuments(filter),
     ]);
 
-    const formatted = await attachOtherParticipantNames(rows.map((c) => formatConversation(c, userRef)));
+    const formatted = await attachOtherParticipantDetails(rows.map((c) => formatConversation(c, userRef)));
     res.json({
       conversations: formatted,
       page,
@@ -179,7 +283,7 @@ router.get('/:id/messages', auth, requirePortalUser, async (req, res) => {
     rows.reverse();
 
     const formatted = formatConversation(conv, userRef);
-    const [withName] = await attachOtherParticipantNames([formatted]);
+    const [withName] = await attachOtherParticipantDetails([formatted]);
 
     res.json({
       messages: rows.map((m) => ({

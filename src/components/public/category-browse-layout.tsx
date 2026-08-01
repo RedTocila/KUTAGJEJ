@@ -3,9 +3,10 @@ import { Container, Grid, Stack, Typography } from '@mui/material';
 
 import { BrowsePagination } from '@/components/public/listing-filters/browse-pagination';
 import { PublicCategoryEmptyState, PublicCategoryHero } from '@/components/public/category-hero';
+import { CategoryTopViewedSlider } from '@/components/public/category-top-viewed-slider';
 import { PublicShell } from '@/components/public/public-shell';
 import type { HomeVerticalId } from '@/lib/home-categories';
-import { hasActiveBrowseFilters } from '@/lib/listing-filters';
+import type { TopViewedListing } from '@/lib/public-listings-client';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 
 interface CategoryBrowseLayoutProps {
@@ -17,6 +18,8 @@ interface CategoryBrowseLayoutProps {
   pageSize: number;
   hasFilters: boolean;
   cities: RealEstateCityDto[];
+  /** Most-viewed listings for the category slider (max 10). */
+  topViewed?: TopViewedListing[];
   children: React.ReactNode;
 }
 
@@ -29,14 +32,16 @@ export function CategoryBrowseLayout({
   pageSize,
   hasFilters,
   cities,
+  topViewed = [],
   children,
 }: CategoryBrowseLayoutProps) {
   const rangeStart = shownCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const rangeEnd = shownCount === 0 ? 0 : (page - 1) * pageSize + shownCount;
 
   return (
-    <PublicShell>
+    <PublicShell hideHeaderBelowMd>
       <PublicCategoryHero verticalId={verticalId} total={total} cities={cities} />
+      <CategoryTopViewedSlider verticalId={verticalId} listings={topViewed} />
       {shownCount === 0 ? (
         <PublicCategoryEmptyState verticalId={verticalId} />
       ) : (

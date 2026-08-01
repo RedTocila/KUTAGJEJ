@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { Box, Button, Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
+import { ArrowUpRight as ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 
 import type { HomeBannerDto } from '@/lib/home-banners-client';
 
@@ -13,27 +14,53 @@ export interface HomeBannerCarouselProps {
 const SLIDE_MS = 480;
 const SWIPE_THRESHOLD = 48;
 
+const MAX_SLIDES = 7;
+
 function resolveSlides(banners: HomeBannerDto[]): HomeBannerDto[] {
-  const fromApi = banners.slice(0, 3);
-  if (fromApi.length >= 2) return fromApi;
-  if (fromApi.length === 1) {
-    const extra = FALLBACK_BANNERS.find((b) => b.title !== fromApi[0].title) ?? FALLBACK_BANNERS[1];
-    return [fromApi[0], { ...extra, id: `pad-${extra.id}` }];
-  }
-  return FALLBACK_BANNERS.slice(0, 2);
+  const fromApi = banners.slice(0, MAX_SLIDES);
+  if (fromApi.length >= MAX_SLIDES) return fromApi;
+
+  const usedTitles = new Set(fromApi.map((b) => b.title));
+  const pads = FALLBACK_BANNERS.filter((b) => !usedTitles.has(b.title))
+    .slice(0, MAX_SLIDES - fromApi.length)
+    .map((b) => ({ ...b, id: `pad-${b.id}` }));
+
+  const merged = [...fromApi, ...pads];
+  if (merged.length > 0) return merged;
+  return FALLBACK_BANNERS.slice(0, MAX_SLIDES);
 }
 
-function BannerSlidePanel({ slide, visualIndex }: { slide: HomeBannerDto; visualIndex: number }) {
-  const visual = VISUALS[visualIndex % VISUALS.length];
+function slideHref(slide: HomeBannerDto): string | null {
+  const href = slide.ctaHref?.trim();
+  return href || null;
+}
 
-  return (
+function BannerSlidePanel({
+  slide,
+  visualIndex,
+  suppressNavRef,
+}: {
+  slide: HomeBannerDto;
+  visualIndex: number;
+  suppressNavRef: React.MutableRefObject<boolean>;
+}) {
+  const visual = VISUALS[visualIndex % VISUALS.length];
+  const href = slideHref(slide);
+  const imageBg =
+    slide.imageUrl && /^https?:\/\//i.test(slide.imageUrl) ? slide.imageUrl : null;
+
+  const content = (
     <Box
       sx={{
         position: 'relative',
         width: '100%',
-        minHeight: { xs: 210, md: 290 },
+        minHeight: { xs: 200, sm: 220 },
         backgroundColor: 'background.paper',
-        backgroundImage: visual.bg,
+        backgroundImage: imageBg
+          ? `linear-gradient(115deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.2) 100%), url(${imageBg})`
+          : visual.bg,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
         '@keyframes particleFloat': {
           '0%': { transform: 'translate3d(0, 0, 0) scale(1)', opacity: 0.2 },
           '50%': { transform: 'translate3d(10px, -22px, 0) scale(1.2)', opacity: 0.75 },
@@ -43,78 +70,134 @@ function BannerSlidePanel({ slide, visualIndex }: { slide: HomeBannerDto; visual
           '0%,100%': { opacity: 0.36 },
           '50%': { opacity: 0.66 },
         },
+        transition: 'transform 0.25s ease, filter 0.25s ease',
+        ...(href
+          ? {
+              '&:hover': {
+                filter: 'brightness(1.04)',
+              },
+              '&:active': {
+                transform: 'scale(0.992)',
+              },
+            }
+          : null),
       }}
     >
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          background:
-            'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 85% 70%, rgba(255,255,255,0.14), transparent 32%)',
-          animation: 'pulseGlow 4.8s ease-in-out infinite',
-        }}
-      />
-      {PARTICLES.map((p, i) => (
-        <Box
-          key={i}
-          sx={{
-            position: 'absolute',
-            left: `${p.left}%`,
-            top: `${p.top}%`,
-            width: p.size,
-            height: p.size,
-            borderRadius: '50%',
-            bgcolor: p.color,
-            filter: 'blur(0.4px)',
-            animation: `particleFloat ${p.duration}s ease-in-out ${p.delay}s infinite`,
-            zIndex: 0,
-            pointerEvents: 'none',
-          }}
-        />
-      ))}
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          background:
-            'linear-gradient(95deg, rgba(0, 0, 0, 0.58) 0%, rgba(0, 0, 0, 0.24) 52%, rgba(0, 0, 0, 0.14) 100%)',
-        }}
-      />
+      {!imageBg ? (
+        <>
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              background:
+                'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 85% 70%, rgba(255,255,255,0.14), transparent 32%)',
+              animation: 'pulseGlow 4.8s ease-in-out infinite',
+              pointerEvents: 'none',
+            }}
+          />
+          {PARTICLES.map((p, i) => (
+            <Box
+              key={i}
+              sx={{
+                position: 'absolute',
+                left: `${p.left}%`,
+                top: `${p.top}%`,
+                width: p.size,
+                height: p.size,
+                borderRadius: '50%',
+                bgcolor: p.color,
+                filter: 'blur(0.4px)',
+                animation: `particleFloat ${p.duration}s ease-in-out ${p.delay}s infinite`,
+                zIndex: 0,
+                pointerEvents: 'none',
+              }}
+            />
+          ))}
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              background:
+                'linear-gradient(95deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.18) 52%, rgba(0, 0, 0, 0.1) 100%)',
+              pointerEvents: 'none',
+            }}
+          />
+        </>
+      ) : null}
 
       <Stack
-        spacing={1.4}
+        direction="row"
+        spacing={1.5}
         sx={{
           position: 'relative',
           zIndex: 1,
           color: 'common.white',
-          p: { xs: 2.2, sm: 2.8, md: 3.8 },
-          maxWidth: { xs: '100%', md: '62%' },
+          p: { xs: 2.4, sm: 3 },
+          minHeight: { xs: 200, sm: 220 },
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
         }}
       >
-        <Typography
-          component="h2"
-          sx={{ fontWeight: 900, fontSize: { xs: '1.25rem', md: '2.05rem' }, lineHeight: 1.12 }}
-        >
-          {slide.title}
-        </Typography>
-        {slide.subtitle ? (
-          <Typography sx={{ color: 'rgba(255,255,255,0.92)', fontSize: { xs: '0.94rem', md: '1.05rem' } }}>
-            {slide.subtitle}
+        <Stack spacing={0} sx={{ maxWidth: '88%', flex: 1, minWidth: 0, alignItems: 'flex-start' }}>
+          <Typography
+            component="h2"
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: '1.2rem', sm: '1.35rem' },
+              lineHeight: 1.15,
+              letterSpacing: '-0.02em',
+              textAlign: 'left',
+              textShadow: '0 1px 18px rgba(0,0,0,0.35)',
+            }}
+          >
+            {slide.title}
           </Typography>
-        ) : null}
-        {slide.ctaLabel && slide.ctaHref ? (
-          <Box>
-            <Button
-              component={RouterLink}
-              href={slide.ctaHref}
-              variant="contained"
-              sx={{ textTransform: 'none', fontWeight: 800, borderRadius: 99, px: 3, py: 1.1 }}
-            >
-              {slide.ctaLabel}
-            </Button>
+        </Stack>
+
+        {href ? (
+          <Box
+            aria-hidden
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              flexShrink: 0,
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: 'rgba(255,255,255,0.18)',
+              border: '1px solid rgba(255,255,255,0.28)',
+              backdropFilter: 'blur(8px)',
+              color: '#fff',
+              mb: 0.25,
+            }}
+          >
+            <ArrowUpRightIcon size={18} weight="bold" />
           </Box>
         ) : null}
       </Stack>
+    </Box>
+  );
+
+  if (!href) return content;
+
+  return (
+    <Box
+      component={RouterLink}
+      href={href}
+      onClick={(event: React.MouseEvent) => {
+        if (suppressNavRef.current) {
+          event.preventDefault();
+          suppressNavRef.current = false;
+        }
+      }}
+      sx={{
+        display: 'block',
+        textDecoration: 'none',
+        color: 'inherit',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      {content}
     </Box>
   );
 }
@@ -126,6 +209,7 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
   const [isDragging, setIsDragging] = React.useState(false);
   const touchStartX = React.useRef<number | null>(null);
   const timerRef = React.useRef<number | null>(null);
+  const suppressNavRef = React.useRef(false);
 
   const startAutoPlay = React.useCallback(() => {
     if (timerRef.current) window.clearInterval(timerRef.current);
@@ -167,10 +251,13 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
     const endX = event.changedTouches[0]?.clientX;
     if (endX != null) {
       const delta = endX - touchStartX.current;
-      if (delta <= -SWIPE_THRESHOLD) {
-        goToSlide(idx + 1);
-      } else if (delta >= SWIPE_THRESHOLD) {
-        goToSlide(idx - 1);
+      if (Math.abs(delta) >= SWIPE_THRESHOLD) {
+        suppressNavRef.current = true;
+        if (delta <= -SWIPE_THRESHOLD) {
+          goToSlide(idx + 1);
+        } else {
+          goToSlide(idx - 1);
+        }
       }
     }
     touchStartX.current = null;
@@ -189,7 +276,7 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
 
   return (
     <Box component="section" aria-label="Banner kryesor" sx={{ width: '100%' }}>
-      <Stack spacing={1.25} sx={{ width: '100%' }}>
+      <Stack spacing={1.35} sx={{ width: '100%' }}>
         <Box
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -197,10 +284,11 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
           onTouchCancel={handleTouchCancel}
           sx={{
             position: 'relative',
-            borderRadius: 2,
+            borderRadius: 3,
             overflow: 'hidden',
             border: '1px solid',
             borderColor: 'divider',
+            boxShadow: '0 10px 28px rgba(0,0,0,0.18)',
             touchAction: 'pan-y',
             cursor: slides.length > 1 ? 'grab' : undefined,
             userSelect: 'none',
@@ -229,7 +317,7 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
                   minWidth: 0,
                 }}
               >
-                <BannerSlidePanel slide={slide} visualIndex={i} />
+                <BannerSlidePanel slide={slide} visualIndex={i} suppressNavRef={suppressNavRef} />
               </Box>
             ))}
           </Box>
@@ -241,7 +329,7 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
             spacing={0.8}
             role="tablist"
             aria-label="Banner slides"
-            sx={{ justifyContent: 'center', pt: 0.25 }}
+            sx={{ justifyContent: 'center', pt: 0.15 }}
           >
             {slides.map((_, i) => (
               <Box
@@ -253,7 +341,7 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
                 aria-label={`Banner ${i + 1}`}
                 onClick={() => goToSlide(i)}
                 sx={{
-                  width: i === safeIdx ? 20 : 8,
+                  width: i === safeIdx ? 22 : 8,
                   height: 8,
                   borderRadius: 99,
                   border: 0,
@@ -277,30 +365,66 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
 const FALLBACK_BANNERS: HomeBannerDto[] = [
   {
     id: 'fallback-1',
-    title: 'Posto njoftime falas në KuTaGjej',
-    subtitle: 'Prona, makina, punë dhe tregu - të gjitha në një vend modern.',
+    title: 'Posto njoftimin tënd falas në sekonda',
+    subtitle: '',
     imageUrl: '',
-    ctaLabel: 'Posto tani',
+    ctaLabel: '',
     ctaHref: '/user/dashboard/prona',
     order: 1,
   },
   {
     id: 'fallback-2',
-    title: 'Eksploro mijëra njoftime çdo ditë',
-    subtitle: 'Kërko sipas kategorisë dhe gjej saktësisht atë që të duhet.',
+    title: 'Gjej atë që kërkon, më shpejt',
+    subtitle: '',
     imageUrl: '',
-    ctaLabel: 'Shiko njoftimet',
+    ctaLabel: '',
     ctaHref: '/prona',
     order: 2,
   },
   {
     id: 'fallback-3',
-    title: 'Gjithçka në një platformë të vetme',
-    subtitle: 'Dizajn i pastër, shpejtësi e lartë dhe eksperiencë e thjeshtë.',
+    title: 'Prona në Tiranë, Durrës e gjithë Shqipërinë',
+    subtitle: '',
     imageUrl: '',
-    ctaLabel: 'Fillo tani',
-    ctaHref: '/makina',
+    ctaLabel: '',
+    ctaHref: '/prona',
     order: 3,
+  },
+  {
+    id: 'fallback-4',
+    title: 'Makina të reja dhe të përdorura',
+    subtitle: '',
+    imageUrl: '',
+    ctaLabel: '',
+    ctaHref: '/makina',
+    order: 4,
+  },
+  {
+    id: 'fallback-5',
+    title: 'Oferta pune pranë teje',
+    subtitle: '',
+    imageUrl: '',
+    ctaLabel: '',
+    ctaHref: '/pune',
+    order: 5,
+  },
+  {
+    id: 'fallback-6',
+    title: 'Tregu online – bli e shit lehtë',
+    subtitle: '',
+    imageUrl: '',
+    ctaLabel: '',
+    ctaHref: '/tregu',
+    order: 6,
+  },
+  {
+    id: 'fallback-7',
+    title: 'Zbulo biznese lokale pranë teje',
+    subtitle: '',
+    imageUrl: '',
+    ctaLabel: '',
+    ctaHref: '/biznese',
+    order: 7,
   },
 ];
 
@@ -313,6 +437,18 @@ const VISUALS = [
   },
   {
     bg: 'radial-gradient(900px 320px at 15% 85%, #fef08a 0%, transparent 42%), linear-gradient(135deg, #6a11cb 0%, #8b2cf5 48%, #b270ff 100%)',
+  },
+  {
+    bg: 'radial-gradient(900px 320px at 80% 20%, #fb923c 0%, transparent 42%), linear-gradient(135deg, #9a3412 0%, #c2410c 48%, #f97316 100%)',
+  },
+  {
+    bg: 'radial-gradient(900px 320px at 10% 80%, #67e8f9 0%, transparent 42%), linear-gradient(135deg, #0e7490 0%, #0891b2 48%, #22d3ee 100%)',
+  },
+  {
+    bg: 'radial-gradient(900px 320px at 90% 75%, #f9a8d4 0%, transparent 42%), linear-gradient(135deg, #9d174d 0%, #db2777 48%, #f472b6 100%)',
+  },
+  {
+    bg: 'radial-gradient(900px 320px at 20% 15%, #a3e635 0%, transparent 42%), linear-gradient(135deg, #365314 0%, #4d7c0f 48%, #84cc16 100%)',
   },
 ] as const;
 

@@ -26,6 +26,7 @@ import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Hands
 import { LinkSimple as LinkSimpleIcon } from '@phosphor-icons/react/dist/ssr/LinkSimple';
 
 import { ProgramDisplay } from '@/components/dashboard/referral/referral-program-display';
+import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { useUser } from '@/hooks/use-user';
 import { fetchMyReferralStats } from '@/lib/referrals-client';
 import type { ReferralProgram } from '@/types/referral-program';
@@ -95,17 +96,11 @@ export function UserReferralView() {
 
   return (
     <Stack spacing={3}>
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-        <HandshakeIcon size={28} weight="duotone" />
-        <Stack spacing={0.25}>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-            Referimi
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Fto miqtë, ndiq statistikat dhe shiko programin e platformës.
-          </Typography>
-        </Stack>
-      </Stack>
+      <UserPageHeader
+        icon={<HandshakeIcon size={20} weight="duotone" />}
+        title="Referimi"
+        description="Fto miqtë, ndiq statistikat dhe shiko programin e platformës."
+      />
 
       {error ? <Alert severity="error">{error}</Alert> : null}
       {copyMsg ? <Alert severity="success">{copyMsg}</Alert> : null}

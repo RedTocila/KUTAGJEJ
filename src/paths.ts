@@ -34,6 +34,14 @@ export const paths = {
     referral: '/user/dashboard/referral',
     /** Buy boost credits with POK Payments. */
     credits: '/user/dashboard/kredite',
+    /** Subscription packages hub (category cards). */
+    packages: '/user/dashboard/paketat',
+    /** Main subscription plans. */
+    packagesMain: '/user/dashboard/paketat/kryesore',
+    /** Add-on packages (auto-refresh, premium, convert). */
+    packagesExtra: '/user/dashboard/paketat/shtese',
+    /** Boost Coins purchase (via packages hub). */
+    packagesCredits: '/user/dashboard/paketat/boost-coins',
     /** The user's own payments + active subscriptions. */
     payments: '/user/dashboard/pagesat',
   },
@@ -63,6 +71,8 @@ export const paths = {
     professionalVerification: '/dashboard/verifikimet-profesioniste',
     /** Listing moderation queue (platform admin). */
     listingModeration: '/dashboard/njoftimet',
+    /** Homepage hero carousel banners (platform admin). */
+    homeBanners: '/dashboard/bannerat',
   },
   app: {},
   errors: {},
@@ -73,6 +83,13 @@ export function pathsPublicRealEstateListingDetail(permalinkPath: string): strin
   const p = String(permalinkPath ?? '').trim();
   if (!p) return `/prona/`;
   return `/prona/${encodeURIComponent(p)}`;
+}
+
+/** Public seller / member profile: `/anetares/{id}`. */
+export function pathsPublicMemberProfile(id: string): string {
+  const seg = String(id ?? '').trim();
+  if (!seg) return '/anetares/';
+  return `/anetares/${encodeURIComponent(seg)}`;
 }
 
 /** `/makina/{segment}`, `/pune/{segment}`, etc. — `segment` is `slug-{id}.html` or legacy id. */

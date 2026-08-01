@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
 import {
   Alert,
   alpha,
@@ -18,8 +17,6 @@ import {
   Grid,
   InputAdornment,
   Paper,
-  Radio,
-  RadioGroup,
   Stack,
   Switch,
   TextField,
@@ -29,18 +26,34 @@ import {
   useTheme,
 } from '@mui/material';
 
-import { paths } from '@/paths';
 import type { Contract } from '@/types/contract';
-import type { ListingCategory } from '@/types/listing-category';
 import type { Role } from '@/types/role';
 import { createContract, updateContract } from '@/lib/admin-contracts-client';
+
+function QuotaField(props: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <TextField
+      label={props.label}
+      type="number"
+      value={props.value}
+      onChange={(ev) => props.onChange(ev.target.value)}
+      fullWidth
+      size="small"
+      slotProps={{ input: { inputProps: { min: 0, step: 1 } } }}
+      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+    />
+  );
+}
 
 export function ContractFormDialog(props: {
   open?: boolean;
   contract?: Contract | null;
   onClose: () => void;
   roles: Role[];
-  categories: ListingCategory[];
   onSaved: () => void | Promise<void>;
 }) {
   const theme = useTheme();
@@ -48,13 +61,17 @@ export function ContractFormDialog(props: {
   const open = isEdit ? Boolean(props.contract) : Boolean(props.open);
   const infoMain = theme.palette.info.main;
 
-  const [createStep, setCreateStep] = React.useState(0);
-  const [listingCategoryKey, setListingCategoryKey] = React.useState('');
   const [subscriberKind, setSubscriberKind] = React.useState<'agent' | 'company'>('agent');
-  const [refreshEveryHours, setRefreshEveryHours] = React.useState('12');
+  const [refreshEveryHours, setRefreshEveryHours] = React.useState('48');
   const [glowBadgeEnabled, setGlowBadgeEnabled] = React.useState(false);
   const [boostCredits, setBoostCredits] = React.useState('0');
   const [dailyBoostAccess, setDailyBoostAccess] = React.useState(false);
+  const [maxListAllCategories, setMaxListAllCategories] = React.useState('1');
+  const [maxJobListings, setMaxJobListings] = React.useState('0');
+  const [maxCarListings, setMaxCarListings] = React.useState('0');
+  const [maxApartmentListings, setMaxApartmentListings] = React.useState('0');
+  const [maxProductListings, setMaxProductListings] = React.useState('0');
+  const [maxPremiumListings, setMaxPremiumListings] = React.useState('0');
   const [price1Month, setPrice1Month] = React.useState('');
   const [price3Months, setPrice3Months] = React.useState('');
   const [price6Months, setPrice6Months] = React.useState('');
@@ -68,13 +85,17 @@ export function ContractFormDialog(props: {
   React.useEffect(() => {
     if (!open) return;
     if (props.contract) {
-      setCreateStep(0);
-      setListingCategoryKey(props.contract.listingCategoryKey ?? '');
       setSubscriberKind(props.contract.subscriberKind === 'company' ? 'company' : 'agent');
-      setRefreshEveryHours(String(props.contract.refreshEveryHours ?? 12));
+      setRefreshEveryHours(String(props.contract.refreshEveryHours ?? 48));
       setGlowBadgeEnabled(Boolean(props.contract.glowBadgeEnabled));
       setBoostCredits(String(props.contract.boostCredits ?? 0));
       setDailyBoostAccess(Boolean(props.contract.dailyBoostAccess));
+      setMaxListAllCategories(String(props.contract.maxListAllCategories ?? 0));
+      setMaxJobListings(String(props.contract.maxJobListings ?? 0));
+      setMaxCarListings(String(props.contract.maxCarListings ?? 0));
+      setMaxApartmentListings(String(props.contract.maxApartmentListings ?? 0));
+      setMaxProductListings(String(props.contract.maxProductListings ?? 0));
+      setMaxPremiumListings(String(props.contract.maxPremiumListings ?? 0));
       setPrice1Month(String(props.contract.price1Month ?? ''));
       setPrice3Months(String(props.contract.price3Months ?? ''));
       setPrice6Months(String(props.contract.price6Months ?? ''));
@@ -83,14 +104,18 @@ export function ContractFormDialog(props: {
       setContent(props.contract.content ?? '');
       setRoleIds(props.contract.roles.map((r) => r.id));
     } else {
-      setCreateStep(0);
-      setListingCategoryKey('');
       setSubscriberKind('agent');
-      setRefreshEveryHours('12');
+      setRefreshEveryHours('48');
       setGlowBadgeEnabled(false);
       setBoostCredits('0');
       setDailyBoostAccess(false);
-      setPrice1Month('');
+      setMaxListAllCategories('1');
+      setMaxJobListings('10');
+      setMaxCarListings('5');
+      setMaxApartmentListings('10');
+      setMaxProductListings('5');
+      setMaxPremiumListings('0');
+      setPrice1Month('0');
       setPrice3Months('');
       setPrice6Months('');
       setPrice12Months('');
@@ -105,24 +130,9 @@ export function ContractFormDialog(props: {
     setRoleIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
-  const showPlanFields = isEdit || createStep === 1;
-  const headerSubtitle = isEdit ? 'Përditësim' : createStep === 0 ? 'Hapi 1 · Kategoria' : 'Hapi 2 · Plani';
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    if (!isEdit && createStep === 0) {
-      if (!listingCategoryKey) {
-        setError('Zgjidhni një kategori kontrate.');
-        return;
-      }
-      const cat = props.categories.find((c) => c.key === listingCategoryKey);
-      const kindLabel = subscriberKind === 'agent' ? 'Agjent' : 'Kompani';
-      if (cat) setTitle(`${cat.title} · ${kindLabel}`);
-      setCreateStep(1);
-      return;
-    }
 
     const refreshH = Number(refreshEveryHours);
     const boost = Number(boostCredits);
@@ -134,10 +144,28 @@ export function ContractFormDialog(props: {
       setError('Kreditet boost duhet të jenë numër ≥ 0.');
       return;
     }
-    if (!listingCategoryKey) {
-      setError('Mungon kategoria.');
-      return;
-    }
+
+    const readQuota = (raw: string, label: string): number | '__bad__' => {
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
+        setError(`${label}: vendos numër të plotë ≥ 0.`);
+        return '__bad__';
+      }
+      return n;
+    };
+
+    const qAll = readQuota(maxListAllCategories, 'Lista në të gjitha kategoritë');
+    if (qAll === '__bad__') return;
+    const qJobs = readQuota(maxJobListings, 'Vendet e punës');
+    if (qJobs === '__bad__') return;
+    const qCars = readQuota(maxCarListings, 'Makinat');
+    if (qCars === '__bad__') return;
+    const qApts = readQuota(maxApartmentListings, 'Apartamentet');
+    if (qApts === '__bad__') return;
+    const qProducts = readQuota(maxProductListings, 'Produktet');
+    if (qProducts === '__bad__') return;
+    const qPremium = readQuota(maxPremiumListings, 'Premium');
+    if (qPremium === '__bad__') return;
 
     const readOptionalPrice = (raw: string, labelSq: string): number | null | '__bad__' => {
       const s = String(raw).trim();
@@ -162,44 +190,47 @@ export function ContractFormDialog(props: {
       return;
     }
 
+    if (!title.trim()) {
+      setError('Titulli është i detyrueshëm.');
+      return;
+    }
+    if (roleIds.length === 0) {
+      setError('Zgjidhni të paktën një rol.');
+      return;
+    }
+
+    const payload = {
+      title: title.trim(),
+      content,
+      roleIds,
+      listingCategoryKey: null as string | null,
+      subscriberKind,
+      refreshEveryHours: refreshH,
+      glowBadgeEnabled,
+      boostCredits: boost,
+      dailyBoostAccess,
+      maxListAllCategories: qAll,
+      maxJobListings: qJobs,
+      maxCarListings: qCars,
+      maxApartmentListings: qApts,
+      maxProductListings: qProducts,
+      maxPremiumListings: qPremium,
+      price1Month: p1,
+      price3Months: p3,
+      price6Months: p6,
+      price12Months: p12,
+    };
+
     setPending(true);
     try {
       if (isEdit && props.contract) {
-        const { error: err } = await updateContract(props.contract.id, {
-          title: title.trim(),
-          content,
-          roleIds,
-          listingCategoryKey,
-          subscriberKind,
-          refreshEveryHours: refreshH,
-          glowBadgeEnabled,
-          boostCredits: boost,
-          dailyBoostAccess,
-          price1Month: p1,
-          price3Months: p3,
-          price6Months: p6,
-          price12Months: p12,
-        });
+        const { error: err } = await updateContract(props.contract.id, payload);
         if (err) {
           setError(err);
           return;
         }
       } else {
-        const { error: err } = await createContract({
-          title: title.trim(),
-          content,
-          roleIds,
-          listingCategoryKey,
-          subscriberKind,
-          refreshEveryHours: refreshH,
-          glowBadgeEnabled,
-          boostCredits: boost,
-          dailyBoostAccess,
-          price1Month: p1,
-          price3Months: p3,
-          price6Months: p6,
-          price12Months: p12,
-        });
+        const { error: err } = await createContract(payload);
         if (err) {
           setError(err);
           return;
@@ -250,10 +281,10 @@ export function ContractFormDialog(props: {
           }}
         >
           <Typography variant="caption" sx={{ color: 'info.main', fontWeight: 800, letterSpacing: '0.08em' }}>
-            {headerSubtitle}
+            {isEdit ? 'Përditësim' : 'Paketë e re'}
           </Typography>
           <DialogTitle sx={{ p: 0, pt: 0.25, fontSize: '1.2rem', fontWeight: 800 }}>
-            {isEdit ? 'Kontrata' : createStep === 0 ? 'Zgjidh kategorinë' : 'Detajet e planit'}
+            {isEdit ? 'Kontrata / plani' : 'Detajet e planit'}
           </DialogTitle>
         </Box>
         <DialogContent
@@ -273,301 +304,249 @@ export function ContractFormDialog(props: {
               </Alert>
             ) : null}
 
-            {!showPlanFields ? (
-              <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  Së pari zgjidh vertikalin (p.sh. Real Estate). Hapi tjetër: agjent vs kompani, rifreskim, boost.
-                </Typography>
-                {props.categories.length === 0 ? (
-                  <Alert severity="warning">
-                    Nuk ka kategori.{' '}
-                    <Box
-                      component={RouterLink}
-                      href={paths.dashboard.kategorite}
-                      sx={{ fontWeight: 700, color: 'inherit' }}
-                    >
-                      Kategoritë
-                    </Box>
-                  </Alert>
-                ) : (
-                  <RadioGroup
-                    value={listingCategoryKey}
-                    onChange={(ev) => setListingCategoryKey(ev.target.value)}
-                  >
-                    <Stack spacing={1}>
-                      {props.categories.map((c) => (
-                        <Paper
-                          key={c.key}
-                          variant="outlined"
-                          sx={{
-                            px: 2,
-                            py: 1.25,
-                            borderRadius: 1.5,
-                            borderColor: listingCategoryKey === c.key ? 'primary.main' : 'divider',
-                            bgcolor: listingCategoryKey === c.key ? alpha(theme.palette.primary.main, 0.06) : 'transparent',
-                          }}
-                        >
-                          <FormControlLabel
-                            value={c.key}
-                            control={<Radio size="small" />}
-                            label={<Typography sx={{ fontWeight: 700 }}>{c.title}</Typography>}
-                            sx={{ m: 0 }}
-                          />
-                        </Paper>
-                      ))}
-                    </Stack>
-                  </RadioGroup>
-                )}
-              </Box>
-            ) : (
-              <>
-                {isEdit ? (
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 700 }}>
-                      Kategoria
-                    </Typography>
-                    <RadioGroup
-                      row
-                      value={listingCategoryKey}
-                      onChange={(ev) => setListingCategoryKey(ev.target.value)}
-                      sx={{ flexWrap: 'wrap', gap: 0.5 }}
-                    >
-                      {props.categories.map((c) => (
-                        <FormControlLabel
-                          key={c.key}
-                          value={c.key}
-                          control={<Radio size="small" />}
-                          label={c.title}
-                        />
-                      ))}
-                    </RadioGroup>
-                  </Box>
-                ) : null}
+            <TextField
+              label="Titulli"
+              value={title}
+              onChange={(ev) => setTitle(ev.target.value)}
+              required
+              fullWidth
+              size="small"
+              placeholder="FREE · STARTER · GROW · ELITE"
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+            />
 
-                {!isEdit ? (
-                  <Button
-                    type="button"
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 700 }}>
+                Lloji i abonentit
+              </Typography>
+              <ToggleButtonGroup
+                exclusive
+                size="small"
+                value={subscriberKind}
+                onChange={(_, v) => v && setSubscriberKind(v)}
+              >
+                <ToggleButton value="agent">Agjent</ToggleButton>
+                <ToggleButton value="company">Kompani</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.25, fontWeight: 700 }}>
+                Kuotat e postimeve
+              </Typography>
+              <Grid container spacing={1.5}>
+                <Grid size={{ xs: 6, sm: 4 }}>
+                  <QuotaField label="Të gjitha kategoritë" value={maxListAllCategories} onChange={setMaxListAllCategories} />
+                </Grid>
+                <Grid size={{ xs: 6, sm: 4 }}>
+                  <QuotaField label="Vende pune" value={maxJobListings} onChange={setMaxJobListings} />
+                </Grid>
+                <Grid size={{ xs: 6, sm: 4 }}>
+                  <QuotaField label="Makina" value={maxCarListings} onChange={setMaxCarListings} />
+                </Grid>
+                <Grid size={{ xs: 6, sm: 4 }}>
+                  <QuotaField label="Apartamente" value={maxApartmentListings} onChange={setMaxApartmentListings} />
+                </Grid>
+                <Grid size={{ xs: 6, sm: 4 }}>
+                  <QuotaField label="Produkte" value={maxProductListings} onChange={setMaxProductListings} />
+                </Grid>
+                <Grid size={{ xs: 6, sm: 4 }}>
+                  <QuotaField label="Premium" value={maxPremiumListings} onChange={setMaxPremiumListings} />
+                </Grid>
+              </Grid>
+            </Box>
+
+            <TextField
+              label="Rifreskimi çdo sa orë"
+              type="number"
+              value={refreshEveryHours}
+              onChange={(ev) => setRefreshEveryHours(ev.target.value)}
+              required
+              fullWidth
+              slotProps={{
+                input: {
+                  inputProps: { min: 1 },
+                  endAdornment: <InputAdornment position="end">orë</InputAdornment>,
+                },
+              }}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+            />
+
+            <TextField
+              label="Boost Coins"
+              type="number"
+              value={boostCredits}
+              onChange={(ev) => setBoostCredits(ev.target.value)}
+              required
+              fullWidth
+              slotProps={{ input: { inputProps: { min: 0 } } }}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={glowBadgeEnabled}
+                  onChange={(ev) => setGlowBadgeEnabled(ev.target.checked)}
+                  color="primary"
+                />
+              }
+              label="Trust Badge"
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={dailyBoostAccess}
+                  onChange={(ev) => setDailyBoostAccess(ev.target.checked)}
+                  color="primary"
+                />
+              }
+              label="Qasje në boost ditor"
+            />
+
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 700 }}>
+                Çmimet e abonimit (€)
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                FREE = 0. Plotësoni vetëm afatet që ofroni. Të paktën një çmim.
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 6, sm: 3 }}>
+                  <TextField
+                    label="1 muaj"
+                    type="number"
+                    value={price1Month}
+                    onChange={(ev) => setPrice1Month(ev.target.value)}
+                    fullWidth
                     size="small"
-                    onClick={() => setCreateStep(0)}
-                    sx={{ alignSelf: 'flex-start' }}
-                  >
-                    ← Ndrysho kategorinë
-                  </Button>
-                ) : null}
-
-                <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 700 }}>
-                    Lloji i abonentit
-                  </Typography>
-                  <ToggleButtonGroup
-                    exclusive
-                    size="small"
-                    value={subscriberKind}
-                    onChange={(_, v) => v && setSubscriberKind(v)}
-                  >
-                    <ToggleButton value="agent">Agjent</ToggleButton>
-                    <ToggleButton value="company">Kompani</ToggleButton>
-                  </ToggleButtonGroup>
-                </Box>
-
-                <TextField
-                  label="Rifreskimi çdo sa orë"
-                  type="number"
-                  value={refreshEveryHours}
-                  onChange={(ev) => setRefreshEveryHours(ev.target.value)}
-                  required
-                  fullWidth
-                  slotProps={{
-                    input: {
-                      inputProps: { min: 1 },
-                      endAdornment: <InputAdornment position="end">orë</InputAdornment>,
-                    },
-                  }}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
-                />
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={glowBadgeEnabled}
-                      onChange={(ev) => setGlowBadgeEnabled(ev.target.checked)}
-                      color="primary"
-                    />
-                  }
-                  label="Glow + badge"
-                />
-
-                <TextField
-                  label="Kreditet boost"
-                  type="number"
-                  value={boostCredits}
-                  onChange={(ev) => setBoostCredits(ev.target.value)}
-                  required
-                  fullWidth
-                  slotProps={{ input: { inputProps: { min: 0 } } }}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
-                />
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={dailyBoostAccess}
-                      onChange={(ev) => setDailyBoostAccess(ev.target.checked)}
-                      color="primary"
-                    />
-                  }
-                  label="Qasje në boost ditor"
-                />
-
-                <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 700 }}>
-                    Çmimet e abonimit (€)
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-                    Plotësoni vetëm afatet që ofroni (p.sh. vetëm mujore, ose mujore + vjetore). Të paktën një çmim.
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid size={{ xs: 6, sm: 3 }}>
-                      <TextField
-                        label="1 muaj"
-                        type="number"
-                        value={price1Month}
-                        onChange={(ev) => setPrice1Month(ev.target.value)}
-                        fullWidth
-                        size="small"
-                        slotProps={{
-                          input: {
-                            inputProps: { min: 0, step: '0.01' },
-                            endAdornment: <InputAdornment position="end">€</InputAdornment>,
-                          },
-                        }}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 6, sm: 3 }}>
-                      <TextField
-                        label="3 muaj"
-                        type="number"
-                        value={price3Months}
-                        onChange={(ev) => setPrice3Months(ev.target.value)}
-                        fullWidth
-                        size="small"
-                        slotProps={{
-                          input: {
-                            inputProps: { min: 0, step: '0.01' },
-                            endAdornment: <InputAdornment position="end">€</InputAdornment>,
-                          },
-                        }}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 6, sm: 3 }}>
-                      <TextField
-                        label="6 muaj"
-                        type="number"
-                        value={price6Months}
-                        onChange={(ev) => setPrice6Months(ev.target.value)}
-                        fullWidth
-                        size="small"
-                        slotProps={{
-                          input: {
-                            inputProps: { min: 0, step: '0.01' },
-                            endAdornment: <InputAdornment position="end">€</InputAdornment>,
-                          },
-                        }}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 6, sm: 3 }}>
-                      <TextField
-                        label="12 muaj"
-                        type="number"
-                        value={price12Months}
-                        onChange={(ev) => setPrice12Months(ev.target.value)}
-                        fullWidth
-                        size="small"
-                        slotProps={{
-                          input: {
-                            inputProps: { min: 0, step: '0.01' },
-                            endAdornment: <InputAdornment position="end">€</InputAdornment>,
-                          },
-                        }}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
-                      />
-                    </Grid>
-                  </Grid>
-                </Box>
-
-                <TextField
-                  label="Titulli"
-                  value={title}
-                  onChange={(ev) => setTitle(ev.target.value)}
-                  required
-                  fullWidth
-                  size="small"
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
-                />
-                <TextField
-                  label="Shënime"
-                  value={content}
-                  onChange={(ev) => setContent(ev.target.value)}
-                  fullWidth
-                  multiline
-                  minRows={2}
-                  placeholder="Opsionale"
-                  size="small"
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
-                />
-
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>
-                    Rolet
-                  </Typography>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      borderRadius: 1.5,
-                      border: '1px dashed',
-                      borderColor: 'divider',
-                      maxHeight: 220,
-                      overflow: 'auto',
-                      bgcolor: alpha(theme.palette.primary.main, 0.02),
+                    slotProps={{
+                      input: {
+                        inputProps: { min: 0, step: '0.01' },
+                        endAdornment: <InputAdornment position="end">€</InputAdornment>,
+                      },
                     }}
-                  >
-                    <FormGroup sx={{ gap: 0.25 }}>
-                      {props.roles.length === 0 ? (
-                        <Typography variant="body2" color="text.secondary">
-                          Nuk ka role në katalog.
-                        </Typography>
-                      ) : (
-                        props.roles.map((r) => (
-                          <FormControlLabel
-                            key={r.id}
-                            sx={{
-                              mx: 0,
-                              py: 0.5,
-                              px: 1,
-                              borderRadius: 1,
-                              '&:hover': { bgcolor: 'action.hover' },
-                            }}
-                            control={
-                              <Checkbox
-                                checked={roleIds.includes(r.id)}
-                                onChange={() => toggleRole(r.id)}
-                                color="primary"
-                                size="small"
-                              />
-                            }
-                            label={<Typography variant="body2" sx={{ fontWeight: 600 }}>{r.name}</Typography>}
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 6, sm: 3 }}>
+                  <TextField
+                    label="3 muaj"
+                    type="number"
+                    value={price3Months}
+                    onChange={(ev) => setPrice3Months(ev.target.value)}
+                    fullWidth
+                    size="small"
+                    slotProps={{
+                      input: {
+                        inputProps: { min: 0, step: '0.01' },
+                        endAdornment: <InputAdornment position="end">€</InputAdornment>,
+                      },
+                    }}
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 6, sm: 3 }}>
+                  <TextField
+                    label="6 muaj"
+                    type="number"
+                    value={price6Months}
+                    onChange={(ev) => setPrice6Months(ev.target.value)}
+                    fullWidth
+                    size="small"
+                    slotProps={{
+                      input: {
+                        inputProps: { min: 0, step: '0.01' },
+                        endAdornment: <InputAdornment position="end">€</InputAdornment>,
+                      },
+                    }}
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 6, sm: 3 }}>
+                  <TextField
+                    label="12 muaj"
+                    type="number"
+                    value={price12Months}
+                    onChange={(ev) => setPrice12Months(ev.target.value)}
+                    fullWidth
+                    size="small"
+                    slotProps={{
+                      input: {
+                        inputProps: { min: 0, step: '0.01' },
+                        endAdornment: <InputAdornment position="end">€</InputAdornment>,
+                      },
+                    }}
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+
+            <TextField
+              label="Shënime"
+              value={content}
+              onChange={(ev) => setContent(ev.target.value)}
+              fullWidth
+              multiline
+              minRows={2}
+              placeholder="Opsionale"
+              size="small"
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+            />
+
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>
+                Rolet
+              </Typography>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  borderRadius: 1.5,
+                  border: '1px dashed',
+                  borderColor: 'divider',
+                  maxHeight: 220,
+                  overflow: 'auto',
+                  bgcolor: alpha(theme.palette.primary.main, 0.02),
+                }}
+              >
+                <FormGroup sx={{ gap: 0.25 }}>
+                  {props.roles.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      Nuk ka role në katalog.
+                    </Typography>
+                  ) : (
+                    props.roles.map((r) => (
+                      <FormControlLabel
+                        key={r.id}
+                        sx={{
+                          mx: 0,
+                          py: 0.5,
+                          px: 1,
+                          borderRadius: 1,
+                          '&:hover': { bgcolor: 'action.hover' },
+                        }}
+                        control={
+                          <Checkbox
+                            checked={roleIds.includes(r.id)}
+                            onChange={() => toggleRole(r.id)}
+                            color="primary"
+                            size="small"
                           />
-                        ))
-                      )}
-                    </FormGroup>
-                  </Paper>
-                </Box>
-              </>
-            )}
+                        }
+                        label={
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {r.name}
+                          </Typography>
+                        }
+                      />
+                    ))
+                  )}
+                </FormGroup>
+              </Paper>
+            </Box>
           </Stack>
         </DialogContent>
         <Divider sx={{ flexShrink: 0 }} />
@@ -575,27 +554,15 @@ export function ContractFormDialog(props: {
           <Button onClick={props.onClose} size="large" sx={{ borderRadius: 2 }}>
             Anulo
           </Button>
-          {!isEdit && createStep === 0 ? (
-            <Button
-              type="submit"
-              variant="contained"
-              size="large"
-              disabled={pending || !listingCategoryKey || props.categories.length === 0}
-              sx={{ minWidth: 140, borderRadius: 2, px: 3 }}
-            >
-              Vazhdu
-            </Button>
-          ) : (
-            <Button
-              type="submit"
-              variant="contained"
-              size="large"
-              disabled={pending || roleIds.length === 0 || !title.trim()}
-              sx={{ minWidth: 140, borderRadius: 2, px: 3 }}
-            >
-              {pending ? 'Duke u ruajtur…' : 'Ruaj'}
-            </Button>
-          )}
+          <Button
+            type="submit"
+            variant="contained"
+            size="large"
+            disabled={pending || roleIds.length === 0 || !title.trim()}
+            sx={{ minWidth: 140, borderRadius: 2, px: 3 }}
+          >
+            {pending ? 'Duke u ruajtur…' : 'Ruaj'}
+          </Button>
         </DialogActions>
       </Box>
     </Dialog>

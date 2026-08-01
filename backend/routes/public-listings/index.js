@@ -34,6 +34,7 @@ const {
   countMarketplace,
   queryDirectory,
   countDirectory,
+  topViewedByKind,
 } = require('../../lib/public-listings/latest-queries');
 const {
   parseRealEstateFilters,
@@ -49,11 +50,42 @@ const { saverFromUser, enrichListingsSaverState } = require('../../lib/listing-m
 
 const router = express.Router();
 
+/** Home vertical id → ListingEngagement.listingKind */
+const VERTICAL_TO_KIND = {
+  'real-estate': 'real-estate',
+  cars: 'car',
+  jobs: 'job',
+  marketplace: 'marketplace',
+  businesses: 'businesses',
+  professionals: 'professionals',
+};
+
 function isPublicListing(doc) {
   return Boolean(doc && doc.status === 'approved');
 }
 
 router.use(publicCache(60));
+
+/** GET /api/public/listings/top-viewed?vertical=cars&limit=10 — most-viewed listings for a category. */
+router.get('/top-viewed', optionalAuth, async (req, res) => {
+  try {
+    const vertical = String(req.query.vertical ?? '').trim();
+    const kind = VERTICAL_TO_KIND[vertical];
+    if (!kind) {
+      res.status(400).json({ message: 'Invalid vertical' });
+      return;
+    }
+    const rawLimit = Number.parseInt(String(req.query.limit ?? '10'), 10);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 10) : 10;
+    let listings = await topViewedByKind(kind, limit);
+    const saver = saverFromUser(req.user);
+    if (saver) listings = await enrichListingsSaverState(listings, saver);
+    res.json({ listings, vertical, kind });
+  } catch (err) {
+    console.error('GET /public/listings/top-viewed:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 /** GET /api/public/listings/latest — newest listings per vertical (homepage). */
 router.get('/latest', optionalAuth, async (req, res) => {

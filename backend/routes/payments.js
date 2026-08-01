@@ -7,7 +7,11 @@ const authMiddleware = require('../middleware/auth');
 const requirePortalUser = require('../middleware/require-portal-user');
 const pokClient = require('../lib/pok-client');
 const { confirmAndApplyPayment } = require('../lib/apply-payment');
-const { listActiveCreditPackages, getActiveCreditPackage } = require('../lib/credit-packages');
+const {
+  listActiveCreditPackages,
+  getActiveCreditPackage,
+  totalCredits,
+} = require('../lib/credit-packages');
 
 const router = express.Router();
 
@@ -127,6 +131,7 @@ router.get('/subscriptions/mine', async (req, res) => {
       id: String(d._id),
       contractId: d.contractId ? String(d.contractId) : null,
       contractTitle: d.contractTitle || '',
+      planCode: d.planCode || null,
       months: d.months,
       priceEur: d.priceEur,
       startsAt: d.startsAt,
@@ -135,6 +140,13 @@ router.get('/subscriptions/mine', async (req, res) => {
       glowBadgeEnabled: d.glowBadgeEnabled,
       dailyBoostAccess: d.dailyBoostAccess,
       boostCreditsGranted: d.boostCreditsGranted,
+      refreshEveryHours: d.refreshEveryHours ?? null,
+      maxListAllCategories: Number(d.maxListAllCategories) || 0,
+      maxJobListings: Number(d.maxJobListings) || 0,
+      maxCarListings: Number(d.maxCarListings) || 0,
+      maxApartmentListings: Number(d.maxApartmentListings) || 0,
+      maxProductListings: Number(d.maxProductListings) || 0,
+      maxPremiumListings: Number(d.maxPremiumListings) || 0,
     }));
     res.json({ subscriptions: subs });
   } catch (error) {
@@ -224,7 +236,8 @@ router.post('/credits/order', async (req, res) => {
 
     const amount = Number(pkg.priceEur);
     const amountMinor = Math.round(amount * 100);
-    const description = `Blerje kreditesh: ${pkg.credits} kredite`;
+    const grantedCredits = totalCredits(pkg);
+    const description = `Blerje kreditesh: ${pkg.labelSq} (${grantedCredits} BC)`;
 
     const payment = new Payment({
       payerId: req.user._id,
@@ -240,7 +253,7 @@ router.post('/credits/order', async (req, res) => {
       status: 'pending',
       metadata: {
         creditPackageId: String(pkg._id),
-        credits: pkg.credits,
+        credits: grantedCredits,
       },
     });
     await payment.save();
@@ -260,7 +273,7 @@ router.post('/credits/order', async (req, res) => {
       orderId: order.id,
       amount,
       currency: 'EUR',
-      credits: pkg.credits,
+      credits: grantedCredits,
       pokEnv: payment.pokEnv,
     });
   } catch (error) {

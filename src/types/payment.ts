@@ -5,6 +5,7 @@ export type PokEnv = 'production' | 'staging';
 export interface CreditPackage {
   id: string;
   credits: number;
+  bonusCredits: number;
   priceEur: number;
   labelSq: string;
   badgeSq?: string;
@@ -14,6 +15,7 @@ export interface CreditPackage {
 export interface AdminCreditPackage {
   id: string;
   credits: number;
+  bonusCredits: number;
   priceEur: number;
   labelSq: string;
   badgeSq: string;
@@ -25,6 +27,7 @@ export interface AdminCreditPackage {
 
 export interface CreditPackageInput {
   credits: number;
+  bonusCredits: number;
   priceEur: number;
   labelSq: string;
   badgeSq: string;
@@ -71,6 +74,7 @@ export interface UserSubscriptionSummary {
   id: string;
   contractId: string | null;
   contractTitle: string;
+  planCode: string | null;
   months: number;
   priceEur: number;
   startsAt: string;
@@ -79,6 +83,13 @@ export interface UserSubscriptionSummary {
   glowBadgeEnabled: boolean;
   dailyBoostAccess: boolean;
   boostCreditsGranted: number;
+  refreshEveryHours: number | null;
+  maxListAllCategories: number;
+  maxJobListings: number;
+  maxCarListings: number;
+  maxApartmentListings: number;
+  maxProductListings: number;
+  maxPremiumListings: number;
 }
 
 /** Admin view of a payment (includes the payer). */

@@ -17,7 +17,7 @@ import { List as ListIcon, X as XIcon } from '@phosphor-icons/react/dist/ssr';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 interface NavPage {
   title: string;

@@ -4,7 +4,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
+    "dev": "node --watch server.js",
+    "dev:keep": "bash scripts/keep-api-alive.sh",
     "create-admin": "node scripts/create-admin-direct.js",
     "seed-listings": "node scripts/seed-listings.js",
     "test-listing-filters": "node scripts/test-listing-filters.js"

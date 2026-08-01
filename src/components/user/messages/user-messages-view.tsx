@@ -10,16 +10,20 @@ import {
   Button,
   Card,
   CircularProgress,
-  Divider,
   IconButton,
   Stack,
   TextField,
   Typography,
+  useColorScheme,
+  useTheme,
 } from '@mui/material';
 import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
+import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
+import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
 
+import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import {
   consumePendingListingChat,
   fetchConversationMessages,
@@ -30,6 +34,7 @@ import {
   type ConversationMessage,
   type ConversationSummary,
 } from '@/lib/conversations-client';
+import { whatsappHref } from '@/lib/listing-contact';
 import {
   listingBusinessPublicHref,
   listingCarPublicHref,
@@ -39,6 +44,13 @@ import {
   listingRealEstatePublicHref,
   paths,
 } from '@/paths';
+
+function conversationContactPhone(conv: ConversationSummary): string | null {
+  const listingPhone = conv.listingContactPhone?.trim() || '';
+  const otherPhone = conv.otherParticipantPhone?.trim() || '';
+  if (conv.role === 'inquirer') return listingPhone || otherPhone || null;
+  return otherPhone || listingPhone || null;
+}
 
 function listingPublicHref(kind: ConversationSummary['listingKind'], listingId: string): string {
   const entry = { id: listingId, permalinkPath: null as string | null };
@@ -63,12 +75,38 @@ function listingPublicHref(kind: ConversationSummary['listingKind'], listingId: 
 function formatMessageTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleString('sq-AL', {
-    day: '2-digit',
-    month: 'short',
+  return d.toLocaleTimeString('sq-AL', {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+/** Always dark chat chrome — readable WhatsApp-like layout with brand colors. */
+function useChatChrome() {
+  const theme = useTheme();
+  return {
+    header: '#171717',
+    wallpaper: '#0a0a0a',
+    wallpaperPattern: 'rgba(255,255,255,0.035)',
+    bubbleOut: theme.palette.primary.main,
+    bubbleOutText: theme.palette.primary.contrastText || '#0a0a0a',
+    bubbleIn: '#262626',
+    bubbleInText: '#fafafa',
+    composer: '#171717',
+    input: '#262626',
+    inputText: '#fafafa',
+    inputPlaceholder: 'rgba(250,250,250,0.45)',
+    send: theme.palette.primary.main,
+    sendIcon: theme.palette.primary.contrastText || '#0a0a0a',
+    timeOut: 'rgba(0,0,0,0.55)',
+    timeIn: 'rgba(250,250,250,0.55)',
+    emptyChip: 'rgba(23,23,23,0.92)',
+    text: '#fafafa',
+    textMuted: '#d4d4d4',
+    action: theme.palette.primary.main,
+    whatsapp: '#25D366',
+    divider: '#404040',
+  };
 }
 
 function ConversationListItem({
@@ -138,36 +176,80 @@ function ConversationListItem({
   );
 }
 
-function MessageBubble({ message }: { message: ConversationMessage }) {
+function MessageBubble({
+  message,
+  chrome,
+}: {
+  message: ConversationMessage;
+  chrome: ReturnType<typeof useChatChrome>;
+}) {
+  const mine = message.isMine;
   return (
     <Box
       sx={{
         display: 'flex',
-        justifyContent: message.isMine ? 'flex-end' : 'flex-start',
-        px: 2,
-        py: 0.5,
+        justifyContent: mine ? 'flex-end' : 'flex-start',
+        px: 1.25,
+        py: 0.2,
       }}
     >
       <Box
         sx={{
+          position: 'relative',
           maxWidth: '78%',
-          px: 1.5,
-          py: 1,
-          borderRadius: 2,
-          bgcolor: message.isMine ? 'primary.main' : 'action.hover',
-          color: message.isMine ? 'primary.contrastText' : 'text.primary',
+          px: 1.1,
+          pt: 0.55,
+          pb: 0.4,
+          bgcolor: mine ? chrome.bubbleOut : chrome.bubbleIn,
+          color: mine ? chrome.bubbleOutText : chrome.bubbleInText,
+          borderRadius: mine ? '8px 0 8px 8px' : '0 8px 8px 8px',
+          boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            width: 8,
+            height: 13,
+            ...(mine
+              ? {
+                  right: -7,
+                  bgcolor: chrome.bubbleOut,
+                  clipPath: 'polygon(0 0, 100% 0, 0 100%)',
+                }
+              : {
+                  left: -7,
+                  bgcolor: chrome.bubbleIn,
+                  clipPath: 'polygon(0 0, 100% 0, 100% 100%)',
+                }),
+          },
         }}
       >
-        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+        <Typography
+          variant="body2"
+          component="span"
+          sx={{
+            display: 'inline',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            fontSize: '0.9375rem',
+            lineHeight: 1.35,
+          }}
+        >
           {message.body}
         </Typography>
         <Typography
-          variant="caption"
+          component="span"
           sx={{
-            display: 'block',
-            mt: 0.5,
-            opacity: 0.75,
-            textAlign: message.isMine ? 'right' : 'left',
+            display: 'inline-block',
+            float: 'right',
+            position: 'relative',
+            top: 6,
+            ml: 1.25,
+            mb: -0.15,
+            fontSize: '0.68rem',
+            lineHeight: 1,
+            color: mine ? chrome.timeOut : chrome.timeIn,
+            whiteSpace: 'nowrap',
           }}
         >
           {formatMessageTime(message.createdAt)}
@@ -178,9 +260,15 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
 }
 
 export function UserMessagesView() {
+  const chrome = useChatChrome();
+  const { setMode } = useColorScheme();
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('c');
+
+  React.useEffect(() => {
+    setMode('dark');
+  }, [setMode]);
 
   const [conversations, setConversations] = React.useState<ConversationSummary[]>([]);
   const [messages, setMessages] = React.useState<ConversationMessage[]>([]);
@@ -287,33 +375,49 @@ export function UserMessagesView() {
   };
 
   const showThreadOnMobile = Boolean(selectedId);
+  const contactPhone = activeConversation ? conversationContactPhone(activeConversation) : null;
+  const contactWhatsapp = whatsappHref(contactPhone);
 
   return (
-    <Stack spacing={2}>
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-        <ChatsCircleIcon size={28} weight="duotone" />
-        <Stack spacing={0.25}>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-            Mesazhet
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Bisedoni me shitësit dhe blerësit përmes njoftimeve tuaja.
-          </Typography>
-        </Stack>
-      </Stack>
+    <Stack
+      spacing={{ xs: 0, md: 2 }}
+      sx={{
+        flex: { xs: '1 1 auto', md: '0 1 auto' },
+        minHeight: 0,
+        height: { xs: '100%', md: 'auto' },
+      }}
+    >
+      <UserPageHeader
+        icon={<ChatsCircleIcon size={20} weight="duotone" />}
+        title="Mesazhet"
+        description="Bisedoni me shitësit dhe blerësit përmes njoftimeve tuaja."
+        sx={{
+          display: { xs: showThreadOnMobile ? 'none' : 'flex', md: 'flex' },
+          px: { xs: 2, md: 0 },
+          pt: { xs: 2, md: 0 },
+          pb: { xs: 1.5, md: 0 },
+        }}
+      />
 
-      {error ? <Alert severity="error">{error}</Alert> : null}
+      {error && !showThreadOnMobile ? (
+        <Alert severity="error" sx={{ mx: { xs: 2, md: 0 }, mb: { xs: 1.5, md: 0 } }}>
+          {error}
+        </Alert>
+      ) : null}
 
       <Card
         elevation={0}
         sx={{
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 2,
+          border: { xs: 'none', md: '1px solid' },
+          borderColor: { md: 'divider' },
+          borderRadius: { xs: 0, md: 2 },
           overflow: 'hidden',
-          minHeight: { xs: 480, md: 560 },
+          flex: { xs: '1 1 auto', md: '0 1 auto' },
+          minHeight: { xs: 0, md: 560 },
+          height: { xs: '100%', md: 'auto' },
           display: 'flex',
           flexDirection: { xs: 'column', md: 'row' },
+          bgcolor: 'background.default',
         }}
       >
         <Box
@@ -324,9 +428,19 @@ export function UserMessagesView() {
             borderColor: 'divider',
             display: { xs: showThreadOnMobile ? 'none' : 'flex', md: 'flex' },
             flexDirection: 'column',
+            minHeight: 0,
+            flex: { xs: '1 1 auto', md: '0 0 auto' },
           }}
         >
-          <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Box
+            sx={{
+              px: 2,
+              py: 1.5,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              display: { xs: 'none', md: 'block' },
+            }}
+          >
             <Typography sx={{ fontWeight: 800 }}>Bisedat</Typography>
           </Box>
           {listLoading ? (
@@ -359,6 +473,8 @@ export function UserMessagesView() {
             display: { xs: showThreadOnMobile ? 'flex' : 'none', md: 'flex' },
             flexDirection: 'column',
             minWidth: 0,
+            minHeight: 0,
+            height: { xs: '100%', md: 'auto' },
           }}
         >
           {!selectedId ? (
@@ -371,59 +487,137 @@ export function UserMessagesView() {
             </Stack>
           ) : activeConversation ? (
             <>
+              {error ? (
+                <Alert severity="error" sx={{ borderRadius: 0 }}>
+                  {error}
+                </Alert>
+              ) : null}
               <Stack
                 direction="row"
                 spacing={1}
                 sx={{
                   alignItems: 'center',
-                  px: 1.5,
-                  py: 1.25,
+                  px: 1,
+                  py: 0.85,
+                  flexShrink: 0,
+                  bgcolor: chrome.header,
                   borderBottom: '1px solid',
-                  borderColor: 'divider',
+                  borderColor: chrome.divider,
+                  color: chrome.text,
                 }}
               >
                 <IconButton
                   type="button"
                   onClick={() => router.push(paths.user.messages)}
-                  sx={{ display: { xs: 'inline-flex', md: 'none' } }}
+                  sx={{ display: { xs: 'inline-flex', md: 'none' }, color: chrome.text, p: 0.75 }}
                   aria-label="Kthehu te lista"
                 >
-                  <ArrowLeftIcon size={20} />
+                  <ArrowLeftIcon size={22} weight="bold" />
                 </IconButton>
-                <Stack spacing={0.25} sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography sx={{ fontWeight: 800 }} noWrap>
+                <Avatar
+                  src={activeConversation.listingImageUrl ?? undefined}
+                  sx={{ width: 40, height: 40, flexShrink: 0 }}
+                >
+                  {(activeConversation.otherParticipantName ?? 'P').slice(0, 1).toUpperCase()}
+                </Avatar>
+                <Stack spacing={0.1} sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography sx={{ fontWeight: 600, fontSize: '1rem', lineHeight: 1.25, color: chrome.text }} noWrap>
                     {activeConversation.otherParticipantName ?? 'Përdorues'}
                   </Typography>
                   <Typography
                     component={Link}
                     href={listingPublicHref(activeConversation.listingKind, activeConversation.listingId)}
                     variant="caption"
-                    color="primary"
-                    sx={{ fontWeight: 600, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                    sx={{
+                      fontWeight: 600,
+                      color: chrome.action,
+                      textDecoration: 'none',
+                      '&:hover': { textDecoration: 'underline' },
+                    }}
                     noWrap
                   >
                     {activeConversation.listingTitle}
                   </Typography>
                 </Stack>
+                {contactPhone ? (
+                  <Stack direction="row" spacing={0} sx={{ flexShrink: 0 }}>
+                    <IconButton
+                      component="a"
+                      href={`tel:${contactPhone.replace(/\s/g, '')}`}
+                      aria-label="Telefono"
+                      sx={{ color: chrome.action }}
+                    >
+                      <PhoneIcon size={22} weight="regular" />
+                    </IconButton>
+                    {contactWhatsapp ? (
+                      <IconButton
+                        component="a"
+                        href={`${contactWhatsapp}?text=${encodeURIComponent(`Përshëndetje, jam i interesuari për: «${activeConversation.listingTitle}».`)}`}
+                        rel="noopener noreferrer"
+                        target="_blank"
+                        aria-label="WhatsApp"
+                        sx={{ color: chrome.whatsapp }}
+                      >
+                        <WhatsappLogoIcon size={22} weight="regular" />
+                      </IconButton>
+                    ) : null}
+                  </Stack>
+                ) : null}
               </Stack>
 
-              <Box sx={{ flex: 1, overflow: 'auto', py: 1.5 }}>
+              <Box
+                sx={{
+                  flex: 1,
+                  overflow: 'auto',
+                  py: 1.25,
+                  minHeight: 0,
+                  bgcolor: chrome.wallpaper,
+                  backgroundImage: `radial-gradient(${chrome.wallpaperPattern} 1.2px, transparent 1.2px)`,
+                  backgroundSize: '18px 18px',
+                }}
+              >
                 {messages.length === 0 ? (
-                  <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4, px: 2 }}>
-                    Filloni bisedën — shkruani mesazhin e parë më poshtë.
-                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', px: 2, py: 3 }}>
+                    <Typography
+                      sx={{
+                        textAlign: 'center',
+                        px: 2,
+                        py: 1,
+                        borderRadius: 1.5,
+                        bgcolor: chrome.emptyChip,
+                        color: chrome.textMuted,
+                        fontSize: '0.8rem',
+                        maxWidth: 320,
+                        boxShadow: '0 1px 1px rgba(0,0,0,0.12)',
+                      }}
+                    >
+                      Filloni bisedën — shkruani mesazhin e parë më poshtë.
+                    </Typography>
+                  </Box>
                 ) : (
-                  messages.map((m) => <MessageBubble key={m.id} message={m} />)
+                  messages.map((m) => <MessageBubble key={m.id} message={m} chrome={chrome} />)
                 )}
                 <div ref={messagesEndRef} />
               </Box>
 
-              <Divider />
-              <Stack direction="row" spacing={1} sx={{ p: 1.5, alignItems: 'flex-end' }}>
+              <Stack
+                direction="row"
+                spacing={0.75}
+                sx={{
+                  px: 1,
+                  pt: 0.65,
+                  alignItems: 'center',
+                  flexShrink: 0,
+                  bgcolor: chrome.composer,
+                  borderTop: '1px solid',
+                  borderColor: chrome.divider,
+                  pb: { xs: 'max(8px, env(safe-area-inset-bottom))', md: 0.85 },
+                }}
+              >
                 <TextField
                   fullWidth
                   multiline
-                  maxRows={4}
+                  maxRows={5}
                   placeholder="Shkruani mesazhin…"
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
@@ -434,16 +628,54 @@ export function UserMessagesView() {
                     }
                   }}
                   size="small"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: chrome.input,
+                      color: chrome.inputText,
+                      borderRadius: 999,
+                      minHeight: 36,
+                      alignItems: 'center',
+                      py: 0.25,
+                      px: 1.25,
+                      fontSize: '0.9rem',
+                      '& fieldset': { border: 'none' },
+                      '&.Mui-focused fieldset': { border: 'none' },
+                    },
+                    '& .MuiInputBase-input': {
+                      color: chrome.inputText,
+                      py: 0.65,
+                      lineHeight: 1.35,
+                      '&::placeholder': {
+                        color: chrome.inputPlaceholder,
+                        opacity: 1,
+                      },
+                    },
+                  }}
                 />
                 <IconButton
                   type="button"
-                  color="primary"
                   disabled={sending || !draft.trim()}
                   onClick={() => void handleSend()}
                   aria-label="Dërgo mesazhin"
-                  sx={{ mb: 0.25 }}
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    flexShrink: 0,
+                    bgcolor: chrome.send,
+                    color: chrome.sendIcon,
+                    '&:hover': { bgcolor: 'primary.dark' },
+                    '&.Mui-disabled': {
+                      bgcolor: chrome.send,
+                      color: chrome.sendIcon,
+                      opacity: 0.45,
+                    },
+                  }}
                 >
-                  {sending ? <CircularProgress size={22} /> : <PaperPlaneTiltIcon size={22} weight="fill" />}
+                  {sending ? (
+                    <CircularProgress size={16} sx={{ color: chrome.sendIcon }} />
+                  ) : (
+                    <PaperPlaneTiltIcon size={18} weight="fill" />
+                  )}
                 </IconButton>
               </Stack>
             </>

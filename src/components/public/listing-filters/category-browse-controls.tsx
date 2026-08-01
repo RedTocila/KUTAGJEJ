@@ -33,6 +33,7 @@ import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { ActiveFilterChips } from './active-filter-chips';
 import { FilterDrawerPanel } from './filter-drawer';
 import { LocationSearchInput } from './location-search-input';
+import { SubcategoryPills } from '../subcategory-pills';
 
 const toolbarRowSx = {
   display: 'flex',
@@ -242,6 +243,10 @@ export function CategoryBrowseControls({
               <SortDescIcon size={14} />
             </ToggleButton>
           </ToggleButtonGroup>
+        </Box>
+
+        <Box sx={{ '& > [role=navigation]': { mt: { xs: 1.25, md: 1.5 }, mb: 0 } }}>
+          <SubcategoryPills verticalId={verticalId} />
         </Box>
 
         {activeChips.length > 0 ? (

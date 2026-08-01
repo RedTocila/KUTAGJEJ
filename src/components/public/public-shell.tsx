@@ -13,18 +13,22 @@ import { PublicHeader } from './public-header';
  *
  * @param hideHeaderBelowMd Use on listing **detail** routes: hides `PublicHeader` (and its layout spacer)
  *   below `md`, so hero imagery can hug the viewport top edge on phones / small tablets.
+ * @param hideHeader Hide `PublicHeader` on all breakpoints (e.g. public member profile).
  */
 export function PublicShell({
   children,
   hideHeaderBelowMd = false,
+  hideHeader = false,
 }: {
   children: React.ReactNode;
   /** Hide fixed header below `md` (listing detail fullscreen hero). */
   hideHeaderBelowMd?: boolean;
+  /** Hide fixed header on all viewports. */
+  hideHeader?: boolean;
 }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      {hideHeaderBelowMd ? (
+      {hideHeader ? null : hideHeaderBelowMd ? (
         <Box sx={{ display: { xs: 'none', md: 'block' } }}>
           <PublicHeader />
         </Box>

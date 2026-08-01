@@ -1,6 +1,7 @@
 import type { ListingMetrics } from '@/lib/listing-metrics';
 import type { BrowseFilters } from '@/lib/listing-filters';
 import { BROWSE_PAGE_SIZE, buildBrowseApiQuery } from '@/lib/listing-filters';
+import type { HomeVerticalId } from '@/lib/home-categories';
 import { safeServerJson } from '@/lib/server-fetch';
 
 export type ListingMetricsFields = ListingMetrics;
@@ -41,12 +42,17 @@ export interface PublicRealEstateListing extends ListingMetricsFields {
 }
 
 export interface PublicRealEstateListingSeller {
+  id?: string;
   kind: 'individual' | 'business';
   displayName: string | null;
   phone: string | null;
   memberSince: string;
-  /** Punë — admin-approved employer profile. */
+  /** Admin-approved verification (jobs and/or professionals, depending on context). */
   verified?: boolean;
+  /** Business accounts — registered owner name. */
+  businessOwner?: string | null;
+  /** Business accounts — free-text category. */
+  businessCategory?: string | null;
 }
 
 export interface JobListingBenefit {
@@ -437,6 +443,27 @@ export async function fetchLatestBusinesses(limit = 12): Promise<PublicDirectory
 export async function fetchLatestProfessionals(limit = 12): Promise<PublicDirectoryListing[]> {
   const { listings } = await fetchBrowseProfessionals(limit);
   return listings;
+}
+
+export const TOP_VIEWED_LIMIT = 10;
+
+export type TopViewedListing =
+  | PublicRealEstateListing
+  | PublicCarListing
+  | PublicJobListing
+  | PublicMarketplaceListing
+  | PublicDirectoryListing;
+
+/** Most-viewed listings for a public category page slider (max 10). */
+export async function fetchTopViewedListings(
+  verticalId: HomeVerticalId,
+  limit = TOP_VIEWED_LIMIT,
+): Promise<TopViewedListing[]> {
+  const capped = Math.min(Math.max(1, limit), TOP_VIEWED_LIMIT);
+  const data = await safeJson<{ listings?: TopViewedListing[] }>(
+    `/public/listings/top-viewed?vertical=${encodeURIComponent(verticalId)}&limit=${capped}`,
+  );
+  return data?.listings ?? [];
 }
 
 const OBJECT_ID_RE = /^[a-f\d]{24}$/i;

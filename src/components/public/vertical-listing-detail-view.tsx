@@ -13,7 +13,6 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
 import {
@@ -36,13 +35,20 @@ import {
   LISTING_DETAIL_HERO_IMAGE_SIZES,
 } from '@/lib/listing-detail-layout';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import type { AnyPublicListingDetail } from '@/lib/public-listings-client';
+import type {
+  AnyPublicListingDetail,
+  PublicCarListing,
+  PublicMarketplaceListing,
+} from '@/lib/public-listings-client';
 
 import { ListingMessageButton } from '@/components/public/listing-message-button';
+import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
+import { StickyListingContact } from '@/components/public/sticky-listing-contact';
 import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
+import { CarCard } from '@/components/public/listing-cards/car-card';
 import {
   findOptionLabel,
   formatKilometers,
@@ -50,94 +56,13 @@ import {
   relativeAlbanianDate,
 } from '@/components/public/listing-cards/format-helpers';
 import { JobListingCountdown } from '@/components/public/listing-cards/job-listing-countdown';
+import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
-import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { metricKindToConversationKind } from '@/lib/conversations-client';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
-
-/** Tiny strip card for related listings — plain links, no theme callbacks crossing RSC boundaries. */
-export interface VerticalListingSimilarItem {
-  id: string;
-  href: string;
-  thumbUrl: string | null;
-  title: string;
-  sub: string;
-  badge?: string | null;
-  priceLine?: string | null;
-}
-
-function StickyListingContact(props: {
-  phone?: string | null;
-  whatsappInquireHref?: string | null | undefined;
-  listingKind: ReturnType<typeof metricKindToConversationKind>;
-  listingId: string;
-}) {
-  const { phone, whatsappInquireHref, listingKind, listingId } = props;
-  return (
-    <Box
-      sx={{
-        display: { xs: 'flex', md: 'none' },
-        position: 'fixed',
-        left: 0,
-        right: 0,
-        zIndex: 1200,
-        bottom: MOBILE_BOTTOM_NAV_OFFSET,
-        justifyContent: 'center',
-        px: { xs: 1.5, sm: 3 },
-      }}
-    >
-      <Stack direction="row" spacing={1.25} sx={{ width: '100%', maxWidth: 560 }}>
-        {phone ? (
-          <Button
-            component="a"
-            href={`tel:${phone.replace(/\s/g, '')}`}
-            variant="contained"
-            disableElevation
-            size="large"
-            sx={{ flex: 1, borderRadius: 2, fontWeight: 800, textTransform: 'none', fontSize: '1rem', py: 1.35 }}
-          >
-            Kontakto shitësin
-          </Button>
-        ) : (
-          <Button variant="contained" disabled sx={{ flex: 1 }}>
-            Nr. kontakti i padisponueshëm
-          </Button>
-        )}
-        {whatsappInquireHref ? (
-          <Button
-            component="a"
-            href={whatsappInquireHref}
-            rel="noopener noreferrer"
-            target="_blank"
-            variant="outlined"
-            size="large"
-            sx={{
-              px: 1.85,
-              minWidth: 'auto',
-              borderRadius: 2,
-              ...whatsappOutlinedButtonSx,
-            }}
-            aria-label="WhatsApp"
-          >
-            <WhatsappLogoIcon weight="regular" size={26} />
-          </Button>
-        ) : null}
-        <ListingMessageButton
-          listingKind={listingKind}
-          listingId={listingId}
-          aria-label="Dërgo mesazh"
-          variant="outlined"
-          size="large"
-          sx={{ px: 1.85, minWidth: 'auto', flexShrink: 0, borderRadius: 2, py: 1.35 }}
-        >
-          <ChatsCircleIcon weight="regular" size={26} />
-        </ListingMessageButton>
-      </Stack>
-    </Box>
-  );
-}
+import { pathsPublicMemberProfile } from '@/paths';
 
 function DetailLine({ label, value }: { label: string; value: string }) {
   return (
@@ -240,7 +165,7 @@ export function VerticalListingDetailView(props: {
   canonicalUrl: string;
   browseHref: string;
   similarSectionTitle: string;
-  similar: VerticalListingSimilarItem[];
+  similar: PublicCarListing[] | PublicMarketplaceListing[];
 }) {
   const { listing, canonicalUrl, browseHref, similarSectionTitle, similar } = props;
 
@@ -400,79 +325,42 @@ export function VerticalListingDetailView(props: {
             <Box sx={{ display: { xs: 'block', md: 'none' } }}>{sellerBlock(listing)}</Box>
 
             {similar.length ? (
-              <>
+              <Stack spacing={1.5} component="aside" aria-labelledby="vertical-similar-heading">
                 <Divider />
-                <Typography variant="overline" sx={{ fontWeight: 800, letterSpacing: '0.08em', color: 'text.secondary' }}>
+                <Typography
+                  id="vertical-similar-heading"
+                  variant="overline"
+                  sx={{ fontWeight: 800, letterSpacing: '0.08em', color: 'text.secondary' }}
+                >
                   {similarSectionTitle}
                 </Typography>
-                <Stack
-                  direction="row"
-                  spacing={1.5}
-                  sx={{ overflowX: 'auto', pb: 1, scrollbarWidth: 'thin', scrollSnapType: 'x proximity' }}
+                <Box
+                  sx={{
+                    mx: { xs: -2, sm: -3, md: 0 },
+                    '& > div > div': { py: '8px 0 0 !important' },
+                  }}
                 >
-                  {similar.map((s) => (
-                    <SimilarMini key={s.id} item={s} />
-                  ))}
-                </Stack>
-              </>
+                  <ListingsCarousel>
+                    {similar.map((s) =>
+                      s.kind === 'car' ? (
+                        <CarCard key={s.id} listing={s} />
+                      ) : (
+                        <MarketplaceCard key={s.id} listing={s} />
+                      ),
+                    )}
+                  </ListingsCarousel>
+                </Box>
+              </Stack>
             ) : null}
           </Stack>
         </Container>
       </Box>
 
       <StickyListingContact
-        phone={displayPhone}
-        whatsappInquireHref={whatsappInquireHref}
         listingKind={metricKindToConversationKind(metricKind)}
         listingId={listing.id}
       />
     </>
-  );
-}
-
-function SimilarMini({ item }: { item: VerticalListingSimilarItem }) {
-  return (
-    <Box sx={{ flex: '0 0 min(268px, 84vw)', scrollSnapAlign: 'start' }}>
-      <Link href={item.href} prefetch={false} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-        <Paper
-          variant="outlined"
-          sx={{
-            borderRadius: 2,
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            overflow: 'hidden',
-            '&:hover': { borderColor: 'primary.main' },
-          }}
-        >
-          <Box sx={{ display: 'flex', height: 100 }}>
-            <Box sx={{ width: 118, flexShrink: 0, bgcolor: 'grey.200', position: 'relative' }}>
-              {item.thumbUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.thumbUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : null}
-              {item.badge ? (
-                <Typography variant="caption" sx={{ position: 'absolute', top: 6, left: 6, bgcolor: 'rgba(0,0,0,0.5)', px: 0.6, py: 0.1, borderRadius: 0.5, fontWeight: 800, fontSize: '0.62rem', color: 'primary.main' }}>
-                  {item.badge}
-                </Typography>
-              ) : null}
-            </Box>
-            <Stack spacing={0.5} sx={{ p: 1.25, minWidth: 0 }}>
-              {item.priceLine ? (
-                <Typography variant="subtitle2" sx={{ fontWeight: 850, color: 'primary.main' }}>
-                  {item.priceLine}
-                </Typography>
-              ) : null}
-              <Typography variant="body2" sx={{ fontWeight: 650, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.35 }}>
-                {item.title}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" noWrap>
-                {item.sub}
-              </Typography>
-            </Stack>
-          </Box>
-        </Paper>
-      </Link>
-    </Box>
   );
 }
 
@@ -610,7 +498,7 @@ function extrasBlock(l: AnyPublicListingDetail): React.ReactNode {
   );
 }
 
-/** Avatar + “Rreth shitësit” + Telefon/WhatsApp row (nested card in desktop hero column, or wrapped below). */
+/** Avatar + “Rreth shitësit” + Shiko profilin (nested card in desktop hero column, or wrapped below). */
 function SellerProfileInner({ listing: l }: { listing: AnyPublicListingDetail }) {
   const s = l.seller;
   const initials =
@@ -623,14 +511,7 @@ function SellerProfileInner({ listing: l }: { listing: AnyPublicListingDetail })
           .map((p) => p[0]?.toUpperCase())
           .join('') || '?';
   const memberYear = s?.memberSince ? new Date(s.memberSince).getFullYear() : undefined;
-  const displayPhone =
-    (l.contactPhone ?? '').trim() || s?.phone?.trim() || '';
-  const whatsappListingHref = (() => {
-    const wa = whatsappHref(displayPhone);
-    return wa
-      ? `${wa}?text=${encodeURIComponent(`Përshëndetje, për njoftimin «${listingTitle(l)}» në KuTaGjej.`)}`
-      : undefined;
-  })();
+  const profileHref = s?.id ? pathsPublicMemberProfile(s.id) : null;
 
   return (
     <>
@@ -660,42 +541,27 @@ function SellerProfileInner({ listing: l }: { listing: AnyPublicListingDetail })
           ) : null}
         </Stack>
       </Stack>
-      <Stack direction="row" spacing={1.25} sx={{ mt: 2, flexWrap: 'wrap' }}>
-        <Button
-          component={displayPhone ? 'a' : 'button'}
-          href={displayPhone ? `tel:${displayPhone.replace(/\s/g, '')}` : undefined}
-          disabled={!displayPhone}
-          variant="contained"
-          disableElevation
-          sx={{ flex: 1, borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.1, minWidth: 120 }}
-        >
-          Telefon
-        </Button>
-        <Button
-          component="a"
-          href={whatsappListingHref ?? '#'}
-          rel="noopener noreferrer"
-          disabled={!whatsappListingHref}
-          target="_blank"
-          variant="outlined"
-          sx={{
-            px: 1.85,
-            minWidth: 'auto',
-            flexShrink: 0,
-            borderRadius: 2,
-            ...whatsappOutlinedButtonSx,
-          }}
-          aria-label="WhatsApp"
-        >
-          <WhatsappLogoIcon weight="regular" size={26} />
-        </Button>
-        <ListingMessageButton
-          listingKind={metricKindToConversationKind(l.kind as ListingMetricKind)}
-          listingId={l.id}
-          variant="outlined"
-          sx={{ flex: 1, borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.1, minWidth: 120 }}
-        />
-      </Stack>
+      <Button
+        component={profileHref ? Link : 'button'}
+        href={profileHref ?? undefined}
+        disabled={!profileHref}
+        variant="contained"
+        disableElevation
+        fullWidth
+        sx={{
+          mt: 2,
+          borderRadius: 999,
+          fontWeight: 800,
+          textTransform: 'none',
+          py: 1.25,
+          color: 'common.black',
+          boxShadow: 'none',
+          '&:hover': { color: 'common.black' },
+          '& .MuiButton-startIcon': { color: 'inherit' },
+        }}
+      >
+        Shiko profilin
+      </Button>
     </>
   );
 }

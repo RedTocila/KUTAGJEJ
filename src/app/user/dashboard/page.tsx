@@ -3,21 +3,25 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import {
-  Alert,
   Box,
-  Button,
   Chip,
-  CircularProgress,
   Grid,
   LinearProgress,
   Stack,
   Typography,
 } from '@mui/material';
 import { ChartLineUp as ChartLineUpIcon } from '@phosphor-icons/react/dist/ssr/ChartLineUp';
+import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { Coins as CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins';
+import { FileText as FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
+import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
 import { ListBullets as ListBulletsIcon } from '@phosphor-icons/react/dist/ssr/ListBullets';
+import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
+import { Receipt as ReceiptIcon } from '@phosphor-icons/react/dist/ssr/Receipt';
+import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
+import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGear';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { paths } from '@/paths';
@@ -29,16 +33,24 @@ import {
   listMyRealEstateListings,
 } from '@/lib/listings-client';
 import { listPublicContracts } from '@/lib/public-contracts-client';
-import { createSubscriptionOrder } from '@/lib/payments-client';
+import { listMySubscriptions } from '@/lib/payments-client';
 import { getUserPortalAccountCategoryLabel } from '@/lib/user-portal-account-label';
-import type { PublicContract } from '@/types/contract';
-import type { ContractPriceOption } from '@/lib/contract-pricing';
-import { PokCheckoutDialog } from '@/components/payments/pok-checkout-dialog';
+import type { ContractQuotas, PublicContract } from '@/types/contract';
+import { FREE_PLAN_QUOTAS } from '@/types/contract';
+import type { UserSubscriptionSummary } from '@/types/payment';
+import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
 
-// NOTE: Posting/premium caps come from the user's active subscription once that
-// backend exists. Until then these are placeholder caps; the "used" values are real.
-const DEFAULT_LISTING_QUOTA = 10;
-const DEFAULT_PREMIUM_QUOTA = 5;
+function quotasFromSub(sub: UserSubscriptionSummary | null): ContractQuotas {
+  if (!sub) return FREE_PLAN_QUOTAS;
+  return {
+    maxListAllCategories: sub.maxListAllCategories ?? FREE_PLAN_QUOTAS.maxListAllCategories,
+    maxJobListings: sub.maxJobListings ?? FREE_PLAN_QUOTAS.maxJobListings,
+    maxCarListings: sub.maxCarListings ?? FREE_PLAN_QUOTAS.maxCarListings,
+    maxApartmentListings: sub.maxApartmentListings ?? FREE_PLAN_QUOTAS.maxApartmentListings,
+    maxProductListings: sub.maxProductListings ?? FREE_PLAN_QUOTAS.maxProductListings,
+    maxPremiumListings: sub.maxPremiumListings ?? 0,
+  };
+}
 
 const GRADIENTS = {
   blue: 'linear-gradient(160deg, #3ec6e0 0%, #2f86c5 100%)',
@@ -95,6 +107,78 @@ function ActionTile({
       <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', textAlign: 'center', lineHeight: 1.25 }}>
         {label}
       </Typography>
+    </Box>
+  );
+}
+
+/** Full-width panel row — opens a dedicated page. */
+function PanelLinkCard({
+  href,
+  title,
+  description,
+  icon: Icon,
+  badge,
+}: {
+  href: string;
+  title: string;
+  description: string;
+  icon: PhosphorIcon;
+  badge?: string;
+}) {
+  return (
+    <Box
+      component={RouterLink}
+      href={href}
+      sx={{
+        textDecoration: 'none',
+        color: 'inherit',
+        display: 'block',
+        p: { xs: 2.25, sm: 3 },
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        transition: 'border-color 0.15s ease, background-color 0.15s ease',
+        '&:hover': {
+          borderColor: 'primary.main',
+          bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'action.hover'),
+        },
+      }}
+    >
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+        <Box
+          sx={{
+            width: 44,
+            height: 44,
+            borderRadius: 2,
+            display: 'grid',
+            placeItems: 'center',
+            flexShrink: 0,
+            bgcolor: (t) => `${t.palette.primary.main}22`,
+            color: 'primary.main',
+          }}
+        >
+          {React.createElement(Icon, { size: 24, weight: 'duotone' })}
+        </Box>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.25 }}>
+            {title}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+            {description}
+          </Typography>
+          {badge ? (
+            <Chip
+              label={badge}
+              size="small"
+              sx={{ mt: 1.25, fontWeight: 700 }}
+            />
+          ) : null}
+        </Box>
+        <Box sx={{ color: 'text.secondary', display: 'flex', flexShrink: 0 }}>
+          <CaretRightIcon size={20} weight="bold" />
+        </Box>
+      </Stack>
     </Box>
   );
 }
@@ -158,20 +242,18 @@ function QuotaStat({
   );
 }
 
-type PendingPlanCheckout = {
-  contract: PublicContract;
-  option: ContractPriceOption;
-};
-
 export default function UserDashboardPage() {
-  const { user, checkSession } = useUser();
+  const { user } = useUser();
 
   const subscriberKindFilter = user?.accountType === 'business' || user?.role === 'business-user' ? 'company' : 'agent';
   const [plans, setPlans] = React.useState<PublicContract[]>([]);
-  const [plansLoading, setPlansLoading] = React.useState(true);
-  const [plansError, setPlansError] = React.useState<string | null>(null);
-  const [postedListings, setPostedListings] = React.useState<number | null>(null);
-  const [planCheckout, setPlanCheckout] = React.useState<PendingPlanCheckout | null>(null);
+  const [activeSub, setActiveSub] = React.useState<UserSubscriptionSummary | null>(null);
+  const [usage, setUsage] = React.useState({
+    apartments: 0,
+    cars: 0,
+    jobs: 0,
+    products: 0,
+  });
 
   const canPublish =
     Boolean(user) &&
@@ -182,18 +264,16 @@ export default function UserDashboardPage() {
   React.useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    setPlansLoading(true);
-    setPlansError(null);
     void (async () => {
-      const { contracts, error } = await listPublicContracts({ subscriberKind: subscriberKindFilter });
+      const [{ contracts }, subsRes] = await Promise.all([
+        listPublicContracts({ subscriberKind: subscriberKindFilter }),
+        listMySubscriptions(),
+      ]);
       if (cancelled) return;
-      if (error) {
-        setPlansError(error);
-        setPlans([]);
-      } else {
-        setPlans(contracts ?? []);
-      }
-      setPlansLoading(false);
+      setPlans(contracts ?? []);
+      const active =
+        (subsRes.subscriptions ?? []).find((s) => s.status === 'active' && Number(s.priceEur) > 0) ?? null;
+      setActiveSub(active);
     })();
     return () => {
       cancelled = true;
@@ -202,7 +282,7 @@ export default function UserDashboardPage() {
 
   React.useEffect(() => {
     if (!user || !canPublish) {
-      setPostedListings(null);
+      setUsage({ apartments: 0, cars: 0, jobs: 0, products: 0 });
       return;
     }
     let cancelled = false;
@@ -213,13 +293,12 @@ export default function UserDashboardPage() {
       listMyMarketplaceListings(),
     ]).then(([re, cars, jobs, mkt]) => {
       if (cancelled) return;
-      const all = [
-        ...(re.listings ?? []),
-        ...(cars.listings ?? []),
-        ...(jobs.listings ?? []),
-        ...(mkt.listings ?? []),
-      ];
-      setPostedListings(all.length);
+      setUsage({
+        apartments: (re.listings ?? []).length,
+        cars: (cars.listings ?? []).length,
+        jobs: (jobs.listings ?? []).length,
+        products: (mkt.listings ?? []).length,
+      });
     });
     return () => {
       cancelled = true;
@@ -228,25 +307,42 @@ export default function UserDashboardPage() {
 
   const boostCoins = typeof user?.boostCredits === 'number' ? user.boostCredits : 0;
   const categoryLabel = getUserPortalAccountCategoryLabel(user ?? null);
+  const quotas = React.useMemo(() => {
+    if (activeSub) return quotasFromSub(activeSub);
+    const freePlan = plans.find((p) => p.planCode === 'free');
+    if (freePlan) {
+      return {
+        maxListAllCategories: freePlan.maxListAllCategories,
+        maxJobListings: freePlan.maxJobListings,
+        maxCarListings: freePlan.maxCarListings,
+        maxApartmentListings: freePlan.maxApartmentListings,
+        maxProductListings: freePlan.maxProductListings,
+        maxPremiumListings: freePlan.maxPremiumListings,
+      };
+    }
+    return FREE_PLAN_QUOTAS;
+  }, [activeSub, plans]);
+  const activePlanLabel = activeSub?.contractTitle || 'FREE';
 
   if (!user) return null;
 
   return (
     <Stack spacing={3}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={2}
-        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
-      >
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-          Paneli
-        </Typography>
+      <Stack spacing={1.5}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
+            Paneli
+          </Typography>
+          <Box sx={{ display: { xs: 'block', lg: 'none' }, mr: -1 }}>
+            <ThemeModeToggle />
+          </Box>
+        </Stack>
         <Stack
           direction="row"
           spacing={1}
           sx={{
             alignItems: 'center',
-            alignSelf: { xs: 'flex-start', sm: 'auto' },
+            alignSelf: 'flex-start',
             px: 1.75,
             py: 0.85,
             borderRadius: 999,
@@ -299,26 +395,62 @@ export default function UserDashboardPage() {
               </Typography>
             </Box>
             <Chip
-              label={`${categoryLabel} · Package`}
+              label={`${activePlanLabel} · ${categoryLabel}`}
               sx={{ fontWeight: 700, alignSelf: { xs: 'flex-start', sm: 'auto' } }}
             />
           </Stack>
 
           <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <QuotaStat
-                label="Mund të postoni"
-                used={postedListings ?? 0}
-                max={DEFAULT_LISTING_QUOTA}
+                label="Të gjitha kategoritë"
+                used={0}
+                max={quotas.maxListAllCategories}
                 icon={ListBulletsIcon}
                 accent="success"
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <QuotaStat
+                label="Apartamente"
+                used={usage.apartments}
+                max={quotas.maxApartmentListings}
+                icon={ListBulletsIcon}
+                accent="success"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <QuotaStat
+                label="Makina"
+                used={usage.cars}
+                max={quotas.maxCarListings}
+                icon={ListBulletsIcon}
+                accent="success"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <QuotaStat
+                label="Vende pune"
+                used={usage.jobs}
+                max={quotas.maxJobListings}
+                icon={ListBulletsIcon}
+                accent="success"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <QuotaStat
+                label="Produkte"
+                used={usage.products}
+                max={quotas.maxProductListings}
+                icon={ListBulletsIcon}
+                accent="success"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <QuotaStat
                 label="Njoftime premium"
                 used={0}
-                max={DEFAULT_PREMIUM_QUOTA}
+                max={quotas.maxPremiumListings}
                 icon={SparkleIcon}
                 accent="warning"
               />
@@ -327,86 +459,50 @@ export default function UserDashboardPage() {
         </Box>
       ) : null}
 
-      <Box sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
-        <Typography variant="h6" sx={{ fontWeight: 800, mb: 2 }}>
-          Paketat për ju
-        </Typography>
-        {plansLoading ? (
-          <Box sx={{ py: 2, display: 'flex', justifyContent: 'center' }}>
-            <CircularProgress size={28} />
-          </Box>
-        ) : null}
-        {plansError ? (
-          <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
-            {plansError}
-          </Alert>
-        ) : null}
-        {!plansLoading && !plansError && plans.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
-            Për momentin nuk ka plan aktiv me çmim për llogarinë tuaj.
-          </Typography>
-        ) : null}
-        {!plansLoading && !plansError && plans.length > 0 ? (
-          <Stack spacing={2}>
-            {plans.map((plan) => (
-              <Box
-                key={plan.id}
-                sx={{ p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: 'action.hover' }}
-              >
-                <Typography sx={{ fontWeight: 700 }}>{plan.title}</Typography>
-                {plan.listingCategoryTitle ? (
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                    {plan.listingCategoryTitle}
-                  </Typography>
-                ) : null}
-                <Stack direction="row" sx={{ flexWrap: 'wrap', mt: 1.5, gap: 1 }}>
-                  {plan.priceOptions.map((opt) => (
-                    <Button
-                      key={opt.months}
-                      size="small"
-                      variant="outlined"
-                      onClick={() => setPlanCheckout({ contract: plan, option: opt })}
-                      sx={{ fontWeight: 700, textTransform: 'none', borderRadius: 999 }}
-                    >
-                      {`${opt.labelSq} · ${opt.price} € — Blej`}
-                    </Button>
-                  ))}
-                </Stack>
-              </Box>
-            ))}
-          </Stack>
-        ) : null}
-      </Box>
-
-      {planCheckout ? (
-        <PokCheckoutDialog
-          open={Boolean(planCheckout)}
-          onClose={() => setPlanCheckout(null)}
-          title="Abonohu në plan"
-          summary={
-            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.4 }}>
-                  Abonim
-                </Typography>
-                <Typography sx={{ fontWeight: 700, lineHeight: 1.25 }}>{planCheckout.contract.title}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {planCheckout.option.labelSq} · {planCheckout.option.months} muaj
-                </Typography>
-              </Box>
-              <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', whiteSpace: 'nowrap' }}>
-                {planCheckout.option.price} €
-              </Typography>
-            </Stack>
-          }
-          createOrder={() =>
-            createSubscriptionOrder(planCheckout.contract.id, planCheckout.option.months)
-          }
-          onPaid={() => {
-            void checkSession();
-          }}
+      <Stack spacing={2}>
+        <PanelLinkCard
+          href={paths.user.packages}
+          title="Paketat për ju"
+          description="Shikoni planet e abonimit dhe blini planin që ju përshtatet."
+          icon={PackageIcon}
+          badge={activePlanLabel}
         />
-      ) : null}
+        {canPublish ? (
+          <PanelLinkCard
+            href={paths.user.referral}
+            title="Referimi"
+            description="Ftoni miqtë dhe fitoni kredite nga sistemi i referimit."
+            icon={HandshakeIcon}
+          />
+        ) : null}
+        {canPublish ? (
+          <PanelLinkCard
+            href={paths.user.payments}
+            title="Pagesat e mia"
+            description="Shikoni pagesat, abonimet dhe historikun e transakcioneve."
+            icon={ReceiptIcon}
+          />
+        ) : null}
+        <PanelLinkCard
+          href={paths.user.profile}
+          title="Profili im"
+          description="Menaxhoni të dhënat e llogarisë dhe fjalëkalimin."
+          icon={UserGearIcon}
+          badge={categoryLabel}
+        />
+        <PanelLinkCard
+          href={paths.public.terms}
+          title="Kushtet e përdorimit"
+          description="Rregullat e përdorimit të platformës KuTaGjej."
+          icon={FileTextIcon}
+        />
+        <PanelLinkCard
+          href={paths.public.privacy}
+          title="Politika e privatësisë"
+          description="Si mbledhim, përdorim dhe mbrojmë të dhënat tuaja."
+          icon={ShieldCheckIcon}
+        />
+      </Stack>
     </Stack>
   );
 }

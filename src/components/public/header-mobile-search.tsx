@@ -73,8 +73,8 @@ export function HeaderMobileSearch() {
                     width: 28,
                     height: 28,
                     bgcolor: 'primary.main',
-                    color: 'grey.900',
-                    '&:hover': { bgcolor: 'primary.dark' },
+                    color: 'common.black',
+                    '&:hover': { bgcolor: 'primary.dark', color: 'common.black' },
                   }}
                 >
                   <MagnifyingGlassIcon size={15} weight="bold" />

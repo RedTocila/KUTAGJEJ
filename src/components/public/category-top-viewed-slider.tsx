@@ -1,0 +1,467 @@
+'use client';
+
+import * as React from 'react';
+import RouterLink from 'next/link';
+import { Box, Container, Stack, Typography } from '@mui/material';
+import { ArrowUpRight as ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
+
+import { formatPrice } from '@/components/public/listing-cards/format-helpers';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import type { HomeVerticalId } from '@/lib/home-categories';
+import type {
+  PublicCarListing,
+  PublicDirectoryListing,
+  PublicJobListing,
+  PublicMarketplaceListing,
+  PublicRealEstateListing,
+  TopViewedListing,
+} from '@/lib/public-listings-client';
+import {
+  listingBusinessPublicHref,
+  listingCarPublicHref,
+  listingJobPublicHref,
+  listingMarketplacePublicHref,
+  listingProfessionalPublicHref,
+  listingRealEstatePublicHref,
+} from '@/paths';
+
+const SLIDE_MS = 480;
+const SWIPE_THRESHOLD = 48;
+const AUTOPLAY_MS = 5000;
+
+type SlideModel = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  imageUrl: string | null;
+  href: string;
+};
+
+function toSlide(verticalId: HomeVerticalId, listing: TopViewedListing): SlideModel {
+  switch (verticalId) {
+    case 'real-estate': {
+      const l = listing as PublicRealEstateListing;
+      return {
+        id: l.id,
+        title: l.title,
+        subtitle: formatPrice(l.price, l.currency),
+        imageUrl: l.imageUrl,
+        href: listingRealEstatePublicHref(l),
+      };
+    }
+    case 'cars': {
+      const l = listing as PublicCarListing;
+      const title = [l.make, l.model, l.variant].filter(Boolean).join(' ');
+      return {
+        id: l.id,
+        title,
+        subtitle: formatPrice(l.price, l.currency),
+        imageUrl: l.imageUrl,
+        href: listingCarPublicHref(l),
+      };
+    }
+    case 'jobs': {
+      const l = listing as PublicJobListing;
+      return {
+        id: l.id,
+        title: l.title,
+        subtitle: l.salary != null ? formatPrice(l.salary, l.currency) : (l.cityName ?? null),
+        imageUrl: l.imageUrl,
+        href: listingJobPublicHref(l),
+      };
+    }
+    case 'marketplace': {
+      const l = listing as PublicMarketplaceListing;
+      return {
+        id: l.id,
+        title: l.title,
+        subtitle: formatPrice(l.price, l.currency),
+        imageUrl: l.imageUrl,
+        href: listingMarketplacePublicHref(l),
+      };
+    }
+    case 'businesses': {
+      const l = listing as PublicDirectoryListing;
+      return {
+        id: l.id,
+        title: l.title,
+        subtitle: l.categoryLabel || l.cityName,
+        imageUrl: l.imageUrl,
+        href: listingBusinessPublicHref(l),
+      };
+    }
+    case 'professionals': {
+      const l = listing as PublicDirectoryListing;
+      return {
+        id: l.id,
+        title: l.title,
+        subtitle: l.categoryLabel || l.cityName,
+        imageUrl: l.imageUrl,
+        href: listingProfessionalPublicHref(l),
+      };
+    }
+    default:
+      return {
+        id: listing.id,
+        title: 'Njoftim',
+        subtitle: null,
+        imageUrl: null,
+        href: '/',
+      };
+  }
+}
+
+function ListingSlidePanel({
+  slide,
+  suppressNavRef,
+}: {
+  slide: SlideModel;
+  suppressNavRef: React.MutableRefObject<boolean>;
+}) {
+  const imageBg = slide.imageUrl && /^https?:\/\//i.test(slide.imageUrl) ? slide.imageUrl : null;
+
+  const content = (
+    <Box
+      sx={{
+        position: 'relative',
+        width: '100%',
+        minHeight: { xs: 200, sm: 220 },
+        overflow: 'hidden',
+        bgcolor: imageBg ? 'grey.900' : primaryMainAlpha(0.14),
+        backgroundImage: imageBg ? `url(${imageBg})` : undefined,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        transition: 'transform 0.25s ease, filter 0.25s ease',
+        '&:hover': { filter: 'brightness(1.03)' },
+        '&:active': { transform: 'scale(0.992)' },
+      }}
+    >
+      {/* Scrim keeps white title readable on bright photos in light mode */}
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          background: imageBg
+            ? 'linear-gradient(180deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.12) 42%, rgba(0,0,0,0.72) 100%)'
+            : 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%)',
+        }}
+      />
+
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 1,
+          p: { xs: 2.25, sm: 2.75 },
+          minHeight: { xs: 200, sm: 220 },
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+        }}
+      >
+        {slide.subtitle ? (
+          <Box
+            sx={{
+              alignSelf: 'flex-end',
+              px: 1.25,
+              py: 0.55,
+              borderRadius: 999,
+              bgcolor: 'rgba(0,0,0,0.42)',
+              border: '1px solid rgba(255,255,255,0.16)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.22)',
+              maxWidth: '72%',
+            }}
+          >
+            <Typography
+              sx={{
+                fontWeight: 800,
+                fontSize: { xs: '0.9rem', sm: '1rem' },
+                color: 'primary.main',
+                textAlign: 'right',
+                lineHeight: 1.25,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {slide.subtitle}
+            </Typography>
+          </Box>
+        ) : (
+          <Box />
+        )}
+
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Typography
+            component="h3"
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: '1.1rem', sm: '1.25rem' },
+              lineHeight: 1.2,
+              letterSpacing: '-0.02em',
+              textAlign: 'left',
+              color: '#fff',
+              textShadow: '0 1px 2px rgba(0,0,0,0.45), 0 2px 16px rgba(0,0,0,0.35)',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              maxWidth: '88%',
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            {slide.title}
+          </Typography>
+
+          <Box
+            aria-hidden
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              flexShrink: 0,
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: 'rgba(0,0,0,0.42)',
+              border: '1px solid rgba(255,255,255,0.16)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.22)',
+              color: '#fff',
+              mb: 0.25,
+            }}
+          >
+            <ArrowUpRightIcon size={18} weight="bold" />
+          </Box>
+        </Stack>
+      </Box>
+    </Box>
+  );
+
+  return (
+    <Box
+      component={RouterLink}
+      href={slide.href}
+      onClick={(event: React.MouseEvent) => {
+        if (suppressNavRef.current) {
+          event.preventDefault();
+          suppressNavRef.current = false;
+        }
+      }}
+      sx={{
+        display: 'block',
+        textDecoration: 'none',
+        color: 'inherit',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      {content}
+    </Box>
+  );
+}
+
+/**
+ * Homepage-style banner slider for the most-viewed listings on a category page —
+ * image + title/price only (no full listing card chrome).
+ */
+export function CategoryTopViewedSlider({
+  verticalId,
+  listings,
+}: {
+  verticalId: HomeVerticalId;
+  listings: TopViewedListing[];
+}) {
+  const slides = React.useMemo(
+    () => listings.map((listing) => toSlide(verticalId, listing)),
+    [listings, verticalId],
+  );
+
+  const [idx, setIdx] = React.useState(0);
+  const [dragOffset, setDragOffset] = React.useState(0);
+  const [isDragging, setIsDragging] = React.useState(false);
+  const touchStartX = React.useRef<number | null>(null);
+  const timerRef = React.useRef<number | null>(null);
+  const suppressNavRef = React.useRef(false);
+
+  const startAutoPlay = React.useCallback(() => {
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    if (slides.length < 2) return;
+    timerRef.current = window.setInterval(() => {
+      setIdx((prev) => (prev + 1) % slides.length);
+    }, AUTOPLAY_MS);
+  }, [slides.length]);
+
+  React.useEffect(() => {
+    startAutoPlay();
+    return () => {
+      if (timerRef.current) window.clearInterval(timerRef.current);
+    };
+  }, [startAutoPlay]);
+
+  React.useEffect(() => {
+    setIdx(0);
+  }, [slides.length]);
+
+  const goToSlide = React.useCallback(
+    (next: number) => {
+      if (slides.length === 0) return;
+      setIdx(((next % slides.length) + slides.length) % slides.length);
+      startAutoPlay();
+    },
+    [slides.length, startAutoPlay],
+  );
+
+  const handleTouchStart = (event: React.TouchEvent) => {
+    touchStartX.current = event.touches[0]?.clientX ?? null;
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (event: React.TouchEvent) => {
+    if (touchStartX.current == null || slides.length < 2) return;
+    const currentX = event.touches[0]?.clientX;
+    if (currentX == null) return;
+    setDragOffset(currentX - touchStartX.current);
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent) => {
+    if (touchStartX.current == null) return;
+    const endX = event.changedTouches[0]?.clientX;
+    if (endX != null) {
+      const delta = endX - touchStartX.current;
+      if (Math.abs(delta) >= SWIPE_THRESHOLD) {
+        suppressNavRef.current = true;
+        if (delta <= -SWIPE_THRESHOLD) {
+          goToSlide(idx + 1);
+        } else {
+          goToSlide(idx - 1);
+        }
+      }
+    }
+    touchStartX.current = null;
+    setDragOffset(0);
+    setIsDragging(false);
+  };
+
+  const handleTouchCancel = () => {
+    touchStartX.current = null;
+    setDragOffset(0);
+    setIsDragging(false);
+  };
+
+  if (slides.length === 0) return null;
+
+  const safeIdx = idx % slides.length;
+  const slideBasis = 100 / slides.length;
+
+  return (
+    <Box
+      component="section"
+      aria-label="Njoftimet më të shikuara"
+      sx={{
+        py: { xs: 2, md: 2.5 },
+      }}
+    >
+      <Container maxWidth="xl">
+        <Typography
+          component="h2"
+          sx={{
+            fontWeight: 700,
+            fontSize: { xs: '0.95rem', md: '1.05rem' },
+            letterSpacing: '-0.01em',
+            mb: { xs: 1, md: 1.25 },
+          }}
+        >
+          Më të shikuarat
+        </Typography>
+
+        <Stack spacing={1.35} sx={{ width: '100%' }}>
+          <Box
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchCancel}
+            sx={{
+              position: 'relative',
+              borderRadius: 3,
+              overflow: 'hidden',
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: (theme) =>
+                theme.palette.mode === 'light'
+                  ? '0 8px 24px rgba(0,0,0,0.1)'
+                  : '0 10px 28px rgba(0,0,0,0.18)',
+              touchAction: 'pan-y',
+              cursor: slides.length > 1 ? 'grab' : undefined,
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                width: `${slides.length * 100}%`,
+                transform: `translate3d(calc(-${safeIdx * slideBasis}% + ${dragOffset}px), 0, 0)`,
+                transition: isDragging
+                  ? 'none'
+                  : `transform ${SLIDE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+                willChange: 'transform',
+                '@media (prefers-reduced-motion: reduce)': {
+                  transition: 'none',
+                },
+              }}
+            >
+              {slides.map((slide) => (
+                <Box key={slide.id} sx={{ flex: `0 0 ${slideBasis}%`, minWidth: 0 }}>
+                  <ListingSlidePanel slide={slide} suppressNavRef={suppressNavRef} />
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+          {slides.length > 1 ? (
+            <Stack
+              direction="row"
+              spacing={0.8}
+              role="tablist"
+              aria-label="Slidet e njoftimeve"
+              sx={{ justifyContent: 'center', pt: 0.15 }}
+            >
+              {slides.map((slide, i) => (
+                <Box
+                  key={slide.id}
+                  component="button"
+                  type="button"
+                  role="tab"
+                  aria-selected={i === safeIdx}
+                  aria-label={`Njoftimi ${i + 1}`}
+                  onClick={() => goToSlide(i)}
+                  sx={{
+                    width: i === safeIdx ? 22 : 8,
+                    height: 8,
+                    borderRadius: 99,
+                    border: 0,
+                    p: 0,
+                    cursor: 'pointer',
+                    transition: 'all .25s cubic-bezier(0.22, 1, 0.36, 1)',
+                    bgcolor: i === safeIdx ? 'primary.main' : 'action.selected',
+                    '&:hover': {
+                      bgcolor: i === safeIdx ? 'primary.dark' : 'action.active',
+                    },
+                  }}
+                />
+              ))}
+            </Stack>
+          ) : null}
+        </Stack>
+      </Container>
+    </Box>
+  );
+}

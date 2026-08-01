@@ -117,6 +117,107 @@ async function countReceivedReviews(userId, userModel) {
   return businessReviews + professionalReviews;
 }
 
+/**
+ * Public profile badges from the referral program (earned + locked slots).
+ * @returns {Promise<Array<{ id: string, kind: string, label: string, earned: boolean, description?: string, lifetimePercent?: number, level?: number }>>}
+ */
+async function resolveReferralBadges(userId, userModel) {
+  await ensureReferralProgram();
+  const program = await ReferralProgram.findById('default').lean();
+  if (!program) return [];
+
+  const [referralCount, paidReferralCount, reviewCount] = await Promise.all([
+    countFreeReferrals(userId, userModel),
+    countPaidReferrals(userId, userModel),
+    countReceivedReviews(userId, userModel),
+  ]);
+
+  const badges = [];
+
+  const freeTiers = [...(program.freeTiers || [])].sort(
+    (a, b) => Number(a.referralsRequired) - Number(b.referralsRequired),
+  );
+  for (const tier of freeTiers) {
+    badges.push({
+      id: `free-tier-${tier.level}`,
+      kind: 'free-tier',
+      label: String(tier.title || `Niveli ${tier.level}`).trim(),
+      description: `${tier.referralsRequired} referime`,
+      level: Number(tier.level) || 0,
+      earned: referralCount >= Number(tier.referralsRequired),
+    });
+  }
+
+  const paidTiers = [...(program.paidTiers || [])].sort(
+    (a, b) => Number(a.paidReferralsRequired) - Number(b.paidReferralsRequired),
+  );
+  for (const tier of paidTiers) {
+    badges.push({
+      id: `paid-tier-${tier.tier}`,
+      kind: 'paid-tier',
+      label: String(tier.title || `Paketa ${tier.tier}`).trim(),
+      description: `${tier.paidReferralsRequired} referime të paguara`,
+      level: Number(tier.tier) || 0,
+      earned: paidReferralCount >= Number(tier.paidReferralsRequired),
+    });
+  }
+
+  const freeComplete =
+    freeTiers.length > 0 &&
+    referralCount >= Number(freeTiers[freeTiers.length - 1].referralsRequired);
+  const paidComplete =
+    paidTiers.length > 0 &&
+    paidReferralCount >= Number(paidTiers[paidTiers.length - 1].paidReferralsRequired);
+
+  if (program.networkBuilderBadge) {
+    badges.push({
+      id: 'network-builder',
+      kind: 'network-builder',
+      label: program.networkBuilderBadge.label,
+      description: program.networkBuilderBadge.description || '',
+      lifetimePercent: program.networkBuilderBadge.lifetimePercent,
+      earned: freeComplete,
+    });
+  }
+
+  if (program.revenueDriverBadge) {
+    badges.push({
+      id: 'revenue-driver',
+      kind: 'revenue-driver',
+      label: program.revenueDriverBadge.label,
+      description: program.revenueDriverBadge.description || '',
+      lifetimePercent: program.revenueDriverBadge.lifetimePercent,
+      earned: paidComplete,
+    });
+  }
+
+  const trustedRequired = Number(program.trustedReviewerBadge?.reviewsRequired) || 0;
+  const trustedEarned = trustedRequired > 0 && reviewCount >= trustedRequired;
+  if (program.trustedReviewerBadge) {
+    badges.push({
+      id: 'trusted-reviewer',
+      kind: 'trusted-reviewer',
+      label: program.trustedReviewerBadge.label,
+      description: program.trustedReviewerBadge.description || '',
+      lifetimePercent: program.trustedReviewerBadge.lifetimePercent,
+      earned: trustedEarned,
+    });
+  }
+
+  if (program.platformDominatorBadge) {
+    badges.push({
+      id: 'platform-dominator',
+      kind: 'platform-dominator',
+      label: program.platformDominatorBadge.label,
+      description: program.platformDominatorBadge.description || '',
+      lifetimePercent: program.platformDominatorBadge.lifetimePercent,
+      earned: freeComplete && paidComplete && trustedEarned,
+    });
+  }
+
+  return badges;
+}
+
 async function awardReferralTierCredits(referrer) {
   await ensureReferralProgram();
   const program = await ReferralProgram.findById('default').lean();
@@ -233,6 +334,7 @@ module.exports = {
   countFreeReferrals,
   countPaidReferrals,
   countReceivedReviews,
+  resolveReferralBadges,
   processReferralOnSignup,
   ensureUserReferralCode,
   backfillMissingReferralCodes,

@@ -23,6 +23,13 @@ const userSubscriptionSchema = new mongoose.Schema(
     glowBadgeEnabled: { type: Boolean, default: false },
     boostCreditsGranted: { type: Number, default: 0 },
     dailyBoostAccess: { type: Boolean, default: false },
+    planCode: { type: String, default: null },
+    maxListAllCategories: { type: Number, default: 0 },
+    maxJobListings: { type: Number, default: 0 },
+    maxCarListings: { type: Number, default: 0 },
+    maxApartmentListings: { type: Number, default: 0 },
+    maxProductListings: { type: Number, default: 0 },
+    maxPremiumListings: { type: Number, default: 0 },
 
     startsAt: { type: Date, default: Date.now },
     expiresAt: { type: Date, required: true, index: true },

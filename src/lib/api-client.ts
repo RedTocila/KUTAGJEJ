@@ -29,7 +29,11 @@ export async function clientFetch<T = unknown>(
     const data = (await res.json().catch(() => ({}))) as T & { message?: string };
     if (!res.ok) {
       const message = typeof data?.message === 'string' ? data.message : undefined;
-      return { ok: false, status: res.status, error: message };
+      if (message) return { ok: false, status: res.status, error: message };
+      if (res.status >= 500) {
+        return { ok: false, status: res.status, error: 'Gabim serveri. Provoni përsëri.' };
+      }
+      return { ok: false, status: res.status, error: 'Kërkesa dështoi.' };
     }
     return { ok: true, status: res.status, data };
   } catch {

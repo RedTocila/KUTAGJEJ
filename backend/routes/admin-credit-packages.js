@@ -16,6 +16,7 @@ function formatAdmin(doc) {
   return {
     id: String(doc._id),
     credits: doc.credits,
+    bonusCredits: Number(doc.bonusCredits) || 0,
     priceEur: doc.priceEur,
     labelSq: doc.labelSq,
     badgeSq: doc.badgeSq || '',
@@ -56,10 +57,18 @@ router.get('/', async (_req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { credits, priceEur, labelSq, badgeSq, active, sortOrder } = req.body || {};
+    const { credits, bonusCredits, priceEur, labelSq, badgeSq, active, sortOrder } = req.body || {};
 
     const c = parsePositiveInt(credits, 'Kreditet');
     if (!c.ok) return res.status(400).json({ message: c.message });
+    const bonus =
+      bonusCredits === undefined || bonusCredits === null || bonusCredits === ''
+        ? { ok: true, n: 0 }
+        : parseNonNegative(bonusCredits, 'Bonusi');
+    if (!bonus.ok) return res.status(400).json({ message: bonus.message });
+    if (!Number.isInteger(bonus.n)) {
+      return res.status(400).json({ message: 'Bonusi duhet të jetë numër i plotë ≥ 0.' });
+    }
     const p = parseNonNegative(priceEur, 'Çmimi');
     if (!p.ok) return res.status(400).json({ message: p.message });
     const label = String(labelSq || '').trim();
@@ -67,6 +76,7 @@ router.post('/', async (req, res) => {
 
     const doc = await CreditPackage.create({
       credits: c.n,
+      bonusCredits: bonus.n,
       priceEur: p.n,
       labelSq: label,
       badgeSq: badgeSq !== undefined ? String(badgeSq).trim() : '',
@@ -89,12 +99,20 @@ router.patch('/:id', async (req, res) => {
     const doc = await CreditPackage.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: 'Paketa nuk u gjet.' });
 
-    const { credits, priceEur, labelSq, badgeSq, active, sortOrder } = req.body || {};
+    const { credits, bonusCredits, priceEur, labelSq, badgeSq, active, sortOrder } = req.body || {};
 
     if (credits !== undefined) {
       const c = parsePositiveInt(credits, 'Kreditet');
       if (!c.ok) return res.status(400).json({ message: c.message });
       doc.credits = c.n;
+    }
+    if (bonusCredits !== undefined) {
+      const bonus = parseNonNegative(bonusCredits, 'Bonusi');
+      if (!bonus.ok) return res.status(400).json({ message: bonus.message });
+      if (!Number.isInteger(bonus.n)) {
+        return res.status(400).json({ message: 'Bonusi duhet të jetë numër i plotë ≥ 0.' });
+      }
+      doc.bonusCredits = bonus.n;
     }
     if (priceEur !== undefined) {
       const p = parseNonNegative(priceEur, 'Çmimi');

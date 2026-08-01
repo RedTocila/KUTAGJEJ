@@ -72,8 +72,13 @@ export function MobileBottomNav() {
       {
         id: 'profile',
         ariaLabel: 'Profili',
-        href: isAuthed ? paths.user.profile : paths.user.auth,
-        activeWhen: (p) => Boolean(p?.startsWith(paths.user.profile)),
+        href: isAuthed ? paths.user.dashboard : paths.user.auth,
+        activeWhen: (p) =>
+          Boolean(
+            p?.startsWith('/user/dashboard') &&
+              !p.startsWith(paths.user.messages) &&
+              !p.startsWith(paths.user.savedListings),
+          ),
         icon: UserCircleIcon,
       },
     ],
@@ -90,7 +95,7 @@ export function MobileBottomNav() {
         left: 0,
         right: 0,
         zIndex: theme.zIndex.appBar,
-        display: { xs: 'block', md: 'none' },
+        display: { xs: 'block', lg: 'none' },
         borderTop: '1px solid',
         borderColor: 'divider',
         backdropFilter: 'blur(12px)',

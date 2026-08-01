@@ -1,11 +1,17 @@
 const mongoose = require('mongoose');
 const CreditPackage = require('../models/CreditPackage');
 
+/** Total BC granted for a package (base + bonus). */
+function totalCredits(doc) {
+  return Number(doc.credits || 0) + Number(doc.bonusCredits || 0);
+}
+
 /** Shape returned to buyers (and the admin list uses the raw doc directly). */
 function formatCreditPackage(doc) {
   return {
     id: String(doc._id),
     credits: doc.credits,
+    bonusCredits: Number(doc.bonusCredits) || 0,
     priceEur: doc.priceEur,
     labelSq: doc.labelSq,
     badgeSq: doc.badgeSq || undefined,
@@ -28,4 +34,9 @@ async function getActiveCreditPackage(id) {
   return doc || null;
 }
 
-module.exports = { formatCreditPackage, listActiveCreditPackages, getActiveCreditPackage };
+module.exports = {
+  formatCreditPackage,
+  listActiveCreditPackages,
+  getActiveCreditPackage,
+  totalCredits,
+};

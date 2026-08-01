@@ -9,8 +9,9 @@ import { useUser } from '@/hooks/use-user';
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, error, isLoading } = useUser();
-  const [isChecking, setIsChecking] = React.useState(true);
+  const { user, error, isLoading, checkSession } = useUser();
+  const [isChecking, setIsChecking] = React.useState(() => !user);
+  const sessionRetryDone = React.useRef(false);
 
   React.useEffect(() => {
     if (isLoading) return;
@@ -19,6 +20,18 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
     if (!user) {
+      const hasToken =
+        typeof window !== 'undefined' && Boolean(localStorage.getItem('custom-auth-token'));
+      if (hasToken && !sessionRetryDone.current) {
+        sessionRetryDone.current = true;
+        void checkSession();
+        return;
+      }
+      // Token still present after retry (e.g. API blip) — keep waiting; do not bounce to login.
+      if (hasToken) {
+        setIsChecking(false);
+        return;
+      }
       router.replace(pathname.startsWith('/user') ? paths.user.auth : paths.auth.signIn);
       return;
     }
@@ -66,7 +79,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     setIsChecking(false);
-  }, [user, error, isLoading, pathname, router]);
+  }, [user, error, isLoading, pathname, router, checkSession]);
 
   if (error) {
     return <Alert color="error">{error}</Alert>;

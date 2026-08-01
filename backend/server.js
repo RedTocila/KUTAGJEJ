@@ -7,6 +7,7 @@ const { ensureListingCategories } = require('./lib/ensure-listing-categories');
 const { ensureCoreRoles } = require('./lib/core-roles');
 const { ensureReferralProgram } = require('./lib/ensure-referral-program');
 const { ensureCreditPackages } = require('./lib/ensure-credit-packages');
+const { ensureContractPackages } = require('./lib/ensure-contract-packages');
 const { ensureHomeBanners } = require('./lib/ensure-home-banners');
 const { ensureListingIndexes } = require('./lib/ensure-listing-indexes');
 const { ensureListingModeration } = require('./lib/ensure-listing-moderation');
@@ -78,6 +79,7 @@ const connectDB = async () => {
     await ensureCoreRoles();
     await ensureReferralProgram();
     await ensureCreditPackages();
+    await ensureContractPackages();
     await ensureHomeBanners();
     await ensureListingIndexes();
     await ensureListingModeration();
@@ -155,6 +157,7 @@ app.use('/api/professional-reviews', require('./routes/professional-listing-revi
 app.use('/api/professional-verification', require('./routes/professional-verification'));
 app.use('/api/admin/professional-verification', require('./routes/admin-professional-verification'));
 app.use('/api/public/listings', require('./routes/public-listings'));
+app.use('/api/public/members', require('./routes/public-members'));
 app.use('/api/listing-metrics', require('./routes/listing-metrics'));
 app.use('/api/job-employer-verification', require('./routes/job-employer-verification'));
 app.use('/api/admin/job-employer-verification', require('./routes/admin-job-employer-verification'));
@@ -169,7 +172,8 @@ const startServer = async () => {
       );
       process.exit(1);
     }
-    const PORT = Number(process.env.PORT) || 5000;
+    // Default 5001 (macOS AirPlay often owns :5000). Public app stays on :3000 via Next rewrite.
+    const PORT = Number(process.env.PORT) || 5001;
     app.listen(PORT, () => {
       console.log(`KuTaGjej API listening on http://localhost:${PORT}`);
     });

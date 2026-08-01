@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import RouterLink from 'next/link';
 import {
   Alert,
   Box,
@@ -15,14 +16,17 @@ import {
   Typography,
 } from '@mui/material';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
+import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { Envelope as EnvelopeIcon } from '@phosphor-icons/react/dist/ssr/Envelope';
 import { FileText as FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
+import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 
-import { authClient } from '@/lib/auth/client';
-import { useUser } from '@/hooks/use-user';
-import { getUserPortalAccountCategoryLabel } from '@/lib/user-portal-account-label';
 import { JobEmployerVerificationCard } from '@/components/jobs/job-employer-verification-card';
+import { useUser } from '@/hooks/use-user';
+import { authClient } from '@/lib/auth/client';
+import { getUserPortalAccountCategoryLabel } from '@/lib/user-portal-account-label';
+import { paths } from '@/paths';
 
 function ProfileRow({
   icon,
@@ -129,15 +133,6 @@ export default function UserProfilePage() {
 
   return (
     <Stack spacing={3}>
-      <Box>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>
-          Profili im
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          Të dhënat e llogarisë sipas regjistrimit tuaj.
-        </Typography>
-      </Box>
-
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 5 }}>
           <Card sx={{ height: '100%' }}>
@@ -325,6 +320,68 @@ export default function UserProfilePage() {
                   {savingPassword ? 'Duke u përditësuar…' : 'Ndrysho fjalëkalimin'}
                 </Button>
               </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12 }}>
+          <Card>
+            <CardContent sx={{ p: 0 }}>
+              <Box
+                component={RouterLink}
+                href={paths.public.terms}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  px: 3,
+                  py: 2,
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  '&:hover': { bgcolor: 'action.hover' },
+                }}
+              >
+                <Box sx={{ color: 'primary.main', display: 'flex' }}>
+                  <FileTextIcon size={22} weight="duotone" />
+                </Box>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography sx={{ fontWeight: 700 }}>Kushtet e përdorimit</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Rregullat e platformës
+                  </Typography>
+                </Box>
+                <Box sx={{ color: 'text.secondary', display: 'flex' }}>
+                  <CaretRightIcon size={18} weight="bold" />
+                </Box>
+              </Box>
+              <Divider />
+              <Box
+                component={RouterLink}
+                href={paths.public.privacy}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  px: 3,
+                  py: 2,
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  '&:hover': { bgcolor: 'action.hover' },
+                }}
+              >
+                <Box sx={{ color: 'primary.main', display: 'flex' }}>
+                  <ShieldCheckIcon size={22} weight="duotone" />
+                </Box>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography sx={{ fontWeight: 700 }}>Politika e privatësisë</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Si trajtohen të dhënat tuaja
+                  </Typography>
+                </Box>
+                <Box sx={{ color: 'text.secondary', display: 'flex' }}>
+                  <CaretRightIcon size={18} weight="bold" />
+                </Box>
+              </Box>
             </CardContent>
           </Card>
         </Grid>

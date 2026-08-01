@@ -1,0 +1,665 @@
+'use client';
+
+import * as React from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Avatar,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Container,
+  Stack,
+  Typography,
+} from '@mui/material';
+import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
+import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
+import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
+import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
+import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
+import { Medal as MedalIcon } from '@phosphor-icons/react/dist/ssr/Medal';
+import { SealCheck as SealCheckIcon } from '@phosphor-icons/react/dist/ssr/SealCheck';
+import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
+import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
+import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
+import { TrendUp as TrendUpIcon } from '@phosphor-icons/react/dist/ssr/TrendUp';
+import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
+
+import {
+  HomepageMixedListingCard,
+  mixedListingKey,
+} from '@/components/public/homepage-mixed-listing-card';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import type { HomepageMixedListing } from '@/lib/homepage-latest-listings';
+import { startConversationWithMember } from '@/lib/conversations-client';
+import {
+  memberInitials,
+  mergeMemberReferralBadges,
+  type PublicMemberListingsBundle,
+  type PublicMemberReferralBadge,
+} from '@/lib/public-member-client';
+import type { PublicRealEstateListingSeller } from '@/lib/public-listings-client';
+import { useUser } from '@/hooks/use-user';
+import { paths } from '@/paths';
+type FilterKey = 'all' | HomepageMixedListing['kind'];
+
+const FILTERS: { key: FilterKey; label: string; totalKey?: keyof PublicMemberListingsBundle['totals'] }[] = [
+  { key: 'all', label: 'Të gjitha' },
+  { key: 'real-estate', label: 'Prona', totalKey: 'realEstate' },
+  { key: 'cars', label: 'Makina', totalKey: 'cars' },
+  { key: 'jobs', label: 'Punë', totalKey: 'jobs' },
+  { key: 'marketplace', label: 'Tregu', totalKey: 'marketplace' },
+  { key: 'businesses', label: 'Biznese', totalKey: 'businesses' },
+  { key: 'professionals', label: 'Profesionistë', totalKey: 'professionals' },
+];
+
+function badgeVisual(kind: string): { Icon: PhosphorIcon; accent: string } {
+  switch (kind) {
+    case 'platform-dominator':
+      return { Icon: CrownIcon, accent: '#f0a020' };
+    case 'trusted-reviewer':
+      return { Icon: StarIcon, accent: '#f0a020' };
+    case 'network-builder':
+      return { Icon: ShareNetworkIcon, accent: 'var(--mui-palette-primary-main)' };
+    case 'revenue-driver':
+      return { Icon: TrendUpIcon, accent: 'var(--mui-palette-primary-main)' };
+    case 'paid-tier':
+      return { Icon: MedalIcon, accent: '#f0a020' };
+    case 'free-tier':
+    default:
+      return { Icon: MedalIcon, accent: 'var(--mui-palette-primary-main)' };
+  }
+}
+
+function memberSinceParts(iso: string | undefined): { year: number; monthYear: string } | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return {
+    year: date.getFullYear(),
+    monthYear: date.toLocaleDateString('sq-AL', { month: 'long', year: 'numeric' }),
+  };
+}
+
+function MemberContactButton({
+  memberId,
+  pill = false,
+}: {
+  memberId: string;
+  pill?: boolean;
+}) {
+  const router = useRouter();
+  const { user, isLoading, checkSession } = useUser();
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleClick = async () => {
+    setError(null);
+    if (isLoading) return;
+
+    const hasToken = typeof window !== 'undefined' && Boolean(localStorage.getItem('custom-auth-token'));
+    if (!user && !hasToken) {
+      router.push(paths.user.auth);
+      return;
+    }
+
+    if (!user && hasToken) {
+      await checkSession();
+    }
+
+    setLoading(true);
+    try {
+      const res = await startConversationWithMember(memberId);
+      if (res.error || !res.conversation) {
+        const message = res.error ?? 'Nuk u krijua biseda.';
+        if (/auth required|invalid token|çaktivizuar/i.test(message)) {
+          router.push(paths.user.auth);
+          return;
+        }
+        setError(message);
+        return;
+      }
+      router.push(`${paths.user.messages}?c=${encodeURIComponent(res.conversation.id)}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+      <Button
+        type="button"
+        variant="contained"
+        disableElevation
+        fullWidth
+        disabled={loading || isLoading}
+        onClick={() => void handleClick()}
+        startIcon={
+          loading || isLoading ? (
+            <CircularProgress size={18} color="inherit" />
+          ) : (
+            <ChatsCircleIcon size={20} weight="fill" />
+          )
+        }
+        sx={{
+          borderRadius: pill ? 999 : 2.5,
+          fontWeight: 800,
+          textTransform: 'none',
+          color: 'common.black',
+          boxShadow: 'none',
+          py: pill ? 1.5 : 1.5,
+          fontSize: pill ? '1rem' : undefined,
+          '&:hover': { color: 'common.black' },
+          '& .MuiButton-startIcon': { color: 'inherit' },
+        }}
+      >
+        Kontakto
+      </Button>
+      {error ? (
+        <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.75, fontWeight: 600, textAlign: 'center' }}>
+          {error}
+        </Typography>
+      ) : null}
+    </Box>
+  );
+}
+
+function ReferralBadgesRow({ badges }: { badges: PublicMemberReferralBadge[] }) {
+  return (
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{
+        overflowX: 'auto',
+        pb: 0.25,
+        mx: { xs: -0.25, sm: 0 },
+        px: { xs: 0.25, sm: 0 },
+        scrollbarWidth: 'none',
+        '&::-webkit-scrollbar': { display: 'none' },
+      }}
+    >
+      {badges.map((badge) => {
+        const { Icon, accent } = badgeVisual(badge.kind);
+        const earned = Boolean(badge.earned);
+        const titleParts = [
+          badge.label,
+          earned ? 'E fituar' : 'Ende e pafituar',
+          badge.description,
+          typeof badge.lifetimePercent === 'number' ? `${badge.lifetimePercent}% Lifetime` : null,
+        ].filter(Boolean);
+        return (
+          <Box
+            key={badge.id}
+            title={titleParts.join(' · ')}
+            sx={{
+              flexShrink: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 0.45,
+              width: 56,
+              opacity: earned ? 1 : 0.42,
+              filter: earned ? 'none' : 'grayscale(0.65)',
+            }}
+          >
+            <Box
+              sx={{
+                position: 'relative',
+                width: 40,
+                height: 40,
+                borderRadius: 1.5,
+                display: 'grid',
+                placeItems: 'center',
+                bgcolor: earned
+                  ? accent
+                  : (theme) =>
+                      theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
+                color: earned ? '#0a0a0a' : 'text.disabled',
+                border: '1px solid',
+                borderColor: earned ? 'transparent' : 'divider',
+              }}
+            >
+              <Icon size={18} weight={earned ? 'fill' : 'regular'} />
+              {earned ? (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: -3,
+                    right: -3,
+                    width: 14,
+                    height: 14,
+                    borderRadius: '50%',
+                    bgcolor: '#d98f00',
+                    display: 'grid',
+                    placeItems: 'center',
+                    border: '1.5px solid',
+                    borderColor: 'background.paper',
+                  }}
+                >
+                  <SealCheckIcon size={8} weight="fill" color="#fff" />
+                </Box>
+              ) : null}
+            </Box>
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: earned ? 750 : 600,
+                textAlign: 'center',
+                lineHeight: 1.15,
+                color: earned ? 'text.primary' : 'text.disabled',
+                fontSize: '0.6rem',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                width: '100%',
+              }}
+            >
+              {badge.label}
+            </Typography>
+          </Box>
+        );
+      })}
+    </Stack>
+  );
+}
+
+export function MemberProfileView({
+  member,
+  listings,
+  mixed,
+  badges = [],
+}: {
+  member: PublicRealEstateListingSeller;
+  listings: PublicMemberListingsBundle;
+  mixed: HomepageMixedListing[];
+  badges?: PublicMemberReferralBadge[];
+}) {
+  const router = useRouter();
+  const [filter, setFilter] = React.useState<FilterKey>('all');
+
+  const name = member.displayName?.trim() || 'Përdorues KuTaGjej';
+  const initials = memberInitials(name);
+  const since = memberSinceParts(member.memberSince);
+  const isBusiness = member.kind === 'business';
+  const totalActive = listings.totals.all;
+  const memberId = member.id?.trim() || '';
+  const displayBadges = React.useMemo(() => mergeMemberReferralBadges(badges), [badges]);
+
+  const visibleFilters = FILTERS.filter((f) => {
+    if (f.key === 'all') return true;
+    if (!f.totalKey) return false;
+    return (listings.totals[f.totalKey] ?? 0) > 0;
+  });
+
+  const filtered = filter === 'all' ? mixed : mixed.filter((item) => item.kind === filter);
+
+  const showOwner =
+    isBusiness &&
+    member.businessOwner?.trim() &&
+    member.businessOwner.trim().toLowerCase() !== name.toLowerCase();
+
+  const handleBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push('/');
+  };
+
+  return (
+    <Box
+      sx={{
+        bgcolor: 'background.default',
+        pb: { xs: 6, md: 8 },
+        minHeight: '60vh',
+      }}
+    >
+      <Box
+        sx={{
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: { xs: '0 0 24px 24px', md: 4 },
+          border: '1px solid',
+          borderColor: 'divider',
+          borderTop: { xs: 'none', md: '1px solid' },
+          borderTopColor: { md: 'divider' },
+          bgcolor: 'background.paper',
+          mb: { xs: 3, md: 4 },
+          mt: { md: 3 },
+          mx: { md: 'auto' },
+          maxWidth: { md: 900 },
+          width: { md: 'calc(100% - 48px)' },
+        }}
+      >
+        {/* Cover */}
+        <Box
+          sx={{
+            position: 'relative',
+            height: { xs: 120, sm: 140 },
+            background: (theme) =>
+              `linear-gradient(135deg, ${primaryMainAlpha(0.28)} 0%, ${
+                theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'
+              } 55%, ${primaryMainAlpha(0.1)} 100%)`,
+          }}
+        >
+          <Button
+            onClick={handleBack}
+            startIcon={<ArrowLeftIcon size={18} weight="bold" />}
+            sx={{
+              position: 'absolute',
+              top: { xs: 'max(10px, env(safe-area-inset-top, 0px))', sm: 14 },
+              left: { xs: 8, sm: 12 },
+              zIndex: 1,
+              color: 'common.white',
+              fontWeight: 750,
+              textTransform: 'none',
+              bgcolor: 'rgba(0,0,0,0.35)',
+              borderRadius: 999,
+              px: 1.5,
+              py: 0.65,
+              minWidth: 0,
+              backdropFilter: 'blur(8px)',
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.5)', color: 'common.white' },
+            }}
+          >
+            Kthehu
+          </Button>
+        </Box>
+
+        <Stack
+          spacing={2.5}
+          sx={{
+            px: { xs: 2.25, sm: 3.5 },
+            pb: { xs: 2.75, sm: 3.5 },
+            mt: { xs: -5, sm: -6 },
+          }}
+        >
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={{ xs: 2, sm: 2.5 }}
+              sx={{ alignItems: { sm: 'flex-end' } }}
+            >
+              <Avatar
+                sx={{
+                  width: { xs: 88, sm: 104 },
+                  height: { xs: 88, sm: 104 },
+                  bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.18 : 0.14),
+                  color: 'primary.main',
+                  fontWeight: 800,
+                  fontSize: { xs: '1.75rem', sm: '2rem' },
+                  border: '3px solid',
+                  borderColor: 'background.paper',
+                  boxShadow: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? '0 8px 24px rgba(0,0,0,0.45)'
+                      : '0 8px 24px rgba(0,0,0,0.08)',
+                }}
+              >
+                {initials}
+              </Avatar>
+
+              <Stack spacing={1} sx={{ flex: '1 1 auto', minWidth: 0, pb: { sm: 0.5 } }}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.75 }}
+                >
+                  <Typography
+                    component="h1"
+                    sx={{
+                      fontWeight: 850,
+                      fontSize: { xs: '1.45rem', sm: '1.75rem' },
+                      lineHeight: 1.2,
+                      letterSpacing: '-0.02em',
+                    }}
+                  >
+                    {name}
+                  </Typography>
+                  {member.verified ? (
+                    <Box
+                      component="span"
+                      title="Profil i verifikuar"
+                      sx={{ display: 'inline-flex', color: 'primary.main', flexShrink: 0 }}
+                    >
+                      <SealCheckIcon size={22} weight="fill" aria-label="Profil i verifikuar" />
+                    </Box>
+                  ) : null}
+                </Stack>
+
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 0.75 }}>
+                  <Chip
+                    size="small"
+                    icon={
+                      isBusiness ? (
+                        <BuildingsIcon size={14} weight="fill" />
+                      ) : (
+                        <UserIcon size={14} weight="fill" />
+                      )
+                    }
+                    label={isBusiness ? 'Biznes' : 'Individ'}
+                    sx={{
+                      fontWeight: 700,
+                      bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.14 : 0.1),
+                      color: 'primary.main',
+                      border: 'none',
+                      '& .MuiChip-icon': { color: 'inherit', ml: 0.75 },
+                    }}
+                  />
+                  {member.verified ? (
+                    <Chip
+                      size="small"
+                      label="I verifikuar"
+                      sx={{
+                        fontWeight: 700,
+                        bgcolor: 'transparent',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        color: 'text.secondary',
+                      }}
+                    />
+                  ) : null}
+                </Stack>
+
+                <ReferralBadgesRow badges={displayBadges} />
+              </Stack>
+            </Stack>
+
+            <Stack spacing={1.25}>
+              {since ? (
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+                  <CalendarBlankIcon size={18} weight="duotone" />
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    Anëtar që prej {since.year}
+                    <Box component="span" sx={{ opacity: 0.7, fontWeight: 500 }}>
+                      {' '}
+                      · {since.monthYear}
+                    </Box>
+                  </Typography>
+                </Stack>
+              ) : null}
+
+              {showOwner ? (
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+                  <UserIcon size={18} weight="duotone" />
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    Pronar: {member.businessOwner}
+                  </Typography>
+                </Stack>
+              ) : null}
+
+              {member.businessCategory?.trim() ? (
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+                  <StorefrontIcon size={18} weight="duotone" />
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {member.businessCategory.trim()}
+                  </Typography>
+                </Stack>
+              ) : null}
+            </Stack>
+
+            <Box
+              sx={{
+                borderRadius: 2.5,
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: (theme) =>
+                  theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                px: 2,
+                py: 1.5,
+                textAlign: 'center',
+              }}
+            >
+              <Typography
+                sx={{
+                  fontWeight: 850,
+                  fontSize: '1.35rem',
+                  color: 'primary.main',
+                  lineHeight: 1.2,
+                }}
+              >
+                {totalActive}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+                Njoftime aktive
+              </Typography>
+            </Box>
+
+            {memberId ? (
+              <Stack spacing={1}>
+                <MemberContactButton memberId={memberId} pill />
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ fontWeight: 600, opacity: 0.85, textAlign: 'center' }}
+                >
+                  Komuniko përmes mesazheve në platformë — mos ndaj të dhëna sensitive jashtë saj.
+                </Typography>
+              </Stack>
+            ) : null}
+          </Stack>
+      </Box>
+
+      <Container maxWidth="md">
+        <Stack spacing={2}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            sx={{ alignItems: { sm: 'baseline' }, justifyContent: 'space-between' }}
+          >
+            <Typography
+              component="h2"
+              sx={{
+                fontWeight: 850,
+                fontSize: { xs: '1.15rem', sm: '1.25rem' },
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Njoftime aktive
+            </Typography>
+            {totalActive > 0 ? (
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                {filtered.length} {filtered.length === 1 ? 'njoftim' : 'njoftime'}
+                {filter !== 'all' ? ' në këtë kategori' : ''}
+              </Typography>
+            ) : null}
+          </Stack>
+
+          {totalActive === 0 ? (
+            <Box
+              sx={{
+                borderRadius: 3,
+                border: '1px dashed',
+                borderColor: 'divider',
+                px: 3,
+                py: 5,
+                textAlign: 'center',
+              }}
+            >
+              <Typography sx={{ fontWeight: 700, mb: 0.5 }}>Nuk ka njoftime aktive</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                Ky anëtar nuk ka publikuar ende njoftime publike.
+              </Typography>
+            </Box>
+          ) : (
+            <>
+              {visibleFilters.length > 2 ? (
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    overflowX: 'auto',
+                    pb: 0.5,
+                    mx: { xs: -0.25, sm: 0 },
+                    px: { xs: 0.25, sm: 0 },
+                    scrollbarWidth: 'none',
+                    '&::-webkit-scrollbar': { display: 'none' },
+                  }}
+                >
+                  {visibleFilters.map((f) => {
+                    const count =
+                      f.key === 'all' ? totalActive : f.totalKey ? listings.totals[f.totalKey] : 0;
+                    const selected = filter === f.key;
+                    return (
+                      <Chip
+                        key={f.key}
+                        clickable
+                        onClick={() => setFilter(f.key)}
+                        label={`${f.label} · ${count}`}
+                        sx={{
+                          flexShrink: 0,
+                          fontWeight: 750,
+                          borderRadius: 999,
+                          bgcolor: selected ? 'primary.main' : 'transparent',
+                          color: selected ? 'grey.900' : 'text.secondary',
+                          border: '1px solid',
+                          borderColor: selected ? 'primary.main' : 'divider',
+                          '&:hover': {
+                            bgcolor: selected ? 'primary.main' : 'action.hover',
+                          },
+                        }}
+                      />
+                    );
+                  })}
+                </Stack>
+              ) : null}
+
+              {filtered.length === 0 ? (
+                <Box
+                  sx={{
+                    borderRadius: 3,
+                    border: '1px dashed',
+                    borderColor: 'divider',
+                    px: 3,
+                    py: 4,
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                    Nuk ka njoftime në këtë kategori.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gap: { xs: 1.75, sm: 2 },
+                    gridTemplateColumns: {
+                      xs: '1fr',
+                      sm: 'repeat(2, minmax(0, 1fr))',
+                    },
+                  }}
+                >
+                  {filtered.map((item) => (
+                    <HomepageMixedListingCard key={mixedListingKey(item)} item={item} />
+                  ))}
+                </Box>
+              )}
+            </>
+          )}
+        </Stack>
+      </Container>
+    </Box>
+  );
+}

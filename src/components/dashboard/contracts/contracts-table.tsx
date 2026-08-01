@@ -94,8 +94,8 @@ export function ContractsTable({ contracts, loading, onCreate, onEdit, onDelete 
               }}
             >
               <TableCell>Kontrata</TableCell>
-              <TableCell>Kategoria</TableCell>
               <TableCell>Lloji</TableCell>
+              <TableCell>Kuotat</TableCell>
               <TableCell>Rifreskimi</TableCell>
               <TableCell>Boost</TableCell>
               <TableCell sx={{ minWidth: 120 }}>Çmimet</TableCell>
@@ -182,6 +182,13 @@ export function ContractsTable({ contracts, loading, onCreate, onEdit, onDelete 
                         <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.35 }}>
                           {row.title}
                         </Typography>
+                        {row.planCode ? (
+                          <Chip
+                            size="small"
+                            label={row.planCode.toUpperCase()}
+                            sx={{ mt: 0.5, height: 20, fontSize: '0.65rem', fontWeight: 800 }}
+                          />
+                        ) : null}
                         {row.content ? (
                           <Typography
                             variant="caption"
@@ -200,14 +207,17 @@ export function ContractsTable({ contracts, loading, onCreate, onEdit, onDelete 
                       </Box>
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ py: 2, verticalAlign: 'top', whiteSpace: 'nowrap' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {row.listingCategoryTitle ?? '—'}
-                    </Typography>
-                  </TableCell>
                   <TableCell sx={{ py: 2, verticalAlign: 'top' }}>
                     <Typography variant="body2">
                       {row.subscriberKind === 'company' ? 'Kompani' : row.subscriberKind === 'agent' ? 'Agjent' : '—'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ py: 2, verticalAlign: 'top' }}>
+                    <Typography variant="caption" sx={{ display: 'block', lineHeight: 1.4 }}>
+                      All {row.maxListAllCategories} · Jobs {row.maxJobListings} · Cars {row.maxCarListings}
+                    </Typography>
+                    <Typography variant="caption" sx={{ display: 'block', lineHeight: 1.4 }} color="text.secondary">
+                      Apt {row.maxApartmentListings} · Prod {row.maxProductListings} · Prem {row.maxPremiumListings}
                     </Typography>
                   </TableCell>
                   <TableCell sx={{ py: 2, verticalAlign: 'top' }}>
@@ -221,7 +231,7 @@ export function ContractsTable({ contracts, loading, onCreate, onEdit, onDelete 
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
                       {row.glowBadgeEnabled ? (
-                        <Chip size="small" label="Glow" sx={{ height: 22, fontSize: '0.7rem' }} />
+                        <Chip size="small" label="Trust" sx={{ height: 22, fontSize: '0.7rem' }} />
                       ) : null}
                       {row.dailyBoostAccess ? (
                         <Chip size="small" label="Ditore" sx={{ height: 22, fontSize: '0.7rem' }} />

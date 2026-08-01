@@ -11,7 +11,6 @@ import {
   fetchLatestCars,
   fetchPublicCarListingById,
 } from '@/lib/public-listings-client';
-import { mapCarsToSimilarStrip } from '@/lib/vertical-detail-similar-strip';
 import { paths, pathsPublicVerticalListingDetail } from '@/paths';
 
 export const revalidate = 60;
@@ -71,7 +70,7 @@ export default async function CarListingPage({ params }: PageProps): Promise<Rea
     ? pathsPublicVerticalListingDetail(paths.public.cars, canonRaw)
     : pathsPublicVerticalListingDetail(paths.public.cars, listing.id);
   const canonicalUrl = `${config.site.url.replace(/\/$/, '')}${pathHref}`;
-  const similar = mapCarsToSimilarStrip(pool, listing.id);
+  const similar = pool.filter((l) => l.id !== listing.id).slice(0, 10);
 
   return (
     <PublicShell hideHeaderBelowMd>

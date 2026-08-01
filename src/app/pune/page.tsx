@@ -11,7 +11,7 @@ import {
   parseBrowsePage,
   parseBrowseSearchParams,
 } from '@/lib/listing-filters';
-import { fetchBrowseJobs } from '@/lib/public-listings-client';
+import { fetchBrowseJobs, fetchTopViewedListings } from '@/lib/public-listings-client';
 import { fetchPublicCities } from '@/lib/real-estate-locations-server';
 import { paths } from '@/paths';
 
@@ -31,9 +31,10 @@ export default async function JobsBrowsePage({ searchParams }: PageProps) {
   const page = parseBrowsePage(sp);
   const hasFilters = hasActiveBrowseFilters(filters);
 
-  const [{ listings, total, page: currentPage, totalPages }, cities] = await Promise.all([
+  const [{ listings, total, page: currentPage, totalPages }, cities, topViewed] = await Promise.all([
     fetchBrowseJobs(BROWSE_PAGE_SIZE, filters, page),
     fetchPublicCities(),
+    fetchTopViewedListings('jobs'),
   ]);
 
   return (
@@ -46,6 +47,7 @@ export default async function JobsBrowsePage({ searchParams }: PageProps) {
       pageSize={BROWSE_PAGE_SIZE}
       hasFilters={hasFilters}
       cities={cities}
+      topViewed={topViewed}
     >
       <CategoryBrowseGrid>
         {listings.map((listing) => (

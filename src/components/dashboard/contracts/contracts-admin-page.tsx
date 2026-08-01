@@ -15,7 +15,6 @@ export function ContractsAdminPage() {
   const { user, isPlatformAdmin } = usePlatformAdminGuard();
   const {
     contracts,
-    categories,
     roles,
     loadError,
     loading,
@@ -63,7 +62,6 @@ export function ContractsAdminPage() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         roles={roles}
-        categories={categories}
         onSaved={async () => {
           setCreateOpen(false);
           await refresh();
@@ -74,7 +72,6 @@ export function ContractsAdminPage() {
         contract={editContract}
         onClose={() => setEditContract(null)}
         roles={roles}
-        categories={categories}
         onSaved={async () => {
           setEditContract(null);
           await refresh();

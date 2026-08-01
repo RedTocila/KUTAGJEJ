@@ -16,5 +16,6 @@ const listingEngagementSchema = new mongoose.Schema(
 );
 
 listingEngagementSchema.index({ listingKind: 1, listingId: 1 }, { unique: true });
+listingEngagementSchema.index({ listingKind: 1, viewCount: -1 });
 
 module.exports = mongoose.model('ListingEngagement', listingEngagementSchema);

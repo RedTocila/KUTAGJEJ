@@ -15,7 +15,7 @@ function normalizePayload(body) {
   return {
     title: String(body?.title || '').trim(),
     subtitle: String(body?.subtitle || '').trim(),
-    imageUrl: String(body?.imageUrl || '').trim(),
+    imageUrl: String(body?.imageUrl || '').trim() || '/KuTaGjejLogo.png',
     ctaLabel: String(body?.ctaLabel || '').trim(),
     ctaHref: String(body?.ctaHref || '').trim(),
     order: Number.isFinite(Number(body?.order)) ? Number(body.order) : 0,
@@ -25,9 +25,9 @@ function normalizePayload(body) {
 
 function validate(payload) {
   if (!payload.title) return 'Titulli është i detyrueshëm.';
-  if (!payload.imageUrl) return 'Imazhi është i detyrueshëm.';
-  if (payload.ctaLabel && !payload.ctaHref) return 'Kur vendosni CTA etiketë, vendosni edhe linkun.';
-  if (payload.ctaHref && !payload.ctaHref.startsWith('/')) return 'Linku CTA duhet të fillojë me "/".';
+  if (payload.ctaHref && !payload.ctaHref.startsWith('/')) {
+    return 'Linku duhet të fillojë me "/" (p.sh. /prona).';
+  }
   return null;
 }
 

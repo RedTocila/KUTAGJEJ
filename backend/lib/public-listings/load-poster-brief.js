@@ -4,6 +4,13 @@ const BusinessUser = require('../../models/BusinessUser');
 const { isJobsEmployerVerified } = require('../job-employer-verification');
 const { isProfessionalVerified } = require('../professional-verification');
 
+/** @param {'jobs'|'professionals'|null} verifiedContext — `null` = any verification badge. */
+function resolveVerified(u, verifiedContext) {
+  if (verifiedContext === 'professionals') return isProfessionalVerified(u);
+  if (verifiedContext === 'jobs') return isJobsEmployerVerified(u);
+  return isJobsEmployerVerified(u) || isProfessionalVerified(u);
+}
+
 /** @param {'jobs'|'professionals'|null} verifiedContext */
 async function loadPosterBrief(posterModel, posterId, verifiedContext = 'jobs') {
   try {
@@ -15,24 +22,21 @@ async function loadPosterBrief(posterModel, posterId, verifiedContext = 'jobs') 
       if (!u) return null;
       const displayName =
         `${u.firstName || ''} ${u.lastName || ''}`.replace(/\s+/g, ' ').trim() || null;
-      const verified =
-        verifiedContext === 'professionals'
-          ? isProfessionalVerified(u)
-          : verifiedContext === 'jobs'
-            ? isJobsEmployerVerified(u)
-            : false;
       return {
+        id: String(u._id),
         kind: 'individual',
         displayName,
         phone: u.phone?.trim() || null,
         memberSince: u.createdAt,
-        verified,
+        verified: resolveVerified(u, verifiedContext),
+        businessOwner: null,
+        businessCategory: null,
       };
     }
     if (posterModel === 'BusinessUser') {
       const u = await BusinessUser.findById(posterId)
         .select(
-          'firstName lastName phone createdAt businessName businessOwner jobsEmployerVerifiedAt professionalsVerifiedAt',
+          'firstName lastName phone createdAt businessName businessOwner businessCategory jobsEmployerVerifiedAt professionalsVerifiedAt',
         )
         .lean();
       if (!u) return null;
@@ -41,18 +45,15 @@ async function loadPosterBrief(posterModel, posterId, verifiedContext = 'jobs') 
         (u.businessOwner && String(u.businessOwner).trim()) ||
         `${u.firstName || ''} ${u.lastName || ''}`.replace(/\s+/g, ' ').trim() ||
         null;
-      const verified =
-        verifiedContext === 'professionals'
-          ? isProfessionalVerified(u)
-          : verifiedContext === 'jobs'
-            ? isJobsEmployerVerified(u)
-            : false;
       return {
+        id: String(u._id),
         kind: 'business',
         displayName,
         phone: u.phone?.trim() || null,
         memberSince: u.createdAt,
-        verified,
+        verified: resolveVerified(u, verifiedContext),
+        businessOwner: u.businessOwner?.trim() || null,
+        businessCategory: u.businessCategory?.trim() || null,
       };
     }
   } catch (e) {

@@ -12,6 +12,17 @@ function persistUserProfile(profile: unknown): void {
   localStorage.setItem('user-data', JSON.stringify(profile));
 }
 
+function readCachedUser(): User | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('user-data');
+    if (!raw) return null;
+    return JSON.parse(raw) as User;
+  } catch {
+    return null;
+  }
+}
+
 const loginErrorSq = (message: string | undefined): string => {
   const key = (message || '').trim();
   const map: Record<string, string> = {
@@ -101,15 +112,20 @@ class AuthClient {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
-        localStorage.removeItem('custom-auth-token');
-        localStorage.removeItem('user-data');
-        return { data: null };
+        // Only wipe the session on auth failures — not on 5xx / proxy / network blips.
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem('custom-auth-token');
+          localStorage.removeItem('user-data');
+          return { data: null };
+        }
+        // Keep the last known profile so Contact → messages does not look like a logout.
+        return { data: readCachedUser(), error: res.status >= 500 ? 'Gabim serveri.' : undefined };
       }
       const data = await res.json();
       persistUserProfile(data.admin);
       return { data: data.admin as User };
     } catch (_error) {
-      return { data: null };
+      return { data: readCachedUser(), error: 'Nuk u arrit lidhja me serverin.' };
     }
   }
 

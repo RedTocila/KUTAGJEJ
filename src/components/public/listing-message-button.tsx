@@ -30,26 +30,42 @@ export function ListingMessageButton({
   ...buttonProps
 }: ListingMessageButtonProps) {
   const router = useRouter();
-  const { user } = useUser();
+  const { user, isLoading, checkSession } = useUser();
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const handleClick = async () => {
     setError(null);
-    if (!user) {
+    if (isLoading) return;
+
+    const hasToken = typeof window !== 'undefined' && Boolean(localStorage.getItem('custom-auth-token'));
+    if (!user && !hasToken) {
       setPendingListingChat({ listingKind, listingId });
       router.push(paths.user.auth);
       return;
     }
 
-    setLoading(true);
-    const res = await startConversation(listingKind, listingId);
-    setLoading(false);
-    if (res.error || !res.conversation) {
-      setError(res.error ?? 'Nuk u krijua biseda.');
-      return;
+    if (!user && hasToken) {
+      await checkSession();
     }
-    router.push(`${paths.user.messages}?c=${encodeURIComponent(res.conversation.id)}`);
+
+    setLoading(true);
+    try {
+      const res = await startConversation(listingKind, listingId);
+      if (res.error || !res.conversation) {
+        const message = res.error ?? 'Nuk u krijua biseda.';
+        if (/auth required|invalid token|çaktivizuar/i.test(message)) {
+          setPendingListingChat({ listingKind, listingId });
+          router.push(paths.user.auth);
+          return;
+        }
+        setError(message);
+        return;
+      }
+      router.push(`${paths.user.messages}?c=${encodeURIComponent(res.conversation.id)}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -57,10 +73,10 @@ export function ListingMessageButton({
       <Button
       type="button"
       onClick={() => void handleClick()}
-      disabled={disabled || loading}
+      disabled={disabled || loading || isLoading}
       title={error && !buttonProps.fullWidth ? error : buttonProps.title}
       startIcon={
-        loading
+        loading || isLoading
           ? <CircularProgress size={18} color="inherit" />
           : startIcon ?? (children ? undefined : <ChatsCircleIcon weight="regular" size={20} />)
       }

@@ -15,7 +15,19 @@ import { UserPortalPopover } from './user-portal-popover';
 
 function titleForPath(pathname: string): string {
   if (pathname.startsWith(paths.user.profile)) return 'Profili im';
-  return 'Përmbledhje';
+  if (pathname.startsWith(paths.user.messages)) return 'Mesazhet';
+  if (pathname.startsWith(paths.user.savedListings)) return 'Të ruajturat';
+  if (pathname.startsWith(paths.user.myRealEstateListings)) return 'Njoftimet e mia';
+  if (pathname.startsWith(paths.user.referral)) return 'Referimi';
+  if (pathname.startsWith(paths.user.packagesMain)) return 'Paketat kryesore';
+  if (pathname.startsWith(paths.user.packagesExtra)) return 'Paketat shtesë';
+  if (pathname.startsWith(paths.user.packagesCredits)) return 'Bli Boost Coins';
+  if (pathname.startsWith(paths.user.packages)) return 'Paketat për ju';
+  if (pathname.startsWith(paths.user.credits)) return 'Bli kredite';
+  if (pathname.startsWith(paths.user.payments)) return 'Pagesat e mia';
+  if (pathname.startsWith(paths.user.realEstateListing)) return 'Posto njoftim';
+  if (pathname === paths.user.dashboard) return 'Përmbledhje';
+  return 'Paneli im';
 }
 
 export function UserMainNav() {

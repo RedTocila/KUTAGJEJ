@@ -9,6 +9,7 @@ import type { NavItemConfig } from '@/types/nav';
 import { paths } from '@/paths';
 import { isNavItemActive } from '@/lib/is-nav-item-active';
 import { BrandLogo } from '@/components/brand/brand-logo';
+import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
 
 import { getUserPortalNavItemsForUser } from './user-nav-config';
 import { userPortalNavIcons } from './user-portal-nav-icons';
@@ -90,6 +91,9 @@ export function UserSideNav() {
         </Stack>
       </Box>
       <Divider />
+      <Box sx={{ px: 1.5, py: 1.25, display: 'flex', justifyContent: 'flex-end' }}>
+        <ThemeModeToggle />
+      </Box>
     </Box>
   );
 }

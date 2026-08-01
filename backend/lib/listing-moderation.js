@@ -192,6 +192,7 @@ module.exports = {
   LISTING_KINDS,
   PUBLIC_LISTING_STATUS_FILTER,
   mergePublicFilter,
+  getKindConfig,
   backfillListingStatuses,
   notifyAdminsListingSubmitted,
   createAdminNotification,

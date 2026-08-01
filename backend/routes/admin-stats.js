@@ -1,10 +1,6 @@
 const express = require('express');
-const ManagedUser = require('../models/ManagedUser');
-const BusinessUser = require('../models/BusinessUser');
-const IndividualUser = require('../models/IndividualUser');
-const AdminNotification = require('../models/AdminNotification');
+const { getSupabaseAdmin } = require('../lib/supabase');
 const authMiddleware = require('../middleware/auth');
-const { countListingsByStatus } = require('../lib/listing-moderation');
 
 const router = express.Router();
 
@@ -15,16 +11,48 @@ function requirePlatformAdmin(req, res, next) {
   next();
 }
 
+const LISTING_KINDS = {
+  'real-estate': { table: 'real_estate_listings' },
+  cars: { table: 'car_listings' },
+  jobs: { table: 'job_listings' },
+  marketplace: { table: 'marketplace_listings' },
+  businesses: { table: 'directory_listings', extraFilter: { vertical: 'businesses' } },
+  professionals: { table: 'directory_listings', extraFilter: { vertical: 'professionals' } },
+};
+
+async function countListingsByStatus(sb) {
+  const out = {};
+  for (const [kind, cfg] of Object.entries(LISTING_KINDS)) {
+    let query = sb.from(cfg.table).select('status');
+    for (const [col, val] of Object.entries(cfg.extraFilter || {})) {
+      query = query.eq(col, val);
+    }
+    const { data, error } = await query;
+    if (error) throw error;
+    const rows = data || [];
+    out[kind] = {
+      total: rows.length,
+      pending: rows.filter((r) => r.status === 'pending').length,
+      approved: rows.filter((r) => r.status === 'approved').length,
+      rejected: rows.filter((r) => r.status === 'rejected').length,
+    };
+  }
+  return out;
+}
+
 /** GET /api/admin/stats — platform overview for the admin dashboard. */
 router.get('/', authMiddleware, requirePlatformAdmin, async (_req, res) => {
   try {
-    const [byKind, managedUsers, individualUsers, businessUsers, unreadNotifications] = await Promise.all([
-      countListingsByStatus(),
-      ManagedUser.countDocuments(),
-      IndividualUser.countDocuments(),
-      BusinessUser.countDocuments(),
-      AdminNotification.countDocuments({ readAt: null }),
+    const sb = getSupabaseAdmin();
+
+    const [byKind, usersResult, unreadResult] = await Promise.all([
+      countListingsByStatus(sb),
+      sb.from('profiles').select('account_type').in('account_type', ['managed', 'individual', 'business']),
+      sb.from('admin_notifications').select('*', { count: 'exact', head: true }).is('read_at', null),
     ]);
+
+    if (usersResult.error) throw usersResult.error;
+    if (unreadResult.error) throw unreadResult.error;
 
     const totals = { total: 0, pending: 0, approved: 0, rejected: 0 };
     for (const row of Object.values(byKind)) {
@@ -34,6 +62,11 @@ router.get('/', authMiddleware, requirePlatformAdmin, async (_req, res) => {
       totals.rejected += row.rejected;
     }
 
+    const userRows = usersResult.data || [];
+    const managedUsers = userRows.filter((u) => u.account_type === 'managed').length;
+    const individualUsers = userRows.filter((u) => u.account_type === 'individual').length;
+    const businessUsers = userRows.filter((u) => u.account_type === 'business').length;
+
     res.json({
       listings: { byKind, totals },
       users: {
@@ -42,7 +75,7 @@ router.get('/', authMiddleware, requirePlatformAdmin, async (_req, res) => {
         business: businessUsers,
         total: managedUsers + individualUsers + businessUsers,
       },
-      notifications: { unread: unreadNotifications },
+      notifications: { unread: unreadResult.count ?? 0 },
     });
   } catch (err) {
     console.error('GET /admin/stats:', err?.message || err);

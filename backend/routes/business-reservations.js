@@ -1,8 +1,8 @@
+'use strict';
+
 const express = require('express');
-const mongoose = require('mongoose');
 const optionalAuth = require('../middleware/optional-auth');
-const DirectoryListing = require('../models/DirectoryListing');
-const BusinessReservation = require('../models/BusinessReservation');
+const { getSupabaseAdmin } = require('../lib/supabase');
 const { validateReservationPayload } = require('../lib/directory-business-validation');
 
 const router = express.Router();
@@ -13,21 +13,27 @@ router.post('/', optionalAuth, async (req, res) => {
     const v = validateReservationPayload(req.body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
-    const listing = await DirectoryListing.findOne({
-      _id: v.listingId,
-      vertical: 'businesses',
-    }).lean();
+    const sb = getSupabaseAdmin();
+    const { data: listing, error: listingErr } = await sb
+      .from('directory_listings')
+      .select(
+        'id, reservations_enabled, reservation_time_slots, reservation_party_sizes',
+      )
+      .eq('id', v.listingId)
+      .eq('vertical', 'businesses')
+      .maybeSingle();
+    if (listingErr) throw listingErr;
     if (!listing) return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
-    if (!listing.reservationsEnabled) {
+    if (!listing.reservations_enabled) {
       return res.status(400).json({ message: 'Ky biznes nuk pranon rezervime në platformë.' });
     }
 
-    const slots = listing.reservationTimeSlots ?? [];
+    const slots = listing.reservation_time_slots ?? [];
     if (slots.length > 0 && !slots.includes(v.timeSlot)) {
       return res.status(400).json({ message: 'Ora e zgjedhur nuk është e disponueshme.' });
     }
 
-    const sizes = listing.reservationPartySizes ?? [];
+    const sizes = listing.reservation_party_sizes ?? [];
     if (sizes.length > 0 && !sizes.includes(v.partySize)) {
       return res.status(400).json({ message: 'Numri i mysafirëve nuk është i lejuar.' });
     }
@@ -45,30 +51,32 @@ router.post('/', optionalAuth, async (req, res) => {
     }
 
     let userId = null;
-    let userModel = null;
     const model = req.user?.constructor?.modelName;
     if (model === 'IndividualUser' || model === 'BusinessUser') {
-      userId = req.user._id;
-      userModel = model;
+      userId = req.user.id || req.user._id;
     }
 
-    const doc = await BusinessReservation.create({
-      listingId: v.listingId,
-      guestName: v.guestName,
-      guestPhone: v.guestPhone,
-      partySize: v.partySize,
-      reservationDate: v.reservationDate,
-      timeSlot: v.timeSlot,
-      userId,
-      userModel,
-    });
+    const { data: doc, error } = await sb
+      .from('business_reservations')
+      .insert({
+        listing_id: v.listingId,
+        guest_name: v.guestName,
+        guest_phone: v.guestPhone,
+        party_size: v.partySize,
+        reservation_date: v.reservationDate,
+        time_slot: v.timeSlot,
+        user_id: userId,
+      })
+      .select('*')
+      .single();
+    if (error) throw error;
 
     res.status(201).json({
       reservation: {
-        id: String(doc._id),
-        reservationDate: doc.reservationDate,
-        timeSlot: doc.timeSlot,
-        partySize: doc.partySize,
+        id: String(doc.id),
+        reservationDate: doc.reservation_date,
+        timeSlot: doc.time_slot,
+        partySize: doc.party_size,
         status: doc.status,
       },
     });

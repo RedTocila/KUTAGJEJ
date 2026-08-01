@@ -1,6 +1,7 @@
 const express = require('express');
+const { getSupabaseAdmin } = require('../lib/supabase');
+const { camelizeRows } = require('../lib/profiles');
 const authMiddleware = require('../middleware/auth');
-const HomeBanner = require('../models/HomeBanner');
 
 const router = express.Router();
 
@@ -31,17 +32,30 @@ function validate(payload) {
   return null;
 }
 
-function format(doc) {
+function toRow(payload) {
   return {
-    id: String(doc._id),
-    title: doc.title,
-    subtitle: doc.subtitle || '',
-    imageUrl: doc.imageUrl,
-    ctaLabel: doc.ctaLabel || '',
-    ctaHref: doc.ctaHref || '',
-    order: Number(doc.order || 0),
-    isActive: Boolean(doc.isActive),
-    updatedAt: doc.updatedAt,
+    title: payload.title,
+    subtitle: payload.subtitle,
+    image_url: payload.imageUrl,
+    cta_label: payload.ctaLabel,
+    cta_href: payload.ctaHref,
+    order: payload.order,
+    is_active: payload.isActive,
+  };
+}
+
+function format(row) {
+  const c = camelizeRows([row])[0];
+  return {
+    id: c.id,
+    title: c.title,
+    subtitle: c.subtitle || '',
+    imageUrl: c.imageUrl,
+    ctaLabel: c.ctaLabel || '',
+    ctaHref: c.ctaHref || '',
+    order: Number(c.order || 0),
+    isActive: Boolean(c.isActive),
+    updatedAt: c.updatedAt,
   };
 }
 
@@ -49,8 +63,13 @@ router.use(authMiddleware, requirePlatformAdmin);
 
 router.get('/', async (_req, res) => {
   try {
-    const docs = await HomeBanner.find().sort({ order: 1, createdAt: -1 }).lean();
-    res.json({ banners: docs.map((d) => format(d)) });
+    const { data, error } = await getSupabaseAdmin()
+      .from('home_banners')
+      .select('*')
+      .order('order', { ascending: true })
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json({ banners: (data || []).map((d) => format(d)) });
   } catch (error) {
     console.error('GET /admin/home-banners:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -62,8 +81,13 @@ router.post('/', async (req, res) => {
     const payload = normalizePayload(req.body);
     const err = validate(payload);
     if (err) return res.status(400).json({ message: err });
-    const doc = await HomeBanner.create(payload);
-    res.status(201).json({ banner: format(doc.toObject()) });
+    const { data, error } = await getSupabaseAdmin()
+      .from('home_banners')
+      .insert(toRow(payload))
+      .select('*')
+      .single();
+    if (error) throw error;
+    res.status(201).json({ banner: format(data) });
   } catch (error) {
     console.error('POST /admin/home-banners:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -72,20 +96,25 @@ router.post('/', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   try {
-    const doc = await HomeBanner.findById(req.params.id);
+    const sb = getSupabaseAdmin();
+    const { data: doc, error: findError } = await sb.from('home_banners').select('*').eq('id', req.params.id).maybeSingle();
+    if (findError) throw findError;
     if (!doc) return res.status(404).json({ message: 'Banner-i nuk u gjet.' });
-    const payload = normalizePayload({ ...doc.toObject(), ...req.body });
+
+    const current = camelizeRows([doc])[0];
+    const payload = normalizePayload({ ...current, ...req.body });
     const err = validate(payload);
     if (err) return res.status(400).json({ message: err });
-    doc.title = payload.title;
-    doc.subtitle = payload.subtitle;
-    doc.imageUrl = payload.imageUrl;
-    doc.ctaLabel = payload.ctaLabel;
-    doc.ctaHref = payload.ctaHref;
-    doc.order = payload.order;
-    doc.isActive = payload.isActive;
-    await doc.save();
-    res.json({ banner: format(doc.toObject()) });
+
+    const patch = { ...toRow(payload), updated_at: new Date().toISOString() };
+    const { data: updated, error: updateError } = await sb
+      .from('home_banners')
+      .update(patch)
+      .eq('id', req.params.id)
+      .select('*')
+      .single();
+    if (updateError) throw updateError;
+    res.json({ banner: format(updated) });
   } catch (error) {
     console.error('PATCH /admin/home-banners/:id:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -94,7 +123,13 @@ router.patch('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const deleted = await HomeBanner.findByIdAndDelete(req.params.id).lean();
+    const { data: deleted, error } = await getSupabaseAdmin()
+      .from('home_banners')
+      .delete()
+      .eq('id', req.params.id)
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
     if (!deleted) return res.status(404).json({ message: 'Banner-i nuk u gjet.' });
     res.json({ ok: true });
   } catch (error) {

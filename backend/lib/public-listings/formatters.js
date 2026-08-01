@@ -6,10 +6,10 @@ const { jobListingExpiresAt } = require('./query-helpers');
 const { pickImage, snippet, carSlugSource, carDisplayTitle } = require('./text-helpers');
 
 function formatRealEstate(doc, cityById) {
-  const city = cityById.get(String(doc.cityId));
-  const zone = city?.zones?.find((z) => String(z._id) === String(doc.zoneId));
+  const city = cityById.get(doc.cityId);
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   return {
-    id: String(doc._id),
+    id: doc.id,
     kind: 'real-estate',
     title: doc.title,
     description: snippet(doc.description),
@@ -36,10 +36,10 @@ function formatRealEstate(doc, cityById) {
 
 /** One public listing with full description and poster summary (SEO / detail page). */
 function formatRealEstateDetail(doc, cityById, seller) {
-  const city = cityById.get(String(doc.cityId));
-  const zone = city?.zones?.find((z) => String(z._id) === String(doc.zoneId));
+  const city = cityById.get(doc.cityId);
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   return {
-    id: String(doc._id),
+    id: doc.id,
     kind: 'real-estate',
     title: doc.title,
     description: String(doc.description || '').trim(),
@@ -70,9 +70,9 @@ function formatRealEstateDetail(doc, cityById, seller) {
 }
 
 function formatCar(doc, cityById) {
-  const city = cityById.get(String(doc.cityId));
+  const city = cityById.get(doc.cityId);
   return {
-    id: String(doc._id),
+    id: doc.id,
     kind: 'car',
     description: snippet(doc.description),
     make: doc.make,
@@ -90,14 +90,14 @@ function formatCar(doc, cityById) {
     imageUrl: Array.isArray(doc.imageUrls) && doc.imageUrls.length > 0 ? doc.imageUrls[0] : null,
     imageUrls: doc.imageUrls ?? [],
     createdAt: doc.createdAt,
-    permalinkPath: listingPermalinkFromSlugSource(carSlugSource(doc), doc._id),
+    permalinkPath: listingPermalinkFromSlugSource(carSlugSource(doc), doc.id),
   };
 }
 
 function formatJob(doc, cityById) {
-  const city = cityById.get(String(doc.cityId));
+  const city = cityById.get(doc.cityId);
   return {
-    id: String(doc._id),
+    id: doc.id,
     kind: 'job',
     title: doc.title,
     description: snippet(doc.description),
@@ -114,7 +114,7 @@ function formatJob(doc, cityById) {
     imageUrls: doc.imageUrls ?? [],
     createdAt: doc.createdAt,
     expiresAt: jobListingExpiresAt(doc.createdAt),
-    permalinkPath: listingPermalinkFromSlugSource(doc.title, doc._id),
+    permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
     responsibilities: Array.isArray(doc.responsibilities) ? doc.responsibilities.filter(Boolean) : [],
     requirements: Array.isArray(doc.requirements) ? doc.requirements.filter(Boolean) : [],
     benefits: Array.isArray(doc.benefits)
@@ -124,9 +124,9 @@ function formatJob(doc, cityById) {
 }
 
 function formatMarketplace(doc, cityById) {
-  const city = cityById.get(String(doc.cityId));
+  const city = cityById.get(doc.cityId);
   return {
-    id: String(doc._id),
+    id: doc.id,
     kind: 'marketplace',
     transactionType: doc.transactionType,
     title: doc.title,
@@ -140,7 +140,7 @@ function formatMarketplace(doc, cityById) {
     imageUrl: pickImage(doc),
     imageUrls: doc.imageUrls ?? [],
     createdAt: doc.createdAt,
-    permalinkPath: listingPermalinkFromSlugSource(doc.title, doc._id),
+    permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
   };
 }
 
@@ -150,7 +150,7 @@ function directoryCategoryLabel(vertical, categorySlug) {
 }
 
 function directoryReviewFields(doc, reviewStats) {
-  const stats = reviewStats?.get(String(doc._id));
+  const stats = reviewStats?.get(doc.id);
   return {
     ratingAverage: stats?.ratingAverage ?? null,
     reviewCount: stats?.reviewCount ?? 0,
@@ -191,11 +191,11 @@ function formatBusinessMenuPayload(doc) {
 }
 
 function formatDirectory(doc, cityById, reviewStats) {
-  const city = cityById.get(String(doc.cityId));
+  const city = cityById.get(doc.cityId);
   const vertical = doc.vertical;
   const categorySlug = doc.category;
   const base = {
-    id: String(doc._id),
+    id: doc.id,
     kind: vertical,
     title: doc.title,
     description: snippet(doc.description),
@@ -206,10 +206,10 @@ function formatDirectory(doc, cityById, reviewStats) {
     imageUrl: pickImage(doc),
     imageUrls: doc.imageUrls ?? [],
     createdAt: doc.createdAt,
-    permalinkPath: listingPermalinkFromSlugSource(doc.title, doc._id),
+    permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
   };
   if (vertical === 'businesses') {
-    const weekly = doc.weeklyHours ?? [];
+    const weekly = Array.isArray(doc.weeklyHours) ? doc.weeklyHours : [];
     const legacyOh = doc.openingHours != null ? String(doc.openingHours).replace(/\s+/g, ' ').trim() : '';
     const oh = legacyOh || formatWeeklyHoursLine(weekly) || null;
     const { label: openStatusLine } = computeOpenStatus(weekly, legacyOh);
@@ -300,7 +300,7 @@ function formatDirectoryDetail(doc, cityById, seller, reviewStats) {
   if (doc.vertical === 'businesses') {
     return {
       ...base,
-      weeklyHours: doc.weeklyHours ?? [],
+      weeklyHours: Array.isArray(doc.weeklyHours) ? doc.weeklyHours : [],
       ...formatBusinessMenuPayload(doc),
       reservationTimeSlots: doc.reservationTimeSlots ?? [],
       reservationPartySizes: doc.reservationPartySizes ?? [],

@@ -1,12 +1,14 @@
+'use strict';
+
 const express = require('express');
-const mongoose = require('mongoose');
 const authMiddleware = require('../middleware/auth');
-const JobListing = require('../models/JobListing');
-const RealEstateCity = require('../models/RealEstateCity');
+const { getSupabaseAdmin } = require('../lib/supabase');
+const { camelizeRow, camelizeRows } = require('../lib/profiles');
 const { validateJobPayload } = require('../lib/job-field-rules');
 const { attachOwnerMetrics } = require('../lib/listing-metrics');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls } = require('../lib/image-upload');
+const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers');
 
 const router = express.Router();
 
@@ -23,7 +25,7 @@ function requirePortalUser(req, res, next) {
 function formatMineListing(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
   return {
-    id: String(doc._id),
+    id: String(doc.id),
     title: doc.title,
     description: doc.description,
     industry: doc.industry,
@@ -49,16 +51,15 @@ function formatMineListing(doc, cityById) {
 /** GET /api/listings/jobs/mine */
 router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
   try {
-    const posterModel = req.user.constructor.modelName;
-    const docs = await JobListing.find({ posterId: req.user._id, posterModel })
-      .sort({ createdAt: -1 })
-      .lean();
+    const { data, error } = await getSupabaseAdmin()
+      .from('job_listings')
+      .select('*')
+      .eq('poster_id', req.user.id)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
 
-    const cityIds = [...new Set(docs.map((d) => String(d.cityId)).filter(Boolean))];
-    const cityObjectIds = cityIds.filter((id) => mongoose.isValidObjectId(id)).map((id) => new mongoose.Types.ObjectId(id));
-    const cities = cityObjectIds.length > 0 ? await RealEstateCity.find({ _id: { $in: cityObjectIds } }).lean() : [];
-    const cityById = new Map(cities.map((c) => [String(c._id), c]));
-
+    const docs = camelizeRows(data);
+    const cityById = await buildCityIndex(docs);
     const listings = docs.map((d) => formatMineListing(d, cityById));
     res.json({ listings: await attachOwnerMetrics(listings, 'job') });
   } catch (err) {
@@ -75,41 +76,52 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     const v = validateJobPayload(body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
-    // Verify city exists.
     const cityId = String(body.cityId).trim();
-    const city = await RealEstateCity.findById(cityId).lean();
-    if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+    if (!isUuid(cityId)) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
 
-    const posterModel = req.user.constructor.modelName;
+    const { data: city, error: cityErr } = await getSupabaseAdmin()
+      .from('real_estate_cities')
+      .select('id')
+      .eq('id', cityId)
+      .maybeSingle();
+    if (cityErr) throw cityErr;
+    if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
 
     const hasSalary = body.salary !== null && body.salary !== undefined && String(body.salary).trim() !== '';
 
-    const doc = await JobListing.create({
-      posterId: req.user._id,
-      posterModel,
+    const row = {
+      poster_id: req.user.id,
       title: String(body.title).trim(),
       description: String(body.description).trim(),
       industry: body.industry,
-      cityId: new mongoose.Types.ObjectId(cityId),
+      city_id: cityId,
       education: body.education,
       experience: body.experience,
-      jobType: body.jobType,
-      workLocation: body.workLocation,
+      job_type: body.jobType,
+      work_location: body.workLocation,
       salary: hasSalary ? Number(body.salary) : null,
-      currency: hasSalary ? body.currency : null,
-      contactPhone: String(body.contactPhone || '').trim(),
+      contact_phone: String(body.contactPhone || '').trim(),
       responsibilities: v.responsibilities,
       requirements: v.requirements,
       benefits: v.benefits,
-      imageUrls: sanitizeImageUrls(body.imageUrls, MAX_JOB_IMAGES),
-    });
+      image_urls: sanitizeImageUrls(body.imageUrls, MAX_JOB_IMAGES),
+    };
+    if (hasSalary) row.currency = body.currency;
 
-    await notifyAdminsListingSubmitted('jobs', doc._id, doc.title);
+    const { data: created, error: insErr } = await getSupabaseAdmin()
+      .from('job_listings')
+      .insert(row)
+      .select('*')
+      .single();
+    if (insErr) throw insErr;
+
+    const doc = camelizeRow(created);
+    await notifyAdminsListingSubmitted('jobs', doc.id, doc.title);
 
     res.status(201).json({
       message: 'Njoftimi u dërgua për aprovim..',
       listing: {
-        id: String(doc._id),
+        id: String(doc.id),
         title: doc.title,
         industry: doc.industry,
         status: doc.status,

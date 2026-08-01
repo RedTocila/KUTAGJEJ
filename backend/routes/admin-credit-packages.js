@@ -1,6 +1,9 @@
+'use strict';
+
 const express = require('express');
-const mongoose = require('mongoose');
-const CreditPackage = require('../models/CreditPackage');
+const { getSupabaseAdmin } = require('../lib/supabase');
+const { mapCreditPackage } = require('../lib/credit-packages');
+const { isUuid } = require('../lib/public-listings/query-helpers');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
@@ -14,7 +17,7 @@ function requirePlatformAdmin(req, res, next) {
 
 function formatAdmin(doc) {
   return {
-    id: String(doc._id),
+    id: String(doc.id || doc._id),
     credits: doc.credits,
     bonusCredits: Number(doc.bonusCredits) || 0,
     priceEur: doc.priceEur,
@@ -47,8 +50,13 @@ router.use(authMiddleware, requirePlatformAdmin);
 
 router.get('/', async (_req, res) => {
   try {
-    const docs = await CreditPackage.find().sort({ sortOrder: 1, createdAt: 1 }).lean();
-    res.json({ packages: docs.map(formatAdmin) });
+    const { data, error } = await getSupabaseAdmin()
+      .from('credit_packages')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    res.json({ packages: (data || []).map(mapCreditPackage).map(formatAdmin) });
   } catch (error) {
     console.error('GET /admin/credit-packages:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -74,17 +82,22 @@ router.post('/', async (req, res) => {
     const label = String(labelSq || '').trim();
     if (!label) return res.status(400).json({ message: 'Etiketa është e detyrueshme.' });
 
-    const doc = await CreditPackage.create({
-      credits: c.n,
-      bonusCredits: bonus.n,
-      priceEur: p.n,
-      labelSq: label,
-      badgeSq: badgeSq !== undefined ? String(badgeSq).trim() : '',
-      active: active === undefined ? true : Boolean(active),
-      sortOrder: Number.isFinite(Number(sortOrder)) ? Number(sortOrder) : 0,
-      createdBy: req.admin._id,
-    });
-    res.status(201).json({ package: formatAdmin(doc) });
+    const { data, error } = await getSupabaseAdmin()
+      .from('credit_packages')
+      .insert({
+        credits: c.n,
+        bonus_credits: bonus.n,
+        price_eur: p.n,
+        label_sq: label,
+        badge_sq: badgeSq !== undefined ? String(badgeSq).trim() : '',
+        active: active === undefined ? true : Boolean(active),
+        sort_order: Number.isFinite(Number(sortOrder)) ? Number(sortOrder) : 0,
+        created_by: req.admin.id,
+      })
+      .select('*')
+      .single();
+    if (error) throw error;
+    res.status(201).json({ package: formatAdmin(mapCreditPackage(data)) });
   } catch (error) {
     console.error('POST /admin/credit-packages:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -93,18 +106,25 @@ router.post('/', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!isUuid(req.params.id)) {
       return res.status(400).json({ message: 'ID e pavlefshme.' });
     }
-    const doc = await CreditPackage.findById(req.params.id);
-    if (!doc) return res.status(404).json({ message: 'Paketa nuk u gjet.' });
+    const sb = getSupabaseAdmin();
+    const { data: existing, error: findErr } = await sb
+      .from('credit_packages')
+      .select('*')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (findErr) throw findErr;
+    if (!existing) return res.status(404).json({ message: 'Paketa nuk u gjet.' });
 
     const { credits, bonusCredits, priceEur, labelSq, badgeSq, active, sortOrder } = req.body || {};
+    const patch = { updated_at: new Date().toISOString() };
 
     if (credits !== undefined) {
       const c = parsePositiveInt(credits, 'Kreditet');
       if (!c.ok) return res.status(400).json({ message: c.message });
-      doc.credits = c.n;
+      patch.credits = c.n;
     }
     if (bonusCredits !== undefined) {
       const bonus = parseNonNegative(bonusCredits, 'Bonusi');
@@ -112,24 +132,30 @@ router.patch('/:id', async (req, res) => {
       if (!Number.isInteger(bonus.n)) {
         return res.status(400).json({ message: 'Bonusi duhet të jetë numër i plotë ≥ 0.' });
       }
-      doc.bonusCredits = bonus.n;
+      patch.bonus_credits = bonus.n;
     }
     if (priceEur !== undefined) {
       const p = parseNonNegative(priceEur, 'Çmimi');
       if (!p.ok) return res.status(400).json({ message: p.message });
-      doc.priceEur = p.n;
+      patch.price_eur = p.n;
     }
     if (labelSq !== undefined) {
       const label = String(labelSq).trim();
       if (!label) return res.status(400).json({ message: 'Etiketa nuk mund të jetë bosh.' });
-      doc.labelSq = label;
+      patch.label_sq = label;
     }
-    if (badgeSq !== undefined) doc.badgeSq = String(badgeSq).trim();
-    if (active !== undefined) doc.active = Boolean(active);
-    if (sortOrder !== undefined && Number.isFinite(Number(sortOrder))) doc.sortOrder = Number(sortOrder);
+    if (badgeSq !== undefined) patch.badge_sq = String(badgeSq).trim();
+    if (active !== undefined) patch.active = Boolean(active);
+    if (sortOrder !== undefined && Number.isFinite(Number(sortOrder))) patch.sort_order = Number(sortOrder);
 
-    await doc.save();
-    res.json({ package: formatAdmin(doc) });
+    const { data, error } = await sb
+      .from('credit_packages')
+      .update(patch)
+      .eq('id', req.params.id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    res.json({ package: formatAdmin(mapCreditPackage(data)) });
   } catch (error) {
     console.error('PATCH /admin/credit-packages/:id:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -138,11 +164,17 @@ router.patch('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!isUuid(req.params.id)) {
       return res.status(400).json({ message: 'ID e pavlefshme.' });
     }
-    const doc = await CreditPackage.findByIdAndDelete(req.params.id);
-    if (!doc) return res.status(404).json({ message: 'Paketa nuk u gjet.' });
+    const { data, error } = await getSupabaseAdmin()
+      .from('credit_packages')
+      .delete()
+      .eq('id', req.params.id)
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ message: 'Paketa nuk u gjet.' });
     res.json({ message: 'Paketa u fshi.' });
   } catch (error) {
     console.error('DELETE /admin/credit-packages/:id:', error?.message || error);

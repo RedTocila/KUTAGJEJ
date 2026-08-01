@@ -1,4 +1,4 @@
-const CreditPackage = require('../models/CreditPackage');
+const { getSupabaseAdmin } = require('./supabase');
 
 /**
  * BOOST CREDIT catalog. `credits` is the base BC; buyers also receive `bonusCredits`.
@@ -14,34 +14,52 @@ const DEFAULT_CREDIT_PACKAGES = [
 ];
 
 async function ensureCreditPackages() {
+  const sb = getSupabaseAdmin();
   const legacyLabels = ['100 kredite', '250 kredite', '600 kredite', '1500 kredite'];
+  const now = new Date().toISOString();
 
   for (const pkg of DEFAULT_CREDIT_PACKAGES) {
-    await CreditPackage.findOneAndUpdate(
-      { labelSq: pkg.labelSq },
-      {
-        $set: {
-          credits: pkg.credits,
-          bonusCredits: pkg.bonusCredits,
-          priceEur: pkg.priceEur,
-          badgeSq: pkg.badgeSq,
-          sortOrder: pkg.sortOrder,
-          active: true,
-        },
-        $setOnInsert: { labelSq: pkg.labelSq },
-      },
-      { upsert: true },
-    );
+    const { data: existing, error: findErr } = await sb
+      .from('credit_packages')
+      .select('id')
+      .eq('label_sq', pkg.labelSq)
+      .maybeSingle();
+    if (findErr) throw findErr;
+
+    const row = {
+      credits: pkg.credits,
+      bonus_credits: pkg.bonusCredits,
+      price_eur: pkg.priceEur,
+      badge_sq: pkg.badgeSq,
+      sort_order: pkg.sortOrder,
+      active: true,
+      updated_at: now,
+    };
+
+    if (existing) {
+      const { error } = await sb.from('credit_packages').update(row).eq('id', existing.id);
+      if (error) throw error;
+    } else {
+      const { error } = await sb.from('credit_packages').insert({
+        ...row,
+        label_sq: pkg.labelSq,
+      });
+      if (error) throw error;
+    }
   }
 
-  const deactivate = await CreditPackage.updateMany(
-    { labelSq: { $in: legacyLabels }, active: true },
-    { $set: { active: false } },
-  );
+  const { data: deactivated, error: deactivateErr } = await sb
+    .from('credit_packages')
+    .update({ active: false, updated_at: now })
+    .in('label_sq', legacyLabels)
+    .eq('active', true)
+    .select('id');
+  if (deactivateErr) throw deactivateErr;
 
+  const deactivatedCount = deactivated?.length ?? 0;
   console.log(
     `✓ Synced ${DEFAULT_CREDIT_PACKAGES.length} BOOST CREDIT packages` +
-      (deactivate.modifiedCount ? ` (hid ${deactivate.modifiedCount} legacy)` : ''),
+      (deactivatedCount ? ` (hid ${deactivatedCount} legacy)` : ''),
   );
 }
 

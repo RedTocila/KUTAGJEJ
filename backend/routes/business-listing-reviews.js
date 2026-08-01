@@ -1,61 +1,68 @@
+'use strict';
+
 const express = require('express');
-const mongoose = require('mongoose');
 const authMiddleware = require('../middleware/auth');
-const DirectoryListing = require('../models/DirectoryListing');
-const BusinessListingReview = require('../models/BusinessListingReview');
+const requirePortalUser = require('../middleware/require-portal-user');
+const { getSupabaseAdmin } = require('../lib/supabase');
+const { getProfileById } = require('../lib/profiles');
+const { isUuid } = require('../lib/public-listings/query-helpers');
 const { validateReviewPayload } = require('../lib/directory-business-validation');
 
 const router = express.Router();
 
-function requirePortalUser(req, res, next) {
-  const model = req.user?.constructor?.modelName;
-  if (model !== 'IndividualUser' && model !== 'BusinessUser') {
-    return res.status(403).json({ message: 'Duhet të jeni të kyçur për të lënë vlerësim.' });
-  }
-  next();
-}
-
 function formatReview(doc, reviewerName) {
   return {
-    id: String(doc._id),
-    listingId: String(doc.listingId),
+    id: String(doc.id),
+    listingId: String(doc.listing_id),
     rating: doc.rating,
     comment: doc.comment ?? '',
     reviewerName: reviewerName ?? 'Përdorues',
-    createdAt: doc.createdAt,
+    createdAt: doc.created_at,
   };
 }
 
-async function reviewerDisplayName(reviewerModel, reviewerId) {
-  const UserModel = mongoose.model(reviewerModel);
-  const u = await UserModel.findById(reviewerId).lean();
+async function reviewerDisplayName(reviewerId) {
+  const u = await getProfileById(reviewerId);
   if (!u) return 'Përdorues';
-  if (reviewerModel === 'BusinessUser') return u.businessName || u.email || 'Biznes';
+  if (u.accountType === 'business' || u.constructor?.modelName === 'BusinessUser') {
+    return u.businessName || u.email || 'Biznes';
+  }
   const parts = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
   return parts || u.email || 'Përdorues';
+}
+
+function isUniqueViolation(err) {
+  return err?.code === '23505' || err?.code === 23505;
 }
 
 /** GET /api/business-reviews?listingId= */
 router.get('/', async (req, res) => {
   try {
     const listingId = String(req.query.listingId || '').trim();
-    if (!mongoose.isValidObjectId(listingId)) {
+    if (!isUuid(listingId)) {
       return res.status(400).json({ message: 'Njoftimi nuk është i vlefshëm.' });
     }
 
-    const listing = await DirectoryListing.findOne({
-      _id: listingId,
-      vertical: 'businesses',
-    }).lean();
+    const sb = getSupabaseAdmin();
+    const { data: listing, error: listingErr } = await sb
+      .from('directory_listings')
+      .select('id')
+      .eq('id', listingId)
+      .eq('vertical', 'businesses')
+      .maybeSingle();
+    if (listingErr) throw listingErr;
     if (!listing) return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
 
-    const docs = await BusinessListingReview.find({ listingId })
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean();
+    const { data: docs, error } = await sb
+      .from('business_listing_reviews')
+      .select('*')
+      .eq('listing_id', listingId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) throw error;
 
     const reviews = await Promise.all(
-      docs.map(async (d) => formatReview(d, await reviewerDisplayName(d.reviewerModel, d.reviewerId))),
+      (docs || []).map(async (d) => formatReview(d, await reviewerDisplayName(d.reviewer_id))),
     );
 
     res.json({ reviews });
@@ -73,46 +80,66 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     if (!v.ok) return res.status(400).json({ message: v.message });
 
     const listingId = String(body.listingId || '').trim();
-    if (!mongoose.isValidObjectId(listingId)) {
+    if (!isUuid(listingId)) {
       return res.status(400).json({ message: 'Njoftimi nuk u gjet.' });
     }
 
-    const listing = await DirectoryListing.findOne({
-      _id: listingId,
-      vertical: 'businesses',
-    }).lean();
+    const sb = getSupabaseAdmin();
+    const { data: listing, error: listingErr } = await sb
+      .from('directory_listings')
+      .select('id, poster_id')
+      .eq('id', listingId)
+      .eq('vertical', 'businesses')
+      .maybeSingle();
+    if (listingErr) throw listingErr;
     if (!listing) return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
 
-    const reviewerModel = req.user.constructor.modelName;
-    const reviewerId = req.user._id;
-
-    if (String(listing.posterId) === String(reviewerId) && listing.posterModel === reviewerModel) {
+    const reviewerId = req.user.id || req.user._id;
+    if (String(listing.poster_id) === String(reviewerId)) {
       return res.status(400).json({ message: 'Nuk mund të vlerësoni biznesin tuaj.' });
     }
 
-    const existing = await BusinessListingReview.findOne({ listingId, reviewerId, reviewerModel });
+    const { data: existing, error: existingErr } = await sb
+      .from('business_listing_reviews')
+      .select('*')
+      .eq('listing_id', listingId)
+      .eq('reviewer_id', reviewerId)
+      .maybeSingle();
+    if (existingErr) throw existingErr;
+
     if (existing) {
-      existing.rating = v.rating;
-      existing.comment = v.comment;
-      await existing.save();
-      const name = await reviewerDisplayName(reviewerModel, reviewerId);
-      return res.json({ review: formatReview(existing, name), updated: true });
+      const now = new Date().toISOString();
+      const { data: updated, error: updateErr } = await sb
+        .from('business_listing_reviews')
+        .update({ rating: v.rating, comment: v.comment, updated_at: now })
+        .eq('id', existing.id)
+        .select('*')
+        .single();
+      if (updateErr) throw updateErr;
+      const name = await reviewerDisplayName(reviewerId);
+      return res.json({ review: formatReview(updated, name), updated: true });
     }
 
-    const doc = await BusinessListingReview.create({
-      listingId,
-      reviewerId,
-      reviewerModel,
-      rating: v.rating,
-      comment: v.comment,
-    });
+    const { data: doc, error: insertErr } = await sb
+      .from('business_listing_reviews')
+      .insert({
+        listing_id: listingId,
+        reviewer_id: reviewerId,
+        rating: v.rating,
+        comment: v.comment,
+      })
+      .select('*')
+      .single();
+    if (insertErr) {
+      if (isUniqueViolation(insertErr)) {
+        return res.status(400).json({ message: 'Keni lënë tashmë një vlerësim për këtë biznes.' });
+      }
+      throw insertErr;
+    }
 
-    const name = await reviewerDisplayName(reviewerModel, reviewerId);
+    const name = await reviewerDisplayName(reviewerId);
     res.status(201).json({ review: formatReview(doc, name), updated: false });
   } catch (err) {
-    if (err?.code === 11000) {
-      return res.status(400).json({ message: 'Keni lënë tashmë një vlerësim për këtë biznes.' });
-    }
     console.error('POST /business-reviews:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }

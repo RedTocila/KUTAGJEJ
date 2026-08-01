@@ -1,29 +1,31 @@
+'use strict';
+
 const express = require('express');
-const mongoose = require('mongoose');
 const authMiddleware = require('../../middleware/auth');
 const requirePortalUser = require('../../middleware/require-portal-user');
-const DirectoryListing = require('../../models/DirectoryListing');
-const RealEstateCity = require('../../models/RealEstateCity');
+const { getSupabaseAdmin } = require('../../lib/supabase');
+const { camelizeRow, camelizeRows } = require('../../lib/profiles');
 const { validateBusinessPayload, BUSINESS_CATEGORIES } = require('../../lib/directory-business-validation');
 const { attachOwnerMetrics } = require('../../lib/listing-metrics');
 const { buildCityIndexFromDocs } = require('../../lib/directory-listings/city-index');
 const { formatMineBusiness } = require('../../lib/directory-listings/format-mine');
 const { notifyAdminsListingSubmitted } = require('../../lib/listing-moderation');
+const { isUuid } = require('../../lib/public-listings/query-helpers');
 
 const router = express.Router();
 
 /** GET /api/listings/directory/businesses/mine */
 router.get('/businesses/mine', authMiddleware, requirePortalUser, async (req, res) => {
   try {
-    const posterModel = req.user.constructor.modelName;
-    const docs = await DirectoryListing.find({
-      posterId: req.user._id,
-      posterModel,
-      vertical: 'businesses',
-    })
-      .sort({ createdAt: -1 })
-      .lean();
+    const { data, error } = await getSupabaseAdmin()
+      .from('directory_listings')
+      .select('*')
+      .eq('poster_id', req.user.id)
+      .eq('vertical', 'businesses')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
 
+    const docs = camelizeRows(data);
     const cityById = await buildCityIndexFromDocs(docs);
     const listings = docs.map((d) => formatMineBusiness(d, cityById));
     res.json({ listings: await attachOwnerMetrics(listings, 'businesses') });
@@ -41,38 +43,51 @@ router.post('/businesses', authMiddleware, requirePortalUser, async (req, res) =
     if (!v.ok) return res.status(400).json({ message: v.message });
 
     const cityId = String(body.cityId).trim();
-    const city = await RealEstateCity.findById(cityId).lean();
+    if (!isUuid(cityId)) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+
+    const { data: city, error: cityErr } = await getSupabaseAdmin()
+      .from('real_estate_cities')
+      .select('id')
+      .eq('id', cityId)
+      .maybeSingle();
+    if (cityErr) throw cityErr;
     if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
 
-    const posterModel = req.user.constructor.modelName;
     const imageUrls = v.imageUrls ?? [];
 
-    const doc = await DirectoryListing.create({
+    const row = {
       vertical: 'businesses',
-      posterId: req.user._id,
-      posterModel,
+      poster_id: req.user.id,
       title: String(body.title).trim(),
       description: String(body.description).trim(),
       category: body.category,
-      cityId: new mongoose.Types.ObjectId(cityId),
-      contactPhone: String(body.contactPhone || '').trim(),
-      imageUrls,
-      openingHours: v.openingHours,
-      weeklyHours: v.weeklyHours,
-      menuCategories: v.menuCategories,
-      menuItems: v.menuItems,
-      reservationsEnabled: v.reservationsEnabled,
-      reservationUrl: v.reservationUrl,
-      reservationTimeSlots: v.reservationTimeSlots,
-      reservationPartySizes: v.reservationPartySizes,
-      servicesHighlight: v.servicesHighlight,
-    });
+      city_id: cityId,
+      contact_phone: String(body.contactPhone || '').trim(),
+      image_urls: imageUrls,
+      opening_hours: v.openingHours,
+      weekly_hours: v.weeklyHours,
+      menu_categories: v.menuCategories,
+      menu_items: v.menuItems,
+      reservations_enabled: v.reservationsEnabled,
+      reservation_url: v.reservationUrl,
+      reservation_time_slots: v.reservationTimeSlots,
+      reservation_party_sizes: v.reservationPartySizes,
+      services_highlight: v.servicesHighlight,
+    };
 
-    await notifyAdminsListingSubmitted('businesses', doc._id, doc.title);
+    const { data: created, error: insErr } = await getSupabaseAdmin()
+      .from('directory_listings')
+      .insert(row)
+      .select('*')
+      .single();
+    if (insErr) throw insErr;
+
+    const doc = camelizeRow(created);
+    await notifyAdminsListingSubmitted('businesses', doc.id, doc.title);
 
     res.status(201).json({
       message: 'Njoftimi u dërgua për aprovim..',
-      listing: { id: String(doc._id), title: doc.title, status: doc.status, createdAt: doc.createdAt },
+      listing: { id: String(doc.id), title: doc.title, status: doc.status, createdAt: doc.createdAt },
     });
   } catch (err) {
     console.error('POST /listings/directory/businesses:', err?.message || err);
@@ -84,52 +99,69 @@ router.post('/businesses', authMiddleware, requirePortalUser, async (req, res) =
 router.put('/businesses/:id', authMiddleware, requirePortalUser, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
-    if (!mongoose.isValidObjectId(rawId)) {
+    if (!isUuid(rawId)) {
       return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
     }
 
-    const posterModel = req.user.constructor.modelName;
-    const doc = await DirectoryListing.findOne({
-      _id: rawId,
-      posterId: req.user._id,
-      posterModel,
-      vertical: 'businesses',
-    });
-    if (!doc) return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
+    const { data: existing, error: selErr } = await getSupabaseAdmin()
+      .from('directory_listings')
+      .select('*')
+      .eq('id', rawId)
+      .eq('poster_id', req.user.id)
+      .eq('vertical', 'businesses')
+      .maybeSingle();
+    if (selErr) throw selErr;
+    if (!existing) return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
 
     const body = req.body;
     const v = validateBusinessPayload(body, { partial: true });
     if (!v.ok) return res.status(400).json({ message: v.message });
 
-    if (body.title != null) doc.title = String(body.title).trim();
-    if (body.description != null) doc.description = String(body.description).trim();
+    const patch = { updated_at: new Date().toISOString() };
+
+    if (body.title != null) patch.title = String(body.title).trim();
+    if (body.description != null) patch.description = String(body.description).trim();
     if (body.category != null) {
       if (!BUSINESS_CATEGORIES.has(body.category)) {
         return res.status(400).json({ message: 'Kategoria nuk është e vlefshme.' });
       }
-      doc.category = body.category;
+      patch.category = body.category;
     }
     if (body.cityId != null) {
       const cityId = String(body.cityId).trim();
-      const city = await RealEstateCity.findById(cityId).lean();
+      if (!isUuid(cityId)) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+      const { data: city, error: cityErr } = await getSupabaseAdmin()
+        .from('real_estate_cities')
+        .select('id')
+        .eq('id', cityId)
+        .maybeSingle();
+      if (cityErr) throw cityErr;
       if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
-      doc.cityId = new mongoose.Types.ObjectId(cityId);
+      patch.city_id = cityId;
     }
-    if (body.contactPhone != null) doc.contactPhone = String(body.contactPhone).trim();
+    if (body.contactPhone != null) patch.contact_phone = String(body.contactPhone).trim();
 
-    doc.openingHours = v.openingHours;
-    doc.weeklyHours = v.weeklyHours;
-    doc.menuCategories = v.menuCategories;
-    doc.menuItems = v.menuItems;
-    doc.reservationsEnabled = v.reservationsEnabled;
-    doc.reservationUrl = v.reservationUrl;
-    doc.reservationTimeSlots = v.reservationTimeSlots;
-    doc.reservationPartySizes = v.reservationPartySizes;
-    doc.servicesHighlight = v.servicesHighlight;
-    if (v.imageUrls != null) doc.imageUrls = v.imageUrls;
+    patch.opening_hours = v.openingHours;
+    patch.weekly_hours = v.weeklyHours;
+    patch.menu_categories = v.menuCategories;
+    patch.menu_items = v.menuItems;
+    patch.reservations_enabled = v.reservationsEnabled;
+    patch.reservation_url = v.reservationUrl;
+    patch.reservation_time_slots = v.reservationTimeSlots;
+    patch.reservation_party_sizes = v.reservationPartySizes;
+    patch.services_highlight = v.servicesHighlight;
+    if (v.imageUrls != null) patch.image_urls = v.imageUrls;
 
-    await doc.save();
-    res.json({ listing: { id: String(doc._id), title: doc.title, updatedAt: doc.updatedAt } });
+    const { data: updated, error: updErr } = await getSupabaseAdmin()
+      .from('directory_listings')
+      .update(patch)
+      .eq('id', rawId)
+      .select('*')
+      .single();
+    if (updErr) throw updErr;
+
+    const doc = camelizeRow(updated);
+    res.json({ listing: { id: String(doc.id), title: doc.title, updatedAt: doc.updatedAt } });
   } catch (err) {
     console.error('PUT /listings/directory/businesses/:id:', err?.message || err);
     res.status(500).json({ message: 'Server error' });

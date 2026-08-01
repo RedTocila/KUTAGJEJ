@@ -151,7 +151,9 @@ function validateReservationPayload(body) {
   const timeSlot = String(body?.timeSlot || '').trim();
   if (!TIME_RE.test(timeSlot)) return { ok: false, message: 'Ora e rezervimit nuk është e vlefshme.' };
   const listingId = String(body?.listingId || '').trim();
-  if (!/^[a-f\d]{24}$/i.test(listingId)) return { ok: false, message: 'Njoftimi nuk u gjet.' };
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(listingId)) {
+    return { ok: false, message: 'Njoftimi nuk u gjet.' };
+  }
   return { ok: true, guestName, guestPhone, partySize, reservationDate, timeSlot, listingId };
 }
 

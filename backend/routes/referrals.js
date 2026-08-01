@@ -1,8 +1,9 @@
+'use strict';
+
 const express = require('express');
+const { getSupabaseAdmin } = require('../lib/supabase');
 const auth = require('../middleware/auth');
 const requirePortalUser = require('../middleware/require-portal-user');
-const ReferralSignup = require('../models/ReferralSignup');
-const ReferralProgram = require('../models/ReferralProgram');
 const { ensureReferralProgram, formatReferralProgram } = require('../lib/ensure-referral-program');
 const {
   ensureUserReferralCode,
@@ -23,39 +24,43 @@ router.get('/me', auth, requirePortalUser, async (req, res) => {
     const code = user.referralCode;
     const posterModel = user.constructor.modelName;
     const [referralCount, paidReferralCount, reviewCount] = await Promise.all([
-      countFreeReferrals(user._id, posterModel),
-      countPaidReferrals(user._id, posterModel),
-      countReceivedReviews(user._id, posterModel),
+      countFreeReferrals(user.id, posterModel),
+      countPaidReferrals(user.id, posterModel),
+      countReceivedReviews(user.id, posterModel),
     ]);
 
-    const referredBy =
-      user.referredById && user.referredByModel
-        ? await loadPortalUserBrief(user.referredById, user.referredByModel)
-        : null;
+    const referredBy = user.referredById
+      ? await loadPortalUserBrief(user.referredById, null)
+      : null;
 
-    const signups = await ReferralSignup.find({
-      referrerId: user._id,
-      referrerModel: user.constructor.modelName,
-    })
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean();
+    const { data: signups, error: signupErr } = await getSupabaseAdmin()
+      .from('referral_signups')
+      .select('*')
+      .eq('referrer_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (signupErr) throw signupErr;
 
     const referredUsers = await Promise.all(
-      signups.map(async (s) => {
-        const brief = await loadPortalUserBrief(s.referredUserId, s.referredUserModel);
+      (signups || []).map(async (s) => {
+        const brief = await loadPortalUserBrief(s.referred_user_id, null);
         return {
-          id: String(s._id),
+          id: String(s.id),
           referredUser: brief,
-          creditsAwarded: s.creditsAwarded ?? 0,
-          referralCodeUsed: s.referralCodeUsed || code,
-          createdAt: s.createdAt,
+          creditsAwarded: s.credits_awarded ?? 0,
+          referralCodeUsed: s.referral_code_used || code,
+          createdAt: s.created_at,
         };
       }),
     );
 
     await ensureReferralProgram();
-    const programDoc = await ReferralProgram.findById('default');
+    const { data: programDoc, error: progErr } = await getSupabaseAdmin()
+      .from('referral_programs')
+      .select('*')
+      .eq('id', 'default')
+      .maybeSingle();
+    if (progErr) throw progErr;
     const program = programDoc ? formatReferralProgram(programDoc) : null;
 
     const claimed = new Set((user.referralTiersClaimed || []).map(Number));

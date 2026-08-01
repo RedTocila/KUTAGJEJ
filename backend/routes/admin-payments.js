@@ -1,5 +1,8 @@
+'use strict';
+
 const express = require('express');
-const Payment = require('../models/Payment');
+const { getSupabaseAdmin } = require('../lib/supabase');
+const { mapPayment } = require('../lib/apply-payment');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
@@ -13,10 +16,10 @@ function requirePlatformAdmin(req, res, next) {
 
 function formatAdminPayment(doc) {
   return {
-    id: String(doc._id),
+    id: String(doc.id || doc._id),
     payer: {
       id: String(doc.payerId),
-      model: doc.payerModel,
+      model: doc.metadata?.payerModel || null,
       email: doc.payerEmail || '',
       name: doc.payerName || '',
     },
@@ -49,35 +52,48 @@ router.use(authMiddleware, requirePlatformAdmin);
 router.get('/', async (req, res) => {
   try {
     const { status, type } = req.query;
-    const query = {};
-    if (['pending', 'paid', 'failed', 'canceled'].includes(String(status))) {
-      query.status = String(status);
-    }
-    if (['subscription', 'credits'].includes(String(type))) {
-      query.type = String(type);
-    }
-
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
-    const skip = (page - 1) * limit;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
 
-    const [docs, total, paidAgg] = await Promise.all([
-      Payment.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-      Payment.countDocuments(query),
-      Payment.aggregate([
-        { $match: { status: 'paid' } },
-        { $group: { _id: '$currency', total: { $sum: '$amount' }, count: { $sum: 1 } } },
-      ]),
-    ]);
+    const sb = getSupabaseAdmin();
+    let query = sb.from('payments').select('*', { count: 'exact' });
+    if (['pending', 'paid', 'failed', 'canceled'].includes(String(status))) {
+      query = query.eq('status', String(status));
+    }
+    if (['subscription', 'credits'].includes(String(type))) {
+      query = query.eq('type', String(type));
+    }
 
-    const revenueByCurrency = paidAgg.map((r) => ({
-      currency: r._id || 'EUR',
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(from, to);
+    if (error) throw error;
+
+    const { data: paidRows, error: paidErr } = await sb
+      .from('payments')
+      .select('amount, currency')
+      .eq('status', 'paid');
+    if (paidErr) throw paidErr;
+
+    const byCurrency = new Map();
+    for (const r of paidRows || []) {
+      const cur = r.currency || 'EUR';
+      const entry = byCurrency.get(cur) || { currency: cur, total: 0, count: 0 };
+      entry.total += Number(r.amount) || 0;
+      entry.count += 1;
+      byCurrency.set(cur, entry);
+    }
+    const revenueByCurrency = [...byCurrency.values()].map((r) => ({
+      currency: r.currency,
       total: Math.round(r.total * 100) / 100,
       count: r.count,
     }));
 
+    const total = count ?? 0;
     res.json({
-      payments: docs.map(formatAdminPayment),
+      payments: (data || []).map(mapPayment).map(formatAdminPayment),
       page,
       limit,
       total,

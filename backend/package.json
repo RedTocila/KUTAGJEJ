@@ -6,19 +6,15 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "dev:keep": "bash scripts/keep-api-alive.sh",
-    "create-admin": "node scripts/create-admin-direct.js",
-    "seed-listings": "node scripts/seed-listings.js",
-    "test-listing-filters": "node scripts/test-listing-filters.js"
+    "create-admin": "node scripts/create-admin-direct.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.111.0",
     "@vercel/blob": "^2.3.3",
-    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.1",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.4.1",
     "multer": "^2.1.1"
   },
   "devDependencies": {

@@ -1,6 +1,8 @@
+'use strict';
+
 const express = require('express');
-const mongoose = require('mongoose');
-const AdminNotification = require('../models/AdminNotification');
+const { getSupabaseAdmin } = require('../lib/supabase');
+const { isUuid } = require('../lib/public-listings/query-helpers');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
@@ -14,14 +16,14 @@ function requirePlatformAdmin(req, res, next) {
 
 function formatNotification(doc) {
   return {
-    id: String(doc._id),
+    id: String(doc.id),
     type: doc.type,
-    refKind: doc.refKind || '',
-    refId: doc.refId ? String(doc.refId) : null,
+    refKind: doc.ref_kind || '',
+    refId: doc.ref_id ? String(doc.ref_id) : null,
     title: doc.title,
     message: doc.message || '',
-    readAt: doc.readAt ?? null,
-    createdAt: doc.createdAt,
+    readAt: doc.read_at ?? null,
+    createdAt: doc.created_at,
   };
 }
 
@@ -30,14 +32,21 @@ router.get('/', authMiddleware, requirePlatformAdmin, async (req, res) => {
   try {
     const unreadOnly = String(req.query.unreadOnly ?? '') === '1';
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
-    const filter = unreadOnly ? { readAt: null } : {};
-    const [notifications, unread] = await Promise.all([
-      AdminNotification.find(filter).sort({ createdAt: -1 }).limit(limit).lean(),
-      AdminNotification.countDocuments({ readAt: null }),
+    const sb = getSupabaseAdmin();
+
+    let listQ = sb.from('admin_notifications').select('*').order('created_at', { ascending: false }).limit(limit);
+    if (unreadOnly) listQ = listQ.is('read_at', null);
+
+    const [{ data: notifications, error }, { count: unread, error: unreadErr }] = await Promise.all([
+      listQ,
+      sb.from('admin_notifications').select('*', { count: 'exact', head: true }).is('read_at', null),
     ]);
+    if (error) throw error;
+    if (unreadErr) throw unreadErr;
+
     res.json({
-      notifications: notifications.map(formatNotification),
-      unread,
+      notifications: (notifications || []).map(formatNotification),
+      unread: unread ?? 0,
     });
   } catch (err) {
     console.error('GET /admin/notifications:', err?.message || err);
@@ -48,7 +57,11 @@ router.get('/', authMiddleware, requirePlatformAdmin, async (req, res) => {
 /** PATCH /api/admin/notifications/read-all */
 router.patch('/read-all', authMiddleware, requirePlatformAdmin, async (_req, res) => {
   try {
-    await AdminNotification.updateMany({ readAt: null }, { $set: { readAt: new Date() } });
+    const { error } = await getSupabaseAdmin()
+      .from('admin_notifications')
+      .update({ read_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .is('read_at', null);
+    if (error) throw error;
     res.json({ ok: true });
   } catch (err) {
     console.error('PATCH /admin/notifications/read-all:', err?.message || err);
@@ -60,14 +73,16 @@ router.patch('/read-all', authMiddleware, requirePlatformAdmin, async (_req, res
 router.patch('/:id/read', authMiddleware, requirePlatformAdmin, async (req, res) => {
   try {
     const id = String(req.params.id ?? '').trim();
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isUuid(id)) {
       return res.status(400).json({ message: 'ID e pavlefshme.' });
     }
-    const doc = await AdminNotification.findByIdAndUpdate(
-      id,
-      { $set: { readAt: new Date() } },
-      { new: true },
-    ).lean();
+    const { data: doc, error } = await getSupabaseAdmin()
+      .from('admin_notifications')
+      .update({ read_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*')
+      .maybeSingle();
+    if (error) throw error;
     if (!doc) return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
     res.json({ notification: formatNotification(doc) });
   } catch (err) {

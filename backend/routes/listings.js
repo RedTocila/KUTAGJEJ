@@ -1,8 +1,9 @@
+'use strict';
+
 const express = require('express');
-const mongoose = require('mongoose');
 const authMiddleware = require('../middleware/auth');
-const RealEstateCity = require('../models/RealEstateCity');
-const RealEstateListing = require('../models/RealEstateListing');
+const { getSupabaseAdmin } = require('../lib/supabase');
+const { camelizeRow, camelizeRows } = require('../lib/profiles');
 const { attachOwnerMetrics } = require('../lib/listing-metrics');
 const {
   validateRealEstatePayload,
@@ -15,6 +16,7 @@ const {
 } = require('../lib/real-estate-field-rules');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls } = require('../lib/image-upload');
+const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers');
 
 const router = express.Router();
 
@@ -38,9 +40,9 @@ router.get('/', authMiddleware, async (_req, res) => {
 
 function formatMineListing(doc, cityById) {
   const city = cityById.get(String(doc.cityId));
-  const zone = city?.zones?.find((z) => String(z._id) === String(doc.zoneId));
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   return {
-    id: String(doc._id),
+    id: String(doc.id),
     title: doc.title,
     description: doc.description,
     propertyCategory: doc.propertyCategory,
@@ -70,20 +72,15 @@ function formatMineListing(doc, cityById) {
 /** Portal user: their saved real-estate listings (newest first). */
 router.get('/real-estate/mine', authMiddleware, requirePortalUser, async (req, res) => {
   try {
-    const posterModel = req.user.constructor.modelName;
-    const docs = await RealEstateListing.find({
-      posterId: req.user._id,
-      posterModel,
-    })
-      .sort({ createdAt: -1 })
-      .lean();
+    const { data, error } = await getSupabaseAdmin()
+      .from('real_estate_listings')
+      .select('*')
+      .eq('poster_id', req.user.id)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
 
-    const cityIds = [...new Set(docs.map((d) => String(d.cityId)).filter(Boolean))];
-    const cityObjectIds = cityIds.filter((id) => mongoose.isValidObjectId(id)).map((id) => new mongoose.Types.ObjectId(id));
-    const cities =
-      cityObjectIds.length > 0 ? await RealEstateCity.find({ _id: { $in: cityObjectIds } }).lean() : [];
-    const cityById = new Map(cities.map((c) => [String(c._id), c]));
-
+    const docs = camelizeRows(data);
+    const cityById = await buildCityIndex(docs);
     const listings = docs.map((d) => formatMineListing(d, cityById));
     res.json({ listings: await attachOwnerMetrics(listings, 'real-estate') });
   } catch (error) {
@@ -97,52 +94,64 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
     const v = validateRealEstatePayload(req.body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
-    const cityId = req.body.cityId;
-    const zoneId = req.body.zoneId;
-    if (!mongoose.isValidObjectId(cityId) || !mongoose.isValidObjectId(zoneId)) {
+    const cityId = String(req.body.cityId ?? '').trim();
+    const zoneId = String(req.body.zoneId ?? '').trim();
+    if (!isUuid(cityId) || !isUuid(zoneId)) {
       return res.status(400).json({ message: 'Invalid city or zone id.' });
     }
 
-    const city = await RealEstateCity.findById(cityId);
-    if (!city) return res.status(400).json({ message: 'City not found.' });
-    const zone = city.zones.id(zoneId);
+    const { data: cityRow, error: cityErr } = await getSupabaseAdmin()
+      .from('real_estate_cities')
+      .select('*')
+      .eq('id', cityId)
+      .maybeSingle();
+    if (cityErr) throw cityErr;
+    if (!cityRow) return res.status(400).json({ message: 'City not found.' });
+
+    const city = camelizeRow(cityRow);
+    const zone = (city.zones || []).find((z) => String(z.id) === zoneId);
     if (!zone) return res.status(400).json({ message: 'Zone does not belong to the selected city.' });
-    void zone;
 
     const propertyCategory = String(req.body.propertyCategory).trim().toLowerCase();
-    const posterModel = req.user.constructor.modelName;
     const contactPhone = String(req.body.contactPhone ?? '').trim();
 
-    const doc = await RealEstateListing.create({
-      posterId: req.user._id,
-      posterModel,
-      propertyCategory,
+    const row = {
+      poster_id: req.user.id,
+      property_category: propertyCategory,
       title: String(req.body.title).trim(),
       description: String(req.body.description).trim(),
-      transactionType: req.body.transactionType,
+      transaction_type: req.body.transactionType,
       price: Number(req.body.price),
       currency: req.body.currency,
-      surfaceM2: Number(req.body.surfaceM2),
-      cityId,
-      zoneId,
-      contactPhone,
-      condition: needsCondition(propertyCategory) ? req.body.condition : undefined,
-      floor: needsFloor(propertyCategory) ? Number(req.body.floor) : undefined,
-      totalFloors: needsTotalFloors(propertyCategory) ? Number(req.body.totalFloors) : undefined,
-      parkingFloor: needsParkingFloor(propertyCategory) ? Number(req.body.parkingFloor) : undefined,
-      bedrooms: needsBedroomsBathFurnishing(propertyCategory) ? Number(req.body.bedrooms) : undefined,
-      bathrooms: needsBedroomsBathFurnishing(propertyCategory) ? Number(req.body.bathrooms) : undefined,
-      furnishing: needsBedroomsBathFurnishing(propertyCategory) ? req.body.furnishing : undefined,
-      yearBuilt: needsYearBuilt(propertyCategory) ? Number(req.body.yearBuilt) : undefined,
-      imageUrls: sanitizeImageUrls(req.body.imageUrls, MAX_REAL_ESTATE_IMAGES),
-    });
+      surface_m2: Number(req.body.surfaceM2),
+      city_id: cityId,
+      zone_id: zoneId,
+      contact_phone: contactPhone,
+      condition: needsCondition(propertyCategory) ? req.body.condition : null,
+      floor: needsFloor(propertyCategory) ? Number(req.body.floor) : null,
+      total_floors: needsTotalFloors(propertyCategory) ? Number(req.body.totalFloors) : null,
+      parking_floor: needsParkingFloor(propertyCategory) ? Number(req.body.parkingFloor) : null,
+      bedrooms: needsBedroomsBathFurnishing(propertyCategory) ? Number(req.body.bedrooms) : null,
+      bathrooms: needsBedroomsBathFurnishing(propertyCategory) ? Number(req.body.bathrooms) : null,
+      furnishing: needsBedroomsBathFurnishing(propertyCategory) ? req.body.furnishing : null,
+      year_built: needsYearBuilt(propertyCategory) ? Number(req.body.yearBuilt) : null,
+      image_urls: sanitizeImageUrls(req.body.imageUrls, MAX_REAL_ESTATE_IMAGES),
+    };
 
-    await notifyAdminsListingSubmitted('real-estate', doc._id, doc.title);
+    const { data: created, error: insErr } = await getSupabaseAdmin()
+      .from('real_estate_listings')
+      .insert(row)
+      .select('*')
+      .single();
+    if (insErr) throw insErr;
+
+    const doc = camelizeRow(created);
+    await notifyAdminsListingSubmitted('real-estate', doc.id, doc.title);
 
     res.status(201).json({
       message: 'Njoftimi u dërgua për aprovim..',
       listing: {
-        id: String(doc._id),
+        id: String(doc.id),
         propertyCategory: doc.propertyCategory,
         title: doc.title,
         status: doc.status,

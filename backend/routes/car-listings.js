@@ -1,20 +1,18 @@
+'use strict';
+
 const express = require('express');
 const multer = require('multer');
-const mongoose = require('mongoose');
 const { put } = require('@vercel/blob');
 const authMiddleware = require('../middleware/auth');
-const CarListing = require('../models/CarListing');
-const RealEstateCity = require('../models/RealEstateCity');
+const { getSupabaseAdmin } = require('../lib/supabase');
+const { camelizeRow, camelizeRows } = require('../lib/profiles');
 const { validateCarPayload, FINISH_VALUES } = require('../lib/car-field-rules');
 const { attachOwnerMetrics } = require('../lib/listing-metrics');
 const { notifyAdminsListingSubmitted, listingTitle } = require('../lib/listing-moderation');
+const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers');
 
 const router = express.Router();
 
-// ---------------------------------------------------------------------------
-// Multer — keep files in memory so we can stream them straight to Vercel Blob.
-// Max 5 images, 8 MB each.
-// ---------------------------------------------------------------------------
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024, files: 5 },
@@ -27,10 +25,6 @@ const upload = multer({
   },
 });
 
-// ---------------------------------------------------------------------------
-// Guards
-// ---------------------------------------------------------------------------
-
 function requirePortalUser(req, res, next) {
   const model = req.user?.constructor?.modelName;
   if (model !== 'IndividualUser' && model !== 'BusinessUser') {
@@ -39,17 +33,8 @@ function requirePortalUser(req, res, next) {
   next();
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Upload a single buffer to Vercel Blob and return its public URL.
- * Falls back to null when BLOB_READ_WRITE_TOKEN is not configured (local dev).
- */
 async function uploadToBlob(buffer, originalName, mimetype) {
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    // No Vercel Blob token in local dev — skip upload, return null.
     return null;
   }
   const ext = originalName.split('.').pop() || 'jpg';
@@ -62,7 +47,6 @@ async function uploadToBlob(buffer, originalName, mimetype) {
   return blob.url;
 }
 
-/** Normalise extras: accept both extras[] (repeated key) and extras (comma-separated). */
 function parseExtras(fields) {
   const raw = fields['extras[]'] || fields['extras'] || [];
   if (Array.isArray(raw)) return raw.map((e) => String(e).trim()).filter(Boolean);
@@ -72,7 +56,6 @@ function parseExtras(fields) {
     .filter(Boolean);
 }
 
-/** Normalise finish: same pattern as extras. */
 function parseFinish(fields) {
   const raw = fields['finish'] || [];
   const arr = Array.isArray(raw) ? raw : [raw];
@@ -82,7 +65,7 @@ function parseFinish(fields) {
 function formatMineListing(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
   return {
-    id: String(doc._id),
+    id: String(doc.id),
     make: doc.make,
     model: doc.model,
     variant: doc.variant || '',
@@ -106,22 +89,17 @@ function formatMineListing(doc, cityById) {
   };
 }
 
-// ---------------------------------------------------------------------------
-// GET /api/listings/cars/mine
-// ---------------------------------------------------------------------------
-
 router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
   try {
-    const posterModel = req.user.constructor.modelName;
-    const docs = await CarListing.find({ posterId: req.user._id, posterModel })
-      .sort({ createdAt: -1 })
-      .lean();
+    const { data, error } = await getSupabaseAdmin()
+      .from('car_listings')
+      .select('*')
+      .eq('poster_id', req.user.id)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
 
-    const cityIds = [...new Set(docs.map((d) => String(d.cityId)).filter(Boolean))];
-    const cityObjectIds = cityIds.filter((id) => mongoose.isValidObjectId(id)).map((id) => new mongoose.Types.ObjectId(id));
-    const cities = cityObjectIds.length > 0 ? await RealEstateCity.find({ _id: { $in: cityObjectIds } }).lean() : [];
-    const cityById = new Map(cities.map((c) => [String(c._id), c]));
-
+    const docs = camelizeRows(data);
+    const cityById = await buildCityIndex(docs);
     const listings = docs.map((d) => formatMineListing(d, cityById));
     res.json({ listings: await attachOwnerMetrics(listings, 'car') });
   } catch (err) {
@@ -130,10 +108,6 @@ router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// POST /api/listings/cars
-// ---------------------------------------------------------------------------
-
 router.post(
   '/',
   authMiddleware,
@@ -141,13 +115,11 @@ router.post(
   upload.array('images', 5),
   async (req, res) => {
     try {
-      // Multer puts text fields on req.body and files on req.files.
       const fields = req.body;
 
       const v = validateCarPayload(fields);
       if (!v.ok) return res.status(400).json({ message: v.message });
 
-      // Upload images to Vercel Blob (gracefully skipped if no token).
       const files = req.files || [];
       const imageUrls = [];
       for (const file of files) {
@@ -155,16 +127,19 @@ router.post(
         if (url) imageUrls.push(url);
       }
 
-      // Verify city exists.
       const cityId = String(fields.cityId).trim();
-      const city = await RealEstateCity.findById(cityId).lean();
+      if (!isUuid(cityId)) return res.status(400).json({ message: 'City not found.' });
+
+      const { data: city, error: cityErr } = await getSupabaseAdmin()
+        .from('real_estate_cities')
+        .select('id')
+        .eq('id', cityId)
+        .maybeSingle();
+      if (cityErr) throw cityErr;
       if (!city) return res.status(400).json({ message: 'City not found.' });
 
-      const posterModel = req.user.constructor.modelName;
-
-      const doc = await CarListing.create({
-        posterId: req.user._id,
-        posterModel,
+      const row = {
+        poster_id: req.user.id,
         make: String(fields.make).trim(),
         model: String(fields.model).trim(),
         variant: String(fields.variant || '').trim(),
@@ -172,23 +147,31 @@ router.post(
         year: Number(fields.year),
         kilometers: Number(fields.kilometers),
         transmission: fields.transmission,
-        fuelType: fields.fuelType,
+        fuel_type: fields.fuelType,
         price: Number(fields.price),
         currency: fields.currency,
         color: String(fields.color).trim().toLowerCase(),
         finish: parseFinish(fields),
         extras: parseExtras(fields),
-        contactPhone: String(fields.contactPhone || '').trim(),
-        cityId: new mongoose.Types.ObjectId(cityId),
-        imageUrls,
-      });
+        contact_phone: String(fields.contactPhone || '').trim(),
+        city_id: cityId,
+        image_urls: imageUrls,
+      };
 
-      await notifyAdminsListingSubmitted('cars', doc._id, listingTitle('cars', doc));
+      const { data: created, error: insErr } = await getSupabaseAdmin()
+        .from('car_listings')
+        .insert(row)
+        .select('*')
+        .single();
+      if (insErr) throw insErr;
+
+      const doc = camelizeRow(created);
+      await notifyAdminsListingSubmitted('cars', doc.id, listingTitle('cars', doc));
 
       res.status(201).json({
         message: 'Njoftimi u dërgua për aprovim..',
         listing: {
-          id: String(doc._id),
+          id: String(doc.id),
           make: doc.make,
           model: doc.model,
           variant: doc.variant,

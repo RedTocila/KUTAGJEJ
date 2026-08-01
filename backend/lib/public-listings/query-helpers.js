@@ -1,6 +1,12 @@
-const mongoose = require('mongoose');
-const RealEstateCity = require('../../models/RealEstateCity');
+const { getSupabaseAdmin } = require('../supabase');
+const { camelizeRows } = require('../profiles');
 const { DEFAULT_LIMIT, MAX_LIMIT, JOB_LISTING_VISIBLE_DAYS, MS_PER_DAY } = require('./constants');
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUuid(value) {
+  return typeof value === 'string' && UUID_RE.test(value);
+}
 
 function jobListingExpiresAt(createdAt) {
   const posted = createdAt instanceof Date ? createdAt : new Date(createdAt);
@@ -11,8 +17,10 @@ function isJobListingActive(doc) {
   return Date.now() < jobListingExpiresAt(doc.createdAt).getTime();
 }
 
+/** FilterSpec fragment restricting job listings to the still-visible window. */
 function activeJobCreatedAtFilter() {
-  return { createdAt: { $gte: new Date(Date.now() - JOB_LISTING_VISIBLE_DAYS * MS_PER_DAY) } };
+  const cutoff = new Date(Date.now() - JOB_LISTING_VISIBLE_DAYS * MS_PER_DAY).toISOString();
+  return { gte: { created_at: cutoff } };
 }
 
 function clampLimit(value) {
@@ -43,27 +51,101 @@ function buildPaginatedResponse(listings, total, limit, page) {
   };
 }
 
+/**
+ * A FilterSpec is a plain descriptor applied to a Supabase query builder via
+ * `applyFilterSpec`: `{ eq, neq, gte, lte, gt, lt, in, or }`, each of
+ * `eq`/`neq`/`gte`/`lte`/`gt`/`lt`/`in` being `{ column: value }` maps, and
+ * `or` a raw PostgREST `.or()` filter string.
+ */
+function applyFilterSpec(query, spec = {}) {
+  let q = query;
+  if (spec.eq) for (const [col, val] of Object.entries(spec.eq)) q = q.eq(col, val);
+  if (spec.neq) for (const [col, val] of Object.entries(spec.neq)) q = q.neq(col, val);
+  if (spec.gte) for (const [col, val] of Object.entries(spec.gte)) q = q.gte(col, val);
+  if (spec.lte) for (const [col, val] of Object.entries(spec.lte)) q = q.lte(col, val);
+  if (spec.gt) for (const [col, val] of Object.entries(spec.gt)) q = q.gt(col, val);
+  if (spec.lt) for (const [col, val] of Object.entries(spec.lt)) q = q.lt(col, val);
+  if (spec.in) for (const [col, val] of Object.entries(spec.in)) q = q.in(col, val);
+  if (spec.or) q = q.or(spec.or);
+  return q;
+}
+
+/** Shallow-merges FilterSpec fragments; later fragments win on key conflicts. */
+function mergeSpecs(...specs) {
+  const out = {};
+  for (const spec of specs) {
+    if (!spec) continue;
+    for (const key of ['eq', 'neq', 'gte', 'lte', 'gt', 'lt', 'in']) {
+      if (spec[key]) out[key] = { ...(out[key] || {}), ...spec[key] };
+    }
+    if (spec.or) out.or = out.or ? `${out.or},${spec.or}` : spec.or;
+  }
+  return out;
+}
+
+function applySort(query, sortSpec = []) {
+  let q = query;
+  for (const s of sortSpec) q = q.order(s.column, { ascending: s.ascending, nullsFirst: false });
+  return q;
+}
+
+const SORT_VALUES = new Set(['newest', 'price-asc', 'price-desc']);
+
+function parseSort(value) {
+  const raw = String(value ?? '').trim().toLowerCase();
+  return SORT_VALUES.has(raw) ? raw : 'newest';
+}
+
+function buildSort(sort, field = 'price') {
+  if (sort === 'price-asc') return [{ column: field, ascending: true }, { column: 'created_at', ascending: false }];
+  if (sort === 'price-desc') return [{ column: field, ascending: false }, { column: 'created_at', ascending: false }];
+  return [{ column: 'created_at', ascending: false }];
+}
+
+function escapeIlikeValue(value) {
+  return String(value).replace(/[%_\\]/g, '\\$&');
+}
+
+/** Wraps a value for a PostgREST `.or()` filter, quoting if it contains reserved characters. */
+function escapeOrValue(value) {
+  const needsQuotes = /[,()]/.test(value);
+  const escaped = value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return needsQuotes ? `"${escaped}"` : escaped;
+}
+
+/** Builds a `.or()` filter string matching any of `fields` against `q` (case-insensitive substring). */
+function buildIlikeOrFilter(fields, q) {
+  const term = String(q ?? '').trim();
+  if (term.length < 2 || term.length > 80) return null;
+  const likeValue = `%${escapeIlikeValue(term)}%`;
+  const value = escapeOrValue(likeValue);
+  return fields.map((field) => `${field}.ilike.${value}`).join(',');
+}
+
+/** Loads `real_estate_cities` rows referenced by `cityId` on a list of camelCase docs. */
 async function buildCityIndex(docs) {
-  const cityIds = [
-    ...new Set(
-      docs
-        .map((d) => (d.cityId ? String(d.cityId) : null))
-        .filter((id) => id && mongoose.isValidObjectId(id)),
-    ),
-  ];
+  const cityIds = [...new Set((docs || []).map((d) => d.cityId).filter(Boolean))];
   if (cityIds.length === 0) return new Map();
-  const cities = await RealEstateCity.find({
-    _id: { $in: cityIds.map((id) => new mongoose.Types.ObjectId(id)) },
-  }).lean();
-  return new Map(cities.map((c) => [String(c._id), c]));
+  const { data, error } = await getSupabaseAdmin().from('real_estate_cities').select('*').in('id', cityIds);
+  if (error) throw error;
+  const cities = camelizeRows(data);
+  return new Map(cities.map((c) => [c.id, c]));
 }
 
 module.exports = {
+  isUuid,
   jobListingExpiresAt,
   isJobListingActive,
   activeJobCreatedAtFilter,
   clampLimit,
   parsePagination,
+  calcTotalPages,
   buildPaginatedResponse,
+  applyFilterSpec,
+  mergeSpecs,
+  applySort,
+  parseSort,
+  buildSort,
+  buildIlikeOrFilter,
   buildCityIndex,
 };

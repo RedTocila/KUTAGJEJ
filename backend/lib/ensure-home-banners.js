@@ -1,4 +1,4 @@
-const HomeBanner = require('../models/HomeBanner');
+const { getSupabaseAdmin } = require('./supabase');
 
 const DEFAULT_BANNERS = [
   {
@@ -66,22 +66,43 @@ const DEFAULT_BANNERS = [
   },
 ];
 
-async function ensureHomeBanners() {
-  const existing = await HomeBanner.find().select('title').lean();
-  const existingTitles = new Set(existing.map((b) => b.title));
+function bannerToRow(b) {
+  return {
+    title: b.title,
+    subtitle: b.subtitle || '',
+    image_url: b.imageUrl,
+    cta_label: b.ctaLabel,
+    cta_href: b.ctaHref,
+    order: b.order,
+    is_active: b.isActive !== false,
+  };
+}
 
-  if (existing.length === 0) {
-    await HomeBanner.insertMany(DEFAULT_BANNERS);
+async function ensureHomeBanners() {
+  const sb = getSupabaseAdmin();
+  const { data: existing, error: findErr } = await sb.from('home_banners').select('title');
+  if (findErr) throw findErr;
+
+  const existingTitles = new Set((existing || []).map((b) => b.title));
+
+  if (!existing || existing.length === 0) {
+    const { error } = await sb.from('home_banners').insert(DEFAULT_BANNERS.map(bannerToRow));
+    if (error) throw error;
     return;
   }
 
   const missing = DEFAULT_BANNERS.filter((b) => !existingTitles.has(b.title));
   if (missing.length > 0) {
-    await HomeBanner.insertMany(missing);
+    const { error } = await sb.from('home_banners').insert(missing.map(bannerToRow));
+    if (error) throw error;
   }
 
   // Drop legacy subtitles so slides show headline only.
-  await HomeBanner.updateMany({ subtitle: { $nin: [null, ''] } }, { $set: { subtitle: '' } });
+  const { error: clearErr } = await sb
+    .from('home_banners')
+    .update({ subtitle: '', updated_at: new Date().toISOString() })
+    .not('subtitle', 'eq', '');
+  if (clearErr) throw clearErr;
 }
 
 module.exports = { ensureHomeBanners };

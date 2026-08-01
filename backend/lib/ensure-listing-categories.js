@@ -2,8 +2,10 @@
  * Ensures the four fixed verticals exist with sensible Albanian defaults.
  * Only inserts missing docs; does not overwrite admin edits.
  */
+const { getSupabaseAdmin } = require('./supabase');
+
 async function ensureListingCategories() {
-  const ListingCategory = require('../models/ListingCategory');
+  const sb = getSupabaseAdmin();
 
   const defaults = [
     {
@@ -73,18 +75,22 @@ async function ensureListingCategories() {
   ];
 
   for (const d of defaults) {
-    await ListingCategory.updateOne(
-      { key: d.key },
-      {
-        $setOnInsert: {
-          title: d.title,
-          slug: d.slug,
-          listingTypes: d.listingTypes,
-          updatedAt: new Date(),
-        },
-      },
-      { upsert: true },
-    );
+    const { data: existing, error: findErr } = await sb
+      .from('listing_categories')
+      .select('id')
+      .eq('key', d.key)
+      .maybeSingle();
+    if (findErr) throw findErr;
+    if (existing) continue;
+
+    const { error } = await sb.from('listing_categories').insert({
+      key: d.key,
+      title: d.title,
+      slug: d.slug,
+      listing_types: d.listingTypes,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
   }
 }
 

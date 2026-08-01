@@ -1,22 +1,9 @@
-const { backfillListingStatuses } = require('./listing-moderation');
-
+/**
+ * MongoDB moderation index backfill is not needed with Supabase/Postgres.
+ * Kept as a no-op so startup hooks keep working.
+ */
 async function ensureListingModeration() {
-  await backfillListingStatuses();
-
-  const models = [
-    'RealEstateListing',
-    'CarListing',
-    'JobListing',
-    'MarketplaceListing',
-    'DirectoryListing',
-  ];
-  for (const name of models) {
-    const Model = require(`../models/${name}`);
-    await Model.collection.createIndex({ status: 1, createdAt: -1 });
-  }
-
-  const AdminNotification = require('../models/AdminNotification');
-  await AdminNotification.collection.createIndex({ readAt: 1, createdAt: -1 });
+  return Promise.resolve();
 }
 
 module.exports = { ensureListingModeration };

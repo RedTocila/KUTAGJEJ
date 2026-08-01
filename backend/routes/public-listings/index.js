@@ -1,14 +1,19 @@
+'use strict';
+
 const express = require('express');
-const mongoose = require('mongoose');
-const RealEstateListing = require('../../models/RealEstateListing');
-const CarListing = require('../../models/CarListing');
-const JobListing = require('../../models/JobListing');
-const MarketplaceListing = require('../../models/MarketplaceListing');
-const DirectoryListing = require('../../models/DirectoryListing');
+const { getSupabaseAdmin } = require('../../lib/supabase');
+const { camelizeRow } = require('../../lib/profiles');
 const optionalAuth = require('../../middleware/optional-auth');
 const publicCache = require('../../middleware/public-cache');
 const { loadPosterBrief } = require('../../lib/public-listings/load-poster-brief');
-const { clampLimit, buildCityIndex, isJobListingActive, parsePagination, buildPaginatedResponse } = require('../../lib/public-listings/query-helpers');
+const {
+  clampLimit,
+  buildCityIndex,
+  isJobListingActive,
+  parsePagination,
+  buildPaginatedResponse,
+  isUuid,
+} = require('../../lib/public-listings/query-helpers');
 const {
   formatRealEstateDetail,
   formatCarDetail,
@@ -45,7 +50,6 @@ const {
 } = require('../../lib/public-listings/listing-filters');
 const { reviewStatsByListingIds } = require('../../lib/business-review-stats');
 const { professionalReviewStatsByListingIds } = require('../../lib/professional-review-stats');
-const { PUBLIC_LISTING_STATUS_FILTER } = require('../../lib/listing-moderation');
 const { saverFromUser, enrichListingsSaverState } = require('../../lib/listing-metrics');
 
 const router = express.Router();
@@ -62,6 +66,15 @@ const VERTICAL_TO_KIND = {
 
 function isPublicListing(doc) {
   return Boolean(doc && doc.status === 'approved');
+}
+
+async function loadApprovedById(table, id, extraEq = {}) {
+  if (!isUuid(id)) return null;
+  let q = getSupabaseAdmin().from(table).select('*').eq('id', id);
+  for (const [col, val] of Object.entries(extraEq)) q = q.eq(col, val);
+  const { data, error } = await q.maybeSingle();
+  if (error) throw error;
+  return data ? camelizeRow(data) : null;
 }
 
 router.use(publicCache(60));
@@ -107,12 +120,12 @@ router.get('/latest', optionalAuth, async (req, res) => {
       }
     }
     const counts = await Promise.all([
-      RealEstateListing.countDocuments(PUBLIC_LISTING_STATUS_FILTER),
-      CarListing.countDocuments(PUBLIC_LISTING_STATUS_FILTER),
+      countRealEstate(),
+      countCars(),
       countActiveJobs(),
-      MarketplaceListing.countDocuments(PUBLIC_LISTING_STATUS_FILTER),
-      DirectoryListing.countDocuments({ ...PUBLIC_LISTING_STATUS_FILTER, vertical: 'businesses' }),
-      DirectoryListing.countDocuments({ ...PUBLIC_LISTING_STATUS_FILTER, vertical: 'professionals' }),
+      countMarketplace(),
+      countDirectory({ eq: { vertical: 'businesses' } }),
+      countDirectory({ eq: { vertical: 'professionals' } }),
     ]);
     res.json({
       realEstate: bundle.realEstate,
@@ -140,16 +153,12 @@ router.get('/latest', optionalAuth, async (req, res) => {
 router.get('/real-estate/:id', optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
-    if (!mongoose.isValidObjectId(rawId)) {
-      res.status(404).json({ message: 'Not found' });
-      return;
-    }
-    const doc = await RealEstateListing.findById(rawId).lean();
+    const doc = await loadApprovedById('real_estate_listings', rawId);
     if (!isPublicListing(doc)) {
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(doc.posterModel, doc.posterId);
+    const seller = await loadPosterBrief(null, doc.posterId);
     const cityById = await buildCityIndex([doc]);
     const listing = await attachDetailMetrics(req, formatRealEstateDetail(doc, cityById, seller));
     res.json({ listing });
@@ -162,16 +171,12 @@ router.get('/real-estate/:id', optionalAuth, async (req, res) => {
 router.get('/cars/:id', optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
-    if (!mongoose.isValidObjectId(rawId)) {
-      res.status(404).json({ message: 'Not found' });
-      return;
-    }
-    const doc = await CarListing.findById(rawId).lean();
+    const doc = await loadApprovedById('car_listings', rawId);
     if (!isPublicListing(doc)) {
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(doc.posterModel, doc.posterId);
+    const seller = await loadPosterBrief(null, doc.posterId);
     const cityById = await buildCityIndex([doc]);
     const listing = await attachDetailMetrics(req, formatCarDetail(doc, cityById, seller));
     res.json({ listing });
@@ -184,16 +189,12 @@ router.get('/cars/:id', optionalAuth, async (req, res) => {
 router.get('/jobs/:id', optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
-    if (!mongoose.isValidObjectId(rawId)) {
-      res.status(404).json({ message: 'Not found' });
-      return;
-    }
-    const doc = await JobListing.findById(rawId).lean();
+    const doc = await loadApprovedById('job_listings', rawId);
     if (!isPublicListing(doc) || !isJobListingActive(doc)) {
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(doc.posterModel, doc.posterId);
+    const seller = await loadPosterBrief(null, doc.posterId);
     const cityById = await buildCityIndex([doc]);
     const listing = await attachDetailMetrics(req, formatJobDetail(doc, cityById, seller));
     res.json({ listing });
@@ -206,16 +207,12 @@ router.get('/jobs/:id', optionalAuth, async (req, res) => {
 router.get('/marketplace/:id', optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
-    if (!mongoose.isValidObjectId(rawId)) {
-      res.status(404).json({ message: 'Not found' });
-      return;
-    }
-    const doc = await MarketplaceListing.findById(rawId).lean();
+    const doc = await loadApprovedById('marketplace_listings', rawId);
     if (!isPublicListing(doc)) {
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(doc.posterModel, doc.posterId);
+    const seller = await loadPosterBrief(null, doc.posterId);
     const cityById = await buildCityIndex([doc]);
     const listing = await attachDetailMetrics(req, formatMarketplaceDetail(doc, cityById, seller));
     res.json({ listing });
@@ -228,22 +225,17 @@ router.get('/marketplace/:id', optionalAuth, async (req, res) => {
 router.get('/businesses/:id', optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
-    if (!mongoose.isValidObjectId(rawId)) {
-      res.status(404).json({ message: 'Not found' });
-      return;
-    }
-    const doc = await DirectoryListing.findOne({
-      _id: rawId,
+    const doc = await loadApprovedById('directory_listings', rawId, {
       vertical: 'businesses',
       status: 'approved',
-    }).lean();
+    });
     if (!doc) {
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(doc.posterModel, doc.posterId, null);
+    const seller = await loadPosterBrief(null, doc.posterId, null);
     const cityById = await buildCityIndex([doc]);
-    const reviewStats = await reviewStatsByListingIds([doc._id]);
+    const reviewStats = await reviewStatsByListingIds([doc.id]);
     const listing = await attachDetailMetrics(req, formatDirectoryDetail(doc, cityById, seller, reviewStats));
     res.json({ listing });
   } catch (err) {
@@ -255,22 +247,17 @@ router.get('/businesses/:id', optionalAuth, async (req, res) => {
 router.get('/professionals/:id', optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
-    if (!mongoose.isValidObjectId(rawId)) {
-      res.status(404).json({ message: 'Not found' });
-      return;
-    }
-    const doc = await DirectoryListing.findOne({
-      _id: rawId,
+    const doc = await loadApprovedById('directory_listings', rawId, {
       vertical: 'professionals',
       status: 'approved',
-    }).lean();
+    });
     if (!doc) {
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(doc.posterModel, doc.posterId, 'professionals');
+    const seller = await loadPosterBrief(null, doc.posterId, 'professionals');
     const cityById = await buildCityIndex([doc]);
-    const reviewStats = await professionalReviewStatsByListingIds([doc._id]);
+    const reviewStats = await professionalReviewStatsByListingIds([doc.id]);
     const listing = await attachDetailMetrics(req, formatDirectoryDetail(doc, cityById, seller, reviewStats));
     res.json({ listing });
   } catch (err) {

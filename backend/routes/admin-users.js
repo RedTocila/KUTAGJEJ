@@ -1,13 +1,11 @@
 const express = require('express');
-const mongoose = require('mongoose');
-const ManagedUser = require('../models/ManagedUser');
-const Admin = require('../models/Admin');
-const BusinessUser = require('../models/BusinessUser');
-const IndividualUser = require('../models/IndividualUser');
-const Role = require('../models/Role');
+const { getSupabaseAdmin } = require('../lib/supabase');
+const { mapProfile, getProfileByEmail, createProfileForAuthUser } = require('../lib/profiles');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function requirePlatformAdmin(req, res, next) {
   if (!req.admin || req.admin.constructor.modelName !== 'Admin') {
@@ -16,46 +14,33 @@ function requirePlatformAdmin(req, res, next) {
   next();
 }
 
-async function isEmailInUse(email, excludeManagedUserId) {
-  const e = String(email).toLowerCase().trim();
-  const [fromAdmin, fromBusiness, fromIndividual, fromManaged] = await Promise.all([
-    Admin.findOne({ email: e }),
-    BusinessUser.findOne({ email: e }),
-    IndividualUser.findOne({ email: e }),
-    excludeManagedUserId
-      ? ManagedUser.findOne({ email: e, _id: { $ne: excludeManagedUserId } })
-      : ManagedUser.findOne({ email: e }),
-  ]);
-  return Boolean(fromAdmin || fromBusiness || fromIndividual || fromManaged);
+async function isEmailInUse(email, excludeUserId) {
+  const existing = await getProfileByEmail(email);
+  if (!existing) return false;
+  if (excludeUserId && String(existing.id) === String(excludeUserId)) return false;
+  return true;
 }
 
-function formatManagedUser(doc) {
-  const roleIdObj = doc.roleId && typeof doc.roleId === 'object' ? doc.roleId : null;
+function formatManagedUser(user, roleDescription) {
   return {
-    id: String(doc._id),
-    email: doc.email,
-    firstName: doc.firstName,
-    lastName: doc.lastName,
-    roleId: roleIdObj?._id != null ? String(roleIdObj._id) : doc.roleId != null ? String(doc.roleId) : null,
-    role: doc.role,
-    roleDescription: roleIdObj?.description ?? '',
-    isActive: doc.isActive,
-    createdBy: doc.createdBy,
-    createdAt: doc.createdAt,
-    updatedAt: doc.updatedAt,
-    lastLogin: doc.lastLogin,
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    roleId: user.roleId || null,
+    role: user.role,
+    roleDescription: roleDescription ?? '',
+    isActive: user.isActive,
+    createdBy: user.createdBy,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+    lastLogin: user.lastLogin,
   };
 }
 
-function formatDirectoryIndividual(doc) {
+function formatDirectoryIndividual(user) {
   return {
-    ...formatManagedUser({
-      ...doc,
-      roleId: null,
-      role: 'individual-user',
-      createdBy: null,
-    }),
-    roleDescription: '',
+    ...formatManagedUser({ ...user, roleId: null, role: 'individual-user', createdBy: null }, ''),
     accountKind: 'individual',
     roleLabel: 'Individ',
     staffRoleName: null,
@@ -65,27 +50,20 @@ function formatDirectoryIndividual(doc) {
   };
 }
 
-function formatDirectoryBusiness(doc) {
+function formatDirectoryBusiness(user) {
   return {
-    ...formatManagedUser({
-      ...doc,
-      roleId: null,
-      role: 'business-user',
-      lastLogin: undefined,
-      createdBy: null,
-    }),
-    roleDescription: '',
+    ...formatManagedUser({ ...user, roleId: null, role: 'business-user', lastLogin: undefined, createdBy: null }, ''),
     accountKind: 'business',
     roleLabel: 'Biznes',
     staffRoleName: null,
     manageable: false,
-    businessName: doc.businessName ?? null,
-    nipt: doc.nipt ?? null,
+    businessName: user.businessName ?? null,
+    nipt: user.nipt ?? null,
   };
 }
 
-function formatDirectoryStaff(doc) {
-  const base = formatManagedUser(doc);
+function formatDirectoryStaff(user, roleDescription) {
+  const base = formatManagedUser(user, roleDescription);
   return {
     ...base,
     accountKind: 'support',
@@ -107,17 +85,31 @@ router.use(authMiddleware, requirePlatformAdmin);
 /** List all platform users: individuals, businesses, and staff (support), newest first. */
 router.get('/', async (_req, res) => {
   try {
-    const [individuals, businesses, staff] = await Promise.all([
-      IndividualUser.find().sort({ createdAt: -1 }).select('-password').lean(),
-      BusinessUser.find().sort({ createdAt: -1 }).select('-password').lean(),
-      ManagedUser.find().sort({ createdAt: -1 }).select('-password').populate('roleId', 'name description').lean(),
-    ]);
-    const rows = [
-      ...individuals.map((u) => formatDirectoryIndividual(u)),
-      ...businesses.map((u) => formatDirectoryBusiness(u)),
-      ...staff.map((u) => formatDirectoryStaff(u)),
-    ].sort((a, b) => sortKey(b) - sortKey(a));
-    res.json({ users: rows });
+    const sb = getSupabaseAdmin();
+    const { data, error } = await sb
+      .from('profiles')
+      .select('*')
+      .in('account_type', ['individual', 'business', 'managed']);
+    if (error) throw error;
+
+    const rows = (data || []).map(mapProfile);
+    const roleIds = [...new Set(rows.filter((u) => u.accountType === 'managed' && u.roleId).map((u) => u.roleId))];
+    let roleById = new Map();
+    if (roleIds.length) {
+      const { data: roles, error: rolesError } = await sb.from('roles').select('id, description').in('id', roleIds);
+      if (rolesError) throw rolesError;
+      roleById = new Map((roles || []).map((r) => [r.id, r.description || '']));
+    }
+
+    const users = rows
+      .map((u) => {
+        if (u.accountType === 'individual') return formatDirectoryIndividual(u);
+        if (u.accountType === 'business') return formatDirectoryBusiness(u);
+        return formatDirectoryStaff(u, roleById.get(u.roleId) ?? '');
+      })
+      .sort((a, b) => sortKey(b) - sortKey(a));
+
+    res.json({ users });
   } catch (error) {
     console.error('GET /admin/users:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -134,35 +126,56 @@ router.post('/', async (req, res) => {
     if (!password || String(password).length < 6) {
       return res.status(400).json({ message: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere.' });
     }
-    if (!roleId || !mongoose.Types.ObjectId.isValid(String(roleId))) {
+    if (!roleId || !UUID_RE.test(String(roleId))) {
       return res.status(400).json({ message: 'Roli (roleId) është i detyrueshëm.' });
     }
 
-    const roleDoc = await Role.findById(roleId);
+    const sb = getSupabaseAdmin();
+    const { data: roleDoc, error: roleError } = await sb.from('roles').select('*').eq('id', roleId).maybeSingle();
+    if (roleError) throw roleError;
     if (!roleDoc) {
       return res.status(400).json({ message: 'Roli i zgjedhur nuk ekziston.' });
     }
 
-    if (await isEmailInUse(email, null)) {
+    const emailNorm = String(email).toLowerCase().trim();
+    if (await isEmailInUse(emailNorm, null)) {
       return res.status(400).json({ message: 'Ky email është tashmë në përdorim.' });
     }
 
-    const user = new ManagedUser({
-      email: String(email).toLowerCase().trim(),
+    const { data: created, error: createErr } = await sb.auth.admin.createUser({
+      email: emailNorm,
       password: String(password),
-      roleId: roleDoc._id,
-      role: roleDoc.name,
-      firstName: firstName !== undefined ? String(firstName).trim() : undefined,
-      lastName: lastName !== undefined ? String(lastName).trim() : undefined,
-      createdBy: req.admin._id,
+      email_confirm: true,
     });
-    await user.save();
-    const populated = await ManagedUser.findById(user._id).select('-password').populate('roleId', 'name description').lean();
-    res.status(201).json({ user: formatManagedUser(populated) });
-  } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ message: 'Ky email është tashmë në përdorim.' });
+    if (createErr || !created?.user) {
+      if (/already.*registered|already.*exists/i.test(createErr?.message || '')) {
+        return res.status(400).json({ message: 'Ky email është tashmë në përdorim.' });
+      }
+      console.error('POST /admin/users auth.createUser:', createErr?.message);
+      return res.status(500).json({ message: 'Gabim serveri.' });
     }
+
+    let user;
+    try {
+      user = await createProfileForAuthUser(created.user.id, {
+        email: emailNorm,
+        accountType: 'managed',
+        roleId: roleDoc.id,
+        role: roleDoc.name,
+        firstName: firstName !== undefined ? String(firstName).trim() : '',
+        lastName: lastName !== undefined ? String(lastName).trim() : '',
+        createdBy: req.admin.id,
+      });
+    } catch (profileError) {
+      await sb.auth.admin.deleteUser(created.user.id).catch(() => {});
+      if (profileError?.code === '23505') {
+        return res.status(400).json({ message: 'Ky email është tashmë në përdorim.' });
+      }
+      throw profileError;
+    }
+
+    res.status(201).json({ user: formatManagedUser(user, roleDoc.description || '') });
+  } catch (error) {
     console.error('POST /admin/users:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
@@ -171,12 +184,26 @@ router.post('/', async (req, res) => {
 /** Get one managed user. */
 router.get('/:id', async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!UUID_RE.test(req.params.id)) {
       return res.status(400).json({ message: 'ID e pavlefshme.' });
     }
-    const user = await ManagedUser.findById(req.params.id).select('-password').populate('roleId', 'name description').lean();
-    if (!user) return res.status(404).json({ message: 'Përdoruesi nuk u gjet.' });
-    res.json({ user: formatManagedUser(user) });
+    const sb = getSupabaseAdmin();
+    const { data: row, error } = await sb
+      .from('profiles')
+      .select('*')
+      .eq('id', req.params.id)
+      .eq('account_type', 'managed')
+      .maybeSingle();
+    if (error) throw error;
+    if (!row) return res.status(404).json({ message: 'Përdoruesi nuk u gjet.' });
+
+    const user = mapProfile(row);
+    let roleDescription = '';
+    if (user.roleId) {
+      const { data: roleDoc } = await sb.from('roles').select('description').eq('id', user.roleId).maybeSingle();
+      roleDescription = roleDoc?.description ?? '';
+    }
+    res.json({ user: formatManagedUser(user, roleDescription) });
   } catch (error) {
     console.error('GET /admin/users/:id:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -186,18 +213,27 @@ router.get('/:id', async (req, res) => {
 /** Update managed user (role via roleId, profile, active flag, email, optional new password). */
 router.patch('/:id', async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!UUID_RE.test(req.params.id)) {
       return res.status(400).json({ message: 'ID e pavlefshme.' });
     }
-    const user = await ManagedUser.findById(req.params.id);
-    if (!user) return res.status(404).json({ message: 'Përdoruesi nuk u gjet.' });
+    const sb = getSupabaseAdmin();
+    const { data: row, error: findError } = await sb
+      .from('profiles')
+      .select('*')
+      .eq('id', req.params.id)
+      .eq('account_type', 'managed')
+      .maybeSingle();
+    if (findError) throw findError;
+    if (!row) return res.status(404).json({ message: 'Përdoruesi nuk u gjet.' });
 
+    const user = mapProfile(row);
     const { email, password, roleId, firstName, lastName, isActive } = req.body;
+    let roleDoc = null;
 
     if (email !== undefined) {
       const nextEmail = String(email).toLowerCase().trim();
       if (!nextEmail) return res.status(400).json({ message: 'Emaili nuk mund të jetë bosh.' });
-      if (nextEmail !== user.email && (await isEmailInUse(nextEmail, user._id))) {
+      if (nextEmail !== user.email && (await isEmailInUse(nextEmail, user.id))) {
         return res.status(400).json({ message: 'Ky email është tashmë në përdorim.' });
       }
       user.email = nextEmail;
@@ -206,30 +242,53 @@ router.patch('/:id', async (req, res) => {
       if (String(password).length < 6) {
         return res.status(400).json({ message: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere.' });
       }
-      user.password = String(password);
     }
     if (roleId !== undefined) {
-      if (!mongoose.Types.ObjectId.isValid(String(roleId))) {
+      if (!UUID_RE.test(String(roleId))) {
         return res.status(400).json({ message: 'ID e rolit është e pavlefshme.' });
       }
-      const roleDoc = await Role.findById(roleId);
-      if (!roleDoc) {
+      const { data: found, error: roleError } = await sb.from('roles').select('*').eq('id', roleId).maybeSingle();
+      if (roleError) throw roleError;
+      if (!found) {
         return res.status(400).json({ message: 'Roli i zgjedhur nuk ekziston.' });
       }
-      user.roleId = roleDoc._id;
+      roleDoc = found;
+      user.roleId = roleDoc.id;
       user.role = roleDoc.name;
     }
     if (firstName !== undefined) user.firstName = String(firstName).trim();
     if (lastName !== undefined) user.lastName = String(lastName).trim();
     if (isActive !== undefined) user.isActive = Boolean(isActive);
 
-    await user.save();
-    const populated = await ManagedUser.findById(user._id).select('-password').populate('roleId', 'name description').lean();
-    res.json({ user: formatManagedUser(populated) });
-  } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ message: 'Ky email është tashmë në përdorim.' });
+    if (email !== undefined || password !== undefined) {
+      const authPatch = {};
+      if (email !== undefined) authPatch.email = user.email;
+      if (password !== undefined) authPatch.password = String(password);
+      const { error: authError } = await sb.auth.admin.updateUserById(user.id, authPatch);
+      if (authError) {
+        if (/already.*registered|already.*exists/i.test(authError.message || '')) {
+          return res.status(400).json({ message: 'Ky email është tashmë në përdorim.' });
+        }
+        throw authError;
+      }
     }
+
+    try {
+      await user.save();
+    } catch (saveError) {
+      if (saveError?.code === '23505') {
+        return res.status(400).json({ message: 'Ky email është tashmë në përdorim.' });
+      }
+      throw saveError;
+    }
+
+    let roleDescription = roleDoc?.description ?? '';
+    if (user.roleId && !roleDoc) {
+      const { data: existingRole } = await sb.from('roles').select('description').eq('id', user.roleId).maybeSingle();
+      roleDescription = existingRole?.description ?? '';
+    }
+    res.json({ user: formatManagedUser(user, roleDescription) });
+  } catch (error) {
     console.error('PATCH /admin/users/:id:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
@@ -238,11 +297,21 @@ router.patch('/:id', async (req, res) => {
 /** Delete a managed user permanently. */
 router.delete('/:id', async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!UUID_RE.test(req.params.id)) {
       return res.status(400).json({ message: 'ID e pavlefshme.' });
     }
-    const user = await ManagedUser.findByIdAndDelete(req.params.id);
-    if (!user) return res.status(404).json({ message: 'Përdoruesi nuk u gjet.' });
+    const sb = getSupabaseAdmin();
+    const { data: row, error: findError } = await sb
+      .from('profiles')
+      .select('id')
+      .eq('id', req.params.id)
+      .eq('account_type', 'managed')
+      .maybeSingle();
+    if (findError) throw findError;
+    if (!row) return res.status(404).json({ message: 'Përdoruesi nuk u gjet.' });
+
+    const { error: deleteError } = await sb.auth.admin.deleteUser(req.params.id);
+    if (deleteError) throw deleteError;
     res.json({ message: 'Përdoruesi u fshi.' });
   } catch (error) {
     console.error('DELETE /admin/users/:id:', error?.message || error);

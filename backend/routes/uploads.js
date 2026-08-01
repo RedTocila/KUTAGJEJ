@@ -1,8 +1,12 @@
 const express = require('express');
+const crypto = require('crypto');
+const { getSupabaseAdmin } = require('../lib/supabase');
 const authMiddleware = require('../middleware/auth');
-const { imageUpload, uploadBuffersToBlob, MAX_IMAGES } = require('../lib/image-upload');
+const { imageUpload, MAX_IMAGES } = require('../lib/image-upload');
 
 const router = express.Router();
+
+const UPLOADS_BUCKET = 'uploads';
 
 function requirePortalUser(req, res, next) {
   const model = req.user?.constructor?.modelName;
@@ -12,11 +16,32 @@ function requirePortalUser(req, res, next) {
   next();
 }
 
+/**
+ * Upload an array of multer file objects to Supabase Storage.
+ * Returns the list of public URLs.
+ */
+async function uploadBuffersToSupabase(files, folder = 'listings') {
+  const sb = getSupabaseAdmin();
+  const urls = [];
+  for (const file of files || []) {
+    const ext = String(file.originalname || 'image').split('.').pop() || 'jpg';
+    const path = `${folder}/${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${ext}`;
+    const { error } = await sb.storage.from(UPLOADS_BUCKET).upload(path, file.buffer, {
+      contentType: file.mimetype,
+      upsert: false,
+    });
+    if (error) throw error;
+    const { data: publicUrlData } = sb.storage.from(UPLOADS_BUCKET).getPublicUrl(path);
+    urls.push(publicUrlData.publicUrl);
+  }
+  return urls;
+}
+
 // ---------------------------------------------------------------------------
 // POST /api/uploads/images
 // Generic image upload used by every listing category. Accepts multipart files
 // under the `images` field and returns their public URLs. An optional `folder`
-// (query or field) groups uploads in Vercel Blob (e.g. cars, real-estate).
+// (query or field) groups uploads in Supabase Storage (e.g. cars, real-estate).
 // ---------------------------------------------------------------------------
 router.post(
   '/images',
@@ -33,7 +58,7 @@ router.post(
       const rawFolder = String(req.query.folder || req.body?.folder || 'listings').trim();
       const folder = /^[a-z0-9-]{1,40}$/i.test(rawFolder) ? rawFolder : 'listings';
 
-      const urls = await uploadBuffersToBlob(files, folder);
+      const urls = await uploadBuffersToSupabase(files, folder);
       return res.status(201).json({ urls });
     } catch (err) {
       if (err.code === 'LIMIT_FILE_SIZE') {

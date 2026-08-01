@@ -1,9 +1,8 @@
+'use strict';
+
 const express = require('express');
-const jwt = require('jsonwebtoken');
-const Admin = require('../models/Admin');
-const BusinessUser = require('../models/BusinessUser');
-const IndividualUser = require('../models/IndividualUser');
-const ManagedUser = require('../models/ManagedUser');
+const { getSupabaseAdmin, createAuthPasswordClient } = require('../lib/supabase');
+const { getProfileById, getProfileByEmail, insertProfile, mapProfile } = require('../lib/profiles');
 const authMiddleware = require('../middleware/auth');
 const {
   allocateUniqueReferralCode,
@@ -17,7 +16,6 @@ const rateLimit = require('../middleware/rate-limit');
 
 const authRateLimit = rateLimit({ windowMs: 60_000, max: 15 });
 
-/** Dashboard profile & password routes: admin role only (not business users). */
 function requireAdminRole(req, res, next) {
   if (!req.admin || req.admin.constructor.modelName !== 'Admin') {
     return res.status(403).json({ message: 'Vetëm administratorët mund ta përdorin këtë funksion.' });
@@ -25,7 +23,6 @@ function requireAdminRole(req, res, next) {
   next();
 }
 
-/** Individual / business portal accounts only (not admin or managed staff). */
 function requirePortalUser(req, res, next) {
   const model = req.admin?.constructor?.modelName;
   if (model !== 'IndividualUser' && model !== 'BusinessUser') {
@@ -37,7 +34,7 @@ function requirePortalUser(req, res, next) {
 const formatUser = (user) => {
   const model = user.constructor.modelName;
   const base = {
-    id: user._id,
+    id: user.id,
     email: user.email,
     firstName: user.firstName,
     lastName: user.lastName,
@@ -66,11 +63,35 @@ const formatUser = (user) => {
 };
 
 async function isEmailRegistered(emailNorm) {
-  if (await Admin.findOne({ email: emailNorm })) return true;
-  if (await ManagedUser.findOne({ email: emailNorm })) return true;
-  if (await BusinessUser.findOne({ email: emailNorm })) return true;
-  if (await IndividualUser.findOne({ email: emailNorm })) return true;
-  return false;
+  return Boolean(await getProfileByEmail(emailNorm));
+}
+
+async function createAuthUser({ email, password, metadata }) {
+  const sb = getSupabaseAdmin();
+  const { data, error } = await sb.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: metadata || {},
+  });
+  if (error) {
+    const msg = String(error.message || '');
+    if (/already|registered|exists/i.test(msg)) {
+      const err = new Error('EMAIL_TAKEN');
+      err.code = 'EMAIL_TAKEN';
+      throw err;
+    }
+    throw error;
+  }
+  return data.user;
+}
+
+async function signInWithPassword(email, password) {
+  // Ephemeral client — must not use getSupabaseAdmin() (sign-in would stick a user JWT on it).
+  const sb = createAuthPasswordClient();
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) return { error };
+  return { session: data.session, user: data.user };
 }
 
 router.post('/login', authRateLimit, async (req, res) => {
@@ -80,48 +101,29 @@ router.post('/login', authRateLimit, async (req, res) => {
       return res.status(400).json({ message: 'Emaili dhe fjalëkalimi janë të detyrueshëm.' });
     }
 
-    const emailNorm = email.toLowerCase();
-    let user = await Admin.findOne({ email: emailNorm });
-    if (!user) user = await BusinessUser.findOne({ email: emailNorm });
-    if (!user) user = await IndividualUser.findOne({ email: emailNorm });
-    if (!user) user = await ManagedUser.findOne({ email: emailNorm });
-    if (!user || !(await user.comparePassword(password))) {
+    const emailNorm = String(email).toLowerCase().trim();
+    const { session, error } = await signInWithPassword(emailNorm, password);
+    if (error || !session) {
       return res.status(401).json({ message: 'Email ose fjalëkalim i pasaktë.' });
     }
 
+    const profile = await getProfileById(session.user.id);
+    if (!profile) {
+      return res.status(401).json({ message: 'Profili nuk u gjet. Kontaktoni mbështetjen.' });
+    }
+
     if (
-      (user.constructor.modelName === 'ManagedUser' || user.constructor.modelName === 'IndividualUser') &&
-      user.isActive === false
+      (profile.constructor.modelName === 'ManagedUser' ||
+        profile.constructor.modelName === 'IndividualUser') &&
+      profile.isActive === false
     ) {
       return res.status(401).json({ message: 'Llogaria është çaktivizuar.' });
     }
 
-    if (
-      user.constructor.modelName === 'Admin' ||
-      user.constructor.modelName === 'ManagedUser' ||
-      user.constructor.modelName === 'IndividualUser'
-    ) {
-      user.lastLogin = new Date();
-      await user.save();
-    }
+    profile.lastLogin = new Date().toISOString();
+    await profile.save();
 
-    const secret = String(process.env.JWT_SECRET || '').trim();
-    if (!secret) {
-      console.error('Login blocked: JWT_SECRET is not set');
-      return res.status(500).json({ message: 'Gabim serveri.' });
-    }
-
-    const token = jwt.sign(
-      {
-        id: String(user._id),
-        email: user.email,
-        role: user.role,
-        userType: user.constructor.modelName,
-      },
-      secret,
-      { expiresIn: '7d' },
-    );
-    res.json({ token, admin: formatUser(user) });
+    res.json({ token: session.access_token, admin: formatUser(profile) });
   } catch (error) {
     console.error('POST /login error:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -143,12 +145,6 @@ router.post('/register', authRateLimit, async (req, res) => {
       return res.status(400).json({ message: 'Ky email është tashmë i regjistruar.' });
     }
 
-    const secret = String(process.env.JWT_SECRET || '').trim();
-    if (!secret) {
-      console.error('Register blocked: JWT_SECRET is not set');
-      return res.status(500).json({ message: 'Gabim serveri.' });
-    }
-
     if (userType === 'individual') {
       const firstName = String(req.body.firstName || '').trim();
       const lastName = String(req.body.lastName || '').trim();
@@ -157,28 +153,34 @@ router.post('/register', authRateLimit, async (req, res) => {
       }
       const phone = String(req.body.phone || '').trim().slice(0, 40);
       const referralCode = await allocateUniqueReferralCode();
-      const doc = await IndividualUser.create({
+
+      const authUser = await createAuthUser({
         email: emailNorm,
         password,
-        firstName,
-        lastName,
-        referralCode,
-        ...(phone ? { phone } : {}),
+        metadata: { account_type: 'individual', first_name: firstName, last_name: lastName },
       });
+
+      const doc = await insertProfile({
+        id: authUser.id,
+        email: emailNorm,
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone || '',
+        account_type: 'individual',
+        role: 'individual-user',
+        referral_code: referralCode,
+        is_active: true,
+      });
+
       const refRaw = req.body.referralCode ?? req.body.ref;
       if (refRaw) await processReferralOnSignup(doc, refRaw);
       await ensureUserReferralCode(doc);
-      const token = jwt.sign(
-        {
-          id: String(doc._id),
-          email: doc.email,
-          role: doc.role,
-          userType: doc.constructor.modelName,
-        },
-        secret,
-        { expiresIn: '7d' },
-      );
-      return res.status(201).json({ token, admin: formatUser(doc) });
+
+      const { session, error: signErr } = await signInWithPassword(emailNorm, password);
+      if (signErr || !session) {
+        return res.status(201).json({ token: null, admin: formatUser(doc), message: 'Llogaria u krijua. Identifikohuni.' });
+      }
+      return res.status(201).json({ token: session.access_token, admin: formatUser(doc) });
     }
 
     if (userType === 'business') {
@@ -191,45 +193,54 @@ router.post('/register', authRateLimit, async (req, res) => {
           message: 'NIPT, emri i biznesit, pronari dhe kategoria janë të detyrueshëm.',
         });
       }
-      const niptTaken = await BusinessUser.findOne({ nipt });
+
+      const sb = getSupabaseAdmin();
+      const { data: niptTaken } = await sb.from('profiles').select('id').eq('nipt', nipt).maybeSingle();
       if (niptTaken) {
         return res.status(400).json({ message: 'Ky NIPT është tashmë i regjistruar.' });
       }
+
       const parts = businessOwner.split(/\s+/).filter(Boolean);
       const phone = String(req.body.phone || '').trim().slice(0, 40);
       const referralCode = await allocateUniqueReferralCode();
-      const doc = await BusinessUser.create({
+
+      const authUser = await createAuthUser({
         email: emailNorm,
         password,
-        nipt,
-        businessName,
-        businessOwner,
-        businessCategory,
-        firstName: parts[0] || businessOwner,
-        lastName: parts.slice(1).join(' ') || '',
-        referralCode,
-        ...(phone ? { phone } : {}),
+        metadata: { account_type: 'business', business_name: businessName },
       });
+
+      const doc = await insertProfile({
+        id: authUser.id,
+        email: emailNorm,
+        first_name: parts[0] || businessOwner,
+        last_name: parts.slice(1).join(' ') || '',
+        phone: phone || '',
+        account_type: 'business',
+        role: 'business-user',
+        nipt,
+        business_name: businessName,
+        business_owner: businessOwner,
+        business_category: businessCategory,
+        referral_code: referralCode,
+        is_active: true,
+      });
+
       const refRaw = req.body.referralCode ?? req.body.ref;
       if (refRaw) await processReferralOnSignup(doc, refRaw);
       await ensureUserReferralCode(doc);
-      const token = jwt.sign(
-        {
-          id: String(doc._id),
-          email: doc.email,
-          role: doc.role,
-          userType: doc.constructor.modelName,
-        },
-        secret,
-        { expiresIn: '7d' },
-      );
-      return res.status(201).json({ token, admin: formatUser(doc) });
+
+      const { session, error: signErr } = await signInWithPassword(emailNorm, password);
+      if (signErr || !session) {
+        return res.status(201).json({ token: null, admin: formatUser(doc), message: 'Llogaria u krijua. Identifikohuni.' });
+      }
+      return res.status(201).json({ token: session.access_token, admin: formatUser(doc) });
     }
 
     return res.status(400).json({ message: 'Lloji i përdoruesit nuk është i vlefshëm.' });
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ message: 'Ky email ose NIPT është tashmë i regjistruar.' });
+    if (error.code === 'EMAIL_TAKEN') {
+      return res.status(400).json({ message: 'Ky email është tashmë i regjistruar.' });
     }
     console.error('POST /register error:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -253,13 +264,14 @@ router.put('/admin/update-profile', authMiddleware, requireAdminRole, async (req
       return res.status(400).json({ message: 'Emaili është i detyrueshëm.' });
     }
 
-    if (email && String(email).toLowerCase() !== admin.email) {
-      const nextEmail = String(email).toLowerCase().trim();
-      const existing = await Admin.findOne({ email: nextEmail });
-      if (existing && String(existing._id) !== String(admin._id)) {
+    const nextEmail = String(email).toLowerCase().trim();
+    if (nextEmail !== admin.email) {
+      const existing = await getProfileByEmail(nextEmail);
+      if (existing && existing.id !== admin.id) {
         return res.status(400).json({ message: 'Ky email është tashmë në përdorim.' });
       }
       admin.email = nextEmail;
+      await getSupabaseAdmin().auth.admin.updateUserById(admin.id, { email: nextEmail });
     }
 
     if (firstName !== undefined) admin.firstName = String(firstName).trim();
@@ -281,12 +293,16 @@ router.put('/admin/change-password', authMiddleware, requireAdminRole, async (re
     if (String(newPassword).length < 6) {
       return res.status(400).json({ message: 'Fjalëkalimi i ri duhet të ketë të paktën 6 karaktere.' });
     }
-    if (!(await req.admin.comparePassword(currentPassword))) {
+
+    const { error: checkErr } = await signInWithPassword(req.admin.email, currentPassword);
+    if (checkErr) {
       return res.status(401).json({ message: 'Fjalëkalimi aktual është i pasaktë.' });
     }
 
-    req.admin.password = newPassword;
-    await req.admin.save();
+    const { error } = await getSupabaseAdmin().auth.admin.updateUserById(req.admin.id, {
+      password: String(newPassword),
+    });
+    if (error) throw error;
     res.json({ message: 'Fjalëkalimi u ndryshua.' });
   } catch (error) {
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -314,12 +330,16 @@ router.put('/portal/change-password', authMiddleware, requirePortalUser, async (
     if (String(newPassword).length < 6) {
       return res.status(400).json({ message: 'Fjalëkalimi i ri duhet të ketë të paktën 6 karaktere.' });
     }
-    if (!(await req.admin.comparePassword(currentPassword))) {
+
+    const { error: checkErr } = await signInWithPassword(req.admin.email, currentPassword);
+    if (checkErr) {
       return res.status(401).json({ message: 'Fjalëkalimi aktual është i pasaktë.' });
     }
 
-    req.admin.password = newPassword;
-    await req.admin.save();
+    const { error } = await getSupabaseAdmin().auth.admin.updateUserById(req.admin.id, {
+      password: String(newPassword),
+    });
+    if (error) throw error;
     res.json({ message: 'Fjalëkalimi u ndryshua.' });
   } catch (error) {
     res.status(500).json({ message: 'Gabim serveri.' });

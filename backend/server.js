@@ -1,16 +1,13 @@
 require('dotenv').config();
 
 const express = require('express');
-const mongoose = require('mongoose');
-const { getMongoUri } = require('./lib/get-mongo-uri');
+const { isSupabaseConfigured, getSupabaseAdmin } = require('./lib/supabase');
 const { ensureListingCategories } = require('./lib/ensure-listing-categories');
 const { ensureCoreRoles } = require('./lib/core-roles');
 const { ensureReferralProgram } = require('./lib/ensure-referral-program');
 const { ensureCreditPackages } = require('./lib/ensure-credit-packages');
 const { ensureContractPackages } = require('./lib/ensure-contract-packages');
 const { ensureHomeBanners } = require('./lib/ensure-home-banners');
-const { ensureListingIndexes } = require('./lib/ensure-listing-indexes');
-const { ensureListingModeration } = require('./lib/ensure-listing-moderation');
 const { backfillMissingReferralCodes } = require('./lib/referrals');
 
 const app = express();
@@ -27,101 +24,46 @@ app.use(corsMiddleware);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-/** Load models once so Mongoose registers schemas before routes run. */
-function registerModels() {
-  require('./models/Admin');
-  require('./models/BusinessUser');
-  require('./models/IndividualUser');
-  require('./models/Role');
-  require('./models/ManagedUser');
-  require('./models/ListingCategory');
-  require('./models/Contract');
-  require('./models/ReferralProgram');
-  require('./models/RealEstateCity');
-  require('./models/RealEstateListing');
-  require('./models/CarListing');
-  require('./models/JobListing');
-  require('./models/MarketplaceListing');
-  require('./models/DirectoryListing');
-  require('./models/HomeBanner');
-  require('./models/ListingEngagement');
-  require('./models/SavedListing');
-  require('./models/ListingMetricDedup');
-  require('./models/JobEmployerVerificationRequest');
-  require('./models/BusinessListingReview');
-  require('./models/BusinessReservation');
-  require('./models/ProfessionalListingReview');
-  require('./models/ProfessionalVerificationRequest');
-  require('./models/AdminNotification');
-  require('./models/ReferralSignup');
-  require('./models/Conversation');
-  require('./models/Message');
-  require('./models/Payment');
-  require('./models/UserSubscription');
-  require('./models/CreditPackage');
-}
-
-const connectDB = async () => {
-  const uri = getMongoUri();
-  if (!uri) {
+const bootstrap = async () => {
+  if (!isSupabaseConfigured()) {
     throw new Error(
-      'Set MONGODB_URI, or set MONGODB_USER + MONGODB_PASSWORD + MONGODB_HOST (see backend/.env.example).',
+      'Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (see backend/.env.example).',
     );
   }
-
-  try {
-    await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 15_000,
-    });
-    console.log('Connected to MongoDB');
-    registerModels();
-    await ensureListingCategories();
-    await ensureCoreRoles();
-    await ensureReferralProgram();
-    await ensureCreditPackages();
-    await ensureContractPackages();
-    await ensureHomeBanners();
-    await ensureListingIndexes();
-    await ensureListingModeration();
-    await backfillMissingReferralCodes();
-  } catch (error) {
-    console.error('MongoDB connection failed:', error.message);
-    const msg = String(error.message || '');
-    if (msg.includes('bad auth') || msg.includes('authentication failed')) {
-      console.error(
-        'Hint: bad auth means wrong username/password for this cluster. In Atlas: Database Access → user → Edit password, then use “Connect” → copy URI, or use MONGODB_USER + MONGODB_PASSWORD + MONGODB_HOST so the password is plain text in .env (encoded automatically).',
-      );
-    } else {
-      console.error(
-        'Hint: if using MONGODB_URI only, special characters in the password must be percent-encoded in the URI (! → %21, @ → %40, # → %23).',
-      );
-    }
-    throw error;
-  }
+  // Touch client once so misconfig fails fast.
+  getSupabaseAdmin();
+  console.log('Connected to Supabase');
+  await ensureListingCategories();
+  await ensureCoreRoles();
+  await ensureReferralProgram();
+  await ensureCreditPackages();
+  await ensureContractPackages();
+  await ensureHomeBanners();
+  await backfillMissingReferralCodes();
 };
 
 app.get('/', (_req, res) => {
-  res.json({ ok: true, name: 'KuTaGjej API', version: '1' });
+  res.json({ ok: true, name: 'KuTaGjej API', version: '2', db: 'supabase' });
 });
 
 app.get('/api/health', async (_req, res) => {
-  const ready = mongoose.connection.readyState === 1;
+  const configured = isSupabaseConfigured();
   const body = {
-    ok: ready,
-    mongo: ready ? 'connected' : 'disconnected',
+    ok: configured,
+    supabase: configured ? 'configured' : 'missing_env',
   };
-  if (ready && mongoose.connection.db) {
-    body.dbName = mongoose.connection.db.databaseName;
+  if (configured) {
     try {
-      const Admin = mongoose.connection.models.Admin;
-      if (Admin) {
-        body.adminCount = await Admin.countDocuments();
-      }
+      const { count, error } = await getSupabaseAdmin()
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('account_type', 'admin');
+      if (!error) body.adminCount = count ?? 0;
     } catch {
+      /* ignore */
     }
   }
-  body.jwtConfigured = Boolean(String(process.env.JWT_SECRET || '').trim());
-  res.status(ready ? 200 : 503).json(body);
+  res.status(configured ? 200 : 503).json(body);
 });
 
 app.use('/api/admin/stats', require('./routes/admin-stats'));
@@ -165,14 +107,7 @@ app.use('/api/public/home-banners', require('./routes/public-home-banners'));
 
 const startServer = async () => {
   try {
-    await connectDB();
-    if (!String(process.env.JWT_SECRET || '').trim()) {
-      console.error(
-        'FATAL: JWT_SECRET is missing or empty. Set it in backend/.env locally, or in Vercel → Settings → Environment Variables for production.',
-      );
-      process.exit(1);
-    }
-    // Default 5001 (macOS AirPlay often owns :5000). Public app stays on :3000 via Next rewrite.
+    await bootstrap();
     const PORT = Number(process.env.PORT) || 5001;
     app.listen(PORT, () => {
       console.log(`KuTaGjej API listening on http://localhost:${PORT}`);

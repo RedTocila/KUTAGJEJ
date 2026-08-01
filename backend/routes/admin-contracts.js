@@ -1,13 +1,14 @@
+'use strict';
+
 const express = require('express');
-const mongoose = require('mongoose');
-const Contract = require('../models/Contract');
-const ListingCategory = require('../models/ListingCategory');
-const Role = require('../models/Role');
-const { CATEGORY_KEYS } = ListingCategory;
-const { PLAN_CODES } = Contract;
+const { getSupabaseAdmin } = require('../lib/supabase');
+const { isUuid } = require('../lib/public-listings/query-helpers');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
+
+const CATEGORY_KEYS = ['real-estate', 'job-listings', 'cars', 'marketplace', 'businesses', 'professionals'];
+const PLAN_CODES = ['free', 'starter', 'grow', 'elite'];
 
 function requirePlatformAdmin(req, res, next) {
   if (!req.admin || req.admin.constructor.modelName !== 'Admin') {
@@ -18,55 +19,66 @@ function requirePlatformAdmin(req, res, next) {
 
 function formatQuotas(doc) {
   return {
-    maxListAllCategories: Number(doc.maxListAllCategories) || 0,
-    maxJobListings: Number(doc.maxJobListings) || 0,
-    maxCarListings: Number(doc.maxCarListings) || 0,
-    maxApartmentListings: Number(doc.maxApartmentListings) || 0,
-    maxProductListings: Number(doc.maxProductListings) || 0,
-    maxPremiumListings: Number(doc.maxPremiumListings) || 0,
+    maxListAllCategories: Number(doc.max_list_all_categories) || 0,
+    maxJobListings: Number(doc.max_job_listings) || 0,
+    maxCarListings: Number(doc.max_car_listings) || 0,
+    maxApartmentListings: Number(doc.max_apartment_listings) || 0,
+    maxProductListings: Number(doc.max_product_listings) || 0,
+    maxPremiumListings: Number(doc.max_premium_listings) || 0,
   };
 }
 
-function formatContract(doc, categoryTitleByKey = {}) {
-  const roles = (doc.roleIds || [])
-    .map((r) => {
-      if (r && typeof r === 'object' && r._id) {
-        return { id: String(r._id), name: r.name || '' };
-      }
-      if (r == null) return null;
-      return { id: String(r), name: '' };
+function formatContract(doc, categoryTitleByKey = {}, roleById = {}) {
+  const roleIds = Array.isArray(doc.role_ids) ? doc.role_ids : [];
+  const roles = roleIds
+    .map((id) => {
+      if (!id) return null;
+      const r = roleById[String(id)];
+      return { id: String(id), name: r?.name || '' };
     })
     .filter(Boolean);
-  const catKey = doc.listingCategoryKey || null;
+  const catKey = doc.listing_category_key || null;
   return {
-    id: String(doc._id),
+    id: String(doc.id),
     title: doc.title,
     content: doc.content || '',
-    planCode: doc.planCode || null,
-    sortOrder: doc.sortOrder ?? 0,
+    planCode: doc.plan_code || null,
+    sortOrder: doc.sort_order ?? 0,
     listingCategoryKey: catKey,
     listingCategoryTitle: catKey ? categoryTitleByKey[catKey] || catKey : null,
-    subscriberKind: doc.subscriberKind || null,
-    refreshEveryHours: doc.refreshEveryHours ?? null,
-    glowBadgeEnabled: Boolean(doc.glowBadgeEnabled),
-    boostCredits: doc.boostCredits ?? null,
-    dailyBoostAccess: Boolean(doc.dailyBoostAccess),
+    subscriberKind: doc.subscriber_kind || null,
+    refreshEveryHours: doc.refresh_every_hours ?? null,
+    glowBadgeEnabled: Boolean(doc.glow_badge_enabled),
+    boostCredits: doc.boost_credits ?? null,
+    dailyBoostAccess: Boolean(doc.daily_boost_access),
     ...formatQuotas(doc),
-    price1Month: doc.price1Month ?? null,
-    price3Months: doc.price3Months ?? null,
-    price6Months: doc.price6Months ?? null,
-    price12Months: doc.price12Months ?? null,
+    price1Month: doc.price_1_month != null ? Number(doc.price_1_month) : null,
+    price3Months: doc.price_3_months != null ? Number(doc.price_3_months) : null,
+    price6Months: doc.price_6_months != null ? Number(doc.price_6_months) : null,
+    price12Months: doc.price_12_months != null ? Number(doc.price_12_months) : null,
     roles,
-    createdAt: doc.createdAt,
-    updatedAt: doc.updatedAt,
+    createdAt: doc.created_at,
+    updatedAt: doc.updated_at,
   };
 }
 
 async function categoryTitleMapForKeys(keys) {
   const uniq = [...new Set((keys || []).filter(Boolean))];
   if (uniq.length === 0) return {};
-  const docs = await ListingCategory.find({ key: { $in: uniq } }).select('key title').lean();
-  return Object.fromEntries(docs.map((d) => [d.key, d.title]));
+  const { data, error } = await getSupabaseAdmin()
+    .from('listing_categories')
+    .select('key, title')
+    .in('key', uniq);
+  if (error) throw error;
+  return Object.fromEntries((data || []).map((d) => [d.key, d.title]));
+}
+
+async function loadRoleById(roleIds) {
+  const uniq = [...new Set((roleIds || []).filter(Boolean).map(String))];
+  if (uniq.length === 0) return {};
+  const { data, error } = await getSupabaseAdmin().from('roles').select('id, name').in('id', uniq);
+  if (error) throw error;
+  return Object.fromEntries((data || []).map((r) => [String(r.id), r]));
 }
 
 function parseOptionalPrice(value, fieldLabelSq) {
@@ -80,12 +92,12 @@ function parseOptionalPrice(value, fieldLabelSq) {
   return { ok: true, n: num };
 }
 
-function countSetPrices(doc) {
+function countSetPrices(row) {
   let c = 0;
-  if (doc.price1Month != null && Number.isFinite(Number(doc.price1Month))) c += 1;
-  if (doc.price3Months != null && Number.isFinite(Number(doc.price3Months))) c += 1;
-  if (doc.price6Months != null && Number.isFinite(Number(doc.price6Months))) c += 1;
-  if (doc.price12Months != null && Number.isFinite(Number(doc.price12Months))) c += 1;
+  if (row.price_1_month != null && Number.isFinite(Number(row.price_1_month))) c += 1;
+  if (row.price_3_months != null && Number.isFinite(Number(row.price_3_months))) c += 1;
+  if (row.price_6_months != null && Number.isFinite(Number(row.price_6_months))) c += 1;
+  if (row.price_12_months != null && Number.isFinite(Number(row.price_12_months))) c += 1;
   return c;
 }
 
@@ -95,10 +107,10 @@ function normalizeRoleIds(ids) {
   const seen = new Set();
   for (const raw of ids) {
     const s = String(raw ?? '').trim();
-    if (!s || !mongoose.Types.ObjectId.isValid(s)) continue;
+    if (!s || !isUuid(s)) continue;
     if (seen.has(s)) continue;
     seen.add(s);
-    out.push(new mongoose.Types.ObjectId(s));
+    out.push(s);
   }
   return out;
 }
@@ -117,30 +129,44 @@ function parseNonNegInt(value, labelSq, { required = false } = {}) {
 
 function parseQuotaBody(body) {
   const fields = [
-    ['maxListAllCategories', 'Lista në të gjitha kategoritë'],
-    ['maxJobListings', 'Kuota e vendeve të punës'],
-    ['maxCarListings', 'Kuota e makinave'],
-    ['maxApartmentListings', 'Kuota e apartamenteve'],
-    ['maxProductListings', 'Kuota e produkteve'],
-    ['maxPremiumListings', 'Kuota e njoftimeve premium'],
+    ['maxListAllCategories', 'Lista në të gjitha kategoritë', 'max_list_all_categories'],
+    ['maxJobListings', 'Kuota e vendeve të punës', 'max_job_listings'],
+    ['maxCarListings', 'Kuota e makinave', 'max_car_listings'],
+    ['maxApartmentListings', 'Kuota e apartamenteve', 'max_apartment_listings'],
+    ['maxProductListings', 'Kuota e produkteve', 'max_product_listings'],
+    ['maxPremiumListings', 'Kuota e njoftimeve premium', 'max_premium_listings'],
   ];
   const out = {};
-  for (const [key, label] of fields) {
+  for (const [key, label, snake] of fields) {
     if (body[key] === undefined) continue;
     const r = parseNonNegInt(body[key], label);
     if (!r.ok) return { ok: false, message: r.message };
-    out[key] = r.n;
+    out[snake] = r.n;
   }
   return { ok: true, quotas: out };
+}
+
+async function formatContractResponse(doc) {
+  const titleByKey = await categoryTitleMapForKeys([doc.listing_category_key]);
+  const roleById = await loadRoleById(doc.role_ids);
+  return formatContract(doc, titleByKey, roleById);
 }
 
 router.use(authMiddleware, requirePlatformAdmin);
 
 router.get('/', async (_req, res) => {
   try {
-    const docs = await Contract.find().sort({ sortOrder: 1, updatedAt: -1 }).populate('roleIds', 'name').lean();
-    const titleByKey = await categoryTitleMapForKeys(docs.map((d) => d.listingCategoryKey));
-    res.json({ contracts: docs.map((d) => formatContract(d, titleByKey)) });
+    const { data, error } = await getSupabaseAdmin()
+      .from('contracts')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('updated_at', { ascending: false });
+    if (error) throw error;
+    const docs = data || [];
+    const titleByKey = await categoryTitleMapForKeys(docs.map((d) => d.listing_category_key));
+    const allRoleIds = docs.flatMap((d) => d.role_ids || []);
+    const roleById = await loadRoleById(allRoleIds);
+    res.json({ contracts: docs.map((d) => formatContract(d, titleByKey, roleById)) });
   } catch (error) {
     console.error('GET /admin/contracts:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -182,13 +208,19 @@ router.post('/', async (req, res) => {
       });
     }
 
+    const sb = getSupabaseAdmin();
     let catKey = null;
     if (listingCategoryKey != null && String(listingCategoryKey).trim() !== '') {
       catKey = String(listingCategoryKey).trim();
       if (!CATEGORY_KEYS.includes(catKey)) {
         return res.status(400).json({ message: 'Zgjidhni një kategori kontrate.' });
       }
-      const cat = await ListingCategory.findOne({ key: catKey }).select('key').lean();
+      const { data: cat, error: catErr } = await sb
+        .from('listing_categories')
+        .select('key')
+        .eq('key', catKey)
+        .maybeSingle();
+      if (catErr) throw catErr;
       if (!cat) {
         return res.status(400).json({ message: 'Kategoria nuk ekziston.' });
       }
@@ -222,8 +254,12 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Zgjidhni të paktën një rol nga katalogu.' });
     }
 
-    const found = await Role.find({ _id: { $in: roleObjectIds } }).select('_id').lean();
-    if (found.length !== roleObjectIds.length) {
+    const { data: foundRoles, error: roleErr } = await sb
+      .from('roles')
+      .select('id')
+      .in('id', roleObjectIds);
+    if (roleErr) throw roleErr;
+    if ((foundRoles || []).length !== roleObjectIds.length) {
       return res.status(400).json({ message: 'Një ose më shumë role nuk ekzistojnë.' });
     }
 
@@ -240,33 +276,38 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Renditja duhet të jetë numër.' });
     }
 
-    const contract = new Contract({
-      title: t,
-      content: content !== undefined ? String(content) : '',
-      planCode: code,
-      sortOrder: sort,
-      listingCategoryKey: catKey,
-      subscriberKind: kind,
-      refreshEveryHours: refreshH,
-      glowBadgeEnabled: Boolean(glowBadgeEnabled),
-      boostCredits: boost,
-      dailyBoostAccess: Boolean(dailyBoostAccess),
-      ...quotaParse.quotas,
-      price1Month: p1.n,
-      price3Months: p3.n,
-      price6Months: p6.n,
-      price12Months: p12.n,
-      roleIds: roleObjectIds,
-      createdBy: req.admin._id,
-    });
-    await contract.save();
-    const populated = await Contract.findById(contract._id).populate('roleIds', 'name').lean();
-    const titleByKey = await categoryTitleMapForKeys([populated.listingCategoryKey]);
-    res.status(201).json({ contract: formatContract(populated, titleByKey) });
-  } catch (error) {
-    if (error?.code === 11000) {
-      return res.status(400).json({ message: 'Ky plan (kod + lloj abonenti) ekziston tashmë.' });
+    const { data: created, error: insertErr } = await sb
+      .from('contracts')
+      .insert({
+        title: t,
+        content: content !== undefined ? String(content) : '',
+        plan_code: code,
+        sort_order: sort,
+        listing_category_key: catKey,
+        subscriber_kind: kind,
+        refresh_every_hours: refreshH,
+        glow_badge_enabled: Boolean(glowBadgeEnabled),
+        boost_credits: boost,
+        daily_boost_access: Boolean(dailyBoostAccess),
+        ...quotaParse.quotas,
+        price_1_month: p1.n,
+        price_3_months: p3.n,
+        price_6_months: p6.n,
+        price_12_months: p12.n,
+        role_ids: roleObjectIds,
+        created_by: req.admin.id,
+      })
+      .select('*')
+      .single();
+    if (insertErr) {
+      if (insertErr.code === '23505') {
+        return res.status(400).json({ message: 'Ky plan (kod + lloj abonenti) ekziston tashmë.' });
+      }
+      throw insertErr;
     }
+
+    res.status(201).json({ contract: await formatContractResponse(created) });
+  } catch (error) {
     console.error('POST /admin/contracts:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
@@ -274,11 +315,17 @@ router.post('/', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!isUuid(req.params.id)) {
       return res.status(400).json({ message: 'ID e pavlefshme.' });
     }
-    const contract = await Contract.findById(req.params.id);
-    if (!contract) return res.status(404).json({ message: 'Kontrata nuk u gjet.' });
+    const sb = getSupabaseAdmin();
+    const { data: existing, error: findErr } = await sb
+      .from('contracts')
+      .select('*')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (findErr) throw findErr;
+    if (!existing) return res.status(404).json({ message: 'Kontrata nuk u gjet.' });
 
     const {
       title,
@@ -298,22 +345,24 @@ router.patch('/:id', async (req, res) => {
       sortOrder,
     } = req.body;
 
+    const patch = { updated_at: new Date().toISOString() };
+
     if (title !== undefined) {
       const t = String(title).trim();
       if (!t) return res.status(400).json({ message: 'Titulli nuk mund të jetë bosh.' });
-      contract.title = t;
+      patch.title = t;
     }
-    if (content !== undefined) contract.content = String(content);
+    if (content !== undefined) patch.content = String(content);
 
     if (planCode !== undefined) {
       if (planCode === null || String(planCode).trim() === '') {
-        contract.planCode = null;
+        patch.plan_code = null;
       } else {
         const code = String(planCode).trim().toLowerCase();
         if (!PLAN_CODES.includes(code)) {
           return res.status(400).json({ message: 'Kodi i planit është i pavlefshëm.' });
         }
-        contract.planCode = code;
+        patch.plan_code = code;
       }
     }
 
@@ -322,20 +371,25 @@ router.patch('/:id', async (req, res) => {
       if (!Number.isFinite(sort)) {
         return res.status(400).json({ message: 'Renditja duhet të jetë numër.' });
       }
-      contract.sortOrder = sort;
+      patch.sort_order = sort;
     }
 
     if (listingCategoryKey !== undefined) {
       if (listingCategoryKey === null || String(listingCategoryKey).trim() === '') {
-        contract.listingCategoryKey = null;
+        patch.listing_category_key = null;
       } else {
         const catKey = String(listingCategoryKey).trim();
         if (!CATEGORY_KEYS.includes(catKey)) {
           return res.status(400).json({ message: 'Kategori e pavlefshme.' });
         }
-        const cat = await ListingCategory.findOne({ key: catKey }).select('key').lean();
+        const { data: cat, error: catErr } = await sb
+          .from('listing_categories')
+          .select('key')
+          .eq('key', catKey)
+          .maybeSingle();
+        if (catErr) throw catErr;
         if (!cat) return res.status(400).json({ message: 'Kategoria nuk ekziston.' });
-        contract.listingCategoryKey = catKey;
+        patch.listing_category_key = catKey;
       }
     }
 
@@ -344,7 +398,7 @@ router.patch('/:id', async (req, res) => {
       if (kind !== 'agent' && kind !== 'company') {
         return res.status(400).json({ message: 'Lloji i abonentit duhet të jetë agjent ose kompani.' });
       }
-      contract.subscriberKind = kind;
+      patch.subscriber_kind = kind;
     }
 
     if (refreshEveryHours !== undefined) {
@@ -352,58 +406,58 @@ router.patch('/:id', async (req, res) => {
       if (!Number.isFinite(refreshH) || refreshH < 1) {
         return res.status(400).json({ message: 'Rifreskimi çdo sa orë duhet të jetë të paktën 1.' });
       }
-      contract.refreshEveryHours = refreshH;
+      patch.refresh_every_hours = refreshH;
     }
 
-    if (glowBadgeEnabled !== undefined) contract.glowBadgeEnabled = Boolean(glowBadgeEnabled);
-    if (dailyBoostAccess !== undefined) contract.dailyBoostAccess = Boolean(dailyBoostAccess);
+    if (glowBadgeEnabled !== undefined) patch.glow_badge_enabled = Boolean(glowBadgeEnabled);
+    if (dailyBoostAccess !== undefined) patch.daily_boost_access = Boolean(dailyBoostAccess);
 
     if (boostCredits !== undefined) {
       const boost = Number(boostCredits);
       if (!Number.isFinite(boost) || boost < 0) {
         return res.status(400).json({ message: 'Kreditet boost duhet të jenë numër jo negativ.' });
       }
-      contract.boostCredits = boost;
+      patch.boost_credits = boost;
     }
 
     const quotaParse = parseQuotaBody(req.body);
     if (!quotaParse.ok) return res.status(400).json({ message: quotaParse.message });
-    Object.assign(contract, quotaParse.quotas);
+    Object.assign(patch, quotaParse.quotas);
 
     if (price1Month !== undefined) {
       if (price1Month === null || price1Month === '') {
-        contract.price1Month = null;
+        patch.price_1_month = null;
       } else {
         const r = parseOptionalPrice(price1Month, 'Çmimi 1 muaj');
         if (!r.ok) return res.status(400).json({ message: r.message });
-        contract.price1Month = r.n;
+        patch.price_1_month = r.n;
       }
     }
     if (price3Months !== undefined) {
       if (price3Months === null || price3Months === '') {
-        contract.price3Months = null;
+        patch.price_3_months = null;
       } else {
         const r = parseOptionalPrice(price3Months, 'Çmimi 3 muaj');
         if (!r.ok) return res.status(400).json({ message: r.message });
-        contract.price3Months = r.n;
+        patch.price_3_months = r.n;
       }
     }
     if (price6Months !== undefined) {
       if (price6Months === null || price6Months === '') {
-        contract.price6Months = null;
+        patch.price_6_months = null;
       } else {
         const r = parseOptionalPrice(price6Months, 'Çmimi 6 muaj');
         if (!r.ok) return res.status(400).json({ message: r.message });
-        contract.price6Months = r.n;
+        patch.price_6_months = r.n;
       }
     }
     if (price12Months !== undefined) {
       if (price12Months === null || price12Months === '') {
-        contract.price12Months = null;
+        patch.price_12_months = null;
       } else {
         const r = parseOptionalPrice(price12Months, 'Çmimi 12 muaj');
         if (!r.ok) return res.status(400).json({ message: r.message });
-        contract.price12Months = r.n;
+        patch.price_12_months = r.n;
       }
     }
 
@@ -412,7 +466,7 @@ router.patch('/:id', async (req, res) => {
       price3Months !== undefined ||
       price6Months !== undefined ||
       price12Months !== undefined;
-    if (pricePatchTouched && countSetPrices(contract) === 0) {
+    if (pricePatchTouched && countSetPrices({ ...existing, ...patch }) === 0) {
       return res.status(400).json({
         message: 'Duhet të mbetet të paktën një çmim. Mos i boshatisni të gjitha afatet njëkohësisht.',
       });
@@ -423,21 +477,32 @@ router.patch('/:id', async (req, res) => {
       if (roleObjectIds.length === 0) {
         return res.status(400).json({ message: 'Zgjidhni të paktën një rol.' });
       }
-      const found = await Role.find({ _id: { $in: roleObjectIds } }).select('_id').lean();
-      if (found.length !== roleObjectIds.length) {
+      const { data: foundRoles, error: roleErr } = await sb
+        .from('roles')
+        .select('id')
+        .in('id', roleObjectIds);
+      if (roleErr) throw roleErr;
+      if ((foundRoles || []).length !== roleObjectIds.length) {
         return res.status(400).json({ message: 'Një ose më shumë role nuk ekzistojnë.' });
       }
-      contract.roleIds = roleObjectIds;
+      patch.role_ids = roleObjectIds;
     }
 
-    await contract.save();
-    const populated = await Contract.findById(contract._id).populate('roleIds', 'name').lean();
-    const titleByKey = await categoryTitleMapForKeys([populated.listingCategoryKey]);
-    res.json({ contract: formatContract(populated, titleByKey) });
-  } catch (error) {
-    if (error?.code === 11000) {
-      return res.status(400).json({ message: 'Ky plan (kod + lloj abonenti) ekziston tashmë.' });
+    const { data: updated, error: updErr } = await sb
+      .from('contracts')
+      .update(patch)
+      .eq('id', req.params.id)
+      .select('*')
+      .single();
+    if (updErr) {
+      if (updErr.code === '23505') {
+        return res.status(400).json({ message: 'Ky plan (kod + lloj abonenti) ekziston tashmë.' });
+      }
+      throw updErr;
     }
+
+    res.json({ contract: await formatContractResponse(updated) });
+  } catch (error) {
     console.error('PATCH /admin/contracts/:id:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
@@ -445,11 +510,17 @@ router.patch('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!isUuid(req.params.id)) {
       return res.status(400).json({ message: 'ID e pavlefshme.' });
     }
-    const contract = await Contract.findByIdAndDelete(req.params.id);
-    if (!contract) return res.status(404).json({ message: 'Kontrata nuk u gjet.' });
+    const { data, error } = await getSupabaseAdmin()
+      .from('contracts')
+      .delete()
+      .eq('id', req.params.id)
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ message: 'Kontrata nuk u gjet.' });
     res.json({ message: 'Kontrata u fshi.' });
   } catch (error) {
     console.error('DELETE /admin/contracts/:id:', error?.message || error);

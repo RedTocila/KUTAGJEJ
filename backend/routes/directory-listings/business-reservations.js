@@ -1,9 +1,11 @@
+'use strict';
+
 const express = require('express');
-const mongoose = require('mongoose');
 const authMiddleware = require('../../middleware/auth');
 const requirePortalUser = require('../../middleware/require-portal-user');
-const DirectoryListing = require('../../models/DirectoryListing');
-const BusinessReservation = require('../../models/BusinessReservation');
+const { getSupabaseAdmin } = require('../../lib/supabase');
+const { camelizeRow, camelizeRows } = require('../../lib/profiles');
+const { isUuid } = require('../../lib/public-listings/query-helpers');
 
 const router = express.Router();
 
@@ -11,28 +13,35 @@ const router = express.Router();
 router.get('/businesses/:id/reservations', authMiddleware, requirePortalUser, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
-    if (!mongoose.isValidObjectId(rawId)) {
+    if (!isUuid(rawId)) {
       return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
     }
 
-    const posterModel = req.user.constructor.modelName;
-    const listing = await DirectoryListing.findOne({
-      _id: rawId,
-      posterId: req.user._id,
-      posterModel,
-      vertical: 'businesses',
-    }).lean();
+    const { data: listing, error: listingErr } = await getSupabaseAdmin()
+      .from('directory_listings')
+      .select('id')
+      .eq('id', rawId)
+      .eq('poster_id', req.user.id)
+      .eq('vertical', 'businesses')
+      .maybeSingle();
+    if (listingErr) throw listingErr;
     if (!listing) return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
 
     const status = String(req.query.status || 'all').trim();
-    const filter = { listingId: listing._id };
-    if (status === 'pending') filter.status = 'pending';
+    let q = getSupabaseAdmin()
+      .from('business_reservations')
+      .select('*')
+      .eq('listing_id', listing.id)
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (status === 'pending') q = q.eq('status', 'pending');
 
-    const rows = await BusinessReservation.find(filter).sort({ createdAt: -1 }).limit(200).lean();
+    const { data: rows, error } = await q;
+    if (error) throw error;
 
     res.json({
-      reservations: rows.map((r) => ({
-        id: String(r._id),
+      reservations: camelizeRows(rows).map((r) => ({
+        id: String(r.id),
         guestName: r.guestName,
         guestPhone: r.guestPhone,
         partySize: r.partySize,
@@ -52,33 +61,46 @@ router.get('/businesses/:id/reservations', authMiddleware, requirePortalUser, as
 router.patch('/businesses/reservations/:reservationId', authMiddleware, requirePortalUser, async (req, res) => {
   try {
     const rawId = String(req.params.reservationId ?? '').trim();
-    if (!mongoose.isValidObjectId(rawId)) {
+    if (!isUuid(rawId)) {
       return res.status(404).json({ message: 'Rezervimi nuk u gjet.' });
     }
 
-    const row = await BusinessReservation.findById(rawId);
+    const { data: row, error: rowErr } = await getSupabaseAdmin()
+      .from('business_reservations')
+      .select('*')
+      .eq('id', rawId)
+      .maybeSingle();
+    if (rowErr) throw rowErr;
     if (!row) return res.status(404).json({ message: 'Rezervimi nuk u gjet.' });
 
-    const posterModel = req.user.constructor.modelName;
-    const listing = await DirectoryListing.findOne({
-      _id: row.listingId,
-      posterId: req.user._id,
-      posterModel,
-      vertical: 'businesses',
-    });
+    const { data: listing, error: listingErr } = await getSupabaseAdmin()
+      .from('directory_listings')
+      .select('id')
+      .eq('id', row.listing_id)
+      .eq('poster_id', req.user.id)
+      .eq('vertical', 'businesses')
+      .maybeSingle();
+    if (listingErr) throw listingErr;
     if (!listing) return res.status(403).json({ message: 'Nuk keni akses.' });
 
     const status = String(req.body?.status || '').trim();
     if (!['pending', 'confirmed', 'cancelled'].includes(status)) {
       return res.status(400).json({ message: 'Statusi nuk është i vlefshëm.' });
     }
-    row.status = status;
-    await row.save();
 
+    const { data: updated, error: updErr } = await getSupabaseAdmin()
+      .from('business_reservations')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', rawId)
+      .select('*')
+      .single();
+    if (updErr) throw updErr;
+
+    const doc = camelizeRow(updated);
     res.json({
       reservation: {
-        id: String(row._id),
-        status: row.status,
+        id: String(doc.id),
+        status: doc.status,
       },
     });
   } catch (err) {

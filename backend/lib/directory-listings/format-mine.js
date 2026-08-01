@@ -1,7 +1,11 @@
+function listingId(doc) {
+  return doc.id != null ? String(doc.id) : doc._id != null ? String(doc._id) : null;
+}
+
 function formatMineBusiness(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
   return {
-    id: String(doc._id),
+    id: listingId(doc),
     vertical: doc.vertical,
     title: doc.title,
     description: doc.description,
@@ -11,7 +15,7 @@ function formatMineBusiness(doc, cityById) {
     contactPhone: doc.contactPhone ?? null,
     imageUrls: doc.imageUrls ?? [],
     openingHours: doc.openingHours ?? null,
-    weeklyHours: doc.weeklyHours ?? [],
+    weeklyHours: Array.isArray(doc.weeklyHours) ? doc.weeklyHours : doc.weeklyHours ?? [],
     menuCategories: doc.menuCategories ?? [],
     menuItems: doc.menuItems ?? [],
     reservationsEnabled: Boolean(doc.reservationsEnabled),
@@ -28,7 +32,7 @@ function formatMineBusiness(doc, cityById) {
 function formatMineProfessional(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
   return {
-    id: String(doc._id),
+    id: listingId(doc),
     vertical: doc.vertical,
     title: doc.title,
     description: doc.description,

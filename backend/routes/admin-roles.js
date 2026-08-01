@@ -1,11 +1,11 @@
 const express = require('express');
-const mongoose = require('mongoose');
-const Role = require('../models/Role');
-const ManagedUser = require('../models/ManagedUser');
+const { getSupabaseAdmin } = require('../lib/supabase');
 const authMiddleware = require('../middleware/auth');
 const { CORE_ROLE_NAMES, sortRolesForAdmin } = require('../lib/core-roles');
 
 const router = express.Router();
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function requirePlatformAdmin(req, res, next) {
   if (!req.admin || req.admin.constructor.modelName !== 'Admin') {
@@ -14,14 +14,18 @@ function requirePlatformAdmin(req, res, next) {
   next();
 }
 
-function formatRole(doc) {
+function isUniqueViolation(error) {
+  return error?.code === '23505';
+}
+
+function formatRole(row) {
   return {
-    id: String(doc._id),
-    name: doc.name,
-    description: doc.description || '',
-    isCore: CORE_ROLE_NAMES.has(doc.name),
-    createdAt: doc.createdAt,
-    updatedAt: doc.updatedAt,
+    id: row.id,
+    name: row.name,
+    description: row.description || '',
+    isCore: CORE_ROLE_NAMES.has(row.name),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -29,8 +33,9 @@ router.use(authMiddleware, requirePlatformAdmin);
 
 router.get('/', async (_req, res) => {
   try {
-    const roles = await Role.find().lean();
-    const sorted = sortRolesForAdmin(roles);
+    const { data, error } = await getSupabaseAdmin().from('roles').select('*');
+    if (error) throw error;
+    const sorted = sortRolesForAdmin(data || []);
     res.json({ roles: sorted.map((r) => formatRole(r)) });
   } catch (error) {
     console.error('GET /admin/roles:', error?.message || error);
@@ -51,17 +56,24 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const role = new Role({
-      name: n,
-      description: description !== undefined ? String(description).trim() : '',
-      createdBy: req.admin._id,
-    });
-    await role.save();
-    res.status(201).json({ role: formatRole(role.toObject()) });
-  } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ message: 'Ekziston tashmë një rol me këtë emër.' });
+    const sb = getSupabaseAdmin();
+    const { data, error } = await sb
+      .from('roles')
+      .insert({
+        name: n,
+        description: description !== undefined ? String(description).trim() : '',
+        created_by: req.admin.id,
+      })
+      .select('*')
+      .single();
+    if (error) {
+      if (isUniqueViolation(error)) {
+        return res.status(400).json({ message: 'Ekziston tashmë një rol me këtë emër.' });
+      }
+      throw error;
     }
+    res.status(201).json({ role: formatRole(data) });
+  } catch (error) {
     console.error('POST /admin/roles:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
@@ -69,14 +81,17 @@ router.post('/', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!UUID_RE.test(req.params.id)) {
       return res.status(400).json({ message: 'ID e pavlefshme.' });
     }
-    const role = await Role.findById(req.params.id);
+    const sb = getSupabaseAdmin();
+    const { data: role, error: findError } = await sb.from('roles').select('*').eq('id', req.params.id).maybeSingle();
+    if (findError) throw findError;
     if (!role) return res.status(404).json({ message: 'Roli nuk u gjet.' });
 
     const { name, description } = req.body;
     const prevName = role.name;
+    const patch = {};
 
     if (name !== undefined) {
       const n = String(name).trim();
@@ -91,22 +106,35 @@ router.patch('/:id', async (req, res) => {
         if (CORE_ROLE_NAMES.has(n)) {
           return res.status(400).json({ message: 'Ky emër është i rezervuar për rolet kryesore të platformës.' });
         }
-        role.name = n;
+        patch.name = n;
       }
     }
-    if (description !== undefined) role.description = String(description).trim();
+    if (description !== undefined) patch.description = String(description).trim();
+    patch.updated_at = new Date().toISOString();
 
-    await role.save();
-
-    if (name !== undefined && role.name !== prevName) {
-      await ManagedUser.updateMany({ roleId: role._id }, { $set: { role: role.name } });
+    const { data: updated, error: updateError } = await sb
+      .from('roles')
+      .update(patch)
+      .eq('id', role.id)
+      .select('*')
+      .single();
+    if (updateError) {
+      if (isUniqueViolation(updateError)) {
+        return res.status(400).json({ message: 'Ekziston tashmë një rol me këtë emër.' });
+      }
+      throw updateError;
     }
 
-    res.json({ role: formatRole(role.toObject()) });
+    if (name !== undefined && updated.name !== prevName) {
+      const { error: cascadeError } = await sb
+        .from('profiles')
+        .update({ role: updated.name, updated_at: new Date().toISOString() })
+        .eq('role_id', role.id);
+      if (cascadeError) throw cascadeError;
+    }
+
+    res.json({ role: formatRole(updated) });
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ message: 'Ekziston tashmë një rol me këtë emër.' });
-    }
     console.error('PATCH /admin/roles/:id:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
@@ -114,10 +142,12 @@ router.patch('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!UUID_RE.test(req.params.id)) {
       return res.status(400).json({ message: 'ID e pavlefshme.' });
     }
-    const role = await Role.findById(req.params.id);
+    const sb = getSupabaseAdmin();
+    const { data: role, error: findError } = await sb.from('roles').select('*').eq('id', req.params.id).maybeSingle();
+    if (findError) throw findError;
     if (!role) return res.status(404).json({ message: 'Roli nuk u gjet.' });
     if (CORE_ROLE_NAMES.has(role.name)) {
       return res.status(400).json({
@@ -125,13 +155,19 @@ router.delete('/:id', async (req, res) => {
       });
     }
 
-    const inUse = await ManagedUser.countDocuments({ roleId: req.params.id });
-    if (inUse > 0) {
+    const { count, error: countError } = await sb
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('role_id', req.params.id);
+    if (countError) throw countError;
+    if ((count || 0) > 0) {
       return res.status(400).json({
-        message: `Nuk mund të fshihet: ${inUse} përdorues(e) përdorin ende këtë rol.`,
+        message: `Nuk mund të fshihet: ${count} përdorues(e) përdorin ende këtë rol.`,
       });
     }
-    await Role.findByIdAndDelete(req.params.id);
+
+    const { error: deleteError } = await sb.from('roles').delete().eq('id', req.params.id);
+    if (deleteError) throw deleteError;
     res.json({ message: 'Roli u fshi.' });
   } catch (error) {
     console.error('DELETE /admin/roles/:id:', error?.message || error);

@@ -1,9 +1,10 @@
+'use strict';
+
 const express = require('express');
-const mongoose = require('mongoose');
+const { getSupabaseAdmin } = require('../lib/supabase');
+const { mapProfile } = require('../lib/profiles');
+const { isUuid } = require('../lib/public-listings/query-helpers');
 const auth = require('../middleware/auth');
-const IndividualUser = require('../models/IndividualUser');
-const BusinessUser = require('../models/BusinessUser');
-const ReferralSignup = require('../models/ReferralSignup');
 const {
   loadPortalUserBrief,
   buildReferralLink,
@@ -19,29 +20,61 @@ function requirePlatformAdmin(req, res, next) {
   next();
 }
 
+function displayNameForProfile(u) {
+  if (u.accountType === 'business' || u.accountKind === 'business') {
+    return (
+      (u.businessName && String(u.businessName).trim()) ||
+      (u.businessOwner && String(u.businessOwner).trim()) ||
+      `${u.firstName || ''} ${u.lastName || ''}`.replace(/\s+/g, ' ').trim() ||
+      u.email
+    );
+  }
+  return `${u.firstName || ''} ${u.lastName || ''}`.replace(/\s+/g, ' ').trim() || u.email;
+}
+
 router.use(auth, requirePlatformAdmin);
 
 /** GET /api/admin/referrals/overview */
 router.get('/overview', async (_req, res) => {
   try {
-    const [indReferred, busReferred] = await Promise.all([
-      IndividualUser.countDocuments({ referredById: { $ne: null } }),
-      BusinessUser.countDocuments({ referredById: { $ne: null } }),
-    ]);
-    const referredUsersCount = indReferred + busReferred;
+    const sb = getSupabaseAdmin();
+    const [{ count: referredUsersCount, error: refErr }, { count: totalSignups, error: sigErr }] =
+      await Promise.all([
+        sb
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .in('account_type', ['individual', 'business'])
+          .not('referred_by_id', 'is', null),
+        sb
+          .from('referral_signups')
+          .select('*', { count: 'exact', head: true })
+          .eq('kind', 'free-signup'),
+      ]);
+    if (refErr) throw refErr;
+    if (sigErr) throw sigErr;
 
-    const [totalSignups, creditsAgg, referrersCount] = await Promise.all([
-      ReferralSignup.countDocuments({ kind: 'free-signup' }),
-      ReferralSignup.aggregate([{ $group: { _id: null, total: { $sum: '$creditsAwarded' } } }]),
-      ReferralSignup.distinct('referrerId', { kind: 'free-signup' }),
-    ]);
+    const { data: creditRows, error: credErr } = await sb
+      .from('referral_signups')
+      .select('credits_awarded');
+    if (credErr) throw credErr;
+    const totalCreditsAwarded = (creditRows || []).reduce(
+      (sum, r) => sum + (Number(r.credits_awarded) || 0),
+      0,
+    );
+
+    const { data: referrerRows, error: uniqErr } = await sb
+      .from('referral_signups')
+      .select('referrer_id')
+      .eq('kind', 'free-signup');
+    if (uniqErr) throw uniqErr;
+    const uniqueReferrers = new Set((referrerRows || []).map((r) => r.referrer_id)).size;
 
     res.json({
       overview: {
-        totalSignups,
-        totalCreditsAwarded: creditsAgg[0]?.total ?? 0,
-        uniqueReferrers: referrersCount.length,
-        usersReferred: referredUsersCount,
+        totalSignups: totalSignups ?? 0,
+        totalCreditsAwarded,
+        uniqueReferrers,
+        usersReferred: referredUsersCount ?? 0,
       },
     });
   } catch (err) {
@@ -55,24 +88,29 @@ router.get('/signups', async (req, res) => {
   try {
     const page = Math.max(1, parseInt(String(req.query.page ?? '1'), 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? '30'), 10) || 30));
-    const skip = (page - 1) * limit;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
 
-    const [rows, total] = await Promise.all([
-      ReferralSignup.find({ kind: 'free-signup' }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-      ReferralSignup.countDocuments({ kind: 'free-signup' }),
-    ]);
+    const { data: rows, error, count } = await getSupabaseAdmin()
+      .from('referral_signups')
+      .select('*', { count: 'exact' })
+      .eq('kind', 'free-signup')
+      .order('created_at', { ascending: false })
+      .range(from, to);
+    if (error) throw error;
 
     const signups = await Promise.all(
-      rows.map(async (s) => ({
-        id: String(s._id),
-        referrer: await loadPortalUserBrief(s.referrerId, s.referrerModel),
-        referredUser: await loadPortalUserBrief(s.referredUserId, s.referredUserModel),
-        creditsAwarded: s.creditsAwarded ?? 0,
-        referralCodeUsed: s.referralCodeUsed || '',
-        createdAt: s.createdAt,
+      (rows || []).map(async (s) => ({
+        id: String(s.id),
+        referrer: await loadPortalUserBrief(s.referrer_id, null),
+        referredUser: await loadPortalUserBrief(s.referred_user_id, null),
+        creditsAwarded: s.credits_awarded ?? 0,
+        referralCodeUsed: s.referral_code_used || '',
+        createdAt: s.created_at,
       })),
     );
 
+    const total = count ?? 0;
     res.json({ signups, page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) });
   } catch (err) {
     console.error('GET /admin/referrals/signups:', err?.message || err);
@@ -88,21 +126,30 @@ router.get('/users', async (req, res) => {
     const filter = String(req.query.filter ?? 'all');
     const skip = (page - 1) * limit;
 
-    const [individuals, businesses] = await Promise.all([
-      IndividualUser.find().select('-password').lean(),
-      BusinessUser.find().select('-password').lean(),
-    ]);
+    const sb = getSupabaseAdmin();
+    const { data: profileRows, error } = await sb
+      .from('profiles')
+      .select('*')
+      .in('account_type', ['individual', 'business']);
+    if (error) throw error;
 
-    let rows = [
-      ...individuals.map((u) => ({ ...u, accountKind: 'individual', userModel: 'IndividualUser' })),
-      ...businesses.map((u) => ({ ...u, accountKind: 'business', userModel: 'BusinessUser' })),
-    ];
+    let rows = (profileRows || []).map((r) => {
+      const u = mapProfile(r);
+      return {
+        ...u,
+        accountKind: u.accountType,
+        userModel: u.constructor.modelName,
+      };
+    });
 
     if (filter === 'referrers') {
-      const referrerIds = new Set(
-        (await ReferralSignup.distinct('referrerId', { kind: 'free-signup' })).map(String),
-      );
-      rows = rows.filter((u) => referrerIds.has(String(u._id)));
+      const { data: referrerRows, error: rErr } = await sb
+        .from('referral_signups')
+        .select('referrer_id')
+        .eq('kind', 'free-signup');
+      if (rErr) throw rErr;
+      const referrerIds = new Set((referrerRows || []).map((r) => String(r.referrer_id)));
+      rows = rows.filter((u) => referrerIds.has(String(u.id)));
     } else if (filter === 'referred') {
       rows = rows.filter((u) => u.referredById);
     }
@@ -113,24 +160,14 @@ router.get('/users', async (req, res) => {
 
     const users = await Promise.all(
       pageRows.map(async (u) => {
-        const referralCount = await countFreeReferrals(u._id, u.userModel);
-        const referredBy =
-          u.referredById && u.referredByModel
-            ? await loadPortalUserBrief(u.referredById, u.referredByModel)
-            : null;
-        const displayName =
-          u.accountKind === 'business'
-            ? (u.businessName && String(u.businessName).trim()) ||
-              (u.businessOwner && String(u.businessOwner).trim()) ||
-              `${u.firstName || ''} ${u.lastName || ''}`.replace(/\s+/g, ' ').trim() ||
-              u.email
-            : `${u.firstName || ''} ${u.lastName || ''}`.replace(/\s+/g, ' ').trim() || u.email;
+        const referralCount = await countFreeReferrals(u.id, u.userModel);
+        const referredBy = u.referredById ? await loadPortalUserBrief(u.referredById, null) : null;
 
         return {
-          id: String(u._id),
+          id: String(u.id),
           accountKind: u.accountKind,
           email: u.email,
-          displayName,
+          displayName: displayNameForProfile(u),
           referralCode: u.referralCode || null,
           referralLink: u.referralCode ? buildReferralLink(u.referralCode) : null,
           referralCount,
@@ -151,55 +188,48 @@ router.get('/users', async (req, res) => {
 /** GET /api/admin/referrals/users/:id — detail for one portal user */
 router.get('/users/:id', async (req, res) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.id)) {
+    if (!isUuid(req.params.id)) {
       return res.status(400).json({ message: 'ID e pavlefshme.' });
     }
-    let user = await IndividualUser.findById(req.params.id).select('-password');
-    let userModel = 'IndividualUser';
-    let accountKind = 'individual';
-    if (!user) {
-      user = await BusinessUser.findById(req.params.id).select('-password');
-      userModel = 'BusinessUser';
-      accountKind = 'business';
-    }
-    if (!user) return res.status(404).json({ message: 'Përdoruesi nuk u gjet.' });
+    const sb = getSupabaseAdmin();
+    const { data: row, error } = await sb
+      .from('profiles')
+      .select('*')
+      .eq('id', req.params.id)
+      .in('account_type', ['individual', 'business'])
+      .maybeSingle();
+    if (error) throw error;
+    if (!row) return res.status(404).json({ message: 'Përdoruesi nuk u gjet.' });
 
-    const referralCount = await countFreeReferrals(user._id, userModel);
-    const referredBy =
-      user.referredById && user.referredByModel
-        ? await loadPortalUserBrief(user.referredById, user.referredByModel)
-        : null;
+    const user = mapProfile(row);
+    const accountKind = user.accountType;
+    const userModel = user.constructor.modelName;
 
-    const signupsAsReferrer = await ReferralSignup.find({
-      referrerId: user._id,
-      referrerModel: userModel,
-    })
-      .sort({ createdAt: -1 })
-      .lean();
+    const referralCount = await countFreeReferrals(user.id, userModel);
+    const referredBy = user.referredById ? await loadPortalUserBrief(user.referredById, null) : null;
+
+    const { data: signupsAsReferrer, error: sErr } = await sb
+      .from('referral_signups')
+      .select('*')
+      .eq('referrer_id', user.id)
+      .order('created_at', { ascending: false });
+    if (sErr) throw sErr;
 
     const referredUsers = await Promise.all(
-      signupsAsReferrer.map(async (s) => ({
-        id: String(s._id),
-        user: await loadPortalUserBrief(s.referredUserId, s.referredUserModel),
-        creditsAwarded: s.creditsAwarded ?? 0,
-        createdAt: s.createdAt,
+      (signupsAsReferrer || []).map(async (s) => ({
+        id: String(s.id),
+        user: await loadPortalUserBrief(s.referred_user_id, null),
+        creditsAwarded: s.credits_awarded ?? 0,
+        createdAt: s.created_at,
       })),
     );
 
-    const displayName =
-      accountKind === 'business'
-        ? (user.businessName && String(user.businessName).trim()) ||
-          (user.businessOwner && String(user.businessOwner).trim()) ||
-          `${user.firstName || ''} ${user.lastName || ''}`.replace(/\s+/g, ' ').trim() ||
-          user.email
-        : `${user.firstName || ''} ${user.lastName || ''}`.replace(/\s+/g, ' ').trim() || user.email;
-
     res.json({
       user: {
-        id: String(user._id),
+        id: String(user.id),
         accountKind,
         email: user.email,
-        displayName,
+        displayName: displayNameForProfile({ ...user, accountKind }),
         referralCode: user.referralCode || null,
         referralLink: user.referralCode ? buildReferralLink(user.referralCode) : null,
         referralCount,

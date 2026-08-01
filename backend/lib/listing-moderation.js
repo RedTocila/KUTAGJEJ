@@ -1,56 +1,50 @@
-const mongoose = require('mongoose');
-const RealEstateListing = require('../models/RealEstateListing');
-const CarListing = require('../models/CarListing');
-const JobListing = require('../models/JobListing');
-const MarketplaceListing = require('../models/MarketplaceListing');
-const DirectoryListing = require('../models/DirectoryListing');
-const AdminNotification = require('../models/AdminNotification');
-const { PUBLIC_LISTING_STATUS_FILTER } = require('./listing-moderation-fields');
-const { buildCityIndex } = require('./public-listings/query-helpers');
+const { getSupabaseAdmin } = require('./supabase');
+const { camelizeRow, camelizeRows, modelNameFromAccount } = require('./profiles');
+const { PUBLIC_LISTING_STATUS_FILTER, LISTING_STATUSES } = require('./listing-moderation-fields');
+const { buildCityIndex, isUuid, mergeSpecs } = require('./public-listings/query-helpers');
 
 const LISTING_KINDS = {
   'real-estate': {
-    model: RealEstateListing,
+    table: 'real_estate_listings',
     label: 'Prona',
     title: (doc) => doc.title,
   },
   cars: {
-    model: CarListing,
+    table: 'car_listings',
     label: 'Makina',
     title: (doc) => `${doc.make} ${doc.model}`.trim(),
   },
   jobs: {
-    model: JobListing,
+    table: 'job_listings',
     label: 'Punë',
     title: (doc) => doc.title,
   },
   marketplace: {
-    model: MarketplaceListing,
+    table: 'marketplace_listings',
     label: 'Tregu',
     title: (doc) => doc.title,
   },
   businesses: {
-    model: DirectoryListing,
+    table: 'directory_listings',
     label: 'Biznese',
     title: (doc) => doc.title,
     extraFilter: { vertical: 'businesses' },
   },
   professionals: {
-    model: DirectoryListing,
+    table: 'directory_listings',
     label: 'Profesionistë',
     title: (doc) => doc.title,
     extraFilter: { vertical: 'professionals' },
   },
 };
 
-function mergePublicFilter(filter = {}) {
-  return { ...PUBLIC_LISTING_STATUS_FILTER, ...filter };
+/** Merges a FilterSpec fragment with the "publicly visible" (approved) status condition. */
+function mergePublicFilter(spec = {}) {
+  return mergeSpecs(spec, { eq: { status: 'approved' } });
 }
 
 function getKindConfig(kind) {
-  const cfg = LISTING_KINDS[kind];
-  if (!cfg) return null;
-  return cfg;
+  return LISTING_KINDS[kind] || null;
 }
 
 function listingTitle(kind, doc) {
@@ -58,13 +52,32 @@ function listingTitle(kind, doc) {
   return cfg ? cfg.title(doc) : doc.title || 'Njoftim';
 }
 
-async function backfillListingStatuses() {
-  for (const cfg of Object.values(LISTING_KINDS)) {
-    await cfg.model.updateMany(
-      { $or: [{ status: { $exists: false } }, { status: null }, { status: '' }] },
-      { $set: { status: 'approved' } },
-    );
+function applyExtraFilter(query, cfg) {
+  let q = query;
+  if (cfg.extraFilter) {
+    for (const [col, val] of Object.entries(cfg.extraFilter)) q = q.eq(col, val);
   }
+  return q;
+}
+
+/**
+ * No-op under Postgres: `status` is a NOT NULL enum column with a default,
+ * so rows can never be missing a status the way legacy Mongo docs could.
+ * Kept for call-site compatibility.
+ */
+async function backfillListingStatuses() {
+  return Object.fromEntries(LISTING_STATUSES.map((s) => [s, 0]));
+}
+
+async function createAdminNotification({ type, refKind, refId, title, message }) {
+  const { error } = await getSupabaseAdmin().from('admin_notifications').insert({
+    type,
+    ref_kind: refKind || '',
+    ref_id: refId ?? null,
+    title,
+    message: message || '',
+  });
+  if (error) throw error;
 }
 
 async function notifyAdminsListingSubmitted(kind, listingId, title) {
@@ -78,26 +91,29 @@ async function notifyAdminsListingSubmitted(kind, listingId, title) {
   });
 }
 
-async function createAdminNotification({ type, refKind, refId, title, message }) {
-  await AdminNotification.create({
-    type,
-    refKind: refKind || '',
-    refId: refId ?? null,
-    title,
-    message: message || '',
-  });
+/** Batch-resolve `posterId -> 'IndividualUser'|'BusinessUser'|null` via profiles.account_type. */
+async function loadPosterModelMap(posterIds) {
+  const ids = [...new Set((posterIds || []).filter(Boolean))];
+  if (ids.length === 0) return new Map();
+  const { data, error } = await getSupabaseAdmin().from('profiles').select('id, account_type').in('id', ids);
+  if (error) throw error;
+  const map = new Map();
+  for (const row of data || []) {
+    map.set(row.id, modelNameFromAccount(row.account_type));
+  }
+  return map;
 }
 
-function formatAdminListing(kind, doc, cityById) {
-  const city = doc.cityId ? cityById.get(String(doc.cityId)) : null;
+function formatAdminListing(kind, doc, cityById, posterModelMap) {
+  const city = doc.cityId ? cityById.get(doc.cityId) : null;
   return {
-    id: String(doc._id),
+    id: doc.id,
     kind,
     kindLabel: getKindConfig(kind)?.label ?? kind,
     title: listingTitle(kind, doc),
     status: doc.status || 'pending',
-    posterId: String(doc.posterId),
-    posterModel: doc.posterModel,
+    posterId: doc.posterId,
+    posterModel: posterModelMap?.get(doc.posterId) ?? null,
     cityName: city?.name ?? null,
     price: doc.price ?? doc.salary ?? null,
     currency: doc.currency ?? null,
@@ -110,31 +126,40 @@ function formatAdminListing(kind, doc, cityById) {
 }
 
 async function listAdminListings({ status = 'pending', kind, page = 1, limit = 24 }) {
+  const sb = getSupabaseAdmin();
   const skip = (Math.max(1, page) - 1) * limit;
   const kinds = kind && getKindConfig(kind) ? [kind] : Object.keys(LISTING_KINDS);
   const items = [];
 
   for (const k of kinds) {
     const cfg = getKindConfig(k);
-    const filter = { ...(cfg.extraFilter || {}) };
-    if (status !== 'all') filter.status = status;
-    const docs = await cfg.model.find(filter).sort({ createdAt: -1 }).limit(200).lean();
-    for (const doc of docs) {
+    let q = sb.from(cfg.table).select('*').order('created_at', { ascending: false }).limit(200);
+    q = applyExtraFilter(q, cfg);
+    if (status !== 'all') q = q.eq('status', status);
+    const { data, error } = await q;
+    if (error) throw error;
+    for (const doc of camelizeRows(data)) {
       items.push({ kind: k, doc, createdAt: doc.createdAt });
     }
   }
 
   items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const slice = items.slice(skip, skip + limit);
-  const cityById = await buildCityIndex(slice.map((row) => row.doc));
-  const listings = slice.map((row) => formatAdminListing(row.kind, row.doc, cityById));
+  const [cityById, posterModelMap] = await Promise.all([
+    buildCityIndex(slice.map((row) => row.doc)),
+    loadPosterModelMap(slice.map((row) => row.doc.posterId)),
+  ]);
+  const listings = slice.map((row) => formatAdminListing(row.kind, row.doc, cityById, posterModelMap));
 
   let total = 0;
   for (const k of kinds) {
     const cfg = getKindConfig(k);
-    const filter = { ...(cfg.extraFilter || {}) };
-    if (status !== 'all') filter.status = status;
-    total += await cfg.model.countDocuments(filter);
+    let q = sb.from(cfg.table).select('*', { count: 'exact', head: true });
+    q = applyExtraFilter(q, cfg);
+    if (status !== 'all') q = q.eq('status', status);
+    const { count, error } = await q;
+    if (error) throw error;
+    total += count ?? 0;
   }
 
   return {
@@ -149,39 +174,61 @@ async function listAdminListings({ status = 'pending', kind, page = 1, limit = 2
 async function reviewListing(kind, listingId, admin, decision, adminNote = '') {
   const cfg = getKindConfig(kind);
   if (!cfg) return { ok: false, status: 400, message: 'Lloji i njoftimit nuk është i vlefshëm.' };
-  if (!mongoose.isValidObjectId(listingId)) {
+  if (!isUuid(listingId)) {
     return { ok: false, status: 400, message: 'ID e pavlefshme.' };
   }
 
-  const doc = await cfg.model.findById(listingId);
-  if (!doc) return { ok: false, status: 404, message: 'Njoftimi nuk u gjet.' };
-  if (doc.status !== 'pending') {
+  const sb = getSupabaseAdmin();
+  let selectQ = sb.from(cfg.table).select('*').eq('id', listingId);
+  selectQ = applyExtraFilter(selectQ, cfg);
+  const { data: existing, error: selErr } = await selectQ.maybeSingle();
+  if (selErr) throw selErr;
+  if (!existing) return { ok: false, status: 404, message: 'Njoftimi nuk u gjet.' };
+  if (existing.status !== 'pending') {
     return { ok: false, status: 409, message: 'Ky njoftim është shqyrtuar tashmë.' };
   }
 
   const status = decision === 'approve' ? 'approved' : 'rejected';
-  doc.status = status;
-  doc.reviewedBy = admin._id;
-  doc.reviewedAt = new Date();
-  doc.adminNote = String(adminNote ?? '').trim().slice(0, 500);
-  await doc.save();
+  const { data: updated, error: updErr } = await sb
+    .from(cfg.table)
+    .update({
+      status,
+      reviewed_by: admin.id,
+      reviewed_at: new Date().toISOString(),
+      admin_note: String(adminNote ?? '').trim().slice(0, 500),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', listingId)
+    .select('*')
+    .single();
+  if (updErr) throw updErr;
 
-  const cityById = await buildCityIndex([doc.toObject()]);
+  const doc = camelizeRow(updated);
+  const [cityById, posterModelMap] = await Promise.all([
+    buildCityIndex([doc]),
+    loadPosterModelMap([doc.posterId]),
+  ]);
+
   return {
     ok: true,
-    listing: formatAdminListing(kind, doc.toObject(), cityById),
+    listing: formatAdminListing(kind, doc, cityById, posterModelMap),
   };
 }
 
 async function countListingsByStatus() {
+  const sb = getSupabaseAdmin();
   const out = {};
   for (const [kind, cfg] of Object.entries(LISTING_KINDS)) {
-    const base = { ...(cfg.extraFilter || {}) };
+    const countFor = async (statusValue) => {
+      let q = sb.from(cfg.table).select('*', { count: 'exact', head: true });
+      q = applyExtraFilter(q, cfg);
+      if (statusValue) q = q.eq('status', statusValue);
+      const { count, error } = await q;
+      if (error) throw error;
+      return count ?? 0;
+    };
     const [total, pending, approved, rejected] = await Promise.all([
-      cfg.model.countDocuments(base),
-      cfg.model.countDocuments({ ...base, status: 'pending' }),
-      cfg.model.countDocuments({ ...base, status: 'approved' }),
-      cfg.model.countDocuments({ ...base, status: 'rejected' }),
+      countFor(), countFor('pending'), countFor('approved'), countFor('rejected'),
     ]);
     out[kind] = { total, pending, approved, rejected };
   }
@@ -196,6 +243,7 @@ module.exports = {
   backfillListingStatuses,
   notifyAdminsListingSubmitted,
   createAdminNotification,
+  loadPosterModelMap,
   formatAdminListing,
   listAdminListings,
   reviewListing,

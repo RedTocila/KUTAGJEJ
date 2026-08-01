@@ -33,14 +33,14 @@ export function mongoIdFromRealEstatePermalink(segment: string): string | null {
   return OBJECT_ID.test(id) ? id.toLowerCase() : null;
 }
 
-/** Resolves mongo id from `/prona/{permalink}` segment (`.html` or legacy bare ObjectId). */
+/** Resolves listing id from `/prona/{permalink}` segment (`.html` or legacy bare id). */
 export function mongoIdFromPronaDynamicSegment(segment: string): string | null {
   const raw = normalizeListingPermalinkSegment(segment);
   if (OBJECT_ID.test(raw)) return raw.toLowerCase();
   return mongoIdFromRealEstatePermalink(raw);
 }
 
-/** Alias: same `{slug}-{mongoId}.html` or legacy bare ObjectId for all browse verticals. */
+/** Alias: same `{slug}-{id}.html` or legacy bare id for all browse verticals. */
 export function mongoIdFromPublicListingSegment(segment: string): string | null {
   return mongoIdFromPronaDynamicSegment(segment);
 }

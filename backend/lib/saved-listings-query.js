@@ -1,8 +1,8 @@
-const mongoose = require('mongoose');
-const SavedListing = require('../models/SavedListing');
-const { saverFromUser, metricsKey, fetchMetricsMap } = require('./listing-metrics');
-const { PUBLIC_LISTING_STATUS_FILTER } = require('./listing-moderation-fields');
-const { buildCityIndex } = require('./public-listings/query-helpers');
+'use strict';
+
+const { getSupabaseAdmin } = require('./supabase');
+const { camelizeRow } = require('./profiles');
+const { isUuid, buildCityIndex } = require('./public-listings/query-helpers');
 const { reviewStatsByListingIds } = require('./business-review-stats');
 const { professionalReviewStatsByListingIds } = require('./professional-review-stats');
 const {
@@ -13,13 +13,22 @@ const {
   formatDirectory,
 } = require('./public-listings/formatters');
 
-const MODEL_BY_KIND = {
-  'real-estate': require('../models/RealEstateListing'),
-  car: require('../models/CarListing'),
-  job: require('../models/JobListing'),
-  marketplace: require('../models/MarketplaceListing'),
-  businesses: require('../models/DirectoryListing'),
-  professionals: require('../models/DirectoryListing'),
+/** Keep local — avoid circular require with listing-metrics (metricsKey was previously unexported). */
+function metricsKey(kind, listingId) {
+  return `${kind}:${String(listingId)}`;
+}
+
+function fetchMetricsMap(refs, saver) {
+  return require('./listing-metrics').fetchMetricsMap(refs, saver);
+}
+
+const TABLE_BY_KIND = {
+  'real-estate': 'real_estate_listings',
+  car: 'car_listings',
+  job: 'job_listings',
+  marketplace: 'marketplace_listings',
+  businesses: 'directory_listings',
+  professionals: 'directory_listings',
 };
 
 const KIND_LABELS = {
@@ -32,13 +41,15 @@ const KIND_LABELS = {
 };
 
 async function loadApprovedListing(kind, listingId) {
-  const Model = MODEL_BY_KIND[kind];
-  if (!Model || !mongoose.isValidObjectId(listingId)) return null;
-  const filter = { _id: listingId, ...PUBLIC_LISTING_STATUS_FILTER };
+  const table = TABLE_BY_KIND[kind];
+  if (!table || !isUuid(listingId)) return null;
+  let q = getSupabaseAdmin().from(table).select('*').eq('id', listingId).eq('status', 'approved');
   if (kind === 'businesses' || kind === 'professionals') {
-    filter.vertical = kind;
+    q = q.eq('vertical', kind);
   }
-  return Model.findOne(filter).lean();
+  const { data, error } = await q.maybeSingle();
+  if (error) throw error;
+  return data ? camelizeRow(data) : null;
 }
 
 function listingCardTitle(kind, formatted) {
@@ -79,47 +90,55 @@ async function formatSavedRow(kind, doc, cityById, reviewStats) {
 
 async function getSavedKeysForSaver(saver) {
   if (!saver) return [];
-  const docs = await SavedListing.find({
-    saverId: saver.saverId,
-    saverModel: saver.saverModel,
-  })
-    .select('listingKind listingId')
-    .lean();
-  return docs.map((d) => metricsKey(d.listingKind, d.listingId));
+  const { data, error } = await getSupabaseAdmin()
+    .from('saved_listings')
+    .select('listing_kind, listing_id')
+    .eq('saver_id', saver.saverId);
+  if (error) throw error;
+  return (data || []).map((d) => metricsKey(d.listing_kind, d.listing_id));
 }
 
 async function listSavedListingsForSaver(saver, { page = 1, limit = 24 } = {}) {
   if (!saver) return { keys: [], items: [], total: 0, page: 1, limit, totalPages: 1 };
 
   const skip = (Math.max(1, page) - 1) * limit;
-  const [rows, total, keys] = await Promise.all([
-    SavedListing.find({ saverId: saver.saverId, saverModel: saver.saverModel })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    SavedListing.countDocuments({ saverId: saver.saverId, saverModel: saver.saverModel }),
+  const sb = getSupabaseAdmin();
+
+  const [rowsRes, countRes, keys] = await Promise.all([
+    sb
+      .from('saved_listings')
+      .select('*')
+      .eq('saver_id', saver.saverId)
+      .order('created_at', { ascending: false })
+      .range(skip, skip + limit - 1),
+    sb
+      .from('saved_listings')
+      .select('*', { count: 'exact', head: true })
+      .eq('saver_id', saver.saverId),
     getSavedKeysForSaver(saver),
   ]);
+  if (rowsRes.error) throw rowsRes.error;
+  if (countRes.error) throw countRes.error;
 
+  const total = countRes.count ?? 0;
   const loaded = [];
-  for (const row of rows) {
-    const kind = row.listingKind;
-    const listingId = String(row.listingId);
+  for (const row of rowsRes.data || []) {
+    const kind = row.listing_kind;
+    const listingId = String(row.listing_id);
     const doc = await loadApprovedListing(kind, listingId);
     if (!doc) continue;
-    loaded.push({ kind, doc, savedAt: row.createdAt });
+    loaded.push({ kind, doc, savedAt: row.created_at });
   }
 
   const cityById = await buildCityIndex(loaded.map((r) => r.doc));
-  const bizIds = loaded.filter((r) => r.kind === 'businesses').map((r) => r.doc._id);
-  const profIds = loaded.filter((r) => r.kind === 'professionals').map((r) => r.doc._id);
+  const bizIds = loaded.filter((r) => r.kind === 'businesses').map((r) => r.doc.id);
+  const profIds = loaded.filter((r) => r.kind === 'professionals').map((r) => r.doc.id);
   const [bizStats, profStats] = await Promise.all([
     bizIds.length ? reviewStatsByListingIds(bizIds) : null,
     profIds.length ? professionalReviewStatsByListingIds(profIds) : null,
   ]);
 
-  const refs = loaded.map((r) => ({ kind: r.kind, listingId: String(r.doc._id) }));
+  const refs = loaded.map((r) => ({ kind: r.kind, listingId: String(r.doc.id) }));
   const metricsMap = await fetchMetricsMap(refs, saver);
 
   const items = [];

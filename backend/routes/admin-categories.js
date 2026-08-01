@@ -1,9 +1,11 @@
 const express = require('express');
-const ListingCategory = require('../models/ListingCategory');
-const { CATEGORY_KEYS } = require('../models/ListingCategory');
+const { getSupabaseAdmin } = require('../lib/supabase');
+const { camelizeRows } = require('../lib/profiles');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
+
+const CATEGORY_KEYS = ['real-estate', 'job-listings', 'cars', 'marketplace', 'businesses', 'professionals'];
 
 function requirePlatformAdmin(req, res, next) {
   if (!req.admin || req.admin.constructor.modelName !== 'Admin') {
@@ -12,14 +14,15 @@ function requirePlatformAdmin(req, res, next) {
   next();
 }
 
-function format(doc) {
+function format(row) {
+  const c = camelizeRows([row])[0];
   return {
-    key: doc.key,
-    title: doc.title,
-    slug: doc.slug,
-    listingTypes: (doc.listingTypes || []).map((t) => ({ slug: t.slug, label: t.label })),
-    apartmentTypes: (doc.apartmentTypes || []).map((t) => ({ slug: t.slug, label: t.label })),
-    updatedAt: doc.updatedAt,
+    key: c.key,
+    title: c.title,
+    slug: c.slug,
+    listingTypes: (c.listingTypes || []).map((t) => ({ slug: t.slug, label: t.label })),
+    apartmentTypes: (c.apartmentTypes || []).map((t) => ({ slug: t.slug, label: t.label })),
+    updatedAt: c.updatedAt,
   };
 }
 
@@ -41,8 +44,9 @@ router.use(authMiddleware, requirePlatformAdmin);
 
 router.get('/', async (_req, res) => {
   try {
-    const docs = await ListingCategory.find().sort({ key: 1 }).lean();
-    res.json({ categories: docs.map((d) => format(d)) });
+    const { data, error } = await getSupabaseAdmin().from('listing_categories').select('*').order('key', { ascending: true });
+    if (error) throw error;
+    res.json({ categories: (data || []).map((d) => format(d)) });
   } catch (error) {
     console.error('GET /admin/categories:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -56,26 +60,35 @@ router.patch('/:key', async (req, res) => {
       return res.status(404).json({ message: 'Kategoria nuk ekziston.' });
     }
 
-    const doc = await ListingCategory.findOne({ key });
+    const sb = getSupabaseAdmin();
+    const { data: doc, error: findError } = await sb.from('listing_categories').select('*').eq('key', key).maybeSingle();
+    if (findError) throw findError;
     if (!doc) return res.status(404).json({ message: 'Kategoria nuk u gjet.' });
 
     const { title, slug, listingTypes, apartmentTypes } = req.body;
+    const patch = {};
 
     if (title !== undefined) {
       const t = String(title).trim();
       if (!t) return res.status(400).json({ message: 'Titulli nuk mund të jetë bosh.' });
-      doc.title = t;
+      patch.title = t;
     }
 
     if (slug !== undefined) {
       const s = normalizeSlug(slug);
       if (!s) return res.status(400).json({ message: 'Slug-i është i pavlefshëm.' });
       if (!SLUG_RE.test(s)) return res.status(400).json({ message: 'Përdorni vetëm shkronja të vogla, numra dhe vizat.' });
-      const conflict = await ListingCategory.findOne({ slug: s, key: { $ne: key } }).lean();
+      const { data: conflict, error: conflictError } = await sb
+        .from('listing_categories')
+        .select('key')
+        .eq('slug', s)
+        .neq('key', key)
+        .maybeSingle();
+      if (conflictError) throw conflictError;
       if (conflict) {
         return res.status(400).json({ message: 'Një kategori tjetër përdor tashmë këtë slug.' });
       }
-      doc.slug = s;
+      patch.slug = s;
     }
 
     if (listingTypes !== undefined) {
@@ -98,7 +111,7 @@ router.patch('/:key', async (req, res) => {
         seen.add(ls);
         next.push({ slug: ls, label });
       }
-      doc.listingTypes = next;
+      patch.listing_types = next;
     }
 
     if (apartmentTypes !== undefined) {
@@ -124,15 +137,26 @@ router.patch('/:key', async (req, res) => {
         seenA.add(ls);
         nextA.push({ slug: ls, label });
       }
-      doc.apartmentTypes = nextA;
+      patch.apartment_types = nextA;
     }
 
-    await doc.save();
-    res.json({ category: format(doc.toObject()) });
-  } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ message: 'Slug-i është i zënë.' });
+    patch.updated_at = new Date().toISOString();
+
+    const { data: updated, error: updateError } = await sb
+      .from('listing_categories')
+      .update(patch)
+      .eq('key', key)
+      .select('*')
+      .single();
+    if (updateError) {
+      if (updateError.code === '23505') {
+        return res.status(400).json({ message: 'Slug-i është i zënë.' });
+      }
+      throw updateError;
     }
+
+    res.json({ category: format(updated) });
+  } catch (error) {
     console.error('PATCH /admin/categories/:key:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }

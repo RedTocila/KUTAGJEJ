@@ -1,38 +1,31 @@
-const IndividualUser = require('../models/IndividualUser');
-const BusinessUser = require('../models/BusinessUser');
-const ProfessionalVerificationRequest = require('../models/ProfessionalVerificationRequest');
+'use strict';
+
+const { getSupabaseAdmin } = require('./supabase');
+const { getProfileById } = require('./profiles');
 const {
   buildApplicantSnapshot,
   formatVerificationRequest,
 } = require('./job-employer-verification');
 const { createAdminNotification } = require('./listing-moderation');
+const { isUuid } = require('./public-listings/query-helpers');
 
 function isProfessionalVerified(userDoc) {
   return Boolean(userDoc?.professionalsVerifiedAt);
 }
 
-async function loadPortalUser(modelName, userId) {
-  if (modelName === 'IndividualUser') {
-    return IndividualUser.findById(userId).lean();
-  }
-  if (modelName === 'BusinessUser') {
-    return BusinessUser.findById(userId).lean();
-  }
-  return null;
-}
-
 async function getApplicantVerificationStatus(user) {
-  const modelName = user.constructor.modelName;
-  const portal = await loadPortalUser(modelName, user._id);
+  const portal = await getProfileById(user.id || user._id);
   if (!portal) return { verified: false, canRequest: false, latestRequest: null };
 
   const verified = isProfessionalVerified(portal);
-  const latest = await ProfessionalVerificationRequest.findOne({
-    applicantId: user._id,
-    applicantModel: modelName,
-  })
-    .sort({ createdAt: -1 })
-    .lean();
+  const { data: latest, error } = await getSupabaseAdmin()
+    .from('professional_verification_requests')
+    .select('*')
+    .eq('applicant_id', portal.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
 
   const pending = latest?.status === 'pending';
   return {
@@ -43,38 +36,44 @@ async function getApplicantVerificationStatus(user) {
 }
 
 async function submitVerificationRequest(user, message) {
-  const modelName = user.constructor.modelName;
-  const portal = await loadPortalUser(modelName, user._id);
+  const portal = await getProfileById(user.id || user._id);
   if (!portal) return { ok: false, status: 404, message: 'User not found.' };
 
   if (isProfessionalVerified(portal)) {
     return { ok: false, status: 400, message: 'Profili juaj është tashmë i verifikuar për Profesionistë.' };
   }
 
-  const pending = await ProfessionalVerificationRequest.findOne({
-    applicantId: user._id,
-    applicantModel: modelName,
-    status: 'pending',
-  }).lean();
+  const { data: pending, error: pendingErr } = await getSupabaseAdmin()
+    .from('professional_verification_requests')
+    .select('id')
+    .eq('applicant_id', portal.id)
+    .eq('status', 'pending')
+    .limit(1)
+    .maybeSingle();
+  if (pendingErr) throw pendingErr;
 
   if (pending) {
     return { ok: false, status: 400, message: 'Keni tashmë një kërkesë në pritje.' };
   }
 
   const note = String(message ?? '').replace(/\s+/g, ' ').trim().slice(0, 2000);
-  const doc = await ProfessionalVerificationRequest.create({
-    applicantId: user._id,
-    applicantModel: modelName,
-    status: 'pending',
-    message: note,
-    applicantSnapshot: buildApplicantSnapshot(portal, modelName),
-  });
+  const snap = buildApplicantSnapshot(portal, portal.constructor.modelName);
+  const { data: doc, error } = await getSupabaseAdmin()
+    .from('professional_verification_requests')
+    .insert({
+      applicant_id: portal.id,
+      status: 'pending',
+      message: note,
+      applicant_snapshot: snap,
+    })
+    .select('*')
+    .single();
+  if (error) throw error;
 
-  const snap = buildApplicantSnapshot(portal, modelName);
   await createAdminNotification({
     type: 'professional_verification',
     refKind: 'professionals',
-    refId: doc._id,
+    refId: doc.id,
     title: 'Kërkesë verifikimi profesionisti',
     message: `${snap.displayName || 'Përdorues'} dërgoi një kërkesë verifikimi për Profesionistë.`,
   });
@@ -83,25 +82,47 @@ async function submitVerificationRequest(user, message) {
 }
 
 async function reviewVerificationRequest(admin, requestId, decision, adminNote) {
-  const doc = await ProfessionalVerificationRequest.findById(requestId);
+  if (!isUuid(String(requestId || '').trim())) {
+    return { ok: false, status: 404, message: 'Request not found.' };
+  }
+
+  const sb = getSupabaseAdmin();
+  const { data: doc, error: findErr } = await sb
+    .from('professional_verification_requests')
+    .select('*')
+    .eq('id', requestId)
+    .maybeSingle();
+  if (findErr) throw findErr;
   if (!doc) return { ok: false, status: 404, message: 'Request not found.' };
   if (doc.status !== 'pending') {
     return { ok: false, status: 400, message: 'Kjo kërkesë është përpunuar tashmë.' };
   }
 
   const status = decision === 'approve' ? 'approved' : 'rejected';
-  doc.status = status;
-  doc.reviewedBy = admin._id;
-  doc.reviewedAt = new Date();
-  doc.adminNote = String(adminNote ?? '').trim().slice(0, 2000);
-  await doc.save();
+  const now = new Date().toISOString();
+  const { data: updated, error: updateErr } = await sb
+    .from('professional_verification_requests')
+    .update({
+      status,
+      reviewed_by: admin.id || admin._id,
+      reviewed_at: now,
+      admin_note: String(adminNote ?? '').trim().slice(0, 2000),
+      updated_at: now,
+    })
+    .eq('id', requestId)
+    .select('*')
+    .single();
+  if (updateErr) throw updateErr;
 
   if (status === 'approved') {
-    const Model = doc.applicantModel === 'IndividualUser' ? IndividualUser : BusinessUser;
-    await Model.findByIdAndUpdate(doc.applicantId, { professionalsVerifiedAt: new Date() });
+    const { error: profileErr } = await sb
+      .from('profiles')
+      .update({ professionals_verified_at: now, updated_at: now })
+      .eq('id', doc.applicant_id);
+    if (profileErr) throw profileErr;
   }
 
-  return { ok: true, request: formatVerificationRequest(doc) };
+  return { ok: true, request: formatVerificationRequest(updated) };
 }
 
 module.exports = {

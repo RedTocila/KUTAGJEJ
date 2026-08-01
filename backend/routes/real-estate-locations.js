@@ -1,16 +1,17 @@
 const express = require('express');
-const RealEstateCity = require('../models/RealEstateCity');
+const { getSupabaseAdmin } = require('../lib/supabase');
+const { camelizeRows } = require('../lib/profiles');
 
 const router = express.Router();
 
-function formatCity(doc) {
-  const o = typeof doc.toObject === 'function' ? doc.toObject() : doc;
+function formatCity(row) {
+  const c = camelizeRows([row])[0];
   return {
-    id: String(o._id),
-    name: o.name,
-    slug: o.slug,
-    zones: (o.zones || []).map((z) => ({
-      id: String(z._id),
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
+    zones: (c.zones || []).map((z) => ({
+      id: z.id,
       name: z.name,
       slug: z.slug,
     })),
@@ -20,8 +21,12 @@ function formatCity(doc) {
 /** Public: cities and zones for the real-estate listing form. */
 router.get('/', async (_req, res) => {
   try {
-    const docs = await RealEstateCity.find().sort({ name: 1 }).lean();
-    res.json({ cities: docs.map((d) => formatCity(d)) });
+    const { data, error } = await getSupabaseAdmin()
+      .from('real_estate_cities')
+      .select('*')
+      .order('name', { ascending: true });
+    if (error) throw error;
+    res.json({ cities: (data || []).map((d) => formatCity(d)) });
   } catch (error) {
     console.error('GET /real-estate/locations:', error?.message || error);
     res.status(500).json({ message: 'Server error' });

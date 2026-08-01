@@ -1,19 +1,14 @@
+'use strict';
+
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
+const requirePortalUser = require('../middleware/require-portal-user');
 const {
   getApplicantVerificationStatus,
   submitVerificationRequest,
 } = require('../lib/job-employer-verification');
 
 const router = express.Router();
-
-function requirePortalUser(req, res, next) {
-  const model = req.user?.constructor?.modelName;
-  if (model !== 'IndividualUser' && model !== 'BusinessUser') {
-    return res.status(403).json({ message: 'Ky veprim kërkon llogari individuale ose biznesi.' });
-  }
-  next();
-}
 
 /** GET /api/job-employer-verification/status */
 router.get('/status', authMiddleware, requirePortalUser, async (req, res) => {

@@ -1,4 +1,5 @@
-const mongoose = require('mongoose');
+'use strict';
+
 const { PROPERTY_SLUGS } = require('../real-estate-field-rules');
 const { FUEL_TYPE_VALUES, CAR_MAKES, TRANSMISSION_VALUES } = require('../car-field-rules');
 const {
@@ -10,7 +11,14 @@ const {
 } = require('../job-field-rules');
 const { BUSINESS_CATEGORIES } = require('../directory-business-validation');
 const { PROFESSIONAL_CATEGORIES } = require('../directory-professional-validation');
-const { activeJobCreatedAtFilter } = require('./query-helpers');
+const {
+  activeJobCreatedAtFilter,
+  isUuid,
+  parseSort,
+  buildSort,
+  buildIlikeOrFilter,
+  mergeSpecs,
+} = require('./query-helpers');
 
 const MARKETPLACE_CATEGORY_VALUES = [
   'elektronike', 'mobilje-shtepi', 'veshje-aksesore', 'libra-shkolla',
@@ -19,24 +27,20 @@ const MARKETPLACE_CATEGORY_VALUES = [
 
 const MARKETPLACE_CONDITION_VALUES = ['i-ri', 'si-i-ri', 'shume-mire', 'mire', 'me-defekte'];
 
-const SORT_VALUES = new Set(['newest', 'price-asc', 'price-desc']);
-
-function parseObjectId(value) {
+function parseUuid(value) {
   const raw = String(value ?? '').trim();
-  return mongoose.isValidObjectId(raw) ? new mongoose.Types.ObjectId(raw) : null;
+  return isUuid(raw) ? raw : null;
 }
 
-function parseObjectIdArray(query, key) {
+function parseUuidArray(query, key) {
   const raw = query[key];
   const values = Array.isArray(raw) ? raw : raw != null && raw !== '' ? [raw] : [];
   const seen = new Set();
   const ids = [];
   for (const value of values) {
-    const id = parseObjectId(value);
-    if (!id) continue;
-    const token = String(id);
-    if (seen.has(token)) continue;
-    seen.add(token);
+    const id = parseUuid(value);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
     ids.push(id);
   }
   return ids;
@@ -57,166 +61,144 @@ function parseAllowedFromArray(value, allowedValues) {
   return allowedValues.includes(raw) ? raw : null;
 }
 
-function escapeRegex(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function applyTextSearch(spec, query, fields) {
+  const or = buildIlikeOrFilter(fields, query.q);
+  if (or) spec.or = or;
 }
 
-function applyTextSearch(filter, query, fields) {
-  const q = String(query.q ?? '').trim();
-  if (q.length < 2 || q.length > 80) return;
-  const pattern = { $regex: escapeRegex(q), $options: 'i' };
-  const clauses = fields.map((field) => ({ [field]: pattern }));
-  if (clauses.length === 1) {
-    Object.assign(filter, clauses[0]);
-    return;
-  }
-  filter.$or = clauses;
-}
-
-function applyPriceRange(filter, minPrice, maxPrice) {
+function applyPriceRange(spec, minPrice, maxPrice) {
   const min = parsePositiveInt(minPrice);
   const max = parsePositiveInt(maxPrice);
   if (min == null && max == null) return;
-  filter.price = {};
-  if (min != null) filter.price.$gte = min;
-  if (max != null) filter.price.$lte = max;
-}
-
-function parseSort(value) {
-  const raw = String(value ?? '').trim().toLowerCase();
-  return SORT_VALUES.has(raw) ? raw : 'newest';
-}
-
-function buildPriceSort(sort, field = 'price') {
-  if (sort === 'price-asc') return { [field]: 1, createdAt: -1 };
-  if (sort === 'price-desc') return { [field]: -1, createdAt: -1 };
-  return { createdAt: -1 };
+  if (!spec.gte) spec.gte = {};
+  if (!spec.lte) spec.lte = {};
+  if (min != null) spec.gte.price = min;
+  if (max != null) spec.lte.price = max;
 }
 
 function parseRealEstateFilters(query) {
-  const filter = {};
+  const filter = { eq: {}, gte: {}, lte: {}, in: {} };
+
   const cat = parseAllowedFromArray(query.cat || query.category, PROPERTY_SLUGS);
-  if (cat) filter.propertyCategory = cat;
+  if (cat) filter.eq.property_category = cat;
 
   const tx = parseAllowedString(query.tx || query.transaction, new Set(['rent', 'sale']));
-  if (tx) filter.transactionType = tx;
+  if (tx) filter.eq.transaction_type = tx;
 
-  const cityId = parseObjectId(query.city);
-  if (cityId) filter.cityId = cityId;
+  const cityId = parseUuid(query.city);
+  if (cityId) filter.eq.city_id = cityId;
 
-  const zoneIds = parseObjectIdArray(query, 'zone');
-  if (zoneIds.length) filter.zoneId = { $in: zoneIds };
+  const zoneIds = parseUuidArray(query, 'zone');
+  if (zoneIds.length) filter.in.zone_id = zoneIds;
 
   applyPriceRange(filter, query.minPrice, query.maxPrice);
 
   const minSurface = parsePositiveInt(query.minSurface);
-  if (minSurface != null) filter.surfaceM2 = { $gte: minSurface };
+  if (minSurface != null) filter.gte.surface_m2 = minSurface;
 
   const bedrooms = parsePositiveInt(query.bedrooms);
-  if (bedrooms != null) filter.bedrooms = { $gte: bedrooms };
+  if (bedrooms != null) filter.gte.bedrooms = bedrooms;
 
   applyTextSearch(filter, query, ['title', 'description']);
 
   const sort = parseSort(query.sort);
-  return { filter, sort: buildPriceSort(sort) };
+  return { filter, sort: buildSort(sort) };
 }
 
 function parseCarFilters(query) {
-  const filter = {};
+  const filter = { eq: {}, gte: {}, lte: {} };
+
   const fuel = parseAllowedFromArray(query.fuel, FUEL_TYPE_VALUES);
-  if (fuel) filter.fuelType = fuel;
+  if (fuel) filter.eq.fuel_type = fuel;
 
   const make = String(query.make ?? '').trim();
-  if (make && CAR_MAKES.includes(make)) filter.make = make;
+  if (make && CAR_MAKES.includes(make)) filter.eq.make = make;
 
   const transmission = parseAllowedFromArray(query.transmission, TRANSMISSION_VALUES);
-  if (transmission) filter.transmission = transmission;
+  if (transmission) filter.eq.transmission = transmission;
 
-  const cityId = parseObjectId(query.city);
-  if (cityId) filter.cityId = cityId;
+  const cityId = parseUuid(query.city);
+  if (cityId) filter.eq.city_id = cityId;
 
   applyPriceRange(filter, query.minPrice, query.maxPrice);
 
   const minYear = parsePositiveInt(query.minYear);
   const maxYear = parsePositiveInt(query.maxYear);
-  if (minYear != null || maxYear != null) {
-    filter.year = {};
-    if (minYear != null) filter.year.$gte = minYear;
-    if (maxYear != null) filter.year.$lte = maxYear;
-  }
+  if (minYear != null) filter.gte.year = minYear;
+  if (maxYear != null) filter.lte.year = maxYear;
 
   const maxKm = parsePositiveInt(query.maxKm);
-  if (maxKm != null) filter.kilometers = { $lte: maxKm };
+  if (maxKm != null) filter.lte.kilometers = maxKm;
 
-  applyTextSearch(filter, query, ['title', 'description', 'make', 'model', 'trim']);
+  applyTextSearch(filter, query, ['description', 'make', 'model', 'variant']);
 
   const sort = parseSort(query.sort);
-  return { filter, sort: buildPriceSort(sort) };
+  return { filter, sort: buildSort(sort) };
 }
 
 function parseJobFilters(query) {
-  const filter = { ...activeJobCreatedAtFilter() };
+  const filter = mergeSpecs(activeJobCreatedAtFilter(), { eq: {} });
 
   const industry = parseAllowedFromArray(query.industry, INDUSTRY_VALUES);
-  if (industry) filter.industry = industry;
+  if (industry) filter.eq.industry = industry;
 
   const jobType = parseAllowedFromArray(query.jobType, JOB_TYPE_VALUES);
-  if (jobType) filter.jobType = jobType;
+  if (jobType) filter.eq.job_type = jobType;
 
   const workLocation = parseAllowedFromArray(query.workLocation, WORK_LOCATION_VALUES);
-  if (workLocation) filter.workLocation = workLocation;
+  if (workLocation) filter.eq.work_location = workLocation;
 
   const education = parseAllowedFromArray(query.education, EDUCATION_VALUES);
-  if (education) filter.education = education;
+  if (education) filter.eq.education = education;
 
   const experience = parseAllowedFromArray(query.experience, EXPERIENCE_VALUES);
-  if (experience) filter.experience = experience;
+  if (experience) filter.eq.experience = experience;
 
-  const cityId = parseObjectId(query.city);
-  if (cityId) filter.cityId = cityId;
+  const cityId = parseUuid(query.city);
+  if (cityId) filter.eq.city_id = cityId;
 
   applyTextSearch(filter, query, ['title', 'description']);
 
   const sort = parseSort(query.sort);
-  return { filter, sort: buildPriceSort(sort, 'salary') };
+  return { filter, sort: buildSort(sort, 'salary') };
 }
 
 function parseMarketplaceFilters(query) {
-  const filter = {};
+  const filter = { eq: {}, gte: {}, lte: {} };
+
   const cat = parseAllowedFromArray(query.cat || query.category, MARKETPLACE_CATEGORY_VALUES);
-  if (cat) filter.category = cat;
+  if (cat) filter.eq.category = cat;
 
   const condition = parseAllowedFromArray(query.condition, MARKETPLACE_CONDITION_VALUES);
-  if (condition) filter.condition = condition;
+  if (condition) filter.eq.condition = condition;
 
-  const cityId = parseObjectId(query.city);
-  if (cityId) filter.cityId = cityId;
+  const cityId = parseUuid(query.city);
+  if (cityId) filter.eq.city_id = cityId;
 
   applyPriceRange(filter, query.minPrice, query.maxPrice);
-
   applyTextSearch(filter, query, ['title', 'description']);
 
   const sort = parseSort(query.sort);
-  return { filter, sort: buildPriceSort(sort) };
+  return { filter, sort: buildSort(sort) };
 }
 
 function parseDirectoryFilters(query, vertical) {
-  const filter = { vertical };
+  const filter = { eq: { vertical } };
   const allowed =
     vertical === 'businesses'
       ? BUSINESS_CATEGORIES
       : PROFESSIONAL_CATEGORIES;
 
   const type = parseAllowedString(query.type || query.cat || query.category, allowed);
-  if (type) filter.category = type;
+  if (type) filter.eq.category = type;
 
-  const cityId = parseObjectId(query.city);
-  if (cityId) filter.cityId = cityId;
+  const cityId = parseUuid(query.city);
+  if (cityId) filter.eq.city_id = cityId;
 
   applyTextSearch(filter, query, ['title', 'description']);
 
   const sort = parseSort(query.sort);
-  return { filter, sort: buildPriceSort(sort) };
+  return { filter, sort: buildSort(sort) };
 }
 
 module.exports = {

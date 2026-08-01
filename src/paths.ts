@@ -104,7 +104,7 @@ export function pathsPublicVerticalListingDetail(
 }
 
 /**
- * Prefer server `permalinkPath`; fall back to legacy bare ObjectId (handled by `[permalink]` resolver).
+ * Prefer server `permalinkPath`; fall back to legacy bare id (handled by `[permalink]` resolver).
  */
 export function listingCarPublicHref(entry: { permalinkPath?: string | null; id: string }): string {
   const raw = typeof entry.permalinkPath === 'string' ? entry.permalinkPath.trim() : '';
@@ -137,7 +137,7 @@ export function listingProfessionalPublicHref(entry: { permalinkPath?: string | 
 }
 
 /**
- * Prefer server `permalinkPath`; fall back to legacy bare ObjectId (handled by `[permalink]` resolver).
+ * Prefer server `permalinkPath`; fall back to legacy bare id (handled by `[permalink]` resolver).
  */
 export function listingRealEstatePublicHref(entry: { permalinkPath?: string | null; id: string }): string {
   const raw = typeof entry.permalinkPath === 'string' ? entry.permalinkPath.trim() : '';

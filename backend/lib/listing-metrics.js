@@ -1,12 +1,7 @@
-const mongoose = require('mongoose');
-const ListingEngagement = require('../models/ListingEngagement');
-const SavedListing = require('../models/SavedListing');
-const ListingMetricDedup = require('../models/ListingMetricDedup');
-const RealEstateListing = require('../models/RealEstateListing');
-const CarListing = require('../models/CarListing');
-const JobListing = require('../models/JobListing');
-const MarketplaceListing = require('../models/MarketplaceListing');
-const DirectoryListing = require('../models/DirectoryListing');
+'use strict';
+
+const { getSupabaseAdmin } = require('./supabase');
+const { isUuid } = require('./public-listings/query-helpers');
 
 const LISTING_KINDS = new Set([
   'real-estate',
@@ -17,13 +12,13 @@ const LISTING_KINDS = new Set([
   'professionals',
 ]);
 
-const MODEL_BY_KIND = {
-  'real-estate': RealEstateListing,
-  car: CarListing,
-  job: JobListing,
-  marketplace: MarketplaceListing,
-  businesses: DirectoryListing,
-  professionals: DirectoryListing,
+const TABLE_BY_KIND = {
+  'real-estate': 'real_estate_listings',
+  car: 'car_listings',
+  job: 'job_listings',
+  marketplace: 'marketplace_listings',
+  businesses: 'directory_listings',
+  professionals: 'directory_listings',
 };
 
 const DEDUP_MS = {
@@ -49,7 +44,7 @@ function visitorKeyFromRequest(req) {
   if (req.user) {
     const model = req.user.constructor?.modelName;
     if (model === 'IndividualUser' || model === 'BusinessUser') {
-      return `user:${model}:${req.user._id}`;
+      return `user:${model}:${req.user.id}`;
     }
   }
   return null;
@@ -59,98 +54,162 @@ function saverFromUser(user) {
   if (!user) return null;
   const model = user.constructor?.modelName;
   if (model !== 'IndividualUser' && model !== 'BusinessUser') return null;
-  return { saverId: user._id, saverModel: model };
+  return { saverId: user.id, saverModel: model };
 }
 
 async function listingExists(kind, listingId) {
-  const Model = MODEL_BY_KIND[kind];
-  if (!Model || !mongoose.isValidObjectId(listingId)) return false;
+  const table = TABLE_BY_KIND[kind];
+  if (!table || !isUuid(listingId)) return false;
+  let q = getSupabaseAdmin().from(table).select('id').eq('id', listingId);
   if (kind === 'businesses' || kind === 'professionals') {
-    const vertical = kind === 'businesses' ? 'businesses' : 'professionals';
-    const doc = await Model.findOne({ _id: listingId, vertical }).select('_id').lean();
-    return Boolean(doc);
+    q = q.eq('vertical', kind);
   }
-  const doc = await Model.findById(listingId).select('_id').lean();
-  return Boolean(doc);
+  const { data, error } = await q.maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
 }
 
 async function ensureEngagement(kind, listingId) {
-  return ListingEngagement.findOneAndUpdate(
-    { listingKind: kind, listingId },
-    { $setOnInsert: { viewCount: 0, clickCount: 0, shareCount: 0 } },
-    { upsert: true, new: true },
-  ).lean();
+  const sb = getSupabaseAdmin();
+  const { data: existing, error: selErr } = await sb
+    .from('listing_engagements')
+    .select('*')
+    .eq('listing_kind', kind)
+    .eq('listing_id', listingId)
+    .maybeSingle();
+  if (selErr) throw selErr;
+  if (existing) {
+    return {
+      viewCount: existing.view_count ?? 0,
+      clickCount: existing.click_count ?? 0,
+      shareCount: existing.share_count ?? 0,
+    };
+  }
+
+  const { data: created, error: insErr } = await sb
+    .from('listing_engagements')
+    .insert({
+      listing_kind: kind,
+      listing_id: listingId,
+      view_count: 0,
+      click_count: 0,
+      share_count: 0,
+    })
+    .select('*')
+    .single();
+  if (insErr) {
+    // Race: another request inserted first.
+    if (insErr.code === '23505') {
+      const { data: again, error } = await sb
+        .from('listing_engagements')
+        .select('*')
+        .eq('listing_kind', kind)
+        .eq('listing_id', listingId)
+        .maybeSingle();
+      if (error) throw error;
+      return {
+        viewCount: again?.view_count ?? 0,
+        clickCount: again?.click_count ?? 0,
+        shareCount: again?.share_count ?? 0,
+      };
+    }
+    throw insErr;
+  }
+  return {
+    viewCount: created.view_count ?? 0,
+    clickCount: created.click_count ?? 0,
+    shareCount: created.share_count ?? 0,
+  };
+}
+
+async function incrementEngagement(kind, listingId, event) {
+  await ensureEngagement(kind, listingId);
+  const sb = getSupabaseAdmin();
+  const { data: row, error: selErr } = await sb
+    .from('listing_engagements')
+    .select('*')
+    .eq('listing_kind', kind)
+    .eq('listing_id', listingId)
+    .single();
+  if (selErr) throw selErr;
+
+  const patch = { updated_at: new Date().toISOString() };
+  if (event === 'view') patch.view_count = (row.view_count ?? 0) + 1;
+  else if (event === 'click') patch.click_count = (row.click_count ?? 0) + 1;
+  else if (event === 'share') patch.share_count = (row.share_count ?? 0) + 1;
+
+  const { error: updErr } = await sb
+    .from('listing_engagements')
+    .update(patch)
+    .eq('listing_kind', kind)
+    .eq('listing_id', listingId);
+  if (updErr) throw updErr;
 }
 
 async function countSaves(kind, listingId) {
-  return SavedListing.countDocuments({ listingKind: kind, listingId });
+  const { count, error } = await getSupabaseAdmin()
+    .from('saved_listings')
+    .select('*', { count: 'exact', head: true })
+    .eq('listing_kind', kind)
+    .eq('listing_id', listingId);
+  if (error) throw error;
+  return count ?? 0;
 }
 
 async function getSavedSet(saver, refs) {
   if (!saver || refs.length === 0) return new Set();
-  const or = refs.map((r) => ({
-    listingKind: r.kind,
-    listingId: new mongoose.Types.ObjectId(r.listingId),
-  }));
-  const docs = await SavedListing.find({
-    saverId: saver.saverId,
-    saverModel: saver.saverModel,
-    $or: or,
-  })
-    .select('listingKind listingId')
-    .lean();
-  return new Set(docs.map((d) => metricsKey(d.listingKind, d.listingId)));
+  const { data, error } = await getSupabaseAdmin()
+    .from('saved_listings')
+    .select('listing_kind, listing_id')
+    .eq('saver_id', saver.saverId);
+  if (error) throw error;
+
+  const wanted = new Set(refs.map((r) => metricsKey(r.kind, r.listingId)));
+  const out = new Set();
+  for (const row of data || []) {
+    const key = metricsKey(row.listing_kind, row.listing_id);
+    if (wanted.has(key)) out.add(key);
+  }
+  return out;
 }
 
 /**
  * @param {{ kind: string, listingId: string }[]} refs
- * @param {{ saverId: import('mongoose').Types.ObjectId, saverModel: string } | null} saver
+ * @param {{ saverId: string, saverModel: string } | null} saver
  */
 async function fetchMetricsMap(refs, saver = null) {
-  const valid = refs.filter((r) => isValidKind(r.kind) && mongoose.isValidObjectId(r.listingId));
+  const valid = refs.filter((r) => isValidKind(r.kind) && isUuid(r.listingId));
   if (valid.length === 0) return new Map();
 
-  const listingIds = valid.map((r) => new mongoose.Types.ObjectId(r.listingId));
-  const kinds = [...new Set(valid.map((r) => r.kind))];
+  const sb = getSupabaseAdmin();
+  const orFilter = valid
+    .map((r) => `and(listing_kind.eq."${r.kind}",listing_id.eq."${r.listingId}")`)
+    .join(',');
 
-  const [engagements, saveAgg, savedSet] = await Promise.all([
-    ListingEngagement.find({
-      $or: valid.map((r) => ({
-        listingKind: r.kind,
-        listingId: new mongoose.Types.ObjectId(r.listingId),
-      })),
-    }).lean(),
-    SavedListing.aggregate([
-      {
-        $match: {
-          $or: valid.map((r) => ({
-            listingKind: r.kind,
-            listingId: new mongoose.Types.ObjectId(r.listingId),
-          })),
-        },
-      },
-      { $group: { _id: { kind: '$listingKind', id: '$listingId' }, saveCount: { $sum: 1 } } },
-    ]),
+  const [engagementRes, savesRes, savedSet] = await Promise.all([
+    sb.from('listing_engagements').select('*').or(orFilter),
+    sb.from('saved_listings').select('listing_kind, listing_id').or(orFilter),
     getSavedSet(saver, valid),
   ]);
+  if (engagementRes.error) throw engagementRes.error;
+  if (savesRes.error) throw savesRes.error;
 
   const engagementByKey = new Map(
-    engagements.map((e) => [
-      metricsKey(e.listingKind, e.listingId),
+    (engagementRes.data || []).map((e) => [
+      metricsKey(e.listing_kind, e.listing_id),
       {
-        viewCount: e.viewCount ?? 0,
-        clickCount: e.clickCount ?? 0,
-        shareCount: e.shareCount ?? 0,
+        viewCount: e.view_count ?? 0,
+        clickCount: e.click_count ?? 0,
+        shareCount: e.share_count ?? 0,
       },
     ]),
   );
 
-  const savesByKey = new Map(
-    saveAgg.map((row) => [
-      metricsKey(row._id.kind, row._id.id),
-      row.saveCount,
-    ]),
-  );
+  const savesByKey = new Map();
+  for (const row of savesRes.data || []) {
+    const key = metricsKey(row.listing_kind, row.listing_id);
+    savesByKey.set(key, (savesByKey.get(key) || 0) + 1);
+  }
 
   const map = new Map();
   for (const r of valid) {
@@ -198,7 +257,7 @@ async function attachOwnerMetrics(listings, kind) {
 }
 
 async function recordListingEvent(req, { kind, listingId, event }) {
-  if (!isValidKind(kind) || !mongoose.isValidObjectId(listingId)) {
+  if (!isValidKind(kind) || !isUuid(listingId)) {
     return { ok: false, status: 400, message: 'Invalid listing.' };
   }
   if (!['view', 'click', 'share'].includes(event)) {
@@ -215,33 +274,22 @@ async function recordListingEvent(req, { kind, listingId, event }) {
     if (!visitorKey) {
       return { ok: false, status: 400, message: 'Visitor id required.' };
     }
-    const expiresAt = new Date(Date.now() + DEDUP_MS[event]);
-    try {
-      await ListingMetricDedup.create({
-        listingKind: kind,
-        listingId,
-        visitorKey,
-        eventType: event,
-        expiresAt,
-      });
-    } catch (err) {
-      if (err?.code === 11000) incremented = false;
-      else throw err;
+    const expiresAt = new Date(Date.now() + DEDUP_MS[event]).toISOString();
+    const { error } = await getSupabaseAdmin().from('listing_metric_dedups').insert({
+      listing_kind: kind,
+      listing_id: listingId,
+      visitor_key: visitorKey,
+      event_type: event,
+      expires_at: expiresAt,
+    });
+    if (error) {
+      if (error.code === '23505') incremented = false;
+      else throw error;
     }
   }
 
   if (event === 'share' || incremented) {
-    const inc =
-      event === 'view'
-        ? { viewCount: 1 }
-        : event === 'click'
-          ? { clickCount: 1 }
-          : { shareCount: 1 };
-    await ListingEngagement.findOneAndUpdate(
-      { listingKind: kind, listingId },
-      { $inc: inc, $setOnInsert: { viewCount: 0, clickCount: 0, shareCount: 0 } },
-      { upsert: true },
-    );
+    await incrementEngagement(kind, listingId, event);
   }
 
   const saveCount = await countSaves(kind, listingId);
@@ -249,12 +297,14 @@ async function recordListingEvent(req, { kind, listingId, event }) {
   const saver = saverFromUser(req.user);
   let saved = false;
   if (saver) {
-    const hit = await SavedListing.findOne({
-      saverId: saver.saverId,
-      saverModel: saver.saverModel,
-      listingKind: kind,
-      listingId,
-    }).lean();
+    const { data: hit, error } = await getSupabaseAdmin()
+      .from('saved_listings')
+      .select('id')
+      .eq('saver_id', saver.saverId)
+      .eq('listing_kind', kind)
+      .eq('listing_id', listingId)
+      .maybeSingle();
+    if (error) throw error;
     saved = Boolean(hit);
   }
 
@@ -273,30 +323,34 @@ async function recordListingEvent(req, { kind, listingId, event }) {
 async function toggleSavedListing(req, { kind, listingId }) {
   const saver = saverFromUser(req.user);
   if (!saver) return { ok: false, status: 401, message: 'Auth required' };
-  if (!isValidKind(kind) || !mongoose.isValidObjectId(listingId)) {
+  if (!isValidKind(kind) || !isUuid(listingId)) {
     return { ok: false, status: 400, message: 'Invalid listing.' };
   }
   const exists = await listingExists(kind, listingId);
   if (!exists) return { ok: false, status: 404, message: 'Listing not found.' };
 
-  const existing = await SavedListing.findOne({
-    saverId: saver.saverId,
-    saverModel: saver.saverModel,
-    listingKind: kind,
-    listingId,
-  });
+  const sb = getSupabaseAdmin();
+  const { data: existing, error: selErr } = await sb
+    .from('saved_listings')
+    .select('id')
+    .eq('saver_id', saver.saverId)
+    .eq('listing_kind', kind)
+    .eq('listing_id', listingId)
+    .maybeSingle();
+  if (selErr) throw selErr;
 
   let saved;
   if (existing) {
-    await existing.deleteOne();
+    const { error } = await sb.from('saved_listings').delete().eq('id', existing.id);
+    if (error) throw error;
     saved = false;
   } else {
-    await SavedListing.create({
-      saverId: saver.saverId,
-      saverModel: saver.saverModel,
-      listingKind: kind,
-      listingId,
+    const { error } = await sb.from('saved_listings').insert({
+      saver_id: saver.saverId,
+      listing_kind: kind,
+      listing_id: listingId,
     });
+    if (error) throw error;
     saved = true;
   }
 
@@ -328,6 +382,7 @@ module.exports = {
   LISTING_KINDS,
   isValidKind,
   emptyMetrics,
+  metricsKey,
   visitorKeyFromRequest,
   saverFromUser,
   fetchMetricsMap,

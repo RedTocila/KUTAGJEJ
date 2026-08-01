@@ -1,6 +1,9 @@
+'use strict';
+
 const express = require('express');
-const JobEmployerVerificationRequest = require('../models/JobEmployerVerificationRequest');
 const authMiddleware = require('../middleware/auth');
+const { getSupabaseAdmin } = require('../lib/supabase');
+const { isUuid } = require('../lib/public-listings/query-helpers');
 const {
   formatVerificationRequest,
   reviewVerificationRequest,
@@ -19,9 +22,15 @@ function requirePlatformAdmin(req, res, next) {
 router.get('/', authMiddleware, requirePlatformAdmin, async (req, res) => {
   try {
     const status = String(req.query.status ?? 'pending').trim();
-    const filter = status === 'all' ? {} : { status };
-    const docs = await JobEmployerVerificationRequest.find(filter).sort({ createdAt: -1 }).limit(100).lean();
-    res.json({ requests: docs.map(formatVerificationRequest) });
+    let q = getSupabaseAdmin()
+      .from('job_employer_verification_requests')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (status !== 'all') q = q.eq('status', status);
+    const { data, error } = await q;
+    if (error) throw error;
+    res.json({ requests: (data || []).map(formatVerificationRequest) });
   } catch (err) {
     console.error('GET /admin/job-employer-verification:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
@@ -31,7 +40,15 @@ router.get('/', authMiddleware, requirePlatformAdmin, async (req, res) => {
 /** GET /api/admin/job-employer-verification/:id */
 router.get('/:id', authMiddleware, requirePlatformAdmin, async (req, res) => {
   try {
-    const doc = await JobEmployerVerificationRequest.findById(req.params.id).lean();
+    const id = String(req.params.id || '').trim();
+    if (!isUuid(id)) return res.status(404).json({ message: 'Not found' });
+
+    const { data: doc, error } = await getSupabaseAdmin()
+      .from('job_employer_verification_requests')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
     if (!doc) return res.status(404).json({ message: 'Not found' });
     res.json({ request: formatVerificationRequest(doc) });
   } catch (err) {

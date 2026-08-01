@@ -1,9 +1,8 @@
 /**
  * Shared API origin resolution for server and browser.
  *
- * Browser / public clients always talk to the Next app (port 3000 in dev),
- * which rewrites `/api` → the Express backend. Never call :5001 from the browser.
- * Server Components may use API_URL to reach Express directly.
+ * Browser always uses the Next app (port 3000 in dev) — never the internal Express port.
+ * Next rewrites `/api` → Express. Server Components talk to Express directly (API_URL or default).
  */
 const PUBLIC_DEV_ORIGIN = 'http://localhost:3000';
 const INTERNAL_API_ORIGIN = 'http://localhost:5001';
@@ -12,15 +11,15 @@ export function getApiOrigin(): string {
   const fromServer = typeof process !== 'undefined' ? process.env.API_URL : undefined;
   const fromPublic = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_API_URL : undefined;
 
-  // Browser: always same-origin or the public Next URL (never the internal backend port).
+  // Browser: same-origin or NEXT_PUBLIC_API_URL (always :3000 in local env).
   if (typeof window !== 'undefined') {
     const publicOrigin = fromPublic?.trim();
     if (publicOrigin) return publicOrigin.replace(/\/$/, '');
     return '';
   }
 
-  // Server: prefer internal backend, then public Next proxy, then defaults.
-  const origin = (fromServer?.trim() || fromPublic?.trim() || INTERNAL_API_ORIGIN).replace(/\/$/, '');
+  // Server: Express only — do not use NEXT_PUBLIC (:3000) or rewrites loop.
+  const origin = (fromServer?.trim() || INTERNAL_API_ORIGIN).replace(/\/$/, '');
   return origin || PUBLIC_DEV_ORIGIN;
 }
 

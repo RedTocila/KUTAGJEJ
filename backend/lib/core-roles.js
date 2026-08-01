@@ -2,13 +2,15 @@
  * Main platform roles — always present; names are stable (do not rename via API).
  * Individual = end users; Biznes = businesses / agencies.
  */
+const { getSupabaseAdmin } = require('./supabase');
+
 const CORE_ROLE_NAMES = new Set(['Individual', 'Biznes']);
 
 /** Display order for listing (subset of core names). */
 const CORE_ROLE_ORDER = ['Individual', 'Biznes'];
 
 async function ensureCoreRoles() {
-  const Role = require('../models/Role');
+  const sb = getSupabaseAdmin();
 
   const defaults = [
     {
@@ -24,18 +26,15 @@ async function ensureCoreRoles() {
   ];
 
   for (const d of defaults) {
-    await Role.updateOne(
-      { name: d.name },
+    const { error } = await sb.from('roles').upsert(
       {
-        $setOnInsert: {
-          name: d.name,
-          description: d.description,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
+        name: d.name,
+        description: d.description,
+        updated_at: new Date().toISOString(),
       },
-      { upsert: true },
+      { onConflict: 'name', ignoreDuplicates: true },
     );
+    if (error) throw error;
   }
 }
 

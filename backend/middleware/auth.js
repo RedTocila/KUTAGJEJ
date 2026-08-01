@@ -1,18 +1,18 @@
-const jwt = require('jsonwebtoken');
-const { resolveUserFromToken, isUserInactive, touchLastActive } = require('../lib/resolve-user');
+'use strict';
+
+const {
+  resolveUserFromAccessToken,
+  isUserInactive,
+  touchLastActive,
+} = require('../lib/resolve-user');
 
 module.exports = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const token = req.header('Authorization')?.replace(/^Bearer\s+/i, '');
     if (!token) return res.status(401).json({ message: 'Auth required' });
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await resolveUserFromToken(decoded);
+    const user = await resolveUserFromAccessToken(token);
     if (!user) return res.status(401).json({ message: 'Invalid token' });
-
-    if (user.constructor.modelName === 'ManagedUser' && user.roleId) {
-      await user.populate('roleId', 'name');
-    }
 
     if (isUserInactive(user)) {
       return res.status(401).json({ message: 'Llogaria është çaktivizuar.' });
@@ -22,8 +22,10 @@ module.exports = async (req, res, next) => {
 
     req.admin = user;
     req.user = user;
+    req.accessToken = token;
     next();
   } catch (error) {
+    console.error('auth middleware:', error?.message || error);
     res.status(401).json({ message: 'Invalid token' });
   }
 };

@@ -1,54 +1,63 @@
-require('dotenv').config();
-const mongoose = require('mongoose');
-const { getMongoUri } = require('../lib/get-mongo-uri');
-const Admin = require('../models/Admin');
+'use strict';
 
-async function createAdmin() {
-  try {
-    const uri = getMongoUri();
-    if (!uri) {
-      throw new Error('Set MONGODB_URI or MONGODB_USER + MONGODB_PASSWORD + MONGODB_HOST in .env');
-    }
-    await mongoose.connect(uri);
-    console.log('Connected to MongoDB');
-    const email = 'admin@kutagjej.al';
-    const password = 'admin123';
-    const firstName = 'Admin';
-    const lastName = 'User';
+/**
+ * Create the first platform admin in Supabase Auth + profiles.
+ *
+ * Usage:
+ *   ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='secret' ADMIN_FIRST_NAME=Admin ADMIN_LAST_NAME=User \
+ *     node scripts/create-admin-direct.js
+ */
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
-    // Check if admin already exists
-    const existingAdmin = await Admin.findOne({ email: email.toLowerCase() });
-    if (existingAdmin) {
-      console.log('Admin with this email already exists!');
-      console.log('Email:', existingAdmin.email);
-      console.log('ID:', existingAdmin._id);
-      process.exit(0);
-    }
+const { getSupabaseAdmin, isSupabaseConfigured } = require('../lib/supabase');
+const { getProfileByEmail, insertProfile } = require('../lib/profiles');
 
-    // Create admin
-    const admin = new Admin({
-      email: email.toLowerCase(),
-      password,
-      firstName,
-      lastName,
-      role: 'admin',
-    });
-
-    await admin.save();
-    console.log('Admin created successfully!');
-    console.log('Email:', admin.email);
-    console.log('Password:', password);
-    console.log('ID:', admin._id);
-    console.log('\nYou can now login with:');
-    console.log('Email: admin@kutagjej.al');
-    console.log('Password: admin123');
-
-    process.exit(0);
-  } catch (error) {
-    console.error('Error creating admin:', error);
-    process.exit(1);
+async function main() {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env');
   }
+
+  const email = String(process.env.ADMIN_EMAIL || '').toLowerCase().trim();
+  const password = String(process.env.ADMIN_PASSWORD || '');
+  const firstName = String(process.env.ADMIN_FIRST_NAME || 'Admin').trim();
+  const lastName = String(process.env.ADMIN_LAST_NAME || 'User').trim();
+
+  if (!email || !password) {
+    throw new Error('Set ADMIN_EMAIL and ADMIN_PASSWORD');
+  }
+  if (password.length < 6) {
+    throw new Error('ADMIN_PASSWORD must be at least 6 characters');
+  }
+
+  const existing = await getProfileByEmail(email);
+  if (existing) {
+    console.log('Admin profile already exists:', existing.id, existing.email);
+    return;
+  }
+
+  const sb = getSupabaseAdmin();
+  const { data, error } = await sb.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { account_type: 'admin', first_name: firstName, last_name: lastName },
+  });
+  if (error) throw error;
+
+  const profile = await insertProfile({
+    id: data.user.id,
+    email,
+    first_name: firstName,
+    last_name: lastName,
+    account_type: 'admin',
+    role: 'admin',
+    is_active: true,
+  });
+
+  console.log('Created admin:', profile.id, profile.email);
 }
 
-createAdmin();
-
+main().catch((err) => {
+  console.error(err.message || err);
+  process.exit(1);
+});

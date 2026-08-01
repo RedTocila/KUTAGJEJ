@@ -1,5 +1,4 @@
-const Contract = require('../models/Contract');
-const Role = require('../models/Role');
+const { getSupabaseAdmin } = require('./supabase');
 
 /**
  * Canonical subscription packages (platform-wide, all categories).
@@ -89,52 +88,69 @@ function tierFields(tier) {
   return {
     title: tier.title,
     content: tier.content,
-    sortOrder: tier.sortOrder,
-    listingCategoryKey: null,
-    refreshEveryHours: tier.refreshEveryHours,
-    glowBadgeEnabled: tier.glowBadgeEnabled,
-    boostCredits: tier.boostCredits,
-    dailyBoostAccess: tier.dailyBoostAccess,
-    maxListAllCategories: tier.maxListAllCategories,
-    maxJobListings: tier.maxJobListings,
-    maxCarListings: tier.maxCarListings,
-    maxApartmentListings: tier.maxApartmentListings,
-    maxProductListings: tier.maxProductListings,
-    maxPremiumListings: tier.maxPremiumListings,
-    price1Month: tier.price1Month,
-    price3Months: null,
-    price6Months: null,
-    price12Months: null,
+    sort_order: tier.sortOrder,
+    listing_category_key: null,
+    refresh_every_hours: tier.refreshEveryHours,
+    glow_badge_enabled: tier.glowBadgeEnabled,
+    boost_credits: tier.boostCredits,
+    daily_boost_access: tier.dailyBoostAccess,
+    max_list_all_categories: tier.maxListAllCategories,
+    max_job_listings: tier.maxJobListings,
+    max_car_listings: tier.maxCarListings,
+    max_apartment_listings: tier.maxApartmentListings,
+    max_product_listings: tier.maxProductListings,
+    max_premium_listings: tier.maxPremiumListings,
+    price_1_month: tier.price1Month,
+    price_3_months: null,
+    price_6_months: null,
+    price_12_months: null,
   };
 }
 
 async function ensureContractPackages() {
+  const sb = getSupabaseAdmin();
   const roleByName = {};
+
   for (const { roleName } of SUBSCRIBER_KINDS) {
-    const role = await Role.findOne({ name: roleName }).select('_id').lean();
-    if (role) roleByName[roleName] = role._id;
+    const { data: role, error } = await sb.from('roles').select('id').eq('name', roleName).maybeSingle();
+    if (error) throw error;
+    if (role) roleByName[roleName] = role.id;
   }
 
   let upserted = 0;
+  const now = new Date().toISOString();
+
   for (const { kind, roleName } of SUBSCRIBER_KINDS) {
     const roleId = roleByName[roleName];
     for (const tier of PACKAGE_TIERS) {
       const fields = {
         ...tierFields(tier),
-        planCode: tier.planCode,
-        subscriberKind: kind,
-        roleIds: roleId ? [roleId] : [],
-        updatedAt: new Date(),
+        plan_code: tier.planCode,
+        subscriber_kind: kind,
+        role_ids: roleId ? [roleId] : [],
+        updated_at: now,
       };
-      const result = await Contract.updateOne(
-        { planCode: tier.planCode, subscriberKind: kind },
-        {
-          $set: fields,
-          $setOnInsert: { createdAt: new Date() },
-        },
-        { upsert: true },
-      );
-      if (result.upsertedCount || result.modifiedCount) upserted += 1;
+
+      const { data: existing, error: findErr } = await sb
+        .from('contracts')
+        .select('id')
+        .eq('plan_code', tier.planCode)
+        .eq('subscriber_kind', kind)
+        .maybeSingle();
+      if (findErr) throw findErr;
+
+      if (existing) {
+        const { error } = await sb.from('contracts').update(fields).eq('id', existing.id);
+        if (error) throw error;
+        upserted += 1;
+      } else {
+        const { error } = await sb.from('contracts').insert({
+          ...fields,
+          created_at: now,
+        });
+        if (error) throw error;
+        upserted += 1;
+      }
     }
   }
 

@@ -1,24 +1,27 @@
 const express = require('express');
-const ListingCategory = require('../models/ListingCategory');
+const { getSupabaseAdmin } = require('../lib/supabase');
+const { camelizeRows } = require('../lib/profiles');
 
 const router = express.Router();
 
-function format(doc) {
+function format(row) {
+  const c = camelizeRows([row])[0];
   return {
-    key: doc.key,
-    title: doc.title,
-    slug: doc.slug,
-    listingTypes: (doc.listingTypes || []).map((t) => ({ slug: t.slug, label: t.label })),
-    apartmentTypes: (doc.apartmentTypes || []).map((t) => ({ slug: t.slug, label: t.label })),
-    updatedAt: doc.updatedAt,
+    key: c.key,
+    title: c.title,
+    slug: c.slug,
+    listingTypes: (c.listingTypes || []).map((t) => ({ slug: t.slug, label: t.label })),
+    apartmentTypes: (c.apartmentTypes || []).map((t) => ({ slug: t.slug, label: t.label })),
+    updatedAt: c.updatedAt,
   };
 }
 
 /** Public: listing forms can resolve category slug → types without admin token. */
 router.get('/', async (_req, res) => {
   try {
-    const docs = await ListingCategory.find().sort({ key: 1 }).lean();
-    res.json({ categories: docs.map((d) => format(d)) });
+    const { data, error } = await getSupabaseAdmin().from('listing_categories').select('*').order('key', { ascending: true });
+    if (error) throw error;
+    res.json({ categories: (data || []).map((d) => format(d)) });
   } catch (error) {
     console.error('GET /categories:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });

@@ -1,5 +1,7 @@
+'use strict';
+
 const express = require('express');
-const ReferralProgram = require('../models/ReferralProgram');
+const { getSupabaseAdmin } = require('../lib/supabase');
 const authMiddleware = require('../middleware/auth');
 const { ensureReferralProgram, formatReferralProgram } = require('../lib/ensure-referral-program');
 
@@ -139,9 +141,14 @@ router.use(authMiddleware, requirePlatformAdmin);
 router.get('/', async (_req, res) => {
   try {
     await ensureReferralProgram();
-    const doc = await ReferralProgram.findById('default');
-    if (!doc) return res.status(500).json({ message: 'Programi i referimit nuk u gjet.' });
-    res.json({ program: formatReferralProgram(doc) });
+    const { data, error } = await getSupabaseAdmin()
+      .from('referral_programs')
+      .select('*')
+      .eq('id', 'default')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(500).json({ message: 'Programi i referimit nuk u gjet.' });
+    res.json({ program: formatReferralProgram(data) });
   } catch (error) {
     console.error('GET /admin/referral-program:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -157,32 +164,37 @@ router.put('/', async (req, res) => {
     }
 
     const v = parsed.value;
-    const doc = await ReferralProgram.findById('default');
-    if (!doc) return res.status(500).json({ message: 'Programi i referimit nuk u gjet.' });
-
-    doc.pageTitle = v.pageTitle;
-    doc.pageSubtitle = v.pageSubtitle;
-    doc.freeSignUpTitle = v.freeSignUpTitle;
-    doc.freeSignUpSubtitle = v.freeSignUpSubtitle;
-    doc.freeTiers = v.freeTiers;
-    doc.networkBuilderBadge = v.networkBuilderBadge;
-    doc.paidTitle = v.paidTitle;
-    doc.paidSubtitle = v.paidSubtitle;
-    doc.paidTiers = v.paidTiers;
-    doc.revenueDriverBadge = v.revenueDriverBadge;
-    doc.reviewsTitle = v.reviewsTitle;
-    doc.reviewsSubtitle = v.reviewsSubtitle;
-    doc.reviewMilestones = v.reviewMilestones;
-    doc.trustedReviewerBadge = v.trustedReviewerBadge;
-    doc.completionTitle = v.completionTitle;
-    doc.completionSubtitle = v.completionSubtitle;
-    doc.platformDominatorBadge = v.platformDominatorBadge;
-    doc.loginStreakTitle = v.loginStreakTitle;
-    doc.loginStreakSubtitle = v.loginStreakSubtitle;
-    doc.loginStreak = v.loginStreak;
-
-    await doc.save();
-    res.json({ program: formatReferralProgram(doc) });
+    const { data, error } = await getSupabaseAdmin()
+      .from('referral_programs')
+      .update({
+        page_title: v.pageTitle,
+        page_subtitle: v.pageSubtitle,
+        free_sign_up_title: v.freeSignUpTitle,
+        free_sign_up_subtitle: v.freeSignUpSubtitle,
+        free_tiers: v.freeTiers,
+        network_builder_badge: v.networkBuilderBadge,
+        paid_title: v.paidTitle,
+        paid_subtitle: v.paidSubtitle,
+        paid_tiers: v.paidTiers,
+        revenue_driver_badge: v.revenueDriverBadge,
+        reviews_title: v.reviewsTitle,
+        reviews_subtitle: v.reviewsSubtitle,
+        review_milestones: v.reviewMilestones,
+        trusted_reviewer_badge: v.trustedReviewerBadge,
+        completion_title: v.completionTitle,
+        completion_subtitle: v.completionSubtitle,
+        platform_dominator_badge: v.platformDominatorBadge,
+        login_streak_title: v.loginStreakTitle,
+        login_streak_subtitle: v.loginStreakSubtitle,
+        login_streak: v.loginStreak,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', 'default')
+      .select('*')
+      .single();
+    if (error) throw error;
+    if (!data) return res.status(500).json({ message: 'Programi i referimit nuk u gjet.' });
+    res.json({ program: formatReferralProgram(data) });
   } catch (error) {
     console.error('PUT /admin/referral-program:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });

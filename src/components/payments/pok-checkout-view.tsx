@@ -422,7 +422,7 @@ export function PokCheckoutView({ title, summary, createOrder, onPaid, onDone }:
           </Stack>
         ) : null}
 
-        {showForm ? (
+        {showForm && order ? (
           <Box
             className={hideEmail ? 'pok-checkout-known-email' : undefined}
             sx={{ width: '100%' }}

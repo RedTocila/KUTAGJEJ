@@ -153,17 +153,17 @@ export function MemberLeaveReviewButton({
               pointerEvents: 'auto',
             },
           },
-        }}
-        PaperProps={{
-          elevation: 0,
-          sx: {
-            borderRadius: 3,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            overflow: 'hidden',
-            mx: 2,
-            backgroundImage: 'none',
+          paper: {
+            elevation: 0,
+            sx: {
+              borderRadius: 3,
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              overflow: 'hidden',
+              mx: 2,
+              backgroundImage: 'none',
+            },
           },
         }}
         sx={{ zIndex: dialogZIndex }}

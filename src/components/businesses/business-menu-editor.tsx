@@ -57,7 +57,7 @@ function hydrateMenu(listing: BusinessMineListing): {
     name: c.name ?? '',
     sortOrder: typeof c.sortOrder === 'number' ? c.sortOrder : i,
   }));
-  const items = (listing.menuItems ?? []).map((item, i) => ({
+  const items: BusinessMenuItem[] = (listing.menuItems ?? []).map((item, i): BusinessMenuItem => ({
     id: item.id || newId(),
     categoryId: item.categoryId,
     name: item.name ?? '',
@@ -617,7 +617,7 @@ export function BusinessMenuEditor({
         onClose={() => setCategoryDialogOpen(false)}
         fullWidth
         maxWidth="xs"
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>
           {editingCategoryId ? 'Ndrysho kategorinë' : 'Kategori e re'}
@@ -664,7 +664,7 @@ export function BusinessMenuEditor({
         }}
         fullWidth
         maxWidth="sm"
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>
           {productDraft?.id ? 'Ndrysho artikullin' : 'Artikull i ri'}

@@ -110,18 +110,18 @@ export function MemberReviewsDialog({
             pointerEvents: 'auto',
           },
         },
-      }}
-      PaperProps={{
-        elevation: 0,
-        sx: {
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
-          overflow: 'hidden',
-          mx: 2,
-          backgroundImage: 'none',
-          maxHeight: 'min(80vh, 640px)',
+        paper: {
+          elevation: 0,
+          sx: {
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            overflow: 'hidden',
+            mx: 2,
+            backgroundImage: 'none',
+            maxHeight: 'min(80vh, 640px)',
+          },
         },
       }}
       sx={{ zIndex: DIALOG_Z_INDEX }}

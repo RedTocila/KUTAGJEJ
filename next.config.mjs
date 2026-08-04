@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
 const backendOrigin = (process.env.API_URL || 'http://localhost:5001').replace(/\/$/, '');
+const backendHostname = (() => {
+  try {
+    return new URL(backendOrigin).hostname;
+  } catch {
+    return null;
+  }
+})();
 
 const config = {
   reactStrictMode: true,
@@ -11,10 +18,24 @@ const config = {
 
   images: {
     remotePatterns: [
+      ...(backendHostname
+        ? [
+            {
+              protocol: 'https',
+              hostname: backendHostname,
+              pathname: '/**',
+            },
+          ]
+        : []),
       {
         protocol: 'https',
         hostname: 'retireesystem-backend.vercel.app',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/**',
       },
       {
         protocol: 'https',

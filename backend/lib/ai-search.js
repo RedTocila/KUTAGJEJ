@@ -1,12 +1,14 @@
 'use strict';
 
 const { getSupabaseAdmin } = require('./supabase');
+const { namesMatch, normalizeSearchText } = require('./search-normalize');
 const {
   parseRealEstateFilters,
   parseCarFilters,
   parseJobFilters,
   parseMarketplaceFilters,
   parseDirectoryFilters,
+  finalizeTextSearch,
 } = require('./public-listings/listing-filters');
 const {
   queryRealEstate,
@@ -44,14 +46,7 @@ function clampLimit(value, fallback = 24) {
 }
 
 function normalizeLocationName(value) {
-  return String(value || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '')
-    .replace(/ë/g, 'e')
-    .replace(/ç/g, 'c')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return normalizeSearchText(value);
 }
 
 function locationTokens(value) {
@@ -61,11 +56,10 @@ function locationTokens(value) {
 }
 
 function locationNamesMatch(a, b) {
+  if (namesMatch(a, b)) return true;
   const left = normalizeLocationName(a);
   const right = normalizeLocationName(b);
   if (!left || !right) return false;
-  if (left === right) return true;
-  if (left.includes(right) || right.includes(left)) return true;
 
   const leftTokens = locationTokens(left);
   const rightTokens = locationTokens(right);
@@ -284,7 +278,9 @@ async function buildQueryParams(intent) {
 async function searchVertical(vertical, params, perVertical) {
   switch (vertical) {
     case 'real-estate': {
-      const { filter, sort } = parseRealEstateFilters(params);
+      const parsed = parseRealEstateFilters(params);
+      const filter = await finalizeTextSearch(parsed.filter, params);
+      const sort = parsed.sort;
       const [listings, total] = await Promise.all([
         queryRealEstate(perVertical, filter, sort, 0),
         countRealEstate(filter),
@@ -295,7 +291,9 @@ async function searchVertical(vertical, params, perVertical) {
       };
     }
     case 'cars': {
-      const { filter, sort } = parseCarFilters(params);
+      const parsed = parseCarFilters(params);
+      const filter = await finalizeTextSearch(parsed.filter, params);
+      const sort = parsed.sort;
       const [listings, total] = await Promise.all([
         queryCars(perVertical, filter, sort, 0),
         countCars(filter),
@@ -306,7 +304,9 @@ async function searchVertical(vertical, params, perVertical) {
       };
     }
     case 'jobs': {
-      const { filter, sort } = parseJobFilters(params);
+      const parsed = parseJobFilters(params);
+      const filter = await finalizeTextSearch(parsed.filter, params);
+      const sort = parsed.sort;
       const [listings, total] = await Promise.all([
         queryJobs(perVertical, filter, sort, 0),
         countJobs(filter),
@@ -317,7 +317,9 @@ async function searchVertical(vertical, params, perVertical) {
       };
     }
     case 'marketplace': {
-      const { filter, sort } = parseMarketplaceFilters(params);
+      const parsed = parseMarketplaceFilters(params);
+      const filter = await finalizeTextSearch(parsed.filter, params);
+      const sort = parsed.sort;
       const [listings, total] = await Promise.all([
         queryMarketplace(perVertical, filter, sort, 0),
         countMarketplace(filter),
@@ -328,7 +330,9 @@ async function searchVertical(vertical, params, perVertical) {
       };
     }
     case 'businesses': {
-      const { filter, sort } = parseDirectoryFilters(params, 'businesses');
+      const parsed = parseDirectoryFilters(params, 'businesses');
+      const filter = await finalizeTextSearch(parsed.filter, params);
+      const sort = parsed.sort;
       const [listings, total] = await Promise.all([
         queryDirectory('businesses', perVertical, filter, sort, 0),
         countDirectory(filter),
@@ -339,7 +343,9 @@ async function searchVertical(vertical, params, perVertical) {
       };
     }
     case 'professionals': {
-      const { filter, sort } = parseDirectoryFilters(params, 'professionals');
+      const parsed = parseDirectoryFilters(params, 'professionals');
+      const filter = await finalizeTextSearch(parsed.filter, params);
+      const sort = parsed.sort;
       const [listings, total] = await Promise.all([
         queryDirectory('professionals', perVertical, filter, sort, 0),
         countDirectory(filter),

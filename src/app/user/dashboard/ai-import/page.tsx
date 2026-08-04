@@ -31,6 +31,8 @@ import {
 } from '@/lib/ai-import-client';
 import {
   AI_SEARCH_BLUE,
+  AI_SEARCH_BLUE_HOVER,
+  AI_SEARCH_BLUE_ON,
   AI_SEARCH_BLUE_SOFT,
   localizeHomeVerticals,
   type HomeVerticalId,
@@ -232,179 +234,209 @@ export default function AiImportListingsPage() {
       />
 
       <PostListingFormSurface>
-        <Stack spacing={1.5} component="form" onSubmit={handleAnalyze}>
-          <Stack spacing={1}>
-            <Typography sx={{ fontWeight: 800, fontSize: '0.92rem' }}>
-              {t.aiImport.chooseCategory}
-            </Typography>
-            <Box
-              role="listbox"
-              aria-label={t.aiImport.chooseCategory}
-              sx={{
-                display: 'flex',
-                flexDirection: 'row',
-                flexWrap: 'nowrap',
-                gap: { xs: 1.25, sm: 2 },
-                justifyContent: 'flex-start',
-                overflowX: 'auto',
-                overflowY: 'hidden',
-                WebkitOverflowScrolling: 'touch',
-                scrollSnapType: { xs: 'x proximity', sm: 'none' },
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-                pb: 0.5,
-                mx: { xs: -0.5, sm: 0 },
-                px: { xs: 0.5, sm: 0 },
-                '&::-webkit-scrollbar': { display: 'none' },
-              }}
-            >
-              {categories.map((item) => {
-                const key = toListingCategory(item.id);
-                const selected = category === key;
-                return (
-                  <Stack
-                    key={item.id}
-                    component="button"
-                    type="button"
-                    role="option"
-                    aria-selected={selected}
-                    onClick={() => {
-                      setCategory(key);
-                      setError(null);
-                    }}
-                    spacing={0.4}
-                    sx={{
-                      flexShrink: 0,
-                      scrollSnapAlign: { xs: 'start', sm: 'none' },
-                      alignItems: 'center',
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      WebkitTapHighlightColor: 'transparent',
-                      border: 'none',
-                      background: 'none',
-                      padding: 0,
-                      font: 'inherit',
-                      color: 'inherit',
-                      '&:hover .ai-cat-circle': {
-                        borderColor: AI_SEARCH_BLUE,
-                        bgcolor: AI_SEARCH_BLUE_SOFT,
-                      },
-                      '&:hover .ai-cat-label': {
-                        color: AI_SEARCH_BLUE,
-                      },
-                    }}
-                  >
-                    <Box
-                      className="ai-cat-circle"
-                      sx={{
-                        width: { xs: 60, sm: 58 },
-                        height: { xs: 60, sm: 58 },
-                        borderRadius: '50%',
-                        display: 'grid',
-                        placeItems: 'center',
-                        bgcolor: selected ? AI_SEARCH_BLUE_SOFT : 'background.paper',
-                        border: '1px solid',
-                        borderColor: selected ? AI_SEARCH_BLUE : 'divider',
-                        transition: 'border-color 0.15s ease, background-color 0.15s ease',
-                      }}
-                    >
-                      <HomeVerticalIcon verticalId={item.id} size={34} color={AI_SEARCH_BLUE} />
-                    </Box>
-                    <Typography
-                      className="ai-cat-label"
-                      variant="caption"
-                      sx={{
-                        fontWeight: selected ? 700 : 600,
-                        color: selected ? AI_SEARCH_BLUE : 'text.secondary',
-                        whiteSpace: 'nowrap',
-                        transition: 'color 0.15s ease',
-                      }}
-                    >
-                      {item.label}
-                    </Typography>
-                  </Stack>
-                );
-              })}
-            </Box>
-          </Stack>
-
-          <TextField
-            fullWidth
-            multiline
-            minRows={5}
-            maxRows={12}
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder={t.aiImport.placeholder}
-            disabled={!category}
+        <Box
+          sx={{
+            borderRadius: 2.75,
+            border: '1.5px solid',
+            borderColor: AI_SEARCH_BLUE,
+            bgcolor: 'background.paper',
+            boxShadow: (theme) =>
+              theme.palette.mode === 'dark'
+                ? '0 0 0 1px rgba(255, 187, 31, 0.08), 0 12px 32px -16px rgba(0,0,0,0.65)'
+                : '0 12px 32px -18px rgba(255, 187, 31, 0.35)',
+            overflow: 'hidden',
+          }}
+        >
+          <Box
             sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 2.5,
-                bgcolor: category ? AI_SEARCH_BLUE_SOFT : 'action.hover',
-                color: 'text.primary',
-                '& fieldset': {
-                  borderWidth: 1.5,
-                  borderColor: category ? AI_SEARCH_BLUE : 'divider',
-                },
-                '&:hover fieldset': {
-                  borderColor: category ? AI_SEARCH_BLUE : 'divider',
-                },
-                '&.Mui-focused fieldset': {
-                  borderWidth: 1.5,
-                  borderColor: AI_SEARCH_BLUE,
-                },
-                '&.Mui-disabled': {
-                  bgcolor: 'action.hover',
-                },
-              },
-              '& .MuiInputBase-input::placeholder': {
-                color: '#9CA3AF',
-                opacity: 1,
-              },
+              height: 3,
+              bgcolor: AI_SEARCH_BLUE,
             }}
           />
-
-          {error ? (
-            <Alert severity="error" sx={{ borderRadius: 2.5 }}>
-              {error}
-            </Alert>
-          ) : null}
-
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={loading || !category}
-            fullWidth
-            startIcon={
-              loading ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                <SparkleIcon size={18} weight="bold" />
-              )
-            }
-            sx={{
-              borderRadius: 2.5,
-              textTransform: 'none',
-              fontWeight: 800,
-              py: 1.35,
-              boxShadow: 'none',
-              bgcolor: AI_SEARCH_BLUE,
-              color: '#1a3344',
-              '&:hover': {
-                boxShadow: 'none',
-                bgcolor: '#8BBAD9',
-                color: '#1a3344',
-              },
-              '&.Mui-disabled': {
-                bgcolor: AI_SEARCH_BLUE,
-                color: '#1a3344',
-                opacity: 0.55,
-              },
-            }}
+          <Stack
+            spacing={1.75}
+            component="form"
+            onSubmit={handleAnalyze}
+            sx={{ p: { xs: 1.75, sm: 2.25 } }}
           >
-            {loading ? t.aiImport.analyzing : t.aiImport.analyze}
-          </Button>
-        </Stack>
+            <Stack spacing={1.15}>
+              <Typography sx={{ fontWeight: 800, fontSize: '0.92rem' }}>
+                {t.aiImport.chooseCategory}
+              </Typography>
+              <Box
+                role="listbox"
+                aria-label={t.aiImport.chooseCategory}
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  flexWrap: 'nowrap',
+                  gap: { xs: 1.25, sm: 2 },
+                  justifyContent: 'flex-start',
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  WebkitOverflowScrolling: 'touch',
+                  scrollSnapType: { xs: 'x proximity', sm: 'none' },
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                  pb: 0.25,
+                  mx: { xs: -0.5, sm: 0 },
+                  px: { xs: 0.5, sm: 0 },
+                  '&::-webkit-scrollbar': { display: 'none' },
+                }}
+              >
+                {categories.map((item) => {
+                  const key = toListingCategory(item.id);
+                  const selected = category === key;
+                  return (
+                    <Stack
+                      key={item.id}
+                      component="button"
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onClick={() => {
+                        setCategory(key);
+                        setError(null);
+                      }}
+                      spacing={0.45}
+                      sx={{
+                        flexShrink: 0,
+                        scrollSnapAlign: { xs: 'start', sm: 'none' },
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        WebkitTapHighlightColor: 'transparent',
+                        border: 'none',
+                        background: 'none',
+                        padding: 0,
+                        font: 'inherit',
+                        color: 'inherit',
+                        '&:hover .ai-cat-circle': {
+                          borderColor: AI_SEARCH_BLUE,
+                          bgcolor: selected ? AI_SEARCH_BLUE : `${AI_SEARCH_BLUE}22`,
+                        },
+                        '&:hover .ai-cat-label': {
+                          color: AI_SEARCH_BLUE,
+                        },
+                      }}
+                    >
+                      <Box
+                        className="ai-cat-circle"
+                        sx={{
+                          width: { xs: 60, sm: 58 },
+                          height: { xs: 60, sm: 58 },
+                          borderRadius: '50%',
+                          display: 'grid',
+                          placeItems: 'center',
+                          bgcolor: selected ? AI_SEARCH_BLUE : 'action.hover',
+                          border: '1.5px solid',
+                          borderColor: selected ? AI_SEARCH_BLUE : 'divider',
+                          transition: 'border-color 0.15s ease, background-color 0.15s ease',
+                        }}
+                      >
+                        <HomeVerticalIcon
+                          verticalId={item.id}
+                          size={34}
+                          color={selected ? AI_SEARCH_BLUE_ON : AI_SEARCH_BLUE}
+                        />
+                      </Box>
+                      <Typography
+                        className="ai-cat-label"
+                        variant="caption"
+                        sx={{
+                          fontWeight: selected ? 800 : 600,
+                          color: selected ? AI_SEARCH_BLUE : 'text.secondary',
+                          whiteSpace: 'nowrap',
+                          transition: 'color 0.15s ease',
+                        }}
+                      >
+                        {item.label}
+                      </Typography>
+                    </Stack>
+                  );
+                })}
+              </Box>
+            </Stack>
+
+            {category ? (
+              <>
+                <TextField
+                  fullWidth
+                  multiline
+                  minRows={5}
+                  maxRows={12}
+                  value={text}
+                  onChange={(event) => setText(event.target.value)}
+                  placeholder={t.aiImport.placeholder}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2.5,
+                      bgcolor: (theme) =>
+                        theme.palette.mode === 'dark' ? 'action.hover' : 'background.default',
+                      color: 'text.primary',
+                      '& fieldset': {
+                        borderWidth: 1.5,
+                        borderColor: 'divider',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: AI_SEARCH_BLUE,
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderWidth: 1.5,
+                        borderColor: AI_SEARCH_BLUE,
+                      },
+                    },
+                    '& .MuiInputBase-input::placeholder': {
+                      color: '#9CA3AF',
+                      opacity: 1,
+                    },
+                  }}
+                />
+
+                {error ? (
+                  <Alert severity="error" sx={{ borderRadius: 2.5 }}>
+                    {error}
+                  </Alert>
+                ) : null}
+
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={loading}
+                  fullWidth
+                  startIcon={
+                    loading ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <SparkleIcon size={18} weight="bold" />
+                    )
+                  }
+                  sx={{
+                    borderRadius: 2.5,
+                    textTransform: 'none',
+                    fontWeight: 800,
+                    py: 1.35,
+                    boxShadow: 'none',
+                    bgcolor: AI_SEARCH_BLUE,
+                    color: AI_SEARCH_BLUE_ON,
+                    '&:hover': {
+                      boxShadow: 'none',
+                      bgcolor: AI_SEARCH_BLUE_HOVER,
+                      color: AI_SEARCH_BLUE_ON,
+                    },
+                    '&.Mui-disabled': {
+                      bgcolor: AI_SEARCH_BLUE,
+                      color: AI_SEARCH_BLUE_ON,
+                      opacity: 0.55,
+                    },
+                  }}
+                >
+                  {loading ? t.aiImport.analyzing : t.aiImport.analyze}
+                </Button>
+              </>
+            ) : null}
+          </Stack>
+        </Box>
       </PostListingFormSurface>
 
       {drafts.length > 0 ? (
@@ -420,7 +452,7 @@ export default function AiImportListingsPage() {
                 {t.aiImport.draftsKeptHint}
               </Typography>
             </Stack>
-            <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+            <Stack spacing={1} sx={{ flexShrink: 0, alignItems: 'stretch', minWidth: { xs: '100%', sm: 160 } }}>
               <Button
                 variant="outlined"
                 disabled={postingAll || postingId != null || drafts.length === 0}
@@ -448,11 +480,11 @@ export default function AiImportListingsPage() {
                   borderRadius: 2.5,
                   boxShadow: 'none',
                   bgcolor: AI_SEARCH_BLUE,
-                  color: '#1a3344',
-                  '&:hover': { boxShadow: 'none', bgcolor: '#8BBAD9' },
+                  color: AI_SEARCH_BLUE_ON,
+                  '&:hover': { boxShadow: 'none', bgcolor: AI_SEARCH_BLUE_HOVER },
                   '&.Mui-disabled': {
                     bgcolor: AI_SEARCH_BLUE,
-                    color: '#1a3344',
+                    color: AI_SEARCH_BLUE_ON,
                     opacity: 0.55,
                   },
                 }}
@@ -592,15 +624,15 @@ export default function AiImportListingsPage() {
                           borderRadius: 2.5,
                           boxShadow: 'none',
                           bgcolor: AI_SEARCH_BLUE,
-                          color: '#1a3344',
+                          color: AI_SEARCH_BLUE_ON,
                           '&:hover': {
                             boxShadow: 'none',
-                            bgcolor: '#8BBAD9',
-                            color: '#1a3344',
+                            bgcolor: AI_SEARCH_BLUE_HOVER,
+                            color: AI_SEARCH_BLUE_ON,
                           },
                           '&.Mui-disabled': {
                             bgcolor: AI_SEARCH_BLUE,
-                            color: '#1a3344',
+                            color: AI_SEARCH_BLUE_ON,
                             opacity: 0.55,
                           },
                         }}

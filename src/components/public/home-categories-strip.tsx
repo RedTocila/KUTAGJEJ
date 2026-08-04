@@ -9,7 +9,7 @@ import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import {
   AI_SEARCH_BLUE,
-  AI_SEARCH_BLUE_SOFT,
+  AI_SEARCH_BLUE_ON,
   localizeSearchCategories,
 } from '@/lib/home-categories';
 import { paths } from '@/paths';
@@ -82,16 +82,20 @@ export function HomeCategoriesStrip() {
                     display: 'grid',
                     placeItems: 'center',
                     flexShrink: 0,
-                    color: isAi ? AI_SEARCH_BLUE : 'primary.main',
+                    color: isAi ? AI_SEARCH_BLUE_ON : 'primary.main',
                     bgcolor: isAi
-                      ? AI_SEARCH_BLUE_SOFT
+                      ? AI_SEARCH_BLUE
                       : (theme) =>
                           theme.palette.mode === 'dark'
                             ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
                             : 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)',
                   }}
                 >
-                  <HomeVerticalIcon verticalId={v.id} size={32} />
+                  <HomeVerticalIcon
+                    verticalId={v.id}
+                    size={32}
+                    color={isAi ? AI_SEARCH_BLUE_ON : undefined}
+                  />
                 </Box>
                 <Stack spacing={0.5} sx={{ minWidth: 0 }}>
                   <Typography

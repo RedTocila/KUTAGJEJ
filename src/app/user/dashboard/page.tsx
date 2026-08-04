@@ -16,9 +16,7 @@ import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Build
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { ChartLineUp as ChartLineUpIcon } from '@phosphor-icons/react/dist/ssr/ChartLineUp';
-import { Coins as CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins';
 import { FileText as FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
-import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
 import { ListBullets as ListBulletsIcon } from '@phosphor-icons/react/dist/ssr/ListBullets';
 import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
@@ -26,6 +24,7 @@ import { Receipt as ReceiptIcon } from '@phosphor-icons/react/dist/ssr/Receipt';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { SignOut as SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
+import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGear';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
@@ -47,14 +46,17 @@ import { getUserDashboardCopy } from '@/lib/user-dashboard-copy';
 import type { ContractQuotas, PublicContract } from '@/types/contract';
 import { FREE_PLAN_QUOTAS } from '@/types/contract';
 import type { UserSubscriptionSummary } from '@/types/payment';
+import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { DailyStreakCard } from '@/components/user/daily-streak-card';
 import { HeaderLanguageToggle } from '@/components/user/header-language-toggle';
 import { LanguageSwitchRow } from '@/components/user/language-switch-row';
 import { PortalLinkCard, PortalLinkGroup, portalCardSx } from '@/components/user/portal-cards';
+import { ReferralSummaryCard } from '@/components/user/referral-summary-card';
 import { planAccentForCode } from '@/components/user/packages/package-ui';
 import { hardNavigate } from '@/lib/hard-navigate';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 
 function quotasFromSub(sub: UserSubscriptionSummary | null): ContractQuotas {
   if (!sub) return FREE_PLAN_QUOTAS;
@@ -68,27 +70,29 @@ function quotasFromSub(sub: UserSubscriptionSummary | null): ContractQuotas {
   };
 }
 
-const GRADIENTS = {
-  blue: 'linear-gradient(160deg, #3ec6e0 0%, #2f86c5 100%)',
-  purple: 'linear-gradient(160deg, #8b5cf6 0%, #6d28d9 100%)',
-  green: 'linear-gradient(160deg, #7ac943 0%, #4a9e2a 100%)',
-  orange: 'linear-gradient(160deg, #f5a623 0%, #e8821e 100%)',
-} as const;
-
 function ActionTile({
   href,
   onClick,
   label,
   icon: Icon,
-  gradient,
+  tone = 'primary',
 }: {
   href?: string;
   onClick?: () => void;
   label: string;
   icon: PhosphorIcon;
-  gradient: string;
+  tone?: 'primary' | 'amber';
 }) {
+  const isAmber = tone === 'amber';
+  const accentAlpha = (dark: number, light: number) => (t: { palette: { mode: string } }) =>
+    isAmber
+      ? t.palette.mode === 'dark'
+        ? `rgba(245, 166, 35, ${dark})`
+        : `rgba(245, 166, 35, ${light})`
+      : primaryMainAlpha(t.palette.mode === 'dark' ? dark : light);
+
   const sx = {
+    ...portalCardSx,
     textDecoration: 'none',
     display: 'flex',
     flexDirection: 'column',
@@ -98,19 +102,17 @@ function ActionTile({
     minHeight: { xs: 148, sm: 160 },
     height: '100%',
     p: 2.25,
-    borderRadius: 3.5,
-    background: gradient,
-    color: '#fff',
-    border: '1px solid rgba(255,255,255,0.12)',
+    color: 'text.primary',
     cursor: 'pointer',
     width: '100%',
     font: 'inherit',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.2)',
-    transition: 'transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease',
+    borderColor: accentAlpha(0.32, 0.28),
+    bgcolor: accentAlpha(0.12, 0.08),
+    transition: 'transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease',
     '&:hover': {
-      transform: 'translateY(-3px)',
-      boxShadow: '0 14px 30px rgba(0,0,0,0.28)',
-      filter: 'brightness(1.05)',
+      transform: 'translateY(-2px)',
+      borderColor: isAmber ? '#F5A623' : 'primary.main',
+      bgcolor: accentAlpha(0.18, 0.12),
     },
   } as const;
 
@@ -123,12 +125,11 @@ function ActionTile({
           borderRadius: 2.5,
           display: 'grid',
           placeItems: 'center',
-          bgcolor: 'rgba(255,255,255,0.22)',
-          border: '1px solid rgba(255,255,255,0.18)',
-          backdropFilter: 'blur(6px)',
+          bgcolor: accentAlpha(0.22, 0.16),
+          color: isAmber ? '#F5A623' : 'primary.main',
         }}
       >
-        {React.createElement(Icon, { size: 28, weight: 'bold', color: '#fff' })}
+        {React.createElement(Icon, { size: 28, weight: 'bold' })}
       </Box>
       <Typography sx={{ fontWeight: 800, fontSize: '1.02rem', textAlign: 'center', lineHeight: 1.25 }}>
         {label}
@@ -166,7 +167,6 @@ function QuotaStat({
   convertTooltip,
   convertAria,
   unavailableLabel,
-  remainingLabel,
 }: {
   label: string;
   used: number;
@@ -177,109 +177,116 @@ function QuotaStat({
   convertTooltip: string;
   convertAria: string;
   unavailableLabel: string;
-  remainingLabel: string;
 }) {
   const percent = max > 0 ? Math.min(100, (used / max) * 100) : 0;
   const barPercent = used > 0 && percent < 4 ? 4 : percent;
 
   return (
-    <Box
+    <Stack
+      direction="row"
+      spacing={1.25}
       sx={{
-        position: 'relative',
-        width: '100%',
-        minWidth: 0,
-        px: 1.5,
+        alignItems: 'center',
         py: 1.15,
-        borderRadius: 2.5,
-        border: '1px solid',
-        borderColor: 'divider',
-        bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
-        display: 'flex',
-        flexDirection: 'column',
+        px: { xs: 0.25, sm: 0.5 },
+        minWidth: 0,
       }}
     >
-      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 0.75 }}>
-        <Stack direction="row" spacing={0.85} sx={{ alignItems: 'center', minWidth: 0, flex: 1 }}>
-          <Box
-            sx={{
-              width: 32,
-              height: 32,
-              borderRadius: 1.5,
-              display: 'grid',
-              placeItems: 'center',
-              flexShrink: 0,
-              bgcolor: `${tone}24`,
-              color: tone,
-            }}
-          >
-            {React.createElement(Icon, { size: 17, weight: 'bold' })}
-          </Box>
+      <Box
+        sx={{
+          width: 36,
+          height: 36,
+          borderRadius: 1.75,
+          display: 'grid',
+          placeItems: 'center',
+          flexShrink: 0,
+          bgcolor: `${tone}18`,
+          color: tone,
+        }}
+      >
+        {React.createElement(Icon, { size: 18, weight: 'bold' })}
+      </Box>
+
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ alignItems: 'baseline', justifyContent: 'space-between', gap: 1, mb: 0.55 }}
+        >
           <Typography
             sx={{
-              fontWeight: 750,
-              fontSize: '0.8rem',
-              lineHeight: 1.25,
-              color: 'text.secondary',
-              wordBreak: 'break-word',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              lineHeight: 1.2,
+              color: 'text.primary',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
           >
             {label}
           </Typography>
+          <Typography
+            sx={{
+              fontWeight: 750,
+              fontSize: '0.88rem',
+              lineHeight: 1.2,
+              letterSpacing: '-0.01em',
+              flexShrink: 0,
+              color: max <= 0 ? 'text.secondary' : 'text.primary',
+            }}
+          >
+            {max <= 0 ? (
+              unavailableLabel
+            ) : (
+              <>
+                {used}
+                <Box component="span" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                  {' '}
+                  / {max}
+                </Box>
+              </>
+            )}
+          </Typography>
         </Stack>
-        {convertible ? (
-          <Tooltip title={convertTooltip} arrow>
-            <IconButton
-              component="a"
-              href={`${paths.user.packagesExtra}#convert`}
-              onClick={(event) => hardNavigate(`${paths.user.packagesExtra}#convert`, event)}
-              size="small"
-              aria-label={convertAria}
-              sx={{
-                width: 28,
-                height: 28,
-                color: tone,
-                bgcolor: `${tone}18`,
-                flexShrink: 0,
-                '&:hover': { bgcolor: `${tone}2e` },
-              }}
-            >
-              <ArrowsLeftRightIcon size={14} weight="bold" />
-            </IconButton>
-          </Tooltip>
-        ) : null}
-      </Stack>
-
-      <Typography sx={{ mt: 0.75, fontWeight: 850, fontSize: '1.05rem', lineHeight: 1.1, letterSpacing: '-0.02em' }}>
-        {used}
-        <Box component="span" sx={{ color: 'text.secondary', fontWeight: 650, fontSize: '0.82rem' }}>
-          {' '}
-          / {max}
-        </Box>
-      </Typography>
-
-      <Box sx={{ mt: 0.85 }}>
         <LinearProgress
           variant="determinate"
-          value={barPercent}
+          value={max <= 0 ? 0 : barPercent}
           sx={{
-            height: 3.5,
+            height: 4,
             borderRadius: 2,
             bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'),
             '& .MuiLinearProgress-bar': {
               borderRadius: 2,
-              bgcolor: tone,
+              bgcolor: max <= 0 ? 'text.disabled' : tone,
             },
           }}
         />
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ display: 'block', mt: 0.45, fontWeight: 550, fontSize: '0.68rem', lineHeight: 1.2 }}
-        >
-          {max <= 0 ? unavailableLabel : remainingLabel}
-        </Typography>
       </Box>
-    </Box>
+
+      {convertible ? (
+        <Tooltip title={convertTooltip} arrow>
+          <IconButton
+            component="a"
+            href={`${paths.user.packagesExtra}#convert`}
+            onClick={(event) => hardNavigate(`${paths.user.packagesExtra}#convert`, event)}
+            size="small"
+            aria-label={convertAria}
+            sx={{
+              width: 30,
+              height: 30,
+              color: 'text.secondary',
+              flexShrink: 0,
+              '&:hover': { color: tone, bgcolor: `${tone}18` },
+            }}
+          >
+            <ArrowsLeftRightIcon size={15} weight="bold" />
+          </IconButton>
+        </Tooltip>
+      ) : (
+        <Box sx={{ width: 30, height: 30, flexShrink: 0 }} aria-hidden />
+      )}
+    </Stack>
   );
 }
 
@@ -426,21 +433,7 @@ export default function UserDashboardPage() {
             },
           }}
         >
-          <Box
-            sx={{
-              width: 30,
-              height: 30,
-              borderRadius: '50%',
-              display: 'grid',
-              placeItems: 'center',
-              flexShrink: 0,
-              bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.18)' : 'rgba(232, 185, 35, 0.2)',
-              color: '#e8b923',
-            }}
-          >
-            <CoinsIcon size={16} weight="fill" />
-          </Box>
+          <BoostCoinIcon size={28} />
           <Typography
             component="span"
             sx={{
@@ -474,18 +467,22 @@ export default function UserDashboardPage() {
               onClick={() => setAddListingOpen(true)}
               label={t.addListing}
               icon={PlusIcon}
-              gradient={GRADIENTS.blue}
             />
           </Grid>
         ) : null}
         <Grid size={{ xs: 6, md: 3 }}>
-          <ActionTile href={paths.user.statistics} label={t.statistics} icon={ChartLineUpIcon} gradient={GRADIENTS.purple} />
+          <ActionTile href={paths.user.statistics} label={t.statistics} icon={ChartLineUpIcon} />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
-          <ActionTile href={paths.user.myRealEstateListings} label={t.myListings} icon={ListBulletsIcon} gradient={GRADIENTS.green} />
+          <ActionTile href={paths.user.myRealEstateListings} label={t.myListings} icon={ListBulletsIcon} />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
-          <ActionTile href={paths.user.credits} label={t.buyCredits} icon={CoinsIcon} gradient={GRADIENTS.orange} />
+          <ActionTile
+            href={paths.user.credits}
+            label={t.buyCredits}
+            icon={BoostCoinIcon as PhosphorIcon}
+            tone="amber"
+          />
         </Grid>
       </Grid>
 
@@ -493,30 +490,28 @@ export default function UserDashboardPage() {
 
       {canPublish ? (
         <Box sx={{ ...portalCardSx, p: { xs: 2, sm: 2.5 } }}>
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 0.75 }}
-          >
-            <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ fontWeight: 850, fontSize: '1.05rem', lineHeight: 1.2, letterSpacing: '-0.01em' }}>
-                {t.subscriptionPackage}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
-                {t.quotasHint(activePlanLabel, categoryLabel)}
-              </Typography>
-            </Box>
+          <Stack spacing={0.35} sx={{ mb: 1.25 }}>
+            <Typography sx={{ fontWeight: 850, fontSize: '1.05rem', lineHeight: 1.2, letterSpacing: '-0.01em' }}>
+              {t.subscriptionPackage}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35 }}>
+              {t.quotasHint(activePlanLabel, categoryLabel)}
+            </Typography>
           </Stack>
 
-          <Box
+          <Stack
+            spacing={0}
             sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: 'repeat(2, minmax(0, 1fr))',
-                sm: 'repeat(3, minmax(0, 1fr))',
-                md: 'repeat(5, minmax(0, 1fr))',
+              borderRadius: 2.25,
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: (theme) =>
+                theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
+              px: { xs: 1.25, sm: 1.5 },
+              '& > *:not(:last-child)': {
+                borderBottom: '1px solid',
+                borderColor: 'divider',
               },
-              gap: 1.1,
             }}
           >
             <QuotaStat
@@ -529,7 +524,6 @@ export default function UserDashboardPage() {
               convertTooltip={t.convertTooltip}
               convertAria={t.convertAria(t.apartments)}
               unavailableLabel={t.unavailable}
-              remainingLabel={t.remaining(Math.max(0, quotas.maxApartmentListings - usage.apartments))}
             />
             <QuotaStat
               label={t.cars}
@@ -541,7 +535,6 @@ export default function UserDashboardPage() {
               convertTooltip={t.convertTooltip}
               convertAria={t.convertAria(t.cars)}
               unavailableLabel={t.unavailable}
-              remainingLabel={t.remaining(Math.max(0, quotas.maxCarListings - usage.cars))}
             />
             <QuotaStat
               label={t.jobs}
@@ -553,7 +546,6 @@ export default function UserDashboardPage() {
               convertTooltip={t.convertTooltip}
               convertAria={t.convertAria(t.jobs)}
               unavailableLabel={t.unavailable}
-              remainingLabel={t.remaining(Math.max(0, quotas.maxJobListings - usage.jobs))}
             />
             <QuotaStat
               label={t.products}
@@ -565,7 +557,6 @@ export default function UserDashboardPage() {
               convertTooltip={t.convertTooltip}
               convertAria={t.convertAria(t.products)}
               unavailableLabel={t.unavailable}
-              remainingLabel={t.remaining(Math.max(0, quotas.maxProductListings - usage.products))}
             />
             <QuotaStat
               label={t.premium}
@@ -576,42 +567,15 @@ export default function UserDashboardPage() {
               convertTooltip={t.convertTooltip}
               convertAria={t.convertAria(t.premium)}
               unavailableLabel={t.unavailable}
-              remainingLabel={t.remaining(Math.max(0, quotas.maxPremiumListings - usage.premium))}
             />
-          </Box>
+          </Stack>
         </Box>
       ) : null}
 
-      <DailyStreakCard />
+      {canPublish ? <ReferralSummaryCard /> : null}
+      {!canPublish ? <DailyStreakCard /> : null}
 
       <PortalLinkGroup>
-        <PortalLinkCard
-          grouped
-          href={paths.user.packages}
-          title={t.packagesTitle}
-          description={t.packagesDescription}
-          icon={PackageIcon}
-          badge={activePlanLabel}
-          badgeColor={activePlanBadgeColor}
-        />
-        {canPublish ? (
-          <PortalLinkCard
-            grouped
-            href={paths.user.referral}
-            title={t.referralTitle}
-            description={t.referralDescription}
-            icon={HandshakeIcon}
-          />
-        ) : null}
-        {canPublish ? (
-          <PortalLinkCard
-            grouped
-            href={paths.user.payments}
-            title={t.paymentsTitle}
-            description={t.paymentsDescription}
-            icon={ReceiptIcon}
-          />
-        ) : null}
         <PortalLinkCard
           grouped
           href={paths.user.profile}
@@ -621,6 +585,32 @@ export default function UserDashboardPage() {
           badge={categoryLabel}
           badgeColor={categoryBadgeColor}
         />
+        <PortalLinkCard
+          grouped
+          href={paths.user.packagesMain}
+          title={t.packagesTitle}
+          description={t.packagesDescription}
+          icon={PackageIcon}
+          badge={activePlanLabel}
+          badgeColor={activePlanBadgeColor}
+        />
+        <PortalLinkCard
+          grouped
+          href={paths.user.packagesExtra}
+          title={t.extraPackagesTitle}
+          description={t.extraPackagesDescription}
+          icon={SquaresFourIcon}
+        />
+        {canPublish ? (
+          <PortalLinkCard
+            grouped
+            href={paths.user.payments}
+            title={t.paymentsTitle}
+            description={t.paymentsDescription}
+            icon={ReceiptIcon}
+          />
+        ) : null}
+        <LanguageSwitchRow grouped />
         <PortalLinkCard
           grouped
           href={paths.public.terms}
@@ -636,8 +626,6 @@ export default function UserDashboardPage() {
           icon={ShieldCheckIcon}
         />
       </PortalLinkGroup>
-
-      <LanguageSwitchRow />
 
       <Button
         variant="outlined"

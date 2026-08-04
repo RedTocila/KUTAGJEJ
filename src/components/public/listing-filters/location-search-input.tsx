@@ -22,6 +22,7 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { cleanLocationPart } from '@/lib/location-display';
 import { normalizeZoneIds } from '@/lib/listing-filters';
+import { normalizeSearchText } from '@/lib/smart-search';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 
 const pillSx = {
@@ -61,8 +62,30 @@ const chipsScrollerSx = {
   WebkitMaskImage: 'linear-gradient(to right, black 0, black calc(100% - 12px), transparent 100%)',
 } as const;
 
-function normalize(value: string): string {
-  return value.trim().toLowerCase();
+/** Accent-tolerant match so "durres" finds "Durrës", "tirana" finds "Tiranë". */
+function locationMatches(label: string, query: string): boolean {
+  const needle = normalizeSearchText(query);
+  const hay = normalizeSearchText(label);
+  if (!needle || !hay) return false;
+  if (hay.includes(needle) || needle.includes(hay)) return true;
+
+  const aliases: Record<string, string[]> = {
+    tirana: ['tirane'],
+    vlora: ['vlore'],
+    shkodra: ['shkoder'],
+    korca: ['korce'],
+    saranda: ['sarande'],
+    himara: ['himare'],
+    kavaja: ['kavaje'],
+    lushnja: ['lushnje'],
+    lezha: ['lezhe'],
+    durresi: ['durres'],
+  };
+  for (const [alias, targets] of Object.entries(aliases)) {
+    if (needle === alias && targets.some((t) => hay.includes(t))) return true;
+    if (targets.includes(needle) && (hay.includes(alias) || alias.includes(hay))) return true;
+  }
+  return false;
 }
 
 function safeLabel(value: string | null | undefined): string {
@@ -138,15 +161,15 @@ export function LocationSearchInput({
   const zoneMode = Boolean(enableZones && cityId && selectedCity);
 
   const cityOptions = React.useMemo(() => {
-    const q = normalize(query);
+    const q = query.trim();
     const all: CityOption[] = cities.map((c) => ({ cityId: c.id, label: safeLabel(c.name) }));
     if (!q) return all;
-    return all.filter((c) => normalize(c.label).includes(q));
+    return all.filter((c) => locationMatches(c.label, q));
   }, [cities, query]);
 
   const zoneOptions = React.useMemo(() => {
     if (!zoneMode) return [] as ZoneOption[];
-    const q = normalize(query);
+    const q = query.trim();
     const all: ZoneOption[] = cityZones.map((z) => ({
       zoneId: z.id,
       label: safeLabel(z.name),
@@ -154,17 +177,17 @@ export function LocationSearchInput({
       cityName,
     }));
     if (!q) return all;
-    return all.filter((z) => normalize(z.label).includes(q));
+    return all.filter((z) => locationMatches(z.label, q));
   }, [zoneMode, cityZones, query, selectedCity, cityName]);
 
   const globalZoneOptions = React.useMemo(() => {
-    if (!enableZones || cityId || !normalize(query)) return [] as ZoneOption[];
-    const q = normalize(query);
+    if (!enableZones || cityId || !query.trim()) return [] as ZoneOption[];
+    const q = query.trim();
     const rows: ZoneOption[] = [];
     for (const city of cities) {
       for (const zone of city.zones ?? []) {
         const label = safeLabel(zone.name);
-        if (!normalize(label).includes(q)) continue;
+        if (!locationMatches(label, q)) continue;
         rows.push({
           zoneId: zone.id,
           label,

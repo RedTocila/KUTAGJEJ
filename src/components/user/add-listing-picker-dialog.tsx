@@ -219,7 +219,7 @@ export function AddListingPickerDialog({
                   display: 'grid',
                   placeItems: 'center',
                   flexShrink: 0,
-                  bgcolor: 'rgba(158, 201, 232, 0.22)',
+                  bgcolor: `${AI_SEARCH_BLUE}14`,
                   color: AI_SEARCH_BLUE,
                 }}
               >

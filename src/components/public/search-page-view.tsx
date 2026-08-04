@@ -31,7 +31,9 @@ import { useLanguage } from '@/hooks/use-language';
 import { fetchAiSearch, type AiSearchResult } from '@/lib/ai-search-client';
 import {
   AI_SEARCH_BLUE,
+  AI_SEARCH_BLUE_HOVER,
   AI_SEARCH_BLUE_MUTED,
+  AI_SEARCH_BLUE_ON,
   AI_SEARCH_BLUE_SOFT,
   findVertical,
   isHomeVerticalId,
@@ -425,19 +427,19 @@ export function SearchPageView() {
                 height: 40,
                 alignSelf: isAi ? 'flex-end' : 'center',
                 bgcolor: isAi ? AI_SEARCH_BLUE : 'primary.main',
-                color: isAi ? '#1a3344' : 'common.black',
+                color: isAi ? AI_SEARCH_BLUE_ON : 'common.black',
                 '&:hover': {
-                  bgcolor: isAi ? '#8BBAD9' : 'primary.dark',
-                  color: isAi ? '#1a3344' : 'common.black',
+                  bgcolor: isAi ? AI_SEARCH_BLUE_HOVER : 'primary.dark',
+                  color: isAi ? AI_SEARCH_BLUE_ON : 'common.black',
                 },
                 '&.Mui-disabled': {
                   bgcolor: isAi ? AI_SEARCH_BLUE_SOFT : undefined,
-                  color: isAi ? '#1a3344' : undefined,
+                  color: isAi ? AI_SEARCH_BLUE_ON : undefined,
                 },
               }}
             >
               {loading && isAi ? (
-                <CircularProgress size={18} sx={{ color: '#1a3344' }} />
+                <CircularProgress size={18} sx={{ color: AI_SEARCH_BLUE_ON }} />
               ) : isAi ? (
                 <SparkleIcon size={18} weight="bold" />
               ) : (

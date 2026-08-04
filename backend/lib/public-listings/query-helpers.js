@@ -1,6 +1,7 @@
 const { getSupabaseAdmin } = require('../supabase');
 const { camelizeRows } = require('../profiles');
 const { DEFAULT_LIMIT, MAX_LIMIT, JOB_LISTING_VISIBLE_DAYS, MS_PER_DAY } = require('./constants');
+const { expandSearchTerms, namesMatch, normalizeSearchText } = require('../search-normalize');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -153,11 +154,60 @@ function escapeOrValue(value) {
 
 /** Builds a `.or()` filter string matching any of `fields` against `q` (case-insensitive substring). */
 function buildIlikeOrFilter(fields, q) {
-  const term = String(q ?? '').trim();
-  if (term.length < 2 || term.length > 80) return null;
-  const likeValue = `%${escapeIlikeValue(term)}%`;
-  const value = escapeOrValue(likeValue);
-  return fields.map((field) => `${field}.ilike.${value}`).join(',');
+  const terms = expandSearchTerms(q);
+  if (!terms.length || !fields?.length) return null;
+
+  const parts = [];
+  for (const term of terms) {
+    const likeValue = `%${escapeIlikeValue(term)}%`;
+    const value = escapeOrValue(likeValue);
+    for (const field of fields) {
+      parts.push(`${field}.ilike.${value}`);
+    }
+  }
+  return parts.length ? parts.join(',') : null;
+}
+
+/**
+ * Resolve free-text `q` to city/zone ids (accent + English-alias tolerant).
+ * Appends `city_id.eq` / `zone_id.eq` clauses onto `spec.or` so location names find listings.
+ */
+async function enrichTextSearchWithLocations(spec, q) {
+  const needle = normalizeSearchText(q);
+  if (!needle || needle.length < 2) return spec;
+
+  const { data, error } = await getSupabaseAdmin()
+    .from('real_estate_cities')
+    .select('id, name, zones');
+  if (error) throw error;
+  if (!data?.length) return spec;
+
+  const cityIds = new Set();
+  const zoneIds = new Set();
+
+  for (const city of data) {
+    if (namesMatch(needle, city.name)) {
+      cityIds.add(city.id);
+    }
+    const zones = Array.isArray(city.zones) ? city.zones : [];
+    for (const zone of zones) {
+      const zoneName = zone?.name;
+      if (!zoneName || !namesMatch(needle, zoneName)) continue;
+      zoneIds.add(zone.id);
+      cityIds.add(city.id);
+    }
+  }
+
+  const locationParts = [];
+  for (const id of cityIds) locationParts.push(`city_id.eq.${id}`);
+  for (const id of zoneIds) locationParts.push(`zone_id.eq.${id}`);
+  if (!locationParts.length) return spec;
+
+  const locationOr = locationParts.join(',');
+  return {
+    ...spec,
+    or: spec.or ? `${spec.or},${locationOr}` : locationOr,
+  };
 }
 
 /** Loads `real_estate_cities` rows referenced by `cityId` on a list of camelCase docs. */
@@ -188,5 +238,6 @@ module.exports = {
   isPremiumActive,
   prioritizeActivePremium,
   buildIlikeOrFilter,
+  enrichTextSearchWithLocations,
   buildCityIndex,
 };

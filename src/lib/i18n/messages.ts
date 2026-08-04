@@ -259,7 +259,7 @@ const sq = {
       fail > 0
         ? `U postuan ${ok}, dështuan ${fail}. Kontrollo draftet e mbetura.`
         : `U postuan ${ok} njoftime.`,
-    draftsKeptHint: 'Draftet ruhen këtu. Pas ruajtjes ose mbylljes së formularit ktheheni te AI Build.',
+    draftsKeptHint: 'Ruhen këtu — i gjen përsëri pasi të kthehesh nga formulari.',
     placeholder:
       'https://example.com/apartament\nhttps://www.instagram.com/p/...\nhttps://www.amazon.com/...',
     analyze: 'Analizo me AI',
@@ -478,7 +478,7 @@ const en: AppMessages = {
     title: 'AI Build',
     subtitle:
       'Choose the category, then paste up to 20 links (Instagram, website, etc.). AI builds the drafts.',
-    chooseCategory: 'Choose category',
+    chooseCategory: 'Choose a category',
     categoryRequired: 'Choose the listing category before analyzing.',
     previewImage: 'Preview photo',
     dismissDraft: 'Remove draft',
@@ -492,7 +492,7 @@ const en: AppMessages = {
       fail > 0
         ? `Posted ${ok}, failed ${fail}. Check remaining drafts.`
         : `Posted ${ok} listings.`,
-    draftsKeptHint: 'Drafts stay here. After saving or closing the form you return to AI Build.',
+    draftsKeptHint: 'Saved here — you’ll find them again after you return from the form.',
     placeholder:
       'https://example.com/apartment\nhttps://www.instagram.com/p/...\nhttps://www.amazon.com/...',
     analyze: 'Analyze with AI',

@@ -17,6 +17,7 @@ const {
   parseSort,
   buildSort,
   buildIlikeOrFilter,
+  enrichTextSearchWithLocations,
   mergeSpecs,
 } = require('./query-helpers');
 
@@ -64,6 +65,13 @@ function parseAllowedFromArray(value, allowedValues) {
 function applyTextSearch(spec, query, fields) {
   const or = buildIlikeOrFilter(fields, query.q);
   if (or) spec.or = or;
+}
+
+/** Finish keyword search: accent-tolerant text match + city/zone name resolution. */
+async function finalizeTextSearch(filter, query) {
+  const q = String(query?.q ?? '').trim();
+  if (q.length < 2) return filter;
+  return enrichTextSearchWithLocations(filter, q);
 }
 
 function applyPriceRange(spec, minPrice, maxPrice) {
@@ -209,4 +217,5 @@ module.exports = {
   parseJobFilters,
   parseMarketplaceFilters,
   parseDirectoryFilters,
+  finalizeTextSearch,
 };

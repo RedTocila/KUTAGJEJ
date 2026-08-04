@@ -29,7 +29,9 @@ import {
 } from '@/lib/ai-import-client';
 import {
   AI_SEARCH_BLUE,
+  AI_SEARCH_BLUE_HOVER,
   AI_SEARCH_BLUE_MUTED,
+  AI_SEARCH_BLUE_ON,
   AI_SEARCH_BLUE_SOFT,
 } from '@/lib/home-categories';
 import { uploadListingImages } from '@/lib/uploads-client';
@@ -356,15 +358,15 @@ export function PostListingAiAssist({
             sx={{
               flexShrink: 0,
               bgcolor: AI_SEARCH_BLUE,
-              color: '#1a3344',
+              color: AI_SEARCH_BLUE_ON,
               borderRadius: 2,
               width: 38,
               height: 38,
               mb: 0.15,
-              '&:hover': { bgcolor: '#8BBAD9' },
+              '&:hover': { bgcolor: AI_SEARCH_BLUE_HOVER },
               '&.Mui-disabled': {
                 bgcolor: AI_SEARCH_BLUE,
-                color: '#1a3344',
+                color: AI_SEARCH_BLUE_ON,
                 opacity: 0.45,
               },
             }}
@@ -421,7 +423,7 @@ export function PostListingAiAssist({
           font: 'inherit',
           textAlign: 'left',
           '&:hover': {
-            bgcolor: 'rgba(158, 201, 232, 0.12)',
+            bgcolor: AI_SEARCH_BLUE_MUTED,
           },
         }}
       >
@@ -433,7 +435,7 @@ export function PostListingAiAssist({
             display: 'grid',
             placeItems: 'center',
             flexShrink: 0,
-            bgcolor: 'rgba(158, 201, 232, 0.28)',
+            bgcolor: AI_SEARCH_BLUE_SOFT,
             color: AI_SEARCH_BLUE,
           }}
         >
@@ -497,8 +499,8 @@ export function PostListingAiAssist({
                   borderColor: AI_SEARCH_BLUE,
                   color: AI_SEARCH_BLUE,
                   '&:hover': {
-                    borderColor: '#8BBAD9',
-                    bgcolor: 'rgba(158, 201, 232, 0.12)',
+                    borderColor: AI_SEARCH_BLUE_HOVER,
+                    bgcolor: AI_SEARCH_BLUE_MUTED,
                   },
                 }}
               >
@@ -537,15 +539,15 @@ export function PostListingAiAssist({
                 py: 1.2,
                 boxShadow: 'none',
                 bgcolor: AI_SEARCH_BLUE,
-                color: '#1a3344',
+                color: AI_SEARCH_BLUE_ON,
                 '&:hover': {
                   boxShadow: 'none',
-                  bgcolor: '#8BBAD9',
-                  color: '#1a3344',
+                  bgcolor: AI_SEARCH_BLUE_HOVER,
+                  color: AI_SEARCH_BLUE_ON,
                 },
                 '&.Mui-disabled': {
                   bgcolor: AI_SEARCH_BLUE,
-                  color: '#1a3344',
+                  color: AI_SEARCH_BLUE_ON,
                   opacity: 0.55,
                 },
               }}

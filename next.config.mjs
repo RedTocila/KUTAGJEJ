@@ -17,6 +17,10 @@ const config = {
   },
 
   images: {
+    // Vercel multi-service deploy currently returns HTML 404 for `/_next/image`
+    // (even for already-allowed hosts like images.unsplash.com). Serve remote
+    // URLs directly so listing photos load.
+    unoptimized: true,
     qualities: [75, 85],
     remotePatterns: [
       ...(backendHostname
@@ -35,6 +39,11 @@ const config = {
       },
       {
         protocol: 'https',
+        hostname: 'ksemrbndoenxdxijokke.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+      {
+        protocol: 'https',
         hostname: '*.supabase.co',
         pathname: '/storage/v1/object/public/**',
       },
@@ -49,7 +58,6 @@ const config = {
         pathname: '/**',
       },
     ],
-    unoptimized: process.env.NODE_ENV !== 'production',
   },
 
   async rewrites() {

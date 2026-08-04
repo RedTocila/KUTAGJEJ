@@ -77,13 +77,11 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
   const showFrameClose =
     pathname === paths.user.businessesListing ||
     pathname === paths.user.professionalsListing;
-  const isPackagesSub =
-    pathMatches(pathname, paths.user.packages) && pathname !== paths.user.packages;
   const messageThreadOpen = isMessages && Boolean(searchParams.get('c'));
   const showMobileBottomNav = !messageThreadOpen;
   const showBackLink = !isDashboardHome && !isMessages && !isSavedListings && !isPostListing;
-  const backHref = isPackagesSub ? paths.user.packages : paths.user.dashboard;
-  const backLabel = isPackagesSub ? 'Kthehu te paketat' : 'Kthehu te profili';
+  const backHref = paths.user.dashboard;
+  const backLabel = 'Kthehu te profili';
 
   return (
     <AuthGuard>

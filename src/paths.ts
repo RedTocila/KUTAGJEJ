@@ -46,13 +46,13 @@ export const paths = {
     credits: '/user/dashboard/kredite',
     /** Full-page POK checkout (credits or subscription). */
     checkout: '/user/dashboard/checkout',
-    /** Subscription packages hub (category cards). */
+    /** @deprecated Hub removed — redirects to dashboard. Prefer packagesMain / packagesExtra / packagesCredits. */
     packages: '/user/dashboard/paketat',
     /** Main subscription plans. */
     packagesMain: '/user/dashboard/paketat/kryesore',
     /** Add-on packages (auto-refresh, premium, convert). */
     packagesExtra: '/user/dashboard/paketat/shtese',
-    /** Boost Coins purchase (via packages hub). */
+    /** Boost Coins purchase. */
     packagesCredits: '/user/dashboard/paketat/boost-coins',
     /** The user's own payments + active subscriptions. */
     payments: '/user/dashboard/pagesat',

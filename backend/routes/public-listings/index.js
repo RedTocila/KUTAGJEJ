@@ -47,6 +47,7 @@ const {
   parseJobFilters,
   parseMarketplaceFilters,
   parseDirectoryFilters,
+  finalizeTextSearch,
 } = require('../../lib/public-listings/listing-filters');
 const { reviewStatsByListingIds } = require('../../lib/business-review-stats');
 const { professionalReviewStatsByListingIds } = require('../../lib/professional-review-stats');
@@ -269,7 +270,9 @@ router.get('/professionals/:id', optionalAuth, async (req, res) => {
 router.get('/real-estate', optionalAuth, async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
-    const { filter, sort } = parseRealEstateFilters(req.query);
+    const parsed = parseRealEstateFilters(req.query);
+    const filter = await finalizeTextSearch(parsed.filter, req.query);
+    const sort = parsed.sort;
     const total = await countRealEstate(filter);
     let listings = await queryRealEstate(limit, filter, sort, skip);
     const saver = saverFromUser(req.user);
@@ -284,7 +287,9 @@ router.get('/real-estate', optionalAuth, async (req, res) => {
 router.get('/cars', optionalAuth, async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
-    const { filter, sort } = parseCarFilters(req.query);
+    const parsed = parseCarFilters(req.query);
+    const filter = await finalizeTextSearch(parsed.filter, req.query);
+    const sort = parsed.sort;
     const total = await countCars(filter);
     let listings = await queryCars(limit, filter, sort, skip);
     const saver = saverFromUser(req.user);
@@ -299,7 +304,9 @@ router.get('/cars', optionalAuth, async (req, res) => {
 router.get('/jobs', optionalAuth, async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
-    const { filter, sort } = parseJobFilters(req.query);
+    const parsed = parseJobFilters(req.query);
+    const filter = await finalizeTextSearch(parsed.filter, req.query);
+    const sort = parsed.sort;
     const total = await countJobs(filter);
     let listings = await queryJobs(limit, filter, sort, skip);
     const saver = saverFromUser(req.user);
@@ -314,7 +321,9 @@ router.get('/jobs', optionalAuth, async (req, res) => {
 router.get('/marketplace', optionalAuth, async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
-    const { filter, sort } = parseMarketplaceFilters(req.query);
+    const parsed = parseMarketplaceFilters(req.query);
+    const filter = await finalizeTextSearch(parsed.filter, req.query);
+    const sort = parsed.sort;
     const total = await countMarketplace(filter);
     let listings = await queryMarketplace(limit, filter, sort, skip);
     const saver = saverFromUser(req.user);
@@ -329,7 +338,9 @@ router.get('/marketplace', optionalAuth, async (req, res) => {
 router.get('/businesses', optionalAuth, async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
-    const { filter, sort } = parseDirectoryFilters(req.query, 'businesses');
+    const parsed = parseDirectoryFilters(req.query, 'businesses');
+    const filter = await finalizeTextSearch(parsed.filter, req.query);
+    const sort = parsed.sort;
     const total = await countDirectory(filter);
     let listings = await queryDirectory('businesses', limit, filter, sort, skip);
     const saver = saverFromUser(req.user);
@@ -344,7 +355,9 @@ router.get('/businesses', optionalAuth, async (req, res) => {
 router.get('/professionals', optionalAuth, async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
-    const { filter, sort } = parseDirectoryFilters(req.query, 'professionals');
+    const parsed = parseDirectoryFilters(req.query, 'professionals');
+    const filter = await finalizeTextSearch(parsed.filter, req.query);
+    const sort = parsed.sort;
     const total = await countDirectory(filter);
     let listings = await queryDirectory('professionals', limit, filter, sort, skip);
     const saver = saverFromUser(req.user);

@@ -9,12 +9,17 @@ import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import type { AppLanguage } from '@/lib/language';
 
-export function LanguageSwitchRow() {
+export function LanguageSwitchRow({ grouped = false }: { grouped?: boolean }) {
   const { language, setLanguage } = useLanguage();
   const t = useCopy();
 
   return (
-    <Box sx={{ ...portalCardSx, p: { xs: 2.25, sm: 2.75 } }}>
+    <Box
+      sx={{
+        p: { xs: 2.25, sm: 2.75 },
+        ...(grouped ? null : portalCardSx),
+      }}
+    >
       <Stack direction="row" spacing={1.75} sx={{ alignItems: 'center' }}>
         <PortalIconBox>{React.createElement(TranslateIcon, { size: 24, weight: 'duotone' })}</PortalIconBox>
         <Box sx={{ minWidth: 0, flex: 1 }}>

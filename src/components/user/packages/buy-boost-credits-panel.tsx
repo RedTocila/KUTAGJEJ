@@ -7,25 +7,22 @@ import {
   Box,
   Button,
   CircularProgress,
-  Grid,
   Stack,
   Typography,
 } from '@mui/material';
-import { Coins as CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins';
-
+import { alpha } from '@mui/material/styles';
+import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
+import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { useUser } from '@/hooks/use-user';
 import { listCreditPackages } from '@/lib/payments-client';
 import type { CreditPackage } from '@/types/payment';
 import { paths } from '@/paths';
 import {
-  FeatureList,
-  PlanCard,
-  PlanCardHeader,
-  PlanPrice,
   SoftChip,
   accentButtonSx,
   formatBc,
   formatEur,
+  resolveAccent,
   type PlanAccent,
 } from './package-ui';
 
@@ -39,39 +36,8 @@ const FALLBACK_CREDIT_PACKAGES: CreditPackage[] = [
   { id: 'Dominator', credits: 8000, bonusCredits: 1500, priceEur: 750, labelSq: 'Dominator', badgeSq: '+1500 BC' },
 ];
 
-/** Card / chip accent per package. Starter & Elite keep the orange look. */
-const CREDIT_PACKAGE_ACCENT: Record<string, PlanAccent> = {
-  starter: 'warning',
-  growth: '#3b82f6',
-  pro: '#2dd4bf',
-  elite: 'warning',
-  competitor: 'error',
-  dominator: '#a855f7',
-};
-
-/** Buy button accent — Starter uses green; others match the card. */
-const CREDIT_PACKAGE_BUTTON_ACCENT: Record<string, PlanAccent> = {
-  starter: 'success',
-  growth: '#3b82f6',
-  pro: '#2dd4bf',
-  elite: 'warning',
-  competitor: 'error',
-  dominator: '#a855f7',
-};
-
-function packageKey(pkg: CreditPackage) {
-  return String(pkg.labelSq || pkg.id || '')
-    .trim()
-    .toLowerCase();
-}
-
-function accentForPackage(pkg: CreditPackage): PlanAccent {
-  return CREDIT_PACKAGE_ACCENT[packageKey(pkg)] ?? 'warning';
-}
-
-function buttonAccentForPackage(pkg: CreditPackage): PlanAccent {
-  return CREDIT_PACKAGE_BUTTON_ACCENT[packageKey(pkg)] ?? accentForPackage(pkg);
-}
+/** Shared accent for every Boost Coins package row. */
+const PACKAGE_ACCENT: PlanAccent = 'primary';
 
 function checkoutCreditsHref(packageId: string) {
   const q = new URLSearchParams({
@@ -124,7 +90,7 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
         >
           <Box>
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5 }}>
-              <CoinsIcon size={28} weight="duotone" color="var(--mui-palette-warning-main)" />
+              <BoostCoinIcon size={28} />
               <Typography variant="h4" component="h1" sx={{ fontWeight: 850 }}>
                 Boost Coins
               </Typography>
@@ -156,70 +122,127 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
           <CircularProgress size={28} />
         </Box>
       ) : (
-        <Grid container spacing={1.5}>
+        <Stack spacing={1.15}>
           {packages.map((pkg, index) => {
             const bonus = Number(pkg.bonusCredits) || 0;
             const total = Number(pkg.credits) + bonus;
-            const accent = accentForPackage(pkg);
-            const buttonAccent = buttonAccentForPackage(pkg);
             const highlighted = Boolean(pkg.badgeSq) || index === 2;
+            const detailItems =
+              bonus > 0
+                ? [`${formatBc(pkg.credits)} BC bazë`, `+${formatBc(bonus)} bonus`]
+                : ['Pa bonus'];
+
             return (
-              <Grid key={pkg.id} size={{ xs: 6, sm: 6, md: 4 }}>
-                <PlanCard highlighted={highlighted} accent={accent} compact>
-                  <PlanCardHeader
-                    compact
-                    title={pkg.labelSq}
-                    accent={accent}
-                    badge={
-                      pkg.badgeSq ? (
-                        <SoftChip compact label={pkg.badgeSq} accent={accent} />
-                      ) : highlighted ? (
-                        <SoftChip compact label="Popullore" accent={accent} />
-                      ) : undefined
-                    }
-                  />
-
-                  <PlanPrice
-                    compact
-                    amount={formatBc(total)}
-                    suffix="BC"
-                    hint={formatEur(pkg.priceEur)}
-                  />
-
-                  <FeatureList
-                    compact
-                    accent={accent}
-                    items={
-                      bonus > 0
-                        ? [`${formatBc(pkg.credits)} BC bazë`, `+${formatBc(bonus)} bonus`]
-                        : ['Pa bonus']
-                    }
-                  />
-
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    size="small"
-                    onClick={() => router.push(checkoutCreditsHref(pkg.id))}
-                    sx={{
-                      ...accentButtonSx(buttonAccent),
-                      mt: 'auto',
-                      borderRadius: 1.75,
-                      py: 0.85,
-                      fontSize: '0.8rem',
-                      minWidth: 0,
-                      // Light accents need dark label text for contrast.
-                      color:
-                        buttonAccent === 'warning' || buttonAccent === '#2dd4bf' ? '#0b1220' : '#fff',
-                    }}
+              <Box
+                key={pkg.id}
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: { xs: 1.25, sm: 2 },
+                  px: { xs: 1.5, sm: 1.75 },
+                  py: { xs: 1.35, sm: 1.5 },
+                  borderRadius: 2.5,
+                  border: '1px solid',
+                  borderColor: highlighted
+                    ? (t) => alpha(resolveAccent(t, PACKAGE_ACCENT), 0.55)
+                    : 'divider',
+                  bgcolor: 'background.paper',
+                  boxShadow: highlighted
+                    ? (t) => `0 8px 22px ${alpha(resolveAccent(t, PACKAGE_ACCENT), 0.12)}`
+                    : 'none',
+                  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+                  '&:hover': {
+                    borderColor: (t) => alpha(resolveAccent(t, PACKAGE_ACCENT), 0.45),
+                    boxShadow: (t) => `0 8px 22px ${alpha(t.palette.common.black, 0.08)}`,
+                  },
+                }}
+              >
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Stack
+                    direction="row"
+                    spacing={0.75}
+                    sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5, mb: 0.35 }}
                   >
-                    Blej {formatEur(pkg.priceEur)}
-                  </Button>
-                </PlanCard>
-              </Grid>
+                    <Typography sx={{ fontWeight: 850, fontSize: '0.95rem', lineHeight: 1.25 }}>
+                      {pkg.labelSq}
+                    </Typography>
+                    {pkg.badgeSq ? (
+                      <SoftChip compact label={pkg.badgeSq} accent={PACKAGE_ACCENT} />
+                    ) : highlighted ? (
+                      <SoftChip compact label="Popullore" accent={PACKAGE_ACCENT} />
+                    ) : null}
+                  </Stack>
+
+                  <Stack direction="row" spacing={0.85} sx={{ alignItems: 'baseline', mb: 0.45 }}>
+                    <Typography
+                      sx={{
+                        fontWeight: 900,
+                        fontSize: { xs: '1.15rem', sm: '1.25rem' },
+                        lineHeight: 1.15,
+                        letterSpacing: '-0.02em',
+                        color: (t) => resolveAccent(t, PACKAGE_ACCENT),
+                      }}
+                    >
+                      {formatBc(total)}
+                    </Typography>
+                    <Typography
+                      sx={{ fontWeight: 750, fontSize: '0.78rem', color: 'text.secondary' }}
+                    >
+                      BC
+                    </Typography>
+                    <Typography
+                      sx={{ fontWeight: 650, fontSize: '0.78rem', color: 'text.secondary' }}
+                    >
+                      · {formatEur(pkg.priceEur)}
+                    </Typography>
+                  </Stack>
+
+                  <Stack direction="row" spacing={1.25} sx={{ flexWrap: 'wrap', rowGap: 0.25 }}>
+                    {detailItems.map((item) => (
+                      <Stack
+                        key={item}
+                        direction="row"
+                        spacing={0.4}
+                        sx={{
+                          alignItems: 'center',
+                          color: (t) => resolveAccent(t, PACKAGE_ACCENT),
+                        }}
+                      >
+                        <CheckCircleIcon size={13} weight="fill" />
+                        <Typography
+                          variant="caption"
+                          sx={{ fontWeight: 650, color: 'text.secondary', fontSize: '0.7rem' }}
+                        >
+                          {item}
+                        </Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                </Box>
+
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => router.push(checkoutCreditsHref(pkg.id))}
+                  sx={{
+                    ...accentButtonSx(PACKAGE_ACCENT),
+                    flexShrink: 0,
+                    borderRadius: 1.75,
+                    px: { xs: 1.5, sm: 2 },
+                    py: 0.95,
+                    minWidth: { xs: 92, sm: 110 },
+                    fontSize: '0.8rem',
+                    fontWeight: 800,
+                    textTransform: 'none',
+                  }}
+                >
+                  {formatEur(pkg.priceEur)}
+                </Button>
+              </Box>
             );
           })}
-        </Grid>
+        </Stack>
       )}
     </Stack>
   );
@@ -241,7 +264,7 @@ function BalanceChip({ balance }: { balance: number }) {
         color: 'warning.main',
       }}
     >
-      <CoinsIcon size={20} weight="duotone" />
+      <BoostCoinIcon size={20} />
       <Typography component="span" sx={{ color: 'text.primary', fontWeight: 650, fontSize: '0.85rem' }}>
         Balanca
       </Typography>

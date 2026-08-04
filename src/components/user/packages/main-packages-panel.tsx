@@ -90,6 +90,7 @@ export function MainPackagesPanel() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [activeContractId, setActiveContractId] = React.useState<string | null>(null);
+  const [activePlanCode, setActivePlanCode] = React.useState<string | null>(null);
 
   const reload = React.useCallback(async () => {
     const [{ contracts, error: err }, subsRes] = await Promise.all([
@@ -106,6 +107,7 @@ export function MainPackagesPanel() {
     const active =
       (subsRes.subscriptions ?? []).find((s) => s.status === 'active' && Number(s.priceEur) > 0) ?? null;
     setActiveContractId(active?.contractId ?? null);
+    setActivePlanCode(active?.planCode ? String(active.planCode).toLowerCase() : null);
   }, [subscriberKindFilter]);
 
   React.useEffect(() => {
@@ -148,13 +150,17 @@ export function MainPackagesPanel() {
           {plans.map((plan) => {
             const paidOptions = plan.priceOptions.filter((o) => o.price > 0);
             const isFree = plan.planCode === 'free' || plan.priceOptions.every((o) => o.price === 0);
+            const planCode = (plan.planCode || '').toLowerCase();
+            const hasPaidPlan = Boolean(activeContractId || activePlanCode);
             const isCurrent =
-              (activeContractId && activeContractId === plan.id) || (!activeContractId && isFree);
+              (activeContractId != null && activeContractId === plan.id) ||
+              (activePlanCode != null && planCode === activePlanCode) ||
+              (!hasPaidPlan && isFree);
             const accent = planAccent(plan);
-            const highlighted = isHighlightedPlan(plan) || Boolean(isCurrent);
+            const highlighted = isCurrent || isHighlightedPlan(plan);
             const from = startingPrice(plan);
             const Icon =
-              (plan.planCode || '').toLowerCase() === 'elite'
+              planCode === 'elite'
                 ? CrownIcon
                 : plan.glowBadgeEnabled
                   ? SealCheckIcon
@@ -170,8 +176,8 @@ export function MainPackagesPanel() {
                     accent={accent}
                     badge={
                       isCurrent ? (
-                        <SoftChip label="Aktuale" accent={accent} />
-                      ) : (plan.planCode || '').toLowerCase() === 'grow' ? (
+                        <SoftChip label="Plani juaj" accent={accent} />
+                      ) : planCode === 'grow' ? (
                         <SoftChip label="Popullore" accent={accent} />
                       ) : plan.glowBadgeEnabled ? (
                         <SoftChip label="Trust" accent={accent} />
@@ -185,20 +191,46 @@ export function MainPackagesPanel() {
                     <PlanPrice
                       amount={from != null ? formatEur(from) : '—'}
                       suffix="nga"
-                      hint="Zgjidhni kohëzgjatjen më poshtë"
+                      hint={
+                        isCurrent
+                          ? 'Ky është plani aktiv në llogarinë tuaj'
+                          : 'Zgjidhni kohëzgjatjen më poshtë'
+                      }
                     />
                   )}
 
                   <FeatureList items={planFeatureLines(plan)} accent={accent} />
 
-                  {isFree ? (
+                  {isCurrent ? (
+                    <Box
+                      role="status"
+                      sx={{
+                        ...accentPillButtonSx(accent, 'outlined'),
+                        mt: 'auto',
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center',
+                        boxSizing: 'border-box',
+                        bgcolor: (t) =>
+                          t.palette.mode === 'dark'
+                            ? 'rgba(255,255,255,0.04)'
+                            : 'rgba(0,0,0,0.03)',
+                        cursor: 'default',
+                        pointerEvents: 'none',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Plani juaj aktual
+                    </Box>
+                  ) : isFree ? (
                     <Button
                       fullWidth
                       variant="outlined"
-                      disabled={Boolean(isCurrent)}
                       sx={{ ...accentPillButtonSx(accent, 'outlined'), mt: 'auto' }}
                     >
-                      {isCurrent ? 'Plani juaj aktual' : 'Falas'}
+                      Ndrysho planin
                     </Button>
                   ) : (
                     <Stack spacing={1} sx={{ mt: 'auto' }}>
@@ -211,9 +243,13 @@ export function MainPackagesPanel() {
                             size="medium"
                             variant={isPrimaryCta ? 'contained' : 'outlined'}
                             onClick={() => router.push(checkoutSubscriptionHref(plan.id, opt.months))}
-                            sx={accentPillButtonSx(accent, isPrimaryCta ? 'contained' : 'outlined')}
+                            sx={{
+                              ...accentPillButtonSx(accent, isPrimaryCta ? 'contained' : 'outlined'),
+                              whiteSpace: 'normal',
+                              lineHeight: 1.25,
+                            }}
                           >
-                            {opt.labelSq} · {formatEur(opt.price)}
+                            {`Ndrysho planin · ${opt.labelSq} · ${formatEur(opt.price)}`}
                           </Button>
                         );
                       })}

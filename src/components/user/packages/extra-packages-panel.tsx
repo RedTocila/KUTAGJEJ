@@ -22,9 +22,10 @@ import {
   Typography,
 } from '@mui/material';
 import { ArrowClockwise as ArrowClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowClockwise';
-import { Coins as CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins';
 import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
+
+import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 
 import { useUser } from '@/hooks/use-user';
 import {
@@ -502,7 +503,7 @@ function PremiumListingSection() {
                     color="warning"
                     disabled={busy || !canAfford}
                     onClick={() => void onBuyBc(pkg)}
-                    startIcon={busy ? <CircularProgress size={14} color="inherit" /> : <CoinsIcon size={16} />}
+                    startIcon={busy ? <CircularProgress size={14} color="inherit" /> : <BoostCoinIcon size={16} />}
                     sx={{ fontWeight: 800, textTransform: 'none', borderRadius: 2 }}
                   >
                     {formatBc(pkg.priceBc)} BC
@@ -641,7 +642,7 @@ function ConvertListingSection() {
         border: '1px solid',
         borderColor: 'divider',
         bgcolor: 'background.paper',
-        scrollMarginTop: 88,
+        scrollMarginTop: { xs: 96, md: 112 },
       }}
     >
       <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mb: 0.5 }}>
@@ -657,7 +658,7 @@ function ConvertListingSection() {
             color: 'warning.main',
           }}
         >
-          <CoinsIcon size={20} weight="duotone" />
+          <BoostCoinIcon size={20} />
         </Box>
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
@@ -768,7 +769,7 @@ function ConvertListingSection() {
             color="warning"
             disabled={!canSubmit}
             onClick={() => void onConvert()}
-            startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : <CoinsIcon size={18} />}
+            startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : <BoostCoinIcon size={18} />}
             sx={{ fontWeight: 800, alignSelf: { xs: 'stretch', sm: 'auto' } }}
           >
             Konverto
@@ -783,10 +784,43 @@ export function ExtraPackagesPanel() {
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     if (window.location.hash !== '#convert') return;
-    const timer = window.setTimeout(() => {
-      document.getElementById('convert')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 80);
-    return () => window.clearTimeout(timer);
+
+    let cancelled = false;
+    let attempts = 0;
+    let lastY = Number.NaN;
+    const timers: number[] = [];
+
+    const scrollToConvert = (behavior: ScrollBehavior) => {
+      if (cancelled) return;
+      const el = document.getElementById('convert');
+      if (!el) {
+        if (attempts < 50) {
+          attempts += 1;
+          timers.push(window.setTimeout(() => scrollToConvert(behavior), 60));
+        }
+        return;
+      }
+      el.scrollIntoView({ behavior, block: 'start' });
+      const y = el.getBoundingClientRect().top + window.scrollY;
+      // Sections above load asynchronously and push this block down — re-align until stable.
+      if (!Number.isFinite(lastY) || Math.abs(y - lastY) > 12) {
+        lastY = y;
+        if (attempts < 50) {
+          attempts += 1;
+          timers.push(window.setTimeout(() => scrollToConvert('auto'), 120));
+        }
+      }
+    };
+
+    // Instant first jumps beat the browser's early hash scroll; a late smooth pass finishes it.
+    timers.push(window.setTimeout(() => scrollToConvert('auto'), 40));
+    timers.push(window.setTimeout(() => scrollToConvert('auto'), 250));
+    timers.push(window.setTimeout(() => scrollToConvert('smooth'), 700));
+
+    return () => {
+      cancelled = true;
+      for (const id of timers) window.clearTimeout(id);
+    };
   }, []);
 
   return (

@@ -22,11 +22,21 @@ function isOpenAiConfigured() {
 
 function normalizeUrl(raw) {
   const trimmed = String(raw || '').trim();
-  if (!trimmed) return null;
+  if (!trimmed || /\s/.test(trimmed)) return null;
   try {
-    const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const hasProtocol = /^https?:\/\//i.test(trimmed);
+    const withProtocol = hasProtocol ? trimmed : `https://${trimmed}`;
     const url = new URL(withProtocol);
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+
+    const host = url.hostname.replace(/\.$/, '').toLowerCase();
+    if (!host) return null;
+    // Plain words like "Telefon" become https://telefon/ — require a real host.
+    const isLocalhost = host === 'localhost';
+    const isIpv4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
+    const hasDot = host.includes('.');
+    if (!isLocalhost && !isIpv4 && !hasDot) return null;
+
     return url.toString();
   } catch {
     return null;
@@ -38,23 +48,23 @@ function extractUrls(input) {
   const seen = new Set();
   const urls = [];
 
-  for (const line of text.split(/[\n,]+/)) {
-    const normalized = normalizeUrl(line);
-    if (!normalized || seen.has(normalized)) continue;
+  const push = (candidate) => {
+    const normalized = normalizeUrl(candidate);
+    if (!normalized || seen.has(normalized)) return;
     seen.add(normalized);
     urls.push(normalized);
+  };
+
+  for (const line of text.split(/[\n,]+/)) {
     if (urls.length >= MAX_IMPORT_URLS) break;
+    push(line);
   }
 
-  if (urls.length === 0) {
-    const matches = text.match(/https?:\/\/[^\s<>"']+/gi) || [];
-    for (const match of matches) {
-      const normalized = normalizeUrl(match.replace(/[),.;]+$/, ''));
-      if (!normalized || seen.has(normalized)) continue;
-      seen.add(normalized);
-      urls.push(normalized);
-      if (urls.length >= MAX_IMPORT_URLS) break;
-    }
+  // Also pick up https?:// links embedded in prose (not alone on a line).
+  const matches = text.match(/https?:\/\/[^\s<>"']+/gi) || [];
+  for (const match of matches) {
+    if (urls.length >= MAX_IMPORT_URLS) break;
+    push(match.replace(/[),.;]+$/, ''));
   }
 
   return urls;
@@ -95,15 +105,178 @@ function extractMeta(html, attr, key) {
   return null;
 }
 
+const BROWSER_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+/** Many product / listing SPAs only emit og:image + title for social crawlers. */
+const CRAWLER_UA =
+  'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
+const IG_WEB_APP_ID = '936619743392459';
+/** Instagram web GraphQL doc used by Polaris post pages. */
+const IG_SHORTCODE_DOC_ID = '10015901848480474';
+const MAX_SNAPSHOT_IMAGES = 8;
+
+function decodeHtmlEntities(value) {
+  return String(value || '')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\\u0026/gi, '&')
+    .replace(/\\\//g, '/');
+}
+
+function isLikelyJunkImageUrl(url) {
+  const lower = String(url || '').toLowerCase();
+  return (
+    lower.startsWith('data:') ||
+    /\.svg(\?|$)/i.test(lower) ||
+    /sprite|icon|logo|favicon|pixel|tracking|1x1|blank\.|placeholder|avatar-default|spinner|loading\.gif|rsrc\.php/i.test(
+      lower,
+    ) ||
+    // Amazon share/composite banners (not product gallery shots)
+    /\.jpg_bo\d+/i.test(lower) ||
+    /_sr\d+,\d+/i.test(lower)
+  );
+}
+
+function firstSrcsetUrl(srcset) {
+  if (!srcset) return null;
+  const first = String(srcset)
+    .split(',')
+    .map((part) => part.trim().split(/\s+/)[0])
+    .find(Boolean);
+  return first || null;
+}
+
+function extractAllMeta(html, attr, key) {
+  const out = [];
+  const re = new RegExp(
+    `<meta[^>]+(?:${attr}=["']${key}["'][^>]+content=["']([^"']+)["']|content=["']([^"']+)["'][^>]+${attr}=["']${key}["'])[^>]*>`,
+    'gi',
+  );
+  let match;
+  while ((match = re.exec(html))) {
+    const value = decodeHtmlEntities(match[1] || match[2] || '').trim();
+    if (value) out.push(value);
+  }
+  return out;
+}
+
+function extractJsonLdImages(html) {
+  const out = [];
+  const blocks =
+    html.match(
+      /<script[^>]+type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi,
+    ) || [];
+  for (const block of blocks) {
+    const raw = block.replace(/^<script[^>]*>/i, '').replace(/<\/script>$/i, '');
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      continue;
+    }
+    const stack = Array.isArray(parsed) ? [...parsed] : [parsed];
+    while (stack.length) {
+      const node = stack.pop();
+      if (!node || typeof node !== 'object') continue;
+      if (Array.isArray(node)) {
+        stack.push(...node);
+        continue;
+      }
+      const image = node.image ?? node.photo ?? node.thumbnailUrl ?? node.contentUrl;
+      if (typeof image === 'string') out.push(image);
+      else if (Array.isArray(image)) {
+        for (const item of image) {
+          if (typeof item === 'string') out.push(item);
+          else if (item && typeof item === 'object' && item.url) out.push(String(item.url));
+        }
+      } else if (image && typeof image === 'object' && image.url) {
+        out.push(String(image.url));
+      }
+      for (const value of Object.values(node)) {
+        if (value && typeof value === 'object') stack.push(value);
+      }
+    }
+  }
+  return out;
+}
+
+/** Product galleries often embed hiRes / large image URLs in page JSON. */
+function extractAmazonStyleImages(html) {
+  const out = [];
+  const patterns = [
+    /"hiRes"\s*:\s*"(https:[^"]+)"/gi,
+    /"large"\s*:\s*"(https:\/\/m\.media-amazon\.com[^"]+)"/gi,
+    /"hiRes"\s*:\s*'(https:[^']+)'/gi,
+  ];
+  for (const re of patterns) {
+    let match;
+    while ((match = re.exec(html))) {
+      out.push(decodeHtmlEntities(match[1]));
+      if (out.length >= 16) return out;
+    }
+  }
+  return out;
+}
+
+function extractEmbeddedPayloadImages(html) {
+  const out = [];
+  const patterns = [
+    /"(?:imageUrl|image_url|imageURL|thumbnailUrl|thumbnail_url|contentUrl|photoUrl|photo_url|mainImage|main_image)"\s*:\s*"(https:[^"]+)"/gi,
+    /"(?:images|photos|gallery|imageGallery|media)"\s*:\s*\[([^\]]{0,8000})\]/gi,
+  ];
+  for (const re of patterns) {
+    let match;
+    while ((match = re.exec(html))) {
+      if (re.source.startsWith('"(?:images')) {
+        const urls = match[1].match(/https:[^"\\]+/g) || [];
+        out.push(...urls);
+      } else {
+        out.push(decodeHtmlEntities(match[1]));
+      }
+      if (out.length >= 24) return out;
+    }
+  }
+  return out;
+}
+
+function preferLargerImageUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    // Remax / Gryphtech preview → Large
+    if (/remax\.azureedge\.net|cdn\.gryphtech\.com/i.test(host)) {
+      parsed.pathname = parsed.pathname.replace(
+        /\/userimages\/(\d+)\/(?!Large(?:WM)?\/)/i,
+        '/userimages/$1/Large/',
+      );
+      return parsed.toString();
+    }
+    // Amazon size transforms → larger SL1500 when possible
+    if (/media-amazon\.com|images-amazon\.com|ssl-images-amazon\.com/i.test(host)) {
+      parsed.pathname = parsed.pathname.replace(/\._[A-Z0-9,_]+_\./i, '._AC_SL1500_.');
+      return parsed.toString();
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 function extractImageCandidates(html, baseUrl) {
   const urls = [];
   const seen = new Set();
   const push = (raw) => {
     if (!raw) return;
     try {
-      const absolute = new URL(raw, baseUrl).toString();
+      const absolute = preferLargerImageUrl(
+        new URL(decodeHtmlEntities(String(raw).trim()), baseUrl).toString(),
+      );
       if (seen.has(absolute)) return;
       if (!/^https?:\/\//i.test(absolute)) return;
+      if (isLikelyJunkImageUrl(absolute)) return;
       seen.add(absolute);
       urls.push(absolute);
     } catch {
@@ -111,17 +284,157 @@ function extractImageCandidates(html, baseUrl) {
     }
   };
 
-  push(extractMeta(html, 'property', 'og:image'));
-  push(extractMeta(html, 'name', 'twitter:image'));
+  for (const img of extractAllMeta(html, 'property', 'og:image')) push(img);
+  for (const img of extractAllMeta(html, 'name', 'twitter:image')) push(img);
+  for (const img of extractAllMeta(html, 'property', 'twitter:image')) push(img);
+  for (const img of extractJsonLdImages(html)) push(img);
+  for (const img of extractAmazonStyleImages(html)) push(img);
+  for (const img of extractEmbeddedPayloadImages(html)) push(img);
 
-  const imgTags = html.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi) || [];
-  for (const tag of imgTags.slice(0, 12)) {
-    const src = tag.match(/src=["']([^"']+)["']/i)?.[1];
-    push(src);
-    if (urls.length >= 8) break;
+  const imgTags = html.match(/<img\b[^>]*>/gi) || [];
+  for (const tag of imgTags.slice(0, 60)) {
+    push(tag.match(/\bsrc=["']([^"']+)["']/i)?.[1]);
+    push(tag.match(/\bdata-src=["']([^"']+)["']/i)?.[1]);
+    push(tag.match(/\bdata-lazy-src=["']([^"']+)["']/i)?.[1]);
+    push(tag.match(/\bdata-original=["']([^"']+)["']/i)?.[1]);
+    push(tag.match(/\bdata-zoom-image=["']([^"']+)["']/i)?.[1]);
+    push(firstSrcsetUrl(tag.match(/\bsrcset=["']([^"']+)["']/i)?.[1]));
+    if (urls.length >= MAX_SNAPSHOT_IMAGES) break;
   }
 
-  return urls.slice(0, 8);
+  if (urls.length < MAX_SNAPSHOT_IMAGES) {
+    const embedded =
+      html.match(/https?:\/\/[^"'\\\s<>]+?\.(?:jpe?g|png|webp)(?:\?[^"'\\\s<>]*)?/gi) || [];
+    for (const match of embedded) {
+      push(match);
+      if (urls.length >= MAX_SNAPSHOT_IMAGES) break;
+    }
+  }
+
+  return urls.slice(0, MAX_SNAPSHOT_IMAGES);
+}
+
+function htmlRichnessScore(html) {
+  const text = String(html || '');
+  if (!text) return 0;
+  const images = extractImageCandidates(text, 'https://example.com').length;
+  const textLen = stripHtml(text).length;
+  const hasOg = extractAllMeta(text, 'property', 'og:image').length > 0 ? 400 : 0;
+  const hasTitle = extractMeta(text, 'property', 'og:title') ? 120 : 0;
+  return images * 80 + Math.min(textLen, 4000) + hasOg + hasTitle + Math.min(text.length / 50, 500);
+}
+
+function isThinListingHtml(html) {
+  const text = String(html || '');
+  if (!text) return true;
+  if (text.length < 4000 && /<div[^>]+id=["']root["'][^>]*>\s*<\/div>/i.test(text)) {
+    return true;
+  }
+  // Anti-bot challenge shells
+  if (text.length < 6000 && /_0x[a-f0-9]+|cf-browser-verification|challenge-platform/i.test(text)) {
+    return true;
+  }
+  const hasOgImage = extractAllMeta(text, 'property', 'og:image').length > 0;
+  const hasMeaningfulText = stripHtml(text).length > 280;
+  return !hasOgImage && !hasMeaningfulText;
+}
+
+function mergeImageUrlLists(...lists) {
+  const out = [];
+  const seen = new Set();
+  for (const list of lists) {
+    for (const raw of list || []) {
+      const url = preferLargerImageUrl(String(raw || '').trim());
+      if (!/^https?:\/\//i.test(url) || seen.has(url) || isLikelyJunkImageUrl(url)) continue;
+      seen.add(url);
+      out.push(url);
+      if (out.length >= MAX_SNAPSHOT_IMAGES) return out;
+    }
+  }
+  return out;
+}
+
+/** Remax Albania listing pages are empty SPA shells — optional gallery API boost (no-op for other sites). */
+async function enrichRemaxAlbaniaImages(pageUrl) {
+  let parsed;
+  try {
+    parsed = new URL(pageUrl);
+  } catch {
+    return [];
+  }
+  const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+  if (host !== 'remax-albania.com' && !host.endsWith('.remax-albania.com')) return [];
+
+  const mlsId = parsed.pathname.match(/(\d{5,}-\d+)\s*$/)?.[1];
+  if (!mlsId) return [];
+
+  const endpoint = `${parsed.origin}/search/listing-search/docs/search`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      redirect: 'follow',
+      signal: controller.signal,
+      headers: {
+        'User-Agent': BROWSER_UA,
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Origin: parsed.origin,
+        Referer: `${parsed.origin}/`,
+      },
+      body: JSON.stringify({
+        search: '*',
+        filter: `content/MLSID eq '${mlsId.replace(/'/g, "''")}'`,
+        top: 1,
+        count: true,
+      }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => null);
+    const content = data?.value?.[0]?.content;
+    if (!content || typeof content !== 'object') return [];
+
+    const regionId = Number(content.RegionId || content.MacroRegionId || 0);
+    const images = Array.isArray(content.ListingImages) ? content.ListingImages : [];
+    if (!regionId || !images.length) return [];
+
+    const ordered = [...images].sort(
+      (a, b) => Number(a?.Order || 0) - Number(b?.Order || 0),
+    );
+    const urls = [];
+    for (const image of ordered) {
+      const fileName = String(image?.FileName || '').trim();
+      if (!fileName) continue;
+      const useLarge = String(image?.HasLargeImage || '') === '1';
+      urls.push(
+        useLarge
+          ? `https://remax.azureedge.net/userimages/${regionId}/Large/${fileName}`
+          : `https://remax.azureedge.net/userimages/${regionId}/${fileName}`,
+      );
+      if (urls.length >= MAX_SNAPSHOT_IMAGES) break;
+    }
+    return urls;
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchHtmlDocument(url, userAgent, signal) {
+  const res = await fetch(url, {
+    method: 'GET',
+    redirect: 'follow',
+    signal,
+    headers: {
+      'User-Agent': userAgent,
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9,sq;q=0.8',
+    },
+  });
+  const html = await res.text();
+  return { res, html };
 }
 
 function isSocialMediaUrl(url) {
@@ -154,6 +467,16 @@ function isInstagramUrl(url) {
   }
 }
 
+function extractInstagramShortcode(url) {
+  try {
+    const path = new URL(url).pathname;
+    const match = path.match(/\/(?:p|reel|tv|reels)\/([A-Za-z0-9_-]+)/i);
+    return match?.[1] || null;
+  } catch {
+    return null;
+  }
+}
+
 /** Instagram HTML is often a login shell; oEmbed returns the real post caption. */
 async function fetchInstagramOEmbed(url) {
   const endpoint = `https://www.instagram.com/api/v1/oembed/?omitscript=true&url=${encodeURIComponent(url)}`;
@@ -165,8 +488,7 @@ async function fetchInstagramOEmbed(url) {
       redirect: 'follow',
       signal: controller.signal,
       headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'User-Agent': BROWSER_UA,
         Accept: 'application/json',
       },
     });
@@ -189,33 +511,280 @@ async function fetchInstagramOEmbed(url) {
   }
 }
 
-async function fetchPageSnapshot(url) {
+function collectInstagramMediaImages(mediaNode) {
+  const urls = [];
+  if (!mediaNode || typeof mediaNode !== 'object') return urls;
+  const push = (raw) => {
+    const value = decodeHtmlEntities(String(raw || '').trim());
+    if (/^https?:\/\//i.test(value) && !isLikelyJunkImageUrl(value) && !urls.includes(value)) {
+      urls.push(value);
+    }
+  };
+
+  const children = mediaNode.edge_sidecar_to_children?.edges;
+  if (Array.isArray(children) && children.length) {
+    for (const edge of children) {
+      push(edge?.node?.display_url);
+      if (urls.length >= MAX_SNAPSHOT_IMAGES) break;
+    }
+    return urls;
+  }
+
+  push(mediaNode.display_url);
+  push(mediaNode.thumbnail_src);
+  return urls;
+}
+
+/** Public Instagram shortcode media (includes carousel children when available). */
+async function fetchInstagramShortcodeMedia(shortcode) {
+  if (!shortcode) return null;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
-  const social = isSocialMediaUrl(url);
-  const instagram = isInstagramUrl(url);
   try {
-    const [pageResult, oembed] = await Promise.all([
-      fetch(url, {
+    const body = new URLSearchParams({
+      variables: JSON.stringify({
+        shortcode,
+        fetch_tagged_user_count: null,
+        hoisted_comment_id: null,
+        hoisted_reply_id: null,
+      }),
+      doc_id: IG_SHORTCODE_DOC_ID,
+    });
+    const res = await fetch('https://www.instagram.com/graphql/query', {
+      method: 'POST',
+      redirect: 'follow',
+      signal: controller.signal,
+      headers: {
+        'User-Agent': BROWSER_UA,
+        Accept: '*/*',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-IG-App-ID': IG_WEB_APP_ID,
+        Referer: `https://www.instagram.com/p/${shortcode}/`,
+      },
+      body,
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    const media = data?.data?.xdt_shortcode_media;
+    if (!media || typeof media !== 'object') return null;
+
+    const captionEdges = media.edge_media_to_caption?.edges;
+    const caption =
+      Array.isArray(captionEdges) && captionEdges[0]?.node?.text
+        ? String(captionEdges[0].node.text).trim()
+        : null;
+    return {
+      caption,
+      authorName: media.owner?.username ? String(media.owner.username) : null,
+      imageUrls: collectInstagramMediaImages(media),
+    };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Fallback: look up author's recent posts and match shortcode (includes carousel).
+ */
+async function fetchInstagramCarouselViaProfile(shortcode, authorName) {
+  const username = String(authorName || '')
+    .replace(/^@/, '')
+    .trim();
+  if (!shortcode || !username) return [];
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  try {
+    const res = await fetch(
+      `https://www.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`,
+      {
         method: 'GET',
         redirect: 'follow',
         signal: controller.signal,
         headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9,sq;q=0.8',
+          'User-Agent': BROWSER_UA,
+          Accept: '*/*',
+          'X-IG-App-ID': IG_WEB_APP_ID,
+          Referer: `https://www.instagram.com/${username}/`,
         },
-      })
-        .then(async (res) => {
-          const html = await res.text();
-          return { res, html };
-        })
-        .catch((err) => ({ res: null, html: '', fetchError: err?.message || 'Failed to fetch page' })),
-      instagram ? fetchInstagramOEmbed(url) : Promise.resolve(null),
+      },
+    );
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => null);
+    const edges = data?.data?.user?.edge_owner_to_timeline_media?.edges;
+    if (!Array.isArray(edges)) return [];
+    const match = edges.find((edge) => edge?.node?.shortcode === shortcode)?.node;
+    return collectInstagramMediaImages(match);
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function enrichInstagramSnapshot(url) {
+  const shortcode = extractInstagramShortcode(url);
+  const crawlerController = new AbortController();
+  const crawlerTimeout = setTimeout(() => crawlerController.abort(), 12000);
+
+  const [oembed, graphql, crawlerResult] = await Promise.all([
+    fetchInstagramOEmbed(url),
+    shortcode ? fetchInstagramShortcodeMedia(shortcode) : Promise.resolve(null),
+    fetchHtmlDocument(url, CRAWLER_UA, crawlerController.signal).catch(() => ({
+      res: null,
+      html: '',
+    })),
+  ]).finally(() => clearTimeout(crawlerTimeout));
+
+  const crawlerHtml = crawlerResult?.html || '';
+  let imageUrls = mergeImageUrlLists(
+    graphql?.imageUrls,
+    oembed?.thumbnailUrl ? [oembed.thumbnailUrl] : [],
+    extractImageCandidates(crawlerHtml, url),
+  );
+
+  // GraphQL is rate-limited sometimes; profile timeline still includes sidecar children.
+  const graphqlCount = Array.isArray(graphql?.imageUrls) ? graphql.imageUrls.length : 0;
+  if (shortcode && graphqlCount <= 1) {
+    const fromProfile = await fetchInstagramCarouselViaProfile(
+      shortcode,
+      graphql?.authorName || oembed?.authorName,
+    );
+    imageUrls = mergeImageUrlLists(fromProfile, imageUrls);
+  }
+
+  const caption =
+    graphql?.caption ||
+    oembed?.caption ||
+    extractMeta(crawlerHtml, 'property', 'og:description') ||
+    null;
+  const authorName = graphql?.authorName || oembed?.authorName || null;
+  const title =
+    (authorName ? `@${authorName}` : null) ||
+    extractMeta(crawlerHtml, 'property', 'og:title') ||
+    null;
+
+  const textParts = [];
+  if (authorName) textParts.push(`Instagram author: @${authorName}`);
+  if (caption) textParts.push(`Post caption / description:\n${caption}`);
+
+  return {
+    ok: Boolean(caption || imageUrls.length || crawlerResult?.res?.ok),
+    status: crawlerResult?.res?.status || (caption || imageUrls.length ? 200 : 0),
+    finalUrl: crawlerResult?.res?.url || url,
+    title,
+    description: caption,
+    caption,
+    authorName,
+    text: textParts.filter(Boolean).join('\n\n').slice(0, 6000),
+    imageUrls,
+    social: true,
+    fetchError: caption || imageUrls.length ? null : 'Could not open this Instagram link',
+  };
+}
+
+function buildSnapshotFromHtml({ url, pageResult, extraImageUrls = [], social = false }) {
+  const html = pageResult?.html || '';
+  const res = pageResult?.res || null;
+  const ogTitle =
+    extractMeta(html, 'property', 'og:title') ||
+    html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g, ' ').trim() ||
+    null;
+  const ogDescription =
+    extractMeta(html, 'property', 'og:description') ||
+    extractMeta(html, 'name', 'description') ||
+    null;
+
+  const imageUrls = mergeImageUrlLists(
+    extraImageUrls,
+    extractImageCandidates(html, url),
+  );
+
+  const textParts = [];
+  if (ogTitle || ogDescription) {
+    textParts.push([ogTitle, ogDescription].filter(Boolean).join('\n'));
+  }
+  if (!social && html && !isThinListingHtml(html)) {
+    textParts.push(stripHtml(html).slice(0, 4000));
+  } else if (!social && (ogTitle || ogDescription)) {
+    textParts.push(stripHtml(html).slice(0, 1500));
+  }
+
+  return {
+    ok: Boolean(res?.ok || imageUrls.length || ogTitle || ogDescription),
+    status: res?.status || (imageUrls.length || ogTitle ? 200 : 0),
+    finalUrl: res?.url || url,
+    title: ogTitle,
+    description: ogDescription,
+    caption: ogDescription,
+    authorName: null,
+    text: textParts.filter(Boolean).join('\n\n').slice(0, 6000),
+    imageUrls,
+    social,
+    fetchError:
+      imageUrls.length || ogTitle || ogDescription
+        ? null
+        : pageResult?.fetchError || null,
+  };
+}
+
+async function fetchPageSnapshot(url) {
+  const social = isSocialMediaUrl(url);
+  const instagram = isInstagramUrl(url);
+
+  if (instagram) {
+    try {
+      return await enrichInstagramSnapshot(url);
+    } catch (err) {
+      return {
+        ok: false,
+        status: 0,
+        finalUrl: url,
+        title: null,
+        description: null,
+        caption: null,
+        authorName: null,
+        text: '',
+        imageUrls: [],
+        social: true,
+        fetchError: err?.message || 'Failed to fetch Instagram post',
+      };
+    }
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 14000);
+  try {
+    // Same path for every website: browser HTML + crawler HTML (og tags / galleries),
+    // then merge title, description, and images.
+    const [browserResult, crawlerResult, remaxImages] = await Promise.all([
+      fetchHtmlDocument(url, BROWSER_UA, controller.signal).catch((err) => ({
+        res: null,
+        html: '',
+        fetchError: err?.message || 'Failed to fetch page',
+      })),
+      fetchHtmlDocument(url, CRAWLER_UA, controller.signal).catch(() => ({
+        res: null,
+        html: '',
+      })),
+      enrichRemaxAlbaniaImages(url),
     ]);
 
-    if (!pageResult.res && !oembed?.caption) {
+    const browserScore = htmlRichnessScore(browserResult.html);
+    const crawlerScore = htmlRichnessScore(crawlerResult.html);
+    const pageResult =
+      crawlerScore > browserScore
+        ? { ...crawlerResult, fetchError: crawlerResult.res?.ok ? null : browserResult.fetchError }
+        : browserResult;
+
+    const mergedImages = mergeImageUrlLists(
+      remaxImages,
+      extractImageCandidates(crawlerResult.html || '', url),
+      extractImageCandidates(browserResult.html || '', url),
+    );
+
+    if (!pageResult.res && !mergedImages.length) {
       return {
         ok: false,
         status: 0,
@@ -231,58 +800,14 @@ async function fetchPageSnapshot(url) {
       };
     }
 
-    const html = pageResult.html || '';
-    const res = pageResult.res;
-    const ogTitle =
-      extractMeta(html, 'property', 'og:title') ||
-      html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g, ' ').trim() ||
-      null;
-    const ogDescription =
-      extractMeta(html, 'property', 'og:description') ||
-      extractMeta(html, 'name', 'description') ||
-      null;
-
-    // Caption / description text is the source of truth for social posts.
-    const caption = oembed?.caption || ogDescription || null;
-    const title =
-      (oembed?.authorName ? `@${oembed.authorName}` : null) ||
-      ogTitle ||
-      null;
-    const description = caption || ogDescription || null;
-
-    const imageUrls = [];
-    if (oembed?.thumbnailUrl) imageUrls.push(oembed.thumbnailUrl);
-    for (const img of extractImageCandidates(html, url)) {
-      if (!imageUrls.includes(img)) imageUrls.push(img);
-      if (imageUrls.length >= 8) break;
-    }
-
-    // Prefer real caption text; avoid dumping Instagram login-wall HTML into the model.
-    const textParts = [];
-    if (oembed?.authorName) textParts.push(`Instagram author: @${oembed.authorName}`);
-    if (caption) textParts.push(`Post caption / description:\n${caption}`);
-    else if (ogTitle || ogDescription) {
-      textParts.push([ogTitle, ogDescription].filter(Boolean).join('\n'));
-    }
-    if (!social && html) {
-      textParts.push(stripHtml(html).slice(0, 4000));
-    }
-
-    const text = textParts.filter(Boolean).join('\n\n').slice(0, 6000);
-
-    return {
-      ok: Boolean(res?.ok || caption),
-      status: res?.status || (caption ? 200 : 0),
-      finalUrl: res?.url || url,
-      title,
-      description,
-      caption,
-      authorName: oembed?.authorName || null,
-      text,
-      imageUrls,
+    const snapshot = buildSnapshotFromHtml({
+      url,
+      pageResult,
+      extraImageUrls: mergedImages,
       social,
-      fetchError: caption ? null : pageResult.fetchError || null,
-    };
+    });
+    snapshot.imageUrls = mergeImageUrlLists(mergedImages, snapshot.imageUrls);
+    return snapshot;
   } catch (err) {
     return {
       ok: false,
@@ -370,14 +895,15 @@ professionals: title, description, category (konsulent|freelance|sherbim|kurse|d
 
 Rules:
 - ALWAYS prioritize written text: post caption, page description, og:description, and the user's prompt. Images are secondary context only.
-- For Instagram/TikTok/social links, the field "caption" (post description) is the source of truth for what is being offered.
+- For Instagram/TikTok/social links, the field "caption" (post description) is the source of truth for what is being offered. Carousel/listing photos are in snapshotImageUrls — keep them.
+- For any website link, use title/description/text AND keep snapshotImageUrls as listing photos.
 - Do NOT invent a profession from the username alone (e.g. do not assume "konsulent" / marketing / design unless the caption says so).
 - Prefer Albanian for title/description when the caption/prompt is in Albanian; otherwise keep their language.
 - Invent as little as possible. Leave unknown fields empty string / empty array / null.
 - Always fill description with concrete details from the caption/prompt (offers, prices, product names like apps, services).
 - Use profile.phone for contactPhone when missing. Use profile.businessName / full name for title when relevant.
 - cityName should be an Albanian city when mentioned (e.g. Tiranë, Durrës).
-- imageUrls: keep only absolute http(s) URLs from the page snapshot when relevant (max 8). Attached images are sent separately — describe roles via imageRoles; do not invent fake image URLs.
+- imageUrls: keep absolute http(s) URLs from the page snapshot (snapshotImageUrls) whenever present (max 8). Never drop scraped listing photos. Attached images are sent separately — describe roles via imageRoles; do not invent fake image URLs.
 - If images show work/products/venue, use them only to support details already present in the caption/text.
 - If the page is thin (Instagram login wall, blocked scraper) but caption is present, build the draft from the caption + prompt + profile.`;
 }
@@ -480,10 +1006,8 @@ function parseAiListingResponse(raw, { forcedCategory, fallbackImageUrls = [] })
     forcedCategory ||
     (CATEGORIES.includes(parsed.category) ? parsed.category : 'marketplace');
   const form = parsed.form && typeof parsed.form === 'object' ? parsed.form : {};
-  const imageUrls = Array.isArray(parsed.imageUrls)
-    ? parsed.imageUrls
-        .filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u))
-        .slice(0, 8)
+  const modelImageUrls = Array.isArray(parsed.imageUrls)
+    ? parsed.imageUrls.filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u))
     : [];
   const imageRoles = Array.isArray(parsed.imageRoles)
     ? parsed.imageRoles
@@ -502,7 +1026,8 @@ function parseAiListingResponse(raw, { forcedCategory, fallbackImageUrls = [] })
     title: typeof parsed.title === 'string' ? parsed.title.trim() : '',
     summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : '',
     cityName: typeof parsed.cityName === 'string' ? parsed.cityName.trim() : '',
-    imageUrls: imageUrls.length ? imageUrls : fallbackImageUrls.slice(0, 8),
+    // Always keep scraped page photos even if the model omits or reorders them.
+    imageUrls: mergeImageUrlLists(fallbackImageUrls, modelImageUrls),
     imageRoles,
     form,
   };
@@ -634,6 +1159,14 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile }) {
   };
 }
 
+function friendlyFetchWarning(fetchError) {
+  const raw = String(fetchError || '').trim();
+  if (!raw || /fetch failed|ENOTFOUND|ECONNREFUSED|EAI_AGAIN|aborted|timeout/i.test(raw)) {
+    return 'Could not open this link; draft may need edits.';
+  }
+  return raw;
+}
+
 function stringifyFormValues(form) {
   const out = {};
   for (const [key, value] of Object.entries(form || {})) {
@@ -735,13 +1268,17 @@ async function importListingsFromLinks({
         prompt,
         currentListing,
       });
+      interpreted.imageUrls = mergeImageUrlLists(
+        snapshot.imageUrls,
+        interpreted.imageUrls,
+      );
       drafts.push(
         await finalizeDraft({
           interpreted,
           sourceUrl: url,
           warning: snapshot.ok
             ? null
-            : snapshot.fetchError || 'Page content was limited; draft may need edits.',
+            : friendlyFetchWarning(snapshot.fetchError),
           profile,
         }),
       );

@@ -125,7 +125,7 @@ function ListingSlidePanel({
       sx={{
         position: 'relative',
         width: '100%',
-        minHeight: { xs: 200, sm: 220 },
+        minHeight: { xs: 240, sm: 260 },
         overflow: 'hidden',
         bgcolor: imageBg ? 'grey.900' : primaryMainAlpha(0.14),
         backgroundImage: imageBg ? `url(${imageBg})` : undefined,
@@ -136,15 +136,26 @@ function ListingSlidePanel({
         '&:active': { transform: 'scale(0.992)' },
       }}
     >
-      {/* Scrim keeps white title readable on bright photos in light mode */}
+      {/* Light top dim + bottom fade so the title stays readable */}
       <Box
         sx={{
           position: 'absolute',
           inset: 0,
           pointerEvents: 'none',
           background: imageBg
-            ? 'linear-gradient(180deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.12) 42%, rgba(0,0,0,0.72) 100%)'
-            : 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%)',
+            ? 'linear-gradient(180deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.06) 45%, rgba(0,0,0,0) 62%)'
+            : 'linear-gradient(180deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0) 55%)',
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: '46%',
+          pointerEvents: 'none',
+          background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 100%)',
         }}
       />
 
@@ -153,7 +164,7 @@ function ListingSlidePanel({
           position: 'relative',
           zIndex: 1,
           p: { xs: 2.25, sm: 2.75 },
-          minHeight: { xs: 200, sm: 220 },
+          minHeight: { xs: 240, sm: 260 },
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
@@ -165,7 +176,7 @@ function ListingSlidePanel({
               alignSelf: 'flex-end',
               px: 1.25,
               py: 0.55,
-              borderRadius: 999,
+              borderRadius: 1.5,
               bgcolor: 'rgba(0,0,0,0.42)',
               border: '1px solid rgba(255,255,255,0.16)',
               backdropFilter: 'blur(12px)',

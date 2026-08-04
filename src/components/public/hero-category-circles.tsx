@@ -133,7 +133,7 @@ export function HeroCategoryCircles({
                             : 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
                     : 'background.paper',
                   border: '1px solid',
-                  borderColor: selected ? accent : 'divider',
+                  borderColor: isAi ? AI_SEARCH_BLUE : selected ? accent : 'divider',
                   transition: 'border-color 0.15s ease, background-color 0.15s ease',
                 }}
               >

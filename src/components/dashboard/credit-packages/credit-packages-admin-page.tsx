@@ -23,11 +23,11 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { Coins as CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins';
 import { PencilSimple as PencilIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
+import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { usePlatformAdminGuard } from '@/hooks/use-platform-admin';
 import {
@@ -203,7 +203,7 @@ export function CreditPackagesAdminPage() {
   return (
     <Stack spacing={3}>
       <AdminPageHeader
-        icon={React.createElement(CoinsIcon, { size: 22, weight: 'duotone' })}
+        icon={<BoostCoinIcon size={22} />}
         eyebrow="Financa"
         title="Paketat e krediteve"
         description="Paketat që përdoruesit blejnë te “Bli kredite”."

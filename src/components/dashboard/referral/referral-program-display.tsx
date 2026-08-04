@@ -5,7 +5,6 @@ import { alpha } from '@mui/material/styles';
 import { Box, Chip, LinearProgress, Stack, Typography, useTheme } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { Circle as CircleIcon } from '@phosphor-icons/react/dist/ssr/Circle';
-import { Coins as CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins';
 import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
 import { SealCheck as SealCheckIcon } from '@phosphor-icons/react/dist/ssr/SealCheck';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
@@ -14,6 +13,7 @@ import { TrendUp as TrendUpIcon } from '@phosphor-icons/react/dist/ssr/TrendUp';
 import { UserPlus as UserPlusIcon } from '@phosphor-icons/react/dist/ssr/UserPlus';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
+import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import type { ReferralBadge, ReferralProgram, ReferralTrustedBadge } from '@/types/referral-program';
 
 type Accent = 'primary' | 'warning';
@@ -335,7 +335,7 @@ export function ProgramDisplay({
       </GroupCard>
 
       <GroupCard
-        icon={CoinsIcon}
+        icon={BoostCoinIcon as PhosphorIcon}
         kindLabel="2 · Referime të paguara"
         title={program.paidTitle || 'Referime të paguara'}
         howItWorks="Kur personi i ftuar blen një paketë me pagesë, llogaritet si referim i paguar (shpërblime më të mëdha)."

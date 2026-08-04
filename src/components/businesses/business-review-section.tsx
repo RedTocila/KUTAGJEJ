@@ -220,12 +220,12 @@ function StarFilterTags({
               gap: 0.4,
               opacity: disabled ? 0.4 : 1,
               transition: 'background-color 0.15s ease, color 0.15s ease',
-              bgcolor: isActive ? 'warning.main' : 'action.hover',
-              color: isActive ? 'common.black' : 'text.secondary',
+              bgcolor: isActive ? 'primary.main' : 'action.hover',
+              color: isActive ? 'primary.contrastText' : 'text.secondary',
               '&:hover': disabled
                 ? undefined
                 : {
-                    bgcolor: isActive ? 'warning.main' : 'action.selected',
+                    bgcolor: isActive ? 'primary.main' : 'action.selected',
                   },
             }}
           >

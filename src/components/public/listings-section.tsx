@@ -68,7 +68,7 @@ export function ListingsSection({
         <Stack
           direction="row"
           spacing={2}
-          sx={{ alignItems: 'baseline', justifyContent: 'space-between', mb: { xs: 1.5, md: 2 } }}
+          sx={{ alignItems: 'center', justifyContent: 'space-between', mb: { xs: 1.5, md: 2 } }}
         >
           <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
             {!hideVerticalIcon ? (

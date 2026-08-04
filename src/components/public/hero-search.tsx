@@ -19,7 +19,9 @@ import { useLanguage } from '@/hooks/use-language';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import {
   AI_SEARCH_BLUE,
+  AI_SEARCH_BLUE_HOVER,
   AI_SEARCH_BLUE_MUTED,
+  AI_SEARCH_BLUE_ON,
   AI_SEARCH_BLUE_SOFT,
   localizeSearchCategories,
   type SearchCategoryId,
@@ -95,7 +97,7 @@ export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
             theme.palette.mode === 'dark'
               ? '0 24px 60px -24px rgba(0,0,0,0.7)'
               : isAi
-                ? '0 24px 60px -24px rgba(158, 201, 232, 0.45)'
+                ? '0 24px 60px -24px rgba(255, 187, 31, 0.45)'
                 : '0 24px 60px -24px rgba(58, 140, 0, 0.25)',
           overflow: 'hidden',
         }}
@@ -172,13 +174,13 @@ export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
               py: 1.5,
               fontWeight: 700,
               fontSize: '1rem',
-              color: isAi ? '#1a3344' : 'common.black',
+              color: isAi ? AI_SEARCH_BLUE_ON : 'common.black',
               bgcolor: isAi ? AI_SEARCH_BLUE : undefined,
               boxShadow: 'none',
               '&:hover': {
                 boxShadow: 'none',
-                color: isAi ? '#1a3344' : 'common.black',
-                bgcolor: isAi ? '#8BBAD9' : undefined,
+                color: isAi ? AI_SEARCH_BLUE_ON : 'common.black',
+                bgcolor: isAi ? AI_SEARCH_BLUE_HOVER : undefined,
               },
               '& .MuiButton-startIcon': { color: 'inherit' },
             }}

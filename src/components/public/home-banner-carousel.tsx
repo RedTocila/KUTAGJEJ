@@ -126,7 +126,7 @@ function BannerSlidePanel({
       sx={{
         position: 'relative',
         width: '100%',
-        minHeight: { xs: 200, sm: 220 },
+        minHeight: { xs: 240, sm: 260 },
         backgroundColor: 'background.paper',
         backgroundImage: imageBg
           ? `linear-gradient(115deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.2) 100%), url(${imageBg})`
@@ -205,7 +205,7 @@ function BannerSlidePanel({
           zIndex: 1,
           color: 'common.white',
           p: { xs: 2.4, sm: 3 },
-          minHeight: { xs: 200, sm: 220 },
+          minHeight: { xs: 240, sm: 260 },
           alignItems: 'flex-end',
           justifyContent: 'space-between',
         }}

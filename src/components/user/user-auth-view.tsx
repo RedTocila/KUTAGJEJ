@@ -134,7 +134,7 @@ function AcceptTermsField<T extends { acceptTerms: boolean }>({
                 checked={Boolean(field.value)}
                 onChange={(event) => field.onChange(event.target.checked)}
                 onBlur={field.onBlur}
-                inputRef={field.ref}
+                slotProps={{ input: { ref: field.ref } }}
                 sx={{
                   color: 'rgba(255,255,255,0.45)',
                   p: 0.5,

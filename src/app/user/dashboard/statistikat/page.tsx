@@ -362,26 +362,28 @@ export default function UserStatisticsPage() {
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Kërko njoftimet…"
                 aria-label="Kërko njoftimet"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Box sx={{ display: 'inline-flex', color: 'text.secondary' }}>
-                        <MagnifyingGlassIcon size={18} weight="bold" />
-                      </Box>
-                    </InputAdornment>
-                  ),
-                  endAdornment: search ? (
-                    <InputAdornment position="end">
-                      <IconButton
-                        size="small"
-                        aria-label="Pastro kërkimin"
-                        onClick={() => setSearch('')}
-                        edge="end"
-                      >
-                        <XIcon size={16} weight="bold" />
-                      </IconButton>
-                    </InputAdornment>
-                  ) : null,
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Box sx={{ display: 'inline-flex', color: 'text.secondary' }}>
+                          <MagnifyingGlassIcon size={18} weight="bold" />
+                        </Box>
+                      </InputAdornment>
+                    ),
+                    endAdornment: search ? (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          aria-label="Pastro kërkimin"
+                          onClick={() => setSearch('')}
+                          edge="end"
+                        >
+                          <XIcon size={16} weight="bold" />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : null,
+                  },
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {

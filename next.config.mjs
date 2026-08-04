@@ -17,6 +17,7 @@ const config = {
   },
 
   images: {
+    qualities: [75, 85],
     remotePatterns: [
       ...(backendHostname
         ? [

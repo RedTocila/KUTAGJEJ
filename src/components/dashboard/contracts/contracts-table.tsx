@@ -222,7 +222,7 @@ export function ContractsTable({ contracts, loading, onCreate, onEdit, onDelete 
                   </TableCell>
                   <TableCell sx={{ py: 2, verticalAlign: 'top' }}>
                     <Typography variant="body2">
-                      {row.refreshEveryHours != null ? `Çdo ${row.refreshEveryHours} orë` : '—'}
+                      {row.refreshEveryHours != null ? `Pas ${row.refreshEveryHours} orësh` : '—'}
                     </Typography>
                   </TableCell>
                   <TableCell sx={{ py: 2, verticalAlign: 'top' }}>

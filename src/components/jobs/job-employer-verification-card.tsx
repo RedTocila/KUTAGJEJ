@@ -3,6 +3,7 @@
 import * as React from 'react';
 import {
   Alert,
+  Box,
   Button,
   Card,
   CardContent,
@@ -19,7 +20,7 @@ import {
   type JobEmployerVerificationStatus,
 } from '@/lib/job-employer-verification-client';
 
-export function JobEmployerVerificationCard() {
+export function JobEmployerVerificationCard({ embedded = false }: { embedded?: boolean }) {
   const [status, setStatus] = React.useState<JobEmployerVerificationStatus | null>(null);
   const [message, setMessage] = React.useState('');
   const [loading, setLoading] = React.useState(true);
@@ -56,63 +57,83 @@ export function JobEmployerVerificationCard() {
 
   const latest = status?.latestRequest;
 
+  const body = (
+    <Stack spacing={2}>
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+        <ShieldCheckIcon size={22} weight="duotone" color="var(--mui-palette-primary-main)" />
+        <Typography sx={{ fontWeight: 800, fontSize: '0.98rem' }}>Verifikimi për Punë</Typography>
+      </Stack>
+
+      <Typography variant="body2" color="text.secondary">
+        Shenja e verifikuar shfaqet te njoftimet e punës dhe rrit besimin e kandidatëve.
+      </Typography>
+
+      {loading ? (
+        <Typography variant="body2" color="text.secondary">
+          Duke ngarkuar…
+        </Typography>
+      ) : null}
+
+      {error ? <Alert severity="error">{error}</Alert> : null}
+      {success ? <Alert severity="success">{success}</Alert> : null}
+
+      {status?.verified ? (
+        <Chip label="Profili i verifikuar" color="success" sx={{ alignSelf: 'flex-start', fontWeight: 700 }} />
+      ) : latest?.status === 'pending' ? (
+        <Alert severity="info">
+          Kërkesa juaj është në pritje (e dërguar{' '}
+          {new Date(latest.createdAt).toLocaleDateString('sq-AL')}). Administratori do ta shqyrtojë së shpejti.
+        </Alert>
+      ) : latest?.status === 'rejected' ? (
+        <Alert severity="warning">
+          Kërkesa e fundit u refuzua
+          {latest.adminNote ? `: ${latest.adminNote}` : '.'} Mund të dërgoni një kërkesë të re.
+        </Alert>
+      ) : null}
+
+      {status && !status.verified && status.canRequest ? (
+        <>
+          <TextField
+            label="Mesazh për administratorin (opsional)"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            fullWidth
+            multiline
+            minRows={2}
+            placeholder="p.sh. Kompania jonë operon që prej 2018…"
+          />
+          <Button
+            variant="contained"
+            onClick={() => void handleSubmit()}
+            disabled={submitting}
+            sx={{ alignSelf: 'flex-start', fontWeight: 700 }}
+          >
+            {submitting ? 'Duke dërguar…' : 'Kërko verifikimin'}
+          </Button>
+        </>
+      ) : null}
+    </Stack>
+  );
+
+  if (embedded) {
+    return (
+      <Box
+        sx={{
+          p: 2,
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+        }}
+      >
+        {body}
+      </Box>
+    );
+  }
+
   return (
     <Card variant="outlined" sx={{ borderRadius: 2 }}>
-      <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
-        <Stack spacing={2}>
-          <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
-            <ShieldCheckIcon size={24} weight="duotone" color="var(--mui-palette-primary-main)" />
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              Verifikimi për Punë
-            </Typography>
-          </Stack>
-
-          <Typography variant="body2" color="text.secondary">
-            Profili i verifikuar shfaqet me shenjën e verifikuar në njoftimet e punës dhe rrit besimin e
-            kandidatëve.
-          </Typography>
-
-          {loading ? (
-            <Typography variant="body2" color="text.secondary">
-              Duke ngarkuar…
-            </Typography>
-          ) : null}
-
-          {error ? <Alert severity="error">{error}</Alert> : null}
-          {success ? <Alert severity="success">{success}</Alert> : null}
-
-          {status?.verified ? (
-            <Chip label="Profili i verifikuar" color="success" sx={{ alignSelf: 'flex-start', fontWeight: 700 }} />
-          ) : latest?.status === 'pending' ? (
-            <Alert severity="info">
-              Kërkesa juaj është në pritje (e dërguar{' '}
-              {new Date(latest.createdAt).toLocaleDateString('sq-AL')}). Administratori do ta shqyrtojë së shpejti.
-            </Alert>
-          ) : latest?.status === 'rejected' ? (
-            <Alert severity="warning">
-              Kërkesa e fundit u refuzua
-              {latest.adminNote ? `: ${latest.adminNote}` : '.'} Mund të dërgoni një kërkesë të re.
-            </Alert>
-          ) : null}
-
-          {status && !status.verified && status.canRequest ? (
-            <>
-              <TextField
-                label="Mesazh për administratorin (opsional)"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                fullWidth
-                multiline
-                minRows={2}
-                placeholder="p.sh. Kompania jonë operon që prej 2018…"
-              />
-              <Button variant="contained" onClick={() => void handleSubmit()} disabled={submitting}>
-                {submitting ? 'Duke dërguar…' : 'Kërko verifikimin e profilit'}
-              </Button>
-            </>
-          ) : null}
-        </Stack>
-      </CardContent>
+      <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>{body}</CardContent>
     </Card>
   );
 }

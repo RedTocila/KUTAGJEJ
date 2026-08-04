@@ -14,16 +14,20 @@ export interface BusinessReview {
 
 export async function listBusinessReviews(listingId: string): Promise<{
   reviews?: BusinessReview[];
+  viewerHasReviewed?: boolean;
   error?: string;
 }> {
   try {
     const res = await fetch(
       getApiUrl(`/business-reviews?listingId=${encodeURIComponent(listingId)}`),
-      { cache: 'no-store' },
+      { cache: 'no-store', headers: authHeaders() },
     );
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not load reviews.' };
-    return { reviews: data.reviews as BusinessReview[] };
+    return {
+      reviews: data.reviews as BusinessReview[],
+      viewerHasReviewed: Boolean(data.viewerHasReviewed),
+    };
   } catch {
     return { error: 'Could not reach the server.' };
   }

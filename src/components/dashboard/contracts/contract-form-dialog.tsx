@@ -357,12 +357,13 @@ export function ContractFormDialog(props: {
             </Box>
 
             <TextField
-              label="Rifreskimi çdo sa orë"
+              label="Pritja midis rifreskimeve"
               type="number"
               value={refreshEveryHours}
               onChange={(ev) => setRefreshEveryHours(ev.target.value)}
               required
               fullWidth
+              helperText="Sa orë duhet të presë përdoruesi para se të rifreskojë të njëjtin njoftim përsëri."
               slotProps={{
                 input: {
                   inputProps: { min: 1 },

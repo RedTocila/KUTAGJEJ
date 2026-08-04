@@ -1,50 +1,56 @@
 'use client';
 
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
-import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
-import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
-import { Martini as MartiniIcon } from '@phosphor-icons/react/dist/ssr/Martini';
-import { ShoppingCart as ShoppingCartIcon } from '@phosphor-icons/react/dist/ssr/ShoppingCart';
-import { UsersThree as UsersThreeIcon } from '@phosphor-icons/react/dist/ssr/UsersThree';
+import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
+import { CarProfile as CarProfileIcon } from '@phosphor-icons/react/dist/ssr/CarProfile';
+import { ForkKnife as ForkKnifeIcon } from '@phosphor-icons/react/dist/ssr/ForkKnife';
+import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
+import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
+import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import type { IconWeight } from '@phosphor-icons/react';
 
-import type { HomeVerticalId } from '@/lib/home-categories';
+import { AI_SEARCH_BLUE, type SearchCategoryId } from '@/lib/home-categories';
 
 export interface HomeVerticalIconProps {
-  verticalId: HomeVerticalId;
+  verticalId: SearchCategoryId;
   size?: number;
   weight?: IconWeight;
   color?: string;
 }
 
-/** Bold Phosphor icons for homepage verticals — shared by hero circles and listing sections. */
+/** Phosphor icons for homepage verticals — shared by hero circles and listing sections. */
 export function HomeVerticalIcon({
   verticalId,
   size = 26,
-  weight = 'bold',
-  color = 'var(--mui-palette-primary-main)',
+  weight = 'duotone',
+  color,
 }: HomeVerticalIconProps) {
+  const resolvedColor =
+    color ??
+    (verticalId === 'ai' ? AI_SEARCH_BLUE : 'var(--mui-palette-primary-main)');
   const shared = {
     weight,
     size,
-    color,
+    color: resolvedColor,
     'aria-hidden': true as const,
   };
 
   switch (verticalId) {
+    case 'ai':
+      return <SparkleIcon {...shared} />;
     case 'real-estate':
-      return <HouseIcon {...shared} />;
+      return <BuildingsIcon {...shared} />;
     case 'cars':
-      return <CarIcon {...shared} />;
+      return <CarProfileIcon {...shared} />;
     case 'jobs':
       return <BriefcaseIcon {...shared} />;
     case 'marketplace':
-      return <ShoppingCartIcon {...shared} />;
+      return <StorefrontIcon {...shared} />;
     case 'businesses':
-      return <MartiniIcon {...shared} />;
+      return <ForkKnifeIcon {...shared} />;
     case 'professionals':
-      return <UsersThreeIcon {...shared} />;
+      return <HandshakeIcon {...shared} />;
     default:
-      return <HouseIcon {...shared} />;
+      return <BuildingsIcon {...shared} />;
   }
 }

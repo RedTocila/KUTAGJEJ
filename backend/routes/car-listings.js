@@ -10,8 +10,12 @@ const { validateCarPayload, FINISH_VALUES } = require('../lib/car-field-rules');
 const { attachOwnerMetrics } = require('../lib/listing-metrics');
 const { notifyAdminsListingSubmitted, listingTitle } = require('../lib/listing-moderation');
 const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers');
+const { premiumFieldsFromDoc } = require('../lib/premium-listing');
+const { sanitizeImageUrls } = require('../lib/image-upload');
 
 const router = express.Router();
+
+const MAX_CAR_IMAGES = 5;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -86,6 +90,7 @@ function formatMineListing(doc, cityById) {
     status: doc.status || 'pending',
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
+    ...premiumFieldsFromDoc(doc),
   };
 }
 
@@ -192,5 +197,89 @@ router.post(
     }
   },
 );
+
+/** PUT /api/listings/cars/:id — owner update (JSON; keep/replace imageUrls). */
+router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    const rawId = String(req.params.id ?? '').trim();
+    if (!isUuid(rawId)) return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
+
+    const { data: existing, error: selErr } = await getSupabaseAdmin()
+      .from('car_listings')
+      .select('id, poster_id')
+      .eq('id', rawId)
+      .eq('poster_id', req.user.id)
+      .maybeSingle();
+    if (selErr) throw selErr;
+    if (!existing) return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
+
+    const fields = req.body || {};
+    const v = validateCarPayload(fields);
+    if (!v.ok) return res.status(400).json({ message: v.message });
+
+    const cityId = String(fields.cityId || '').trim();
+    if (!isUuid(cityId)) return res.status(400).json({ message: 'City not found.' });
+
+    const { data: city, error: cityErr } = await getSupabaseAdmin()
+      .from('real_estate_cities')
+      .select('id')
+      .eq('id', cityId)
+      .maybeSingle();
+    if (cityErr) throw cityErr;
+    if (!city) return res.status(400).json({ message: 'City not found.' });
+
+    const finishRaw = fields.finish;
+    const finish = Array.isArray(finishRaw)
+      ? finishRaw.map((f) => String(f).trim()).filter((f) => FINISH_VALUES.includes(f))
+      : parseFinish(fields);
+    const extrasRaw = fields.extras;
+    const extras = Array.isArray(extrasRaw)
+      ? extrasRaw.map((e) => String(e).trim()).filter(Boolean)
+      : parseExtras(fields);
+
+    const patch = {
+      make: String(fields.make).trim(),
+      model: String(fields.model).trim(),
+      variant: String(fields.variant || '').trim(),
+      description: String(fields.description).trim(),
+      year: Number(fields.year),
+      kilometers: Number(fields.kilometers),
+      transmission: fields.transmission,
+      fuel_type: fields.fuelType,
+      price: Number(fields.price),
+      currency: fields.currency,
+      color: String(fields.color).trim().toLowerCase(),
+      finish,
+      extras,
+      contact_phone: String(fields.contactPhone || '').trim(),
+      city_id: cityId,
+      image_urls: sanitizeImageUrls(fields.imageUrls, MAX_CAR_IMAGES),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: updated, error: updErr } = await getSupabaseAdmin()
+      .from('car_listings')
+      .update(patch)
+      .eq('id', rawId)
+      .select('*')
+      .single();
+    if (updErr) throw updErr;
+
+    const doc = camelizeRow(updated);
+    res.json({
+      message: 'Njoftimi u përditësua.',
+      listing: {
+        id: String(doc.id),
+        make: doc.make,
+        model: doc.model,
+        status: doc.status,
+        updatedAt: doc.updatedAt,
+      },
+    });
+  } catch (err) {
+    console.error('PUT /listings/cars/:id:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 module.exports = router;

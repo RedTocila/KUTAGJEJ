@@ -1,4 +1,5 @@
 const { randomUUID } = require('crypto');
+const { isUuid } = require('./public-listings/query-helpers');
 
 const PROFESSIONAL_CATEGORIES = new Set([
   'konsulent', 'freelance', 'sherbim', 'kurse', 'dizajn-it', 'marketing', 'mjekesi', 'arsim',
@@ -28,7 +29,7 @@ function normalizePortfolioItems(input) {
       sortOrder: Number(row?.sortOrder) || i,
     });
   }
-  return out.slice(0, 24);
+  return out.slice(0, 8);
 }
 
 function validateProfessionalPayload(body, { partial = false } = {}) {
@@ -39,7 +40,7 @@ function validateProfessionalPayload(body, { partial = false } = {}) {
       return { ok: false, message: 'Kategoria nuk është e vlefshme.' };
     }
     const cityId = String(body?.cityId || '').trim();
-    if (!/^[a-f\d]{24}$/i.test(cityId)) return { ok: false, message: 'Zgjidhni një qytet të vlefshëm.' };
+    if (!cityId || !isUuid(cityId)) return { ok: false, message: 'Zgjidhni një qytet të vlefshëm.' };
     const phone = String(body?.contactPhone || '').trim();
     if (phone.length < 6) return { ok: false, message: 'Numri i telefonit duhet të ketë të paktën 6 karaktere.' };
   }
@@ -65,7 +66,7 @@ function validateProfessionalPayload(body, { partial = false } = {}) {
 
   const portfolioItems = normalizePortfolioItems(body?.portfolioItems);
   const imageUrls = Array.isArray(body?.imageUrls)
-    ? body.imageUrls.map((u) => String(u || '').trim()).filter(Boolean).slice(0, 20)
+    ? body.imageUrls.map((u) => String(u || '').trim()).filter(Boolean).slice(0, 2)
     : undefined;
 
   return {

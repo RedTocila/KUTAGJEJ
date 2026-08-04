@@ -5,15 +5,18 @@ import { Box } from '@mui/material';
 
 /**
  * Shared chrome for the public listing cards: a quiet bordered card that
- * lifts subtly and tints its border on hover. Optional `mediaSlot` for
- * verticals that have real photos (e.g. cars).
+ * lifts subtly and tints its border on hover. Premium listings get a lasting
+ * amber frame while their boost window is active.
  */
 export function CardShell({
   children,
   mediaSlot,
+  premium = false,
 }: {
   children: React.ReactNode;
   mediaSlot?: React.ReactNode;
+  /** Active Premium listing — amber frame that keeps visual priority. */
+  premium?: boolean;
 }) {
   return (
     <Box
@@ -25,11 +28,17 @@ export function CardShell({
         borderRadius: 2,
         overflow: 'hidden',
         bgcolor: 'background.paper',
-        border: '1px solid',
-        borderColor: 'divider',
-        transition: 'border-color 0.15s ease, transform 0.15s ease',
+        border: '2px solid',
+        borderColor: premium ? 'warning.main' : 'divider',
+        boxShadow: premium
+          ? (t) =>
+              t.palette.mode === 'dark'
+                ? '0 0 0 1px rgba(245, 166, 35, 0.35), 0 8px 22px rgba(245, 166, 35, 0.12)'
+                : '0 0 0 1px rgba(245, 166, 35, 0.28), 0 8px 20px rgba(245, 166, 35, 0.14)'
+          : 'none',
+        transition: 'border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
         '&:hover': {
-          borderColor: 'primary.main',
+          borderColor: premium ? 'warning.dark' : 'primary.main',
           transform: 'translateY(-2px)',
         },
         // Inner content Stack fills remaining space below the media slot.

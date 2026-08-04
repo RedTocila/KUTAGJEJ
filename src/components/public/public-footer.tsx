@@ -11,40 +11,9 @@ import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { config } from '@/config';
+import { useCopy } from '@/hooks/use-copy';
 import { primaryMainAlpha, secondaryMainAlpha } from '@/lib/css-var-alpha';
 import { paths } from '@/paths';
-
-const COLUMNS = [
-  {
-    title: 'Kategoritë',
-    links: [
-      { label: 'Prona', href: paths.public.realEstate },
-      { label: 'Makina', href: paths.public.cars },
-      { label: 'Punë', href: paths.public.jobs },
-      { label: 'Tregu', href: paths.public.marketplace },
-      { label: 'Biznese', href: paths.public.businesses },
-      { label: 'Profesionistë', href: paths.public.professionals },
-    ],
-  },
-  {
-    title: 'Përdoruesit',
-    links: [
-      { label: 'Posto njoftim falas', href: paths.user.realEstateListing },
-      { label: 'Hyr / Regjistrohu', href: paths.user.auth },
-      { label: 'Paneli im', href: paths.user.dashboard },
-      { label: 'Shpalljet e mia', href: paths.user.myRealEstateListings },
-    ],
-  },
-  {
-    title: 'Rreth platformës',
-    links: [
-      { label: 'Rreth nesh', href: paths.public.about },
-      { label: 'Kontakti', href: paths.public.contact },
-      { label: 'Kushtet e përdorimit', href: paths.public.terms },
-      { label: 'Politika e privatësisë', href: paths.public.privacy },
-    ],
-  },
-] as const;
 
 const SOCIAL = [
   { label: 'Facebook', href: 'https://facebook.com', icon: FacebookIcon },
@@ -53,6 +22,41 @@ const SOCIAL = [
 ] as const;
 
 export function PublicFooter() {
+  const t = useCopy();
+
+  const columns = [
+    {
+      title: t.chrome.footerCategories,
+      links: [
+        { label: t.verticals.ai.label, href: `${paths.public.search}?cat=ai` },
+        { label: t.verticals['real-estate'].label, href: paths.public.realEstate },
+        { label: t.verticals.cars.label, href: paths.public.cars },
+        { label: t.verticals.jobs.label, href: paths.public.jobs },
+        { label: t.verticals.marketplace.label, href: paths.public.marketplace },
+        { label: t.verticals.businesses.label, href: paths.public.businesses },
+        { label: t.verticals.professionals.label, href: paths.public.professionals },
+      ],
+    },
+    {
+      title: t.chrome.footerUsers,
+      links: [
+        { label: t.chrome.footerPostFree, href: paths.user.realEstateListing },
+        { label: t.common.loginRegister, href: paths.user.auth },
+        { label: t.common.myPanel, href: paths.user.dashboard },
+        { label: t.chrome.footerMyListings, href: paths.user.myRealEstateListings },
+      ],
+    },
+    {
+      title: t.chrome.footerAbout,
+      links: [
+        { label: t.chrome.footerAboutUs, href: paths.public.about },
+        { label: t.chrome.footerContact, href: paths.public.contact },
+        { label: t.chrome.footerTerms, href: paths.public.terms },
+        { label: t.chrome.footerPrivacy, href: paths.public.privacy },
+      ],
+    },
+  ];
+
   return (
     <Box
       component="footer"
@@ -103,7 +107,7 @@ export function PublicFooter() {
               />
             </RouterLink>
             <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-              {config.site.description} Posto, kërko dhe gjej shpejt — prona, makina, punë dhe shumë më tepër, në një vend.
+              {t.chrome.footerBlurb}
             </Typography>
             <Stack spacing={1}>
               <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
@@ -123,7 +127,7 @@ export function PublicFooter() {
                   {React.createElement(MapPinIcon, { size: 18, weight: 'duotone' })}
                 </Box>
                 <Typography variant="body2" color="text.secondary">
-                  Tiranë, Shqipëri
+                  {t.chrome.footerLocation}
                 </Typography>
               </Stack>
             </Stack>
@@ -157,7 +161,7 @@ export function PublicFooter() {
             spacing={{ xs: 3, sm: 6 }}
             sx={{ flex: 1, justifyContent: { md: 'flex-end' } }}
           >
-            {COLUMNS.map((col) => (
+            {columns.map((col) => (
               <Stack key={col.title} spacing={1.25} sx={{ minWidth: 160 }}>
                 <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.primary', letterSpacing: '0.08em' }}>
                   {col.title}
@@ -194,7 +198,7 @@ export function PublicFooter() {
           sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
         >
           <Typography variant="body2" color="text.secondary">
-            © {new Date().getFullYear()} {config.site.name} — Ku Ta Gjej. Të gjitha të drejtat e rezervuara.
+            © {new Date().getFullYear()} {config.site.name} — Ku Ta Gjej. {t.chrome.footerRights}
           </Typography>
           <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap' }}>
             <Link
@@ -203,7 +207,7 @@ export function PublicFooter() {
               underline="hover"
               sx={{ color: 'text.secondary', fontSize: '0.85rem' }}
             >
-              Kushtet
+              {t.chrome.footerTermsShort}
             </Link>
             <Link
               component={RouterLink}
@@ -211,7 +215,7 @@ export function PublicFooter() {
               underline="hover"
               sx={{ color: 'text.secondary', fontSize: '0.85rem' }}
             >
-              Privatësia
+              {t.chrome.footerPrivacyShort}
             </Link>
             <Link
               component={RouterLink}
@@ -219,7 +223,7 @@ export function PublicFooter() {
               underline="hover"
               sx={{ color: 'text.secondary', fontSize: '0.85rem' }}
             >
-              Kontakti
+              {t.chrome.footerContact}
             </Link>
           </Stack>
         </Stack>

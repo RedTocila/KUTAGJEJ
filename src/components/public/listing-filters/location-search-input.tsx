@@ -140,8 +140,8 @@ export function LocationSearchInput({
   const cityOptions = React.useMemo(() => {
     const q = normalize(query);
     const all: CityOption[] = cities.map((c) => ({ cityId: c.id, label: safeLabel(c.name) }));
-    if (!q) return all.slice(0, 10);
-    return all.filter((c) => normalize(c.label).includes(q)).slice(0, 12);
+    if (!q) return all;
+    return all.filter((c) => normalize(c.label).includes(q));
   }, [cities, query]);
 
   const zoneOptions = React.useMemo(() => {
@@ -344,143 +344,160 @@ export function LocationSearchInput({
           open={open && Boolean(anchorEl)}
           anchorEl={anchorEl}
           placement="bottom-start"
+          modifiers={[{ name: 'preventOverflow', options: { padding: 8 } }]}
           sx={{ zIndex: 1400, width: Math.max(anchorEl?.offsetWidth ?? 220, 220) }}
         >
           <Paper
             elevation={8}
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
             sx={{
               mt: 0.75,
-              maxHeight: 280,
-              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              // Header + "Qytete" label + ~4 dense city rows
+              maxHeight: 240,
+              overflow: 'hidden',
               borderRadius: 2.5,
               border: '1px solid',
               borderColor: 'divider',
             }}
           >
-            {zoneMode ? (
-              <>
-                <Typography
-                  variant="caption"
-                  sx={{ display: 'block', px: 1.5, pt: 1.25, pb: 0.5, color: 'text.secondary', fontWeight: 600 }}
-                >
-                  Zgjidh zona në {cityName}
-                </Typography>
-                <List dense disablePadding>
-                  {zoneOptions.map((option) => (
-                    <ListItemButton
-                      key={option.zoneId}
-                      selected={safeZoneIds.includes(option.zoneId)}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => handleToggleZone(option.zoneId)}
-                      sx={{ py: 0.45, px: 1.25 }}
-                    >
-                      <Checkbox
-                        size="small"
-                        checked={safeZoneIds.includes(option.zoneId)}
-                        tabIndex={-1}
-                        disableRipple
-                        sx={{ p: 0.5, mr: 0.75 }}
-                      />
-                      <MapPinAreaIcon size={14} style={{ marginRight: 8, flexShrink: 0 }} />
-                      <ListItemText
-                        primary={option.label}
-                        slotProps={{ primary: { sx: { fontSize: '0.84rem', fontWeight: 600 } } }}
-                      />
-                    </ListItemButton>
-                  ))}
-                </List>
-                {zoneOptions.length === 0 ? (
-                  <Typography sx={{ px: 1.5, py: 1.5, fontSize: '0.84rem', color: 'text.secondary' }}>
-                    Nuk u gjet asnjë zonë
-                  </Typography>
-                ) : null}
-              </>
-            ) : (
-              <>
-                {!query ? (
+            <Box
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                overflowY: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'contain',
+                scrollbarWidth: 'thin',
+              }}
+            >
+              {zoneMode ? (
+                <>
                   <Typography
                     variant="caption"
                     sx={{ display: 'block', px: 1.5, pt: 1.25, pb: 0.5, color: 'text.secondary', fontWeight: 600 }}
                   >
-                    Shkruaj qytetin{enableZones ? ' ose zonën' : ''}
+                    Zgjidh zona në {cityName}
                   </Typography>
-                ) : null}
-                <List dense disablePadding>
-                  {showGlobalZones ? (
-                    <>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          display: 'block',
-                          px: 1.5,
-                          py: 0.5,
-                          color: 'text.secondary',
-                          fontWeight: 700,
-                          letterSpacing: '0.04em',
-                          textTransform: 'uppercase',
-                          fontSize: '0.62rem',
-                        }}
+                  <List dense disablePadding>
+                    {zoneOptions.map((option) => (
+                      <ListItemButton
+                        key={option.zoneId}
+                        selected={safeZoneIds.includes(option.zoneId)}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleToggleZone(option.zoneId)}
+                        sx={{ py: 0.45, px: 1.25 }}
                       >
-                        Zona
-                      </Typography>
-                      {globalZoneOptions.map((option) => (
-                        <ListItemButton
-                          key={`${option.cityId}-${option.zoneId}`}
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => handleSelectZoneWithCity(option.cityId, option.zoneId)}
-                          sx={{ py: 0.45, px: 1.25 }}
-                        >
-                          <MapPinAreaIcon size={14} style={{ marginRight: 8, flexShrink: 0 }} />
-                          <ListItemText
-                            primary={option.label}
-                            secondary={option.cityName}
-                            slotProps={{
-                              primary: { sx: { fontSize: '0.84rem', fontWeight: 600 } },
-                              secondary: { sx: { fontSize: '0.72rem' } },
-                            }}
-                          />
-                        </ListItemButton>
-                      ))}
-                    </>
+                        <Checkbox
+                          size="small"
+                          checked={safeZoneIds.includes(option.zoneId)}
+                          tabIndex={-1}
+                          disableRipple
+                          sx={{ p: 0.5, mr: 0.75 }}
+                        />
+                        <MapPinAreaIcon size={14} style={{ marginRight: 8, flexShrink: 0 }} />
+                        <ListItemText
+                          primary={option.label}
+                          slotProps={{ primary: { sx: { fontSize: '0.84rem', fontWeight: 600 } } }}
+                        />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                  {zoneOptions.length === 0 ? (
+                    <Typography sx={{ px: 1.5, py: 1.5, fontSize: '0.84rem', color: 'text.secondary' }}>
+                      Nuk u gjet asnjë zonë
+                    </Typography>
                   ) : null}
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      display: 'block',
-                      px: 1.5,
-                      py: 0.5,
-                      color: 'text.secondary',
-                      fontWeight: 700,
-                      letterSpacing: '0.04em',
-                      textTransform: 'uppercase',
-                      fontSize: '0.62rem',
-                    }}
-                  >
-                    Qytete
-                  </Typography>
-                  {cityOptions.map((option) => (
-                    <ListItemButton
-                      key={option.cityId}
-                      selected={cityId === option.cityId}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => handleSelectCity(option.cityId)}
-                      sx={{ py: 0.45, px: 1.25 }}
+                </>
+              ) : (
+                <>
+                  {!query ? (
+                    <Typography
+                      variant="caption"
+                      sx={{ display: 'block', px: 1.5, pt: 1.25, pb: 0.5, color: 'text.secondary', fontWeight: 600 }}
                     >
-                      <MapPinIcon size={14} style={{ marginRight: 8, flexShrink: 0 }} />
-                      <ListItemText
-                        primary={option.label}
-                        slotProps={{ primary: { sx: { fontSize: '0.84rem', fontWeight: 600 } } }}
-                      />
-                    </ListItemButton>
-                  ))}
-                </List>
-                {query && cityOptions.length === 0 && !showGlobalZones ? (
-                  <Typography sx={{ px: 1.5, py: 1.5, fontSize: '0.84rem', color: 'text.secondary' }}>
-                    Nuk u gjet asnjë qytet{enableZones ? ' apo zonë' : ''}
-                  </Typography>
-                ) : null}
-              </>
-            )}
+                      Shkruaj qytetin{enableZones ? ' ose zonën' : ''}
+                    </Typography>
+                  ) : null}
+                  <List dense disablePadding>
+                    {showGlobalZones ? (
+                      <>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            display: 'block',
+                            px: 1.5,
+                            py: 0.5,
+                            color: 'text.secondary',
+                            fontWeight: 700,
+                            letterSpacing: '0.04em',
+                            textTransform: 'uppercase',
+                            fontSize: '0.62rem',
+                          }}
+                        >
+                          Zona
+                        </Typography>
+                        {globalZoneOptions.map((option) => (
+                          <ListItemButton
+                            key={`${option.cityId}-${option.zoneId}`}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => handleSelectZoneWithCity(option.cityId, option.zoneId)}
+                            sx={{ py: 0.45, px: 1.25 }}
+                          >
+                            <MapPinAreaIcon size={14} style={{ marginRight: 8, flexShrink: 0 }} />
+                            <ListItemText
+                              primary={option.label}
+                              secondary={option.cityName}
+                              slotProps={{
+                                primary: { sx: { fontSize: '0.84rem', fontWeight: 600 } },
+                                secondary: { sx: { fontSize: '0.72rem' } },
+                              }}
+                            />
+                          </ListItemButton>
+                        ))}
+                      </>
+                    ) : null}
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        display: 'block',
+                        px: 1.5,
+                        py: 0.5,
+                        color: 'text.secondary',
+                        fontWeight: 700,
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                        fontSize: '0.62rem',
+                      }}
+                    >
+                      Qytete
+                    </Typography>
+                    {cityOptions.map((option) => (
+                      <ListItemButton
+                        key={option.cityId}
+                        selected={cityId === option.cityId}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleSelectCity(option.cityId)}
+                        sx={{ py: 0.45, px: 1.25 }}
+                      >
+                        <MapPinIcon size={14} style={{ marginRight: 8, flexShrink: 0 }} />
+                        <ListItemText
+                          primary={option.label}
+                          slotProps={{ primary: { sx: { fontSize: '0.84rem', fontWeight: 600 } } }}
+                        />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                  {query && cityOptions.length === 0 && !showGlobalZones ? (
+                    <Typography sx={{ px: 1.5, py: 1.5, fontSize: '0.84rem', color: 'text.secondary' }}>
+                      Nuk u gjet asnjë qytet{enableZones ? ' apo zonë' : ''}
+                    </Typography>
+                  ) : null}
+                </>
+              )}
+            </Box>
           </Paper>
         </Popper>
       </Box>

@@ -27,8 +27,9 @@ export interface BusinessListingPayload {
   contactPhone: string;
   imageUrls: string[];
   weeklyHours: WeeklyHourRow[];
-  menuCategories: BusinessMenuCategory[];
-  menuItems: BusinessMenuItem[];
+  /** Omit on profile save so an existing menu is preserved. */
+  menuCategories?: BusinessMenuCategory[];
+  menuItems?: BusinessMenuItem[];
   reservationsEnabled: boolean;
   reservationUrl: string | null;
   reservationTimeSlots: string[];
@@ -36,11 +37,17 @@ export interface BusinessListingPayload {
   servicesHighlight: string | null;
 }
 
+export interface BusinessMenuPayload {
+  menuCategories: BusinessMenuCategory[];
+  menuItems: BusinessMenuItem[];
+}
+
 export interface BusinessMineListing extends ListingMetrics {
   id: string;
   title: string;
   description: string;
   category: string;
+  cityId: string | null;
   cityName: string | null;
   contactPhone: string | null;
   imageUrls: string[];
@@ -56,6 +63,8 @@ export interface BusinessMineListing extends ListingMetrics {
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
   updatedAt: string;
+  isPremium?: boolean;
+  premiumUntil?: string | null;
 }
 
 export interface BusinessReservationRow {
@@ -109,7 +118,7 @@ export async function createBusinessListing(
 
 export async function updateBusinessListing(
   id: string,
-  body: BusinessListingPayload,
+  body: Partial<BusinessListingPayload>,
 ): Promise<{ error?: string }> {
   try {
     const res = await fetch(getApiUrl(`/listings/directory/businesses/${encodeURIComponent(id)}`), {
@@ -123,6 +132,14 @@ export async function updateBusinessListing(
   } catch {
     return { error: 'Could not reach the server.' };
   }
+}
+
+/** Save only the business menu (categories + items). */
+export async function updateBusinessMenu(
+  id: string,
+  body: BusinessMenuPayload,
+): Promise<{ error?: string }> {
+  return updateBusinessListing(id, body);
 }
 
 export async function listBusinessReservations(
@@ -175,6 +192,7 @@ export interface ProfessionalMineListing extends ListingMetrics {
   condition: string | null;
   price: number | null;
   currency: string | null;
+  cityId: string | null;
   cityName: string | null;
   contactPhone: string | null;
   imageUrls: string[];
@@ -184,6 +202,8 @@ export interface ProfessionalMineListing extends ListingMetrics {
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
   updatedAt: string;
+  isPremium?: boolean;
+  premiumUntil?: string | null;
 }
 
 export async function listMyProfessionalListings(): Promise<{
@@ -219,6 +239,24 @@ export async function createProfessionalListing(
       status: data.listing?.status,
       message: typeof data.message === 'string' ? data.message : undefined,
     };
+  } catch {
+    return { error: 'Could not reach the server.' };
+  }
+}
+
+export async function updateProfessionalListing(
+  id: string,
+  body: Partial<ProfessionalListingPayload>,
+): Promise<{ error?: string }> {
+  try {
+    const res = await fetch(getApiUrl(`/listings/directory/professionals/${encodeURIComponent(id)}`), {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not update listing.' };
+    return {};
   } catch {
     return { error: 'Could not reach the server.' };
   }

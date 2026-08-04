@@ -277,6 +277,7 @@ export interface ActiveFilterChip {
 export function getActiveFilterChips(
   verticalId: HomeVerticalId,
   filters: BrowseFilters,
+  cities?: ReadonlyArray<{ id: string; name: string; zones?: ReadonlyArray<{ id: string; name: string }> }>,
 ): ActiveFilterChip[] {
   const chips: ActiveFilterChip[] = [];
 
@@ -287,6 +288,21 @@ export function getActiveFilterChips(
   const sortLabel = findLabel(BROWSE_SORT_OPTIONS, filters.sort);
   if (sortLabel && filters.sort && filters.sort !== 'newest') {
     push('sort', sortLabel);
+  }
+
+  const cityId = (filters as { city?: string }).city;
+  if (cityId) {
+    const cityName = cities?.find((c) => c.id === cityId)?.name;
+    push('city', cityName || 'Qyteti');
+  }
+
+  if (verticalId === 'real-estate') {
+    const zones = normalizeZoneIds((filters as BrowseRealEstateFilters).zone);
+    const city = cities?.find((c) => c.id === cityId);
+    for (const zoneId of zones) {
+      const zoneName = city?.zones?.find((z) => z.id === zoneId)?.name;
+      push(`zone:${zoneId}`, zoneName || 'Zona');
+    }
   }
 
   switch (verticalId) {
@@ -303,7 +319,7 @@ export function getActiveFilterChips(
       if (f.maxPrice) push('maxPrice', `Max ${f.maxPrice}`);
       if (f.minSurface) push('minSurface', `≥ ${f.minSurface} m²`);
       if (f.bedrooms) push('bedrooms', `≥ ${f.bedrooms} dhoma`);
-      if (f.q) push('q', `"${f.q}"`);
+      // Keyword `q` is shown in the main search input — omit from chips.
       break;
     }
     case 'cars': {
@@ -318,7 +334,6 @@ export function getActiveFilterChips(
       if (f.minYear) push('minYear', `Nga ${f.minYear}`);
       if (f.maxYear) push('maxYear', `Deri ${f.maxYear}`);
       if (f.maxKm) push('maxKm', `≤ ${f.maxKm} km`);
-      if (f.q) push('q', `"${f.q}"`);
       break;
     }
     case 'jobs': {
@@ -333,7 +348,6 @@ export function getActiveFilterChips(
       if (education) push('education', education);
       const experience = findLabel(JOB_EXPERIENCE_OPTIONS, f.experience);
       if (experience) push('experience', experience);
-      if (f.q) push('q', `"${f.q}"`);
       break;
     }
     case 'marketplace': {
@@ -344,21 +358,18 @@ export function getActiveFilterChips(
       if (condition) push('condition', condition);
       if (f.minPrice) push('minPrice', `Min ${f.minPrice}`);
       if (f.maxPrice) push('maxPrice', `Max ${f.maxPrice}`);
-      if (f.q) push('q', `"${f.q}"`);
       break;
     }
     case 'businesses': {
       const f = filters as BrowseDirectoryFilters;
       const type = findLabel(BUSINESS_FILTER_OPTIONS, f.type);
       if (type) push('type', type);
-      if (f.q) push('q', `"${f.q}"`);
       break;
     }
     case 'professionals': {
       const f = filters as BrowseDirectoryFilters;
       const type = findLabel(PROFESSIONAL_FILTER_OPTIONS, f.type);
       if (type) push('type', type);
-      if (f.q) push('q', `"${f.q}"`);
       break;
     }
     default:
@@ -379,6 +390,7 @@ export function removeBrowseFilterKey(filters: BrowseFilters, key: string): Brow
     return next as BrowseFilters;
   }
   delete next[key];
+  if (key === 'city') delete next.zone;
   return next as BrowseFilters;
 }
 

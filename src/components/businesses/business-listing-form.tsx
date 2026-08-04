@@ -1,22 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
 import {
   Alert,
   Box,
-  Button,
   Checkbox,
-  Divider,
   FormControlLabel,
   FormGroup,
-  IconButton,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
-import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
-import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
+import { CalendarCheck as CalendarCheckIcon } from '@phosphor-icons/react/dist/ssr/CalendarCheck';
+import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
+import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import {
@@ -29,115 +25,171 @@ import {
 } from '@/lib/business-constants';
 import {
   createBusinessListing,
-  type BusinessMenuCategory,
-  type BusinessMenuItem,
+  listMyBusinessListings,
+  updateBusinessListing,
+  type BusinessMineListing,
 } from '@/lib/directory-listings-client';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import {
+  ListingFormActions,
+  ListingFormSection,
+  ListingTextField,
+} from '@/components/user/listing-form-ui';
+import { BusinessAccountRequiredNotice } from '@/components/user/business-account-required-notice';
 import { uploadListingImages } from '@/lib/uploads-client';
+import { isBusinessPortalAccount } from '@/lib/user-portal-account-label';
+import {
+  businessCategoryFromUser,
+  businessTitleFromUser,
+  profileDefaultsFromStorage,
+  resolveContactPhone,
+} from '@/lib/listing-form-defaults';
 import { useUser } from '@/hooks/use-user';
 
 const MAX_BUSINESS_IMAGES = 8;
-
-function contactPhoneInitialFromStorage(): string {
-  if (typeof window === 'undefined') return '';
-  try {
-    const raw = localStorage.getItem('user-data');
-    if (!raw) return '';
-    const u = JSON.parse(raw) as { phone?: string };
-    return typeof u.phone === 'string' ? u.phone.trim() : '';
-  } catch {
-    return '';
-  }
-}
-
-function newId(): string {
-  return typeof crypto !== 'undefined' && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `id-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
 
 export interface BusinessListingFormProps {
   onSuccess?: () => void;
   backHref?: string;
   backLabel?: string;
+  /** Prefill from AI link import (create flow). */
+  aiPrefill?: Record<string, unknown> | null;
 }
 
-export function BusinessListingForm({ onSuccess, backHref, backLabel }: BusinessListingFormProps) {
+export function BusinessListingForm({
+  onSuccess,
+  backHref,
+  backLabel,
+  aiPrefill,
+}: BusinessListingFormProps) {
   const { user } = useUser();
+  const canPostBusiness = isBusinessPortalAccount(user);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [checkingExisting, setCheckingExisting] = React.useState(true);
+  const [existingId, setExistingId] = React.useState<string | null>(null);
+  const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(() => {
+    const urls = aiPrefill?.imageUrls;
+    return Array.isArray(urls)
+      ? urls.filter((u): u is string => typeof u === 'string' && Boolean(u)).slice(0, MAX_BUSINESS_IMAGES)
+      : [];
+  });
+  const [saveNotice, setSaveNotice] = React.useState<string | null>(null);
+  const [createdPending, setCreatedPending] = React.useState(false);
 
-  const [title, setTitle] = React.useState('');
-  const [description, setDescription] = React.useState('');
-  const [category, setCategory] = React.useState('');
-  const [cityId, setCityId] = React.useState('');
-  const [contactPhone, setContactPhone] = React.useState('');
-  const [servicesHighlight, setServicesHighlight] = React.useState('');
+  const [title, setTitle] = React.useState(() => {
+    const fromAi = String(aiPrefill?.title ?? '').trim();
+    if (fromAi) return fromAi;
+    return profileDefaultsFromStorage().businessName;
+  });
+  const [description, setDescription] = React.useState(() => String(aiPrefill?.description ?? ''));
+  const [category, setCategory] = React.useState(() => {
+    const fromAi = String(aiPrefill?.category ?? '').trim();
+    if (fromAi) return fromAi;
+    return profileDefaultsFromStorage().businessCategory;
+  });
+  const [cityId, setCityId] = React.useState(() => String(aiPrefill?.cityId ?? ''));
+  const [contactPhone, setContactPhone] = React.useState(() => {
+    const fromAi = String(aiPrefill?.contactPhone ?? '').trim();
+    if (fromAi) return fromAi;
+    return profileDefaultsFromStorage().phone;
+  });
+  const [servicesHighlight, setServicesHighlight] = React.useState(() =>
+    String(aiPrefill?.servicesHighlight ?? ''),
+  );
   const [images, setImages] = React.useState<File[]>([]);
   const [weeklyHours, setWeeklyHours] = React.useState<WeeklyHourRow[]>(defaultWeeklyHours);
-  const [menuCategories, setMenuCategories] = React.useState<BusinessMenuCategory[]>([]);
-  const [menuItems, setMenuItems] = React.useState<BusinessMenuItem[]>([]);
   const [reservationsEnabled, setReservationsEnabled] = React.useState(false);
   const [reservationUrl, setReservationUrl] = React.useState('');
   const [timeSlotsText, setTimeSlotsText] = React.useState(DEFAULT_RESERVATION_TIME_SLOTS.join(', '));
   const [partySizesText, setPartySizesText] = React.useState(DEFAULT_RESERVATION_PARTY_SIZES.join(', '));
 
+  const applyExistingListing = React.useCallback((listing: BusinessMineListing) => {
+    setExistingId(listing.id);
+    setTitle(listing.title ?? '');
+    setDescription(listing.description ?? '');
+    setCategory(listing.category ?? '');
+    setCityId(listing.cityId ?? '');
+    setContactPhone(listing.contactPhone ?? '');
+    setServicesHighlight(listing.servicesHighlight ?? '');
+    setExistingImageUrls((listing.imageUrls ?? []).filter(Boolean));
+    setImages([]);
+    const hours = Array.isArray(listing.weeklyHours) && listing.weeklyHours.length
+      ? listing.weeklyHours.map((row, i) => ({
+          dayOfWeek: typeof row.dayOfWeek === 'number' ? row.dayOfWeek : i,
+          closed: Boolean(row.closed),
+          open: String(row.open || '09:00'),
+          close: String(row.close || '22:00'),
+        }))
+      : defaultWeeklyHours();
+    setWeeklyHours(hours);
+    setReservationsEnabled(Boolean(listing.reservationsEnabled));
+    setReservationUrl(listing.reservationUrl ?? '');
+    setTimeSlotsText(
+      (listing.reservationTimeSlots?.length ? listing.reservationTimeSlots : DEFAULT_RESERVATION_TIME_SLOTS).join(
+        ', ',
+      ),
+    );
+    setPartySizesText(
+      (listing.reservationPartySizes?.length ? listing.reservationPartySizes : DEFAULT_RESERVATION_PARTY_SIZES).join(
+        ', ',
+      ),
+    );
+  }, []);
+
   React.useEffect(() => {
-    setContactPhone(contactPhoneInitialFromStorage());
+    if (!canPostBusiness) {
+      setCheckingExisting(false);
+      return;
+    }
     void listRealEstateLocationsPublic().then((res) => {
       if (res.cities) setCities(res.cities);
     });
-  }, []);
+    let cancelled = false;
+    void listMyBusinessListings().then((res) => {
+      if (cancelled) return;
+      const first = res.listings?.[0];
+      if (first) applyExistingListing(first);
+      else setExistingId(null);
+      setCheckingExisting(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [canPostBusiness, applyExistingListing]);
 
-  const addCategory = () => {
-    const id = newId();
-    setMenuCategories((prev) => [...prev, { id, name: '', sortOrder: prev.length }]);
-  };
-
-  const addMenuItem = (categoryId: string) => {
-    setMenuItems((prev) => [
-      ...prev,
-      {
-        id: newId(),
-        categoryId,
-        name: '',
-        description: '',
-        price: 0,
-        currency: 'EUR',
-        imageUrl: null,
-        sortOrder: prev.length,
-      },
-    ]);
-  };
+  // Prefill empty create fields from signup/profile.
+  React.useEffect(() => {
+    if (!canPostBusiness || checkingExisting || existingId) return;
+    const phone = resolveContactPhone(user);
+    if (phone) setContactPhone((prev) => (prev.trim() ? prev : phone));
+    const name = businessTitleFromUser(user);
+    if (name) setTitle((prev) => (prev.trim() ? prev : name));
+    const cat = businessCategoryFromUser(user);
+    if (cat) setCategory((prev) => (prev.trim() ? prev : cat));
+  }, [user, canPostBusiness, checkingExisting, existingId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSaveNotice(null);
+    if (!canPostBusiness) {
+      setError('Krijoni një llogari biznesi për të kryer këtë veprim.');
+      return;
+    }
     if (!title.trim() || !description.trim() || !category || !cityId) {
       setError('Plotësoni fushat e detyrueshme.');
       return;
     }
-    const cats = menuCategories
-      .map((c, i) => ({ ...c, name: c.name.trim(), sortOrder: i }))
-      .filter((c) => c.name);
-    const items = menuItems
-      .filter((item) => item.name.trim() && cats.some((c) => c.id === item.categoryId))
-      .map((item, i) => ({
-        ...item,
-        name: item.name.trim(),
-        description: item.description.trim(),
-        price: Number(item.price) || 0,
-        sortOrder: i,
-      }));
 
     const reservationTimeSlots = timeSlotsText
       .split(/[,;\s]+/)
       .map((s) => s.trim())
-      .filter(/^\d{1,2}:\d{2}$/.test);
+      .filter((s) => /^\d{1,2}:\d{2}$/.test(s));
 
     const reservationPartySizes = partySizesText
       .split(/[,;\s]+/)
@@ -145,17 +197,19 @@ export function BusinessListingForm({ onSuccess, backHref, backLabel }: Business
       .filter((n) => Number.isInteger(n) && n >= 1);
 
     setSubmitting(true);
-    let imageUrls: string[] = [];
+    let uploadedUrls: string[] = [];
     if (images.length) {
-      const up = await uploadListingImages(images, 'businesses');
+      const slots = Math.max(0, MAX_BUSINESS_IMAGES - existingImageUrls.length);
+      const up = await uploadListingImages(images.slice(0, slots), 'businesses');
       if (up.error) {
         setSubmitting(false);
         setError(up.error);
         return;
       }
-      imageUrls = up.urls;
+      uploadedUrls = up.urls;
     }
-    const res = await createBusinessListing({
+    const imageUrls = [...existingImageUrls, ...uploadedUrls].slice(0, MAX_BUSINESS_IMAGES);
+    const payload = {
       title: title.trim(),
       description: description.trim(),
       category,
@@ -163,34 +217,92 @@ export function BusinessListingForm({ onSuccess, backHref, backLabel }: Business
       contactPhone: contactPhone.trim(),
       imageUrls,
       weeklyHours,
-      menuCategories: cats,
-      menuItems: items,
       reservationsEnabled,
       reservationUrl: reservationUrl.trim() || null,
       reservationTimeSlots,
       reservationPartySizes,
       servicesHighlight: servicesHighlight.trim() || null,
-    });
+      ...(existingId
+        ? {}
+        : {
+            menuCategories: [] as const,
+            menuItems: [] as const,
+          }),
+    };
+
+    if (existingId) {
+      const res = await updateBusinessListing(existingId, payload);
+      setSubmitting(false);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      setImages([]);
+      setExistingImageUrls(imageUrls);
+      setSaveNotice('Profili i biznesit u përditësua.');
+      setSuccess(true);
+      onSuccess?.();
+      return;
+    }
+
+    const res = await createBusinessListing(payload);
     setSubmitting(false);
     if (res.error) {
       setError(res.error);
       return;
     }
+    if (res.id) setExistingId(res.id);
+    setImages([]);
+    setExistingImageUrls(imageUrls);
+    setCreatedPending(true);
     setSuccess(true);
     onSuccess?.();
   };
 
+  if (checkingExisting) {
+    return (
+      <Typography color="text.secondary" sx={{ py: 2 }}>
+        Duke ngarkuar profilin e biznesit…
+      </Typography>
+    );
+  }
+
+  if (!canPostBusiness) {
+    return <BusinessAccountRequiredNotice />;
+  }
+
   return (
     <Box component="form" onSubmit={(e) => void handleSubmit(e)}>
-      <Stack spacing={3}>
-        {error ? <Alert severity="error">{error}</Alert> : null}
-        {success ? <ListingSubmittedPendingAlert /> : null}
+      <Stack spacing={2.25}>
+        {error ? (
+          <Alert severity="error" sx={{ borderRadius: 2 }}>
+            {error}
+          </Alert>
+        ) : null}
+        {saveNotice ? (
+          <Alert severity="success" sx={{ borderRadius: 2 }} onClose={() => setSaveNotice(null)}>
+            {saveNotice}
+          </Alert>
+        ) : null}
+        {createdPending ? <ListingSubmittedPendingAlert /> : null}
+        {existingId && !createdPending ? (
+          <Alert severity="info" sx={{ borderRadius: 2 }}>
+            Po përditësoni profilin ekzistues të biznesit — shtoni, ndryshoni ose fshini kategoritë dhe artikujt e menusë.
+          </Alert>
+        ) : null}
 
-        <Stack spacing={2}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-            Informacioni bazë
-          </Typography>
-          <TextField label="Emri i biznesit" value={title} onChange={(e) => setTitle(e.target.value)} required fullWidth />
+        <ListingFormSection
+          icon={<StorefrontIcon size={20} weight="duotone" />}
+          title="Informacioni bazë"
+          description="Emri, kategoria dhe të dhënat që shfaqen në profil."
+        >
+          <ListingTextField
+            label="Emri i biznesit"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            fullWidth
+          />
           <SearchableSelect
             label="Kategoria"
             value={category}
@@ -207,7 +319,7 @@ export function BusinessListingForm({ onSuccess, backHref, backLabel }: Business
             emptyLabel="Zgjidhni qytetin…"
             required
           />
-          <TextField
+          <ListingTextField
             label="Përshkrimi"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -216,232 +328,161 @@ export function BusinessListingForm({ onSuccess, backHref, backLabel }: Business
             multiline
             minRows={3}
           />
-          <TextField
+          <ListingTextField
             label="Çfarë ofron (opsionale)"
             value={servicesHighlight}
             onChange={(e) => setServicesHighlight(e.target.value)}
             fullWidth
             placeholder="p.sh. Brunch · Terracë · Muzikë live"
           />
-          <TextField label="Telefon" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} required fullWidth />
+          <ListingTextField
+            label="Telefon"
+            value={contactPhone}
+            onChange={(e) => setContactPhone(e.target.value)}
+            required
+            fullWidth
+            placeholder="+355 69 …"
+            type="tel"
+            autoComplete="tel"
+          />
           <ListingImagePicker
             value={images}
             onChange={setImages}
+            existingUrls={existingImageUrls}
+            onExistingUrlsChange={setExistingImageUrls}
             max={MAX_BUSINESS_IMAGES}
             label="Foto të biznesit"
             disabled={submitting}
           />
-        </Stack>
+        </ListingFormSection>
 
-        <Divider />
-
-        <Stack spacing={1.5}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-            Orari i hapjes
-          </Typography>
-          {weeklyHours.map((row, index) => (
-            <Stack key={row.dayOfWeek} direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-              <Typography sx={{ width: 36, fontWeight: 600 }}>{BUSINESS_DAY_LABELS[row.dayOfWeek]}</Typography>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={row.closed}
-                    onChange={(e) => {
-                      const next = [...weeklyHours];
-                      next[index] = { ...row, closed: e.target.checked };
-                      setWeeklyHours(next);
-                    }}
-                  />
-                }
-                label="Mbyllur"
-              />
-              <TextField
-                size="small"
-                label="Hapet"
-                value={row.open}
-                disabled={row.closed}
-                onChange={(e) => {
-                  const next = [...weeklyHours];
-                  next[index] = { ...row, open: e.target.value };
-                  setWeeklyHours(next);
+        <ListingFormSection
+          icon={<ClockIcon size={20} weight="duotone" />}
+          title="Orari i hapjes"
+          description="Vendosni orarin javor që klientët të dinë kur jeni hapur."
+        >
+          <Stack spacing={1}>
+            {weeklyHours.map((row, index) => (
+              <Box
+                key={row.dayOfWeek}
+                sx={{
+                  p: 1.25,
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: 'background.paper',
                 }}
-                sx={{ width: 100 }}
-                placeholder="09:00"
-              />
-              <TextField
-                size="small"
-                label="Mbyllet"
-                value={row.close}
-                disabled={row.closed}
-                onChange={(e) => {
-                  const next = [...weeklyHours];
-                  next[index] = { ...row, close: e.target.value };
-                  setWeeklyHours(next);
-                }}
-                sx={{ width: 100 }}
-                placeholder="22:00"
-              />
-            </Stack>
-          ))}
-        </Stack>
-
-        <Divider />
-
-        <Stack spacing={2}>
-          <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-              Menu
-            </Typography>
-            <Button size="small" startIcon={<PlusIcon size={16} />} onClick={addCategory}>
-              Kategori
-            </Button>
-          </Stack>
-          {menuCategories.map((cat, ci) => (
-            <Box key={cat.id} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
-                <TextField
-                  size="small"
-                  label="Emri i kategorisë"
-                  value={cat.name}
-                  onChange={(e) => {
-                    const next = [...menuCategories];
-                    next[ci] = { ...cat, name: e.target.value };
-                    setMenuCategories(next);
-                  }}
-                  fullWidth
-                />
-                <IconButton
-                  color="error"
-                  aria-label="Fshi kategorinë"
-                  onClick={() => {
-                    setMenuCategories((prev) => prev.filter((c) => c.id !== cat.id));
-                    setMenuItems((prev) => prev.filter((i) => i.categoryId !== cat.id));
-                  }}
+              >
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: 'center', justifyContent: 'space-between', mb: row.closed ? 0 : 1.25 }}
                 >
-                  <TrashIcon size={18} />
-                </IconButton>
-              </Stack>
-              {menuItems
-                .filter((item) => item.categoryId === cat.id)
-                .map((item) => {
-                  const ii = menuItems.indexOf(item);
-                  return (
-                    <Stack key={item.id} spacing={1} sx={{ mb: 1.5, pl: 1, borderLeft: '2px solid', borderColor: 'divider' }}>
-                      <TextField size="small" label="Artikulli" value={item.name} onChange={(e) => {
-                        const next = [...menuItems];
-                        next[ii] = { ...item, name: e.target.value };
-                        setMenuItems(next);
-                      }} />
-                      <TextField size="small" label="Përshkrimi" value={item.description} onChange={(e) => {
-                        const next = [...menuItems];
-                        next[ii] = { ...item, description: e.target.value };
-                        setMenuItems(next);
-                      }} />
-                      <Stack direction="row" spacing={1}>
-                        <TextField
-                          size="small"
-                          label="Çmimi"
-                          type="number"
-                          value={item.price || ''}
-                          onChange={(e) => {
-                            const next = [...menuItems];
-                            next[ii] = { ...item, price: Number(e.target.value) || 0 };
-                            setMenuItems(next);
-                          }}
-                          sx={{ flex: 1 }}
-                        />
-                        <SearchableSelect
-                          label="Mon."
-                          value={item.currency}
-                          onChange={(v) => {
-                            const next = [...menuItems];
-                            next[ii] = { ...item, currency: v as 'EUR' | 'LEK' };
-                            setMenuItems(next);
-                          }}
-                          options={[
-                            { value: 'EUR', label: 'EUR' },
-                            { value: 'LEK', label: 'LEK' },
-                          ]}
-                          emptyLabel="—"
-                          sx={{ minWidth: 90, flex: '0 0 auto' }}
-                        />
-                      </Stack>
-                      <TextField
+                  <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', minWidth: 28 }}>
+                    {BUSINESS_DAY_LABELS[row.dayOfWeek]}
+                  </Typography>
+                  <FormControlLabel
+                    sx={{ m: 0 }}
+                    control={
+                      <Checkbox
                         size="small"
-                        label="URL foto"
-                        value={item.imageUrl ?? ''}
+                        checked={row.closed}
                         onChange={(e) => {
-                          const next = [...menuItems];
-                          next[ii] = { ...item, imageUrl: e.target.value.trim() || null };
-                          setMenuItems(next);
+                          const next = [...weeklyHours];
+                          next[index] = { ...row, closed: e.target.checked };
+                          setWeeklyHours(next);
                         }}
                       />
-                      <Button
-                        size="small"
-                        color="error"
-                        startIcon={<TrashIcon size={14} />}
-                        onClick={() => setMenuItems((prev) => prev.filter((i) => i.id !== item.id))}
-                      >
-                        Hiq artikullin
-                      </Button>
-                    </Stack>
-                  );
-                })}
-              <Button size="small" onClick={() => addMenuItem(cat.id)}>
-                + Artikull
-              </Button>
-            </Box>
-          ))}
-        </Stack>
+                    }
+                    label={<Typography variant="body2">Mbyllur</Typography>}
+                  />
+                </Stack>
+                {row.closed ? null : (
+                  <Stack direction="row" spacing={1}>
+                    <ListingTextField
+                      size="small"
+                      label="Hapet"
+                      value={row.open}
+                      onChange={(e) => {
+                        const next = [...weeklyHours];
+                        next[index] = { ...row, open: e.target.value };
+                        setWeeklyHours(next);
+                      }}
+                      placeholder="09:00"
+                      fullWidth
+                    />
+                    <ListingTextField
+                      size="small"
+                      label="Mbyllet"
+                      value={row.close}
+                      onChange={(e) => {
+                        const next = [...weeklyHours];
+                        next[index] = { ...row, close: e.target.value };
+                        setWeeklyHours(next);
+                      }}
+                      placeholder="22:00"
+                      fullWidth
+                    />
+                  </Stack>
+                )}
+              </Box>
+            ))}
+          </Stack>
+        </ListingFormSection>
 
-        <Divider />
-
-        <Stack spacing={2}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-            Rezervime
-          </Typography>
+        <ListingFormSection
+          icon={<CalendarCheckIcon size={20} weight="duotone" />}
+          title="Rezervime"
+          description="Klientët plotësojnë fushat e rezervimit dhe kërkesa ju vjen si mesazh në bisedë."
+        >
           <FormGroup>
             <FormControlLabel
               control={
-                <Checkbox checked={reservationsEnabled} onChange={(e) => setReservationsEnabled(e.target.checked)} />
+                <Checkbox
+                  checked={reservationsEnabled}
+                  onChange={(e) => setReservationsEnabled(e.target.checked)}
+                />
               }
-              label="Aktivizo rezervimet në platformë"
+              label="Aktivizo rezervimet (përmes mesazheve)"
             />
           </FormGroup>
           {reservationsEnabled ? (
             <>
-              <TextField
-                label="Ora (ndarë me presje)"
+              <Typography variant="body2" color="text.secondary">
+                Kur dikush rezervon, hapet një bisedë me të dhënat: emri, telefoni, data, ora dhe numri i mysafirëve.
+              </Typography>
+              <ListingTextField
+                label="Ora e disponueshme (ndarë me presje)"
                 value={timeSlotsText}
                 onChange={(e) => setTimeSlotsText(e.target.value)}
                 fullWidth
+                helperText="p.sh. 18:00, 19:00, 20:00, 21:00"
               />
-              <TextField
+              <ListingTextField
                 label="Numri i mysafirëve (ndarë me presje)"
                 value={partySizesText}
                 onChange={(e) => setPartySizesText(e.target.value)}
                 fullWidth
+                helperText="p.sh. 2, 4, 6, 8"
               />
             </>
           ) : null}
-          <TextField
+          <ListingTextField
             label="Link rezervimi i jashtëm (opsionale)"
             value={reservationUrl}
             onChange={(e) => setReservationUrl(e.target.value)}
             fullWidth
+            helperText="Nëse e plotësoni, klientët dërgohen te ky link në vend të mesazheve."
           />
-        </Stack>
+        </ListingFormSection>
 
-        <Stack direction="row" spacing={2} sx={{ justifyContent: 'flex-end' }}>
-          {backHref ? (
-            <Button component={RouterLink} href={backHref} color="inherit">
-              {backLabel ?? 'Kthehu'}
-            </Button>
-          ) : null}
-          <Button type="submit" variant="contained" disabled={submitting || !user}>
-            {submitting ? 'Duke ruajtur…' : 'Publiko biznesin'}
-          </Button>
-        </Stack>
+        <ListingFormActions
+          submitLabel={existingId ? 'Ruaj ndryshimet' : 'Publiko biznesin'}
+          submitting={submitting}
+          disabled={!user}
+          backHref={backHref}
+          backLabel={backLabel}
+        />
       </Stack>
     </Box>
   );

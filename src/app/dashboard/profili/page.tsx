@@ -13,6 +13,9 @@ import {
   Typography,
 } from '@mui/material';
 
+import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGear';
+
+import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { authClient } from '@/lib/auth/client';
 import { useUser } from '@/hooks/use-user';
 
@@ -103,14 +106,12 @@ export default function AdminProfilePage() {
   if (isManagedStaff) {
     return (
       <Stack spacing={3}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            Profili im
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Llogaria juaj menaxhohet nga administratori i platformës.
-          </Typography>
-        </Box>
+        <AdminPageHeader
+          icon={React.createElement(UserGearIcon, { size: 22, weight: 'duotone' })}
+          eyebrow="Llogaria"
+          title="Profili im"
+          description="Llogaria juaj menaxhohet nga administratori i platformës."
+        />
         <Alert severity="info">
           Përditësimet e emailit, fjalëkalimit dhe të dhënave të tjera bëhen vetëm nga një administrator KuTaGjej.
         </Alert>
@@ -144,14 +145,12 @@ export default function AdminProfilePage() {
 
   return (
     <Stack spacing={3}>
-      <Box>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>
-          Profili im
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Përditëso të dhënat e llogarisë së administratorit dhe fjalëkalimin.
-        </Typography>
-      </Box>
+      <AdminPageHeader
+        icon={React.createElement(UserGearIcon, { size: 22, weight: 'duotone' })}
+        eyebrow="Llogaria"
+        title="Profili im"
+        description="Përditëso të dhënat e llogarisë së administratorit dhe fjalëkalimin."
+      />
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>

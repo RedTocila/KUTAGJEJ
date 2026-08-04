@@ -1,9 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import { Button, IconButton, Stack, TextField, Typography } from '@mui/material';
+import { Button, IconButton, Stack, Typography } from '@mui/material';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
+
+import { ListingTextField } from '@/components/user/listing-form-ui';
 
 export function JobFormStringList({
   label,
@@ -48,14 +50,14 @@ export function JobFormStringList({
       </Stack>
       {items.map((line, index) => (
         <Stack key={index} direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
-          <TextField
+          <ListingTextField
             value={line}
             onChange={(e) => updateAt(index, e.target.value)}
             fullWidth
             multiline
             minRows={1}
-            placeholder={`Pika ${index + 1}`}
             size="small"
+            label={`Pika ${index + 1}`}
           />
           <IconButton
             aria-label="Hiq pikën"

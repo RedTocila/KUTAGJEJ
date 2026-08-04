@@ -1,9 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import { Alert, Box, Button, Skeleton, Stack, Typography } from '@mui/material';
+import { Alert, Button, Skeleton, Stack } from '@mui/material';
+import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
 import { PencilSimple as PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 
+import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { AdminEditor } from '@/components/dashboard/referral/referral-admin-editor';
 import { ProgramDisplay } from '@/components/dashboard/referral/referral-program-display';
 import { useIsPlatformAdmin } from '@/hooks/use-platform-admin';
@@ -63,42 +65,33 @@ export function ReferralAdminPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack
-        spacing={2}
-        sx={{
-          flexDirection: { xs: 'column', sm: 'row' },
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          justifyContent: 'space-between',
-        }}
-      >
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800 }}>
-            Programi i referimit
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Shiko nivelet, shpërblimet dhe badge-t; administratorët mund t'i përditësojnë vlerat kur të duhen.
-          </Typography>
-        </Box>
-        {isPlatformAdmin ? (
-          <Button
-            variant={editing ? 'outlined' : 'contained'}
-            color="primary"
-            startIcon={editing ? undefined : <PencilSimpleIcon size={20} weight="bold" />}
-            onClick={() => {
-              if (editing) {
-                setDraft(program);
-                setEditing(false);
-                setSaveError(null);
-              } else {
-                setDraft(program);
-                setEditing(true);
-              }
-            }}
-          >
-            {editing ? 'Anulo redaktimin' : 'Redakto si admin'}
-          </Button>
-        ) : null}
-      </Stack>
+      <AdminPageHeader
+        icon={React.createElement(HandshakeIcon, { size: 22, weight: 'duotone' })}
+        eyebrow="Rritja"
+        title="Referimi"
+        description="Shiko nivelet, shpërblimet dhe badge-t; administratorët mund t'i përditësojnë vlerat."
+        actions={
+          isPlatformAdmin ? (
+            <Button
+              variant={editing ? 'outlined' : 'contained'}
+              color="primary"
+              startIcon={editing ? undefined : <PencilSimpleIcon size={20} weight="bold" />}
+              onClick={() => {
+                if (editing) {
+                  setDraft(program);
+                  setEditing(false);
+                  setSaveError(null);
+                } else {
+                  setDraft(program);
+                  setEditing(true);
+                }
+              }}
+            >
+              {editing ? 'Anulo redaktimin' : 'Redakto si admin'}
+            </Button>
+          ) : null
+        }
+      />
 
       {error ? (
         <Alert severity="error">{error}</Alert>

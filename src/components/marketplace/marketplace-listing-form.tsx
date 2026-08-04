@@ -1,18 +1,21 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
 import {
   Alert,
-  Button,
-  Divider,
   InputAdornment,
   Stack,
-  TextField,
-  Typography,
 } from '@mui/material';
+import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
+import { Images as ImagesIcon } from '@phosphor-icons/react/dist/ssr/Images';
+import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
+import {
+  ListingFormActions,
+  ListingFormSection,
+  ListingTextField,
+} from '@/components/user/listing-form-ui';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import {
   MARKETPLACE_CATEGORY_OPTIONS,
@@ -21,22 +24,12 @@ import {
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { useUser } from '@/hooks/use-user';
-import { createMarketplaceListing } from '@/lib/listings-client';
+import { createMarketplaceListing, updateMarketplaceListing, type MarketplaceMineListing } from '@/lib/listings-client';
+import { contactPhoneFromStorage, resolveContactPhone } from '@/lib/listing-form-defaults';
 import { uploadListingImages } from '@/lib/uploads-client';
 
 const MAX_MARKETPLACE_IMAGES = 5;
 
-function contactPhoneInitialFromStorage(): string {
-  if (typeof window === 'undefined') return '';
-  try {
-    const raw = localStorage.getItem('user-data');
-    if (!raw) return '';
-    const u = JSON.parse(raw) as { phone?: string };
-    return typeof u.phone === 'string' ? u.phone.trim() : '';
-  } catch {
-    return '';
-  }
-}
 
 function parseFloatStrict(s: string): number | null {
   const t = s.trim();
@@ -49,6 +42,8 @@ export interface MarketplaceListingFormProps {
   onSuccess?: () => void;
   backHref?: string;
   backLabel?: string;
+  editListingId?: string;
+  initialListing?: MarketplaceMineListing | null;
 }
 
 type MarketplaceFormState = {
@@ -101,15 +96,38 @@ function validateForm(f: MarketplaceFormState): string | null {
   return null;
 }
 
-export function MarketplaceListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: MarketplaceListingFormProps) {
+function formFromListing(l: MarketplaceMineListing): MarketplaceFormState {
+  return {
+    transactionType: 'shes',
+    title: l.title || '',
+    description: l.description || '',
+    category: l.category || '',
+    condition: l.condition || '',
+    price: l.price != null ? String(l.price) : '',
+    currency: l.currency === 'EUR' || l.currency === 'LEK' ? l.currency : '',
+    cityId: l.cityId ? String(l.cityId) : '',
+    contactPhone: l.contactPhone || '',
+  };
+}
+
+export function MarketplaceListingForm({
+  onSuccess,
+  backHref,
+  backLabel = 'Mbrapa',
+  editListingId,
+  initialListing,
+}: MarketplaceListingFormProps) {
+  const isEdit = Boolean(editListingId);
   const { user } = useUser();
 
-  const [form, setForm] = React.useState<MarketplaceFormState>(() => ({
-    ...emptyForm(),
-    contactPhone: contactPhoneInitialFromStorage(),
-  }));
+  const [form, setForm] = React.useState<MarketplaceFormState>(() =>
+    initialListing ? formFromListing(initialListing) : { ...emptyForm(), contactPhone: contactPhoneFromStorage() },
+  );
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [images, setImages] = React.useState<File[]>([]);
+  const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(
+    () => (initialListing?.imageUrls ?? []).filter(Boolean),
+  );
   const [loadingCities, setLoadingCities] = React.useState(true);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -126,14 +144,21 @@ export function MarketplaceListingForm({ onSuccess, backHref, backLabel = 'Mbrap
   }, []);
 
   React.useEffect(() => {
-    if (!user) return;
-    const p = typeof user.phone === 'string' ? user.phone.trim() : '';
+    if (!initialListing) return;
+    setForm(formFromListing(initialListing));
+    setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
+    setImages([]);
+  }, [initialListing]);
+
+  React.useEffect(() => {
+    if (isEdit) return;
+    const p = resolveContactPhone(user);
     if (!p) return;
     setForm((prev) => {
       if (prev.contactPhone.trim()) return prev;
       return { ...prev, contactPhone: p };
     });
-  }, [user]);
+  }, [user, isEdit]);
 
   const onField =
     (key: keyof MarketplaceFormState) =>
@@ -150,11 +175,11 @@ export function MarketplaceListingForm({ onSuccess, backHref, backLabel = 'Mbrap
     setSubmitting(true);
     try {
       const hasPrice = Boolean(form.price.trim());
-      let imageUrls: string[] = [];
+      let uploaded: string[] = [];
       if (images.length) {
         const up = await uploadListingImages(images, 'marketplace');
         if (up.error) { setSubmitError(up.error); return; }
-        imageUrls = up.urls;
+        uploaded = up.urls;
       }
       const payload = {
         transactionType: 'shes',
@@ -166,10 +191,13 @@ export function MarketplaceListingForm({ onSuccess, backHref, backLabel = 'Mbrap
         currency: hasPrice ? form.currency : null,
         cityId: form.cityId,
         contactPhone: form.contactPhone.trim(),
-        imageUrls,
+        imageUrls: [...existingImageUrls, ...uploaded].slice(0, MAX_MARKETPLACE_IMAGES),
       };
-      const { error } = await createMarketplaceListing(payload);
-      if (error) { setSubmitError(error); return; }
+      const result =
+        isEdit && editListingId
+          ? await updateMarketplaceListing(editListingId, payload)
+          : await createMarketplaceListing(payload);
+      if (result.error) { setSubmitError(result.error); return; }
       onSuccess?.();
     } finally {
       setSubmitting(false);
@@ -177,133 +205,126 @@ export function MarketplaceListingForm({ onSuccess, backHref, backLabel = 'Mbrap
   };
 
   return (
-    <Stack component="form" spacing={3} onSubmit={(e) => void handleSubmit(e)}>
+    <Stack component="form" spacing={2.25} onSubmit={(e) => void handleSubmit(e)}>
       {submitError ? (
-        <Alert severity="error" sx={{ borderRadius: 1.5 }}>{submitError}</Alert>
+        <Alert severity="error" sx={{ borderRadius: 2 }}>
+          {submitError}
+        </Alert>
       ) : null}
 
-      {/* ── Detajet e artikullit ──────────────────────────────────────────── */}
-          <Stack spacing={2}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-              Detajet e artikullit
-            </Typography>
-
-            <TextField
-              label="Titulli i njoftimit"
-              value={form.title}
-              onChange={onField('title')}
-              required
-              fullWidth
-              placeholder="p.sh. iPhone 14 Pro Max 256GB, Karrige zyre, Çantë Adidas…"
-            />
-
-            <TextField
-              label="Përshkrimi"
-              value={form.description}
-              onChange={onField('description')}
-              required
-              fullWidth
-              multiline
-              minRows={4}
-              placeholder="Përshkruani artikullin, gjendjen, çdo detaj të rëndësishëm…"
-            />
-
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <SearchableSelect
-                label="Kategoria"
-                value={form.category}
-                onChange={(v) => setForm((p) => ({ ...p, category: v }))}
-                options={MARKETPLACE_CATEGORY_OPTIONS}
-                emptyLabel="Zgjidhni kategorinë…"
-                required
-              />
-
-              <SearchableSelect
-                label="Gjendja"
-                value={form.condition}
-                onChange={(v) => setForm((p) => ({ ...p, condition: v }))}
-                options={MARKETPLACE_CONDITION_OPTIONS}
-                emptyLabel="Zgjidhni gjendjen…"
-                required
-              />
-            </Stack>
-          </Stack>
-
-          <Divider />
-
-          {/* ── Çmimi & Qyteti ───────────────────────────────────────────── */}
-          <Stack spacing={2}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-            Çmimi dhe vendndodhja
-          </Typography>
-
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
-              label="Çmimi"
-              type="text"
-              inputMode="decimal"
-              value={form.price}
-              onChange={onField('price')}
-              fullWidth
-              placeholder="p.sh. 5000"
-              helperText="Opsionale — lëreni bosh nëse është me marrëveshje."
-              slotProps={{ input: { endAdornment: <InputAdornment position="end">/ copë</InputAdornment> } }}
-            />
-            <SearchableSelect
-              label="Monedha"
-              value={form.currency}
-              onChange={(v) => setForm((p) => ({ ...p, currency: v as MarketplaceFormState['currency'] }))}
-              options={CURRENCY_OPTIONS}
-              emptyLabel="Zgjidhni…"
-              disabled={!form.price.trim()}
-            />
-          </Stack>
-
-            <SearchableSelect
-              label="Qyteti"
-              value={form.cityId}
-              onChange={(v) => setForm((p) => ({ ...p, cityId: v }))}
-              options={cities.map((c) => ({ value: c.id, label: c.name }))}
-              emptyLabel="Zgjidhni qytetin…"
-              required
-              disabled={loadingCities || cities.length === 0}
-            />
-
-            <TextField
-              label="Numri i telefonit"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              value={form.contactPhone}
-              onChange={onField('contactPhone')}
-              required
-              fullWidth
-              helperText="Do të shfaqet tek të interesuarit për këtë njoftim."
-            />
-          </Stack>
-
-          <Divider />
-
-          {/* ── Foto ─────────────────────────────────────────────────────── */}
-          <ListingImagePicker
-            value={images}
-            onChange={setImages}
-            max={MAX_MARKETPLACE_IMAGES}
-            label="Foto të artikullit"
-            disabled={submitting}
+      <ListingFormSection
+        icon={<PackageIcon size={20} weight="duotone" />}
+        title="Detajet e artikullit"
+        description="Titulli, përshkrimi dhe kategoria e produktit."
+      >
+        <ListingTextField
+          label="Titulli i njoftimit"
+          value={form.title}
+          onChange={onField('title')}
+          required
+          fullWidth
+          placeholder="p.sh. iPhone 14 Pro Max 256GB, Karrige zyre, Çantë Adidas…"
+        />
+        <ListingTextField
+          label="Përshkrimi"
+          value={form.description}
+          onChange={onField('description')}
+          required
+          fullWidth
+          multiline
+          minRows={4}
+          placeholder="Përshkruani artikullin, gjendjen, çdo detaj të rëndësishëm…"
+        />
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          <SearchableSelect
+            label="Kategoria"
+            value={form.category}
+            onChange={(v) => setForm((p) => ({ ...p, category: v }))}
+            options={MARKETPLACE_CATEGORY_OPTIONS}
+            emptyLabel="Zgjidhni kategorinë…"
+            required
           />
+          <SearchableSelect
+            label="Gjendja"
+            value={form.condition}
+            onChange={(v) => setForm((p) => ({ ...p, condition: v }))}
+            options={MARKETPLACE_CONDITION_OPTIONS}
+            emptyLabel="Zgjidhni gjendjen…"
+            required
+          />
+        </Stack>
+      </ListingFormSection>
 
-          {/* ── Veprimet ─────────────────────────────────────────────────── */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ pt: 1, justifyContent: 'flex-end' }}>
-            {backHref ? (
-              <Button component={RouterLink} href={backHref} variant="outlined" color="inherit">
-                {backLabel}
-              </Button>
-            ) : null}
-            <Button type="submit" variant="contained" disabled={submitting}>
-              {submitting ? 'Duke ruajtur…' : 'Ruaj njoftimin'}
-            </Button>
-          </Stack>
+      <ListingFormSection
+        icon={<MapPinIcon size={20} weight="duotone" />}
+        title="Çmimi dhe vendndodhja"
+        description="Vendosni çmimin, monedhën dhe qytetin."
+      >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          <ListingTextField
+            label="Çmimi"
+            type="text"
+            inputMode="decimal"
+            value={form.price}
+            onChange={onField('price')}
+            fullWidth
+            placeholder="p.sh. 5000"
+            helperText="Opsionale — lëreni bosh nëse është me marrëveshje."
+            slotProps={{ input: { endAdornment: <InputAdornment position="end">/ copë</InputAdornment> } }}
+          />
+          <SearchableSelect
+            label="Monedha"
+            value={form.currency}
+            onChange={(v) => setForm((p) => ({ ...p, currency: v as MarketplaceFormState['currency'] }))}
+            options={CURRENCY_OPTIONS}
+            emptyLabel="Zgjidhni…"
+            disabled={!form.price.trim()}
+          />
+        </Stack>
+        <SearchableSelect
+          label="Qyteti"
+          value={form.cityId}
+          onChange={(v) => setForm((p) => ({ ...p, cityId: v }))}
+          options={cities.map((c) => ({ value: c.id, label: c.name }))}
+          emptyLabel="Zgjidhni qytetin…"
+          required
+          disabled={loadingCities || cities.length === 0}
+        />
+        <ListingTextField
+          label="Numri i telefonit"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          value={form.contactPhone}
+          onChange={onField('contactPhone')}
+          required
+          fullWidth
+          helperText="Do të shfaqet tek të interesuarit për këtë njoftim."
+        />
+      </ListingFormSection>
+
+      <ListingFormSection
+        icon={<ImagesIcon size={20} weight="duotone" />}
+        title="Foto"
+        description="Shtoni deri në 5 foto të artikullit."
+      >
+        <ListingImagePicker
+          value={images}
+          onChange={setImages}
+          existingUrls={existingImageUrls}
+          onExistingUrlsChange={setExistingImageUrls}
+          max={MAX_MARKETPLACE_IMAGES}
+          label="Foto të artikullit"
+          disabled={submitting}
+        />
+      </ListingFormSection>
+
+      <ListingFormActions
+        submitLabel={isEdit ? 'Përditëso njoftimin' : 'Ruaj njoftimin'}
+        submitting={submitting}
+        backHref={backHref}
+        backLabel={backLabel}
+      />
     </Stack>
   );
 }

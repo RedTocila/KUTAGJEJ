@@ -7,15 +7,9 @@ import {
   Box,
   Button,
   Chip,
-  Grid,
   Stack,
   Typography,
 } from '@mui/material';
-import CalendarTodayOutlined from '@mui/icons-material/CalendarTodayOutlined';
-import ArrowForwardOutlined from '@mui/icons-material/ArrowForwardOutlined';
-import CheckCircleOutlined from '@mui/icons-material/CheckCircleOutlined';
-import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
-import EventAvailableOutlined from '@mui/icons-material/EventAvailableOutlined';
 import GroupsOutlined from '@mui/icons-material/GroupsOutlined';
 import LockOutlined from '@mui/icons-material/LockOutlined';
 import PaymentsOutlined from '@mui/icons-material/PaymentsOutlined';
@@ -25,15 +19,16 @@ import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import TrendingUpOutlined from '@mui/icons-material/TrendingUpOutlined';
 import WorkOutlineOutlined from '@mui/icons-material/WorkOutlineOutlined';
 import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
-import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
+import CalendarTodayOutlined from '@mui/icons-material/CalendarTodayOutlined';
 
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
 import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
+import { StickyListingContact } from '@/components/public/sticky-listing-contact';
 import { findOptionLabel, formatPrice } from '@/components/public/listing-cards/format-helpers';
-import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
+import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import {
   buildJobDetailSections,
@@ -44,16 +39,18 @@ import {
   jobDetailMetaRows,
   type JobDetailBenefit,
 } from '@/lib/job-listing-detail-content';
-import { whatsappHref } from '@/lib/listing-contact';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { JobListingDetailDesktop } from '@/components/public/job-listing-detail-desktop';
 import { JobVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
+import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
+import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
-import { shareListing } from '@/lib/listing-metrics';
+import type { ListingSharePayload } from '@/lib/listing-share';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { paths } from '@/paths';
 
 /** 14px body — standard readable size on mobile. */
@@ -62,16 +59,8 @@ const FONT_CAPTION = '0.75rem';
 const FONT_SECTION = '1rem';
 const CONTENT_MAX = 480;
 
-const surfaceCardSx = {
-  p: 2,
-  borderRadius: 3,
-  border: '1px solid',
-  borderColor: 'divider',
-  bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.45)',
-} as const;
-
 function benefitIcon(id: JobDetailBenefit['id']) {
-  const iconSx = { fontSize: 28, color: 'primary.main' };
+  const iconSx = { fontSize: 22, color: 'primary.main' };
   switch (id) {
     case 'pay':
     case 'negotiable-pay':
@@ -85,64 +74,54 @@ function benefitIcon(id: JobDetailBenefit['id']) {
   }
 }
 
-function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
+function SoftSectionLabel({
+  title,
+  edit,
+}: {
+  title: string;
+  edit?: { label: string; onClick: () => void };
+}) {
   return (
-    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
-      <Box sx={{ color: 'primary.main', display: 'flex', '& svg': { fontSize: 22 } }}>{icon}</Box>
-      <Typography sx={{ fontWeight: 800, fontSize: FONT_SECTION, lineHeight: 1.3 }}>{title}</Typography>
+    <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', mb: 1.25 }}>
+      <Typography
+        sx={{
+          fontWeight: 800,
+          fontSize: '0.72rem',
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          color: 'text.secondary',
+        }}
+      >
+        {title}
+      </Typography>
+      {edit ? <OwnerEditPencil label={edit.label} onClick={edit.onClick} /> : null}
     </Stack>
   );
 }
 
-function BulletList({
-  items,
-  variant,
-}: {
-  items: string[];
-  variant: 'check' | 'dot';
-}) {
-  return (
-    <Stack component="ul" spacing={1.25} sx={{ m: 0, p: 0, listStyle: 'none' }}>
-      {items.map((item) => (
-        <Stack
-          key={item}
-          component="li"
-          direction="row"
-          spacing={1}
-          sx={{ alignItems: 'flex-start' }}
-        >
-          {variant === 'check' ? (
-            <CheckCircleOutlined sx={{ fontSize: 18, color: 'primary.main', mt: 0.15, flexShrink: 0 }} />
-          ) : (
-            <Box
-              sx={{
-                width: 7,
-                height: 7,
-                borderRadius: '50%',
-                bgcolor: 'primary.main',
-                mt: 0.6,
-                flexShrink: 0,
-              }}
-            />
-          )}
-          <Typography component="span" sx={{ fontSize: FONT_BODY, lineHeight: 1.5, color: 'text.secondary' }}>
-            {item}
-          </Typography>
-        </Stack>
-      ))}
-    </Stack>
-  );
-}
+const metaIcons = [
+  LocationOnOutlined,
+  WorkOutlineOutlined,
+  CalendarTodayOutlined,
+  ScheduleOutlined,
+] as const;
 
 export function JobListingDetailView({
   listing,
   canonicalUrl,
   similar = [],
+  ownerPreview = false,
+  ownerEdit,
 }: {
   listing: PublicJobListingDetail;
   canonicalUrl: string;
   similar?: PublicJobListing[];
+  /** Owner edit canvas — hide buyer chrome (contact, similar, metrics). */
+  ownerPreview?: boolean;
+  ownerEdit?: OwnerEditHandlers;
 }) {
+  const onEditInfo = ownerEdit?.onEditInfo;
+  const onEditPrice = ownerEdit?.onEditPrice ?? onEditInfo;
   const { saved, saveCount, toggleSave } = useListingBookmark('job', listing.id, {
     saved: listing.saved,
     saveCount: listing.saveCount,
@@ -158,32 +137,41 @@ export function JobListingDetailView({
   const metaRows = React.useMemo(() => jobDetailMetaRows(listing), [listing]);
   const companyName =
     listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
-  const phone = listing.contactPhone ?? listing.seller?.phone ?? null;
-  const applyHref = phone ? `tel:${phone.replace(/\s/g, '')}` : whatsappHref(listing.contactPhone ?? listing.seller?.phone);
   const coverImageUrls = React.useMemo(() => jobCoverImageUrls(listing), [listing]);
   const companyAvatarUrl = React.useMemo(() => jobCompanyAvatarUrl(listing), [listing]);
   const companyInitials = React.useMemo(() => jobCompanyInitials(companyName), [companyName]);
   const isNew = isJobListingNew(listing.createdAt);
 
-  const metaIcons = [
-    LocationOnOutlined,
-    WorkOutlineOutlined,
-    CalendarTodayOutlined,
-    ScheduleOutlined,
-  ] as const;
+  const [shareOpen, setShareOpen] = React.useState(false);
 
-  const handleShare = async () => {
-    const metrics = await shareListing({
-      title: listing.title,
+  const salary =
+    listing.salary != null ? `${formatPrice(listing.salary, listing.currency)} / muaj` : 'Pagë e diskutueshme';
+  const jobTypeLabel = findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType);
+  const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
+
+  const sharePayload = React.useMemo<ListingSharePayload>(
+    () => ({
       listingKind: 'job',
       listingId: listing.id,
+      title: listing.title,
+      category: industryLabel,
+      priceLabel: salary,
+      badge: jobTypeLabel,
+      imageUrl: coverImageUrls[0] ?? listing.imageUrl ?? null,
+      location: listing.cityName || undefined,
+      specs: [
+        { icon: 'clock', label: jobTypeLabel },
+        { icon: 'briefcase', label: industryLabel },
+      ],
+      createdAt: listing.createdAt,
+      viewCount: listing.viewCount ?? 0,
+      saveCount: listing.saveCount,
       url: canonicalUrl,
-    });
-    if (metrics) setShareCount(metrics.shareCount);
-  };
+    }),
+    [canonicalUrl, coverImageUrls, industryLabel, jobTypeLabel, listing, salary],
+  );
 
-  /** Sticky Ruaj/Apliko bar — safe-area counted once via nav offset on mobile. */
-  const stickyFooterHeight = '96px';
+  const stickyFooterHeight = '80px';
   const scrollPadBottom = {
     xs: `calc(${stickyFooterHeight} + ${MOBILE_BOTTOM_NAV_OFFSET})`,
     md: `calc(${stickyFooterHeight} + env(safe-area-inset-bottom, 0px))`,
@@ -191,358 +179,574 @@ export function JobListingDetailView({
 
   return (
     <>
-      <ListingMetricsTracker listingKind="job" listingId={listing.id} />
+      {ownerPreview ? null : <ListingMetricsTracker listingKind="job" listingId={listing.id} />}
       <JobListingDetailDesktop
         listing={listing}
-        similar={similar}
+        similar={ownerPreview ? [] : similar}
         saved={saved}
         saveCount={saveCount}
         shareCount={shareCount}
         onToggleSave={() => void toggleSave()}
-        onShare={() => void handleShare()}
-        applyHref={applyHref}
+        onShare={() => setShareOpen(true)}
+        ownerPreview={ownerPreview}
       />
+
+      {ownerPreview ? null : (
+        <ListingSharePage
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          payload={sharePayload}
+          onShared={(metrics) => setShareCount(metrics.shareCount)}
+        />
+      )}
 
       <Box
         sx={{
-          display: { xs: 'block', md: 'none' },
+          display: ownerPreview ? 'block' : { xs: 'block', md: 'none' },
           bgcolor: 'background.default',
-          minHeight: '100vh',
-          pb: scrollPadBottom,
+          minHeight: ownerPreview ? 'auto' : '100vh',
+          pb: ownerPreview ? 3 : scrollPadBottom,
           overflow: 'visible',
         }}
       >
         <Box sx={{ position: 'relative', zIndex: 0 }}>
-        <RealEstateListingGallery
-          title={listing.title}
-          imageUrls={coverImageUrls}
-          placeholderIcon={listingDetailGalleryPlaceholder(listing)}
-          browseListHref={paths.public.jobs}
-          browseListAriaLabel="Prapa te lista e punës"
-          bookmark={{ saved, onToggle: () => void toggleSave() }}
-          listingKind="job"
-          listingId={listing.id}
-          shareCount={shareCount}
-          saveCount={saveCount}
-          hideSlideCount
-          mediaActionSurface="glass"
-        />
+          <RealEstateListingGallery
+            title={listing.title}
+            imageUrls={coverImageUrls}
+            placeholderIcon={listingDetailGalleryPlaceholder(listing)}
+            browseListHref={ownerPreview ? undefined : paths.public.jobs}
+            browseListAriaLabel="Prapa te lista e punës"
+            bookmark={ownerPreview ? undefined : { saved, onToggle: () => void toggleSave() }}
+            listingKind="job"
+            listingId={listing.id}
+            shareCount={ownerPreview ? undefined : shareCount}
+            saveCount={ownerPreview ? undefined : saveCount}
+            hideSlideCount
+            mediaActionSurface="glass"
+            sharePayload={ownerPreview ? undefined : sharePayload}
+            onEditPhotos={ownerEdit?.onEditPhotos}
+          />
         </Box>
 
-      <Box
-        sx={{
-          px: 2,
-          pb: 0,
-          maxWidth: CONTENT_MAX,
-          mx: 'auto',
-          width: '100%',
-          minWidth: 0,
-          boxSizing: 'border-box',
-          position: 'relative',
-          zIndex: 2,
-          overflow: 'visible',
-        }}
-      >
-        <Stack spacing={2} sx={{ minWidth: 0, width: '100%', overflow: 'visible' }}>
-          <Stack spacing={0.75} sx={{ mt: -1.5, alignItems: 'flex-start', width: '100%', overflow: 'visible' }}>
-            <Stack
-              direction="row"
-              spacing={1.25}
-              sx={{ alignItems: 'center', width: '100%', position: 'relative', zIndex: 2 }}
-            >
-              <Avatar
-                src={companyAvatarUrl ?? undefined}
-                alt={companyName}
-                sx={{
-                  width: 72,
-                  height: 72,
-                  flexShrink: 0,
-                  mt: -5.5,
-                  border: '3px solid',
-                  borderColor: 'background.default',
-                  bgcolor: 'grey.900',
-                  color: 'primary.main',
-                  fontWeight: 800,
-                  fontSize: FONT_BODY,
-                }}
+        <Box
+          sx={{
+            px: 2,
+            pb: 0,
+            maxWidth: CONTENT_MAX,
+            mx: 'auto',
+            width: '100%',
+            minWidth: 0,
+            boxSizing: 'border-box',
+            position: 'relative',
+            zIndex: 2,
+            overflow: 'visible',
+          }}
+        >
+          <Stack spacing={2} sx={{ minWidth: 0, width: '100%', overflow: 'visible' }}>
+            <Stack spacing={1} sx={{ mt: -1.5, alignItems: 'flex-start', width: '100%', overflow: 'visible' }}>
+              <Stack
+                direction="row"
+                spacing={1.25}
+                sx={{ alignItems: 'flex-end', width: '100%', position: 'relative', zIndex: 2 }}
               >
-                {companyInitials}
-              </Avatar>
+                <Avatar
+                  src={companyAvatarUrl ?? undefined}
+                  alt={companyName}
+                  sx={{
+                    width: 64,
+                    height: 64,
+                    flexShrink: 0,
+                    mt: -4.5,
+                    border: '3px solid',
+                    borderColor: 'background.default',
+                    bgcolor: 'grey.900',
+                    color: 'primary.main',
+                    fontWeight: 800,
+                    fontSize: FONT_BODY,
+                  }}
+                >
+                  {companyInitials}
+                </Avatar>
 
-              {isNew ? (
-                <Chip
-                  label="E re"
-                  size="small"
-                  color="primary"
-                  sx={{ height: 24, fontSize: FONT_CAPTION, fontWeight: 700, ml: 'auto', mt: -1.25 }}
-                />
+                <Box sx={{ flex: 1, minWidth: 0, pb: 0.25 }}>
+                  <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                    <Box
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 0.55,
+                        minWidth: 0,
+                        maxWidth: '100%',
+                        px: 1.15,
+                        py: 0.55,
+                        borderRadius: 999,
+                        bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.78)',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        backdropFilter: 'blur(10px)',
+                        WebkitBackdropFilter: 'blur(10px)',
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          fontWeight: 750,
+                          fontSize: FONT_CAPTION,
+                          color: 'text.primary',
+                          lineHeight: 1.2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {companyName}
+                      </Typography>
+                      {listing.seller?.verified ? <JobVerifiedBadge size={16} /> : null}
+                    </Box>
+                    {isNew ? (
+                      <Chip
+                        label="E re"
+                        size="small"
+                        sx={{
+                          ml: 'auto',
+                          flexShrink: 0,
+                          height: 24,
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          color: 'primary.contrastText',
+                          bgcolor: 'rgba(166, 226, 46, 0.78)',
+                          border: '1px solid rgba(255,255,255,0.35)',
+                          backdropFilter: 'blur(14px) saturate(160%)',
+                          WebkitBackdropFilter: 'blur(14px) saturate(160%)',
+                          boxShadow: '0 4px 14px rgba(166, 226, 46, 0.28), inset 0 1px 0 rgba(255,255,255,0.4)',
+                          '& .MuiChip-label': { px: 1.1 },
+                        }}
+                      />
+                    ) : null}
+                  </Stack>
+                </Box>
+              </Stack>
+
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                <Typography
+                  component="h1"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE,
+                    lineHeight: 1.2,
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  {listing.title}
+                </Typography>
+                {onEditInfo ? (
+                  <OwnerEditPencil label="Ndrysho titullin" onClick={onEditInfo} />
+                ) : null}
+              </Stack>
+
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
+                <Box
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    px: 1.15,
+                    py: 0.55,
+                    borderRadius: 999,
+                    bgcolor: primaryMainAlpha(0.14),
+                    color: 'primary.main',
+                  }}
+                >
+                  <PaymentsOutlined sx={{ fontSize: 15 }} />
+                  <Typography sx={{ fontWeight: 800, fontSize: FONT_CAPTION, lineHeight: 1 }}>
+                    {salary}
+                  </Typography>
+                </Box>
+                {onEditPrice ? (
+                  <OwnerEditPencil label="Ndrysho pagën" onClick={onEditPrice} />
+                ) : null}
+                {jobTypeLabel ? (
+                  <Box
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      px: 1.15,
+                      py: 0.55,
+                      borderRadius: 999,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      color: 'text.secondary',
+                    }}
+                  >
+                    <Typography sx={{ fontWeight: 700, fontSize: FONT_CAPTION, lineHeight: 1 }}>
+                      {jobTypeLabel}
+                    </Typography>
+                  </Box>
+                ) : null}
+              </Stack>
+
+              {listing.seller ? (
+                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                  <LockOutlined sx={{ fontSize: 14, color: 'text.disabled' }} />
+                  <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.disabled' }}>
+                    Kjo punë është e verifikuar dhe e sigurt
+                  </Typography>
+                </Stack>
               ) : null}
             </Stack>
 
-            <Typography
-              component="h1"
+            <Box
               sx={{
-                fontWeight: 800,
-                fontSize: LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE,
-                lineHeight: 1.2,
-                letterSpacing: '-0.02em',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 0.85,
               }}
             >
-              {listing.title}
-            </Typography>
+              {metaRows.map((row, index) => {
+                const Icon = metaIcons[index];
+                const isLocation = index === 0;
+                return (
+                  <Box
+                    key={row.label}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      px: 1.15,
+                      py: 1,
+                      borderRadius: 2.5,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
+                      minWidth: 0,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 1.5,
+                        display: 'grid',
+                        placeItems: 'center',
+                        flexShrink: 0,
+                        bgcolor: primaryMainAlpha(0.14),
+                        color: 'primary.main',
+                      }}
+                    >
+                      <Icon sx={{ fontSize: 17 }} />
+                    </Box>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography
+                        sx={{
+                          fontWeight: 750,
+                          fontSize: '0.78rem',
+                          lineHeight: 1.2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {row.value}
+                      </Typography>
+                      <Typography
+                        sx={{
+                          color: 'text.secondary',
+                          fontSize: '0.65rem',
+                          lineHeight: 1.2,
+                          mt: 0.2,
+                        }}
+                      >
+                        {row.label}
+                      </Typography>
+                    </Box>
+                    {isLocation && onEditInfo ? (
+                      <OwnerEditPencil label="Ndrysho lokacionin" onClick={onEditInfo} />
+                    ) : null}
+                  </Box>
+                );
+              })}
+            </Box>
 
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-              <Box
-                sx={{
-                  width: 'max-content',
-                  flexShrink: 0,
-                  height: 24,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  px: 1.25,
+            <JobListingDetailCountdown expiresAt={expiresAt} />
+
+            <Box
+              sx={{
+                position: 'relative',
+                pl: 2,
+                py: 0.25,
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  left: 0,
+                  top: 4,
+                  bottom: 4,
+                  width: 3,
                   borderRadius: 999,
                   bgcolor: 'primary.main',
-                  color: 'primary.contrastText',
-                }}
-              >
-                <Typography
-                  sx={{
-                    fontWeight: 700,
-                    fontSize: FONT_CAPTION,
-                    lineHeight: 1,
-                    color: 'inherit',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {companyName}
-                </Typography>
-              </Box>
-              {listing.seller?.verified ? <JobVerifiedBadge size={20} /> : null}
-            </Stack>
-
-            {listing.seller ? (
-              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-                <LockOutlined sx={{ fontSize: 14, color: 'text.disabled' }} />
-                <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.disabled' }}>
-                  Kjo punë është e verifikuar dhe e sigurt
-                </Typography>
-              </Stack>
-            ) : null}
-          </Stack>
-
-          {/* Meta — single row */}
-          <Grid
-            container
-            sx={{
-              borderRadius: 2.5,
-              border: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
-              overflow: 'hidden',
-            }}
-          >
-            {metaRows.map((row, index) => {
-              const Icon = metaIcons[index];
-              return (
-                <Grid
-                  key={row.label}
-                  size={3}
-                  sx={{
-                    py: 1.25,
-                    px: 0.75,
-                    minWidth: 0,
-                    borderRight: index < metaRows.length - 1 ? '1px solid' : 'none',
-                    borderColor: 'divider',
-                  }}
-                >
-                  <Stack spacing={0.35} sx={{ minWidth: 0, alignItems: 'center', textAlign: 'center' }}>
-                    <Icon sx={{ fontSize: 18, color: 'primary.main' }} />
-                    <Typography
-                      sx={{
-                        fontWeight: 700,
-                        fontSize: '0.6875rem',
-                        lineHeight: 1.25,
-                        overflow: 'hidden',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                      }}
-                    >
-                      {row.value}
-                    </Typography>
-                    <Typography
-                      sx={{
-                        color: 'text.secondary',
-                        fontSize: '0.625rem',
-                        lineHeight: 1.2,
-                        overflow: 'hidden',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                      }}
-                    >
-                      {row.label}
-                    </Typography>
-                  </Stack>
-                </Grid>
-              );
-            })}
-          </Grid>
-
-          <JobListingDetailCountdown expiresAt={expiresAt} />
-
-          {/* Description */}
-          <Box sx={surfaceCardSx}>
-            <SectionHeader icon={<DescriptionOutlined />} title="Përshkrimi i punës" />
-            <RealEstateListingExpandableText
-              text={sections.intro}
-              readMoreLabel="Lexo më shumë"
-              readLessLabel="Mbyll"
-              fontSize={FONT_BODY}
-            />
-            {listing.salary != null ? (
-              <Typography sx={{ mt: 1.5, color: 'primary.main', fontWeight: 700, fontSize: FONT_BODY }}>
-                Pagë: {formatPrice(listing.salary, listing.currency)} / muaj
-              </Typography>
-            ) : null}
-          </Box>
-
-          {/* Responsibilities — full width, stacked above requirements */}
-          <Box sx={surfaceCardSx}>
-            <SectionHeader icon={<GroupsOutlined />} title="Përgjegjësitë kryesore" />
-            <BulletList items={sections.responsibilities} variant="check" />
-          </Box>
-
-          <Box sx={surfaceCardSx}>
-            <SectionHeader icon={<SchoolOutlined />} title="Kërkesat" />
-            <BulletList items={sections.requirements} variant="dot" />
-          </Box>
-
-          {/* Benefits 2×2 */}
-          <Box sx={surfaceCardSx}>
-            <SectionHeader icon={<EventAvailableOutlined />} title="Çfarë ofrojmë" />
-            <Grid container spacing={2}>
-              {sections.benefits.map((benefit) => (
-                <Grid key={benefit.id} size={6}>
-                  <Stack spacing={1} sx={{ alignItems: 'center', textAlign: 'center', px: 0.5 }}>
-                    {benefitIcon(benefit.id)}
-                    <Typography sx={{ fontWeight: 600, fontSize: FONT_BODY, lineHeight: 1.35 }}>
-                      {benefit.label}
-                    </Typography>
-                  </Stack>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-
-          {similar.length > 0 ? (
-            <Stack
-              spacing={1.5}
-              component="aside"
-              aria-labelledby="job-similar-heading"
-              sx={{ mb: 0, pb: 0 }}
-            >
-              <Typography id="job-similar-heading" sx={{ fontWeight: 800, fontSize: FONT_SECTION, lineHeight: 1.3 }}>
-                Punë të ngjashme
-              </Typography>
-              <Box
-                sx={{
-                  mx: { xs: -2, sm: 0 },
-                  mb: 0,
-                  '& > div > div': { py: '8px 0 0 !important' },
-                }}
-              >
-                <ListingsCarousel slotWidth={{ xs: 260, sm: 280, md: 300 }}>
-                  {similar.map((item) => (
-                    <JobCard key={item.id} listing={item} />
-                  ))}
-                </ListingsCarousel>
-              </Box>
-            </Stack>
-          ) : null}
-
-          <Box sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'center' }}>
-            <Button
-              component={Link}
-              href={paths.public.jobs}
-              variant="text"
-              sx={{ fontWeight: 700, textTransform: 'none', fontSize: FONT_BODY }}
-            >
-              Kthehu te lista e punëve
-            </Button>
-          </Box>
-        </Stack>
-      </Box>
-
-      {/* Sticky footer */}
-      <Box
-        sx={{
-          position: 'fixed',
-          left: 0,
-          right: 0,
-          bottom: { xs: MOBILE_BOTTOM_NAV_OFFSET, md: 0 },
-          zIndex: 25,
-          px: 2,
-          pt: 1.5,
-          pb: 1.5,
-          bgcolor: 'rgba(var(--mui-palette-background-defaultChannel) / 0.96)',
-          backdropFilter: 'blur(14px)',
-          borderTop: '1px solid',
-          borderColor: 'divider',
-        }}
-      >
-        <Stack spacing={1} sx={{ maxWidth: 560, mx: 'auto', width: '100%' }}>
-          <Stack direction="row" spacing={1.25}>
-            <Button
-              variant="outlined"
-              onClick={toggleSave}
-              startIcon={<BookmarkSimpleIcon size={18} weight={saved ? 'fill' : 'regular'} />}
-              sx={{
-                flex: 1,
-                py: 1.25,
-                borderRadius: 2.5,
-                fontWeight: 800,
-                textTransform: 'none',
-                fontSize: FONT_BODY,
-                borderWidth: 2,
-                ...(saved
-                  ? { borderColor: 'primary.main', color: 'primary.main' }
-                  : {}),
+                },
               }}
             >
-              Ruaj
-            </Button>
-            {applyHref ? (
-              <Button
-                component="a"
-                href={applyHref}
-                variant="contained"
-                endIcon={<ArrowForwardOutlined />}
+              <SoftSectionLabel
+                title="Përshkrimi i punës"
+                edit={onEditInfo ? { label: 'Ndrysho përshkrimin', onClick: onEditInfo } : undefined}
+              />
+              {sections.intro ? (
+                <RealEstateListingExpandableText
+                  text={sections.intro}
+                  readMoreLabel="Shfaq më shumë"
+                  readLessLabel="Shfaq më pak"
+                  fontSize={FONT_BODY}
+                  maxLines={4}
+                />
+              ) : onEditInfo ? (
+                <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>
+                  Shtoni përshkrimin
+                </Typography>
+              ) : null}
+            </Box>
+
+            {sections.responsibilities.length > 0 ? (
+              <Box>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
+                  <Box
+                    sx={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 1.5,
+                      display: 'grid',
+                      placeItems: 'center',
+                      bgcolor: primaryMainAlpha(0.14),
+                      color: 'primary.main',
+                    }}
+                  >
+                    <GroupsOutlined sx={{ fontSize: 16 }} />
+                  </Box>
+                  <Typography sx={{ fontWeight: 800, fontSize: FONT_SECTION, lineHeight: 1.2 }}>
+                    Përgjegjësitë
+                  </Typography>
+                </Stack>
+                <Stack spacing={0} sx={{ position: 'relative', pl: 0.5 }}>
+                  {sections.responsibilities.map((item, index) => {
+                    const isLast = index === sections.responsibilities.length - 1;
+                    return (
+                      <Stack
+                        key={`${index}-${item.slice(0, 24)}`}
+                        direction="row"
+                        spacing={1.25}
+                        sx={{ alignItems: 'stretch', position: 'relative' }}
+                      >
+                        <Box
+                          sx={{
+                            width: 28,
+                            flexShrink: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: '50%',
+                              display: 'grid',
+                              placeItems: 'center',
+                              bgcolor: 'primary.main',
+                              color: 'primary.contrastText',
+                              fontWeight: 800,
+                              fontSize: '0.7rem',
+                              zIndex: 1,
+                            }}
+                          >
+                            {index + 1}
+                          </Box>
+                          {isLast ? null : (
+                            <Box
+                              sx={{
+                                flex: 1,
+                                width: 2,
+                                my: 0.35,
+                                bgcolor: primaryMainAlpha(0.35),
+                                borderRadius: 1,
+                              }}
+                            />
+                          )}
+                        </Box>
+                        <Box
+                          sx={{
+                            flex: 1,
+                            minWidth: 0,
+                            mb: isLast ? 0 : 1.25,
+                            p: 1.35,
+                            borderRadius: 2.25,
+                            bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.5)',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          <Typography sx={{ fontSize: FONT_BODY, lineHeight: 1.5, color: 'text.secondary' }}>
+                            {item}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    );
+                  })}
+                </Stack>
+              </Box>
+            ) : null}
+
+            {sections.requirements.length > 0 ? (
+              <Box
                 sx={{
-                  flex: 1.35,
-                  py: 1.25,
-                  borderRadius: 2.5,
-                  fontWeight: 800,
-                  textTransform: 'none',
-                  fontSize: FONT_BODY,
-                  boxShadow: 'none',
+                  p: 1.75,
+                  borderRadius: 3,
+                  border: '1px dashed',
+                  borderColor: primaryMainAlpha(0.45),
+                  bgcolor: primaryMainAlpha(0.05),
                 }}
               >
-                Apliko tani
-              </Button>
-            ) : (
-              <Button
-                variant="contained"
-                disabled
-                sx={{ flex: 1.35, py: 1.25, borderRadius: 2.5, textTransform: 'none', fontSize: FONT_BODY }}
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.35 }}>
+                  <SchoolOutlined sx={{ fontSize: 18, color: 'primary.main' }} />
+                  <Typography sx={{ fontWeight: 800, fontSize: FONT_SECTION, lineHeight: 1.2 }}>
+                    Kërkesat
+                  </Typography>
+                </Stack>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.85 }}>
+                  {sections.requirements.map((item, index) => (
+                    <Box
+                      key={`${index}-${item.slice(0, 24)}`}
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'flex-start',
+                        gap: 0.65,
+                        maxWidth: '100%',
+                        px: 1.15,
+                        py: 0.85,
+                        borderRadius: 2,
+                        bgcolor: 'background.paper',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          mt: 0.15,
+                          width: 18,
+                          height: 18,
+                          borderRadius: 1,
+                          display: 'grid',
+                          placeItems: 'center',
+                          flexShrink: 0,
+                          bgcolor: primaryMainAlpha(0.16),
+                          color: 'primary.main',
+                          fontWeight: 800,
+                          fontSize: '0.62rem',
+                        }}
+                      >
+                        {index + 1}
+                      </Box>
+                      <Typography sx={{ fontSize: '0.8125rem', lineHeight: 1.4, color: 'text.primary' }}>
+                        {item}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            ) : null}
+
+            {sections.benefits.length > 0 ? (
+              <Box>
+                <SoftSectionLabel title="Çfarë ofrojmë" />
+                <Box
+                  sx={{
+                    display: 'flex',
+                    gap: 1,
+                    overflowX: 'auto',
+                    pb: 0.5,
+                    mx: -2,
+                    px: 2,
+                    scrollbarWidth: 'none',
+                    '&::-webkit-scrollbar': { display: 'none' },
+                  }}
+                >
+                  {sections.benefits.map((benefit) => (
+                    <Box
+                      key={benefit.id}
+                      sx={{
+                        flex: '0 0 auto',
+                        width: 148,
+                        p: 1.5,
+                        borderRadius: 3,
+                        bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.65)',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        backgroundImage: `linear-gradient(160deg, ${primaryMainAlpha(0.12)} 0%, transparent 60%)`,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 2,
+                          display: 'grid',
+                          placeItems: 'center',
+                          mb: 1.1,
+                          bgcolor: primaryMainAlpha(0.14),
+                        }}
+                      >
+                        {benefitIcon(benefit.id)}
+                      </Box>
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.8125rem', lineHeight: 1.35 }}>
+                        {benefit.label}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            ) : null}
+
+            {!ownerPreview && similar.length > 0 ? (
+              <Stack
+                spacing={1.5}
+                component="aside"
+                aria-labelledby="job-similar-heading"
+                sx={{ mb: 0, pb: 0 }}
               >
-                Apliko tani
-              </Button>
+                <Typography id="job-similar-heading" sx={{ fontWeight: 800, fontSize: FONT_SECTION, lineHeight: 1.3 }}>
+                  Punë të ngjashme
+                </Typography>
+                <Box
+                  sx={{
+                    mx: { xs: -2, sm: 0 },
+                    mb: 0,
+                    '& > div > div': { py: '8px 0 0 !important' },
+                  }}
+                >
+                  <ListingsCarousel slotWidth={{ xs: 260, sm: 280, md: 300 }}>
+                    {similar.map((item) => (
+                      <JobCard key={item.id} listing={item} />
+                    ))}
+                  </ListingsCarousel>
+                </Box>
+              </Stack>
+            ) : null}
+
+            {ownerPreview ? null : (
+              <Box sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'center' }}>
+                <Button
+                  component={Link}
+                  href={paths.public.jobs}
+                  variant="text"
+                  sx={{ fontWeight: 700, textTransform: 'none', fontSize: FONT_BODY }}
+                >
+                  Kthehu te lista e punëve
+                </Button>
+              </Box>
             )}
           </Stack>
-        </Stack>
+        </Box>
+
+        {ownerPreview ? null : <StickyListingContact listingKind="jobs" listingId={listing.id} />}
       </Box>
-    </Box>
     </>
   );
 }

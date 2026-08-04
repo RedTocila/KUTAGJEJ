@@ -12,33 +12,64 @@ import {
   Tooltip,
 } from '@mui/material';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
+import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { HOME_VERTICALS, type HomeVerticalId } from '@/lib/home-categories';
+import {
+  AI_SEARCH_BLUE,
+  AI_SEARCH_BLUE_MUTED,
+  AI_SEARCH_BLUE_SOFT,
+  localizeSearchCategories,
+  type SearchCategoryId,
+} from '@/lib/home-categories';
+import { paths } from '@/paths';
 
 import { HeroCategoryCircles } from './hero-category-circles';
-
 export interface HeroSearchProps {
-  defaultVertical?: HomeVerticalId;
+  defaultVertical?: SearchCategoryId;
   /** Called after the user submits and navigation runs (e.g. close mobile search sheet). */
   onNavigate?: () => void;
 }
 
-export function HeroSearch({ defaultVertical = 'real-estate', onNavigate }: HeroSearchProps) {
+export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
   const router = useRouter();
-  const heroVerticals = React.useMemo(() => HOME_VERTICALS, []);
-  const initialIdx = Math.max(0, heroVerticals.findIndex((v) => v.id === defaultVertical));
+  const { language } = useLanguage();
+  const t = useCopy();
+  const heroVerticals = React.useMemo(() => localizeSearchCategories(language), [language]);
+  const initialIdx = defaultVertical
+    ? Math.max(0, heroVerticals.findIndex((v) => v.id === defaultVertical))
+    : -1;
   const [tab, setTab] = React.useState(initialIdx);
   const [query, setQuery] = React.useState('');
 
-  const active = heroVerticals[tab] ?? heroVerticals[0];
+  const active = tab >= 0 ? (heroVerticals[tab] ?? null) : null;
+  const isAi = active?.id === 'ai';
 
   const submit = (event?: React.FormEvent) => {
     event?.preventDefault();
+    const trimmed = query.trim();
+    if (!active) {
+      const params = new URLSearchParams();
+      if (trimmed) params.set('q', trimmed);
+      const qs = params.toString();
+      router.push(`${paths.public.search}${qs ? `?${qs}` : ''}`);
+      onNavigate?.();
+      return;
+    }
+    if (active.id === 'ai') {
+      const params = new URLSearchParams({ cat: 'ai' });
+      if (trimmed) params.set('q', trimmed);
+      router.push(`${paths.public.search}?${params.toString()}`);
+      onNavigate?.();
+      return;
+    }
     const params = new URLSearchParams();
-    if (query.trim()) params.set('q', query.trim());
+    if (trimmed) params.set('q', trimmed);
     const qs = params.toString();
-    router.push(`${active.href}${qs ? `?${qs}` : ''}`);
+    const base = active.href.split('?')[0];
+    router.push(`${base}${qs ? `?${qs}` : ''}`);
     onNavigate?.();
   };
 
@@ -52,16 +83,20 @@ export function HeroSearch({ defaultVertical = 'real-estate', onNavigate }: Hero
         sx={{
           width: '100%',
           borderRadius: 3,
-          bgcolor: (theme) =>
-            `rgb(var(--mui-palette-background-paperChannel) / ${theme.palette.mode === 'dark' ? 0.85 : 0.96})`,
+          bgcolor: isAi
+            ? AI_SEARCH_BLUE_MUTED
+            : (theme) =>
+                `rgb(var(--mui-palette-background-paperChannel) / ${theme.palette.mode === 'dark' ? 0.85 : 0.96})`,
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           border: '1px solid',
-          borderColor: 'divider',
+          borderColor: isAi ? AI_SEARCH_BLUE : 'divider',
           boxShadow: (theme) =>
             theme.palette.mode === 'dark'
               ? '0 24px 60px -24px rgba(0,0,0,0.7)'
-              : '0 24px 60px -24px rgba(58, 140, 0, 0.25)',
+              : isAi
+                ? '0 24px 60px -24px rgba(158, 201, 232, 0.45)'
+                : '0 24px 60px -24px rgba(58, 140, 0, 0.25)',
           overflow: 'hidden',
         }}
       >
@@ -76,12 +111,17 @@ export function HeroSearch({ defaultVertical = 'real-estate', onNavigate }: Hero
             autoComplete="off"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder={active.searchPlaceholder}
+            placeholder={active?.searchPlaceholder ?? t.search.pickCategory}
             slotProps={{
               input: {
                 startAdornment: (
-                  <InputAdornment position="start" sx={{ color: 'text.secondary', ml: 0.5 }}>
-                    {React.createElement(MagnifyingGlassIcon, { size: 22 })}
+                  <InputAdornment
+                    position="start"
+                    sx={{ color: isAi ? AI_SEARCH_BLUE : 'text.secondary', ml: 0.5 }}
+                  >
+                    {isAi
+                      ? React.createElement(SparkleIcon, { size: 22 })
+                      : React.createElement(MagnifyingGlassIcon, { size: 22 })}
                   </InputAdornment>
                 ),
                 endAdornment: query ? (
@@ -107,11 +147,12 @@ export function HeroSearch({ defaultVertical = 'real-estate', onNavigate }: Hero
             sx={{
               flex: 1,
               '& .MuiOutlinedInput-root': {
-                bgcolor: 'action.hover',
+                bgcolor: isAi ? AI_SEARCH_BLUE_SOFT : 'action.hover',
                 borderRadius: 2,
                 '&.Mui-focused': {
-                  bgcolor: (theme) =>
-                    primaryMainAlpha(theme.palette.mode === 'dark' ? 0.12 : 0.06),
+                  bgcolor: isAi
+                    ? AI_SEARCH_BLUE_SOFT
+                    : (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.12 : 0.06),
                 },
               },
             }}
@@ -120,20 +161,29 @@ export function HeroSearch({ defaultVertical = 'real-estate', onNavigate }: Hero
             type="submit"
             variant="contained"
             size="large"
-            startIcon={React.createElement(MagnifyingGlassIcon, { size: 20, weight: 'bold' })}
+            startIcon={
+              isAi
+                ? React.createElement(SparkleIcon, { size: 20, weight: 'bold' })
+                : React.createElement(MagnifyingGlassIcon, { size: 20, weight: 'bold' })
+            }
             sx={{
               borderRadius: 2,
               px: { xs: 3, sm: 4 },
               py: 1.5,
               fontWeight: 700,
               fontSize: '1rem',
-              color: 'common.black',
+              color: isAi ? '#1a3344' : 'common.black',
+              bgcolor: isAi ? AI_SEARCH_BLUE : undefined,
               boxShadow: 'none',
-              '&:hover': { boxShadow: 'none', color: 'common.black' },
+              '&:hover': {
+                boxShadow: 'none',
+                color: isAi ? '#1a3344' : 'common.black',
+                bgcolor: isAi ? '#8BBAD9' : undefined,
+              },
               '& .MuiButton-startIcon': { color: 'inherit' },
             }}
           >
-            Kërko
+            {isAi && active ? active.label : t.home.heroSearch}
           </Button>
         </Stack>
       </Box>

@@ -1,0 +1,189 @@
+'use client';
+
+import * as React from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Alert, Box, CircularProgress, Stack, Typography } from '@mui/material';
+
+import { BusinessOwnerEdit } from '@/components/user/owner-edit/business-owner-edit';
+import { CarOwnerEdit } from '@/components/user/owner-edit/car-owner-edit';
+import { JobOwnerEdit } from '@/components/user/owner-edit/job-owner-edit';
+import { MarketplaceOwnerEdit } from '@/components/user/owner-edit/marketplace-owner-edit';
+import { ProfessionalOwnerEdit } from '@/components/user/owner-edit/professional-owner-edit';
+import { RealEstateOwnerEdit } from '@/components/user/owner-edit/real-estate-owner-edit';
+import { useUser } from '@/hooks/use-user';
+import {
+  listMyBusinessListings,
+  listMyProfessionalListings,
+  type BusinessMineListing,
+  type ProfessionalMineListing,
+} from '@/lib/directory-listings-client';
+import {
+  listMyCarListings,
+  listMyJobListings,
+  listMyMarketplaceListings,
+  listMyRealEstateListings,
+  type CarMineListing,
+  type JobMineListing,
+  type MarketplaceMineListing,
+} from '@/lib/listings-client';
+import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
+import { paths } from '@/paths';
+
+type EditKind = 'real-estate' | 'car' | 'job' | 'marketplace' | 'businesses' | 'professionals';
+
+function parseKind(raw: string | null): EditKind | null {
+  if (
+    raw === 'real-estate' ||
+    raw === 'car' ||
+    raw === 'job' ||
+    raw === 'marketplace' ||
+    raw === 'businesses' ||
+    raw === 'professionals'
+  ) {
+    return raw;
+  }
+  return null;
+}
+
+export default function EditListingPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user } = useUser();
+
+  const kind = parseKind(searchParams.get('kind'));
+  const listingId = String(searchParams.get('id') || '').trim();
+
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [reListing, setReListing] = React.useState<RealEstateMineListing | null>(null);
+  const [carListing, setCarListing] = React.useState<CarMineListing | null>(null);
+  const [jobListing, setJobListing] = React.useState<JobMineListing | null>(null);
+  const [mktListing, setMktListing] = React.useState<MarketplaceMineListing | null>(null);
+  const [bizListing, setBizListing] = React.useState<BusinessMineListing | null>(null);
+  const [proListing, setProListing] = React.useState<ProfessionalMineListing | null>(null);
+
+  const canView =
+    Boolean(user) &&
+    (user?.accountType === 'individual' ||
+      user?.accountType === 'business' ||
+      user?.role === 'business-user');
+
+  React.useEffect(() => {
+    if (!user) return;
+    if (!canView) router.replace(paths.user.dashboard);
+  }, [user, canView, router]);
+
+  React.useEffect(() => {
+    if (!user?.id || !canView) return;
+    if (!kind || !listingId) {
+      setError('Njoftimi për ndryshim nuk është i vlefshëm.');
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    void (async () => {
+      const fail = (message: string) => {
+        setError(message);
+      };
+
+      if (kind === 'real-estate') {
+        const res = await listMyRealEstateListings();
+        if (cancelled) return;
+        if (res.error) fail(res.error);
+        else {
+          const found = (res.listings ?? []).find((l) => l.id === listingId) ?? null;
+          if (!found) fail('Njoftimi nuk u gjet.');
+          setReListing(found);
+        }
+      } else if (kind === 'car') {
+        const res = await listMyCarListings();
+        if (cancelled) return;
+        if (res.error) fail(res.error);
+        else {
+          const found = (res.listings ?? []).find((l) => l.id === listingId) ?? null;
+          if (!found) fail('Njoftimi nuk u gjet.');
+          setCarListing(found);
+        }
+      } else if (kind === 'job') {
+        const res = await listMyJobListings();
+        if (cancelled) return;
+        if (res.error) fail(res.error);
+        else {
+          const found = (res.listings ?? []).find((l) => l.id === listingId) ?? null;
+          if (!found) fail('Njoftimi nuk u gjet.');
+          setJobListing(found);
+        }
+      } else if (kind === 'marketplace') {
+        const res = await listMyMarketplaceListings();
+        if (cancelled) return;
+        if (res.error) fail(res.error);
+        else {
+          const found = (res.listings ?? []).find((l) => l.id === listingId) ?? null;
+          if (!found) fail('Njoftimi nuk u gjet.');
+          setMktListing(found);
+        }
+      } else if (kind === 'businesses') {
+        const res = await listMyBusinessListings();
+        if (cancelled) return;
+        if (res.error) fail(res.error);
+        else {
+          const found = (res.listings ?? []).find((l) => l.id === listingId) ?? null;
+          if (!found) fail('Njoftimi nuk u gjet.');
+          setBizListing(found);
+        }
+      } else {
+        const res = await listMyProfessionalListings();
+        if (cancelled) return;
+        if (res.error) fail(res.error);
+        else {
+          const found = (res.listings ?? []).find((l) => l.id === listingId) ?? null;
+          if (!found) fail('Njoftimi nuk u gjet.');
+          setProListing(found);
+        }
+      }
+      if (!cancelled) setLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, canView, kind, listingId]);
+
+  if (!user || !canView) return null;
+
+  return (
+    <Stack spacing={2}>
+      <Stack spacing={0.35}>
+        <Typography variant="h5" component="h1" sx={{ fontWeight: 800 }}>
+          Ndrysho njoftimin
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Shihni si duket njoftimi publikisht dhe ndryshoni fotot ose të dhënat.
+        </Typography>
+      </Stack>
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ borderRadius: 2 }}>
+          {error}
+        </Alert>
+      ) : (
+        <>
+          {kind === 'real-estate' && reListing ? <RealEstateOwnerEdit initial={reListing} /> : null}
+          {kind === 'car' && carListing ? <CarOwnerEdit initial={carListing} /> : null}
+          {kind === 'job' && jobListing ? <JobOwnerEdit initial={jobListing} /> : null}
+          {kind === 'marketplace' && mktListing ? <MarketplaceOwnerEdit initial={mktListing} /> : null}
+          {kind === 'businesses' && bizListing ? <BusinessOwnerEdit initial={bizListing} /> : null}
+          {kind === 'professionals' && proListing ? <ProfessionalOwnerEdit initial={proListing} /> : null}
+        </>
+      )}
+    </Stack>
+  );
+}

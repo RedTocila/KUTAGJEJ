@@ -11,6 +11,19 @@ const {
   getActiveCreditPackage,
   totalCredits,
 } = require('../lib/credit-packages');
+const {
+  listAutoRefreshPackages,
+  getAutoRefreshPackage,
+} = require('../lib/auto-refresh-packages');
+const { getAutoRefreshSnapshot } = require('../lib/listing-auto-refresh');
+const { listPremiumPackages, getPremiumPackage } = require('../lib/premium-packages');
+const {
+  listPremiumVouchers,
+  purchasePremiumWithBoostCoins,
+  applyPremiumVoucher,
+  applyPremiumFromPlan,
+  getPremiumQuotaSnapshot,
+} = require('../lib/premium-listing');
 const { isUuid } = require('../lib/public-listings/query-helpers');
 
 const router = express.Router();
@@ -48,6 +61,11 @@ function formatPayment(doc) {
       creditPackageId: doc.metadata?.creditPackageId || null,
       credits: doc.metadata?.credits ?? null,
       subscriptionId: doc.metadata?.subscriptionId ? String(doc.metadata.subscriptionId) : null,
+      autoRefreshPackageId: doc.metadata?.autoRefreshPackageId || null,
+      autoRefreshSlots: doc.metadata?.autoRefreshSlots ?? null,
+      premiumPackageId: doc.metadata?.premiumPackageId || null,
+      premiumDays: doc.metadata?.premiumDays ?? null,
+      premiumVoucherId: doc.metadata?.premiumVoucherId || null,
     },
     paidAt: doc.paidAt,
     createdAt: doc.createdAt,
@@ -71,6 +89,26 @@ router.get('/credit-packages', async (_req, res) => {
     res.json({ packages, pokEnv: pokClient.getConfig().env });
   } catch (error) {
     console.error('GET /payments/credit-packages:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** Public: auto-refresh slot packs. */
+router.get('/auto-refresh-packages', async (_req, res) => {
+  try {
+    res.json({ packages: listAutoRefreshPackages(), pokEnv: pokClient.getConfig().env });
+  } catch (error) {
+    console.error('GET /payments/auto-refresh-packages:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** Public: premium listing packs. */
+router.get('/premium-packages', async (_req, res) => {
+  try {
+    res.json({ packages: listPremiumPackages(), pokEnv: pokClient.getConfig().env });
+  } catch (error) {
+    console.error('GET /payments/premium-packages:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
 });
@@ -154,6 +192,24 @@ router.get('/subscriptions/mine', async (req, res) => {
     res.json({ subscriptions: subs });
   } catch (error) {
     console.error('GET /payments/subscriptions/mine:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** Current auto-refresh capacity, usage, and interval from the active plan. */
+router.get('/auto-refresh/status', async (req, res) => {
+  try {
+    const snapshot = await getAutoRefreshSnapshot(req.user.id);
+    res.json({
+      slots: snapshot.slots,
+      used: snapshot.used,
+      planCode: snapshot.planCode,
+      refreshEveryHours: snapshot.refreshEveryHours,
+      packages: listAutoRefreshPackages(),
+      enrolled: snapshot.enrolled,
+    });
+  } catch (error) {
+    console.error('GET /payments/auto-refresh/status:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
 });
@@ -314,6 +370,250 @@ router.post('/credits/order', async (req, res) => {
   } catch (error) {
     console.error('POST /payments/credits/order:', error?.message || error);
     res.status(502).json({ message: 'Nuk u krijua dot pagesa. Provoni përsëri.' });
+  }
+});
+
+/** Create a POK order for an auto-refresh slot pack. */
+router.post('/auto-refresh/order', async (req, res) => {
+  try {
+    if (!pokClient.isConfigured()) {
+      return res.status(503).json({ message: 'Pagesat nuk janë konfiguruar. Provoni më vonë.' });
+    }
+    const { packageId } = req.body || {};
+    const pkg = getAutoRefreshPackage(packageId);
+    if (!pkg) return res.status(400).json({ message: 'Paketa Auto-Refresh është e pavlefshme.' });
+
+    const amount = Number(pkg.priceEur);
+    const amountMinor = Math.round(amount * 100);
+    const description = `Auto-Refresh: ${pkg.labelSq}`;
+
+    const sb = getSupabaseAdmin();
+    const { data: paymentRow, error: pErr } = await sb
+      .from('payments')
+      .insert({
+        payer_id: req.user.id,
+        payer_email: req.user.email || '',
+        payer_name: payerLabel(req.user),
+        type: 'auto-refresh',
+        description,
+        amount_minor: amountMinor,
+        amount,
+        currency: 'EUR',
+        pok_env: pokClient.getConfig().env,
+        status: 'pending',
+        metadata: {
+          autoRefreshPackageId: String(pkg.id),
+          autoRefreshSlots: pkg.slots,
+          payerModel: req.user.constructor.modelName,
+        },
+      })
+      .select('*')
+      .single();
+    if (pErr) throw pErr;
+
+    const payment = mapPayment(paymentRow);
+
+    const order = await pokClient.createSdkOrder({
+      amount,
+      currencyCode: 'EUR',
+      webhookUrl: `${backendOrigin(req)}/api/payments/webhook/pok?paymentId=${payment.id}`,
+      redirectUrl: `${frontendOrigin()}/user/dashboard/pagesat`,
+    });
+
+    const { data: updated, error: uErr } = await sb
+      .from('payments')
+      .update({ pok_order_id: order.id, updated_at: new Date().toISOString() })
+      .eq('id', payment.id)
+      .select('*')
+      .single();
+    if (uErr) throw uErr;
+    const saved = mapPayment(updated);
+
+    res.status(201).json({
+      paymentId: String(saved.id),
+      orderId: order.id,
+      amount,
+      currency: 'EUR',
+      slots: pkg.slots,
+      pokEnv: saved.pokEnv,
+    });
+  } catch (error) {
+    console.error('POST /payments/auto-refresh/order:', error?.message || error);
+    res.status(502).json({ message: 'Nuk u krijua dot pagesa. Provoni përsëri.' });
+  }
+});
+
+/** Create a POK order for a premium listing pack. */
+router.post('/premium/order', async (req, res) => {
+  try {
+    if (!pokClient.isConfigured()) {
+      return res.status(503).json({ message: 'Pagesat nuk janë konfiguruar. Provoni më vonë.' });
+    }
+    const { packageId } = req.body || {};
+    const pkg = getPremiumPackage(packageId);
+    if (!pkg) return res.status(400).json({ message: 'Paketa Premium është e pavlefshme.' });
+
+    const amount = Number(pkg.priceEur);
+    const amountMinor = Math.round(amount * 100);
+    const description = `Premium listing: ${pkg.labelSq}`;
+
+    const sb = getSupabaseAdmin();
+    const { data: paymentRow, error: pErr } = await sb
+      .from('payments')
+      .insert({
+        payer_id: req.user.id,
+        payer_email: req.user.email || '',
+        payer_name: payerLabel(req.user),
+        type: 'premium',
+        description,
+        amount_minor: amountMinor,
+        amount,
+        currency: 'EUR',
+        pok_env: pokClient.getConfig().env,
+        status: 'pending',
+        metadata: {
+          premiumPackageId: String(pkg.id),
+          premiumDays: pkg.days,
+          premiumPriceBc: pkg.priceBc,
+          payerModel: req.user.constructor.modelName,
+        },
+      })
+      .select('*')
+      .single();
+    if (pErr) throw pErr;
+
+    const payment = mapPayment(paymentRow);
+
+    const order = await pokClient.createSdkOrder({
+      amount,
+      currencyCode: 'EUR',
+      webhookUrl: `${backendOrigin(req)}/api/payments/webhook/pok?paymentId=${payment.id}`,
+      redirectUrl: `${frontendOrigin()}/user/dashboard/paketat/shtese?assignPremium=1`,
+    });
+
+    const { data: updated, error: uErr } = await sb
+      .from('payments')
+      .update({ pok_order_id: order.id, updated_at: new Date().toISOString() })
+      .eq('id', payment.id)
+      .select('*')
+      .single();
+    if (uErr) throw uErr;
+    const saved = mapPayment(updated);
+
+    res.status(201).json({
+      paymentId: String(saved.id),
+      orderId: order.id,
+      amount,
+      currency: 'EUR',
+      days: pkg.days,
+      pokEnv: saved.pokEnv,
+    });
+  } catch (error) {
+    console.error('POST /payments/premium/order:', error?.message || error);
+    res.status(502).json({ message: 'Nuk u krijua dot pagesa. Provoni përsëri.' });
+  }
+});
+
+/** Buy premium pack with Boost Coins (no card). */
+router.post('/premium/buy-with-credits', async (req, res) => {
+  try {
+    const { packageId } = req.body || {};
+    const result = await purchasePremiumWithBoostCoins({
+      userId: req.user.id,
+      packageId,
+    });
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ message: result.message });
+    }
+    res.json({
+      ok: true,
+      voucher: result.voucher,
+      boostCredits: result.boostCredits,
+      cost: result.cost,
+      message: 'Premium u blë me Boost Coins. Zgjidhni njoftimin për ta aktivizuar.',
+    });
+  } catch (error) {
+    console.error('POST /payments/premium/buy-with-credits:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** Unused / recent premium vouchers for the current user. */
+router.get('/premium/vouchers', async (req, res) => {
+  try {
+    const unusedOnly = String(req.query.unusedOnly || '') === '1';
+    const vouchers = await listPremiumVouchers(req.user.id, { unusedOnly });
+    res.json({ vouchers });
+  } catch (error) {
+    console.error('GET /payments/premium/vouchers:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** Grow/Elite Premium Listing quota (30-day slots included with the plan). */
+router.get('/premium/quota', async (req, res) => {
+  try {
+    const quota = await getPremiumQuotaSnapshot(req.user.id);
+    res.json(quota);
+  } catch (error) {
+    console.error('GET /payments/premium/quota:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** Apply an unused premium voucher to one of the user's listings. */
+router.post('/premium/apply', async (req, res) => {
+  try {
+    const voucherId = String(req.body?.voucherId || '').trim();
+    const kind = String(req.body?.kind || '').trim();
+    const listingId = String(req.body?.listingId || '').trim();
+    const result = await applyPremiumVoucher({
+      userId: req.user.id,
+      voucherId,
+      kind,
+      listingId,
+    });
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ message: result.message });
+    }
+    res.json({
+      ok: true,
+      voucher: result.voucher,
+      premiumUntil: result.premiumUntil,
+      message: 'Njoftimi u bë Premium.',
+    });
+  } catch (error) {
+    console.error('POST /payments/premium/apply:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** Spend one plan Premium slot (30 days) on a listing. */
+router.post('/premium/apply-from-plan', async (req, res) => {
+  try {
+    const kind = String(req.body?.kind || '').trim();
+    const listingId = String(req.body?.listingId || '').trim();
+    const result = await applyPremiumFromPlan({
+      userId: req.user.id,
+      kind,
+      listingId,
+    });
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ message: result.message });
+    }
+    res.json({
+      ok: true,
+      alreadyActive: Boolean(result.alreadyActive),
+      voucher: result.voucher,
+      premiumUntil: result.premiumUntil,
+      quota: result.quota,
+      message: result.alreadyActive
+        ? 'Ky njoftim është tashmë Premium.'
+        : 'Njoftimi u bë Premium për 30 ditë nga paketa.',
+    });
+  } catch (error) {
+    console.error('POST /payments/premium/apply-from-plan:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
   }
 });
 

@@ -2,14 +2,13 @@
 
 import Cookies from 'js-cookie';
 
-import { authHeaders } from '@/lib/api-client';
+import { authHeaders, persistTokens, getAccessToken, AUTH_TOKEN_KEY, AUTH_REFRESH_KEY } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
 import { getPostSignOutPath } from '@/lib/auth/post-login-path';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@/types/user';
 
-/** Access token storage key (Supabase access_token from /api/auth). */
-export const AUTH_TOKEN_KEY = 'custom-auth-token';
+export { AUTH_TOKEN_KEY, AUTH_REFRESH_KEY };
 
 function persistUserProfile(profile: unknown): void {
   if (typeof window === 'undefined') return;
@@ -27,10 +26,8 @@ function readCachedUser(): User | null {
   }
 }
 
-function persistAccessToken(token: string | null | undefined): void {
-  if (typeof window === 'undefined') return;
-  if (token) localStorage.setItem(AUTH_TOKEN_KEY, token);
-  else localStorage.removeItem(AUTH_TOKEN_KEY);
+function persistAccessToken(token: string | null | undefined, refreshToken?: string | null): void {
+  persistTokens(token, refreshToken === undefined ? undefined : refreshToken);
 }
 
 const loginErrorSq = (message: string | undefined): string => {
@@ -87,7 +84,7 @@ class AuthClient {
       });
       const data = await res.json();
       if (!res.ok) return { error: loginErrorSq(data.message) };
-      persistAccessToken(data.token);
+      persistAccessToken(data.token, data.refreshToken ?? null);
       persistUserProfile(data.admin);
       try {
         const sb = getSupabaseBrowserClient();
@@ -110,7 +107,7 @@ class AuthClient {
       });
       const data = await res.json();
       if (!res.ok) return { error: registerErrorSq(data.message) };
-      if (data.token) persistAccessToken(data.token);
+      if (data.token) persistAccessToken(data.token, data.refreshToken ?? null);
       persistUserProfile(data.admin);
       try {
         if (data.token) {
@@ -127,7 +124,7 @@ class AuthClient {
   }
 
   async getUser(): Promise<{ data?: User | null; error?: string }> {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = await getAccessToken();
     if (!token) return { data: null };
 
     try {
@@ -136,7 +133,7 @@ class AuthClient {
       });
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
-          persistAccessToken(null);
+          persistAccessToken(null, null);
           localStorage.removeItem('user-data');
           return { data: null };
         }
@@ -165,10 +162,11 @@ class AuthClient {
       target = getPostSignOutPath(u, window.location.pathname);
     }
 
-    persistAccessToken(null);
+    persistAccessToken(null, null);
     localStorage.removeItem('user-data');
     localStorage.removeItem('user');
     Cookies.remove(AUTH_TOKEN_KEY);
+    Cookies.remove(AUTH_REFRESH_KEY);
     Cookies.remove('user-data');
     Cookies.remove('user');
     try {
@@ -218,7 +216,16 @@ class AuthClient {
     }
   }
 
-  async updatePortalProfile(body: { phone: string }): Promise<{ admin?: User; error?: string }> {
+  async updatePortalProfile(body: {
+    phone?: string;
+    firstName?: string;
+    lastName?: string;
+    businessName?: string;
+    businessOwner?: string;
+    businessCategory?: string;
+    /** Public profile photo URL; empty string clears it. */
+    avatar?: string;
+  }): Promise<{ admin?: User; error?: string }> {
     try {
       const res = await fetch(getApiUrl('/auth/portal/update-profile'), {
         method: 'PUT',
@@ -227,6 +234,76 @@ class AuthClient {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Përditësimi dështoi.' };
+      if (data.admin) persistUserProfile(data.admin);
+      return { admin: data.admin as User };
+    } catch {
+      return { error: 'Nuk u arrit lidhja me serverin.' };
+    }
+  }
+
+  async convertToBusinessAccount(body: {
+    nipt: string;
+    businessName: string;
+    businessOwner: string;
+    businessCategory: string;
+    phone?: string;
+  }): Promise<{ admin?: User; error?: string }> {
+    try {
+      const res = await fetch(getApiUrl('/auth/portal/convert-to-business'), {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return {
+          error: typeof data.message === 'string' ? data.message : 'Kthimi në llogari biznesi dështoi.',
+        };
+      }
+      if (data.admin) persistUserProfile(data.admin);
+      return { admin: data.admin as User };
+    } catch {
+      return { error: 'Nuk u arrit lidhja me serverin.' };
+    }
+  }
+
+  async uploadPortalAvatar(file: File): Promise<{ admin?: User; avatar?: string; error?: string }> {
+    try {
+      const token = await getAccessToken();
+      if (!token) return { error: 'Duhet të jeni të identifikuar.' };
+      const fd = new FormData();
+      fd.append('avatar', file, file.name);
+      const res = await fetch(getApiUrl('/auth/portal/avatar'), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return { error: typeof data.message === 'string' ? data.message : 'Ngarkimi i fotos dështoi.' };
+      }
+      const avatar =
+        (typeof data.avatarUrl === 'string' && data.avatarUrl) ||
+        (typeof data.admin?.avatar === 'string' && data.admin.avatar) ||
+        '';
+      if (!avatar) {
+        return { error: 'Foto u ngarkua por nuk u ruajt te profili. Rifreskoni faqen dhe provojeni përsëri.' };
+      }
+      if (data.admin) persistUserProfile(data.admin);
+      return { admin: data.admin as User, avatar };
+    } catch {
+      return { error: 'Nuk u arrit lidhja me serverin.' };
+    }
+  }
+
+  async removePortalAvatar(): Promise<{ admin?: User; error?: string }> {
+    try {
+      const res = await fetch(getApiUrl('/auth/portal/avatar'), {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Heqja e fotos dështoi.' };
       if (data.admin) persistUserProfile(data.admin);
       return { admin: data.admin as User };
     } catch {

@@ -18,6 +18,11 @@ import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
 import { findOptionLabel, formatPrice, relativeAlbanianDate } from './format-helpers';
+import {
+  ListingCardRating,
+  resolveListingCardRating,
+  type ListingCardRatingSummary,
+} from './listing-card-rating';
 import { SpecRow, type Spec } from './spec-row';
 
 function conditionIcon(condition: string | null) {
@@ -25,10 +30,17 @@ function conditionIcon(condition: string | null) {
   return CheckCircleIcon;
 }
 
-export function MarketplaceCard({ listing }: { listing: PublicMarketplaceListing }) {
+export function MarketplaceCard({
+  listing,
+  sellerRating = null,
+}: {
+  listing: PublicMarketplaceListing;
+  sellerRating?: ListingCardRatingSummary | null;
+}) {
   const viewCount = listing.viewCount ?? 0;
   const categoryLabel = findOptionLabel(MARKETPLACE_CATEGORY_OPTIONS, listing.category);
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
+  const cardRating = resolveListingCardRating(null, sellerRating);
 
   const specs: Spec[] = [
     { Icon: TagIcon, label: categoryLabel, title: 'Kategoria' },
@@ -43,7 +55,7 @@ export function MarketplaceCard({ listing }: { listing: PublicMarketplaceListing
       prefetch={false}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell>
+      <CardShell premium={Boolean(listing.isPremium)}>
       <CardMedia
         listingKind="marketplace"
         listingId={listing.id}
@@ -54,6 +66,33 @@ export function MarketplaceCard({ listing }: { listing: PublicMarketplaceListing
         shareCount={listing.shareCount}
         saveCount={listing.saveCount}
         saved={listing.saved}
+        premium={Boolean(listing.isPremium)}
+        sharePayload={{
+          title: listing.title,
+          category: categoryLabel,
+          priceLabel: formatPrice(listing.price, listing.currency),
+          badge: conditionLabel ?? undefined,
+          imageUrl: listing.imageUrl,
+          location: listing.cityName || undefined,
+            specs: [
+              { icon: 'tag', label: categoryLabel },
+              ...(conditionLabel
+                ? [
+                    {
+                      icon:
+                        listing.condition === 'i-ri' || listing.condition === 'si-i-ri'
+                          ? ('sparkle' as const)
+                          : ('check' as const),
+                      label: conditionLabel,
+                    },
+                  ]
+                : []),
+            ],
+          createdAt: listing.createdAt,
+          viewCount,
+          saveCount: listing.saveCount,
+          url: listingMarketplacePublicHref(listing),
+        }}
       />
       <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
         <Typography
@@ -78,7 +117,20 @@ export function MarketplaceCard({ listing }: { listing: PublicMarketplaceListing
         >
           {listing.title}
         </Typography>
-        <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: 'primary.main', lineHeight: 1.2 }}>
+        {cardRating ? (
+          <ListingCardRating
+            ratingAverage={cardRating.ratingAverage}
+            reviewCount={cardRating.reviewCount}
+          />
+        ) : null}
+        <Typography
+          sx={{
+            fontWeight: 800,
+            fontSize: '1.1rem',
+            color: listing.isPremium ? 'warning.main' : 'primary.main',
+            lineHeight: 1.2,
+          }}
+        >
           {formatPrice(listing.price, listing.currency)}
         </Typography>
 

@@ -29,11 +29,21 @@ export interface MyReferralStats {
   referralCount: number;
   paidReferralCount: number;
   reviewCount: number;
+  /** Aggregate star rating from received listing reviews (same pool as Trusted badge). */
+  ratingAverage: number | null;
   boostCredits: number;
   tiersClaimed: number[];
   nextTier: ReferralNextTier | null;
   referredBy: ReferralUserBrief | null;
   referredUsers: ReferralSignupEntry[];
+  /** True when today's Instagram story share reward was already claimed. */
+  dailyShareClaimedToday?: boolean;
+  dailyShareBoostCredits?: number;
+  loginStreakDays?: number;
+  loginStreakDaysRequired?: number;
+  loginStreakBoostCredits?: number;
+  loginStreakCheckedInToday?: boolean;
+  loginStreakAwarded?: boolean;
 }
 
 export interface AdminReferralOverview {

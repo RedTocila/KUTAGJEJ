@@ -45,10 +45,23 @@ router.post('/professionals', authMiddleware, requirePortalUser, async (req, res
     const v = validateProfessionalPayload(body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
+    const sb = getSupabaseAdmin();
+    const { count: existingCount, error: countErr } = await sb
+      .from('directory_listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('poster_id', req.user.id)
+      .eq('vertical', 'professionals');
+    if (countErr) throw countErr;
+    if ((existingCount ?? 0) > 0) {
+      return res.status(409).json({
+        message: 'Mund të keni vetëm një profil profesionisti. Përditësojeni atë ekzistues nga Shpalljet e mia.',
+      });
+    }
+
     const cityId = String(body.cityId).trim();
     if (!isUuid(cityId)) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
 
-    const { data: city, error: cityErr } = await getSupabaseAdmin()
+    const { data: city, error: cityErr } = await sb
       .from('real_estate_cities')
       .select('id')
       .eq('id', cityId)
@@ -75,11 +88,7 @@ router.post('/professionals', authMiddleware, requirePortalUser, async (req, res
     };
     if (v.currency != null) row.currency = v.currency;
 
-    const { data: created, error: insErr } = await getSupabaseAdmin()
-      .from('directory_listings')
-      .insert(row)
-      .select('*')
-      .single();
+    const { data: created, error: insErr } = await sb.from('directory_listings').insert(row).select('*').single();
     if (insErr) throw insErr;
 
     const doc = camelizeRow(created);

@@ -19,6 +19,7 @@ export function ListingMediaActionButton({
   active = false,
   disabled = false,
   surface = 'card',
+  accent = 'primary',
   onClick,
 }: {
   'aria-label': string;
@@ -28,16 +29,19 @@ export function ListingMediaActionButton({
   disabled?: boolean;
   /** `hero` — solid dark glass; `glass` — softer dark transparent; `card` — listing card chips. */
   surface?: 'hero' | 'glass' | 'card';
+  /** Accent for the active / emphasized state — amber on premium cards. */
+  accent?: 'primary' | 'warning';
   onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
+  const accentToken = `${accent}.main` as const;
   const surfaceStyles =
     surface === 'hero'
       ? {
           bgcolor: alpha('#000', 0.45),
-          color: active ? 'primary.main' : '#fff',
+          color: active ? accentToken : '#fff',
           backdropFilter: 'blur(10px)',
           border: '1px solid',
-          borderColor: active ? 'primary.main' : alpha('#fff', 0.18),
+          borderColor: active ? accentToken : alpha('#fff', 0.18),
           '&:hover': { bgcolor: alpha('#000', 0.62) },
           '&.Mui-disabled': {
             bgcolor: alpha('#000', 0.45),
@@ -48,10 +52,10 @@ export function ListingMediaActionButton({
       : surface === 'glass'
         ? {
             bgcolor: alpha('#000', 0.28),
-            color: active ? 'primary.main' : '#fff',
+            color: active ? accentToken : '#fff',
             backdropFilter: 'blur(12px)',
             border: '1px solid',
-            borderColor: active ? 'primary.main' : alpha('#fff', 0.14),
+            borderColor: active ? accentToken : alpha('#fff', 0.14),
             '&:hover': { bgcolor: alpha('#000', 0.38) },
             '&.Mui-disabled': {
               bgcolor: alpha('#000', 0.28),
@@ -61,9 +65,9 @@ export function ListingMediaActionButton({
           }
         : {
             bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.92)',
-            color: active ? 'primary.main' : 'text.primary',
+            color: active || accent === 'warning' ? accentToken : 'text.primary',
             border: '1px solid',
-            borderColor: active ? 'primary.main' : 'divider',
+            borderColor: active || accent === 'warning' ? accentToken : 'divider',
             '&:hover': {
               bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.98)',
             },

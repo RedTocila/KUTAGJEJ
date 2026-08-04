@@ -95,14 +95,14 @@ export const DEFAULT_MEMBER_REFERRAL_BADGES: PublicMemberReferralBadge[] = [
     id: 'trusted-reviewer',
     kind: 'trusted-reviewer',
     label: 'Trusted',
-    lifetimePercent: 3,
+    lifetimePercent: 5,
     earned: false,
   },
   {
     id: 'platform-dominator',
     kind: 'platform-dominator',
     label: 'Platform Dominator',
-    lifetimePercent: 18,
+    lifetimePercent: 20,
     earned: false,
   },
 ];

@@ -1,8 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Typography } from '@mui/material';
-import HourglassEmptyOutlined from '@mui/icons-material/HourglassEmptyOutlined';
+import { Box, Stack, Typography } from '@mui/material';
 
 import {
   getJobCountdownParts,
@@ -10,62 +9,109 @@ import {
   type JobCountdownParts,
   type JobListingCountdownUrgency,
 } from '@/lib/job-listing-expiry';
-
-/** 14px body baseline for job detail. */
-const FONT_BODY = '0.875rem';
-const FONT_CAPTION = '0.75rem';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 
 function pad2(value: number): string {
   return String(value).padStart(2, '0');
 }
 
-function accentColorForUrgency(urgency: JobListingCountdownUrgency): string {
-  if (urgency === 'critical') return 'error.main';
-  if (urgency === 'warning') return 'warning.main';
-  return 'primary.main';
+function accentToken(urgency: JobListingCountdownUrgency): {
+  color: string;
+  soft: string;
+  ring: string;
+  cell: string;
+  cellBorder: string;
+} {
+  if (urgency === 'critical') {
+    return {
+      color: 'var(--mui-palette-error-main)',
+      soft: 'rgba(239, 68, 68, 0.16)',
+      ring: 'rgba(239, 68, 68, 0.45)',
+      cell: 'rgba(239, 68, 68, 0.18)',
+      cellBorder: 'rgba(239, 68, 68, 0.4)',
+    };
+  }
+  if (urgency === 'warning') {
+    return {
+      color: 'var(--mui-palette-warning-main)',
+      soft: 'rgba(245, 158, 11, 0.14)',
+      ring: 'rgba(245, 158, 11, 0.4)',
+      cell: 'rgba(245, 158, 11, 0.16)',
+      cellBorder: 'rgba(245, 158, 11, 0.38)',
+    };
+  }
+  return {
+    color: 'var(--mui-palette-primary-main)',
+    soft: primaryMainAlpha(0.14),
+    ring: primaryMainAlpha(0.42),
+    cell: primaryMainAlpha(0.16),
+    cellBorder: primaryMainAlpha(0.38),
+  };
 }
 
-function CountdownUnit({
+function TimeCell({
   value,
-  unit,
-  urgency,
+  label,
+  accent,
+  cellBg,
+  cellBorder,
+  pulse,
 }: {
-  value: number;
-  unit: string;
-  urgency: JobListingCountdownUrgency;
+  value: string;
+  label: string;
+  accent: string;
+  cellBg: string;
+  cellBorder: string;
+  pulse?: boolean;
 }) {
-  const accent = accentColorForUrgency(urgency);
-
   return (
     <Box
       sx={{
         flex: 1,
         minWidth: 0,
-        py: { xs: 1, sm: 1.25 },
-        px: { xs: 0.25, sm: 0.5 },
-        borderRadius: 2,
-        bgcolor: 'rgba(0,0,0,0.35)',
-        border: '1px solid',
-        borderColor: accent,
         textAlign: 'center',
+        px: 0.65,
+        py: 1.05,
+        borderRadius: 1.5,
+        bgcolor: cellBg,
+        border: '1px solid',
+        borderColor: cellBorder,
+        ...(pulse
+          ? {
+              animation: 'urgentPulse 1s ease-in-out infinite',
+              '@keyframes urgentPulse': {
+                '0%, 100%': { borderColor: cellBorder },
+                '50%': { borderColor: accent },
+              },
+            }
+          : null),
       }}
     >
       <Typography
         sx={{
-          fontWeight: 800,
-          fontSize: '1.125rem',
-          lineHeight: 1.1,
+          fontWeight: 900,
+          fontSize: { xs: '1.4rem', sm: '1.55rem' },
+          lineHeight: 1,
+          letterSpacing: '-0.04em',
           color: accent,
           fontVariantNumeric: 'tabular-nums',
         }}
       >
-        {pad2(value)}
+        {value}
       </Typography>
       <Typography
-        variant="caption"
-        sx={{ color: 'text.secondary', fontWeight: 600, fontSize: FONT_CAPTION }}
+        sx={{
+          mt: 0.55,
+          fontSize: '0.62rem',
+          fontWeight: 800,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          color: accent,
+          opacity: 0.78,
+          lineHeight: 1,
+        }}
       >
-        {unit}
+        {label}
       </Typography>
     </Box>
   );
@@ -100,66 +146,98 @@ export function JobListingDetailCountdown({ expiresAt }: { expiresAt: string }) 
   const display = mounted
     ? parts
     : { days: 0, hours: 0, minutes: 0, seconds: 0, expired: false };
-  const accent = accentColorForUrgency(urgency);
+  const accent = accentToken(urgency);
+  const live = !display.expired;
 
   return (
     <Box
       sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1.5,
         width: '100%',
-        maxWidth: '100%',
-        boxSizing: 'border-box',
-        p: 2,
-        borderRadius: 3,
+        p: 1.4,
+        borderRadius: 2,
         border: '1px solid',
-        borderColor: accent,
-        bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
+        borderColor: accent.ring,
+        bgcolor: accent.soft,
+        backgroundImage: `linear-gradient(160deg, ${accent.soft} 0%, rgba(0,0,0,0.12) 100%)`,
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
-        <Box
-          sx={{
-            width: 44,
-            height: 44,
-            borderRadius: '50%',
-            display: 'grid',
-            placeItems: 'center',
-            flexShrink: 0,
-            bgcolor: accent,
-            color:
-              urgency === 'warning'
-                ? 'warning.contrastText'
-                : urgency === 'critical'
-                  ? 'error.contrastText'
-                  : 'primary.contrastText',
-          }}
-        >
-          <HourglassEmptyOutlined sx={{ fontSize: 24 }} />
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY, lineHeight: 1.3 }}>
+      <Stack
+        direction="row"
+        sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1.15 }}
+      >
+        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0 }}>
+          {live ? (
+            <Box
+              sx={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                bgcolor: accent.color,
+                flexShrink: 0,
+                animation: 'urgentDot 1.2s ease-in-out infinite',
+                '@keyframes urgentDot': {
+                  '0%, 100%': { opacity: 1 },
+                  '50%': { opacity: 0.4 },
+                },
+              }}
+            />
+          ) : null}
+          <Typography sx={{ fontWeight: 900, fontSize: '0.9rem', letterSpacing: '-0.01em', lineHeight: 1.15 }}>
             {display.expired ? 'Afati ka përfunduar' : 'Apliko brenda'}
           </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontSize: FONT_CAPTION }}>
-            {display.expired ? 'Njoftimi nuk pranon më aplikime' : 'Mbyllet pas:'}
-          </Typography>
-        </Box>
-      </Box>
+        </Stack>
+        <Typography
+          sx={{
+            fontSize: '0.7rem',
+            color: accent.color,
+            fontWeight: 700,
+            lineHeight: 1.2,
+            opacity: 0.9,
+            flexShrink: 0,
+          }}
+        >
+          {display.expired ? 'Nuk pranon aplikime' : 'deri sa të mbyllet'}
+        </Typography>
+      </Stack>
 
       <Box
         sx={{
-          display: 'flex',
-          gap: { xs: 0.5, sm: 0.75 },
-          width: '100%',
-          minWidth: 0,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          gap: 0.7,
         }}
+        aria-live="polite"
+        aria-atomic="true"
       >
-        <CountdownUnit value={display.days} unit="Ditë" urgency={urgency} />
-        <CountdownUnit value={display.hours} unit="Orë" urgency={urgency} />
-        <CountdownUnit value={display.minutes} unit="Min" urgency={urgency} />
-        <CountdownUnit value={display.seconds} unit="Sek" urgency={urgency} />
+        <TimeCell
+          value={String(display.days)}
+          label="Ditë"
+          accent={accent.color}
+          cellBg={accent.cell}
+          cellBorder={accent.cellBorder}
+        />
+        <TimeCell
+          value={pad2(display.hours)}
+          label="Orë"
+          accent={accent.color}
+          cellBg={accent.cell}
+          cellBorder={accent.cellBorder}
+        />
+        <TimeCell
+          value={pad2(display.minutes)}
+          label="Min"
+          accent={accent.color}
+          cellBg={accent.cell}
+          cellBorder={accent.cellBorder}
+        />
+        <TimeCell
+          value={pad2(display.seconds)}
+          label="Sek"
+          accent={accent.color}
+          cellBg={accent.cell}
+          cellBorder={accent.cellBorder}
+          pulse={live}
+        />
       </Box>
     </Box>
   );

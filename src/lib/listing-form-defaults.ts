@@ -1,0 +1,92 @@
+import type { User } from '@/types/user';
+import { BUSINESS_CATEGORY_OPTIONS } from '@/lib/business-constants';
+
+/** Sync read of cached profile phone (available before `useUser` hydrates). */
+export function contactPhoneFromStorage(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const raw = localStorage.getItem('user-data');
+    if (!raw) return '';
+    const u = JSON.parse(raw) as { phone?: string };
+    return typeof u.phone === 'string' ? u.phone.trim() : '';
+  } catch {
+    return '';
+  }
+}
+
+export function contactPhoneFromUser(user: Pick<User, 'phone'> | null | undefined): string {
+  return typeof user?.phone === 'string' ? user.phone.trim() : '';
+}
+
+/** Prefer live user profile, then localStorage cache. */
+export function resolveContactPhone(user: Pick<User, 'phone'> | null | undefined): string {
+  return contactPhoneFromUser(user) || contactPhoneFromStorage();
+}
+
+/** Professional profile title from individual name or business name. */
+export function professionalTitleFromUser(
+  user: Pick<User, 'firstName' | 'lastName' | 'businessName'> | null | undefined,
+): string {
+  if (!user) return '';
+  const business = typeof user.businessName === 'string' ? user.businessName.trim() : '';
+  if (business) return business;
+  const name = [user.firstName, user.lastName]
+    .map((p) => (typeof p === 'string' ? p.trim() : ''))
+    .filter(Boolean)
+    .join(' ');
+  return name;
+}
+
+export function businessTitleFromUser(user: Pick<User, 'businessName'> | null | undefined): string {
+  return typeof user?.businessName === 'string' ? user.businessName.trim() : '';
+}
+
+/**
+ * Map free-text signup/profile business category onto listing option values when possible.
+ */
+export function businessCategoryFromUser(
+  user: Pick<User, 'businessCategory'> | null | undefined,
+): string {
+  const raw = typeof user?.businessCategory === 'string' ? user.businessCategory.trim() : '';
+  if (!raw) return '';
+  const lower = raw.toLowerCase();
+  const exactValue = BUSINESS_CATEGORY_OPTIONS.find((o) => o.value === lower);
+  if (exactValue) return exactValue.value;
+  const exactLabel = BUSINESS_CATEGORY_OPTIONS.find((o) => o.label.toLowerCase() === lower);
+  if (exactLabel) return exactLabel.value;
+  const partial = BUSINESS_CATEGORY_OPTIONS.find(
+    (o) => lower.includes(o.label.toLowerCase()) || o.label.toLowerCase().includes(lower),
+  );
+  return partial?.value ?? '';
+}
+
+/** Cached profile snapshot for create-form initial state (SSR-safe). */
+export function profileDefaultsFromStorage(): {
+  phone: string;
+  title: string;
+  businessName: string;
+  businessCategory: string;
+  firstName: string;
+  lastName: string;
+} {
+  if (typeof window === 'undefined') {
+    return { phone: '', title: '', businessName: '', businessCategory: '', firstName: '', lastName: '' };
+  }
+  try {
+    const raw = localStorage.getItem('user-data');
+    if (!raw) {
+      return { phone: '', title: '', businessName: '', businessCategory: '', firstName: '', lastName: '' };
+    }
+    const u = JSON.parse(raw) as User;
+    return {
+      phone: contactPhoneFromUser(u),
+      title: professionalTitleFromUser(u),
+      businessName: businessTitleFromUser(u),
+      businessCategory: businessCategoryFromUser(u),
+      firstName: typeof u.firstName === 'string' ? u.firstName.trim() : '',
+      lastName: typeof u.lastName === 'string' ? u.lastName.trim() : '',
+    };
+  } catch {
+    return { phone: '', title: '', businessName: '', businessCategory: '', firstName: '', lastName: '' };
+  }
+}

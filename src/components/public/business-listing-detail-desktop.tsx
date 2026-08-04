@@ -1,46 +1,39 @@
 'use client';
 
 import * as React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   Alert,
   Box,
   Button,
   ButtonBase,
+  Collapse,
   Container,
   Divider,
-  Grid,
   Paper,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { ArrowRight as ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
-import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
+import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
+import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { BusinessVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
-import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
-import { formatPrice } from '@/components/public/listing-cards/format-helpers';
+import { BusinessMenuPreview } from '@/components/public/business-menu-section';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
 import {
   businessCategorySubtitle,
-  businessGalleryThumbs,
-  businessMenuCategoryNames,
-  businessMenuItemsForCategory,
   businessOpenStatusLine,
-  businessRatingDisplay,
-  type BusinessMenuItemView,
 } from '@/lib/business-listing-detail-content';
 import { BusinessReviewSection } from '@/components/businesses/business-review-section';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
@@ -59,63 +52,22 @@ const surfaceSx = {
   bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
 } as const;
 
-function selectFieldSx() {
-  return {
-    flex: 1,
-    minWidth: 0,
-    '& .MuiOutlinedInput-root': {
-      borderRadius: 2.5,
-      bgcolor: 'rgba(var(--mui-palette-background-defaultChannel) / 0.85)',
-      fontSize: '0.8rem',
-      fontWeight: 600,
-    },
-  } as const;
-}
+const reserveFieldSx = {
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 2.5,
+    bgcolor: 'rgba(var(--mui-palette-background-defaultChannel) / 0.85)',
+    fontSize: '0.875rem',
+    fontWeight: 600,
+  },
+  '& .MuiInputLabel-root': { fontSize: '0.8rem', fontWeight: 600 },
+} as const;
 
-function MenuItemRow({
-  item,
-  hearted,
-  onToggleHeart,
-}: {
-  item: BusinessMenuItemView;
-  hearted: boolean;
-  onToggleHeart: () => void;
-}) {
-  return (
-    <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start' }}>
-      <Box
-        sx={{
-          position: 'relative',
-          width: 80,
-          height: 80,
-          flexShrink: 0,
-          borderRadius: 2,
-          overflow: 'hidden',
-          bgcolor: 'grey.900',
-        }}
-      >
-        {item.imageUrl ? (
-          <Image src={item.imageUrl} alt="" fill sizes="80px" style={{ objectFit: 'cover' }} />
-        ) : (
-          <Box sx={{ width: '100%', height: '100%', bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)' }} />
-        )}
-      </Box>
-      <Stack spacing={0.35} sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', lineHeight: 1.25 }}>{item.name}</Typography>
-        <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', lineHeight: 1.45 }}>{item.description}</Typography>
-        <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', color: 'primary.main', pt: 0.25 }}>
-          {formatPrice(item.price, item.currency)}
-        </Typography>
-      </Stack>
-      <ButtonBase
-        aria-label={hearted ? 'Hiq nga të preferuarat' : 'Shto te të preferuarat'}
-        onClick={onToggleHeart}
-        sx={{ p: 0.5, borderRadius: 2, color: hearted ? 'primary.main' : 'text.secondary' }}
-      >
-        <BookmarkSimpleIcon size={20} weight={hearted ? 'fill' : 'regular'} />
-      </ButtonBase>
-    </Stack>
-  );
+function selectFieldSx(flex = 1) {
+  return {
+    flex,
+    minWidth: 0,
+    ...reserveFieldSx,
+  } as const;
 }
 
 export function BusinessListingDetailDesktop({
@@ -138,15 +90,16 @@ export function BusinessListingDetailDesktop({
   onReserve,
   reserveGuestName,
   reserveGuestPhone,
+  reserveNote,
   onReserveGuestName,
   onReserveGuestPhone,
+  onReserveNote,
   usePlatformReservation,
   reserveFeedback,
   reserveSubmitting,
-  menuCategory,
-  onMenuCategory,
-  savedMenuHearts,
-  onToggleMenuHeart,
+  reserveOpen,
+  onReserveOpen,
+  ownerPreview = false,
 }: {
   listing: PublicDirectoryListingDetail;
   similar: PublicDirectoryListing[];
@@ -167,28 +120,23 @@ export function BusinessListingDetailDesktop({
   onReserve: () => void;
   reserveGuestName: string;
   reserveGuestPhone: string;
+  reserveNote: string;
   onReserveGuestName: (v: string) => void;
   onReserveGuestPhone: (v: string) => void;
+  onReserveNote: (v: string) => void;
   usePlatformReservation: boolean;
   reserveFeedback: string | null;
   reserveSubmitting: boolean;
-  menuCategory: string;
-  onMenuCategory: (cat: string) => void;
-  savedMenuHearts: Set<string>;
-  onToggleMenuHeart: (id: string) => void;
+  reserveOpen: boolean;
+  onReserveOpen: (open: boolean) => void;
+  ownerPreview?: boolean;
 }) {
-  const rating = React.useMemo(() => businessRatingDisplay(listing), [listing]);
   const categoryLine = React.useMemo(() => businessCategorySubtitle(listing), [listing]);
   const statusLine = React.useMemo(() => businessOpenStatusLine(listing), [listing]);
-  const menuCategories = React.useMemo(() => businessMenuCategoryNames(listing), [listing]);
-  const activeMenuCategory = menuCategory || menuCategories[0] || '';
-  const menuItems = React.useMemo(
-    () => (activeMenuCategory ? businessMenuItemsForCategory(listing, activeMenuCategory) : []),
-    [listing, activeMenuCategory],
-  );
-  const gallery = React.useMemo(() => businessGalleryThumbs(listing.imageUrls, 6), [listing.imageUrls]);
   const telHref = listing.contactPhone ?? listing.seller?.phone ?? null;
   const phoneHref = telHref ? `tel:${telHref.replace(/\s/g, '')}` : null;
+
+  if (ownerPreview) return null;
 
   return (
     <Box component="article" sx={{ bgcolor: 'background.default', pb: 6, display: { xs: 'none', md: 'block' } }}>
@@ -245,30 +193,25 @@ export function BusinessListingDetailDesktop({
             >
               <Stack spacing={2} sx={{ width: '100%' }}>
                 <Stack spacing={1}>
-                  <Stack direction="row" spacing={0.75} sx={{ alignItems: 'flex-start' }}>
-                    <Typography component="h1" sx={{ fontWeight: 800, fontSize: '1.35rem', lineHeight: 1.2, flex: 1 }}>
+                  <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Typography component="h1" sx={{ fontWeight: 800, fontSize: '1.35rem', lineHeight: 1.2 }}>
                       {listing.title}
                     </Typography>
                     <BusinessVerifiedBadge />
                   </Stack>
                   <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', lineHeight: 1.4 }}>{categoryLine}</Typography>
-                  <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', alignItems: 'center' }}>
-                    {rating.rating ? (
-                      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                        <StarIcon size={16} weight="fill" color="var(--mui-palette-primary-main)" />
-                        <Typography sx={{ fontWeight: 700 }}>{rating.rating}</Typography>
-                        <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-                          ({rating.reviews} vlerësime)
-                        </Typography>
-                      </Stack>
-                    ) : null}
-                    {listing.cityName ? (
-                      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
-                        <MapPinIcon size={16} weight="regular" />
-                        <Typography sx={{ fontSize: '0.8rem' }}>{listing.cityName}</Typography>
-                      </Stack>
-                    ) : null}
-                  </Stack>
+                  {listing.cityName ? (
+                    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+                      <MapPinIcon size={16} weight="regular" />
+                      <Typography sx={{ fontSize: '0.8rem' }}>{listing.cityName}</Typography>
+                    </Stack>
+                  ) : null}
+                  <BusinessReviewSection
+                    variant="summary"
+                    listingId={listing.id}
+                    ratingAverage={listing.ratingAverage}
+                    reviewCount={listing.reviewCount}
+                  />
                   {statusLine ? (
                     <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
                       <Box
@@ -288,119 +231,190 @@ export function BusinessListingDetailDesktop({
                 <Divider />
 
                 {showReservation ? (
-                  <ButtonBase onClick={onReserve} sx={{ width: '100%', textAlign: 'left', display: 'block', borderRadius: 3 }}>
+                  <ButtonBase onClick={() => onReserveOpen(true)} sx={{ width: '100%', textAlign: 'left', display: 'block', borderRadius: 3 }}>
                     <BusinessPromoBanner servicesHighlight={listing.servicesHighlight} variant="detail" />
                   </ButtonBase>
                 ) : null}
 
                 {showReservation ? (
-                  <Box sx={{ ...surfaceSx, p: 2 }}>
-                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
-                      <CalendarBlankIcon size={22} weight="regular" color="var(--mui-palette-primary-main)" />
-                      <Typography sx={{ fontWeight: 800, fontSize: '0.95rem' }}>Rezervo tavolinën</Typography>
-                    </Stack>
-                    <Stack spacing={1.25}>
-                      <Stack direction="row" spacing={1}>
-                        <SearchableSelect
-                          label="Data"
-                          value={reserveDate}
-                          onChange={onReserveDate}
-                          options={dateOptions}
-                          emptyLabel="Zgjidhni datën…"
-                          sx={selectFieldSx()}
-                        />
-                        <SearchableSelect
-                          label="Ora"
-                          value={reserveTime}
-                          onChange={onReserveTime}
-                          options={timeOptions.map((t) => ({ value: t, label: t }))}
-                          emptyLabel="Zgjidhni orën…"
-                          sx={selectFieldSx()}
-                        />
-                        <SearchableSelect
-                          label="Persona"
-                          value={reservePeople}
-                          onChange={onReservePeople}
-                          options={peopleOptions.map((n) => ({ value: String(n), label: String(n) }))}
-                          emptyLabel="Zgjidhni…"
-                          sx={selectFieldSx()}
-                        />
-                      </Stack>
-                      {usePlatformReservation ? (
-                        <Stack spacing={1}>
-                          <TextField
-                            size="small"
-                            label="Emri i plotë"
-                            value={reserveGuestName}
-                            onChange={(e) => onReserveGuestName(e.target.value)}
-                            fullWidth
-                          />
-                          <TextField
-                            size="small"
-                            label="Telefoni"
-                            value={reserveGuestPhone}
-                            onChange={(e) => onReserveGuestPhone(e.target.value)}
-                            fullWidth
-                          />
-                        </Stack>
-                      ) : null}
-                      {reserveFeedback ? (
-                        <Alert severity={reserveFeedback.includes('dërgua') ? 'success' : 'warning'} sx={{ py: 0 }}>
-                          {reserveFeedback}
-                        </Alert>
-                      ) : null}
-                      <Stack direction="row" spacing={1}>
-                        <Button
-                          component={phoneHref ? 'a' : 'button'}
-                          href={phoneHref ?? undefined}
-                          variant="outlined"
-                          disabled={!phoneHref}
-                          startIcon={<PhoneIcon size={18} weight="regular" />}
-                          sx={{
-                            flex: 1,
-                            py: 1.25,
-                            borderRadius: 2.5,
-                            fontWeight: 800,
-                            textTransform: 'none',
-                            borderWidth: 2,
-                          }}
-                        >
-                          Telefono
-                        </Button>
-                        <Button
-                          variant="contained"
-                          startIcon={<CalendarBlankIcon size={18} weight="fill" />}
-                          onClick={onReserve}
-                          disabled={usePlatformReservation ? reserveSubmitting : !reserveHref}
-                          sx={{
-                            flex: 1.4,
-                            py: 1.25,
-                            borderRadius: 2.5,
-                            fontWeight: 800,
-                            textTransform: 'none',
-                            boxShadow: 'none',
-                          }}
-                        >
-                          {reserveSubmitting ? 'Duke dërguar…' : 'Rezervo tani'}
-                        </Button>
-                      </Stack>
-                    </Stack>
-                  </Box>
-                ) : (
-                  <Stack direction="row" spacing={1}>
-                    <Button
-                      component={phoneHref ? 'a' : 'button'}
-                      href={phoneHref ?? undefined}
-                      variant="outlined"
-                      disabled={!phoneHref}
-                      fullWidth
-                      startIcon={<PhoneIcon size={18} weight="regular" />}
-                      sx={{ py: 1.25, borderRadius: 2.5, fontWeight: 800, textTransform: 'none', borderWidth: 2 }}
+                  <Box sx={{ ...surfaceSx, p: 0, overflow: 'hidden' }}>
+                    <ButtonBase
+                      onClick={() => onReserveOpen(!reserveOpen)}
+                      aria-expanded={reserveOpen}
+                      sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 1.5,
+                        px: 2,
+                        py: 1.5,
+                        textAlign: 'left',
+                        bgcolor: reserveOpen ? 'transparent' : 'primary.main',
+                        color: reserveOpen ? 'text.primary' : 'common.black',
+                        transition: 'background-color 0.15s ease, color 0.15s ease',
+                      }}
                     >
-                      Telefono
-                    </Button>
-                  </Stack>
-                )}
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
+                        <CalendarBlankIcon
+                          size={22}
+                          weight={reserveOpen ? 'regular' : 'fill'}
+                          color={reserveOpen ? 'var(--mui-palette-primary-main)' : 'currentColor'}
+                        />
+                        <Stack spacing={0.15} sx={{ minWidth: 0 }}>
+                          <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', lineHeight: 1.25 }}>
+                            Rezervo tavolinën
+                          </Typography>
+                          {!reserveOpen && usePlatformReservation ? (
+                            <Typography sx={{ fontSize: '0.75rem', opacity: 0.75, lineHeight: 1.3 }}>
+                              Hap formularin e rezervimit
+                            </Typography>
+                          ) : null}
+                        </Stack>
+                      </Stack>
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          placeItems: 'center',
+                          flexShrink: 0,
+                          transition: 'transform 0.2s ease',
+                          transform: reserveOpen ? 'rotate(180deg)' : 'none',
+                        }}
+                      >
+                        <CaretDownIcon size={18} weight="bold" />
+                      </Box>
+                    </ButtonBase>
+
+                    <Collapse in={reserveOpen} unmountOnExit>
+                      <Box sx={{ px: 2, pb: 2, pt: 0.5 }}>
+                        {usePlatformReservation ? (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ fontSize: '0.78rem', mb: 1.5, lineHeight: 1.45 }}
+                          >
+                            Plotësoni fushat — kërkesa dërgohet si mesazh te biznesi.
+                          </Typography>
+                        ) : null}
+                        <Stack spacing={1.5}>
+                          <SearchableSelect
+                            size="small"
+                            label="Data"
+                            value={reserveDate}
+                            onChange={onReserveDate}
+                            options={dateOptions}
+                            emptyLabel="Zgjidhni datën…"
+                            clearable={false}
+                            sx={selectFieldSx()}
+                          />
+                          <Stack direction="row" spacing={1.25}>
+                            <SearchableSelect
+                              size="small"
+                              label="Ora"
+                              value={reserveTime}
+                              onChange={onReserveTime}
+                              options={timeOptions.map((t) => ({ value: t, label: t }))}
+                              emptyLabel="Ora…"
+                              clearable={false}
+                              menuMinWidth={140}
+                              sx={selectFieldSx(1.2)}
+                            />
+                            <SearchableSelect
+                              size="small"
+                              label="Persona"
+                              value={reservePeople}
+                              onChange={onReservePeople}
+                              options={peopleOptions.map((n) => ({ value: String(n), label: String(n) }))}
+                              emptyLabel="—"
+                              clearable={false}
+                              menuMinWidth={120}
+                              sx={selectFieldSx(0.85)}
+                            />
+                          </Stack>
+                          {usePlatformReservation ? (
+                            <Stack spacing={1.25}>
+                              <TextField
+                                size="small"
+                                label="Emri i plotë"
+                                value={reserveGuestName}
+                                onChange={(e) => onReserveGuestName(e.target.value)}
+                                fullWidth
+                                sx={reserveFieldSx}
+                              />
+                              <TextField
+                                size="small"
+                                label="Telefoni"
+                                value={reserveGuestPhone}
+                                onChange={(e) => onReserveGuestPhone(e.target.value)}
+                                fullWidth
+                                sx={reserveFieldSx}
+                              />
+                              <TextField
+                                size="small"
+                                label="Shënim (opsionale)"
+                                value={reserveNote}
+                                onChange={(e) => onReserveNote(e.target.value)}
+                                fullWidth
+                                multiline
+                                minRows={2}
+                                placeholder="p.sh. Tavolinë pranë dritares…"
+                                sx={reserveFieldSx}
+                              />
+                            </Stack>
+                          ) : null}
+                          {reserveFeedback ? (
+                            <Alert
+                              severity={reserveFeedback.includes('dërgua') ? 'success' : 'warning'}
+                              sx={{ py: 0.5, borderRadius: 2, alignItems: 'center' }}
+                            >
+                              {reserveFeedback}
+                            </Alert>
+                          ) : null}
+                          <Button
+                            variant="contained"
+                            fullWidth
+                            startIcon={
+                              usePlatformReservation ? (
+                                <ChatsCircleIcon size={18} weight="bold" />
+                              ) : (
+                                <CalendarBlankIcon size={18} weight="fill" />
+                              )
+                            }
+                            onClick={onReserve}
+                            disabled={usePlatformReservation ? reserveSubmitting : !reserveHref}
+                            sx={{
+                              py: 1.25,
+                              borderRadius: 999,
+                              fontWeight: 800,
+                              textTransform: 'none',
+                              boxShadow: 'none',
+                            }}
+                          >
+                            {reserveSubmitting
+                              ? 'Duke dërguar…'
+                              : usePlatformReservation
+                                ? 'Dërgo rezervimin'
+                                : 'Rezervo tani'}
+                          </Button>
+                        </Stack>
+                      </Box>
+                    </Collapse>
+                  </Box>
+                ) : null}
+
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    component={phoneHref ? 'a' : 'button'}
+                    href={phoneHref ?? undefined}
+                    variant="outlined"
+                    disabled={!phoneHref}
+                    fullWidth
+                    startIcon={<PhoneIcon size={18} weight="regular" />}
+                    sx={{ py: 1.25, borderRadius: 2.5, fontWeight: 800, textTransform: 'none', borderWidth: 2 }}
+                  >
+                    Telefono
+                  </Button>
+                </Stack>
                 <ListingMessageButton
                   listingKind="businesses"
                   listingId={listing.id}
@@ -426,94 +440,14 @@ export function BusinessListingDetailDesktop({
             </Box>
           ) : null}
 
-          <Box sx={surfaceSx}>
-            <BusinessReviewSection
-              listingId={listing.id}
-              ratingAverage={listing.ratingAverage}
-              reviewCount={listing.reviewCount}
-            />
-          </Box>
+          <BusinessMenuPreview listing={listing} maxPerCategory={3} />
 
-          {menuItems.length > 0 ? (
-            <Box sx={surfaceSx}>
-              <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                <Typography sx={{ fontWeight: 800, fontSize: '1.05rem' }}>Menu</Typography>
-                <Button
-                  variant="text"
-                  endIcon={<ArrowRightIcon size={16} weight="bold" />}
-                  sx={{ fontWeight: 700, textTransform: 'none', fontSize: '0.8rem' }}
-                >
-                  Shiko të plotë
-                </Button>
-              </Stack>
-              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                {menuCategories.map((cat) => {
-                  const active = cat === activeMenuCategory;
-                  return (
-                    <Button
-                      key={cat}
-                      size="small"
-                      variant={active ? 'outlined' : 'text'}
-                      onClick={() => onMenuCategory(cat)}
-                      sx={{
-                        borderRadius: 999,
-                        textTransform: 'none',
-                        fontWeight: 700,
-                        fontSize: '0.8rem',
-                        borderWidth: active ? 2 : 0,
-                        borderColor: 'primary.main',
-                        color: active ? 'primary.main' : 'text.secondary',
-                      }}
-                    >
-                      {cat}
-                    </Button>
-                  );
-                })}
-              </Stack>
-              <Grid container spacing={2}>
-                {menuItems.map((item) => (
-                  <Grid key={item.id} size={6}>
-                    <MenuItemRow
-                      item={item}
-                      hearted={savedMenuHearts.has(item.id)}
-                      onToggleHeart={() => onToggleMenuHeart(item.id)}
-                    />
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          ) : null}
-
-          {gallery.visible.length > 0 ? (
-            <Stack spacing={1.5}>
-              <Typography sx={{ fontWeight: 800, fontSize: '1.05rem' }}>Ambient &amp; Galeri</Typography>
-              <Stack direction="row" spacing={1.25} sx={{ flexWrap: 'wrap' }}>
-                {gallery.visible.map((url, idx) => (
-                  <Box
-                    key={`${url}-${idx}`}
-                    sx={{ position: 'relative', width: 140, height: 140, borderRadius: 2, overflow: 'hidden', flexShrink: 0 }}
-                  >
-                    <Image src={url} alt="" fill sizes="140px" style={{ objectFit: 'cover' }} />
-                  </Box>
-                ))}
-                {gallery.extraCount > 0 ? (
-                  <Box
-                    sx={{
-                      width: 140,
-                      height: 140,
-                      borderRadius: 2,
-                      bgcolor: 'grey.900',
-                      display: 'grid',
-                      placeItems: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Typography sx={{ fontWeight: 800 }}>+{gallery.extraCount}</Typography>
-                  </Box>
-                ) : null}
-              </Stack>
-            </Stack>
-          ) : null}
+          <BusinessReviewSection
+            variant="list"
+            listingId={listing.id}
+            ratingAverage={listing.ratingAverage}
+            reviewCount={listing.reviewCount}
+          />
 
           {similar.length > 0 ? (
             <Stack spacing={2}>

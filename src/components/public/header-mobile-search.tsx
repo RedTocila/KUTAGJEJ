@@ -1,105 +1,48 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
-import { Box, IconButton, InputAdornment, TextField } from '@mui/material';
+import RouterLink from 'next/link';
+import { Box, Stack, Typography } from '@mui/material';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 
-import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
-import { buildSmartSearchUrl, parseSmartSearchQuery } from '@/lib/smart-search';
+import { useCopy } from '@/hooks/use-copy';
+import { paths } from '@/paths';
 
-let citiesCache: RealEstateCityDto[] | null = null;
-let citiesPromise: Promise<RealEstateCityDto[]> | null = null;
-
-function loadCitiesForSearch(): Promise<RealEstateCityDto[]> {
-  if (citiesCache) return Promise.resolve(citiesCache);
-  if (!citiesPromise) {
-    citiesPromise = listRealEstateLocationsPublic().then((res) => {
-      citiesCache = res.cities ?? [];
-      return citiesCache;
-    });
-  }
-  return citiesPromise;
-}
-
+/** Mobile header search control — opens the full-page search experience. */
 export function HeaderMobileSearch() {
-  const router = useRouter();
-  const [query, setQuery] = React.useState('');
-  const [submitting, setSubmitting] = React.useState(false);
-  const hasQuery = query.trim().length > 0;
-
-  React.useEffect(() => {
-    void loadCitiesForSearch();
-  }, []);
-
-  const submit = async (event?: React.FormEvent) => {
-    event?.preventDefault();
-    const trimmed = query.trim();
-    if (!trimmed || submitting) return;
-
-    setSubmitting(true);
-    try {
-      const cities = await loadCitiesForSearch();
-      const result = parseSmartSearchQuery(trimmed, cities);
-      router.push(buildSmartSearchUrl(result));
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const t = useCopy();
 
   return (
     <Box
-      component="form"
-      onSubmit={(event) => void submit(event)}
-      sx={{ flex: 1, minWidth: 0, display: { xs: 'block', md: 'none' } }}
+      component={RouterLink}
+      href={paths.public.search}
+      aria-label={t.common.openSearch}
+      sx={{
+        flex: 1,
+        minWidth: 0,
+        display: { xs: 'flex', md: 'none' },
+        alignItems: 'center',
+        height: 36,
+        px: 1.25,
+        borderRadius: 999,
+        bgcolor: 'action.hover',
+        color: 'text.secondary',
+        textDecoration: 'none',
+        '&:hover': { bgcolor: 'action.selected' },
+      }}
     >
-      <TextField
-        fullWidth
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Kërko prona, makina, punë…"
-        aria-label="Kërko prona, makina, punë"
-        disabled={submitting}
-        slotProps={{
-          input: {
-            endAdornment: hasQuery ? (
-              <InputAdornment position="end" sx={{ mr: -0.5 }}>
-                <IconButton
-                  type="submit"
-                  aria-label="Kërko"
-                  size="small"
-                  disabled={submitting}
-                  sx={{
-                    width: 28,
-                    height: 28,
-                    bgcolor: 'primary.main',
-                    color: 'common.black',
-                    '&:hover': { bgcolor: 'primary.dark', color: 'common.black' },
-                  }}
-                >
-                  <MagnifyingGlassIcon size={15} weight="bold" />
-                </IconButton>
-              </InputAdornment>
-            ) : null,
-          },
-        }}
-        sx={{
-          '& .MuiOutlinedInput-root': {
-            height: 36,
-            borderRadius: 999,
-            bgcolor: 'action.hover',
-            fontSize: { xs: '1rem', md: '0.8125rem' },
-            fontWeight: 500,
-            pl: 1.25,
-            pr: hasQuery ? 0.5 : 1.25,
-            '& fieldset': { border: 'none' },
-            '& .MuiInputBase-input': {
-              py: 0,
-              px: 0,
-            },
-          },
-        }}
-      />
+      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, width: '100%' }}>
+        <Box sx={{ display: 'inline-flex', flexShrink: 0 }}>
+          <MagnifyingGlassIcon size={16} weight="bold" />
+        </Box>
+        <Typography
+          component="span"
+          noWrap
+          sx={{ fontSize: '0.9375rem', fontWeight: 500, color: 'text.secondary' }}
+        >
+          {t.chrome.searchPlaceholder}
+        </Typography>
+      </Stack>
     </Box>
   );
 }

@@ -19,6 +19,9 @@ import {
   Typography,
 } from '@mui/material';
 
+import { UserCheck as UserCheckIcon } from '@phosphor-icons/react/dist/ssr/UserCheck';
+
+import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { paths } from '@/paths';
 import {
   listProfessionalVerificationRequests,
@@ -83,24 +86,22 @@ export default function ProfessionalVerificationAdminPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ justifyContent: 'space-between', gap: 2 }}>
-        <Stack spacing={0.5}>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            Verifikimet — Profesionistë
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Shqyrtoni kërkesat për shenjën e verifikuar në profilet e profesionistëve.
-          </Typography>
-        </Stack>
-        <Stack direction="row" spacing={1}>
-          <Button variant={filter === 'pending' ? 'contained' : 'outlined'} onClick={() => setFilter('pending')}>
-            Në pritje
-          </Button>
-          <Button variant={filter === 'all' ? 'contained' : 'outlined'} onClick={() => setFilter('all')}>
-            Të gjitha
-          </Button>
-        </Stack>
-      </Stack>
+      <AdminPageHeader
+        icon={React.createElement(UserCheckIcon, { size: 22, weight: 'duotone' })}
+        eyebrow="Verifikimet"
+        title="Profesionistët"
+        description="Shqyrtoni kërkesat për shenjën e verifikuar në profilet e profesionistëve."
+        actions={
+          <>
+            <Button variant={filter === 'pending' ? 'contained' : 'outlined'} onClick={() => setFilter('pending')}>
+              Në pritje
+            </Button>
+            <Button variant={filter === 'all' ? 'contained' : 'outlined'} onClick={() => setFilter('all')}>
+              Të gjitha
+            </Button>
+          </>
+        }
+      />
 
       {error ? <Alert severity="error">{error}</Alert> : null}
 

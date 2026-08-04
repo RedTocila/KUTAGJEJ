@@ -14,8 +14,22 @@ import { primaryMainAlpha } from '@/lib/css-var-alpha';
 
 const fieldSx = {
   '& .MuiOutlinedInput-root': {
+    borderRadius: 999,
+    bgcolor: 'transparent',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+    '&.Mui-focused': {
+      boxShadow: `0 0 0 3px ${primaryMainAlpha(0.12)}`,
+    },
+  },
+  '& .MuiInputLabel-root': {
+    fontSize: '0.8125rem',
+  },
+} as const;
+
+const selectFieldSx = {
+  '& .MuiOutlinedInput-root': {
     borderRadius: 2.5,
-    bgcolor: 'background.paper',
+    bgcolor: 'transparent',
     transition: 'border-color 0.2s, box-shadow 0.2s',
     '&.Mui-focused': {
       boxShadow: `0 0 0 3px ${primaryMainAlpha(0.12)}`,
@@ -36,7 +50,7 @@ export function FilterSection({
     <Box
       sx={{
         p: 2,
-        borderRadius: 3,
+        borderRadius: 3.5,
         border: '1px solid',
         borderColor: 'divider',
         bgcolor: 'background.paper',
@@ -45,8 +59,8 @@ export function FilterSection({
         animation: 'filterSectionIn 0.45s ease both',
         animationDelay: `${index * 0.07}s`,
         '@keyframes filterSectionIn': {
-          from: { opacity: 0, transform: 'translateX(-12px)' },
-          to: { opacity: 1, transform: 'translateX(0)' },
+          from: { opacity: 0, transform: 'translateY(8px)' },
+          to: { opacity: 1, transform: 'translateY(0)' },
         },
         '&::before': {
           content: '""',
@@ -55,11 +69,11 @@ export function FilterSection({
           left: 0,
           right: 0,
           height: 2,
-          background: `linear-gradient(90deg, ${primaryMainAlpha(0.7)}, transparent)`,
+          background: `linear-gradient(90deg, ${primaryMainAlpha(0.75)}, transparent 70%)`,
         },
       }}
     >
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.75 }}>
         <Box
           sx={{
             width: 6,
@@ -112,7 +126,7 @@ export function FilterSelect({
         onChange={onChange}
         options={options}
         emptyLabel={emptyLabel}
-        sx={fieldSx}
+        sx={selectFieldSx}
       />
     </Grid>
   );
@@ -122,7 +136,7 @@ export function FilterNumberField({
   label,
   value,
   onChange,
-  gridSize = { xs: 12, sm: 6 },
+  gridSize = { xs: 12 },
 }: {
   label: string;
   value: string;

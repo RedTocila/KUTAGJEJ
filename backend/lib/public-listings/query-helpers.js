@@ -96,10 +96,48 @@ function parseSort(value) {
   return SORT_VALUES.has(raw) ? raw : 'newest';
 }
 
+/** Active Premium listings (premium_until in the future) float above the rest. */
+function premiumSortPrefix() {
+  return [{ column: 'premium_until', ascending: false, nullsFirst: false }];
+}
+
 function buildSort(sort, field = 'price') {
-  if (sort === 'price-asc') return [{ column: field, ascending: true }, { column: 'created_at', ascending: false }];
-  if (sort === 'price-desc') return [{ column: field, ascending: false }, { column: 'created_at', ascending: false }];
-  return [{ column: 'created_at', ascending: false }];
+  const premiumFirst = premiumSortPrefix();
+  if (sort === 'price-asc') {
+    return [...premiumFirst, { column: field, ascending: true }, { column: 'created_at', ascending: false }];
+  }
+  if (sort === 'price-desc') {
+    return [...premiumFirst, { column: field, ascending: false }, { column: 'created_at', ascending: false }];
+  }
+  return [...premiumFirst, { column: 'created_at', ascending: false }];
+}
+
+/** Strip premium_until from a sort spec (fallback when the column is not migrated yet). */
+function withoutPremiumSort(sortSpec = []) {
+  return (sortSpec || []).filter((s) => s.column !== 'premium_until');
+}
+
+function isPremiumActive(doc) {
+  if (!doc) return false;
+  const raw = doc.premiumUntil ?? doc.premium_until ?? null;
+  if (!raw) return false;
+  const ts = new Date(raw).getTime();
+  return Number.isFinite(ts) && ts > Date.now();
+}
+
+/**
+ * Stable partition: active Premium first (keeping relative order), then the rest.
+ * Needed because DB order by premium_until also floats *expired* timestamps above nulls.
+ */
+function prioritizeActivePremium(docs) {
+  if (!Array.isArray(docs) || docs.length === 0) return docs || [];
+  const premium = [];
+  const rest = [];
+  for (const doc of docs) {
+    if (isPremiumActive(doc)) premium.push(doc);
+    else rest.push(doc);
+  }
+  return [...premium, ...rest];
 }
 
 function escapeIlikeValue(value) {
@@ -146,6 +184,9 @@ module.exports = {
   applySort,
   parseSort,
   buildSort,
+  withoutPremiumSort,
+  isPremiumActive,
+  prioritizeActivePremium,
   buildIlikeOrFilter,
   buildCityIndex,
 };

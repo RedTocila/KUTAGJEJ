@@ -20,14 +20,26 @@ import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
 import { findOptionLabel, formatKilometers, formatPrice, relativeAlbanianDate } from './format-helpers';
+import {
+  ListingCardRating,
+  resolveListingCardRating,
+  type ListingCardRatingSummary,
+} from './listing-card-rating';
 import { SpecRow, type Spec } from './spec-row';
 
-export function CarCard({ listing }: { listing: PublicCarListing }) {
+export function CarCard({
+  listing,
+  sellerRating = null,
+}: {
+  listing: PublicCarListing;
+  sellerRating?: ListingCardRatingSummary | null;
+}) {
   const title = [listing.make, listing.model, listing.variant].filter(Boolean).join(' ');
   const viewCount = listing.viewCount ?? 0;
   const fuelLabel = findOptionLabel(FUEL_TYPE_OPTIONS, listing.fuelType);
   const transmissionLabel = findOptionLabel(TRANSMISSION_OPTIONS, listing.transmission);
   const colourLabel = findOptionLabel(CAR_COLOUR_OPTIONS, listing.color);
+  const cardRating = resolveListingCardRating(null, sellerRating);
 
   const specs: Spec[] = [
     { Icon: CalendarIcon, label: String(listing.year), title: 'Viti' },
@@ -45,7 +57,7 @@ export function CarCard({ listing }: { listing: PublicCarListing }) {
       prefetch={false}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-    <CardShell>
+    <CardShell premium={Boolean(listing.isPremium)}>
       <CardMedia
         listingKind="car"
         listingId={listing.id}
@@ -56,6 +68,26 @@ export function CarCard({ listing }: { listing: PublicCarListing }) {
         shareCount={listing.shareCount}
         saveCount={listing.saveCount}
         saved={listing.saved}
+        premium={Boolean(listing.isPremium)}
+        sharePayload={{
+          title,
+          category: listing.make,
+          priceLabel: formatPrice(listing.price, listing.currency),
+          badge: String(listing.year),
+          imageUrl: listing.imageUrl,
+          location: listing.cityName || undefined,
+          specs: [
+            { icon: 'calendar', label: String(listing.year) },
+            { icon: 'gauge', label: formatKilometers(listing.kilometers) },
+            { icon: 'gas', label: fuelLabel },
+            { icon: 'gear', label: transmissionLabel },
+            ...(listing.color ? [{ icon: 'paint' as const, label: colourLabel }] : []),
+          ],
+          createdAt: listing.createdAt,
+          viewCount,
+          saveCount: listing.saveCount,
+          url: listingCarPublicHref(listing),
+        }}
       />
       <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
         <Typography
@@ -80,7 +112,20 @@ export function CarCard({ listing }: { listing: PublicCarListing }) {
         >
           {title}
         </Typography>
-        <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: 'primary.main', lineHeight: 1.2 }}>
+        {cardRating ? (
+          <ListingCardRating
+            ratingAverage={cardRating.ratingAverage}
+            reviewCount={cardRating.reviewCount}
+          />
+        ) : null}
+        <Typography
+          sx={{
+            fontWeight: 800,
+            fontSize: '1.1rem',
+            color: listing.isPremium ? 'warning.main' : 'primary.main',
+            lineHeight: 1.2,
+          }}
+        >
           {formatPrice(listing.price, listing.currency)}
         </Typography>
 

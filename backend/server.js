@@ -8,6 +8,9 @@ const { ensureReferralProgram } = require('./lib/ensure-referral-program');
 const { ensureCreditPackages } = require('./lib/ensure-credit-packages');
 const { ensureContractPackages } = require('./lib/ensure-contract-packages');
 const { ensureHomeBanners } = require('./lib/ensure-home-banners');
+const { ensureAutoRefreshSchema } = require('./lib/ensure-auto-refresh-schema');
+const { ensurePremiumListingSchema } = require('./lib/ensure-premium-listing-schema');
+const { ensureMemberReviewsSchema } = require('./lib/ensure-member-reviews-schema');
 const { backfillMissingReferralCodes } = require('./lib/referrals');
 
 const app = express();
@@ -21,8 +24,8 @@ app.use(
   }),
 );
 app.use(corsMiddleware);
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.json({ limit: '30mb' }));
+app.use(express.urlencoded({ extended: true, limit: '30mb' }));
 
 let bootPromise = null;
 
@@ -40,6 +43,9 @@ async function bootstrap() {
   await ensureCreditPackages();
   await ensureContractPackages();
   await ensureHomeBanners();
+  await ensureAutoRefreshSchema();
+  await ensurePremiumListingSchema();
+  await ensureMemberReviewsSchema();
   await backfillMissingReferralCodes();
 }
 
@@ -120,6 +126,8 @@ app.use('/api/categories', require('./routes/categories'));
 app.use('/api/real-estate/locations', require('./routes/real-estate-locations'));
 app.use('/api/admin/real-estate/locations', require('./routes/admin-real-estate-locations'));
 app.use('/api/listings', require('./routes/listings'));
+app.use('/api/listings/refresh', require('./routes/listing-refresh'));
+app.use('/api/listings/convert-quota', require('./routes/listing-quota-convert'));
 app.use('/api/listings/cars', require('./routes/car-listings'));
 app.use('/api/listings/jobs', require('./routes/job-listings'));
 app.use('/api/listings/marketplace', require('./routes/marketplace-listings'));
@@ -128,9 +136,12 @@ app.use('/api/business-reviews', require('./routes/business-listing-reviews'));
 app.use('/api/business-reservations', require('./routes/business-reservations'));
 app.use('/api/conversations', require('./routes/conversations'));
 app.use('/api/professional-reviews', require('./routes/professional-listing-reviews'));
+app.use('/api/member-reviews', require('./routes/member-reviews'));
 app.use('/api/professional-verification', require('./routes/professional-verification'));
 app.use('/api/admin/professional-verification', require('./routes/admin-professional-verification'));
 app.use('/api/public/listings', require('./routes/public-listings'));
+app.use('/api/public/ai-search', require('./routes/ai-search'));
+app.use('/api/ai', require('./routes/ai-import'));
 app.use('/api/public/members', require('./routes/public-members'));
 app.use('/api/listing-metrics', require('./routes/listing-metrics'));
 app.use('/api/job-employer-verification', require('./routes/job-employer-verification'));

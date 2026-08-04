@@ -23,8 +23,10 @@ import {
   Typography,
 } from '@mui/material';
 import { PencilSimple as PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
+import { Shield as ShieldIcon } from '@phosphor-icons/react/dist/ssr/Shield';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
+import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { paths } from '@/paths';
 import type { Role } from '@/types/role';
 import { createRole, deleteRole, listRoles, updateRole } from '@/lib/admin-roles-client';
@@ -71,31 +73,29 @@ export default function RolesPage() {
 
   return (
     <Stack spacing={3}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            Rolet
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            <strong>Individual</strong> dhe <strong>Biznes</strong> janë rolet kryesore të platformës (krijohen
-            automatikisht). Shtoni role shtesë sipas nevojës; pastaj zgjidhni një rol kur krijoni përdorues në
-            Përdoruesit.
-          </Typography>
-        </Box>
-        <Button variant="contained" onClick={() => setCreateOpen(true)}>
-          Shto rol
-        </Button>
-      </Box>
+      <AdminPageHeader
+        icon={React.createElement(ShieldIcon, { size: 22, weight: 'duotone' })}
+        eyebrow="Ekipi"
+        title="Rolet"
+        description="Individual dhe Biznes janë role kryesore. Shtoni role shtesë, pastaj zgjidhini kur krijoni staf."
+        actions={
+          <Button variant="contained" onClick={() => setCreateOpen(true)}>
+            Shto rol
+          </Button>
+        }
+      />
 
       {loadError ? <Alert severity="error">{loadError}</Alert> : null}
 
-      <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'auto' }}>
+      <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2.5, overflow: 'auto', bgcolor: 'background.paper' }}>
         <Table size="small">
           <TableHead>
-            <TableRow>
-              <TableCell>Emri i rolit</TableCell>
-              <TableCell>Përshkrimi</TableCell>
-              <TableCell align="right">Veprime</TableCell>
+            <TableRow sx={{ bgcolor: 'action.hover' }}>
+              <TableCell sx={{ fontWeight: 700 }}>Emri i rolit</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Përshkrimi</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 700 }}>
+                Veprime
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>

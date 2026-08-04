@@ -20,6 +20,9 @@ import {
   Typography,
 } from '@mui/material';
 
+import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
+
+import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { paths } from '@/paths';
 import {
   listJobEmployerVerificationRequests,
@@ -84,24 +87,22 @@ export default function JobEmployerVerificationAdminPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ justifyContent: 'space-between', gap: 2 }}>
-        <Stack spacing={0.5}>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            Verifikimet — Punë
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Shqyrtoni kërkesat e punëdhënësve për shenjën e verifikuar në njoftimet e punës.
-          </Typography>
-        </Stack>
-        <Stack direction="row" spacing={1}>
-          <Button variant={filter === 'pending' ? 'contained' : 'outlined'} onClick={() => setFilter('pending')}>
-            Në pritje
-          </Button>
-          <Button variant={filter === 'all' ? 'contained' : 'outlined'} onClick={() => setFilter('all')}>
-            Të gjitha
-          </Button>
-        </Stack>
-      </Stack>
+      <AdminPageHeader
+        icon={React.createElement(ShieldCheckIcon, { size: 22, weight: 'duotone' })}
+        eyebrow="Verifikimet"
+        title="Punëdhënësit"
+        description="Shqyrtoni kërkesat e punëdhënësve për shenjën e verifikuar në njoftimet e punës."
+        actions={
+          <>
+            <Button variant={filter === 'pending' ? 'contained' : 'outlined'} onClick={() => setFilter('pending')}>
+              Në pritje
+            </Button>
+            <Button variant={filter === 'all' ? 'contained' : 'outlined'} onClick={() => setFilter('all')}>
+              Të gjitha
+            </Button>
+          </>
+        }
+      />
 
       {error ? <Alert severity="error">{error}</Alert> : null}
 

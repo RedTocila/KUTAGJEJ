@@ -31,6 +31,11 @@ import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 
 import { findOptionLabel, formatPrice } from './format-helpers';
 import { JobListingCountdownPlaceholder } from './job-listing-countdown';
+import {
+  ListingCardRating,
+  resolveListingCardRating,
+  type ListingCardRatingSummary,
+} from './listing-card-rating';
 import { SpecRow, type Spec } from './spec-row';
 
 const JobListingCountdown = dynamic(
@@ -44,7 +49,13 @@ function workLocationIcon(value: string) {
   return BuildingsIcon;
 }
 
-export function JobCard({ listing }: { listing: PublicJobListing }) {
+export function JobCard({
+  listing,
+  sellerRating = null,
+}: {
+  listing: PublicJobListing;
+  sellerRating?: ListingCardRatingSummary | null;
+}) {
   const viewCount = listing.viewCount ?? 0;
   const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const jobTypeLabel = findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType);
@@ -54,6 +65,7 @@ export function JobCard({ listing }: { listing: PublicJobListing }) {
   const salary =
     listing.salary != null ? `${formatPrice(listing.salary, listing.currency)} / muaj` : 'Pagë e diskutueshme';
   const expiresAt = listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
+  const cardRating = resolveListingCardRating(null, sellerRating);
 
   const WorkLocationIcon = workLocationIcon(listing.workLocation);
 
@@ -74,7 +86,7 @@ export function JobCard({ listing }: { listing: PublicJobListing }) {
       prefetch={false}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell>
+      <CardShell premium={Boolean(listing.isPremium)}>
       <CardMedia
         listingKind="job"
         listingId={listing.id}
@@ -85,6 +97,35 @@ export function JobCard({ listing }: { listing: PublicJobListing }) {
         shareCount={listing.shareCount}
         saveCount={listing.saveCount}
         saved={listing.saved}
+        premium={Boolean(listing.isPremium)}
+        sharePayload={{
+          title: listing.title,
+          category: industryLabel,
+          priceLabel: salary,
+          badge: jobTypeLabel,
+          imageUrl: listing.imageUrl,
+          location: listing.cityName || undefined,
+          specs: [
+            { icon: 'clock', label: jobTypeLabel },
+            {
+              icon:
+                listing.workLocation === 'remote'
+                  ? 'house'
+                  : listing.workLocation === 'hybrid'
+                    ? 'path'
+                    : 'buildings',
+              label: workLocationLabel,
+            },
+            { icon: 'star', label: experienceLabel },
+            ...(listing.education && listing.education !== 'no-requirement'
+              ? [{ icon: 'graduation' as const, label: educationLabel }]
+              : []),
+          ],
+          createdAt: listing.createdAt,
+          viewCount,
+          saveCount: listing.saveCount,
+          url: listingJobPublicHref(listing),
+        }}
       />
       <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
         <Typography
@@ -109,7 +150,20 @@ export function JobCard({ listing }: { listing: PublicJobListing }) {
         >
           {listing.title}
         </Typography>
-        <Typography sx={{ fontWeight: 800, fontSize: '1rem', color: 'primary.main', lineHeight: 1.2 }}>
+        {cardRating ? (
+          <ListingCardRating
+            ratingAverage={cardRating.ratingAverage}
+            reviewCount={cardRating.reviewCount}
+          />
+        ) : null}
+        <Typography
+          sx={{
+            fontWeight: 800,
+            fontSize: '1rem',
+            color: listing.isPremium ? 'warning.main' : 'primary.main',
+            lineHeight: 1.2,
+          }}
+        >
           {salary}
         </Typography>
 

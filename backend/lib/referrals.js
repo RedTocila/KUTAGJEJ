@@ -109,30 +109,55 @@ async function countPaidReferrals(referrerId, _referrerModel) {
   return count ?? 0;
 }
 
-/** Total reviews received across all of a user's directory listings (businesses + professionals). */
-async function countReceivedReviews(userId, _userModel) {
+/**
+ * Aggregate reviews received on a member's public profile and across their
+ * directory listings (businesses + professionals). Same pool as the Trusted referral badge.
+ * @returns {Promise<{ reviewCount: number, ratingAverage: number | null }>}
+ */
+async function getReceivedReviewStats(userId, _userModel) {
   const sb = getSupabaseAdmin();
-  const { data: listings, error: listErr } = await sb
-    .from('directory_listings')
-    .select('id')
-    .eq('poster_id', userId);
-  if (listErr) throw listErr;
-  if (!listings || listings.length === 0) return 0;
-
-  const listingIds = listings.map((l) => l.id);
-  const [businessRes, professionalRes] = await Promise.all([
-    sb
-      .from('business_listing_reviews')
-      .select('*', { count: 'exact', head: true })
-      .in('listing_id', listingIds),
-    sb
-      .from('professional_listing_reviews')
-      .select('*', { count: 'exact', head: true })
-      .in('listing_id', listingIds),
+  const [{ data: listings, error: listErr }, memberRes] = await Promise.all([
+    sb.from('directory_listings').select('id').eq('poster_id', userId),
+    sb.from('member_reviews').select('rating').eq('member_id', userId),
   ]);
-  if (businessRes.error) throw businessRes.error;
-  if (professionalRes.error) throw professionalRes.error;
-  return (businessRes.count ?? 0) + (professionalRes.count ?? 0);
+  if (listErr) throw listErr;
+
+  // Table may be missing until migration is applied — treat as zero member reviews.
+  const memberMissing =
+    memberRes.error &&
+    (memberRes.error.code === '42P01' ||
+      /member_reviews|does not exist|schema cache/i.test(String(memberRes.error.message || '')));
+  if (memberRes.error && !memberMissing) throw memberRes.error;
+
+  const listingIds = (listings || []).map((l) => l.id);
+  let listingRatings = [];
+  if (listingIds.length > 0) {
+    const [businessRes, professionalRes] = await Promise.all([
+      sb.from('business_listing_reviews').select('rating').in('listing_id', listingIds),
+      sb.from('professional_listing_reviews').select('rating').in('listing_id', listingIds),
+    ]);
+    if (businessRes.error) throw businessRes.error;
+    if (professionalRes.error) throw professionalRes.error;
+    listingRatings = [...(businessRes.data || []), ...(professionalRes.data || [])];
+  }
+
+  const ratings = [...(memberMissing ? [] : memberRes.data || []), ...listingRatings].map(
+    (row) => Number(row.rating) || 0,
+  );
+  const reviewCount = ratings.length;
+  if (reviewCount === 0) return { reviewCount: 0, ratingAverage: null };
+
+  const total = ratings.reduce((sum, value) => sum + value, 0);
+  return {
+    reviewCount,
+    ratingAverage: Math.round((total / reviewCount) * 10) / 10,
+  };
+}
+
+/** Total reviews received across all of a user's directory listings (businesses + professionals). */
+async function countReceivedReviews(userId, userModel) {
+  const stats = await getReceivedReviewStats(userId, userModel);
+  return stats.reviewCount;
 }
 
 function programField(program, camel, snake, fallback) {
@@ -331,8 +356,13 @@ async function processReferralOnSignup(newUser, referralCodeRaw) {
 
 async function ensureUserReferralCode(user) {
   if (user.referralCode && String(user.referralCode).trim()) return user.referralCode;
-  user.referralCode = await allocateUniqueReferralCode(user.id);
-  await user.save();
+  const code = await allocateUniqueReferralCode(user.id);
+  const { error } = await getSupabaseAdmin()
+    .from('profiles')
+    .update({ referral_code: code, updated_at: new Date().toISOString() })
+    .eq('id', user.id);
+  if (error) throw error;
+  user.referralCode = code;
   return user.referralCode;
 }
 
@@ -372,6 +402,7 @@ module.exports = {
   countFreeReferrals,
   countPaidReferrals,
   countReceivedReviews,
+  getReceivedReviewStats,
   resolveReferralBadges,
   processReferralOnSignup,
   ensureUserReferralCode,

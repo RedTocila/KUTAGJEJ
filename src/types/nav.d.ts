@@ -16,3 +16,11 @@ export interface NavItemConfig {
   // can extend it to accept multiple matchers.
   matcher?: { type: 'startsWith' | 'equals'; href: string };
 }
+
+/** Group of nav items under an optional section label. */
+export interface NavSectionConfig {
+  key: string;
+  /** Section label shown above items. Omit / null for unlabeled top items. */
+  title?: string | null;
+  items: NavItemConfig[];
+}

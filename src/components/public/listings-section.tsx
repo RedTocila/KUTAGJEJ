@@ -5,7 +5,9 @@ import RouterLink from 'next/link';
 import ArrowForward from '@mui/icons-material/ArrowForward';
 import { Box, Button, Container, Stack, Typography } from '@mui/material';
 
-import { findVertical, type HomeVerticalId } from '@/lib/home-categories';
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
+import { localizeVertical, type HomeVerticalId } from '@/lib/home-categories';
 
 import { SubcategoryPills } from './subcategory-pills';
 import { HomeVerticalIcon } from './home-vertical-icon';
@@ -18,6 +20,8 @@ export interface ListingsSectionProps {
   isEmpty: boolean;
   /** Override the H2 label (e.g. homepage “Njoftimet e fundit”). */
   titleOverride?: string;
+  /** Resolve title from i18n (`latestListings`). */
+  titleKey?: 'latestListings';
   /** Use `@mui/icons-material` category icons instead of PNG assets. */
   useMuiVerticalIcon?: boolean;
   /** Hide numeric total next to the title. */
@@ -38,6 +42,7 @@ export function ListingsSection({
   children,
   isEmpty,
   titleOverride,
+  titleKey,
   useMuiVerticalIcon = false,
   hideTotal = false,
   hideVerticalIcon = false,
@@ -45,8 +50,13 @@ export function ListingsSection({
   hideBrowseAction = false,
   compactTop = false,
 }: ListingsSectionProps) {
-  const vertical = findVertical(verticalId);
-  const title = titleOverride ?? vertical.label;
+  const { language } = useLanguage();
+  const t = useCopy();
+  const vertical = localizeVertical(verticalId, language);
+  const title =
+    titleKey === 'latestListings'
+      ? t.home.latestListings
+      : (titleOverride ?? vertical.label);
 
   return (
     <Box
@@ -118,7 +128,7 @@ export function ListingsSection({
               px: 1,
             }}
           >
-            Shfleto të gjitha
+            {t.common.browseAll}
           </Button>
           ) : null}
         </Stack>
@@ -132,7 +142,9 @@ export function ListingsSection({
 }
 
 function EmptyPlaceholder({ verticalId }: { verticalId: HomeVerticalId }) {
-  const vertical = findVertical(verticalId);
+  const { language } = useLanguage();
+  const t = useCopy();
+  const vertical = localizeVertical(verticalId, language);
   return (
     <Box
       sx={{
@@ -148,7 +160,7 @@ function EmptyPlaceholder({ verticalId }: { verticalId: HomeVerticalId }) {
       <Stack spacing={1.5} sx={{ alignItems: 'center' }}>
         <HomeVerticalIcon verticalId={verticalId} size={48} />
         <Typography variant="body2" color="text.secondary">
-          Nuk ka njoftime ende në {vertical.label.toLowerCase()}.
+          {t.common.noListingsYet(vertical.label.toLowerCase())}
         </Typography>
         <Button
           component={RouterLink}
@@ -157,7 +169,7 @@ function EmptyPlaceholder({ verticalId }: { verticalId: HomeVerticalId }) {
           variant="outlined"
           sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
         >
-          Bëhu i pari që poston
+          {t.common.beFirstToPost}
         </Button>
       </Stack>
     </Box>

@@ -50,9 +50,15 @@ function mapProfile(row) {
       referralCode: this.referralCode,
       referredById: this.referredById,
       boostCredits: this.boostCredits,
+      autoRefreshSlots: this.autoRefreshSlots,
       referralTiersClaimed: this.referralTiersClaimed,
+      dailyShareClaimedOn: this.dailyShareClaimedOn,
+      loginStreakDays: this.loginStreakDays,
+      loginStreakLastDay: this.loginStreakLastDay,
+      avatarUrl: this.avatarUrl,
       lastLogin: this.lastLogin,
       lastActive: this.lastActive,
+      accountType: this.accountType,
     });
     const { data, error } = await getSupabaseAdmin()
       .from('profiles')

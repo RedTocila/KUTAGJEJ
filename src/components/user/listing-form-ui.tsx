@@ -1,0 +1,189 @@
+'use client';
+
+import * as React from 'react';
+import {
+  Box,
+  Button,
+  Stack,
+  TextField,
+  Typography,
+  type ButtonProps,
+  type SxProps,
+  type Theme,
+  type TextFieldProps,
+} from '@mui/material';
+
+import { PortalIconBox } from '@/components/user/portal-cards';
+import { hardNavigate } from '@/lib/hard-navigate';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+
+/** Shared outlined field chrome — matches `SearchableSelect`. */
+export const listingOutlinedFieldSx = {
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 2.5,
+    bgcolor: 'background.paper',
+    transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
+    '&.Mui-focused': {
+      boxShadow: `0 0 0 3px ${primaryMainAlpha(0.12)}`,
+    },
+  },
+  '& .MuiInputLabel-root': {
+    fontWeight: 600,
+  },
+} as const;
+
+/**
+ * Text field with always-floating label + shared radius/focus so it matches
+ * `SearchableSelect` and other listing inputs.
+ */
+export const ListingTextField = React.forwardRef(function ListingTextField(
+  props: TextFieldProps,
+  ref: React.Ref<HTMLDivElement>,
+) {
+  const { slotProps, sx, ...rest } = props;
+  const inputLabelSlot =
+    typeof slotProps?.inputLabel === 'object' && slotProps.inputLabel !== null
+      ? slotProps.inputLabel
+      : {};
+
+  return (
+    <TextField
+      ref={ref}
+      {...rest}
+      slotProps={{
+        ...slotProps,
+        inputLabel: {
+          ...inputLabelSlot,
+          shrink: true,
+        },
+      }}
+      sx={[listingOutlinedFieldSx, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])]}
+    />
+  );
+});
+
+export function ListingFormSection({
+  icon,
+  title,
+  description,
+  action,
+  children,
+}: {
+  icon?: React.ReactNode;
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Box
+      sx={{
+        borderRadius: 2.75,
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: (t) =>
+          t.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
+        overflow: 'hidden',
+      }}
+    >
+      <Stack
+        direction="row"
+        spacing={1.25}
+        sx={{
+          alignItems: 'flex-start',
+          px: { xs: 1.75, sm: 2.25 },
+          pt: { xs: 1.75, sm: 2 },
+          pb: 1.5,
+        }}
+      >
+        {icon ? <PortalIconBox size={36}>{icon}</PortalIconBox> : null}
+        <Box sx={{ minWidth: 0, flex: 1, pt: 0.15 }}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}
+          >
+            <Typography sx={{ fontWeight: 800, fontSize: '0.98rem', letterSpacing: '-0.01em' }}>
+              {title}
+            </Typography>
+            {action}
+          </Stack>
+          {description ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35, lineHeight: 1.4 }}>
+              {description}
+            </Typography>
+          ) : null}
+        </Box>
+      </Stack>
+      <Box sx={{ px: { xs: 1.75, sm: 2.25 }, pb: { xs: 1.75, sm: 2.25 } }}>
+        <Stack spacing={1.75}>{children}</Stack>
+      </Box>
+    </Box>
+  );
+}
+
+const submitButtonSx = {
+  textTransform: 'none',
+  fontWeight: 800,
+  px: 3,
+  borderRadius: 2.25,
+  minHeight: 48,
+  width: { xs: '100%', sm: 'auto' },
+  boxShadow: 'none',
+  '&:hover': { boxShadow: 'none' },
+} as const;
+
+export function ListingFormActions({
+  submitLabel,
+  submitting = false,
+  disabled = false,
+  backHref,
+  backLabel = 'Kthehu',
+  submitProps,
+  sx,
+}: {
+  submitLabel: string;
+  submitting?: boolean;
+  disabled?: boolean;
+  backHref?: string;
+  backLabel?: string;
+  submitProps?: Omit<ButtonProps, 'type' | 'variant' | 'disabled' | 'children' | 'sx'>;
+  sx?: SxProps<Theme>;
+}) {
+  return (
+    <Stack
+      direction={{ xs: 'column-reverse', sm: 'row' }}
+      spacing={1.5}
+      sx={[
+        { justifyContent: 'flex-end', pt: 0.5 },
+        ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+      ]}
+    >
+      {backHref ? (
+        <Button
+          color="inherit"
+          variant="outlined"
+          onClick={() => hardNavigate(backHref)}
+          sx={{
+            textTransform: 'none',
+            fontWeight: 700,
+            borderRadius: 2.25,
+            minHeight: 48,
+            borderColor: 'divider',
+          }}
+        >
+          {backLabel}
+        </Button>
+      ) : null}
+      <Button
+        type="submit"
+        variant="contained"
+        disabled={disabled || submitting}
+        {...submitProps}
+        sx={submitButtonSx}
+      >
+        {submitting ? 'Duke ruajtur…' : submitLabel}
+      </Button>
+    </Stack>
+  );
+}

@@ -14,6 +14,7 @@ import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Stairs as StairsIcon } from '@phosphor-icons/react/dist/ssr/Stairs';
 
+import { useCopy } from '@/hooks/use-copy';
 import type { PublicRealEstateListing } from '@/lib/public-listings-client';
 import { propertyCategoryLabel } from '@/lib/real-estate-constants';
 import { listingRealEstatePublicHref } from '@/paths';
@@ -22,6 +23,11 @@ import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
 import { formatPrice, relativeAlbanianDate } from './format-helpers';
+import {
+  ListingCardRating,
+  resolveListingCardRating,
+  type ListingCardRatingSummary,
+} from './listing-card-rating';
 import { SpecRow, type Spec } from './spec-row';
 
 const FURNISHING_LABEL: Record<string, string> = {
@@ -31,10 +37,18 @@ const FURNISHING_LABEL: Record<string, string> = {
   'kitchen-only': 'Vetëm kuzhinë',
 };
 
-export function RealEstateCard({ listing }: { listing: PublicRealEstateListing }) {
+export function RealEstateCard({
+  listing,
+  sellerRating = null,
+}: {
+  listing: PublicRealEstateListing;
+  sellerRating?: ListingCardRatingSummary | null;
+}) {
+  const t = useCopy();
   const location = [listing.zoneName, listing.cityName].filter(Boolean).join(', ');
-  const transactionLabel = listing.transactionType === 'rent' ? 'Me qira' : 'Në shitje';
+  const transactionLabel = listing.transactionType === 'rent' ? t.common.forRent : t.common.forSale;
   const viewCount = listing.viewCount ?? 0;
+  const cardRating = resolveListingCardRating(null, sellerRating);
 
   const specs: Spec[] = [
     ...(listing.bedrooms != null ? [{ Icon: BedIcon, label: `${listing.bedrooms}`, title: 'Dhoma gjumi' }] : []),
@@ -46,6 +60,20 @@ export function RealEstateCard({ listing }: { listing: PublicRealEstateListing }
       : []),
     ...(listing.furnishing
       ? [{ Icon: CouchIcon, label: FURNISHING_LABEL[listing.furnishing] ?? listing.furnishing, title: 'Mobilim' }]
+      : []),
+  ];
+
+  const priceLabel =
+    formatPrice(listing.price, listing.currency) + (listing.transactionType === 'rent' ? ' / muaj' : '');
+
+  const shareSpecs = [
+    ...(listing.bedrooms != null ? [{ icon: 'bed' as const, label: `${listing.bedrooms}` }] : []),
+    ...(listing.bathrooms != null ? [{ icon: 'bath' as const, label: `${listing.bathrooms}` }] : []),
+    { icon: 'ruler' as const, label: `${listing.surfaceM2} m²` },
+    ...(listing.floor != null ? [{ icon: 'stairs' as const, label: `Kati ${listing.floor}` }] : []),
+    ...(listing.yearBuilt != null ? [{ icon: 'calendar' as const, label: String(listing.yearBuilt) }] : []),
+    ...(listing.furnishing
+      ? [{ icon: 'couch' as const, label: FURNISHING_LABEL[listing.furnishing] ?? listing.furnishing }]
       : []),
   ];
 
@@ -62,7 +90,7 @@ export function RealEstateCard({ listing }: { listing: PublicRealEstateListing }
       }}
       aria-labelledby={`listing-card-title-${listing.id}`}
     >
-      <CardShell>
+      <CardShell premium={Boolean(listing.isPremium)}>
         <CardMedia
           listingKind="real-estate"
           listingId={listing.id}
@@ -73,6 +101,20 @@ export function RealEstateCard({ listing }: { listing: PublicRealEstateListing }
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
+          premium={Boolean(listing.isPremium)}
+          sharePayload={{
+            title: listing.title,
+            category: propertyCategoryLabel(listing.propertyCategory),
+            priceLabel,
+            badge: transactionLabel,
+            imageUrl: listing.imageUrl,
+            location: location || undefined,
+            specs: shareSpecs,
+            createdAt: listing.createdAt,
+            viewCount,
+            saveCount: listing.saveCount,
+            url: listingRealEstatePublicHref(listing),
+          }}
         />
         <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
         <Typography
@@ -98,7 +140,20 @@ export function RealEstateCard({ listing }: { listing: PublicRealEstateListing }
         >
           {listing.title}
         </Typography>
-        <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: 'primary.main', lineHeight: 1.2 }}>
+        {cardRating ? (
+          <ListingCardRating
+            ratingAverage={cardRating.ratingAverage}
+            reviewCount={cardRating.reviewCount}
+          />
+        ) : null}
+        <Typography
+          sx={{
+            fontWeight: 800,
+            fontSize: '1.1rem',
+            color: listing.isPremium ? 'warning.main' : 'primary.main',
+            lineHeight: 1.2,
+          }}
+        >
           {formatPrice(listing.price, listing.currency)}
           {listing.transactionType === 'rent' ? (
             <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 500 }}>

@@ -2,8 +2,19 @@
 
 import * as React from 'react';
 import { Box, IconButton, Stack, Typography } from '@mui/material';
+import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
-import { Image as ImageIcon } from '@phosphor-icons/react/dist/ssr/Image';
+
+const THUMB_SX = {
+  position: 'relative',
+  width: 96,
+  height: 80,
+  borderRadius: 1.5,
+  overflow: 'hidden',
+  border: '1px solid',
+  borderColor: 'divider',
+  flexShrink: 0,
+} as const;
 
 interface ImagePreviewProps {
   file: File;
@@ -22,18 +33,7 @@ function ImagePreview({ file, onRemove }: ImagePreviewProps) {
   }, [file]);
 
   return (
-    <Box
-      sx={{
-        position: 'relative',
-        width: 96,
-        height: 80,
-        borderRadius: 1.5,
-        overflow: 'hidden',
-        border: '1px solid',
-        borderColor: 'divider',
-        flexShrink: 0,
-      }}
-    >
+    <Box sx={THUMB_SX}>
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -61,9 +61,36 @@ function ImagePreview({ file, onRemove }: ImagePreviewProps) {
   );
 }
 
+function UrlPreview({ url, onRemove }: { url: string; onRemove: () => void }) {
+  return (
+    <Box sx={THUMB_SX}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+      <IconButton
+        size="small"
+        onClick={onRemove}
+        sx={{
+          position: 'absolute',
+          top: 2,
+          right: 2,
+          bgcolor: 'rgba(0,0,0,0.55)',
+          color: '#fff',
+          p: 0.25,
+          '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
+        }}
+      >
+        <XIcon size={12} weight="bold" />
+      </IconButton>
+    </Box>
+  );
+}
+
 export interface ListingImagePickerProps {
   value: File[];
   onChange: (files: File[]) => void;
+  /** Already-uploaded image URLs (edit mode). */
+  existingUrls?: string[];
+  onExistingUrlsChange?: (urls: string[]) => void;
   max?: number;
   label?: string;
   disabled?: boolean;
@@ -77,21 +104,29 @@ export interface ListingImagePickerProps {
 export function ListingImagePicker({
   value,
   onChange,
+  existingUrls = [],
+  onExistingUrlsChange,
   max = 5,
   label = 'Foto',
   disabled = false,
 }: ListingImagePickerProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const total = existingUrls.length + value.length;
+  const slotsLeft = Math.max(0, max - total);
 
   const handleFileChange = (ev: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(ev.target.files ?? []);
     if (!picked.length) return;
-    onChange([...value, ...picked].slice(0, max));
+    onChange([...value, ...picked].slice(0, slotsLeft + value.length));
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const removeImage = (index: number) => {
     onChange(value.filter((_, i) => i !== index));
+  };
+
+  const removeExisting = (index: number) => {
+    onExistingUrlsChange?.(existingUrls.filter((_, i) => i !== index));
   };
 
   return (
@@ -101,7 +136,7 @@ export function ListingImagePicker({
           {label}
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          {value.length} / {max}
+          {total} / {max}
         </Typography>
       </Stack>
 
@@ -109,58 +144,68 @@ export function ListingImagePicker({
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        multiple
+        multiple={max > 1}
         style={{ display: 'none' }}
         onChange={handleFileChange}
       />
 
-      {value.length > 0 ? (
-        <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.5 }}>
-          {value.map((img, idx) => (
-            <ImagePreview
-              key={`${img.name}-${idx}`}
-              file={img}
-              onRemove={() => {
-                removeImage(idx);
-              }}
-            />
-          ))}
-        </Stack>
-      ) : null}
+      <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.5 }}>
+        {existingUrls.map((url, idx) => (
+          <UrlPreview
+            key={`url-${url}-${idx}`}
+            url={url}
+            onRemove={() => {
+              removeExisting(idx);
+            }}
+          />
+        ))}
+        {value.map((img, idx) => (
+          <ImagePreview
+            key={`${img.name}-${idx}`}
+            file={img}
+            onRemove={() => {
+              removeImage(idx);
+            }}
+          />
+        ))}
+        {slotsLeft > 0 && !disabled ? (
+          <Box
+            component="button"
+            type="button"
+            aria-label="Shto foto"
+            onClick={() => {
+              fileInputRef.current?.click();
+            }}
+            sx={{
+              ...THUMB_SX,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderStyle: 'dashed',
+              borderWidth: 2,
+              bgcolor: 'transparent',
+              cursor: 'pointer',
+              color: 'text.secondary',
+              p: 0,
+              font: 'inherit',
+              transition: 'border-color 0.15s, color 0.15s, background-color 0.15s',
+              '&:hover': {
+                borderColor: 'primary.main',
+                color: 'primary.main',
+                bgcolor: (t) =>
+                  t.palette.mode === 'dark' ? 'rgba(130, 201, 30, 0.08)' : 'rgba(118, 186, 27, 0.06)',
+              },
+            }}
+          >
+            <PlusIcon size={28} weight="bold" />
+          </Box>
+        ) : null}
+      </Stack>
 
-      {value.length < max && !disabled ? (
-        <Box
-          onClick={() => {
-            fileInputRef.current?.click();
-          }}
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 1,
-            p: 3,
-            border: '2px dashed',
-            borderColor: 'divider',
-            borderRadius: 2,
-            cursor: 'pointer',
-            color: 'text.secondary',
-            transition: 'border-color 0.15s, color 0.15s',
-            '&:hover': {
-              borderColor: 'primary.main',
-              color: 'primary.main',
-            },
-          }}
-        >
-          <ImageIcon size={32} />
-          <Typography variant="body2" sx={{ textAlign: 'center' }}>
-            Kliko për të shtuar foto
-            <br />
-            <Typography component="span" variant="caption" color="text.disabled">
-              Deri në {max} foto · JPG, PNG, WEBP
-            </Typography>
-          </Typography>
-        </Box>
+      {slotsLeft > 0 && !disabled ? (
+        <Typography variant="caption" color="text.disabled">
+          {max === 1 ? '1 foto · JPG, PNG, WEBP' : `Deri në ${max} foto · JPG, PNG, WEBP`}
+        </Typography>
       ) : null}
     </Stack>
   );

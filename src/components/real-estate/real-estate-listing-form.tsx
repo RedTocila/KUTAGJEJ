@@ -1,10 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
 import {
   Alert,
-  Button,
   Divider,
   FormControl,
   FormControlLabel,
@@ -13,9 +11,10 @@ import {
   Radio,
   RadioGroup,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
+import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
+import { Images as ImagesIcon } from '@phosphor-icons/react/dist/ssr/Images';
 
 import {
   CONDITION_OPTIONS,
@@ -31,26 +30,22 @@ import {
   TRANSACTION_OPTIONS,
 } from '@/lib/real-estate-constants';
 import { SearchableSelect } from '@/components/core/searchable-select';
+import {
+  ListingFormActions,
+  ListingFormSection,
+  ListingTextField,
+} from '@/components/user/listing-form-ui';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import type { RealEstatePropertySlug } from '@/lib/real-estate-constants';
 import { useUser } from '@/hooks/use-user';
-import { createRealEstateListing, type RealEstateListingPayload } from '@/lib/listings-client';
+import { createRealEstateListing, updateRealEstateListing, type RealEstateListingPayload } from '@/lib/listings-client';
 import { uploadListingImages } from '@/lib/uploads-client';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
+import { contactPhoneFromStorage, resolveContactPhone } from '@/lib/listing-form-defaults';
 
 const MAX_REAL_ESTATE_IMAGES = 8;
 
-function contactPhoneInitialFromStorage(): string {
-  if (typeof window === 'undefined') return '';
-  try {
-    const raw = localStorage.getItem('user-data');
-    if (!raw) return '';
-    const u = JSON.parse(raw) as { phone?: string };
-    return typeof u.phone === 'string' ? u.phone.trim() : '';
-  } catch {
-    return '';
-  }
-}
 
 export interface RealEstateListingFormProps {
   /** Called after a successful save (e.g. redirect to dashboard). */
@@ -58,6 +53,9 @@ export interface RealEstateListingFormProps {
   /** Optional back link shown next to submit. */
   backHref?: string;
   backLabel?: string;
+  /** When set, form updates this listing instead of creating. */
+  editListingId?: string;
+  initialListing?: RealEstateMineListing | null;
 }
 
 type FormState = {
@@ -204,15 +202,41 @@ function buildPayload(f: FormState): RealEstateListingPayload {
   return payload;
 }
 
+function formFromListing(l: RealEstateMineListing): FormState {
+  return {
+    propertyCategory: (l.propertyCategory as RealEstatePropertySlug) || '',
+    title: l.title || '',
+    description: l.description || '',
+    transactionType: l.transactionType === 'rent' || l.transactionType === 'sale' ? l.transactionType : '',
+    price: l.price != null ? String(l.price) : '',
+    surfaceM2: l.surfaceM2 != null ? String(l.surfaceM2) : '',
+    cityId: l.cityId ? String(l.cityId) : '',
+    zoneId: l.zoneId ? String(l.zoneId) : '',
+    currency: l.currency === 'EUR' || l.currency === 'LEK' ? l.currency : '',
+    condition: (l.condition as FormState['condition']) || '',
+    floor: l.floor != null ? String(l.floor) : '',
+    totalFloors: l.totalFloors != null ? String(l.totalFloors) : '',
+    parkingFloor: l.parkingFloor != null ? String(l.parkingFloor) : '',
+    bedrooms: l.bedrooms != null ? String(l.bedrooms) : '',
+    bathrooms: l.bathrooms != null ? String(l.bathrooms) : '',
+    furnishing: (l.furnishing as FormState['furnishing']) || '',
+    yearBuilt: l.yearBuilt != null ? String(l.yearBuilt) : '',
+    contactPhone: l.contactPhone || '',
+  };
+}
+
 export function RealEstateListingForm(props: RealEstateListingFormProps) {
-  const { onSuccess, backHref, backLabel = 'Prapa' } = props;
+  const { onSuccess, backHref, backLabel = 'Prapa', editListingId, initialListing } = props;
+  const isEdit = Boolean(editListingId);
   const { user } = useUser();
-  const [form, setForm] = React.useState<FormState>(() => ({
-    ...emptyForm(),
-    contactPhone: contactPhoneInitialFromStorage(),
-  }));
+  const [form, setForm] = React.useState<FormState>(() =>
+    initialListing ? formFromListing(initialListing) : { ...emptyForm(), contactPhone: contactPhoneFromStorage() },
+  );
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [images, setImages] = React.useState<File[]>([]);
+  const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(
+    () => (initialListing?.imageUrls ?? []).filter(Boolean),
+  );
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [loadingRefs, setLoadingRefs] = React.useState(false);
@@ -225,9 +249,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
 
   React.useEffect(() => {
     let cancelled = false;
-    setForm((prev) => ({ ...emptyForm(), contactPhone: prev.contactPhone }));
     setLoadError(null);
-    setSubmitError(null);
     setLoadingRefs(true);
     void (async () => {
       const locRes = await listRealEstateLocationsPublic();
@@ -246,19 +268,26 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
   }, []);
 
   React.useEffect(() => {
-    if (!user) return;
+    if (!initialListing) return;
+    setForm(formFromListing(initialListing));
+    setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
+    setImages([]);
+  }, [initialListing]);
+
+  React.useEffect(() => {
+    if (!user || isEdit) return;
     const isPortal =
       user.accountType === 'individual' ||
       user.accountType === 'business' ||
       user.role === 'business-user';
     if (!isPortal) return;
-    const p = typeof user.phone === 'string' ? user.phone.trim() : '';
+    const p = resolveContactPhone(user);
     if (!p) return;
     setForm((prev) => {
       if (prev.contactPhone.trim()) return prev;
       return { ...prev, contactPhone: p };
     });
-  }, [user]);
+  }, [user, isEdit]);
 
   const onField =
     (key: keyof FormState) =>
@@ -277,17 +306,21 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
     setSubmitting(true);
     try {
       const payload = buildPayload(form);
+      let uploaded: string[] = [];
       if (images.length) {
         const up = await uploadListingImages(images, 'real-estate');
         if (up.error) {
           setSubmitError(up.error);
           return;
         }
-        payload.imageUrls = up.urls;
+        uploaded = up.urls;
       }
-      const { error } = await createRealEstateListing(payload);
-      if (error) {
-        setSubmitError(error);
+      payload.imageUrls = [...existingImageUrls, ...uploaded].slice(0, MAX_REAL_ESTATE_IMAGES);
+      const result = isEdit && editListingId
+        ? await updateRealEstateListing(editListingId, payload)
+        : await createRealEstateListing(payload);
+      if (result.error) {
+        setSubmitError(result.error);
         return;
       }
       onSuccess?.();
@@ -299,25 +332,25 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
   const cat = form.propertyCategory;
 
   return (
-    <Stack component="form" spacing={2.5} onSubmit={(e) => void handleSubmit(e)}>
-      <Typography variant="body2" color="text.secondary">
-        Pasuri e paluajtshme. Plotësoni fillimisht titullin, përshkrimin dhe llojin e pronës; fushat e tjera varen nga
-        lloji që zgjidhni.
-      </Typography>
-
+    <Stack component="form" spacing={2.25} onSubmit={(e) => void handleSubmit(e)}>
       {loadError ? (
-        <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
+        <Alert severity="warning" sx={{ borderRadius: 2 }}>
           {loadError}
         </Alert>
       ) : null}
       {submitError ? (
-        <Alert severity="error" sx={{ borderRadius: 1.5 }}>
+        <Alert severity="error" sx={{ borderRadius: 2 }}>
           {submitError}
         </Alert>
       ) : null}
 
-      <TextField label="Titulli" value={form.title} onChange={onField('title')} required fullWidth />
-      <TextField
+      <ListingFormSection
+        icon={<BuildingsIcon size={20} weight="duotone" />}
+        title="Detajet e njoftimit"
+        description="Plotësoni titullin, llojin e pronës dhe fushat e tjera sipas kategorisë."
+      >
+      <ListingTextField label="Titulli" value={form.title} onChange={onField('title')} required fullWidth />
+      <ListingTextField
         label="Përshkrimi"
         value={form.description}
         onChange={onField('description')}
@@ -351,7 +384,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
       </FormControl>
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-        <TextField
+        <ListingTextField
           label="Çmimi"
           type="text"
           inputMode="decimal"
@@ -397,7 +430,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         </Typography>
       ) : null}
 
-      <TextField
+      <ListingTextField
         label="Sipërfaqja"
         type="text"
         inputMode="decimal"
@@ -435,7 +468,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
       ) : null}
 
       {needsFloor(cat) ? (
-        <TextField
+        <ListingTextField
           label="Kati"
           type="text"
           inputMode="numeric"
@@ -448,7 +481,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
       ) : null}
 
       {needsTotalFloors(cat) ? (
-        <TextField
+        <ListingTextField
           label="Numri i kateve (prona)"
           type="text"
           inputMode="numeric"
@@ -461,7 +494,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
       ) : null}
 
       {needsParkingFloor(cat) ? (
-        <TextField
+        <ListingTextField
           label="Niveli i parkimit"
           type="text"
           inputMode="numeric"
@@ -475,7 +508,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
 
       {needsBedroomsBathFurnishing(cat) ? (
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <TextField
+          <ListingTextField
             label="Dhoma gjumi"
             type="text"
             inputMode="numeric"
@@ -484,7 +517,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
             required
             fullWidth
           />
-          <TextField
+          <ListingTextField
             label="Banjo"
             type="text"
             inputMode="numeric"
@@ -509,7 +542,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
       ) : null}
 
       {needsYearBuilt(cat) ? (
-        <TextField
+        <ListingTextField
           label="Viti i ndërtimit"
           type="text"
           inputMode="numeric"
@@ -520,7 +553,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         />
       ) : null}
 
-      <TextField
+      <ListingTextField
         label="Numri i telefonit"
         type="tel"
         inputMode="tel"
@@ -532,25 +565,31 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         helperText="I shfaqet personave të interesuar për këtë njoftim. Është paraplotësuar nga llogaria juaj nëse keni shtuar një numër gjatë regjistrimit ose në profil — mund ta ndryshoni këtu."
       />
 
-      <Divider sx={{ my: 1 }} />
-      <ListingImagePicker
-        value={images}
-        onChange={setImages}
-        max={MAX_REAL_ESTATE_IMAGES}
-        label="Foto"
-        disabled={submitting}
-      />
+      </ListingFormSection>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ pt: 1, justifyContent: 'flex-end' }}>
-        {backHref ? (
-          <Button component={RouterLink} href={backHref} variant="outlined" color="inherit">
-            {backLabel}
-          </Button>
-        ) : null}
-        <Button type="submit" variant="contained" disabled={submitting || loadingRefs}>
-          {submitting ? 'Po ruhet…' : 'Ruaj njoftimin'}
-        </Button>
-      </Stack>
+      <ListingFormSection
+        icon={<ImagesIcon size={20} weight="duotone" />}
+        title="Foto"
+        description="Shtoni foto të qarta të pronës."
+      >
+        <ListingImagePicker
+          value={images}
+          onChange={setImages}
+          existingUrls={existingImageUrls}
+          onExistingUrlsChange={setExistingImageUrls}
+          max={MAX_REAL_ESTATE_IMAGES}
+          label="Foto"
+          disabled={submitting}
+        />
+      </ListingFormSection>
+
+      <ListingFormActions
+        submitLabel={isEdit ? 'Përditëso njoftimin' : 'Ruaj njoftimin'}
+        submitting={submitting}
+        disabled={loadingRefs}
+        backHref={backHref}
+        backLabel={backLabel}
+      />
     </Stack>
   );
 }

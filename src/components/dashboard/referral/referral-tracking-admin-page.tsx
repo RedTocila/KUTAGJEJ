@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
 
+import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { usePlatformAdminGuard } from '@/hooks/use-platform-admin';
 import {
   fetchAdminReferralOverview,
@@ -89,17 +90,12 @@ export function ReferralTrackingAdminPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-        <HandshakeIcon size={28} weight="duotone" />
-        <Stack spacing={0.25}>
-          <Typography variant="h4" sx={{ fontWeight: 800 }}>
-            Gjurmimi i referimeve
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Shiko kush ka referuar, kush u referua dhe sa Boost Credits u dhanë.
-          </Typography>
-        </Stack>
-      </Stack>
+      <AdminPageHeader
+        icon={React.createElement(HandshakeIcon, { size: 22, weight: 'duotone' })}
+        eyebrow="Rritja"
+        title="Gjurmimi i referimeve"
+        description="Shiko kush ka referuar, kush u referua dhe sa Boost Credits u dhanë."
+      />
 
       {error ? <Alert severity="error">{error}</Alert> : null}
 

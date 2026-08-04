@@ -13,7 +13,6 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -24,10 +23,12 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { PencilSimple as PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 
+import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { paths } from '@/paths';
 import {
   createRealEstateCity,
@@ -118,7 +119,7 @@ export default function RealEstateLocationsAdminPage() {
     setFormError(null);
     const name = cityName.trim();
     if (!name) {
-      setFormError('City name is required.');
+      setFormError('Emri i qytetit është i detyrueshëm.');
       return;
     }
     const zones = zonesFromLines(zonesText);
@@ -171,31 +172,17 @@ export default function RealEstateLocationsAdminPage() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Paper
-        elevation={0}
-        sx={{
-          overflow: 'hidden',
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          px: { xs: 2, sm: 3 },
-          py: { xs: 2.5, sm: 3 },
-        }}
-      >
-        <Typography variant="overline" sx={{ letterSpacing: '0.12em', color: 'primary.main', fontWeight: 700 }}>
-          Prona
-        </Typography>
-        <Typography variant="h4" sx={{ fontWeight: 800, mt: 0.5 }}>
-          Cities & zones
-        </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mt: 1, maxWidth: 720 }}>
-          These locations power the city and zone dropdowns on the user real-estate listing form (English UI). Use one
-          zone per line when editing.
-        </Typography>
-        <Button sx={{ mt: 2 }} variant="contained" startIcon={React.createElement(PlusIcon, { size: 20 })} onClick={openCreate}>
-          Add city
-        </Button>
-      </Paper>
+      <AdminPageHeader
+        icon={React.createElement(MapPinIcon, { size: 22, weight: 'duotone' })}
+        eyebrow="Përmbajtja"
+        title="Vendndodhjet"
+        description="Qytetet dhe zonat për dropdown-et e formës së pronave. Një zonë për rresht kur redaktoni."
+        actions={
+          <Button variant="contained" startIcon={React.createElement(PlusIcon, { size: 20 })} onClick={openCreate}>
+            Shto qytet
+          </Button>
+        }
+      />
 
       {loadError ? (
         <Alert severity="error" sx={{ borderRadius: 2 }}>
@@ -209,24 +196,24 @@ export default function RealEstateLocationsAdminPage() {
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ bgcolor: 'action.hover' }}>
-                  <TableCell sx={{ fontWeight: 700 }}>City</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Qyteti</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Slug</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Zones</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Zonat</TableCell>
                   <TableCell align="right" width={120} sx={{ fontWeight: 700 }}>
-                    Actions
+                    Veprime
                   </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={4}>Loading…</TableCell>
+                    <TableCell colSpan={4}>Duke u ngarkuar…</TableCell>
                   </TableRow>
                 ) : cities.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4}>
                       <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                        No cities yet. Add Tirana, Durrës, etc., then list zones (neighbourhoods) one per line.
+                        Nuk ka ende qytete. Shtoni Tiranë, Durrës, etj., pastaj listoni zonat një për rresht.
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -258,41 +245,35 @@ export default function RealEstateLocationsAdminPage() {
       </Card>
 
       <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ fontWeight: 700 }}>{editing ? 'Edit city' : 'Add city'}</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>{editing ? 'Ndrysho qytetin' : 'Shto qytet'}</DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            {formError ? (
-              <Alert severity="error" sx={{ borderRadius: 1.5 }}>
-                {formError}
-              </Alert>
-            ) : null}
-            <TextField label="City name" value={cityName} onChange={(e) => setCityName(e.target.value)} required fullWidth />
+          <Stack spacing={2} sx={{ pt: 1, minWidth: { sm: 420 } }}>
+            {formError ? <Alert severity="error">{formError}</Alert> : null}
+            <TextField label="Emri i qytetit" value={cityName} onChange={(e) => setCityName(e.target.value)} required fullWidth />
             <TextField
-              label="City slug (optional)"
+              label="Slug (opsionale)"
               value={citySlug}
               onChange={(e) => setCitySlug(e.target.value)}
               fullWidth
-              helperText="Lowercase, Latin letters and hyphens. Leave empty to derive from the name."
+              helperText="Lëreni bosh për ta gjeneruar automatikisht."
             />
             <TextField
-              label="Zones"
+              label="Zonat"
               value={zonesText}
               onChange={(e) => setZonesText(e.target.value)}
-              required
               fullWidth
               multiline
-              minRows={6}
-              placeholder={'Blloku\n21 Dhjetori\nLapraka'}
-              helperText="One zone (area / neighbourhood) per line."
+              minRows={4}
+              helperText="Një zonë për rresht."
             />
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={closeDialog} color="inherit">
-            Cancel
+          <Button onClick={closeDialog} disabled={pending}>
+            Anulo
           </Button>
           <Button variant="contained" onClick={() => void saveCity()} disabled={pending}>
-            {pending ? 'Saving…' : 'Save'}
+            {pending ? 'Duke ruajtur…' : 'Ruaj'}
           </Button>
         </DialogActions>
       </Dialog>

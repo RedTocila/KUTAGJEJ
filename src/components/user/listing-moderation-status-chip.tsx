@@ -28,8 +28,19 @@ export function ListingModerationStatusChip({
       size={size}
       label={LISTING_MODERATION_STATUS_LABELS[normalized]}
       color={chipColor(normalized)}
-      variant={normalized === 'approved' ? 'outlined' : 'filled'}
-      sx={{ fontWeight: 700 }}
+      variant="filled"
+      sx={{
+        fontWeight: 800,
+        letterSpacing: '0.01em',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.35)',
+        ...(normalized === 'approved'
+          ? {
+              bgcolor: 'success.main',
+              color: 'success.contrastText',
+              '& .MuiChip-label': { px: 1 },
+            }
+          : null),
+      }}
     />
   );
 }

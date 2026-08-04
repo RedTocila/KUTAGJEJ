@@ -28,6 +28,7 @@ import { PencilSimple as PencilIcon } from '@phosphor-icons/react/dist/ssr/Penci
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
+import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { usePlatformAdminGuard } from '@/hooks/use-platform-admin';
 import {
   createHomeBanner,
@@ -278,30 +279,24 @@ export function HomeBannersAdminPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={2}
-        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
-      >
-        <Box>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-            Bannerat e homepage
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Postet e karuselit në krye të faqes kryesore. E gjithë karta është e klikueshme.
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<PlusIcon />}
-          onClick={() => {
-            setEditing(null);
-            setDialogOpen(true);
-          }}
-        >
-          Shto banner
-        </Button>
-      </Stack>
+      <AdminPageHeader
+        icon={React.createElement(ImageIcon, { size: 22, weight: 'duotone' })}
+        eyebrow="Përmbajtja"
+        title="Bannerat"
+        description="Postet e karuselit në krye të faqes kryesore. E gjithë karta është e klikueshme."
+        actions={
+          <Button
+            variant="contained"
+            startIcon={<PlusIcon />}
+            onClick={() => {
+              setEditing(null);
+              setDialogOpen(true);
+            }}
+          >
+            Shto banner
+          </Button>
+        }
+      />
 
       {error ? (
         <Alert severity="error" sx={{ borderRadius: 2 }}>

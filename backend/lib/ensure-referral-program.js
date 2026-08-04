@@ -60,16 +60,16 @@ const DEFAULT_DOC = {
   ],
   trusted_reviewer_badge: {
     label: 'Trusted',
-    lifetimePercent: 3,
+    lifetimePercent: 5,
     reviewsRequired: 100,
-    description: '3% Lifetime kur arrin pragun e vlerësimeve.',
+    description: '5% Lifetime kur arrin pragun e vlerësimeve.',
   },
   completion_title: 'Completed All Referral',
   completion_subtitle: 'Kur përmbush të gjitha nivelet e sistemit të referimit.',
   platform_dominator_badge: {
     label: 'Platform Dominator',
-    lifetimePercent: 18,
-    description: '18% Lifetime për përfundimin e plotë të programit të referimit.',
+    lifetimePercent: 20,
+    description: '20% Lifetime për përfundimin e plotë të programit të referimit.',
   },
   login_streak_title: 'Log In streak',
   login_streak_subtitle: 'Angazhim i qëndrueshëm në platformë.',
@@ -184,17 +184,51 @@ async function ensureReferralProgram() {
   const sb = getSupabaseAdmin();
   const { data: existing, error: findErr } = await sb
     .from('referral_programs')
-    .select('id')
+    .select('id, trusted_reviewer_badge, platform_dominator_badge')
     .eq('id', 'default')
     .maybeSingle();
   if (findErr) throw findErr;
-  if (existing) return;
 
-  const { error } = await sb.from('referral_programs').insert({
-    ...DEFAULT_DOC,
-    updated_at: new Date().toISOString(),
-  });
-  if (error) throw error;
+  if (!existing) {
+    const { error } = await sb.from('referral_programs').insert({
+      ...DEFAULT_DOC,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+    return;
+  }
+
+  // Migrate old defaults: Trusted 3% → 5%, Platform Dominator 18% → 20% (10+5+5).
+  const trusted = existing.trusted_reviewer_badge || {};
+  const dominator = existing.platform_dominator_badge || {};
+  const patch = {};
+  if (Number(trusted.lifetimePercent) === 3) {
+    patch.trusted_reviewer_badge = {
+      ...trusted,
+      lifetimePercent: 5,
+      description:
+        trusted.description === '3% Lifetime kur arrin pragun e vlerësimeve.'
+          ? DEFAULT_DOC.trusted_reviewer_badge.description
+          : trusted.description,
+    };
+  }
+  if (Number(dominator.lifetimePercent) === 18) {
+    patch.platform_dominator_badge = {
+      ...dominator,
+      lifetimePercent: 20,
+      description:
+        dominator.description === '18% Lifetime për përfundimin e plotë të programit të referimit.'
+          ? DEFAULT_DOC.platform_dominator_badge.description
+          : dominator.description,
+    };
+  }
+  if (Object.keys(patch).length === 0) return;
+
+  const { error: updateErr } = await sb
+    .from('referral_programs')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('id', 'default');
+  if (updateErr) throw updateErr;
 }
 
 module.exports = {

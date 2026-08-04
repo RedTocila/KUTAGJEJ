@@ -1,9 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import {
-  Avatar,
   Box,
   Button,
   Chip,
@@ -13,8 +11,23 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
+import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
+import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
+import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
+import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
+import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
+import { GasPump as GasPumpIcon } from '@phosphor-icons/react/dist/ssr/GasPump';
+import { Gauge as GaugeIcon } from '@phosphor-icons/react/dist/ssr/Gauge';
+import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
+import { GraduationCap as GraduationCapIcon } from '@phosphor-icons/react/dist/ssr/GraduationCap';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
+import { Palette as PaletteIcon } from '@phosphor-icons/react/dist/ssr/Palette';
+import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
+import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
+import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
+import { Wrench as WrenchIcon } from '@phosphor-icons/react/dist/ssr/Wrench';
 import {
   CAR_COLOUR_OPTIONS,
   FUEL_TYPE_OPTIONS,
@@ -34,7 +47,6 @@ import {
   LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
   LISTING_DETAIL_HERO_IMAGE_SIZES,
 } from '@/lib/listing-detail-layout';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type {
   AnyPublicListingDetail,
   PublicCarListing,
@@ -42,6 +54,7 @@ import type {
 } from '@/lib/public-listings-client';
 
 import { ListingMessageButton } from '@/components/public/listing-message-button';
+import { ListingSellerProfileCard } from '@/components/public/listing-seller-profile-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
@@ -59,19 +72,84 @@ import { JobListingCountdown } from '@/components/public/listing-cards/job-listi
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
+import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { metricKindToConversationKind } from '@/lib/conversations-client';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
-import { pathsPublicMemberProfile } from '@/paths';
 
-function DetailLine({ label, value }: { label: string; value: string }) {
+type SpecIcon = typeof TagIcon;
+
+type SummarySpec = {
+  Icon: SpecIcon;
+  label: string;
+  value: string;
+};
+
+function conditionIcon(condition: string | null | undefined): SpecIcon {
+  if (condition === 'i-ri' || condition === 'si-i-ri') return SparkleIcon;
+  return CheckCircleIcon;
+}
+
+function SpecIconBox({ Icon, primary, secondary }: { Icon: SpecIcon; primary: string; secondary: string }) {
   return (
-    <Stack direction="row" sx={{ justifyContent: 'space-between', gap: 2, py: 0.85 }}>
-      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-        {label}
+    <Stack
+      spacing={0.65}
+      sx={{
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        flex: '1 1 0',
+        minWidth: { xs: '30%', sm: 0 },
+        px: { xs: 0.75, sm: 1.25 },
+        py: 0.5,
+      }}
+    >
+      <Box
+        sx={{
+          width: 36,
+          height: 36,
+          borderRadius: '50%',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)',
+          color: 'primary.main',
+          lineHeight: 0,
+          flexShrink: 0,
+        }}
+      >
+        <Icon weight="regular" color="currentColor" size={18} aria-hidden />
+      </Box>
+      <Typography
+        variant="subtitle2"
+        sx={{
+          fontWeight: 800,
+          color: 'text.primary',
+          fontSize: { xs: '0.78rem', sm: '0.875rem' },
+          textAlign: 'center',
+          lineHeight: 1.25,
+          maxWidth: '100%',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
+        title={primary}
+      >
+        {primary}
       </Typography>
-      <Typography variant="body2" color="text.primary" sx={{ fontWeight: 600, textAlign: 'right', maxWidth: '62%' }}>
-        {value}
+      <Typography
+        variant="caption"
+        sx={{
+          fontWeight: 600,
+          color: 'text.secondary',
+          fontSize: '0.68rem',
+          textAlign: 'center',
+          lineHeight: 1.2,
+          letterSpacing: '0.02em',
+          textTransform: 'uppercase',
+        }}
+      >
+        {secondary}
       </Typography>
     </Stack>
   );
@@ -166,8 +244,14 @@ export function VerticalListingDetailView(props: {
   browseHref: string;
   similarSectionTitle: string;
   similar: PublicCarListing[] | PublicMarketplaceListing[];
+  /** Owner edit canvas — hide buyer chrome (contact, similar, metrics). */
+  ownerPreview?: boolean;
+  ownerEdit?: OwnerEditHandlers;
 }) {
-  const { listing, canonicalUrl, browseHref, similarSectionTitle, similar } = props;
+  const { listing, canonicalUrl, browseHref, similarSectionTitle, similar, ownerPreview = false, ownerEdit } = props;
+  const onEditInfo = ownerEdit?.onEditInfo;
+  const onEditPrice = ownerEdit?.onEditPrice ?? onEditInfo;
+  const onEditSpecs = ownerEdit?.onEditSpecs ?? onEditInfo;
 
   const displayPhone =
     listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
@@ -188,10 +272,12 @@ export function VerticalListingDetailView(props: {
     mapQuery = `${listing.cityName}, Shqipëri`;
   }
 
+  const summarySpecs = summarySpecsFor(listing);
+
   return (
     <>
-      <ListingMetricsTracker listingKind={metricKind} listingId={listing.id} />
-      <Box component="article" sx={{ bgcolor: 'background.default', pb: { xs: 14, md: 6 } }}>
+      {ownerPreview ? null : <ListingMetricsTracker listingKind={metricKind} listingId={listing.id} />}
+      <Box component="article" sx={{ bgcolor: 'background.default', pb: ownerPreview ? 3 : { xs: 14, md: 6 } }}>
         <Container maxWidth={false} sx={{ px: { xs: 0, md: 3 }, bgcolor: 'background.default' }}>
           <Box
             sx={{
@@ -203,7 +289,10 @@ export function VerticalListingDetailView(props: {
               boxShadow: { xs: 'none', md: '0 12px 40px rgba(0, 0, 0, 0.08)' },
             }}
           >
-            <Stack direction={{ xs: 'column', md: 'row' }} sx={{ alignItems: { md: 'stretch' }, minHeight: 0 }}>
+            <Stack
+              direction={ownerPreview ? 'column' : { xs: 'column', md: 'row' }}
+              sx={{ alignItems: { md: 'stretch' }, minHeight: 0 }}
+            >
               <Box
                 sx={{
                   flex: { md: `0 1 ${LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX}px` },
@@ -216,19 +305,20 @@ export function VerticalListingDetailView(props: {
                   title={listingTitle(listing)}
                   imageUrls={listing.imageUrls}
                   placeholderIcon={listingDetailGalleryPlaceholder(listing)}
-                  browseListHref={browseHref}
+                  browseListHref={ownerPreview ? undefined : browseHref}
                   browseListAriaLabel="Prapa te lista"
                   heroSizes={LISTING_DETAIL_HERO_IMAGE_SIZES}
                   listingKind={metricKind}
                   listingId={listing.id}
-                  shareCount={listing.shareCount}
-                  saveCount={saveCount}
-                  bookmark={{ saved, onToggle: () => void toggleSave() }}
+                  shareCount={ownerPreview ? undefined : listing.shareCount}
+                  saveCount={ownerPreview ? undefined : saveCount}
+                  bookmark={ownerPreview ? undefined : { saved, onToggle: () => void toggleSave() }}
+                  onEditPhotos={ownerEdit?.onEditPhotos}
                 />
               </Box>
               <Box
                 sx={{
-                  display: { xs: 'none', md: 'flex' },
+                  display: ownerPreview ? 'none' : { xs: 'none', md: 'flex' },
                   flexDirection: 'column',
                   flex: '0 0 auto',
                   width: { md: 'min(340px, 34%)' },
@@ -261,24 +351,50 @@ export function VerticalListingDetailView(props: {
         <Container maxWidth="lg" sx={{ pt: { xs: 2.5, sm: 3 }, pb: 2 }}>
           <Stack spacing={{ xs: 3, md: 3 }} sx={{ width: '100%' }}>
             <Stack spacing={1.25}>
-              <Typography
-                variant="h3"
-                component="h1"
-                sx={{
-                  fontWeight: 800,
-                  lineHeight: 1.18,
-                  color: 'text.primary',
-                  letterSpacing: '-0.02em',
-                  fontSize: { xs: '1.5rem', sm: '1.85rem', md: '2rem' },
-                }}
-              >
-                {listingTitle(listing)}
-              </Typography>
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                <Typography
+                  variant="h3"
+                  component="h1"
+                  sx={{
+                    fontWeight: 800,
+                    lineHeight: 1.18,
+                    color: 'text.primary',
+                    letterSpacing: '-0.02em',
+                    fontSize: { xs: '1.5rem', sm: '1.85rem', md: '2rem' },
+                  }}
+                >
+                  {listingTitle(listing)}
+                </Typography>
+                {onEditInfo ? (
+                  <OwnerEditPencil label="Ndrysho titullin" onClick={onEditInfo} />
+                ) : null}
+              </Stack>
 
-              <Box sx={{ display: { xs: 'block', md: 'none' } }}>{primaryPriceRow(listing)}</Box>
+              <Box sx={{ display: ownerPreview ? 'block' : { xs: 'block', md: 'none' } }}>
+                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                  {primaryPriceRow(listing)}
+                  {onEditPrice ? (
+                    <OwnerEditPencil label="Ndrysho çmimin" onClick={onEditPrice} />
+                  ) : null}
+                </Stack>
+              </Box>
 
-              <Stack direction="row" sx={{ flexWrap: 'wrap', gap: { xs: 1.25, sm: 2 }, color: 'text.secondary' }}>
-                {subtitleLine(listing)}
+              <Stack direction="row" sx={{ flexWrap: 'wrap', gap: { xs: 1.25, sm: 2 }, color: 'text.secondary', alignItems: 'center' }}>
+                {onEditInfo ? (
+                  <Stack direction="row" spacing={0.65} sx={{ alignItems: 'center', maxWidth: '100%' }}>
+                    <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
+                      <MapPinIcon size={17} weight="regular" color="currentColor" />
+                    </Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                      {'cityName' in listing && listing.cityName
+                        ? listing.cityName
+                        : 'Shtoni lokacionin'}
+                    </Typography>
+                    <OwnerEditPencil label="Ndrysho lokacionin" onClick={onEditInfo} />
+                  </Stack>
+                ) : (
+                  subtitleLine(listing)
+                )}
                 <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)} shikime</Typography>
                 {listing.kind === 'job' ? (
                   <JobListingCountdown
@@ -293,24 +409,77 @@ export function VerticalListingDetailView(props: {
               </Stack>
             </Stack>
 
-            <Paper variant="outlined" sx={{ borderRadius: 2.5, borderColor: 'divider', bgcolor: 'background.paper', p: 2 }}>
-              <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800, letterSpacing: '0.1em', display: 'block', mb: 1.5 }}>
-                Përmbledhje
-              </Typography>
-              <Stack divider={<Divider flexItem />} spacing={0}>
-                {detailRowsFor(listing).map((row) => (
-                  <DetailLine key={`${row.label}-${row.value}`} label={row.label} value={row.value} />
-                ))}
+            <Stack spacing={1.5} component="section" aria-labelledby="vertical-summary-heading">
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                <Typography
+                  id="vertical-summary-heading"
+                  variant="overline"
+                  color="text.secondary"
+                  sx={{ fontWeight: 800, letterSpacing: '0.1em' }}
+                >
+                  Përmbledhje
+                </Typography>
+                {onEditSpecs ? (
+                  <OwnerEditPencil label="Ndrysho specifikimet" onClick={onEditSpecs} />
+                ) : null}
               </Stack>
-            </Paper>
+              <Box
+                sx={{
+                  borderRadius: 2.5,
+                  bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.9)',
+                  border: '1px solid',
+                  borderColor: 'rgba(var(--mui-palette-dividerChannel) / 0.7)',
+                  px: { xs: 0.5, sm: 0.75 },
+                  py: { xs: 1.5, sm: 1.75 },
+                }}
+              >
+                <Stack
+                  direction="row"
+                  divider={
+                    summarySpecs.length <= 4 ? (
+                      <Divider
+                        orientation="vertical"
+                        flexItem
+                        sx={{ borderColor: 'rgba(var(--mui-palette-dividerChannel) / 0.55)', my: 0.5 }}
+                      />
+                    ) : undefined
+                  }
+                  sx={{
+                    alignItems: 'stretch',
+                    width: '100%',
+                    flexWrap: summarySpecs.length > 4 ? 'wrap' : 'nowrap',
+                    rowGap: 1.5,
+                    justifyContent: summarySpecs.length > 4 ? 'space-evenly' : 'flex-start',
+                  }}
+                >
+                  {summarySpecs.map((spec) => (
+                    <SpecIconBox
+                      key={`${spec.label}-${spec.value}`}
+                      Icon={spec.Icon}
+                      primary={spec.value}
+                      secondary={spec.label}
+                    />
+                  ))}
+                </Stack>
+              </Box>
+            </Stack>
 
             {extrasBlock(listing)}
 
             <Stack spacing={1.5}>
-              <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800, letterSpacing: '0.1em' }}>
-                Përshkrimi
-              </Typography>
-              <RealEstateListingExpandableText text={listing.description} />
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800, letterSpacing: '0.1em' }}>
+                  Përshkrimi
+                </Typography>
+                {onEditSpecs ? (
+                  <OwnerEditPencil label="Ndrysho përshkrimin" onClick={onEditSpecs} />
+                ) : null}
+              </Stack>
+              {listing.description ? (
+                <RealEstateListingExpandableText text={listing.description} />
+              ) : onEditSpecs ? (
+                <Typography sx={{ color: 'text.secondary' }}>Shtoni përshkrimin</Typography>
+              ) : null}
             </Stack>
 
             {mapQuery ? (
@@ -322,9 +491,9 @@ export function VerticalListingDetailView(props: {
               </Stack>
             ) : null}
 
-            <Box sx={{ display: { xs: 'block', md: 'none' } }}>{sellerBlock(listing)}</Box>
+            <Box sx={{ display: ownerPreview ? 'block' : { xs: 'block', md: 'none' } }}>{sellerBlock(listing)}</Box>
 
-            {similar.length ? (
+            {!ownerPreview && similar.length ? (
               <Stack spacing={1.5} component="aside" aria-labelledby="vertical-similar-heading">
                 <Divider />
                 <Typography
@@ -356,10 +525,12 @@ export function VerticalListingDetailView(props: {
         </Container>
       </Box>
 
-      <StickyListingContact
-        listingKind={metricKindToConversationKind(metricKind)}
-        listingId={listing.id}
-      />
+      {ownerPreview ? null : (
+        <StickyListingContact
+          listingKind={metricKindToConversationKind(metricKind)}
+          listingId={listing.id}
+        />
+      )}
     </>
   );
 }
@@ -430,50 +601,65 @@ function sidebarPrice(l: AnyPublicListingDetail): React.ReactNode {
   return primaryPriceRow(l);
 }
 
-function detailRowsFor(l: AnyPublicListingDetail): Array<{ label: string; value: string }> {
+function summarySpecsFor(l: AnyPublicListingDetail): SummarySpec[] {
   switch (l.kind) {
     case 'car':
       return [
-        { label: 'Markë', value: l.make },
-        { label: 'Model', value: l.model },
-        ...(l.variant ? [{ label: 'Variant', value: l.variant }] : []),
-        { label: 'Viti', value: String(l.year) },
-        { label: 'Kilometrazhi', value: formatKilometers(l.kilometers) },
-        { label: 'Transmision', value: findOptionLabel(TRANSMISSION_OPTIONS, l.transmission) },
-        { label: 'Karburant', value: findOptionLabel(FUEL_TYPE_OPTIONS, l.fuelType) },
-        { label: 'Ngjyra', value: findOptionLabel(CAR_COLOUR_OPTIONS, l.color) },
-        ...(l.cityName ? [{ label: 'Qyteti', value: l.cityName }] : []),
+        { Icon: CarIcon, label: 'Markë', value: l.make },
+        { Icon: TagIcon, label: 'Model', value: l.model },
+        ...(l.variant ? [{ Icon: TagIcon, label: 'Variant', value: l.variant }] : []),
+        { Icon: CalendarIcon, label: 'Viti', value: String(l.year) },
+        { Icon: GaugeIcon, label: 'Kilometrazhi', value: formatKilometers(l.kilometers) },
+        { Icon: GearSixIcon, label: 'Transmision', value: findOptionLabel(TRANSMISSION_OPTIONS, l.transmission) },
+        { Icon: GasPumpIcon, label: 'Karburant', value: findOptionLabel(FUEL_TYPE_OPTIONS, l.fuelType) },
+        { Icon: PaletteIcon, label: 'Ngjyra', value: findOptionLabel(CAR_COLOUR_OPTIONS, l.color) },
+        ...(l.cityName ? [{ Icon: MapPinIcon, label: 'Qyteti', value: l.cityName }] : []),
       ];
     case 'job':
       return [
-        { label: 'Industria', value: findOptionLabel(JOB_INDUSTRY_OPTIONS, l.industry) },
-        { label: 'Lloji i punës', value: findOptionLabel(JOB_TYPE_OPTIONS, l.jobType) },
-        { label: 'Vendi', value: findOptionLabel(WORK_LOCATION_OPTIONS, l.workLocation) },
-        { label: 'Eksperienca', value: findOptionLabel(JOB_EXPERIENCE_OPTIONS, l.experience) },
-        { label: 'Arsimi', value: findOptionLabel(JOB_EDUCATION_OPTIONS, l.education) },
-        ...(l.cityName ? [{ label: 'Qyteti', value: l.cityName }] : []),
+        { Icon: BriefcaseIcon, label: 'Industria', value: findOptionLabel(JOB_INDUSTRY_OPTIONS, l.industry) },
+        { Icon: ClockIcon, label: 'Lloji i punës', value: findOptionLabel(JOB_TYPE_OPTIONS, l.jobType) },
+        { Icon: MapPinIcon, label: 'Vendi', value: findOptionLabel(WORK_LOCATION_OPTIONS, l.workLocation) },
+        { Icon: UserIcon, label: 'Eksperienca', value: findOptionLabel(JOB_EXPERIENCE_OPTIONS, l.experience) },
+        { Icon: GraduationCapIcon, label: 'Arsimi', value: findOptionLabel(JOB_EDUCATION_OPTIONS, l.education) },
+        ...(l.cityName ? [{ Icon: MapPinIcon, label: 'Qyteti', value: l.cityName }] : []),
       ];
     case 'marketplace':
       return [
-        { label: 'Kategoria', value: findOptionLabel(MARKETPLACE_CATEGORY_OPTIONS, l.category) },
-        ...(l.condition ? [{ label: 'Gjendja', value: findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, l.condition) }] : []),
-        ...(l.cityName ? [{ label: 'Qyteti', value: l.cityName }] : []),
+        { Icon: TagIcon, label: 'Kategoria', value: findOptionLabel(MARKETPLACE_CATEGORY_OPTIONS, l.category) },
+        ...(l.condition
+          ? [
+              {
+                Icon: conditionIcon(l.condition),
+                label: 'Gjendja',
+                value: findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, l.condition),
+              },
+            ]
+          : []),
+        ...(l.cityName ? [{ Icon: MapPinIcon, label: 'Qyteti', value: l.cityName }] : []),
       ];
     default:
       if (l.kind === 'businesses') {
-        const rows: Array<{ label: string; value: string }> = [
-          { label: 'Lloji', value: l.categoryLabel },
-          ...(l.openingHours ? [{ label: 'Orari', value: l.openingHours }] : []),
-          ...(l.servicesHighlight ? [{ label: 'Veçori', value: l.servicesHighlight }] : []),
-          ...(l.cityName ? [{ label: 'Qyteti', value: l.cityName }] : []),
+        return [
+          { Icon: BuildingsIcon, label: 'Lloji', value: l.categoryLabel },
+          ...(l.openingHours ? [{ Icon: ClockIcon, label: 'Orari', value: l.openingHours }] : []),
+          ...(l.servicesHighlight ? [{ Icon: SparkleIcon, label: 'Veçori', value: l.servicesHighlight }] : []),
+          ...(l.cityName ? [{ Icon: MapPinIcon, label: 'Qyteti', value: l.cityName }] : []),
         ];
-        return rows;
       }
       /* professionals */
       return [
-        { label: 'Shërbimi', value: l.categoryLabel },
-        ...(l.condition ? [{ label: 'Gjendja', value: findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, l.condition) }] : []),
-        ...(l.cityName ? [{ label: 'Qyteti', value: l.cityName }] : []),
+        { Icon: WrenchIcon, label: 'Shërbimi', value: l.categoryLabel },
+        ...(l.condition
+          ? [
+              {
+                Icon: conditionIcon(l.condition),
+                label: 'Gjendja',
+                value: findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, l.condition),
+              },
+            ]
+          : []),
+        ...(l.cityName ? [{ Icon: MapPinIcon, label: 'Qyteti', value: l.cityName }] : []),
       ];
   }
 }
@@ -500,70 +686,7 @@ function extrasBlock(l: AnyPublicListingDetail): React.ReactNode {
 
 /** Avatar + “Rreth shitësit” + Shiko profilin (nested card in desktop hero column, or wrapped below). */
 function SellerProfileInner({ listing: l }: { listing: AnyPublicListingDetail }) {
-  const s = l.seller;
-  const initials =
-    !s?.displayName
-      ? '?'
-      : s.displayName
-          .split(/\s+/)
-          .filter(Boolean)
-          .slice(0, 2)
-          .map((p) => p[0]?.toUpperCase())
-          .join('') || '?';
-  const memberYear = s?.memberSince ? new Date(s.memberSince).getFullYear() : undefined;
-  const profileHref = s?.id ? pathsPublicMemberProfile(s.id) : null;
-
-  return (
-    <>
-      <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800, letterSpacing: '0.1em', mb: 1.5, display: 'block' }}>
-        Rreth shitësit / ofertuesit
-      </Typography>
-      <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
-        <Avatar
-          sx={{
-            width: 64,
-            height: 64,
-            bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.16 : 0.12),
-            color: 'primary.main',
-            fontWeight: 800,
-          }}
-        >
-          {initials}
-        </Avatar>
-        <Stack spacing={0.5} sx={{ flex: '1 1 auto', minWidth: 0 }}>
-          <Typography sx={{ fontWeight: 850, fontSize: '1.125rem', color: 'text.primary' }}>
-            {s?.displayName ?? 'Përdorues KuTaGjej'}
-          </Typography>
-          {memberYear != null ? (
-            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-              Anëtar që prej {memberYear}
-            </Typography>
-          ) : null}
-        </Stack>
-      </Stack>
-      <Button
-        component={profileHref ? Link : 'button'}
-        href={profileHref ?? undefined}
-        disabled={!profileHref}
-        variant="contained"
-        disableElevation
-        fullWidth
-        sx={{
-          mt: 2,
-          borderRadius: 999,
-          fontWeight: 800,
-          textTransform: 'none',
-          py: 1.25,
-          color: 'common.black',
-          boxShadow: 'none',
-          '&:hover': { color: 'common.black' },
-          '& .MuiButton-startIcon': { color: 'inherit' },
-        }}
-      >
-        Shiko profilin
-      </Button>
-    </>
-  );
+  return <ListingSellerProfileCard seller={l.seller} />;
 }
 
 function sellerBlock(l: AnyPublicListingDetail): React.ReactNode {

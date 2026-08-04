@@ -8,19 +8,13 @@ import {
   Button,
   Chip,
   Container,
-  Divider,
   Grid,
   IconButton,
-  Paper,
   Stack,
   Typography,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import ArrowForwardOutlined from '@mui/icons-material/ArrowForwardOutlined';
 import CalendarTodayOutlined from '@mui/icons-material/CalendarTodayOutlined';
-import CheckCircleOutlined from '@mui/icons-material/CheckCircleOutlined';
-import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
-import EventAvailableOutlined from '@mui/icons-material/EventAvailableOutlined';
 import GroupsOutlined from '@mui/icons-material/GroupsOutlined';
 import LockOutlined from '@mui/icons-material/LockOutlined';
 import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
@@ -40,8 +34,10 @@ import { JobCard } from '@/components/public/listing-cards/job-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
+import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { findOptionLabel, formatPrice } from '@/components/public/listing-cards/format-helpers';
-import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
+import { listingContactCtaSx } from '@/components/public/sticky-listing-contact';
+import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import {
   buildJobDetailSections,
@@ -52,18 +48,11 @@ import {
 import { JobVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { LISTING_DETAIL_STICKY_TOP_MD } from '@/lib/listing-detail-layout';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { paths } from '@/paths';
 
-const surfaceCardSx = {
-  p: 2.5,
-  borderRadius: 3,
-  border: '1px solid',
-  borderColor: 'divider',
-  bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
-} as const;
-
 function benefitIcon(id: JobDetailBenefit['id']) {
-  const iconSx = { fontSize: 28, color: 'primary.main' };
+  const iconSx = { fontSize: 22, color: 'primary.main' };
   switch (id) {
     case 'pay':
     case 'negotiable-pay':
@@ -77,43 +66,6 @@ function benefitIcon(id: JobDetailBenefit['id']) {
   }
 }
 
-function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
-  return (
-    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
-      <Box sx={{ color: 'primary.main', display: 'flex', '& svg': { fontSize: 22 } }}>{icon}</Box>
-      <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.3 }}>{title}</Typography>
-    </Stack>
-  );
-}
-
-function BulletList({ items, variant }: { items: string[]; variant: 'check' | 'dot' }) {
-  return (
-    <Stack component="ul" spacing={1.25} sx={{ m: 0, p: 0, listStyle: 'none' }}>
-      {items.map((item) => (
-        <Stack key={item} component="li" direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
-          {variant === 'check' ? (
-            <CheckCircleOutlined sx={{ fontSize: 18, color: 'primary.main', mt: 0.15, flexShrink: 0 }} />
-          ) : (
-            <Box
-              sx={{
-                width: 7,
-                height: 7,
-                borderRadius: '50%',
-                bgcolor: 'primary.main',
-                mt: 0.6,
-                flexShrink: 0,
-              }}
-            />
-          )}
-          <Typography component="span" sx={{ fontSize: '0.9rem', lineHeight: 1.55, color: 'text.secondary' }}>
-            {item}
-          </Typography>
-        </Stack>
-      ))}
-    </Stack>
-  );
-}
-
 const metaIcons = [LocationOnOutlined, WorkOutlineOutlined, CalendarTodayOutlined, ScheduleOutlined] as const;
 
 export function JobListingDetailDesktop({
@@ -124,7 +76,7 @@ export function JobListingDetailDesktop({
   shareCount,
   onToggleSave,
   onShare,
-  applyHref,
+  ownerPreview = false,
 }: {
   listing: PublicJobListingDetail;
   similar: PublicJobListing[];
@@ -133,7 +85,7 @@ export function JobListingDetailDesktop({
   shareCount: number;
   onToggleSave: () => void;
   onShare: () => void;
-  applyHref: string | null | undefined;
+  ownerPreview?: boolean;
 }) {
   const sections = React.useMemo(() => buildJobDetailSections(listing), [listing]);
   const metaRows = React.useMemo(() => jobDetailMetaRows(listing), [listing]);
@@ -142,6 +94,9 @@ export function JobListingDetailDesktop({
   const heroImage = listing.imageUrl ?? listing.imageUrls[0] ?? null;
   const isNew = isJobListingNew(listing.createdAt);
   const expiresAt = listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
+  const salary =
+    listing.salary != null ? `${formatPrice(listing.salary, listing.currency)} / muaj` : 'Pagë e diskutueshme';
+  const jobTypeLabel = findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType);
 
   const heroControlButtonSx = {
     bgcolor: alpha('#000', 0.45),
@@ -149,6 +104,8 @@ export function JobListingDetailDesktop({
     backdropFilter: 'blur(10px)',
     '&:hover': { bgcolor: alpha('#000', 0.62) },
   } as const;
+
+  if (ownerPreview) return null;
 
   return (
     <Box component="article" sx={{ bgcolor: 'background.default', pb: 6, display: { xs: 'none', md: 'block' } }}>
@@ -311,33 +268,58 @@ export function JobListingDetailDesktop({
               >
                 {listing.title}
               </Typography>
-              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
                 <Box
                   sx={{
-                    width: 'max-content',
-                    flexShrink: 0,
-                    height: 28,
                     display: 'inline-flex',
                     alignItems: 'center',
-                    px: 1.5,
+                    gap: 0.5,
+                    px: 1.35,
+                    py: 0.65,
                     borderRadius: 999,
                     bgcolor: 'primary.main',
                     color: 'primary.contrastText',
                   }}
                 >
-                  <Typography
-                    sx={{
-                      fontWeight: 700,
-                      fontSize: '0.8125rem',
-                      lineHeight: 1,
-                      color: 'inherit',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {companyName}
+                  <PaymentsOutlined sx={{ fontSize: 16 }} />
+                  <Typography sx={{ fontWeight: 800, fontSize: '0.8125rem', lineHeight: 1 }}>
+                    {salary}
                   </Typography>
                 </Box>
-                {listing.seller?.verified ? <JobVerifiedBadge size={20} /> : null}
+                {jobTypeLabel ? (
+                  <Box
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      px: 1.35,
+                      py: 0.65,
+                      borderRadius: 999,
+                      bgcolor: 'rgba(255,255,255,0.14)',
+                      color: '#fff',
+                    }}
+                  >
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.8125rem', lineHeight: 1 }}>
+                      {jobTypeLabel}
+                    </Typography>
+                  </Box>
+                ) : null}
+                <Box
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    px: 1.35,
+                    py: 0.65,
+                    borderRadius: 999,
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                    color: 'rgba(255,255,255,0.9)',
+                  }}
+                >
+                  <Typography sx={{ fontWeight: 700, fontSize: '0.8125rem', lineHeight: 1 }}>
+                    {companyName}
+                  </Typography>
+                  {listing.seller?.verified ? <JobVerifiedBadge size={16} /> : null}
+                </Box>
               </Stack>
               {listing.seller ? (
                 <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
@@ -350,78 +332,273 @@ export function JobListingDetailDesktop({
             </Stack>
             </Box>
 
-          <Grid container sx={{ bgcolor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', width: '100%' }}>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+              bgcolor: 'rgba(0,0,0,0.55)',
+              backdropFilter: 'blur(8px)',
+              width: '100%',
+            }}
+          >
             {metaRows.map((row, index) => {
               const Icon = metaIcons[index];
               return (
-                <Grid
+                <Box
                   key={row.label}
-                  size={3}
                   sx={{
-                    py: 2,
-                    px: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.25,
+                    py: 1.75,
+                    px: 2.25,
+                    minWidth: 0,
                     borderRight: index < metaRows.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
                   }}
                 >
-                  <Stack spacing={0.5}>
-                    <Icon sx={{ fontSize: 22, color: 'primary.main' }} />
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>{row.value}</Typography>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.75rem' }}>{row.label}</Typography>
-                  </Stack>
-                </Grid>
+                  <Box
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 1.75,
+                      display: 'grid',
+                      placeItems: 'center',
+                      flexShrink: 0,
+                      bgcolor: primaryMainAlpha(0.2),
+                      color: 'primary.main',
+                    }}
+                  >
+                    <Icon sx={{ fontSize: 18 }} />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography
+                      sx={{
+                        fontWeight: 750,
+                        fontSize: '0.9rem',
+                        color: '#fff',
+                        lineHeight: 1.2,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {row.value}
+                    </Typography>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.72rem', mt: 0.2 }}>
+                      {row.label}
+                    </Typography>
+                  </Box>
+                </Box>
               );
             })}
-          </Grid>
+          </Box>
           </Box>
 
           <Grid container spacing={4} sx={{ width: '100%' }}>
           <Grid size={{ md: 8 }}>
-            <Stack spacing={3}>
-              <Box sx={surfaceCardSx}>
-                <SectionHeader icon={<DescriptionOutlined />} title="Përshkrimi i punës" />
+            <Stack spacing={3.5}>
+              <Box
+                sx={{
+                  position: 'relative',
+                  pl: 2.5,
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    left: 0,
+                    top: 6,
+                    bottom: 6,
+                    width: 3,
+                    borderRadius: 999,
+                    bgcolor: 'primary.main',
+                  },
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: '0.72rem',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: 'text.secondary',
+                    mb: 1.25,
+                  }}
+                >
+                  Përshkrimi i punës
+                </Typography>
                 <RealEstateListingExpandableText
                   text={sections.intro}
-                  readMoreLabel="Lexo më shumë"
-                  readLessLabel="Mbyll"
+                  readMoreLabel="Shfaq më shumë"
+                  readLessLabel="Shfaq më pak"
                   fontSize="0.9rem"
+                  maxLines={4}
                 />
-                {listing.salary != null ? (
-                  <Typography sx={{ mt: 2, color: 'primary.main', fontWeight: 700, fontSize: '1rem' }}>
-                    Pagë: {formatPrice(listing.salary, listing.currency)} / muaj
+              </Box>
+
+              {sections.responsibilities.length > 0 ? (
+                <Box>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.75 }}>
+                    <Box
+                      sx={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 1.5,
+                        display: 'grid',
+                        placeItems: 'center',
+                        bgcolor: primaryMainAlpha(0.14),
+                        color: 'primary.main',
+                      }}
+                    >
+                      <GroupsOutlined sx={{ fontSize: 17 }} />
+                    </Box>
+                    <Typography sx={{ fontWeight: 800, fontSize: '1.05rem' }}>Përgjegjësitë</Typography>
+                  </Stack>
+                  <Grid container spacing={1.5}>
+                    {sections.responsibilities.map((item, index) => (
+                      <Grid key={`${index}-${item.slice(0, 24)}`} size={6}>
+                        <Stack
+                          direction="row"
+                          spacing={1.25}
+                          sx={{
+                            alignItems: 'flex-start',
+                            p: 1.5,
+                            height: '100%',
+                            borderRadius: 2.5,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.5)',
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: '50%',
+                              display: 'grid',
+                              placeItems: 'center',
+                              flexShrink: 0,
+                              bgcolor: 'primary.main',
+                              color: 'primary.contrastText',
+                              fontWeight: 800,
+                              fontSize: '0.72rem',
+                            }}
+                          >
+                            {index + 1}
+                          </Box>
+                          <Typography sx={{ fontSize: '0.875rem', lineHeight: 1.5, color: 'text.secondary' }}>
+                            {item}
+                          </Typography>
+                        </Stack>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              ) : null}
+
+              {sections.requirements.length > 0 ? (
+                <Box
+                  sx={{
+                    p: 2.25,
+                    borderRadius: 3,
+                    border: '1px dashed',
+                    borderColor: primaryMainAlpha(0.45),
+                    bgcolor: primaryMainAlpha(0.05),
+                  }}
+                >
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
+                    <SchoolOutlined sx={{ fontSize: 20, color: 'primary.main' }} />
+                    <Typography sx={{ fontWeight: 800, fontSize: '1.05rem' }}>Kërkesat</Typography>
+                  </Stack>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {sections.requirements.map((item, index) => (
+                      <Box
+                        key={`${index}-${item.slice(0, 24)}`}
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'flex-start',
+                          gap: 0.75,
+                          maxWidth: '100%',
+                          px: 1.25,
+                          py: 1,
+                          borderRadius: 2,
+                          bgcolor: 'background.paper',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            mt: 0.1,
+                            width: 20,
+                            height: 20,
+                            borderRadius: 1,
+                            display: 'grid',
+                            placeItems: 'center',
+                            flexShrink: 0,
+                            bgcolor: primaryMainAlpha(0.16),
+                            color: 'primary.main',
+                            fontWeight: 800,
+                            fontSize: '0.65rem',
+                          }}
+                        >
+                          {index + 1}
+                        </Box>
+                        <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.4 }}>{item}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              ) : null}
+
+              {sections.benefits.length > 0 ? (
+                <Box>
+                  <Typography
+                    sx={{
+                      fontWeight: 800,
+                      fontSize: '0.72rem',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: 'text.secondary',
+                      mb: 1.5,
+                    }}
+                  >
+                    Çfarë ofrojmë
                   </Typography>
-                ) : null}
-              </Box>
-
-              <Grid container spacing={2.5}>
-                <Grid size={6}>
-                  <Box sx={{ ...surfaceCardSx, height: '100%' }}>
-                    <SectionHeader icon={<GroupsOutlined />} title="Përgjegjësitë kryesore" />
-                    <BulletList items={sections.responsibilities} variant="check" />
-                  </Box>
-                </Grid>
-                <Grid size={6}>
-                  <Box sx={{ ...surfaceCardSx, height: '100%' }}>
-                    <SectionHeader icon={<SchoolOutlined />} title="Kërkesat" />
-                    <BulletList items={sections.requirements} variant="dot" />
-                  </Box>
-                </Grid>
-              </Grid>
-
-              <Box sx={surfaceCardSx}>
-                <SectionHeader icon={<EventAvailableOutlined />} title="Çfarë ofrojmë" />
-                <Grid container spacing={2}>
-                  {sections.benefits.map((benefit) => (
-                    <Grid key={benefit.id} size={3}>
-                      <Stack spacing={1} sx={{ alignItems: 'center', textAlign: 'center', px: 1 }}>
-                        {benefitIcon(benefit.id)}
-                        <Typography sx={{ fontWeight: 600, fontSize: '0.875rem', lineHeight: 1.35 }}>
-                          {benefit.label}
-                        </Typography>
-                      </Stack>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
+                  <Grid container spacing={1.5}>
+                    {sections.benefits.map((benefit) => (
+                      <Grid key={benefit.id} size={3}>
+                        <Box
+                          sx={{
+                            p: 1.75,
+                            height: '100%',
+                            borderRadius: 3,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
+                            backgroundImage: `linear-gradient(160deg, ${primaryMainAlpha(0.12)} 0%, transparent 60%)`,
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: 38,
+                              height: 38,
+                              borderRadius: 2,
+                              display: 'grid',
+                              placeItems: 'center',
+                              mb: 1.15,
+                              bgcolor: primaryMainAlpha(0.14),
+                            }}
+                          >
+                            {benefitIcon(benefit.id)}
+                          </Box>
+                          <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', lineHeight: 1.35 }}>
+                            {benefit.label}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              ) : null}
 
               {similar.length > 0 ? (
                 <Stack spacing={2} component="aside" aria-labelledby="job-similar-heading-desktop">
@@ -446,53 +623,21 @@ export function JobListingDetailDesktop({
 
           <Grid size={{ md: 4 }} sx={{ alignSelf: 'stretch' }}>
             <Box sx={{ position: 'sticky', top: LISTING_DETAIL_STICKY_TOP_MD, zIndex: 1 }}>
-              <Stack spacing={2.5}>
-                <Paper variant="outlined" sx={{ borderRadius: 3, borderColor: 'divider', p: 2.5 }}>
-                  <Stack spacing={2}>
-                    <JobListingDetailCountdown expiresAt={expiresAt} />
-                    <Divider />
-                    <Stack direction="row" spacing={1.25}>
-                      <Button
-                        variant="outlined"
-                        onClick={onToggleSave}
-                        startIcon={<BookmarkSimpleIcon size={18} weight={saved ? 'fill' : 'regular'} />}
-                        sx={{
-                          flex: 1,
-                          py: 1.35,
-                          borderRadius: 2.5,
-                          fontWeight: 800,
-                          textTransform: 'none',
-                          borderWidth: 2,
-                          ...(saved ? { borderColor: 'primary.main', color: 'primary.main' } : {}),
-                        }}
-                      >
-                        Ruaj
-                      </Button>
-                      {applyHref ? (
-                        <Button
-                          component="a"
-                          href={applyHref}
-                          variant="contained"
-                          endIcon={<ArrowForwardOutlined />}
-                          sx={{
-                            flex: 1.35,
-                            py: 1.35,
-                            borderRadius: 2.5,
-                            fontWeight: 800,
-                            textTransform: 'none',
-                            boxShadow: 'none',
-                          }}
-                        >
-                          Apliko tani
-                        </Button>
-                      ) : (
-                        <Button variant="contained" disabled sx={{ flex: 1.35, py: 1.35, borderRadius: 2.5, textTransform: 'none' }}>
-                          Apliko tani
-                        </Button>
-                      )}
-                    </Stack>
-                  </Stack>
-                </Paper>
+              <Stack spacing={2} sx={{ alignItems: 'stretch', width: '100%' }}>
+                <JobListingDetailCountdown expiresAt={expiresAt} />
+                <ListingMessageButton
+                  listingKind="jobs"
+                  listingId={listing.id}
+                  label="Kontakto"
+                  variant="contained"
+                  size="large"
+                  disableElevation
+                  fullWidth
+                  sx={listingContactCtaSx}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', display: 'block' }}>
+                  Hap bisedën me punëdhënësin në mesazhe
+                </Typography>
               </Stack>
             </Box>
           </Grid>

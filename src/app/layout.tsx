@@ -1,9 +1,8 @@
 import type { Metadata, Viewport } from 'next';
-import { cookies } from 'next/headers';
 import Script from 'next/script';
 
 import { brandLogoSrc, config } from '@/config';
-import { COLOR_SCHEME_COOKIE_NAME, parseColorScheme } from '@/lib/color-scheme';
+import { DEFAULT_COLOR_SCHEME } from '@/lib/color-scheme';
 
 import { AppProviders } from './app-providers';
 
@@ -13,6 +12,10 @@ import { AppProviders } from './app-providers';
  *
  * `theme-color-boot.js` (beforeInteractive) sets `.light` / `.dark` on `<html>`, theme-color meta,
  * and `color-scheme` from localStorage — no inline React scripts (React 19 safe).
+ *
+ * Avoid `cookies()` / other dynamic APIs here: Next.js 16.2 soft-nav can fail with
+ * "router state header was sent but could not be parsed" when the root layout is dynamic.
+ * Theme is applied before paint by the boot script + CssVarsProvider `modeStorageKey`.
  */
 export const viewport = {
   width: 'device-width',
@@ -38,15 +41,12 @@ export const metadata = {
   },
 } satisfies Metadata;
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies();
-  const initialColorScheme = parseColorScheme(cookieStore.get(COLOR_SCHEME_COOKIE_NAME)?.value);
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="sq-AL" className={initialColorScheme} suppressHydrationWarning>
+    <html lang="sq-AL" className={DEFAULT_COLOR_SCHEME} suppressHydrationWarning>
       <body suppressHydrationWarning>
         <Script src="/theme-color-boot.js" strategy="beforeInteractive" />
-        <AppProviders initialColorScheme={initialColorScheme}>{children}</AppProviders>
+        <AppProviders initialColorScheme={DEFAULT_COLOR_SCHEME}>{children}</AppProviders>
       </body>
     </html>
   );

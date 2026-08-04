@@ -69,18 +69,42 @@ export function businessMenuItemsForCategory(
     }));
 }
 
-export function businessGalleryThumbs(imageUrls: string[], maxVisible = 4): {
-  visible: string[];
-  extraCount: number;
-} {
-  const urls = imageUrls.filter(Boolean);
-  if (urls.length <= maxVisible) {
-    return { visible: urls, extraCount: 0 };
-  }
-  return {
-    visible: urls.slice(0, maxVisible - 1),
-    extraCount: urls.length - (maxVisible - 1),
-  };
+export type BusinessMenuSectionView = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  items: BusinessMenuItemView[];
+};
+
+/** Categories with their items, sorted. Optionally limit items per category (preview). */
+export function businessMenuSections(
+  listing: PublicDirectoryListingDetail,
+  options?: { maxPerCategory?: number },
+): BusinessMenuSectionView[] {
+  const cats = [...(listing.menuCategories ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
+  const max = options?.maxPerCategory;
+  return cats
+    .map((cat) => {
+      let items = (listing.menuItems ?? [])
+        .filter((item) => item.categoryId === cat.id)
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((item) => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          price: item.price,
+          currency: item.currency,
+          imageUrl: item.imageUrl,
+        }));
+      if (typeof max === 'number' && max >= 0) items = items.slice(0, max);
+      return {
+        id: cat.id,
+        name: cat.name,
+        sortOrder: cat.sortOrder,
+        items,
+      };
+    })
+    .filter((s) => s.items.length > 0);
 }
 
 export function reservationDateOptions(): { value: string; label: string }[] {
@@ -90,12 +114,13 @@ export function reservationDateOptions(): { value: string; label: string }[] {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
     const value = d.toISOString().slice(0, 10);
-    const label = d.toLocaleDateString('sq-AL', {
-      weekday: i === 0 ? 'short' : undefined,
-      day: 'numeric',
-      month: 'short',
-    });
-    out.push({ value, label: i === 0 ? `Sot, ${label}` : label });
+    const dayMonth = d.toLocaleDateString('sq-AL', { day: 'numeric', month: 'short' });
+    if (i === 0) out.push({ value, label: `Sot · ${dayMonth}` });
+    else if (i === 1) out.push({ value, label: `Nesër · ${dayMonth}` });
+    else {
+      const weekday = d.toLocaleDateString('sq-AL', { weekday: 'short' });
+      out.push({ value, label: `${weekday} · ${dayMonth}` });
+    }
   }
   return out;
 }

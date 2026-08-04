@@ -11,7 +11,7 @@ const {
   isUuid,
   buildCityIndex,
 } = require('../lib/public-listings/query-helpers');
-const { resolveReferralBadges } = require('../lib/referrals');
+const { getReceivedReviewStats, resolveReferralBadges } = require('../lib/referrals');
 const { reviewStatsByListingIds } = require('../lib/business-review-stats');
 const { professionalReviewStatsByListingIds } = require('../lib/professional-review-stats');
 const {
@@ -191,11 +191,20 @@ router.get('/:id', publicCache(), async (req, res) => {
     const loaded = await loadMemberWithModel(id);
     if (!loaded) return res.status(404).json({ error: 'Profili nuk u gjet.' });
 
-    const [listings, badges] = await Promise.all([
+    const [listings, badges, reviewStats] = await Promise.all([
       loadMemberListings(id),
       resolveReferralBadges(id, loaded.posterModel),
+      getReceivedReviewStats(id, loaded.posterModel),
     ]);
-    return res.json({ member: loaded.member, listings, badges });
+    return res.json({
+      member: {
+        ...loaded.member,
+        ratingAverage: reviewStats.ratingAverage,
+        reviewCount: reviewStats.reviewCount,
+      },
+      listings,
+      badges,
+    });
   } catch (e) {
     console.error('GET /api/public/members/:id', e);
     return res.status(500).json({ error: 'Gabim serveri.' });

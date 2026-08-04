@@ -1,11 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
 import {
   Alert,
-  Button,
-  Divider,
   Checkbox,
   FormControl,
   FormControlLabel,
@@ -15,7 +12,6 @@ import {
   Radio,
   RadioGroup,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 
@@ -28,12 +24,18 @@ import {
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
 import { SearchableSelect } from '@/components/core/searchable-select';
+import {
+  ListingFormActions,
+  ListingFormSection,
+  ListingTextField,
+} from '@/components/user/listing-form-ui';
 import { JobFormStringList } from '@/components/jobs/job-form-string-list';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { useUser } from '@/hooks/use-user';
-import { createJobListing } from '@/lib/listings-client';
+import { createJobListing, updateJobListing, type JobMineListing } from '@/lib/listings-client';
+import { contactPhoneFromStorage, resolveContactPhone } from '@/lib/listing-form-defaults';
 import { uploadListingImages } from '@/lib/uploads-client';
 
 const MAX_JOB_IMAGES = 5;
@@ -42,17 +44,6 @@ const MAX_JOB_IMAGES = 5;
 // Helpers
 // ---------------------------------------------------------------------------
 
-function contactPhoneInitialFromStorage(): string {
-  if (typeof window === 'undefined') return '';
-  try {
-    const raw = localStorage.getItem('user-data');
-    if (!raw) return '';
-    const u = JSON.parse(raw) as { phone?: string };
-    return typeof u.phone === 'string' ? u.phone.trim() : '';
-  } catch {
-    return '';
-  }
-}
 
 function parseFloatStrict(s: string): number | null {
   const t = s.trim();
@@ -69,6 +60,8 @@ export interface JobListingFormProps {
   onSuccess?: () => void;
   backHref?: string;
   backLabel?: string;
+  editListingId?: string;
+  initialListing?: JobMineListing | null;
 }
 
 type JobFormState = {
@@ -171,15 +164,50 @@ function validateForm(f: JobFormState): string | null {
 // Main form
 // ---------------------------------------------------------------------------
 
-export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: JobListingFormProps) {
+function formFromListing(l: JobMineListing): JobFormState {
+  const benefitIds: string[] = [];
+  let customBenefit = '';
+  for (const b of l.benefits ?? []) {
+    if (b.id === 'custom') customBenefit = b.label || '';
+    else if (JOB_BENEFIT_PRESETS.some((p) => p.id === b.id)) benefitIds.push(b.id);
+  }
+  return {
+    title: l.title || '',
+    description: l.description || '',
+    industry: l.industry || '',
+    cityId: l.cityId ? String(l.cityId) : '',
+    education: l.education || '',
+    experience: l.experience || '',
+    jobType: l.jobType || '',
+    workLocation: l.workLocation || '',
+    salary: l.salary != null ? String(l.salary) : '',
+    currency: l.currency === 'EUR' || l.currency === 'LEK' ? l.currency : '',
+    contactPhone: l.contactPhone || '',
+    responsibilities: (l.responsibilities?.length ? l.responsibilities : ['']) as string[],
+    requirements: (l.requirements?.length ? l.requirements : ['']) as string[],
+    benefitIds,
+    customBenefit,
+  };
+}
+
+export function JobListingForm({
+  onSuccess,
+  backHref,
+  backLabel = 'Mbrapa',
+  editListingId,
+  initialListing,
+}: JobListingFormProps) {
+  const isEdit = Boolean(editListingId);
   const { user } = useUser();
 
-  const [form, setForm] = React.useState<JobFormState>(() => ({
-    ...emptyForm(),
-    contactPhone: contactPhoneInitialFromStorage(),
-  }));
+  const [form, setForm] = React.useState<JobFormState>(() =>
+    initialListing ? formFromListing(initialListing) : { ...emptyForm(), contactPhone: contactPhoneFromStorage() },
+  );
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [images, setImages] = React.useState<File[]>([]);
+  const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(
+    () => (initialListing?.imageUrls ?? []).filter(Boolean),
+  );
   const [loadingCities, setLoadingCities] = React.useState(true);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -198,14 +226,21 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
   }, []);
 
   React.useEffect(() => {
-    if (!user) return;
-    const p = typeof user.phone === 'string' ? user.phone.trim() : '';
+    if (!initialListing) return;
+    setForm(formFromListing(initialListing));
+    setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
+    setImages([]);
+  }, [initialListing]);
+
+  React.useEffect(() => {
+    if (isEdit) return;
+    const p = resolveContactPhone(user);
     if (!p) return;
     setForm((prev) => {
       if (prev.contactPhone.trim()) return prev;
       return { ...prev, contactPhone: p };
     });
-  }, [user]);
+  }, [user, isEdit]);
 
   // -------------------------------------------------------------------------
   // Handlers
@@ -233,14 +268,14 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
 
     setSubmitting(true);
     try {
-      let imageUrls: string[] = [];
+      let uploaded: string[] = [];
       if (images.length) {
         const up = await uploadListingImages(images, 'jobs');
         if (up.error) {
           setSubmitError(up.error);
           return;
         }
-        imageUrls = up.urls;
+        uploaded = up.urls;
       }
       const payload = {
         title: form.title.trim(),
@@ -257,12 +292,15 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
         responsibilities: normalizeLines(form.responsibilities),
         requirements: normalizeLines(form.requirements),
         benefits: buildBenefitsPayload(form),
-        imageUrls,
+        imageUrls: [...existingImageUrls, ...uploaded].slice(0, MAX_JOB_IMAGES),
       };
 
-      const { error } = await createJobListing(payload);
-      if (error) {
-        setSubmitError(error);
+      const result =
+        isEdit && editListingId
+          ? await updateJobListing(editListingId, payload)
+          : await createJobListing(payload);
+      if (result.error) {
+        setSubmitError(result.error);
         return;
       }
       onSuccess?.();
@@ -276,20 +314,15 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
   // -------------------------------------------------------------------------
 
   return (
-    <Stack component="form" spacing={3} onSubmit={(e) => void handleSubmit(e)}>
+    <Stack component="form" spacing={2.25} onSubmit={(e) => void handleSubmit(e)}>
       {submitError ? (
-        <Alert severity="error" sx={{ borderRadius: 1.5 }}>
+        <Alert severity="error" sx={{ borderRadius: 2 }}>
           {submitError}
         </Alert>
       ) : null}
 
-      {/* ── Detajet e punës ──────────────────────────────────────────────── */}
-      <Stack spacing={2}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-          Detajet e punës
-        </Typography>
-
-        <TextField
+      <ListingFormSection title="Detajet e punës" description="Titulli dhe prezantimi i pozicionit.">
+        <ListingTextField
           label="Titulli i punës"
           value={form.title}
           onChange={onField('title')}
@@ -297,8 +330,7 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
           fullWidth
           placeholder="p.sh. Menaxher Shitjesh, Programues Backend…"
         />
-
-        <TextField
+        <ListingTextField
           label="Përshkrimi i shkurtër"
           value={form.description}
           onChange={onField('description')}
@@ -309,32 +341,24 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
           placeholder="Prezantim i pozicionit — 2–3 fjali për kandidatët…"
           helperText="Detyrat, kërkesat dhe përfitimet plotësohen më poshtë si seksione të veçanta."
         />
-      </Stack>
+      </ListingFormSection>
 
-      <Divider />
+      <ListingFormSection title="Detyrat dhe kërkesat">
+        <JobFormStringList
+          label="Detyrat dhe përgjegjësitë"
+          hint="Lista e detyrave kryesore (të shfaqen në faqen e njoftimit)."
+          items={form.responsibilities}
+          onChange={(responsibilities) => setForm((p) => ({ ...p, responsibilities }))}
+        />
+        <JobFormStringList
+          label="Kërkesat"
+          hint="Kualifikimet dhe aftësitë e kërkuara."
+          items={form.requirements}
+          onChange={(requirements) => setForm((p) => ({ ...p, requirements }))}
+        />
+      </ListingFormSection>
 
-      <JobFormStringList
-        label="Detyrat dhe përgjegjësitë"
-        hint="Lista e detyrave kryesore (të shfaqen në faqen e njoftimit)."
-        items={form.responsibilities}
-        onChange={(responsibilities) => setForm((p) => ({ ...p, responsibilities }))}
-      />
-
-      <Divider />
-
-      <JobFormStringList
-        label="Kërkesat"
-        hint="Kualifikimet dhe aftësitë e kërkuara."
-        items={form.requirements}
-        onChange={(requirements) => setForm((p) => ({ ...p, requirements }))}
-      />
-
-      <Divider />
-
-      <Stack spacing={1.5}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-          Përfitimet
-        </Typography>
+      <ListingFormSection title="Përfitimet" description="Zgjidhni përfitimet që ofroni.">
         <FormGroup>
           {JOB_BENEFIT_PRESETS.map((preset) => (
             <FormControlLabel
@@ -356,23 +380,16 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
             />
           ))}
         </FormGroup>
-        <TextField
+        <ListingTextField
           label="Përfitim tjetër (opsional)"
           value={form.customBenefit}
           onChange={onField('customBenefit')}
           fullWidth
           placeholder="p.sh. Ditë pushimi shtesë"
         />
-      </Stack>
+      </ListingFormSection>
 
-      <Divider />
-
-      {/* ── Industria & Qyteti ───────────────────────────────────────────── */}
-      <Stack spacing={2}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-          Industria dhe vendndodhja
-        </Typography>
-
+      <ListingFormSection title="Industria dhe vendndodhja">
         <SearchableSelect
           label="Industria"
           value={form.industry}
@@ -381,7 +398,6 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
           emptyLabel="Zgjidhni industrinë…"
           required
         />
-
         <SearchableSelect
           label="Qyteti"
           value={form.cityId}
@@ -391,22 +407,14 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
           required
           disabled={loadingCities || cities.length === 0}
         />
-
         {!loadingCities && cities.length === 0 ? (
           <Typography variant="caption" color="text.secondary">
             Nuk ka qytete të disponueshme — një administrator duhet t&apos;i shtojë te Paneli → Vendndodhjet.
           </Typography>
         ) : null}
-      </Stack>
+      </ListingFormSection>
 
-      <Divider />
-
-      {/* ── Arsimi & eksperienca ─────────────────────────────────────────── */}
-      <Stack spacing={2}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-          Arsimi dhe eksperienca
-        </Typography>
-
+      <ListingFormSection title="Arsimi dhe eksperienca">
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <SearchableSelect
             label="Edukimi"
@@ -416,7 +424,6 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
             emptyLabel="Zgjidhni nivelin…"
             required
           />
-
           <SearchableSelect
             label="Eksperienca"
             value={form.experience}
@@ -426,19 +433,12 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
             required
           />
         </Stack>
-      </Stack>
+      </ListingFormSection>
 
-      <Divider />
-
-      {/* ── Lloji i punës & Vendndodhja ──────────────────────────────────── */}
-      <Stack spacing={2}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-          Lloji i punës
-        </Typography>
-
+      <ListingFormSection title="Lloji i punës">
         <FormControl component="fieldset" required>
           <FormLabel component="legend" sx={{ mb: 0.5, fontSize: '0.875rem', fontWeight: 600 }}>
-            Job Type
+            Lloji i kontratës
           </FormLabel>
           <RadioGroup
             row
@@ -451,7 +451,6 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
             ))}
           </RadioGroup>
         </FormControl>
-
         <FormControl component="fieldset" required>
           <FormLabel component="legend" sx={{ mb: 0.5, fontSize: '0.875rem', fontWeight: 600 }}>
             Vendi i punës
@@ -466,18 +465,11 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
             ))}
           </RadioGroup>
         </FormControl>
-      </Stack>
+      </ListingFormSection>
 
-      <Divider />
-
-      {/* ── Paga & Kontakti ──────────────────────────────────────────────── */}
-      <Stack spacing={2}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-          Paga dhe kontakti
-        </Typography>
-
+      <ListingFormSection title="Paga dhe kontakti">
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <TextField
+          <ListingTextField
             label="Paga"
             type="text"
             inputMode="numeric"
@@ -504,8 +496,7 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
             disabled={!form.salary.trim()}
           />
         </Stack>
-
-        <TextField
+        <ListingTextField
           label="Numri i telefonit"
           type="tel"
           inputMode="tel"
@@ -516,30 +507,26 @@ export function JobListingForm({ onSuccess, backHref, backLabel = 'Mbrapa' }: Jo
           fullWidth
           helperText="Do të shfaqet tek kandidatët e interesuar për këtë njoftim."
         />
-      </Stack>
+      </ListingFormSection>
 
-      <Divider />
+      <ListingFormSection title="Foto" description="Logo ose kopertinë — opsionale.">
+        <ListingImagePicker
+          value={images}
+          onChange={setImages}
+          existingUrls={existingImageUrls}
+          onExistingUrlsChange={setExistingImageUrls}
+          max={MAX_JOB_IMAGES}
+          label="Foto (logo / kopertinë — opsionale)"
+          disabled={submitting}
+        />
+      </ListingFormSection>
 
-      {/* ── Foto (opsionale) ─────────────────────────────────────────────── */}
-      <ListingImagePicker
-        value={images}
-        onChange={setImages}
-        max={MAX_JOB_IMAGES}
-        label="Foto (logo / kopertinë — opsionale)"
-        disabled={submitting}
+      <ListingFormActions
+        submitLabel={isEdit ? 'Përditëso njoftimin' : 'Ruaj njoftimin'}
+        submitting={submitting}
+        backHref={backHref}
+        backLabel={backLabel}
       />
-
-      {/* ── Veprimet ─────────────────────────────────────────────────────── */}
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ pt: 1, justifyContent: 'flex-end' }}>
-        {backHref ? (
-          <Button component={RouterLink} href={backHref} variant="outlined" color="inherit">
-            {backLabel}
-          </Button>
-        ) : null}
-        <Button type="submit" variant="contained" disabled={submitting}>
-          {submitting ? 'Duke ruajtur…' : 'Ruaj njoftimin'}
-        </Button>
-      </Stack>
     </Stack>
   );
 }

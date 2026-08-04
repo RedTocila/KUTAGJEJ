@@ -1,0 +1,440 @@
+'use client';
+
+import * as React from 'react';
+import { Box, Grid, Stack, Typography } from '@mui/material';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
+import { Bed as BedIcon } from '@phosphor-icons/react/dist/ssr/Bed';
+import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
+import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
+import { Key as KeyIcon } from '@phosphor-icons/react/dist/ssr/Key';
+import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
+import { HouseLine as HouseLineIcon } from '@phosphor-icons/react/dist/ssr/HouseLine';
+import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
+import { SteeringWheel as SteeringWheelIcon } from '@phosphor-icons/react/dist/ssr/SteeringWheel';
+
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+
+type Option = { value: string; label: string; Icon?: PhosphorIcon; hint?: string };
+
+function toggleValue(current: string, next: string): string {
+  return current === next ? '' : next;
+}
+
+/** Compact segmented control for 2–4 exclusive options. */
+export function FilterSegmented({
+  value,
+  onChange,
+  options,
+  allowEmpty = true,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: readonly Option[];
+  allowEmpty?: boolean;
+}) {
+  return (
+    <Grid size={{ xs: 12 }}>
+      <Box
+        role="radiogroup"
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${options.length}, 1fr)`,
+          gap: 0.75,
+          p: 0.5,
+          borderRadius: 999,
+          border: '1px solid',
+          borderColor: 'divider',
+          bgcolor: primaryMainAlpha(0.04),
+        }}
+      >
+        {options.map((opt) => {
+          const active = value === opt.value;
+          const Icon = opt.Icon;
+          return (
+            <Box
+              key={opt.value}
+              component="button"
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => onChange(allowEmpty ? toggleValue(value, opt.value) : opt.value)}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 0.6,
+                minHeight: 40,
+                px: 1,
+                borderRadius: 999,
+                border: 'none',
+                bgcolor: active ? 'primary.main' : 'transparent',
+                color: active ? 'primary.contrastText' : 'text.secondary',
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'background-color 0.15s, color 0.15s, transform 0.15s',
+                boxShadow: active ? `0 4px 14px ${primaryMainAlpha(0.35)}` : 'none',
+                '&:hover': {
+                  bgcolor: active ? 'primary.main' : primaryMainAlpha(0.1),
+                  color: active ? 'primary.contrastText' : 'text.primary',
+                },
+              }}
+            >
+              {Icon ? <Icon size={15} weight={active ? 'fill' : 'duotone'} /> : null}
+              {opt.label}
+            </Box>
+          );
+        })}
+      </Box>
+    </Grid>
+  );
+}
+
+/** Icon + label choice cards in a responsive grid. */
+export function FilterChoiceCards({
+  value,
+  onChange,
+  options,
+  columns = 2,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: readonly Option[];
+  columns?: 2 | 3;
+}) {
+  return (
+    <Grid size={{ xs: 12 }}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+          gap: 0.85,
+        }}
+      >
+        {options.map((opt) => {
+          const active = value === opt.value;
+          const Icon = opt.Icon;
+          return (
+            <Box
+              key={opt.value}
+              component="button"
+              type="button"
+              onClick={() => onChange(toggleValue(value, opt.value))}
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                gap: 0.85,
+                p: 1.25,
+                minHeight: 76,
+                borderRadius: 2.5,
+                border: '1px solid',
+                borderColor: active ? 'primary.main' : 'divider',
+                bgcolor: active ? primaryMainAlpha(0.12) : 'transparent',
+                color: 'text.primary',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'border-color 0.15s, background-color 0.15s, transform 0.15s',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  bgcolor: primaryMainAlpha(0.08),
+                  transform: 'translateY(-1px)',
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 1.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: active ? 'primary.main' : primaryMainAlpha(0.1),
+                  color: active ? 'primary.contrastText' : 'primary.main',
+                }}
+              >
+                {Icon ? <Icon size={16} weight={active ? 'fill' : 'duotone'} /> : null}
+              </Box>
+              <Box>
+                <Typography sx={{ fontWeight: 700, fontSize: '0.78rem', lineHeight: 1.2 }}>
+                  {opt.label}
+                </Typography>
+                {opt.hint ? (
+                  <Typography sx={{ mt: 0.35, fontSize: '0.68rem', color: 'text.secondary', lineHeight: 1.2 }}>
+                    {opt.hint}
+                  </Typography>
+                ) : null}
+              </Box>
+            </Box>
+          );
+        })}
+      </Box>
+    </Grid>
+  );
+}
+
+/** Compact selectable tiles (labels only, multi-row wrap). */
+export function FilterOptionTiles({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: readonly Option[];
+}) {
+  return (
+    <Grid size={{ xs: 12 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+        {options.map((opt) => {
+          const active = value === opt.value;
+          const Icon = opt.Icon;
+          return (
+            <Box
+              key={opt.value}
+              component="button"
+              type="button"
+              onClick={() => onChange(toggleValue(value, opt.value))}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.55,
+                px: 1.2,
+                py: 0.75,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: active ? 'primary.main' : 'divider',
+                bgcolor: active ? primaryMainAlpha(0.14) : 'transparent',
+                color: active ? 'primary.main' : 'text.primary',
+                fontWeight: 600,
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'all 0.15s ease',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  bgcolor: primaryMainAlpha(0.08),
+                },
+              }}
+            >
+              {Icon ? <Icon size={14} weight={active ? 'fill' : 'regular'} /> : null}
+              {opt.label}
+            </Box>
+          );
+        })}
+      </Box>
+    </Grid>
+  );
+}
+
+/** Quick preset chips that set a single numeric field (e.g. max price / min surface). */
+export function FilterPresetChips({
+  value,
+  onChange,
+  presets,
+  suffix = '',
+  prefix = '',
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  presets: readonly { value: string; label: string }[];
+  suffix?: string;
+  prefix?: string;
+}) {
+  return (
+    <Grid size={{ xs: 12 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.65 }}>
+        {presets.map((preset) => {
+          const active = value === preset.value;
+          return (
+            <Box
+              key={preset.value}
+              component="button"
+              type="button"
+              onClick={() => onChange(toggleValue(value, preset.value))}
+              sx={{
+                px: 1.15,
+                py: 0.55,
+                borderRadius: 999,
+                border: '1px solid',
+                borderColor: active ? 'primary.main' : 'divider',
+                bgcolor: active ? 'primary.main' : 'transparent',
+                color: active ? 'primary.contrastText' : 'text.secondary',
+                fontWeight: 700,
+                fontSize: '0.72rem',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'all 0.15s ease',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  color: active ? 'primary.contrastText' : 'primary.main',
+                },
+              }}
+            >
+              {prefix}
+              {preset.label}
+              {suffix}
+            </Box>
+          );
+        })}
+      </Box>
+    </Grid>
+  );
+}
+
+const BEDROOM_OPTIONS = [
+  { value: '1', rooms: 1 },
+  { value: '2', rooms: 2 },
+  { value: '3', rooms: 3 },
+  { value: '4', rooms: 4 },
+  { value: '5', rooms: 5 },
+] as const;
+
+/** Visual bedroom diagram picker — room blocks instead of a number input. */
+export function FilterBedroomPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Grid size={{ xs: 12 }}>
+      <Typography sx={{ mb: 1, fontSize: '0.75rem', fontWeight: 600, color: 'text.secondary' }}>
+        Dhoma gjumi (min)
+      </Typography>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+          gap: 0.65,
+        }}
+      >
+        {BEDROOM_OPTIONS.map((opt) => {
+          const active = value === opt.value;
+          const showPlus = opt.rooms === 5;
+          return (
+            <Box
+              key={opt.value}
+              component="button"
+              type="button"
+              aria-pressed={active}
+              onClick={() => onChange(toggleValue(value, opt.value))}
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 0.55,
+                py: 1,
+                px: 0.35,
+                borderRadius: 2.25,
+                border: '1px solid',
+                borderColor: active ? 'primary.main' : 'divider',
+                bgcolor: active ? primaryMainAlpha(0.14) : 'transparent',
+                color: active ? 'primary.main' : 'text.secondary',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'all 0.15s ease',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  bgcolor: primaryMainAlpha(0.08),
+                },
+              }}
+            >
+              <Stack direction="row" spacing={0.25} sx={{ alignItems: 'flex-end', minHeight: 22 }}>
+                {Array.from({ length: Math.min(opt.rooms, 4) }, (_, i) => (
+                  <Box
+                    key={i}
+                    sx={{
+                      width: opt.rooms >= 4 ? 7 : 9,
+                      height: 10 + i * 2,
+                      borderRadius: 0.6,
+                      bgcolor: active ? 'primary.main' : primaryMainAlpha(0.35),
+                      opacity: 0.55 + i * 0.12,
+                    }}
+                  />
+                ))}
+                {showPlus ? (
+                  <Typography sx={{ fontSize: '0.65rem', fontWeight: 800, lineHeight: 1, ml: 0.15 }}>
+                    +
+                  </Typography>
+                ) : null}
+              </Stack>
+              <Stack direction="row" spacing={0.25} sx={{ alignItems: 'center' }}>
+                <BedIcon size={11} weight={active ? 'fill' : 'regular'} />
+                <Typography sx={{ fontWeight: 800, fontSize: '0.78rem', lineHeight: 1 }}>
+                  {showPlus ? '5+' : opt.rooms}
+                </Typography>
+              </Stack>
+            </Box>
+          );
+        })}
+      </Box>
+    </Grid>
+  );
+}
+
+export const REAL_ESTATE_TX_VISUAL = [
+  { value: 'rent', label: 'Me qira', Icon: KeyIcon, hint: 'Qira mujore' },
+  { value: 'sale', label: 'Në shitje', Icon: HouseLineIcon, hint: 'Blerje' },
+] as const;
+
+export const CAR_TRANSMISSION_VISUAL = [
+  { value: 'automatic', label: 'Automatik', Icon: GearSixIcon },
+  { value: 'manual', label: 'Manual', Icon: SteeringWheelIcon },
+] as const;
+
+export const JOB_WORK_LOCATION_VISUAL = [
+  { value: 'onsite', label: 'Në zyrë', Icon: BuildingsIcon, hint: 'Onsite' },
+  { value: 'hybrid', label: 'Hibrid', Icon: HouseIcon, hint: 'Zyrë + remote' },
+  { value: 'remote', label: 'Remote', Icon: MapPinIcon, hint: 'Nga shtëpia' },
+] as const;
+
+export const REAL_ESTATE_PRICE_PRESETS = [
+  { value: '500', label: '≤ 500' },
+  { value: '1000', label: '≤ 1k' },
+  { value: '1500', label: '≤ 1.5k' },
+  { value: '2500', label: '≤ 2.5k' },
+  { value: '5000', label: '≤ 5k' },
+] as const;
+
+export const REAL_ESTATE_SURFACE_PRESETS = [
+  { value: '50', label: '50+' },
+  { value: '80', label: '80+' },
+  { value: '100', label: '100+' },
+  { value: '150', label: '150+' },
+  { value: '200', label: '200+' },
+] as const;
+
+export const CAR_PRICE_PRESETS = [
+  { value: '3000', label: '≤ 3k' },
+  { value: '6000', label: '≤ 6k' },
+  { value: '10000', label: '≤ 10k' },
+  { value: '15000', label: '≤ 15k' },
+  { value: '25000', label: '≤ 25k' },
+] as const;
+
+export const CAR_KM_PRESETS = [
+  { value: '50000', label: '≤ 50k' },
+  { value: '100000', label: '≤ 100k' },
+  { value: '150000', label: '≤ 150k' },
+  { value: '200000', label: '≤ 200k' },
+] as const;
+
+export const CAR_YEAR_MIN_PRESETS = [
+  { value: '2015', label: '2015+' },
+  { value: '2018', label: '2018+' },
+  { value: '2020', label: '2020+' },
+  { value: '2022', label: '2022+' },
+] as const;
+
+export const MARKETPLACE_PRICE_PRESETS = [
+  { value: '50', label: '≤ 50' },
+  { value: '100', label: '≤ 100' },
+  { value: '250', label: '≤ 250' },
+  { value: '500', label: '≤ 500' },
+  { value: '1000', label: '≤ 1k' },
+] as const;

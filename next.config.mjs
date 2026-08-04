@@ -4,6 +4,11 @@ const backendOrigin = (process.env.API_URL || 'http://localhost:5001').replace(/
 const config = {
   reactStrictMode: true,
 
+  // AI import (and similar) can exceed the default 30s rewrite proxy timeout.
+  experimental: {
+    proxyTimeout: 120_000,
+  },
+
   images: {
     remotePatterns: [
       {

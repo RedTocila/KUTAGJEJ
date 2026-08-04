@@ -6,6 +6,7 @@ import {
   Avatar,
   Box,
   Button,
+  ButtonBase,
   Chip,
   CircularProgress,
   Container,
@@ -30,9 +31,16 @@ import {
   HomepageMixedListingCard,
   mixedListingKey,
 } from '@/components/public/homepage-mixed-listing-card';
+import { MemberLeaveReviewButton } from '@/components/public/member-leave-review-button';
+import {
+  MemberReviewsDialog,
+  MemberSeeReviewsButton,
+} from '@/components/public/member-reviews-dialog';
+import { ProfessionalRatingSummary } from '@/components/public/professional-listing-detail-ui';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { HomepageMixedListing } from '@/lib/homepage-latest-listings';
 import { startConversationWithMember } from '@/lib/conversations-client';
+import { listMemberReviews } from '@/lib/member-reviews-client';
 import {
   memberInitials,
   mergeMemberReferralBadges,
@@ -277,7 +285,10 @@ export function MemberProfileView({
   badges?: PublicMemberReferralBadge[];
 }) {
   const router = useRouter();
+  const { user } = useUser();
   const [filter, setFilter] = React.useState<FilterKey>('all');
+  const [reviewsOpen, setReviewsOpen] = React.useState(false);
+  const [viewerHasReviewed, setViewerHasReviewed] = React.useState(false);
 
   const name = member.displayName?.trim() || 'Përdorues KuTaGjej';
   const initials = memberInitials(name);
@@ -285,7 +296,25 @@ export function MemberProfileView({
   const isBusiness = member.kind === 'business';
   const totalActive = listings.totals.all;
   const memberId = member.id?.trim() || '';
+  const reviewCount = member.reviewCount ?? 0;
+  const isOwnProfile = Boolean(user?.id && memberId && String(user.id) === String(memberId));
+  const showLeaveReview = Boolean(memberId) && !isOwnProfile && !viewerHasReviewed;
   const displayBadges = React.useMemo(() => mergeMemberReferralBadges(badges), [badges]);
+
+  React.useEffect(() => {
+    if (!memberId || isOwnProfile) {
+      setViewerHasReviewed(false);
+      return;
+    }
+    let cancelled = false;
+    void listMemberReviews(memberId).then((res) => {
+      if (cancelled) return;
+      setViewerHasReviewed(Boolean(res.viewerHasReviewed));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [memberId, isOwnProfile, user?.id]);
 
   const visibleFilters = FILTERS.filter((f) => {
     if (f.key === 'all') return true;
@@ -382,6 +411,8 @@ export function MemberProfileView({
               sx={{ alignItems: { sm: 'flex-end' } }}
             >
               <Avatar
+                src={member.avatarUrl || undefined}
+                alt={name}
                 sx={{
                   width: { xs: 88, sm: 104 },
                   height: { xs: 88, sm: 104 },
@@ -428,38 +459,70 @@ export function MemberProfileView({
                   ) : null}
                 </Stack>
 
-                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 0.75 }}>
-                  <Chip
-                    size="small"
-                    icon={
-                      isBusiness ? (
-                        <BuildingsIcon size={14} weight="fill" />
-                      ) : (
-                        <UserIcon size={14} weight="fill" />
-                      )
-                    }
-                    label={isBusiness ? 'Biznes' : 'Individ'}
-                    sx={{
-                      fontWeight: 700,
-                      bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.14 : 0.1),
-                      color: 'primary.main',
-                      border: 'none',
-                      '& .MuiChip-icon': { color: 'inherit', ml: 0.75 },
-                    }}
-                  />
-                  {member.verified ? (
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    rowGap: 0.75,
+                    width: '100%',
+                  }}
+                >
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 0.75, minWidth: 0 }}>
                     <Chip
                       size="small"
-                      label="I verifikuar"
+                      icon={
+                        isBusiness ? (
+                          <BuildingsIcon size={14} weight="fill" />
+                        ) : (
+                          <UserIcon size={14} weight="fill" />
+                        )
+                      }
+                      label={isBusiness ? 'Biznes' : 'Individ'}
                       sx={{
                         fontWeight: 700,
-                        bgcolor: 'transparent',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        color: 'text.secondary',
+                        bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.14 : 0.1),
+                        color: 'primary.main',
+                        border: 'none',
+                        '& .MuiChip-icon': { color: 'inherit', ml: 0.75 },
                       }}
                     />
-                  ) : null}
+                    {member.verified ? (
+                      <Chip
+                        size="small"
+                        label="I verifikuar"
+                        sx={{
+                          fontWeight: 700,
+                          bgcolor: 'transparent',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          color: 'text.secondary',
+                        }}
+                      />
+                    ) : null}
+                  </Stack>
+                  <ButtonBase
+                    onClick={() => setReviewsOpen(true)}
+                    aria-label={`Shiko vlerësimet (${reviewCount})`}
+                    sx={{
+                      borderRadius: 999,
+                      px: 0.5,
+                      py: 0.25,
+                      '&:hover': { bgcolor: 'action.hover' },
+                    }}
+                  >
+                    <ProfessionalRatingSummary
+                      rating={
+                        member.ratingAverage != null && Number.isFinite(member.ratingAverage)
+                          ? member.ratingAverage.toFixed(1)
+                          : '0.0'
+                      }
+                      reviewCount={reviewCount}
+                      starSize={15}
+                    />
+                  </ButtonBase>
                 </Stack>
 
                 <ReferralBadgesRow badges={displayBadges} />
@@ -529,16 +592,53 @@ export function MemberProfileView({
             {memberId ? (
               <Stack spacing={1}>
                 <MemberContactButton memberId={memberId} pill />
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                  {showLeaveReview ? (
+                    <Box sx={{ flex: '1 1 0', minWidth: 0 }}>
+                      <MemberLeaveReviewButton
+                        memberId={memberId}
+                        memberName={name}
+                        pill
+                        hasReviewed={viewerHasReviewed}
+                        onSubmitted={() => {
+                          setViewerHasReviewed(true);
+                          router.refresh();
+                        }}
+                      />
+                    </Box>
+                  ) : null}
+                  <Box sx={{ flex: showLeaveReview ? '1 1 0' : '1 1 auto', minWidth: 0, width: showLeaveReview ? undefined : '100%' }}>
+                    <MemberSeeReviewsButton
+                      onClick={() => setReviewsOpen(true)}
+                      pill
+                    />
+                  </Box>
+                </Stack>
                 <Typography
                   variant="caption"
                   color="text.secondary"
                   sx={{ fontWeight: 600, opacity: 0.85, textAlign: 'center' }}
                 >
-                  Komuniko përmes mesazheve në platformë — mos ndaj të dhëna sensitive jashtë saj.
+                  Duhet llogari KuTaGjej për të lënë vlerësim. Komuniko përmes mesazheve në platformë.
                 </Typography>
               </Stack>
             ) : null}
           </Stack>
+
+          {memberId ? (
+            <MemberReviewsDialog
+              memberId={memberId}
+              memberName={name}
+              open={reviewsOpen}
+              onClose={() => setReviewsOpen(false)}
+              ratingAverage={member.ratingAverage}
+              reviewCount={reviewCount}
+              onReviewSubmitted={() => {
+                setViewerHasReviewed(true);
+                router.refresh();
+              }}
+            />
+          ) : null}
       </Box>
 
       <Container maxWidth="md">
@@ -652,7 +752,14 @@ export function MemberProfileView({
                   }}
                 >
                   {filtered.map((item) => (
-                    <HomepageMixedListingCard key={mixedListingKey(item)} item={item} />
+                    <HomepageMixedListingCard
+                      key={mixedListingKey(item)}
+                      item={item}
+                      sellerRating={{
+                        ratingAverage: member.ratingAverage ?? null,
+                        reviewCount: member.reviewCount ?? 0,
+                      }}
+                    />
                   ))}
                 </Box>
               )}

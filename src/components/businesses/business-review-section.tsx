@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Dialog,
@@ -15,26 +16,23 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import { ArrowRight as ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 
 import { listBusinessReviews, submitBusinessReview, type BusinessReview } from '@/lib/business-reviews-client';
+import { ProfessionalFiveStarRating } from '@/components/public/professional-listing-detail-ui';
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
 
-export function BusinessReviewSection({
-  listingId,
-  ratingAverage,
-  reviewCount,
-  onReviewSubmitted,
-}: {
-  listingId: string;
-  ratingAverage: number | null | undefined;
-  reviewCount: number | undefined;
-  onReviewSubmitted?: () => void;
-}) {
+const REVIEWS_PAGE_SIZE = 10;
+const STAR_FILTERS = [5, 4, 3, 2, 1] as const;
+
+function useBusinessReviews(listingId: string, onReviewSubmitted?: () => void) {
   const router = useRouter();
   const { user } = useUser();
   const [reviews, setReviews] = React.useState<BusinessReview[]>([]);
+  const [viewerHasReviewed, setViewerHasReviewed] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [rating, setRating] = React.useState<number | null>(5);
   const [comment, setComment] = React.useState('');
@@ -43,18 +41,24 @@ export function BusinessReviewSection({
 
   const load = React.useCallback(async () => {
     const res = await listBusinessReviews(listingId);
-    if (!res.error) setReviews(res.reviews ?? []);
+    if (!res.error) {
+      setReviews(res.reviews ?? []);
+      setViewerHasReviewed(Boolean(res.viewerHasReviewed));
+    }
   }, [listingId]);
 
   React.useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, user?.id]);
 
   const openDialog = () => {
     if (!user) {
-      router.push(`${paths.user.auth}?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : paths.public.businesses)}`);
+      router.push(
+        `${paths.user.auth}?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : paths.public.businesses)}`,
+      );
       return;
     }
+    setError(null);
     setOpen(true);
   };
 
@@ -72,79 +76,423 @@ export function BusinessReviewSection({
       return;
     }
     setOpen(false);
+    setComment('');
+    setRating(5);
+    setViewerHasReviewed(true);
     await load();
     onReviewSubmitted?.();
   };
 
+  return {
+    reviews,
+    viewerHasReviewed,
+    open,
+    setOpen,
+    rating,
+    setRating,
+    comment,
+    setComment,
+    error,
+    submitting,
+    openDialog,
+    submit,
+  };
+}
+
+function LeaveReviewDialog({
+  open,
+  onClose,
+  rating,
+  onRatingChange,
+  comment,
+  onCommentChange,
+  error,
+  submitting,
+  onSubmit,
+}: {
+  open: boolean;
+  onClose: () => void;
+  rating: number | null;
+  onRatingChange: (v: number | null) => void;
+  comment: string;
+  onCommentChange: (v: string) => void;
+  error: string | null;
+  submitting: boolean;
+  onSubmit: () => void;
+}) {
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle>Vlerësoni biznesin</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          {error ? <Alert severity="error">{error}</Alert> : null}
+          <Rating value={rating} onChange={(_, v) => onRatingChange(v)} />
+          <TextField
+            label="Komenti (opsionale)"
+            value={comment}
+            onChange={(e) => onCommentChange(e.target.value)}
+            multiline
+            minRows={3}
+            fullWidth
+          />
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} color="inherit">
+          Anulo
+        </Button>
+        <Button variant="contained" disabled={submitting} onClick={onSubmit}>
+          Dërgo
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function reviewerInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  return parts
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+function StarFilterTags({
+  active,
+  counts,
+  onSelect,
+}: {
+  active: number | 'all';
+  counts: Record<number, number>;
+  onSelect: (value: number | 'all') => void;
+}) {
+  const options: Array<{ value: number | 'all'; label: string; count: number }> = [
+    {
+      value: 'all',
+      label: 'Të gjitha',
+      count: STAR_FILTERS.reduce((sum, star) => sum + (counts[star] ?? 0), 0),
+    },
+    ...STAR_FILTERS.map((star) => ({
+      value: star,
+      label: `${star}`,
+      count: counts[star] ?? 0,
+    })),
+  ];
+
+  return (
+    <Stack
+      direction="row"
+      spacing={0.75}
+      sx={{
+        overflowX: 'auto',
+        mx: -0.25,
+        px: 0.25,
+        pb: 0.25,
+        scrollbarWidth: 'none',
+        '&::-webkit-scrollbar': { display: 'none' },
+      }}
+    >
+      {options.map((option) => {
+        const isActive = option.value === active;
+        const disabled = option.count === 0 && option.value !== 'all';
+        return (
+          <Box
+            key={String(option.value)}
+            component="button"
+            type="button"
+            disabled={disabled}
+            onClick={() => onSelect(option.value)}
+            sx={{
+              flexShrink: 0,
+              cursor: disabled ? 'default' : 'pointer',
+              border: 'none',
+              outline: 'none',
+              borderRadius: 999,
+              px: 1.4,
+              py: 0.65,
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              lineHeight: 1.2,
+              fontFamily: 'inherit',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.4,
+              opacity: disabled ? 0.4 : 1,
+              transition: 'background-color 0.15s ease, color 0.15s ease',
+              bgcolor: isActive ? 'warning.main' : 'action.hover',
+              color: isActive ? 'common.black' : 'text.secondary',
+              '&:hover': disabled
+                ? undefined
+                : {
+                    bgcolor: isActive ? 'warning.main' : 'action.selected',
+                  },
+            }}
+          >
+            {option.value === 'all' ? (
+              option.label
+            ) : (
+              <>
+                <Box component="span">{option.label}</Box>
+                <StarIcon size={12} weight="fill" />
+              </>
+            )}
+          </Box>
+        );
+      })}
+    </Stack>
+  );
+}
+
+function ReviewCard({ review }: { review: BusinessReview }) {
+  return (
+    <Box
+      sx={{
+        p: 1.75,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: (theme) =>
+          theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.018)',
+      }}
+    >
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start' }}>
+        <Avatar
+          sx={{
+            width: 40,
+            height: 40,
+            fontWeight: 800,
+            fontSize: '0.8rem',
+            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.16),
+            color: 'primary.main',
+          }}
+        >
+          {reviewerInitials(review.reviewerName)}
+        </Avatar>
+        <Stack spacing={0.75} sx={{ flex: 1, minWidth: 0 }}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}
+          >
+            <Stack spacing={0.2} sx={{ minWidth: 0 }}>
+              <Typography
+                sx={{
+                  fontWeight: 800,
+                  fontSize: '0.875rem',
+                  lineHeight: 1.25,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {review.reviewerName}
+              </Typography>
+              <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', fontWeight: 600 }}>
+                {new Date(review.createdAt).toLocaleDateString('sq-AL')}
+              </Typography>
+            </Stack>
+            <Box
+              sx={{
+                flexShrink: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.4,
+                px: 0.85,
+                py: 0.35,
+                borderRadius: 999,
+                bgcolor: (theme) => alpha(theme.palette.warning.main, 0.12),
+                color: 'warning.main',
+              }}
+            >
+              <Typography sx={{ fontWeight: 800, fontSize: '0.75rem', lineHeight: 1 }}>
+                {review.rating}
+              </Typography>
+              <StarIcon size={12} weight="fill" />
+            </Box>
+          </Stack>
+          <ProfessionalFiveStarRating value={review.rating} size={14} />
+          {review.comment ? (
+            <Typography
+              sx={{
+                fontSize: '0.8125rem',
+                color: 'text.secondary',
+                lineHeight: 1.5,
+                mt: 0.15,
+              }}
+            >
+              {review.comment}
+            </Typography>
+          ) : null}
+        </Stack>
+      </Stack>
+    </Box>
+  );
+}
+
+export function BusinessReviewSection({
+  listingId,
+  ratingAverage,
+  reviewCount,
+  onReviewSubmitted,
+  variant = 'full',
+}: {
+  listingId: string;
+  ratingAverage: number | null | undefined;
+  reviewCount: number | undefined;
+  onReviewSubmitted?: () => void;
+  /** `summary` = stars + leave button; `list` = review cards; `full` = both. */
+  variant?: 'summary' | 'list' | 'full';
+}) {
+  const {
+    reviews,
+    viewerHasReviewed,
+    open,
+    setOpen,
+    rating,
+    setRating,
+    comment,
+    setComment,
+    error,
+    submitting,
+    openDialog,
+    submit,
+  } = useBusinessReviews(listingId, onReviewSubmitted);
+
+  const [visibleCount, setVisibleCount] = React.useState(REVIEWS_PAGE_SIZE);
+  const [starFilter, setStarFilter] = React.useState<number | 'all'>('all');
+
+  React.useEffect(() => {
+    setVisibleCount(REVIEWS_PAGE_SIZE);
+    setStarFilter('all');
+  }, [listingId]);
+
+  const starCounts = React.useMemo(() => {
+    const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    for (const review of reviews) {
+      const star = Math.round(Number(review.rating));
+      if (star >= 1 && star <= 5) counts[star] += 1;
+    }
+    return counts;
+  }, [reviews]);
+
+  const filteredReviews = React.useMemo(
+    () => (starFilter === 'all' ? reviews : reviews.filter((r) => Math.round(Number(r.rating)) === starFilter)),
+    [reviews, starFilter],
+  );
+
   const count = reviewCount ?? 0;
-  const avg = ratingAverage != null ? Number(ratingAverage).toFixed(1) : null;
+  const avgValue = ratingAverage != null && Number.isFinite(Number(ratingAverage)) ? Number(ratingAverage) : 0;
+  const avgLabel = count > 0 ? avgValue.toFixed(1) : null;
+  const showSummary = variant === 'summary' || variant === 'full';
+  const showList = variant === 'list' || variant === 'full';
+  const visibleReviews = filteredReviews.slice(0, visibleCount);
+  const hasMoreReviews = visibleCount < filteredReviews.length;
+  const showLeaveReview = !viewerHasReviewed;
+
+  const handleStarFilter = (value: number | 'all') => {
+    setStarFilter(value);
+    setVisibleCount(REVIEWS_PAGE_SIZE);
+  };
 
   return (
     <Box>
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
-        {avg ? (
-          <>
-            <StarIcon size={18} weight="fill" color="var(--mui-palette-primary-main)" />
-            <Typography sx={{ fontWeight: 700 }}>{avg}</Typography>
-          </>
-        ) : null}
-        <Typography variant="body2" color="text.secondary">
-          ({count} vlerësime)
-        </Typography>
-        <Button size="small" variant="outlined" onClick={openDialog} sx={{ ml: 'auto' }}>
-          Lini vlerësim
-        </Button>
-      </Stack>
-
-      {reviews.length > 0 ? (
-        <Stack spacing={1.5} sx={{ mt: 1 }}>
-          {reviews.slice(0, 5).map((r) => (
-            <Box key={r.id} sx={{ p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
-              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                <Rating value={r.rating} readOnly size="small" />
-                <Typography variant="caption" color="text.secondary">
-                  {r.reviewerName} · {new Date(r.createdAt).toLocaleDateString('sq-AL')}
-                </Typography>
-              </Stack>
-              {r.comment ? (
-                <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  {r.comment}
-                </Typography>
-              ) : null}
-            </Box>
-          ))}
-        </Stack>
-      ) : (
-        <Typography variant="body2" color="text.secondary">
-          Ende pa vlerësime. Bëhuni i pari që lini një koment.
-        </Typography>
-      )}
-
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Vlerësoni biznesin</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            {error ? <Alert severity="error">{error}</Alert> : null}
-            <Rating value={rating} onChange={(_, v) => setRating(v)} />
-            <TextField
-              label="Komenti (opsionale)"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              multiline
-              minRows={3}
-              fullWidth
-            />
+      {showSummary ? (
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', width: '100%' }}>
+          <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, flex: 1 }}>
+            <ProfessionalFiveStarRating value={avgValue} size={16} />
+            {avgLabel ? (
+              <Typography sx={{ fontWeight: 800, fontSize: '0.875rem', lineHeight: 1 }}>{avgLabel}</Typography>
+            ) : null}
+            <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>
+              ({count} vlerësime)
+            </Typography>
           </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)} color="inherit">
-            Anulo
-          </Button>
-          <Button variant="contained" disabled={submitting} onClick={() => void submit()}>
-            Dërgo
-          </Button>
-        </DialogActions>
-      </Dialog>
+          {showLeaveReview ? (
+            <Button
+              size="small"
+              variant="outlined"
+              color="primary"
+              onClick={openDialog}
+              startIcon={<StarIcon size={14} weight="fill" />}
+              sx={{
+                flexShrink: 0,
+                ml: 'auto',
+                height: 32,
+                minHeight: 32,
+                px: 1.25,
+                py: 0,
+                borderRadius: 999,
+                fontWeight: 800,
+                textTransform: 'none',
+                fontSize: '0.75rem',
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap',
+                borderWidth: 1.5,
+                '& .MuiButton-startIcon': { mr: 0.5 },
+              }}
+            >
+              Lini vlerësim
+            </Button>
+          ) : null}
+        </Stack>
+      ) : null}
+
+      {showList && reviews.length > 0 ? (
+        <Stack spacing={1.5} sx={{ mt: showSummary ? 1.25 : 0 }}>
+          {variant === 'list' ? (
+            <Typography sx={{ fontWeight: 800, fontSize: '0.95rem' }}>Vlerësime</Typography>
+          ) : null}
+
+          <StarFilterTags active={starFilter} counts={starCounts} onSelect={handleStarFilter} />
+
+          {visibleReviews.length > 0 ? (
+            <Stack spacing={1.25}>
+              {visibleReviews.map((r) => (
+                <ReviewCard key={r.id} review={r} />
+              ))}
+            </Stack>
+          ) : (
+            <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', py: 0.5 }}>
+              Nuk ka vlerësime me {starFilter} yje.
+            </Typography>
+          )}
+
+          {hasMoreReviews ? (
+            <Button
+              variant="text"
+              endIcon={<ArrowRightIcon size={16} weight="bold" />}
+              onClick={() => setVisibleCount((n) => n + REVIEWS_PAGE_SIZE)}
+              sx={{
+                alignSelf: 'flex-start',
+                px: 0,
+                minWidth: 0,
+                fontWeight: 700,
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                color: 'primary.main',
+                '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
+              }}
+            >
+              Shiko më shumë
+            </Button>
+          ) : null}
+        </Stack>
+      ) : null}
+
+      {showSummary && showLeaveReview ? (
+        <LeaveReviewDialog
+          open={open}
+          onClose={() => setOpen(false)}
+          rating={rating}
+          onRatingChange={setRating}
+          comment={comment}
+          onCommentChange={setComment}
+          error={error}
+          submitting={submitting}
+          onSubmit={() => void submit()}
+        />
+      ) : null}
     </Box>
   );
 }

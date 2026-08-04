@@ -6,6 +6,8 @@ import { Box, Stack, Typography } from '@mui/material';
 import { ArrowUpRight as ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 
 import type { HomeBannerDto } from '@/lib/home-banners-client';
+import { useCopy } from '@/hooks/use-copy';
+import type { AppMessages } from '@/lib/i18n/messages';
 
 export interface HomeBannerCarouselProps {
   banners?: HomeBannerDto[];
@@ -16,18 +18,88 @@ const SWIPE_THRESHOLD = 48;
 
 const MAX_SLIDES = 7;
 
-function resolveSlides(banners: HomeBannerDto[]): HomeBannerDto[] {
+function fallbackBanners(home: AppMessages['home']): HomeBannerDto[] {
+  return [
+    {
+      id: 'fallback-1',
+      title: home.banner1,
+      subtitle: '',
+      imageUrl: '',
+      ctaLabel: '',
+      ctaHref: '/user/dashboard/prona',
+      order: 1,
+    },
+    {
+      id: 'fallback-2',
+      title: home.banner2,
+      subtitle: '',
+      imageUrl: '',
+      ctaLabel: '',
+      ctaHref: '/prona',
+      order: 2,
+    },
+    {
+      id: 'fallback-3',
+      title: home.banner3,
+      subtitle: '',
+      imageUrl: '',
+      ctaLabel: '',
+      ctaHref: '/prona',
+      order: 3,
+    },
+    {
+      id: 'fallback-4',
+      title: home.banner4,
+      subtitle: '',
+      imageUrl: '',
+      ctaLabel: '',
+      ctaHref: '/makina',
+      order: 4,
+    },
+    {
+      id: 'fallback-5',
+      title: home.banner5,
+      subtitle: '',
+      imageUrl: '',
+      ctaLabel: '',
+      ctaHref: '/pune',
+      order: 5,
+    },
+    {
+      id: 'fallback-6',
+      title: home.banner6,
+      subtitle: '',
+      imageUrl: '',
+      ctaLabel: '',
+      ctaHref: '/tregu',
+      order: 6,
+    },
+    {
+      id: 'fallback-7',
+      title: home.banner7,
+      subtitle: '',
+      imageUrl: '',
+      ctaLabel: '',
+      ctaHref: '/biznese',
+      order: 7,
+    },
+  ];
+}
+
+function resolveSlides(banners: HomeBannerDto[], home: AppMessages['home']): HomeBannerDto[] {
+  const fallbacks = fallbackBanners(home);
   const fromApi = banners.slice(0, MAX_SLIDES);
   if (fromApi.length >= MAX_SLIDES) return fromApi;
 
   const usedTitles = new Set(fromApi.map((b) => b.title));
-  const pads = FALLBACK_BANNERS.filter((b) => !usedTitles.has(b.title))
+  const pads = fallbacks
+    .filter((b) => !usedTitles.has(b.title))
     .slice(0, MAX_SLIDES - fromApi.length)
     .map((b) => ({ ...b, id: `pad-${b.id}` }));
 
   const merged = [...fromApi, ...pads];
   if (merged.length > 0) return merged;
-  return FALLBACK_BANNERS.slice(0, MAX_SLIDES);
+  return fallbacks.slice(0, MAX_SLIDES);
 }
 
 function slideHref(slide: HomeBannerDto): string | null {
@@ -203,7 +275,8 @@ function BannerSlidePanel({
 }
 
 export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
-  const slides = React.useMemo(() => resolveSlides(banners), [banners]);
+  const t = useCopy();
+  const slides = React.useMemo(() => resolveSlides(banners, t.home), [banners, t.home]);
   const [idx, setIdx] = React.useState(0);
   const [dragOffset, setDragOffset] = React.useState(0);
   const [isDragging, setIsDragging] = React.useState(false);
@@ -284,11 +357,9 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
           onTouchCancel={handleTouchCancel}
           sx={{
             position: 'relative',
-            borderRadius: 3,
+            // Full-bleed clip so cards enter/leave at the screen edge.
+            mx: -2,
             overflow: 'hidden',
-            border: '1px solid',
-            borderColor: 'divider',
-            boxShadow: '0 10px 28px rgba(0,0,0,0.18)',
             touchAction: 'pan-y',
             cursor: slides.length > 1 ? 'grab' : undefined,
             userSelect: 'none',
@@ -315,9 +386,21 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
                 sx={{
                   flex: `0 0 ${slideBasis}%`,
                   minWidth: 0,
+                  px: 2,
+                  boxSizing: 'border-box',
                 }}
               >
-                <BannerSlidePanel slide={slide} visualIndex={i} suppressNavRef={suppressNavRef} />
+                <Box
+                  sx={{
+                    borderRadius: 3,
+                    overflow: 'hidden',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    boxShadow: '0 10px 28px rgba(0,0,0,0.18)',
+                  }}
+                >
+                  <BannerSlidePanel slide={slide} visualIndex={i} suppressNavRef={suppressNavRef} />
+                </Box>
               </Box>
             ))}
           </Box>
@@ -361,72 +444,6 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
     </Box>
   );
 }
-
-const FALLBACK_BANNERS: HomeBannerDto[] = [
-  {
-    id: 'fallback-1',
-    title: 'Posto njoftimin tënd falas në sekonda',
-    subtitle: '',
-    imageUrl: '',
-    ctaLabel: '',
-    ctaHref: '/user/dashboard/prona',
-    order: 1,
-  },
-  {
-    id: 'fallback-2',
-    title: 'Gjej atë që kërkon, më shpejt',
-    subtitle: '',
-    imageUrl: '',
-    ctaLabel: '',
-    ctaHref: '/prona',
-    order: 2,
-  },
-  {
-    id: 'fallback-3',
-    title: 'Prona në Tiranë, Durrës e gjithë Shqipërinë',
-    subtitle: '',
-    imageUrl: '',
-    ctaLabel: '',
-    ctaHref: '/prona',
-    order: 3,
-  },
-  {
-    id: 'fallback-4',
-    title: 'Makina të reja dhe të përdorura',
-    subtitle: '',
-    imageUrl: '',
-    ctaLabel: '',
-    ctaHref: '/makina',
-    order: 4,
-  },
-  {
-    id: 'fallback-5',
-    title: 'Oferta pune pranë teje',
-    subtitle: '',
-    imageUrl: '',
-    ctaLabel: '',
-    ctaHref: '/pune',
-    order: 5,
-  },
-  {
-    id: 'fallback-6',
-    title: 'Tregu online – bli e shit lehtë',
-    subtitle: '',
-    imageUrl: '',
-    ctaLabel: '',
-    ctaHref: '/tregu',
-    order: 6,
-  },
-  {
-    id: 'fallback-7',
-    title: 'Zbulo biznese lokale pranë teje',
-    subtitle: '',
-    imageUrl: '',
-    ctaLabel: '',
-    ctaHref: '/biznese',
-    order: 7,
-  },
-];
 
 const VISUALS = [
   {

@@ -23,6 +23,8 @@ import {
 import { paths } from '@/paths';
 import { listAdminListings, reviewAdminListing, type AdminListingRow } from '@/lib/admin-listings-client';
 import { useUser } from '@/hooks/use-user';
+import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
+import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
 
 const KIND_OPTIONS = [
   { value: '', label: 'Të gjitha' },
@@ -89,24 +91,22 @@ export default function ListingModerationPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ justifyContent: 'space-between', gap: 2 }}>
-        <Stack spacing={0.5}>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            Moderimi i njoftimeve
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Çdo njoftim i ri pret miratimin e administratorit para se të shfaqet publikisht.
-          </Typography>
-        </Stack>
-        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-          <Button variant={filter === 'pending' ? 'contained' : 'outlined'} onClick={() => setFilter('pending')}>
-            Në pritje
-          </Button>
-          <Button variant={filter === 'all' ? 'contained' : 'outlined'} onClick={() => setFilter('all')}>
-            Të gjitha
-          </Button>
-        </Stack>
-      </Stack>
+      <AdminPageHeader
+        icon={React.createElement(MegaphoneIcon, { size: 22, weight: 'duotone' })}
+        eyebrow="Përmbajtja"
+        title="Njoftimet"
+        description="Çdo njoftim i ri pret miratimin para se të shfaqet publikisht."
+        actions={
+          <>
+            <Button variant={filter === 'pending' ? 'contained' : 'outlined'} onClick={() => setFilter('pending')}>
+              Në pritje
+            </Button>
+            <Button variant={filter === 'all' ? 'contained' : 'outlined'} onClick={() => setFilter('all')}>
+              Të gjitha
+            </Button>
+          </>
+        }
+      />
 
       <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
         {KIND_OPTIONS.map((opt) => (

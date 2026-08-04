@@ -43,7 +43,12 @@ function wrapProfile(row) {
     referralCode: row.referral_code || null,
     referredById: row.referred_by_id || null,
     boostCredits: row.boost_credits ?? 0,
+    autoRefreshSlots: row.auto_refresh_slots ?? 0,
     referralTiersClaimed: row.referral_tiers_claimed || [],
+    dailyShareClaimedOn: row.daily_share_claimed_on || null,
+    loginStreakDays: row.login_streak_days ?? 0,
+    loginStreakLastDay: row.login_streak_last_day || null,
+    avatarUrl: row.avatar_url || '',
     lastLogin: row.last_login || null,
     lastActive: row.last_active || null,
     createdAt: row.created_at || null,
@@ -75,7 +80,12 @@ function profileUpdateFromCamel(fields) {
     referralCode: 'referral_code',
     referredById: 'referred_by_id',
     boostCredits: 'boost_credits',
+    autoRefreshSlots: 'auto_refresh_slots',
     referralTiersClaimed: 'referral_tiers_claimed',
+    dailyShareClaimedOn: 'daily_share_claimed_on',
+    loginStreakDays: 'login_streak_days',
+    loginStreakLastDay: 'login_streak_last_day',
+    avatarUrl: 'avatar_url',
     lastLogin: 'last_login',
     lastActive: 'last_active',
     accountType: 'account_type',
@@ -83,6 +93,11 @@ function profileUpdateFromCamel(fields) {
   for (const [camel, snake] of Object.entries(map)) {
     if (fields[camel] !== undefined) out[snake] = fields[camel];
   }
+  // Postgres UNIQUE treats '' as a value (NULLs are fine). Never persist blank unique keys.
+  for (const key of ['nipt', 'referral_code']) {
+    if (out[key] === '') out[key] = null;
+  }
+  if (out.avatar_url === '') out.avatar_url = null;
   return out;
 }
 

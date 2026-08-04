@@ -1,185 +1,799 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Chip, Divider, Stack, Typography } from '@mui/material';
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Grid,
+  List,
+  ListItemButton,
+  ListItemText,
+  Slider,
+  Stack,
+  Typography,
+} from '@mui/material';
 import { ArrowClockwise as ArrowClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowClockwise';
 import { Coins as CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins';
+import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
-import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
-type ExtraSection = {
-  id: string;
-  title: string;
-  badge?: string;
-  icon: PhosphorIcon;
-  items: ExtraItem[];
-};
+import { useUser } from '@/hooks/use-user';
+import {
+  convertListingQuotas,
+  fetchConvertibleQuotas,
+  type QuotaCounts,
+  type QuotaKind,
+} from '@/lib/listing-quota-convert-client';
+import {
+  listMyCarListings,
+  listMyJobListings,
+  listMyMarketplaceListings,
+  listMyRealEstateListings,
+} from '@/lib/listings-client';
+import { listMyBusinessListings, listMyProfessionalListings } from '@/lib/directory-listings-client';
+import {
+  applyPremiumVoucher,
+  buyPremiumWithCredits,
+  fetchAutoRefreshStatus,
+  listPremiumPackages,
+  listPremiumVouchers,
+} from '@/lib/payments-client';
+import { paths } from '@/paths';
+import type { AutoRefreshPackage, PremiumPackage, PremiumVoucher } from '@/types/payment';
+import type { ListingMetricKind } from '@/lib/listing-metrics';
+import {
+  FeatureList,
+  PlanCard,
+  PlanCardHeader,
+  PlanPrice,
+  SectionBlock,
+  SoftChip,
+  formatBc,
+  formatEur,
+} from './package-ui';
 
-type ExtraItem =
-  | { kind: 'priced'; label: string; priceEur: number }
-  | { kind: 'dual'; label: string; priceBc: number; priceEur: number }
-  | { kind: 'rate'; label: string; priceBc: number };
+const FALLBACK_AUTO_PACKAGES: AutoRefreshPackage[] = [
+  { id: 'auto-refresh-10', slots: 10, priceEur: 14.9, labelSq: '10 njoftime Auto-Refresh' },
+  { id: 'auto-refresh-20', slots: 20, priceEur: 24.9, labelSq: '20 njoftime Auto-Refresh' },
+];
 
-const EXTRA_SECTIONS: ExtraSection[] = [
+const FALLBACK_PREMIUM_PACKAGES: PremiumPackage[] = [
   {
-    id: 'auto-refresh',
-    title: 'AUTO-REFRESH',
-    icon: ArrowClockwiseIcon,
-    items: [
-      { kind: 'priced', label: '0/10 Listings Auto-Refresh', priceEur: 14.9 },
-      { kind: 'priced', label: '0/20 Listings Auto-Refresh', priceEur: 24.9 },
-    ],
+    id: 'premium-5',
+    days: 5,
+    priceBc: 100,
+    priceEur: 9,
+    labelSq: '5 ditë Premium',
+    labelEn: '5 Days Premium Listing',
   },
   {
-    id: 'premium',
-    title: 'PREMIUM LISTING',
-    badge: 'BC150',
-    icon: SparkleIcon,
-    items: [
-      { kind: 'dual', label: '5 Days Premium Listing', priceBc: 100, priceEur: 9 },
-      { kind: 'dual', label: '15 Days Premium Listing', priceBc: 200, priceEur: 18 },
-      { kind: 'dual', label: '30 Days Premium Listing', priceBc: 300, priceEur: 27 },
-    ],
+    id: 'premium-15',
+    days: 15,
+    priceBc: 200,
+    priceEur: 18,
+    labelSq: '15 ditë Premium',
+    labelEn: '15 Days Premium Listing',
   },
   {
-    id: 'convert',
-    title: 'CONVERT LISTING',
-    badge: 'BOOST COINS',
-    icon: CoinsIcon,
-    items: [
-      { kind: 'rate', label: '1 Car', priceBc: 2 },
-      { kind: 'rate', label: '1 Product', priceBc: 2 },
-      { kind: 'rate', label: '1 Apartment', priceBc: 0.5 },
-      { kind: 'rate', label: '1 Job Listing', priceBc: 0.5 },
-    ],
+    id: 'premium-30',
+    days: 30,
+    priceBc: 300,
+    priceEur: 27,
+    labelSq: '30 ditë Premium',
+    labelEn: '30 Days Premium Listing',
   },
 ];
 
-function formatEur(n: number) {
-  return `€${n.toFixed(2).replace(/\.00$/, '')}`;
+const CONVERT_ROWS: { kind: QuotaKind; label: string }[] = [
+  { kind: 'car', label: 'Makina' },
+  { kind: 'product', label: 'Produkte' },
+  { kind: 'apartment', label: 'Apartamente' },
+  { kind: 'job', label: 'Vende pune' },
+];
+
+const EMPTY_COUNTS: QuotaCounts = { car: 0, product: 0, apartment: 0, job: 0 };
+const DEFAULT_RATES: QuotaCounts = { car: 2, product: 2, apartment: 0.5, job: 0.5 };
+
+type PickerListing = {
+  key: string;
+  kind: ListingMetricKind;
+  listingId: string;
+  title: string;
+  categoryLabel: string;
+};
+
+function checkoutAutoRefreshHref(packageId: string) {
+  const q = new URLSearchParams({
+    kind: 'auto-refresh',
+    packageId,
+    returnTo: paths.user.packagesExtra,
+  });
+  return `${paths.user.checkout}?${q.toString()}`;
 }
 
-function formatBc(n: number) {
-  return Number.isInteger(n) ? String(n) : String(n);
+function checkoutPremiumHref(packageId: string) {
+  const q = new URLSearchParams({
+    kind: 'premium',
+    packageId,
+    returnTo: `${paths.user.packagesExtra}?assignPremium=1`,
+  });
+  return `${paths.user.checkout}?${q.toString()}`;
 }
 
-function PriceLabel({ children }: { children: React.ReactNode }) {
+function rawCreditsFrom(counts: QuotaCounts, rates: QuotaCounts) {
   return (
-    <Typography
-      component="span"
-      sx={{
-        fontWeight: 800,
-        fontSize: '0.95rem',
-        whiteSpace: 'nowrap',
-        color: 'text.primary',
-      }}
-    >
-      {children}
-    </Typography>
+    counts.car * rates.car +
+    counts.product * rates.product +
+    counts.apartment * rates.apartment +
+    counts.job * rates.job
   );
 }
 
-function ExtraItemRow({ item }: { item: ExtraItem }) {
+async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
+  const [re, cars, jobs, mkt, biz, pro] = await Promise.all([
+    listMyRealEstateListings(),
+    listMyCarListings(),
+    listMyJobListings(),
+    listMyMarketplaceListings(),
+    listMyBusinessListings(),
+    listMyProfessionalListings(),
+  ]);
+
+  const out: PickerListing[] = [];
+  for (const l of re.listings ?? []) {
+    if (l.status !== 'approved') continue;
+    out.push({
+      key: `real-estate:${l.id}`,
+      kind: 'real-estate',
+      listingId: l.id,
+      title: l.title,
+      categoryLabel: 'Pasuri',
+    });
+  }
+  for (const l of cars.listings ?? []) {
+    if (l.status !== 'approved') continue;
+    const title = [l.make, l.model, l.variant].filter(Boolean).join(' ') || 'Makinë';
+    out.push({
+      key: `car:${l.id}`,
+      kind: 'car',
+      listingId: l.id,
+      title,
+      categoryLabel: 'Makina',
+    });
+  }
+  for (const l of jobs.listings ?? []) {
+    if (l.status !== 'approved') continue;
+    out.push({
+      key: `job:${l.id}`,
+      kind: 'job',
+      listingId: l.id,
+      title: l.title,
+      categoryLabel: 'Punë',
+    });
+  }
+  for (const l of mkt.listings ?? []) {
+    if (l.status !== 'approved') continue;
+    out.push({
+      key: `marketplace:${l.id}`,
+      kind: 'marketplace',
+      listingId: l.id,
+      title: l.title,
+      categoryLabel: 'Tregu',
+    });
+  }
+  for (const l of biz.listings ?? []) {
+    if (l.status !== 'approved') continue;
+    out.push({
+      key: `businesses:${l.id}`,
+      kind: 'businesses',
+      listingId: l.id,
+      title: l.title,
+      categoryLabel: 'Biznese',
+    });
+  }
+  for (const l of pro.listings ?? []) {
+    if (l.status !== 'approved') continue;
+    out.push({
+      key: `professionals:${l.id}`,
+      kind: 'professionals',
+      listingId: l.id,
+      title: l.title,
+      categoryLabel: 'Profesionistë',
+    });
+  }
+  return out;
+}
+
+function AutoRefreshSection() {
+  const router = useRouter();
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [slots, setSlots] = React.useState(0);
+  const [used, setUsed] = React.useState(0);
+  const [packages, setPackages] = React.useState<AutoRefreshPackage[]>(FALLBACK_AUTO_PACKAGES);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      setLoading(true);
+      const { status, error: err } = await fetchAutoRefreshStatus();
+      if (cancelled) return;
+      if (err) setError(err);
+      if (status) {
+        setSlots(status.slots);
+        setUsed(status.used);
+        if (status.packages?.length) setPackages(status.packages);
+      }
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
-    <Stack
-      direction="row"
-      spacing={1.5}
-      sx={{
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 1,
-        py: 1.25,
-        flexWrap: 'wrap',
-      }}
+    <SectionBlock
+      icon={ArrowClockwiseIcon}
+      title="Auto-Refresh"
+      description="Njoftimet tuaja ngrihen automatikisht në krye sipas intervalit të planit."
+      chips={<SoftChip label={`${used}/${slots} vende`} />}
     >
-      <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 0, flex: '1 1 160px' }}>
-        {item.label}
-      </Typography>
-      {item.kind === 'priced' ? (
-        <PriceLabel>{formatEur(item.priceEur)}</PriceLabel>
+      {error ? (
+        <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
       ) : null}
-      {item.kind === 'dual' ? (
-        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-          <Chip
-            size="small"
-            label={`BC${formatBc(item.priceBc)}`}
-            sx={{ fontWeight: 700, bgcolor: (t) => `${t.palette.warning.main}18` }}
-          />
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-            or
-          </Typography>
-          <PriceLabel>{formatEur(item.priceEur)}</PriceLabel>
+
+      {loading ? (
+        <Box sx={{ py: 3, display: 'flex', justifyContent: 'center' }}>
+          <CircularProgress size={24} />
+        </Box>
+      ) : (
+        <Grid container spacing={2}>
+          {packages.map((pkg, index) => (
+            <Grid key={pkg.id} size={{ xs: 12, sm: 6 }}>
+              <PlanCard highlighted={index === 1}>
+                <PlanCardHeader
+                  icon={ArrowClockwiseIcon}
+                  title={`${pkg.slots} vende`}
+                  subtitle="Kapacitet Auto-Refresh"
+                  badge={index === 1 ? <SoftChip label="Më e mirë" color="primary" /> : undefined}
+                />
+                <PlanPrice amount={formatEur(pkg.priceEur)} hint={`Shton ${pkg.slots} vende në llogari`} />
+                <FeatureList
+                  items={[
+                    `${pkg.slots} njoftime me Auto-Refresh`,
+                    `Aktualisht ${used}/${slots} vende në përdorim`,
+                    'Aktivizohet pas pagesës',
+                  ]}
+                />
+                <Button
+                  fullWidth
+                  variant="contained"
+                  onClick={() => router.push(checkoutAutoRefreshHref(pkg.id))}
+                  sx={{ fontWeight: 800, mt: 'auto', textTransform: 'none', borderRadius: 2, py: 1.05 }}
+                >
+                  Blej {formatEur(pkg.priceEur)}
+                </Button>
+              </PlanCard>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+    </SectionBlock>
+  );
+}
+
+function PremiumListingSection() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, checkSession } = useUser();
+  const balance = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
+
+  const [packages, setPackages] = React.useState<PremiumPackage[]>(FALLBACK_PREMIUM_PACKAGES);
+  const [unused, setUnused] = React.useState<PremiumVoucher[]>([]);
+  const [busyId, setBusyId] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState<string | null>(null);
+
+  const [assignOpen, setAssignOpen] = React.useState(false);
+  const [activeVoucher, setActiveVoucher] = React.useState<PremiumVoucher | null>(null);
+  const [pickerLoading, setPickerLoading] = React.useState(false);
+  const [pickerListings, setPickerListings] = React.useState<PickerListing[]>([]);
+  const [selectedKey, setSelectedKey] = React.useState<string | null>(null);
+  const [applying, setApplying] = React.useState(false);
+
+  const reloadVouchers = React.useCallback(async () => {
+    const { vouchers } = await listPremiumVouchers(true);
+    setUnused(vouchers ?? []);
+    return vouchers ?? [];
+  }, []);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const [{ packages: pkgs }, vouchers] = await Promise.all([
+        listPremiumPackages(),
+        reloadVouchers(),
+      ]);
+      if (cancelled) return;
+      if (pkgs?.length) setPackages(pkgs);
+      if (searchParams.get('assignPremium') === '1' && vouchers.length > 0) {
+        setActiveVoucher(vouchers[0]);
+        setAssignOpen(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadVouchers, searchParams]);
+
+  React.useEffect(() => {
+    if (!assignOpen) return;
+    let cancelled = false;
+    setPickerLoading(true);
+    setSelectedKey(null);
+    void loadApprovedListingsForPicker().then((items) => {
+      if (cancelled) return;
+      setPickerListings(items);
+      setPickerLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [assignOpen]);
+
+  const openAssign = (voucher: PremiumVoucher) => {
+    setActiveVoucher(voucher);
+    setAssignOpen(true);
+    setError(null);
+  };
+
+  const closeAssign = () => {
+    setAssignOpen(false);
+    setActiveVoucher(null);
+    if (searchParams.get('assignPremium') === '1') {
+      router.replace(paths.user.packagesExtra);
+    }
+  };
+
+  const onBuyCard = (pkg: PremiumPackage) => {
+    router.push(checkoutPremiumHref(pkg.id));
+  };
+
+  const onBuyBc = async (pkg: PremiumPackage) => {
+    setBusyId(pkg.id);
+    setError(null);
+    setSuccess(null);
+    const result = await buyPremiumWithCredits(pkg.id);
+    setBusyId(null);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    await checkSession();
+    setSuccess(result.message || 'Premium u blë me Boost Coins.');
+    if (result.voucher) {
+      await reloadVouchers();
+      openAssign(result.voucher);
+    }
+  };
+
+  const onApply = async () => {
+    if (!activeVoucher || !selectedKey) return;
+    const listing = pickerListings.find((l) => l.key === selectedKey);
+    if (!listing) return;
+    setApplying(true);
+    setError(null);
+    const result = await applyPremiumVoucher({
+      voucherId: activeVoucher.id,
+      kind: listing.kind,
+      listingId: listing.listingId,
+    });
+    setApplying(false);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setSuccess(result.message || 'Njoftimi u bë Premium.');
+    await reloadVouchers();
+    closeAssign();
+  };
+
+  return (
+    <SectionBlock
+      icon={SparkleIcon}
+      title="Premium Listing"
+      description="Njoftimi juaj shfaqet i theksuar dhe më lart në rezultate për kohëzgjatjen e zgjedhur."
+      accent="warning"
+      chips={
+        <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+          <SoftChip label={`${formatBc(balance)} BC`} color="warning" />
+          {unused.length > 0 ? <SoftChip label={`${unused.length} për t'u aplikuar`} color="primary" /> : null}
+        </Stack>
+      }
+    >
+      {error ? (
+        <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      ) : null}
+      {success ? (
+        <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setSuccess(null)}>
+          {success}
+        </Alert>
+      ) : null}
+
+      {unused.length > 0 ? (
+        <Stack spacing={1} sx={{ mb: 2 }}>
+          {unused.map((v) => (
+            <Stack
+              key={v.id}
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              sx={{
+                alignItems: { sm: 'center' },
+                justifyContent: 'space-between',
+                p: 1.5,
+                borderRadius: 2,
+                border: '1px dashed',
+                borderColor: 'warning.main',
+                bgcolor: (t) => `${t.palette.warning.main}10`,
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 750 }}>
+                {v.days} ditë Premium · e papërdorur
+              </Typography>
+              <Button size="small" variant="contained" color="warning" onClick={() => openAssign(v)} sx={{ fontWeight: 800 }}>
+                Zgjidh njoftimin
+              </Button>
+            </Stack>
+          ))}
         </Stack>
       ) : null}
-      {item.kind === 'rate' ? (
-        <PriceLabel>
-          = BC {formatBc(item.priceBc)}
-        </PriceLabel>
+
+      <Grid container spacing={2}>
+        {packages.map((pkg) => {
+          const busy = busyId === pkg.id;
+          const canAfford = balance >= pkg.priceBc;
+          const highlighted = pkg.days === 15;
+          return (
+            <Grid key={pkg.id} size={{ xs: 12, sm: 6, md: 4 }}>
+              <PlanCard highlighted={highlighted} accent="warning">
+                <PlanCardHeader
+                  icon={SparkleIcon}
+                  title={pkg.labelSq}
+                  subtitle={`${pkg.days} ditë theksim`}
+                  accent="warning"
+                  badge={highlighted ? <SoftChip label="Rekomanduar" color="warning" /> : undefined}
+                />
+                <PlanPrice amount={formatEur(pkg.priceEur)} hint={`ose ${formatBc(pkg.priceBc)} Boost Coins`} />
+                <FeatureList
+                  items={[
+                    `Premium për ${pkg.days} ditë`,
+                    'Renditje e favorizuar',
+                    'Border i theksuar në kartë',
+                  ]}
+                />
+                <Stack spacing={1} sx={{ mt: 'auto' }}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    color="warning"
+                    disabled={busy}
+                    onClick={() => onBuyCard(pkg)}
+                    startIcon={<CreditCardIcon size={16} weight="bold" />}
+                    sx={{ fontWeight: 800, textTransform: 'none', borderRadius: 2 }}
+                  >
+                    Kartë · {formatEur(pkg.priceEur)}
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    color="warning"
+                    disabled={busy || !canAfford}
+                    onClick={() => void onBuyBc(pkg)}
+                    startIcon={busy ? <CircularProgress size={14} color="inherit" /> : <CoinsIcon size={16} />}
+                    sx={{ fontWeight: 800, textTransform: 'none', borderRadius: 2 }}
+                  >
+                    {formatBc(pkg.priceBc)} BC
+                  </Button>
+                </Stack>
+              </PlanCard>
+            </Grid>
+          );
+        })}
+      </Grid>
+
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+        Premium nga abonimi Grow/Elite: 30 ditë — aktivizohet me butonin Premium te Shpalljet e mia.
+      </Typography>
+
+      <Dialog open={assignOpen} onClose={closeAssign} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ fontWeight: 800 }}>
+          Zgjidh njoftimin Premium
+          {activeVoucher ? (
+            <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block', mt: 0.5, fontWeight: 600 }}>
+              {activeVoucher.days} ditë do të aplikohen në njoftimin e zgjedhur
+            </Typography>
+          ) : null}
+        </DialogTitle>
+        <DialogContent dividers>
+          {pickerLoading ? (
+            <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
+              <CircularProgress size={28} />
+            </Box>
+          ) : pickerListings.length === 0 ? (
+            <Alert severity="info" sx={{ borderRadius: 2 }}>
+              Nuk keni njoftime të aprovuara. Shtoni një njoftim dhe aprovoni atë, pastaj aplikoni Premium.
+            </Alert>
+          ) : (
+            <List disablePadding>
+              {pickerListings.map((item) => (
+                <ListItemButton
+                  key={item.key}
+                  selected={selectedKey === item.key}
+                  onClick={() => setSelectedKey(item.key)}
+                  sx={{ borderRadius: 1.5, mb: 0.5 }}
+                >
+                  <ListItemText
+                    primary={<Typography sx={{ fontWeight: 700 }}>{item.title}</Typography>}
+                    secondary={
+                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                        {item.categoryLabel}
+                      </Typography>
+                    }
+                  />
+                </ListItemButton>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={closeAssign} sx={{ fontWeight: 700 }}>
+            Më vonë
+          </Button>
+          <Button
+            variant="contained"
+            disabled={!selectedKey || applying || pickerListings.length === 0}
+            onClick={() => void onApply()}
+            startIcon={applying ? <CircularProgress size={16} color="inherit" /> : <SparkleIcon size={18} />}
+            sx={{ fontWeight: 800 }}
+          >
+            Apliko Premium
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </SectionBlock>
+  );
+}
+
+function ConvertListingSection() {
+  const { checkSession } = useUser();
+  const [loading, setLoading] = React.useState(true);
+  const [submitting, setSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState<string | null>(null);
+  const [hasPaidPlan, setHasPaidPlan] = React.useState(false);
+  const [available, setAvailable] = React.useState<QuotaCounts>(EMPTY_COUNTS);
+  const [rates, setRates] = React.useState<QuotaCounts>(DEFAULT_RATES);
+  const [selected, setSelected] = React.useState<QuotaCounts>(EMPTY_COUNTS);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const { snapshot, error: err } = await fetchConvertibleQuotas();
+    if (err) {
+      setError(err);
+      setLoading(false);
+      return;
+    }
+    if (snapshot) {
+      setHasPaidPlan(snapshot.hasPaidPlan);
+      setAvailable(snapshot.available);
+      setRates(snapshot.rates || DEFAULT_RATES);
+      setSelected(EMPTY_COUNTS);
+    }
+    setLoading(false);
+  }, []);
+
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+
+  const rawTotal = rawCreditsFrom(selected, rates);
+  const awardTotal = Math.floor(rawTotal);
+  const totalSelected = Object.values(selected).reduce((a, b) => a + b, 0);
+  const canSubmit = hasPaidPlan && totalSelected > 0 && awardTotal >= 1 && !submitting;
+
+  const onConvert = async () => {
+    if (!canSubmit) return;
+    setSubmitting(true);
+    setError(null);
+    setSuccess(null);
+    const result = await convertListingQuotas(selected);
+    setSubmitting(false);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    if (result.available) setAvailable(result.available);
+    setSelected(EMPTY_COUNTS);
+    setSuccess(result.message || `+${result.creditsGranted ?? 0} Boost Coins`);
+    await checkSession();
+  };
+
+  return (
+    <Box
+      id="convert"
+      sx={{
+        p: { xs: 2, sm: 2.5 },
+        borderRadius: 2.5,
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        scrollMarginTop: 88,
+      }}
+    >
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mb: 0.5 }}>
+        <Box
+          sx={{
+            width: 36,
+            height: 36,
+            borderRadius: 1.5,
+            display: 'grid',
+            placeItems: 'center',
+            flexShrink: 0,
+            bgcolor: (t) => `${t.palette.warning.main}18`,
+            color: 'warning.main',
+          }}
+        >
+          <CoinsIcon size={20} weight="duotone" />
+        </Box>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+            <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', letterSpacing: 0.4 }}>
+              CONVERT LISTING
+            </Typography>
+            <Chip size="small" label="BOOST COINS" color="warning" sx={{ fontWeight: 700, height: 22 }} />
+          </Stack>
+        </Box>
+      </Stack>
+
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 0.5 }}>
+        Konvertoni kuotat e papërdorura të paketës në Boost Coins.
+      </Typography>
+
+      {error ? (
+        <Alert severity="warning" sx={{ mt: 1.5, borderRadius: 1.5 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
       ) : null}
-    </Stack>
+      {success ? (
+        <Alert severity="success" sx={{ mt: 1.5, borderRadius: 1.5 }} onClose={() => setSuccess(null)}>
+          {success}
+        </Alert>
+      ) : null}
+
+      {loading ? (
+        <Box sx={{ py: 3, display: 'flex', justifyContent: 'center' }}>
+          <CircularProgress size={28} />
+        </Box>
+      ) : !hasPaidPlan ? (
+        <Alert severity="info" sx={{ mt: 1.5, borderRadius: 1.5 }}>
+          Konvertimi është i disponueshëm kur keni një paketë të paguar aktive me kuota të lira.
+        </Alert>
+      ) : (
+        <Stack divider={<Divider flexItem />} sx={{ mt: 1 }}>
+          {CONVERT_ROWS.map(({ kind, label }) => {
+            const max = available[kind] || 0;
+            const value = Math.min(selected[kind], max);
+            const rate = rates[kind];
+            const rowBc = value * rate;
+            return (
+              <Box key={kind} sx={{ py: 1.5 }}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: 'baseline', justifyContent: 'space-between', mb: 0.5, gap: 1 }}
+                >
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    {label}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                    1 = BC {formatBc(rate)} · të lira {max}
+                  </Typography>
+                </Stack>
+                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                  <Slider
+                    size="small"
+                    min={0}
+                    max={Math.max(max, 0)}
+                    step={1}
+                    value={value}
+                    disabled={max === 0 || submitting}
+                    onChange={(_e, v) => {
+                      const n = Array.isArray(v) ? v[0] : v;
+                      setSelected((prev) => ({ ...prev, [kind]: n }));
+                    }}
+                    valueLabelDisplay="auto"
+                    sx={{ flex: 1, color: 'warning.main' }}
+                  />
+                  <Typography
+                    sx={{
+                      minWidth: 64,
+                      textAlign: 'right',
+                      fontWeight: 800,
+                      fontSize: '0.9rem',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {value} → BC {formatBc(rowBc)}
+                  </Typography>
+                </Stack>
+              </Box>
+            );
+          })}
+        </Stack>
+      )}
+
+      {!loading && hasPaidPlan ? (
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={1.5}
+          sx={{ mt: 2, alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+            Gjithsej:{' '}
+            <Box component="span" sx={{ color: 'warning.main', fontWeight: 800 }}>
+              BC {formatBc(rawTotal)}
+            </Box>
+            {awardTotal !== rawTotal ? (
+              <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.75 }}>
+                (merrni {awardTotal})
+              </Typography>
+            ) : null}
+          </Typography>
+          <Button
+            variant="contained"
+            color="warning"
+            disabled={!canSubmit}
+            onClick={() => void onConvert()}
+            startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : <CoinsIcon size={18} />}
+            sx={{ fontWeight: 800, alignSelf: { xs: 'stretch', sm: 'auto' } }}
+          >
+            Konverto
+          </Button>
+        </Stack>
+      ) : null}
+    </Box>
   );
 }
 
 export function ExtraPackagesPanel() {
-  return (
-    <Stack spacing={2}>
-      {EXTRA_SECTIONS.map((section) => {
-        const Icon = section.icon;
-        return (
-          <Box
-            key={section.id}
-            sx={{
-              p: { xs: 2, sm: 2.5 },
-              borderRadius: 2.5,
-              border: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'background.paper',
-            }}
-          >
-            <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mb: 0.5 }}>
-              <Box
-                sx={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 1.5,
-                  display: 'grid',
-                  placeItems: 'center',
-                  flexShrink: 0,
-                  bgcolor: (t) => `${t.palette.primary.main}18`,
-                  color: 'primary.main',
-                }}
-              >
-                {React.createElement(Icon, { size: 20, weight: 'duotone' })}
-              </Box>
-              <Box sx={{ minWidth: 0, flex: 1 }}>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}
-                >
-                  <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', letterSpacing: 0.4 }}>
-                    {section.title}
-                  </Typography>
-                  {section.badge ? (
-                    <Chip
-                      size="small"
-                      label={section.badge}
-                      color={section.id === 'premium' || section.id === 'convert' ? 'warning' : 'default'}
-                      sx={{ fontWeight: 700, height: 22 }}
-                    />
-                  ) : null}
-                </Stack>
-              </Box>
-            </Stack>
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.location.hash !== '#convert') return;
+    const timer = window.setTimeout(() => {
+      document.getElementById('convert')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, []);
 
-            <Stack divider={<Divider flexItem />} sx={{ mt: 1 }}>
-              {section.items.map((item) => (
-                <ExtraItemRow key={item.label} item={item} />
-              ))}
-            </Stack>
-          </Box>
-        );
-      })}
+  return (
+    <Stack spacing={2.5}>
+      <AutoRefreshSection />
+      <PremiumListingSection />
+      <ConvertListingSection />
     </Stack>
   );
 }

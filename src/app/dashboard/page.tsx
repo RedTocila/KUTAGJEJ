@@ -4,8 +4,6 @@ import * as React from 'react';
 import RouterLink from 'next/link';
 import {
   Box,
-  Card,
-  CardContent,
   Chip,
   Grid,
   Stack,
@@ -17,14 +15,17 @@ import {
   Typography,
 } from '@mui/material';
 import { Bell as BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
+import { ChartPie as ChartPieIcon } from '@phosphor-icons/react/dist/ssr/ChartPie';
 import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
 import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 
+import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { useUser } from '@/hooks/use-user';
 import { fetchAdminStats } from '@/lib/admin-stats-client';
 import { listManagedUsers } from '@/lib/admin-users-client';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { paths } from '@/paths';
 
 type StatCard = {
@@ -155,56 +156,60 @@ export default function Page() {
 
   return (
     <Stack spacing={3}>
-      <Box>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>
-          Përmbledhje
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Mirë se erdhe përsëri, {user?.firstName || user?.email}. KuTaGjej — administrimi i njoftimeve dhe
-          përdoruesve.
-        </Typography>
-      </Box>
+      <AdminPageHeader
+        icon={React.createElement(ChartPieIcon, { size: 22, weight: 'duotone' })}
+        eyebrow="Paneli"
+        title="Përmbledhje"
+        description={`Mirë se erdhe, ${user?.firstName || user?.email}. Shiko statusin e njoftimeve, moderimin dhe stafin.`}
+      />
 
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         {statCards.map((stat, i) => {
           const card = (
-            <Card
-              sx={
-                stat.href
+            <Box
+              sx={{
+                height: '100%',
+                p: 2.25,
+                borderRadius: 2.5,
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+                transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+                ...(stat.href
                   ? {
-                      height: '100%',
-                      transition: 'box-shadow 0.2s ease, transform 0.15s ease',
-                      '&:hover': { boxShadow: 4 },
+                      '&:hover': {
+                        borderColor: 'primary.main',
+                        boxShadow: (t) => `0 8px 24px ${primaryMainAlpha(t.palette.mode === 'dark' ? 0.18 : 0.1)}`,
+                      },
                     }
-                  : { height: '100%' }
-              }
+                  : null),
+              }}
             >
-              <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <Box
-                    sx={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: 2,
-                      bgcolor: stat.color,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {React.createElement(stat.icon, { size: 28, weight: 'bold', color: 'white' })}
-                  </Box>
-                  <Box>
-                    <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                      {stat.value}
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {stat.title}
-                    </Typography>
-                  </Box>
+              <Box sx={{ display: 'flex', gap: 1.75, alignItems: 'center' }}>
+                <Box
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 2,
+                    bgcolor: stat.color,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  {React.createElement(stat.icon, { size: 22, weight: 'bold', color: 'white' })}
                 </Box>
-              </CardContent>
-            </Card>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography sx={{ fontWeight: 800, fontSize: '1.5rem', lineHeight: 1.15, letterSpacing: '-0.02em' }}>
+                    {stat.value}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, mt: 0.25 }}>
+                    {stat.title}
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
           );
           return (
             <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
@@ -212,7 +217,7 @@ export default function Page() {
                 <Box
                   component={RouterLink}
                   href={stat.href}
-                  sx={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+                  sx={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
                 >
                   {card}
                 </Box>
@@ -225,55 +230,73 @@ export default function Page() {
       </Grid>
 
       {isPlatformAdmin && statsFetched && Object.keys(byKind).length > 0 ? (
-        <Card>
-          <CardContent sx={{ p: 3 }}>
-            <Stack spacing={2}>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                Njoftime sipas kategorive
-              </Typography>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Kategoria</TableCell>
-                    <TableCell align="right">Total</TableCell>
-                    <TableCell align="right">Aktive</TableCell>
-                    <TableCell align="right">Në pritje</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {Object.entries(byKind).map(([kind, row]) => (
-                    <TableRow key={kind}>
-                      <TableCell>{KIND_LABELS[kind] ?? kind}</TableCell>
-                      <TableCell align="right">{row.total}</TableCell>
-                      <TableCell align="right">{row.approved}</TableCell>
-                      <TableCell align="right">
-                        {row.pending > 0 ? (
-                          <Chip size="small" color="warning" label={row.pending} />
-                        ) : (
-                          row.pending
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Stack>
-          </CardContent>
-        </Card>
+        <Box
+          sx={{
+            borderRadius: 2.5,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            overflow: 'hidden',
+          }}
+        >
+          <Box sx={{ px: 2.5, pt: 2.25, pb: 1.5 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+              Njoftime sipas kategorive
+            </Typography>
+          </Box>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'action.hover' }}>
+                <TableCell sx={{ fontWeight: 700 }}>Kategoria</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700 }}>
+                  Total
+                </TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700 }}>
+                  Aktive
+                </TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700 }}>
+                  Në pritje
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {Object.entries(byKind).map(([kind, row]) => (
+                <TableRow key={kind} hover>
+                  <TableCell>{KIND_LABELS[kind] ?? kind}</TableCell>
+                  <TableCell align="right">{row.total}</TableCell>
+                  <TableCell align="right">{row.approved}</TableCell>
+                  <TableCell align="right">
+                    {row.pending > 0 ? <Chip size="small" color="warning" label={row.pending} /> : row.pending}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
       ) : null}
 
-      <Card>
-        <CardContent sx={{ p: 3, textAlign: 'center' }}>
-          <Chip label="KuTaGjej Admin" color="primary" sx={{ mb: 2 }} />
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            Paneli i administratorit
+      {isPlatformAdmin ? (
+        <Box
+          sx={{
+            borderRadius: 2.5,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: primaryMainAlpha(0.06),
+            px: 2.5,
+            py: 2.25,
+          }}
+        >
+          <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+            Radha e moderimit
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Njoftimet e reja shkojnë në radhën e moderimit. Aprovoni ose refuzoni nga{' '}
-            <RouterLink href={paths.dashboard.listingModeration}>Njoftimet</RouterLink>.
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Njoftimet e reja shkojnë në radhë para publikimit.{' '}
+            <Box component={RouterLink} href={paths.dashboard.listingModeration} sx={{ color: 'primary.main', fontWeight: 700 }}>
+              Hap njoftimet
+            </Box>
           </Typography>
-        </CardContent>
-      </Card>
+        </Box>
+      ) : null}
     </Stack>
   );
 }

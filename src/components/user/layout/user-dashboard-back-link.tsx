@@ -1,16 +1,20 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
-import { Button, type SxProps, type Theme } from '@mui/material';
+import { Button, IconButton, type SxProps, type Theme } from '@mui/material';
 import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
+import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
+import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
 
-/** Returns to the user profile dashboard (`/user/dashboard`), or a custom parent. */
+/**
+ * Returns to the mobile profile tab (portal hub at `/user/dashboard`), or a custom parent.
+ * Uses hard navigation — soft Next.js nav is unreliable in this app shell.
+ */
 export function UserDashboardBackLink({
   href = paths.user.dashboard,
-  label = 'Kthehu te paneli',
+  label = 'Kthehu te profili',
   sx,
 }: {
   href?: string;
@@ -19,10 +23,10 @@ export function UserDashboardBackLink({
 }) {
   return (
     <Button
-      component={RouterLink}
-      href={href}
+      type="button"
       size="small"
       startIcon={React.createElement(ArrowLeftIcon, { size: 18, weight: 'bold' })}
+      onClick={() => hardNavigate(href)}
       sx={[
         {
           alignSelf: 'flex-start',
@@ -38,5 +42,34 @@ export function UserDashboardBackLink({
     >
       {label}
     </Button>
+  );
+}
+
+/** Dismisses the post-listing flow and returns to the dashboard hub. */
+export function UserDashboardCloseButton({
+  href = paths.user.dashboard,
+  sx,
+}: {
+  href?: string;
+  sx?: SxProps<Theme>;
+}) {
+  return (
+    <IconButton
+      type="button"
+      aria-label="Mbyll"
+      onClick={() => hardNavigate(href)}
+      size="small"
+      sx={[
+        {
+          color: 'text.secondary',
+          width: 36,
+          height: 36,
+          '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
+        },
+        ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+      ]}
+    >
+      <XIcon size={20} weight="bold" />
+    </IconButton>
   );
 }

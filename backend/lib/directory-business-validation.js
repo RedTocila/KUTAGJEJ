@@ -22,7 +22,7 @@ function normalizeMenuCategories(input) {
     seen.add(id);
     out.push({ id, name, sortOrder: Number(row?.sortOrder) || i });
   }
-  return out.slice(0, 24);
+  return out.slice(0, 40);
 }
 
 function normalizeMenuItems(input, categories) {
@@ -56,7 +56,7 @@ function normalizeMenuItems(input, categories) {
       sortOrder: Number(row?.sortOrder) || i,
     });
   }
-  return out.slice(0, 120);
+  return out.slice(0, 250);
 }
 
 function normalizeTimeSlots(input) {
@@ -90,7 +90,9 @@ function validateBusinessPayload(body, { partial = false } = {}) {
       return { ok: false, message: 'Kategoria e biznesit nuk është e vlefshme.' };
     }
     const cityId = String(body?.cityId || '').trim();
-    if (!/^[a-f\d]{24}$/i.test(cityId)) return { ok: false, message: 'Zgjidhni një qytet të vlefshëm.' };
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cityId)) {
+      return { ok: false, message: 'Zgjidhni një qytet të vlefshëm.' };
+    }
     const phone = String(body?.contactPhone || '').trim();
     if (phone.length < 6) return { ok: false, message: 'Numri i telefonit duhet të ketë të paktën 6 karaktere.' };
   }

@@ -86,9 +86,14 @@ export function BusinessOwnerReservations() {
     <Card variant="outlined">
       <CardContent>
         <Stack spacing={2}>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            Rezervimet
-          </Typography>
+          <Stack spacing={0.5}>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              Rezervimet
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Kërkesat ruhen këtu; detajet e plota gjenden edhe në Mesazhe.
+            </Typography>
+          </Stack>
           <SearchableSelect
             label="Biznesi"
             value={listingId}

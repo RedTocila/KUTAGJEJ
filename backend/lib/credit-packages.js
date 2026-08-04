@@ -39,24 +39,54 @@ function formatCreditPackage(doc) {
 
 /** Active packages, sorted, for the public store. */
 async function listActiveCreditPackages() {
-  const { data, error } = await getSupabaseAdmin()
-    .from('credit_packages')
-    .select('*')
-    .eq('active', true)
-    .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: true });
+  const sb = getSupabaseAdmin();
+  const query = () =>
+    sb
+      .from('credit_packages')
+      .select('*')
+      .eq('active', true)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true });
+
+  let { data, error } = await query();
   if (error) throw error;
+
+  // Self-heal empty catalogs (e.g. fresh DB before ensure ran, or all rows deactivated).
+  if (!data?.length) {
+    try {
+      const { ensureCreditPackages } = require('./ensure-credit-packages');
+      await ensureCreditPackages();
+      ({ data, error } = await query());
+      if (error) throw error;
+    } catch (ensureErr) {
+      console.error('listActiveCreditPackages ensure fallback:', ensureErr?.message || ensureErr);
+    }
+  }
+
   return (data || []).map(mapCreditPackage).map(formatCreditPackage);
 }
 
-/** A single active package by id, or null. Used when creating an order. */
+/** A single active package by id or labelSq, or null. Used when creating an order. */
 async function getActiveCreditPackage(id) {
   const key = String(id || '').trim();
-  if (!isUuid(key)) return null;
-  const { data, error } = await getSupabaseAdmin()
+  if (!key) return null;
+  const sb = getSupabaseAdmin();
+
+  if (isUuid(key)) {
+    const { data, error } = await sb
+      .from('credit_packages')
+      .select('*')
+      .eq('id', key)
+      .eq('active', true)
+      .maybeSingle();
+    if (error) throw error;
+    return mapCreditPackage(data);
+  }
+
+  const { data, error } = await sb
     .from('credit_packages')
     .select('*')
-    .eq('id', key)
+    .eq('label_sq', key)
     .eq('active', true)
     .maybeSingle();
   if (error) throw error;

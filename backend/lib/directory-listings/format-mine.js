@@ -1,3 +1,5 @@
+const { premiumFieldsFromDoc } = require('../premium-listing');
+
 function listingId(doc) {
   return doc.id != null ? String(doc.id) : doc._id != null ? String(doc._id) : null;
 }
@@ -26,6 +28,7 @@ function formatMineBusiness(doc, cityById) {
     status: doc.status || 'pending',
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
+    ...premiumFieldsFromDoc(doc),
   };
 }
 
@@ -50,6 +53,7 @@ function formatMineProfessional(doc, cityById) {
     status: doc.status || 'pending',
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
+    ...premiumFieldsFromDoc(doc),
   };
 }
 

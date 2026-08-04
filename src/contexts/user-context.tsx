@@ -23,20 +23,13 @@ export interface UserProviderProps {
  * Manages authentication state and user data
  */
 export function UserProvider({ children }: UserProviderProps) {
-  const [state, setState] = React.useState<{ user: User | null; error: string | null; isLoading: boolean }>(() => {
-    if (typeof window === 'undefined') {
-      return { user: null, error: null, isLoading: true };
-    }
-    // Seed from cache so navigating to messages never briefly looks logged-out.
-    let cached: User | null = null;
-    try {
-      const raw = localStorage.getItem('user-data');
-      const token = localStorage.getItem('custom-auth-token');
-      if (token && raw) cached = JSON.parse(raw) as User;
-    } catch {
-      cached = null;
-    }
-    return { user: cached, error: null, isLoading: true };
+  // Always start with `user: null` so SSR and the first client render match.
+  // Seeding from localStorage in useState() caused hydration mismatches that
+  // broke App Router soft navigation (cards ending on the 404 page).
+  const [state, setState] = React.useState<{ user: User | null; error: string | null; isLoading: boolean }>({
+    user: null,
+    error: null,
+    isLoading: true,
   });
 
   const checkSession = React.useCallback(async (): Promise<void> => {
@@ -70,7 +63,28 @@ export function UserProvider({ children }: UserProviderProps) {
   }, []);
 
   React.useEffect(() => {
-    checkSession();
+    // After mount, restore cached profile immediately, then refresh from API.
+    try {
+      const raw = localStorage.getItem('user-data');
+      const token = localStorage.getItem('custom-auth-token');
+      if (token && raw) {
+        const cached = JSON.parse(raw) as User;
+        setState((prev) => ({ ...prev, user: cached, error: null, isLoading: true }));
+      }
+    } catch {
+      /* ignore corrupt cache */
+    }
+    void checkSession();
+  }, [checkSession]);
+
+  // Re-fetch profile when the tab is focused so balances (e.g. boost credits)
+  // update after grants that happened outside this browser session.
+  React.useEffect(() => {
+    const onFocus = () => {
+      void checkSession();
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, [checkSession]);
 
   return <UserContext.Provider value={{ ...state, checkSession }}>{children}</UserContext.Provider>;

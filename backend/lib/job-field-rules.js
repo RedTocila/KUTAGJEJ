@@ -1,6 +1,7 @@
 /** Server-side validation for job listings (mirrors frontend job-constants.ts). */
 
 const { validateJobSections } = require('./job-listing-sections');
+const { isUuid } = require('./public-listings/query-helpers');
 
 const INDUSTRY_VALUES = [
   'biznes-menaxhim', 'horeka', 'instalime-mirembajtje', 'ligjore',
@@ -29,8 +30,6 @@ const WORK_LOCATION_VALUES = ['onsite', 'hybrid', 'remote'];
 
 const CURRENCY_VALUES = ['EUR', 'LEK'];
 
-const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
-
 /**
  * Returns { ok: true } or { ok: false, message }.
  */
@@ -47,7 +46,7 @@ function validateJobPayload(body) {
   }
 
   const cityId = String(body?.cityId || '').trim();
-  if (!cityId || !OBJECT_ID_RE.test(cityId)) {
+  if (!cityId || !isUuid(cityId)) {
     return { ok: false, message: 'Ju lutem zgjidhni një qytet të vlefshëm.' };
   }
 

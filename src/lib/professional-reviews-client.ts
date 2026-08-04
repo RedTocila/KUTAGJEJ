@@ -14,16 +14,20 @@ export interface ProfessionalReview {
 
 export async function listProfessionalReviews(listingId: string): Promise<{
   reviews?: ProfessionalReview[];
+  viewerHasReviewed?: boolean;
   error?: string;
 }> {
   try {
     const res = await fetch(
       getApiUrl(`/professional-reviews?listingId=${encodeURIComponent(listingId)}`),
-      { cache: 'no-store' },
+      { cache: 'no-store', headers: authHeaders() },
     );
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not load reviews.' };
-    return { reviews: data.reviews as ProfessionalReview[] };
+    return {
+      reviews: data.reviews as ProfessionalReview[],
+      viewerHasReviewed: Boolean(data.viewerHasReviewed),
+    };
   } catch {
     return { error: 'Could not reach the server.' };
   }

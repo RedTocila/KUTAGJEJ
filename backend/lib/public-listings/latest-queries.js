@@ -13,6 +13,8 @@ const {
   buildSort,
   mergeSpecs,
   isUuid,
+  prioritizeActivePremium,
+  withoutPremiumSort,
 } = require('./query-helpers');
 const { mergePublicFilter } = require('../listing-moderation');
 const {
@@ -38,14 +40,27 @@ function baseFilterForKind(kind) {
   return {};
 }
 
+function sortLooksPremium(sortSpec) {
+  return Array.isArray(sortSpec) && sortSpec.some((s) => s.column === 'premium_until');
+}
+
 async function runListingQuery(table, filterSpec, sortSpec, limit, skip = 0) {
   const sb = getSupabaseAdmin();
-  let q = applyFilterSpec(sb.from(table).select('*'), filterSpec);
-  q = applySort(q, sortSpec && sortSpec.length ? sortSpec : buildSort('newest'));
-  if (limit > 0) q = q.range(skip, skip + limit - 1);
-  const { data, error } = await q;
+  const effectiveSort = sortSpec && sortSpec.length ? sortSpec : buildSort('newest');
+
+  const run = async (spec) => {
+    let q = applyFilterSpec(sb.from(table).select('*'), filterSpec);
+    q = applySort(q, spec);
+    if (limit > 0) q = q.range(skip, skip + limit - 1);
+    return q;
+  };
+
+  let { data, error } = await run(effectiveSort);
+  if (error && sortLooksPremium(effectiveSort) && /premium_until/i.test(String(error.message || ''))) {
+    ({ data, error } = await run(withoutPremiumSort(effectiveSort)));
+  }
   if (error) throw error;
-  return camelizeRows(data);
+  return prioritizeActivePremium(camelizeRows(data));
 }
 
 async function countListingQuery(table, filterSpec) {
@@ -138,7 +153,7 @@ async function topViewedByKind(kind, limit) {
   }
 
   if (orderedDocs.length === 0) return [];
-  return formatDocsForKind(kind, orderedDocs);
+  return formatDocsForKind(kind, prioritizeActivePremium(orderedDocs));
 }
 
 async function queryRealEstate(limit, filter = {}, sort = null, skip = 0) {

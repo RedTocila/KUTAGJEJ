@@ -24,6 +24,8 @@ import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
 
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
 import {
   consumePendingListingChat,
   fetchConversationMessages,
@@ -34,6 +36,12 @@ import {
   type ConversationMessage,
   type ConversationSummary,
 } from '@/lib/conversations-client';
+import {
+  consumePendingBusinessReservation,
+  submitBusinessReservationToMessages,
+} from '@/lib/business-reservation-message';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { languageHtmlLang } from '@/lib/language';
 import { whatsappHref } from '@/lib/listing-contact';
 import {
   listingBusinessPublicHref,
@@ -72,13 +80,48 @@ function listingPublicHref(kind: ConversationSummary['listingKind'], listingId: 
   }
 }
 
-function formatMessageTime(iso: string): string {
+function formatMessageTime(iso: string, locale: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('sq-AL', {
+  return d.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function formatConversationListTime(iso: string, locale: string, yesterday: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startMsg = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayDiff = Math.round((startToday.getTime() - startMsg.getTime()) / 86_400_000);
+  if (dayDiff === 0) {
+    return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  }
+  if (dayDiff === 1) return yesterday;
+  if (dayDiff < 7) {
+    return d.toLocaleDateString(locale, { weekday: 'short' });
+  }
+  return d.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+}
+
+type InboxFilter = 'all' | 'unread' | 'read';
+
+function conversationActivityAt(item: ConversationSummary): number {
+  const raw = item.lastMessageAt || item.updatedAt;
+  const t = new Date(raw).getTime();
+  return Number.isNaN(t) ? 0 : t;
+}
+
+function sortConversationsByRecent(items: ConversationSummary[]): ConversationSummary[] {
+  return [...items].sort((a, b) => conversationActivityAt(b) - conversationActivityAt(a));
+}
+
+function filterConversations(items: ConversationSummary[], filter: InboxFilter): ConversationSummary[] {
+  if (filter === 'unread') return items.filter((c) => c.unreadCount > 0);
+  if (filter === 'read') return items.filter((c) => c.unreadCount <= 0);
+  return items;
 }
 
 /** Always dark chat chrome — readable WhatsApp-like layout with brand colors. */
@@ -112,67 +155,168 @@ function useChatChrome() {
 function ConversationListItem({
   item,
   active,
+  isLast,
   onSelect,
 }: {
   item: ConversationSummary;
   active: boolean;
+  isLast?: boolean;
   onSelect: (id: string) => void;
 }) {
+  const t = useCopy();
+  const { language } = useLanguage();
+  const locale = languageHtmlLang(language);
+  const unread = item.unreadCount > 0;
+  const timeLabel = formatConversationListTime(
+    item.lastMessageAt || item.updatedAt,
+    locale,
+    t.messages.yesterday,
+  );
+  const preview = item.lastMessageText || t.messages.noMessagesYet;
+  const subtitle = item.listingTitle
+    ? `${item.listingTitle} · ${preview}`
+    : preview;
+
   return (
-    <Button
+    <Box
+      component="button"
       type="button"
       onClick={() => onSelect(item.id)}
-      fullWidth
+      aria-current={active ? 'true' : undefined}
       sx={{
-        justifyContent: 'flex-start',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1.5,
+        width: '100%',
+        m: 0,
+        pl: { xs: 2, md: 1.5 },
+        pr: { xs: 2, md: 1.5 },
+        py: 0,
+        border: 0,
         textAlign: 'left',
-        textTransform: 'none',
-        px: 2,
-        py: 1.5,
-        borderRadius: 0,
-        bgcolor: active ? 'action.selected' : 'transparent',
-        '&:hover': { bgcolor: active ? 'action.selected' : 'action.hover' },
+        font: 'inherit',
+        color: 'inherit',
+        cursor: 'pointer',
+        bgcolor: (t) =>
+          active
+            ? t.palette.mode === 'dark'
+              ? 'rgba(255,255,255,0.06)'
+              : 'rgba(0,0,0,0.05)'
+            : 'transparent',
+        WebkitTapHighlightColor: 'transparent',
+        transition: 'background-color 0.12s ease',
+        '&:hover': {
+          bgcolor: (t) =>
+            t.palette.mode === 'dark'
+              ? active
+                ? 'rgba(255,255,255,0.08)'
+                : 'rgba(255,255,255,0.04)'
+              : active
+                ? 'rgba(0,0,0,0.06)'
+                : 'rgba(0,0,0,0.03)',
+        },
+        '&:active': {
+          bgcolor: (t) =>
+            t.palette.mode === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
+        },
       }}
     >
-      <Stack direction="row" spacing={1.5} sx={{ width: '100%', alignItems: 'center', minWidth: 0 }}>
-        <Avatar
-          src={item.listingImageUrl ?? undefined}
-          variant="rounded"
-          sx={{ width: 48, height: 48, flexShrink: 0 }}
-        >
-          {item.listingTitle.slice(0, 1).toUpperCase()}
-        </Avatar>
-        <Stack spacing={0.35} sx={{ flex: 1, minWidth: 0 }}>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography sx={{ fontWeight: 700, fontSize: '0.95rem' }} noWrap>
-              {item.otherParticipantName ?? 'Përdorues'}
+      <Avatar
+        src={item.listingImageUrl ?? undefined}
+        variant="rounded"
+        sx={{
+          width: 49,
+          height: 49,
+          flexShrink: 0,
+          my: 1.15,
+          borderRadius: 1.5,
+          bgcolor: (t) =>
+            t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+          color: 'text.secondary',
+          fontWeight: 700,
+          fontSize: '1.1rem',
+        }}
+      >
+        {(item.otherParticipantName || item.listingTitle || 'P').slice(0, 1).toUpperCase()}
+      </Avatar>
+
+      <Stack
+        spacing={0.2}
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          py: 1.35,
+          borderBottom: isLast ? 'none' : '1px solid',
+          borderColor: (t) =>
+            t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+        }}
+      >
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <Typography
+            sx={{
+              fontWeight: unread ? 700 : 500,
+              fontSize: '1.05rem',
+              lineHeight: 1.3,
+              color: 'text.primary',
+            }}
+            noWrap
+          >
+            {item.otherParticipantName ?? t.messages.userFallback}
+          </Typography>
+          {timeLabel ? (
+            <Typography
+              sx={{
+                flexShrink: 0,
+                fontSize: '0.75rem',
+                fontWeight: unread ? 600 : 400,
+                color: unread ? 'primary.main' : 'text.secondary',
+                lineHeight: 1.2,
+                ml: 1,
+              }}
+            >
+              {timeLabel}
             </Typography>
-            {item.unreadCount > 0 ? (
-              <Box
-                sx={{
-                  bgcolor: 'primary.main',
-                  color: 'primary.contrastText',
-                  borderRadius: 999,
-                  px: 0.85,
-                  py: 0.15,
-                  fontSize: '0.7rem',
-                  fontWeight: 800,
-                  flexShrink: 0,
-                }}
-              >
-                {item.unreadCount}
-              </Box>
-            ) : null}
-          </Stack>
-          <Typography variant="caption" color="text.secondary" noWrap sx={{ fontWeight: 600 }}>
-            {item.listingTitle}
+          ) : null}
+        </Stack>
+
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', minHeight: 22 }}>
+          <Typography
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              fontSize: '0.875rem',
+              fontWeight: unread ? 500 : 400,
+              lineHeight: 1.35,
+              color: 'text.secondary',
+            }}
+            noWrap
+          >
+            {subtitle}
           </Typography>
-          <Typography variant="caption" color="text.secondary" noWrap>
-            {item.lastMessageText || 'Nuk ka mesazhe ende'}
-          </Typography>
+          {unread ? (
+            <Box
+              sx={{
+                flexShrink: 0,
+                minWidth: 20,
+                height: 20,
+                px: 0.55,
+                borderRadius: 999,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                lineHeight: 1,
+              }}
+            >
+              {item.unreadCount > 99 ? '99+' : item.unreadCount}
+            </Box>
+          ) : null}
         </Stack>
       </Stack>
-    </Button>
+    </Box>
   );
 }
 
@@ -183,6 +327,8 @@ function MessageBubble({
   message: ConversationMessage;
   chrome: ReturnType<typeof useChatChrome>;
 }) {
+  const { language } = useLanguage();
+  const locale = languageHtmlLang(language);
   const mine = message.isMine;
   return (
     <Box
@@ -252,7 +398,7 @@ function MessageBubble({
             whiteSpace: 'nowrap',
           }}
         >
-          {formatMessageTime(message.createdAt)}
+          {formatMessageTime(message.createdAt, locale)}
         </Typography>
       </Box>
     </Box>
@@ -261,10 +407,17 @@ function MessageBubble({
 
 export function UserMessagesView() {
   const chrome = useChatChrome();
+  const t = useCopy();
   const { setMode } = useColorScheme();
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('c');
+
+  const inboxFilterLabels: Record<InboxFilter, string> = {
+    all: t.messages.all,
+    unread: t.messages.unread,
+    read: t.messages.read,
+  };
 
   React.useEffect(() => {
     setMode('dark');
@@ -273,13 +426,26 @@ export function UserMessagesView() {
   const [conversations, setConversations] = React.useState<ConversationSummary[]>([]);
   const [messages, setMessages] = React.useState<ConversationMessage[]>([]);
   const [activeConversation, setActiveConversation] = React.useState<ConversationSummary | null>(null);
+  const [inboxFilter, setInboxFilter] = React.useState<InboxFilter>('all');
   const [listLoading, setListLoading] = React.useState(true);
   const [threadLoading, setThreadLoading] = React.useState(false);
   const [sending, setSending] = React.useState(false);
+  const [markingAllRead, setMarkingAllRead] = React.useState(false);
   const [draft, setDraft] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
   const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
   const pendingHandled = React.useRef(false);
+
+  const unreadConversations = React.useMemo(
+    () => conversations.filter((c) => c.unreadCount > 0),
+    [conversations],
+  );
+  const unreadTotal = unreadConversations.length;
+  const readTotal = conversations.length - unreadTotal;
+  const filteredConversations = React.useMemo(
+    () => filterConversations(conversations, inboxFilter),
+    [conversations, inboxFilter],
+  );
 
   const loadInbox = React.useCallback(async () => {
     setListLoading(true);
@@ -288,7 +454,7 @@ export function UserMessagesView() {
       setError(res.error);
       setConversations([]);
     } else {
-      setConversations(res.conversations ?? []);
+      setConversations(sortConversationsByRecent(res.conversations ?? []));
     }
     setListLoading(false);
   }, []);
@@ -319,6 +485,19 @@ export function UserMessagesView() {
   React.useEffect(() => {
     if (pendingHandled.current) return;
     pendingHandled.current = true;
+
+    const pendingReservation = consumePendingBusinessReservation();
+    if (pendingReservation) {
+      void (async () => {
+        const res = await submitBusinessReservationToMessages(pendingReservation);
+        if (res.conversationId) {
+          router.replace(`${paths.user.messages}?c=${encodeURIComponent(res.conversationId)}`);
+          await loadInbox();
+        }
+      })();
+      return;
+    }
+
     const pending = consumePendingListingChat();
     if (!pending) return;
     void (async () => {
@@ -347,6 +526,15 @@ export function UserMessagesView() {
     router.push(`${paths.user.messages}?c=${encodeURIComponent(id)}`);
   };
 
+  const handleMarkAllRead = async () => {
+    if (unreadConversations.length === 0 || markingAllRead) return;
+    setMarkingAllRead(true);
+    const ids = unreadConversations.map((c) => c.id);
+    await Promise.all(ids.map((id) => markConversationRead(id)));
+    setConversations((prev) => prev.map((c) => (c.unreadCount > 0 ? { ...c, unreadCount: 0 } : c)));
+    setMarkingAllRead(false);
+  };
+
   const handleSend = async () => {
     const body = draft.trim();
     if (!selectedId || !body) return;
@@ -361,14 +549,16 @@ export function UserMessagesView() {
       setMessages((prev) => [...prev, res.message!]);
       setDraft('');
       setConversations((prev) =>
-        prev.map((c) =>
-          c.id === selectedId
-            ? {
-                ...c,
-                lastMessageText: res.message!.body,
-                lastMessageAt: res.message!.createdAt,
-              }
-            : c,
+        sortConversationsByRecent(
+          prev.map((c) =>
+            c.id === selectedId
+              ? {
+                  ...c,
+                  lastMessageText: res.message!.body,
+                  lastMessageAt: res.message!.createdAt,
+                }
+              : c,
+          ),
         ),
       );
     }
@@ -389,13 +579,20 @@ export function UserMessagesView() {
     >
       <UserPageHeader
         icon={<ChatsCircleIcon size={20} weight="duotone" />}
-        title="Mesazhet"
-        description="Bisedoni me shitësit dhe blerësit përmes njoftimeve tuaja."
+        title={t.messages.title}
+        description={t.messages.description}
         sx={{
           display: { xs: showThreadOnMobile ? 'none' : 'flex', md: 'flex' },
           px: { xs: 2, md: 0 },
-          pt: { xs: 2, md: 0 },
-          pb: { xs: 1.5, md: 0 },
+          pt: { xs: 1.25, md: 0 },
+          pb: { xs: 0.75, md: 0 },
+          // WhatsApp-style: title only on mobile; keep description on desktop.
+          '& .MuiTypography-body2': { display: { xs: 'none', md: 'block' } },
+          '& > .MuiBox-root': { display: { xs: 'none', md: 'inline-flex' } },
+          '& .MuiTypography-h5': {
+            fontSize: { xs: '1.65rem', md: undefined },
+            fontWeight: { xs: 700, md: 800 },
+          },
         }}
       />
 
@@ -432,34 +629,205 @@ export function UserMessagesView() {
             flex: { xs: '1 1 auto', md: '0 0 auto' },
           }}
         >
-          <Box
+          <Stack
+            spacing={1}
             sx={{
-              px: 2,
-              py: 1.5,
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              display: { xs: 'none', md: 'block' },
+              px: { xs: 2, md: 1.5 },
+              pt: { xs: 0.25, md: 1.25 },
+              pb: 1,
+              flexShrink: 0,
             }}
           >
-            <Typography sx={{ fontWeight: 800 }}>Bisedat</Typography>
-          </Box>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                display: unreadTotal > 0 ? 'flex' : { xs: 'none', md: 'flex' },
+              }}
+            >
+              <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', display: { xs: 'none', md: 'block' } }}>
+                {t.messages.chats}
+              </Typography>
+              {unreadTotal > 0 ? (
+                <Button
+                  type="button"
+                  size="small"
+                  onClick={() => void handleMarkAllRead()}
+                  disabled={markingAllRead}
+                  sx={{
+                    ml: { xs: 'auto', md: 0 },
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    fontSize: '0.8rem',
+                    minWidth: 0,
+                    px: 0.5,
+                    color: 'primary.main',
+                  }}
+                >
+                  {markingAllRead ? t.common.markingRead : t.common.markAllRead}
+                </Button>
+              ) : null}
+            </Stack>
+
+            {conversations.length > 0 ? (
+              <Stack
+                direction="row"
+                spacing={1}
+                role="tablist"
+                aria-label={t.messages.filterAria}
+                sx={{ overflowX: 'auto', pb: 0.25, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}
+              >
+                {(
+                  [
+                    { id: 'all' as const, count: conversations.length },
+                    { id: 'unread' as const, count: unreadTotal },
+                    { id: 'read' as const, count: readTotal },
+                  ] as const
+                ).map((tab) => {
+                  const selected = inboxFilter === tab.id;
+                  return (
+                    <Box
+                      key={tab.id}
+                      component="button"
+                      type="button"
+                      role="tab"
+                      aria-selected={selected}
+                      onClick={() => setInboxFilter(tab.id)}
+                      sx={{
+                        m: 0,
+                        flexShrink: 0,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        px: 1.5,
+                        py: 0.55,
+                        border: '1px solid',
+                        borderColor: selected
+                          ? 'primary.main'
+                          : (t) =>
+                              t.palette.mode === 'dark' ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)',
+                        borderRadius: 999,
+                        cursor: 'pointer',
+                        font: 'inherit',
+                        WebkitTapHighlightColor: 'transparent',
+                        bgcolor: selected ? primaryMainAlpha(0.18) : 'transparent',
+                        color: selected ? 'primary.main' : 'text.secondary',
+                        transition: 'background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease',
+                        '&:hover': {
+                          borderColor: selected
+                            ? 'primary.main'
+                            : (t) =>
+                                t.palette.mode === 'dark' ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.28)',
+                          color: selected ? 'primary.main' : 'text.primary',
+                        },
+                      }}
+                    >
+                      <Typography
+                        component="span"
+                        sx={{
+                          fontWeight: selected ? 700 : 500,
+                          fontSize: '0.8125rem',
+                          lineHeight: 1.2,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {inboxFilterLabels[tab.id]}
+                      </Typography>
+                      {tab.count > 0 ? (
+                        <Typography
+                          component="span"
+                          sx={{
+                            fontSize: '0.8125rem',
+                            fontWeight: selected ? 700 : 500,
+                            lineHeight: 1,
+                            opacity: 0.9,
+                          }}
+                        >
+                          {tab.count > 99 ? '99+' : tab.count}
+                        </Typography>
+                      ) : null}
+                    </Box>
+                  );
+                })}
+              </Stack>
+            ) : null}
+          </Stack>
+
           {listLoading ? (
             <Stack sx={{ flex: 1, alignItems: 'center', justifyContent: 'center', py: 4 }}>
               <CircularProgress size={28} />
             </Stack>
           ) : conversations.length === 0 ? (
-            <Stack sx={{ flex: 1, alignItems: 'center', justifyContent: 'center', px: 3, py: 4, textAlign: 'center' }}>
-              <Typography color="text.secondary">
-                Nuk keni biseda ende. Hapni një njoftim dhe prekni &quot;Dërgo mesazh&quot; për të filluar.
+            <Stack
+              spacing={1.25}
+              sx={{
+                flex: 1,
+                alignItems: 'center',
+                justifyContent: 'center',
+                px: 3,
+                py: 5,
+                textAlign: 'center',
+              }}
+            >
+              <Box
+                sx={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: '50%',
+                  display: 'grid',
+                  placeItems: 'center',
+                  bgcolor: primaryMainAlpha(0.12),
+                  color: 'primary.main',
+                  mb: 0.5,
+                }}
+              >
+                <ChatsCircleIcon size={28} weight="duotone" />
+              </Box>
+              <Typography sx={{ fontWeight: 700, color: 'text.primary' }}>{t.messages.emptyTitle}</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 280, lineHeight: 1.5 }}>
+                {t.messages.emptyBody}
               </Typography>
             </Stack>
+          ) : filteredConversations.length === 0 ? (
+            <Stack
+              spacing={1}
+              sx={{
+                flex: 1,
+                alignItems: 'center',
+                justifyContent: 'center',
+                px: 3,
+                py: 5,
+                textAlign: 'center',
+              }}
+            >
+              <Typography sx={{ fontWeight: 700, color: 'text.primary' }}>
+                {inboxFilter === 'unread' ? t.messages.emptyUnread : t.messages.emptyRead}
+              </Typography>
+              <Button
+                type="button"
+                size="small"
+                onClick={() => setInboxFilter('all')}
+                sx={{ textTransform: 'none', fontWeight: 700 }}
+              >
+                {t.common.showAll}
+              </Button>
+            </Stack>
           ) : (
-            <Box sx={{ flex: 1, overflow: 'auto' }}>
-              {conversations.map((item) => (
+            <Box
+              sx={{
+                flex: 1,
+                overflow: 'auto',
+                pb: { xs: 10, md: 0 },
+              }}
+            >
+              {filteredConversations.map((item, index) => (
                 <ConversationListItem
                   key={item.id}
                   item={item}
                   active={item.id === selectedId}
+                  isLast={index === filteredConversations.length - 1}
                   onSelect={selectConversation}
                 />
               ))}
@@ -479,7 +847,7 @@ export function UserMessagesView() {
         >
           {!selectedId ? (
             <Stack sx={{ flex: 1, alignItems: 'center', justifyContent: 'center', px: 3, textAlign: 'center' }}>
-              <Typography color="text.secondary">Zgjidhni një bisedë për të vazhduar.</Typography>
+              <Typography color="text.secondary">{t.messages.pickConversation}</Typography>
             </Stack>
           ) : threadLoading ? (
             <Stack sx={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -510,7 +878,7 @@ export function UserMessagesView() {
                   type="button"
                   onClick={() => router.push(paths.user.messages)}
                   sx={{ display: { xs: 'inline-flex', md: 'none' }, color: chrome.text, p: 0.75 }}
-                  aria-label="Kthehu te lista"
+                  aria-label={t.messages.backAria}
                 >
                   <ArrowLeftIcon size={22} weight="bold" />
                 </IconButton>
@@ -522,7 +890,7 @@ export function UserMessagesView() {
                 </Avatar>
                 <Stack spacing={0.1} sx={{ flex: 1, minWidth: 0 }}>
                   <Typography sx={{ fontWeight: 600, fontSize: '1rem', lineHeight: 1.25, color: chrome.text }} noWrap>
-                    {activeConversation.otherParticipantName ?? 'Përdorues'}
+                    {activeConversation.otherParticipantName ?? t.messages.userFallback}
                   </Typography>
                   <Typography
                     component={Link}
@@ -544,7 +912,7 @@ export function UserMessagesView() {
                     <IconButton
                       component="a"
                       href={`tel:${contactPhone.replace(/\s/g, '')}`}
-                      aria-label="Telefono"
+                      aria-label={t.messages.phoneAria}
                       sx={{ color: chrome.action }}
                     >
                       <PhoneIcon size={22} weight="regular" />
@@ -552,7 +920,7 @@ export function UserMessagesView() {
                     {contactWhatsapp ? (
                       <IconButton
                         component="a"
-                        href={`${contactWhatsapp}?text=${encodeURIComponent(`Përshëndetje, jam i interesuari për: «${activeConversation.listingTitle}».`)}`}
+                        href={`${contactWhatsapp}?text=${encodeURIComponent(t.messages.whatsappIntro(activeConversation.listingTitle))}`}
                         rel="noopener noreferrer"
                         target="_blank"
                         aria-label="WhatsApp"
@@ -591,7 +959,7 @@ export function UserMessagesView() {
                         boxShadow: '0 1px 1px rgba(0,0,0,0.12)',
                       }}
                     >
-                      Filloni bisedën — shkruani mesazhin e parë më poshtë.
+                      {t.messages.startChat}
                     </Typography>
                   </Box>
                 ) : (
@@ -618,7 +986,7 @@ export function UserMessagesView() {
                   fullWidth
                   multiline
                   maxRows={5}
-                  placeholder="Shkruani mesazhin…"
+                  placeholder={t.messages.placeholder}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => {
@@ -656,7 +1024,7 @@ export function UserMessagesView() {
                   type="button"
                   disabled={sending || !draft.trim()}
                   onClick={() => void handleSend()}
-                  aria-label="Dërgo mesazhin"
+                  aria-label={t.messages.sendAria}
                   sx={{
                     width: 36,
                     height: 36,

@@ -1,39 +1,53 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
+  Grid,
   Stack,
   Typography,
 } from '@mui/material';
+import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
+import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
+import { SealCheck as SealCheckIcon } from '@phosphor-icons/react/dist/ssr/SealCheck';
 
 import { useUser } from '@/hooks/use-user';
 import { listPublicContracts } from '@/lib/public-contracts-client';
-import { createSubscriptionOrder, listMySubscriptions } from '@/lib/payments-client';
+import { listMySubscriptions } from '@/lib/payments-client';
 import type { PublicContract } from '@/types/contract';
-import type { ContractPriceOption } from '@/lib/contract-pricing';
-import { PokCheckoutDialog } from '@/components/payments/pok-checkout-dialog';
+import { paths } from '@/paths';
+import {
+  FeatureList,
+  PlanCard,
+  PlanCardHeader,
+  PlanPrice,
+  SoftChip,
+  accentPillButtonSx,
+  formatEur,
+  planAccentForCode,
+} from './package-ui';
+import type { PlanAccent } from './package-ui';
 
 function planFeatureLines(plan: PublicContract): string[] {
   const lines: string[] = [
-    `0/${plan.maxListAllCategories} List in All Categories`,
-    `0/${plan.maxJobListings} Job Listings`,
-    `0/${plan.maxCarListings} Car Listings`,
-    `0/${plan.maxApartmentListings} Apartment Listings`,
-    `0/${plan.maxProductListings} Product Listings`,
+    `Deri në ${plan.maxListAllCategories} njoftime (të gjitha kategoritë)`,
+    `${plan.maxApartmentListings} njoftime apartamente`,
+    `${plan.maxCarListings} njoftime makina`,
+    `${plan.maxJobListings} njoftime pune`,
+    `${plan.maxProductListings} njoftime produkte`,
   ];
   if (plan.maxPremiumListings > 0) {
-    lines.push(`0/${plan.maxPremiumListings} Premium Listing`);
+    lines.push(`${plan.maxPremiumListings} Premium listing · 30 ditë`);
   }
   if ((plan.boostCredits ?? 0) > 0) {
     lines.push(`${plan.boostCredits} Boost Coins`);
   }
   if (plan.refreshEveryHours != null) {
-    lines.push(`Refresh Every ${plan.refreshEveryHours} Hours`);
+    lines.push(`Rifresko postimin pas ${plan.refreshEveryHours} orësh`);
   }
   if (plan.glowBadgeEnabled) {
     lines.push('Trust Badge');
@@ -41,13 +55,34 @@ function planFeatureLines(plan: PublicContract): string[] {
   return lines;
 }
 
-type PendingPlanCheckout = {
-  contract: PublicContract;
-  option: ContractPriceOption;
-};
+function checkoutSubscriptionHref(contractId: string, months: number) {
+  const q = new URLSearchParams({
+    kind: 'subscription',
+    contractId,
+    months: String(months),
+    returnTo: paths.user.packagesMain,
+  });
+  return `${paths.user.checkout}?${q.toString()}`;
+}
+
+function planAccent(plan: PublicContract): PlanAccent {
+  return planAccentForCode(plan.planCode);
+}
+
+function isHighlightedPlan(plan: PublicContract): boolean {
+  const code = (plan.planCode || '').toLowerCase();
+  return code === 'grow' || code === 'elite';
+}
+
+function startingPrice(plan: PublicContract): number | null {
+  const paid = plan.priceOptions.filter((o) => o.price > 0).map((o) => o.price);
+  if (!paid.length) return 0;
+  return Math.min(...paid);
+}
 
 export function MainPackagesPanel() {
-  const { user, checkSession } = useUser();
+  const router = useRouter();
+  const { user } = useUser();
   const subscriberKindFilter =
     user?.accountType === 'business' || user?.role === 'business-user' ? 'company' : 'agent';
 
@@ -55,7 +90,6 @@ export function MainPackagesPanel() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [activeContractId, setActiveContractId] = React.useState<string | null>(null);
-  const [planCheckout, setPlanCheckout] = React.useState<PendingPlanCheckout | null>(null);
 
   const reload = React.useCallback(async () => {
     const [{ contracts, error: err }, subsRes] = await Promise.all([
@@ -90,114 +124,112 @@ export function MainPackagesPanel() {
   if (!user) return null;
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2.5}>
       {loading ? (
-        <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
+        <Box sx={{ py: 5, display: 'flex', justifyContent: 'center' }}>
           <CircularProgress size={28} />
         </Box>
       ) : null}
 
       {error ? (
-        <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
+        <Alert severity="warning" sx={{ borderRadius: 2 }}>
           {error}
         </Alert>
       ) : null}
 
       {!loading && !error && plans.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
+        <Alert severity="info" sx={{ borderRadius: 2 }}>
           Për momentin nuk ka plan aktiv me çmim për llogarinë tuaj.
-        </Typography>
+        </Alert>
       ) : null}
 
-      {!loading && !error && plans.length > 0
-        ? plans.map((plan) => {
+      {!loading && !error && plans.length > 0 ? (
+        <Grid container spacing={2}>
+          {plans.map((plan) => {
             const paidOptions = plan.priceOptions.filter((o) => o.price > 0);
             const isFree = plan.planCode === 'free' || plan.priceOptions.every((o) => o.price === 0);
             const isCurrent =
               (activeContractId && activeContractId === plan.id) || (!activeContractId && isFree);
-            return (
-              <Box
-                key={plan.id}
-                sx={{
-                  p: { xs: 2, sm: 2.5 },
-                  borderRadius: 2.5,
-                  border: '1px solid',
-                  borderColor: isCurrent ? 'primary.main' : 'divider',
-                  bgcolor: 'background.paper',
-                }}
-              >
-                <Stack
-                  direction="row"
-                  sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}
-                >
-                  <Typography sx={{ fontWeight: 800, fontSize: '1.05rem' }}>{plan.title}</Typography>
-                  <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-                    {isCurrent ? (
-                      <Chip size="small" color="primary" label="Aktuale" sx={{ fontWeight: 700 }} />
-                    ) : null}
-                    {plan.glowBadgeEnabled ? (
-                      <Chip size="small" label="Trust Badge" sx={{ fontWeight: 700 }} />
-                    ) : null}
-                  </Stack>
-                </Stack>
-                <Stack component="ul" spacing={0.35} sx={{ m: 0, mt: 1.25, pl: 2.25 }}>
-                  {planFeatureLines(plan).map((line) => (
-                    <Typography key={line} component="li" variant="body2" color="text.secondary">
-                      {line}
-                    </Typography>
-                  ))}
-                </Stack>
-                {isFree ? (
-                  <Typography variant="body2" sx={{ mt: 1.5, fontWeight: 700 }}>
-                    €0 · Falas
-                  </Typography>
-                ) : (
-                  <Stack direction="row" sx={{ flexWrap: 'wrap', mt: 1.5, gap: 1 }}>
-                    {paidOptions.map((opt) => (
-                      <Button
-                        key={opt.months}
-                        size="small"
-                        variant="outlined"
-                        onClick={() => setPlanCheckout({ contract: plan, option: opt })}
-                        sx={{ fontWeight: 700, textTransform: 'none', borderRadius: 999 }}
-                      >
-                        {`${opt.labelSq} · ${opt.price} € — Blej`}
-                      </Button>
-                    ))}
-                  </Stack>
-                )}
-              </Box>
-            );
-          })
-        : null}
+            const accent = planAccent(plan);
+            const highlighted = isHighlightedPlan(plan) || Boolean(isCurrent);
+            const from = startingPrice(plan);
+            const Icon =
+              (plan.planCode || '').toLowerCase() === 'elite'
+                ? CrownIcon
+                : plan.glowBadgeEnabled
+                  ? SealCheckIcon
+                  : PackageIcon;
 
-      {planCheckout ? (
-        <PokCheckoutDialog
-          open={Boolean(planCheckout)}
-          onClose={() => setPlanCheckout(null)}
-          title="Abonohu në plan"
-          summary={
-            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.4 }}>
-                  Abonim
-                </Typography>
-                <Typography sx={{ fontWeight: 700, lineHeight: 1.25 }}>{planCheckout.contract.title}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {planCheckout.option.labelSq} · {planCheckout.option.months} muaj
-                </Typography>
-              </Box>
-              <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', whiteSpace: 'nowrap' }}>
-                {planCheckout.option.price} €
-              </Typography>
-            </Stack>
-          }
-          createOrder={() => createSubscriptionOrder(planCheckout.contract.id, planCheckout.option.months)}
-          onPaid={() => {
-            void checkSession();
-            void reload();
-          }}
-        />
+            return (
+              <Grid key={plan.id} size={{ xs: 12, sm: 6, lg: 3 }}>
+                <PlanCard highlighted={highlighted} accent={accent}>
+                  <PlanCardHeader
+                    icon={Icon}
+                    title={plan.title}
+                    subtitle={plan.planCode ? plan.planCode.toUpperCase() : undefined}
+                    accent={accent}
+                    badge={
+                      isCurrent ? (
+                        <SoftChip label="Aktuale" accent={accent} />
+                      ) : (plan.planCode || '').toLowerCase() === 'grow' ? (
+                        <SoftChip label="Popullore" accent={accent} />
+                      ) : plan.glowBadgeEnabled ? (
+                        <SoftChip label="Trust" accent={accent} />
+                      ) : undefined
+                    }
+                  />
+
+                  {isFree ? (
+                    <PlanPrice amount="€0" suffix="/ muaj" hint="Filloni falas" />
+                  ) : (
+                    <PlanPrice
+                      amount={from != null ? formatEur(from) : '—'}
+                      suffix="nga"
+                      hint="Zgjidhni kohëzgjatjen më poshtë"
+                    />
+                  )}
+
+                  <FeatureList items={planFeatureLines(plan)} accent={accent} />
+
+                  {isFree ? (
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      disabled={Boolean(isCurrent)}
+                      sx={{ ...accentPillButtonSx(accent, 'outlined'), mt: 'auto' }}
+                    >
+                      {isCurrent ? 'Plani juaj aktual' : 'Falas'}
+                    </Button>
+                  ) : (
+                    <Stack spacing={1} sx={{ mt: 'auto' }}>
+                      {paidOptions.map((opt) => {
+                        const isPrimaryCta = opt.months === 12 || paidOptions.length === 1;
+                        return (
+                          <Button
+                            key={opt.months}
+                            fullWidth
+                            size="medium"
+                            variant={isPrimaryCta ? 'contained' : 'outlined'}
+                            onClick={() => router.push(checkoutSubscriptionHref(plan.id, opt.months))}
+                            sx={accentPillButtonSx(accent, isPrimaryCta ? 'contained' : 'outlined')}
+                          >
+                            {opt.labelSq} · {formatEur(opt.price)}
+                          </Button>
+                        );
+                      })}
+                    </Stack>
+                  )}
+                </PlanCard>
+              </Grid>
+            );
+          })}
+        </Grid>
+      ) : null}
+
+      {!loading && plans.length > 0 ? (
+        <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+          Abonimi aktivizohet pas pagesës së suksesshme. Kuotat zbatohen menjëherë në llogarinë tuaj.
+        </Typography>
       ) : null}
     </Stack>
   );

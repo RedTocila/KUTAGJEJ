@@ -4,8 +4,9 @@ import * as React from 'react';
 import RouterLink from 'next/link';
 import { Box, Grid, Stack, Typography } from '@mui/material';
 
+import { useLanguage } from '@/hooks/use-language';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { HOME_VERTICALS, type HomeVerticalId } from '@/lib/home-categories';
+import { localizeHomeVerticals, type HomeVerticalId } from '@/lib/home-categories';
 
 import { VerticalIcon } from './vertical-icon';
 
@@ -14,9 +15,12 @@ export interface CategoryTilesProps {
 }
 
 export function CategoryTiles({ totals }: CategoryTilesProps) {
+  const { language } = useLanguage();
+  const verticals = React.useMemo(() => localizeHomeVerticals(language), [language]);
+
   return (
     <Grid container spacing={{ xs: 1.25, md: 2 }}>
-      {HOME_VERTICALS.map((vertical) => {
+      {verticals.map((vertical) => {
         const total = totals?.[vertical.id] ?? 0;
         return (
           <Grid key={vertical.id} size={{ xs: 6, md: 3 }}>

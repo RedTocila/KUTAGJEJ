@@ -18,7 +18,6 @@ import type { PublicDirectoryListing } from '@/lib/public-listings-client';
 import { listingBusinessPublicHref, listingProfessionalPublicHref } from '@/paths';
 
 import { BusinessPromoBanner } from './business-promo-banner';
-import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
 import {
@@ -27,6 +26,11 @@ import {
   formatPrice,
   relativeAlbanianDate,
 } from './format-helpers';
+import {
+  ListingCardRating,
+  resolveListingCardRating,
+  type ListingCardRatingSummary,
+} from './listing-card-rating';
 import { SpecRow, type Spec } from './spec-row';
 
 function conditionIcon(condition: string | null) {
@@ -35,8 +39,15 @@ function conditionIcon(condition: string | null) {
 }
 
 /** Biznese = venues (eat, drink, reserve) — minimal card layout. */
-function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing }) {
+function BusinessVenueCardBody({
+  listing,
+  sellerRating = null,
+}: {
+  listing: PublicDirectoryListing;
+  sellerRating?: ListingCardRatingSummary | null;
+}) {
   const viewCount = listing.viewCount ?? 0;
+  const cardRating = resolveListingCardRating(listing, sellerRating);
 
   const openingHoursLabel = listing.openingHours
     ? formatBusinessOpeningHoursForCard(listing.openingHours)
@@ -52,7 +63,7 @@ function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing })
       prefetch={false}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell>
+      <CardShell premium={Boolean(listing.isPremium)}>
         <CardMedia
           listingKind="businesses"
           listingId={listing.id}
@@ -63,6 +74,23 @@ function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing })
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
+          premium={Boolean(listing.isPremium)}
+          sharePayload={{
+            title: listing.title,
+            category: listing.categoryLabel,
+            badge: topBadge,
+            imageUrl: listing.imageUrl,
+            location: listing.cityName || undefined,
+            specs: [
+              { icon: 'storefront', label: listing.categoryLabel },
+              ...(openingHoursLabel ? [{ icon: 'clock' as const, label: openingHoursLabel }] : []),
+              ...(listing.reservationsEnabled ? [{ icon: 'calendar' as const, label: 'Rezervim' }] : []),
+            ],
+            createdAt: listing.createdAt,
+            viewCount,
+            saveCount: listing.saveCount,
+            url: listingBusinessPublicHref(listing),
+          }}
           bottomOverlay={
             listing.reservationsEnabled ? (
               <BusinessPromoBanner servicesHighlight={listing.servicesHighlight} variant="card" overlay />
@@ -92,6 +120,13 @@ function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing })
           >
             {listing.title}
           </Typography>
+
+          {cardRating ? (
+            <ListingCardRating
+              ratingAverage={cardRating.ratingAverage}
+              reviewCount={cardRating.reviewCount}
+            />
+          ) : null}
 
           {listing.servicesHighlight ? (
             <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600, lineHeight: 1.35 }}>
@@ -157,13 +192,45 @@ function BusinessVenueCardBody({ listing }: { listing: PublicDirectoryListing })
 }
 
 /** Profesionistë — hourly/project rates (keeps price line). */
-function ProfessionalListingCardBody({ listing }: { listing: PublicDirectoryListing }) {
+function ProfessionalListingCardBody({
+  listing,
+  sellerRating = null,
+}: {
+  listing: PublicDirectoryListing;
+  sellerRating?: ListingCardRatingSummary | null;
+}) {
   const viewCount = listing.viewCount ?? 0;
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
+  const cardRating = resolveListingCardRating(listing, sellerRating);
+  const hasPrice = listing.price != null;
+  const description = String(listing.description ?? '').replace(/\s+/g, ' ').trim();
+
+  const serviceTags = React.useMemo(() => {
+    const raw = String(listing.servicesHighlight ?? '').trim();
+    if (!raw) return [] as string[];
+    return raw
+      .split(/[·•|,;/]+/)
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .slice(0, 4);
+  }, [listing.servicesHighlight]);
 
   const specs: Spec[] = [
     { Icon: TagIcon, label: listing.categoryLabel, title: 'Kategoria' },
+    ...serviceTags.map((tag) => ({ Icon: SparkleIcon, label: tag, title: 'Shërbim' })),
     ...(conditionLabel ? [{ Icon: conditionIcon(listing.condition), label: conditionLabel, title: 'Gjendja' }] : []),
+    ...(listing.responseTimeHours != null && listing.responseTimeHours > 0
+      ? [
+          {
+            Icon: ClockIcon,
+            label:
+              listing.responseTimeHours === 1
+                ? 'Përgjigje në 1 orë'
+                : `Përgjigje në ${listing.responseTimeHours} orë`,
+            title: 'Koha e përgjigjes',
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -174,7 +241,7 @@ function ProfessionalListingCardBody({ listing }: { listing: PublicDirectoryList
       prefetch={false}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell>
+      <CardShell premium={Boolean(listing.isPremium)}>
         <CardMedia
           listingKind="professionals"
           listingId={listing.id}
@@ -185,6 +252,45 @@ function ProfessionalListingCardBody({ listing }: { listing: PublicDirectoryList
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
+          premium={Boolean(listing.isPremium)}
+          sharePayload={{
+            title: listing.title,
+            category: listing.categoryLabel,
+            priceLabel: hasPrice ? formatPrice(listing.price, listing.currency) : undefined,
+            badge: conditionLabel ?? undefined,
+            imageUrl: listing.imageUrl,
+            location: listing.cityName || undefined,
+            specs: [
+              { icon: 'tag', label: listing.categoryLabel },
+              ...serviceTags.map((tag) => ({ icon: 'sparkle' as const, label: tag })),
+              ...(conditionLabel
+                ? [
+                    {
+                      icon:
+                        listing.condition === 'i-ri' || listing.condition === 'si-i-ri'
+                          ? ('sparkle' as const)
+                          : ('check' as const),
+                      label: conditionLabel,
+                    },
+                  ]
+                : []),
+              ...(listing.responseTimeHours != null && listing.responseTimeHours > 0
+                ? [
+                    {
+                      icon: 'clock' as const,
+                      label:
+                        listing.responseTimeHours === 1
+                          ? 'Përgjigje në 1 orë'
+                          : `Përgjigje në ${listing.responseTimeHours} orë`,
+                    },
+                  ]
+                : []),
+            ],
+            createdAt: listing.createdAt,
+            viewCount,
+            saveCount: listing.saveCount,
+            url: listingProfessionalPublicHref(listing),
+          }}
         />
         <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
           <Typography
@@ -209,15 +315,44 @@ function ProfessionalListingCardBody({ listing }: { listing: PublicDirectoryList
           >
             {listing.title}
           </Typography>
-          <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: 'primary.main', lineHeight: 1.2 }}>
-            {formatPrice(listing.price, listing.currency)}
-          </Typography>
+          <ListingCardRating
+            ratingAverage={cardRating?.ratingAverage ?? 0}
+            reviewCount={cardRating?.reviewCount ?? 0}
+            showWhenEmpty
+          />
+          {hasPrice ? (
+            <Typography
+              sx={{
+                fontWeight: 800,
+                fontSize: '1.1rem',
+                color: listing.isPremium ? 'warning.main' : 'primary.main',
+                lineHeight: 1.2,
+              }}
+            >
+              {formatPrice(listing.price, listing.currency)}
+            </Typography>
+          ) : null}
 
-          <CardDescription text={listing.description} />
-
-          <Box sx={{ flex: 1 }} />
+          {description ? (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                fontSize: '0.8rem',
+                lineHeight: 1.45,
+                display: '-webkit-box',
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }}
+            >
+              {description}
+            </Typography>
+          ) : null}
 
           <SpecRow specs={specs} />
+
+          <Box sx={{ flex: 1 }} />
 
           {listing.cityName ? (
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
@@ -244,9 +379,15 @@ function ProfessionalListingCardBody({ listing }: { listing: PublicDirectoryList
   );
 }
 
-export function DirectoryListingCard({ listing }: { listing: PublicDirectoryListing }) {
+export function DirectoryListingCard({
+  listing,
+  sellerRating = null,
+}: {
+  listing: PublicDirectoryListing;
+  sellerRating?: ListingCardRatingSummary | null;
+}) {
   if (listing.kind === 'businesses') {
-    return <BusinessVenueCardBody listing={listing} />;
+    return <BusinessVenueCardBody listing={listing} sellerRating={sellerRating} />;
   }
-  return <ProfessionalListingCardBody listing={listing} />;
+  return <ProfessionalListingCardBody listing={listing} sellerRating={sellerRating} />;
 }

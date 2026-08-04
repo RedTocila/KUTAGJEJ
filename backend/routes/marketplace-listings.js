@@ -8,6 +8,7 @@ const { attachOwnerMetrics } = require('../lib/listing-metrics');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls } = require('../lib/image-upload');
 const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers');
+const { premiumFieldsFromDoc } = require('../lib/premium-listing');
 
 const router = express.Router();
 
@@ -85,9 +86,11 @@ router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
         cityId: d.cityId ? String(d.cityId) : null,
         cityName: city?.name ?? null,
         contactPhone: d.contactPhone ?? null,
+        description: d.description ?? '',
         imageUrls: d.imageUrls ?? [],
         status: d.status || 'pending',
         createdAt: d.createdAt,
+        ...premiumFieldsFromDoc(d),
       };
     });
     res.json({ listings: await attachOwnerMetrics(listings, 'marketplace') });
@@ -145,6 +148,70 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     });
   } catch (err) {
     console.error('POST /listings/marketplace:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/** PUT /api/listings/marketplace/:id — owner update. */
+router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    const rawId = String(req.params.id ?? '').trim();
+    if (!isUuid(rawId)) return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
+
+    const { data: existing, error: selErr } = await getSupabaseAdmin()
+      .from('marketplace_listings')
+      .select('id, poster_id')
+      .eq('id', rawId)
+      .eq('poster_id', req.user.id)
+      .maybeSingle();
+    if (selErr) throw selErr;
+    if (!existing) return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
+
+    const body = req.body;
+    const v = validate(body);
+    if (!v.ok) return res.status(400).json({ message: v.message });
+
+    const cityId = String(body.cityId).trim();
+    const { data: city, error: cityErr } = await getSupabaseAdmin()
+      .from('real_estate_cities')
+      .select('id')
+      .eq('id', cityId)
+      .maybeSingle();
+    if (cityErr) throw cityErr;
+    if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+
+    const selling = SELLING.has(body.transactionType);
+    const hasPrice = selling && body.price !== null && body.price !== undefined && String(body.price).trim() !== '';
+
+    const patch = {
+      transaction_type: body.transactionType,
+      title: String(body.title).trim(),
+      description: String(body.description).trim(),
+      category: body.category,
+      condition: selling && body.condition ? body.condition : null,
+      price: hasPrice ? Number(body.price) : null,
+      currency: hasPrice ? body.currency : null,
+      city_id: cityId,
+      contact_phone: String(body.contactPhone || '').trim(),
+      image_urls: sanitizeImageUrls(body.imageUrls, MAX_MARKETPLACE_IMAGES),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: updated, error: updErr } = await getSupabaseAdmin()
+      .from('marketplace_listings')
+      .update(patch)
+      .eq('id', rawId)
+      .select('*')
+      .single();
+    if (updErr) throw updErr;
+
+    const doc = camelizeRow(updated);
+    res.json({
+      message: 'Njoftimi u përditësua.',
+      listing: { id: String(doc.id), title: doc.title, status: doc.status, updatedAt: doc.updatedAt },
+    });
+  } catch (err) {
+    console.error('PUT /listings/marketplace/:id:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });

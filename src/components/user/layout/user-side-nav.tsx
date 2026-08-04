@@ -1,24 +1,42 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
-import { alpha, Box, Divider, Stack, Typography } from '@mui/material';
+import { alpha, Box, Divider, IconButton, Stack, Tooltip, Typography } from '@mui/material';
+import { SignOut as SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
 
 import type { NavItemConfig } from '@/types/nav';
 import { paths } from '@/paths';
 import { isNavItemActive } from '@/lib/is-nav-item-active';
+import { hardNavigate } from '@/lib/hard-navigate';
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
+import { HeaderLanguageToggle } from '@/components/user/header-language-toggle';
+import { authClient } from '@/lib/auth/client';
 
-import { getUserPortalNavItemsForUser } from './user-nav-config';
+import { getLocalizedUserPortalNavItems } from './user-nav-config';
 import { userPortalNavIcons } from './user-portal-nav-icons';
+import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
+import { useOptionalAddListingPicker } from '@/components/user/add-listing-picker-context';
 
 export function UserSideNav() {
   const pathname = usePathname();
   const { user } = useUser();
-  const navItems = React.useMemo(() => getUserPortalNavItemsForUser(user ?? null), [user]);
+  const t = useCopy();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Keep SSR + first client paint identical (overview + profile only), then expand.
+  const navItems = React.useMemo(() => {
+    if (!mounted) {
+      return getLocalizedUserPortalNavItems(null, t);
+    }
+    return getLocalizedUserPortalNavItems(user ?? null, t);
+  }, [mounted, user, t]);
 
   return (
     <Box
@@ -50,8 +68,9 @@ export function UserSideNav() {
     >
       <Stack spacing={1.5} sx={{ px: 3, pt: 0, pb: 2 }}>
         <Box
-          component={RouterLink}
+          component="a"
           href={paths.home}
+          onClick={(event) => hardNavigate(paths.home, event)}
           sx={{
             display: 'inline-flex',
             flexDirection: 'column',
@@ -91,28 +110,51 @@ export function UserSideNav() {
         </Stack>
       </Box>
       <Divider />
-      <Box sx={{ px: 1.5, py: 1.25, display: 'flex', justifyContent: 'flex-end' }}>
+      <Box sx={{ px: 1.5, py: 1.25, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0.75 }}>
+        <HeaderLanguageToggle />
         <ThemeModeToggle />
+        <Tooltip title={t.nav.signOut}>
+          <IconButton
+            size="large"
+            aria-label={t.nav.signOut}
+            onClick={() => {
+              void authClient.signOut();
+            }}
+            sx={{ color: 'text.secondary' }}
+          >
+            <SignOutIcon size={22} />
+          </IconButton>
+        </Tooltip>
       </Box>
     </Box>
   );
 }
 
 function UserNavRow({ item, pathname }: { item: NavItemConfig; pathname: string }) {
-  const { href, icon, title, disabled, external, matcher } = item;
+  const { href, icon, title, disabled, external, matcher, key } = item;
+  const addListingPicker = useOptionalAddListingPicker();
   if (!href) return null;
   const active = isNavItemActive({ disabled, external, href, matcher, pathname });
   const IconComponent = icon ? userPortalNavIcons[icon] : null;
+  const opensPicker = key === 'real-estate';
 
   return (
     <Box component="li" sx={{ display: 'block', listStyle: 'none' }}>
       <Box
-        {...{
-          component: external ? 'a' : RouterLink,
-          href,
-          target: external ? '_blank' : undefined,
-          rel: external ? 'noreferrer' : undefined,
-        }}
+        component="a"
+        href={opensPicker ? '#' : href}
+        target={external ? '_blank' : undefined}
+        rel={external ? 'noreferrer' : undefined}
+        onClick={
+          opensPicker
+            ? (event) => {
+                event.preventDefault();
+                addListingPicker?.openAddListingPicker();
+              }
+            : external
+              ? undefined
+              : (event) => hardNavigate(href, event)
+        }
         sx={{
           alignItems: 'center',
           borderRadius: 1,
@@ -141,7 +183,10 @@ function UserNavRow({ item, pathname }: { item: NavItemConfig; pathname: string 
               })
             : null}
         </Box>
-        <Typography component="span" sx={{ color: 'inherit', fontSize: '0.875rem', fontWeight: active ? 600 : 500, lineHeight: '28px' }}>
+        <Typography
+          component="span"
+          sx={{ color: 'inherit', fontSize: '0.875rem', fontWeight: active ? 600 : 500, lineHeight: '28px' }}
+        >
           {title}
         </Typography>
       </Box>

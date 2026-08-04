@@ -1,4 +1,4 @@
-export type PaymentType = 'subscription' | 'credits';
+export type PaymentType = 'subscription' | 'credits' | 'auto-refresh' | 'premium';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'canceled';
 export type PokEnv = 'production' | 'staging';
 
@@ -9,6 +9,53 @@ export interface CreditPackage {
   priceEur: number;
   labelSq: string;
   badgeSq?: string;
+}
+
+export interface AutoRefreshPackage {
+  id: string;
+  slots: number;
+  priceEur: number;
+  labelSq: string;
+  labelEn?: string;
+}
+
+export interface AutoRefreshStatus {
+  slots: number;
+  used: number;
+  planCode: string;
+  refreshEveryHours: number;
+  packages: AutoRefreshPackage[];
+}
+
+export interface PremiumPackage {
+  id: string;
+  days: number;
+  priceBc: number;
+  priceEur: number;
+  labelSq: string;
+  labelEn?: string;
+}
+
+export interface PremiumVoucher {
+  id: string;
+  packageId: string;
+  days: number;
+  priceEur: number | null;
+  priceBc: number | null;
+  source: 'card' | 'boost_coins' | 'subscription' | string;
+  status: 'unused' | 'applied' | 'canceled' | string;
+  listingKind: string | null;
+  listingId: string | null;
+  appliedAt: string | null;
+  createdAt: string;
+}
+
+/** Grow/Elite included Premium Listing slots (always 30 days when applied). */
+export interface PremiumPlanQuota {
+  max: number;
+  used: number;
+  remaining: number;
+  days: number;
 }
 
 /** Admin view of a credit package (includes management fields). */
@@ -42,6 +89,11 @@ export interface PaymentMetadata {
   creditPackageId?: string | null;
   credits?: number | null;
   subscriptionId?: string | null;
+  autoRefreshPackageId?: string | null;
+  autoRefreshSlots?: number | null;
+  premiumPackageId?: string | null;
+  premiumDays?: number | null;
+  premiumVoucherId?: string | null;
 }
 
 export interface Payment {
@@ -67,6 +119,8 @@ export interface CreatedOrder {
   amount: number;
   currency: string;
   credits?: number;
+  slots?: number;
+  days?: number;
   pokEnv: PokEnv;
 }
 

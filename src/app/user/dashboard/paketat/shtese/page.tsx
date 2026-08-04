@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Stack } from '@mui/material';
+import { CircularProgress, Stack, Box } from '@mui/material';
 import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 
 import { ExtraPackagesPanel } from '@/components/user/packages/extra-packages-panel';
@@ -20,7 +20,15 @@ export default function ExtraPackagesPage() {
         title="Paketat shtesë"
         description="Shtesa për njoftime — auto-refresh, premium dhe konvertim."
       />
-      <ExtraPackagesPanel />
+      <React.Suspense
+        fallback={
+          <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
+            <CircularProgress size={28} />
+          </Box>
+        }
+      >
+        <ExtraPackagesPanel />
+      </React.Suspense>
     </Stack>
   );
 }

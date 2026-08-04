@@ -28,7 +28,7 @@ const CURRENCY_VALUES = ['EUR', 'LEK'];
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
+const { isUuid } = require('./public-listings/query-helpers');
 
 /**
  * Validates a car listing payload (fields already extracted from multipart or JSON).
@@ -90,8 +90,9 @@ function validateCarPayload(fields) {
     return { ok: false, message: 'Phone number contains invalid characters.' };
   }
 
-  const cityId = String(fields.cityId || '').trim();
-  if (!cityId || !OBJECT_ID_RE.test(cityId)) {
+  const rawCityId = Array.isArray(fields.cityId) ? fields.cityId[0] : fields.cityId;
+  const cityId = String(rawCityId || '').trim();
+  if (!cityId || !isUuid(cityId)) {
     return { ok: false, message: 'Please select a valid city.' };
   }
 

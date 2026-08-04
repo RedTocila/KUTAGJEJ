@@ -5,7 +5,14 @@ import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Box, Stack, Typography } from '@mui/material';
 
-import { HOME_VERTICALS } from '@/lib/home-categories';
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
+import {
+  AI_SEARCH_BLUE,
+  AI_SEARCH_BLUE_SOFT,
+  localizeSearchCategories,
+} from '@/lib/home-categories';
+import { paths } from '@/paths';
 
 import { HomeVerticalIcon } from './home-vertical-icon';
 
@@ -24,24 +31,59 @@ export function HeroCategoryCircles({
   onSelect,
 }: HeroCategoryCirclesProps) {
   const pathname = usePathname();
-  const heroVerticals = React.useMemo(() => HOME_VERTICALS, []);
+  const { language } = useLanguage();
+  const t = useCopy();
+  const heroVerticals = React.useMemo(() => localizeSearchCategories(language), [language]);
 
   const selectedFromPath = React.useMemo(() => {
     if (!pathname || pathname === '/') return -1;
-    const idx = heroVerticals.findIndex(
-      (v) => pathname === v.href || pathname?.startsWith(`${v.href}/`),
-    );
+    // /kerko manages selection via props when used as tabs; as links, never force AI.
+    if (pathname === paths.public.search || pathname?.startsWith(`${paths.public.search}/`)) {
+      return -1;
+    }
+    const idx = heroVerticals.findIndex((v) => {
+      if (v.id === 'ai') return false;
+      const base = v.href.split('?')[0];
+      return pathname === base || pathname?.startsWith(`${base}/`);
+    });
     return idx >= 0 ? idx : -1;
   }, [heroVerticals, pathname]);
 
   const selectedIndex =
     variant === 'tabs' && selectedIndexProp != null ? selectedIndexProp : selectedFromPath;
 
-  const itemSx = {
+  const itemSx = (isAi: boolean) => ({
     flexShrink: 0,
     scrollSnapAlign: { xs: 'start', sm: 'none' } as const,
     alignItems: 'center',
-  };
+    cursor: 'pointer',
+    userSelect: 'none',
+    WebkitTapHighlightColor: 'transparent',
+    '&:hover .hero-cat-circle': {
+      borderColor: isAi ? AI_SEARCH_BLUE : 'primary.main',
+      bgcolor: isAi
+        ? AI_SEARCH_BLUE_SOFT
+        : (theme: { palette: { mode: string } }) =>
+            theme.palette.mode === 'dark'
+              ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.18)'
+              : 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)',
+    },
+    '&:hover .hero-cat-label': {
+      color: isAi ? AI_SEARCH_BLUE : 'primary.main',
+    },
+    '&:active .hero-cat-circle': {
+      borderColor: isAi ? AI_SEARCH_BLUE : 'primary.main',
+      bgcolor: isAi
+        ? AI_SEARCH_BLUE_SOFT
+        : (theme: { palette: { mode: string } }) =>
+            theme.palette.mode === 'dark'
+              ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.28)'
+              : 'rgba(var(--mui-palette-primary-mainChannel) / 0.2)',
+    },
+    '&:active .hero-cat-label': {
+      color: isAi ? AI_SEARCH_BLUE : 'primary.main',
+    },
+  });
 
   return (
     <Box
@@ -51,7 +93,7 @@ export function HeroCategoryCircles({
     >
       <Box
         component="nav"
-        aria-label="Kategoritë kryesore"
+        aria-label={t.chrome.categoriesAria}
         sx={{
           display: 'flex',
           flexDirection: 'row',
@@ -62,45 +104,49 @@ export function HeroCategoryCircles({
           overflowY: 'hidden',
           WebkitOverflowScrolling: 'touch',
           scrollSnapType: { xs: 'x proximity', sm: 'none' },
-          scrollbarWidth: { xs: 'none', sm: 'auto' },
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
           pb: { xs: 0, sm: 0.75 },
-          '&::-webkit-scrollbar': {
-            display: { xs: 'none', sm: 'block' },
-            height: { sm: 5 },
-          },
-          '&::-webkit-scrollbar-thumb': {
-            display: { xs: 'none', sm: 'block' },
-            borderRadius: 2.5,
-            bgcolor: (theme) =>
-              theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(26, 33, 24, 0.18)',
-          },
+          '&::-webkit-scrollbar': { display: 'none' },
         }}
       >
         {heroVerticals.map((v, i) => {
           const selected = selectedIndex >= 0 && i === selectedIndex;
+          const isAi = v.id === 'ai';
+          const accent = isAi ? AI_SEARCH_BLUE : 'primary.main';
           const body = (
             <>
               <Box
+                className="hero-cat-circle"
                 sx={{
                   width: { xs: 60, sm: 58 },
                   height: { xs: 60, sm: 58 },
                   borderRadius: '50%',
                   display: 'grid',
                   placeItems: 'center',
-                  bgcolor: 'background.paper',
+                  bgcolor: selected
+                    ? isAi
+                      ? AI_SEARCH_BLUE_SOFT
+                      : (theme) =>
+                          theme.palette.mode === 'dark'
+                            ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.22)'
+                            : 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
+                    : 'background.paper',
                   border: '1px solid',
-                  borderColor: selected ? 'primary.main' : 'divider',
+                  borderColor: selected ? accent : 'divider',
                   transition: 'border-color 0.15s ease, background-color 0.15s ease',
                 }}
               >
                 <HomeVerticalIcon verticalId={v.id} size={34} />
               </Box>
               <Typography
+                className="hero-cat-label"
                 variant="caption"
                 sx={{
                   fontWeight: selected ? 700 : 600,
-                  color: selected ? 'primary.main' : 'text.secondary',
+                  color: selected ? accent : 'text.secondary',
                   whiteSpace: 'nowrap',
+                  transition: 'color 0.15s ease',
                 }}
               >
                 {v.label}
@@ -110,16 +156,7 @@ export function HeroCategoryCircles({
 
           if (variant === 'tabs') {
             return (
-              <Stack
-                key={v.id}
-                spacing={0.4}
-                onClick={() => onSelect?.(i)}
-                sx={{
-                  ...itemSx,
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
-              >
+              <Stack key={v.id} spacing={0.4} onClick={() => onSelect?.(i)} sx={itemSx(isAi)}>
                 {body}
               </Stack>
             );
@@ -132,11 +169,9 @@ export function HeroCategoryCircles({
               href={v.href}
               spacing={0.4}
               sx={{
-                ...itemSx,
+                ...itemSx(isAi),
                 textDecoration: 'none',
                 color: 'inherit',
-                cursor: 'pointer',
-                userSelect: 'none',
               }}
             >
               {body}

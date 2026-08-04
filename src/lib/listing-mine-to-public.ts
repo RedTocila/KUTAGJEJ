@@ -1,0 +1,221 @@
+import { findOptionLabel } from '@/components/public/listing-cards/format-helpers';
+import { BUSINESS_CATEGORY_OPTIONS } from '@/lib/business-constants';
+import type {
+  BusinessMineListing,
+  ProfessionalMineListing,
+} from '@/lib/directory-listings-client';
+import type {
+  CarMineListing,
+  JobMineListing,
+  MarketplaceMineListing,
+} from '@/lib/listings-client';
+import { PROFESSIONAL_CATEGORY_OPTIONS } from '@/lib/professional-constants';
+import type {
+  PublicCarListingDetail,
+  PublicDirectoryListingDetail,
+  PublicJobListingDetail,
+  PublicMarketplaceListingDetail,
+  PublicRealEstateListingDetail,
+} from '@/lib/public-listings-client';
+import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
+
+function metricsFrom(mine: {
+  viewCount?: number;
+  clickCount?: number;
+  shareCount?: number;
+  saveCount?: number;
+  saved?: boolean;
+}) {
+  return {
+    viewCount: mine.viewCount ?? 0,
+    clickCount: mine.clickCount ?? 0,
+    shareCount: mine.shareCount ?? 0,
+    saveCount: mine.saveCount ?? 0,
+    saved: mine.saved,
+  };
+}
+
+export function professionalMineToPublic(mine: ProfessionalMineListing): PublicDirectoryListingDetail {
+  return {
+    id: mine.id,
+    kind: 'professionals',
+    title: mine.title,
+    description: mine.description,
+    category: mine.category,
+    categoryLabel: findOptionLabel(PROFESSIONAL_CATEGORY_OPTIONS, mine.category),
+    condition: mine.condition,
+    price: mine.price,
+    currency: mine.currency === 'EUR' || mine.currency === 'LEK' ? mine.currency : null,
+    cityName: mine.cityName,
+    contactPhone: mine.contactPhone,
+    imageUrl: mine.imageUrls[0] ?? null,
+    imageUrls: mine.imageUrls ?? [],
+    createdAt: mine.createdAt,
+    updatedAt: mine.updatedAt,
+    openingHours: null,
+    openStatusLine: null,
+    ratingAverage: null,
+    reviewCount: 0,
+    reservationsEnabled: false,
+    reservationUrl: null,
+    servicesHighlight: mine.servicesHighlight,
+    responseTimeHours: mine.responseTimeHours,
+    portfolioItems: mine.portfolioItems ?? [],
+    seller: null,
+    ...metricsFrom(mine),
+  };
+}
+
+export function businessMineToPublic(mine: BusinessMineListing): PublicDirectoryListingDetail {
+  return {
+    id: mine.id,
+    kind: 'businesses',
+    title: mine.title,
+    description: mine.description,
+    category: mine.category,
+    categoryLabel: findOptionLabel(BUSINESS_CATEGORY_OPTIONS, mine.category),
+    condition: null,
+    price: null,
+    currency: null,
+    cityName: mine.cityName,
+    contactPhone: mine.contactPhone,
+    imageUrl: mine.imageUrls[0] ?? null,
+    imageUrls: mine.imageUrls ?? [],
+    createdAt: mine.createdAt,
+    updatedAt: mine.updatedAt,
+    openingHours: mine.openingHours,
+    openStatusLine: null,
+    ratingAverage: null,
+    reviewCount: 0,
+    reservationsEnabled: mine.reservationsEnabled,
+    reservationUrl: mine.reservationUrl,
+    servicesHighlight: mine.servicesHighlight,
+    weeklyHours: mine.weeklyHours,
+    menuCategories: mine.menuCategories,
+    menuItems: mine.menuItems,
+    reservationTimeSlots: mine.reservationTimeSlots,
+    reservationPartySizes: mine.reservationPartySizes,
+    seller: null,
+    ...metricsFrom(mine),
+  };
+}
+
+export function realEstateMineToPublic(mine: RealEstateMineListing): PublicRealEstateListingDetail {
+  return {
+    id: mine.id,
+    kind: 'real-estate',
+    title: mine.title,
+    description: mine.description,
+    propertyCategory: mine.propertyCategory,
+    transactionType: mine.transactionType,
+    price: mine.price,
+    currency: mine.currency,
+    surfaceM2: mine.surfaceM2,
+    cityName: mine.cityName,
+    zoneName: mine.zoneName,
+    bedrooms: mine.bedrooms,
+    bathrooms: mine.bathrooms,
+    floor: mine.floor,
+    totalFloors: mine.totalFloors,
+    parkingFloor: mine.parkingFloor,
+    apartmentTypeSlug: mine.apartmentTypeSlug,
+    furnishing: mine.furnishing,
+    yearBuilt: mine.yearBuilt,
+    condition: mine.condition,
+    contactPhone: mine.contactPhone,
+    imageUrl: mine.imageUrls[0] ?? null,
+    imageUrls: mine.imageUrls ?? [],
+    createdAt: mine.createdAt,
+    updatedAt: mine.updatedAt,
+    seller: null,
+    ...metricsFrom(mine),
+  };
+}
+
+export function carMineToPublic(mine: CarMineListing): PublicCarListingDetail {
+  const title = [mine.make, mine.model, mine.variant].filter(Boolean).join(' ').trim() || 'Makina';
+  return {
+    id: mine.id,
+    kind: 'car',
+    title,
+    description: mine.description ?? '',
+    make: mine.make,
+    model: mine.model,
+    variant: mine.variant,
+    year: mine.year,
+    kilometers: mine.kilometers,
+    transmission: (mine.transmission === 'automatic' || mine.transmission === 'manual'
+      ? mine.transmission
+      : 'manual') as 'automatic' | 'manual',
+    fuelType: mine.fuelType,
+    price: mine.price,
+    currency: mine.currency === 'EUR' || mine.currency === 'LEK' ? mine.currency : 'EUR',
+    color: mine.color,
+    finish: mine.finish ?? [],
+    extras: mine.extras ?? [],
+    cityName: mine.cityName,
+    contactPhone: mine.contactPhone,
+    imageUrl: mine.imageUrls[0] ?? null,
+    imageUrls: mine.imageUrls ?? [],
+    createdAt: mine.createdAt,
+    updatedAt: mine.createdAt,
+    seller: null,
+    ...metricsFrom(mine),
+  };
+}
+
+export function jobMineToPublic(mine: JobMineListing): PublicJobListingDetail {
+  const created = new Date(mine.createdAt);
+  const expires = new Date(created.getTime() + 15 * 24 * 60 * 60 * 1000);
+  const workLocation =
+    mine.workLocation === 'hybrid' || mine.workLocation === 'remote' || mine.workLocation === 'onsite'
+      ? mine.workLocation
+      : 'onsite';
+  return {
+    id: mine.id,
+    kind: 'job',
+    title: mine.title,
+    description: mine.description,
+    industry: mine.industry,
+    cityName: mine.cityName,
+    education: mine.education,
+    experience: mine.experience,
+    jobType: mine.jobType,
+    workLocation,
+    salary: mine.salary,
+    currency: mine.currency === 'EUR' || mine.currency === 'LEK' ? mine.currency : null,
+    contactPhone: mine.contactPhone,
+    imageUrl: mine.imageUrls[0] ?? null,
+    imageUrls: mine.imageUrls ?? [],
+    createdAt: mine.createdAt,
+    updatedAt: mine.createdAt,
+    expiresAt: expires.toISOString(),
+    responsibilities: mine.responsibilities ?? [],
+    requirements: mine.requirements ?? [],
+    benefits: mine.benefits ?? [],
+    seller: null,
+    ...metricsFrom(mine),
+  };
+}
+
+export function marketplaceMineToPublic(mine: MarketplaceMineListing): PublicMarketplaceListingDetail {
+  return {
+    id: mine.id,
+    kind: 'marketplace',
+    transactionType: 'shes',
+    title: mine.title,
+    description: mine.description ?? '',
+    category: mine.category,
+    condition: mine.condition,
+    price: mine.price,
+    currency: mine.currency === 'EUR' || mine.currency === 'LEK' ? mine.currency : null,
+    cityName: mine.cityName,
+    contactPhone: mine.contactPhone,
+    imageUrl: mine.imageUrls[0] ?? null,
+    imageUrls: mine.imageUrls ?? [],
+    createdAt: mine.createdAt,
+    updatedAt: mine.createdAt,
+    seller: null,
+    ...metricsFrom(mine),
+  };
+}

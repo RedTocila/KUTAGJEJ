@@ -3,7 +3,6 @@
 import * as React from 'react';
 import Link from 'next/link';
 import {
-  Avatar,
   Box,
   Button,
   Container,
@@ -33,13 +32,14 @@ import { RealEstateCard } from '@/components/public/listing-cards/real-estate-ca
 import { formatPrice, relativeAlbanianDate } from '@/components/public/listing-cards/format-helpers';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
+import { ListingSellerProfileCard } from '@/components/public/listing-seller-profile-card';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { StickyListingContact } from '@/components/public/sticky-listing-contact';
+import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { whatsappHref } from '@/lib/listing-contact';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { PublicRealEstateListing, PublicRealEstateListingDetail } from '@/lib/public-listings-client';
-import { paths, pathsPublicMemberProfile } from '@/paths';
+import { paths } from '@/paths';
 
 import {
   LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
@@ -90,27 +90,23 @@ function postedLabelSq(iso: string): string {
   return relativeAlbanianDate(iso);
 }
 
-function sellerInitials(name: string): string {
-  const p = name.split(/\s+/).filter(Boolean);
-  if (!p.length) return '?';
-  if (p.length === 1) return p[0].slice(0, 2).toUpperCase();
-  return `${p[0][0]}${p[1][0]}`.toUpperCase();
-}
-
-function sectionTitle(text: string, id: string) {
+function sectionTitle(text: string, id: string, edit?: { label: string; onClick: () => void }) {
   return (
-    <Typography
-      id={id}
-      component="h2"
-      variant="overline"
-      sx={{
-        letterSpacing: '0.14em',
-        fontWeight: 800,
-        color: 'text.secondary',
-      }}
-    >
-      {text}
-    </Typography>
+    <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+      <Typography
+        id={id}
+        component="h2"
+        variant="overline"
+        sx={{
+          letterSpacing: '0.14em',
+          fontWeight: 800,
+          color: 'text.secondary',
+        }}
+      >
+        {text}
+      </Typography>
+      {edit ? <OwnerEditPencil label={edit.label} onClick={edit.onClick} /> : null}
+    </Stack>
   );
 }
 
@@ -271,69 +267,12 @@ function RealEstateSellerCardContents({
   /** Unique `id` for the heading (hero + scroll panels both render in the DOM). */
   sellerSectionHeadingId?: string;
 }) {
-  const memberYear = listing.seller?.memberSince ? new Date(listing.seller.memberSince).getFullYear() : undefined;
-  const profileHref = listing.seller?.id ? pathsPublicMemberProfile(listing.seller.id) : null;
-
   return (
-    <>
-      <Typography
-        id={sellerSectionHeadingId}
-        variant="overline"
-        color="text.secondary"
-        sx={{ fontWeight: 800, letterSpacing: '0.1em', mb: 1.5, display: 'block' }}
-      >
-        Rreth shitësit / ofertuesit
-      </Typography>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
-        <Avatar
-          sx={{
-            width: { xs: 64, sm: 72 },
-            height: { xs: 64, sm: 72 },
-            bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.16 : 0.12),
-            color: 'primary.main',
-            fontWeight: 800,
-            fontSize: '1.35rem',
-          }}
-          aria-hidden
-        >
-          {sellerInitials(listing.seller?.displayName ?? 'KuTa')}
-        </Avatar>
-        <Stack spacing={0.65} sx={{ flex: '1 1 auto' }}>
-          <Typography sx={{ fontWeight: 850, fontSize: '1.125rem', color: 'text.primary' }}>
-            {listing.seller?.displayName ?? 'Përdorues KuTaGjej'}
-          </Typography>
-          {memberYear != null ? (
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-              Anëtar që prej {memberYear}
-            </Typography>
-          ) : null}
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, opacity: 0.85 }}>
-            Komuniko vetëm nëpërmjet platformës ose në numrin e listuar.
-          </Typography>
-        </Stack>
-      </Stack>
-      <Button
-        component={profileHref ? Link : 'button'}
-        href={profileHref ?? undefined}
-        disabled={!profileHref}
-        variant="contained"
-        disableElevation
-        fullWidth
-        sx={{
-          mt: { xs: 2, sm: 2.25 },
-          borderRadius: 999,
-          fontWeight: 800,
-          textTransform: 'none',
-          py: 1.25,
-          color: 'common.black',
-          boxShadow: 'none',
-          '&:hover': { color: 'common.black' },
-          '& .MuiButton-startIcon': { color: 'inherit' },
-        }}
-      >
-        Shiko profilin
-      </Button>
-    </>
+    <ListingSellerProfileCard
+      seller={listing.seller}
+      headingId={sellerSectionHeadingId}
+      showSafetyNote
+    />
   );
 }
 
@@ -345,11 +284,19 @@ export function RealEstateListingDetailView({
   listing,
   similar,
   canonicalUrl,
+  ownerPreview = false,
+  ownerEdit,
 }: {
   listing: PublicRealEstateListingDetail;
   similar: PublicRealEstateListing[];
   canonicalUrl: string;
+  /** Owner edit canvas — hide buyer chrome (contact, similar, metrics). */
+  ownerPreview?: boolean;
+  ownerEdit?: OwnerEditHandlers;
 }) {
+  const onEditInfo = ownerEdit?.onEditInfo;
+  const onEditPrice = ownerEdit?.onEditPrice ?? onEditInfo;
+  const onEditSpecs = ownerEdit?.onEditSpecs ?? onEditInfo;
   const locationFull = [listing.zoneName, listing.cityName, 'Shqipëri'].filter(Boolean).join(', ');
   const displayPhone =
     listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
@@ -366,6 +313,32 @@ export function RealEstateListingDetailView({
   const whatsappInquireHref = wa
     ? `${wa}?text=${encodeURIComponent(`Përshëndetje, jam i interesuari për: «${listing.title}» (${canonicalUrl}).`)}`
     : undefined;
+
+  const priceLabel =
+    formatPrice(listing.price, listing.currency) + (listing.transactionType === 'rent' ? ' / muaj' : '');
+
+  const sharePayload = {
+    title: listing.title,
+    category: propertyCategoryLabelSq(listing.propertyCategory),
+    priceLabel,
+    badge: transactionLabel,
+    imageUrl: listing.imageUrls[0] ?? listing.imageUrl ?? null,
+    location: [listing.zoneName, listing.cityName].filter(Boolean).join(', ') || undefined,
+    specs: [
+      ...(listing.bedrooms != null ? [{ icon: 'bed' as const, label: `${listing.bedrooms}` }] : []),
+      ...(listing.bathrooms != null ? [{ icon: 'bath' as const, label: `${listing.bathrooms}` }] : []),
+      { icon: 'ruler' as const, label: `${listing.surfaceM2} m²` },
+      ...(listing.floor != null ? [{ icon: 'stairs' as const, label: `Kati ${listing.floor}` }] : []),
+      ...(listing.yearBuilt != null ? [{ icon: 'calendar' as const, label: String(listing.yearBuilt) }] : []),
+      ...(listing.furnishing
+        ? [{ icon: 'couch' as const, label: FURNISH_SQ[listing.furnishing] ?? listing.furnishing }]
+        : []),
+    ],
+    createdAt: listing.createdAt,
+    viewCount,
+    saveCount: listing.saveCount,
+    url: canonicalUrl,
+  };
 
   const detailRows: Array<{ label: string; value: string } | null> = [
     { label: 'Lloji', value: propertyCategoryLabelSq(listing.propertyCategory) },
@@ -385,7 +358,7 @@ export function RealEstateListingDetailView({
 
   return (
     <>
-      <ListingMetricsTracker listingKind="real-estate" listingId={listing.id} />
+      {ownerPreview ? null : <ListingMetricsTracker listingKind="real-estate" listingId={listing.id} />}
       {/* JSON-LD is emitted from the route; keep article semantics for headings + listing body. */}
       <Box component="article" sx={{ bgcolor: 'background.default' }}>
         <Container
@@ -415,7 +388,7 @@ export function RealEstateListingDetailView({
               })}
             >
             <Stack
-              direction={{ xs: 'column', md: 'row' }}
+              direction={ownerPreview ? 'column' : { xs: 'column', md: 'row' }}
               sx={{ alignItems: { md: 'stretch' }, minHeight: 0, width: '100%' }}
             >
               <Box
@@ -433,19 +406,21 @@ export function RealEstateListingDetailView({
                   placeholderIcon={
                     listing.propertyCategory === 'villa' || listing.propertyCategory === 'part-of-villa' ? 'house' : 'buildings'
                   }
-                  browseListHref={paths.public.realEstate}
+                  browseListHref={ownerPreview ? undefined : paths.public.realEstate}
                   browseListAriaLabel="Prapa te lista e pronës"
                   heroSizes={LISTING_DETAIL_HERO_IMAGE_SIZES}
                   listingKind="real-estate"
                   listingId={listing.id}
-                  shareCount={listing.shareCount}
-                  saveCount={saveCount}
-                  bookmark={{ saved, onToggle: () => void toggleSave() }}
+                  shareCount={ownerPreview ? undefined : listing.shareCount}
+                  saveCount={ownerPreview ? undefined : saveCount}
+                  bookmark={ownerPreview ? undefined : { saved, onToggle: () => void toggleSave() }}
+                  sharePayload={ownerPreview ? undefined : sharePayload}
+                  onEditPhotos={ownerEdit?.onEditPhotos}
                 />
               </Box>
               <Box
                 sx={{
-                  display: { xs: 'none', md: 'flex' },
+                  display: ownerPreview ? 'none' : { xs: 'none', md: 'flex' },
                   flexDirection: 'column',
                   flex: '0 0 auto',
                   width: { md: 'min(340px, 34%)' },
@@ -485,66 +460,79 @@ export function RealEstateListingDetailView({
             </Stack>
             </Box>
 
-            <Stack spacing={{ xs: 3, md: 3.5 }} sx={{ px: { xs: 2, sm: 3, md: 0 }, pb: { xs: 18, md: 6 }, width: '100%' }}>
+            <Stack spacing={{ xs: 3, md: 3.5 }} sx={{ px: { xs: 2, sm: 3, md: 0 }, pb: ownerPreview ? 3 : { xs: 18, md: 6 }, width: '100%' }}>
             <Stack spacing={1.75}>
-              <Typography
-                variant="h3"
-                component="h1"
-                sx={{
-                  fontWeight: 800,
-                  lineHeight: 1.18,
-                  letterSpacing: '-0.02em',
-                  color: 'text.primary',
-                  fontSize: { xs: '1.55rem', sm: '2rem', md: '2.125rem' },
-                }}
-              >
-                {listing.title}
-              </Typography>
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                <Typography
+                  variant="h3"
+                  component="h1"
+                  sx={{
+                    fontWeight: 800,
+                    lineHeight: 1.18,
+                    letterSpacing: '-0.02em',
+                    color: 'text.primary',
+                    fontSize: { xs: '1.55rem', sm: '2rem', md: '2.125rem' },
+                  }}
+                >
+                  {listing.title}
+                </Typography>
+                {onEditInfo ? (
+                  <OwnerEditPencil label="Ndrysho titullin" onClick={onEditInfo} />
+                ) : null}
+              </Stack>
 
-              <Box sx={{ display: { xs: 'block', md: 'none' } }}>
-                <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
-                  <Typography
-                    sx={{
-                      fontWeight: 900,
-                      fontSize: { xs: '1.85rem', sm: '2.15rem' },
-                      color: 'primary.main',
-                      lineHeight: 1.1,
-                    }}
-                  >
-                    {formatPrice(listing.price, listing.currency)}
-                    {listing.transactionType === 'rent' ? (
-                      <Typography component="span" variant="subtitle2" sx={{ ml: 0.5, fontWeight: 600, color: 'text.secondary' }}>
-                        / muaj
-                      </Typography>
-                    ) : null}
-                  </Typography>
-                  <Paper
-                    variant="outlined"
-                    sx={{
-                      borderColor: 'divider',
-                      bgcolor: 'action.hover',
-                      borderRadius: 999,
-                      px: 1.25,
-                      py: 0.35,
-                    }}
-                  >
-                    <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main' }}>
-                      {transactionLabel}
+              <Box sx={{ display: ownerPreview ? 'block' : { xs: 'block', md: 'none' } }}>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
+                    <Typography
+                      sx={{
+                        fontWeight: 900,
+                        fontSize: { xs: '1.85rem', sm: '2.15rem' },
+                        color: 'primary.main',
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      {formatPrice(listing.price, listing.currency)}
+                      {listing.transactionType === 'rent' ? (
+                        <Typography component="span" variant="subtitle2" sx={{ ml: 0.5, fontWeight: 600, color: 'text.secondary' }}>
+                          / muaj
+                        </Typography>
+                      ) : null}
                     </Typography>
-                  </Paper>
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        borderColor: 'divider',
+                        bgcolor: 'action.hover',
+                        borderRadius: 999,
+                        px: 1.25,
+                        py: 0.35,
+                      }}
+                    >
+                      <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main' }}>
+                        {transactionLabel}
+                      </Typography>
+                    </Paper>
+                  </Stack>
+                  {onEditPrice ? (
+                    <OwnerEditPencil label="Ndrysho çmimin" onClick={onEditPrice} />
+                  ) : null}
                 </Stack>
               </Box>
 
               <Stack spacing={1.25}>
                 <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: { xs: 1.25, sm: 2 } }}>
-                  {locationFull ? (
+                  {locationFull || onEditInfo ? (
                     <Stack direction="row" spacing={0.65} sx={{ alignItems: 'center', maxWidth: '100%' }}>
                       <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
                         <MapPinIcon size={17} weight="regular" color="currentColor" />
                       </Box>
                       <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.4 }}>
-                        {locationFull}
+                        {locationFull || 'Shtoni lokacionin'}
                       </Typography>
+                      {onEditInfo ? (
+                        <OwnerEditPencil label="Ndrysho lokacionin" onClick={onEditInfo} />
+                      ) : null}
                     </Stack>
                   ) : null}
                   <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
@@ -559,35 +547,50 @@ export function RealEstateListingDetailView({
               </Stack>
             </Stack>
 
-            <Paper
-              variant="outlined"
-              sx={{ borderRadius: 2.5, borderColor: 'divider', bgcolor: 'background.paper', px: { xs: 1, sm: 1.5 }, py: { xs: 1.75, sm: 2 } }}
-            >
-              <Stack direction="row" sx={{ flexWrap: 'wrap', justifyContent: 'space-evenly', rowGap: 1 }}>
-                {listing.bedrooms != null ? (
-                  <SpecIconBox Icon={BedIcon} primary={`${listing.bedrooms}`} secondary={listing.bedrooms === 1 ? 'Dhomë gjumi' : 'Dhoma gjumi'} />
-                ) : null}
-                {listing.bathrooms != null ? (
-                  <SpecIconBox
-                    Icon={BathtubIcon}
-                    primary={`${listing.bathrooms}`}
-                    secondary={listing.bathrooms === 1 ? 'Tualet' : 'Tualete'}
-                  />
-                ) : null}
-                <SpecIconBox Icon={RulerIcon} primary={`${listing.surfaceM2} m²`} secondary="Sipërfaqe" />
-                {listing.propertyCategory === 'parking' && listing.parkingFloor != null ? (
-                  <SpecIconBox Icon={CarIcon} primary={`Kati ${listing.parkingFloor}`} secondary="Parkim" />
-                ) : listing.totalFloors != null ? (
-                  <SpecIconBox Icon={StairsIcon} primary={`${listing.totalFloors}`} secondary={listing.totalFloors === 1 ? 'Kat' : 'Kata'} />
-                ) : listing.floor != null ? (
-                  <SpecIconBox Icon={StairsIcon} primary={`Kat ${listing.floor}`} secondary="Niveli" />
-                ) : null}
-              </Stack>
-            </Paper>
+            <Box sx={{ position: 'relative' }}>
+              {onEditSpecs ? (
+                <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
+                  <OwnerEditPencil label="Ndrysho specifikimet" onClick={onEditSpecs} />
+                </Box>
+              ) : null}
+              <Paper
+                variant="outlined"
+                sx={{ borderRadius: 2.5, borderColor: 'divider', bgcolor: 'background.paper', px: { xs: 1, sm: 1.5 }, py: { xs: 1.75, sm: 2 } }}
+              >
+                <Stack direction="row" sx={{ flexWrap: 'wrap', justifyContent: 'space-evenly', rowGap: 1 }}>
+                  {listing.bedrooms != null ? (
+                    <SpecIconBox Icon={BedIcon} primary={`${listing.bedrooms}`} secondary={listing.bedrooms === 1 ? 'Dhomë gjumi' : 'Dhoma gjumi'} />
+                  ) : null}
+                  {listing.bathrooms != null ? (
+                    <SpecIconBox
+                      Icon={BathtubIcon}
+                      primary={`${listing.bathrooms}`}
+                      secondary={listing.bathrooms === 1 ? 'Tualet' : 'Tualete'}
+                    />
+                  ) : null}
+                  <SpecIconBox Icon={RulerIcon} primary={`${listing.surfaceM2} m²`} secondary="Sipërfaqe" />
+                  {listing.propertyCategory === 'parking' && listing.parkingFloor != null ? (
+                    <SpecIconBox Icon={CarIcon} primary={`Kati ${listing.parkingFloor}`} secondary="Parkim" />
+                  ) : listing.totalFloors != null ? (
+                    <SpecIconBox Icon={StairsIcon} primary={`${listing.totalFloors}`} secondary={listing.totalFloors === 1 ? 'Kat' : 'Kata'} />
+                  ) : listing.floor != null ? (
+                    <SpecIconBox Icon={StairsIcon} primary={`Kat ${listing.floor}`} secondary="Niveli" />
+                  ) : null}
+                </Stack>
+              </Paper>
+            </Box>
 
             <Stack spacing={2} component="section" aria-labelledby="re-desc-heading">
-              {sectionTitle('Përshkrimi', 're-desc-heading')}
-              <RealEstateListingExpandableText text={listing.description} />
+              {sectionTitle(
+                'Përshkrimi',
+                're-desc-heading',
+                onEditSpecs ? { label: 'Ndrysho përshkrimin', onClick: onEditSpecs } : undefined,
+              )}
+              {listing.description ? (
+                <RealEstateListingExpandableText text={listing.description} />
+              ) : onEditSpecs ? (
+                <Typography sx={{ color: 'text.secondary' }}>Shtoni përshkrimin</Typography>
+              ) : null}
             </Stack>
 
             <Stack spacing={0} component="section" aria-labelledby="re-detail-heading">
@@ -631,7 +634,7 @@ export function RealEstateListingDetailView({
 
             <Divider sx={{ borderColor: 'divider' }} />
 
-            <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+            <Box sx={{ display: ownerPreview ? 'block' : { xs: 'block', md: 'none' } }}>
               <Stack spacing={2} component="section" aria-labelledby="re-seller-heading-scroll">
                 <Paper variant="outlined" sx={{ borderRadius: 2.5, borderColor: 'divider', bgcolor: 'background.paper', p: { xs: 2, sm: 2.5 } }}>
                   <RealEstateSellerCardContents
@@ -657,7 +660,7 @@ export function RealEstateListingDetailView({
               )}
             </Stack>
 
-            {similar.length > 0 ? (
+            {!ownerPreview && similar.length > 0 ? (
               <>
                 <Divider sx={{ borderColor: 'divider' }} />
                 <Stack spacing={2} component="aside" aria-labelledby="re-related-heading">
@@ -685,7 +688,7 @@ export function RealEstateListingDetailView({
         </Container>
       </Box>
 
-      <StickyContactBar listingId={listing.id} />
+      {ownerPreview ? null : <StickyContactBar listingId={listing.id} />}
     </>
   );
 }

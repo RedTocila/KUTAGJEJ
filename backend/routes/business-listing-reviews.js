@@ -2,6 +2,7 @@
 
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
+const optionalAuth = require('../middleware/optional-auth');
 const requirePortalUser = require('../middleware/require-portal-user');
 const { getSupabaseAdmin } = require('../lib/supabase');
 const { getProfileById } = require('../lib/profiles');
@@ -36,7 +37,7 @@ function isUniqueViolation(err) {
 }
 
 /** GET /api/business-reviews?listingId= */
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const listingId = String(req.query.listingId || '').trim();
     if (!isUuid(listingId)) {
@@ -61,11 +62,16 @@ router.get('/', async (req, res) => {
       .limit(50);
     if (error) throw error;
 
+    const viewerId = req.user?.id || req.user?._id ? String(req.user.id || req.user._id) : '';
+    const viewerHasReviewed = Boolean(
+      viewerId && (docs || []).some((d) => String(d.reviewer_id) === viewerId),
+    );
+
     const reviews = await Promise.all(
       (docs || []).map(async (d) => formatReview(d, await reviewerDisplayName(d.reviewer_id))),
     );
 
-    res.json({ reviews });
+    res.json({ reviews, viewerHasReviewed });
   } catch (err) {
     console.error('GET /business-reviews:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
@@ -101,23 +107,14 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
 
     const { data: existing, error: existingErr } = await sb
       .from('business_listing_reviews')
-      .select('*')
+      .select('id')
       .eq('listing_id', listingId)
       .eq('reviewer_id', reviewerId)
       .maybeSingle();
     if (existingErr) throw existingErr;
 
     if (existing) {
-      const now = new Date().toISOString();
-      const { data: updated, error: updateErr } = await sb
-        .from('business_listing_reviews')
-        .update({ rating: v.rating, comment: v.comment, updated_at: now })
-        .eq('id', existing.id)
-        .select('*')
-        .single();
-      if (updateErr) throw updateErr;
-      const name = await reviewerDisplayName(reviewerId);
-      return res.json({ review: formatReview(updated, name), updated: true });
+      return res.status(400).json({ message: 'Keni lënë tashmë një vlerësim për këtë biznes.' });
     }
 
     const { data: doc, error: insertErr } = await sb
@@ -138,7 +135,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     }
 
     const name = await reviewerDisplayName(reviewerId);
-    res.status(201).json({ review: formatReview(doc, name), updated: false });
+    res.status(201).json({ review: formatReview(doc, name) });
   } catch (err) {
     console.error('POST /business-reviews:', err?.message || err);
     res.status(500).json({ message: 'Server error' });

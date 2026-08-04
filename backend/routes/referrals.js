@@ -10,9 +10,15 @@ const {
   buildReferralLink,
   countFreeReferrals,
   countPaidReferrals,
-  countReceivedReviews,
+  getReceivedReviewStats,
   loadPortalUserBrief,
 } = require('../lib/referrals');
+const {
+  DAILY_SHARE_BOOST_CREDITS,
+  claimDailyShareReward,
+  isDailyShareClaimedToday,
+} = require('../lib/daily-share-reward');
+const { recordLoginStreak } = require('../lib/login-streak');
 
 const router = express.Router();
 
@@ -21,13 +27,16 @@ router.get('/me', auth, requirePortalUser, async (req, res) => {
   try {
     const user = req.user;
     await ensureUserReferralCode(user);
+    const loginStreak = await recordLoginStreak(user);
     const code = user.referralCode;
     const posterModel = user.constructor.modelName;
-    const [referralCount, paidReferralCount, reviewCount] = await Promise.all([
+    const [referralCount, paidReferralCount, reviewStats] = await Promise.all([
       countFreeReferrals(user.id, posterModel),
       countPaidReferrals(user.id, posterModel),
-      countReceivedReviews(user.id, posterModel),
+      getReceivedReviewStats(user.id, posterModel),
     ]);
+    const reviewCount = reviewStats.reviewCount;
+    const ratingAverage = reviewStats.ratingAverage;
 
     const referredBy = user.referredById
       ? await loadPortalUserBrief(user.referredById, null)
@@ -76,7 +85,8 @@ router.get('/me', auth, requirePortalUser, async (req, res) => {
         referralCount,
         paidReferralCount,
         reviewCount,
-        boostCredits: user.boostCredits ?? 0,
+        ratingAverage,
+        boostCredits: loginStreak.boostCreditsBalance ?? user.boostCredits ?? 0,
         tiersClaimed: user.referralTiersClaimed || [],
         nextTier: nextTier
           ? {
@@ -89,11 +99,35 @@ router.get('/me', auth, requirePortalUser, async (req, res) => {
           : null,
         referredBy,
         referredUsers,
+        dailyShareClaimedToday: isDailyShareClaimedToday(user.dailyShareClaimedOn),
+        dailyShareBoostCredits: DAILY_SHARE_BOOST_CREDITS,
+        loginStreakDays: loginStreak.days,
+        loginStreakDaysRequired: loginStreak.daysRequired,
+        loginStreakBoostCredits: loginStreak.boostCredits,
+        loginStreakCheckedInToday: loginStreak.checkedInToday,
+        loginStreakAwarded: Boolean(loginStreak.awarded),
       },
       program,
     });
   } catch (err) {
     console.error('GET /referrals/me:', err?.message || err);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** POST /api/referrals/daily-share — claim +3 BC after user confirms Instagram story post (once/day). */
+router.post('/daily-share', auth, requirePortalUser, async (req, res) => {
+  try {
+    const result = await claimDailyShareReward(req.user);
+    res.json({
+      ...result,
+      dailyShareBoostCredits: DAILY_SHARE_BOOST_CREDITS,
+      message: result.awarded
+        ? `Ke fituar +${DAILY_SHARE_BOOST_CREDITS} Boost Coins për ndarjen e sotme.`
+        : 'Shpërblimi ditor i ndarjes është marrë tashmë sot.',
+    });
+  } catch (err) {
+    console.error('POST /referrals/daily-share:', err?.message || err);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
 });

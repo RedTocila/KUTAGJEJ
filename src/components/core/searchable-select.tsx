@@ -37,15 +37,18 @@ export function SearchableSelect({
   options,
   emptyLabel = 'Të gjitha',
   emptyValue = '',
-  size = 'small',
+  size = 'medium',
   fullWidth = true,
   required = false,
   disabled = false,
+  clearable = true,
   id,
   searchPlaceholder = 'Kërko…',
-  minOptionsForSearch = 6,
+  minOptionsForSearch = 5,
   helperText,
+  error = false,
   sx,
+  menuMinWidth,
 }: {
   label: string;
   value: string;
@@ -57,11 +60,16 @@ export function SearchableSelect({
   fullWidth?: boolean;
   required?: boolean;
   disabled?: boolean;
+  /** Show the clear (×) control when a value is selected. */
+  clearable?: boolean;
   id?: string;
   searchPlaceholder?: string;
   minOptionsForSearch?: number;
   helperText?: string;
+  error?: boolean;
   sx?: FormControlProps['sx'];
+  /** Minimum width for the dropdown panel (useful for compact fields). */
+  menuMinWidth?: number;
 }) {
   const fieldId = id ?? `searchable-select-${label.replace(/\s+/g, '-').toLowerCase()}`;
   const anchorRef = React.useRef<HTMLDivElement>(null);
@@ -97,8 +105,8 @@ export function SearchableSelect({
 
   return (
     <ClickAwayListener onClickAway={close}>
-      <FormControl fullWidth={fullWidth} size={size} required={required} disabled={disabled} sx={sx}>
-        <InputLabel id={`${fieldId}-label`} shrink>
+      <FormControl fullWidth={fullWidth} size={size} required={required} disabled={disabled} error={error} sx={sx}>
+        <InputLabel id={`${fieldId}-label`} shrink sx={{ fontWeight: 600 }}>
           {label}
         </InputLabel>
         <OutlinedInput
@@ -107,6 +115,7 @@ export function SearchableSelect({
           label={label}
           readOnly
           notched
+          error={error}
           value={selectedLabel}
           placeholder={emptyLabel}
           onClick={handleOpen}
@@ -117,8 +126,8 @@ export function SearchableSelect({
             }
           }}
           endAdornment={
-            <InputAdornment position="end" sx={{ gap: 0.25 }}>
-              {value ? (
+            <InputAdornment position="end" sx={{ gap: 0.25, ml: 0 }}>
+              {clearable && value ? (
                 <IconButton
                   size="small"
                   aria-label="Pastro zgjedhjen"
@@ -139,6 +148,7 @@ export function SearchableSelect({
             borderRadius: 2.5,
             cursor: disabled ? 'not-allowed' : 'pointer',
             bgcolor: 'background.paper',
+            transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
             '& input': {
               cursor: disabled ? 'not-allowed' : 'pointer',
               textOverflow: 'ellipsis',
@@ -153,7 +163,10 @@ export function SearchableSelect({
           open={open}
           anchorEl={anchorRef.current}
           placement="bottom-start"
-          sx={{ zIndex: 1600, width: anchorRef.current?.offsetWidth ?? 240 }}
+          sx={{
+            zIndex: 1600,
+            width: Math.max(anchorRef.current?.offsetWidth ?? 240, menuMinWidth ?? 0),
+          }}
           modifiers={[{ name: 'preventOverflow', options: { padding: 8 } }]}
         >
           <Paper
@@ -162,7 +175,7 @@ export function SearchableSelect({
               mt: 0.5,
               display: 'flex',
               flexDirection: 'column',
-              maxHeight: { xs: 260, sm: 300 },
+              maxHeight: { xs: 'min(50vh, 280px)', sm: 'min(50vh, 320px)' },
               overflow: 'hidden',
               borderRadius: 2.5,
               border: '1px solid',
@@ -176,9 +189,7 @@ export function SearchableSelect({
                   borderBottom: '1px solid',
                   borderColor: 'divider',
                   bgcolor: 'background.paper',
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 1,
+                  flexShrink: 0,
                 }}
               >
                 <TextField
@@ -202,7 +213,18 @@ export function SearchableSelect({
               </Box>
             ) : null}
 
-            <List dense disablePadding sx={{ overflowY: 'auto', py: 0.5 }}>
+            <List
+              dense
+              disablePadding
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                overflowY: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'contain',
+                py: 0.5,
+              }}
+            >
               <ListItemButton
                 selected={value === emptyValue}
                 onMouseDown={(e) => e.preventDefault()}
@@ -239,7 +261,7 @@ export function SearchableSelect({
           </Paper>
         </Popper>
 
-        {helperText ? <FormHelperText>{helperText}</FormHelperText> : null}
+        {helperText ? <FormHelperText error={error}>{helperText}</FormHelperText> : null}
       </FormControl>
     </ClickAwayListener>
   );

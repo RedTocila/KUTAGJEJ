@@ -53,6 +53,7 @@ export function ProfessionalReviewSection({
   const router = useRouter();
   const { user } = useUser();
   const [reviews, setReviews] = React.useState<ProfessionalReview[]>([]);
+  const [viewerHasReviewed, setViewerHasReviewed] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [rating, setRating] = React.useState<number | null>(5);
   const [comment, setComment] = React.useState('');
@@ -61,12 +62,15 @@ export function ProfessionalReviewSection({
 
   const load = React.useCallback(async () => {
     const res = await listProfessionalReviews(listingId);
-    if (!res.error) setReviews(res.reviews ?? []);
+    if (!res.error) {
+      setReviews(res.reviews ?? []);
+      setViewerHasReviewed(Boolean(res.viewerHasReviewed));
+    }
   }, [listingId]);
 
   React.useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, user?.id]);
 
   const openDialog = () => {
     if (!user) {
@@ -92,6 +96,7 @@ export function ProfessionalReviewSection({
       return;
     }
     setOpen(false);
+    setViewerHasReviewed(true);
     await load();
     onReviewSubmitted?.();
   };
@@ -107,6 +112,7 @@ export function ProfessionalReviewSection({
         : null;
 
   const views = reviews.map(mapApiReviewToView);
+  const showLeaveReview = !viewerHasReviewed;
 
   return (
     <Stack spacing={1.5}>
@@ -116,9 +122,11 @@ export function ProfessionalReviewSection({
         ) : (
           <Typography sx={{ fontWeight: 800, fontSize: '0.875rem' }}>Vlerësimet</Typography>
         )}
-        <Button size="small" variant="outlined" onClick={openDialog}>
-          Lini vlerësim
-        </Button>
+        {showLeaveReview ? (
+          <Button size="small" variant="outlined" onClick={openDialog}>
+            Lini vlerësim
+          </Button>
+        ) : null}
       </Stack>
 
       {views.length > 0 ? (
@@ -162,31 +170,33 @@ export function ProfessionalReviewSection({
         </Typography>
       )}
 
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Vlerësoni profesionistin</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            {error ? <Alert severity="error">{error}</Alert> : null}
-            <Rating value={rating} onChange={(_, v) => setRating(v)} />
-            <TextField
-              label="Komenti"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              multiline
-              minRows={3}
-              fullWidth
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)} color="inherit">
-            Anulo
-          </Button>
-          <Button variant="contained" disabled={submitting} onClick={() => void submit()}>
-            Dërgo
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {showLeaveReview ? (
+        <Dialog open={open} onClose={() => setOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle>Vlerësoni profesionistin</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ pt: 1 }}>
+              {error ? <Alert severity="error">{error}</Alert> : null}
+              <Rating value={rating} onChange={(_, v) => setRating(v)} />
+              <TextField
+                label="Komenti"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                multiline
+                minRows={3}
+                fullWidth
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpen(false)} color="inherit">
+              Anulo
+            </Button>
+            <Button variant="contained" disabled={submitting} onClick={() => void submit()}>
+              Dërgo
+            </Button>
+          </DialogActions>
+        </Dialog>
+      ) : null}
     </Stack>
   );
 }

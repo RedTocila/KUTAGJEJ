@@ -23,10 +23,12 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { Coins as CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins';
 import { PencilSimple as PencilIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
+import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { usePlatformAdminGuard } from '@/hooks/use-platform-admin';
 import {
   createCreditPackage,
@@ -200,30 +202,24 @@ export function CreditPackagesAdminPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={2}
-        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
-      >
-        <Box>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-            Paketat e krediteve
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Paketat që përdoruesit blejnë te “Bli kredite”.
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<PlusIcon />}
-          onClick={() => {
-            setEditing(null);
-            setDialogOpen(true);
-          }}
-        >
-          Shto paketë
-        </Button>
-      </Stack>
+      <AdminPageHeader
+        icon={React.createElement(CoinsIcon, { size: 22, weight: 'duotone' })}
+        eyebrow="Financa"
+        title="Paketat e krediteve"
+        description="Paketat që përdoruesit blejnë te “Bli kredite”."
+        actions={
+          <Button
+            variant="contained"
+            startIcon={<PlusIcon />}
+            onClick={() => {
+              setEditing(null);
+              setDialogOpen(true);
+            }}
+          >
+            Shto paketë
+          </Button>
+        }
+      />
 
       {error ? (
         <Alert severity="error" sx={{ borderRadius: 2 }}>

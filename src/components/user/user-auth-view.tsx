@@ -32,6 +32,7 @@ import { z as zod } from 'zod';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { config } from '@/config';
+import { useCopy } from '@/hooks/use-copy';
 import { authClient } from '@/lib/auth/client';
 import { getDefaultAuthenticatedPath } from '@/lib/auth/post-login-path';
 
@@ -439,9 +440,13 @@ function RegisterFieldsBusiness({
 
 export function UserAuthView() {
   const searchParams = useSearchParams();
+  const t = useCopy();
   const refFromUrl = (searchParams.get('ref') ?? '').trim().toUpperCase();
-  const [tab, setTab] = React.useState(refFromUrl ? 1 : 0);
-  const [registerKind, setRegisterKind] = React.useState<'individual' | 'business'>('individual');
+  const typeFromUrl = (searchParams.get('type') ?? '').trim().toLowerCase();
+  const [tab, setTab] = React.useState(refFromUrl || typeFromUrl === 'business' ? 1 : 0);
+  const [registerKind, setRegisterKind] = React.useState<'individual' | 'business'>(
+    typeFromUrl === 'business' ? 'business' : 'individual',
+  );
   const [showPwSignIn, setShowPwSignIn] = React.useState(false);
   const [showPwReg, setShowPwReg] = React.useState(false);
   const [referralCode, setReferralCode] = React.useState(refFromUrl);
@@ -452,6 +457,13 @@ export function UserAuthView() {
       setTab(1);
     }
   }, [refFromUrl]);
+
+  React.useEffect(() => {
+    if (typeFromUrl === 'business') {
+      setRegisterKind('business');
+      setTab(1);
+    }
+  }, [typeFromUrl]);
 
   const signInForm = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
@@ -610,8 +622,8 @@ export function UserAuthView() {
                     '& .MuiTabs-indicator': { bgcolor: 'primary.light', height: 3, borderRadius: 1 },
                   }}
                 >
-                  <Tab label="Hyr" disableRipple />
-                  <Tab label="Regjistrohu" disableRipple />
+                  <Tab label={t.auth.login} disableRipple />
+                  <Tab label={t.auth.register} disableRipple />
                 </Tabs>
 
                 {tab === 0 ? (
@@ -664,11 +676,11 @@ export function UserAuthView() {
                     >
                       <ToggleButton value="individual">
                         <UserIcon style={{ marginRight: 8 }} size={20} />
-                        Individ
+                        {t.auth.individual}
                       </ToggleButton>
                       <ToggleButton value="business">
                         <BuildingsIcon style={{ marginRight: 8 }} size={20} />
-                        Biznes
+                        {t.auth.business}
                       </ToggleButton>
                     </ToggleButtonGroup>
 

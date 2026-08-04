@@ -1,7 +1,7 @@
 import * as React from 'react';
 import type { Metadata } from 'next';
 import { HeroSection } from '@/components/public/hero-section';
-import { HomepageBanner } from '@/components/public/homepage-banner';
+import { HomepageCommunityBanner, HomepagePostBanner } from '@/components/public/homepage-community-banner';
 import { PublicShell } from '@/components/public/public-shell';
 import { HomepageMixedListingCard, mixedListingKey } from '@/components/public/homepage-mixed-listing-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
@@ -181,7 +181,7 @@ export default async function HomePage() {
       <ListingsSection
         verticalId="real-estate"
         isEmpty={latestMixed.length === 0}
-        titleOverride="Njoftimet e fundit"
+        titleKey="latestListings"
         useMuiVerticalIcon
         hideTotal
         hideVerticalIcon
@@ -217,28 +217,15 @@ export default async function HomePage() {
         </ListingsCarousel>
       </ListingsSection>
 
-      <HomepageBanner
-        variant="secondary"
-        eyebrow="Komuniteti i KuTaGjej"
-        title="Mijëra njoftime, çdo ditë — të gjitha në një vend"
-        subtitle="Prona, makina, vende pune dhe artikuj për tregun. Bashkohu me përdoruesit që po e ndërtojnë komunitetin më të madh të njoftimeve në Shqipëri."
-        primaryAction={{ label: 'Eksploro njoftimet', href: paths.public.realEstate }}
-        secondaryAction={{ label: 'Posto falas', href: paths.user.realEstateListing }}
-        stats={[
-          {
-            value:
-              totals.realEstate +
-              totals.cars +
-              totals.jobs +
-              totals.marketplace +
-              totals.businesses +
-              totals.professionals,
-            suffix: '+',
-            label: 'Njoftime aktive',
-          },
-          { value: 6, label: 'Kategori kryesore' },
-          { value: 12, suffix: '+', label: 'Qytete të mbuluara' },
-        ]}
+      <HomepageCommunityBanner
+        activeListingsCount={
+          totals.realEstate +
+          totals.cars +
+          totals.jobs +
+          totals.marketplace +
+          totals.businesses +
+          totals.professionals
+        }
       />
 
       <ListingsSection verticalId="jobs" total={totals.jobs} isEmpty={bundle.jobs.length === 0} useMuiVerticalIcon>
@@ -288,19 +275,7 @@ export default async function HomePage() {
         </ListingsCarousel>
       </ListingsSection>
 
-      <HomepageBanner
-        variant="primary"
-        eyebrow="Posto në sekonda"
-        title="Njoftimi yt — falas, i shpejtë dhe pa kufij"
-        subtitle="Ngarko foto, vendos çmim dhe gjej blerës ose punëdhënës në minuta. Pa abonime, pa komisione, vetëm rezultate."
-        primaryAction={{ label: 'Posto njoftim falas', href: paths.user.realEstateListing }}
-        secondaryAction={{ label: 'Si funksionon', href: paths.public.about }}
-        features={[
-          { iconKey: 'currency-eur', label: '100% Falas' },
-          { iconKey: 'lightning', label: 'Postim në 30 sekonda' },
-          { iconKey: 'shield-check', label: 'Pa komisione' },
-        ]}
-      />
+      <HomepagePostBanner />
 
       <SeoIntroSection />
     </PublicShell>

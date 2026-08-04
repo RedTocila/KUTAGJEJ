@@ -62,6 +62,7 @@ export type ProfessionalPortfolioItem = {
 
 export function professionalCoverImageUrls(listing: PublicDirectoryListingDetail): string[] {
   const images = listing.imageUrls.filter(Boolean);
+  // Convention: [0] = cover, [1] = profile avatar
   if (images.length > 0) return [images[0]!];
   if (listing.imageUrl) return [listing.imageUrl];
   const firstPortfolio = listing.portfolioItems?.[0]?.imageUrl;
@@ -76,12 +77,20 @@ export function professionalPortfolioItems(listing: PublicDirectoryListingDetail
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((item) => ({
         id: item.id,
-        title: item.title,
+        title: item.title?.trim() || 'Punë',
         location: item.location ?? (listing.cityName ? `${listing.cityName}, Shqipëri` : null),
         imageUrl: item.imageUrl,
       }));
   }
-  return [];
+
+  // Legacy: gallery photos beyond cover + avatar used to act as works.
+  const extras = listing.imageUrls.filter(Boolean).slice(2);
+  return extras.map((imageUrl, index) => ({
+    id: `gallery-work-${index}`,
+    title: `Punë ${index + 1}`,
+    location: listing.cityName ? `${listing.cityName}, Shqipëri` : null,
+    imageUrl,
+  }));
 }
 
 export type ProfessionalReviewView = {
@@ -134,7 +143,9 @@ export function mapApiReviewToView(review: {
 }
 
 export function professionalAvatarUrl(listing: PublicDirectoryListingDetail): string | null {
-  return listing.imageUrls[0] ?? listing.imageUrl ?? listing.portfolioItems?.[0]?.imageUrl ?? null;
+  // Convention: [0] = cover, [1] = profile avatar (falls back to cover).
+  const images = listing.imageUrls.filter(Boolean);
+  return images[1] ?? images[0] ?? listing.imageUrl ?? listing.portfolioItems?.[0]?.imageUrl ?? null;
 }
 
 export function professionalInitials(listing: PublicDirectoryListingDetail): string {

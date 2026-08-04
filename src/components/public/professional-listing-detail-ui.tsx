@@ -2,44 +2,17 @@
 
 import * as React from 'react';
 import Image from 'next/image';
-import { Box, Button, Grid, Stack, Typography } from '@mui/material';
-import { alpha, type SxProps, type Theme } from '@mui/material/styles';
+import { Box, Button, Dialog, Grid, IconButton, Stack, Typography } from '@mui/material';
 import type { ProfessionalPortfolioItem } from '@/lib/professional-listing-detail-content';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import { StarHalf as StarHalfIcon } from '@phosphor-icons/react/dist/ssr/StarHalf';
+import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 const FONT_CAPTION = '0.75rem';
 const FONT_BODY = '0.875rem';
-
-/** Vertical separator between meta stat columns (Specializimi / përgjigje / çmim). */
-export function professionalMetaStatCellSx(index: number, total: number): SxProps<Theme> {
-  return {
-    py: 1.5,
-    px: { xs: 1, sm: 1.25 },
-    minWidth: 0,
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...(index < total - 1
-      ? {
-          '&::after': {
-            content: '""',
-            position: 'absolute',
-            top: '12%',
-            bottom: '12%',
-            right: 0,
-            width: '1px',
-            pointerEvents: 'none',
-            background: (theme) =>
-              `linear-gradient(180deg, transparent 0%, ${alpha(theme.palette.primary.main, 0.42)} 50%, transparent 100%)`,
-          },
-        }
-      : {}),
-  };
-}
 
 /** Google-style 5 stars — full, half, or empty from a 0–5 rating (e.g. 4.7). */
 export function ProfessionalFiveStarRating({
@@ -71,7 +44,7 @@ export function ProfessionalFiveStarRating({
               key={index}
               size={size}
               weight="fill"
-              color="var(--mui-palette-primary-main)"
+              color="var(--mui-palette-warning-main)"
               aria-hidden
             />
           );
@@ -82,7 +55,7 @@ export function ProfessionalFiveStarRating({
               key={index}
               size={size}
               weight="fill"
-              color="var(--mui-palette-primary-main)"
+              color="var(--mui-palette-warning-main)"
               aria-hidden
             />
           );
@@ -101,7 +74,7 @@ export function ProfessionalFiveStarRating({
   );
 }
 
-/** Stars + numeric score + review count (header next to location). */
+/** Numeric score + stars + review count (header next to location). */
 export function ProfessionalRatingSummary({
   rating,
   reviewCount,
@@ -116,10 +89,10 @@ export function ProfessionalRatingSummary({
 }) {
   return (
     <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexShrink: 0 }}>
-      <ProfessionalFiveStarRating value={rating} size={starSize} />
       <Typography sx={{ fontWeight: 800, fontSize: starSize >= 16 ? FONT_BODY : FONT_CAPTION, lineHeight: 1 }}>
         {rating}
       </Typography>
+      <ProfessionalFiveStarRating value={rating} size={starSize} />
       <Typography
         sx={{
           fontSize: showReviewLabel ? '0.85rem' : '0.625rem',
@@ -217,7 +190,7 @@ export function ProfessionalRatingBadge({
       }}
     >
       <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', justifyContent: 'center' }}>
-        <StarIcon size={14} weight="fill" color="var(--mui-palette-primary-main)" aria-hidden />
+        <StarIcon size={14} weight="fill" color="var(--mui-palette-warning-main)" aria-hidden />
         <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY, lineHeight: 1, color: '#fff' }}>
           {rating}
         </Typography>
@@ -257,11 +230,12 @@ export function ProfessionalReviewsSectionHeader({
   );
 }
 
+/** Meta tile — matches job/car detail stat containers (icon chip + label/value). */
 export function ProfessionalMetaStat({
   icon: Icon,
   label,
   value,
-  iconSize = 18,
+  iconSize = 17,
 }: {
   icon: typeof BriefcaseIcon;
   label: string;
@@ -269,40 +243,107 @@ export function ProfessionalMetaStat({
   iconSize?: number;
 }) {
   return (
-    <Stack spacing={0.5} sx={{ minWidth: 0, width: '100%', alignItems: 'center', textAlign: 'center' }}>
-      <Icon size={iconSize} weight="duotone" color="var(--mui-palette-primary-main)" aria-hidden />
-      <Typography
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 0.75,
+        px: { xs: 0.85, sm: 1.15 },
+        py: 1.15,
+        borderRadius: 2.5,
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
+        minWidth: 0,
+        height: '100%',
+        textAlign: 'center',
+      }}
+    >
+      <Box
         sx={{
-          fontSize: iconSize >= 20 ? '0.75rem' : '0.6875rem',
-          color: 'text.secondary',
-          fontWeight: 600,
-          lineHeight: 1.2,
+          width: 32,
+          height: 32,
+          borderRadius: 1.5,
+          display: 'grid',
+          placeItems: 'center',
+          flexShrink: 0,
+          bgcolor: primaryMainAlpha(0.14),
+          color: 'primary.main',
         }}
       >
-        {label}
-      </Typography>
-      <Typography
-        sx={{
-          fontWeight: 800,
-          fontSize: iconSize >= 20 ? '0.9rem' : FONT_CAPTION,
-          lineHeight: 1.25,
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}
-      >
-        {value}
-      </Typography>
-    </Stack>
+        <Icon size={iconSize} weight="duotone" color="currentColor" aria-hidden />
+      </Box>
+      <Box sx={{ minWidth: 0, width: '100%' }}>
+        <Typography
+          sx={{
+            fontWeight: 800,
+            fontSize: { xs: '0.78rem', sm: '0.85rem' },
+            lineHeight: 1.2,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {value}
+        </Typography>
+        <Typography
+          sx={{
+            mt: 0.25,
+            fontSize: { xs: '0.65rem', sm: '0.7rem' },
+            color: 'text.secondary',
+            fontWeight: 600,
+            lineHeight: 1.2,
+          }}
+        >
+          {label}
+        </Typography>
+      </Box>
+    </Box>
   );
 }
 
 const PORTFOLIO_INITIAL_VISIBLE = 6;
 
-function ProfessionalPortfolioCard({ item }: { item: ProfessionalPortfolioItem }) {
+function ProfessionalPortfolioCard({
+  item,
+  onOpen,
+}: {
+  item: ProfessionalPortfolioItem;
+  onOpen: () => void;
+}) {
   return (
-    <Box sx={{ borderRadius: 2.5, overflow: 'hidden', border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+    <Box
+      component="button"
+      type="button"
+      onClick={onOpen}
+      aria-label={`Shiko: ${item.title}`}
+      sx={{
+        display: 'block',
+        width: '100%',
+        p: 0,
+        m: 0,
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 2.5,
+        overflow: 'hidden',
+        bgcolor: 'background.paper',
+        cursor: 'pointer',
+        textAlign: 'left',
+        color: 'inherit',
+        transition: 'border-color 0.15s ease, transform 0.15s ease',
+        '&:hover': {
+          borderColor: 'primary.main',
+          transform: 'translateY(-1px)',
+        },
+        '&:focus-visible': {
+          outline: '2px solid',
+          outlineColor: 'primary.main',
+          outlineOffset: 2,
+        },
+      }}
+    >
       <Box sx={{ position: 'relative', height: { xs: 112, sm: 140 } }}>
         <Image src={item.imageUrl} alt={item.title} fill sizes="(max-width: 600px) 50vw, 220px" style={{ objectFit: 'cover' }} />
       </Box>
@@ -323,41 +364,113 @@ function ProfessionalPortfolioCard({ item }: { item: ProfessionalPortfolioItem }
   );
 }
 
-/** Grid of portfolio work — first 6 visible, then “Më shumë”. */
-export function ProfessionalPortfolioSection({ items }: { items: ProfessionalPortfolioItem[] }) {
+/** Grid of titled works — click opens a lightbox with image + title. */
+export function ProfessionalPortfolioSection({
+  items,
+  headerAction,
+}: {
+  items: ProfessionalPortfolioItem[];
+  headerAction?: React.ReactNode;
+}) {
   const [showAll, setShowAll] = React.useState(false);
+  const [activeIndex, setActiveIndex] = React.useState<number | null>(null);
   const visible = showAll ? items : items.slice(0, PORTFOLIO_INITIAL_VISIBLE);
   const hasMore = items.length > PORTFOLIO_INITIAL_VISIBLE;
+  const active = activeIndex != null ? items[activeIndex] : null;
 
-  if (items.length === 0) return null;
+  if (items.length === 0 && !headerAction) return null;
 
   return (
-    <Stack spacing={1.25}>
-      <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Portofoli</Typography>
-      <Grid container spacing={1.5}>
-        {visible.map((item) => (
-          <Grid key={item.id} size={{ xs: 6, sm: 4 }}>
-            <ProfessionalPortfolioCard item={item} />
-          </Grid>
-        ))}
-      </Grid>
-      {hasMore && !showAll ? (
-        <Button
-          size="small"
-          variant="text"
-          onClick={() => setShowAll(true)}
-          sx={{
-            alignSelf: 'center',
-            fontWeight: 700,
-            textTransform: 'none',
-            fontSize: FONT_CAPTION,
-            py: 0.25,
-            minWidth: 0,
-          }}
-        >
-          Më shumë
-        </Button>
-      ) : null}
-    </Stack>
+    <>
+      <Stack spacing={1.25}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Punët e mia</Typography>
+          {headerAction}
+        </Stack>
+        <Grid container spacing={1.5}>
+          {visible.map((item, index) => (
+            <Grid key={item.id} size={{ xs: 6, sm: 4 }}>
+              <ProfessionalPortfolioCard
+                item={item}
+                onOpen={() => setActiveIndex(index)}
+              />
+            </Grid>
+          ))}
+        </Grid>
+        {hasMore && !showAll ? (
+          <Button
+            size="small"
+            variant="text"
+            onClick={() => setShowAll(true)}
+            sx={{
+              alignSelf: 'center',
+              fontWeight: 700,
+              textTransform: 'none',
+              fontSize: FONT_CAPTION,
+              py: 0.25,
+              minWidth: 0,
+            }}
+          >
+            Më shumë
+          </Button>
+        ) : null}
+      </Stack>
+
+      <Dialog
+        open={Boolean(active)}
+        onClose={() => setActiveIndex(null)}
+        maxWidth="sm"
+        fullWidth
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 3,
+              overflow: 'hidden',
+              bgcolor: 'background.paper',
+              m: 2,
+            },
+          },
+        }}
+      >
+        {active ? (
+          <>
+            <Box sx={{ position: 'relative', width: '100%', aspectRatio: '4 / 3', bgcolor: 'grey.900' }}>
+              <Image
+                src={active.imageUrl}
+                alt={active.title}
+                fill
+                sizes="(max-width: 600px) 100vw, 560px"
+                style={{ objectFit: 'contain' }}
+                priority
+              />
+              <IconButton
+                aria-label="Mbyll"
+                onClick={() => setActiveIndex(null)}
+                sx={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  bgcolor: 'rgba(0,0,0,0.55)',
+                  color: '#fff',
+                  '&:hover': { bgcolor: 'rgba(0,0,0,0.72)' },
+                }}
+              >
+                <XIcon size={18} weight="bold" />
+              </IconButton>
+            </Box>
+            <Stack spacing={0.35} sx={{ px: 2.25, py: 1.75 }}>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.3 }}>
+                {active.title}
+              </Typography>
+              {active.location ? (
+                <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', fontWeight: 600 }}>
+                  {active.location}
+                </Typography>
+              ) : null}
+            </Stack>
+          </>
+        ) : null}
+      </Dialog>
+    </>
   );
 }

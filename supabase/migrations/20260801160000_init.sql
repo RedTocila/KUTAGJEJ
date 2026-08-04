@@ -15,6 +15,7 @@ drop table if exists public.payments cascade;
 drop table if exists public.saved_listings cascade;
 drop table if exists public.professional_listing_reviews cascade;
 drop table if exists public.business_listing_reviews cascade;
+drop table if exists public.member_reviews cascade;
 drop table if exists public.business_reservations cascade;
 drop table if exists public.messages cascade;
 drop table if exists public.conversations cascade;
@@ -53,7 +54,9 @@ create table public.profiles (
   referral_code text unique,
   referred_by_id uuid references public.profiles (id) on delete set null,
   boost_credits integer not null default 0 check (boost_credits >= 0),
+  auto_refresh_slots integer not null default 0 check (auto_refresh_slots >= 0),
   referral_tiers_claimed integer[] not null default '{}',
+  avatar_url text,
   last_login timestamptz,
   last_active timestamptz default now(),
   created_at timestamptz not null default now(),
@@ -400,6 +403,18 @@ create table public.professional_listing_reviews (
   unique (listing_id, reviewer_id)
 );
 
+create table public.member_reviews (
+  id uuid primary key default gen_random_uuid(),
+  member_id uuid not null references public.profiles (id) on delete cascade,
+  reviewer_id uuid not null references public.profiles (id) on delete cascade,
+  rating integer not null check (rating >= 1 and rating <= 5),
+  comment text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (member_id, reviewer_id),
+  check (member_id <> reviewer_id)
+);
+
 create table public.saved_listings (
   id uuid primary key default gen_random_uuid(),
   saver_id uuid not null references public.profiles (id) on delete cascade,
@@ -409,6 +424,20 @@ create table public.saved_listings (
   updated_at timestamptz not null default now(),
   unique (saver_id, listing_kind, listing_id)
 );
+
+create table public.listing_auto_refresh (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  listing_kind text not null,
+  listing_id uuid not null,
+  enabled boolean not null default true,
+  last_refreshed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, listing_kind, listing_id)
+);
+create index listing_auto_refresh_user_idx on public.listing_auto_refresh (user_id);
+create index listing_auto_refresh_due_idx on public.listing_auto_refresh (enabled, last_refreshed_at);
 
 -- ─── billing ─────────────────────────────────────────────────────────────────
 create table public.payments (
@@ -561,7 +590,9 @@ alter table public.messages enable row level security;
 alter table public.business_reservations enable row level security;
 alter table public.business_listing_reviews enable row level security;
 alter table public.professional_listing_reviews enable row level security;
+alter table public.member_reviews enable row level security;
 alter table public.saved_listings enable row level security;
+alter table public.listing_auto_refresh enable row level security;
 alter table public.payments enable row level security;
 alter table public.user_subscriptions enable row level security;
 alter table public.professional_verification_requests enable row level security;

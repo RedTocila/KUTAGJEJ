@@ -5,16 +5,11 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Badge,
   Box,
-  Divider,
   IconButton,
-  ToggleButton,
-  ToggleButtonGroup,
 } from '@mui/material';
-import { Funnel as FunnelIcon } from '@phosphor-icons/react/dist/ssr/Funnel';
-import { SortAscending as SortAscIcon } from '@phosphor-icons/react/dist/ssr/SortAscending';
-import { SortDescending as SortDescIcon } from '@phosphor-icons/react/dist/ssr/SortDescending';
-import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
-import type { HomeVerticalId } from '@/lib/home-categories';
+import { SlidersHorizontal as SlidersIcon } from '@phosphor-icons/react/dist/ssr/SlidersHorizontal';
+import { useLanguage } from '@/hooks/use-language';
+import { localizeVertical, type HomeVerticalId } from '@/lib/home-categories';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import {
   buildBrowseUrlQuery,
@@ -32,23 +27,17 @@ import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 
 import { ActiveFilterChips } from './active-filter-chips';
 import { FilterDrawerPanel } from './filter-drawer';
-import { LocationSearchInput } from './location-search-input';
+import {
+  BROWSE_CONTROL_HEIGHT,
+  ListingKeywordSearchInput,
+} from './listing-keyword-search-input';
 import { SubcategoryPills } from '../subcategory-pills';
 
 const toolbarRowSx = {
   display: 'flex',
   alignItems: 'center',
   gap: 0.75,
-  minHeight: 36,
-  py: 0.25,
-} as const;
-
-const pillSx = {
-  flexShrink: 0,
-  borderRadius: 999,
-  border: '1px solid',
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
+  minHeight: BROWSE_CONTROL_HEIGHT,
 } as const;
 
 function filtersEqual(a: BrowseFilters, b: BrowseFilters): boolean {
@@ -79,6 +68,11 @@ export function CategoryBrowseControls({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { language } = useLanguage();
+  const vertical = React.useMemo(
+    () => localizeVertical(verticalId, language),
+    [verticalId, language],
+  );
 
   const applied = React.useMemo(
     () => parseBrowseSearchParams(verticalId, searchParamsToRecord(searchParams)),
@@ -96,6 +90,23 @@ export function CategoryBrowseControls({
     setDraft((prev) => ({ ...prev, [key]: value || undefined }));
   };
 
+  const setLocation = React.useCallback(
+    (nextCity?: string, nextZones?: string[]) => {
+      const normalizedZones = normalizeZoneIds(nextZones);
+      setDraft((prev) => {
+        if (verticalId === 'real-estate') {
+          return {
+            ...prev,
+            city: nextCity || undefined,
+            zone: normalizedZones.length ? normalizedZones : undefined,
+          } as BrowseFilters;
+        }
+        return { ...prev, city: nextCity || undefined } as BrowseFilters;
+      });
+    },
+    [verticalId],
+  );
+
   const applyDraft = (next: BrowseFilters, closePanel = false) => {
     router.push(`${pathname}${buildBrowseUrlQuery(next)}`);
     if (closePanel) setOpen(false);
@@ -112,43 +123,40 @@ export function CategoryBrowseControls({
     router.push(`${pathname}${buildBrowseUrlQuery(next)}`);
   };
 
-
-  const activeCount = countActiveBrowseFilters(applied);
-  const activeChips = getActiveFilterChips(verticalId, applied);
-  const hasPendingChanges = !filtersEqual(draft, applied);
-  const sortValue = (draft as { sort?: string }).sort ?? 'newest';
-  const cityValue = (draft as { city?: string }).city ?? '';
-  const zoneValue =
-    verticalId === 'real-estate' ? normalizeZoneIds((draft as BrowseRealEstateFilters).zone) : [];
-
-  const applyLocation = React.useCallback(
-    (nextCity?: string, nextZones?: string[]) => {
-      const normalizedZones = normalizeZoneIds(nextZones);
-      if (verticalId === 'real-estate') {
-        const next = {
-          ...draft,
-          city: nextCity || undefined,
-          zone: normalizedZones.length ? normalizedZones : undefined,
-        } as BrowseFilters;
-        setDraft(next);
-        React.startTransition(() => {
-          router.push(`${pathname}${buildBrowseUrlQuery(next)}`);
-        });
-        return;
-      }
-      const next = { ...draft, city: nextCity || undefined } as BrowseFilters;
+  const applyKeyword = React.useCallback(
+    (nextQ: string) => {
+      const next = {
+        ...applied,
+        q: nextQ.trim() || undefined,
+      } as BrowseFilters;
       setDraft(next);
       React.startTransition(() => {
         router.push(`${pathname}${buildBrowseUrlQuery(next)}`);
       });
     },
-    [draft, pathname, router, verticalId],
+    [applied, pathname, router],
   );
+
+  const activeCount = countActiveBrowseFilters(applied);
+  const activeChips = getActiveFilterChips(verticalId, applied, cities);
+  const hasPendingChanges = !filtersEqual(draft, applied);
+  const qValue = (applied as { q?: string }).q ?? '';
+  const cityValue = (draft as { city?: string }).city ?? '';
+  const zoneValue =
+    verticalId === 'real-estate' ? normalizeZoneIds((draft as BrowseRealEstateFilters).zone) : [];
 
   return (
     <>
       <Box component="section" aria-label="Kontrollet e kërkimit" sx={{ mt: { xs: 1.25, md: 2 } }}>
         <Box sx={toolbarRowSx}>
+          <Box sx={{ flex: 1, minWidth: 0, display: 'flex' }}>
+            <ListingKeywordSearchInput
+              value={qValue}
+              placeholder={vertical.searchPlaceholder}
+              onChange={applyKeyword}
+            />
+          </Box>
+
           <Badge
             badgeContent={activeCount}
             color="primary"
@@ -164,8 +172,8 @@ export function CategoryBrowseControls({
                 height: 18,
                 px: 0.5,
                 lineHeight: '18px',
-                top: 4,
-                right: 4,
+                top: 2,
+                right: 2,
               },
             }}
           >
@@ -173,76 +181,23 @@ export function CategoryBrowseControls({
               onClick={() => setOpen(true)}
               aria-label="Hap filtrat"
               sx={{
-                ...pillSx,
-                width: 36,
-                height: 32,
+                width: BROWSE_CONTROL_HEIGHT,
+                height: BROWSE_CONTROL_HEIGHT,
+                borderRadius: '50%',
+                border: '1px solid',
+                borderColor: activeCount > 0 ? 'primary.main' : 'divider',
                 color: activeCount > 0 ? 'primary.contrastText' : 'text.primary',
                 bgcolor: activeCount > 0 ? 'primary.main' : 'background.paper',
+                boxShadow: activeCount > 0 ? `0 2px 10px ${primaryMainAlpha(0.4)}` : 'none',
                 '&:hover': {
-                  bgcolor: activeCount > 0 ? 'primary.dark' : primaryMainAlpha(0.08),
+                  bgcolor: activeCount > 0 ? 'primary.dark' : primaryMainAlpha(0.1),
+                  borderColor: 'primary.main',
                 },
               }}
             >
-              <FunnelIcon size={16} weight="duotone" />
+              <SlidersIcon size={16} weight="bold" />
             </IconButton>
           </Badge>
-
-          <Box sx={{ flex: 1, minWidth: 0, display: 'flex' }}>
-            <LocationSearchInput
-              cities={cities}
-              cityId={cityValue || undefined}
-              zoneIds={zoneValue}
-              enableZones={verticalId === 'real-estate'}
-              placeholder={verticalId === 'real-estate' ? 'Qyteti ose zona' : 'Qyteti'}
-              onChange={applyLocation}
-            />
-          </Box>
-
-          <Divider
-            orientation="vertical"
-            flexItem
-            sx={{ height: 20, alignSelf: 'center', borderColor: 'divider', flexShrink: 0 }}
-          />
-
-          <ToggleButtonGroup
-            exclusive
-            size="small"
-            value={sortValue}
-            onChange={(_, value) => {
-              if (!value) return;
-              const next = { ...draft, sort: value === 'newest' ? undefined : value } as BrowseFilters;
-              setDraft(next);
-              applyDraft(next);
-            }}
-            sx={{
-              ...pillSx,
-              flexShrink: 0,
-              p: 0.2,
-              gap: 0,
-              '& .MuiToggleButton-root': {
-                width: 32,
-                height: 28,
-                p: 0,
-                border: 'none',
-                borderRadius: '999px !important',
-                color: 'text.secondary',
-                '&.Mui-selected': {
-                  bgcolor: primaryMainAlpha(0.14),
-                  color: 'primary.main',
-                },
-              },
-            }}
-          >
-            <ToggleButton value="newest" aria-label="Më të rejat">
-              <SparkleIcon size={14} />
-            </ToggleButton>
-            <ToggleButton value="price-asc" aria-label="Çmimi rritës">
-              <SortAscIcon size={14} />
-            </ToggleButton>
-            <ToggleButton value="price-desc" aria-label="Çmimi zbritës">
-              <SortDescIcon size={14} />
-            </ToggleButton>
-          </ToggleButtonGroup>
         </Box>
 
         <Box sx={{ '& > [role=navigation]': { mt: { xs: 1.25, md: 1.5 }, mb: 0 } }}>
@@ -262,6 +217,10 @@ export function CategoryBrowseControls({
         verticalId={verticalId}
         draft={draft}
         setField={setField}
+        cities={cities}
+        cityId={cityValue || undefined}
+        zoneIds={zoneValue}
+        onLocationChange={setLocation}
         hasPendingChanges={hasPendingChanges}
         hasAppliedFilters={hasActiveBrowseFilters(applied)}
         onApply={apply}

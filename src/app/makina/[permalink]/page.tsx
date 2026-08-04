@@ -2,8 +2,8 @@ import * as React from 'react';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
+import { CarListingDetailView } from '@/components/public/car-listing-detail-view';
 import { PublicShell } from '@/components/public/public-shell';
-import { VerticalListingDetailView } from '@/components/public/vertical-listing-detail-view';
 import { config } from '@/config';
 import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
@@ -74,13 +74,7 @@ export default async function CarListingPage({ params }: PageProps): Promise<Rea
 
   return (
     <PublicShell hideHeaderBelowMd>
-      <VerticalListingDetailView
-        listing={listing}
-        canonicalUrl={canonicalUrl}
-        browseHref={paths.public.cars}
-        similarSectionTitle="Automjete të fundit"
-        similar={similar}
-      />
+      <CarListingDetailView listing={listing} similar={similar} canonicalUrl={canonicalUrl} />
     </PublicShell>
   );
 }

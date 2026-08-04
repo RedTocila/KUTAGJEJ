@@ -106,8 +106,8 @@ function waitForPort(port, host = '127.0.0.1', timeoutMs = 90_000) {
 
 function spawnApi() {
   if (shuttingDown) return;
-  log('api', `starting on :${API_PORT}…`);
-  apiChild = spawn('node', ['server.js'], {
+  log('api', `starting on :${API_PORT} (watch)…`);
+  apiChild = spawn('node', ['--watch', 'server.js'], {
     cwd: path.join(root, 'backend'),
     stdio: 'inherit',
     env: { ...process.env, PORT: String(API_PORT) },

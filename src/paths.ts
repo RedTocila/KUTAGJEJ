@@ -10,6 +10,8 @@ export const paths = {
     businesses: '/biznese',
     /** Professionals & freelance services. */
     professionals: '/profesioniste',
+    /** Full-page search: pick category, then query + results. */
+    search: '/kerko',
     about: '/rreth-nesh',
     terms: '/kushtet',
     privacy: '/privatesia',
@@ -20,12 +22,20 @@ export const paths = {
     auth: '/user/auth',
     dashboard: '/user/dashboard',
     profile: '/user/dashboard/profili',
+    /** AI link → listing draft importer. */
+    aiImport: '/user/dashboard/ai-import',
     /** Immovable property — add listing (individual / business portal). */
     realEstateListing: '/user/dashboard/prona',
     businessesListing: '/user/dashboard/biznese',
+    /** Dedicated business menu editor: `?id=` optional (defaults to the user's business). */
+    businessMenu: '/user/dashboard/biznese/menu',
     professionalsListing: '/user/dashboard/profesioniste',
     /** Listings the user has posted (portal). */
     myRealEstateListings: '/user/dashboard/shpalljet-e-mia',
+    /** Listing performance: totals + per-post views / leads. */
+    statistics: '/user/dashboard/statistikat',
+    /** Edit an existing listing: `?kind=&id=`. */
+    editListing: '/user/dashboard/shpalljet-e-mia/ndrysho',
     /** Bookmarked listings from across the platform. */
     savedListings: '/user/dashboard/te-ruajturat',
     /** In-app messages tied to listings. */
@@ -34,6 +44,8 @@ export const paths = {
     referral: '/user/dashboard/referral',
     /** Buy boost credits with POK Payments. */
     credits: '/user/dashboard/kredite',
+    /** Full-page POK checkout (credits or subscription). */
+    checkout: '/user/dashboard/checkout',
     /** Subscription packages hub (category cards). */
     packages: '/user/dashboard/paketat',
     /** Main subscription plans. */
@@ -128,6 +140,11 @@ export function listingBusinessPublicHref(entry: { permalinkPath?: string | null
   const raw = typeof entry.permalinkPath === 'string' ? entry.permalinkPath.trim() : '';
   if (raw) return pathsPublicVerticalListingDetail(paths.public.businesses, raw);
   return pathsPublicVerticalListingDetail(paths.public.businesses, entry.id);
+}
+
+/** Full menu page for a business: `/biznese/{permalink}/menu`. */
+export function listingBusinessMenuHref(entry: { permalinkPath?: string | null; id: string }): string {
+  return `${listingBusinessPublicHref(entry).replace(/\/$/, '')}/menu`;
 }
 
 export function listingProfessionalPublicHref(entry: { permalinkPath?: string | null; id: string }): string {

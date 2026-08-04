@@ -2,8 +2,17 @@ const { realEstatePermalink } = require('../real-estate-permalink');
 const { listingPermalinkFromSlugSource } = require('../listing-permalink');
 const { computeOpenStatus, formatWeeklyHoursLine } = require('../business-hours');
 const { BUSINESS_CATEGORY_LABELS, PROFESSIONAL_CATEGORY_LABELS } = require('./constants');
-const { jobListingExpiresAt } = require('./query-helpers');
+const { jobListingExpiresAt, isPremiumActive } = require('./query-helpers');
 const { pickImage, snippet, carSlugSource, carDisplayTitle } = require('./text-helpers');
+
+function premiumCardFields(doc) {
+  const until = doc.premiumUntil ?? doc.premium_until ?? null;
+  const active = isPremiumActive(doc);
+  return {
+    isPremium: active,
+    premiumUntil: active && until ? new Date(until).toISOString() : null,
+  };
+}
 
 function formatRealEstate(doc, cityById) {
   const city = cityById.get(doc.cityId);
@@ -31,6 +40,7 @@ function formatRealEstate(doc, cityById) {
     imageUrls: doc.imageUrls ?? [],
     createdAt: doc.createdAt,
     permalinkPath: realEstatePermalink(doc),
+    ...premiumCardFields(doc),
   };
 }
 
@@ -66,6 +76,7 @@ function formatRealEstateDetail(doc, cityById, seller) {
     updatedAt: doc.updatedAt ?? doc.createdAt,
     seller,
     permalinkPath: realEstatePermalink(doc),
+    ...premiumCardFields(doc),
   };
 }
 
@@ -91,6 +102,7 @@ function formatCar(doc, cityById) {
     imageUrls: doc.imageUrls ?? [],
     createdAt: doc.createdAt,
     permalinkPath: listingPermalinkFromSlugSource(carSlugSource(doc), doc.id),
+    ...premiumCardFields(doc),
   };
 }
 
@@ -120,6 +132,7 @@ function formatJob(doc, cityById) {
     benefits: Array.isArray(doc.benefits)
       ? doc.benefits.map((b) => ({ id: String(b.id), label: String(b.label) }))
       : [],
+    ...premiumCardFields(doc),
   };
 }
 
@@ -141,6 +154,7 @@ function formatMarketplace(doc, cityById) {
     imageUrls: doc.imageUrls ?? [],
     createdAt: doc.createdAt,
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
+    ...premiumCardFields(doc),
   };
 }
 
@@ -207,6 +221,7 @@ function formatDirectory(doc, cityById, reviewStats) {
     imageUrls: doc.imageUrls ?? [],
     createdAt: doc.createdAt,
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
+    ...premiumCardFields(doc),
   };
   if (vertical === 'businesses') {
     const weekly = Array.isArray(doc.weeklyHours) ? doc.weeklyHours : [];

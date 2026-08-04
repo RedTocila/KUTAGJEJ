@@ -23,9 +23,9 @@ export default function Layout({ children }: LayoutProps) {
           body: {
             '--MainNav-height': '56px',
             '--MainNav-zIndex': 1000,
-            '--SideNav-width': '280px',
+            '--SideNav-width': '268px',
             '--SideNav-zIndex': 1100,
-            '--MobileNav-width': '320px',
+            '--MobileNav-width': '300px',
             '--MobileNav-zIndex': 1100,
           },
         }}
@@ -43,7 +43,7 @@ export default function Layout({ children }: LayoutProps) {
         <Box sx={{ display: 'flex', flex: '1 1 auto', flexDirection: 'column', pl: { lg: 'var(--SideNav-width)' } }}>
           <MainNav />
           <main>
-            <Container maxWidth="xl" sx={{ py: '64px' }}>
+            <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, sm: 3 } }}>
               {children}
             </Container>
           </main>

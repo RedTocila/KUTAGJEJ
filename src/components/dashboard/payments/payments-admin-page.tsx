@@ -19,6 +19,9 @@ import {
   Typography,
 } from '@mui/material';
 
+import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
+
+import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { usePlatformAdminGuard } from '@/hooks/use-platform-admin';
 import { listAdminPayments } from '@/lib/admin-payments-client';
 import type { AdminPayment, AdminPaymentsResponse, PaymentStatus } from '@/types/payment';
@@ -92,14 +95,12 @@ export function PaymentsAdminPage() {
 
   return (
     <Stack spacing={3}>
-      <Box>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-          Pagesat
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Të gjitha pagesat e kryera nëpërmjet POK në platformë.
-        </Typography>
-      </Box>
+      <AdminPageHeader
+        icon={React.createElement(CreditCardIcon, { size: 22, weight: 'duotone' })}
+        eyebrow="Financa"
+        title="Pagesat"
+        description="Të gjitha pagesat e kryera nëpërmjet POK në platformë."
+      />
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 4 }}>

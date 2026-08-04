@@ -3,21 +3,20 @@
 import * as React from 'react';
 import {
   Alert,
-  alpha,
   Box,
   Card,
   CardContent,
-  Paper,
   Skeleton,
-  Typography,
 } from '@mui/material';
 
 import { CategoryEditor } from '@/components/dashboard/categories/category-editor';
 import { CategoryPickerGrid } from '@/components/dashboard/categories/category-picker-grid';
 import { CATEGORY_HELP, TAB_ORDER } from '@/components/dashboard/categories/category-config';
+import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import type { ListingCategory } from '@/types/listing-category';
 import { listCategoriesAdmin } from '@/lib/admin-categories-client';
 import { usePlatformAdminGuard } from '@/hooks/use-platform-admin';
+import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 
 export function CategoriesAdminPage() {
   const { user, isPlatformAdmin } = usePlatformAdminGuard();
@@ -68,33 +67,12 @@ export function CategoriesAdminPage() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Paper
-        elevation={0}
-        sx={{
-          overflow: 'hidden',
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          background: (t) =>
-            `linear-gradient(135deg, ${alpha(t.palette.primary.main, t.palette.mode === 'dark' ? 0.12 : 0.08)} 0%, ${alpha(t.palette.primary.main, t.palette.mode === 'dark' ? 0.04 : 0.02)} 100%)`,
-        }}
-      >
-        <Box sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2.5, sm: 3 } }}>
-          <Typography
-            variant="overline"
-            sx={{ letterSpacing: '0.12em', color: 'primary.main', fontWeight: 700 }}
-          >
-            Konfigurim platforme
-          </Typography>
-          <Typography variant="h4" sx={{ fontWeight: 800, mt: 0.5, letterSpacing: '-0.02em' }}>
-            Kategoritë
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mt: 1, maxWidth: 720, lineHeight: 1.65 }}>
-            Katër vertikale fikse — secila me slug për URL dhe lloje listimi që përdoruesit zgjedhin kur publikojnë
-            (p.sh. Apartament, Vila për prona).
-          </Typography>
-        </Box>
-      </Paper>
+      <AdminPageHeader
+        icon={React.createElement(SquaresFourIcon, { size: 22, weight: 'duotone' })}
+        eyebrow="Përmbajtja"
+        title="Kategoritë"
+        description="Katër vertikale fikse — secila me slug për URL dhe lloje listimi që përdoruesit zgjedhin kur publikojnë."
+      />
 
       {loadError ? (
         <Alert severity="error" sx={{ borderRadius: 2 }}>

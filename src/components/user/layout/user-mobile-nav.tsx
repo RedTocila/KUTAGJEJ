@@ -10,9 +10,11 @@ import { paths } from '@/paths';
 import { isNavItemActive } from '@/lib/is-nav-item-active';
 import { BrandLogo } from '@/components/brand/brand-logo';
 
-import { getUserPortalNavItemsForUser } from './user-nav-config';
+import { getLocalizedUserPortalNavItems } from './user-nav-config';
 import { userPortalNavIcons } from './user-portal-nav-icons';
+import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
+import { useOptionalAddListingPicker } from '@/components/user/add-listing-picker-context';
 
 export interface UserMobileNavProps {
   onClose?: () => void;
@@ -22,7 +24,8 @@ export interface UserMobileNavProps {
 export function UserMobileNav({ open, onClose }: UserMobileNavProps) {
   const pathname = usePathname();
   const { user } = useUser();
-  const navItems = React.useMemo(() => getUserPortalNavItemsForUser(user ?? null), [user]);
+  const t = useCopy();
+  const navItems = React.useMemo(() => getLocalizedUserPortalNavItems(user ?? null, t), [user, t]);
 
   return (
     <Drawer
@@ -102,21 +105,32 @@ function UserMobileNavRow({
   pathname: string;
   onNavigate?: () => void;
 }) {
-  const { href, icon, title, disabled, external, matcher } = item;
+  const { href, icon, title, disabled, external, matcher, key } = item;
+  const addListingPicker = useOptionalAddListingPicker();
   if (!href) return null;
   const active = isNavItemActive({ disabled, external, href, matcher, pathname });
   const IconComponent = icon ? userPortalNavIcons[icon] : null;
+  const opensPicker = key === 'real-estate';
 
   return (
     <Box component="li" sx={{ display: 'block', listStyle: 'none' }}>
       <Box
-        {...{
-          component: external ? 'a' : RouterLink,
-          href,
-          target: external ? '_blank' : undefined,
-          rel: external ? 'noreferrer' : undefined,
-          onClick: onNavigate,
-        }}
+        {...(opensPicker
+          ? {
+              component: 'button' as const,
+              type: 'button' as const,
+              onClick: () => {
+                onNavigate?.();
+                addListingPicker?.openAddListingPicker();
+              },
+            }
+          : {
+              component: external ? ('a' as const) : RouterLink,
+              href,
+              target: external ? '_blank' : undefined,
+              rel: external ? 'noreferrer' : undefined,
+              onClick: onNavigate,
+            })}
         sx={{
           alignItems: 'center',
           borderRadius: 1,
@@ -127,6 +141,11 @@ function UserMobileNavRow({
           p: '6px 16px',
           textDecoration: 'none',
           whiteSpace: 'nowrap',
+          border: 0,
+          width: '100%',
+          bgcolor: 'transparent',
+          font: 'inherit',
+          textAlign: 'left',
           ...(active && {
             bgcolor: 'var(--NavItem-active-background)',
             color: 'var(--NavItem-active-color)',

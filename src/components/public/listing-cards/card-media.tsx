@@ -11,11 +11,12 @@ import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
+import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
 import { useSavedListingsOptional } from '@/contexts/saved-listings-context';
 import { useListingSavedState } from '@/hooks/use-listing-saved-state';
 import { useUser } from '@/hooks/use-user';
+import type { ListingSharePayload } from '@/lib/listing-share';
 import {
-  shareListing,
   toggleListingSave,
   type ListingMetricKind,
 } from '@/lib/listing-metrics';
@@ -35,6 +36,12 @@ export interface CardMediaProps {
   shareCount?: number;
   saveCount?: number;
   saved?: boolean;
+  /** Premium listing — amber bookmark accent. */
+  premium?: boolean;
+  /** Rich data for the share sheet / Instagram story template. */
+  sharePayload?: Omit<ListingSharePayload, 'listingKind' | 'listingId' | 'title'> & {
+    title?: string;
+  };
 }
 
 export function CardMedia({
@@ -50,6 +57,8 @@ export function CardMedia({
   shareCount: initialShareCount = 0,
   saveCount: initialSaveCount = 0,
   saved: initialSaved,
+  premium = false,
+  sharePayload,
 }: CardMediaProps) {
   const router = useRouter();
   const { user } = useUser();
@@ -57,6 +66,7 @@ export function CardMedia({
   const saved = useListingSavedState(listingKind, listingId, initialSaved);
   const [shareCount, setShareCount] = React.useState(initialShareCount);
   const [saveCount, setSaveCount] = React.useState(initialSaveCount);
+  const [shareOpen, setShareOpen] = React.useState(false);
 
   React.useEffect(() => {
     setShareCount(initialShareCount);
@@ -66,15 +76,30 @@ export function CardMedia({
     setSaveCount(initialSaveCount);
   }, [initialSaveCount]);
 
-  const handleShare = React.useCallback(
-    async (event: React.MouseEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const metrics = await shareListing({ title: alt, listingKind, listingId });
-      if (metrics) setShareCount(metrics.shareCount);
-    },
-    [alt, listingKind, listingId],
+  const resolvedSharePayload = React.useMemo<ListingSharePayload>(
+    () => ({
+      listingKind,
+      listingId,
+      title: sharePayload?.title ?? alt,
+      category: sharePayload?.category,
+      priceLabel: sharePayload?.priceLabel,
+      badge: sharePayload?.badge ?? topLeftBadge,
+      imageUrl: sharePayload?.imageUrl ?? imageUrl,
+      location: sharePayload?.location,
+      specs: sharePayload?.specs,
+      createdAt: sharePayload?.createdAt,
+      viewCount: sharePayload?.viewCount,
+      saveCount: sharePayload?.saveCount ?? saveCount,
+      url: sharePayload?.url,
+    }),
+    [alt, imageUrl, listingId, listingKind, saveCount, sharePayload, topLeftBadge],
   );
+
+  const handleShare = React.useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setShareOpen(true);
+  }, []);
 
   const handleSave = React.useCallback(
     async (event: React.MouseEvent) => {
@@ -200,10 +225,18 @@ export function CardMedia({
           aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
           count={saveCount}
           active={saved}
+          accent={premium ? 'warning' : 'primary'}
           icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} />}
           onClick={handleSave}
         />
       </Stack>
+
+      <ListingSharePage
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        payload={resolvedSharePayload}
+        onShared={(metrics) => setShareCount(metrics.shareCount)}
+      />
     </Box>
   );
 }

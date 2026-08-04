@@ -5,12 +5,22 @@ import RouterLink from 'next/link';
 import ArrowForward from '@mui/icons-material/ArrowForward';
 import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
 
-import { HOME_VERTICALS } from '@/lib/home-categories';
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
+import {
+  AI_SEARCH_BLUE,
+  AI_SEARCH_BLUE_SOFT,
+  localizeSearchCategories,
+} from '@/lib/home-categories';
 import { paths } from '@/paths';
 
 import { HomeVerticalIcon } from './home-vertical-icon';
 
 export function HomeCategoriesStrip() {
+  const { language } = useLanguage();
+  const t = useCopy();
+  const verticals = React.useMemo(() => localizeSearchCategories(language), [language]);
+
   return (
     <Box
       component="section"
@@ -24,22 +34,24 @@ export function HomeCategoriesStrip() {
             component="h2"
             sx={{ fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.02em' }}
           >
-            Zbulo sipas kategorisë
+            {t.home.browseByCategory}
           </Typography>
           <Button
             component={RouterLink}
-            href={paths.public.realEstate}
+            href={paths.public.search}
             size="small"
             endIcon={<ArrowForward sx={{ fontSize: 18 }} />}
             sx={{ textTransform: 'none', fontWeight: 700, color: 'primary.main' }}
           >
-            Shfleto të gjitha
+            {t.common.browseAll}
           </Button>
         </Stack>
 
         <Grid container spacing={2}>
-          {HOME_VERTICALS.map((v) => (
-            <Grid key={v.id} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
+          {verticals.map((v) => {
+            const isAi = v.id === 'ai';
+            return (
+            <Grid key={v.id} size={{ xs: 12, sm: 6, md: 4, lg: 'grow' }}>
               <Stack
                 component={RouterLink}
                 href={v.href}
@@ -57,7 +69,7 @@ export function HomeCategoriesStrip() {
                   borderColor: 'divider',
                   transition: 'transform 0.15s ease, border-color 0.15s ease',
                   '&:hover': {
-                    borderColor: 'primary.main',
+                    borderColor: isAi ? AI_SEARCH_BLUE : 'primary.main',
                     transform: 'translateY(-2px)',
                   },
                 }}
@@ -70,24 +82,34 @@ export function HomeCategoriesStrip() {
                     display: 'grid',
                     placeItems: 'center',
                     flexShrink: 0,
-                    color: 'primary.main',
-                    bgcolor: (theme) =>
-                      theme.palette.mode === 'dark'
-                        ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
-                        : 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)',
+                    color: isAi ? AI_SEARCH_BLUE : 'primary.main',
+                    bgcolor: isAi
+                      ? AI_SEARCH_BLUE_SOFT
+                      : (theme) =>
+                          theme.palette.mode === 'dark'
+                            ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
+                            : 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)',
                   }}
                 >
                   <HomeVerticalIcon verticalId={v.id} size={32} />
                 </Box>
                 <Stack spacing={0.5} sx={{ minWidth: 0 }}>
-                  <Typography sx={{ fontWeight: 800, fontSize: '1rem' }}>{v.label}</Typography>
+                  <Typography
+                    sx={{
+                      fontWeight: 800,
+                      fontSize: '1rem',
+                    }}
+                  >
+                    {v.label}
+                  </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4, fontWeight: 500 }}>
                     {v.tagline}
                   </Typography>
                 </Stack>
               </Stack>
             </Grid>
-          ))}
+            );
+          })}
         </Grid>
       </Container>
     </Box>

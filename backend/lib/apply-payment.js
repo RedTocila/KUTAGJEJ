@@ -90,6 +90,10 @@ async function confirmAndApplyPayment(paymentId, pokClient) {
       await grantSubscription(payment);
     } else if (payment.type === 'credits') {
       await grantCredits(payment);
+    } else if (payment.type === 'auto-refresh') {
+      await grantAutoRefreshSlots(payment);
+    } else if (payment.type === 'premium') {
+      await grantPremiumVoucher(payment);
     }
     payment.granted = true;
   }
@@ -173,6 +177,47 @@ async function grantCredits(payment) {
   if (credits > 0) {
     await addBoostCredits(payment.payerId, credits);
   }
+}
+
+async function grantAutoRefreshSlots(payment) {
+  const slots = Math.max(0, Math.floor(Number(payment.metadata?.autoRefreshSlots) || 0));
+  if (slots <= 0 || !payment.payerId) return;
+  const sb = getSupabaseAdmin();
+  const { data: profile, error } = await sb
+    .from('profiles')
+    .select('auto_refresh_slots')
+    .eq('id', payment.payerId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!profile) return;
+  const { error: updErr } = await sb
+    .from('profiles')
+    .update({
+      auto_refresh_slots: (Number(profile.auto_refresh_slots) || 0) + slots,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', payment.payerId);
+  if (updErr) throw updErr;
+}
+
+async function grantPremiumVoucher(payment) {
+  const packageId = payment.metadata?.premiumPackageId;
+  if (!packageId || !payment.payerId) return;
+  const { createPremiumVoucher } = require('./premium-listing');
+  const created = await createPremiumVoucher({
+    userId: payment.payerId,
+    packageId: String(packageId),
+    source: 'card',
+    paymentId: payment.id,
+    priceEur: payment.amount,
+    priceBc: Number(payment.metadata?.premiumPriceBc) || null,
+  });
+  if (!created.ok) {
+    const err = new Error(created.message || 'Nuk u krijua voucher Premium.');
+    err.statusCode = created.status || 400;
+    throw err;
+  }
+  payment.metadata.premiumVoucherId = created.voucher.id;
 }
 
 async function addBoostCredits(userId, amount) {

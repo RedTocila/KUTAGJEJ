@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
 import {
   Alert,
   Box,
@@ -17,11 +16,10 @@ import {
   Radio,
   RadioGroup,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
+import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
-import { Image as ImageIcon } from '@phosphor-icons/react/dist/ssr/Image';
 
 import {
   CAR_COLOUR_OPTIONS,
@@ -34,24 +32,19 @@ import {
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { SearchableSelect } from '@/components/core/searchable-select';
+import {
+  ListingFormActions,
+  ListingTextField,
+} from '@/components/user/listing-form-ui';
 import { useUser } from '@/hooks/use-user';
-import { createCarListing } from '@/lib/listings-client';
+import { createCarListing, updateCarListing, type CarMineListing } from '@/lib/listings-client';
+import { contactPhoneFromStorage, resolveContactPhone } from '@/lib/listing-form-defaults';
+import { uploadListingImages } from '@/lib/uploads-client';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function contactPhoneInitialFromStorage(): string {
-  if (typeof window === 'undefined') return '';
-  try {
-    const raw = localStorage.getItem('user-data');
-    if (!raw) return '';
-    const u = JSON.parse(raw) as { phone?: string };
-    return typeof u.phone === 'string' ? u.phone.trim() : '';
-  } catch {
-    return '';
-  }
-}
 
 function parsePositiveInt(s: string): number | null {
   const t = s.trim();
@@ -74,6 +67,8 @@ export interface CarListingFormProps {
   onSuccess?: () => void;
   backHref?: string;
   backLabel?: string;
+  editListingId?: string;
+  initialListing?: CarMineListing | null;
 }
 
 type CarFormState = {
@@ -120,38 +115,80 @@ function emptyForm(): CarFormState {
 // Validation
 // ---------------------------------------------------------------------------
 
-function validateForm(f: CarFormState): string | null {
-  if (!f.make) return 'Please select the car make.';
-  if (!f.model.trim()) return 'Car model is required.';
-  if (!f.description.trim()) return 'Description is required.';
+type FieldErrors = Partial<Record<keyof CarFormState, string>>;
+
+function validateForm(f: CarFormState): FieldErrors {
+  const errors: FieldErrors = {};
+
+  if (!f.make) errors.make = 'Please select the car make.';
+  if (!f.model.trim()) errors.model = 'Car model is required.';
+  if (!f.description.trim()) errors.description = 'Description is required.';
 
   const year = parsePositiveInt(f.year);
   const currentYear = new Date().getFullYear();
   if (year === null || year < 1970 || year > currentYear + 1) {
-    return `Year must be between 1970 and ${currentYear + 1}.`;
+    errors.year = `Year must be between 1970 and ${currentYear + 1}.`;
   }
 
   const km = parsePositiveInt(f.kilometers);
-  if (km === null) return 'Kilometres must be a whole number (0 or more).';
+  if (km === null) errors.kilometers = 'Kilometres must be a whole number (0 or more).';
 
-  if (!f.transmission) return 'Please select the transmission type.';
-  if (!f.fuelType) return 'Please select the fuel type.';
+  if (!f.transmission) errors.transmission = 'Please select the transmission type.';
+  if (!f.fuelType) errors.fuelType = 'Please select the fuel type.';
 
   const price = parseFloatStrict(f.price);
-  if (price === null || price < 0) return 'Enter a valid price.';
-  if (f.currency !== 'EUR' && f.currency !== 'LEK') return 'Please choose a currency.';
+  if (price === null || price < 0) errors.price = 'Enter a valid price.';
+  if (f.currency !== 'EUR' && f.currency !== 'LEK') errors.currency = 'Please choose a currency.';
 
-  if (!f.color) return 'Please select the exterior colour.';
+  if (!f.color) errors.color = 'Please select the exterior colour.';
 
-  if (!f.cityId) return 'Please select a city.';
+  if (!f.cityId) errors.cityId = 'Please select a city.';
 
   const phone = f.contactPhone.trim();
-  if (phone.length < 6) return 'Enter a valid phone number (at least 6 characters).';
-  if (phone.length > 40) return 'Phone number is too long.';
-  if (!/^[\d+\s().-]{6,40}$/.test(phone)) {
-    return 'Phone number may only include digits, spaces, and + ( ) . -';
+  if (phone.length < 6) errors.contactPhone = 'Enter a valid phone number (at least 6 characters).';
+  else if (phone.length > 40) errors.contactPhone = 'Phone number is too long.';
+  else if (!/^[\d+\s().-]{6,40}$/.test(phone)) {
+    errors.contactPhone = 'Phone number may only include digits, spaces, and + ( ) . -';
   }
 
+  return errors;
+}
+
+const FIELD_ORDER: (keyof CarFormState)[] = [
+  'make',
+  'model',
+  'description',
+  'year',
+  'kilometers',
+  'transmission',
+  'fuelType',
+  'price',
+  'currency',
+  'contactPhone',
+  'color',
+  'cityId',
+];
+
+function firstFieldError(errors: FieldErrors): keyof CarFormState | null {
+  for (const key of FIELD_ORDER) {
+    if (errors[key]) return key;
+  }
+  return null;
+}
+
+function mapServerErrorToField(message: string): keyof CarFormState | null {
+  const m = message.toLowerCase();
+  if (m.includes('city')) return 'cityId';
+  if (m.includes('make')) return 'make';
+  if (m.includes('model')) return 'model';
+  if (m.includes('description')) return 'description';
+  if (m.includes('year')) return 'year';
+  if (m.includes('kilomet')) return 'kilometers';
+  if (m.includes('transmission')) return 'transmission';
+  if (m.includes('fuel')) return 'fuelType';
+  if (m.includes('price') || m.includes('currency')) return m.includes('currency') ? 'currency' : 'price';
+  if (m.includes('colour') || m.includes('color')) return 'color';
+  if (m.includes('phone')) return 'contactPhone';
   return null;
 }
 
@@ -215,26 +252,55 @@ function ImagePreview({ file, onRemove }: ImagePreviewProps) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main form
-// ---------------------------------------------------------------------------
+function formFromListing(l: CarMineListing): CarFormState {
+  const finish = l.finish ?? [];
+  return {
+    make: l.make || '',
+    model: l.model || '',
+    variant: l.variant || '',
+    description: l.description || '',
+    year: l.year != null ? String(l.year) : '',
+    kilometers: l.kilometers != null ? String(l.kilometers) : '',
+    transmission: l.transmission === 'automatic' || l.transmission === 'manual' ? l.transmission : '',
+    fuelType: l.fuelType || '',
+    price: l.price != null ? String(l.price) : '',
+    currency: l.currency === 'EUR' || l.currency === 'LEK' ? l.currency : '',
+    color: l.color || '',
+    isMatte: finish.includes('matte'),
+    isMetallic: finish.includes('metallic'),
+    extras: l.extras ?? [],
+    contactPhone: l.contactPhone || '',
+    cityId: l.cityId ? String(l.cityId) : '',
+  };
+}
 
 const YEAR_OPTIONS = carYearOptions();
 const MAX_IMAGES = 5;
 
-export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarListingFormProps) {
+export function CarListingForm({
+  onSuccess,
+  backHref,
+  backLabel = 'Back',
+  editListingId,
+  initialListing,
+}: CarListingFormProps) {
+  const isEdit = Boolean(editListingId);
   const { user } = useUser();
 
-  const [form, setForm] = React.useState<CarFormState>(() => ({
-    ...emptyForm(),
-    contactPhone: contactPhoneInitialFromStorage(),
-  }));
+  const [form, setForm] = React.useState<CarFormState>(() =>
+    initialListing ? formFromListing(initialListing) : { ...emptyForm(), contactPhone: contactPhoneFromStorage() },
+  );
   const [images, setImages] = React.useState<File[]>([]);
+  const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(
+    () => (initialListing?.imageUrls ?? []).filter(Boolean),
+  );
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [loadingCities, setLoadingCities] = React.useState(true);
+  const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const cityFieldRef = React.useRef<HTMLDivElement>(null);
 
   // Load cities once on mount.
   React.useEffect(() => {
@@ -250,26 +316,49 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
     };
   }, []);
 
+  React.useEffect(() => {
+    if (!initialListing) return;
+    setForm(formFromListing(initialListing));
+    setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
+    setImages([]);
+  }, [initialListing]);
+
   // Pre-fill phone from user profile when it becomes available.
   React.useEffect(() => {
-    if (!user) return;
-    const p = typeof user.phone === 'string' ? user.phone.trim() : '';
+    if (isEdit) return;
+    const p = resolveContactPhone(user);
     if (!p) return;
     setForm((prev) => {
       if (prev.contactPhone.trim()) return prev;
       return { ...prev, contactPhone: p };
     });
-  }, [user]);
+  }, [user, isEdit]);
 
   // -------------------------------------------------------------------------
   // Field handlers
   // -------------------------------------------------------------------------
 
+  const clearFieldError = (key: keyof CarFormState) => {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
   const onField =
     (key: keyof CarFormState) =>
     (ev: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setForm((prev) => ({ ...prev, [key]: ev.target.value }));
+      const value = ev.target.value;
+      setForm((prev) => ({ ...prev, [key]: value }));
+      clearFieldError(key);
     };
+
+  const setSelectField = <K extends keyof CarFormState>(key: K, value: CarFormState[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    clearFieldError(key);
+  };
 
   const toggleExtra = (extra: string) => {
     setForm((prev) => {
@@ -283,6 +372,7 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
 
   const selectColor = (value: string) => {
     setForm((prev) => ({ ...prev, color: prev.color === value ? '' : value }));
+    clearFieldError('color');
   };
 
   // -------------------------------------------------------------------------
@@ -293,8 +383,8 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
     const picked = Array.from(ev.target.files ?? []);
     if (!picked.length) return;
     setImages((prev) => {
-      const combined = [...prev, ...picked];
-      return combined.slice(0, MAX_IMAGES);
+      const slots = Math.max(0, MAX_IMAGES - existingImageUrls.length);
+      return [...prev, ...picked].slice(0, slots);
     });
     // Reset input so the same file can be picked again after removing.
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -302,6 +392,10 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
 
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingUrl = (index: number) => {
+    setExistingImageUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   // -------------------------------------------------------------------------
@@ -312,37 +406,95 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
     ev.preventDefault();
     setSubmitError(null);
 
-    const err = validateForm(form);
-    if (err) {
-      setSubmitError(err);
+    const errors = validateForm(form);
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      const first = firstFieldError(errors);
+      if (first === 'cityId') {
+        cityFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
+    setFieldErrors({});
 
     setSubmitting(true);
     try {
-      const fd = new FormData();
-      fd.append('make', form.make);
-      fd.append('model', form.model.trim());
-      fd.append('variant', form.variant.trim());
-      fd.append('description', form.description.trim());
-      fd.append('year', form.year.trim());
-      fd.append('kilometers', form.kilometers.trim());
-      fd.append('transmission', form.transmission);
-      fd.append('fuelType', form.fuelType);
-      fd.append('price', form.price.trim());
-      fd.append('currency', form.currency);
-      fd.append('color', form.color);
-      if (form.isMatte) fd.append('finish', 'matte');
-      if (form.isMetallic) fd.append('finish', 'metallic');
-      form.extras.forEach((e) => fd.append('extras[]', e));
-      fd.append('contactPhone', form.contactPhone.trim());
-      fd.append('cityId', form.cityId);
-      images.forEach((img) => fd.append('images', img, img.name));
+      if (isEdit && editListingId) {
+        let uploaded: string[] = [];
+        if (images.length) {
+          const up = await uploadListingImages(images, 'cars');
+          if (up.error) {
+            setSubmitError(up.error);
+            return;
+          }
+          uploaded = up.urls;
+        }
+        const finish: string[] = [];
+        if (form.isMatte) finish.push('matte');
+        if (form.isMetallic) finish.push('metallic');
+        const result = await updateCarListing(editListingId, {
+          make: form.make,
+          model: form.model.trim(),
+          variant: form.variant.trim(),
+          description: form.description.trim(),
+          year: Number(form.year),
+          kilometers: Number(form.kilometers),
+          transmission: form.transmission,
+          fuelType: form.fuelType,
+          price: Number(form.price),
+          currency: form.currency,
+          color: form.color,
+          finish,
+          extras: form.extras,
+          contactPhone: form.contactPhone.trim(),
+          cityId: form.cityId,
+          imageUrls: [...existingImageUrls, ...uploaded].slice(0, MAX_IMAGES),
+        });
+        if (result.error) {
+          const field = mapServerErrorToField(result.error);
+          if (field) {
+            setFieldErrors({ [field]: result.error });
+            if (field === 'cityId') {
+              cityFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          } else {
+            setSubmitError(result.error);
+          }
+          return;
+        }
+      } else {
+        const fd = new FormData();
+        fd.append('make', form.make);
+        fd.append('model', form.model.trim());
+        fd.append('variant', form.variant.trim());
+        fd.append('description', form.description.trim());
+        fd.append('year', form.year.trim());
+        fd.append('kilometers', form.kilometers.trim());
+        fd.append('transmission', form.transmission);
+        fd.append('fuelType', form.fuelType);
+        fd.append('price', form.price.trim());
+        fd.append('currency', form.currency);
+        fd.append('color', form.color);
+        if (form.isMatte) fd.append('finish', 'matte');
+        if (form.isMetallic) fd.append('finish', 'metallic');
+        form.extras.forEach((e) => fd.append('extras[]', e));
+        fd.append('contactPhone', form.contactPhone.trim());
+        fd.append('cityId', form.cityId);
+        images.forEach((img) => fd.append('images', img, img.name));
 
-      const { error } = await createCarListing(fd);
-      if (error) {
-        setSubmitError(error);
-        return;
+        const { error } = await createCarListing(fd);
+        if (error) {
+          const field = mapServerErrorToField(error);
+          if (field) {
+            setFieldErrors({ [field]: error });
+            if (field === 'cityId') {
+              cityFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          } else {
+            setSubmitError(error);
+          }
+          return;
+        }
       }
       onSuccess?.();
     } finally {
@@ -372,23 +524,27 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
           <SearchableSelect
             label="Make"
             value={form.make}
-            onChange={(v) => setForm((p) => ({ ...p, make: v }))}
+            onChange={(v) => setSelectField('make', v)}
             options={CAR_MAKES.map((m) => ({ value: m, label: m }))}
             emptyLabel="Select make…"
             required
+            error={Boolean(fieldErrors.make)}
+            helperText={fieldErrors.make}
           />
 
-          <TextField
+          <ListingTextField
             label="Model"
             value={form.model}
             onChange={onField('model')}
             required
             fullWidth
             placeholder="e.g. A7"
+            error={Boolean(fieldErrors.model)}
+            helperText={fieldErrors.model}
           />
         </Stack>
 
-        <TextField
+        <ListingTextField
           label="Variant / subtitle"
           value={form.variant}
           onChange={onField('variant')}
@@ -397,7 +553,7 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
           helperText="This text will appear in the listing title alongside the make and model."
         />
 
-        <TextField
+        <ListingTextField
           label="Description"
           value={form.description}
           onChange={onField('description')}
@@ -406,6 +562,8 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
           multiline
           minRows={4}
           placeholder="Describe the car's condition, service history, any additional info…"
+          error={Boolean(fieldErrors.description)}
+          helperText={fieldErrors.description}
         />
       </Stack>
 
@@ -421,13 +579,15 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
           <SearchableSelect
             label="Year"
             value={form.year}
-            onChange={(v) => setForm((p) => ({ ...p, year: v }))}
+            onChange={(v) => setSelectField('year', v)}
             options={YEAR_OPTIONS.map((y) => ({ value: String(y), label: String(y) }))}
             emptyLabel="Select year…"
             required
+            error={Boolean(fieldErrors.year)}
+            helperText={fieldErrors.year}
           />
 
-          <TextField
+          <ListingTextField
             label="Kilometres"
             type="text"
             inputMode="numeric"
@@ -436,6 +596,8 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
             required
             fullWidth
             placeholder="e.g. 85000"
+            error={Boolean(fieldErrors.kilometers)}
+            helperText={fieldErrors.kilometers}
             slotProps={{
               input: {
                 endAdornment: <InputAdornment position="end">km</InputAdornment>,
@@ -444,28 +606,35 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
           />
         </Stack>
 
-        <FormControl component="fieldset" required>
+        <FormControl component="fieldset" required error={Boolean(fieldErrors.transmission)}>
           <FormLabel component="legend" sx={{ mb: 0.5, fontSize: '0.875rem', fontWeight: 600 }}>
             Transmission
           </FormLabel>
           <RadioGroup
             row
             value={form.transmission}
-            onChange={(_, v) => setForm((p) => ({ ...p, transmission: v as CarFormState['transmission'] }))}
+            onChange={(_, v) => setSelectField('transmission', v as CarFormState['transmission'])}
           >
             {TRANSMISSION_OPTIONS.map((o) => (
               <FormControlLabel key={o.value} value={o.value} control={<Radio />} label={o.label} />
             ))}
           </RadioGroup>
+          {fieldErrors.transmission ? (
+            <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+              {fieldErrors.transmission}
+            </Typography>
+          ) : null}
         </FormControl>
 
         <SearchableSelect
           label="Fuel type"
           value={form.fuelType}
-          onChange={(v) => setForm((p) => ({ ...p, fuelType: v }))}
+          onChange={(v) => setSelectField('fuelType', v)}
           options={FUEL_TYPE_OPTIONS}
           emptyLabel="Select fuel type…"
           required
+          error={Boolean(fieldErrors.fuelType)}
+          helperText={fieldErrors.fuelType}
         />
       </Stack>
 
@@ -478,7 +647,7 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
         </Typography>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <TextField
+          <ListingTextField
             label="Price"
             type="text"
             inputMode="decimal"
@@ -486,18 +655,22 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
             onChange={onField('price')}
             required
             fullWidth
+            error={Boolean(fieldErrors.price)}
+            helperText={fieldErrors.price}
           />
           <SearchableSelect
             label="Currency"
             value={form.currency}
-            onChange={(v) => setForm((p) => ({ ...p, currency: v as CarFormState['currency'] }))}
+            onChange={(v) => setSelectField('currency', v as CarFormState['currency'])}
             options={CURRENCY_OPTIONS}
             emptyLabel="Select…"
             required
+            error={Boolean(fieldErrors.currency)}
+            helperText={fieldErrors.currency}
           />
         </Stack>
 
-        <TextField
+        <ListingTextField
           label="Phone number"
           type="tel"
           inputMode="tel"
@@ -506,7 +679,8 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
           onChange={onField('contactPhone')}
           required
           fullWidth
-          helperText="Shown to interested buyers for this listing."
+          error={Boolean(fieldErrors.contactPhone)}
+          helperText={fieldErrors.contactPhone || 'Shown to interested buyers for this listing.'}
         />
       </Stack>
 
@@ -520,6 +694,11 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
         <Typography variant="caption" color="text.secondary">
           Select the base colour. Only one colour can be active at a time.
         </Typography>
+        {fieldErrors.color ? (
+          <Typography variant="caption" color="error">
+            {fieldErrors.color}
+          </Typography>
+        ) : null}
 
         <Box
           sx={{
@@ -635,7 +814,7 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
       <Divider />
 
       {/* ── City ─────────────────────────────────────────────────────────── */}
-      <Stack spacing={1.5}>
+      <Stack spacing={1.5} ref={cityFieldRef}>
         <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
           Location
         </Typography>
@@ -643,11 +822,13 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
         <SearchableSelect
           label="City"
           value={form.cityId}
-          onChange={(v) => setForm((p) => ({ ...p, cityId: v }))}
+          onChange={(v) => setSelectField('cityId', v)}
           options={cities.map((c) => ({ value: c.id, label: c.name }))}
           emptyLabel="Select city…"
           required
           disabled={loadingCities || cities.length === 0}
+          error={Boolean(fieldErrors.cityId)}
+          helperText={fieldErrors.cityId}
         />
 
         {!loadingCities && cities.length === 0 ? (
@@ -666,7 +847,7 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
             Photos
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {images.length} / {MAX_IMAGES}
+            {existingImageUrls.length + images.length} / {MAX_IMAGES}
           </Typography>
         </Stack>
 
@@ -679,67 +860,102 @@ export function CarListingForm({ onSuccess, backHref, backLabel = 'Back' }: CarL
           onChange={handleFileChange}
         />
 
-        {images.length > 0 ? (
-          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.5 }}>
-            {images.map((img, idx) => (
-              <ImagePreview
-                key={`${img.name}-${idx}`}
-                file={img}
-                onRemove={() => {
-                  removeImage(idx);
+        <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.5 }}>
+          {existingImageUrls.map((url, idx) => (
+            <Box
+              key={`url-${url}-${idx}`}
+              sx={{
+                position: 'relative',
+                width: 96,
+                height: 80,
+                borderRadius: 1.5,
+                overflow: 'hidden',
+                border: '1px solid',
+                borderColor: 'divider',
+                flexShrink: 0,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              <IconButton
+                size="small"
+                onClick={() => {
+                  removeExistingUrl(idx);
                 }}
-              />
-            ))}
-          </Stack>
-        ) : null}
+                sx={{
+                  position: 'absolute',
+                  top: 2,
+                  right: 2,
+                  bgcolor: 'rgba(0,0,0,0.55)',
+                  color: '#fff',
+                  p: 0.25,
+                  '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
+                }}
+              >
+                <XIcon size={12} weight="bold" />
+              </IconButton>
+            </Box>
+          ))}
+          {images.map((img, idx) => (
+            <ImagePreview
+              key={`${img.name}-${idx}`}
+              file={img}
+              onRemove={() => {
+                removeImage(idx);
+              }}
+            />
+          ))}
+          {existingImageUrls.length + images.length < MAX_IMAGES ? (
+            <Box
+              component="button"
+              type="button"
+              aria-label="Add photos"
+              onClick={() => {
+                fileInputRef.current?.click();
+              }}
+              sx={{
+                position: 'relative',
+                width: 96,
+                height: 80,
+                borderRadius: 1.5,
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px dashed',
+                borderColor: 'divider',
+                bgcolor: 'transparent',
+                cursor: 'pointer',
+                color: 'text.secondary',
+                p: 0,
+                font: 'inherit',
+                transition: 'border-color 0.15s, color 0.15s, background-color 0.15s',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  color: 'primary.main',
+                  bgcolor: (t) =>
+                    t.palette.mode === 'dark' ? 'rgba(130, 201, 30, 0.08)' : 'rgba(118, 186, 27, 0.06)',
+                },
+              }}
+            >
+              <PlusIcon size={28} weight="bold" />
+            </Box>
+          ) : null}
+        </Stack>
 
-        {images.length < MAX_IMAGES ? (
-          <Box
-            onClick={() => {
-              fileInputRef.current?.click();
-            }}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 1,
-              p: 3,
-              border: '2px dashed',
-              borderColor: 'divider',
-              borderRadius: 2,
-              cursor: 'pointer',
-              color: 'text.secondary',
-              transition: 'border-color 0.15s, color 0.15s',
-              '&:hover': {
-                borderColor: 'primary.main',
-                color: 'primary.main',
-              },
-            }}
-          >
-            <ImageIcon size={32} />
-            <Typography variant="body2" sx={{ textAlign: 'center' }}>
-              Click to add photos
-              <br />
-              <Typography component="span" variant="caption" color="text.disabled">
-                Up to {MAX_IMAGES} images · JPG, PNG, WEBP
-              </Typography>
-            </Typography>
-          </Box>
+        {existingImageUrls.length + images.length < MAX_IMAGES ? (
+          <Typography variant="caption" color="text.disabled">
+            Up to {MAX_IMAGES} images · JPG, PNG, WEBP
+          </Typography>
         ) : null}
       </Stack>
 
-      {/* ── Actions ──────────────────────────────────────────────────────── */}
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ pt: 1, justifyContent: 'flex-end' }}>
-        {backHref ? (
-          <Button component={RouterLink} href={backHref} variant="outlined" color="inherit">
-            {backLabel}
-          </Button>
-        ) : null}
-        <Button type="submit" variant="contained" disabled={submitting}>
-          {submitting ? 'Saving…' : 'Save listing'}
-        </Button>
-      </Stack>
+      <ListingFormActions
+        submitLabel={isEdit ? 'Përditëso njoftimin' : 'Ruaj njoftimin'}
+        submitting={submitting}
+        backHref={backHref}
+        backLabel={backLabel}
+      />
     </Stack>
   );
 }

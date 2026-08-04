@@ -2,62 +2,89 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Alert,
+  Avatar,
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
-  Divider,
-  Grid,
+  CircularProgress,
+  IconButton,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
+import { ArrowSquareOut as ArrowSquareOutIcon } from '@phosphor-icons/react/dist/ssr/ArrowSquareOut';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
-import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
+import { Camera as CameraIcon } from '@phosphor-icons/react/dist/ssr/Camera';
 import { Envelope as EnvelopeIcon } from '@phosphor-icons/react/dist/ssr/Envelope';
-import { FileText as FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
+import { Lock as LockIcon } from '@phosphor-icons/react/dist/ssr/Lock';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
+import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 
 import { JobEmployerVerificationCard } from '@/components/jobs/job-employer-verification-card';
+import { ProfessionalVerificationCard } from '@/components/professionals/professional-verification-card';
+import { PortalSectionCard, PortalSurface } from '@/components/user/portal-cards';
 import { useUser } from '@/hooks/use-user';
 import { authClient } from '@/lib/auth/client';
-import { getUserPortalAccountCategoryLabel } from '@/lib/user-portal-account-label';
-import { paths } from '@/paths';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { memberInitials } from '@/lib/public-member-client';
+import { pathsPublicMemberProfile } from '@/paths';
 
-function ProfileRow({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start', py: 1.5 }}>
-      <Box sx={{ color: 'text.secondary', display: 'flex', pt: 0.25 }}>{icon}</Box>
-      <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block' }}>
-          {label}
-        </Typography>
-        <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
-          {value || '—'}
-        </Typography>
-      </Box>
-    </Stack>
-  );
+const AVATAR_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif';
+const AVATAR_MAX_BYTES = 8 * 1024 * 1024;
+
+function publicDisplayName(user: {
+  accountType?: string;
+  role?: string;
+  businessName?: string;
+  businessOwner?: string;
+  firstName?: string;
+  lastName?: string;
+}): string {
+  const isBusiness = user.accountType === 'business' || user.role === 'business-user';
+  if (isBusiness) {
+    return (
+      String(user.businessName || '').trim() ||
+      String(user.businessOwner || '').trim() ||
+      [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
+      'Biznes'
+    );
+  }
+  return [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || 'Individ';
 }
 
 export default function UserProfilePage() {
   const { user, checkSession } = useUser();
+  const searchParams = useSearchParams();
+  const upgradeBusiness = searchParams.get('upgrade') === 'business';
+  const businessUpgradeRef = React.useRef<HTMLDivElement | null>(null);
 
+  const isBusiness = Boolean(user && (user.accountType === 'business' || user.role === 'business-user'));
+  const canEdit =
+    Boolean(user) &&
+    (user?.accountType === 'individual' ||
+      user?.accountType === 'business' ||
+      user?.role === 'business-user');
+
+  const [firstName, setFirstName] = React.useState('');
+  const [lastName, setLastName] = React.useState('');
+  const [businessName, setBusinessName] = React.useState('');
+  const [businessOwner, setBusinessOwner] = React.useState('');
+  const [businessCategory, setBusinessCategory] = React.useState('');
+  const [niptInput, setNiptInput] = React.useState('');
   const [phoneInput, setPhoneInput] = React.useState('');
-  const [phoneSaving, setPhoneSaving] = React.useState(false);
-  const [phoneMsg, setPhoneMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [profileSaving, setProfileSaving] = React.useState(false);
+  const [profileMsg, setProfileMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [convertSaving, setConvertSaving] = React.useState(false);
+  const [convertMsg, setConvertMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const [avatarBusy, setAvatarBusy] = React.useState(false);
+  const [avatarMsg, setAvatarMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
@@ -66,29 +93,147 @@ export default function UserProfilePage() {
   const [savingPassword, setSavingPassword] = React.useState(false);
 
   React.useEffect(() => {
-    setPhoneInput(typeof user?.phone === 'string' ? user.phone : '');
-  }, [user?.id, user?.phone]);
-
-  const onSavePhone = async (e: React.FormEvent) => {
-    e.preventDefault();
     if (!user) return;
-    const canEditPhone =
-      user.accountType === 'individual' ||
-      user.accountType === 'business' ||
-      user.role === 'business-user';
-    if (!canEditPhone) return;
-    setPhoneMsg(null);
-    setPhoneSaving(true);
+    setFirstName(typeof user.firstName === 'string' ? user.firstName : '');
+    setLastName(typeof user.lastName === 'string' ? user.lastName : '');
+    setBusinessName(typeof user.businessName === 'string' ? user.businessName : '');
+    setBusinessOwner(
+      typeof user.businessOwner === 'string' && user.businessOwner.trim()
+        ? user.businessOwner
+        : [user.firstName, user.lastName].filter(Boolean).join(' ').trim(),
+    );
+    setBusinessCategory(typeof user.businessCategory === 'string' ? user.businessCategory : '');
+    setNiptInput(typeof user.nipt === 'string' ? user.nipt : '');
+    setPhoneInput(typeof user.phone === 'string' ? user.phone : '');
+  }, [
+    user?.id,
+    user?.firstName,
+    user?.lastName,
+    user?.businessName,
+    user?.businessOwner,
+    user?.businessCategory,
+    user?.nipt,
+    user?.phone,
+  ]);
+
+  React.useEffect(() => {
+    if (!upgradeBusiness || isBusiness) return;
+    const timer = window.setTimeout(() => {
+      businessUpgradeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [upgradeBusiness, isBusiness]);
+
+  const onSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !canEdit) return;
+    setProfileMsg(null);
+    setProfileSaving(true);
     try {
-      const { error } = await authClient.updatePortalProfile({ phone: phoneInput.trim() });
+      const body = isBusiness
+        ? {
+            businessName: businessName.trim(),
+            businessOwner: businessOwner.trim(),
+            businessCategory: businessCategory.trim(),
+            phone: phoneInput.trim(),
+          }
+        : {
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            phone: phoneInput.trim(),
+          };
+      const { error } = await authClient.updatePortalProfile(body);
       if (error) {
-        setPhoneMsg({ type: 'error', text: error });
+        setProfileMsg({ type: 'error', text: error });
         return;
       }
-      setPhoneMsg({ type: 'success', text: 'Numri i telefonit u ruajt.' });
+      setProfileMsg({ type: 'success', text: 'Profili u ruajt.' });
       await checkSession();
     } finally {
-      setPhoneSaving(false);
+      setProfileSaving(false);
+    }
+  };
+
+  const onConvertToBusiness = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || isBusiness || !canEdit) return;
+    setConvertMsg(null);
+    setConvertSaving(true);
+    try {
+      const { error } = await authClient.convertToBusinessAccount({
+        nipt: niptInput.trim(),
+        businessName: businessName.trim(),
+        businessOwner: businessOwner.trim(),
+        businessCategory: businessCategory.trim(),
+        phone: phoneInput.trim(),
+      });
+      if (error) {
+        setConvertMsg({ type: 'error', text: error });
+        return;
+      }
+      setConvertMsg({ type: 'success', text: 'Llogaria u kthye në llogari biznesi.' });
+      await checkSession();
+    } finally {
+      setConvertSaving(false);
+    }
+  };
+
+  const onPickAvatar = () => {
+    if (avatarBusy || !canEdit) return;
+    fileInputRef.current?.click();
+  };
+
+  const onAvatarSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !canEdit) return;
+
+    setAvatarMsg(null);
+    if (!AVATAR_ACCEPT.split(',').includes(file.type)) {
+      setAvatarMsg({ type: 'error', text: 'Lejohen vetëm foto JPEG, PNG, WEBP ose GIF.' });
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      setAvatarMsg({ type: 'error', text: 'Foto duhet të jetë nën 8 MB.' });
+      return;
+    }
+
+    const localPreview = URL.createObjectURL(file);
+    setAvatarPreview(localPreview);
+    setAvatarBusy(true);
+    try {
+      const { error, avatar } = await authClient.uploadPortalAvatar(file);
+      if (error || !avatar) {
+        setAvatarPreview(null);
+        setAvatarMsg({ type: 'error', text: error || 'Nuk u arrit ngarkimi i fotos.' });
+        return;
+      }
+      setAvatarPreview(avatar);
+      setAvatarMsg({ type: 'success', text: 'Foto e profilit u përditësua.' });
+      await checkSession();
+    } finally {
+      setAvatarBusy(false);
+      URL.revokeObjectURL(localPreview);
+    }
+  };
+
+  const onRemoveAvatar = async () => {
+    if (avatarBusy || !canEdit) return;
+    const hasAvatar = Boolean(avatarPreview || (typeof user?.avatar === 'string' && user.avatar.trim()));
+    if (!hasAvatar) return;
+    setAvatarMsg(null);
+    setAvatarBusy(true);
+    try {
+      const { error } = await authClient.removePortalAvatar();
+      if (error) {
+        setAvatarMsg({ type: 'error', text: error });
+        return;
+      }
+      setAvatarPreview(null);
+      setAvatarMsg({ type: 'success', text: 'Foto e profilit u hoq.' });
+      await checkSession();
+    } finally {
+      setAvatarBusy(false);
     }
   };
 
@@ -122,270 +267,395 @@ export default function UserProfilePage() {
     }
   };
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
-  const categoryLabel = getUserPortalAccountCategoryLabel(user);
-  const isBusiness = user.accountType === 'business' || user.role === 'business-user';
-  const canEditPhone =
-    user.accountType === 'individual' || user.accountType === 'business' || user.role === 'business-user';
+  const displayName = publicDisplayName(user);
+  const initials = memberInitials(displayName);
+  const publicHref = user.id ? pathsPublicMemberProfile(user.id) : null;
+  const avatarSrc =
+    avatarPreview ||
+    (typeof user.avatar === 'string' && user.avatar.trim() ? user.avatar.trim() : undefined);
+  const businessCategoryLabel = isBusiness ? String(user.businessCategory || '').trim() : '';
 
   return (
-    <Stack spacing={3}>
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 5 }}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: 0.5 }}>
-                Kategoria e llogarisë
-              </Typography>
-              <Box sx={{ mt: 2, mb: 1 }}>
-                <Chip
-                  icon={
-                    isBusiness
-                      ? React.createElement(BuildingsIcon, { size: 18, weight: 'duotone' })
-                      : React.createElement(UserIcon, { size: 18, weight: 'duotone' })
-                  }
-                  label={categoryLabel}
-                  color="primary"
-                  variant="outlined"
-                  sx={{
-                    fontWeight: 700,
-                    fontSize: '0.95rem',
-                    py: 2.5,
-                    px: 0.5,
-                    borderWidth: 2,
-                  }}
+    <Stack spacing={2} sx={{ maxWidth: 640, mx: 'auto', width: '100%' }}>
+      {/* Identity preview — same public profile visitors see */}
+      <PortalSurface>
+        <Stack
+          spacing={1.75}
+          sx={{
+            alignItems: 'center',
+            textAlign: 'center',
+            px: { xs: 2.25, sm: 3 },
+            py: { xs: 2.5, sm: 3 },
+          }}
+        >
+          <Box sx={{ position: 'relative', width: 'fit-content' }}>
+            <Avatar
+              src={avatarSrc}
+              alt={displayName}
+              sx={{
+                width: 84,
+                height: 84,
+                bgcolor: (t) => primaryMainAlpha(t.palette.mode === 'dark' ? 0.18 : 0.14),
+                color: 'primary.main',
+                fontWeight: 800,
+                fontSize: '1.65rem',
+                border: '2px solid',
+                borderColor: 'divider',
+              }}
+            >
+              {initials}
+            </Avatar>
+            {canEdit ? (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={AVATAR_ACCEPT}
+                  hidden
+                  onChange={(ev) => void onAvatarSelected(ev)}
                 />
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                {isBusiness
-                  ? 'Kjo llogari është krijuar si biznes — shfaqen të dhënat e aktivitetit tregtar.'
-                  : 'Kjo llogari është krijuar si individ — shfaqen emri juaj dhe kontakti.'}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+                <IconButton
+                  aria-label={avatarSrc ? 'Ndrysho foton' : 'Shto foto'}
+                  onClick={onPickAvatar}
+                  disabled={avatarBusy}
+                  size="small"
+                  sx={{
+                    position: 'absolute',
+                    right: -4,
+                    bottom: -4,
+                    width: 30,
+                    height: 30,
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    border: '2px solid',
+                    borderColor: 'background.paper',
+                    '&:hover': { bgcolor: 'primary.dark' },
+                    '&.Mui-disabled': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      opacity: 0.7,
+                    },
+                  }}
+                >
+                  {avatarBusy ? (
+                    <CircularProgress size={13} color="inherit" />
+                  ) : (
+                    <CameraIcon size={15} weight="bold" />
+                  )}
+                </IconButton>
+              </>
+            ) : null}
+          </Box>
 
-        <Grid size={{ xs: 12, md: 7 }}>
-          <Card>
-            <CardContent sx={{ p: 0 }}>
-              <Box sx={{ px: 3, pt: 3, pb: 1 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  Të dhënat
-                </Typography>
-              </Box>
-              <Divider />
-              <Box sx={{ px: 3, pb: 2 }}>
-                {isBusiness ? (
-                  <>
-                    <ProfileRow
-                      icon={React.createElement(FileTextIcon, { size: 22 })}
-                      label="NIPT"
-                      value={String(user.nipt ?? '')}
-                    />
-                    <Divider />
-                    <ProfileRow
-                      icon={React.createElement(BuildingsIcon, { size: 22 })}
-                      label="Emri i biznesit"
-                      value={String(user.businessName ?? '')}
-                    />
-                    <Divider />
-                    <ProfileRow
-                      icon={React.createElement(UserIcon, { size: 22 })}
-                      label="Pronari i biznesit"
-                      value={String(user.businessOwner ?? '')}
-                    />
-                    <Divider />
-                    <ProfileRow
-                      icon={React.createElement(BuildingsIcon, { size: 22 })}
-                      label="Kategoria e biznesit"
-                      value={String(user.businessCategory ?? '')}
-                    />
-                    <Divider />
-                    <ProfileRow
-                      icon={React.createElement(EnvelopeIcon, { size: 22 })}
-                      label="Email"
-                      value={user.email}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <ProfileRow
-                      icon={React.createElement(UserIcon, { size: 22 })}
-                      label="Emri"
-                      value={String(user.firstName ?? '')}
-                    />
-                    <Divider />
-                    <ProfileRow
-                      icon={React.createElement(UserIcon, { size: 22 })}
-                      label="Mbiemri"
-                      value={String(user.lastName ?? '')}
-                    />
-                    <Divider />
-                    <ProfileRow
-                      icon={React.createElement(EnvelopeIcon, { size: 22 })}
-                      label="Email"
-                      value={user.email}
-                    />
-                  </>
-                )}
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+          <Stack spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, width: '100%' }}>
+            <Typography
+              component="h1"
+              sx={{
+                fontWeight: 800,
+                fontSize: { xs: '1.35rem', sm: '1.5rem' },
+                lineHeight: 1.2,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {displayName}
+            </Typography>
 
-        {canEditPhone ? (
-          <Grid size={{ xs: 12 }}>
-            <JobEmployerVerificationCard />
-          </Grid>
-        ) : null}
+            <Stack
+              direction="row"
+              spacing={0.75}
+              sx={{ alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 0.5 }}
+            >
+              <Chip
+                size="small"
+                icon={
+                  isBusiness ? (
+                    <BuildingsIcon size={13} weight="fill" />
+                  ) : (
+                    <UserIcon size={13} weight="fill" />
+                  )
+                }
+                label={isBusiness ? 'Biznes' : 'Individ'}
+                sx={{
+                  height: 26,
+                  fontWeight: 700,
+                  fontSize: '0.75rem',
+                  bgcolor: (t) => primaryMainAlpha(t.palette.mode === 'dark' ? 0.14 : 0.1),
+                  color: 'primary.main',
+                  border: 'none',
+                  '& .MuiChip-icon': { color: 'inherit', ml: 0.65 },
+                }}
+              />
+              {businessCategoryLabel ? (
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                  {businessCategoryLabel}
+                </Typography>
+              ) : null}
+            </Stack>
+          </Stack>
 
-        {canEditPhone ? (
-          <Grid size={{ xs: 12 }}>
-            <Card component="form" onSubmit={onSavePhone}>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                  Numri i telefonit
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Ruhet në llogarinë tuaj dhe plotësohet automatikisht te forma e njoftimit; mund ta ndryshoni atje për çdo
-                  njoftim veç e veç.
-                </Typography>
-                {phoneMsg ? (
-                  <Alert severity={phoneMsg.type} sx={{ mb: 2 }}>
-                    {phoneMsg.text}
+          {avatarMsg ? (
+            <Alert severity={avatarMsg.type} sx={{ width: '100%', textAlign: 'left' }}>
+              {avatarMsg.text}
+            </Alert>
+          ) : null}
+
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{ alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 0.5 }}
+          >
+            {publicHref ? (
+              <Button
+                component={RouterLink}
+                href={publicHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="outlined"
+                size="small"
+                endIcon={<ArrowSquareOutIcon size={15} weight="bold" />}
+                sx={{ fontWeight: 700, borderRadius: 2, textTransform: 'none', px: 1.5 }}
+              >
+                Shiko profilin publik
+              </Button>
+            ) : null}
+            {canEdit && avatarSrc ? (
+              <Button
+                variant="text"
+                size="small"
+                color="inherit"
+                disabled={avatarBusy}
+                startIcon={<TrashIcon size={14} />}
+                onClick={() => void onRemoveAvatar()}
+                sx={{ fontWeight: 650, textTransform: 'none', color: 'text.secondary' }}
+              >
+                Hiq foton
+              </Button>
+            ) : null}
+          </Stack>
+        </Stack>
+      </PortalSurface>
+
+      {/* Editable public fields — business & individual share this page */}
+      {canEdit ? (
+        <PortalSectionCard
+          title="Të dhënat e profilit"
+          description={
+            isBusiness
+              ? 'Emri, kategoria dhe kontakti që shfaqen në profilin publik të biznesit.'
+              : 'Emri dhe kontakti që shfaqen në profilin tuaj publik.'
+          }
+          icon={<UserIcon size={22} weight="duotone" />}
+        >
+          <Box component="form" onSubmit={(e) => void onSaveProfile(e)}>
+            <Stack spacing={2}>
+              {profileMsg ? <Alert severity={profileMsg.type}>{profileMsg.text}</Alert> : null}
+
+              {isBusiness ? (
+                <>
+                  <TextField
+                    label="Emri i biznesit"
+                    value={businessName}
+                    onChange={(ev) => setBusinessName(ev.target.value)}
+                    required
+                    fullWidth
+                  />
+                  <TextField
+                    label="Pronari"
+                    value={businessOwner}
+                    onChange={(ev) => setBusinessOwner(ev.target.value)}
+                    fullWidth
+                  />
+                  <TextField
+                    label="Kategoria"
+                    value={businessCategory}
+                    onChange={(ev) => setBusinessCategory(ev.target.value)}
+                    fullWidth
+                    placeholder="p.sh. Restorant, Shërbime…"
+                  />
+                  {String(user.nipt ?? '').trim() ? (
+                    <TextField label="NIPT" value={String(user.nipt)} fullWidth disabled />
+                  ) : null}
+                </>
+              ) : (
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <TextField
+                    label="Emri"
+                    value={firstName}
+                    onChange={(ev) => setFirstName(ev.target.value)}
+                    required
+                    fullWidth
+                  />
+                  <TextField
+                    label="Mbiemri"
+                    value={lastName}
+                    onChange={(ev) => setLastName(ev.target.value)}
+                    required
+                    fullWidth
+                  />
+                </Stack>
+              )}
+
+              <TextField
+                label="Email"
+                value={user.email}
+                fullWidth
+                disabled
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <Box sx={{ mr: 1, display: 'flex', color: 'text.secondary' }}>
+                        <EnvelopeIcon size={18} />
+                      </Box>
+                    ),
+                  },
+                }}
+              />
+
+              <TextField
+                label="Telefoni"
+                type="tel"
+                value={phoneInput}
+                onChange={(ev) => setPhoneInput(ev.target.value)}
+                fullWidth
+                autoComplete="tel"
+                slotProps={{ htmlInput: { maxLength: 40 } }}
+              />
+
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={profileSaving}
+                sx={{ alignSelf: 'flex-start', fontWeight: 800, borderRadius: 2.5, px: 2.5 }}
+              >
+                {profileSaving ? 'Duke ruajtur…' : 'Ruaj profilin'}
+              </Button>
+            </Stack>
+          </Box>
+        </PortalSectionCard>
+      ) : null}
+
+      {/* Upgrade path for individuals who want a business account */}
+      {canEdit && !isBusiness ? (
+        <Box ref={businessUpgradeRef} id="upgrade-business">
+          <PortalSectionCard
+            title="Kthehu në llogari biznesi"
+            description="Për të postuar në kategorinë Biznese dhe për të menaxhuar profilin e lokalit."
+            icon={<BuildingsIcon size={22} weight="duotone" />}
+          >
+            <Box component="form" onSubmit={(e) => void onConvertToBusiness(e)}>
+              <Stack spacing={2}>
+                {upgradeBusiness ? (
+                  <Alert severity="info" sx={{ borderRadius: 2 }}>
+                    Plotësoni fushat më poshtë për të krijuar llogarinë e biznesit.
                   </Alert>
                 ) : null}
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'flex-end' } }}>
-                  <TextField
-                    label="Telefoni"
-                    type="tel"
-                    value={phoneInput}
-                    onChange={(ev) => setPhoneInput(ev.target.value)}
-                    fullWidth
-                    slotProps={{ htmlInput: { maxLength: 40 } }}
-                    autoComplete="tel"
-                  />
-                  <Button type="submit" variant="contained" disabled={phoneSaving} sx={{ flexShrink: 0 }}>
-                    {phoneSaving ? 'Duke ruajtur…' : 'Ruaj'}
-                  </Button>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-        ) : null}
-
-        <Grid size={{ xs: 12 }}>
-          <Card component="form" onSubmit={onChangePassword}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-                Fjalëkalimi
-              </Typography>
-              {passwordMsg ? (
-                <Alert severity={passwordMsg.type} sx={{ mb: 2 }}>
-                  {passwordMsg.text}
-                </Alert>
-              ) : null}
-              <Stack spacing={2} sx={{ maxWidth: { sm: 480 } }}>
+                {convertMsg ? <Alert severity={convertMsg.type}>{convertMsg.text}</Alert> : null}
                 <TextField
-                  label="Fjalëkalimi aktual"
-                  type="password"
-                  value={currentPassword}
-                  onChange={(ev) => setCurrentPassword(ev.target.value)}
-                  fullWidth
+                  label="NIPT"
+                  value={niptInput}
+                  onChange={(ev) => setNiptInput(ev.target.value)}
                   required
-                  autoComplete="current-password"
+                  fullWidth
                 />
                 <TextField
-                  label="Fjalëkalimi i ri"
-                  type="password"
-                  value={newPassword}
-                  onChange={(ev) => setNewPassword(ev.target.value)}
-                  fullWidth
+                  label="Emri i biznesit"
+                  value={businessName}
+                  onChange={(ev) => setBusinessName(ev.target.value)}
                   required
-                  autoComplete="new-password"
+                  fullWidth
                 />
                 <TextField
-                  label="Përsërit fjalëkalimin e ri"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(ev) => setConfirmPassword(ev.target.value)}
-                  fullWidth
+                  label="Pronari"
+                  value={businessOwner}
+                  onChange={(ev) => setBusinessOwner(ev.target.value)}
                   required
-                  autoComplete="new-password"
+                  fullWidth
                 />
-                <Button type="submit" variant="contained" color="secondary" disabled={savingPassword} sx={{ alignSelf: 'flex-start' }}>
-                  {savingPassword ? 'Duke u përditësuar…' : 'Ndrysho fjalëkalimin'}
+                <TextField
+                  label="Kategoria"
+                  value={businessCategory}
+                  onChange={(ev) => setBusinessCategory(ev.target.value)}
+                  required
+                  fullWidth
+                  placeholder="p.sh. Restorant, Shërbime…"
+                />
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={convertSaving}
+                  sx={{ alignSelf: 'flex-start', fontWeight: 800, borderRadius: 2.5, px: 2.5 }}
+                >
+                  {convertSaving ? 'Duke konvertuar…' : 'Kompleto profilin e biznesit'}
                 </Button>
               </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
+            </Box>
+          </PortalSectionCard>
+        </Box>
+      ) : null}
 
-        <Grid size={{ xs: 12 }}>
-          <Card>
-            <CardContent sx={{ p: 0 }}>
-              <Box
-                component={RouterLink}
-                href={paths.public.terms}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1.5,
-                  px: 3,
-                  py: 2,
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  '&:hover': { bgcolor: 'action.hover' },
-                }}
-              >
-                <Box sx={{ color: 'primary.main', display: 'flex' }}>
-                  <FileTextIcon size={22} weight="duotone" />
-                </Box>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography sx={{ fontWeight: 700 }}>Kushtet e përdorimit</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Rregullat e platformës
-                  </Typography>
-                </Box>
-                <Box sx={{ color: 'text.secondary', display: 'flex' }}>
-                  <CaretRightIcon size={18} weight="bold" />
-                </Box>
-              </Box>
-              <Divider />
-              <Box
-                component={RouterLink}
-                href={paths.public.privacy}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1.5,
-                  px: 3,
-                  py: 2,
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  '&:hover': { bgcolor: 'action.hover' },
-                }}
-              >
-                <Box sx={{ color: 'primary.main', display: 'flex' }}>
-                  <ShieldCheckIcon size={22} weight="duotone" />
-                </Box>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography sx={{ fontWeight: 700 }}>Politika e privatësisë</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Si trajtohen të dhënat tuaja
-                  </Typography>
-                </Box>
-                <Box sx={{ color: 'text.secondary', display: 'flex' }}>
-                  <CaretRightIcon size={18} weight="bold" />
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      {/* Profession & Jobs are separate listing categories — verification lives here */}
+      {canEdit ? (
+        <PortalSectionCard
+          title="Verifikime"
+          description="Për kategoritë Profesionistë dhe Punë. Opsionale — nuk ndryshojnë llojin e llogarisë (Biznes / Individ)."
+          icon={<ShieldCheckIcon size={22} weight="duotone" />}
+        >
+          <Stack spacing={1.5}>
+            <ProfessionalVerificationCard embedded />
+            <JobEmployerVerificationCard embedded />
+          </Stack>
+        </PortalSectionCard>
+      ) : null}
+
+      <PortalSectionCard
+        title="Fjalëkalimi"
+        description="Ndryshoni fjalëkalimin e llogarisë."
+        icon={<LockIcon size={22} weight="duotone" />}
+      >
+        <Box component="form" onSubmit={(e) => void onChangePassword(e)}>
+          <Stack spacing={2} sx={{ maxWidth: 440 }}>
+            {passwordMsg ? <Alert severity={passwordMsg.type}>{passwordMsg.text}</Alert> : null}
+            <TextField
+              label="Fjalëkalimi aktual"
+              type="password"
+              value={currentPassword}
+              onChange={(ev) => setCurrentPassword(ev.target.value)}
+              fullWidth
+              required
+              autoComplete="current-password"
+            />
+            <TextField
+              label="Fjalëkalimi i ri"
+              type="password"
+              value={newPassword}
+              onChange={(ev) => setNewPassword(ev.target.value)}
+              fullWidth
+              required
+              autoComplete="new-password"
+            />
+            <TextField
+              label="Përsërit fjalëkalimin e ri"
+              type="password"
+              value={confirmPassword}
+              onChange={(ev) => setConfirmPassword(ev.target.value)}
+              fullWidth
+              required
+              autoComplete="new-password"
+            />
+            <Button
+              type="submit"
+              variant="contained"
+              color="secondary"
+              disabled={savingPassword}
+              sx={{ alignSelf: 'flex-start', fontWeight: 800, borderRadius: 2.5 }}
+            >
+              {savingPassword ? 'Duke u përditësuar…' : 'Ndrysho fjalëkalimin'}
+            </Button>
+          </Stack>
+        </Box>
+      </PortalSectionCard>
     </Stack>
   );
 }

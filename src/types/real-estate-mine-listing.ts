@@ -12,6 +12,8 @@ export interface RealEstateMineListing extends ListingMetrics {
   surfaceM2: number;
   cityName: string | null;
   zoneName: string | null;
+  cityId?: string | null;
+  zoneId?: string | null;
   contactPhone: string | null;
   condition: string | null;
   apartmentTypeSlug: string | null;
@@ -26,4 +28,6 @@ export interface RealEstateMineListing extends ListingMetrics {
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
   updatedAt: string;
+  isPremium?: boolean;
+  premiumUntil?: string | null;
 }

@@ -19,8 +19,11 @@ import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Sto
 import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle';
 
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
+import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
+import { OwnerEditPencil } from '@/components/user/owner-edit-pencil';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { shareListing, type ListingMetricKind } from '@/lib/listing-metrics';
+import type { ListingSharePayload } from '@/lib/listing-share';
+import { type ListingMetricKind } from '@/lib/listing-metrics';
 import type { ListingGalleryPlaceholderKey } from '@/lib/listing-gallery-placeholder';
 import { paths } from '@/paths';
 
@@ -75,6 +78,12 @@ export function RealEstateListingGallery(props: {
   listingId?: string;
   shareCount?: number;
   saveCount?: number;
+  /** Rich data for the Instagram story share template. */
+  sharePayload?: Omit<ListingSharePayload, 'listingKind' | 'listingId' | 'title'> & {
+    title?: string;
+  };
+  /** Owner-edit mode: pencil on the gallery to change photos. */
+  onEditPhotos?: () => void;
 }) {
   const {
     title,
@@ -90,10 +99,13 @@ export function RealEstateListingGallery(props: {
     listingId,
     shareCount: initialShareCount = 0,
     saveCount: initialSaveCount = 0,
+    sharePayload,
+    onEditPhotos,
   } = props;
   const urls = urlsRaw.filter(Boolean);
   const [shareCount, setShareCount] = React.useState(initialShareCount);
   const [saveCount, setSaveCount] = React.useState(initialSaveCount);
+  const [shareOpen, setShareOpen] = React.useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
 
   React.useEffect(() => {
@@ -255,15 +267,33 @@ export function RealEstateListingGallery(props: {
   };
 
   const handleShare = React.useCallback(
-    async (event: React.MouseEvent<HTMLButtonElement>) => {
+    (event: React.MouseEvent<HTMLButtonElement>) => {
       event.preventDefault();
       event.stopPropagation();
       if (!listingKind || !listingId) return;
-      const metrics = await shareListing({ title, listingKind, listingId });
-      if (metrics) setShareCount(metrics.shareCount);
+      setShareOpen(true);
     },
-    [title, listingKind, listingId],
+    [listingKind, listingId],
   );
+
+  const resolvedSharePayload = React.useMemo<ListingSharePayload | null>(() => {
+    if (!listingKind || !listingId) return null;
+    return {
+      listingKind,
+      listingId,
+      title: sharePayload?.title ?? title,
+      category: sharePayload?.category,
+      priceLabel: sharePayload?.priceLabel,
+      badge: sharePayload?.badge,
+      imageUrl: sharePayload?.imageUrl ?? urls[0] ?? null,
+      location: sharePayload?.location,
+      specs: sharePayload?.specs,
+      createdAt: sharePayload?.createdAt,
+      viewCount: sharePayload?.viewCount,
+      saveCount: sharePayload?.saveCount ?? saveCount,
+      url: sharePayload?.url,
+    };
+  }, [listingId, listingKind, saveCount, sharePayload, title, urls]);
 
   return (
     <Box sx={{ position: 'relative', width: '100%', bgcolor: 'background.default' }}>
@@ -414,36 +444,44 @@ export function RealEstateListingGallery(props: {
               <ArrowLeftIcon size={22} weight="regular" />
             </IconButton>
             <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-              <Box data-gallery-control component="span" sx={{ display: 'inline-flex' }}>
-                <ListingMediaActionButton
-                  aria-label="Ndaj njoftimin"
-                  count={shareCount}
-                  surface={mediaActionSurface}
-                  icon={<ShareNetworkIcon size={17} weight="regular" />}
-                  onClick={handleShare}
-                />
-              </Box>
-              <Box data-gallery-control component="span" sx={{ display: 'inline-flex' }}>
-              <ListingMediaActionButton
-                aria-label={
-                  bookmark
-                    ? bookmark.saved
-                      ? (bookmark.ariaLabelSaved ?? 'Hiq nga të ruajturat')
-                      : (bookmark.ariaLabelSave ?? 'Ruaj njoftimin')
-                    : 'Ruaj njoftimin'
-                }
-                count={saveCount}
-                surface={mediaActionSurface}
-                active={bookmark?.saved}
-                disabled={!bookmark}
-                icon={<BookmarkSimpleIcon size={17} weight={bookmark?.saved ? 'fill' : 'regular'} />}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  bookmark?.onToggle();
-                }}
-              />
-              </Box>
+              {onEditPhotos ? (
+                <Box data-gallery-control component="span" sx={{ display: 'inline-flex' }}>
+                  <OwnerEditPencil label="Ndrysho fotot" onClick={onEditPhotos} size="md" />
+                </Box>
+              ) : (
+                <>
+                  <Box data-gallery-control component="span" sx={{ display: 'inline-flex' }}>
+                    <ListingMediaActionButton
+                      aria-label="Ndaj njoftimin"
+                      count={shareCount}
+                      surface={mediaActionSurface}
+                      icon={<ShareNetworkIcon size={17} weight="regular" />}
+                      onClick={handleShare}
+                    />
+                  </Box>
+                  <Box data-gallery-control component="span" sx={{ display: 'inline-flex' }}>
+                    <ListingMediaActionButton
+                      aria-label={
+                        bookmark
+                          ? bookmark.saved
+                            ? (bookmark.ariaLabelSaved ?? 'Hiq nga të ruajturat')
+                            : (bookmark.ariaLabelSave ?? 'Ruaj njoftimin')
+                          : 'Ruaj njoftimin'
+                      }
+                      count={saveCount}
+                      surface={mediaActionSurface}
+                      active={bookmark?.saved}
+                      disabled={!bookmark}
+                      icon={<BookmarkSimpleIcon size={17} weight={bookmark?.saved ? 'fill' : 'regular'} />}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        bookmark?.onToggle();
+                      }}
+                    />
+                  </Box>
+                </>
+              )}
             </Stack>
           </Stack>
 
@@ -548,6 +586,15 @@ export function RealEstateListingGallery(props: {
             </ButtonBase>
           ))}
         </Stack>
+      ) : null}
+
+      {resolvedSharePayload ? (
+        <ListingSharePage
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          payload={resolvedSharePayload}
+          onShared={(metrics) => setShareCount(metrics.shareCount)}
+        />
       ) : null}
     </Box>
   );

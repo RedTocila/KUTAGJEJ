@@ -1,17 +1,21 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
 import {
   Box,
-  Chip,
+  Button,
   Grid,
+  IconButton,
   LinearProgress,
   Stack,
+  Tooltip,
   Typography,
 } from '@mui/material';
+import { ArrowsLeftRight as ArrowsLeftRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowsLeftRight';
+import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
+import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
+import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { ChartLineUp as ChartLineUpIcon } from '@phosphor-icons/react/dist/ssr/ChartLineUp';
-import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { Coins as CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins';
 import { FileText as FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
 import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
@@ -20,12 +24,16 @@ import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Receipt as ReceiptIcon } from '@phosphor-icons/react/dist/ssr/Receipt';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
+import { SignOut as SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
+import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGear';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { paths } from '@/paths';
+import { useLanguage } from '@/hooks/use-language';
 import { useUser } from '@/hooks/use-user';
+import { authClient } from '@/lib/auth/client';
 import {
   listMyCarListings,
   listMyJobListings,
@@ -33,12 +41,20 @@ import {
   listMyRealEstateListings,
 } from '@/lib/listings-client';
 import { listPublicContracts } from '@/lib/public-contracts-client';
-import { listMySubscriptions } from '@/lib/payments-client';
+import { listMySubscriptions, fetchPremiumPlanQuota } from '@/lib/payments-client';
 import { getUserPortalAccountCategoryLabel } from '@/lib/user-portal-account-label';
+import { getUserDashboardCopy } from '@/lib/user-dashboard-copy';
 import type { ContractQuotas, PublicContract } from '@/types/contract';
 import { FREE_PLAN_QUOTAS } from '@/types/contract';
 import type { UserSubscriptionSummary } from '@/types/payment';
 import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
+import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
+import { DailyStreakCard } from '@/components/user/daily-streak-card';
+import { HeaderLanguageToggle } from '@/components/user/header-language-toggle';
+import { LanguageSwitchRow } from '@/components/user/language-switch-row';
+import { PortalLinkCard, PortalLinkGroup, portalCardSx } from '@/components/user/portal-cards';
+import { planAccentForCode } from '@/components/user/packages/package-ui';
+import { hardNavigate } from '@/lib/hard-navigate';
 
 function quotasFromSub(sub: UserSubscriptionSummary | null): ContractQuotas {
   if (!sub) return FREE_PLAN_QUOTAS;
@@ -61,36 +77,45 @@ const GRADIENTS = {
 
 function ActionTile({
   href,
+  onClick,
   label,
   icon: Icon,
   gradient,
 }: {
-  href: string;
+  href?: string;
+  onClick?: () => void;
   label: string;
   icon: PhosphorIcon;
   gradient: string;
 }) {
-  return (
-    <Box
-      component={RouterLink}
-      href={href}
-      sx={{
-        textDecoration: 'none',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 1.5,
-        minHeight: { xs: 150, sm: 168 },
-        p: 2.5,
-        borderRadius: 3,
-        background: gradient,
-        color: '#fff',
-        boxShadow: '0 8px 22px rgba(0,0,0,0.18)',
-        transition: 'transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease',
-        '&:hover': { transform: 'translateY(-3px)', boxShadow: '0 14px 30px rgba(0,0,0,0.26)', filter: 'brightness(1.04)' },
-      }}
-    >
+  const sx = {
+    textDecoration: 'none',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1.5,
+    minHeight: { xs: 148, sm: 160 },
+    height: '100%',
+    p: 2.25,
+    borderRadius: 3.5,
+    background: gradient,
+    color: '#fff',
+    border: '1px solid rgba(255,255,255,0.12)',
+    cursor: 'pointer',
+    width: '100%',
+    font: 'inherit',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.2)',
+    transition: 'transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease',
+    '&:hover': {
+      transform: 'translateY(-3px)',
+      boxShadow: '0 14px 30px rgba(0,0,0,0.28)',
+      filter: 'brightness(1.05)',
+    },
+  } as const;
+
+  const content = (
+    <>
       <Box
         sx={{
           width: 56,
@@ -99,86 +124,34 @@ function ActionTile({
           display: 'grid',
           placeItems: 'center',
           bgcolor: 'rgba(255,255,255,0.22)',
-          backdropFilter: 'blur(4px)',
+          border: '1px solid rgba(255,255,255,0.18)',
+          backdropFilter: 'blur(6px)',
         }}
       >
-        {React.createElement(Icon, { size: 30, weight: 'bold', color: '#fff' })}
+        {React.createElement(Icon, { size: 28, weight: 'bold', color: '#fff' })}
       </Box>
-      <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', textAlign: 'center', lineHeight: 1.25 }}>
+      <Typography sx={{ fontWeight: 800, fontSize: '1.02rem', textAlign: 'center', lineHeight: 1.25 }}>
         {label}
       </Typography>
-    </Box>
+    </>
   );
-}
 
-/** Full-width panel row — opens a dedicated page. */
-function PanelLinkCard({
-  href,
-  title,
-  description,
-  icon: Icon,
-  badge,
-}: {
-  href: string;
-  title: string;
-  description: string;
-  icon: PhosphorIcon;
-  badge?: string;
-}) {
+  if (onClick) {
+    return (
+      <Box component="button" type="button" onClick={onClick} sx={sx}>
+        {content}
+      </Box>
+    );
+  }
+
   return (
     <Box
-      component={RouterLink}
-      href={href}
-      sx={{
-        textDecoration: 'none',
-        color: 'inherit',
-        display: 'block',
-        p: { xs: 2.25, sm: 3 },
-        borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
-        transition: 'border-color 0.15s ease, background-color 0.15s ease',
-        '&:hover': {
-          borderColor: 'primary.main',
-          bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'action.hover'),
-        },
-      }}
+      component="a"
+      href={href || paths.user.dashboard}
+      onClick={(event) => hardNavigate(href || paths.user.dashboard, event)}
+      sx={{ ...sx, textDecoration: 'none', color: 'inherit' }}
     >
-      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-        <Box
-          sx={{
-            width: 44,
-            height: 44,
-            borderRadius: 2,
-            display: 'grid',
-            placeItems: 'center',
-            flexShrink: 0,
-            bgcolor: (t) => `${t.palette.primary.main}22`,
-            color: 'primary.main',
-          }}
-        >
-          {React.createElement(Icon, { size: 24, weight: 'duotone' })}
-        </Box>
-        <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.25 }}>
-            {title}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-            {description}
-          </Typography>
-          {badge ? (
-            <Chip
-              label={badge}
-              size="small"
-              sx={{ mt: 1.25, fontWeight: 700 }}
-            />
-          ) : null}
-        </Box>
-        <Box sx={{ color: 'text.secondary', display: 'flex', flexShrink: 0 }}>
-          <CaretRightIcon size={20} weight="bold" />
-        </Box>
-      </Stack>
+      {content}
     </Box>
   );
 }
@@ -188,62 +161,136 @@ function QuotaStat({
   used,
   max,
   icon: Icon,
-  accent,
+  tone,
+  convertible = false,
+  convertTooltip,
+  convertAria,
+  unavailableLabel,
+  remainingLabel,
 }: {
   label: string;
   used: number;
   max: number;
   icon: PhosphorIcon;
-  accent: 'success' | 'warning';
+  tone: string;
+  convertible?: boolean;
+  convertTooltip: string;
+  convertAria: string;
+  unavailableLabel: string;
+  remainingLabel: string;
 }) {
-  const percent = max > 0 ? Math.min(100, Math.round((used / max) * 100)) : 0;
+  const percent = max > 0 ? Math.min(100, (used / max) * 100) : 0;
+  const barPercent = used > 0 && percent < 4 ? 4 : percent;
+
   return (
     <Box
       sx={{
-        p: 2,
+        position: 'relative',
+        width: '100%',
+        minWidth: 0,
+        px: 1.5,
+        py: 1.15,
         borderRadius: 2.5,
         border: '1px solid',
         borderColor: 'divider',
-        bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'),
-        height: '100%',
+        bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
-      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start' }}>
-        <Box
-          sx={{
-            width: 36,
-            height: 36,
-            borderRadius: 2,
-            display: 'grid',
-            placeItems: 'center',
-            bgcolor: (t) => `${t.palette[accent].main}22`,
-            color: `${accent}.main`,
-            flexShrink: 0,
-          }}
-        >
-          {React.createElement(Icon, { size: 20, weight: 'duotone' })}
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.3 }}>
+      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 0.75 }}>
+        <Stack direction="row" spacing={0.85} sx={{ alignItems: 'center', minWidth: 0, flex: 1 }}>
+          <Box
+            sx={{
+              width: 32,
+              height: 32,
+              borderRadius: 1.5,
+              display: 'grid',
+              placeItems: 'center',
+              flexShrink: 0,
+              bgcolor: `${tone}24`,
+              color: tone,
+            }}
+          >
+            {React.createElement(Icon, { size: 17, weight: 'bold' })}
+          </Box>
+          <Typography
+            sx={{
+              fontWeight: 750,
+              fontSize: '0.8rem',
+              lineHeight: 1.25,
+              color: 'text.secondary',
+              wordBreak: 'break-word',
+            }}
+          >
             {label}
           </Typography>
-          <Typography sx={{ fontWeight: 800, fontSize: '1.15rem' }}>
-            {used} <Typography component="span" color="text.secondary" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>nga {max}</Typography>
-          </Typography>
-        </Box>
+        </Stack>
+        {convertible ? (
+          <Tooltip title={convertTooltip} arrow>
+            <IconButton
+              component="a"
+              href={`${paths.user.packagesExtra}#convert`}
+              onClick={(event) => hardNavigate(`${paths.user.packagesExtra}#convert`, event)}
+              size="small"
+              aria-label={convertAria}
+              sx={{
+                width: 28,
+                height: 28,
+                color: tone,
+                bgcolor: `${tone}18`,
+                flexShrink: 0,
+                '&:hover': { bgcolor: `${tone}2e` },
+              }}
+            >
+              <ArrowsLeftRightIcon size={14} weight="bold" />
+            </IconButton>
+          </Tooltip>
+        ) : null}
       </Stack>
-      <LinearProgress
-        variant="determinate"
-        value={percent}
-        color={accent}
-        sx={{ mt: 1.5, height: 8, borderRadius: 4, bgcolor: 'action.hover' }}
-      />
+
+      <Typography sx={{ mt: 0.75, fontWeight: 850, fontSize: '1.05rem', lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+        {used}
+        <Box component="span" sx={{ color: 'text.secondary', fontWeight: 650, fontSize: '0.82rem' }}>
+          {' '}
+          / {max}
+        </Box>
+      </Typography>
+
+      <Box sx={{ mt: 0.85 }}>
+        <LinearProgress
+          variant="determinate"
+          value={barPercent}
+          sx={{
+            height: 3.5,
+            borderRadius: 2,
+            bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'),
+            '& .MuiLinearProgress-bar': {
+              borderRadius: 2,
+              bgcolor: tone,
+            },
+          }}
+        />
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ display: 'block', mt: 0.45, fontWeight: 550, fontSize: '0.68rem', lineHeight: 1.2 }}
+        >
+          {max <= 0 ? unavailableLabel : remainingLabel}
+        </Typography>
+      </Box>
     </Box>
   );
 }
 
 export default function UserDashboardPage() {
-  const { user } = useUser();
+  const { user, checkSession } = useUser();
+  const { language } = useLanguage();
+  const t = getUserDashboardCopy(language);
+
+  React.useEffect(() => {
+    void checkSession();
+  }, [checkSession]);
 
   const subscriberKindFilter = user?.accountType === 'business' || user?.role === 'business-user' ? 'company' : 'agent';
   const [plans, setPlans] = React.useState<PublicContract[]>([]);
@@ -253,7 +300,9 @@ export default function UserDashboardPage() {
     cars: 0,
     jobs: 0,
     products: 0,
+    premium: 0,
   });
+  const [addListingOpen, setAddListingOpen] = React.useState(false);
 
   const canPublish =
     Boolean(user) &&
@@ -282,7 +331,7 @@ export default function UserDashboardPage() {
 
   React.useEffect(() => {
     if (!user || !canPublish) {
-      setUsage({ apartments: 0, cars: 0, jobs: 0, products: 0 });
+      setUsage({ apartments: 0, cars: 0, jobs: 0, products: 0, premium: 0 });
       return;
     }
     let cancelled = false;
@@ -291,13 +340,15 @@ export default function UserDashboardPage() {
       listMyCarListings(),
       listMyJobListings(),
       listMyMarketplaceListings(),
-    ]).then(([re, cars, jobs, mkt]) => {
+      fetchPremiumPlanQuota(),
+    ]).then(([re, cars, jobs, mkt, premium]) => {
       if (cancelled) return;
       setUsage({
         apartments: (re.listings ?? []).length,
         cars: (cars.listings ?? []).length,
         jobs: (jobs.listings ?? []).length,
         products: (mkt.listings ?? []).length,
+        premium: premium.quota?.used ?? 0,
       });
     });
     return () => {
@@ -305,8 +356,11 @@ export default function UserDashboardPage() {
     };
   }, [user, canPublish]);
 
-  const boostCoins = typeof user?.boostCredits === 'number' ? user.boostCredits : 0;
+  const boostCoins = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
   const categoryLabel = getUserPortalAccountCategoryLabel(user ?? null);
+  const isBusinessAccount =
+    user?.accountType === 'business' || user?.role === 'business-user';
+  const categoryBadgeColor = isBusinessAccount ? '#f59e0b' : '#22c55e';
   const quotas = React.useMemo(() => {
     if (activeSub) return quotasFromSub(activeSub);
     const freePlan = plans.find((p) => p.planCode === 'free');
@@ -322,7 +376,8 @@ export default function UserDashboardPage() {
     }
     return FREE_PLAN_QUOTAS;
   }, [activeSub, plans]);
-  const activePlanLabel = activeSub?.contractTitle || 'FREE';
+  const activePlanLabel = activeSub?.contractTitle || activeSub?.planCode?.toUpperCase() || 'FREE';
+  const activePlanBadgeColor = String(planAccentForCode(activeSub?.planCode ?? 'free'));
 
   if (!user) return null;
 
@@ -331,178 +386,281 @@ export default function UserDashboardPage() {
       <Stack spacing={1.5}>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-            Paneli
+            {t.panelTitle}
           </Typography>
-          <Box sx={{ display: { xs: 'block', lg: 'none' }, mr: -1 }}>
+          <Stack
+            direction="row"
+            spacing={0.75}
+            sx={{ display: { xs: 'flex', lg: 'none' }, alignItems: 'center', mr: -0.5 }}
+          >
+            <HeaderLanguageToggle />
             <ThemeModeToggle />
-          </Box>
+          </Stack>
         </Stack>
-        <Stack
-          direction="row"
-          spacing={1}
+
+        <Box
+          component="a"
+          href={paths.user.credits}
+          onClick={(event) => hardNavigate(paths.user.credits, event)}
           sx={{
-            alignItems: 'center',
             alignSelf: 'flex-start',
-            px: 1.75,
-            py: 0.85,
+            textDecoration: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 1,
+            pl: 0.75,
+            pr: 1.5,
+            py: 0.75,
             borderRadius: 999,
             border: '1px solid',
-            borderColor: (t) => `${t.palette.warning.main}55`,
-            bgcolor: (t) => `${t.palette.warning.main}14`,
-            color: 'warning.main',
+            borderColor: (theme) =>
+              theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.28)' : 'rgba(212, 160, 23, 0.35)',
+            bgcolor: (theme) =>
+              theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.08)' : 'rgba(232, 185, 35, 0.1)',
+            transition: 'border-color 0.15s ease, background-color 0.15s ease',
+            '&:hover': {
+              borderColor: (theme) =>
+                theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.5)' : 'rgba(212, 160, 23, 0.55)',
+              bgcolor: (theme) =>
+                theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.14)' : 'rgba(232, 185, 35, 0.16)',
+            },
           }}
         >
-          <CoinsIcon size={22} weight="duotone" />
-          <Typography component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-            Boost coins
+          <Box
+            sx={{
+              width: 30,
+              height: 30,
+              borderRadius: '50%',
+              display: 'grid',
+              placeItems: 'center',
+              flexShrink: 0,
+              bgcolor: (theme) =>
+                theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.18)' : 'rgba(232, 185, 35, 0.2)',
+              color: '#e8b923',
+            }}
+          >
+            <CoinsIcon size={16} weight="fill" />
+          </Box>
+          <Typography
+            component="span"
+            sx={{
+              color: 'text.secondary',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              lineHeight: 1,
+            }}
+          >
+            {t.boostCoins}
           </Typography>
-          <Typography component="span" sx={{ fontWeight: 800 }}>
+          <Typography
+            component="span"
+            sx={{
+              color: '#e8b923',
+              fontWeight: 800,
+              fontSize: '0.95rem',
+              lineHeight: 1,
+              letterSpacing: '-0.01em',
+            }}
+          >
             {new Intl.NumberFormat('en-US').format(boostCoins)}
           </Typography>
-        </Stack>
+        </Box>
       </Stack>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={2} sx={{ alignItems: 'stretch' }}>
         {canPublish ? (
           <Grid size={{ xs: 6, md: 3 }}>
-            <ActionTile href={paths.user.realEstateListing} label="Shto njoftim" icon={PlusIcon} gradient={GRADIENTS.blue} />
+            <ActionTile
+              onClick={() => setAddListingOpen(true)}
+              label={t.addListing}
+              icon={PlusIcon}
+              gradient={GRADIENTS.blue}
+            />
           </Grid>
         ) : null}
         <Grid size={{ xs: 6, md: 3 }}>
-          <ActionTile href={paths.user.myRealEstateListings} label="Statistikat" icon={ChartLineUpIcon} gradient={GRADIENTS.purple} />
+          <ActionTile href={paths.user.statistics} label={t.statistics} icon={ChartLineUpIcon} gradient={GRADIENTS.purple} />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
-          <ActionTile href={paths.user.myRealEstateListings} label="Njoftimet e mia" icon={ListBulletsIcon} gradient={GRADIENTS.green} />
+          <ActionTile href={paths.user.myRealEstateListings} label={t.myListings} icon={ListBulletsIcon} gradient={GRADIENTS.green} />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
-          <ActionTile href={paths.user.credits} label="Bli Kredite" icon={CoinsIcon} gradient={GRADIENTS.orange} />
+          <ActionTile href={paths.user.credits} label={t.buyCredits} icon={CoinsIcon} gradient={GRADIENTS.orange} />
         </Grid>
       </Grid>
 
+      <AddListingPickerDialog open={addListingOpen} onClose={() => setAddListingOpen(false)} />
+
       {canPublish ? (
-        <Box sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+        <Box sx={{ ...portalCardSx, p: { xs: 2, sm: 2.5 } }}>
           <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={1.5}
-            sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between', mb: 2.5 }}
+            direction="row"
+            spacing={1}
+            sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 0.75 }}
           >
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                Paketa e abonimit
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontWeight: 850, fontSize: '1.05rem', lineHeight: 1.2, letterSpacing: '-0.01em' }}>
+                {t.subscriptionPackage}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Kuota e postimeve nga plani juaj
+              <Typography variant="body2" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+                {t.quotasHint(activePlanLabel, categoryLabel)}
               </Typography>
             </Box>
-            <Chip
-              label={`${activePlanLabel} · ${categoryLabel}`}
-              sx={{ fontWeight: 700, alignSelf: { xs: 'flex-start', sm: 'auto' } }}
-            />
           </Stack>
 
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <QuotaStat
-                label="Të gjitha kategoritë"
-                used={0}
-                max={quotas.maxListAllCategories}
-                icon={ListBulletsIcon}
-                accent="success"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <QuotaStat
-                label="Apartamente"
-                used={usage.apartments}
-                max={quotas.maxApartmentListings}
-                icon={ListBulletsIcon}
-                accent="success"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <QuotaStat
-                label="Makina"
-                used={usage.cars}
-                max={quotas.maxCarListings}
-                icon={ListBulletsIcon}
-                accent="success"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <QuotaStat
-                label="Vende pune"
-                used={usage.jobs}
-                max={quotas.maxJobListings}
-                icon={ListBulletsIcon}
-                accent="success"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <QuotaStat
-                label="Produkte"
-                used={usage.products}
-                max={quotas.maxProductListings}
-                icon={ListBulletsIcon}
-                accent="success"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <QuotaStat
-                label="Njoftime premium"
-                used={0}
-                max={quotas.maxPremiumListings}
-                icon={SparkleIcon}
-                accent="warning"
-              />
-            </Grid>
-          </Grid>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'repeat(2, minmax(0, 1fr))',
+                sm: 'repeat(3, minmax(0, 1fr))',
+                md: 'repeat(5, minmax(0, 1fr))',
+              },
+              gap: 1.1,
+            }}
+          >
+            <QuotaStat
+              label={t.apartments}
+              used={usage.apartments}
+              max={quotas.maxApartmentListings}
+              icon={BuildingsIcon}
+              tone="#3ec6e0"
+              convertible
+              convertTooltip={t.convertTooltip}
+              convertAria={t.convertAria(t.apartments)}
+              unavailableLabel={t.unavailable}
+              remainingLabel={t.remaining(Math.max(0, quotas.maxApartmentListings - usage.apartments))}
+            />
+            <QuotaStat
+              label={t.cars}
+              used={usage.cars}
+              max={quotas.maxCarListings}
+              icon={CarIcon}
+              tone="#7ac943"
+              convertible
+              convertTooltip={t.convertTooltip}
+              convertAria={t.convertAria(t.cars)}
+              unavailableLabel={t.unavailable}
+              remainingLabel={t.remaining(Math.max(0, quotas.maxCarListings - usage.cars))}
+            />
+            <QuotaStat
+              label={t.jobs}
+              used={usage.jobs}
+              max={quotas.maxJobListings}
+              icon={BriefcaseIcon}
+              tone="#8b5cf6"
+              convertible
+              convertTooltip={t.convertTooltip}
+              convertAria={t.convertAria(t.jobs)}
+              unavailableLabel={t.unavailable}
+              remainingLabel={t.remaining(Math.max(0, quotas.maxJobListings - usage.jobs))}
+            />
+            <QuotaStat
+              label={t.products}
+              used={usage.products}
+              max={quotas.maxProductListings}
+              icon={StorefrontIcon}
+              tone="#f5a623"
+              convertible
+              convertTooltip={t.convertTooltip}
+              convertAria={t.convertAria(t.products)}
+              unavailableLabel={t.unavailable}
+              remainingLabel={t.remaining(Math.max(0, quotas.maxProductListings - usage.products))}
+            />
+            <QuotaStat
+              label={t.premium}
+              used={usage.premium}
+              max={quotas.maxPremiumListings}
+              icon={SparkleIcon}
+              tone="#e8b923"
+              convertTooltip={t.convertTooltip}
+              convertAria={t.convertAria(t.premium)}
+              unavailableLabel={t.unavailable}
+              remainingLabel={t.remaining(Math.max(0, quotas.maxPremiumListings - usage.premium))}
+            />
+          </Box>
         </Box>
       ) : null}
 
-      <Stack spacing={2}>
-        <PanelLinkCard
+      <DailyStreakCard />
+
+      <PortalLinkGroup>
+        <PortalLinkCard
+          grouped
           href={paths.user.packages}
-          title="Paketat për ju"
-          description="Shikoni planet e abonimit dhe blini planin që ju përshtatet."
+          title={t.packagesTitle}
+          description={t.packagesDescription}
           icon={PackageIcon}
           badge={activePlanLabel}
+          badgeColor={activePlanBadgeColor}
         />
         {canPublish ? (
-          <PanelLinkCard
+          <PortalLinkCard
+            grouped
             href={paths.user.referral}
-            title="Referimi"
-            description="Ftoni miqtë dhe fitoni kredite nga sistemi i referimit."
+            title={t.referralTitle}
+            description={t.referralDescription}
             icon={HandshakeIcon}
           />
         ) : null}
         {canPublish ? (
-          <PanelLinkCard
+          <PortalLinkCard
+            grouped
             href={paths.user.payments}
-            title="Pagesat e mia"
-            description="Shikoni pagesat, abonimet dhe historikun e transakcioneve."
+            title={t.paymentsTitle}
+            description={t.paymentsDescription}
             icon={ReceiptIcon}
           />
         ) : null}
-        <PanelLinkCard
+        <PortalLinkCard
+          grouped
           href={paths.user.profile}
-          title="Profili im"
-          description="Menaxhoni të dhënat e llogarisë dhe fjalëkalimin."
+          title={t.profileTitle}
+          description={t.profileDescription}
           icon={UserGearIcon}
           badge={categoryLabel}
+          badgeColor={categoryBadgeColor}
         />
-        <PanelLinkCard
+        <PortalLinkCard
+          grouped
           href={paths.public.terms}
-          title="Kushtet e përdorimit"
-          description="Rregullat e përdorimit të platformës KuTaGjej."
+          title={t.termsTitle}
+          description={t.termsDescription}
           icon={FileTextIcon}
         />
-        <PanelLinkCard
+        <PortalLinkCard
+          grouped
           href={paths.public.privacy}
-          title="Politika e privatësisë"
-          description="Si mbledhim, përdorim dhe mbrojmë të dhënat tuaja."
+          title={t.privacyTitle}
+          description={t.privacyDescription}
           icon={ShieldCheckIcon}
         />
-      </Stack>
+      </PortalLinkGroup>
+
+      <LanguageSwitchRow />
+
+      <Button
+        variant="outlined"
+        color="inherit"
+        fullWidth
+        startIcon={<SignOutIcon size={20} />}
+        onClick={() => {
+          void authClient.signOut();
+        }}
+        sx={{
+          fontWeight: 700,
+          borderRadius: 3.5,
+          py: 1.4,
+          borderColor: 'divider',
+          color: 'error.main',
+          '&:hover': {
+            borderColor: 'error.main',
+            bgcolor: (theme) => `${theme.palette.error.main}14`,
+          },
+        }}
+      >
+        {t.signOut}
+      </Button>
     </Stack>
   );
 }

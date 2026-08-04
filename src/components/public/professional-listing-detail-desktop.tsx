@@ -16,15 +16,11 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
-import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
-import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
-import { CurrencyEur as CurrencyEurIcon } from '@phosphor-icons/react/dist/ssr/CurrencyEur';
 import { Hammer as HammerIcon } from '@phosphor-icons/react/dist/ssr/Hammer';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { PaintBrush as PaintBrushIcon } from '@phosphor-icons/react/dist/ssr/PaintBrush';
 import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
-import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
@@ -32,18 +28,13 @@ import { ListingMessageButton } from '@/components/public/listing-message-button
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
-import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
+import { listingContactCtaSx } from '@/components/public/sticky-listing-contact';
 import {
-  ProfessionalFiveStarRating,
-  ProfessionalMetaStat,
   ProfessionalPortfolioSection,
   ProfessionalRatingSummary,
-  ProfessionalReviewsSectionHeader,
   ProfessionalVerifiedBadge,
-  professionalMetaStatCellSx,
 } from '@/components/public/professional-listing-detail-ui';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
-import { whatsappHref } from '@/lib/listing-contact';
 import {
   LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
   LISTING_DETAIL_HERO_IMAGE_SIZES,
@@ -54,9 +45,7 @@ import {
   professionalDisplayName,
   professionalInitials,
   professionalPortfolioItems,
-  professionalPriceFromLine,
   professionalRatingDisplay,
-  professionalResponseTime,
   professionalServiceTags,
   professionalSubtitle,
 } from '@/lib/professional-listing-detail-content';
@@ -67,7 +56,7 @@ import { useRouter } from 'next/navigation';
 
 const surfaceSx = {
   p: 2.5,
-  borderRadius: 3,
+  borderRadius: 2.5,
   border: '1px solid',
   borderColor: 'divider',
   bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
@@ -81,20 +70,20 @@ export function ProfessionalListingDetailDesktop({
   saved,
   saveCount,
   onToggleSave,
-  canonicalUrl,
+  ownerPreview = false,
 }: {
   listing: PublicDirectoryListingDetail;
   similar: PublicDirectoryListing[];
   saved: boolean;
   saveCount: number;
   onToggleSave: () => void;
-  canonicalUrl: string;
+  /** Kept for call-site compatibility / future share overrides. */
+  canonicalUrl?: string;
+  ownerPreview?: boolean;
 }) {
   const displayName = React.useMemo(() => professionalDisplayName(listing), [listing]);
   const subtitle = React.useMemo(() => professionalSubtitle(listing), [listing]);
   const rating = React.useMemo(() => professionalRatingDisplay(listing), [listing]);
-  const responseTime = React.useMemo(() => professionalResponseTime(listing), [listing]);
-  const priceFrom = React.useMemo(() => professionalPriceFromLine(listing), [listing]);
   const serviceTags = React.useMemo(() => professionalServiceTags(listing), [listing]);
   const portfolio = React.useMemo(() => professionalPortfolioItems(listing), [listing]);
   const coverImageUrls = React.useMemo(() => professionalCoverImageUrls(listing), [listing]);
@@ -102,24 +91,19 @@ export function ProfessionalListingDetailDesktop({
   const router = useRouter();
   const initials = React.useMemo(() => professionalInitials(listing), [listing]);
 
-  const phone = listing.contactPhone ?? listing.seller?.phone ?? null;
-  const telHref = phone ? `tel:${phone.replace(/\s/g, '')}` : null;
-  const wa = whatsappHref(phone);
-  const whatsappInquireHref = wa
-    ? `${wa}?text=${encodeURIComponent(`Përshëndetje, jam i interesuar për shërbimet tuaja «${displayName}» (${canonicalUrl}).`)}`
-    : undefined;
-
   const locationLine = listing.cityName ? `${listing.cityName}, Shqipëri` : null;
   const isVerified = Boolean(listing.seller?.verified);
+
+  if (ownerPreview) return null;
 
   return (
     <Box component="article" sx={{ bgcolor: 'background.default', pb: 6, display: { xs: 'none', md: 'block' } }}>
       <Container maxWidth="lg" sx={{ px: { md: 3 }, pt: 2, pb: 2 }}>
         <Stack spacing={4}>
-          <Box
-            sx={(theme) => ({
+            <Box
+              sx={(theme) => ({
               width: '100%',
-              borderRadius: 3,
+              borderRadius: 2.5,
               overflow: 'hidden',
               bgcolor: 'background.paper',
               boxShadow:
@@ -127,7 +111,7 @@ export function ProfessionalListingDetailDesktop({
                   ? `0 20px 50px ${alpha(theme.palette.common.black, 0.35)}`
                   : '0 12px 40px rgba(0, 0, 0, 0.08)',
             })}
-          >
+            >
             <Stack direction="row" sx={{ alignItems: 'stretch', minHeight: 0, width: '100%' }}>
               <Box
                 sx={{
@@ -182,7 +166,7 @@ export function ProfessionalListingDetailDesktop({
                       {initials}
                     </Avatar>
                     <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
-                      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, width: '100%' }}>
+                      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, maxWidth: '100%' }}>
                         <Typography
                           component="h1"
                           sx={{
@@ -190,7 +174,7 @@ export function ProfessionalListingDetailDesktop({
                             fontSize: '1.35rem',
                             lineHeight: 1.2,
                             minWidth: 0,
-                            flex: 1,
+                            flex: '0 1 auto',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
@@ -198,144 +182,88 @@ export function ProfessionalListingDetailDesktop({
                         >
                           {displayName}
                         </Typography>
-                        {isVerified ? <ProfessionalVerifiedBadge /> : null}
-                      </Stack>
-                      <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>{subtitle}</Typography>
-                      <Stack
-                        direction="row"
-                        spacing={1}
-                        sx={{ alignItems: 'center', justifyContent: 'space-between', width: '100%', minWidth: 0 }}
-                      >
-                        {locationLine ? (
-                          <Stack
-                            direction="row"
-                            spacing={0.5}
-                            sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0, flex: 1 }}
-                          >
-                            <MapPinIcon size={15} weight="regular" color="var(--mui-palette-primary-main)" />
-                            <Typography
-                              sx={{
-                                fontSize: '0.8rem',
-                                fontWeight: 600,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {locationLine}
-                            </Typography>
-                          </Stack>
-                        ) : (
-                          <Box sx={{ flex: 1 }} />
-                        )}
-                        {rating.rating ? (
-                          <ProfessionalRatingSummary
-                            rating={rating.rating}
-                            reviewCount={rating.reviews}
-                            starSize={16}
-                            showReviewLabel
-                          />
+                        {isVerified ? (
+                          <Box sx={{ flexShrink: 0, display: 'inline-flex', lineHeight: 0 }}>
+                            <ProfessionalVerifiedBadge />
+                          </Box>
                         ) : null}
                       </Stack>
+                      <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>{subtitle}</Typography>
+                      {(locationLine || rating.rating) ? (
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          sx={{ alignItems: 'center', justifyContent: 'space-between', width: '100%', minWidth: 0 }}
+                        >
+                          {locationLine ? (
+                            <Stack
+                              direction="row"
+                              spacing={0.5}
+                              sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0, flex: 1 }}
+                            >
+                              <MapPinIcon size={15} weight="regular" color="var(--mui-palette-primary-main)" />
+                              <Typography
+                                sx={{
+                                  fontSize: '0.8rem',
+                                  fontWeight: 600,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {locationLine}
+                              </Typography>
+                            </Stack>
+                          ) : (
+                            <Box sx={{ flex: 1 }} />
+                          )}
+                          {rating.rating ? (
+                            <Box sx={{ flexShrink: 0 }}>
+                              <ProfessionalRatingSummary
+                                rating={rating.rating}
+                                reviewCount={rating.reviews}
+                                starSize={16}
+                                showReviewLabel
+                              />
+                            </Box>
+                          ) : null}
+                        </Stack>
+                      ) : null}
                     </Stack>
                   </Stack>
 
                   <Divider />
 
-                  <Grid container sx={{ overflow: 'hidden' }}>
-                    <Grid size={4} sx={professionalMetaStatCellSx(0, 3)}>
-                      <ProfessionalMetaStat
-                        icon={BriefcaseIcon}
-                        label="Specializimi"
-                        value={listing.categoryLabel}
-                        iconSize={22}
-                      />
-                    </Grid>
-                    {responseTime ? (
-                      <Grid size={4} sx={professionalMetaStatCellSx(1, 3)}>
-                        <ProfessionalMetaStat
-                          icon={ClockIcon}
-                          label="Përgjigjet shpejt"
-                          value={responseTime}
-                          iconSize={22}
+                  <Stack spacing={1.25} sx={{ alignItems: 'stretch', width: '100%' }}>
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', width: '100%' }}>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <ListingMessageButton
+                          listingKind="professionals"
+                          listingId={listing.id}
+                          label="Kontakto"
+                          variant="contained"
+                          disableElevation
+                          size="large"
+                          fullWidth
+                          sx={listingContactCtaSx}
                         />
-                      </Grid>
-                    ) : null}
-                    <Grid size={4} sx={professionalMetaStatCellSx(2, 3)}>
-                      <ProfessionalMetaStat icon={CurrencyEurIcon} label="Çmimi nga" value={priceFrom} iconSize={22} />
-                    </Grid>
-                  </Grid>
-
-                  <Stack spacing={1.25}>
-                    {telHref ? (
-                      <>
-                        <Stack direction="row" spacing={1}>
-                          <Button
-                            component="a"
-                            href={telHref}
-                            variant="contained"
-                            startIcon={<ChatsCircleIcon weight="regular" size={22} />}
-                            sx={{
-                              flex: 1,
-                              py: 1.25,
-                              borderRadius: 999,
-                              fontWeight: 800,
-                              textTransform: 'none',
-                              boxShadow: 'none',
-                              color: 'grey.900',
-                            }}
-                          >
-                            Kontakto profesionistin
-                          </Button>
-                          <IconButton
-                            aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj'}
-                            onClick={onToggleSave}
-                            sx={{
-                              border: '2px solid',
-                              borderColor: saved ? 'primary.main' : 'divider',
-                              borderRadius: 999,
-                              width: 48,
-                              height: 48,
-                              flexShrink: 0,
-                              color: saved ? 'primary.main' : 'text.primary',
-                            }}
-                          >
-                            <BookmarkSimpleIcon size={20} weight={saved ? 'fill' : 'regular'} />
-                          </IconButton>
-                        </Stack>
-                        {whatsappInquireHref ? (
-                          <Button
-                            component="a"
-                            href={whatsappInquireHref}
-                            rel="noopener noreferrer"
-                            target="_blank"
-                            variant="outlined"
-                            fullWidth
-                            startIcon={<WhatsappLogoIcon weight="regular" size={22} />}
-                            sx={{
-                              py: 1.25,
-                              borderRadius: 2,
-                              fontWeight: 800,
-                              textTransform: 'none',
-                              ...whatsappOutlinedButtonSx,
-                            }}
-                          >
-                            WhatsApp
-                          </Button>
-                        ) : null}
-                      </>
-                    ) : (
-                      <Button variant="contained" disabled fullWidth sx={{ borderRadius: 999, py: 1.25 }}>
-                        Nr. kontakti i padisponueshëm
-                      </Button>
-                    )}
-                    <ListingMessageButton
-                      listingKind="professionals"
-                      listingId={listing.id}
-                      fullWidth
-                      variant="outlined"
-                      sx={{ borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.15 }}
-                    />
+                      </Box>
+                      <IconButton
+                        aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj'}
+                        onClick={onToggleSave}
+                        sx={{
+                          border: '2px solid',
+                          borderColor: saved ? 'primary.main' : 'divider',
+                          borderRadius: 2.5,
+                          width: 52,
+                          height: 52,
+                          flexShrink: 0,
+                          color: saved ? 'primary.main' : 'text.primary',
+                        }}
+                      >
+                        <BookmarkSimpleIcon size={20} weight={saved ? 'fill' : 'regular'} />
+                      </IconButton>
+                    </Stack>
                   </Stack>
                 </Stack>
               </Box>
@@ -364,7 +292,7 @@ export function ProfessionalListingDetailDesktop({
                             icon={<TagIcon size={14} weight="duotone" color="var(--mui-palette-primary-main)" />}
                             label={tag}
                             variant="outlined"
-                            sx={{ fontWeight: 700, borderColor: 'divider' }}
+                            sx={{ fontWeight: 700, borderRadius: 2, borderColor: 'divider' }}
                           />
                         );
                       })}

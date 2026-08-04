@@ -38,14 +38,33 @@ router.get('/businesses/mine', authMiddleware, requirePortalUser, async (req, re
 /** POST /api/listings/directory/businesses */
 router.post('/businesses', authMiddleware, requirePortalUser, async (req, res) => {
   try {
+    if (req.user?.constructor?.modelName !== 'BusinessUser') {
+      return res.status(403).json({
+        message: 'Krijoni një llogari biznesi për të kryer këtë veprim.',
+      });
+    }
+
     const body = req.body;
     const v = validateBusinessPayload(body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
+    const sb = getSupabaseAdmin();
+    const { count: existingCount, error: countErr } = await sb
+      .from('directory_listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('poster_id', req.user.id)
+      .eq('vertical', 'businesses');
+    if (countErr) throw countErr;
+    if ((existingCount ?? 0) > 0) {
+      return res.status(409).json({
+        message: 'Mund të keni vetëm një profil biznesi. Përditësojeni atë ekzistues nga Shpalljet e mia.',
+      });
+    }
+
     const cityId = String(body.cityId).trim();
     if (!isUuid(cityId)) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
 
-    const { data: city, error: cityErr } = await getSupabaseAdmin()
+    const { data: city, error: cityErr } = await sb
       .from('real_estate_cities')
       .select('id')
       .eq('id', cityId)
@@ -75,11 +94,7 @@ router.post('/businesses', authMiddleware, requirePortalUser, async (req, res) =
       services_highlight: v.servicesHighlight,
     };
 
-    const { data: created, error: insErr } = await getSupabaseAdmin()
-      .from('directory_listings')
-      .insert(row)
-      .select('*')
-      .single();
+    const { data: created, error: insErr } = await sb.from('directory_listings').insert(row).select('*').single();
     if (insErr) throw insErr;
 
     const doc = camelizeRow(created);
@@ -98,6 +113,12 @@ router.post('/businesses', authMiddleware, requirePortalUser, async (req, res) =
 /** PUT /api/listings/directory/businesses/:id */
 router.put('/businesses/:id', authMiddleware, requirePortalUser, async (req, res) => {
   try {
+    if (req.user?.constructor?.modelName !== 'BusinessUser') {
+      return res.status(403).json({
+        message: 'Krijoni një llogari biznesi për të kryer këtë veprim.',
+      });
+    }
+
     const rawId = String(req.params.id ?? '').trim();
     if (!isUuid(rawId)) {
       return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
@@ -141,15 +162,27 @@ router.put('/businesses/:id', authMiddleware, requirePortalUser, async (req, res
     }
     if (body.contactPhone != null) patch.contact_phone = String(body.contactPhone).trim();
 
-    patch.opening_hours = v.openingHours;
-    patch.weekly_hours = v.weeklyHours;
-    patch.menu_categories = v.menuCategories;
-    patch.menu_items = v.menuItems;
-    patch.reservations_enabled = v.reservationsEnabled;
-    patch.reservation_url = v.reservationUrl;
-    patch.reservation_time_slots = v.reservationTimeSlots;
-    patch.reservation_party_sizes = v.reservationPartySizes;
-    patch.services_highlight = v.servicesHighlight;
+    if (body.weeklyHours != null) {
+      patch.opening_hours = v.openingHours;
+      patch.weekly_hours = v.weeklyHours;
+    }
+    // Menu is edited on its own page — only overwrite when the body includes it.
+    if (Array.isArray(body.menuCategories) || Array.isArray(body.menuItems)) {
+      patch.menu_categories = v.menuCategories;
+      patch.menu_items = v.menuItems;
+    }
+    if (
+      body.reservationsEnabled != null ||
+      body.reservationUrl != null ||
+      body.reservationTimeSlots != null ||
+      body.reservationPartySizes != null
+    ) {
+      patch.reservations_enabled = v.reservationsEnabled;
+      patch.reservation_url = v.reservationUrl;
+      patch.reservation_time_slots = v.reservationTimeSlots;
+      patch.reservation_party_sizes = v.reservationPartySizes;
+    }
+    if (body.servicesHighlight != null) patch.services_highlight = v.servicesHighlight;
     if (v.imageUrls != null) patch.image_urls = v.imageUrls;
 
     const { data: updated, error: updErr } = await getSupabaseAdmin()

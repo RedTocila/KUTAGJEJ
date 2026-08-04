@@ -21,21 +21,12 @@ import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-c
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { useSavedListings } from '@/contexts/saved-listings-context';
+import { useCopy } from '@/hooks/use-copy';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { fetchSavedListings, listingMetricsKey, type ListingMetricKind, type SavedListingItem } from '@/lib/listing-metrics';
 import type { PublicCarListing, PublicDirectoryListing, PublicJobListing, PublicMarketplaceListing, PublicRealEstateListing } from '@/lib/public-listings-client';
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';
-
-const KIND_TABS: { value: 'all' | ListingMetricKind; label: string }[] = [
-  { value: 'all', label: 'Të gjitha' },
-  { value: 'real-estate', label: 'Prona' },
-  { value: 'car', label: 'Makina' },
-  { value: 'job', label: 'Punë' },
-  { value: 'marketplace', label: 'Tregu' },
-  { value: 'businesses', label: 'Biznese' },
-  { value: 'professionals', label: 'Profesionistë' },
-];
 
 function SavedListingCard({ item }: { item: SavedListingItem }) {
   const listing = item.listing;
@@ -59,11 +50,22 @@ function SavedListingCard({ item }: { item: SavedListingItem }) {
 export default function UserSavedListingsPage() {
   const router = useRouter();
   const { user } = useUser();
+  const t = useCopy();
   const { refresh: refreshKeys, keys } = useSavedListings();
   const [items, setItems] = React.useState<SavedListingItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [tab, setTab] = React.useState(0);
+
+  const kindTabs: { value: 'all' | ListingMetricKind; label: string }[] = [
+    { value: 'all', label: t.saved.all },
+    { value: 'real-estate', label: t.verticals['real-estate'].label },
+    { value: 'car', label: t.verticals.cars.label },
+    { value: 'job', label: t.verticals.jobs.label },
+    { value: 'marketplace', label: t.verticals.marketplace.label },
+    { value: 'businesses', label: t.verticals.businesses.label },
+    { value: 'professionals', label: t.verticals.professionals.label },
+  ];
 
   const canView =
     Boolean(user) &&
@@ -96,35 +98,44 @@ export default function UserSavedListingsPage() {
 
   if (!user || !canView) return null;
 
-  const activeKind = KIND_TABS[tab]?.value ?? 'all';
+  const activeKind = kindTabs[tab]?.value ?? 'all';
   const visibleItems = items.filter((item) => keys.has(listingMetricsKey(item.kind, item.listingId)));
   const filtered =
     activeKind === 'all' ? visibleItems : visibleItems.filter((item) => item.kind === activeKind);
 
-  const counts = KIND_TABS.map((t) =>
-    t.value === 'all' ? visibleItems.length : visibleItems.filter((i) => i.kind === t.value).length,
+  const counts = kindTabs.map((kindTab) =>
+    kindTab.value === 'all' ? visibleItems.length : visibleItems.filter((i) => i.kind === kindTab.value).length,
   );
 
   const emptyMessage =
     items.length === 0
-      ? 'Nuk keni ruajtur asnjë njoftim ende. Prekni ikonën e bookmark-ut në një njoftim për ta shtuar këtu.'
+      ? t.saved.emptyNone
       : visibleItems.length === 0
-        ? 'Nuk keni njoftime të ruajtura aktive (mund të jenë hequr nga platforma).'
-        : 'Nuk ka njoftime të ruajtura për këtë kategori.';
+        ? t.saved.emptyInactive
+        : t.saved.emptyCategory;
 
   return (
     <Stack spacing={{ xs: 2.5, md: 3 }}>
       <UserPageHeader
         icon={<BookmarkIcon size={20} weight="duotone" />}
-        title="Të ruajturat"
-        description="Njoftimet që keni ruajtur me ikonën e bookmark-ut."
+        title={t.saved.title}
+        description={t.saved.description}
+        sx={{
+          // Match messages: title only on mobile; keep icon + description on desktop.
+          '& .MuiTypography-body2': { display: { xs: 'none', md: 'block' } },
+          '& > .MuiBox-root': { display: { xs: 'none', md: 'inline-flex' } },
+          '& .MuiTypography-h5': {
+            fontSize: { xs: '1.65rem', md: undefined },
+            fontWeight: { xs: 700, md: 800 },
+          },
+        }}
       />
 
       {error ? <Alert severity="error">{error}</Alert> : null}
 
       <Box
         role="tablist"
-        aria-label="Filtro sipas kategorisë"
+        aria-label={t.saved.filterAria}
         sx={{
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
@@ -135,12 +146,12 @@ export default function UserSavedListingsPage() {
         }}
       >
         <Stack direction="row" spacing={1} sx={{ width: 'max-content', pr: { xs: 1, md: 0 } }}>
-          {KIND_TABS.map((t, i) => {
+          {kindTabs.map((kindTab, i) => {
             const active = tab === i;
             const count = counts[i];
             return (
               <Box
-                key={t.value}
+                key={kindTab.value}
                 component="button"
                 type="button"
                 role="tab"
@@ -171,7 +182,7 @@ export default function UserSavedListingsPage() {
                   },
                 }}
               >
-                {t.label}
+                {kindTab.label}
                 {!loading && count > 0 ? (
                   <Box
                     component="span"
@@ -233,7 +244,7 @@ export default function UserSavedListingsPage() {
               <BookmarkIcon size={28} weight="duotone" />
             </Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.75 }}>
-              Asnjë njoftim i ruajtur
+              {t.saved.emptyTitle}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360, mx: 'auto' }}>
               {emptyMessage}

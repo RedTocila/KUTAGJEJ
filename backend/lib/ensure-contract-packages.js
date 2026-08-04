@@ -21,7 +21,7 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: false,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/10 Job Listings · 0/5 Car Listings · 0/10 Apartment Listings · 0/5 Product Listings · Refresh every 48 hours',
+      '0/1 List in All Categories · 0/10 Job Listings · 0/5 Car Listings · 0/10 Apartment Listings · 0/5 Product Listings · Refresh same listing after 48 hours',
   },
   {
     planCode: 'starter',
@@ -39,7 +39,7 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: true,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/15 Car · 0/25 Apartment · 0/15 Product · 0/50 Job · 150 Boost Coins · Refresh every 24 hours · Trust Badge',
+      '0/1 List in All Categories · 0/15 Car · 0/25 Apartment · 0/15 Product · 0/50 Job · 150 Boost Coins · Refresh same listing after 24 hours · Trust Badge',
   },
   {
     planCode: 'grow',
@@ -57,7 +57,7 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: true,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/40 Cars · 0/250 Apartments · 0/50 Products · 0/200 Jobs · 0/20 Premium · 1000 Boost Coins · Refresh every 12 hours · Trust Badge',
+      '0/1 List in All Categories · 0/40 Cars · 0/250 Apartments · 0/50 Products · 0/200 Jobs · 0/20 Premium (30 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Trust Badge',
   },
   {
     planCode: 'elite',
@@ -75,7 +75,7 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: true,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/150 Cars · 0/1000 Apartments · 0/200 Products · 0/500 Jobs · 0/30 Premium · 2000 Boost Coins · Refresh every 6 hours · Trust Badge',
+      '0/1 List in All Categories · 0/150 Cars · 0/1000 Apartments · 0/200 Products · 0/500 Jobs · 0/30 Premium (30 days) · 2000 Boost Coins · Refresh same listing after 6 hours · Trust Badge',
   },
 ];
 

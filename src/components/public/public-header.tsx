@@ -19,6 +19,8 @@ import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/Use
 
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
+import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
+import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
 
@@ -65,9 +67,11 @@ function useHeaderScrollHidden() {
 
 export function PublicHeader() {
   const { user } = useUser();
+  const t = useCopy();
   const elevated = useScrollTrigger({ disableHysteresis: true, threshold: 8 });
   const headerHidden = useHeaderScrollHidden();
   const [mounted, setMounted] = React.useState(false);
+  const [addListingOpen, setAddListingOpen] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
@@ -75,8 +79,13 @@ export function PublicHeader() {
 
   const accountHref =
     user?.accountType === 'admin' ? paths.dashboard.overview : paths.user.dashboard;
-  const postHref = paths.user.realEstateListing;
-  const mobilePostHref = user ? postHref : paths.user.auth;
+  const openPostPicker = () => {
+    if (user) {
+      setAddListingOpen(true);
+      return;
+    }
+    window.location.assign(paths.user.auth);
+  };
 
   return (
     <>
@@ -139,7 +148,7 @@ export function PublicHeader() {
             <Box
               component={RouterLink}
               href={paths.home}
-              aria-label="KuTaGjej — kreu"
+              aria-label={t.chrome.homeAria}
               sx={{
                 display: 'inline-flex',
                 textDecoration: 'none',
@@ -173,7 +182,7 @@ export function PublicHeader() {
               <ThemeModeToggle />
               {user ? (
                 <>
-                  <Tooltip title="Paneli im">
+                  <Tooltip title={t.common.myPanel}>
                     <IconButton
                       component={RouterLink}
                       href={accountHref}
@@ -183,13 +192,12 @@ export function PublicHeader() {
                     </IconButton>
                   </Tooltip>
                   <Button
-                    component={RouterLink}
-                    href={postHref}
+                    onClick={openPostPicker}
                     variant="contained"
                     startIcon={React.createElement(PlusIcon, { size: 18, weight: 'bold' })}
                     sx={{ borderRadius: 2, fontWeight: 700, textTransform: 'none', px: 2 }}
                   >
-                    Posto njoftim
+                    {t.common.postListing}
                   </Button>
                 </>
               ) : (
@@ -206,7 +214,7 @@ export function PublicHeader() {
                     }}
                     startIcon={React.createElement(SignInIcon, { size: 18 })}
                   >
-                    Hyr
+                    {t.common.login}
                   </Button>
                   <Button
                     component={RouterLink}
@@ -215,7 +223,7 @@ export function PublicHeader() {
                     startIcon={React.createElement(PlusIcon, { size: 18, weight: 'bold' })}
                     sx={{ borderRadius: 2, fontWeight: 700, textTransform: 'none', px: 2 }}
                   >
-                    Posto falas
+                    {t.common.postFree}
                   </Button>
                 </>
               )}
@@ -231,11 +239,10 @@ export function PublicHeader() {
                 ml: 'auto',
               }}
             >
-              <Tooltip title="Posto njoftim">
+              <Tooltip title={t.common.postListing}>
                 <IconButton
-                  component={RouterLink}
-                  href={mobilePostHref}
-                  aria-label="Posto njoftim"
+                  onClick={openPostPicker}
+                  aria-label={t.common.postListing}
                   sx={{
                     width: 34,
                     height: 34,
@@ -261,6 +268,7 @@ export function PublicHeader() {
           pointerEvents: 'none',
         }}
       />
+      <AddListingPickerDialog open={addListingOpen} onClose={() => setAddListingOpen(false)} />
     </>
   );
 }

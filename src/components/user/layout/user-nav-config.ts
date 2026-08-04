@@ -1,4 +1,5 @@
 import { paths } from '@/paths';
+import type { AppMessages } from '@/lib/i18n/messages';
 import type { NavItemConfig } from '@/types/nav';
 import type { User } from '@/types/user';
 
@@ -87,5 +88,41 @@ export function getUserPortalNavItemsForUser(user: User | null | undefined): Nav
     )
       return canRealEstate;
     return true;
+  });
+}
+
+function localizedNavTitle(key: string, t: AppMessages): string | null {
+  switch (key) {
+    case 'overview':
+      return t.nav.overview;
+    case 'real-estate':
+      return t.nav.postListing;
+    case 'my-listings':
+      return t.nav.myListings;
+    case 'saved-listings':
+      return t.nav.saved;
+    case 'messages':
+      return t.nav.messages;
+    case 'referral':
+      return t.nav.referral;
+    case 'credits':
+      return t.nav.buyCredits;
+    case 'payments':
+      return t.nav.payments;
+    case 'profile':
+      return t.nav.profile;
+    default:
+      return null;
+  }
+}
+
+/** Filtered portal nav items with titles from `t.nav.*`. */
+export function getLocalizedUserPortalNavItems(
+  user: User | null | undefined,
+  t: AppMessages,
+): NavItemConfig[] {
+  return getUserPortalNavItemsForUser(user).map((item) => {
+    const title = localizedNavTitle(item.key, t);
+    return title != null ? { ...item, title } : item;
   });
 }

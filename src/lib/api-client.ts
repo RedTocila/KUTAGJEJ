@@ -1,9 +1,91 @@
 'use client';
 
 import { getApiUrl } from '@/lib/api-config';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+
+/** Access token storage key (Supabase access_token from /api/auth). */
+export const AUTH_TOKEN_KEY = 'custom-auth-token';
+/** Refresh token for renewing expired access tokens. */
+export const AUTH_REFRESH_KEY = 'custom-auth-refresh';
+
+function readStoredToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+export function persistTokens(access: string | null | undefined, refresh?: string | null): void {
+  if (typeof window === 'undefined') return;
+  if (access) localStorage.setItem(AUTH_TOKEN_KEY, access);
+  else localStorage.removeItem(AUTH_TOKEN_KEY);
+  if (refresh !== undefined) {
+    if (refresh) localStorage.setItem(AUTH_REFRESH_KEY, refresh);
+    else localStorage.removeItem(AUTH_REFRESH_KEY);
+  }
+}
+
+/**
+ * Prefer a live Supabase browser session (auto-refreshed), then stored access token,
+ * then refresh via stored refresh token.
+ */
+export async function getAccessToken(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const sb = getSupabaseBrowserClient();
+    const { data } = await sb.auth.getSession();
+    const live = data.session?.access_token;
+    if (live) {
+      persistTokens(live, data.session?.refresh_token ?? undefined);
+      return live;
+    }
+  } catch {
+    /* optional browser client */
+  }
+
+  const stored = readStoredToken();
+  if (stored) return stored;
+
+  const refresh = localStorage.getItem(AUTH_REFRESH_KEY);
+  if (!refresh) return null;
+
+  try {
+    const res = await fetch(getApiUrl('/auth/refresh'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: refresh }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || typeof data.token !== 'string') {
+      persistTokens(null, null);
+      return null;
+    }
+    const nextRefresh = typeof data.refreshToken === 'string' ? data.refreshToken : refresh;
+    persistTokens(data.token, nextRefresh);
+    try {
+      const sb = getSupabaseBrowserClient();
+      await sb.auth.setSession({
+        access_token: data.token,
+        refresh_token: nextRefresh,
+      });
+    } catch {
+      /* ignore */
+    }
+    return data.token as string;
+  } catch {
+    return null;
+  }
+}
 
 export function authHeaders(extra?: Record<string, string>): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
+  const token = readStoredToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...extra };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+/** Same as authHeaders but awaits a refreshed access token when possible. */
+export async function authHeadersAsync(extra?: Record<string, string>): Promise<HeadersInit> {
+  const token = await getAccessToken();
   const headers: Record<string, string> = { 'Content-Type': 'application/json', ...extra };
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
@@ -24,7 +106,10 @@ export async function clientFetch<T = unknown>(
   try {
     const res = await fetch(getApiUrl(path), {
       ...init,
-      headers: { ...authHeaders(), ...(init?.headers as Record<string, string> | undefined) },
+      headers: {
+        ...(await authHeadersAsync()),
+        ...(init?.headers as Record<string, string> | undefined),
+      },
     });
     const data = (await res.json().catch(() => ({}))) as T & { message?: string };
     if (!res.ok) {

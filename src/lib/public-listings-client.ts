@@ -2,9 +2,14 @@ import type { ListingMetrics } from '@/lib/listing-metrics';
 import type { BrowseFilters } from '@/lib/listing-filters';
 import { BROWSE_PAGE_SIZE, buildBrowseApiQuery } from '@/lib/listing-filters';
 import type { HomeVerticalId } from '@/lib/home-categories';
+import { isListingId } from '@/lib/real-estate-permalink';
 import { safeServerJson } from '@/lib/server-fetch';
 
-export type ListingMetricsFields = ListingMetrics;
+export type ListingMetricsFields = ListingMetrics & {
+  /** Active Premium boost window — listing floats to the top of public feeds. */
+  isPremium?: boolean;
+  premiumUntil?: string | null;
+};
 
 /**
  * Server-friendly client for the platform's public listing endpoints.
@@ -46,6 +51,8 @@ export interface PublicRealEstateListingSeller {
   kind: 'individual' | 'business';
   displayName: string | null;
   phone: string | null;
+  /** Public profile photo URL when the member has uploaded one. */
+  avatarUrl?: string | null;
   memberSince: string;
   /** Admin-approved verification (jobs and/or professionals, depending on context). */
   verified?: boolean;
@@ -53,6 +60,13 @@ export interface PublicRealEstateListingSeller {
   businessOwner?: string | null;
   /** Business accounts — free-text category. */
   businessCategory?: string | null;
+  /**
+   * Aggregate rating from business/professional listing reviews.
+   * Same review pool that feeds the Trusted referral badge.
+   */
+  ratingAverage?: number | null;
+  /** Total reviews received across directory listings. */
+  reviewCount?: number;
 }
 
 export interface JobListingBenefit {
@@ -466,11 +480,9 @@ export async function fetchTopViewedListings(
   return data?.listings ?? [];
 }
 
-const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
-
 export async function fetchPublicRealEstateListingById(id: string): Promise<PublicRealEstateListingDetail | null> {
   const raw = typeof id === 'string' ? id.trim() : '';
-  if (!OBJECT_ID_RE.test(raw)) return null;
+  if (!isListingId(raw)) return null;
   const data = await safeJson<{ listing?: PublicRealEstateListingDetail }>(
     `/public/listings/real-estate/${encodeURIComponent(raw)}`,
   );
@@ -479,7 +491,7 @@ export async function fetchPublicRealEstateListingById(id: string): Promise<Publ
 
 export async function fetchPublicCarListingById(id: string): Promise<PublicCarListingDetail | null> {
   const raw = typeof id === 'string' ? id.trim() : '';
-  if (!OBJECT_ID_RE.test(raw)) return null;
+  if (!isListingId(raw)) return null;
   const data = await safeJson<{ listing?: PublicCarListingDetail }>(
     `/public/listings/cars/${encodeURIComponent(raw)}`,
   );
@@ -488,7 +500,7 @@ export async function fetchPublicCarListingById(id: string): Promise<PublicCarLi
 
 export async function fetchPublicJobListingById(id: string): Promise<PublicJobListingDetail | null> {
   const raw = typeof id === 'string' ? id.trim() : '';
-  if (!OBJECT_ID_RE.test(raw)) return null;
+  if (!isListingId(raw)) return null;
   const data = await safeJson<{ listing?: PublicJobListingDetail }>(
     `/public/listings/jobs/${encodeURIComponent(raw)}`,
   );
@@ -497,7 +509,7 @@ export async function fetchPublicJobListingById(id: string): Promise<PublicJobLi
 
 export async function fetchPublicMarketplaceListingById(id: string): Promise<PublicMarketplaceListingDetail | null> {
   const raw = typeof id === 'string' ? id.trim() : '';
-  if (!OBJECT_ID_RE.test(raw)) return null;
+  if (!isListingId(raw)) return null;
   const data = await safeJson<{ listing?: PublicMarketplaceListingDetail }>(
     `/public/listings/marketplace/${encodeURIComponent(raw)}`,
   );
@@ -506,16 +518,17 @@ export async function fetchPublicMarketplaceListingById(id: string): Promise<Pub
 
 export async function fetchPublicBusinessListingById(id: string): Promise<PublicDirectoryListingDetail | null> {
   const raw = typeof id === 'string' ? id.trim() : '';
-  if (!OBJECT_ID_RE.test(raw)) return null;
+  if (!isListingId(raw)) return null;
   const data = await safeJson<{ listing?: PublicDirectoryListingDetail }>(
     `/public/listings/businesses/${encodeURIComponent(raw)}`,
+    { cache: 'no-store' },
   );
   return data?.listing ?? null;
 }
 
 export async function fetchPublicProfessionalListingById(id: string): Promise<PublicDirectoryListingDetail | null> {
   const raw = typeof id === 'string' ? id.trim() : '';
-  if (!OBJECT_ID_RE.test(raw)) return null;
+  if (!isListingId(raw)) return null;
   const data = await safeJson<{ listing?: PublicDirectoryListingDetail }>(
     `/public/listings/professionals/${encodeURIComponent(raw)}`,
   );

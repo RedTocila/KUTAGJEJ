@@ -6,7 +6,6 @@ import {
   Box,
   Chip,
   CircularProgress,
-  Divider,
   Stack,
   Table,
   TableBody,
@@ -15,7 +14,11 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
+import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
+import { Receipt as ReceiptIcon } from '@phosphor-icons/react/dist/ssr/Receipt';
 
+import { UserPageHeader } from '@/components/user/layout/user-page-header';
+import { PortalSectionCard, PortalSurface } from '@/components/user/portal-cards';
 import { listMyPayments, listMySubscriptions } from '@/lib/payments-client';
 import type { Payment, PaymentStatus, UserSubscriptionSummary } from '@/types/payment';
 
@@ -64,13 +67,15 @@ export default function MyPaymentsPage() {
   }, []);
 
   return (
-    <Stack spacing={3}>
-      <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-        Pagesat e mia
-      </Typography>
+    <Stack spacing={2.5}>
+      <UserPageHeader
+        icon={<ReceiptIcon size={20} weight="duotone" />}
+        title="Pagesat e mia"
+        description="Abonimet aktive dhe historiku i transakcioneve."
+      />
 
       {error ? (
-        <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
+        <Alert severity="warning" sx={{ borderRadius: 2.5 }}>
           {error}
         </Alert>
       ) : null}
@@ -80,17 +85,31 @@ export default function MyPaymentsPage() {
           <CircularProgress size={28} />
         </Box>
       ) : (
-        <>
+        <Stack spacing={1.75}>
           {subscriptions.length > 0 ? (
-            <Box sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
-              <Typography variant="h6" sx={{ fontWeight: 800, mb: 2 }}>
-                Abonimet
-              </Typography>
-              <Stack spacing={1.5}>
+            <PortalSectionCard
+              title="Abonimet"
+              description="Planet aktive dhe skadimi i tyre."
+              icon={<CreditCardIcon size={22} weight="duotone" />}
+            >
+              <Stack spacing={1.25}>
                 {subscriptions.map((sub) => (
-                  <Box key={sub.id} sx={{ p: 2, borderRadius: 2, bgcolor: 'action.hover' }}>
-                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                      <Typography sx={{ fontWeight: 700 }}>{sub.contractTitle || 'Abonim'}</Typography>
+                  <Box
+                    key={sub.id}
+                    sx={{
+                      p: 2,
+                      borderRadius: 2.5,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+                    }}
+                  >
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 0.75 }}
+                    >
+                      <Typography sx={{ fontWeight: 800 }}>{sub.contractTitle || 'Abonim'}</Typography>
                       <Chip
                         size="small"
                         color={sub.status === 'active' ? 'success' : 'default'}
@@ -98,49 +117,50 @@ export default function MyPaymentsPage() {
                         sx={{ fontWeight: 700 }}
                       />
                     </Stack>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                       {sub.months} muaj · {sub.priceEur} € · skadon {formatDate(sub.expiresAt)}
                     </Typography>
                   </Box>
                 ))}
               </Stack>
-              <Divider sx={{ mt: 2 }} />
-            </Box>
+            </PortalSectionCard>
           ) : null}
 
-          <Box sx={{ p: { xs: 1, sm: 2 }, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+          <PortalSurface sx={{ p: { xs: 1, sm: 1.5 } }}>
             {payments.length === 0 ? (
               <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
                 Nuk keni ende asnjë pagesë.
               </Typography>
             ) : (
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Data</TableCell>
-                    <TableCell>Përshkrimi</TableCell>
-                    <TableCell align="right">Shuma</TableCell>
-                    <TableCell align="right">Statusi</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {payments.map((p) => (
-                    <TableRow key={p.id} hover>
-                      <TableCell>{formatDate(p.createdAt)}</TableCell>
-                      <TableCell>{p.description || (p.type === 'credits' ? 'Blerje kreditesh' : 'Abonim')}</TableCell>
-                      <TableCell align="right">
-                        {p.amount} {p.currency}
-                      </TableCell>
-                      <TableCell align="right">
-                        <Chip size="small" color={STATUS_COLOR[p.status]} label={STATUS_LABEL[p.status]} sx={{ fontWeight: 700 }} />
-                      </TableCell>
+              <Box sx={{ overflowX: 'auto' }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Data</TableCell>
+                      <TableCell>Përshkrimi</TableCell>
+                      <TableCell align="right">Shuma</TableCell>
+                      <TableCell align="right">Statusi</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHead>
+                  <TableBody>
+                    {payments.map((p) => (
+                      <TableRow key={p.id} hover>
+                        <TableCell>{formatDate(p.createdAt)}</TableCell>
+                        <TableCell>{p.description || (p.type === 'credits' ? 'Blerje kreditesh' : 'Abonim')}</TableCell>
+                        <TableCell align="right">
+                          {p.amount} {p.currency}
+                        </TableCell>
+                        <TableCell align="right">
+                          <Chip size="small" color={STATUS_COLOR[p.status]} label={STATUS_LABEL[p.status]} sx={{ fontWeight: 700 }} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
             )}
-          </Box>
-        </>
+          </PortalSurface>
+        </Stack>
       )}
     </Stack>
   );

@@ -26,7 +26,9 @@ import {
 } from '@mui/material';
 import { PencilSimple as PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
+import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 
+import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { paths } from '@/paths';
 import type { DirectoryUser } from '@/types/directory-user';
@@ -105,21 +107,17 @@ export default function StaffUsersPage() {
 
   return (
     <Stack spacing={3}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            Përdoruesit
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Lista përfshin të gjithë përdoruesit e portalit (individë dhe biznese) dhe stafin e mbështetjes. Ndryshoni ose
-            fshini vetëm përdoruesit e stafit; për staf, së pari përcaktoni rolet te{' '}
-            <RouterLink href={paths.dashboard.roles}>Rolet</RouterLink>.
-          </Typography>
-        </Box>
-        <Button variant="contained" onClick={() => setCreateOpen(true)} disabled={roles.length === 0}>
-          Shto përdorues
-        </Button>
-      </Box>
+      <AdminPageHeader
+        icon={React.createElement(UsersIcon, { size: 22, weight: 'duotone' })}
+        eyebrow="Ekipi"
+        title="Përdoruesit"
+        description="Lista e portalit dhe stafit. Ndryshoni ose fshini vetëm stafin; rolet përcaktohen te Rolet."
+        actions={
+          <Button variant="contained" onClick={() => setCreateOpen(true)} disabled={roles.length === 0}>
+            Shto përdorues
+          </Button>
+        }
+      />
 
       {roles.length === 0 && !loading ? (
         <Alert severity="info">
@@ -135,16 +133,18 @@ export default function StaffUsersPage() {
         <Alert severity="error">{loadError}</Alert>
       ) : null}
 
-      <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'auto' }}>
+      <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2.5, overflow: 'auto', bgcolor: 'background.paper' }}>
         <Table size="small">
           <TableHead>
-            <TableRow>
-              <TableCell>Email</TableCell>
-              <TableCell>Lloji</TableCell>
-              <TableCell>Roli (staf)</TableCell>
-              <TableCell>Emri</TableCell>
-              <TableCell>Statusi</TableCell>
-              <TableCell align="right">Veprime</TableCell>
+            <TableRow sx={{ bgcolor: 'action.hover' }}>
+              <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Lloji</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Roli (staf)</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Emri</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Statusi</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 700 }}>
+                Veprime
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>

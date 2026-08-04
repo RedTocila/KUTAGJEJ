@@ -1,24 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardActionArea,
-  CardContent,
-  CircularProgress,
-  Stack,
-  Typography,
-} from '@mui/material';
-import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
-import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist/ssr/BuildingOffice';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Alert, Button, Stack } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
+import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist/ssr/BuildingOffice';
+import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { RealEstateListingForm } from '@/components/real-estate/real-estate-listing-form';
 import { CarListingForm } from '@/components/cars/car-listing-form';
@@ -27,10 +18,22 @@ import { JobEmployerVerificationCard } from '@/components/jobs/job-employer-veri
 import { MarketplaceListingForm } from '@/components/marketplace/marketplace-listing-form';
 import { BusinessListingForm } from '@/components/businesses/business-listing-form';
 import { ProfessionalListingForm } from '@/components/professionals/professional-listing-form';
+import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
+import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
+import { PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
+import { aiDraftToInitialListing } from '@/lib/ai-draft-to-listing';
+import {
+  consumeAiListingDraft,
+  removeAiListingDraftFromQueue,
+  type AiListingDraft,
+} from '@/lib/ai-listing-draft';
 import { listCategoriesPublic } from '@/lib/listings-client';
+import type { CarMineListing, JobMineListing, MarketplaceMineListing } from '@/lib/listings-client';
+import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';
 import type { ListingCategory, ListingCategoryKey } from '@/types/listing-category';
+import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
 
 type Phase =
   | 'choose'
@@ -42,34 +45,85 @@ type Phase =
   | 'professionals-form'
   | 'unsupported';
 
-function categoryIcon(key: ListingCategoryKey) {
-  switch (key) {
-    case 'real-estate':
-      return BuildingsIcon;
-    case 'job-listings':
-      return BriefcaseIcon;
-    case 'cars':
+const KNOWN_CATEGORY_KEYS: ListingCategoryKey[] = [
+  'real-estate',
+  'cars',
+  'job-listings',
+  'marketplace',
+  'businesses',
+  'professionals',
+];
+
+function fallbackCategory(key: ListingCategoryKey): ListingCategory {
+  const titles: Record<ListingCategoryKey, string> = {
+    'real-estate': 'Pasuri të paluajtshme',
+    cars: 'Makina',
+    'job-listings': 'Vende pune',
+    marketplace: 'Tregu',
+    businesses: 'Biznese',
+    professionals: 'Profesionistë',
+  };
+  return {
+    key,
+    title: titles[key] ?? key,
+    slug: key,
+    listingTypes: [],
+  };
+}
+
+function phaseIcon(phase: Phase): PhosphorIcon {
+  switch (phase) {
+    case 'cars-form':
       return CarIcon;
-    case 'marketplace':
+    case 'jobs-form':
+      return BriefcaseIcon;
+    case 'marketplace-form':
       return StorefrontIcon;
-    case 'businesses':
+    case 'businesses-form':
       return BuildingOfficeIcon;
-    case 'professionals':
+    case 'professionals-form':
       return UsersIcon;
     default:
       return BuildingsIcon;
   }
 }
 
+function phaseCategory(phase: Phase): ListingCategoryKey | null {
+  switch (phase) {
+    case 'real-estate-form':
+      return 'real-estate';
+    case 'cars-form':
+      return 'cars';
+    case 'jobs-form':
+      return 'job-listings';
+    case 'marketplace-form':
+      return 'marketplace';
+    case 'businesses-form':
+      return 'businesses';
+    case 'professionals-form':
+      return 'professionals';
+    default:
+      return null;
+  }
+}
+
 export default function UserPostListingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useUser();
 
   const [phase, setPhase] = React.useState<Phase>('choose');
   const [picked, setPicked] = React.useState<ListingCategory | null>(null);
   const [categories, setCategories] = React.useState<ListingCategory[]>([]);
-  const [loadError, setLoadError] = React.useState<string | null>(null);
   const [loadingCategories, setLoadingCategories] = React.useState(true);
+  const wantsAi = searchParams.get('ai') === '1';
+  const aiDraftId = searchParams.get('draftId');
+  const aiReturnHref = paths.user.aiImport;
+  const [aiInitial, setAiInitial] = React.useState<Record<string, unknown> | null>(null);
+  const [aiReady, setAiReady] = React.useState(!wantsAi);
+  const [aiFormKey, setAiFormKey] = React.useState(0);
+  const appliedCategoryRef = React.useRef<string | null>(null);
+  const aiConsumedRef = React.useRef(false);
 
   const canPublish =
     Boolean(user) &&
@@ -88,16 +142,10 @@ export default function UserPostListingPage() {
     if (!user || !canPublish) return;
     let cancelled = false;
     setLoadingCategories(true);
-    setLoadError(null);
     void (async () => {
       const res = await listCategoriesPublic();
       if (cancelled) return;
-      if (res.error) {
-        setLoadError(res.error);
-        setCategories([]);
-      } else {
-        setCategories(res.categories ?? []);
-      }
+      setCategories(res.categories ?? []);
       setLoadingCategories(false);
     })();
     return () => {
@@ -124,298 +172,182 @@ export default function UserPostListingPage() {
     }
   };
 
-  const handleBackToCategories = () => {
-    setPicked(null);
-    setPhase('choose');
+  const applyCategoryKey = React.useCallback(
+    (raw: string) => {
+      const fromApi = categories.find((c) => c.key === raw);
+      if (fromApi) {
+        appliedCategoryRef.current = raw;
+        handlePickCategory(fromApi);
+        return;
+      }
+      if (KNOWN_CATEGORY_KEYS.includes(raw as ListingCategoryKey)) {
+        appliedCategoryRef.current = raw;
+        handlePickCategory(fallbackCategory(raw as ListingCategoryKey));
+      }
+    },
+    [categories],
+  );
+
+  React.useEffect(() => {
+    const raw = searchParams.get('category');
+    if (!raw || loadingCategories) return;
+    if (appliedCategoryRef.current === raw) return;
+    applyCategoryKey(raw);
+  }, [searchParams, loadingCategories, applyCategoryKey]);
+
+  React.useEffect(() => {
+    if (!wantsAi) {
+      setAiReady(true);
+      return;
+    }
+    if (aiConsumedRef.current) return;
+    const category = searchParams.get('category') as ListingCategoryKey | null;
+    if (!category) {
+      setAiReady(true);
+      return;
+    }
+    const draftId = searchParams.get('draftId');
+    const draft: AiListingDraft | null = consumeAiListingDraft(category, draftId);
+    aiConsumedRef.current = true;
+    if (draft) setAiInitial(aiDraftToInitialListing(draft));
+    setAiReady(true);
+  }, [wantsAi, searchParams]);
+
+  const handleSheetPick = (key: ListingCategoryKey) => {
+    hardNavigate(`${paths.user.realEstateListing}?category=${encodeURIComponent(key)}`);
   };
+
+  const handleAiApply = React.useCallback((initial: Record<string, unknown>) => {
+    setAiInitial(initial);
+    setAiFormKey((k) => k + 1);
+  }, []);
+
+  const handleFormSuccess = React.useCallback(() => {
+    if (wantsAi) {
+      if (aiDraftId) removeAiListingDraftFromQueue(aiDraftId);
+      hardNavigate(aiReturnHref);
+      return;
+    }
+    hardNavigate(`${paths.user.myRealEstateListings}?submitted=pending`);
+  }, [wantsAi, aiDraftId, aiReturnHref]);
 
   if (!user) return null;
   if (!canPublish) return null;
 
+  const formMeta: Partial<Record<Phase, { title: string; description: string }>> = {
+    'real-estate-form': {
+      title: 'Posto njoftim',
+      description: 'Plotësoni detajet e pronës për ta publikuar në platformë.',
+    },
+    'cars-form': {
+      title: 'Posto njoftim',
+      description: 'Shtoni makinën tuaj me foto dhe specifikimet kryesore.',
+    },
+    'jobs-form': {
+      title: 'Posto njoftim pune',
+      description: 'Publikoni një vend pune dhe arrini kandidatët e duhur.',
+    },
+    'businesses-form': {
+      title: 'Posto profil biznesi',
+      description: 'Krijoni profilin e biznesit me orar, menu dhe kontakt. Vetëm një profil për llogari.',
+    },
+    'professionals-form': {
+      title: 'Posto profil profesionisti',
+      description: 'Prezantoni shërbimet dhe portofolin tuaj. Vetëm një profil për llogari.',
+    },
+    'marketplace-form': {
+      title: 'Posto njoftim tregu',
+      description: 'Shitni ose jepni me qira produkte në tregun online.',
+    },
+  };
+
+  const activeMeta = formMeta[phase];
+  const showFormShell = Boolean(activeMeta);
+  const activeCategory = phaseCategory(phase);
+
   return (
-    <Stack spacing={3}>
+    <Stack spacing={2.5}>
       {phase === 'choose' ? (
-        <>
-          <Stack spacing={0.5}>
-            <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-              Posto njoftim
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 720 }}>
-              Zgjidh kategorinë e njoftimit. Kategoritë dhe titujt e tyre vijnë nga paneli i administratorit (Kategoritë).
-            </Typography>
-          </Stack>
-
-          {loadError ? (
-            <Alert severity="error" sx={{ borderRadius: 1.5 }}>
-              {loadError}
-            </Alert>
-          ) : null}
-
-          {loadingCategories ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-              <CircularProgress />
-            </Box>
-          ) : categories.length === 0 ? (
-            <Alert severity="info" sx={{ borderRadius: 1.5 }}>
-              Nuk ka kategori të konfiguruara. Një administrator duhet të shtojë kategoritë te Paneli → Kategoritë.
-            </Alert>
-          ) : (
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 2,
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
-              }}
-            >
-              {categories.map((cat) => {
-                const Icon = categoryIcon(cat.key);
-                return (
-                  <Card
-                    key={cat.key}
-                    variant="outlined"
-                    sx={{ borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}
-                  >
-                    <CardActionArea onClick={() => handlePickCategory(cat)} sx={{ alignItems: 'stretch', height: '100%' }}>
-                      <CardContent sx={{ p: 2.5 }}>
-                        <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
-                          <Box
-                            sx={{
-                              p: 1.25,
-                              borderRadius: 2,
-                              bgcolor: (theme) =>
-                                theme.palette.mode === 'dark'
-                                  ? 'rgba(118, 186, 27, 0.12)'
-                                  : 'rgba(118, 186, 27, 0.14)',
-                              color: 'primary.main',
-                              display: 'flex',
-                            }}
-                          >
-                            <Icon size={28} weight="duotone" />
-                          </Box>
-                          <Stack spacing={0.5} sx={{ minWidth: 0 }}>
-                            <Typography variant="h6" component="h2" sx={{ fontWeight: 700 }}>
-                              {cat.title}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {cat.key === 'real-estate'
-                                ? 'Apartament, vilë, tokë dhe të tjera — plotësoni formularin më poshtë.'
-                                : cat.key === 'cars'
-                                  ? 'Makina, SUV, kamionë dhe të tjera — plotësoni formularin me detajet e automjetit.'
-                                  : cat.key === 'job-listings'
-                                    ? 'Postoni një njoftim pune — plotësoni industrinë, kërkesat dhe pagën.'
-                                    : cat.key === 'marketplace'
-                                      ? 'Shisni, blini ose jepni me qira artikuj — plotësoni formularin e tregut.'
-                                      : cat.key === 'businesses'
-                                        ? 'Biznese dhe lokale — formulari i dedikuar aktivizohet së shpejti.'
-                                        : cat.key === 'professionals'
-                                          ? 'Profesionistë dhe freelance — formulari i dedikuar aktivizohet së shpejti.'
-                                          : 'Postimi për këtë kategori do të aktivizohet së shpejti.'}
-                            </Typography>
-                          </Stack>
-                        </Stack>
-                      </CardContent>
-                    </CardActionArea>
-                  </Card>
-                );
-              })}
-            </Box>
-          )}
-        </>
+        <AddListingPickerDialog
+          open
+          onClose={() => hardNavigate(paths.user.dashboard)}
+          onPick={handleSheetPick}
+        />
       ) : null}
 
-      {phase === 'real-estate-form' ? (
+      {showFormShell && activeMeta ? (
         <>
-          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-            <Stack spacing={0.5}>
-              <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-                Posto njoftim
-              </Typography>
-              {picked ? (
-                <Typography variant="body2" color="text.secondary">
-                  Kategoria: <strong>{picked.title}</strong>
-                </Typography>
-              ) : null}
-            </Stack>
-            <Button variant="outlined" onClick={handleBackToCategories} sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}>
-              Ndrysho kategorinë
-            </Button>
-          </Stack>
+          <PostListingHeader
+            icon={phaseIcon(phase)}
+            title={activeMeta.title}
+            description={activeMeta.description}
+            closeHref={wantsAi ? aiReturnHref : paths.home}
+          />
 
-          <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
-            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+          {phase === 'jobs-form' ? <JobEmployerVerificationCard /> : null}
+
+          <PostListingFormSurface>
+            {activeCategory ? (
+              <PostListingAiAssist category={activeCategory} onApply={handleAiApply} />
+            ) : null}
+            {!aiReady ? null : (
+              <>
+            {phase === 'real-estate-form' ? (
               <RealEstateListingForm
-                onSuccess={() => router.push(`${paths.user.myRealEstateListings}?submitted=pending`)}
-                backHref={paths.user.myRealEstateListings}
-                backLabel="Njoftimet e mia"
+                key={`re-${aiFormKey}`}
+                initialListing={(aiInitial as RealEstateMineListing | null) ?? null}
+                onSuccess={handleFormSuccess}
               />
-            </CardContent>
-          </Card>
-        </>
-      ) : null}
-
-      {phase === 'cars-form' ? (
-        <>
-          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-            <Stack spacing={0.5}>
-              <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-                Posto njoftim
-              </Typography>
-              {picked ? (
-                <Typography variant="body2" color="text.secondary">
-                  Kategoria: <strong>{picked.title}</strong>
-                </Typography>
-              ) : null}
-            </Stack>
-            <Button variant="outlined" onClick={handleBackToCategories} sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}>
-              Ndrysho kategorinë
-            </Button>
-          </Stack>
-
-          <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
-            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+            ) : null}
+            {phase === 'cars-form' ? (
               <CarListingForm
-                onSuccess={() => router.push(`${paths.user.myRealEstateListings}?submitted=pending`)}
-                backHref={paths.user.myRealEstateListings}
-                backLabel="Njoftimet e mia"
+                key={`cars-${aiFormKey}`}
+                initialListing={(aiInitial as CarMineListing | null) ?? null}
+                onSuccess={handleFormSuccess}
               />
-            </CardContent>
-          </Card>
-        </>
-      ) : null}
-
-      {phase === 'jobs-form' ? (
-        <>
-          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-            <Stack spacing={0.5}>
-              <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-                Posto njoftim pune
-              </Typography>
-              {picked ? (
-                <Typography variant="body2" color="text.secondary">
-                  Kategoria: <strong>{picked.title}</strong>
-                </Typography>
-              ) : null}
-            </Stack>
-            <Button variant="outlined" onClick={handleBackToCategories} sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}>
-              Ndrysho kategorinë
-            </Button>
-          </Stack>
-
-          <JobEmployerVerificationCard />
-
-          <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
-            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+            ) : null}
+            {phase === 'jobs-form' ? (
               <JobListingForm
-                onSuccess={() => router.push(`${paths.user.myRealEstateListings}?submitted=pending`)}
-                backHref={paths.user.myRealEstateListings}
-                backLabel="Njoftimet e mia"
+                key={`jobs-${aiFormKey}`}
+                initialListing={(aiInitial as JobMineListing | null) ?? null}
+                onSuccess={handleFormSuccess}
               />
-            </CardContent>
-          </Card>
-        </>
-      ) : null}
-
-      {phase === 'businesses-form' ? (
-        <>
-          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-            <Stack spacing={0.5}>
-              <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-                Posto profil biznesi
-              </Typography>
-              {picked ? (
-                <Typography variant="body2" color="text.secondary">
-                  Kategoria: <strong>{picked.title}</strong>
-                </Typography>
-              ) : null}
-            </Stack>
-            <Button variant="outlined" onClick={handleBackToCategories} sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}>
-              Ndrysho kategorinë
-            </Button>
-          </Stack>
-
-          <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
-            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+            ) : null}
+            {phase === 'businesses-form' ? (
               <BusinessListingForm
-                onSuccess={() => router.push(paths.user.businessesListing)}
-                backHref={paths.user.businessesListing}
-                backLabel="Biznese"
+                key={`biz-${aiFormKey}`}
+                aiPrefill={aiInitial}
+                onSuccess={handleFormSuccess}
               />
-            </CardContent>
-          </Card>
-        </>
-      ) : null}
-
-      {phase === 'professionals-form' ? (
-        <>
-          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-            <Stack spacing={0.5}>
-              <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-                Posto profil profesionisti
-              </Typography>
-              {picked ? (
-                <Typography variant="body2" color="text.secondary">
-                  Kategoria: <strong>{picked.title}</strong>
-                </Typography>
-              ) : null}
-            </Stack>
-            <Button variant="outlined" onClick={handleBackToCategories} sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}>
-              Ndrysho kategorinë
-            </Button>
-          </Stack>
-
-          <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
-            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+            ) : null}
+            {phase === 'professionals-form' ? (
               <ProfessionalListingForm
-                onSuccess={() => router.push(paths.user.professionalsListing)}
-                backHref={paths.user.professionalsListing}
-                backLabel="Profesionistë"
+                key={`pro-${aiFormKey}`}
+                aiPrefill={aiInitial}
+                onSuccess={handleFormSuccess}
               />
-            </CardContent>
-          </Card>
-        </>
-      ) : null}
-
-      {phase === 'marketplace-form' ? (
-        <>
-          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-            <Stack spacing={0.5}>
-              <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-                Posto njoftim tregu
-              </Typography>
-              {picked ? (
-                <Typography variant="body2" color="text.secondary">
-                  Kategoria: <strong>{picked.title}</strong>
-                </Typography>
-              ) : null}
-            </Stack>
-            <Button variant="outlined" onClick={handleBackToCategories} sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}>
-              Ndrysho kategorinë
-            </Button>
-          </Stack>
-
-          <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
-            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+            ) : null}
+            {phase === 'marketplace-form' ? (
               <MarketplaceListingForm
-                onSuccess={() => router.push(`${paths.user.myRealEstateListings}?submitted=pending`)}
-                backHref={paths.user.myRealEstateListings}
-                backLabel="Njoftimet e mia"
+                key={`mkt-${aiFormKey}`}
+                initialListing={(aiInitial as MarketplaceMineListing | null) ?? null}
+                onSuccess={handleFormSuccess}
               />
-            </CardContent>
-          </Card>
+            ) : null}
+              </>
+            )}
+          </PostListingFormSurface>
         </>
       ) : null}
 
       {phase === 'unsupported' && picked ? (
-        <Stack spacing={3}>
-          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-            <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-              Posto njoftim
-            </Typography>
-            <Button variant="outlined" onClick={handleBackToCategories}>
-              Ndrysho kategorinë
-            </Button>
-          </Stack>
-          <Alert severity="info" sx={{ borderRadius: 1.5 }}>
+        <Stack spacing={2.5}>
+          <PostListingHeader
+            icon={BuildingsIcon}
+            title="Posto njoftim"
+            description="Kjo kategori ende nuk ofron formular postimi nga portali."
+          />
+          <Alert severity="info" sx={{ borderRadius: 2.5 }}>
             Kategoria <strong>{picked.title}</strong> ende nuk ofron formular postimi nga portali. Për momentin mund të
             postoni vetëm njoftime për <strong>prona</strong>.
           </Alert>

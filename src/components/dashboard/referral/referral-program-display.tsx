@@ -2,135 +2,40 @@
 
 import * as React from 'react';
 import { alpha } from '@mui/material/styles';
-import { Box, Card, CardContent, Chip, Divider, Stack, Typography, useTheme } from '@mui/material';
-import { Check as CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { Box, Chip, LinearProgress, Stack, Typography, useTheme } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { Circle as CircleIcon } from '@phosphor-icons/react/dist/ssr/Circle';
+import { Coins as CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins';
 import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
 import { SealCheck as SealCheckIcon } from '@phosphor-icons/react/dist/ssr/SealCheck';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import { TrendUp as TrendUpIcon } from '@phosphor-icons/react/dist/ssr/TrendUp';
+import { UserPlus as UserPlusIcon } from '@phosphor-icons/react/dist/ssr/UserPlus';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import type { ReferralBadge, ReferralProgram, ReferralTrustedBadge } from '@/types/referral-program';
 
 type Accent = 'primary' | 'warning';
 
-const GRADIENTS = {
-  green: 'linear-gradient(135deg, #3fd266 0%, #1a7f37 100%)',
-  gold: 'linear-gradient(135deg, #ffd35c 0%, #d98f00 100%)',
-} as const;
-
-// ---------------------------------------------------------------------------
-// Checkpoint slider
-// ---------------------------------------------------------------------------
-
-function CheckpointSlider({
-  thresholds,
-  current,
-  accent,
-}: {
-  thresholds: number[];
-  current: number;
-  accent: Accent;
-}) {
-  const theme = useTheme();
-  const main = theme.palette[accent].main;
+function progressOf(current: number, thresholds: number[]) {
   const max = thresholds.length ? thresholds[thresholds.length - 1] : 1;
-  const fillPercent = Math.max(0, Math.min(100, (current / max) * 100));
-
-  return (
-    <Box sx={{ position: 'relative', px: 1.5, pt: 1.25, pb: 3 }}>
-      <Box sx={{ position: 'relative', height: 18 }}>
-        {/* base track */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 7,
-            left: 0,
-            right: 0,
-            height: 4,
-            borderRadius: 2,
-            bgcolor: 'divider',
-          }}
-        />
-        {/* filled track */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 7,
-            left: 0,
-            width: `${fillPercent}%`,
-            height: 4,
-            borderRadius: 2,
-            bgcolor: main,
-            transition: 'width 0.4s ease',
-          }}
-        />
-        {thresholds.map((threshold, i) => {
-          const pos = Math.max(0, Math.min(100, (threshold / max) * 100));
-          const achieved = current >= threshold;
-          return (
-            <Box
-              key={`${threshold}-${i}`}
-              sx={{ position: 'absolute', top: 0, left: `${pos}%`, transform: 'translateX(-50%)' }}
-            >
-              <Box
-                sx={{
-                  width: 18,
-                  height: 18,
-                  borderRadius: '50%',
-                  display: 'grid',
-                  placeItems: 'center',
-                  border: '2px solid',
-                  borderColor: main,
-                  bgcolor: achieved ? main : 'background.paper',
-                }}
-              >
-                {achieved ? (
-                  <CheckIcon size={9} weight="bold" color={theme.palette[accent].contrastText} />
-                ) : (
-                  <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: main }} />
-                )}
-              </Box>
-              <Typography
-                variant="caption"
-                sx={{
-                  position: 'absolute',
-                  top: 22,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  color: achieved ? 'text.primary' : 'text.disabled',
-                  fontWeight: achieved ? 700 : 500,
-                  fontSize: '0.7rem',
-                }}
-              >
-                {threshold}
-              </Typography>
-            </Box>
-          );
-        })}
-      </Box>
-    </Box>
-  );
+  const achieved = thresholds.filter((t) => current >= t).length;
+  const percent = Math.round(Math.max(0, Math.min(100, (current / Math.max(max, 1)) * 100)));
+  return { achieved, total: thresholds.length, percent };
 }
 
-// ---------------------------------------------------------------------------
-// Achievement row (level / tier / review milestone)
-// ---------------------------------------------------------------------------
-
-function TierRow({
-  heading,
-  subtitle,
-  boostCredits,
-  achieved,
+function TierLine({
+  title,
+  hint,
+  reward,
+  done,
   accent,
 }: {
-  heading: string;
-  subtitle: string;
-  boostCredits: number;
-  achieved: boolean;
+  title: string;
+  hint: string;
+  reward: string;
+  done: boolean;
   accent: Accent;
 }) {
   const theme = useTheme();
@@ -138,392 +43,483 @@ function TierRow({
   return (
     <Stack
       direction="row"
-      spacing={1.25}
+      spacing={1}
       sx={{
         alignItems: 'center',
-        py: 1,
-        px: 1.25,
-        borderRadius: 1.5,
-        border: '1px solid',
-        borderColor: achieved ? alpha(main, 0.5) : 'transparent',
-        bgcolor: achieved ? alpha(main, 0.08) : 'transparent',
+        py: 0.7,
+        px: 0.85,
+        borderRadius: 1.25,
+        bgcolor: done ? alpha(main, 0.09) : 'transparent',
       }}
     >
-      <Box sx={{ display: 'inline-flex', color: achieved ? main : 'text.disabled', flexShrink: 0 }}>
-        {achieved ? (
-          <CheckCircleIcon size={20} weight="fill" />
-        ) : (
-          <CircleIcon size={20} weight="regular" />
-        )}
+      <Box sx={{ display: 'inline-flex', color: done ? main : 'text.disabled', flexShrink: 0 }}>
+        {done ? <CheckCircleIcon size={16} weight="fill" /> : <CircleIcon size={16} weight="regular" />}
       </Box>
-      <Stack spacing={0.1} sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
-          {heading}
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography variant="body2" sx={{ fontWeight: 750, lineHeight: 1.25, fontSize: '0.82rem' }}>
+          {title}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {subtitle}
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
+          {hint}
         </Typography>
-      </Stack>
+      </Box>
       <Chip
         size="small"
-        label={`+${boostCredits} BC`}
+        label={reward}
         color={accent}
-        variant="outlined"
-        sx={{ fontWeight: 700, flexShrink: 0 }}
+        variant={done ? 'filled' : 'outlined'}
+        sx={{ height: 22, fontWeight: 800, fontSize: '0.68rem', flexShrink: 0 }}
       />
     </Stack>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Badge card
-// ---------------------------------------------------------------------------
-
-function BadgeCard({
+function MiniBadge({
   badge,
-  icon: Icon,
-  gradient,
-  iconColor,
+  Icon,
+  tone,
 }: {
   badge: ReferralBadge | ReferralTrustedBadge;
-  icon: PhosphorIcon;
-  gradient: string;
-  iconColor: string;
+  Icon: PhosphorIcon;
+  tone: 'green' | 'gold';
 }) {
   const isTrusted = 'reviewsRequired' in badge && typeof badge.reviewsRequired === 'number';
+  const bg =
+    tone === 'gold'
+      ? 'linear-gradient(135deg, #ffd35c 0%, #d98f00 100%)'
+      : 'linear-gradient(135deg, #3fd266 0%, #1a7f37 100%)';
   return (
     <Stack
       direction="row"
-      spacing={1.5}
+      spacing={1.15}
       sx={{
         alignItems: 'center',
-        p: 1.5,
-        borderRadius: 2,
-        bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.05)'),
-        border: '1px solid',
+        mt: 0.85,
+        p: 1,
+        borderRadius: 1.5,
+        border: '1px dashed',
         borderColor: 'divider',
+        bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.015)'),
       }}
     >
       <Box
         sx={{
-          position: 'relative',
-          width: 52,
-          height: 52,
-          borderRadius: 2,
-          background: gradient,
+          width: 34,
+          height: 34,
+          borderRadius: 1.25,
+          background: bg,
           display: 'grid',
           placeItems: 'center',
           flexShrink: 0,
-          boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
+          position: 'relative',
         }}
       >
-        <Icon size={26} weight="fill" color={iconColor} />
+        <Icon size={17} weight="fill" color={tone === 'gold' ? '#1a1a1a' : '#fff'} />
         <Box
           sx={{
             position: 'absolute',
-            bottom: -5,
-            right: -5,
-            width: 20,
-            height: 20,
+            bottom: -3,
+            right: -3,
+            width: 14,
+            height: 14,
             borderRadius: '50%',
             bgcolor: '#d98f00',
             display: 'grid',
             placeItems: 'center',
-            border: '2px solid',
+            border: '1.5px solid',
             borderColor: 'background.paper',
           }}
         >
-          <SealCheckIcon size={11} weight="fill" color="#fff" />
+          <SealCheckIcon size={8} weight="fill" color="#fff" />
         </Box>
       </Box>
-
-      <Stack spacing={0.4} sx={{ flex: 1, minWidth: 0 }}>
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-          <Chip
-            size="small"
-            label={badge.label}
-            sx={{ bgcolor: '#f0a020', color: '#1a1a1a', fontWeight: 800, height: 22 }}
-          />
-          <Typography variant="body2" sx={{ fontWeight: 700 }}>
-            {badge.lifetimePercent}% Lifetime
-            {isTrusted ? ` · në ${(badge as ReferralTrustedBadge).reviewsRequired} reviews` : ''}
-          </Typography>
-        </Stack>
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Typography variant="caption" sx={{ fontWeight: 800, display: 'block', lineHeight: 1.2 }}>
+          Badge: {badge.label} · {badge.lifetimePercent}% lifetime
+          {isTrusted ? ` · ${(badge as ReferralTrustedBadge).reviewsRequired} reviews` : ''}
+        </Typography>
         {badge.description ? (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
             {badge.description}
           </Typography>
         ) : null}
-      </Stack>
+      </Box>
     </Stack>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Section shell with progress header
-// ---------------------------------------------------------------------------
-
-function SectionCard({
+function GroupCard({
+  icon: Icon,
+  kindLabel,
   title,
-  subtitle,
-  unitLabel,
+  howItWorks,
   current,
+  unit,
   thresholds,
   accent,
   children,
+  badge,
 }: {
+  icon: PhosphorIcon;
+  kindLabel: string;
   title: string;
-  subtitle?: string;
-  unitLabel: string;
+  howItWorks: string;
   current: number;
+  unit: string;
   thresholds: number[];
   accent: Accent;
   children: React.ReactNode;
+  badge?: React.ReactNode;
 }) {
-  const total = thresholds.length;
-  const achievedCount = thresholds.filter((t) => current >= t).length;
-  const max = total ? thresholds[total - 1] : 1;
-  const percent = Math.round(Math.max(0, Math.min(100, (current / max) * 100)));
+  const { achieved, total, percent } = progressOf(current, thresholds);
+  const done = total > 0 && achieved >= total;
 
   return (
-    <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-        <Typography variant="h6" sx={{ fontWeight: 800 }}>
-          {title}
-        </Typography>
-        {subtitle ? (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            {subtitle}
-          </Typography>
-        ) : null}
-
-        <Stack
-          direction="row"
-          sx={{ alignItems: 'center', justifyContent: 'space-between', mt: 2.5 }}
-        >
-          <Typography variant="body2" sx={{ fontWeight: 700 }}>
-            {current} {unitLabel} · {achievedCount}/{total} checkpointe
-          </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 800, color: `${accent}.main` }}>
-            {percent}%
-          </Typography>
+    <Box
+      sx={{
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 2.5,
+        bgcolor: 'background.paper',
+        overflow: 'hidden',
+      }}
+    >
+      <Stack
+        spacing={1}
+        sx={{
+          px: 1.5,
+          py: 1.25,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          bgcolor: (t) =>
+            accent === 'warning'
+              ? t.palette.mode === 'dark'
+                ? 'rgba(245,166,35,0.08)'
+                : 'rgba(245,166,35,0.06)'
+              : t.palette.mode === 'dark'
+                ? 'rgba(118,186,27,0.08)'
+                : 'rgba(118,186,27,0.06)',
+        }}
+      >
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
+          <Box
+            sx={{
+              width: 34,
+              height: 34,
+              borderRadius: 1.5,
+              display: 'grid',
+              placeItems: 'center',
+              flexShrink: 0,
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              color: accent === 'warning' ? 'warning.main' : 'primary.main',
+            }}
+          >
+            <Icon size={18} weight="duotone" />
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+              <Chip
+                size="small"
+                label={kindLabel}
+                color={accent}
+                variant="outlined"
+                sx={{ height: 20, fontWeight: 800, fontSize: '0.62rem', letterSpacing: 0.2 }}
+              />
+              <Chip
+                size="small"
+                label={done ? 'Kompletuar' : `${achieved}/${total}`}
+                color={done ? 'success' : 'default'}
+                sx={{ height: 20, fontWeight: 800, fontSize: '0.62rem' }}
+              />
+            </Stack>
+            <Typography sx={{ fontWeight: 850, fontSize: '0.92rem', mt: 0.45, lineHeight: 1.25 }}>
+              {title}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.2, lineHeight: 1.35 }}>
+              {howItWorks}
+            </Typography>
+          </Box>
         </Stack>
 
-        <CheckpointSlider thresholds={thresholds} current={current} accent={accent} />
-
-        <Stack spacing={1}>{children}</Stack>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Simple reward row (login streak)
-// ---------------------------------------------------------------------------
-
-function RewardRow({
-  title,
-  subtitle,
-  boostCredits,
-  accent,
-}: {
-  title: string;
-  subtitle: string;
-  boostCredits: number;
-  accent: Accent;
-}) {
-  return (
-    <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', py: 1.25 }}>
-      <Stack spacing={0.1} sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-          {title}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {subtitle}
-        </Typography>
+        <Stack spacing={0.4}>
+          <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+            <Typography variant="caption" sx={{ fontWeight: 700 }}>
+              {current} {unit}
+            </Typography>
+            <Typography variant="caption" sx={{ fontWeight: 800, color: `${accent}.main` }}>
+              {percent}%
+            </Typography>
+          </Stack>
+          <LinearProgress
+            variant="determinate"
+            value={percent}
+            color={accent}
+            sx={{ height: 5, borderRadius: 3 }}
+          />
+        </Stack>
       </Stack>
-      <Chip
-        size="small"
-        label={`+${boostCredits} BC`}
-        color={accent}
-        variant="outlined"
-        sx={{ fontWeight: 700, flexShrink: 0 }}
-      />
-    </Stack>
+
+      <Stack spacing={0.15} sx={{ px: 1.15, py: 1 }}>
+        {children}
+        {badge}
+      </Stack>
+    </Box>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Program display
-// ---------------------------------------------------------------------------
 
 export function ProgramDisplay({
   program,
   referralCount = 0,
   paidReferralCount = 0,
   reviewCount = 0,
+  compact = false,
+  dailyShareClaimedToday = false,
+  dailyShareBoostCredits = 3,
+  loginStreakDays = 0,
 }: {
   program: ReferralProgram;
   referralCount?: number;
   paidReferralCount?: number;
   reviewCount?: number;
+  compact?: boolean;
+  dailyShareClaimedToday?: boolean;
+  dailyShareBoostCredits?: number;
+  loginStreakDays?: number;
 }) {
   const freeThresholds = program.freeTiers.map((t) => t.referralsRequired);
   const paidThresholds = program.paidTiers.map((t) => t.paidReferralsRequired);
   const reviewThresholds = program.reviewMilestones.map((m) => m.reviewsRequired);
 
   return (
-    <Stack spacing={3}>
-      <Box>
-        <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: 0.2 }}>
-          {program.pageTitle}
-        </Typography>
-        {program.pageSubtitle ? (
-          <Typography variant="body1" color="text.secondary" sx={{ mt: 1, maxWidth: 720 }}>
-            {program.pageSubtitle}
+    <Stack spacing={1.5}>
+      {!compact ? (
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: '-0.01em' }}>
+            {program.pageTitle}
           </Typography>
-        ) : null}
-      </Box>
+          {program.pageSubtitle ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, maxWidth: 640 }}>
+              {program.pageSubtitle}
+            </Typography>
+          ) : null}
+        </Box>
+      ) : (
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 650 }}>
+          Çdo grup më poshtë është një lloj shpërblimi i ndryshëm — progresi juaj matet veç e veç.
+        </Typography>
+      )}
 
-      {/* Free sign-up promotions */}
-      <SectionCard
-        title={program.freeSignUpTitle}
-        subtitle={program.freeSignUpSubtitle}
-        unitLabel="referime"
+      <GroupCard
+        icon={UserPlusIcon}
+        kindLabel="1 · Referime falas"
+        title={program.freeSignUpTitle || 'Regjistrime falas'}
+        howItWorks="Ftoni miq që krijojnë llogari falas. Sa më shumë referime, aq më shumë Boost Coins."
         current={referralCount}
+        unit="referime"
         thresholds={freeThresholds}
         accent="primary"
+        badge={<MiniBadge badge={program.networkBuilderBadge} Icon={ShareNetworkIcon} tone="green" />}
       >
         {program.freeTiers.map((t) => (
-          <TierRow
+          <TierLine
             key={`${t.level}-${t.title}`}
-            heading={`Niveli ${t.level}: ${t.title}`}
-            subtitle={`${t.referralsRequired} referime`}
-            boostCredits={t.boostCredits}
-            achieved={referralCount >= t.referralsRequired}
+            title={t.title}
+            hint={`Niveli ${t.level} · duhen ${t.referralsRequired} referime`}
+            reward={`+${t.boostCredits} BC`}
+            done={referralCount >= t.referralsRequired}
             accent="primary"
           />
         ))}
-        <Box sx={{ pt: 1 }}>
-          <BadgeCard
-            badge={program.networkBuilderBadge}
-            icon={ShareNetworkIcon}
-            gradient={GRADIENTS.green}
-            iconColor="#fff"
-          />
-        </Box>
-      </SectionCard>
+      </GroupCard>
 
-      {/* Paid promotion packages */}
-      <SectionCard
-        title={program.paidTitle}
-        subtitle={program.paidSubtitle}
-        unitLabel="referime të paguara"
+      <GroupCard
+        icon={CoinsIcon}
+        kindLabel="2 · Referime të paguara"
+        title={program.paidTitle || 'Referime të paguara'}
+        howItWorks="Kur personi i ftuar blen një paketë me pagesë, llogaritet si referim i paguar (shpërblime më të mëdha)."
         current={paidReferralCount}
+        unit="të paguara"
         thresholds={paidThresholds}
         accent="primary"
+        badge={<MiniBadge badge={program.revenueDriverBadge} Icon={TrendUpIcon} tone="green" />}
       >
         {program.paidTiers.map((t) => (
-          <TierRow
+          <TierLine
             key={`${t.tier}-${t.title}`}
-            heading={`Paketa ${t.tier}: ${t.title}`}
-            subtitle={
+            title={t.title}
+            hint={
               t.premiumMonths > 0
-                ? `${t.premiumMonths} muaj premium${t.extraNote ? ` · ${t.extraNote}` : ''}`
-                : `${t.paidReferralsRequired} referime të paguara`
+                ? `${t.paidReferralsRequired} të paguara · +${t.premiumMonths} muaj premium`
+                : `Duhen ${t.paidReferralsRequired} referime të paguara`
             }
-            boostCredits={t.boostCredits}
-            achieved={paidReferralCount >= t.paidReferralsRequired}
+            reward={`+${t.boostCredits} BC`}
+            done={paidReferralCount >= t.paidReferralsRequired}
             accent="primary"
           />
         ))}
-        <Box sx={{ pt: 1 }}>
-          <BadgeCard
-            badge={program.revenueDriverBadge}
-            icon={TrendUpIcon}
-            gradient={GRADIENTS.green}
-            iconColor="#fff"
-          />
-        </Box>
-      </SectionCard>
+      </GroupCard>
 
-      {/* Reviews */}
-      <SectionCard
-        title={program.reviewsTitle}
-        subtitle={program.reviewsSubtitle}
-        unitLabel="vlerësime"
+      <GroupCard
+        icon={StarIcon}
+        kindLabel="3 · Vlerësime"
+        title={program.reviewsTitle || 'Vlerësime'}
+        howItWorks="Fitoni Boost Coins kur merrni vlerësime nga klientët në njoftimet tuaja."
         current={reviewCount}
+        unit="vlerësime"
         thresholds={reviewThresholds}
         accent="warning"
+        badge={<MiniBadge badge={program.trustedReviewerBadge} Icon={StarIcon} tone="gold" />}
       >
         {program.reviewMilestones.map((m, i) => (
-          <TierRow
+          <TierLine
             key={`${m.reviewsRequired}-${i}`}
-            heading={`${m.reviewsRequired} vlerësime`}
-            subtitle={`${m.reviewsRequired} vlerësime`}
-            boostCredits={m.boostCredits}
-            achieved={reviewCount >= m.reviewsRequired}
+            title={`${m.reviewsRequired} vlerësime`}
+            hint="Milestone i vlerësimeve"
+            reward={`+${m.boostCredits} BC`}
+            done={reviewCount >= m.reviewsRequired}
             accent="warning"
           />
         ))}
-        <Box sx={{ pt: 1 }}>
-          <BadgeCard
-            badge={program.trustedReviewerBadge}
-            icon={StarIcon}
-            gradient={GRADIENTS.gold}
-            iconColor="#1a1a1a"
-          />
+      </GroupCard>
+
+      <Box
+        sx={{
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 2.5,
+          bgcolor: 'background.paper',
+          overflow: 'hidden',
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'flex-start',
+            px: 1.5,
+            py: 1.25,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            bgcolor: (t) =>
+              t.palette.mode === 'dark' ? 'rgba(245,166,35,0.08)' : 'rgba(245,166,35,0.06)',
+          }}
+        >
+          <Box
+            sx={{
+              width: 34,
+              height: 34,
+              borderRadius: 1.5,
+              display: 'grid',
+              placeItems: 'center',
+              flexShrink: 0,
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              color: 'warning.main',
+            }}
+          >
+            <CrownIcon size={18} weight="duotone" />
+          </Box>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Chip
+              size="small"
+              label="4 · Kompletuesi"
+              color="warning"
+              variant="outlined"
+              sx={{ height: 20, fontWeight: 800, fontSize: '0.62rem', mb: 0.45 }}
+            />
+            <Typography sx={{ fontWeight: 850, fontSize: '0.92rem', lineHeight: 1.25 }}>
+              {program.completionTitle || 'Badge i platformës'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.2 }}>
+              {program.completionSubtitle ||
+                'Badge speciale kur arrini nivelet më të larta të programit të referimit.'}
+            </Typography>
+          </Box>
+        </Stack>
+        <Box sx={{ px: 1.15, py: 1 }}>
+          <MiniBadge badge={program.platformDominatorBadge} Icon={CrownIcon} tone="gold" />
         </Box>
-      </SectionCard>
+      </Box>
 
-      {/* Completion */}
-      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
-            {program.completionTitle}
-          </Typography>
-          {program.completionSubtitle ? (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {program.completionSubtitle}
+      <Box
+        sx={{
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 2.5,
+          bgcolor: 'background.paper',
+          overflow: 'hidden',
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'flex-start',
+            px: 1.5,
+            py: 1.25,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            bgcolor: (t) =>
+              t.palette.mode === 'dark' ? 'rgba(118,186,27,0.08)' : 'rgba(118,186,27,0.06)',
+          }}
+        >
+          <Box
+            sx={{
+              width: 34,
+              height: 34,
+              borderRadius: 1.5,
+              display: 'grid',
+              placeItems: 'center',
+              flexShrink: 0,
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              color: 'primary.main',
+            }}
+          >
+            <ShareNetworkIcon size={18} weight="duotone" />
+          </Box>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Chip
+              size="small"
+              label="5 · Aktivitet ditor"
+              color="primary"
+              variant="outlined"
+              sx={{ height: 20, fontWeight: 800, fontSize: '0.62rem', mb: 0.45 }}
+            />
+            <Typography sx={{ fontWeight: 850, fontSize: '0.92rem', lineHeight: 1.25 }}>
+              {program.loginStreakTitle || 'Aktivitet ditor'}
             </Typography>
-          ) : null}
-          <Divider sx={{ my: 2 }} />
-          <BadgeCard
-            badge={program.platformDominatorBadge}
-            icon={CrownIcon}
-            gradient={GRADIENTS.gold}
-            iconColor="#1a1a1a"
-          />
-        </CardContent>
-      </Card>
-
-      {/* Login streak */}
-      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
-            {program.loginStreakTitle}
-          </Typography>
-          {program.loginStreakSubtitle ? (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {program.loginStreakSubtitle}
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.2 }}>
+              {program.loginStreakSubtitle ||
+                'Shpërblime të vogla për aktivitet të rregullt — të ndara nga referimet.'}
             </Typography>
-          ) : null}
-          <Divider sx={{ my: 1.5 }} />
-          <RewardRow
-            title="Share daily"
-            subtitle="Ndaj çdo ditë për të fituar 3 Boost Coins"
-            boostCredits={3}
+          </Box>
+        </Stack>
+        <Stack spacing={0.15} sx={{ px: 1.15, py: 1 }}>
+          <TierLine
+            title="Ndaj çdo ditë"
+            hint="Ndaj një njoftim si Instagram Story"
+            reward={`+${dailyShareBoostCredits} BC`}
+            done={dailyShareClaimedToday}
             accent="primary"
           />
-          <Divider />
-          <RewardRow
+          <TierLine
             title={`${program.loginStreak.daysRequired} ditë radhazi`}
-            subtitle="Hyr çdo ditë në platformë"
-            boostCredits={program.loginStreak.boostCredits}
+            hint={
+              loginStreakDays > 0
+                ? `${Math.min(loginStreakDays, program.loginStreak.daysRequired)}/${program.loginStreak.daysRequired} ditë`
+                : 'Hyr çdo ditë në platformë'
+            }
+            reward={`+${program.loginStreak.boostCredits} BC`}
+            done={loginStreakDays >= program.loginStreak.daysRequired}
             accent="primary"
           />
-        </CardContent>
-      </Card>
+        </Stack>
+      </Box>
     </Stack>
   );
 }

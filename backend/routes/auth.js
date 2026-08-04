@@ -10,11 +10,27 @@ const {
   ensureUserReferralCode,
   referralFieldsForUser,
 } = require('../lib/referrals');
+const { imageUpload } = require('../lib/image-upload');
+const crypto = require('crypto');
 
 const router = express.Router();
 const rateLimit = require('../middleware/rate-limit');
 
 const authRateLimit = rateLimit({ windowMs: 60_000, max: 15 });
+const UPLOADS_BUCKET = 'uploads';
+
+async function uploadAvatarBuffer(file) {
+  const sb = getSupabaseAdmin();
+  const ext = String(file.originalname || 'image').split('.').pop() || 'jpg';
+  const path = `avatars/${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${ext}`;
+  const { error } = await sb.storage.from(UPLOADS_BUCKET).upload(path, file.buffer, {
+    contentType: file.mimetype,
+    upsert: false,
+  });
+  if (error) throw error;
+  const { data: publicUrlData } = sb.storage.from(UPLOADS_BUCKET).getPublicUrl(path);
+  return publicUrlData.publicUrl;
+}
 
 function requireAdminRole(req, res, next) {
   if (!req.admin || req.admin.constructor.modelName !== 'Admin') {
@@ -45,7 +61,15 @@ const formatUser = (user) => {
   if (model === 'Admin') return { ...base, accountType: 'admin' };
   if (model === 'ManagedUser') return { ...base, accountType: 'managed' };
   if (model === 'IndividualUser') {
-    return { ...base, accountType: 'individual', phone: user.phone || '', ...referralFieldsForUser(user) };
+    return {
+      ...base,
+      accountType: 'individual',
+      phone: user.phone || '',
+      avatar: user.avatarUrl || '',
+      boostCredits: Number(user.boostCredits) || 0,
+      autoRefreshSlots: Number(user.autoRefreshSlots) || 0,
+      ...referralFieldsForUser(user),
+    };
   }
   if (model === 'BusinessUser') {
     return {
@@ -56,6 +80,9 @@ const formatUser = (user) => {
       businessOwner: user.businessOwner,
       businessCategory: user.businessCategory,
       phone: user.phone || '',
+      avatar: user.avatarUrl || '',
+      boostCredits: Number(user.boostCredits) || 0,
+      autoRefreshSlots: Number(user.autoRefreshSlots) || 0,
       ...referralFieldsForUser(user),
     };
   }
@@ -123,9 +150,46 @@ router.post('/login', authRateLimit, async (req, res) => {
     profile.lastLogin = new Date().toISOString();
     await profile.save();
 
-    res.json({ token: session.access_token, admin: formatUser(profile) });
+    try {
+      const { recordLoginStreak } = require('../lib/login-streak');
+      await recordLoginStreak(profile);
+    } catch (streakErr) {
+      console.warn('login streak:', streakErr?.message || streakErr);
+    }
+
+    res.json({
+      token: session.access_token,
+      refreshToken: session.refresh_token,
+      admin: formatUser(profile),
+    });
   } catch (error) {
     console.error('POST /login error:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+router.post('/refresh', authRateLimit, async (req, res) => {
+  try {
+    const refreshToken = String(req.body?.refreshToken || '').trim();
+    if (!refreshToken) {
+      return res.status(400).json({ message: 'Refresh token mungon.' });
+    }
+    const sb = createAuthPasswordClient();
+    const { data, error } = await sb.auth.refreshSession({ refresh_token: refreshToken });
+    if (error || !data?.session?.access_token) {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+    const profile = await getProfileById(data.session.user.id);
+    if (!profile) {
+      return res.status(401).json({ message: 'Profili nuk u gjet. Kontaktoni mbështetjen.' });
+    }
+    res.json({
+      token: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+      admin: formatUser(profile),
+    });
+  } catch (error) {
+    console.error('POST /refresh error:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
 });
@@ -180,7 +244,11 @@ router.post('/register', authRateLimit, async (req, res) => {
       if (signErr || !session) {
         return res.status(201).json({ token: null, admin: formatUser(doc), message: 'Llogaria u krijua. Identifikohuni.' });
       }
-      return res.status(201).json({ token: session.access_token, admin: formatUser(doc) });
+      return res.status(201).json({
+        token: session.access_token,
+        refreshToken: session.refresh_token,
+        admin: formatUser(doc),
+      });
     }
 
     if (userType === 'business') {
@@ -234,7 +302,11 @@ router.post('/register', authRateLimit, async (req, res) => {
       if (signErr || !session) {
         return res.status(201).json({ token: null, admin: formatUser(doc), message: 'Llogaria u krijua. Identifikohuni.' });
       }
-      return res.status(201).json({ token: session.access_token, admin: formatUser(doc) });
+      return res.status(201).json({
+        token: session.access_token,
+        refreshToken: session.refresh_token,
+        admin: formatUser(doc),
+      });
     }
 
     return res.status(400).json({ message: 'Lloji i përdoruesit nuk është i vlefshëm.' });
@@ -309,14 +381,175 @@ router.put('/admin/change-password', authMiddleware, requireAdminRole, async (re
   }
 });
 
+function sanitizeAvatarUrl(value) {
+  const url = String(value ?? '').trim().slice(0, 2000);
+  if (!url) return '';
+  if (!/^https?:\/\//i.test(url)) return null;
+  return url;
+}
+
 router.put('/portal/update-profile', authMiddleware, requirePortalUser, async (req, res) => {
   try {
-    const phone = String(req.body.phone ?? '').trim().slice(0, 40);
-    req.admin.phone = phone;
+    const model = req.admin.constructor.modelName;
+    const body = req.body || {};
+
+    if (body.phone !== undefined) {
+      req.admin.phone = String(body.phone ?? '').trim().slice(0, 40);
+    }
+
+    if (body.avatar !== undefined || body.avatarUrl !== undefined) {
+      const raw = body.avatar !== undefined ? body.avatar : body.avatarUrl;
+      const avatarUrl = sanitizeAvatarUrl(raw);
+      if (avatarUrl === null) {
+        return res.status(400).json({ message: 'URL e fotos së profilit nuk është e vlefshme.' });
+      }
+      req.admin.avatarUrl = avatarUrl;
+    }
+
+    if (model === 'IndividualUser') {
+      if (body.firstName !== undefined) {
+        const firstName = String(body.firstName ?? '').trim().slice(0, 80);
+        if (!firstName) return res.status(400).json({ message: 'Emri është i detyrueshëm.' });
+        req.admin.firstName = firstName;
+      }
+      if (body.lastName !== undefined) {
+        const lastName = String(body.lastName ?? '').trim().slice(0, 80);
+        if (!lastName) return res.status(400).json({ message: 'Mbiemri është i detyrueshëm.' });
+        req.admin.lastName = lastName;
+      }
+    }
+
+    if (model === 'BusinessUser') {
+      if (body.businessName !== undefined) {
+        const businessName = String(body.businessName ?? '').trim().slice(0, 120);
+        if (!businessName) return res.status(400).json({ message: 'Emri i biznesit është i detyrueshëm.' });
+        req.admin.businessName = businessName;
+      }
+      if (body.businessOwner !== undefined) {
+        req.admin.businessOwner = String(body.businessOwner ?? '').trim().slice(0, 120);
+      }
+      if (body.businessCategory !== undefined) {
+        req.admin.businessCategory = String(body.businessCategory ?? '').trim().slice(0, 80);
+      }
+    }
+
     await req.admin.save();
     res.json({ message: 'Profili u përditësua.', admin: formatUser(req.admin) });
   } catch (error) {
     console.error('PUT /portal/update-profile:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** POST /api/auth/portal/convert-to-business — individual → business account. */
+router.post('/portal/convert-to-business', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    if (req.admin.constructor.modelName !== 'IndividualUser') {
+      return res.status(400).json({ message: 'Llogaria juaj është tashmë llogari biznesi.' });
+    }
+
+    const body = req.body || {};
+    const nipt = String(body.nipt || '').trim().slice(0, 40);
+    const businessName = String(body.businessName || '').trim().slice(0, 120);
+    const businessOwner = String(body.businessOwner || '').trim().slice(0, 120);
+    const businessCategory = String(body.businessCategory || '').trim().slice(0, 80);
+
+    if (!nipt || !businessName || !businessOwner || !businessCategory) {
+      return res.status(400).json({
+        message: 'NIPT, emri i biznesit, pronari dhe kategoria janë të detyrueshëm.',
+      });
+    }
+
+    const sb = getSupabaseAdmin();
+    const { data: niptTaken, error: niptErr } = await sb
+      .from('profiles')
+      .select('id')
+      .eq('nipt', nipt)
+      .neq('id', req.admin.id)
+      .maybeSingle();
+    if (niptErr) throw niptErr;
+    if (niptTaken) {
+      return res.status(400).json({ message: 'Ky NIPT është tashmë i regjistruar.' });
+    }
+
+    const parts = businessOwner.split(/\s+/).filter(Boolean);
+    req.admin.accountType = 'business';
+    req.admin.role = 'business-user';
+    req.admin.nipt = nipt;
+    req.admin.businessName = businessName;
+    req.admin.businessOwner = businessOwner;
+    req.admin.businessCategory = businessCategory;
+    if (!String(req.admin.firstName || '').trim()) {
+      req.admin.firstName = parts[0] || businessOwner;
+    }
+    if (!String(req.admin.lastName || '').trim()) {
+      req.admin.lastName = parts.slice(1).join(' ') || '';
+    }
+    if (body.phone !== undefined) {
+      req.admin.phone = String(body.phone ?? '').trim().slice(0, 40);
+    }
+
+    await req.admin.save();
+
+    try {
+      await sb.auth.admin.updateUserById(req.admin.id, {
+        user_metadata: {
+          account_type: 'business',
+          business_name: businessName,
+        },
+      });
+    } catch (metaErr) {
+      console.warn('convert-to-business metadata:', metaErr?.message || metaErr);
+    }
+
+    // Reload so constructor.modelName / formatUser reflect business account.
+    const refreshed = await getProfileById(req.admin.id);
+    res.json({
+      message: 'Llogaria u kthye në llogari biznesi.',
+      admin: formatUser(refreshed || req.admin),
+    });
+  } catch (error) {
+    console.error('POST /portal/convert-to-business:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** POST /api/auth/portal/avatar — upload + persist profile photo in one step. */
+router.post(
+  '/portal/avatar',
+  authMiddleware,
+  requirePortalUser,
+  imageUpload.single('avatar'),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'Nuk u zgjodh asnjë foto.' });
+      }
+      const avatarUrl = await uploadAvatarBuffer(req.file);
+      req.admin.avatarUrl = avatarUrl;
+      await req.admin.save();
+      return res.json({ message: 'Foto e profilit u përditësua.', admin: formatUser(req.admin), avatarUrl });
+    } catch (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ message: 'Foto duhet të jetë nën 8 MB.' });
+      }
+      if (/images are allowed/i.test(err.message || '')) {
+        return res.status(400).json({ message: 'Lejohen vetëm foto JPEG, PNG, WEBP dhe GIF.' });
+      }
+      console.error('POST /portal/avatar:', err?.message || err);
+      return res.status(500).json({ message: 'Gabim serveri.' });
+    }
+  },
+);
+
+/** DELETE /api/auth/portal/avatar — clear profile photo. */
+router.delete('/portal/avatar', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    req.admin.avatarUrl = '';
+    await req.admin.save();
+    res.json({ message: 'Foto e profilit u hoq.', admin: formatUser(req.admin) });
+  } catch (error) {
+    console.error('DELETE /portal/avatar:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
 });

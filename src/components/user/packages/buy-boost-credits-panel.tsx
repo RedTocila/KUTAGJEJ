@@ -1,11 +1,11 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Grid,
   Stack,
@@ -14,33 +14,97 @@ import {
 import { Coins as CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins';
 
 import { useUser } from '@/hooks/use-user';
-import { createCreditsOrder, listCreditPackages } from '@/lib/payments-client';
+import { listCreditPackages } from '@/lib/payments-client';
 import type { CreditPackage } from '@/types/payment';
-import { PokCheckoutDialog } from '@/components/payments/pok-checkout-dialog';
+import { paths } from '@/paths';
+import {
+  FeatureList,
+  PlanCard,
+  PlanCardHeader,
+  PlanPrice,
+  SoftChip,
+  accentButtonSx,
+  formatBc,
+  formatEur,
+  type PlanAccent,
+} from './package-ui';
 
-function formatBc(n: number) {
-  return new Intl.NumberFormat('en-US').format(n);
+/** Always-visible catalog when the API has no active rows yet. */
+const FALLBACK_CREDIT_PACKAGES: CreditPackage[] = [
+  { id: 'Starter', credits: 100, bonusCredits: 0, priceEur: 9, labelSq: 'Starter' },
+  { id: 'Growth', credits: 300, bonusCredits: 40, priceEur: 27, labelSq: 'Growth', badgeSq: '+40 BC' },
+  { id: 'Pro', credits: 800, bonusCredits: 200, priceEur: 75, labelSq: 'Pro', badgeSq: '+200 BC' },
+  { id: 'Elite', credits: 2000, bonusCredits: 500, priceEur: 180, labelSq: 'Elite', badgeSq: '+500 BC' },
+  { id: 'Competitor', credits: 4000, bonusCredits: 900, priceEur: 360, labelSq: 'Competitor', badgeSq: '+900 BC' },
+  { id: 'Dominator', credits: 8000, bonusCredits: 1500, priceEur: 750, labelSq: 'Dominator', badgeSq: '+1500 BC' },
+];
+
+/** Card / chip accent per package. Starter & Elite keep the orange look. */
+const CREDIT_PACKAGE_ACCENT: Record<string, PlanAccent> = {
+  starter: 'warning',
+  growth: '#3b82f6',
+  pro: '#2dd4bf',
+  elite: 'warning',
+  competitor: 'error',
+  dominator: '#a855f7',
+};
+
+/** Buy button accent — Starter uses green; others match the card. */
+const CREDIT_PACKAGE_BUTTON_ACCENT: Record<string, PlanAccent> = {
+  starter: 'success',
+  growth: '#3b82f6',
+  pro: '#2dd4bf',
+  elite: 'warning',
+  competitor: 'error',
+  dominator: '#a855f7',
+};
+
+function packageKey(pkg: CreditPackage) {
+  return String(pkg.labelSq || pkg.id || '')
+    .trim()
+    .toLowerCase();
 }
 
-function bonusLabel(bonus: number) {
-  if (bonus <= 0) return 'Bonus 0';
-  return `Bonus +${formatBc(bonus)} BC`;
+function accentForPackage(pkg: CreditPackage): PlanAccent {
+  return CREDIT_PACKAGE_ACCENT[packageKey(pkg)] ?? 'warning';
+}
+
+function buttonAccentForPackage(pkg: CreditPackage): PlanAccent {
+  return CREDIT_PACKAGE_BUTTON_ACCENT[packageKey(pkg)] ?? accentForPackage(pkg);
+}
+
+function checkoutCreditsHref(packageId: string) {
+  const q = new URLSearchParams({
+    kind: 'credits',
+    packageId,
+    returnTo: paths.user.packagesCredits,
+  });
+  return `${paths.user.checkout}?${q.toString()}`;
+}
+
+function mergeCatalog(apiPackages: CreditPackage[]): CreditPackage[] {
+  if (apiPackages.length > 0) return apiPackages;
+  return FALLBACK_CREDIT_PACKAGES;
 }
 
 export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boolean }) {
-  const { user, checkSession } = useUser();
-  const [packages, setPackages] = React.useState<CreditPackage[]>([]);
+  const router = useRouter();
+  const { user } = useUser();
+  const [packages, setPackages] = React.useState<CreditPackage[]>(FALLBACK_CREDIT_PACKAGES);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [selected, setSelected] = React.useState<CreditPackage | null>(null);
+  const [usingFallback, setUsingFallback] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
     void (async () => {
       const { packages: pkgs, error: err } = await listCreditPackages();
       if (cancelled) return;
-      if (err) setError(err);
-      else setPackages(pkgs ?? []);
+      const merged = mergeCatalog(pkgs ?? []);
+      setPackages(merged);
+      setUsingFallback(!(pkgs && pkgs.length > 0));
+      if (err && !(pkgs && pkgs.length > 0)) setError(err);
+      else setError(null);
       setLoading(false);
     })();
     return () => {
@@ -48,10 +112,10 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
     };
   }, []);
 
-  const balance = typeof user?.boostCredits === 'number' ? user.boostCredits : 0;
+  const balance = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={2.5}>
       {showHeader ? (
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
@@ -61,8 +125,8 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
           <Box>
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5 }}>
               <CoinsIcon size={28} weight="duotone" color="var(--mui-palette-warning-main)" />
-              <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-                BOOST CREDIT
+              <Typography variant="h4" component="h1" sx={{ fontWeight: 850 }}>
+                Boost Coins
               </Typography>
             </Stack>
             <Typography variant="body2" color="text.secondary">
@@ -74,129 +138,89 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
       ) : (
         <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
           <Typography variant="body2" color="text.secondary">
-            Zgjidhni një paketë për të promovuar njoftimet tuaja.
+            Sa më e madhe paketa, aq më shumë Boost Coins (dhe bonus).
           </Typography>
           <BalanceChip balance={balance} />
         </Stack>
       )}
 
       {error ? (
-        <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
+        <Alert severity="warning" sx={{ borderRadius: 2 }}>
           {error}
+          {usingFallback ? ' Po shfaqen paketat standarde.' : ''}
         </Alert>
       ) : null}
 
       {loading ? (
-        <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
+        <Box sx={{ py: 5, display: 'flex', justifyContent: 'center' }}>
           <CircularProgress size={28} />
         </Box>
       ) : (
-        <Grid container spacing={2}>
-          {packages.map((pkg) => {
+        <Grid container spacing={1.5}>
+          {packages.map((pkg, index) => {
             const bonus = Number(pkg.bonusCredits) || 0;
             const total = Number(pkg.credits) + bonus;
+            const accent = accentForPackage(pkg);
+            const buttonAccent = buttonAccentForPackage(pkg);
+            const highlighted = Boolean(pkg.badgeSq) || index === 2;
             return (
-              <Grid key={pkg.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                <Box
-                  sx={{
-                    position: 'relative',
-                    p: 3,
-                    borderRadius: 3,
-                    border: '1px solid',
-                    borderColor: bonus > 0 ? (t) => `${t.palette.warning.main}66` : 'divider',
-                    bgcolor: 'background.paper',
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 1.25,
-                    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                    '&:hover': {
-                      transform: 'translateY(-3px)',
-                      boxShadow: '0 12px 26px rgba(0,0,0,0.12)',
-                    },
-                  }}
-                >
-                  {pkg.badgeSq ? (
-                    <Chip
-                      size="small"
-                      color="warning"
-                      label={pkg.badgeSq}
-                      sx={{ position: 'absolute', top: 12, right: 12, fontWeight: 700 }}
-                    />
-                  ) : null}
+              <Grid key={pkg.id} size={{ xs: 6, sm: 6, md: 4 }}>
+                <PlanCard highlighted={highlighted} accent={accent} compact>
+                  <PlanCardHeader
+                    compact
+                    title={pkg.labelSq}
+                    accent={accent}
+                    badge={
+                      pkg.badgeSq ? (
+                        <SoftChip compact label={pkg.badgeSq} accent={accent} />
+                      ) : highlighted ? (
+                        <SoftChip compact label="Popullore" accent={accent} />
+                      ) : undefined
+                    }
+                  />
 
-                  <Typography sx={{ fontWeight: 800, fontSize: '1.25rem', pr: pkg.badgeSq ? 8 : 0 }}>
-                    {pkg.labelSq}
-                  </Typography>
+                  <PlanPrice
+                    compact
+                    amount={formatBc(total)}
+                    suffix="BC"
+                    hint={formatEur(pkg.priceEur)}
+                  />
 
-                  <Typography sx={{ fontWeight: 800, fontSize: '1.75rem', lineHeight: 1.1 }}>
-                    €{pkg.priceEur}
-                  </Typography>
-
-                  <Stack spacing={0.5} sx={{ mt: 0.5 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {formatBc(pkg.credits)} BC
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      color={bonus > 0 ? 'warning.main' : 'text.secondary'}
-                      sx={{ fontWeight: bonus > 0 ? 700 : 500 }}
-                    >
-                      {bonusLabel(bonus)}
-                    </Typography>
-                    {bonus > 0 ? (
-                      <Typography variant="caption" color="text.secondary">
-                        Totali: {formatBc(total)} BC
-                      </Typography>
-                    ) : null}
-                  </Stack>
+                  <FeatureList
+                    compact
+                    accent={accent}
+                    items={
+                      bonus > 0
+                        ? [`${formatBc(pkg.credits)} BC bazë`, `+${formatBc(bonus)} bonus`]
+                        : ['Pa bonus']
+                    }
+                  />
 
                   <Button
+                    fullWidth
                     variant="contained"
-                    onClick={() => setSelected(pkg)}
-                    sx={{ fontWeight: 700, mt: 'auto' }}
+                    size="small"
+                    onClick={() => router.push(checkoutCreditsHref(pkg.id))}
+                    sx={{
+                      ...accentButtonSx(buttonAccent),
+                      mt: 'auto',
+                      borderRadius: 1.75,
+                      py: 0.85,
+                      fontSize: '0.8rem',
+                      minWidth: 0,
+                      // Light accents need dark label text for contrast.
+                      color:
+                        buttonAccent === 'warning' || buttonAccent === '#2dd4bf' ? '#0b1220' : '#fff',
+                    }}
                   >
-                    Blej
+                    Blej {formatEur(pkg.priceEur)}
                   </Button>
-                </Box>
+                </PlanCard>
               </Grid>
             );
           })}
         </Grid>
       )}
-
-      {selected ? (
-        <PokCheckoutDialog
-          open={Boolean(selected)}
-          onClose={() => setSelected(null)}
-          title="Bli kredite"
-          summary={
-            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.4 }}>
-                  {selected.labelSq}
-                </Typography>
-                <Typography sx={{ fontWeight: 700, lineHeight: 1.25 }}>
-                  {formatBc(selected.credits)} BC
-                  {(selected.bonusCredits || 0) > 0
-                    ? ` + ${formatBc(selected.bonusCredits)} bonus`
-                    : ''}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Totali: {formatBc(selected.credits + (selected.bonusCredits || 0))} BC
-                </Typography>
-              </Box>
-              <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', whiteSpace: 'nowrap' }}>
-                €{selected.priceEur}
-              </Typography>
-            </Stack>
-          }
-          createOrder={() => createCreditsOrder(selected.id)}
-          onPaid={() => {
-            void checkSession();
-          }}
-        />
-      ) : null}
     </Stack>
   );
 }
@@ -210,19 +234,19 @@ function BalanceChip({ balance }: { balance: number }) {
         alignItems: 'center',
         px: 1.75,
         py: 0.85,
-        borderRadius: 999,
+        borderRadius: 2,
         border: '1px solid',
         borderColor: (t) => `${t.palette.warning.main}55`,
         bgcolor: (t) => `${t.palette.warning.main}14`,
         color: 'warning.main',
       }}
     >
-      <CoinsIcon size={22} weight="duotone" />
-      <Typography component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+      <CoinsIcon size={20} weight="duotone" />
+      <Typography component="span" sx={{ color: 'text.primary', fontWeight: 650, fontSize: '0.85rem' }}>
         Balanca
       </Typography>
-      <Typography component="span" sx={{ fontWeight: 800 }}>
-        {formatBc(balance)}
+      <Typography component="span" sx={{ fontWeight: 850 }}>
+        {formatBc(balance)} BC
       </Typography>
     </Stack>
   );

@@ -95,7 +95,19 @@ export async function postAiListingDraft(
   }
 
   const f = draft.form || {};
-  const imageUrls = (draft.imageUrls || []).filter((u) => /^https?:\/\//i.test(u));
+  const imageUrls = (draft.imageUrls || []).filter((u) => {
+    if (!/^https?:\/\//i.test(u)) return false;
+    const lower = u.toLowerCase();
+    if (/facebook\.com\/(?:tr|tr\/)\b|[?&]ev=pageview\b/i.test(lower)) return false;
+    if (
+      /google-analytics\.com|googletagmanager\.com|doubleclick\.net|bat\.bing\.com|adservice\.google/i.test(
+        lower,
+      )
+    ) {
+      return false;
+    }
+    return true;
+  });
   const phone =
     str(f.contactPhone) ||
     str(opts?.phoneFallback) ||

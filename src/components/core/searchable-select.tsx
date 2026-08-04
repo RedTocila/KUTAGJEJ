@@ -41,7 +41,7 @@ export function SearchableSelect({
   fullWidth = true,
   required = false,
   disabled = false,
-  clearable = true,
+  clearable = false,
   id,
   searchPlaceholder = 'Kërko…',
   minOptionsForSearch = 5,
@@ -91,8 +91,12 @@ export function SearchableSelect({
     setQuery('');
   };
 
-  const handleOpen = () => {
+  const handleToggle = () => {
     if (disabled) return;
+    if (open) {
+      close();
+      return;
+    }
     setQuery('');
     setOpen(true);
     window.setTimeout(() => searchRef.current?.focus(), 0);
@@ -118,11 +122,23 @@ export function SearchableSelect({
           error={error}
           value={selectedLabel}
           placeholder={emptyLabel}
-          onClick={handleOpen}
+          onClick={handleToggle}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+            if (e.key === 'Escape') {
+              if (open) {
+                e.preventDefault();
+                close();
+              }
+              return;
+            }
+            if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              handleOpen();
+              handleToggle();
+              return;
+            }
+            if (e.key === 'ArrowDown' && !open) {
+              e.preventDefault();
+              handleToggle();
             }
           }}
           endAdornment={

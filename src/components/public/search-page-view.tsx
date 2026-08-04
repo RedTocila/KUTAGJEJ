@@ -32,7 +32,6 @@ import { fetchAiSearch, type AiSearchResult } from '@/lib/ai-search-client';
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
-  AI_SEARCH_BLUE_MUTED,
   AI_SEARCH_BLUE_ON,
   AI_SEARCH_BLUE_SOFT,
   findVertical,
@@ -180,6 +179,7 @@ export function SearchPageView() {
   const [items, setItems] = React.useState<SearchItem[]>([]);
   const [total, setTotal] = React.useState(0);
   const [aiReply, setAiReply] = React.useState<string | null>(null);
+  const [inputExpanded, setInputExpanded] = React.useState(false);
 
   const selectedIndex = categoryId
     ? localizedCategories.findIndex((v) => v.id === categoryId)
@@ -188,6 +188,21 @@ export function SearchPageView() {
     ? (localizedCategories.find((v) => v.id === categoryId) ?? null)
     : null;
   const isAi = categoryId === 'ai';
+
+  React.useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el || !query) {
+      setInputExpanded(false);
+      return;
+    }
+    const measure = () => {
+      const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight) || 20;
+      setInputExpanded(el.scrollHeight > lineHeight + 4);
+    };
+    measure();
+    const raf = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(raf);
+  }, [query, categoryId]);
 
   const syncUrl = React.useCallback(
     (nextCat: SearchCategoryId | null, nextQ: string) => {
@@ -357,10 +372,12 @@ export function SearchPageView() {
               display: 'flex',
               gap: 1,
               p: 1,
-              borderRadius: isAi ? 3 : 999,
+              borderRadius: inputExpanded ? 2.5 : 999,
               border: '1px solid',
-              borderColor: isAi ? AI_SEARCH_BLUE : 'divider',
-              bgcolor: isAi ? AI_SEARCH_BLUE_MUTED : 'background.paper',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              alignItems: inputExpanded ? 'flex-end' : 'center',
+              transition: 'border-radius 120ms ease',
             }}
           >
             <TextField
@@ -371,16 +388,15 @@ export function SearchPageView() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => {
-                if (!isAi) return;
                 if (event.key === 'Enter' && !event.shiftKey) {
                   event.preventDefault();
                   handleSubmit();
                 }
               }}
               placeholder={activeCategory?.searchPlaceholder ?? t.search.genericPlaceholder}
-              multiline={isAi}
-              minRows={isAi ? 2 : 1}
-              maxRows={isAi ? 4 : 1}
+              multiline
+              minRows={1}
+              maxRows={4}
               slotProps={{
                 input: {
                   startAdornment: (
@@ -388,15 +404,18 @@ export function SearchPageView() {
                       position="start"
                       sx={{
                         color: isAi ? AI_SEARCH_BLUE : 'text.secondary',
-                        alignSelf: isAi ? 'flex-start' : 'center',
-                        mt: isAi ? 0.75 : 0,
+                        alignSelf: inputExpanded ? 'flex-start' : 'center',
+                        mt: inputExpanded ? 0.75 : 0,
                       }}
                     >
                       {isAi ? <SparkleIcon size={18} /> : <MagnifyingGlassIcon size={18} />}
                     </InputAdornment>
                   ),
                   endAdornment: query ? (
-                    <InputAdornment position="end" sx={{ alignSelf: isAi ? 'flex-start' : 'center', mt: isAi ? 0.5 : 0 }}>
+                    <InputAdornment
+                      position="end"
+                      sx={{ alignSelf: inputExpanded ? 'flex-start' : 'center', mt: inputExpanded ? 0.5 : 0 }}
+                    >
                       <IconButton
                         size="small"
                         aria-label={t.search.clear}
@@ -412,8 +431,20 @@ export function SearchPageView() {
               sx={{
                 '& .MuiOutlinedInput-root': {
                   bgcolor: 'transparent',
-                  alignItems: isAi ? 'flex-start' : 'center',
+                  alignItems: inputExpanded ? 'flex-start' : 'center',
+                  py: 0.25,
                   '& fieldset': { border: 'none' },
+                },
+                '& textarea': {
+                  resize: 'none',
+                  lineHeight: 1.4,
+                  ...(!query
+                    ? {
+                        whiteSpace: 'nowrap',
+                        textOverflow: 'ellipsis',
+                        overflow: 'hidden !important',
+                      }
+                    : null),
                 },
               }}
             />
@@ -425,7 +456,7 @@ export function SearchPageView() {
                 flexShrink: 0,
                 width: 40,
                 height: 40,
-                alignSelf: isAi ? 'flex-end' : 'center',
+                alignSelf: inputExpanded ? 'flex-end' : 'center',
                 bgcolor: isAi ? AI_SEARCH_BLUE : 'primary.main',
                 color: isAi ? AI_SEARCH_BLUE_ON : 'common.black',
                 '&:hover': {
@@ -455,9 +486,10 @@ export function SearchPageView() {
             severity="info"
             sx={{
               borderRadius: 2,
-              bgcolor: AI_SEARCH_BLUE_SOFT,
+              bgcolor: 'background.paper',
               color: 'text.primary',
-              border: `1px solid ${AI_SEARCH_BLUE}`,
+              border: '1px solid',
+              borderColor: 'divider',
               '& .MuiAlert-icon': { color: AI_SEARCH_BLUE },
             }}
           >

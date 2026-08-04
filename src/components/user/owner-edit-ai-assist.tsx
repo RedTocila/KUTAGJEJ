@@ -5,7 +5,7 @@ import * as React from 'react';
 import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
 import type { ListingCategoryKey } from '@/types/listing-category';
 
-/** Shared AI edit panel for owner-edit screens. */
+/** Shared AI edit bar for owner-edit screens. */
 export function OwnerEditAiAssist({
   category,
   currentListing,
@@ -18,7 +18,6 @@ export function OwnerEditAiAssist({
   return (
     <PostListingAiAssist
       mode="edit"
-      variant="composer"
       category={category}
       currentListing={currentListing}
       onApply={onApply}

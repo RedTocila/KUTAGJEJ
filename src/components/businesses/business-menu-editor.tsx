@@ -333,8 +333,8 @@ export function BusinessMenuEditor({
             py: 1.15,
             borderRadius: 2,
             border: '1px solid',
-            borderColor: AI_SEARCH_BLUE,
-            bgcolor: AI_SEARCH_BLUE_MUTED,
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
           }}
         >
           <Box

@@ -203,7 +203,6 @@ function ProfessionalListingCardBody({
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
   const cardRating = resolveListingCardRating(listing, sellerRating);
   const hasPrice = listing.price != null;
-  const description = String(listing.description ?? '').replace(/\s+/g, ' ').trim();
 
   const serviceTags = React.useMemo(() => {
     const raw = String(listing.servicesHighlight ?? '').trim();
@@ -330,23 +329,6 @@ function ProfessionalListingCardBody({
               }}
             >
               {formatPrice(listing.price, listing.currency)}
-            </Typography>
-          ) : null}
-
-          {description ? (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{
-                fontSize: '0.8rem',
-                lineHeight: 1.45,
-                display: '-webkit-box',
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-              }}
-            >
-              {description}
             </Typography>
           ) : null}
 

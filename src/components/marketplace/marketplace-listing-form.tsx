@@ -7,7 +7,6 @@ import {
   Stack,
 } from '@mui/material';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
-import { Images as ImagesIcon } from '@phosphor-icons/react/dist/ssr/Images';
 import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
@@ -225,6 +224,15 @@ export function MarketplaceListingForm({
           fullWidth
           placeholder="p.sh. iPhone 14 Pro Max 256GB, Karrige zyre, Çantë Adidas…"
         />
+        <ListingImagePicker
+          value={images}
+          onChange={setImages}
+          existingUrls={existingImageUrls}
+          onExistingUrlsChange={setExistingImageUrls}
+          max={MAX_MARKETPLACE_IMAGES}
+          label="Foto të artikullit"
+          disabled={submitting}
+        />
         <ListingTextField
           label="Përshkrimi"
           value={form.description}
@@ -300,22 +308,6 @@ export function MarketplaceListingForm({
           required
           fullWidth
           helperText="Do të shfaqet tek të interesuarit për këtë njoftim."
-        />
-      </ListingFormSection>
-
-      <ListingFormSection
-        icon={<ImagesIcon size={20} weight="duotone" />}
-        title="Foto"
-        description="Shtoni deri në 5 foto të artikullit."
-      >
-        <ListingImagePicker
-          value={images}
-          onChange={setImages}
-          existingUrls={existingImageUrls}
-          onExistingUrlsChange={setExistingImageUrls}
-          max={MAX_MARKETPLACE_IMAGES}
-          label="Foto të artikullit"
-          disabled={submitting}
         />
       </ListingFormSection>
 

@@ -330,6 +330,15 @@ export function JobListingForm({
           fullWidth
           placeholder="p.sh. Menaxher Shitjesh, Programues Backend…"
         />
+        <ListingImagePicker
+          value={images}
+          onChange={setImages}
+          existingUrls={existingImageUrls}
+          onExistingUrlsChange={setExistingImageUrls}
+          max={MAX_JOB_IMAGES}
+          label="Foto (logo / kopertinë — opsionale)"
+          disabled={submitting}
+        />
         <ListingTextField
           label="Përshkrimi i shkurtër"
           value={form.description}
@@ -506,18 +515,6 @@ export function JobListingForm({
           required
           fullWidth
           helperText="Do të shfaqet tek kandidatët e interesuar për këtë njoftim."
-        />
-      </ListingFormSection>
-
-      <ListingFormSection title="Foto" description="Logo ose kopertinë — opsionale.">
-        <ListingImagePicker
-          value={images}
-          onChange={setImages}
-          existingUrls={existingImageUrls}
-          onExistingUrlsChange={setExistingImageUrls}
-          max={MAX_JOB_IMAGES}
-          label="Foto (logo / kopertinë — opsionale)"
-          disabled={submitting}
         />
       </ListingFormSection>
 

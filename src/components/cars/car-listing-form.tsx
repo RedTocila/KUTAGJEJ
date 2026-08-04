@@ -544,6 +544,115 @@ export function CarListingForm({
           />
         </Stack>
 
+        <Stack spacing={1.5}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+              Photos
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {existingImageUrls.length + images.length} / {MAX_IMAGES}
+            </Typography>
+          </Stack>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+
+          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.5 }}>
+            {existingImageUrls.map((url, idx) => (
+              <Box
+                key={`url-${url}-${idx}`}
+                sx={{
+                  position: 'relative',
+                  width: 96,
+                  height: 80,
+                  borderRadius: 1.5,
+                  overflow: 'hidden',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  flexShrink: 0,
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    removeExistingUrl(idx);
+                  }}
+                  sx={{
+                    position: 'absolute',
+                    top: 2,
+                    right: 2,
+                    bgcolor: 'rgba(0,0,0,0.55)',
+                    color: '#fff',
+                    p: 0.25,
+                    '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
+                  }}
+                >
+                  <XIcon size={12} weight="bold" />
+                </IconButton>
+              </Box>
+            ))}
+            {images.map((img, idx) => (
+              <ImagePreview
+                key={`${img.name}-${idx}`}
+                file={img}
+                onRemove={() => {
+                  removeImage(idx);
+                }}
+              />
+            ))}
+            {existingImageUrls.length + images.length < MAX_IMAGES ? (
+              <Box
+                component="button"
+                type="button"
+                aria-label="Add photos"
+                onClick={() => {
+                  fileInputRef.current?.click();
+                }}
+                sx={{
+                  position: 'relative',
+                  width: 96,
+                  height: 80,
+                  borderRadius: 1.5,
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px dashed',
+                  borderColor: 'divider',
+                  bgcolor: 'transparent',
+                  cursor: 'pointer',
+                  color: 'text.secondary',
+                  p: 0,
+                  font: 'inherit',
+                  transition: 'border-color 0.15s, color 0.15s, background-color 0.15s',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    color: 'primary.main',
+                    bgcolor: (t) =>
+                      t.palette.mode === 'dark' ? 'rgba(130, 201, 30, 0.08)' : 'rgba(118, 186, 27, 0.06)',
+                  },
+                }}
+              >
+                <PlusIcon size={28} weight="bold" />
+              </Box>
+            ) : null}
+          </Stack>
+
+          {existingImageUrls.length + images.length < MAX_IMAGES ? (
+            <Typography variant="caption" color="text.disabled">
+              Up to {MAX_IMAGES} images · JPG, PNG, WEBP
+            </Typography>
+          ) : null}
+        </Stack>
+
         <ListingTextField
           label="Variant / subtitle"
           value={form.variant}
@@ -834,118 +943,6 @@ export function CarListingForm({
         {!loadingCities && cities.length === 0 ? (
           <Typography variant="caption" color="text.secondary">
             No cities available yet — a platform admin must add them under Dashboard → Vendndodhjet (pasuri).
-          </Typography>
-        ) : null}
-      </Stack>
-
-      <Divider />
-
-      {/* ── Photos ───────────────────────────────────────────────────────── */}
-      <Stack spacing={1.5}>
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-            Photos
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {existingImageUrls.length + images.length} / {MAX_IMAGES}
-          </Typography>
-        </Stack>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
-
-        <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.5 }}>
-          {existingImageUrls.map((url, idx) => (
-            <Box
-              key={`url-${url}-${idx}`}
-              sx={{
-                position: 'relative',
-                width: 96,
-                height: 80,
-                borderRadius: 1.5,
-                overflow: 'hidden',
-                border: '1px solid',
-                borderColor: 'divider',
-                flexShrink: 0,
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-              <IconButton
-                size="small"
-                onClick={() => {
-                  removeExistingUrl(idx);
-                }}
-                sx={{
-                  position: 'absolute',
-                  top: 2,
-                  right: 2,
-                  bgcolor: 'rgba(0,0,0,0.55)',
-                  color: '#fff',
-                  p: 0.25,
-                  '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
-                }}
-              >
-                <XIcon size={12} weight="bold" />
-              </IconButton>
-            </Box>
-          ))}
-          {images.map((img, idx) => (
-            <ImagePreview
-              key={`${img.name}-${idx}`}
-              file={img}
-              onRemove={() => {
-                removeImage(idx);
-              }}
-            />
-          ))}
-          {existingImageUrls.length + images.length < MAX_IMAGES ? (
-            <Box
-              component="button"
-              type="button"
-              aria-label="Add photos"
-              onClick={() => {
-                fileInputRef.current?.click();
-              }}
-              sx={{
-                position: 'relative',
-                width: 96,
-                height: 80,
-                borderRadius: 1.5,
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '2px dashed',
-                borderColor: 'divider',
-                bgcolor: 'transparent',
-                cursor: 'pointer',
-                color: 'text.secondary',
-                p: 0,
-                font: 'inherit',
-                transition: 'border-color 0.15s, color 0.15s, background-color 0.15s',
-                '&:hover': {
-                  borderColor: 'primary.main',
-                  color: 'primary.main',
-                  bgcolor: (t) =>
-                    t.palette.mode === 'dark' ? 'rgba(130, 201, 30, 0.08)' : 'rgba(118, 186, 27, 0.06)',
-                },
-              }}
-            >
-              <PlusIcon size={28} weight="bold" />
-            </Box>
-          ) : null}
-        </Stack>
-
-        {existingImageUrls.length + images.length < MAX_IMAGES ? (
-          <Typography variant="caption" color="text.disabled">
-            Up to {MAX_IMAGES} images · JPG, PNG, WEBP
           </Typography>
         ) : null}
       </Stack>

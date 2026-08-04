@@ -8,11 +8,14 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Container,
   FormControl,
+  FormControlLabel,
   FormHelperText,
   IconButton,
   InputAdornment,
+  Link as MuiLink,
   OutlinedInput,
   Stack,
   Tab,
@@ -27,7 +30,8 @@ import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { EyeSlash as EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlash';
-import { Controller, useForm } from 'react-hook-form';
+import RouterLink from 'next/link';
+import { Controller, useForm, type Control } from 'react-hook-form';
 import { z as zod } from 'zod';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
@@ -35,6 +39,7 @@ import { config } from '@/config';
 import { useCopy } from '@/hooks/use-copy';
 import { authClient } from '@/lib/auth/client';
 import { getDefaultAuthenticatedPath } from '@/lib/auth/post-login-path';
+import { paths } from '@/paths';
 
 const { name: siteName } = config.site;
 
@@ -45,6 +50,10 @@ const signInSchema = zod.object({
 
 type SignInValues = zod.infer<typeof signInSchema>;
 
+const acceptTermsField = zod.boolean().refine((value) => value === true, {
+  message: 'Duhet të pranoni kushtet e përdorimit',
+});
+
 const individualRegisterSchema = zod
   .object({
     firstName: zod.string().min(1, { message: 'Emri është i detyrueshëm' }),
@@ -53,6 +62,7 @@ const individualRegisterSchema = zod
     email: zod.string().min(1, { message: 'Emaili është i detyrueshëm' }).email('Email i pavlefshëm'),
     password: zod.string().min(6, { message: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere' }),
     confirmPassword: zod.string().min(1, { message: 'Konfirmo fjalëkalimin' }),
+    acceptTerms: acceptTermsField,
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Fjalëkalimet nuk përputhen',
@@ -69,6 +79,7 @@ const businessRegisterSchema = zod
     email: zod.string().min(1, { message: 'Emaili është i detyrueshëm' }).email('Email i pavlefshëm'),
     password: zod.string().min(6, { message: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere' }),
     confirmPassword: zod.string().min(1, { message: 'Konfirmo fjalëkalimin' }),
+    acceptTerms: acceptTermsField,
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Fjalëkalimet nuk përputhen',
@@ -92,6 +103,79 @@ const outlinedDarkSx = {
   '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'common.white' },
   '& input::placeholder': { color: 'rgba(255,255,255,0.6)', opacity: 1 },
 };
+
+function AcceptTermsField<T extends { acceptTerms: boolean }>({
+  control,
+  error,
+}: {
+  control: Control<T>;
+  error?: string;
+}) {
+  return (
+    <Controller
+      control={control}
+      name={'acceptTerms' as never}
+      render={({ field }) => (
+        <FormControl error={Boolean(error)} sx={{ width: '100%' }}>
+          <FormControlLabel
+            sx={{
+              alignItems: 'flex-start',
+              mx: 0,
+              gap: 1,
+              '& .MuiFormControlLabel-label': {
+                color: 'rgba(226,232,240,0.9)',
+                fontSize: '0.85rem',
+                lineHeight: 1.45,
+                pt: 0.35,
+              },
+            }}
+            control={
+              <Checkbox
+                checked={Boolean(field.value)}
+                onChange={(event) => field.onChange(event.target.checked)}
+                onBlur={field.onBlur}
+                inputRef={field.ref}
+                sx={{
+                  color: 'rgba(255,255,255,0.45)',
+                  p: 0.5,
+                  '&.Mui-checked': { color: 'primary.light' },
+                }}
+              />
+            }
+            label={
+              <Typography component="span" variant="body2" sx={{ color: 'inherit' }}>
+                Pranoj{' '}
+                <MuiLink
+                  component={RouterLink}
+                  href={paths.public.terms}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: 'primary.light', fontWeight: 600 }}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  kushtet e përdorimit
+                </MuiLink>{' '}
+                dhe{' '}
+                <MuiLink
+                  component={RouterLink}
+                  href={paths.public.privacy}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: 'primary.light', fontWeight: 600 }}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  politikën e privatësisë
+                </MuiLink>
+                .
+              </Typography>
+            }
+          />
+          {error ? <FormHelperText>{error}</FormHelperText> : null}
+        </FormControl>
+      )}
+    />
+  );
+}
 
 function SignInFields({
   control,
@@ -479,6 +563,7 @@ export function UserAuthView() {
       email: '',
       password: '',
       confirmPassword: '',
+      acceptTerms: false,
     },
   });
 
@@ -493,6 +578,7 @@ export function UserAuthView() {
       email: '',
       password: '',
       confirmPassword: '',
+      acceptTerms: false,
     },
   });
 
@@ -710,6 +796,10 @@ export function UserAuthView() {
                             showPassword={showPwReg}
                             setShowPassword={setShowPwReg}
                           />
+                          <AcceptTermsField
+                            control={individualForm.control}
+                            error={individualForm.formState.errors.acceptTerms?.message}
+                          />
                           <Button
                             type="submit"
                             variant="contained"
@@ -730,6 +820,10 @@ export function UserAuthView() {
                             errors={businessForm.formState.errors}
                             showPassword={showPwReg}
                             setShowPassword={setShowPwReg}
+                          />
+                          <AcceptTermsField
+                            control={businessForm.control}
+                            error={businessForm.formState.errors.acceptTerms?.message}
                           />
                           <Button
                             type="submit"

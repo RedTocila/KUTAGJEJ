@@ -4,17 +4,13 @@ import * as React from 'react';
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
-  Collapse,
   IconButton,
+  InputAdornment,
   Stack,
   TextField,
-  Typography,
 } from '@mui/material';
-import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
-import { Images as ImagesIcon } from '@phosphor-icons/react/dist/ssr/Images';
-import { PaperPlaneTilt as PaperPlaneIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
+import { Paperclip as PaperclipIcon } from '@phosphor-icons/react/dist/ssr/Paperclip';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
@@ -30,7 +26,6 @@ import {
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
-  AI_SEARCH_BLUE_MUTED,
   AI_SEARCH_BLUE_ON,
   AI_SEARCH_BLUE_SOFT,
 } from '@/lib/home-categories';
@@ -68,28 +63,27 @@ export function PostListingAiAssist({
   onApply,
   mode = 'create',
   currentListing = null,
-  defaultOpen = false,
-  variant = 'panel',
 }: {
   category: ListingCategoryKey;
   onApply: (initial: Record<string, unknown>) => void;
   mode?: 'create' | 'edit';
   currentListing?: Record<string, unknown> | null;
+  /** @deprecated Always a single-line bar; kept for call-site compatibility. */
   defaultOpen?: boolean;
-  /** `composer` = always-visible input with attach + send (owner edit). */
+  /** @deprecated Always a single-line bar; kept for call-site compatibility. */
   variant?: 'panel' | 'composer';
 }) {
   const t = useCopy();
   const { user } = useUser();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const isComposer = variant === 'composer';
-  const [open, setOpen] = React.useState(defaultOpen || isComposer);
+  const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const [text, setText] = React.useState('');
   const [files, setFiles] = React.useState<File[]>([]);
   const [previews, setPreviews] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
+  const [inputExpanded, setInputExpanded] = React.useState(false);
 
   React.useEffect(() => {
     const urls = files.map((f) => URL.createObjectURL(f));
@@ -99,11 +93,25 @@ export function PostListingAiAssist({
     };
   }, [files]);
 
+  React.useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el || !text) {
+      setInputExpanded(false);
+      return;
+    }
+    const measure = () => {
+      const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight) || 20;
+      setInputExpanded(el.scrollHeight > lineHeight + 4);
+    };
+    measure();
+    const raf = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(raf);
+  }, [text]);
+
   const isEdit = mode === 'edit';
-  const title = isEdit ? t.aiImport.editTitle : t.aiImport.formTitle;
-  const hint = isEdit ? t.aiImport.editHint : t.aiImport.formHint;
-  const placeholder = isEdit ? t.aiImport.editPlaceholder : t.aiImport.formPlaceholder;
+  const placeholder = isEdit ? t.aiImport.editTitle : t.aiImport.formTitle;
   const appliedMsg = isEdit ? t.aiImport.editApplied : t.aiImport.formApplied;
+  const canSubmit = Boolean(text.trim() || files.length > 0);
 
   const handleFilesPicked = (list: FileList | null) => {
     if (!list?.length) return;
@@ -191,7 +199,6 @@ export function PostListingAiAssist({
       setSuccess(appliedMsg);
       setText('');
       setFiles([]);
-      if (!isComposer) setOpen(false);
     } catch {
       setError(t.aiImport.failed);
     } finally {
@@ -199,372 +206,188 @@ export function PostListingAiAssist({
     }
   };
 
-  const fieldSx = {
-    '& .MuiOutlinedInput-root': {
-      borderRadius: 2.5,
-      bgcolor: AI_SEARCH_BLUE_SOFT,
-      color: 'text.primary',
-      pr: 0.75,
-      '& fieldset': {
-        borderWidth: 1.5,
-        borderColor: AI_SEARCH_BLUE,
-      },
-      '&:hover fieldset': {
-        borderColor: AI_SEARCH_BLUE,
-      },
-      '&.Mui-focused fieldset': {
-        borderWidth: 1.5,
-        borderColor: AI_SEARCH_BLUE,
-      },
-      '&.Mui-focused': {
-        bgcolor: AI_SEARCH_BLUE_SOFT,
-      },
-    },
-    '& .MuiInputBase-input': {
-      color: 'text.primary',
-    },
-    '& .MuiInputBase-input::placeholder': {
-      color: '#9CA3AF',
-      opacity: 1,
-    },
-  } as const;
-
-  const fileInput = (
-    <input
-      ref={fileInputRef}
-      type="file"
-      accept="image/jpeg,image/png,image/webp,image/gif"
-      multiple
-      hidden
-      onChange={(e) => handleFilesPicked(e.target.files)}
-    />
-  );
-
-  const previewRow =
-    previews.length > 0 ? (
-      <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-        {previews.map((src, index) => (
-          <Box
-            key={`${src}-${index}`}
-            sx={{
-              position: 'relative',
-              width: 56,
-              height: 56,
-              borderRadius: 1.5,
-              overflow: 'hidden',
-              border: '1.5px solid',
-              borderColor: AI_SEARCH_BLUE,
-            }}
-          >
-            <Box
-              component="img"
-              src={src}
-              alt=""
-              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-            <IconButton
-              size="small"
-              aria-label={t.aiImport.removeImage}
-              onClick={() => removeFile(index)}
-              sx={{
-                position: 'absolute',
-                top: 2,
-                right: 2,
-                width: 22,
-                height: 22,
-                bgcolor: 'rgba(0,0,0,0.55)',
-                color: '#fff',
-                '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' },
-              }}
-            >
-              <XIcon size={12} weight="bold" />
-            </IconButton>
-          </Box>
-        ))}
-      </Stack>
-    ) : null;
-
-  if (isComposer) {
-    return (
-      <Stack spacing={1} component="form" onSubmit={handleAnalyze}>
-        {fileInput}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'flex-end',
-            gap: 1,
-            p: 1,
-            borderRadius: 2.5,
-            border: '1.5px solid',
-            borderColor: AI_SEARCH_BLUE,
-            bgcolor: AI_SEARCH_BLUE_SOFT,
-          }}
-        >
-          <IconButton
-            type="button"
-            size="small"
-            aria-label={t.aiImport.attachImages}
-            disabled={loading || files.length >= MAX_AI_IMAGES}
-            onClick={() => fileInputRef.current?.click()}
-            sx={{
-              flexShrink: 0,
-              color: AI_SEARCH_BLUE,
-              border: '1px solid',
-              borderColor: AI_SEARCH_BLUE,
-              borderRadius: 2,
-              width: 38,
-              height: 38,
-              mb: 0.15,
-            }}
-          >
-            <ImagesIcon size={18} weight="bold" />
-          </IconButton>
-
-          <TextField
-            fullWidth
-            multiline
-            minRows={1}
-            maxRows={4}
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder={placeholder}
-            disabled={loading}
-            variant="standard"
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                if (!loading) void handleAnalyze();
-              }
-            }}
-            sx={{
-              '& .MuiInputBase-root': {
-                color: 'text.primary',
-                fontSize: '0.95rem',
-                py: 0.75,
-                '&:before, &:after': { display: 'none' },
-              },
-              '& .MuiInputBase-input::placeholder': {
-                color: '#9CA3AF',
-                opacity: 1,
-              },
-            }}
-          />
-
-          <IconButton
-            type="submit"
-            size="small"
-            aria-label={loading ? t.aiImport.analyzing : t.aiImport.analyze}
-            disabled={loading || (!text.trim() && files.length === 0)}
-            sx={{
-              flexShrink: 0,
-              bgcolor: AI_SEARCH_BLUE,
-              color: AI_SEARCH_BLUE_ON,
-              borderRadius: 2,
-              width: 38,
-              height: 38,
-              mb: 0.15,
-              '&:hover': { bgcolor: AI_SEARCH_BLUE_HOVER },
-              '&.Mui-disabled': {
-                bgcolor: AI_SEARCH_BLUE,
-                color: AI_SEARCH_BLUE_ON,
-                opacity: 0.45,
-              },
-            }}
-          >
-            {loading ? (
-              <CircularProgress size={16} color="inherit" />
-            ) : (
-              <PaperPlaneIcon size={18} weight="fill" />
-            )}
-          </IconButton>
-        </Box>
-        {previewRow}
-        {error ? (
-          <Alert severity="error" sx={{ borderRadius: 2.5, py: 0 }}>
-            {error}
-          </Alert>
-        ) : null}
-        {success ? (
-          <Alert severity="success" sx={{ borderRadius: 2.5, py: 0 }}>
-            {success}
-          </Alert>
-        ) : null}
-      </Stack>
-    );
-  }
-
   return (
-    <Box
-      sx={{
-        borderRadius: 2.75,
-        border: '1.5px solid',
-        borderColor: AI_SEARCH_BLUE,
-        bgcolor: (theme) =>
-          theme.palette.mode === 'dark' ? AI_SEARCH_BLUE_MUTED : AI_SEARCH_BLUE_SOFT,
-        overflow: 'hidden',
-      }}
-    >
+    <Stack spacing={1} component="form" onSubmit={handleAnalyze}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        multiple
+        hidden
+        onChange={(e) => handleFilesPicked(e.target.files)}
+      />
+
       <Box
-        component="button"
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
         sx={{
           display: 'flex',
-          alignItems: 'flex-start',
-          gap: 1.25,
-          width: '100%',
-          px: { xs: 1.75, sm: 2.25 },
-          py: { xs: 1.75, sm: 2 },
-          border: 0,
-          bgcolor: 'transparent',
-          color: 'inherit',
-          cursor: 'pointer',
-          font: 'inherit',
-          textAlign: 'left',
-          '&:hover': {
-            bgcolor: AI_SEARCH_BLUE_MUTED,
-          },
+          gap: 0.25,
+          p: 0.75,
+          borderRadius: inputExpanded ? 2.5 : 999,
+          border: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+          alignItems: inputExpanded ? 'flex-end' : 'center',
+          transition: 'border-radius 120ms ease',
         }}
       >
-        <Box
+        <TextField
+          fullWidth
+          size="small"
+          autoComplete="off"
+          multiline
+          minRows={1}
+          maxRows={4}
+          value={text}
+          inputRef={inputRef}
+          onChange={(event) => setText(event.target.value)}
+          placeholder={placeholder}
+          disabled={loading}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              if (!loading && canSubmit) void handleAnalyze();
+            }
+          }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment
+                  position="start"
+                  sx={{
+                    color: AI_SEARCH_BLUE,
+                    alignSelf: inputExpanded ? 'flex-start' : 'center',
+                    mt: inputExpanded ? 0.5 : 0,
+                  }}
+                >
+                  <SparkleIcon size={18} />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment
+                  position="end"
+                  sx={{
+                    alignSelf: inputExpanded ? 'flex-start' : 'center',
+                    mt: inputExpanded ? 0.25 : 0,
+                  }}
+                >
+                  <IconButton
+                    type="button"
+                    size="small"
+                    aria-label={t.aiImport.attachImages}
+                    disabled={loading || files.length >= MAX_AI_IMAGES}
+                    onClick={() => fileInputRef.current?.click()}
+                    edge="end"
+                    sx={{
+                      color: files.length > 0 ? AI_SEARCH_BLUE : 'text.secondary',
+                      mr: -0.5,
+                      p: 0.75,
+                    }}
+                  >
+                    <PaperclipIcon size={20} weight="bold" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
+          }}
           sx={{
-            width: 36,
-            height: 36,
-            borderRadius: 2.25,
-            display: 'grid',
-            placeItems: 'center',
+            '& .MuiOutlinedInput-root': {
+              bgcolor: 'transparent',
+              alignItems: inputExpanded ? 'flex-start' : 'center',
+              py: 0,
+              minHeight: 40,
+              '& fieldset': { border: 'none' },
+            },
+            '& textarea': {
+              resize: 'none',
+              lineHeight: 1.35,
+              whiteSpace: inputExpanded ? 'pre-wrap' : 'nowrap',
+              textOverflow: inputExpanded ? 'clip' : 'ellipsis',
+              overflow: inputExpanded ? 'auto' : 'hidden !important',
+            },
+          }}
+        />
+        <IconButton
+          type="submit"
+          aria-label={loading ? t.aiImport.analyzing : t.aiImport.analyze}
+          disabled={loading || !canSubmit}
+          sx={{
             flexShrink: 0,
-            bgcolor: AI_SEARCH_BLUE_SOFT,
-            color: AI_SEARCH_BLUE,
+            width: 40,
+            height: 40,
+            alignSelf: inputExpanded ? 'flex-end' : 'center',
+            bgcolor: AI_SEARCH_BLUE,
+            color: AI_SEARCH_BLUE_ON,
+            '&:hover': {
+              bgcolor: AI_SEARCH_BLUE_HOVER,
+              color: AI_SEARCH_BLUE_ON,
+            },
+            '&.Mui-disabled': {
+              bgcolor: AI_SEARCH_BLUE_SOFT,
+              color: AI_SEARCH_BLUE_ON,
+            },
           }}
         >
-          <SparkleIcon size={18} weight="duotone" />
-        </Box>
-
-        <Box sx={{ minWidth: 0, flex: 1, pt: 0.15 }}>
-          <Typography sx={{ fontWeight: 800, fontSize: '0.98rem', letterSpacing: '-0.01em' }}>
-            {title}
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 0.35, lineHeight: 1.4, color: '#9CA3AF' }}>
-            {hint}
-          </Typography>
-        </Box>
-
-        <Box
-          sx={{
-            mt: 0.5,
-            color: AI_SEARCH_BLUE,
-            display: 'inline-flex',
-            transition: 'transform 0.18s ease',
-            transform: open ? 'rotate(180deg)' : 'none',
-          }}
-        >
-          <CaretDownIcon size={18} weight="bold" />
-        </Box>
+          {loading ? (
+            <CircularProgress size={18} sx={{ color: AI_SEARCH_BLUE_ON }} />
+          ) : (
+            <SparkleIcon size={18} weight="bold" />
+          )}
+        </IconButton>
       </Box>
 
-      <Collapse in={open} unmountOnExit>
-        <Box
-          component="form"
-          onSubmit={handleAnalyze}
-          sx={{ px: { xs: 1.75, sm: 2.25 }, pb: { xs: 1.75, sm: 2.25 } }}
-        >
-          <Stack spacing={1.5}>
-            <TextField
-              fullWidth
-              multiline
-              minRows={3}
-              maxRows={8}
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              placeholder={placeholder}
-              sx={fieldSx}
-            />
-
-            {fileInput}
-
-            <Stack spacing={1}>
-              <Button
-                type="button"
-                variant="outlined"
-                startIcon={<ImagesIcon size={18} weight="bold" />}
-                onClick={() => fileInputRef.current?.click()}
-                disabled={loading || files.length >= MAX_AI_IMAGES}
-                sx={{
-                  alignSelf: 'flex-start',
-                  textTransform: 'none',
-                  fontWeight: 700,
-                  borderRadius: 2.5,
-                  borderColor: AI_SEARCH_BLUE,
-                  color: AI_SEARCH_BLUE,
-                  '&:hover': {
-                    borderColor: AI_SEARCH_BLUE_HOVER,
-                    bgcolor: AI_SEARCH_BLUE_MUTED,
-                  },
-                }}
-              >
-                {t.aiImport.attachImages}
-                {files.length > 0 ? ` (${files.length}/${MAX_AI_IMAGES})` : ''}
-              </Button>
-              <Typography variant="caption" sx={{ color: '#9CA3AF', lineHeight: 1.35 }}>
-                {t.aiImport.attachHint}
-              </Typography>
-
-              {previewRow}
-            </Stack>
-
-            {error ? (
-              <Alert severity="error" sx={{ borderRadius: 2.5, py: 0 }}>
-                {error}
-              </Alert>
-            ) : null}
-
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={loading}
-              fullWidth
-              startIcon={
-                loading ? (
-                  <CircularProgress size={16} color="inherit" />
-                ) : (
-                  <SparkleIcon size={18} weight="bold" />
-                )
-              }
+      {previews.length > 0 ? (
+        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1, px: 0.5 }}>
+          {previews.map((src, index) => (
+            <Box
+              key={`${src}-${index}`}
               sx={{
-                borderRadius: 2.5,
-                textTransform: 'none',
-                fontWeight: 800,
-                py: 1.2,
-                boxShadow: 'none',
-                bgcolor: AI_SEARCH_BLUE,
-                color: AI_SEARCH_BLUE_ON,
-                '&:hover': {
-                  boxShadow: 'none',
-                  bgcolor: AI_SEARCH_BLUE_HOVER,
-                  color: AI_SEARCH_BLUE_ON,
-                },
-                '&.Mui-disabled': {
-                  bgcolor: AI_SEARCH_BLUE,
-                  color: AI_SEARCH_BLUE_ON,
-                  opacity: 0.55,
-                },
+                position: 'relative',
+                width: 56,
+                height: 56,
+                borderRadius: 1.5,
+                overflow: 'hidden',
+                border: '1px solid',
+                borderColor: 'divider',
               }}
             >
-              {loading ? t.aiImport.analyzing : t.aiImport.analyze}
-            </Button>
-          </Stack>
-        </Box>
-      </Collapse>
-
-      {success && !open ? (
-        <Box sx={{ px: { xs: 1.75, sm: 2.25 }, pb: { xs: 1.5, sm: 1.75 } }}>
-          <Alert severity="success" sx={{ borderRadius: 2.5, py: 0 }}>
-            {success}
-          </Alert>
-        </Box>
+              <Box
+                component="img"
+                src={src}
+                alt=""
+                sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <IconButton
+                size="small"
+                aria-label={t.aiImport.removeImage}
+                onClick={() => removeFile(index)}
+                sx={{
+                  position: 'absolute',
+                  top: 2,
+                  right: 2,
+                  width: 22,
+                  height: 22,
+                  bgcolor: 'rgba(0,0,0,0.55)',
+                  color: '#fff',
+                  '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' },
+                }}
+              >
+                <XIcon size={12} weight="bold" />
+              </IconButton>
+            </Box>
+          ))}
+        </Stack>
       ) : null}
-    </Box>
+
+      {error ? (
+        <Alert severity="error" sx={{ borderRadius: 2.5, py: 0 }}>
+          {error}
+        </Alert>
+      ) : null}
+      {success ? (
+        <Alert severity="success" sx={{ borderRadius: 2.5, py: 0 }}>
+          {success}
+        </Alert>
+      ) : null}
+    </Stack>
   );
 }

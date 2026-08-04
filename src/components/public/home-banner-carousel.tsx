@@ -197,6 +197,21 @@ function BannerSlidePanel({
         </>
       ) : null}
 
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: '55%',
+          background:
+            'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.38) 42%, rgba(0,0,0,0) 100%)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+
       <Stack
         direction="row"
         spacing={1.5}

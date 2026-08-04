@@ -303,6 +303,15 @@ export function BusinessListingForm({
             required
             fullWidth
           />
+          <ListingImagePicker
+            value={images}
+            onChange={setImages}
+            existingUrls={existingImageUrls}
+            onExistingUrlsChange={setExistingImageUrls}
+            max={MAX_BUSINESS_IMAGES}
+            label="Foto të biznesit"
+            disabled={submitting}
+          />
           <SearchableSelect
             label="Kategoria"
             value={category}
@@ -344,15 +353,6 @@ export function BusinessListingForm({
             placeholder="+355 69 …"
             type="tel"
             autoComplete="tel"
-          />
-          <ListingImagePicker
-            value={images}
-            onChange={setImages}
-            existingUrls={existingImageUrls}
-            onExistingUrlsChange={setExistingImageUrls}
-            max={MAX_BUSINESS_IMAGES}
-            label="Foto të biznesit"
-            disabled={submitting}
           />
         </ListingFormSection>
 

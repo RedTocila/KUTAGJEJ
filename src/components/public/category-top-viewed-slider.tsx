@@ -148,14 +148,17 @@ function ListingSlidePanel({
         }}
       />
       <Box
+        aria-hidden
         sx={{
           position: 'absolute',
           left: 0,
           right: 0,
           bottom: 0,
-          height: '46%',
+          height: '55%',
           pointerEvents: 'none',
-          background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 100%)',
+          zIndex: 0,
+          background:
+            'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.38) 42%, rgba(0,0,0,0) 100%)',
         }}
       />
 

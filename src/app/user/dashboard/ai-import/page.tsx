@@ -17,6 +17,7 @@ import { CaretLeft as CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/Caret
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { LinkSimple as LinkSimpleIcon } from '@phosphor-icons/react/dist/ssr/LinkSimple';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
+import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { HomeVerticalIcon } from '@/components/public/home-vertical-icon';
@@ -56,7 +57,20 @@ function toListingCategory(id: HomeVerticalId): ListingCategoryKey {
 }
 
 function draftImageUrls(draft: AiImportDraftResult | AiListingDraft): string[] {
-  return (draft.imageUrls ?? []).filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url));
+  return (draft.imageUrls ?? []).filter((url) => {
+    if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return false;
+    const lower = url.toLowerCase();
+    // Drop analytics beacons that scrape sometimes picks up as <img> sources.
+    if (/facebook\.com\/(?:tr|tr\/)\b|[?&]ev=pageview\b/i.test(lower)) return false;
+    if (
+      /google-analytics\.com|googletagmanager\.com|doubleclick\.net|bat\.bing\.com|adservice\.google/i.test(
+        lower,
+      )
+    ) {
+      return false;
+    }
+    return true;
+  });
 }
 
 export default function AiImportListingsPage() {
@@ -237,22 +251,12 @@ export default function AiImportListingsPage() {
         <Box
           sx={{
             borderRadius: 2.75,
-            border: '1.5px solid',
-            borderColor: AI_SEARCH_BLUE,
+            border: '1px solid',
+            borderColor: 'divider',
             bgcolor: 'background.paper',
-            boxShadow: (theme) =>
-              theme.palette.mode === 'dark'
-                ? '0 0 0 1px rgba(255, 187, 31, 0.08), 0 12px 32px -16px rgba(0,0,0,0.65)'
-                : '0 12px 32px -18px rgba(255, 187, 31, 0.35)',
             overflow: 'hidden',
           }}
         >
-          <Box
-            sx={{
-              height: 3,
-              bgcolor: AI_SEARCH_BLUE,
-            }}
-          />
           <Stack
             spacing={1.75}
             component="form"
@@ -260,9 +264,46 @@ export default function AiImportListingsPage() {
             sx={{ p: { xs: 1.75, sm: 2.25 } }}
           >
             <Stack spacing={1.15}>
-              <Typography sx={{ fontWeight: 800, fontSize: '0.92rem' }}>
-                {t.aiImport.chooseCategory}
-              </Typography>
+              <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                <Typography sx={{ fontWeight: 800, fontSize: '0.92rem' }}>
+                  {t.aiImport.chooseCategory}
+                </Typography>
+                <Stack
+                  direction="row"
+                  spacing={0.25}
+                  sx={{ alignItems: 'center', color: AI_SEARCH_BLUE, flexShrink: 0 }}
+                  aria-hidden
+                >
+                  <Box
+                    sx={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: '50%',
+                      bgcolor: AI_SEARCH_BLUE,
+                      opacity: 0.95,
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: '50%',
+                      bgcolor: AI_SEARCH_BLUE,
+                      opacity: 0.45,
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: '50%',
+                      bgcolor: AI_SEARCH_BLUE,
+                      opacity: 0.25,
+                    }}
+                  />
+                  <CaretRightIcon size={14} weight="bold" />
+                </Stack>
+              </Stack>
               <Box
                 role="listbox"
                 aria-label={t.aiImport.chooseCategory}
@@ -270,7 +311,7 @@ export default function AiImportListingsPage() {
                   display: 'flex',
                   flexDirection: 'row',
                   flexWrap: 'nowrap',
-                  gap: { xs: 1.25, sm: 2 },
+                  gap: { xs: 1, sm: 1.5 },
                   justifyContent: 'flex-start',
                   overflowX: 'auto',
                   overflowY: 'hidden',
@@ -279,8 +320,6 @@ export default function AiImportListingsPage() {
                   scrollbarWidth: 'none',
                   msOverflowStyle: 'none',
                   pb: 0.25,
-                  mx: { xs: -0.5, sm: 0 },
-                  px: { xs: 0.5, sm: 0 },
                   '&::-webkit-scrollbar': { display: 'none' },
                 }}
               >
@@ -298,9 +337,10 @@ export default function AiImportListingsPage() {
                         setCategory(key);
                         setError(null);
                       }}
-                      spacing={0.45}
+                      spacing={0.4}
                       sx={{
-                        flexShrink: 0,
+                        flex: '0 0 auto',
+                        width: { xs: 56, sm: 58 },
                         scrollSnapAlign: { xs: 'start', sm: 'none' },
                         alignItems: 'center',
                         cursor: 'pointer',
@@ -323,8 +363,8 @@ export default function AiImportListingsPage() {
                       <Box
                         className="ai-cat-circle"
                         sx={{
-                          width: { xs: 60, sm: 58 },
-                          height: { xs: 60, sm: 58 },
+                          width: { xs: 48, sm: 50 },
+                          height: { xs: 48, sm: 50 },
                           borderRadius: '50%',
                           display: 'grid',
                           placeItems: 'center',
@@ -336,7 +376,7 @@ export default function AiImportListingsPage() {
                       >
                         <HomeVerticalIcon
                           verticalId={item.id}
-                          size={34}
+                          size={26}
                           color={selected ? AI_SEARCH_BLUE_ON : AI_SEARCH_BLUE}
                         />
                       </Box>
@@ -345,8 +385,13 @@ export default function AiImportListingsPage() {
                         variant="caption"
                         sx={{
                           fontWeight: selected ? 800 : 600,
+                          fontSize: '0.68rem',
                           color: selected ? AI_SEARCH_BLUE : 'text.secondary',
                           whiteSpace: 'nowrap',
+                          maxWidth: '100%',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          textAlign: 'center',
                           transition: 'color 0.15s ease',
                         }}
                       >
@@ -379,11 +424,11 @@ export default function AiImportListingsPage() {
                         borderColor: 'divider',
                       },
                       '&:hover fieldset': {
-                        borderColor: AI_SEARCH_BLUE,
+                        borderColor: 'text.secondary',
                       },
                       '&.Mui-focused fieldset': {
                         borderWidth: 1.5,
-                        borderColor: AI_SEARCH_BLUE,
+                        borderColor: 'text.secondary',
                       },
                     },
                     '& .MuiInputBase-input::placeholder': {
@@ -412,7 +457,7 @@ export default function AiImportListingsPage() {
                     )
                   }
                   sx={{
-                    borderRadius: 2.5,
+                    borderRadius: '16px',
                     textTransform: 'none',
                     fontWeight: 800,
                     py: 1.35,
@@ -434,7 +479,15 @@ export default function AiImportListingsPage() {
                   {loading ? t.aiImport.analyzing : t.aiImport.analyze}
                 </Button>
               </>
-            ) : null}
+            ) : (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ textAlign: 'center', py: 1.5, px: 1 }}
+              >
+                {t.aiImport.chooseCategoryToContinue}
+              </Typography>
+            )}
           </Stack>
         </Box>
       </PostListingFormSurface>
@@ -452,21 +505,11 @@ export default function AiImportListingsPage() {
                 {t.aiImport.draftsKeptHint}
               </Typography>
             </Stack>
-            <Stack spacing={1} sx={{ flexShrink: 0, alignItems: 'stretch', minWidth: { xs: '100%', sm: 160 } }}>
-              <Button
-                variant="outlined"
-                disabled={postingAll || postingId != null || drafts.length === 0}
-                onClick={deleteAllDrafts}
-                sx={{
-                  textTransform: 'none',
-                  fontWeight: 800,
-                  borderRadius: 2.5,
-                  borderColor: 'divider',
-                  color: 'text.secondary',
-                }}
-              >
-                {t.aiImport.deleteAll}
-              </Button>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ flexShrink: 0, alignItems: 'stretch', width: { xs: '100%', sm: 'auto' } }}
+            >
               <Button
                 variant="contained"
                 disabled={postingAll || postingId != null || readyDrafts.length === 0}
@@ -477,8 +520,9 @@ export default function AiImportListingsPage() {
                 sx={{
                   textTransform: 'none',
                   fontWeight: 800,
-                  borderRadius: 2.5,
+                  borderRadius: '16px',
                   boxShadow: 'none',
+                  flex: { xs: 1, sm: 'none' },
                   bgcolor: AI_SEARCH_BLUE,
                   color: AI_SEARCH_BLUE_ON,
                   '&:hover': { boxShadow: 'none', bgcolor: AI_SEARCH_BLUE_HOVER },
@@ -490,6 +534,30 @@ export default function AiImportListingsPage() {
                 }}
               >
                 {postingAll ? t.aiImport.posting : t.aiImport.postAll}
+              </Button>
+              <Button
+                variant="contained"
+                aria-label={t.aiImport.deleteAll}
+                disabled={postingAll || postingId != null || drafts.length === 0}
+                onClick={deleteAllDrafts}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 800,
+                  borderRadius: '16px',
+                  boxShadow: 'none',
+                  minWidth: 42,
+                  px: 1.25,
+                  bgcolor: 'error.main',
+                  color: 'error.contrastText',
+                  '&:hover': { boxShadow: 'none', bgcolor: 'error.dark' },
+                  '&.Mui-disabled': {
+                    bgcolor: 'error.main',
+                    color: 'error.contrastText',
+                    opacity: 0.55,
+                  },
+                }}
+              >
+                <TrashIcon size={18} weight="bold" />
               </Button>
             </Stack>
           </Stack>
@@ -509,13 +577,13 @@ export default function AiImportListingsPage() {
                   p: 2,
                   borderRadius: 2.5,
                   border: '1px solid',
-                  borderColor: failed ? 'error.light' : AI_SEARCH_BLUE,
-                  bgcolor: failed ? 'error.light' : AI_SEARCH_BLUE_SOFT,
+                  borderColor: failed ? 'error.light' : 'divider',
+                  bgcolor: failed ? 'error.light' : 'background.paper',
                 }}
               >
                 <Stack spacing={1.25}>
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
-                    <Box sx={{ color: AI_SEARCH_BLUE, mt: 0.25 }}>
+                    <Box sx={{ color: 'text.secondary', mt: 0.25 }}>
                       <LinkSimpleIcon size={18} />
                     </Box>
                     <Stack spacing={0.35} sx={{ minWidth: 0, flex: 1 }}>
@@ -540,7 +608,7 @@ export default function AiImportListingsPage() {
                         {draft.sourceUrl}
                       </Typography>
                       {draft.category ? (
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: AI_SEARCH_BLUE }}>
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
                           {categoryLabel(draft.category)}
                           {draft.cityName ? ` · ${draft.cityName}` : ''}
                         </Typography>
@@ -587,7 +655,7 @@ export default function AiImportListingsPage() {
                             borderRadius: 2,
                             overflow: 'hidden',
                             border: '1px solid',
-                            borderColor: AI_SEARCH_BLUE,
+                            borderColor: 'divider',
                             padding: 0,
                             cursor: 'pointer',
                             bgcolor: 'background.paper',
@@ -598,6 +666,12 @@ export default function AiImportListingsPage() {
                             src={url}
                             alt=""
                             loading="lazy"
+                            referrerPolicy="no-referrer"
+                            onError={(event) => {
+                              const img = event.currentTarget;
+                              const button = img.closest('button');
+                              if (button instanceof HTMLElement) button.style.display = 'none';
+                            }}
                             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                           />
                         </Box>
@@ -621,7 +695,7 @@ export default function AiImportListingsPage() {
                         sx={{
                           textTransform: 'none',
                           fontWeight: 800,
-                          borderRadius: 2.5,
+                          borderRadius: '16px',
                           boxShadow: 'none',
                           bgcolor: AI_SEARCH_BLUE,
                           color: AI_SEARCH_BLUE_ON,
@@ -646,7 +720,7 @@ export default function AiImportListingsPage() {
                         sx={{
                           textTransform: 'none',
                           fontWeight: 800,
-                          borderRadius: 2.5,
+                          borderRadius: '16px',
                           borderColor: AI_SEARCH_BLUE,
                           color: AI_SEARCH_BLUE,
                           '&:hover': {
@@ -759,6 +833,7 @@ export default function AiImportListingsPage() {
             <img
               src={previewUrl}
               alt=""
+              referrerPolicy="no-referrer"
               style={{
                 width: '100%',
                 height: 'min(70vh, 640px)',

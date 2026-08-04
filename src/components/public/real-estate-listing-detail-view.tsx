@@ -307,7 +307,7 @@ export function RealEstateListingDetailView({
     saveCount: listing.saveCount,
   });
 
-  const transactionLabel = listing.transactionType === 'rent' ? 'Me qira' : 'Për shitje';
+  const transactionLabel = listing.transactionType === 'rent' ? 'Qera' : 'Shitje';
   const wa = whatsappHref(displayPhone);
 
   const whatsappInquireHref = wa

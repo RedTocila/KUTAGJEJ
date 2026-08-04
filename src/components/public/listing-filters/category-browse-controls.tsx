@@ -7,7 +7,7 @@ import {
   Box,
   IconButton,
 } from '@mui/material';
-import { SlidersHorizontal as SlidersIcon } from '@phosphor-icons/react/dist/ssr/SlidersHorizontal';
+import { Funnel as FunnelIcon } from '@phosphor-icons/react/dist/ssr/Funnel';
 import { useLanguage } from '@/hooks/use-language';
 import { localizeVertical, type HomeVerticalId } from '@/lib/home-categories';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -195,7 +195,7 @@ export function CategoryBrowseControls({
                 },
               }}
             >
-              <SlidersIcon size={16} weight="bold" />
+              <FunnelIcon size={16} weight="bold" />
             </IconButton>
           </Badge>
         </Box>

@@ -10,7 +10,6 @@ import {
   Typography,
 } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
-import { Images as ImagesIcon } from '@phosphor-icons/react/dist/ssr/Images';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle';
@@ -395,6 +394,32 @@ export function ProfessionalListingForm({
             required
             fullWidth
           />
+          <Stack spacing={2}>
+            <ListingImagePicker
+              value={coverFile}
+              onChange={(files) => {
+                setCoverFile(files.slice(0, 1));
+                if (files.length) setCoverUrl(null);
+              }}
+              existingUrls={coverUrl ? [coverUrl] : []}
+              onExistingUrlsChange={(urls) => setCoverUrl(urls[0] ?? null)}
+              max={1}
+              label="Foto kopertinë"
+              disabled={submitting}
+            />
+            <ListingImagePicker
+              value={avatarFile}
+              onChange={(files) => {
+                setAvatarFile(files.slice(0, 1));
+                if (files.length) setAvatarUrl(null);
+              }}
+              existingUrls={avatarUrl ? [avatarUrl] : []}
+              onExistingUrlsChange={(urls) => setAvatarUrl(urls[0] ?? null)}
+              max={1}
+              label="Foto profili (rrethi)"
+              disabled={submitting}
+            />
+          </Stack>
           <SearchableSelect
             label="Kategoria"
             value={category}
@@ -459,39 +484,6 @@ export function ProfessionalListingForm({
               options={CURRENCY_OPTIONS}
               emptyLabel="—"
               sx={{ minWidth: 120 }}
-            />
-          </Stack>
-        </ListingFormSection>
-
-        <ListingFormSection
-          icon={<ImagesIcon size={20} weight="duotone" />}
-          title="Foto"
-          description="Një foto kopertinë dhe një foto profili (rrethi)."
-        >
-          <Stack spacing={2}>
-            <ListingImagePicker
-              value={coverFile}
-              onChange={(files) => {
-                setCoverFile(files.slice(0, 1));
-                if (files.length) setCoverUrl(null);
-              }}
-              existingUrls={coverUrl ? [coverUrl] : []}
-              onExistingUrlsChange={(urls) => setCoverUrl(urls[0] ?? null)}
-              max={1}
-              label="Foto kopertinë"
-              disabled={submitting}
-            />
-            <ListingImagePicker
-              value={avatarFile}
-              onChange={(files) => {
-                setAvatarFile(files.slice(0, 1));
-                if (files.length) setAvatarUrl(null);
-              }}
-              existingUrls={avatarUrl ? [avatarUrl] : []}
-              onExistingUrlsChange={(urls) => setAvatarUrl(urls[0] ?? null)}
-              max={1}
-              label="Foto profili (rrethi)"
-              disabled={submitting}
             />
           </Stack>
         </ListingFormSection>

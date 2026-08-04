@@ -134,6 +134,11 @@ function isLikelyJunkImageUrl(url) {
     /sprite|icon|logo|favicon|pixel|tracking|1x1|blank\.|placeholder|avatar-default|spinner|loading\.gif|rsrc\.php/i.test(
       lower,
     ) ||
+    // Analytics / ad beacons often appear as <img> tags (e.g. Facebook noscript pixel).
+    /facebook\.com\/(?:tr|tr\/)\b|connect\.facebook\.net\/.*\/fbevents|google-analytics\.com|googletagmanager\.com|googleadservices\.com|doubleclick\.net|bat\.bing\.com|adservice\.google|scorecardresearch\.com|hotjar\.com/i.test(
+      lower,
+    ) ||
+    /[?&]ev=pageview\b/i.test(lower) ||
     // Amazon share/composite banners (not product gallery shots)
     /\.jpg_bo\d+/i.test(lower) ||
     /_sr\d+,\d+/i.test(lower)

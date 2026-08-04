@@ -25,8 +25,8 @@ export function propertyCategoryLabel(slug: string): string {
 }
 
 export const TRANSACTION_OPTIONS = [
-  { value: 'rent', label: 'Me qira' },
-  { value: 'sale', label: 'Në shitje' },
+  { value: 'rent', label: 'Qera' },
+  { value: 'sale', label: 'Shitje' },
 ] as const;
 
 export const CURRENCY_OPTIONS = [

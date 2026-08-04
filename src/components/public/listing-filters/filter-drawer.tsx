@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Box, Grid, IconButton, Stack, Typography } from '@mui/material';
-import { SlidersHorizontal as SlidersIcon } from '@phosphor-icons/react/dist/ssr/SlidersHorizontal';
+import { Funnel as FunnelIcon } from '@phosphor-icons/react/dist/ssr/Funnel';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import type { HomeVerticalId } from '@/lib/home-categories';
@@ -411,7 +411,7 @@ export function FilterDrawerPanel({
                   boxShadow: `0 4px 16px ${primaryMainAlpha(0.45)}`,
                 }}
               >
-                <SlidersIcon size={20} weight="bold" />
+                <FunnelIcon size={20} weight="bold" />
               </Box>
               <Box sx={{ minWidth: 0 }}>
                 <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em', lineHeight: 1.2 }}>

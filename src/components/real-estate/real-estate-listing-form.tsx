@@ -14,7 +14,6 @@ import {
   Typography,
 } from '@mui/material';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
-import { Images as ImagesIcon } from '@phosphor-icons/react/dist/ssr/Images';
 
 import {
   CONDITION_OPTIONS,
@@ -350,6 +349,15 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         description="Plotësoni titullin, llojin e pronës dhe fushat e tjera sipas kategorisë."
       >
       <ListingTextField label="Titulli" value={form.title} onChange={onField('title')} required fullWidth />
+      <ListingImagePicker
+        value={images}
+        onChange={setImages}
+        existingUrls={existingImageUrls}
+        onExistingUrlsChange={setExistingImageUrls}
+        max={MAX_REAL_ESTATE_IMAGES}
+        label="Foto"
+        disabled={submitting}
+      />
       <ListingTextField
         label="Përshkrimi"
         value={form.description}
@@ -565,22 +573,6 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         helperText="I shfaqet personave të interesuar për këtë njoftim. Është paraplotësuar nga llogaria juaj nëse keni shtuar një numër gjatë regjistrimit ose në profil — mund ta ndryshoni këtu."
       />
 
-      </ListingFormSection>
-
-      <ListingFormSection
-        icon={<ImagesIcon size={20} weight="duotone" />}
-        title="Foto"
-        description="Shtoni foto të qarta të pronës."
-      >
-        <ListingImagePicker
-          value={images}
-          onChange={setImages}
-          existingUrls={existingImageUrls}
-          onExistingUrlsChange={setExistingImageUrls}
-          max={MAX_REAL_ESTATE_IMAGES}
-          label="Foto"
-          disabled={submitting}
-        />
       </ListingFormSection>
 
       <ListingFormActions

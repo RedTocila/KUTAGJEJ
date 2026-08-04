@@ -352,7 +352,7 @@ function RealEstateCard({
       onPremiumApplied={onPremiumApplied}
       onRefreshed={onRefreshed}
       chips={<>
-        <Chip size="small" label={l.transactionType === 'rent' ? 'Me qira' : 'Në shitje'} color={l.transactionType === 'rent' ? 'info' : 'secondary'} variant="outlined" sx={chipSx} />
+        <Chip size="small" label={l.transactionType === 'rent' ? 'Qera' : 'Shitje'} color={l.transactionType === 'rent' ? 'info' : 'secondary'} variant="outlined" sx={chipSx} />
         <Chip size="small" label={propertyCategoryLabel(l.propertyCategory)} variant="outlined" sx={chipSx} />
       </>}
     >
@@ -685,7 +685,7 @@ function realEstateMatches(l: RealEstateMineListing, query: string): boolean {
     l.cityName,
     l.zoneName,
     propertyCategoryLabel(l.propertyCategory),
-    l.transactionType === 'rent' ? 'Me qira' : 'Në shitje',
+    l.transactionType === 'rent' ? 'Qera' : 'Shitje',
     l.price,
     l.currency,
   ]);

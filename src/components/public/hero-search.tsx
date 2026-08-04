@@ -20,9 +20,7 @@ import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
-  AI_SEARCH_BLUE_MUTED,
   AI_SEARCH_BLUE_ON,
-  AI_SEARCH_BLUE_SOFT,
   localizeSearchCategories,
   type SearchCategoryId,
 } from '@/lib/home-categories';
@@ -85,20 +83,16 @@ export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
         sx={{
           width: '100%',
           borderRadius: 3,
-          bgcolor: isAi
-            ? AI_SEARCH_BLUE_MUTED
-            : (theme) =>
-                `rgb(var(--mui-palette-background-paperChannel) / ${theme.palette.mode === 'dark' ? 0.85 : 0.96})`,
+          bgcolor: (theme) =>
+            `rgb(var(--mui-palette-background-paperChannel) / ${theme.palette.mode === 'dark' ? 0.85 : 0.96})`,
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           border: '1px solid',
-          borderColor: isAi ? AI_SEARCH_BLUE : 'divider',
+          borderColor: 'divider',
           boxShadow: (theme) =>
             theme.palette.mode === 'dark'
               ? '0 24px 60px -24px rgba(0,0,0,0.7)'
-              : isAi
-                ? '0 24px 60px -24px rgba(255, 187, 31, 0.45)'
-                : '0 24px 60px -24px rgba(58, 140, 0, 0.25)',
+              : '0 24px 60px -24px rgba(58, 140, 0, 0.25)',
           overflow: 'hidden',
         }}
       >
@@ -149,12 +143,10 @@ export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
             sx={{
               flex: 1,
               '& .MuiOutlinedInput-root': {
-                bgcolor: isAi ? AI_SEARCH_BLUE_SOFT : 'action.hover',
+                bgcolor: 'action.hover',
                 borderRadius: 2,
                 '&.Mui-focused': {
-                  bgcolor: isAi
-                    ? AI_SEARCH_BLUE_SOFT
-                    : (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.12 : 0.06),
+                  bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.12 : 0.06),
                 },
               },
             }}

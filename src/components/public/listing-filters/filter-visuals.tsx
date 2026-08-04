@@ -378,8 +378,8 @@ export function FilterBedroomPicker({
 }
 
 export const REAL_ESTATE_TX_VISUAL = [
-  { value: 'rent', label: 'Me qira', Icon: KeyIcon, hint: 'Qira mujore' },
-  { value: 'sale', label: 'Në shitje', Icon: HouseLineIcon, hint: 'Blerje' },
+  { value: 'rent', label: 'Qera', Icon: KeyIcon, hint: 'Qira mujore' },
+  { value: 'sale', label: 'Shitje', Icon: HouseLineIcon, hint: 'Blerje' },
 ] as const;
 
 export const CAR_TRANSMISSION_VISUAL = [

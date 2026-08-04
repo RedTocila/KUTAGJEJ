@@ -225,8 +225,8 @@ export function BusinessListingForm({
       ...(existingId
         ? {}
         : {
-            menuCategories: [] as const,
-            menuItems: [] as const,
+            menuCategories: [],
+            menuItems: [],
           }),
     };
 

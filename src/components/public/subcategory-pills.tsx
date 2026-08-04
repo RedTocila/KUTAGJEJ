@@ -14,9 +14,19 @@ import type { HomeVerticalId } from '@/lib/home-categories';
  * Horizontally-scrollable strip of subcategory pills shown beneath each
  * section header. On mobile the row scrolls; on desktop it wraps onto a
  * single line that the user can flick through with a swipe / wheel.
+ *
+ * Wrapped in Suspense because `useSearchParams` requires a boundary for
+ * static prerender (e.g. homepage sections).
  */
 export function SubcategoryPills({ verticalId }: { verticalId: HomeVerticalId }) {
-  const items = HOME_SUBCATEGORIES[verticalId];
+  return (
+    <React.Suspense fallback={<SubcategoryPillsList verticalId={verticalId} isPillActive={() => false} />}>
+      <SubcategoryPillsWithParams verticalId={verticalId} />
+    </React.Suspense>
+  );
+}
+
+function SubcategoryPillsWithParams({ verticalId }: { verticalId: HomeVerticalId }) {
   const searchParams = useSearchParams();
 
   const isPillActive = React.useCallback(
@@ -32,6 +42,17 @@ export function SubcategoryPills({ verticalId }: { verticalId: HomeVerticalId })
     [searchParams],
   );
 
+  return <SubcategoryPillsList verticalId={verticalId} isPillActive={isPillActive} />;
+}
+
+function SubcategoryPillsList({
+  verticalId,
+  isPillActive,
+}: {
+  verticalId: HomeVerticalId;
+  isPillActive: (href: string) => boolean;
+}) {
+  const items = HOME_SUBCATEGORIES[verticalId];
   if (!items || items.length === 0) return null;
 
   return (

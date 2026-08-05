@@ -58,7 +58,7 @@ import { ReferralSummaryCard } from '@/components/user/referral-summary-card';
 import { planAccentForCode } from '@/components/user/packages/package-ui';
 import { hardNavigate } from '@/lib/hard-navigate';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { OKAZION_RED } from '@/lib/home-categories';
+import { OKAZION_ACCENT } from '@/lib/home-categories';
 
 function quotasFromSub(sub: UserSubscriptionSummary | null): ContractQuotas {
   if (!sub) return FREE_PLAN_QUOTAS;
@@ -580,7 +580,7 @@ export default function UserDashboardPage() {
               used={usage.okazion}
               max={quotas.maxOkazionListings}
               icon={SealPercentIcon}
-              tone={OKAZION_RED}
+              tone={OKAZION_ACCENT}
               convertTooltip={t.convertTooltip}
               convertAria={t.convertAria(t.okazion)}
               unavailableLabel={t.unavailable}

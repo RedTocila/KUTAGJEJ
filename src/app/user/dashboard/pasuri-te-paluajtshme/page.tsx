@@ -23,7 +23,7 @@ import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dia
 import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
 import { PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
 import { OkazionTheme } from '@/components/user/okazion-theme';
-import { OKAZION_RED, OKAZION_RED_SOFT } from '@/lib/home-categories';
+import { OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
 import { aiDraftToInitialListing } from '@/lib/ai-draft-to-listing';
 import {
   consumeAiListingDraft,
@@ -293,8 +293,8 @@ export default function UserPostListingPage() {
                 ? 'Plotësoni njoftimin — publikohet me temë të kuqe në OKAZION për 5 ditë.'
                 : activeMeta.description
             }
-            iconColor={wantsOkazion ? OKAZION_RED : undefined}
-            iconBgcolor={wantsOkazion ? OKAZION_RED_SOFT : undefined}
+            iconColor={wantsOkazion ? OKAZION_ACCENT : undefined}
+            iconBgcolor={wantsOkazion ? OKAZION_ACCENT_SOFT : undefined}
             closeHref={wantsAi ? aiReturnHref : paths.home}
           />
 

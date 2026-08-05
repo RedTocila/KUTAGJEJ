@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Box, Chip, Stack } from '@mui/material';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { OKAZION_RED } from '@/lib/home-categories';
+import { OKAZION_ACCENT } from '@/lib/home-categories';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
@@ -197,7 +197,7 @@ export function CardMedia({
                 fontSize: '0.72rem',
                 fontWeight: 900,
                 letterSpacing: 0.5,
-                bgcolor: OKAZION_RED,
+                bgcolor: OKAZION_ACCENT,
                 color: '#fff',
                 flexShrink: 0,
                 boxShadow: '0 2px 10px rgba(239, 68, 68, 0.55)',

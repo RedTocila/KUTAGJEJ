@@ -22,6 +22,7 @@ import {
   AI_SEARCH_BLUE_HOVER,
   AI_SEARCH_BLUE_ON,
   OKAZION_RED,
+  OKAZION_RED_DARK,
   localizeSearchCategories,
   type HomeVerticalId,
   type SearchCategoryId,
@@ -191,7 +192,7 @@ export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
               '&:hover': {
                 boxShadow: 'none',
                 color: isAi ? AI_SEARCH_BLUE_ON : isOkazion ? '#fff' : 'primary.contrastText',
-                bgcolor: isAi ? AI_SEARCH_BLUE_HOVER : isOkazion ? '#dc2626' : undefined,
+                bgcolor: isAi ? AI_SEARCH_BLUE_HOVER : isOkazion ? OKAZION_RED_DARK : undefined,
               },
               '& .MuiButton-startIcon': { color: 'inherit' },
             }}

@@ -11,8 +11,8 @@ import { useLanguage } from '@/hooks/use-language';
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_SOFT,
-  OKAZION_RED,
-  OKAZION_RED_SOFT,
+  OKAZION_ACCENT,
+  OKAZION_ACCENT_SOFT,
   localizeHomeBrowseCategories,
   localizeSearchCategories,
 } from '@/lib/home-categories';
@@ -56,13 +56,13 @@ function ScrollMoreHint({ color }: { color: string }) {
 
 function accentColor(mode: AccentMode): string {
   if (mode === 'ai') return AI_SEARCH_BLUE;
-  if (mode === 'okazion') return OKAZION_RED;
+  if (mode === 'okazion') return OKAZION_ACCENT;
   return 'var(--mui-palette-primary-main)';
 }
 
 function accentSoft(mode: AccentMode): string {
   if (mode === 'ai') return AI_SEARCH_BLUE_SOFT;
-  if (mode === 'okazion') return OKAZION_RED_SOFT;
+  if (mode === 'okazion') return OKAZION_ACCENT_SOFT;
   return 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)';
 }
 

@@ -10,7 +10,7 @@ import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import type { IconWeight } from '@phosphor-icons/react';
 
-import { AI_SEARCH_BLUE, OKAZION_RED, type SearchCategoryId } from '@/lib/home-categories';
+import { AI_SEARCH_BLUE, OKAZION_ACCENT, type SearchCategoryId } from '@/lib/home-categories';
 
 export interface HomeVerticalIconProps {
   verticalId: SearchCategoryId;
@@ -31,7 +31,7 @@ export function HomeVerticalIcon({
     (verticalId === 'ai'
       ? AI_SEARCH_BLUE
       : verticalId === 'okazion'
-        ? OKAZION_RED
+        ? OKAZION_ACCENT
         : 'var(--mui-palette-primary-main)');
   const shared = {
     weight,

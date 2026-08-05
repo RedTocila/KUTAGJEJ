@@ -13,9 +13,6 @@ alter table public.job_listings
 alter table public.marketplace_listings
   add column if not exists okazion_until timestamptz;
 
-alter table public.directory_listings
-  add column if not exists okazion_until timestamptz;
-
 alter table public.contracts
   add column if not exists max_okazion_listings integer;
 
@@ -53,9 +50,6 @@ create index if not exists job_listings_okazion_until_idx
 
 create index if not exists marketplace_listings_okazion_until_idx
   on public.marketplace_listings (okazion_until desc nulls last);
-
-create index if not exists directory_listings_okazion_until_idx
-  on public.directory_listings (okazion_until desc nulls last);
 
 alter table public.okazion_listing_vouchers enable row level security;
 

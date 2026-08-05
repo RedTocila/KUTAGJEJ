@@ -42,7 +42,7 @@ import {
   listMyRealEstateListings,
 } from '@/lib/listings-client';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
-import { OKAZION_RED, OKAZION_RED_SOFT } from '@/lib/home-categories';
+import { OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
 import {
   applyOkazionVoucher,
   buyOkazionWithCredits,
@@ -345,8 +345,8 @@ export function OkazionPackagesSection() {
                 p: 1.5,
                 borderRadius: 2,
                 border: '1px dashed',
-                borderColor: OKAZION_RED,
-                bgcolor: OKAZION_RED_SOFT,
+                borderColor: OKAZION_ACCENT,
+                bgcolor: OKAZION_ACCENT_SOFT,
               }}
             >
               <Typography variant="body2" sx={{ fontWeight: 750 }}>
@@ -533,7 +533,7 @@ export function OkazionPackagesSection() {
                         borderColor: 'divider',
                         display: 'grid',
                         placeItems: 'center',
-                        color: OKAZION_RED,
+                        color: OKAZION_ACCENT,
                       }}
                     >
                       {item.imageUrl ? (

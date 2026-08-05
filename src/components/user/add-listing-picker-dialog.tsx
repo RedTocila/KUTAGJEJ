@@ -27,7 +27,7 @@ import {
 } from '@/lib/directory-listings-client';
 import { listCategoriesPublic } from '@/lib/listings-client';
 import { hardNavigate } from '@/lib/hard-navigate';
-import { AI_SEARCH_BLUE, OKAZION_RED, OKAZION_RED_SOFT } from '@/lib/home-categories';
+import { AI_SEARCH_BLUE, OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
 import { paths } from '@/paths';
 import type { ListingCategory, ListingCategoryKey } from '@/types/listing-category';
 import { useCopy } from '@/hooks/use-copy';
@@ -216,7 +216,7 @@ export function AddListingPickerDialog({
             sx={{
               fontWeight: 800,
               fontSize: '1rem',
-              color: pickingOkazion ? OKAZION_RED : 'text.primary',
+              color: pickingOkazion ? OKAZION_ACCENT : 'text.primary',
             }}
           >
             {pickingOkazion ? t.picker.okazionTitle : t.picker.title}
@@ -334,14 +334,14 @@ export function AddListingPickerDialog({
                       display: 'grid',
                       placeItems: 'center',
                       flexShrink: 0,
-                      bgcolor: OKAZION_RED_SOFT,
-                      color: OKAZION_RED,
+                      bgcolor: OKAZION_ACCENT_SOFT,
+                      color: OKAZION_ACCENT,
                     }}
                   >
                     <SealPercentIcon size={18} weight="fill" />
                   </Box>
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.25, color: OKAZION_RED }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.25, color: OKAZION_ACCENT }}>
                       {t.picker.okazion}
                     </Typography>
                     <Typography
@@ -416,9 +416,9 @@ export function AddListingPickerDialog({
                         flexShrink: 0,
                         bgcolor: (theme) =>
                           pickingOkazion
-                            ? OKAZION_RED_SOFT
+                            ? OKAZION_ACCENT_SOFT
                             : `${theme.palette.primary.main}14`,
-                        color: pickingOkazion ? OKAZION_RED : 'primary.main',
+                        color: pickingOkazion ? OKAZION_ACCENT : 'primary.main',
                       }}
                     >
                       <Icon size={18} weight="duotone" />

@@ -135,7 +135,15 @@ export const AI_SEARCH_CATEGORY: SearchCategory = {
   searchPlaceholder: 'P.sh. apartament me qira në Tiranë deri 500€…',
 };
 
-/** Short-lived OKAZION deals — brand crimson. */
+/**
+ * Soft salmon accent — borders, icons, labels, chips (not solid CTAs).
+ * Previous OKAZION red before the crimson button fill.
+ */
+export const OKAZION_ACCENT = '#ef4444';
+export const OKAZION_ACCENT_DARK = '#dc2626';
+export const OKAZION_ACCENT_SOFT = 'rgba(239, 68, 68, 0.18)';
+
+/** Solid CTA crimson — buttons keep this (do not swap to salmon). */
 export const OKAZION_RED = '#F72F35';
 export const OKAZION_RED_DARK = '#D9262C';
 export const OKAZION_RED_SOFT = 'rgba(247, 47, 53, 0.18)';
@@ -144,8 +152,8 @@ export const OKAZION_RED_ON = '#ffffff';
 export const OKAZION_SEARCH_CATEGORY: SearchCategory = {
   id: 'okazion',
   label: 'OKAZION',
-  tagline: 'Oferta të shpejta — 5 ditë nga të gjitha kategoritë',
-  gradient: [OKAZION_RED, OKAZION_RED_DARK] as const,
+  tagline: 'Oferta të shpejta — 5 ditë · prona, makina, punë, tregu',
+  gradient: [OKAZION_ACCENT, OKAZION_ACCENT_DARK] as const,
   iconKey: 'seal-percent',
   href: paths.public.okazion,
   searchPlaceholder: 'Kërko oferta OKAZION…',

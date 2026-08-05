@@ -9,8 +9,8 @@ import {
   findSearchCategory,
   findVertical,
   isHomeVerticalId,
-  OKAZION_RED,
-  OKAZION_RED_SOFT,
+  OKAZION_ACCENT,
+  OKAZION_ACCENT_SOFT,
   type HomeVerticalId,
 } from '@/lib/home-categories';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
@@ -68,8 +68,8 @@ export function PublicCategoryHero({
                 display: 'grid',
                 placeItems: 'center',
                 flexShrink: 0,
-                bgcolor: OKAZION_RED_SOFT,
-                color: OKAZION_RED,
+                bgcolor: OKAZION_ACCENT_SOFT,
+                color: OKAZION_ACCENT,
               }}
             >
               <HomeVerticalIcon verticalId="okazion" size={22} />

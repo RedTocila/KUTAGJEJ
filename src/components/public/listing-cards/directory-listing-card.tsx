@@ -64,7 +64,7 @@ function BusinessVenueCardBody({
       href={listingBusinessPublicHref(listing)}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
+      <CardShell premium={Boolean(listing.isPremium)}>
         <CardMedia
           listingKind="businesses"
           listingId={listing.id}
@@ -76,8 +76,6 @@ function BusinessVenueCardBody({
           saveCount={listing.saveCount}
           saved={listing.saved}
           premium={Boolean(listing.isPremium)}
-        okazion={Boolean(listing.isOkazion)}
-        okazionUntil={listing.okazionUntil}
           sharePayload={{
             title: listing.title,
             category: listing.categoryLabel,
@@ -254,7 +252,7 @@ function ProfessionalListingCardBody({
       href={listingProfessionalPublicHref(listing)}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
+      <CardShell premium={Boolean(listing.isPremium)}>
         <CardMedia
           listingKind="professionals"
           listingId={listing.id}
@@ -268,8 +266,6 @@ function ProfessionalListingCardBody({
           saveCount={listing.saveCount}
           saved={listing.saved}
           premium={Boolean(listing.isPremium)}
-        okazion={Boolean(listing.isOkazion)}
-        okazionUntil={listing.okazionUntil}
           sharePayload={{
             title: listing.title,
             category: listing.categoryLabel,

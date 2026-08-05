@@ -69,8 +69,6 @@ export interface BusinessMineListing extends ListingMetrics {
   updatedAt: string;
   isPremium?: boolean;
   premiumUntil?: string | null;
-  isOkazion?: boolean;
-  okazionUntil?: string | null;
 }
 
 export interface BusinessReservationRow {
@@ -228,8 +226,6 @@ export interface ProfessionalMineListing extends ListingMetrics {
   updatedAt: string;
   isPremium?: boolean;
   premiumUntil?: string | null;
-  isOkazion?: boolean;
-  okazionUntil?: string | null;
 }
 
 export async function listMyProfessionalListings(): Promise<{

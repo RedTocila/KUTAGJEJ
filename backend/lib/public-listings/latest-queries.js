@@ -11,6 +11,7 @@ const {
   applyFilterSpec,
   applySort,
   buildSort,
+  buildDirectorySort,
   buildIlikeOrFilter,
   mergeSpecs,
   isUuid,
@@ -144,10 +145,14 @@ async function topViewedByKind(kind, limit) {
   }
 
   if (orderedDocs.length < limit) {
+    const fillerSort =
+      kind === 'businesses' || kind === 'professionals'
+        ? buildDirectorySort('newest')
+        : buildSort('newest');
     const fillers = await runListingQuery(
       table,
       mergePublicFilter(baseFilter),
-      buildSort('newest'),
+      fillerSort,
       limit * 2,
       0,
     );
@@ -230,7 +235,7 @@ async function queryDirectory(vertical, limit, filter = { eq: { vertical } }, so
   const docs = await runListingQuery(
     'directory_listings',
     mergePublicFilter(filter),
-    sort,
+    sort && sort.length ? sort : buildDirectorySort('newest'),
     limit,
     skip,
   );

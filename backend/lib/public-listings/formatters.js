@@ -238,7 +238,8 @@ function formatDirectory(doc, cityById, reviewStats) {
     imageUrls: doc.imageUrls ?? [],
     createdAt: doc.createdAt,
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
-    ...featuredCardFields(doc),
+    // Directory profiles support Premium only — OKAZION is for sellable ads.
+    ...premiumCardFields(doc),
   };
   if (vertical === 'businesses') {
     const weekly = Array.isArray(doc.weeklyHours) ? doc.weeklyHours : [];

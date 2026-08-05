@@ -7,8 +7,8 @@ import { Box, Stack, Typography } from '@mui/material';
 
 import { useLanguage } from '@/hooks/use-language';
 import {
-  OKAZION_RED,
-  OKAZION_RED_SOFT,
+  OKAZION_ACCENT,
+  OKAZION_ACCENT_SOFT,
   localizeHomeVerticals,
   localizeSearchCategory,
   type HomeVerticalId,
@@ -23,7 +23,7 @@ import { PRODUCT_BROWSE_CONTROL_HEIGHT } from '@/components/public/product-brows
 import { ListingKeywordSearchInput } from '@/components/public/listing-filters/listing-keyword-search-input';
 import { HomeVerticalIcon } from '@/components/public/home-vertical-icon';
 
-const OKAZION_SEARCH_ACCENT = { color: OKAZION_RED, soft: OKAZION_RED_SOFT } as const;
+const OKAZION_SEARCH_ACCENT = { color: OKAZION_ACCENT, soft: OKAZION_ACCENT_SOFT } as const;
 
 /** Same verticals as create-OKAZION — no directory profiles. */
 const OKAZION_BROWSE_VERTICAL_IDS = new Set<HomeVerticalId>([
@@ -123,15 +123,15 @@ export function OkazionBrowseControls() {
                 userSelect: 'none',
                 WebkitTapHighlightColor: 'transparent',
                 '&:hover .okazion-cat-circle': {
-                  borderColor: OKAZION_RED,
-                  bgcolor: OKAZION_RED_SOFT,
+                  borderColor: OKAZION_ACCENT,
+                  bgcolor: OKAZION_ACCENT_SOFT,
                 },
                 '&:hover .okazion-cat-label': {
-                  color: OKAZION_RED,
+                  color: OKAZION_ACCENT,
                 },
                 '&:active .okazion-cat-circle': {
-                  borderColor: OKAZION_RED,
-                  bgcolor: OKAZION_RED_SOFT,
+                  borderColor: OKAZION_ACCENT,
+                  bgcolor: OKAZION_ACCENT_SOFT,
                 },
               }}
             >
@@ -143,20 +143,20 @@ export function OkazionBrowseControls() {
                   borderRadius: '50%',
                   display: 'grid',
                   placeItems: 'center',
-                  bgcolor: active ? OKAZION_RED_SOFT : 'background.paper',
+                  bgcolor: active ? OKAZION_ACCENT_SOFT : 'background.paper',
                   border: '1px solid',
-                  borderColor: active ? OKAZION_RED : 'divider',
+                  borderColor: active ? OKAZION_ACCENT : 'divider',
                   transition: 'border-color 0.15s ease, background-color 0.15s ease',
                 }}
               >
-                <HomeVerticalIcon verticalId={vertical.id} size={40} color={OKAZION_RED} />
+                <HomeVerticalIcon verticalId={vertical.id} size={40} color={OKAZION_ACCENT} />
               </Box>
               <Typography
                 className="okazion-cat-label"
                 variant="caption"
                 sx={{
                   fontWeight: active ? 700 : 600,
-                  color: active ? OKAZION_RED : 'text.secondary',
+                  color: active ? OKAZION_ACCENT : 'text.secondary',
                   whiteSpace: 'nowrap',
                   fontSize: { xs: '0.72rem', sm: '0.78rem' },
                   transition: 'color 0.15s ease',

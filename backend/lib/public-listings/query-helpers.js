@@ -98,9 +98,12 @@ function parseSort(value) {
   return SORT_VALUES.has(raw) ? raw : 'newest';
 }
 
-/** Active OKAZION, then Premium, float above the rest. */
-function premiumSortPrefix() {
-  const prefix = [{ column: 'okazion_until', ascending: false, nullsFirst: false }];
+/** Active OKAZION, then Premium, float above the rest (sellable ads). */
+function premiumSortPrefix({ includeOkazion = true } = {}) {
+  const prefix = [];
+  if (includeOkazion) {
+    prefix.push({ column: 'okazion_until', ascending: false, nullsFirst: false });
+  }
   // null = not probed yet → include and let runListingQuery fall back on error
   if (hasPremiumUntilColumn() !== false) {
     prefix.push({ column: 'premium_until', ascending: false, nullsFirst: false });
@@ -108,8 +111,8 @@ function premiumSortPrefix() {
   return prefix;
 }
 
-function buildSort(sort, field = 'price') {
-  const premiumFirst = premiumSortPrefix();
+function buildSort(sort, field = 'price', { includeOkazion = true } = {}) {
+  const premiumFirst = premiumSortPrefix({ includeOkazion });
   if (sort === 'price-asc') {
     return [...premiumFirst, { column: field, ascending: true }, { column: 'created_at', ascending: false }];
   }
@@ -117,6 +120,11 @@ function buildSort(sort, field = 'price') {
     return [...premiumFirst, { column: field, ascending: false }, { column: 'created_at', ascending: false }];
   }
   return [...premiumFirst, { column: 'created_at', ascending: false }];
+}
+
+/** Directory profiles (businesses / professionals) — Premium only, no OKAZION. */
+function buildDirectorySort(sort) {
+  return buildSort(sort, 'price', { includeOkazion: false });
 }
 
 /** Strip featured-until columns from a sort spec (fallback when not migrated yet). */
@@ -252,6 +260,7 @@ module.exports = {
   applySort,
   parseSort,
   buildSort,
+  buildDirectorySort,
   withoutPremiumSort,
   isPremiumActive,
   isOkazionActive,

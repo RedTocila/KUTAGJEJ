@@ -4,7 +4,6 @@ import { Grid } from '@mui/material';
 
 import { CategoryBrowseGrid, CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 import { CarCard } from '@/components/public/listing-cards/car-card';
-import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
@@ -24,7 +23,7 @@ export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: 'OKAZION | KuTaGjej',
-  description: 'Oferta të shpejta — njoftime OKAZION për 5 ditë nga të gjitha kategoritë.',
+  description: 'Oferta të shpejta — njoftime OKAZION për 5 ditë: prona, makina, punë dhe tregu.',
   alternates: { canonical: paths.public.okazion },
 };
 
@@ -42,9 +41,6 @@ function OkazionCard({ listing }: { listing: PublicOkazionListing }) {
       return <JobCard listing={listing} />;
     case 'marketplace':
       return <MarketplaceCard listing={listing} />;
-    case 'businesses':
-    case 'professionals':
-      return <DirectoryListingCard listing={listing} />;
     default:
       return null;
   }

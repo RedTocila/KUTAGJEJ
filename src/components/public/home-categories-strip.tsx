@@ -8,7 +8,7 @@ import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import {
-  OKAZION_RED,
+  OKAZION_ACCENT,
   localizeHomeBrowseCategories,
 } from '@/lib/home-categories';
 import { paths } from '@/paths';
@@ -49,7 +49,7 @@ export function HomeCategoriesStrip() {
         <Grid container spacing={2}>
           {verticals.map((v) => {
             const isOkazion = v.id === 'okazion';
-            const accent = isOkazion ? OKAZION_RED : 'primary.main';
+            const accent = isOkazion ? OKAZION_ACCENT : 'primary.main';
             return (
             <Grid key={v.id} size={{ xs: 12, sm: 6, md: 4, lg: 'grow' }}>
               <Stack
@@ -84,7 +84,7 @@ export function HomeCategoriesStrip() {
                     flexShrink: 0,
                     color: isOkazion ? '#fff' : 'primary.main',
                     bgcolor: isOkazion
-                      ? OKAZION_RED
+                      ? OKAZION_ACCENT
                       : (theme) =>
                           theme.palette.mode === 'dark'
                             ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'

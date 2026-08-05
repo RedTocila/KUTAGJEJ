@@ -613,13 +613,11 @@ function MarketplaceCard({
 function BusinessCard({
   l,
   onPremiumApplied,
-  onOkazionApplied,
   onRefreshed,
   onAnnouncementSaved,
 }: {
   l: BusinessMineListing;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
-  onOkazionApplied?: (result: { okazionUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
   onAnnouncementSaved?: (result: {
     announcement: BusinessAnnouncement | null;
@@ -649,10 +647,7 @@ function BusinessCard({
       kind="businesses"
       isPremium={Boolean(l.isPremium)}
       premiumUntil={l.premiumUntil ?? null}
-      isOkazion={Boolean(l.isOkazion)}
-      okazionUntil={l.okazionUntil ?? null}
       onPremiumApplied={onPremiumApplied}
-      onOkazionApplied={onOkazionApplied}
       onRefreshed={onRefreshed}
       announcement={announcement}
       onAnnouncementSaved={onAnnouncementSaved}
@@ -683,12 +678,10 @@ function BusinessCard({
 function ProfessionalCard({
   l,
   onPremiumApplied,
-  onOkazionApplied,
   onRefreshed,
 }: {
   l: ProfessionalMineListing;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
-  onOkazionApplied?: (result: { okazionUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
 }) {
   const categoryLabel = findLabel(PROFESSIONAL_CATEGORY_OPTIONS, l.category);
@@ -704,10 +697,7 @@ function ProfessionalCard({
       kind="professionals"
       isPremium={Boolean(l.isPremium)}
       premiumUntil={l.premiumUntil ?? null}
-      isOkazion={Boolean(l.isOkazion)}
-      okazionUntil={l.okazionUntil ?? null}
       onPremiumApplied={onPremiumApplied}
-      onOkazionApplied={onOkazionApplied}
       onRefreshed={onRefreshed}
       chips={
         <>
@@ -1233,9 +1223,6 @@ export default function UserMyListingsPage() {
             onPremiumApplied={({ premiumUntil }) => {
               setBizListings((prev) => markListingPremium(prev, item.listing.id, premiumUntil));
             }}
-            onOkazionApplied={({ okazionUntil }) => {
-              setBizListings((prev) => markListingOkazion(prev, item.listing.id, okazionUntil));
-            }}
             onRefreshed={({ refreshedAt }) => {
               setBizListings((prev) => bumpListingToTop(prev, item.listing.id, refreshedAt));
             }}
@@ -1252,9 +1239,6 @@ export default function UserMyListingsPage() {
             l={item.listing}
             onPremiumApplied={({ premiumUntil }) => {
               setProListings((prev) => markListingPremium(prev, item.listing.id, premiumUntil));
-            }}
-            onOkazionApplied={({ okazionUntil }) => {
-              setProListings((prev) => markListingOkazion(prev, item.listing.id, okazionUntil));
             }}
             onRefreshed={({ refreshedAt }) => {
               setProListings((prev) => bumpListingToTop(prev, item.listing.id, refreshedAt));
@@ -1563,9 +1547,6 @@ export default function UserMyListingsPage() {
                 onPremiumApplied={({ premiumUntil }) => {
                   setBizListings((prev) => markListingPremium(prev, l.id, premiumUntil));
                 }}
-                onOkazionApplied={({ okazionUntil }) => {
-                  setBizListings((prev) => markListingOkazion(prev, l.id, okazionUntil));
-                }}
                 onRefreshed={({ refreshedAt }) => {
                   setBizListings((prev) => bumpListingToTop(prev, l.id, refreshedAt));
                 }}
@@ -1590,9 +1571,6 @@ export default function UserMyListingsPage() {
                 l={l}
                 onPremiumApplied={({ premiumUntil }) => {
                   setProListings((prev) => markListingPremium(prev, l.id, premiumUntil));
-                }}
-                onOkazionApplied={({ okazionUntil }) => {
-                  setProListings((prev) => markListingOkazion(prev, l.id, okazionUntil));
                 }}
                 onRefreshed={({ refreshedAt }) => {
                   setProListings((prev) => bumpListingToTop(prev, l.id, refreshedAt));

@@ -84,8 +84,6 @@ alter table public.job_listings
   add column if not exists okazion_until timestamptz;
 alter table public.marketplace_listings
   add column if not exists okazion_until timestamptz;
-alter table public.directory_listings
-  add column if not exists okazion_until timestamptz;
 
 create index if not exists real_estate_listings_okazion_until_idx
   on public.real_estate_listings (okazion_until desc nulls last);
@@ -95,8 +93,11 @@ create index if not exists job_listings_okazion_until_idx
   on public.job_listings (okazion_until desc nulls last);
 create index if not exists marketplace_listings_okazion_until_idx
   on public.marketplace_listings (okazion_until desc nulls last);
-create index if not exists directory_listings_okazion_until_idx
-  on public.directory_listings (okazion_until desc nulls last);
+
+-- Directory profiles never use OKAZION (drop leftover column from earlier schema).
+drop index if exists public.directory_listings_okazion_until_idx;
+alter table public.directory_listings
+  drop column if exists okazion_until;
 
 alter table public.contracts
   add column if not exists max_okazion_listings integer;

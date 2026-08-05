@@ -16,7 +16,14 @@ import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/S
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { useUser } from '@/hooks/use-user';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
-import { OKAZION_RED, OKAZION_RED_DARK, OKAZION_RED_ON, OKAZION_RED_SOFT } from '@/lib/home-categories';
+import {
+  OKAZION_ACCENT,
+  OKAZION_ACCENT_SOFT,
+  OKAZION_RED,
+  OKAZION_RED_DARK,
+  OKAZION_RED_ON,
+  OKAZION_RED_SOFT,
+} from '@/lib/home-categories';
 import {
   applyOkazionFromPlan,
   applyOkazionVoucher,
@@ -79,13 +86,13 @@ export function OkazionBoostUpsell({
         p: 2,
         borderRadius: 2,
         border: '2px solid',
-        borderColor: OKAZION_RED,
-        bgcolor: OKAZION_RED_SOFT,
+        borderColor: OKAZION_ACCENT,
+        bgcolor: OKAZION_ACCENT_SOFT,
       }}
     >
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
-        <SealPercentIcon size={22} weight="fill" color={OKAZION_RED} />
-        <Typography sx={{ fontWeight: 800, color: OKAZION_RED }}>OKAZION · 5 ditë</Typography>
+        <SealPercentIcon size={22} weight="fill" color={OKAZION_ACCENT} />
+        <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT }}>OKAZION · 5 ditë</Typography>
       </Stack>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
         Shfaqe njoftimin me temë të kuqe në OKAZION. {OKAZION_PRICE_EUR}€ ose {OKAZION_PRICE_BC} BC —
@@ -93,30 +100,30 @@ export function OkazionBoostUpsell({
       </Typography>
 
       <RadioGroup value={value} onChange={(e) => onChange(e.target.value as OkazionBoostMode)}>
-        <FormControlLabel value="off" control={<Radio color="error" size="small" sx={{ color: OKAZION_RED, '&.Mui-checked': { color: OKAZION_RED } }} />} label="Jo tani" />
+        <FormControlLabel value="off" control={<Radio color="error" size="small" sx={{ color: OKAZION_ACCENT, '&.Mui-checked': { color: OKAZION_ACCENT } }} />} label="Jo tani" />
         {planRemaining > 0 ? (
           <FormControlLabel
             value="plan"
-            control={<Radio size="small" sx={{ color: OKAZION_RED, '&.Mui-checked': { color: OKAZION_RED } }} />}
+            control={<Radio size="small" sx={{ color: OKAZION_ACCENT, '&.Mui-checked': { color: OKAZION_ACCENT } }} />}
             label={`Përdor vendin e paketës (${planRemaining} të mbetura)`}
           />
         ) : null}
         {unusedCount > 0 ? (
           <FormControlLabel
             value="voucher"
-            control={<Radio size="small" sx={{ color: OKAZION_RED, '&.Mui-checked': { color: OKAZION_RED } }} />}
+            control={<Radio size="small" sx={{ color: OKAZION_ACCENT, '&.Mui-checked': { color: OKAZION_ACCENT } }} />}
             label={`Përdor voucher të blerë (${unusedCount} gati)`}
           />
         ) : null}
         <FormControlLabel
           value="buy-bc"
-          control={<Radio size="small" sx={{ color: OKAZION_RED, '&.Mui-checked': { color: OKAZION_RED } }} />}
+          control={<Radio size="small" sx={{ color: OKAZION_ACCENT, '&.Mui-checked': { color: OKAZION_ACCENT } }} />}
           disabled={balance < OKAZION_PRICE_BC}
           label={`Bli tani me ${OKAZION_PRICE_BC} BC${balance < OKAZION_PRICE_BC ? ' (balancë e pamjaftueshme)' : ''}`}
         />
         <FormControlLabel
           value="buy-card"
-          control={<Radio size="small" sx={{ color: OKAZION_RED, '&.Mui-checked': { color: OKAZION_RED } }} />}
+          control={<Radio size="small" sx={{ color: OKAZION_ACCENT, '&.Mui-checked': { color: OKAZION_ACCENT } }} />}
           label={`Bli tani me kartë · ${OKAZION_PRICE_EUR}€`}
         />
       </RadioGroup>
@@ -153,13 +160,13 @@ export function OkazionPostActions({
           p: 1.75,
           borderRadius: 2,
           border: '1px solid',
-          borderColor: OKAZION_RED,
-          bgcolor: OKAZION_RED_SOFT,
+          borderColor: OKAZION_ACCENT,
+          bgcolor: OKAZION_ACCENT_SOFT,
         }}
       >
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5 }}>
-          <SealPercentIcon size={18} weight="fill" color={OKAZION_RED} />
-          <Typography sx={{ fontWeight: 800, color: OKAZION_RED, fontSize: '0.95rem' }}>
+          <SealPercentIcon size={18} weight="fill" color={OKAZION_ACCENT} />
+          <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT, fontSize: '0.95rem' }}>
             OKAZION · 5 ditë
           </Typography>
         </Stack>

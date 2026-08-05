@@ -6,8 +6,8 @@ import { createTheme, ThemeProvider, useTheme } from '@mui/material/styles';
 import { OKAZION_RED, OKAZION_RED_DARK, OKAZION_RED_ON } from '@/lib/home-categories';
 
 /**
- * Remaps MUI `primary` + `error` to OKAZION crimson so forms / browse chrome
- * stay red (not the salmon `error` palette) without touching AI Build.
+ * Remaps MUI `primary` + `error` to OKAZION button crimson so CTAs stay
+ * crimson (accents use `OKAZION_ACCENT` salmon separately) without touching AI Build.
  */
 export function OkazionTheme({
   children,

@@ -17,6 +17,7 @@ const {
   isUuid,
   parseSort,
   buildSort,
+  buildDirectorySort,
   buildIlikeOrFilter,
   enrichTextSearchWithLocations,
   mergeSpecs,
@@ -218,7 +219,7 @@ function parseDirectoryFilters(query, vertical) {
   applyTextSearch(filter, query, ['title', 'description']);
 
   const sort = parseSort(query.sort);
-  return { filter, sort: buildSort(sort) };
+  return { filter, sort: buildDirectorySort(sort) };
 }
 
 module.exports = {

@@ -437,12 +437,12 @@ export async function fetchBrowseProfessionals(
   return parseBrowseResult(data, limit, page);
 }
 
+/** OKAZION applies to sellable ads only — not businesses / professionals. */
 export type PublicOkazionListing =
   | PublicRealEstateListing
   | PublicCarListing
   | PublicJobListing
-  | PublicMarketplaceListing
-  | PublicDirectoryListing;
+  | PublicMarketplaceListing;
 
 export async function fetchBrowseOkazion(
   limit = BROWSE_PAGE_SIZE,

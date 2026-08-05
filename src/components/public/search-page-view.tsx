@@ -40,8 +40,10 @@ import {
   AI_SEARCH_BLUE_HOVER,
   AI_SEARCH_BLUE_ON,
   AI_SEARCH_BLUE_SOFT,
+  OKAZION_ACCENT,
+  OKAZION_ACCENT_SOFT,
   OKAZION_RED,
-  OKAZION_RED_SOFT,
+  OKAZION_RED_DARK,
   findVertical,
   isHomeVerticalId,
   isSearchCategoryId,
@@ -176,9 +178,6 @@ function ResultCard({ item }: { item: SearchItem }) {
           return <JobCard listing={listing} />;
         case 'marketplace':
           return <MarketplaceCard listing={listing} />;
-        case 'businesses':
-        case 'professionals':
-          return <DirectoryListingCard listing={listing} />;
         default:
           return null;
       }
@@ -423,7 +422,7 @@ export function SearchPageView() {
                 isAi
                   ? { color: AI_SEARCH_BLUE, soft: AI_SEARCH_BLUE_SOFT }
                   : isOkazion
-                    ? { color: OKAZION_RED, soft: OKAZION_RED_SOFT }
+                    ? { color: OKAZION_ACCENT, soft: OKAZION_ACCENT_SOFT }
                     : undefined,
               ),
               borderRadius: inputExpanded ? 2.5 : 999,
@@ -461,7 +460,7 @@ export function SearchPageView() {
                       {isAi ? (
                         <SparkleIcon size={18} color={AI_SEARCH_BLUE} />
                       ) : (
-                        <ProductSearchIcon color={isOkazion ? OKAZION_RED : undefined} />
+                        <ProductSearchIcon color={isOkazion ? OKAZION_ACCENT : undefined} />
                       )}
                     </InputAdornment>
                   ),
@@ -527,8 +526,8 @@ export function SearchPageView() {
                         bgcolor: OKAZION_RED,
                         color: '#fff',
                         borderColor: OKAZION_RED,
-                        boxShadow: '0 2px 10px rgba(239, 68, 68, 0.45)',
-                        '&:hover': { bgcolor: '#dc2626', borderColor: '#dc2626' },
+                        boxShadow: '0 2px 10px rgba(247, 47, 53, 0.45)',
+                        '&:hover': { bgcolor: OKAZION_RED_DARK, borderColor: OKAZION_RED_DARK },
                       }
                     : {
                         bgcolor: 'primary.main',

@@ -356,7 +356,6 @@ create table public.directory_listings (
   image_urls text[] not null default '{}',
   permalink_slug text,
   premium_until timestamptz,
-  okazion_until timestamptz,
   announcement_title text,
   announcement_subtitle text,
   announcement_banner_url text,
@@ -372,7 +371,6 @@ create index directory_listings_vertical_idx on public.directory_listings (verti
 create index directory_listings_poster_idx on public.directory_listings (poster_id);
 create index directory_listings_status_idx on public.directory_listings (status);
 create index directory_listings_premium_until_idx on public.directory_listings (premium_until desc nulls last);
-create index directory_listings_okazion_until_idx on public.directory_listings (okazion_until desc nulls last);
 
 -- ─── messaging ───────────────────────────────────────────────────────────────
 create table public.conversations (

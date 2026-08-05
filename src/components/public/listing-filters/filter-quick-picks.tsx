@@ -9,7 +9,7 @@ import { ProductTag } from '@/components/public/product-browse-chrome';
 
 const PRIMARY_FILTER_KEY: Record<HomeVerticalId, string> = {
   'real-estate': 'cat',
-  cars: 'fuel',
+  cars: 'type',
   jobs: 'industry',
   marketplace: 'cat',
   businesses: 'type',
@@ -18,7 +18,7 @@ const PRIMARY_FILTER_KEY: Record<HomeVerticalId, string> = {
 
 const SECTION_TITLE: Record<HomeVerticalId, string> = {
   'real-estate': 'Lloji i pronës',
-  cars: 'Karburanti',
+  cars: 'Lloji i mjetit',
   jobs: 'Industria',
   marketplace: 'Kategoria',
   businesses: 'Lloji i biznesit',

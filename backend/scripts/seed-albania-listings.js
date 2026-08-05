@@ -203,7 +203,7 @@ async function ensureCities(sb) {
   if (existingErr) throw existingErr;
 
   const bySlug = new Map((existing || []).map((c) => [String(c.slug || '').toLowerCase(), c]));
-  const missing = desired.filter((c) => !bySlug.has(c.slug));
+  const missing = desired.filter((c) => !bySlug.has(String(c.slug || '').toLowerCase()));
 
   if (missing.length) {
     const chunkSize = 25;
@@ -218,11 +218,25 @@ async function ensureCities(sb) {
     console.log('Cities already present:', existing.length);
   }
 
-  return desired.map((c) => bySlug.get(c.slug)).filter(Boolean);
+  const all = desired.map((c) => bySlug.get(String(c.slug || '').toLowerCase())).filter(Boolean);
+  // Prefer cities that have zones so seeded listings always get a valid zone_id.
+  const withZones = all.filter((c) => Array.isArray(c.zones) && c.zones.length > 0);
+  if (!withZones.length) {
+    throw new Error('No cities with zones available for seeding');
+  }
+  return withZones;
 }
 
 function pickCity(cities, i) {
   return cities[i % cities.length];
+}
+
+function pickZone(city, i) {
+  const zones = Array.isArray(city?.zones) ? city.zones : [];
+  if (!zones.length) {
+    throw new Error(`City ${city?.name || '?'} has no zones`);
+  }
+  return zones[i % zones.length];
 }
 
 async function countApproved(sb, table, extra = {}) {
@@ -284,7 +298,7 @@ async function seedRealEstate(sb, posterId, cities) {
   const rows = Array.from({ length: n }, (_, idx) => {
     const i = existing + idx;
     const city = pickCity(cities, i);
-    const zone = city.zones[i % city.zones.length];
+    const zone = pickZone(city, i);
     const property_category = pick(categories, i);
     const sale = i % 3 !== 0;
     const title = titles[property_category](i, city);
@@ -349,21 +363,24 @@ async function seedCars(sb, posterId, cities) {
   }
 
   const fleet = [
-    { make: 'BMW', model: '320d', variant: 'M Sport', fuel_type: 'diesel', transmission: 'automatic' },
-    { make: 'Mercedes-Benz', model: 'C 220', variant: 'AMG Line', fuel_type: 'diesel', transmission: 'automatic' },
-    { make: 'Volkswagen', model: 'Golf', variant: '7.5', fuel_type: 'petrol', transmission: 'manual' },
-    { make: 'Audi', model: 'A4', variant: '2.0 TDI', fuel_type: 'diesel', transmission: 'automatic' },
-    { make: 'Toyota', model: 'Corolla', variant: 'Hybrid', fuel_type: 'hybrid-petrol', transmission: 'automatic' },
-    { make: 'Mercedes-Benz', model: 'Sprinter', variant: '311', fuel_type: 'diesel', transmission: 'manual' },
-    { make: 'Fiat', model: '500', variant: 'Lounge', fuel_type: 'petrol', transmission: 'manual' },
-    { make: 'Skoda', model: 'Octavia', variant: '1.6 TDI', fuel_type: 'diesel', transmission: 'manual' },
-    { make: 'Renault', model: 'Clio', variant: '1.5 dCi', fuel_type: 'diesel', transmission: 'manual' },
-    { make: 'Hyundai', model: 'Tucson', variant: '1.6 T-GDI', fuel_type: 'petrol', transmission: 'automatic' },
-    { make: 'Ford', model: 'Focus', variant: '1.5 EcoBoost', fuel_type: 'petrol', transmission: 'manual' },
-    { make: 'Opel', model: 'Astra', variant: '1.6 CDTI', fuel_type: 'diesel', transmission: 'manual' },
-    { make: 'Peugeot', model: '3008', variant: 'Allure', fuel_type: 'diesel', transmission: 'automatic' },
-    { make: 'Nissan', model: 'Qashqai', variant: '1.5 dCi', fuel_type: 'diesel', transmission: 'manual' },
-    { make: 'Volkswagen', model: 'Passat', variant: '2.0 TDI', fuel_type: 'diesel', transmission: 'automatic' },
+    { vehicle_type: 'car', make: 'BMW', model: '3 Series', variant: 'M Sport', fuel_type: 'diesel', transmission: 'automatic' },
+    { vehicle_type: 'car', make: 'Mercedes-Benz', model: 'C-Class', variant: 'AMG Line', fuel_type: 'diesel', transmission: 'automatic' },
+    { vehicle_type: 'car', make: 'Volkswagen', model: 'Golf', variant: '7.5', fuel_type: 'petrol', transmission: 'manual' },
+    { vehicle_type: 'car', make: 'Audi', model: 'A4', variant: '2.0 TDI', fuel_type: 'diesel', transmission: 'automatic' },
+    { vehicle_type: 'car', make: 'Toyota', model: 'Corolla', variant: 'Hybrid', fuel_type: 'hybrid-petrol', transmission: 'automatic' },
+    { vehicle_type: 'van', make: 'Mercedes-Benz', model: 'Sprinter', variant: '311', fuel_type: 'diesel', transmission: 'manual' },
+    { vehicle_type: 'car', make: 'Fiat', model: '500', variant: 'Lounge', fuel_type: 'petrol', transmission: 'manual' },
+    { vehicle_type: 'car', make: 'Skoda', model: 'Octavia', variant: '1.6 TDI', fuel_type: 'diesel', transmission: 'manual' },
+    { vehicle_type: 'car', make: 'Renault', model: 'Clio', variant: '1.5 dCi', fuel_type: 'diesel', transmission: 'manual' },
+    { vehicle_type: 'suv', make: 'Hyundai', model: 'Tucson', variant: '1.6 T-GDI', fuel_type: 'petrol', transmission: 'automatic' },
+    { vehicle_type: 'car', make: 'Ford', model: 'Focus', variant: '1.5 EcoBoost', fuel_type: 'petrol', transmission: 'manual' },
+    { vehicle_type: 'car', make: 'Opel', model: 'Astra', variant: '1.6 CDTI', fuel_type: 'diesel', transmission: 'manual' },
+    { vehicle_type: 'suv', make: 'Peugeot', model: '3008', variant: 'Allure', fuel_type: 'diesel', transmission: 'automatic' },
+    { vehicle_type: 'suv', make: 'Nissan', model: 'Qashqai', variant: '1.5 dCi', fuel_type: 'diesel', transmission: 'manual' },
+    { vehicle_type: 'car', make: 'Volkswagen', model: 'Passat', variant: '2.0 TDI', fuel_type: 'diesel', transmission: 'automatic' },
+    { vehicle_type: 'motorcycle', make: 'Yamaha', model: 'MT-07', variant: '', fuel_type: 'petrol', transmission: 'manual' },
+    { vehicle_type: 'motorcycle', make: 'Honda', model: 'PCX', variant: '', fuel_type: 'petrol', transmission: 'automatic' },
+    { vehicle_type: 'boat', make: 'Quicksilver', model: 'Activ', variant: '555', fuel_type: 'petrol', transmission: 'manual' },
   ];
   const colors = ['black', 'white', 'silver', 'grey', 'blue', 'red', 'green'];
 
@@ -376,6 +393,7 @@ async function seedCars(sb, posterId, cities) {
     const price = 4500 + (2025 - year) * -200 + Math.max(0, 180000 - kilometers) / 12 + i * 120;
     return {
       poster_id: posterId,
+      vehicle_type: base.vehicle_type,
       make: base.make,
       model: base.model,
       variant: base.variant,

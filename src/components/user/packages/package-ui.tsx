@@ -2,9 +2,12 @@
 
 import * as React from 'react';
 import { alpha, type Theme } from '@mui/material/styles';
-import { Box, Chip, Stack, Typography } from '@mui/material';
+import { Box, ButtonBase, Chip, Collapse, Stack, Typography } from '@mui/material';
+import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
+
+import { OKAZION_RED } from '@/lib/home-categories';
 
 /** Theme palette key or raw CSS color (hex / rgb). */
 export type PlanAccent = 'primary' | 'warning' | 'error' | 'success' | 'info' | (string & {});
@@ -24,7 +27,7 @@ export const PLAN_ACCENT_BY_CODE: Record<string, PlanAccent> = {
   free: '#3b82f6',
   starter: '#2dd4bf',
   grow: '#f97316',
-  elite: '#ef4444',
+  elite: OKAZION_RED,
 };
 
 export function planAccentForCode(planCode: string | null | undefined): PlanAccent {
@@ -100,7 +103,7 @@ export function PlanCardHeader({
 }) {
   if (compact) {
     return (
-      <Stack spacing={0.55} sx={{ mb: 1 }}>
+      <Stack spacing={0.55} sx={{ mb: 0.65 }}>
         <Stack
           direction="row"
           spacing={0.5}
@@ -120,7 +123,7 @@ export function PlanCardHeader({
           </Typography>
           {badge ? <Box sx={{ flexShrink: 0, maxWidth: '100%' }}>{badge}</Box> : null}
         </Stack>
-        {Icon || subtitle ? (
+        {subtitle ? (
           <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0 }}>
             {Icon ? (
               <Box
@@ -138,15 +141,13 @@ export function PlanCardHeader({
                 <Icon size={14} weight="duotone" />
               </Box>
             ) : null}
-            {subtitle ? (
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ display: 'block', fontSize: '0.68rem', lineHeight: 1.3, minWidth: 0 }}
-              >
-                {subtitle}
-              </Typography>
-            ) : null}
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: 'block', fontSize: '0.68rem', lineHeight: 1.3, minWidth: 0 }}
+            >
+              {subtitle}
+            </Typography>
           </Stack>
         ) : null}
       </Stack>
@@ -203,12 +204,12 @@ export function PlanPrice({
   accent?: PlanAccent;
 }) {
   return (
-    <Box sx={{ mb: compact ? 1 : 1.75 }}>
+    <Box sx={{ mb: compact ? 0.5 : 1.75 }}>
       <Stack direction="row" spacing={0.5} sx={{ alignItems: 'baseline' }}>
         <Typography
           sx={{
             fontWeight: 900,
-            fontSize: compact ? '1.35rem' : '1.85rem',
+            fontSize: compact ? '1.2rem' : '1.85rem',
             lineHeight: 1,
             letterSpacing: '-0.02em',
             color: accent ? (t) => resolveAccent(t, accent) : undefined,
@@ -221,7 +222,7 @@ export function PlanPrice({
             variant="body2"
             sx={{
               fontWeight: 700,
-              fontSize: compact ? '0.75rem' : undefined,
+              fontSize: compact ? '0.72rem' : undefined,
               color: accent ? (t) => resolveAccent(t, accent) : 'text.secondary',
               opacity: accent ? 0.85 : 1,
             }}
@@ -234,7 +235,7 @@ export function PlanPrice({
         <Typography
           variant="caption"
           color="text.secondary"
-          sx={{ display: 'block', mt: 0.25, fontSize: compact ? '0.68rem' : undefined }}
+          sx={{ display: 'block', mt: 0.15, fontSize: compact ? '0.65rem' : undefined }}
         >
           {hint}
         </Typography>
@@ -253,7 +254,7 @@ export function FeatureList({
   compact?: boolean;
 }) {
   return (
-    <Stack spacing={compact ? 0.4 : 0.7} sx={{ mb: compact ? 1.25 : 2, flex: 1 }}>
+    <Stack spacing={compact ? 0.4 : 0.7} sx={{ mb: compact ? 0 : 2, flex: compact ? undefined : 1, mt: compact ? 0.35 : 0 }}>
       {items.map((line) => (
         <Stack key={line} direction="row" spacing={0.65} sx={{ alignItems: 'flex-start' }}>
           <Box sx={{ color: (t) => resolveAccent(t, accent), mt: '1px', flexShrink: 0, display: 'inline-flex' }}>
@@ -269,6 +270,204 @@ export function FeatureList({
         </Stack>
       ))}
     </Stack>
+  );
+}
+
+/** Collapsed-by-default feature list — keeps package cards short. */
+export function FeatureDetailsDropdown({
+  items,
+  accent = 'primary',
+  label = 'Detajet',
+  open,
+  onToggle,
+}: {
+  items: string[];
+  accent?: PlanAccent;
+  label?: string;
+  /** Controlled open state — when set, content is rendered by the parent below. */
+  open?: boolean;
+  onToggle?: () => void;
+}) {
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const isControlled = open != null && onToggle != null;
+  const isOpen = isControlled ? open : uncontrolledOpen;
+  if (items.length === 0) return null;
+
+  const toggle = () => {
+    if (isControlled) onToggle();
+    else setUncontrolledOpen((v) => !v);
+  };
+
+  return (
+    <Box>
+      <ButtonBase
+        onClick={toggle}
+        aria-expanded={isOpen}
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 0.4,
+          py: 0.15,
+          px: 0,
+          borderRadius: 0.75,
+          color: 'text.secondary',
+          '&:hover': { color: (t) => resolveAccent(t, accent) },
+        }}
+      >
+        <Typography sx={{ fontWeight: 750, fontSize: '0.7rem', letterSpacing: '0.02em' }}>{label}</Typography>
+        <Box
+          sx={{
+            display: 'inline-flex',
+            transition: 'transform 0.15s ease',
+            transform: isOpen ? 'rotate(180deg)' : 'none',
+          }}
+        >
+          <CaretDownIcon size={12} weight="bold" />
+        </Box>
+      </ButtonBase>
+      {!isControlled ? (
+        <Collapse in={isOpen} unmountOnExit>
+          <Box sx={{ pt: 0.65 }}>
+            <FeatureList items={items} accent={accent} compact />
+          </Box>
+        </Collapse>
+      ) : null}
+    </Box>
+  );
+}
+
+/**
+ * Horizontal package offer — info + CTAs on one row; details expand full-width below.
+ */
+export function PackageOfferRow({
+  title,
+  badge,
+  price,
+  priceSuffix,
+  meta,
+  details = [],
+  accent = 'primary',
+  highlighted = false,
+  actions,
+}: {
+  title: string;
+  badge?: React.ReactNode;
+  /** Optional — prefer putting prices on the action buttons instead. */
+  price?: React.ReactNode;
+  priceSuffix?: string;
+  /** Secondary price line (e.g. Boost Coins amount). */
+  meta?: React.ReactNode;
+  details?: string[];
+  accent?: PlanAccent;
+  highlighted?: boolean;
+  actions: React.ReactNode;
+}) {
+  const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const showPrice = price != null || priceSuffix != null || meta != null;
+
+  return (
+    <Box
+      sx={{
+        px: { xs: 1.5, sm: 1.75 },
+        py: { xs: 1.25, sm: 1.35 },
+        borderRadius: 2.5,
+        border: '1px solid',
+        borderColor: highlighted ? (t) => alpha(resolveAccent(t, accent), 0.55) : 'divider',
+        bgcolor: highlighted
+          ? (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.1 : 0.04)
+          : 'background.paper',
+        boxShadow: highlighted ? (t) => `0 8px 22px ${alpha(resolveAccent(t, accent), 0.12)}` : 'none',
+        transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+        '&:hover': {
+          borderColor: (t) => alpha(resolveAccent(t, accent), 0.45),
+          boxShadow: (t) => `0 8px 22px ${alpha(t.palette.common.black, 0.08)}`,
+        },
+      }}
+    >
+      <Stack direction="row" spacing={{ xs: 1.25, sm: 2 }} sx={{ alignItems: 'center' }}>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Stack
+            direction="row"
+            spacing={0.75}
+            sx={{
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 0.5,
+              mb: showPrice || details.length ? 0.3 : 0,
+            }}
+          >
+            <Typography sx={{ fontWeight: 850, fontSize: '0.92rem', lineHeight: 1.25 }}>{title}</Typography>
+            {badge}
+          </Stack>
+
+          {showPrice ? (
+            <Stack
+              direction="row"
+              spacing={0.75}
+              sx={{
+                alignItems: 'baseline',
+                flexWrap: 'wrap',
+                columnGap: 0.85,
+                rowGap: 0.15,
+                mb: details.length ? 0.35 : 0,
+              }}
+            >
+              {price != null ? (
+                <Typography
+                  sx={{
+                    fontWeight: 900,
+                    fontSize: { xs: '1.1rem', sm: '1.2rem' },
+                    lineHeight: 1.1,
+                    letterSpacing: '-0.02em',
+                    color: (t) => resolveAccent(t, accent),
+                  }}
+                >
+                  {price}
+                </Typography>
+              ) : null}
+              {priceSuffix ? (
+                <Typography sx={{ fontWeight: 700, fontSize: '0.75rem', color: 'text.secondary' }}>
+                  {priceSuffix}
+                </Typography>
+              ) : null}
+              {meta ? (
+                <Typography sx={{ fontWeight: 650, fontSize: '0.75rem', color: 'text.secondary' }}>
+                  · {meta}
+                </Typography>
+              ) : null}
+            </Stack>
+          ) : null}
+
+          {details.length > 0 ? (
+            <FeatureDetailsDropdown
+              items={details}
+              accent={accent}
+              open={detailsOpen}
+              onToggle={() => setDetailsOpen((v) => !v)}
+            />
+          ) : null}
+        </Box>
+
+        <Stack direction="row" spacing={0.75} sx={{ flexShrink: 0, alignItems: 'center' }}>
+          {actions}
+        </Stack>
+      </Stack>
+
+      {details.length > 0 ? (
+        <Collapse in={detailsOpen} unmountOnExit>
+          <Box
+            sx={{
+              mt: 1.1,
+              pt: 1.1,
+              borderTop: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
+            <FeatureList items={details} accent={accent} compact />
+          </Box>
+        </Collapse>
+      ) : null}
+    </Box>
   );
 }
 

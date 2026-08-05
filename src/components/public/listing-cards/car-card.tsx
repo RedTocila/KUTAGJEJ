@@ -12,7 +12,7 @@ import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { PaintBucket as PaintBucketIcon } from '@phosphor-icons/react/dist/ssr/PaintBucket';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 
-import { CAR_COLOUR_OPTIONS, FUEL_TYPE_OPTIONS, TRANSMISSION_OPTIONS } from '@/lib/car-constants';
+import { CAR_COLOUR_OPTIONS, FUEL_TYPE_OPTIONS, TRANSMISSION_OPTIONS, vehicleTypeLabel } from '@/lib/car-constants';
 import type { PublicCarListing } from '@/lib/public-listings-client';
 import { listingCarPublicHref } from '@/paths';
 
@@ -36,6 +36,7 @@ export function CarCard({
 }) {
   const title = [listing.make, listing.model, listing.variant].filter(Boolean).join(' ');
   const viewCount = listing.viewCount ?? 0;
+  const typeLabel = listing.vehicleType ? vehicleTypeLabel(listing.vehicleType) : null;
   const fuelLabel = findOptionLabel(FUEL_TYPE_OPTIONS, listing.fuelType);
   const transmissionLabel = findOptionLabel(TRANSMISSION_OPTIONS, listing.transmission);
   const colourLabel = findOptionLabel(CAR_COLOUR_OPTIONS, listing.color);
@@ -54,10 +55,9 @@ export function CarCard({
       listingKind="car"
       listingId={listing.id}
       href={listingCarPublicHref(listing)}
-      prefetch={false}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-    <CardShell premium={Boolean(listing.isPremium)}>
+    <CardShell premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
       <CardMedia
         listingKind="car"
         listingId={listing.id}
@@ -69,6 +69,8 @@ export function CarCard({
         saveCount={listing.saveCount}
         saved={listing.saved}
         premium={Boolean(listing.isPremium)}
+        okazion={Boolean(listing.isOkazion)}
+        okazionUntil={listing.okazionUntil}
         sharePayload={{
           title,
           category: listing.make,
@@ -95,7 +97,7 @@ export function CarCard({
           color="text.secondary"
           sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
         >
-          {listing.make}
+          {typeLabel ? `${typeLabel} · ${listing.make}` : listing.make}
         </Typography>
         <Typography
           component="h3"

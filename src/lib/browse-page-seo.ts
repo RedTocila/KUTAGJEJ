@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 import { config } from '@/config';
 import { findVertical, type HomeVerticalId } from '@/lib/home-categories';
-import { CAR_MAKES, FUEL_TYPE_OPTIONS, TRANSMISSION_OPTIONS } from '@/lib/car-constants';
+import { ALL_VEHICLE_MAKES, FUEL_TYPE_OPTIONS, TRANSMISSION_OPTIONS, vehicleTypeLabel } from '@/lib/car-constants';
 import {
   JOB_EDUCATION_OPTIONS,
   JOB_EXPERIENCE_OPTIONS,
@@ -168,17 +168,20 @@ function buildRealEstateSeo(
 
 function buildCarsSeo(filters: BrowseCarFilters, cities: RealEstateCityDto[]): { title: string; description: string } {
   const location = formatLocationPhrase(cities, filters.city);
+  const vehicleType = filters.type ? vehicleTypeLabel(filters.type) : null;
   const fuel = filters.fuel ? (FUEL_SEO[filters.fuel] ?? findOptionLabel(FUEL_TYPE_OPTIONS, filters.fuel)) : null;
   const transmission = findOptionLabel(TRANSMISSION_OPTIONS, filters.transmission);
 
-  const titleParts = ['Makina'];
-  if (filters.make && CAR_MAKES.includes(filters.make as (typeof CAR_MAKES)[number])) titleParts.push(filters.make);
+  const titleParts = [vehicleType || 'Makina'];
+  if (filters.make && ALL_VEHICLE_MAKES.includes(filters.make)) titleParts.push(filters.make);
+  if (filters.model) titleParts.push(filters.model);
   if (fuel) titleParts.push(fuel);
   let title = joinPhrase(titleParts);
   if (location) title = `${title} ${location}`;
 
-  const subjectParts = ['makina'];
+  const subjectParts = [vehicleType ? vehicleType.toLowerCase() : 'makina'];
   if (filters.make) subjectParts.push(filters.make);
+  if (filters.model) subjectParts.push(filters.model);
   if (fuel) subjectParts.push(`me ${fuel}`);
   let description = `Njoftime për ${joinPhrase(subjectParts)}${location ? ` ${location}` : ' në Shqipëri'}. Shiko rezultatet dhe gjej makinën që të pëlqen në KuTaGjej.`;
   description = priceExtras(filters.minPrice, filters.maxPrice) + description;

@@ -14,21 +14,29 @@ import { Paperclip as PaperclipIcon } from '@phosphor-icons/react/dist/ssr/Paper
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
+import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-panel';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import { aiDraftToInitialListing, mergeAiIntoListing } from '@/lib/ai-draft-to-listing';
 import {
+  acceptAiCategoryCorrection,
   filesToAiImagePayload,
   importListingsFromLinks,
+  isAiCategoryMismatch,
+  isAiContentRestricted,
   mergeAttachedImageUrls,
   toAiListingDraft,
+  type AiImportDraftResult,
 } from '@/lib/ai-import-client';
+import { saveAiListingDraft } from '@/lib/ai-listing-draft';
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
   AI_SEARCH_BLUE_ON,
   AI_SEARCH_BLUE_SOFT,
 } from '@/lib/home-categories';
+import { hardNavigate } from '@/lib/hard-navigate';
+import { paths } from '@/paths';
 import { uploadListingImages } from '@/lib/uploads-client';
 import type { ListingCategoryKey } from '@/types/listing-category';
 
@@ -84,6 +92,9 @@ export function PostListingAiAssist({
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
   const [inputExpanded, setInputExpanded] = React.useState(false);
+  const [mismatchDraft, setMismatchDraft] = React.useState<AiImportDraftResult | null>(null);
+  const [switching, setSwitching] = React.useState(false);
+  const [pendingImageUrls, setPendingImageUrls] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     const urls = files.map((f) => URL.createObjectURL(f));
@@ -109,9 +120,26 @@ export function PostListingAiAssist({
   }, [text]);
 
   const isEdit = mode === 'edit';
-  const placeholder = isEdit ? t.aiImport.editTitle : t.aiImport.formTitle;
+  const placeholder = isEdit ? t.aiImport.editPlaceholder : t.aiImport.formPlaceholder;
   const appliedMsg = isEdit ? t.aiImport.editApplied : t.aiImport.formApplied;
-  const canSubmit = Boolean(text.trim() || files.length > 0);
+  const canSubmit = Boolean(text.trim() || files.length > 0 || pendingImageUrls.length > 0);
+
+  const openCorrectCategoryForm = (draft: AiImportDraftResult) => {
+    const accepted = acceptAiCategoryCorrection(draft) ?? {
+      ...draft,
+      category: draft.detectedCategory || draft.category,
+      error: null,
+      errorCode: null,
+    };
+    const ready = toAiListingDraft(accepted as AiImportDraftResult);
+    if (!ready) {
+      setError(t.aiImport.formEmpty);
+      return;
+    }
+    saveAiListingDraft(ready);
+    const href = `${paths.user.realEstateListing}?category=${encodeURIComponent(ready.category)}&ai=1&draftId=${encodeURIComponent(ready.id)}`;
+    hardNavigate(href);
+  };
 
   const handleFilesPicked = (list: FileList | null) => {
     if (!list?.length) return;
@@ -122,6 +150,7 @@ export function PostListingAiAssist({
       next.push(file);
     }
     setFiles(next);
+    setMismatchDraft(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -132,7 +161,7 @@ export function PostListingAiAssist({
   const handleAnalyze = async (event?: React.FormEvent) => {
     event?.preventDefault();
     const trimmed = text.trim();
-    if (!trimmed && files.length === 0) {
+    if (!trimmed && files.length === 0 && pendingImageUrls.length === 0) {
       setError(t.aiImport.empty);
       setSuccess(null);
       return;
@@ -141,8 +170,25 @@ export function PostListingAiAssist({
     setLoading(true);
     setError(null);
     setSuccess(null);
+    setMismatchDraft(null);
     try {
-      const imagePayload = await filesToAiImagePayload(files);
+      let uploadedUrls: string[] = [...pendingImageUrls];
+      if (files.length > 0) {
+        const up = await uploadListingImages(files, UPLOAD_FOLDER[category]);
+        if (up.error) {
+          setError(up.error);
+          return;
+        }
+        uploadedUrls = [...uploadedUrls, ...up.urls].slice(0, MAX_AI_IMAGES);
+      }
+
+      const imagePayload =
+        uploadedUrls.length > 0
+          ? uploadedUrls.map((url) => ({ url }))
+          : await filesToAiImagePayload(files);
+
+      setPendingImageUrls(uploadedUrls);
+
       const res = await importListingsFromLinks({
         text: trimmed,
         category,
@@ -157,16 +203,47 @@ export function PostListingAiAssist({
       }
 
       const match =
-        res.drafts.find((d) => d.category === category && !d.error) ??
-        res.drafts.find((d) => !d.error && d.category);
+        res.drafts.find((d) => d.category === category && !d.error && !isAiCategoryMismatch(d)) ??
+        res.drafts.find((d) => !d.error && d.category && !isAiCategoryMismatch(d));
 
       if (!match) {
-        setError(t.aiImport.formEmpty);
+        const restricted = res.drafts.find((d) => isAiContentRestricted(d));
+        if (restricted) {
+          setError(t.aiImport.contentRestricted);
+          return;
+        }
+        const mismatch = res.drafts.find((d) => isAiCategoryMismatch(d));
+        if (mismatch) {
+          setMismatchDraft({
+            ...mismatch,
+            sourcePrompt: mismatch.sourcePrompt || trimmed,
+            preferredCategory: mismatch.preferredCategory || category,
+            imageUrls:
+              uploadedUrls.length > 0
+                ? mergeAttachedImageUrls({
+                    remoteUrls: mismatch.imageUrls ?? [],
+                    uploadedUrls,
+                    roles: mismatch.imageRoles,
+                    max: (mismatch.detectedCategory || category) === 'professionals' ? 2 : 8,
+                  })
+                : mismatch.imageUrls ?? [],
+          });
+          return;
+        }
+        const firstError = res.drafts.find((d) => d.error)?.error;
+        setError(firstError || t.aiImport.formEmpty);
         return;
       }
 
       if (match.category !== category) {
-        setError(t.aiImport.formWrongCategory);
+        setMismatchDraft({
+          ...match,
+          preferredCategory: category,
+          detectedCategory: match.category,
+          errorCode: 'category_mismatch',
+          error: t.aiImport.formWrongCategory,
+          sourcePrompt: trimmed,
+        });
         return;
       }
 
@@ -176,20 +253,15 @@ export function PostListingAiAssist({
         return;
       }
 
-      let imageUrls = ready.imageUrls ?? [];
-      if (files.length > 0) {
-        const up = await uploadListingImages(files, UPLOAD_FOLDER[category]);
-        if (up.error) {
-          setError(up.error);
-          return;
-        }
-        imageUrls = mergeAttachedImageUrls({
-          remoteUrls: ready.imageUrls ?? [],
-          uploadedUrls: up.urls,
-          roles: ready.imageRoles,
-          max: category === 'professionals' ? 2 : 8,
-        });
-      }
+      const imageUrls =
+        uploadedUrls.length > 0
+          ? mergeAttachedImageUrls({
+              remoteUrls: ready.imageUrls ?? [],
+              uploadedUrls,
+              roles: ready.imageRoles,
+              max: category === 'professionals' ? 2 : 8,
+            })
+          : ready.imageUrls ?? [];
 
       const shaped = aiDraftToInitialListing({ ...ready, imageUrls });
       const payload =
@@ -199,11 +271,81 @@ export function PostListingAiAssist({
       setSuccess(appliedMsg);
       setText('');
       setFiles([]);
+      setPendingImageUrls([]);
+      setMismatchDraft(null);
     } catch {
       setError(t.aiImport.failed);
     } finally {
       setLoading(false);
     }
+  };
+
+  const acceptMismatchDetected = () => {
+    if (!mismatchDraft) return;
+    openCorrectCategoryForm(mismatchDraft);
+  };
+
+  const pickMismatchCategory = async (nextCategory: ListingCategoryKey) => {
+    if (!mismatchDraft) return;
+    if (mismatchDraft.detectedCategory === nextCategory) {
+      openCorrectCategoryForm(mismatchDraft);
+      return;
+    }
+    if (nextCategory === category) {
+      setMismatchDraft(null);
+      setError(null);
+      return;
+    }
+
+    const prompt = (mismatchDraft.sourcePrompt || text || '').trim();
+    const imageUrls = (
+      mismatchDraft.imageUrls?.length ? mismatchDraft.imageUrls : pendingImageUrls
+    ).filter(Boolean);
+    setSwitching(true);
+    setError(null);
+    try {
+      const res = await importListingsFromLinks({
+        text: prompt,
+        category: nextCategory,
+        profile: profileFromUser(user),
+        images: imageUrls.map((url) => ({ url })),
+        mode: 'create',
+      });
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      const rebuilt = res.drafts[0];
+      if (!rebuilt) {
+        setError(t.aiImport.formEmpty);
+        return;
+      }
+      if (isAiCategoryMismatch(rebuilt)) {
+        setMismatchDraft({
+          ...rebuilt,
+          sourcePrompt: prompt,
+          preferredCategory: category,
+        });
+        return;
+      }
+      openCorrectCategoryForm({
+        ...rebuilt,
+        preferredCategory: nextCategory,
+        sourcePrompt: prompt,
+      });
+    } catch {
+      setError(t.aiImport.failed);
+    } finally {
+      setSwitching(false);
+    }
+  };
+
+  const startOverMismatch = () => {
+    if (mismatchDraft?.sourcePrompt) setText(mismatchDraft.sourcePrompt);
+    if (mismatchDraft?.imageUrls?.length) setPendingImageUrls(mismatchDraft.imageUrls);
+    setMismatchDraft(null);
+    setError(null);
+    setSuccess(null);
   };
 
   return (
@@ -376,6 +518,17 @@ export function PostListingAiAssist({
             </Box>
           ))}
         </Stack>
+      ) : null}
+
+      {mismatchDraft ? (
+        <AiCategoryMismatchPanel
+          draft={mismatchDraft}
+          busy={switching}
+          allowCategorySwitch={!isEdit}
+          onAcceptDetected={acceptMismatchDetected}
+          onPickCategory={(key) => void pickMismatchCategory(key)}
+          onStartOver={startOverMismatch}
+        />
       ) : null}
 
       {error ? (

@@ -1,14 +1,13 @@
 /** Server-side validation rules for car listings (mirrors frontend car-constants.ts). */
 
-const CAR_MAKES = [
-  'Alfa Romeo', 'Aston Martin', 'Audi', 'Bentley', 'BMW', 'Bugatti', 'Cadillac',
-  'Chevrolet', 'Chrysler', 'Citroën', 'Dacia', 'Dodge', 'Ferrari', 'Fiat', 'Ford',
-  'Honda', 'Hyundai', 'Infiniti', 'Jaguar', 'Jeep', 'Kia', 'Lamborghini',
-  'Land Rover', 'Lexus', 'Lincoln', 'Maserati', 'Mazda', 'Mercedes-Benz', 'Mini',
-  'Mitsubishi', 'Nissan', 'Opel', 'Peugeot', 'Porsche', 'Renault', 'Rolls-Royce',
-  'Seat', 'Skoda', 'Smart', 'Subaru', 'Suzuki', 'Tesla', 'Toyota', 'Volkswagen',
-  'Volvo', 'Other',
-];
+const {
+  VEHICLE_TYPE_VALUES,
+  isValidVehicleMake,
+  allVehicleMakes,
+  makesForVehicleType,
+} = require('./vehicle-catalog');
+
+const CAR_MAKES = allVehicleMakes();
 
 const TRANSMISSION_VALUES = ['automatic', 'manual'];
 
@@ -35,14 +34,29 @@ const { isUuid } = require('./public-listings/query-helpers');
  * Returns { ok: true } or { ok: false, message }.
  */
 function validateCarPayload(fields) {
+  const vehicleType = String(fields.vehicleType || 'car').trim().toLowerCase();
+  if (!VEHICLE_TYPE_VALUES.includes(vehicleType)) {
+    return { ok: false, message: 'Please select a valid vehicle category.' };
+  }
+  fields.vehicleType = vehicleType;
+
   const make = String(fields.make || '').trim();
-  if (!CAR_MAKES.includes(make)) {
-    return { ok: false, message: 'Invalid or missing car make.' };
+  if (!isValidVehicleMake(vehicleType, make)) {
+    // Case-insensitive / fuzzy make match against catalog for this vehicle type.
+    const catalogMakes = makesForVehicleType(vehicleType);
+    const matched = catalogMakes.find((m) => m.toLowerCase() === make.toLowerCase());
+    if (matched) {
+      fields.make = matched;
+    } else if (catalogMakes.includes('Other')) {
+      fields.make = 'Other';
+    } else {
+      return { ok: false, message: 'Invalid or missing make for this vehicle category.' };
+    }
   }
 
   const model = String(fields.model || '').trim();
-  if (!model) return { ok: false, message: 'Car model is required.' };
-  if (model.length > 80) return { ok: false, message: 'Car model is too long.' };
+  if (!model) return { ok: false, message: 'Model is required.' };
+  if (model.length > 80) return { ok: false, message: 'Model is too long.' };
 
   const description = String(fields.description || '').trim();
   if (!description) return { ok: false, message: 'Description is required.' };
@@ -76,7 +90,10 @@ function validateCarPayload(fields) {
 
   const color = String(fields.color || '').trim().toLowerCase();
   if (!COLOUR_VALUES.includes(color)) {
-    return { ok: false, message: 'Invalid exterior colour.' };
+    // AI / free-text often sends unknown colours — fall back instead of rejecting the listing.
+    fields.color = 'grey';
+  } else {
+    fields.color = color;
   }
 
   const contactPhone = String(fields.contactPhone || '').trim();
@@ -101,6 +118,7 @@ function validateCarPayload(fields) {
 
 module.exports = {
   CAR_MAKES,
+  VEHICLE_TYPE_VALUES,
   TRANSMISSION_VALUES,
   FUEL_TYPE_VALUES,
   COLOUR_VALUES,

@@ -29,6 +29,23 @@ async function loadLoginStreakConfig() {
  * Completing `daysRequired` awards Boost Coins once, then the next day starts a new cycle.
  */
 async function recordLoginStreak(user) {
+  // Schema may lag after an init reset — skip quietly until migration is applied.
+  if (
+    !Object.prototype.hasOwnProperty.call(user, 'loginStreakDays') ||
+    !Object.prototype.hasOwnProperty.call(user, 'loginStreakLastDay')
+  ) {
+    return {
+      days: 0,
+      daysRequired: 7,
+      boostCredits: 0,
+      checkedInToday: false,
+      awarded: false,
+      creditsAwarded: 0,
+      boostCreditsBalance: user.boostCredits ?? 0,
+      skipped: true,
+    };
+  }
+
   const { daysRequired, boostCredits } = await loadLoginStreakConfig();
   const today = calendarDayUtc();
   const yesterday = addDaysUtc(today, -1);

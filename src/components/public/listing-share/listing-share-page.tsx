@@ -287,8 +287,8 @@ export function ListingSharePage({
         zIndex: 1600,
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: '#0a0a0a',
-        color: '#fff',
+        bgcolor: 'background.default',
+        color: 'text.primary',
       }}
     >
       {/* Top bar */}
@@ -377,8 +377,10 @@ export function ListingSharePage({
           px: { xs: 1.75, sm: 3 },
           pt: 1.25,
           pb: { xs: 'max(16px, env(safe-area-inset-bottom))', sm: 2.5 },
-          bgcolor: 'rgba(10,10,10,0.92)',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
+          bgcolor: (theme) =>
+            theme.palette.mode === 'dark' ? 'rgba(10,10,10,0.92)' : 'rgba(255,255,255,0.94)',
+          borderTop: '1px solid',
+          borderColor: 'divider',
           backdropFilter: 'blur(12px)',
         }}
       >
@@ -388,7 +390,7 @@ export function ListingSharePage({
               textAlign: 'center',
               fontSize: '0.8rem',
               lineHeight: 1.45,
-              color: 'rgba(255,255,255,0.72)',
+              color: 'text.secondary',
               px: 0.5,
             }}
           >
@@ -430,8 +432,8 @@ export function ListingSharePage({
             }
             sx={{
               ...btnSx,
-              color: 'common.black',
-              '&:hover': { color: 'common.black', boxShadow: 'none' },
+              color: 'primary.contrastText',
+              '&:hover': { color: 'primary.contrastText', boxShadow: 'none' },
             }}
           >
             Ndaj si Instagram Story
@@ -453,8 +455,8 @@ export function ListingSharePage({
             }
             sx={{
               ...btnSx,
-              borderColor: 'rgba(255,255,255,0.22)',
-              color: '#fff',
+              borderColor: 'divider',
+              color: 'text.primary',
               '&:hover': {
                 borderColor: 'primary.main',
                 bgcolor: primaryMainAlpha(0.1),
@@ -465,7 +467,7 @@ export function ListingSharePage({
           </Button>
 
           {feedback ? (
-            <Typography variant="body2" sx={{ textAlign: 'center', color: 'rgba(255,255,255,0.65)', fontWeight: 550 }}>
+            <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary', fontWeight: 550 }}>
               {feedback}
             </Typography>
           ) : null}

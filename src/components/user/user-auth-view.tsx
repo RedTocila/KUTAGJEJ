@@ -877,7 +877,7 @@ export function UserAuthView() {
             >
               <Stack spacing={3}>
                 <BrandLogo
-                  height={100}
+                  height={80}
                   imgSx={{
                     filter: 'drop-shadow(0 4px 14px rgba(0,0,0,0.4))',
                     maxWidth: 200,

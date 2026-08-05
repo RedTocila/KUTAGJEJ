@@ -40,6 +40,8 @@ import {
   AI_SEARCH_BLUE_HOVER,
   AI_SEARCH_BLUE_ON,
   AI_SEARCH_BLUE_SOFT,
+  OKAZION_RED,
+  OKAZION_RED_SOFT,
   findVertical,
   isHomeVerticalId,
   isSearchCategoryId,
@@ -53,12 +55,14 @@ import {
   fetchBrowseCars,
   fetchBrowseJobs,
   fetchBrowseMarketplace,
+  fetchBrowseOkazion,
   fetchBrowseProfessionals,
   fetchBrowseRealEstate,
   type PublicCarListing,
   type PublicDirectoryListing,
   type PublicJobListing,
   type PublicMarketplaceListing,
+  type PublicOkazionListing,
   type PublicRealEstateListing,
 } from '@/lib/public-listings-client';
 import { paths } from '@/paths';
@@ -71,7 +75,12 @@ type SearchItem =
   | { kind: 'job'; listing: PublicJobListing }
   | { kind: 'marketplace'; listing: PublicMarketplaceListing }
   | { kind: 'businesses'; listing: PublicDirectoryListing }
-  | { kind: 'professionals'; listing: PublicDirectoryListing };
+  | { kind: 'professionals'; listing: PublicDirectoryListing }
+  | { kind: 'okazion'; listing: PublicOkazionListing };
+
+function toOkazionSearchItem(listing: PublicOkazionListing): SearchItem {
+  return { kind: 'okazion', listing };
+}
 
 function buildAiBrowseHref(intent: AiSearchResult['intent']): string | null {
   const verticalId = intent.verticals.find((v): v is HomeVerticalId => isHomeVerticalId(v));
@@ -156,6 +165,24 @@ function ResultCard({ item }: { item: SearchItem }) {
     case 'businesses':
     case 'professionals':
       return <DirectoryListingCard listing={item.listing} />;
+    case 'okazion': {
+      const listing = item.listing;
+      switch (listing.kind) {
+        case 'real-estate':
+          return <RealEstateCard listing={listing} />;
+        case 'car':
+          return <CarCard listing={listing} />;
+        case 'job':
+          return <JobCard listing={listing} />;
+        case 'marketplace':
+          return <MarketplaceCard listing={listing} />;
+        case 'businesses':
+        case 'professionals':
+          return <DirectoryListingCard listing={listing} />;
+        default:
+          return null;
+      }
+    }
     default:
       return null;
   }
@@ -194,6 +221,7 @@ export function SearchPageView() {
     ? (localizedCategories.find((v) => v.id === categoryId) ?? null)
     : null;
   const isAi = categoryId === 'ai';
+  const isOkazion = categoryId === 'okazion';
 
   React.useLayoutEffect(() => {
     const el = inputRef.current;
@@ -223,16 +251,22 @@ export function SearchPageView() {
   );
 
   const runVerticalSearch = React.useCallback(
-    async (cat: HomeVerticalId, q: string) => {
+    async (cat: Exclude<SearchCategoryId, 'ai'>, q: string) => {
       setLoading(true);
       setError(null);
       setHasSearched(true);
       setSubmittedQuery(q.trim());
       setAiReply(null);
       try {
-        const res = await fetchVerticalResults(cat, q);
-        setItems(res.items);
-        setTotal(res.total);
+        if (cat === 'okazion') {
+          const res = await fetchBrowseOkazion(PAGE_SIZE, { q: q.trim() || undefined }, 1);
+          setItems(res.listings.map(toOkazionSearchItem));
+          setTotal(res.total);
+        } else {
+          const res = await fetchVerticalResults(cat, q);
+          setItems(res.items);
+          setTotal(res.total);
+        }
       } catch {
         setItems([]);
         setTotal(0);
@@ -384,7 +418,14 @@ export function SearchPageView() {
               p: 1,
               alignItems: inputExpanded ? 'flex-end' : 'center',
               transition: 'border-radius 120ms ease',
-              ...productSearchBarSx(Boolean(query.trim())),
+              ...productSearchBarSx(
+                Boolean(query.trim()),
+                isAi
+                  ? { color: AI_SEARCH_BLUE, soft: AI_SEARCH_BLUE_SOFT }
+                  : isOkazion
+                    ? { color: OKAZION_RED, soft: OKAZION_RED_SOFT }
+                    : undefined,
+              ),
               borderRadius: inputExpanded ? 2.5 : 999,
               height: 'auto',
               minHeight: 40,
@@ -420,7 +461,7 @@ export function SearchPageView() {
                       {isAi ? (
                         <SparkleIcon size={18} color={AI_SEARCH_BLUE} />
                       ) : (
-                        <ProductSearchIcon />
+                        <ProductSearchIcon color={isOkazion ? OKAZION_RED : undefined} />
                       )}
                     </InputAdornment>
                   ),
@@ -474,17 +515,26 @@ export function SearchPageView() {
                       bgcolor: AI_SEARCH_BLUE,
                       color: AI_SEARCH_BLUE_ON,
                       borderColor: AI_SEARCH_BLUE,
+                      boxShadow: '0 2px 10px rgba(255, 187, 31, 0.45)',
                       '&:hover': { bgcolor: AI_SEARCH_BLUE_HOVER, borderColor: AI_SEARCH_BLUE_HOVER },
                       '&.Mui-disabled': {
                         bgcolor: AI_SEARCH_BLUE_SOFT,
                         color: AI_SEARCH_BLUE_ON,
                       },
                     }
-                  : {
-                      bgcolor: 'primary.main',
-                      color: 'common.black',
-                      '&:hover': { bgcolor: 'primary.dark' },
-                    }),
+                  : isOkazion
+                    ? {
+                        bgcolor: OKAZION_RED,
+                        color: '#fff',
+                        borderColor: OKAZION_RED,
+                        boxShadow: '0 2px 10px rgba(239, 68, 68, 0.45)',
+                        '&:hover': { bgcolor: '#dc2626', borderColor: '#dc2626' },
+                      }
+                    : {
+                        bgcolor: 'primary.main',
+                        color: 'primary.contrastText',
+                        '&:hover': { bgcolor: 'primary.dark' },
+                      }),
               }}
             >
               {loading && isAi ? (

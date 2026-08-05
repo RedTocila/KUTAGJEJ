@@ -36,6 +36,7 @@ function formatQuotas(doc) {
     maxApartmentListings: Number(doc.max_apartment_listings ?? doc.maxApartmentListings) || 0,
     maxProductListings: Number(doc.max_product_listings ?? doc.maxProductListings) || 0,
     maxPremiumListings: Number(doc.max_premium_listings ?? doc.maxPremiumListings) || 0,
+    maxOkazionListings: Number(doc.max_okazion_listings ?? doc.maxOkazionListings) || 0,
   };
 }
 

@@ -1,5 +1,10 @@
 -- KuTaGjej fresh schema (Supabase Postgres). No Mongo migration.
--- Safe to re-run: drops existing app tables first (auth.users is kept).
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║  DANGER: This file DROPS all app tables (profiles, listings, payments,  ║
+-- ║  subscriptions, referrals, …). Auth users are kept but their data is    ║
+-- ║  destroyed. NEVER re-run against a live / production database.          ║
+-- ║  Prefer additive migrations under supabase/migrations/ instead.         ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
 
 create extension if not exists "pgcrypto";
 
@@ -11,8 +16,11 @@ drop table if exists public.admin_notifications cascade;
 drop table if exists public.job_employer_verification_requests cascade;
 drop table if exists public.professional_verification_requests cascade;
 drop table if exists public.user_subscriptions cascade;
+drop table if exists public.okazion_listing_vouchers cascade;
+drop table if exists public.premium_listing_vouchers cascade;
 drop table if exists public.payments cascade;
 drop table if exists public.saved_listings cascade;
+drop table if exists public.listing_auto_refresh cascade;
 drop table if exists public.professional_listing_reviews cascade;
 drop table if exists public.business_listing_reviews cascade;
 drop table if exists public.member_reviews cascade;
@@ -57,6 +65,9 @@ create table public.profiles (
   auto_refresh_slots integer not null default 0 check (auto_refresh_slots >= 0),
   referral_tiers_claimed integer[] not null default '{}',
   avatar_url text,
+  login_streak_days integer not null default 0 check (login_streak_days >= 0),
+  login_streak_last_day date,
+  daily_share_claimed_on date,
   last_login timestamptz,
   last_active timestamptz default now(),
   created_at timestamptz not null default now(),
@@ -116,6 +127,7 @@ create table public.contracts (
   max_apartment_listings integer,
   max_product_listings integer,
   max_premium_listings integer,
+  max_okazion_listings integer,
   price_1_month numeric,
   price_3_months numeric,
   price_6_months numeric,
@@ -207,7 +219,9 @@ create table public.real_estate_listings (
   furnishing text,
   image_urls text[] not null default '{}',
   permalink_slug text,
-  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  premium_until timestamptz,
+  okazion_until timestamptz,
+  status text not null default 'approved' check (status in ('pending', 'approved', 'rejected')),
   reviewed_by uuid references public.profiles (id) on delete set null,
   reviewed_at timestamptz,
   admin_note text not null default '',
@@ -216,10 +230,13 @@ create table public.real_estate_listings (
 );
 create index real_estate_listings_poster_idx on public.real_estate_listings (poster_id);
 create index real_estate_listings_status_idx on public.real_estate_listings (status);
+create index real_estate_listings_premium_until_idx on public.real_estate_listings (premium_until desc nulls last);
+create index real_estate_listings_okazion_until_idx on public.real_estate_listings (okazion_until desc nulls last);
 
 create table public.car_listings (
   id uuid primary key default gen_random_uuid(),
   poster_id uuid not null references public.profiles (id) on delete cascade,
+  vehicle_type text not null default 'car',
   make text not null default '',
   model text not null default '',
   variant text not null default '',
@@ -237,7 +254,9 @@ create table public.car_listings (
   city_id uuid references public.real_estate_cities (id) on delete set null,
   image_urls text[] not null default '{}',
   permalink_slug text,
-  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  premium_until timestamptz,
+  okazion_until timestamptz,
+  status text not null default 'approved' check (status in ('pending', 'approved', 'rejected')),
   reviewed_by uuid references public.profiles (id) on delete set null,
   reviewed_at timestamptz,
   admin_note text not null default '',
@@ -246,6 +265,9 @@ create table public.car_listings (
 );
 create index car_listings_poster_idx on public.car_listings (poster_id);
 create index car_listings_status_idx on public.car_listings (status);
+create index car_listings_vehicle_type_idx on public.car_listings (vehicle_type);
+create index car_listings_premium_until_idx on public.car_listings (premium_until desc nulls last);
+create index car_listings_okazion_until_idx on public.car_listings (okazion_until desc nulls last);
 
 create table public.job_listings (
   id uuid primary key default gen_random_uuid(),
@@ -266,7 +288,9 @@ create table public.job_listings (
   requirements text[] not null default '{}',
   benefits jsonb not null default '[]',
   permalink_slug text,
-  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  premium_until timestamptz,
+  okazion_until timestamptz,
+  status text not null default 'approved' check (status in ('pending', 'approved', 'rejected')),
   reviewed_by uuid references public.profiles (id) on delete set null,
   reviewed_at timestamptz,
   admin_note text not null default '',
@@ -275,6 +299,8 @@ create table public.job_listings (
 );
 create index job_listings_poster_idx on public.job_listings (poster_id);
 create index job_listings_status_idx on public.job_listings (status);
+create index job_listings_premium_until_idx on public.job_listings (premium_until desc nulls last);
+create index job_listings_okazion_until_idx on public.job_listings (okazion_until desc nulls last);
 
 create table public.marketplace_listings (
   id uuid primary key default gen_random_uuid(),
@@ -290,7 +316,9 @@ create table public.marketplace_listings (
   contact_phone text not null default '',
   image_urls text[] not null default '{}',
   permalink_slug text,
-  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  premium_until timestamptz,
+  okazion_until timestamptz,
+  status text not null default 'approved' check (status in ('pending', 'approved', 'rejected')),
   reviewed_by uuid references public.profiles (id) on delete set null,
   reviewed_at timestamptz,
   admin_note text not null default '',
@@ -299,6 +327,8 @@ create table public.marketplace_listings (
 );
 create index marketplace_listings_poster_idx on public.marketplace_listings (poster_id);
 create index marketplace_listings_status_idx on public.marketplace_listings (status);
+create index marketplace_listings_premium_until_idx on public.marketplace_listings (premium_until desc nulls last);
+create index marketplace_listings_okazion_until_idx on public.marketplace_listings (okazion_until desc nulls last);
 
 create table public.directory_listings (
   id uuid primary key default gen_random_uuid(),
@@ -325,7 +355,13 @@ create table public.directory_listings (
   contact_phone text not null default '',
   image_urls text[] not null default '{}',
   permalink_slug text,
-  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  premium_until timestamptz,
+  okazion_until timestamptz,
+  announcement_title text,
+  announcement_subtitle text,
+  announcement_banner_url text,
+  announcement_at timestamptz,
+  status text not null default 'approved' check (status in ('pending', 'approved', 'rejected')),
   reviewed_by uuid references public.profiles (id) on delete set null,
   reviewed_at timestamptz,
   admin_note text not null default '',
@@ -335,6 +371,8 @@ create table public.directory_listings (
 create index directory_listings_vertical_idx on public.directory_listings (vertical);
 create index directory_listings_poster_idx on public.directory_listings (poster_id);
 create index directory_listings_status_idx on public.directory_listings (status);
+create index directory_listings_premium_until_idx on public.directory_listings (premium_until desc nulls last);
+create index directory_listings_okazion_until_idx on public.directory_listings (okazion_until desc nulls last);
 
 -- ─── messaging ───────────────────────────────────────────────────────────────
 create table public.conversations (
@@ -464,6 +502,42 @@ create index payments_payer_idx on public.payments (payer_id);
 create index payments_pok_order_idx on public.payments (pok_order_id);
 create index payments_created_idx on public.payments (created_at desc);
 
+create table public.premium_listing_vouchers (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  package_id text not null,
+  days integer not null check (days > 0),
+  price_eur numeric,
+  price_bc integer,
+  source text not null check (source in ('card', 'boost_coins', 'subscription')),
+  payment_id uuid references public.payments (id) on delete set null,
+  status text not null default 'unused' check (status in ('unused', 'applied', 'canceled')),
+  listing_kind text,
+  listing_id uuid,
+  applied_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index premium_listing_vouchers_user_idx on public.premium_listing_vouchers (user_id, status);
+
+create table public.okazion_listing_vouchers (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  package_id text not null,
+  days integer not null check (days > 0),
+  price_eur numeric,
+  price_bc integer,
+  source text not null check (source in ('card', 'boost_coins', 'subscription')),
+  payment_id uuid references public.payments (id) on delete set null,
+  status text not null default 'unused' check (status in ('unused', 'applied', 'canceled')),
+  listing_kind text,
+  listing_id uuid,
+  applied_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index okazion_listing_vouchers_user_idx on public.okazion_listing_vouchers (user_id, status);
+
 create table public.user_subscriptions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,
@@ -484,6 +558,7 @@ create table public.user_subscriptions (
   max_apartment_listings integer,
   max_product_listings integer,
   max_premium_listings integer,
+  max_okazion_listings integer,
   starts_at timestamptz,
   expires_at timestamptz,
   status text not null default 'active',
@@ -594,6 +669,8 @@ alter table public.member_reviews enable row level security;
 alter table public.saved_listings enable row level security;
 alter table public.listing_auto_refresh enable row level security;
 alter table public.payments enable row level security;
+alter table public.premium_listing_vouchers enable row level security;
+alter table public.okazion_listing_vouchers enable row level security;
 alter table public.user_subscriptions enable row level security;
 alter table public.professional_verification_requests enable row level security;
 alter table public.job_employer_verification_requests enable row level security;

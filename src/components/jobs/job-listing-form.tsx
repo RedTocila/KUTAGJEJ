@@ -29,6 +29,13 @@ import {
   ListingFormSection,
   ListingTextField,
 } from '@/components/user/listing-form-ui';
+import {
+  activateOkazionAfterCreate,
+  OkazionBoostUpsell,
+  OkazionPostActions,
+  type OkazionBoostMode,
+  type OkazionPayMode,
+} from '@/components/user/okazion-boost-upsell';
 import { JobFormStringList } from '@/components/jobs/job-form-string-list';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
@@ -37,6 +44,7 @@ import { useUser } from '@/hooks/use-user';
 import { createJobListing, updateJobListing, type JobMineListing } from '@/lib/listings-client';
 import { contactPhoneFromStorage, resolveContactPhone } from '@/lib/listing-form-defaults';
 import { uploadListingImages } from '@/lib/uploads-client';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const MAX_JOB_IMAGES = 5;
 
@@ -198,11 +206,17 @@ export function JobListingForm({
   initialListing,
 }: JobListingFormProps) {
   const isEdit = Boolean(editListingId);
-  const { user } = useUser();
+  const { user, checkSession } = useUser();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const wantsOkazion = searchParams.get('okazion') === '1';
 
   const [form, setForm] = React.useState<JobFormState>(() =>
     initialListing ? formFromListing(initialListing) : { ...emptyForm(), contactPhone: contactPhoneFromStorage() },
   );
+  const [okazionMode, setOkazionMode] = React.useState<OkazionBoostMode>(wantsOkazion ? 'buy-card' : 'off');
+  const okazionPayRef = React.useRef<OkazionPayMode>('buy-card');
+  const formRef = React.useRef<HTMLFormElement | null>(null);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [images, setImages] = React.useState<File[]>([]);
   const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(
@@ -303,6 +317,21 @@ export function JobListingForm({
         setSubmitError(result.error);
         return;
       }
+      if (!isEdit && result.id && (wantsOkazion || okazionMode !== 'off')) {
+        const boost = await activateOkazionAfterCreate({
+          mode: wantsOkazion ? okazionPayRef.current : okazionMode,
+          kind: 'job',
+          listingId: result.id,
+        });
+        if (boost.redirectToCheckout) {
+          router.push(boost.redirectToCheckout);
+          return;
+        }
+        if (!boost.ok && boost.message) {
+          setSubmitError(boost.message);
+        }
+        void checkSession();
+      }
       onSuccess?.();
     } finally {
       setSubmitting(false);
@@ -314,7 +343,12 @@ export function JobListingForm({
   // -------------------------------------------------------------------------
 
   return (
-    <Stack component="form" spacing={2.25} onSubmit={(e) => void handleSubmit(e)}>
+    <Stack
+      ref={formRef}
+      component="form"
+      spacing={2.25}
+      onSubmit={(e) => void handleSubmit(e)}
+    >
       {submitError ? (
         <Alert severity="error" sx={{ borderRadius: 2 }}>
           {submitError}
@@ -518,12 +552,27 @@ export function JobListingForm({
         />
       </ListingFormSection>
 
-      <ListingFormActions
-        submitLabel={isEdit ? 'Përditëso njoftimin' : 'Ruaj njoftimin'}
-        submitting={submitting}
-        backHref={backHref}
-        backLabel={backLabel}
-      />
+      {!isEdit && !wantsOkazion ? (
+        <OkazionBoostUpsell value={okazionMode} onChange={setOkazionMode} />
+      ) : null}
+
+      {wantsOkazion && !isEdit ? (
+        <OkazionPostActions
+          submitting={submitting}
+          onPost={(mode) => {
+            okazionPayRef.current = mode;
+            setOkazionMode(mode);
+            formRef.current?.requestSubmit();
+          }}
+        />
+      ) : (
+        <ListingFormActions
+          submitLabel={isEdit ? 'Përditëso njoftimin' : 'Ruaj njoftimin'}
+          submitting={submitting}
+          backHref={backHref}
+          backLabel={backLabel}
+        />
+      )}
     </Stack>
   );
 }

@@ -94,6 +94,8 @@ async function confirmAndApplyPayment(paymentId, pokClient) {
       await grantAutoRefreshSlots(payment);
     } else if (payment.type === 'premium') {
       await grantPremiumVoucher(payment);
+    } else if (payment.type === 'okazion') {
+      await grantOkazionVouchers(payment);
     }
     payment.granted = true;
   }
@@ -156,6 +158,7 @@ async function grantSubscription(payment) {
       max_apartment_listings: Number(contract?.max_apartment_listings) || 0,
       max_product_listings: Number(contract?.max_product_listings) || 0,
       max_premium_listings: Number(contract?.max_premium_listings) || 0,
+      max_okazion_listings: Number(contract?.max_okazion_listings) || 0,
       starts_at: now.toISOString(),
       expires_at: expiresAt.toISOString(),
       status: 'active',
@@ -218,6 +221,37 @@ async function grantPremiumVoucher(payment) {
     throw err;
   }
   payment.metadata.premiumVoucherId = created.voucher.id;
+}
+
+async function grantOkazionVouchers(payment) {
+  const packageId = payment.metadata?.okazionPackageId;
+  if (!packageId || !payment.payerId) return;
+  const { createOkazionVoucher, clampQuantity } = require('./okazion-listing');
+  const qty = clampQuantity(payment.metadata?.okazionQuantity || 1);
+  const unitEur =
+    payment.metadata?.okazionUnitPriceEur != null
+      ? Number(payment.metadata.okazionUnitPriceEur)
+      : Number(payment.amount) / qty;
+  const voucherIds = [];
+  for (let i = 0; i < qty; i += 1) {
+    const created = await createOkazionVoucher({
+      userId: payment.payerId,
+      packageId: String(packageId),
+      source: 'card',
+      paymentId: payment.id,
+      priceEur: unitEur,
+      priceBc: Number(payment.metadata?.okazionPriceBc) || null,
+    });
+    if (!created.ok) {
+      const err = new Error(created.message || 'Nuk u krijua voucher OKAZION.');
+      err.statusCode = created.status || 400;
+      throw err;
+    }
+    voucherIds.push(created.voucher.id);
+  }
+  payment.metadata.okazionVoucherId = voucherIds[0] || null;
+  payment.metadata.okazionVoucherIds = voucherIds;
+  payment.metadata.okazionQuantity = qty;
 }
 
 async function addBoostCredits(userId, amount) {

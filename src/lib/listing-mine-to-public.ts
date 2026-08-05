@@ -139,6 +139,7 @@ export function carMineToPublic(mine: CarMineListing): PublicCarListingDetail {
     kind: 'car',
     title,
     description: mine.description ?? '',
+    vehicleType: mine.vehicleType || 'car',
     make: mine.make,
     model: mine.model,
     variant: mine.variant,

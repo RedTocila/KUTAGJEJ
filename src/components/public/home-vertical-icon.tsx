@@ -5,11 +5,12 @@ import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Build
 import { CarProfile as CarProfileIcon } from '@phosphor-icons/react/dist/ssr/CarProfile';
 import { ForkKnife as ForkKnifeIcon } from '@phosphor-icons/react/dist/ssr/ForkKnife';
 import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
+import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import type { IconWeight } from '@phosphor-icons/react';
 
-import { AI_SEARCH_BLUE, type SearchCategoryId } from '@/lib/home-categories';
+import { AI_SEARCH_BLUE, OKAZION_RED, type SearchCategoryId } from '@/lib/home-categories';
 
 export interface HomeVerticalIconProps {
   verticalId: SearchCategoryId;
@@ -27,7 +28,11 @@ export function HomeVerticalIcon({
 }: HomeVerticalIconProps) {
   const resolvedColor =
     color ??
-    (verticalId === 'ai' ? AI_SEARCH_BLUE : 'var(--mui-palette-primary-main)');
+    (verticalId === 'ai'
+      ? AI_SEARCH_BLUE
+      : verticalId === 'okazion'
+        ? OKAZION_RED
+        : 'var(--mui-palette-primary-main)');
   const shared = {
     weight,
     size,
@@ -38,6 +43,8 @@ export function HomeVerticalIcon({
   switch (verticalId) {
     case 'ai':
       return <SparkleIcon {...shared} />;
+    case 'okazion':
+      return <SealPercentIcon {...shared} />;
     case 'real-estate':
       return <BuildingsIcon {...shared} />;
     case 'cars':

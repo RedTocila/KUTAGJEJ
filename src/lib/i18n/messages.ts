@@ -13,6 +13,11 @@ const verticalsSq: Record<SearchCategoryId, VerticalCopy> = {
     tagline: 'Pyet si ChatGPT — gjej njoftime me gjuhë natyrore',
     searchPlaceholder: 'P.sh. apartament me qira në Tiranë deri 500€…',
   },
+  okazion: {
+    label: 'OKAZION',
+    tagline: 'Oferta të shpejta — 5 ditë nga të gjitha kategoritë',
+    searchPlaceholder: 'Kërko oferta OKAZION…',
+  },
   'real-estate': {
     label: 'Prona',
     tagline: 'Apartamente, vila, ambiente biznesi dhe toka',
@@ -50,6 +55,11 @@ const verticalsEn: Record<SearchCategoryId, VerticalCopy> = {
     label: 'AI Search',
     tagline: 'Ask like ChatGPT — find listings in natural language',
     searchPlaceholder: 'E.g. apartment for rent in Tirana under €500…',
+  },
+  okazion: {
+    label: 'OKAZION',
+    tagline: 'Flash deals — 5 days across all categories',
+    searchPlaceholder: 'Search OKAZION deals…',
   },
   'real-estate': {
     label: 'Property',
@@ -227,6 +237,9 @@ const sq = {
   },
   picker: {
     title: 'Shto njoftim',
+    okazionTitle: 'OKAZION — zgjidh kategorinë',
+    okazion: 'OKAZION',
+    okazionHint: '5 ditë · 5€ ose 100 BC · prona, makina, pune, tregu',
     aiImport: 'AI Build',
     aiImportHint: 'Ngjit linke faqesh ose Instagram — AI ndërton njoftimet',
     realEstate: 'Pasuri të paluajtshme',
@@ -245,7 +258,7 @@ const sq = {
   aiImport: {
     title: 'AI Build',
     subtitle:
-      'Zgjidh kategorinë, pastaj ngjit deri në 20 linke (Instagram, faqe, etj.). AI ndërton draftet.',
+      'Zgjidh kategorinë e saktë, pastaj ngjit deri në 20 linke (Instagram, faqe, etj.). AI ndërton draftet — dhe bllokon kategoritë e gabuara ose përmbajtjen e ndaluar.',
     chooseCategory: 'Zgjidh kategorinë',
     chooseCategoryToContinue: 'Zgjidh një kategori për të vazhduar',
     categoryRequired: 'Zgjidh kategorinë e njoftimit përpara analizës.',
@@ -263,24 +276,39 @@ const sq = {
         : `U postuan ${ok} njoftime.`,
     draftsKeptHint: 'Ruhen këtu — i gjen përsëri pasi të kthehesh nga formulari.',
     placeholder:
-      'https://example.com/apartament\nhttps://www.instagram.com/p/...\nhttps://www.amazon.com/...',
+      'Përshkruaj, ngjit linke (deri në 20) ose bashkëngjit foto — AI ndërton njoftimet…\nhttps://example.com/apartament\nhttps://www.instagram.com/p/...',
     analyze: 'Analizo me AI',
     analyzing: 'Duke analizuar…',
     results: 'Draftet e gatshme',
     failed: 'Importi dështoi. Provoni përsëri.',
     empty: 'Shkruani një përshkrim, ngjitni një link, ose bashkëngjitni foto.',
     formTitle: 'Plotëso me AI',
-    formHint: 'Përshkruaj çfarë do, ngjit link, ose bashkëngjit foto — AI mbush formularin',
-    formPlaceholder: 'Plotëso me AI',
+    formHint:
+      'Bashkëngjit foto — AI i njeh produktin — dhe shto detaje (çmim, gjendje, qytet). AI i bashkon në titull e përshkrim.',
+    formPlaceholder: 'p.sh. përdorur një herë, 5000 LEK, Tiranë…',
     formApplied: 'Formulari u mbush me AI. Kontrollo dhe publiko.',
     formEmpty: 'Nuk u gjet draft i vlefshëm.',
     formWrongCategory: 'Ky rezultat duket për një kategori tjetër. Provoni përsëri me më shumë detaje.',
+    categoryMismatch: (detectedLabel: string) =>
+      `U refuzua: zgjodhët kategorinë e gabuar. Ky njoftim i përket «${detectedLabel}».`,
+    categoryMismatchGeneric:
+      'U refuzua: zgjodhët kategorinë e gabuar. Ky përmbajtje nuk i përket kategorisë së zgjedhur.',
+    categoryMismatchHint: 'Ndrysho kategorinë këtu pa humbur draftin, ose fillo nga e para.',
+    contentRestricted:
+      'Ky njoftim u bllokua sepse duket se përmban përmbajtje të ndaluar (p.sh. lakuriqësi, lojëra fati, droga, armë ose aktivitete të paligjshme).',
+    contentRestrictedHint:
+      'Nuk mund të publikohen njoftime me përmbajtje të ndaluar. Fillo nga e para me një ofertë të lejuar.',
+    switchToCategory: (label: string) => `Vazhdo te «${label}»`,
+    changeCategoryKeepDraft: 'Ndrysho kategorinë',
+    startOver: 'Fillo nga e para',
+    switchingCategory: 'Duke ndërruar kategorinë…',
+    categorySwitched: (label: string) => `Kategoria u ndryshua në «${label}». Drafti u ruajt.`,
     editTitle: 'Ndrysho me AI',
-    editHint: 'Shpjego çfarë të ndryshohet — mund të bashkëngjitësh edhe foto të reja',
-    editPlaceholder: 'Ndrysho me AI',
+    editHint: 'Shpjego çfarë të ndryshohet — mund të bashkëngjitësh edhe foto të reja që AI t’i lexojë',
+    editPlaceholder: 'p.sh. ndrysho çmimin, shto që është si i ri…',
     editApplied: 'Ndryshimet u aplikuan. Kontrollo dhe ruaj.',
     attachImages: 'Bashkëngjit foto',
-    attachHint: 'Cover, profil, punë / galeri — shkruaj në tekst se çfarë është secila',
+    attachHint: 'AI lexon fotot për të njohur produktin; shkruaj në tekst detaje shtesë',
     removeImage: 'Hiq',
   },
   language: {
@@ -460,6 +488,9 @@ const en: AppMessages = {
   },
   picker: {
     title: 'Add listing',
+    okazionTitle: 'OKAZION — choose a category',
+    okazion: 'OKAZION',
+    okazionHint: '5 days · €5 or 100 BC · properties, cars, jobs, marketplace',
     aiImport: 'AI Build',
     aiImportHint: 'Paste website or Instagram links — AI builds the listings',
     realEstate: 'Real estate',
@@ -478,7 +509,7 @@ const en: AppMessages = {
   aiImport: {
     title: 'AI Build',
     subtitle:
-      'Choose the category, then paste up to 20 links (Instagram, website, etc.). AI builds the drafts.',
+      'Choose the correct category, then paste up to 20 links (Instagram, website, etc.). AI builds drafts — and blocks wrong categories or prohibited content.',
     chooseCategory: 'Choose a category',
     chooseCategoryToContinue: 'Choose a category to continue',
     categoryRequired: 'Choose the listing category before analyzing.',
@@ -496,24 +527,39 @@ const en: AppMessages = {
         : `Posted ${ok} listings.`,
     draftsKeptHint: 'Saved here — you’ll find them again after you return from the form.',
     placeholder:
-      'https://example.com/apartment\nhttps://www.instagram.com/p/...\nhttps://www.amazon.com/...',
+      'Describe, paste links (up to 20), or attach photos — AI builds the listings…\nhttps://example.com/apartment\nhttps://www.instagram.com/p/...',
     analyze: 'Analyze with AI',
     analyzing: 'Analyzing…',
     results: 'Ready drafts',
     failed: 'Import failed. Please try again.',
     empty: 'Write a description, paste a link, or attach photos.',
     formTitle: 'Fill with AI',
-    formHint: 'Describe what you want, paste a link, or attach photos — AI fills the form',
-    formPlaceholder: 'Fill with AI',
+    formHint:
+      'Attach photos — AI identifies the product — and add extras (price, condition, city). AI merges them into title and description.',
+    formPlaceholder: 'e.g. used once, 5000 LEK, Tirana…',
     formApplied: 'Form filled with AI. Review and publish.',
     formEmpty: 'No valid draft found.',
     formWrongCategory: 'This result looks like another category. Try again with more detail.',
+    categoryMismatch: (detectedLabel: string) =>
+      `Rejected: you chose the wrong category. This listing belongs in “${detectedLabel}”.`,
+    categoryMismatchGeneric:
+      'Rejected: you chose the wrong category. This content does not match the selected category.',
+    categoryMismatchHint: 'Switch category here without losing the draft, or start over.',
+    contentRestricted:
+      'This listing was blocked because it appears to contain prohibited content (e.g. nudity, gambling, drugs, weapons, or other illegal activity).',
+    contentRestrictedHint:
+      'Listings with prohibited content cannot be published. Start over with an allowed offer.',
+    switchToCategory: (label: string) => `Continue in “${label}”`,
+    changeCategoryKeepDraft: 'Change category',
+    startOver: 'Start over',
+    switchingCategory: 'Switching category…',
+    categorySwitched: (label: string) => `Category changed to “${label}”. Draft kept.`,
     editTitle: 'Edit with AI',
-    editHint: 'Explain what to change — you can also attach new photos',
-    editPlaceholder: 'Edit with AI',
+    editHint: 'Explain what to change — you can also attach new photos for AI to read',
+    editPlaceholder: 'e.g. change price, note that it’s like new…',
     editApplied: 'Changes applied. Review and save.',
     attachImages: 'Attach photos',
-    attachHint: 'Cover, profile, work / gallery — say in the text what each photo is',
+    attachHint: 'AI reads photos to identify the product; add extra details in the text',
     removeImage: 'Remove',
   },
   language: {

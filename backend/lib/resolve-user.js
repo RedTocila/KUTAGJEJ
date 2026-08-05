@@ -1,7 +1,7 @@
 'use strict';
 
 const { getSupabaseAdmin } = require('./supabase');
-const { getProfileById, getProfileByEmail, mapProfile } = require('./profiles');
+const { getProfileById, getProfileByEmail, mapProfile, ensureProfileForAuthUser } = require('./profiles');
 const { profileUpdateFromCamel } = require('./profile');
 
 /**
@@ -12,7 +12,9 @@ async function resolveUserFromAccessToken(token) {
   const admin = getSupabaseAdmin();
   const { data: authData, error: authError } = await admin.auth.getUser(token);
   if (authError || !authData?.user?.id) return null;
-  return getProfileById(authData.user.id);
+  const profile = await getProfileById(authData.user.id);
+  if (profile) return profile;
+  return ensureProfileForAuthUser(authData.user);
 }
 
 function isUserInactive(user) {

@@ -92,6 +92,7 @@ router.post('/businesses', authMiddleware, requirePortalUser, async (req, res) =
       reservation_time_slots: v.reservationTimeSlots,
       reservation_party_sizes: v.reservationPartySizes,
       services_highlight: v.servicesHighlight,
+      status: 'approved',
     };
 
     const { data: created, error: insErr } = await sb.from('directory_listings').insert(row).select('*').single();
@@ -101,7 +102,7 @@ router.post('/businesses', authMiddleware, requirePortalUser, async (req, res) =
     await notifyAdminsListingSubmitted('businesses', doc.id, doc.title);
 
     res.status(201).json({
-      message: 'Njoftimi u dërgua për aprovim..',
+      message: 'Njoftimi u publikua me sukses.',
       listing: { id: String(doc.id), title: doc.title, status: doc.status, createdAt: doc.createdAt },
     });
   } catch (err) {

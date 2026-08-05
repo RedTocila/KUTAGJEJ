@@ -1,3 +1,5 @@
+import type { Theme } from '@mui/material/styles';
+
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 
 /** Bordered paper panel — portal cards, listing detail sections, dialogs. */
@@ -33,24 +35,27 @@ export const productButtonSx = {
   '&:hover': { boxShadow: 'none' },
 };
 
-/** Dialog paper surface — immersive black panel. */
-export const productDialogPaperSx = {
+/** Dialog paper — follows light/dark color scheme. */
+export const productDialogPaperSx = (theme: Theme) => ({
   borderRadius: 3,
   border: '1px solid',
-  borderColor: 'rgba(255, 255, 255, 0.1)',
-  bgcolor: '#0c0c0c',
+  borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'divider',
+  bgcolor: theme.palette.mode === 'dark' ? '#0c0c0c' : 'background.paper',
   backgroundImage: 'none',
-  color: '#fff',
+  color: 'text.primary',
   overflow: 'hidden',
   mx: 2,
-  boxShadow: '0 24px 80px rgba(0, 0, 0, 0.55)',
-} as const;
+  boxShadow:
+    theme.palette.mode === 'dark'
+      ? '0 24px 80px rgba(0, 0, 0, 0.55)'
+      : '0 20px 56px rgba(15, 23, 10, 0.16)',
+});
 
-const productDialogBackdropSx = {
-  bgcolor: 'rgba(0, 0, 0, 0.72)',
+const productDialogBackdropSx = (theme: Theme) => ({
+  bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.72)' : 'rgba(15, 23, 10, 0.42)',
   backdropFilter: 'blur(16px)',
   WebkitBackdropFilter: 'blur(16px)',
-} as const;
+});
 
 /** Shared Dialog `slotProps` for product modals. */
 export const productDialogSlotProps = {
@@ -72,21 +77,23 @@ export const productDialogTitleSx = {
   fontWeight: 800,
   fontSize: '1.125rem',
   letterSpacing: '-0.01em',
+  color: 'text.primary',
 } as const;
 
 export const productDialogCloseButtonSx = {
   position: 'absolute',
   right: 12,
   top: 12,
-  color: 'rgba(255, 255, 255, 0.55)',
+  color: 'text.secondary',
   borderRadius: 2,
-  '&:hover': { color: '#fff', bgcolor: 'rgba(255, 255, 255, 0.08)' },
+  '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
 } as const;
 
 export const productDialogContentSx = {
   px: 2.5,
   pb: 1.5,
   pt: '8px !important',
+  color: 'text.primary',
 } as const;
 
 export const productDialogActionsSx = {

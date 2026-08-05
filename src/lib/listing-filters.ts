@@ -1,5 +1,13 @@
 import type { HomeVerticalId } from '@/lib/home-categories';
-import { CAR_MAKES, FUEL_TYPE_OPTIONS, TRANSMISSION_OPTIONS } from '@/lib/car-constants';
+import {
+  CAR_MAKES,
+  FUEL_TYPE_OPTIONS,
+  TRANSMISSION_OPTIONS,
+  VEHICLE_TYPES,
+  makesForVehicleType,
+  modelsForMake,
+  type VehicleType,
+} from '@/lib/car-constants';
 import {
   JOB_EDUCATION_OPTIONS,
   JOB_EXPERIENCE_OPTIONS,
@@ -26,8 +34,10 @@ export interface BrowseRealEstateFilters {
 }
 
 export interface BrowseCarFilters {
+  type?: string;
   fuel?: string;
   make?: string;
+  model?: string;
   transmission?: string;
   city?: string;
   minPrice?: string;
@@ -67,12 +77,19 @@ export interface BrowseDirectoryFilters {
   sort?: BrowseSort;
 }
 
+export interface BrowseOkazionFilters {
+  /** Main category vertical (`cars`, `real-estate`, …). */
+  kind?: HomeVerticalId;
+  q?: string;
+}
+
 export type BrowseFilters =
   | BrowseRealEstateFilters
   | BrowseCarFilters
   | BrowseJobFilters
   | BrowseMarketplaceFilters
-  | BrowseDirectoryFilters;
+  | BrowseDirectoryFilters
+  | BrowseOkazionFilters;
 
 export const BROWSE_PAGE_SIZE = 24;
 
@@ -155,6 +172,20 @@ export function parseBrowsePage(searchParams: SearchParamsInput): number {
   return Number.isFinite(n) && n > 0 ? n : 1;
 }
 
+const OKAZION_KIND_VALUES = new Set<HomeVerticalId>([
+  'real-estate',
+  'cars',
+  'jobs',
+  'marketplace',
+]);
+
+export function parseOkazionBrowseParams(searchParams: SearchParamsInput): BrowseOkazionFilters {
+  const rawKind = firstParam(searchParams.kind).trim() as HomeVerticalId;
+  const kind = OKAZION_KIND_VALUES.has(rawKind) ? rawKind : undefined;
+  const q = firstParam(searchParams.q).trim() || undefined;
+  return { kind, q };
+}
+
 export function parseBrowseSearchParams(
   verticalId: HomeVerticalId,
   searchParams: SearchParamsInput,
@@ -181,8 +212,10 @@ export function parseBrowseSearchParams(
     }
     case 'cars':
       return {
+        type: firstParam(searchParams.type).trim() || undefined,
         fuel: firstParam(searchParams.fuel).trim() || undefined,
         make: firstParam(searchParams.make).trim() || undefined,
+        model: firstParam(searchParams.model).trim() || undefined,
         transmission: firstParam(searchParams.transmission).trim() || undefined,
         city,
         minPrice: firstParam(searchParams.minPrice).trim() || undefined,
@@ -324,9 +357,15 @@ export function getActiveFilterChips(
     }
     case 'cars': {
       const f = filters as BrowseCarFilters;
+      const type = findLabel(
+        VEHICLE_TYPES.map((t) => ({ value: t.value, label: t.label })),
+        f.type,
+      );
+      if (type) push('type', type);
       const fuel = findLabel(FUEL_TYPE_OPTIONS, f.fuel);
       if (fuel) push('fuel', fuel);
       if (f.make) push('make', f.make);
+      if (f.model) push('model', f.model);
       const transmission = findLabel(TRANSMISSION_OPTIONS, f.transmission);
       if (transmission) push('transmission', transmission);
       if (f.minPrice) push('minPrice', `Min ${f.minPrice}`);
@@ -391,6 +430,11 @@ export function removeBrowseFilterKey(filters: BrowseFilters, key: string): Brow
   }
   delete next[key];
   if (key === 'city') delete next.zone;
+  if (key === 'type') {
+    delete next.make;
+    delete next.model;
+  }
+  if (key === 'make') delete next.model;
   return next as BrowseFilters;
 }
 
@@ -404,8 +448,13 @@ export function getFilterFieldConfig(verticalId: HomeVerticalId) {
       };
     case 'cars':
       return {
+        vehicleTypes: VEHICLE_TYPES.map((t) => ({ value: t.value, label: t.label })),
         fuelTypes: FUEL_TYPE_OPTIONS,
         makes: CAR_MAKES.map((m) => ({ value: m, label: m })),
+        makesForType: (vehicleType: string) =>
+          makesForVehicleType(vehicleType as VehicleType).map((m) => ({ value: m, label: m })),
+        modelsForTypeMake: (vehicleType: string, make: string) =>
+          modelsForMake(vehicleType as VehicleType | '', make).map((m) => ({ value: m, label: m })),
         transmissions: TRANSMISSION_OPTIONS,
         sortOptions: BROWSE_SORT_OPTIONS,
       };

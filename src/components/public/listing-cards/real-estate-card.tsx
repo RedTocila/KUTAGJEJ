@@ -90,7 +90,7 @@ export function RealEstateCard({
       }}
       aria-labelledby={`listing-card-title-${listing.id}`}
     >
-      <CardShell premium={Boolean(listing.isPremium)}>
+      <CardShell premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
         <CardMedia
           listingKind="real-estate"
           listingId={listing.id}
@@ -102,6 +102,8 @@ export function RealEstateCard({
           saveCount={listing.saveCount}
           saved={listing.saved}
           premium={Boolean(listing.isPremium)}
+        okazion={Boolean(listing.isOkazion)}
+        okazionUntil={listing.okazionUntil}
           sharePayload={{
             title: listing.title,
             category: propertyCategoryLabel(listing.propertyCategory),

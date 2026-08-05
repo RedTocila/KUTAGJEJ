@@ -30,4 +30,6 @@ export interface RealEstateMineListing extends ListingMetrics {
   updatedAt: string;
   isPremium?: boolean;
   premiumUntil?: string | null;
+  isOkazion?: boolean;
+  okazionUntil?: string | null;
 }

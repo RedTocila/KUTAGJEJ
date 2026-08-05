@@ -115,7 +115,7 @@ export const colorSchemes = {
         light: iAgentGold[400],
         main: iAgentGold[600],
         dark: iAgentGold[900],
-        contrastText: 'var(--mui-palette-common-black)',
+        contrastText: 'var(--mui-palette-common-white)',
       },
       secondary: {
         ...neonBlue,

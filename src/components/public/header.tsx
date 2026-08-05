@@ -85,7 +85,7 @@ export function PublicHeader() {
             {/* Logo */}
             <MuiLink component={NextLink} href="/" underline="none" sx={{ display: 'inline-flex' }}>
               <BrandLogo
-                height={40}
+                height={32}
                 showWordmark
                 wordmarkPresentation="plain"
                 wordmarkSx={{
@@ -214,7 +214,7 @@ export function PublicHeader() {
           {/* Logo */}
           <Box sx={{ mb: 4, px: 1 }}>
             <BrandLogo
-              height={36}
+              height={28}
               showWordmark
               wordmarkPresentation="plain"
               wordmarkSx={{

@@ -11,6 +11,7 @@ const {
   applyFilterSpec,
   applySort,
   buildSort,
+  buildIlikeOrFilter,
   mergeSpecs,
   isUuid,
   prioritizeActivePremium,
@@ -41,7 +42,10 @@ function baseFilterForKind(kind) {
 }
 
 function sortLooksPremium(sortSpec) {
-  return Array.isArray(sortSpec) && sortSpec.some((s) => s.column === 'premium_until');
+  return (
+    Array.isArray(sortSpec) &&
+    sortSpec.some((s) => s.column === 'premium_until' || s.column === 'okazion_until')
+  );
 }
 
 async function runListingQuery(table, filterSpec, sortSpec, limit, skip = 0) {
@@ -56,7 +60,11 @@ async function runListingQuery(table, filterSpec, sortSpec, limit, skip = 0) {
   };
 
   let { data, error } = await run(effectiveSort);
-  if (error && sortLooksPremium(effectiveSort) && /premium_until/i.test(String(error.message || ''))) {
+  if (
+    error &&
+    sortLooksPremium(effectiveSort) &&
+    /(premium_until|okazion_until)/i.test(String(error.message || ''))
+  ) {
     ({ data, error } = await run(withoutPremiumSort(effectiveSort)));
   }
   if (error) throw error;
@@ -260,6 +268,107 @@ async function latestDirectory(vertical, limit) {
   return queryDirectory(vertical, limit);
 }
 
+/**
+ * Active OKAZION deals across all verticals (okazion_until in the future).
+ * Optional filters: `kind` (home vertical id) and free-text `q`.
+ */
+async function queryOkazionListings(limit = 48, skip = 0, query = {}) {
+  const take = Math.max(limit + skip, limit);
+  const nowIso = new Date().toISOString();
+  const okazionFilter = { gt: { okazion_until: nowIso } };
+  const sortSpec = [
+    { column: 'okazion_until', ascending: false, nullsFirst: false },
+    { column: 'created_at', ascending: false },
+  ];
+
+  const VERTICAL_TO_KIND = {
+    'real-estate': 'real-estate',
+    cars: 'car',
+    jobs: 'job',
+    marketplace: 'marketplace',
+  };
+
+  const SEARCH_FIELDS_BY_KIND = {
+    'real-estate': ['title', 'description'],
+    car: ['description', 'make', 'model', 'variant'],
+    job: ['title', 'description'],
+    marketplace: ['title', 'description'],
+  };
+
+  const allKinds = [
+    { kind: 'real-estate', table: 'real_estate_listings', base: {} },
+    { kind: 'car', table: 'car_listings', base: {} },
+    { kind: 'job', table: 'job_listings', base: activeJobCreatedAtFilter() },
+    { kind: 'marketplace', table: 'marketplace_listings', base: {} },
+  ];
+
+  const rawKind = String(query.kind ?? '').trim().toLowerCase();
+  const selectedKind = VERTICAL_TO_KIND[rawKind] || null;
+  const kinds = selectedKind ? allKinds.filter((k) => k.kind === selectedKind) : allKinds;
+
+  const q = String(query.q ?? '').trim();
+
+  const batches = await Promise.all(
+    kinds.map(async ({ kind, table, base }) => {
+      try {
+        let filter = mergeSpecs(base, okazionFilter);
+        if (q.length >= 2) {
+          const fields = SEARCH_FIELDS_BY_KIND[kind] || ['title', 'description'];
+          const or = buildIlikeOrFilter(fields, q);
+          if (or) filter = mergeSpecs(filter, { or });
+        }
+        const docs = await runListingQuery(
+          table,
+          mergePublicFilter(filter),
+          sortSpec,
+          take,
+          0,
+        );
+        return docs.map((d) => ({ kind, doc: d }));
+      } catch (err) {
+        if (/okazion_until/i.test(String(err.message || ''))) return [];
+        throw err;
+      }
+    }),
+  );
+
+  const merged = batches
+    .flat()
+    .sort((a, b) => {
+      const aUntil = new Date(a.doc.okazionUntil || a.doc.okazion_until || 0).getTime();
+      const bUntil = new Date(b.doc.okazionUntil || b.doc.okazion_until || 0).getTime();
+      if (bUntil !== aUntil) return bUntil - aUntil;
+      const aCreated = new Date(a.doc.createdAt || a.doc.created_at || 0).getTime();
+      const bCreated = new Date(b.doc.createdAt || b.doc.created_at || 0).getTime();
+      return bCreated - aCreated;
+    });
+
+  const total = merged.length;
+  const pageDocs = merged.slice(skip, skip + limit);
+  const byKind = new Map();
+  for (const row of pageDocs) {
+    if (!byKind.has(row.kind)) byKind.set(row.kind, []);
+    byKind.get(row.kind).push(row.doc);
+  }
+
+  const formattedById = new Map();
+  await Promise.all(
+    [...byKind.entries()].map(async ([kind, docs]) => {
+      const formatted = await formatDocsForKind(kind, docs);
+      formatted.forEach((listing, idx) => {
+        const id = String(docs[idx]?.id || listing.id);
+        formattedById.set(`${kind}:${id}`, listing);
+      });
+    }),
+  );
+
+  const listings = pageDocs
+    .map(({ kind, doc }) => formattedById.get(`${kind}:${String(doc.id)}`))
+    .filter(Boolean);
+
+  return { listings, total };
+}
+
 async function attachDetailMetrics(req, listing) {
   const saver = saverFromUser(req.user);
   const map = await fetchMetricsMap([{ kind: listing.kind, listingId: listing.id }], saver);
@@ -284,5 +393,6 @@ module.exports = {
   latestMarketplace,
   latestDirectory,
   topViewedByKind,
+  queryOkazionListings,
   attachDetailMetrics,
 };

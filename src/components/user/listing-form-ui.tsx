@@ -12,9 +12,11 @@ import {
   type Theme,
   type TextFieldProps,
 } from '@mui/material';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { PortalIconBox } from '@/components/user/portal-cards';
 import { hardNavigate } from '@/lib/hard-navigate';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 
 /** Shared outlined field chrome — matches `SearchableSelect`. */
@@ -171,3 +173,107 @@ export function ListingFormActions({
     </Stack>
   );
 }
+
+/** Two-/few-option segmented toggle (currency, transmission, etc.). */
+export function ListingToggle({
+  label,
+  value,
+  onChange,
+  options,
+  required,
+  error,
+  helperText,
+  fullWidth = true,
+}: {
+  label?: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: ReadonlyArray<{ value: string; label: string; Icon?: PhosphorIcon }>;
+  required?: boolean;
+  error?: boolean;
+  helperText?: string;
+  fullWidth?: boolean;
+}) {
+  return (
+    <Box sx={{ width: fullWidth ? '100%' : 'auto', minWidth: fullWidth ? undefined : 160 }}>
+      {label ? (
+        <Typography
+          component="label"
+          variant="caption"
+          sx={{
+            display: 'block',
+            mb: 0.75,
+            fontWeight: 600,
+            fontSize: '0.875rem',
+            color: error ? 'error.main' : 'text.secondary',
+          }}
+        >
+          {label}
+          {required ? ' *' : ''}
+        </Typography>
+      ) : null}
+      <Box
+        role="radiogroup"
+        aria-label={label}
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${options.length}, 1fr)`,
+          gap: 0.5,
+          p: 0.5,
+          borderRadius: 2.5,
+          border: '1.5px solid',
+          borderColor: error ? 'error.main' : value ? 'primary.main' : 'divider',
+          bgcolor: value ? primaryMainAlpha(0.06) : 'background.paper',
+          boxShadow: value ? `inset 0 0 0 1px ${primaryMainAlpha(0.1)}` : 'none',
+          transition: 'border-color 0.15s, background-color 0.15s, box-shadow 0.15s',
+        }}
+      >
+        {options.map((opt) => {
+          const active = value === opt.value;
+          const Icon = opt.Icon;
+          return (
+            <Box
+              key={opt.value}
+              component="button"
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => onChange(opt.value)}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 0.65,
+                minHeight: 42,
+                px: 1.25,
+                borderRadius: 2,
+                border: 'none',
+                bgcolor: active ? 'primary.main' : 'transparent',
+                color: active ? 'primary.contrastText' : 'text.secondary',
+                fontWeight: 800,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'background-color 0.15s, color 0.15s, box-shadow 0.15s',
+                boxShadow: active ? `0 3px 12px ${primaryMainAlpha(0.35)}` : 'none',
+                '&:hover': {
+                  bgcolor: active ? 'primary.main' : primaryMainAlpha(0.1),
+                  color: active ? 'primary.contrastText' : 'text.primary',
+                },
+              }}
+            >
+              {Icon ? <Icon size={16} weight={active ? 'fill' : 'duotone'} /> : null}
+              {opt.label}
+            </Box>
+          );
+        })}
+      </Box>
+      {helperText ? (
+        <Typography variant="caption" color={error ? 'error' : 'text.secondary'} sx={{ mt: 0.5, display: 'block' }}>
+          {helperText}
+        </Typography>
+      ) : null}
+    </Box>
+  );
+}
+

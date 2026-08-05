@@ -18,6 +18,8 @@ import {
 } from './filter-primitives';
 import { FilterQuickPicks, getPrimaryFilterKey, getPrimaryFilterValue } from './filter-quick-picks';
 import { LocationSearchInput } from './location-search-input';
+import { VehicleTypePicker } from '@/components/cars/vehicle-type-picker';
+import type { VehicleType } from '@/lib/car-constants';
 import {
   CAR_KM_PRESETS,
   CAR_PRICE_PRESETS,
@@ -146,11 +148,33 @@ export function VerticalFilterSections({
     case 'cars': {
       const f = draft as import('@/lib/listing-filters').BrowseCarFilters;
       const cfg = config as ReturnType<typeof getFilterFieldConfig> & {
-        makes: { value: string; label: string }[];
+        fuelTypes: ReadonlyArray<{ value: string; label: string }>;
+        makesForType: (type: string) => { value: string; label: string }[];
+        modelsForTypeMake: (type: string, make: string) => { value: string; label: string }[];
       };
+      const makeOptions = f.type ? cfg.makesForType(f.type) : [];
+      const modelOptions = f.type && f.make ? cfg.modelsForTypeMake(f.type, f.make) : [];
       return (
         <Stack spacing={2}>
-          {quickPicks}
+          <Box
+            sx={{
+              p: 2,
+              mb: 0,
+              borderRadius: 3.5,
+              border: '1px solid',
+              borderColor: f.type ? 'primary.main' : 'divider',
+              bgcolor: f.type ? primaryMainAlpha(0.06) : 'background.paper',
+              boxShadow: f.type ? `inset 0 0 0 1px ${primaryMainAlpha(0.15)}` : 'none',
+            }}
+          >
+            <VehicleTypePicker
+              label="Lloji i mjetit"
+              value={(f.type as VehicleType) || ''}
+              allowClear
+              size="compact"
+              onChange={(v) => setField('type', v)}
+            />
+          </Box>
           {locationSection}
           <FilterSection title="Transmisioni" index={0}>
             <FilterSegmented
@@ -159,10 +183,37 @@ export function VerticalFilterSections({
               options={CAR_TRANSMISSION_VISUAL}
             />
           </FilterSection>
-          <FilterSection title="Makina" index={1}>
-            <FilterSelect label="Marka" value={f.make ?? ''} onChange={(v) => setField('make', v)} options={cfg.makes} />
+          <FilterSection title="Marka & modeli" index={1}>
+            <FilterSelect
+              label="Marka"
+              value={f.make ?? ''}
+              onChange={(v) => {
+                setField('make', v);
+                setField('model', '');
+              }}
+              options={makeOptions}
+              emptyLabel={f.type ? 'Të gjitha' : 'Zgjidh kategorinë fillimisht'}
+              disabled={!f.type}
+            />
+            <FilterSelect
+              label="Modeli"
+              value={f.model ?? ''}
+              onChange={(v) => setField('model', v)}
+              options={modelOptions}
+              emptyLabel={f.make ? 'Të gjitha' : 'Zgjidh markën fillimisht'}
+              disabled={!f.make}
+            />
           </FilterSection>
-          <FilterSection title="Çmimi" index={2}>
+          <FilterSection title="Karburanti" index={2}>
+            <FilterSelect
+              label="Karburanti"
+              value={f.fuel ?? ''}
+              onChange={(v) => setField('fuel', v)}
+              options={[...cfg.fuelTypes]}
+              gridSize={{ xs: 12 }}
+            />
+          </FilterSection>
+          <FilterSection title="Çmimi" index={3}>
             <FilterPresetChips
               value={f.maxPrice ?? ''}
               onChange={(v) => setField('maxPrice', v)}
@@ -176,7 +227,7 @@ export function VerticalFilterSections({
               onMaxChange={(v) => setField('maxPrice', v)}
             />
           </FilterSection>
-          <FilterSection title="Viti & kilometrazhi" index={3}>
+          <FilterSection title="Viti & kilometrazhi" index={4}>
             <FilterPresetChips
               value={f.minYear ?? ''}
               onChange={(v) => setField('minYear', v)}
@@ -188,9 +239,9 @@ export function VerticalFilterSections({
               presets={CAR_KM_PRESETS}
               suffix=" km"
             />
-            <FilterNumberField label="Viti min" value={f.minYear ?? ''} onChange={(v) => setField('minYear', v)} gridSize={{ xs: 6 }} />
-            <FilterNumberField label="Viti max" value={f.maxYear ?? ''} onChange={(v) => setField('maxYear', v)} gridSize={{ xs: 6 }} />
-            <FilterNumberField label="Kilometra max" value={f.maxKm ?? ''} onChange={(v) => setField('maxKm', v)} />
+            <FilterNumberField label="Viti min" value={f.minYear ?? ''} onChange={(v) => setField('minYear', v)} />
+            <FilterNumberField label="Viti max" value={f.maxYear ?? ''} onChange={(v) => setField('maxYear', v)} />
+            <FilterNumberField label="Km max" value={f.maxKm ?? ''} onChange={(v) => setField('maxKm', v)} />
           </FilterSection>
         </Stack>
       );

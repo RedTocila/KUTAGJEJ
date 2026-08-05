@@ -15,13 +15,16 @@ export function normalizeListingModerationStatus(
 
 export function listingModerationStatusMessage(status: ListingModerationStatus): string | null {
   if (status === 'pending') {
-    return 'Njoftimi juaj pret miratimin e administratorit përpara se të shfaqet publikisht.';
+    return 'Njoftimi juaj është në shqyrtim dhe nuk shfaqet ende publikisht.';
   }
   if (status === 'rejected') {
-    return 'Njoftimi u refuzua nga administratori. Kontaktoni mbështetjen për më shumë detaje.';
+    return 'Njoftimi u heq nga platforma nga administratori. Kontaktoni mbështetjen për më shumë detaje.';
   }
   return null;
 }
 
-export const LISTING_SUBMITTED_PENDING_MESSAGE =
-  'Njoftimi u dërgua me sukses dhe pret miratimin e administratorit. Do ta shihni këtu me statusin "Në pritje".';
+export const LISTING_SUBMITTED_LIVE_MESSAGE =
+  'Njoftimi u publikua me sukses dhe është aktiv tani.';
+
+/** @deprecated Use LISTING_SUBMITTED_LIVE_MESSAGE */
+export const LISTING_SUBMITTED_PENDING_MESSAGE = LISTING_SUBMITTED_LIVE_MESSAGE;

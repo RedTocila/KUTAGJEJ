@@ -45,7 +45,7 @@ export function MobileNav({ open, onClose }: { open?: boolean; onClose?: () => v
           }}
         >
           <BrandLogo
-            height={32}
+            height={26}
             showWordmark
             wordmarkPresentation="brand"
             wordmarkSx={{ fontSize: '1rem' }}

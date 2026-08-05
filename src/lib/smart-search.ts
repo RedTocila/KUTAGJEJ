@@ -1,5 +1,5 @@
 import { HOME_VERTICALS, type HomeVerticalId } from '@/lib/home-categories';
-import { CAR_MAKES, FUEL_TYPE_OPTIONS, TRANSMISSION_OPTIONS } from '@/lib/car-constants';
+import { ALL_VEHICLE_MAKES, FUEL_TYPE_OPTIONS, TRANSMISSION_OPTIONS, VEHICLE_TYPES } from '@/lib/car-constants';
 import {
   JOB_EDUCATION_OPTIONS,
   JOB_EXPERIENCE_OPTIONS,
@@ -208,7 +208,7 @@ function buildRules(): PhraseRule[] {
     sale: ['shitje', 'shitet', 'me shitje', 'blerje'],
   });
 
-  for (const make of CAR_MAKES) {
+  for (const make of ALL_VEHICLE_MAKES) {
     const aliases: string[] = [make];
     if (make === 'Mercedes-Benz') aliases.push('mercedes', 'merc', 'benz');
     if (make === 'Volkswagen') aliases.push('vw');
@@ -217,6 +217,15 @@ function buildRules(): PhraseRule[] {
       bag.cars.make = make;
     });
   }
+
+  addOptionRules(rules, 'cars', VEHICLE_TYPES.map((t) => ({ value: t.value, label: t.label })), 'type', 5, {
+    car: ['vetura', 'makina', 'makine', 'automjet'],
+    suv: ['suv', 'jeep'],
+    van: ['furgon', 'van'],
+    truck: ['kamion', 'truck'],
+    motorcycle: ['motor', 'motorr', 'motorcycle', 'moto'],
+    boat: ['varke', 'anije', 'boat'],
+  });
 
   addOptionRules(rules, 'cars', FUEL_TYPE_OPTIONS, 'fuel', 4, {
     petrol: ['benzine', 'benzin', 'gasoline'],

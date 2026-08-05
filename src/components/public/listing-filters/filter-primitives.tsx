@@ -110,6 +110,7 @@ export function FilterSelect({
   options,
   emptyLabel = 'Të gjitha',
   gridSize = { xs: 12 },
+  disabled = false,
 }: {
   label: string;
   value: string;
@@ -117,6 +118,7 @@ export function FilterSelect({
   options: readonly { value: string; label: string }[];
   emptyLabel?: string;
   gridSize?: { xs?: number; sm?: number; md?: number; lg?: number };
+  disabled?: boolean;
 }) {
   return (
     <Grid size={gridSize}>
@@ -126,6 +128,7 @@ export function FilterSelect({
         onChange={onChange}
         options={options}
         emptyLabel={emptyLabel}
+        disabled={disabled}
         sx={selectFieldSx}
       />
     </Grid>

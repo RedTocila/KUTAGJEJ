@@ -20,8 +20,8 @@ export type HomeVerticalId =
   | 'businesses'
   | 'professionals';
 
-/** Search tabs include AI (ChatGPT-style) plus listing verticals. */
-export type SearchCategoryId = 'ai' | HomeVerticalId;
+/** Search tabs include AI, OKAZION deals, plus listing verticals. */
+export type SearchCategoryId = 'ai' | 'okazion' | HomeVerticalId;
 
 export interface HomeVertical {
   id: HomeVerticalId;
@@ -46,9 +46,9 @@ export interface SearchCategory {
   label: string;
   tagline: string;
   gradient: readonly [string, string];
-  iconKey: HomeVertical['iconKey'] | 'sparkle';
+  iconKey: HomeVertical['iconKey'] | 'sparkle' | 'seal-percent';
   href: string;
-  /** Listing verticals have a post path; AI search does not. */
+  /** Listing verticals have a post path; AI / OKAZION search do not. */
   postHref?: string;
   searchPlaceholder: string;
 }
@@ -124,7 +124,7 @@ export const AI_SEARCH_BLUE_MUTED = 'rgba(255, 187, 31, 0.16)';
 /** Text color on solid AI amber buttons. */
 export const AI_SEARCH_BLUE_ON = '#000000';
 
-/** AI search tab — always first in hero / search category lists. */
+/** AI search tab — first on /kerko; omitted from home category pickers. */
 export const AI_SEARCH_CATEGORY: SearchCategory = {
   id: 'ai',
   label: 'AI Search',
@@ -135,9 +135,32 @@ export const AI_SEARCH_CATEGORY: SearchCategory = {
   searchPlaceholder: 'P.sh. apartament me qira në Tiranë deri 500€…',
 };
 
-/** Hero search tabs + /kerko categories: AI first, then listing verticals. */
+/** Short-lived OKAZION deals — brand crimson. */
+export const OKAZION_RED = '#F72F35';
+export const OKAZION_RED_DARK = '#D9262C';
+export const OKAZION_RED_SOFT = 'rgba(247, 47, 53, 0.18)';
+/** Text / icons on solid OKAZION red buttons. */
+export const OKAZION_RED_ON = '#ffffff';
+export const OKAZION_SEARCH_CATEGORY: SearchCategory = {
+  id: 'okazion',
+  label: 'OKAZION',
+  tagline: 'Oferta të shpejta — 5 ditë nga të gjitha kategoritë',
+  gradient: [OKAZION_RED, OKAZION_RED_DARK] as const,
+  iconKey: 'seal-percent',
+  href: paths.public.okazion,
+  searchPlaceholder: 'Kërko oferta OKAZION…',
+};
+
+/** /kerko categories: AI, OKAZION, then listing verticals. */
 export const SEARCH_CATEGORIES: readonly SearchCategory[] = [
   AI_SEARCH_CATEGORY,
+  OKAZION_SEARCH_CATEGORY,
+  ...HOME_VERTICALS,
+];
+
+/** Home category pickers: OKAZION + listing verticals (no AI). */
+export const HOME_BROWSE_CATEGORIES: readonly SearchCategory[] = [
+  OKAZION_SEARCH_CATEGORY,
   ...HOME_VERTICALS,
 ];
 
@@ -146,7 +169,7 @@ export function isHomeVerticalId(value: string | null | undefined): value is Hom
 }
 
 export function isSearchCategoryId(value: string | null | undefined): value is SearchCategoryId {
-  return value === 'ai' || isHomeVerticalId(value);
+  return value === 'ai' || value === 'okazion' || isHomeVerticalId(value);
 }
 
 export function findVertical(id: HomeVerticalId): HomeVertical {
@@ -186,6 +209,17 @@ export function localizeVertical(id: HomeVerticalId, language: AppLanguage): Hom
 export function localizeSearchCategories(language: AppLanguage): SearchCategory[] {
   const copy = getMessages(language).verticals;
   return SEARCH_CATEGORIES.map((cat) => ({
+    ...cat,
+    label: copy[cat.id].label,
+    tagline: copy[cat.id].tagline,
+    searchPlaceholder: copy[cat.id].searchPlaceholder,
+  }));
+}
+
+/** Home hero / category strip — same as search tabs but without AI. */
+export function localizeHomeBrowseCategories(language: AppLanguage): SearchCategory[] {
+  const copy = getMessages(language).verticals;
+  return HOME_BROWSE_CATEGORIES.map((cat) => ({
     ...cat,
     label: copy[cat.id].label,
     tagline: copy[cat.id].tagline,

@@ -155,11 +155,11 @@ function MemberContactButton({
           borderRadius: pill ? 999 : 2.5,
           fontWeight: 800,
           textTransform: 'none',
-          color: 'common.black',
+          color: 'primary.contrastText',
           boxShadow: 'none',
           py: pill ? 1.5 : 1.5,
           fontSize: pill ? '1rem' : undefined,
-          '&:hover': { color: 'common.black' },
+          '&:hover': { color: 'primary.contrastText' },
           '& .MuiButton-startIcon': { color: 'inherit' },
         }}
       >

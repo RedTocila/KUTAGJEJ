@@ -94,6 +94,23 @@ export async function postAiListingDraft(
     return { draftId: draft.id, ok: false, error: draft.error || 'Draft is incomplete.' };
   }
 
+  // Hard gate: never publish a draft whose category was stripped / invalid.
+  const allowed: AiListingDraft['category'][] = [
+    'real-estate',
+    'cars',
+    'job-listings',
+    'marketplace',
+    'businesses',
+    'professionals',
+  ];
+  if (!allowed.includes(draft.category)) {
+    return {
+      draftId: draft.id,
+      ok: false,
+      error: 'This listing category is invalid. Choose the correct category and try again.',
+    };
+  }
+
   const f = draft.form || {};
   const imageUrls = (draft.imageUrls || []).filter((u) => {
     if (!/^https?:\/\//i.test(u)) return false;
@@ -169,9 +186,34 @@ export async function postAiListingDraft(
         if (phone.length < 6) {
           return { draftId: draft.id, ok: false, error: 'Phone number is required.' };
         }
+        const vehicleType = ['car', 'suv', 'van', 'truck', 'motorcycle', 'boat'].includes(
+          str(f.vehicleType).toLowerCase(),
+        )
+          ? str(f.vehicleType).toLowerCase()
+          : 'car';
+        const colorRaw = str(f.color).toLowerCase();
+        const color =
+          [
+            'beige',
+            'blue',
+            'brown',
+            'yellow',
+            'gold',
+            'green',
+            'grey',
+            'orange',
+            'red',
+            'black',
+            'silver',
+            'purple',
+            'white',
+          ].includes(colorRaw)
+            ? colorRaw
+            : 'grey';
         const fd = new FormData();
+        fd.append('vehicleType', vehicleType);
         fd.append('make', str(f.make) || 'Other');
-        fd.append('model', str(f.model) || 'Model');
+        fd.append('model', str(f.model) || 'Other');
         fd.append('variant', str(f.variant));
         fd.append('description', str(f.description) || draft.summary || draft.title || '');
         fd.append('year', String(num(f.year) ?? new Date().getFullYear()));
@@ -183,7 +225,7 @@ export async function postAiListingDraft(
         fd.append('fuelType', str(f.fuelType) || 'petrol');
         fd.append('price', String(num(f.price) ?? 0));
         fd.append('currency', f.currency === 'LEK' ? 'LEK' : 'EUR');
-        fd.append('color', str(f.color) || 'Other');
+        fd.append('color', color);
         fd.append('contactPhone', phone);
         fd.append('cityId', cityId);
         if (Array.isArray(f.extras)) {
@@ -239,7 +281,7 @@ export async function postAiListingDraft(
           return { draftId: draft.id, ok: false, error: 'Phone number is required.' };
         }
         result = await createMarketplaceListing({
-          transactionType: str(f.transactionType) || 'shes',
+          transactionType: 'shes',
           title: str(f.title) || draft.title || 'Produkt',
           description: str(f.description) || draft.summary || draft.title || '',
           category: str(f.category) || 'te-tjera',

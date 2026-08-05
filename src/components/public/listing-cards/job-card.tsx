@@ -86,10 +86,9 @@ export function JobCard({
       listingKind="job"
       listingId={listing.id}
       href={listingJobPublicHref(listing)}
-      prefetch={false}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell premium={Boolean(listing.isPremium)}>
+      <CardShell premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
       <CardMedia
         listingKind="job"
         listingId={listing.id}
@@ -101,6 +100,8 @@ export function JobCard({
         saveCount={listing.saveCount}
         saved={listing.saved}
         premium={Boolean(listing.isPremium)}
+        okazion={Boolean(listing.isOkazion)}
+        okazionUntil={listing.okazionUntil}
         sharePayload={{
           title: listing.title,
           category: industryLabel,
@@ -130,9 +131,11 @@ export function JobCard({
           url: listingJobPublicHref(listing),
         }}
         bottomOverlay={
-          <Box sx={{ display: 'flex', justifyContent: 'flex-start', p: 1 }}>
-            <JobListingCountdown expiresAt={expiresAt} variant="overlay" />
-          </Box>
+          listing.isOkazion ? undefined : (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start', p: 1 }}>
+              <JobListingCountdown expiresAt={expiresAt} variant="overlay" />
+            </Box>
+          )
         }
       />
       <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>

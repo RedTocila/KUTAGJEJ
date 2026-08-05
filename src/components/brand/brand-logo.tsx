@@ -34,7 +34,7 @@ function resolvedWordmarkSegments(): readonly [string, string] | null {
 }
 
 export function BrandLogo({
-  height = 40,
+  height = 32,
   width,
   showWordmark = false,
   wordmarkPresentation = 'plain',

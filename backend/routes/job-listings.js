@@ -10,6 +10,7 @@ const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls } = require('../lib/image-upload');
 const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers');
 const { premiumFieldsFromDoc } = require('../lib/premium-listing');
+const { okazionFieldsFromDoc } = require('../lib/okazion-listing');
 
 const router = express.Router();
 
@@ -47,6 +48,7 @@ function formatMineListing(doc, cityById) {
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
     ...premiumFieldsFromDoc(doc),
+    ...okazionFieldsFromDoc(doc),
   };
 }
 
@@ -107,6 +109,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       requirements: v.requirements,
       benefits: v.benefits,
       image_urls: sanitizeImageUrls(body.imageUrls, MAX_JOB_IMAGES),
+      status: 'approved',
     };
     if (hasSalary) row.currency = body.currency;
 
@@ -121,7 +124,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     await notifyAdminsListingSubmitted('jobs', doc.id, doc.title);
 
     res.status(201).json({
-      message: 'Njoftimi u dërgua për aprovim..',
+      message: 'Njoftimi u publikua me sukses.',
       listing: {
         id: String(doc.id),
         title: doc.title,

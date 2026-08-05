@@ -424,7 +424,7 @@ export function BusinessListingDetailView({
                     py: 1.5,
                     textAlign: 'left',
                     bgcolor: reserveOpen ? 'transparent' : 'primary.main',
-                    color: reserveOpen ? 'text.primary' : 'common.black',
+                    color: reserveOpen ? 'text.primary' : 'primary.contrastText',
                     transition: 'background-color 0.15s ease, color 0.15s ease',
                   }}
                 >

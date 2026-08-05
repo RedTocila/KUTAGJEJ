@@ -7,6 +7,7 @@ import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Brief
 import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist/ssr/BuildingOffice';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
+import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
@@ -21,6 +22,8 @@ import { ProfessionalListingForm } from '@/components/professionals/professional
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
 import { PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
+import { OkazionTheme } from '@/components/user/okazion-theme';
+import { OKAZION_RED, OKAZION_RED_SOFT } from '@/lib/home-categories';
 import { aiDraftToInitialListing } from '@/lib/ai-draft-to-listing';
 import {
   consumeAiListingDraft,
@@ -117,6 +120,7 @@ export default function UserPostListingPage() {
   const [categories, setCategories] = React.useState<ListingCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = React.useState(true);
   const wantsAi = searchParams.get('ai') === '1';
+  const wantsOkazion = searchParams.get('okazion') === '1';
   const aiDraftId = searchParams.get('draftId');
   const aiReturnHref = paths.user.aiImport;
   const [aiInitial, setAiInitial] = React.useState<Record<string, unknown> | null>(null);
@@ -213,8 +217,10 @@ export default function UserPostListingPage() {
     setAiReady(true);
   }, [wantsAi, searchParams]);
 
-  const handleSheetPick = (key: ListingCategoryKey) => {
-    hardNavigate(`${paths.user.realEstateListing}?category=${encodeURIComponent(key)}`);
+  const handleSheetPick = (key: ListingCategoryKey, opts?: { okazion?: boolean }) => {
+    const q = new URLSearchParams({ category: key });
+    if (opts?.okazion || searchParams.get('okazion') === '1') q.set('okazion', '1');
+    hardNavigate(`${paths.user.realEstateListing}?${q.toString()}`);
   };
 
   const handleAiApply = React.useCallback((initial: Record<string, unknown>) => {
@@ -272,15 +278,23 @@ export default function UserPostListingPage() {
           open
           onClose={() => hardNavigate(paths.user.dashboard)}
           onPick={handleSheetPick}
+          initialOkazion={searchParams.get('okazion') === '1'}
         />
       ) : null}
 
       {showFormShell && activeMeta ? (
-        <>
+        <OkazionTheme enabled={wantsOkazion}>
+          <>
           <PostListingHeader
-            icon={phaseIcon(phase)}
-            title={activeMeta.title}
-            description={activeMeta.description}
+            icon={wantsOkazion ? SealPercentIcon : phaseIcon(phase)}
+            title={wantsOkazion ? 'Posto OKAZION' : activeMeta.title}
+            description={
+              wantsOkazion
+                ? 'Plotësoni njoftimin — publikohet me temë të kuqe në OKAZION për 5 ditë.'
+                : activeMeta.description
+            }
+            iconColor={wantsOkazion ? OKAZION_RED : undefined}
+            iconBgcolor={wantsOkazion ? OKAZION_RED_SOFT : undefined}
             closeHref={wantsAi ? aiReturnHref : paths.home}
           />
 
@@ -337,7 +351,8 @@ export default function UserPostListingPage() {
               </>
             )}
           </PostListingFormSurface>
-        </>
+          </>
+        </OkazionTheme>
       ) : null}
 
       {phase === 'unsupported' && picked ? (

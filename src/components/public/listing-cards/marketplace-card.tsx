@@ -52,10 +52,9 @@ export function MarketplaceCard({
       listingKind="marketplace"
       listingId={listing.id}
       href={listingMarketplacePublicHref(listing)}
-      prefetch={false}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell premium={Boolean(listing.isPremium)}>
+      <CardShell premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
       <CardMedia
         listingKind="marketplace"
         listingId={listing.id}
@@ -67,6 +66,8 @@ export function MarketplaceCard({
         saveCount={listing.saveCount}
         saved={listing.saved}
         premium={Boolean(listing.isPremium)}
+        okazion={Boolean(listing.isOkazion)}
+        okazionUntil={listing.okazionUntil}
         sharePayload={{
           title: listing.title,
           category: categoryLabel,

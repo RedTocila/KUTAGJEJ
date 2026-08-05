@@ -464,7 +464,7 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
               component="img"
               src={brandLogoSrc}
               alt={config.site.name}
-              sx={{ width: 120, height: 120, objectFit: 'contain' }}
+              sx={{ width: 96, height: 96, objectFit: 'contain' }}
             />
             <Typography sx={{ fontWeight: 800, fontSize: 44, letterSpacing: '-0.02em', lineHeight: 1, color: '#fff' }}>
               {config.site.name}

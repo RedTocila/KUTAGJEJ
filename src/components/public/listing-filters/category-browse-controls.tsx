@@ -90,7 +90,17 @@ export function CategoryBrowseControls({
   }, [applied]);
 
   const setField = (key: string, value: string) => {
-    setDraft((prev) => ({ ...prev, [key]: value || undefined }));
+    setDraft((prev) => {
+      const next = { ...prev, [key]: value || undefined } as Record<string, string | string[] | undefined>;
+      if (verticalId === 'cars' && key === 'type') {
+        delete next.make;
+        delete next.model;
+      }
+      if (verticalId === 'cars' && key === 'make') {
+        delete next.model;
+      }
+      return next as BrowseFilters;
+    });
   };
 
   const setLocation = React.useCallback(

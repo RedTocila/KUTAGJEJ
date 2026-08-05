@@ -260,16 +260,18 @@ function RealEstatePriceContactAside(props: {
 function RealEstateSellerCardContents({
   listing,
   sellerSectionHeadingId,
+  cardSx,
 }: {
   listing: PublicRealEstateListingDetail;
   /** Unique `id` for the heading (hero + scroll panels both render in the DOM). */
   sellerSectionHeadingId?: string;
+  cardSx?: React.ComponentProps<typeof ListingSellerProfileCard>['cardSx'];
 }) {
   return (
     <ListingSellerProfileCard
       seller={listing.seller}
       headingId={sellerSectionHeadingId}
-      showSafetyNote
+      cardSx={cardSx}
     />
   );
 }
@@ -447,20 +449,16 @@ export function RealEstateListingDetailView({
                     whatsappInquireHref={whatsappInquireHref}
                   />
                   <Divider flexItem sx={{ borderColor: 'rgba(var(--mui-palette-dividerChannel) / 0.35)' }} />
-                  <Paper
-                    elevation={0}
-                    sx={{
+                  <RealEstateSellerCardContents
+                    sellerSectionHeadingId="re-seller-heading-hero"
+                    listing={listing}
+                    cardSx={{
                       ...productPanelSx,
                       border: 'none',
                       p: 2,
                       borderRadius: 2.5,
                     }}
-                  >
-                    <RealEstateSellerCardContents
-                      sellerSectionHeadingId="re-seller-heading-hero"
-                      listing={listing}
-                    />
-                  </Paper>
+                  />
                 </Stack>
               </Box>
             </Stack>
@@ -670,17 +668,11 @@ export function RealEstateListingDetailView({
               </Stack>
             ) : null}
 
-            <Divider sx={{ borderColor: 'divider' }} />
-
             <Box sx={{ display: ownerPreview ? 'block' : { xs: 'block', md: 'none' } }}>
-              <Stack spacing={2} component="section" aria-labelledby="re-seller-heading-scroll">
-                <Paper variant="outlined" sx={{ borderRadius: 2.5, borderColor: 'divider', bgcolor: 'background.paper', p: { xs: 2, sm: 2.5 } }}>
-                  <RealEstateSellerCardContents
-                    sellerSectionHeadingId="re-seller-heading-scroll"
-                    listing={listing}
-                  />
-                </Paper>
-              </Stack>
+              <RealEstateSellerCardContents
+                sellerSectionHeadingId="re-seller-heading-scroll"
+                listing={listing}
+              />
             </Box>
 
             <Stack spacing={1.5} component="section" aria-labelledby="re-loc-heading">

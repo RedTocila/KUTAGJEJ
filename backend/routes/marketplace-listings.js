@@ -9,6 +9,7 @@ const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls } = require('../lib/image-upload');
 const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers');
 const { premiumFieldsFromDoc } = require('../lib/premium-listing');
+const { okazionFieldsFromDoc } = require('../lib/okazion-listing');
 
 const router = express.Router();
 
@@ -91,6 +92,7 @@ router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
         status: d.status || 'pending',
         createdAt: d.createdAt,
         ...premiumFieldsFromDoc(d),
+        ...okazionFieldsFromDoc(d),
       };
     });
     res.json({ listings: await attachOwnerMetrics(listings, 'marketplace') });
@@ -129,6 +131,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       city_id: cityId,
       contact_phone: String(body.contactPhone || '').trim(),
       image_urls: sanitizeImageUrls(body.imageUrls, MAX_MARKETPLACE_IMAGES),
+      status: 'approved',
     };
     if (hasPrice) row.currency = body.currency;
 
@@ -143,7 +146,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     await notifyAdminsListingSubmitted('marketplace', doc.id, doc.title);
 
     res.status(201).json({
-      message: 'Njoftimi u dërgua për aprovim..',
+      message: 'Njoftimi u publikua me sukses.',
       listing: { id: String(doc.id), title: doc.title, status: doc.status, createdAt: doc.createdAt },
     });
   } catch (err) {

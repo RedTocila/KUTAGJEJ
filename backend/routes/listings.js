@@ -18,6 +18,7 @@ const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls } = require('../lib/image-upload');
 const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers');
 const { premiumFieldsFromDoc } = require('../lib/premium-listing');
+const { okazionFieldsFromDoc } = require('../lib/okazion-listing');
 
 const router = express.Router();
 
@@ -70,6 +71,7 @@ function formatMineListing(doc, cityById) {
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
     ...premiumFieldsFromDoc(doc),
+    ...okazionFieldsFromDoc(doc),
   };
 }
 
@@ -140,6 +142,7 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
       furnishing: needsBedroomsBathFurnishing(propertyCategory) ? req.body.furnishing : null,
       year_built: needsYearBuilt(propertyCategory) ? Number(req.body.yearBuilt) : null,
       image_urls: sanitizeImageUrls(req.body.imageUrls, MAX_REAL_ESTATE_IMAGES),
+      status: 'approved',
     };
 
     const { data: created, error: insErr } = await getSupabaseAdmin()
@@ -153,7 +156,7 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
     await notifyAdminsListingSubmitted('real-estate', doc.id, doc.title);
 
     res.status(201).json({
-      message: 'Njoftimi u dërgua për aprovim..',
+      message: 'Njoftimi u publikua me sukses.',
       listing: {
         id: String(doc.id),
         propertyCategory: doc.propertyCategory,

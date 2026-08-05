@@ -18,7 +18,7 @@ export default function ExtraPackagesPage() {
       <UserPageHeader
         icon={<SquaresFourIcon size={20} weight="duotone" />}
         title="Paketat shtesë"
-        description="Shtesa për njoftime — auto-refresh, premium dhe konvertim."
+        description="Shtesa për njoftime — OKAZION, auto-refresh, premium dhe konvertim."
       />
       <React.Suspense
         fallback={

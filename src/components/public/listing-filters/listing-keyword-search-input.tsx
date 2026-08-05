@@ -9,6 +9,7 @@ import {
   ProductSearchIcon,
   productSearchBarSx,
   productSearchFieldSx,
+  type ProductSearchAccent,
 } from '@/components/public/product-browse-chrome';
 
 /** @deprecated Import `PRODUCT_BROWSE_CONTROL_HEIGHT` from product-browse-chrome. */
@@ -20,13 +21,17 @@ export function ListingKeywordSearchInput({
   value,
   placeholder,
   onChange,
+  accent,
 }: {
   value: string;
   placeholder: string;
   onChange: (next: string) => void;
+  /** Optional accent (e.g. OKAZION red) for icon + active/focus chrome. */
+  accent?: ProductSearchAccent;
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [query, setQuery] = React.useState(value);
+  const [focused, setFocused] = React.useState(false);
 
   React.useEffect(() => {
     setQuery(value);
@@ -50,7 +55,9 @@ export function ListingKeywordSearchInput({
     inputRef.current?.focus();
   };
 
-  const active = Boolean(query.trim());
+  const hasQuery = Boolean(query.trim());
+  const highlighted = hasQuery || focused;
+  const iconColor = accent?.color ?? 'var(--mui-palette-primary-main)';
 
   return (
     <Box
@@ -63,10 +70,10 @@ export function ListingKeywordSearchInput({
         flex: 1,
         minWidth: 0,
         width: '100%',
-        ...productSearchBarSx(active),
+        ...productSearchBarSx(highlighted, accent),
       }}
     >
-      <ProductSearchIcon />
+      <ProductSearchIcon color={iconColor} />
       <TextField
         inputRef={inputRef}
         variant="standard"
@@ -76,6 +83,8 @@ export function ListingKeywordSearchInput({
         placeholder={placeholder}
         aria-label={placeholder}
         onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         slotProps={{
           input: {
             disableUnderline: true,
@@ -84,12 +93,16 @@ export function ListingKeywordSearchInput({
         }}
         sx={{ flex: 1, minWidth: 0 }}
       />
-      {active ? (
+      {hasQuery ? (
         <IconButton
           size="small"
           aria-label="Pastro kërkimin"
           onClick={clear}
-          sx={{ p: 0.25, color: 'text.secondary', flexShrink: 0 }}
+          sx={{
+            p: 0.25,
+            color: accent?.color ?? 'text.secondary',
+            flexShrink: 0,
+          }}
         >
           <XIcon size={12} weight="bold" />
         </IconButton>

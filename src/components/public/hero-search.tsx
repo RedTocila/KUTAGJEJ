@@ -21,6 +21,7 @@ import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
   AI_SEARCH_BLUE_ON,
+  OKAZION_RED,
   localizeSearchCategories,
   type HomeVerticalId,
   type SearchCategoryId,
@@ -36,7 +37,7 @@ export interface HeroSearchProps {
 }
 
 function isHomeVertical(id: SearchCategoryId): id is HomeVerticalId {
-  return id !== 'ai';
+  return id !== 'ai' && id !== 'okazion';
 }
 
 export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
@@ -52,6 +53,7 @@ export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
 
   const active = tab >= 0 ? (heroVerticals[tab] ?? null) : null;
   const isAi = active?.id === 'ai';
+  const isOkazion = active?.id === 'okazion';
 
   const submit = (event?: React.FormEvent) => {
     event?.preventDefault();
@@ -68,6 +70,14 @@ export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
       const params = new URLSearchParams({ cat: 'ai' });
       if (trimmed) params.set('q', trimmed);
       router.push(`${paths.public.search}?${params.toString()}`);
+      onNavigate?.();
+      return;
+    }
+    if (active.id === 'okazion') {
+      const params = new URLSearchParams();
+      if (trimmed) params.set('q', trimmed);
+      const qs = params.toString();
+      router.push(`${paths.public.okazion}${qs ? `?${qs}` : ''}`);
       onNavigate?.();
       return;
     }
@@ -175,13 +185,13 @@ export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
               py: 1.5,
               fontWeight: 700,
               fontSize: '1rem',
-              color: isAi ? AI_SEARCH_BLUE_ON : 'common.black',
-              bgcolor: isAi ? AI_SEARCH_BLUE : undefined,
+              color: isAi ? AI_SEARCH_BLUE_ON : isOkazion ? '#fff' : 'primary.contrastText',
+              bgcolor: isAi ? AI_SEARCH_BLUE : isOkazion ? OKAZION_RED : undefined,
               boxShadow: 'none',
               '&:hover': {
                 boxShadow: 'none',
-                color: isAi ? AI_SEARCH_BLUE_ON : 'common.black',
-                bgcolor: isAi ? AI_SEARCH_BLUE_HOVER : undefined,
+                color: isAi ? AI_SEARCH_BLUE_ON : isOkazion ? '#fff' : 'primary.contrastText',
+                bgcolor: isAi ? AI_SEARCH_BLUE_HOVER : isOkazion ? '#dc2626' : undefined,
               },
               '& .MuiButton-startIcon': { color: 'inherit' },
             }}

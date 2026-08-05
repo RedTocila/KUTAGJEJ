@@ -13,33 +13,45 @@ import {
   FormLabel,
   IconButton,
   InputAdornment,
-  Radio,
-  RadioGroup,
   Stack,
   Typography,
 } from '@mui/material';
+import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
+import { SteeringWheel as SteeringWheelIcon } from '@phosphor-icons/react/dist/ssr/SteeringWheel';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import {
   CAR_COLOUR_OPTIONS,
   CAR_EXTRAS,
-  CAR_MAKES,
   FUEL_TYPE_OPTIONS,
-  TRANSMISSION_OPTIONS,
   carYearOptions,
+  makesForVehicleType,
+  modelsForMake,
+  type VehicleType,
 } from '@/lib/car-constants';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { SearchableSelect } from '@/components/core/searchable-select';
+import { VehicleTypePicker } from '@/components/cars/vehicle-type-picker';
 import {
   ListingFormActions,
   ListingTextField,
+  ListingToggle,
 } from '@/components/user/listing-form-ui';
+import {
+  activateOkazionAfterCreate,
+  OkazionBoostUpsell,
+  OkazionPostActions,
+  type OkazionBoostMode,
+  type OkazionPayMode,
+} from '@/components/user/okazion-boost-upsell';
 import { useUser } from '@/hooks/use-user';
 import { createCarListing, updateCarListing, type CarMineListing } from '@/lib/listings-client';
 import { contactPhoneFromStorage, resolveContactPhone } from '@/lib/listing-form-defaults';
 import { uploadListingImages } from '@/lib/uploads-client';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -72,6 +84,7 @@ export interface CarListingFormProps {
 }
 
 type CarFormState = {
+  vehicleType: VehicleType | '';
   make: string;
   model: string;
   variant: string;
@@ -92,6 +105,7 @@ type CarFormState = {
 
 function emptyForm(): CarFormState {
   return {
+    vehicleType: '',
     make: '',
     model: '',
     variant: '',
@@ -120,9 +134,10 @@ type FieldErrors = Partial<Record<keyof CarFormState, string>>;
 function validateForm(f: CarFormState): FieldErrors {
   const errors: FieldErrors = {};
 
-  if (!f.make) errors.make = 'Please select the car make.';
-  if (!f.model.trim()) errors.model = 'Car model is required.';
-  if (!f.description.trim()) errors.description = 'Description is required.';
+  if (!f.vehicleType) errors.vehicleType = 'Ju lutem zgjidhni kategorinë e automjetit.';
+  if (!f.make) errors.make = 'Ju lutem zgjidhni markën.';
+  if (!f.model.trim()) errors.model = 'Ju lutem zgjidhni modelin.';
+  if (!f.description.trim()) errors.description = 'Përshkrimi është i detyrueshëm.';
 
   const year = parsePositiveInt(f.year);
   const currentYear = new Date().getFullYear();
@@ -155,8 +170,10 @@ function validateForm(f: CarFormState): FieldErrors {
 }
 
 const FIELD_ORDER: (keyof CarFormState)[] = [
+  'vehicleType',
   'make',
   'model',
+  'cityId',
   'description',
   'year',
   'kilometers',
@@ -166,7 +183,6 @@ const FIELD_ORDER: (keyof CarFormState)[] = [
   'currency',
   'contactPhone',
   'color',
-  'cityId',
 ];
 
 function firstFieldError(errors: FieldErrors): keyof CarFormState | null {
@@ -178,6 +194,7 @@ function firstFieldError(errors: FieldErrors): keyof CarFormState | null {
 
 function mapServerErrorToField(message: string): keyof CarFormState | null {
   const m = message.toLowerCase();
+  if (m.includes('vehicle') || m.includes('category')) return 'vehicleType';
   if (m.includes('city')) return 'cityId';
   if (m.includes('make')) return 'make';
   if (m.includes('model')) return 'model';
@@ -255,6 +272,7 @@ function ImagePreview({ file, onRemove }: ImagePreviewProps) {
 function formFromListing(l: CarMineListing): CarFormState {
   const finish = l.finish ?? [];
   return {
+    vehicleType: (l.vehicleType as VehicleType) || 'car',
     make: l.make || '',
     model: l.model || '',
     variant: l.variant || '',
@@ -277,6 +295,13 @@ function formFromListing(l: CarMineListing): CarFormState {
 const YEAR_OPTIONS = carYearOptions();
 const MAX_IMAGES = 5;
 
+const TRANSMISSION_TOGGLE = [
+  { value: 'automatic', label: 'Automatic', Icon: GearSixIcon },
+  { value: 'manual', label: 'Manual', Icon: SteeringWheelIcon },
+] as const;
+
+const CURRENCY_TOGGLE = CURRENCY_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
+
 export function CarListingForm({
   onSuccess,
   backHref,
@@ -285,11 +310,17 @@ export function CarListingForm({
   initialListing,
 }: CarListingFormProps) {
   const isEdit = Boolean(editListingId);
-  const { user } = useUser();
+  const { user, checkSession } = useUser();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const wantsOkazion = searchParams.get('okazion') === '1';
 
   const [form, setForm] = React.useState<CarFormState>(() =>
     initialListing ? formFromListing(initialListing) : { ...emptyForm(), contactPhone: contactPhoneFromStorage() },
   );
+  const [okazionMode, setOkazionMode] = React.useState<OkazionBoostMode>(wantsOkazion ? 'buy-card' : 'off');
+  const okazionPayRef = React.useRef<OkazionPayMode>('buy-card');
+  const formRef = React.useRef<HTMLFormElement | null>(null);
   const [images, setImages] = React.useState<File[]>([]);
   const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(
     () => (initialListing?.imageUrls ?? []).filter(Boolean),
@@ -359,6 +390,33 @@ export function CarListingForm({
     setForm((prev) => ({ ...prev, [key]: value }));
     clearFieldError(key);
   };
+
+  const setVehicleType = (value: VehicleType | '') => {
+    setForm((prev) => ({
+      ...prev,
+      vehicleType: value,
+      make: '',
+      model: '',
+    }));
+    clearFieldError('vehicleType');
+    clearFieldError('make');
+    clearFieldError('model');
+  };
+
+  const setMake = (value: string) => {
+    setForm((prev) => ({ ...prev, make: value, model: '' }));
+    clearFieldError('make');
+    clearFieldError('model');
+  };
+
+  const catalogMakes = makesForVehicleType(form.vehicleType);
+  const makeOptions =
+    form.make && !catalogMakes.includes(form.make) ? [form.make, ...catalogMakes] : catalogMakes;
+  const catalogModels = modelsForMake(form.vehicleType, form.make);
+  const modelOptions =
+    form.model && !catalogModels.includes(form.model)
+      ? [form.model, ...catalogModels]
+      : catalogModels;
 
   const toggleExtra = (extra: string) => {
     setForm((prev) => {
@@ -433,6 +491,7 @@ export function CarListingForm({
         if (form.isMatte) finish.push('matte');
         if (form.isMetallic) finish.push('metallic');
         const result = await updateCarListing(editListingId, {
+          vehicleType: form.vehicleType,
           make: form.make,
           model: form.model.trim(),
           variant: form.variant.trim(),
@@ -464,6 +523,7 @@ export function CarListingForm({
         }
       } else {
         const fd = new FormData();
+        fd.append('vehicleType', form.vehicleType);
         fd.append('make', form.make);
         fd.append('model', form.model.trim());
         fd.append('variant', form.variant.trim());
@@ -482,7 +542,7 @@ export function CarListingForm({
         fd.append('cityId', form.cityId);
         images.forEach((img) => fd.append('images', img, img.name));
 
-        const { error } = await createCarListing(fd);
+        const { error, id } = await createCarListing(fd);
         if (error) {
           const field = mapServerErrorToField(error);
           if (field) {
@@ -494,6 +554,21 @@ export function CarListingForm({
             setSubmitError(error);
           }
           return;
+        }
+        if (id && (wantsOkazion || okazionMode !== 'off')) {
+          const boost = await activateOkazionAfterCreate({
+            mode: wantsOkazion ? okazionPayRef.current : okazionMode,
+            kind: 'car',
+            listingId: id,
+          });
+          if (boost.redirectToCheckout) {
+            router.push(boost.redirectToCheckout);
+            return;
+          }
+          if (!boost.ok && boost.message) {
+            setSubmitError(boost.message);
+          }
+          void checkSession();
         }
       }
       onSuccess?.();
@@ -507,7 +582,12 @@ export function CarListingForm({
   // -------------------------------------------------------------------------
 
   return (
-    <Stack component="form" spacing={3} onSubmit={(e) => void handleSubmit(e)}>
+    <Stack
+      ref={formRef}
+      component="form"
+      spacing={3}
+      onSubmit={(e) => void handleSubmit(e)}
+    >
       {submitError ? (
         <Alert severity="error" sx={{ borderRadius: 1.5 }}>
           {submitError}
@@ -517,28 +597,51 @@ export function CarListingForm({
       {/* ── Car identity ─────────────────────────────────────────────────── */}
       <Stack spacing={2}>
         <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-          Car details
+          Vehicle details
         </Typography>
+
+        <Box
+          sx={{
+            p: 1.75,
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: form.vehicleType ? 'primary.main' : 'divider',
+            bgcolor: form.vehicleType ? primaryMainAlpha(0.06) : 'transparent',
+            boxShadow: form.vehicleType ? `inset 0 0 0 1px ${primaryMainAlpha(0.12)}` : 'none',
+            transition: 'border-color 0.15s, background-color 0.15s, box-shadow 0.15s',
+          }}
+        >
+          <VehicleTypePicker
+            value={form.vehicleType}
+            onChange={setVehicleType}
+            label="Category"
+            required
+            error={Boolean(fieldErrors.vehicleType)}
+            helperText={fieldErrors.vehicleType}
+          />
+        </Box>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <SearchableSelect
             label="Make"
             value={form.make}
-            onChange={(v) => setSelectField('make', v)}
-            options={CAR_MAKES.map((m) => ({ value: m, label: m }))}
-            emptyLabel="Select make…"
+            onChange={setMake}
+            options={makeOptions.map((m) => ({ value: m, label: m }))}
+            emptyLabel={form.vehicleType ? 'Select make…' : 'Select category first…'}
             required
+            disabled={!form.vehicleType}
             error={Boolean(fieldErrors.make)}
             helperText={fieldErrors.make}
           />
 
-          <ListingTextField
+          <SearchableSelect
             label="Model"
             value={form.model}
-            onChange={onField('model')}
+            onChange={(v) => setSelectField('model', v)}
+            options={modelOptions.map((m) => ({ value: m, label: m }))}
+            emptyLabel={form.make ? 'Select model…' : 'Select make first…'}
             required
-            fullWidth
-            placeholder="e.g. A7"
+            disabled={!form.make}
             error={Boolean(fieldErrors.model)}
             helperText={fieldErrors.model}
           />
@@ -659,8 +762,26 @@ export function CarListingForm({
           onChange={onField('variant')}
           fullWidth
           placeholder="e.g. Sportback, Competition, S-Line…"
-          helperText="This text will appear in the listing title alongside the make and model."
         />
+
+        <Box ref={cityFieldRef}>
+          <SearchableSelect
+            label="City"
+            value={form.cityId}
+            onChange={(v) => setSelectField('cityId', v)}
+            options={cities.map((c) => ({ value: c.id, label: c.name }))}
+            emptyLabel="Select city…"
+            required
+            disabled={loadingCities || cities.length === 0}
+            error={Boolean(fieldErrors.cityId)}
+            helperText={
+              fieldErrors.cityId ||
+              (!loadingCities && cities.length === 0
+                ? 'No cities available yet — a platform admin must add them under Dashboard → Vendndodhjet (pasuri).'
+                : undefined)
+            }
+          />
+        </Box>
 
         <ListingTextField
           label="Description"
@@ -715,25 +836,15 @@ export function CarListingForm({
           />
         </Stack>
 
-        <FormControl component="fieldset" required error={Boolean(fieldErrors.transmission)}>
-          <FormLabel component="legend" sx={{ mb: 0.5, fontSize: '0.875rem', fontWeight: 600 }}>
-            Transmission
-          </FormLabel>
-          <RadioGroup
-            row
-            value={form.transmission}
-            onChange={(_, v) => setSelectField('transmission', v as CarFormState['transmission'])}
-          >
-            {TRANSMISSION_OPTIONS.map((o) => (
-              <FormControlLabel key={o.value} value={o.value} control={<Radio />} label={o.label} />
-            ))}
-          </RadioGroup>
-          {fieldErrors.transmission ? (
-            <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-              {fieldErrors.transmission}
-            </Typography>
-          ) : null}
-        </FormControl>
+        <ListingToggle
+          label="Transmission"
+          value={form.transmission}
+          onChange={(v) => setSelectField('transmission', v as CarFormState['transmission'])}
+          options={TRANSMISSION_TOGGLE}
+          required
+          error={Boolean(fieldErrors.transmission)}
+          helperText={fieldErrors.transmission}
+        />
 
         <SearchableSelect
           label="Fuel type"
@@ -755,7 +866,7 @@ export function CarListingForm({
           Price &amp; contact
         </Typography>
 
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'flex-start' } }}>
           <ListingTextField
             label="Price"
             type="text"
@@ -767,15 +878,15 @@ export function CarListingForm({
             error={Boolean(fieldErrors.price)}
             helperText={fieldErrors.price}
           />
-          <SearchableSelect
+          <ListingToggle
             label="Currency"
             value={form.currency}
             onChange={(v) => setSelectField('currency', v as CarFormState['currency'])}
-            options={CURRENCY_OPTIONS}
-            emptyLabel="Select…"
+            options={CURRENCY_TOGGLE}
             required
             error={Boolean(fieldErrors.currency)}
             helperText={fieldErrors.currency}
+            fullWidth={false}
           />
         </Stack>
 
@@ -920,39 +1031,27 @@ export function CarListingForm({
         </FormGroup>
       </Stack>
 
-      <Divider />
+      {!isEdit && !wantsOkazion ? (
+        <OkazionBoostUpsell value={okazionMode} onChange={setOkazionMode} />
+      ) : null}
 
-      {/* ── City ─────────────────────────────────────────────────────────── */}
-      <Stack spacing={1.5} ref={cityFieldRef}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-          Location
-        </Typography>
-
-        <SearchableSelect
-          label="City"
-          value={form.cityId}
-          onChange={(v) => setSelectField('cityId', v)}
-          options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Select city…"
-          required
-          disabled={loadingCities || cities.length === 0}
-          error={Boolean(fieldErrors.cityId)}
-          helperText={fieldErrors.cityId}
+      {wantsOkazion && !isEdit ? (
+        <OkazionPostActions
+          submitting={submitting}
+          onPost={(mode) => {
+            okazionPayRef.current = mode;
+            setOkazionMode(mode);
+            formRef.current?.requestSubmit();
+          }}
         />
-
-        {!loadingCities && cities.length === 0 ? (
-          <Typography variant="caption" color="text.secondary">
-            No cities available yet — a platform admin must add them under Dashboard → Vendndodhjet (pasuri).
-          </Typography>
-        ) : null}
-      </Stack>
-
-      <ListingFormActions
-        submitLabel={isEdit ? 'Përditëso njoftimin' : 'Ruaj njoftimin'}
-        submitting={submitting}
-        backHref={backHref}
-        backLabel={backLabel}
-      />
+      ) : (
+        <ListingFormActions
+          submitLabel={isEdit ? 'Përditëso njoftimin' : 'Ruaj njoftimin'}
+          submitting={submitting}
+          backHref={backHref}
+          backLabel={backLabel}
+        />
+      )}
     </Stack>
   );
 }

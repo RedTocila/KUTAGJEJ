@@ -6,6 +6,8 @@ export const paths = {
     cars: '/makina',
     jobs: '/pune',
     marketplace: '/tregu',
+    /** Short-lived OKAZION deals across all categories. */
+    okazion: '/okazion',
     /** Business listings (lokal, zyrë, shërbime biznesi). */
     businesses: '/biznese',
     /** Professionals & freelance services. */

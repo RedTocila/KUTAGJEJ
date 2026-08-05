@@ -3,7 +3,7 @@
 import type { ListingCreateResult } from '@/lib/listings-client';
 import type { ListingMetrics } from '@/lib/listing-metrics';
 import type { WeeklyHourRow } from '@/lib/business-constants';
-import { authHeaders } from '@/lib/api-client';
+import { authHeaders, authHeadersAsync } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
 
 
@@ -69,6 +69,8 @@ export interface BusinessMineListing extends ListingMetrics {
   updatedAt: string;
   isPremium?: boolean;
   premiumUntil?: string | null;
+  isOkazion?: boolean;
+  okazionUntil?: string | null;
 }
 
 export interface BusinessReservationRow {
@@ -105,18 +107,27 @@ export async function createBusinessListing(
   try {
     const res = await fetch(getApiUrl('/listings/directory/businesses'), {
       method: 'POST',
-      headers: authHeaders(),
+      headers: await authHeadersAsync(),
       body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
+    if (!res.ok) {
+      return {
+        error:
+          typeof data.message === 'string'
+            ? data.message
+            : res.status === 401
+              ? 'Sesioni skadoi. Hyni përsëri.'
+              : 'Nuk u ruajt njoftimi.',
+      };
+    }
     return {
       id: data.listing?.id as string | undefined,
       status: data.listing?.status,
       message: typeof data.message === 'string' ? data.message : undefined,
     };
   } catch {
-    return { error: 'Could not reach the server.' };
+    return { error: 'Nuk u arrit lidhja me serverin.' };
   }
 }
 
@@ -127,14 +138,23 @@ export async function updateBusinessListing(
   try {
     const res = await fetch(getApiUrl(`/listings/directory/businesses/${encodeURIComponent(id)}`), {
       method: 'PUT',
-      headers: authHeaders(),
+      headers: await authHeadersAsync(),
       body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not update listing.' };
+    if (!res.ok) {
+      return {
+        error:
+          typeof data.message === 'string'
+            ? data.message
+            : res.status === 401
+              ? 'Sesioni skadoi. Hyni përsëri.'
+              : 'Nuk u përditësua njoftimi.',
+      };
+    }
     return {};
   } catch {
-    return { error: 'Could not reach the server.' };
+    return { error: 'Nuk u arrit lidhja me serverin.' };
   }
 }
 
@@ -208,6 +228,8 @@ export interface ProfessionalMineListing extends ListingMetrics {
   updatedAt: string;
   isPremium?: boolean;
   premiumUntil?: string | null;
+  isOkazion?: boolean;
+  okazionUntil?: string | null;
 }
 
 export async function listMyProfessionalListings(): Promise<{
@@ -233,18 +255,27 @@ export async function createProfessionalListing(
   try {
     const res = await fetch(getApiUrl('/listings/directory/professionals'), {
       method: 'POST',
-      headers: authHeaders(),
+      headers: await authHeadersAsync(),
       body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
+    if (!res.ok) {
+      return {
+        error:
+          typeof data.message === 'string'
+            ? data.message
+            : res.status === 401
+              ? 'Sesioni skadoi. Hyni përsëri.'
+              : 'Nuk u ruajt njoftimi.',
+      };
+    }
     return {
       id: data.listing?.id as string | undefined,
       status: data.listing?.status,
       message: typeof data.message === 'string' ? data.message : undefined,
     };
   } catch {
-    return { error: 'Could not reach the server.' };
+    return { error: 'Nuk u arrit lidhja me serverin.' };
   }
 }
 
@@ -255,14 +286,23 @@ export async function updateProfessionalListing(
   try {
     const res = await fetch(getApiUrl(`/listings/directory/professionals/${encodeURIComponent(id)}`), {
       method: 'PUT',
-      headers: authHeaders(),
+      headers: await authHeadersAsync(),
       body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not update listing.' };
+    if (!res.ok) {
+      return {
+        error:
+          typeof data.message === 'string'
+            ? data.message
+            : res.status === 401
+              ? 'Sesioni skadoi. Hyni përsëri.'
+              : 'Nuk u përditësua njoftimi.',
+      };
+    }
     return {};
   } catch {
-    return { error: 'Could not reach the server.' };
+    return { error: 'Nuk u arrit lidhja me serverin.' };
   }
 }
 

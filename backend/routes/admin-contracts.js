@@ -25,6 +25,7 @@ function formatQuotas(doc) {
     maxApartmentListings: Number(doc.max_apartment_listings) || 0,
     maxProductListings: Number(doc.max_product_listings) || 0,
     maxPremiumListings: Number(doc.max_premium_listings) || 0,
+    maxOkazionListings: Number(doc.max_okazion_listings) || 0,
   };
 }
 
@@ -135,6 +136,7 @@ function parseQuotaBody(body) {
     ['maxApartmentListings', 'Kuota e apartamenteve', 'max_apartment_listings'],
     ['maxProductListings', 'Kuota e produkteve', 'max_product_listings'],
     ['maxPremiumListings', 'Kuota e njoftimeve premium', 'max_premium_listings'],
+    ['maxOkazionListings', 'Kuota e njoftimeve OKAZION', 'max_okazion_listings'],
   ];
   const out = {};
   for (const [key, label, snake] of fields) {

@@ -62,10 +62,9 @@ function BusinessVenueCardBody({
       listingKind="businesses"
       listingId={listing.id}
       href={listingBusinessPublicHref(listing)}
-      prefetch={false}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell premium={Boolean(listing.isPremium)}>
+      <CardShell premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
         <CardMedia
           listingKind="businesses"
           listingId={listing.id}
@@ -77,6 +76,8 @@ function BusinessVenueCardBody({
           saveCount={listing.saveCount}
           saved={listing.saved}
           premium={Boolean(listing.isPremium)}
+        okazion={Boolean(listing.isOkazion)}
+        okazionUntil={listing.okazionUntil}
           sharePayload={{
             title: listing.title,
             category: listing.categoryLabel,
@@ -251,10 +252,9 @@ function ProfessionalListingCardBody({
       listingKind="professionals"
       listingId={listing.id}
       href={listingProfessionalPublicHref(listing)}
-      prefetch={false}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell premium={Boolean(listing.isPremium)}>
+      <CardShell premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
         <CardMedia
           listingKind="professionals"
           listingId={listing.id}
@@ -268,6 +268,8 @@ function ProfessionalListingCardBody({
           saveCount={listing.saveCount}
           saved={listing.saved}
           premium={Boolean(listing.isPremium)}
+        okazion={Boolean(listing.isOkazion)}
+        okazionUntil={listing.okazionUntil}
           sharePayload={{
             title: listing.title,
             category: listing.categoryLabel,

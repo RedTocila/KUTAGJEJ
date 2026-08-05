@@ -1,4 +1,4 @@
-export type PaymentType = 'subscription' | 'credits' | 'auto-refresh' | 'premium';
+export type PaymentType = 'subscription' | 'credits' | 'auto-refresh' | 'premium' | 'okazion';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'canceled';
 export type PokEnv = 'production' | 'staging';
 
@@ -58,6 +58,10 @@ export interface PremiumPlanQuota {
   days: number;
 }
 
+export type OkazionPackage = PremiumPackage;
+export type OkazionVoucher = PremiumVoucher;
+export type OkazionPlanQuota = PremiumPlanQuota;
+
 /** Admin view of a credit package (includes management fields). */
 export interface AdminCreditPackage {
   id: string;
@@ -94,6 +98,10 @@ export interface PaymentMetadata {
   premiumPackageId?: string | null;
   premiumDays?: number | null;
   premiumVoucherId?: string | null;
+  okazionPackageId?: string | null;
+  okazionDays?: number | null;
+  okazionQuantity?: number | null;
+  okazionVoucherId?: string | null;
 }
 
 export interface Payment {
@@ -121,6 +129,7 @@ export interface CreatedOrder {
   credits?: number;
   slots?: number;
   days?: number;
+  quantity?: number;
   pokEnv: PokEnv;
 }
 
@@ -144,6 +153,7 @@ export interface UserSubscriptionSummary {
   maxApartmentListings: number;
   maxProductListings: number;
   maxPremiumListings: number;
+  maxOkazionListings: number;
 }
 
 /** Admin view of a payment (includes the payer). */

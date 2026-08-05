@@ -2,7 +2,7 @@ const { realEstatePermalink } = require('../real-estate-permalink');
 const { listingPermalinkFromSlugSource } = require('../listing-permalink');
 const { computeOpenStatus, formatWeeklyHoursLine } = require('../business-hours');
 const { BUSINESS_CATEGORY_LABELS, PROFESSIONAL_CATEGORY_LABELS } = require('./constants');
-const { jobListingExpiresAt, isPremiumActive } = require('./query-helpers');
+const { jobListingExpiresAt, isPremiumActive, isOkazionActive } = require('./query-helpers');
 const { pickImage, snippet, carSlugSource, carDisplayTitle } = require('./text-helpers');
 
 function premiumCardFields(doc) {
@@ -11,6 +11,22 @@ function premiumCardFields(doc) {
   return {
     isPremium: active,
     premiumUntil: active && until ? new Date(until).toISOString() : null,
+  };
+}
+
+function okazionCardFields(doc) {
+  const until = doc.okazionUntil ?? doc.okazion_until ?? null;
+  const active = isOkazionActive(doc);
+  return {
+    isOkazion: active,
+    okazionUntil: active && until ? new Date(until).toISOString() : null,
+  };
+}
+
+function featuredCardFields(doc) {
+  return {
+    ...premiumCardFields(doc),
+    ...okazionCardFields(doc),
   };
 }
 
@@ -40,7 +56,7 @@ function formatRealEstate(doc, cityById) {
     imageUrls: doc.imageUrls ?? [],
     createdAt: doc.createdAt,
     permalinkPath: realEstatePermalink(doc),
-    ...premiumCardFields(doc),
+    ...featuredCardFields(doc),
   };
 }
 
@@ -76,7 +92,7 @@ function formatRealEstateDetail(doc, cityById, seller) {
     updatedAt: doc.updatedAt ?? doc.createdAt,
     seller,
     permalinkPath: realEstatePermalink(doc),
-    ...premiumCardFields(doc),
+    ...featuredCardFields(doc),
   };
 }
 
@@ -86,6 +102,7 @@ function formatCar(doc, cityById) {
     id: doc.id,
     kind: 'car',
     description: snippet(doc.description),
+    vehicleType: doc.vehicleType || 'car',
     make: doc.make,
     model: doc.model,
     variant: doc.variant || '',
@@ -102,7 +119,7 @@ function formatCar(doc, cityById) {
     imageUrls: doc.imageUrls ?? [],
     createdAt: doc.createdAt,
     permalinkPath: listingPermalinkFromSlugSource(carSlugSource(doc), doc.id),
-    ...premiumCardFields(doc),
+    ...featuredCardFields(doc),
   };
 }
 
@@ -132,7 +149,7 @@ function formatJob(doc, cityById) {
     benefits: Array.isArray(doc.benefits)
       ? doc.benefits.map((b) => ({ id: String(b.id), label: String(b.label) }))
       : [],
-    ...premiumCardFields(doc),
+    ...featuredCardFields(doc),
   };
 }
 
@@ -154,7 +171,7 @@ function formatMarketplace(doc, cityById) {
     imageUrls: doc.imageUrls ?? [],
     createdAt: doc.createdAt,
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
-    ...premiumCardFields(doc),
+    ...featuredCardFields(doc),
   };
 }
 
@@ -221,7 +238,7 @@ function formatDirectory(doc, cityById, reviewStats) {
     imageUrls: doc.imageUrls ?? [],
     createdAt: doc.createdAt,
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
-    ...premiumCardFields(doc),
+    ...featuredCardFields(doc),
   };
   if (vertical === 'businesses') {
     const weekly = Array.isArray(doc.weeklyHours) ? doc.weeklyHours : [];

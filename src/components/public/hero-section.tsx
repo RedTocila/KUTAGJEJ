@@ -77,7 +77,7 @@ export function HeroSection({ banners, stats }: HeroSectionProps) {
               kërko shpejt, dhe gjej saktësisht atë që do.
             </Typography>
 
-            <HeroCategoryCircles variant="links" />
+            <HeroCategoryCircles variant="links" includeAi={false} />
             <HomeBannerCarousel banners={banners} />
           </Stack>
         </Container>

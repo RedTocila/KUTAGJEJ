@@ -16,6 +16,7 @@ const PACKAGE_TIERS = [
     maxApartmentListings: 10,
     maxProductListings: 5,
     maxPremiumListings: 0,
+    maxOkazionListings: 0,
     boostCredits: 0,
     refreshEveryHours: 48,
     glowBadgeEnabled: false,
@@ -34,6 +35,7 @@ const PACKAGE_TIERS = [
     maxApartmentListings: 25,
     maxProductListings: 15,
     maxPremiumListings: 0,
+    maxOkazionListings: 0,
     boostCredits: 150,
     refreshEveryHours: 24,
     glowBadgeEnabled: true,
@@ -52,12 +54,13 @@ const PACKAGE_TIERS = [
     maxApartmentListings: 250,
     maxProductListings: 50,
     maxPremiumListings: 20,
+    maxOkazionListings: 5,
     boostCredits: 1000,
     refreshEveryHours: 12,
     glowBadgeEnabled: true,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/40 Cars · 0/250 Apartments · 0/50 Products · 0/200 Jobs · 0/20 Premium (30 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Trust Badge',
+      '0/1 List in All Categories · 0/40 Cars · 0/250 Apartments · 0/50 Products · 0/200 Jobs · 0/20 Premium (30 days) · 0/5 OKAZION (5 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Trust Badge',
   },
   {
     planCode: 'elite',
@@ -70,12 +73,13 @@ const PACKAGE_TIERS = [
     maxApartmentListings: 1000,
     maxProductListings: 200,
     maxPremiumListings: 30,
+    maxOkazionListings: 10,
     boostCredits: 2000,
     refreshEveryHours: 6,
     glowBadgeEnabled: true,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/150 Cars · 0/1000 Apartments · 0/200 Products · 0/500 Jobs · 0/30 Premium (30 days) · 2000 Boost Coins · Refresh same listing after 6 hours · Trust Badge',
+      '0/1 List in All Categories · 0/150 Cars · 0/1000 Apartments · 0/200 Products · 0/500 Jobs · 0/30 Premium (30 days) · 0/10 OKAZION (5 days) · 2000 Boost Coins · Refresh same listing after 6 hours · Trust Badge',
   },
 ];
 
@@ -100,6 +104,7 @@ function tierFields(tier) {
     max_apartment_listings: tier.maxApartmentListings,
     max_product_listings: tier.maxProductListings,
     max_premium_listings: tier.maxPremiumListings,
+    max_okazion_listings: tier.maxOkazionListings,
     price_1_month: tier.price1Month,
     price_3_months: null,
     price_6_months: null,
@@ -140,14 +145,31 @@ async function ensureContractPackages() {
       if (findErr) throw findErr;
 
       if (existing) {
-        const { error } = await sb.from('contracts').update(fields).eq('id', existing.id);
+        let { error } = await sb.from('contracts').update(fields).eq('id', existing.id);
+        if (error && /max_okazion_listings/i.test(String(error.message || ''))) {
+          console.warn(
+            '[okazion] contracts.max_okazion_listings missing — apply 20260805140000_okazion_listings.sql',
+          );
+          const { max_okazion_listings: _omit, ...rest } = fields;
+          ({ error } = await sb.from('contracts').update(rest).eq('id', existing.id));
+        }
         if (error) throw error;
         upserted += 1;
       } else {
-        const { error } = await sb.from('contracts').insert({
+        let { error } = await sb.from('contracts').insert({
           ...fields,
           created_at: now,
         });
+        if (error && /max_okazion_listings/i.test(String(error.message || ''))) {
+          console.warn(
+            '[okazion] contracts.max_okazion_listings missing — apply 20260805140000_okazion_listings.sql',
+          );
+          const { max_okazion_listings: _omit, ...rest } = fields;
+          ({ error } = await sb.from('contracts').insert({
+            ...rest,
+            created_at: now,
+          }));
+        }
         if (error) throw error;
         upserted += 1;
       }

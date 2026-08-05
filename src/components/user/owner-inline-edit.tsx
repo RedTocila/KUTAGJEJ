@@ -6,6 +6,7 @@ import { Check as CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { OwnerEditPencil, type OwnerEditHandlers, type OwnerInlineField } from '@/components/user/owner-edit-pencil';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { productButtonSx } from '@/styles/product-sx';
 
 /** Compact Done / Cancel row under an inline editor. */
@@ -30,9 +31,21 @@ export function OwnerInlineEditActions({
       <Button
         size="small"
         variant="contained"
+        color="primary"
         onClick={onDone}
         startIcon={<CheckIcon size={14} weight="bold" />}
-        sx={{ ...productButtonSx, px: 1.5, minWidth: 0 }}
+        sx={{
+          ...productButtonSx,
+          px: 1.5,
+          minWidth: 0,
+          bgcolor: 'primary.main',
+          color: 'primary.contrastText',
+          boxShadow: `0 2px 10px ${primaryMainAlpha(0.35)}`,
+          '&:hover': {
+            bgcolor: 'primary.dark',
+            boxShadow: `0 3px 12px ${primaryMainAlpha(0.45)}`,
+          },
+        }}
       >
         Gati
       </Button>

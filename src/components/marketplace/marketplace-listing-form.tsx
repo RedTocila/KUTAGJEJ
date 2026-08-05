@@ -15,6 +15,13 @@ import {
   ListingFormSection,
   ListingTextField,
 } from '@/components/user/listing-form-ui';
+import {
+  activateOkazionAfterCreate,
+  OkazionBoostUpsell,
+  OkazionPostActions,
+  type OkazionBoostMode,
+  type OkazionPayMode,
+} from '@/components/user/okazion-boost-upsell';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import {
   MARKETPLACE_CATEGORY_OPTIONS,
@@ -26,6 +33,7 @@ import { useUser } from '@/hooks/use-user';
 import { createMarketplaceListing, updateMarketplaceListing, type MarketplaceMineListing } from '@/lib/listings-client';
 import { contactPhoneFromStorage, resolveContactPhone } from '@/lib/listing-form-defaults';
 import { uploadListingImages } from '@/lib/uploads-client';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const MAX_MARKETPLACE_IMAGES = 5;
 
@@ -96,14 +104,15 @@ function validateForm(f: MarketplaceFormState): string | null {
 }
 
 function formFromListing(l: MarketplaceMineListing): MarketplaceFormState {
+  const hasPrice = l.price != null;
   return {
     transactionType: 'shes',
     title: l.title || '',
     description: l.description || '',
     category: l.category || '',
     condition: l.condition || '',
-    price: l.price != null ? String(l.price) : '',
-    currency: l.currency === 'EUR' || l.currency === 'LEK' ? l.currency : '',
+    price: hasPrice ? String(l.price) : '',
+    currency: l.currency === 'EUR' || l.currency === 'LEK' ? l.currency : hasPrice ? 'EUR' : '',
     cityId: l.cityId ? String(l.cityId) : '',
     contactPhone: l.contactPhone || '',
   };
@@ -117,11 +126,17 @@ export function MarketplaceListingForm({
   initialListing,
 }: MarketplaceListingFormProps) {
   const isEdit = Boolean(editListingId);
-  const { user } = useUser();
+  const { user, checkSession } = useUser();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const wantsOkazion = searchParams.get('okazion') === '1';
 
   const [form, setForm] = React.useState<MarketplaceFormState>(() =>
     initialListing ? formFromListing(initialListing) : { ...emptyForm(), contactPhone: contactPhoneFromStorage() },
   );
+  const [okazionMode, setOkazionMode] = React.useState<OkazionBoostMode>(wantsOkazion ? 'buy-card' : 'off');
+  const okazionPayRef = React.useRef<OkazionPayMode>('buy-card');
+  const formRef = React.useRef<HTMLFormElement | null>(null);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [images, setImages] = React.useState<File[]>([]);
   const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(
@@ -148,6 +163,19 @@ export function MarketplaceListingForm({
     setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
     setImages([]);
   }, [initialListing]);
+
+  // AI drafts sometimes only have cityName — map it to cityId once cities load.
+  React.useEffect(() => {
+    if (!initialListing || form.cityId || !cities.length) return;
+    const name = String(initialListing.cityName || '').trim().toLowerCase();
+    if (!name) return;
+    const match =
+      cities.find((c) => c.name.toLowerCase() === name) ||
+      cities.find(
+        (c) => c.name.toLowerCase().includes(name) || name.includes(c.name.toLowerCase()),
+      );
+    if (match) setForm((prev) => (prev.cityId ? prev : { ...prev, cityId: match.id }));
+  }, [initialListing, cities, form.cityId]);
 
   React.useEffect(() => {
     if (isEdit) return;
@@ -197,6 +225,21 @@ export function MarketplaceListingForm({
           ? await updateMarketplaceListing(editListingId, payload)
           : await createMarketplaceListing(payload);
       if (result.error) { setSubmitError(result.error); return; }
+      if (!isEdit && result.id && (wantsOkazion || okazionMode !== 'off')) {
+        const boost = await activateOkazionAfterCreate({
+          mode: wantsOkazion ? okazionPayRef.current : okazionMode,
+          kind: 'marketplace',
+          listingId: result.id,
+        });
+        if (boost.redirectToCheckout) {
+          router.push(boost.redirectToCheckout);
+          return;
+        }
+        if (!boost.ok && boost.message) {
+          setSubmitError(boost.message);
+        }
+        void checkSession();
+      }
       onSuccess?.();
     } finally {
       setSubmitting(false);
@@ -204,7 +247,12 @@ export function MarketplaceListingForm({
   };
 
   return (
-    <Stack component="form" spacing={2.25} onSubmit={(e) => void handleSubmit(e)}>
+    <Stack
+      ref={formRef}
+      component="form"
+      spacing={2.25}
+      onSubmit={(e) => void handleSubmit(e)}
+    >
       {submitError ? (
         <Alert severity="error" sx={{ borderRadius: 2 }}>
           {submitError}
@@ -311,12 +359,27 @@ export function MarketplaceListingForm({
         />
       </ListingFormSection>
 
-      <ListingFormActions
-        submitLabel={isEdit ? 'Përditëso njoftimin' : 'Ruaj njoftimin'}
-        submitting={submitting}
-        backHref={backHref}
-        backLabel={backLabel}
-      />
+      {!isEdit && !wantsOkazion ? (
+        <OkazionBoostUpsell value={okazionMode} onChange={setOkazionMode} />
+      ) : null}
+
+      {wantsOkazion && !isEdit ? (
+        <OkazionPostActions
+          submitting={submitting}
+          onPost={(mode) => {
+            okazionPayRef.current = mode;
+            setOkazionMode(mode);
+            formRef.current?.requestSubmit();
+          }}
+        />
+      ) : (
+        <ListingFormActions
+          submitLabel={isEdit ? 'Përditëso njoftimin' : 'Ruaj njoftimin'}
+          submitting={submitting}
+          backHref={backHref}
+          backLabel={backLabel}
+        />
+      )}
     </Stack>
   );
 }

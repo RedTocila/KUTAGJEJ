@@ -60,7 +60,7 @@ export function MobileNav({ open, onClose, sections: sectionsProp }: MobileNavPr
           }}
         >
           <BrandLogo
-            height={36}
+            height={28}
             showWordmark
             wordmarkPresentation="brand"
             markSx={{

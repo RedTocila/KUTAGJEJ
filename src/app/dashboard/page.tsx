@@ -115,7 +115,7 @@ export default function Page() {
         color: 'primary.main',
       },
       {
-        title: 'Në pritje miratimi',
+        title: 'Hequr / në shqyrtim',
         value: loadingVal(pendingListings),
         icon: ClockIcon,
         color: 'warning.main',

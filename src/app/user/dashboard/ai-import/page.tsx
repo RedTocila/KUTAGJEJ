@@ -15,18 +15,25 @@ import {
 import { CaretLeft as CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { LinkSimple as LinkSimpleIcon } from '@phosphor-icons/react/dist/ssr/LinkSimple';
+import { Paperclip as PaperclipIcon } from '@phosphor-icons/react/dist/ssr/Paperclip';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { ProductDialog } from '@/components/core/product-dialog';
 import { HomeVerticalIcon } from '@/components/public/home-vertical-icon';
+import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-panel';
 import { PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import { useUser } from '@/hooks/use-user';
 import {
+  acceptAiCategoryCorrection,
+  filesToAiImagePayload,
   importListingsFromLinks,
+  isAiCategoryMismatch,
+  isAiContentRestricted,
+  mergeAttachedImageUrls,
   toAiListingDraft,
   type AiImportDraftResult,
 } from '@/lib/ai-import-client';
@@ -49,8 +56,30 @@ import {
 } from '@/lib/ai-listing-draft';
 import { postAiListingDraft, postAiListingDrafts } from '@/lib/ai-draft-post';
 import { hardNavigate } from '@/lib/hard-navigate';
+import { uploadListingImages } from '@/lib/uploads-client';
 import { paths } from '@/paths';
 import type { ListingCategoryKey } from '@/types/listing-category';
+
+const MAX_AI_IMAGES = 6;
+
+function formatCategoryMismatch(
+  t: ReturnType<typeof useCopy>,
+  draft: Pick<AiImportDraftResult, 'detectedCategory' | 'error'>,
+): string {
+  if (draft.detectedCategory) {
+    return t.aiImport.categoryMismatch(categoryLabel(draft.detectedCategory));
+  }
+  return draft.error || t.aiImport.categoryMismatchGeneric;
+}
+
+const UPLOAD_FOLDER: Record<ListingCategoryKey, string> = {
+  'real-estate': 'real-estate',
+  cars: 'cars',
+  'job-listings': 'jobs',
+  marketplace: 'marketplace',
+  businesses: 'businesses',
+  professionals: 'professionals',
+};
 
 function toListingCategory(id: HomeVerticalId): ListingCategoryKey {
   return id === 'jobs' ? 'job-listings' : id;
@@ -79,8 +108,11 @@ export default function AiImportListingsPage() {
   const { language } = useLanguage();
   const t = useCopy();
   const categories = React.useMemo(() => localizeHomeVerticals(language), [language]);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [category, setCategory] = React.useState<ListingCategoryKey | null>(null);
   const [text, setText] = React.useState('');
+  const [files, setFiles] = React.useState<File[]>([]);
+  const [previews, setPreviews] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [drafts, setDrafts] = React.useState<AiImportDraftResult[]>([]);
@@ -88,6 +120,9 @@ export default function AiImportListingsPage() {
   const [postingId, setPostingId] = React.useState<string | null>(null);
   const [postingAll, setPostingAll] = React.useState(false);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
+  const [switchingId, setSwitchingId] = React.useState<string | null>(null);
+  const [pendingImageUrls, setPendingImageUrls] = React.useState<string[]>([]);
+  const [lastPrompt, setLastPrompt] = React.useState('');
 
   const canPublish =
     Boolean(user) &&
@@ -112,6 +147,14 @@ export default function AiImportListingsPage() {
     setCategory(queued[0]?.category ?? null);
   }, []);
 
+  React.useEffect(() => {
+    const urls = files.map((f) => URL.createObjectURL(f));
+    setPreviews(urls);
+    return () => {
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [files]);
+
   const persistDrafts = (next: AiImportDraftResult[]) => {
     setDrafts(next);
     const ready = next
@@ -128,6 +171,22 @@ export default function AiImportListingsPage() {
     [drafts],
   );
 
+  const handleFilesPicked = (list: FileList | null) => {
+    if (!list?.length) return;
+    const next = [...files];
+    for (const file of Array.from(list)) {
+      if (!file.type.startsWith('image/')) continue;
+      if (next.length >= MAX_AI_IMAGES) break;
+      next.push(file);
+    }
+    setFiles(next);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleAnalyze = async (event?: React.FormEvent) => {
     event?.preventDefault();
     if (!category) {
@@ -135,7 +194,7 @@ export default function AiImportListingsPage() {
       return;
     }
     const trimmed = text.trim();
-    if (!trimmed) {
+    if (!trimmed && files.length === 0 && pendingImageUrls.length === 0) {
       setError(t.aiImport.empty);
       return;
     }
@@ -143,7 +202,29 @@ export default function AiImportListingsPage() {
     setError(null);
     setStatusMessage(null);
     try {
-      const res = await importListingsFromLinks({ text: trimmed, category });
+      let uploadedUrls: string[] = [...pendingImageUrls];
+      if (files.length > 0) {
+        const up = await uploadListingImages(files, UPLOAD_FOLDER[category]);
+        if (up.error) {
+          setError(up.error);
+          return;
+        }
+        uploadedUrls = [...uploadedUrls, ...up.urls].slice(0, MAX_AI_IMAGES);
+      }
+
+      const imagePayload =
+        uploadedUrls.length > 0
+          ? uploadedUrls.map((url) => ({ url }))
+          : await filesToAiImagePayload(files);
+
+      setLastPrompt(trimmed);
+      setPendingImageUrls(uploadedUrls);
+
+      const res = await importListingsFromLinks({
+        text: trimmed,
+        category,
+        images: imagePayload,
+      });
       if (res.error) {
         setError(res.error);
         return;
@@ -152,7 +233,29 @@ export default function AiImportListingsPage() {
         setError(t.aiImport.empty);
         return;
       }
-      persistDrafts(res.drafts);
+      const nextDrafts =
+        uploadedUrls.length > 0
+          ? res.drafts.map((draft) => ({
+              ...draft,
+              sourcePrompt: draft.sourcePrompt || trimmed,
+              imageUrls: mergeAttachedImageUrls({
+                remoteUrls: draft.imageUrls ?? [],
+                uploadedUrls,
+                roles: draft.imageRoles,
+                max: draft.category === 'professionals' || draft.detectedCategory === 'professionals' ? 2 : 8,
+              }),
+            }))
+          : res.drafts.map((draft) => ({
+              ...draft,
+              sourcePrompt: draft.sourcePrompt || trimmed,
+            }));
+      persistDrafts(nextDrafts);
+      const hasMismatch = nextDrafts.some((d) => isAiCategoryMismatch(d));
+      if (!hasMismatch) {
+        setText('');
+        setFiles([]);
+        setPendingImageUrls([]);
+      }
     } catch {
       setError(t.aiImport.failed);
     } finally {
@@ -160,9 +263,116 @@ export default function AiImportListingsPage() {
     }
   };
 
+  const acceptMismatch = (draft: AiImportDraftResult) => {
+    const accepted = acceptAiCategoryCorrection(draft);
+    if (!accepted?.category) {
+      setError(t.aiImport.formEmpty);
+      return;
+    }
+    const next = drafts.map((d) => (d.id === draft.id ? accepted : d));
+    persistDrafts(next);
+    setCategory(accepted.category);
+    setError(null);
+    setStatusMessage(t.aiImport.categorySwitched(categoryLabel(accepted.category)));
+  };
+
+  const switchMismatchCategory = async (
+    draft: AiImportDraftResult,
+    nextCategory: ListingCategoryKey,
+  ) => {
+    if (draft.detectedCategory && nextCategory === draft.detectedCategory) {
+      acceptMismatch(draft);
+      return;
+    }
+
+    const prompt = (draft.sourcePrompt || lastPrompt || text || draft.sourceUrl || '').trim();
+    const imageUrls = (draft.imageUrls?.length ? draft.imageUrls : pendingImageUrls).filter(Boolean);
+    if (!prompt && imageUrls.length === 0) {
+      setError(t.aiImport.empty);
+      return;
+    }
+
+    setSwitchingId(draft.id);
+    setError(null);
+    setStatusMessage(null);
+    try {
+      const res = await importListingsFromLinks({
+        text: prompt,
+        category: nextCategory,
+        images: imageUrls.map((url) => ({ url })),
+      });
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      const rebuilt = res.drafts[0];
+      if (!rebuilt) {
+        setError(t.aiImport.formEmpty);
+        return;
+      }
+      const shaped: AiImportDraftResult = {
+        ...rebuilt,
+        id: draft.id,
+        sourcePrompt: prompt,
+        imageUrls: imageUrls.length
+          ? mergeAttachedImageUrls({
+              remoteUrls: rebuilt.imageUrls ?? [],
+              uploadedUrls: imageUrls,
+              roles: rebuilt.imageRoles,
+              max: nextCategory === 'professionals' ? 2 : 8,
+            })
+          : rebuilt.imageUrls ?? [],
+      };
+      if (isAiCategoryMismatch(shaped)) {
+        const next = drafts.map((d) => (d.id === draft.id ? shaped : d));
+        persistDrafts(next);
+        setCategory(nextCategory);
+        return;
+      }
+      const ready = toAiListingDraft(shaped);
+      if (!ready) {
+        setError(shaped.error || t.aiImport.formEmpty);
+        return;
+      }
+      const accepted = { ...shaped, error: null, errorCode: null };
+      const next = drafts.map((d) => (d.id === draft.id ? accepted : d));
+      persistDrafts(next);
+      setCategory(nextCategory);
+      setStatusMessage(t.aiImport.categorySwitched(categoryLabel(nextCategory)));
+    } catch {
+      setError(t.aiImport.failed);
+    } finally {
+      setSwitchingId(null);
+    }
+  };
+
+  const startOverMismatch = (draft: AiImportDraftResult) => {
+    const prompt = draft.sourcePrompt || lastPrompt || '';
+    const images = draft.imageUrls?.length ? draft.imageUrls : pendingImageUrls;
+    dismissDraft(draft.id);
+    setText(prompt);
+    setLastPrompt(prompt);
+    setPendingImageUrls(images);
+    setFiles([]);
+    setCategory(null);
+    setError(null);
+    setStatusMessage(null);
+  };
+
   const openDraft = (draft: AiImportDraftResult) => {
+    if (isAiContentRestricted(draft)) {
+      setError(t.aiImport.contentRestricted);
+      return;
+    }
+    if (isAiCategoryMismatch(draft)) {
+      setError(formatCategoryMismatch(t, draft));
+      return;
+    }
     const ready = toAiListingDraft(draft);
-    if (!ready) return;
+    if (!ready) {
+      setError(draft.error || t.aiImport.formEmpty);
+      return;
+    }
     saveAiListingDraft(ready);
     const href = `${paths.user.realEstateListing}?category=${encodeURIComponent(ready.category)}&ai=1&draftId=${encodeURIComponent(ready.id)}`;
     hardNavigate(href);
@@ -181,9 +391,17 @@ export default function AiImportListingsPage() {
   };
 
   const postOne = async (draft: AiImportDraftResult) => {
+    if (isAiContentRestricted(draft)) {
+      setError(t.aiImport.contentRestricted);
+      return;
+    }
+    if (isAiCategoryMismatch(draft)) {
+      setError(formatCategoryMismatch(t, draft));
+      return;
+    }
     const ready = toAiListingDraft(draft);
     if (!ready) {
-      setError(t.aiImport.formEmpty);
+      setError(draft.error || t.aiImport.formEmpty);
       return;
     }
     setPostingId(draft.id);
@@ -311,7 +529,7 @@ export default function AiImportListingsPage() {
                   display: 'flex',
                   flexDirection: 'row',
                   flexWrap: 'nowrap',
-                  gap: { xs: 1, sm: 1.5 },
+                  gap: { xs: 1.25, sm: 2 },
                   justifyContent: 'flex-start',
                   overflowX: 'auto',
                   overflowY: 'hidden',
@@ -339,8 +557,7 @@ export default function AiImportListingsPage() {
                       }}
                       spacing={0.4}
                       sx={{
-                        flex: '0 0 auto',
-                        width: { xs: 56, sm: 58 },
+                        flexShrink: 0,
                         scrollSnapAlign: { xs: 'start', sm: 'none' },
                         alignItems: 'center',
                         cursor: 'pointer',
@@ -363,8 +580,8 @@ export default function AiImportListingsPage() {
                       <Box
                         className="ai-cat-circle"
                         sx={{
-                          width: { xs: 48, sm: 50 },
-                          height: { xs: 48, sm: 50 },
+                          width: { xs: 60, sm: 58 },
+                          height: { xs: 60, sm: 58 },
                           borderRadius: '50%',
                           display: 'grid',
                           placeItems: 'center',
@@ -376,7 +593,7 @@ export default function AiImportListingsPage() {
                       >
                         <HomeVerticalIcon
                           verticalId={item.id}
-                          size={26}
+                          size={34}
                           color={selected ? AI_SEARCH_BLUE_ON : AI_SEARCH_BLUE}
                         />
                       </Box>
@@ -384,14 +601,9 @@ export default function AiImportListingsPage() {
                         className="ai-cat-label"
                         variant="caption"
                         sx={{
-                          fontWeight: selected ? 800 : 600,
-                          fontSize: '0.68rem',
+                          fontWeight: selected ? 700 : 600,
                           color: selected ? AI_SEARCH_BLUE : 'text.secondary',
                           whiteSpace: 'nowrap',
-                          maxWidth: '100%',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          textAlign: 'center',
                           transition: 'color 0.15s ease',
                         }}
                       >
@@ -405,38 +617,118 @@ export default function AiImportListingsPage() {
 
             {category ? (
               <>
-                <TextField
-                  fullWidth
-                  multiline
-                  minRows={5}
-                  maxRows={12}
-                  value={text}
-                  onChange={(event) => setText(event.target.value)}
-                  placeholder={t.aiImport.placeholder}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2.5,
-                      bgcolor: (theme) =>
-                        theme.palette.mode === 'dark' ? 'action.hover' : 'background.default',
-                      color: 'text.primary',
-                      '& fieldset': {
-                        borderWidth: 1.5,
-                        borderColor: 'divider',
-                      },
-                      '&:hover fieldset': {
-                        borderColor: 'text.secondary',
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderWidth: 1.5,
-                        borderColor: 'text.secondary',
-                      },
-                    },
-                    '& .MuiInputBase-input::placeholder': {
-                      color: '#9CA3AF',
-                      opacity: 1,
-                    },
-                  }}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  multiple
+                  hidden
+                  onChange={(e) => handleFilesPicked(e.target.files)}
                 />
+
+                <Box sx={{ position: 'relative' }}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={5}
+                    maxRows={12}
+                    value={text}
+                    onChange={(event) => setText(event.target.value)}
+                    placeholder={t.aiImport.placeholder}
+                    disabled={loading}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2.5,
+                        bgcolor: (theme) =>
+                          theme.palette.mode === 'dark' ? 'action.hover' : 'background.default',
+                        color: 'text.primary',
+                        pb: 4.5,
+                        '& fieldset': {
+                          borderWidth: 1.5,
+                          borderColor: 'divider',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: 'text.secondary',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderWidth: 1.5,
+                          borderColor: 'text.secondary',
+                        },
+                      },
+                      '& .MuiInputBase-input::placeholder': {
+                        color: '#9CA3AF',
+                        opacity: 1,
+                      },
+                    }}
+                  />
+                  <IconButton
+                    type="button"
+                    size="small"
+                    aria-label={t.aiImport.attachImages}
+                    disabled={loading || files.length >= MAX_AI_IMAGES}
+                    onClick={() => fileInputRef.current?.click()}
+                    sx={{
+                      position: 'absolute',
+                      right: 10,
+                      bottom: 10,
+                      color: files.length > 0 ? AI_SEARCH_BLUE : 'text.secondary',
+                      bgcolor: (theme) =>
+                        theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                      '&:hover': {
+                        bgcolor: (theme) =>
+                          theme.palette.mode === 'dark'
+                            ? 'rgba(255,255,255,0.12)'
+                            : 'rgba(0,0,0,0.08)',
+                      },
+                    }}
+                  >
+                    <PaperclipIcon size={20} weight="bold" />
+                  </IconButton>
+                </Box>
+
+                {previews.length > 0 ? (
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                    {previews.map((src, index) => (
+                      <Box
+                        key={`${src}-${index}`}
+                        sx={{
+                          position: 'relative',
+                          width: 56,
+                          height: 56,
+                          borderRadius: 1.5,
+                          overflow: 'hidden',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                        }}
+                      >
+                        <Box
+                          component="img"
+                          src={src}
+                          alt=""
+                          sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                        <IconButton
+                          size="small"
+                          aria-label={t.aiImport.removeImage}
+                          onClick={() => removeFile(index)}
+                          disabled={loading}
+                          sx={{
+                            position: 'absolute',
+                            top: 2,
+                            right: 2,
+                            width: 22,
+                            height: 22,
+                            bgcolor: 'rgba(0,0,0,0.55)',
+                            color: '#fff',
+                            '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' },
+                          }}
+                        >
+                          <XIcon size={12} weight="bold" />
+                        </IconButton>
+                      </Box>
+                    ))}
+                  </Stack>
+                ) : null}
 
                 {error ? (
                   <Alert severity="error" sx={{ borderRadius: 2.5 }}>
@@ -447,7 +739,7 @@ export default function AiImportListingsPage() {
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={loading}
+                  disabled={loading || (!text.trim() && files.length === 0)}
                   fullWidth
                   startIcon={
                     loading ? (
@@ -568,8 +860,11 @@ export default function AiImportListingsPage() {
             </Alert>
           ) : null}
           {drafts.map((draft) => {
-            const failed = Boolean(draft.error) || !draft.category;
+            const mismatch = isAiCategoryMismatch(draft);
+            const restricted = isAiContentRestricted(draft);
+            const failed = (Boolean(draft.error) || !draft.category) && !mismatch;
             const images = draftImageUrls(draft);
+            const busySwitch = switchingId === draft.id;
             return (
               <Box
                 key={draft.id}
@@ -577,8 +872,8 @@ export default function AiImportListingsPage() {
                   p: 2,
                   borderRadius: 2.5,
                   border: '1px solid',
-                  borderColor: failed ? 'error.light' : 'divider',
-                  bgcolor: failed ? 'error.light' : 'background.paper',
+                  borderColor: mismatch || failed || restricted ? 'error.light' : 'divider',
+                  bgcolor: mismatch || failed || restricted ? 'error.light' : 'background.paper',
                 }}
               >
                 <Stack spacing={1.25}>
@@ -589,7 +884,9 @@ export default function AiImportListingsPage() {
                     <Stack spacing={0.35} sx={{ minWidth: 0, flex: 1 }}>
                       <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
                         <Typography sx={{ fontWeight: 800, fontSize: '0.98rem', flex: 1, minWidth: 0 }}>
-                          {draft.title || categoryLabel(draft.category)}
+                          {draft.title ||
+                            categoryLabel(draft.detectedCategory || draft.category) ||
+                            (restricted ? t.aiImport.contentRestricted.slice(0, 48) : '')}
                         </Typography>
                         <IconButton
                           size="small"
@@ -607,13 +904,13 @@ export default function AiImportListingsPage() {
                       >
                         {draft.sourceUrl}
                       </Typography>
-                      {draft.category ? (
+                      {draft.category && !mismatch && !restricted ? (
                         <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
                           {categoryLabel(draft.category)}
                           {draft.cityName ? ` · ${draft.cityName}` : ''}
                         </Typography>
                       ) : null}
-                      {draft.summary ? (
+                      {draft.summary && !restricted ? (
                         <Typography variant="body2" color="text.secondary">
                           {draft.summary}
                         </Typography>
@@ -623,10 +920,31 @@ export default function AiImportListingsPage() {
                           {draft.warning}
                         </Alert>
                       ) : null}
-                      {draft.error ? (
+                      {restricted ? (
+                        <Alert severity="error" sx={{ borderRadius: 2, py: 0.5 }}>
+                          <Stack spacing={0.5}>
+                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                              {t.aiImport.contentRestricted}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {t.aiImport.contentRestrictedHint}
+                            </Typography>
+                          </Stack>
+                        </Alert>
+                      ) : null}
+                      {failed && !restricted && draft.error ? (
                         <Alert severity="error" sx={{ borderRadius: 2, py: 0 }}>
                           {draft.error}
                         </Alert>
+                      ) : null}
+                      {mismatch ? (
+                        <AiCategoryMismatchPanel
+                          draft={draft}
+                          busy={busySwitch}
+                          onAcceptDetected={() => acceptMismatch(draft)}
+                          onPickCategory={(key) => void switchMismatchCategory(draft, key)}
+                          onStartOver={() => startOverMismatch(draft)}
+                        />
                       ) : null}
                     </Stack>
                   </Stack>
@@ -679,7 +997,7 @@ export default function AiImportListingsPage() {
                     </Box>
                   ) : null}
 
-                  {!failed ? (
+                  {!failed && !mismatch ? (
                     <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
                       <Button
                         variant="contained"

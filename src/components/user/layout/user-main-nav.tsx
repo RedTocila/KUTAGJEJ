@@ -97,8 +97,8 @@ export function UserMainNav() {
                     width: 36,
                     height: 36,
                     bgcolor: 'primary.main',
-                    color: 'common.black',
-                    '&:hover': { bgcolor: 'primary.dark', color: 'common.black' },
+                    color: 'primary.contrastText',
+                    '&:hover': { bgcolor: 'primary.dark', color: 'primary.contrastText' },
                   }}
                 >
                   <PlusIcon size={18} weight="bold" />

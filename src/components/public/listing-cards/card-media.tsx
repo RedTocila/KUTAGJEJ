@@ -1,11 +1,13 @@
 'use client';
 
 import * as React from 'react';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Box, Chip, Stack } from '@mui/material';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { OKAZION_RED } from '@/lib/home-categories';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
@@ -22,6 +24,15 @@ import {
 } from '@/lib/listing-metrics';
 import { paths } from '@/paths';
 
+import { OkazionCountdownPlaceholder } from './okazion-countdown';
+
+const OkazionCountdown = dynamic(
+  () => import('./okazion-countdown').then((m) => m.OkazionCountdown),
+  {
+    ssr: false,
+    loading: () => <OkazionCountdownPlaceholder />,
+  },
+);
 export interface CardMediaProps {
   listingKind: ListingMetricKind;
   listingId: string;
@@ -40,6 +51,10 @@ export interface CardMediaProps {
   saved?: boolean;
   /** Premium listing — amber bookmark accent. */
   premium?: boolean;
+  /** OKAZION listing — red accent / badge. */
+  okazion?: boolean;
+  /** When OKAZION ends (ISO). Countdown falls back to 5 days if omitted. */
+  okazionUntil?: string | null;
   /** Rich data for the share sheet / Instagram story template. */
   sharePayload?: Omit<ListingSharePayload, 'listingKind' | 'listingId' | 'title'> & {
     title?: string;
@@ -61,6 +76,8 @@ export function CardMedia({
   saveCount: initialSaveCount = 0,
   saved: initialSaved,
   premium = false,
+  okazion = false,
+  okazionUntil = null,
   sharePayload,
 }: CardMediaProps) {
   const router = useRouter();
@@ -159,28 +176,54 @@ export function CardMedia({
         </Stack>
       )}
 
-      {topLeftOverlay ? (
-        <Box sx={{ position: 'absolute', top: 8, left: 8, zIndex: 3, lineHeight: 0 }}>
-          {topLeftOverlay}
-        </Box>
-      ) : topLeftBadge ? (
-        <Chip
-          label={topLeftBadge}
-          size="small"
+      {(okazion || topLeftOverlay || topLeftBadge) ? (
+        <Stack
+          spacing={0.6}
           sx={{
             position: 'absolute',
             top: 8,
             left: 8,
-            height: 22,
-            fontSize: '0.7rem',
-            fontWeight: 600,
-            bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.92)',
-            color: 'text.primary',
-            border: '1px solid',
-            borderColor: 'divider',
-            '& .MuiChip-label': { px: 1 },
+            zIndex: 3,
+            alignItems: 'flex-start',
+            maxWidth: 'calc(100% - 88px)',
           }}
-        />
+        >
+          {okazion ? (
+            <Chip
+              label="OKAZION"
+              size="small"
+              sx={{
+                height: 28,
+                fontSize: '0.72rem',
+                fontWeight: 900,
+                letterSpacing: 0.5,
+                bgcolor: OKAZION_RED,
+                color: '#fff',
+                flexShrink: 0,
+                boxShadow: '0 2px 10px rgba(239, 68, 68, 0.55)',
+                '& .MuiChip-label': { px: 1.1 },
+              }}
+            />
+          ) : null}
+          {topLeftOverlay ? (
+            <Box sx={{ lineHeight: 0 }}>{topLeftOverlay}</Box>
+          ) : !okazion && topLeftBadge ? (
+            <Chip
+              label={topLeftBadge}
+              size="small"
+              sx={{
+                height: 22,
+                fontSize: '0.7rem',
+                fontWeight: 600,
+                bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.92)',
+                color: 'text.primary',
+                border: '1px solid',
+                borderColor: 'divider',
+                '& .MuiChip-label': { px: 1 },
+              }}
+            />
+          ) : null}
+        </Stack>
       ) : null}
 
       {topRightBadge ? (
@@ -207,13 +250,27 @@ export function CardMedia({
             position: 'absolute',
             left: 0,
             right: 0,
-            bottom: 0,
+            bottom: okazion ? 44 : 0,
             zIndex: 2,
             pointerEvents: 'none',
             '& > *': { pointerEvents: 'auto' },
           }}
         >
           {bottomOverlay}
+        </Box>
+      ) : null}
+
+      {okazion ? (
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: 8,
+            right: 8,
+            zIndex: 3,
+            maxWidth: 'calc(100% - 16px)',
+          }}
+        >
+          <OkazionCountdown expiresAt={okazionUntil} />
         </Box>
       ) : null}
 
@@ -232,7 +289,7 @@ export function CardMedia({
           aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
           count={saveCount}
           active={saved}
-          accent={premium ? 'warning' : 'primary'}
+          accent={okazion ? 'error' : premium ? 'warning' : 'primary'}
           icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} />}
           onClick={handleSave}
         />

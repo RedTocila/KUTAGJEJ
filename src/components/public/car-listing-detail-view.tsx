@@ -43,6 +43,7 @@ import {
   CAR_COLOUR_OPTIONS,
   FUEL_TYPE_OPTIONS,
   TRANSMISSION_OPTIONS,
+  vehicleTypeLabel,
 } from '@/lib/car-constants';
 import {
   LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
@@ -357,6 +358,9 @@ export function CarListingDetailView({
   };
 
   const detailRows: Array<{ label: string; value: string }> = [
+    ...(listing.vehicleType
+      ? [{ label: 'Kategoria', value: vehicleTypeLabel(listing.vehicleType) }]
+      : []),
     { label: 'Markë', value: listing.make },
     { label: 'Model', value: listing.model },
     ...(listing.variant ? [{ label: 'Variant', value: listing.variant }] : []),
@@ -456,17 +460,16 @@ export function CarListingDetailView({
                       whatsappInquireHref={whatsappInquireHref}
                     />
                     <Divider flexItem sx={{ borderColor: 'rgba(var(--mui-palette-dividerChannel) / 0.35)' }} />
-                    <Paper
-                      elevation={0}
-                      sx={{
+                    <ListingSellerProfileCard
+                      seller={listing.seller}
+                      headingId="car-seller-heading-hero"
+                      cardSx={{
                         ...productPanelSx,
                         border: 'none',
                         p: 2,
                         borderRadius: 2.5,
                       }}
-                    >
-                      <ListingSellerProfileCard seller={listing.seller} headingId="car-seller-heading-hero" showSafetyNote />
-                    </Paper>
+                    />
                   </Stack>
                 </Box>
               </Stack>
@@ -655,12 +658,7 @@ export function CarListingDetailView({
               ) : null}
 
               <Box sx={{ display: ownerPreview ? 'block' : { xs: 'block', md: 'none' } }}>
-                <Paper
-                  variant="outlined"
-                  sx={{ borderRadius: 2.5, borderColor: 'divider', bgcolor: 'background.paper', p: { xs: 2, sm: 2.5 } }}
-                >
-                  <ListingSellerProfileCard seller={listing.seller} headingId="car-seller-heading-mobile" showSafetyNote />
-                </Paper>
+                <ListingSellerProfileCard seller={listing.seller} headingId="car-seller-heading-mobile" />
               </Box>
 
               {!ownerPreview && similar.length ? (

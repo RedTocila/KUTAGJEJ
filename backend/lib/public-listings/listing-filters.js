@@ -1,7 +1,8 @@
 'use strict';
 
 const { PROPERTY_SLUGS } = require('../real-estate-field-rules');
-const { FUEL_TYPE_VALUES, CAR_MAKES, TRANSMISSION_VALUES } = require('../car-field-rules');
+const { FUEL_TYPE_VALUES, CAR_MAKES, TRANSMISSION_VALUES, VEHICLE_TYPE_VALUES } = require('../car-field-rules');
+const { isValidVehicleMake, modelsForMake } = require('../vehicle-catalog');
 const {
   INDUSTRY_VALUES,
   EDUCATION_VALUES,
@@ -116,11 +117,22 @@ function parseRealEstateFilters(query) {
 function parseCarFilters(query) {
   const filter = { eq: {}, gte: {}, lte: {} };
 
+  const vehicleType = parseAllowedFromArray(query.type, VEHICLE_TYPE_VALUES);
+  if (vehicleType) filter.eq.vehicle_type = vehicleType;
+
   const fuel = parseAllowedFromArray(query.fuel, FUEL_TYPE_VALUES);
   if (fuel) filter.eq.fuel_type = fuel;
 
   const make = String(query.make ?? '').trim();
-  if (make && CAR_MAKES.includes(make)) filter.eq.make = make;
+  if (make && (vehicleType ? isValidVehicleMake(vehicleType, make) : CAR_MAKES.includes(make))) {
+    filter.eq.make = make;
+  }
+
+  const model = String(query.model ?? '').trim();
+  if (model && make && vehicleType) {
+    const allowed = modelsForMake(vehicleType, make);
+    if (allowed.includes(model)) filter.eq.model = model;
+  }
 
   const transmission = parseAllowedFromArray(query.transmission, TRANSMISSION_VALUES);
   if (transmission) filter.eq.transmission = transmission;

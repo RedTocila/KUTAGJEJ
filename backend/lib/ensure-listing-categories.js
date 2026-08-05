@@ -33,9 +33,12 @@ async function ensureListingCategories() {
       title: 'Makina',
       slug: 'makina',
       listingTypes: [
-        { slug: 'vetura', label: 'Vetura' },
+        { slug: 'car', label: 'Vetura' },
         { slug: 'suv', label: 'SUV' },
-        { slug: 'kamion', label: 'Kamion' },
+        { slug: 'van', label: 'Furgon' },
+        { slug: 'truck', label: 'Kamion' },
+        { slug: 'motorcycle', label: 'Motor' },
+        { slug: 'boat', label: 'Varkë' },
       ],
     },
     {

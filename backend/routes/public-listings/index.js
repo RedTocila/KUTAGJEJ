@@ -40,6 +40,7 @@ const {
   queryDirectory,
   countDirectory,
   topViewedByKind,
+  queryOkazionListings,
 } = require('../../lib/public-listings/latest-queries');
 const {
   parseRealEstateFilters,
@@ -97,6 +98,23 @@ router.get('/top-viewed', optionalAuth, async (req, res) => {
     res.json({ listings, vertical, kind });
   } catch (err) {
     console.error('GET /public/listings/top-viewed:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/** GET /api/public/listings/okazion — active OKAZION deals across all categories. */
+router.get('/okazion', optionalAuth, async (req, res) => {
+  try {
+    const { limit, page, skip } = parsePagination(req.query);
+    const saver = saverFromUser(req.user);
+    const { listings, total } = await queryOkazionListings(limit, skip, req.query);
+    let enriched = listings;
+    if (saver) {
+      enriched = await enrichListingsSaverState(listings, saver);
+    }
+    res.json(buildPaginatedResponse(enriched, total, limit, page));
+  } catch (err) {
+    console.error('GET /public/listings/okazion:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });

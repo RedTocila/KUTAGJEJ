@@ -10,7 +10,6 @@ import {
   Chip,
   CircularProgress,
   Divider,
-  Grid,
   InputAdornment,
   List,
   ListItemButton,
@@ -65,15 +64,14 @@ import { paths } from '@/paths';
 import type { AutoRefreshPackage, PremiumPackage, PremiumVoucher } from '@/types/payment';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import {
-  FeatureList,
-  PlanCard,
-  PlanCardHeader,
-  PlanPrice,
+  PackageOfferRow,
   SectionBlock,
   SoftChip,
+  accentButtonSx,
   formatBc,
   formatEur,
 } from './package-ui';
+import { OkazionPackagesSection } from './okazion-packages-section';
 
 const FALLBACK_AUTO_PACKAGES: AutoRefreshPackage[] = [
   { id: 'auto-refresh-10', slots: 10, priceEur: 14.9, labelSq: '10 njoftime Auto-Refresh' },
@@ -290,7 +288,7 @@ function AutoRefreshSection() {
       icon={ArrowClockwiseIcon}
       title="Auto-Refresh"
       description="Njoftimet tuaja ngrihen automatikisht në krye sipas intervalit të planit."
-      chips={<SoftChip label={`${used}/${slots} vende`} />}
+      chips={error ? undefined : <SoftChip label={`${used}/${slots} vende`} />}
     >
       {error ? (
         <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError(null)}>
@@ -303,40 +301,39 @@ function AutoRefreshSection() {
           <CircularProgress size={24} />
         </Box>
       ) : (
-        <Grid container spacing={2}>
+        <Stack spacing={1.1}>
           {packages.map((pkg, index) => (
-            <Grid key={pkg.id} size={{ xs: 12, sm: 6 }}>
-              <PlanCard highlighted={index === 1}>
-                <PlanCardHeader
-                  icon={ArrowClockwiseIcon}
-                  title={`${pkg.slots} vende`}
-                  subtitle="Kapacitet Auto-Refresh"
-                  badge={index === 1 ? <SoftChip label="Më e mirë" color="primary" /> : undefined}
-                />
-                <PlanPrice
-                  amount={formatEur(pkg.priceEur)}
-                  suffix="/ muaj"
-                  hint={`Abonim mujor · shton ${pkg.slots} vende në llogari`}
-                />
-                <FeatureList
-                  items={[
-                    `${pkg.slots} njoftime me Auto-Refresh`,
-                    `Aktualisht ${used}/${slots} vende në përdorim`,
-                    'Aktivizohet pas pagesës së parë mujore',
-                  ]}
-                />
+            <PackageOfferRow
+              key={pkg.id}
+              title={`${pkg.slots} vende`}
+              badge={index === 1 ? <SoftChip compact label="Më e mirë" color="primary" /> : undefined}
+              highlighted={index === 1}
+              details={[
+                `${pkg.slots} njoftime me Auto-Refresh`,
+                `Aktualisht ${used}/${slots} vende në përdorim`,
+                'Abonim mujor — aktivizohet pas pagesës',
+                `Shton ${pkg.slots} vende në llogari`,
+              ]}
+              actions={
                 <Button
-                  fullWidth
+                  size="small"
                   variant="contained"
                   onClick={() => router.push(checkoutAutoRefreshHref(pkg.id))}
-                  sx={{ fontWeight: 800, mt: 'auto', textTransform: 'none', borderRadius: 2, py: 1.05 }}
+                  sx={{
+                    ...accentButtonSx('primary'),
+                    borderRadius: 1.75,
+                    px: { xs: 1.5, sm: 2 },
+                    py: 0.9,
+                    minWidth: { xs: 96, sm: 112 },
+                    fontSize: '0.8rem',
+                  }}
                 >
-                  Abonohu · {formatEur(pkg.priceEur)}/muaj
+                  {formatEur(pkg.priceEur)}/muaj
                 </Button>
-              </PlanCard>
-            </Grid>
+              }
+            />
           ))}
-        </Grid>
+        </Stack>
       )}
     </SectionBlock>
   );
@@ -527,58 +524,71 @@ function PremiumListingSection() {
         </Stack>
       ) : null}
 
-      <Grid container spacing={2}>
+      <Stack spacing={1.1}>
         {packages.map((pkg) => {
           const busy = busyId === pkg.id;
           const canAfford = balance >= pkg.priceBc;
           const highlighted = pkg.days === 15;
           return (
-            <Grid key={pkg.id} size={{ xs: 12, sm: 6, md: 4 }}>
-              <PlanCard highlighted={highlighted} accent="warning">
-                <PlanCardHeader
-                  icon={SparkleIcon}
-                  title={pkg.labelSq}
-                  subtitle={`${pkg.days} ditë theksim`}
-                  accent="warning"
-                  badge={highlighted ? <SoftChip label="Rekomanduar" color="warning" /> : undefined}
-                />
-                <PlanPrice amount={formatEur(pkg.priceEur)} hint={`ose ${formatBc(pkg.priceBc)} Boost Coins`} />
-                <FeatureList
-                  items={[
-                    `Premium për ${pkg.days} ditë`,
-                    'Renditje e favorizuar',
-                    'Border i theksuar në kartë',
-                  ]}
-                />
-                <Stack spacing={1} sx={{ mt: 'auto' }}>
+            <PackageOfferRow
+              key={pkg.id}
+              title={pkg.labelSq}
+              badge={highlighted ? <SoftChip compact label="Rekomanduar" color="warning" /> : undefined}
+              accent="warning"
+              highlighted={highlighted}
+              details={[
+                `Premium për ${pkg.days} ditë`,
+                'Renditje e favorizuar',
+                'Border i theksuar në kartë',
+              ]}
+              actions={
+                <>
                   <Button
-                    fullWidth
+                    size="small"
                     variant="contained"
                     color="warning"
                     disabled={busy}
                     onClick={() => onBuyCard(pkg)}
-                    startIcon={<CreditCardIcon size={16} weight="bold" />}
-                    sx={{ fontWeight: 800, textTransform: 'none', borderRadius: 2 }}
+                    startIcon={<CreditCardIcon size={14} weight="bold" />}
+                    aria-label={`Paguaj me kartë ${formatEur(pkg.priceEur)}`}
+                    sx={{
+                      ...accentButtonSx('warning'),
+                      borderRadius: 1.75,
+                      px: { xs: 1.15, sm: 1.5 },
+                      py: 0.85,
+                      minWidth: { xs: 80, sm: 96 },
+                      fontSize: '0.78rem',
+                    }}
                   >
-                    Kartë · {formatEur(pkg.priceEur)}
+                    {formatEur(pkg.priceEur)}
                   </Button>
                   <Button
-                    fullWidth
+                    size="small"
                     variant="outlined"
                     color="warning"
                     disabled={busy || !canAfford}
                     onClick={() => void onBuyBc(pkg)}
-                    startIcon={busy ? <CircularProgress size={14} color="inherit" /> : <BoostCoinIcon size={16} />}
-                    sx={{ fontWeight: 800, textTransform: 'none', borderRadius: 2 }}
+                    startIcon={
+                      busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={14} />
+                    }
+                    aria-label={`Paguaj me ${formatBc(pkg.priceBc)} Boost Coins`}
+                    sx={{
+                      ...accentButtonSx('warning', 'outlined'),
+                      borderRadius: 1.75,
+                      px: { xs: 1.15, sm: 1.5 },
+                      py: 0.85,
+                      minWidth: { xs: 80, sm: 96 },
+                      fontSize: '0.78rem',
+                    }}
                   >
-                    {formatBc(pkg.priceBc)} BC
+                    {formatBc(pkg.priceBc)}
                   </Button>
-                </Stack>
-              </PlanCard>
-            </Grid>
+                </>
+              }
+            />
           );
         })}
-      </Grid>
+      </Stack>
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
         Premium nga abonimi Grow/Elite: 30 ditë — aktivizohet me butonin Premium te Shpalljet e mia.
@@ -954,6 +964,7 @@ export function ExtraPackagesPanel() {
   return (
     <Stack spacing={2.5}>
       <AutoRefreshSection />
+      <OkazionPackagesSection />
       <PremiumListingSection />
       <ConvertListingSection />
     </Stack>

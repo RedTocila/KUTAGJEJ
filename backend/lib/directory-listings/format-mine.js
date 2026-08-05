@@ -1,4 +1,5 @@
 const { premiumFieldsFromDoc } = require('../premium-listing');
+const { okazionFieldsFromDoc } = require('../okazion-listing');
 
 function listingId(doc) {
   return doc.id != null ? String(doc.id) : doc._id != null ? String(doc._id) : null;
@@ -33,6 +34,7 @@ function formatMineBusiness(doc, cityById) {
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
     ...premiumFieldsFromDoc(doc),
+    ...okazionFieldsFromDoc(doc),
   };
 }
 
@@ -58,6 +60,7 @@ function formatMineProfessional(doc, cityById) {
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
     ...premiumFieldsFromDoc(doc),
+    ...okazionFieldsFromDoc(doc),
   };
 }
 

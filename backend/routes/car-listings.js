@@ -11,6 +11,7 @@ const { attachOwnerMetrics } = require('../lib/listing-metrics');
 const { notifyAdminsListingSubmitted, listingTitle } = require('../lib/listing-moderation');
 const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers');
 const { premiumFieldsFromDoc } = require('../lib/premium-listing');
+const { okazionFieldsFromDoc } = require('../lib/okazion-listing');
 const { sanitizeImageUrls } = require('../lib/image-upload');
 
 const router = express.Router();
@@ -70,6 +71,7 @@ function formatMineListing(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
   return {
     id: String(doc.id),
+    vehicleType: doc.vehicleType || 'car',
     make: doc.make,
     model: doc.model,
     variant: doc.variant || '',
@@ -91,6 +93,7 @@ function formatMineListing(doc, cityById) {
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
     ...premiumFieldsFromDoc(doc),
+    ...okazionFieldsFromDoc(doc),
   };
 }
 
@@ -145,6 +148,7 @@ router.post(
 
       const row = {
         poster_id: req.user.id,
+        vehicle_type: String(fields.vehicleType).trim().toLowerCase(),
         make: String(fields.make).trim(),
         model: String(fields.model).trim(),
         variant: String(fields.variant || '').trim(),
@@ -161,6 +165,7 @@ router.post(
         contact_phone: String(fields.contactPhone || '').trim(),
         city_id: cityId,
         image_urls: imageUrls,
+        status: 'approved',
       };
 
       const { data: created, error: insErr } = await getSupabaseAdmin()
@@ -174,7 +179,7 @@ router.post(
       await notifyAdminsListingSubmitted('cars', doc.id, listingTitle('cars', doc));
 
       res.status(201).json({
-        message: 'Njoftimi u dërgua për aprovim..',
+        message: 'Njoftimi u publikua me sukses.',
         listing: {
           id: String(doc.id),
           make: doc.make,
@@ -238,6 +243,7 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
       : parseExtras(fields);
 
     const patch = {
+      vehicle_type: String(fields.vehicleType).trim().toLowerCase(),
       make: String(fields.make).trim(),
       model: String(fields.model).trim(),
       variant: String(fields.variant || '').trim(),

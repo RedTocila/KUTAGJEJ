@@ -16,8 +16,81 @@ const CATEGORIES = [
   'professionals',
 ];
 
+const CATEGORY_LABELS = {
+  'real-estate': 'Prona (real estate)',
+  cars: 'Makina (vehicles)',
+  'job-listings': 'Punë (jobs)',
+  marketplace: 'Tregu (marketplace)',
+  businesses: 'Biznese (businesses)',
+  professionals: 'Profesionistë (professionals)',
+};
+
+const CATEGORY_MISMATCH_CODE = 'category_mismatch';
+const CONTENT_RESTRICTED_CODE = 'content_restricted';
+
+const RESTRICTED_REASON_CODES = [
+  'nudity',
+  'sexual',
+  'gambling',
+  'drugs',
+  'weapons',
+  'violence',
+  'hate',
+  'fraud',
+  'counterfeit',
+  'illegal',
+  'other',
+];
+
+const RESTRICTED_REASON_LABELS = {
+  nudity: 'nudity / adult sexual content',
+  sexual: 'sexual services or pornography',
+  gambling: 'gambling, betting, or casinos',
+  drugs: 'illegal drugs or controlled substances',
+  weapons: 'weapons, explosives, or ammunition',
+  violence: 'violent or graphic content',
+  hate: 'hate speech or discrimination',
+  fraud: 'scams or fraudulent offers',
+  counterfeit: 'counterfeit or pirated goods',
+  illegal: 'other illegal activity',
+  other: 'restricted content',
+};
+
 function isOpenAiConfigured() {
   return Boolean(String(process.env.OPENAI_API_KEY || '').trim());
+}
+
+function categoryMismatchMessage(preferredCategory, detectedCategory) {
+  const preferred = CATEGORY_LABELS[preferredCategory] || preferredCategory;
+  const detected = CATEGORY_LABELS[detectedCategory] || detectedCategory || 'another category';
+  return `This content belongs in ${detected}, not ${preferred}. Choose the matching category to post.`;
+}
+
+function normalizeRestrictedReasons(raw) {
+  const list = Array.isArray(raw) ? raw : typeof raw === 'string' && raw.trim() ? [raw] : [];
+  const out = [];
+  for (const item of list) {
+    const code = String(item || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '_');
+    const mapped =
+      RESTRICTED_REASON_CODES.find((c) => c === code) ||
+      RESTRICTED_REASON_CODES.find((c) => code.includes(c)) ||
+      null;
+    if (mapped && !out.includes(mapped)) out.push(mapped);
+  }
+  return out;
+}
+
+function contentRestrictedMessage(reasons) {
+  const labels = normalizeRestrictedReasons(reasons).map(
+    (r) => RESTRICTED_REASON_LABELS[r] || r,
+  );
+  if (labels.length === 0) {
+    return 'This listing was blocked because it appears to contain restricted or prohibited content.';
+  }
+  return `This listing was blocked because it appears to involve restricted content: ${labels.join(', ')}.`;
 }
 
 function normalizeUrl(raw) {
@@ -848,32 +921,75 @@ async function resolveCityIdByName(cityName) {
 }
 
 function buildSystemPrompt(preferredCategory, { mode = 'create' } = {}) {
-  const categoryInstruction = CATEGORIES.includes(preferredCategory)
-    ? `You MUST use category "${preferredCategory}" only. Do not pick another category.`
-    : `Choose exactly one category:
-- real-estate (apartments, houses, villas, offices, shops, land)
-- cars (vehicles)
-- job-listings (job posts)
-- marketplace (products / goods)
-- businesses (restaurants, bars, cafés, local businesses)
-- professionals (freelancers / service providers)`;
+  const hasPreferred = CATEGORIES.includes(preferredCategory);
+  const categoryDefinitions = `Category definitions (STRICT — pick the true subject of the post):
+- real-estate: apartments, houses, villas, rooms, land, offices, shops, warehouses FOR RENT OR SALE as property
+- cars: complete vehicles only (car, SUV, van, truck, motorcycle, boat) for sale/rent — NOT car parts
+- job-listings: hiring / employment offers (even if the workplace is a restaurant, clinic, or agency)
+- marketplace: products/goods (phones, furniture, clothes, car parts, toys, food products, etc.) — NOT whole vehicles, NOT property for rent/sale
+- businesses: restaurants, bars, cafés, local venues promoting the business itself (menu, hours, location)
+- professionals: freelancers / personal & professional services (consulting, design, medical, courses, coaching, etc.)`;
+
+  const categoryInstruction = hasPreferred
+    ? `The user selected preferredCategory "${preferredCategory}".
+${categoryDefinitions}
+
+CATEGORY GUARD (CRITICAL):
+1. Independently detect what the content ACTUALLY is from photos, caption, page text, and prompt — ignore preferredCategory while detecting.
+2. Set "detectedCategory" to exactly one of: ${CATEGORIES.join(', ')}.
+3. Set "categoryMatch": true ONLY if detectedCategory === "${preferredCategory}".
+4. Set "categoryMatch": false when the content clearly belongs to a different vertical (e.g. apartment text/photos under cars, a job ad under real-estate, a restaurant under professionals, a phone under cars).
+5. If the content is too thin/ambiguous to classify (e.g. only "change the price" while editing an existing listing in that category), set detectedCategory to "${preferredCategory}" and categoryMatch true.
+6. When categoryMatch is false: STILL build a complete draft for detectedCategory (fill that category's form fields, title, summary, cityName). Set "category" to detectedCategory. Do NOT fill preferredCategory fields. The app will ask the user to switch category.
+7. When categoryMatch is true: set "category" to "${preferredCategory}" and fill that category's form fields.`
+    : `Choose exactly one category based on the true subject:
+${categoryDefinitions}
+Set "detectedCategory" to the same value as "category", and "categoryMatch": true.`;
+
+  const contentPolicyInstruction = `CONTENT POLICY GUARD (CRITICAL — runs before category):
+KuTaGjej does NOT allow listings that involve restricted or prohibited content. Inspect photos, caption, page text, and prompt carefully.
+Set "contentAllowed": false and fill "restrictedReasons" (string array) when ANY of the following is clearly intended or depicted:
+- nudity / pornography / adult sexual content / sexual services ("nudity" or "sexual")
+- gambling, betting, casinos, lottery schemes ("gambling")
+- illegal drugs, narcotics, or controlled substance sales ("drugs")
+- weapons, firearms, explosives, ammunition ("weapons")
+- graphic violence or threats ("violence")
+- hate speech, discrimination, or extremist recruitment ("hate")
+- scams, phishing, fake documents, pyramid schemes ("fraud")
+- counterfeit / pirated branded goods sold as genuine ("counterfeit")
+- other clearly illegal activity (trafficking, stolen goods, etc.) ("illegal")
+- otherwise prohibited content that does not fit above ("other")
+
+Rules:
+1. If contentAllowed is false: do NOT invent a sellable draft. Set title/summary to short refusal notes, form to {}, categoryMatch true, detectedCategory to preferredCategory when provided (or "marketplace"), and list every matching restrictedReasons code.
+2. Lingerie, swimwear, medical anatomy diagrams, toy guns clearly for kids, alcohol/tobacco sold legally as products, and casino-themed decorations that are NOT gambling services are usually ALLOWED (contentAllowed true) unless they are explicit adult content or real gambling offers.
+3. When contentAllowed is true: set restrictedReasons to [].
+4. Prefer blocking when intent is clear; if truly ambiguous and looks like a normal marketplace/job/property post, allow it.`;
 
   const modeInstruction =
     mode === 'edit'
       ? `MODE: EDIT an existing listing.
 You receive the current listing JSON plus the user's edit instructions (and optional images/links).
 Return an UPDATED full draft. Keep fields the user did not ask to change. Apply only the requested edits.
-If they ask to add/replace images, set imageRoles for attached images and/or keep/merge imageUrls.`
+If they ask to add/replace images, set imageRoles for attached images and/or keep/merge imageUrls.
+When new photos are attached, re-identify the product/subject from the photos and refresh title/description accordingly, then merge the user's edit notes.
+Still apply the CONTENT POLICY GUARD and CATEGORY GUARD: block restricted content; if new photos/text clearly show a different vertical than preferredCategory, set categoryMatch false.`
       : `MODE: CREATE a new listing from the user's prompt and/or website links and/or attached images.
 Use seller profile/signup info as defaults when the prompt omits contact details, business name, phone, etc.`;
 
   return `You are KuTaGjej's listing assistant for Albania.
 ${modeInstruction}
 
+${contentPolicyInstruction}
+
 ${categoryInstruction}
 
 Return ONLY valid JSON:
 {
+  "contentAllowed": true,
+  "restrictedReasons": [],
+  "detectedCategory": "real-estate",
+  "categoryMatch": true,
   "category": "professionals",
   "title": "short listing title",
   "summary": "1 sentence preview of what you built/changed",
@@ -890,27 +1006,39 @@ imageRoles: optional array aligned with attachedImages order. Values: cover | pr
 
 Form fields by category:
 real-estate: propertyCategory (apartment|villa|penthouse-duplex|room-studio-attic|parking|shop|office|building-plot|agricultural-land|commercial-local|warehouse), title, description, transactionType (rent|sale), price, surfaceM2, currency (EUR|LEK), condition, floor, totalFloors, bedrooms, bathrooms, furnishing, yearBuilt, contactPhone
-cars: make, model, variant, description, year, kilometers, transmission (automatic|manual), fuelType (petrol|diesel|electric|hybrid-petrol|plugin-hybrid|lpg), price, currency (EUR|LEK), color, contactPhone
+cars: vehicleType (car|suv|van|truck|motorcycle|boat), make, model, variant, description, year, kilometers, transmission (automatic|manual), fuelType (petrol|diesel|electric|hybrid-petrol|plugin-hybrid|lpg), price, currency (EUR|LEK), color, contactPhone
 job-listings: title, description, industry, education, experience, jobType (full-time|part-time|remote|internship|freelance), workLocation (onsite|hybrid|remote), salary, currency, contactPhone, responsibilities (string[]), requirements (string[])
-marketplace: transactionType (shes|jap-me-qira), title, description, category (elektronike|mobilje-shtepi|veshje-aksesore|libra-shkolla|sport-hobi|lodra|automjete-pjese|ushqime-bujqesi|sherbime|te-tjera), condition (i-ri|si-i-ri|shume-mire|mire|me-defekte), price, currency, contactPhone
+marketplace: transactionType (always "shes"), title, description, category (elektronike|mobilje-shtepi|veshje-aksesore|libra-shkolla|sport-hobi|lodra|automjete-pjese|ushqime-bujqesi|sherbime|te-tjera), condition (i-ri|si-i-ri|shume-mire|mire|me-defekte), price, currency, contactPhone
 businesses: title, description, category (restorant|bar|kafe|brunch|piceri-fast-food|pasticeri), contactPhone, servicesHighlight
 professionals: title, description, category (konsulent|freelance|sherbim|kurse|dizajn-it|marketing|mjekesi|arsim), servicesHighlight, price, currency, contactPhone, responseTimeHours
   - fitness trainers / personal training / gym coaching / workout courses → category "kurse"
   - apps, digital products, subscriptions sold as products → marketplace (category "sherbime" or "sport-hobi") is OK when the post is mainly selling a product/app
 
-Rules:
-- ALWAYS prioritize written text: post caption, page description, og:description, and the user's prompt. Images are secondary context only.
-- For Instagram/TikTok/social links, the field "caption" (post description) is the source of truth for what is being offered. Carousel/listing photos are in snapshotImageUrls — keep them.
-- For any website link, use title/description/text AND keep snapshotImageUrls as listing photos.
-- Do NOT invent a profession from the username alone (e.g. do not assume "konsulent" / marketing / design unless the caption says so).
-- Prefer Albanian for title/description when the caption/prompt is in Albanian; otherwise keep their language.
-- Invent as little as possible. Leave unknown fields empty string / empty array / null.
-- Always fill description with concrete details from the caption/prompt (offers, prices, product names like apps, services).
-- Use profile.phone for contactPhone when missing. Use profile.businessName / full name for title when relevant.
+Vision + text fusion (CRITICAL when attached images are present):
+1. LOOK carefully at every attached photo. Identify what is shown: product type, brand/model if readable on the item or packaging, color, material, size cues, condition, quantity, accessories, room/context.
+2. Write form.title that a buyer would search for (brand + product name + key attribute when visible).
+3. Write form.description as a complete marketplace-ready text that COMBINES:
+   a) What you see in the photos (concrete visual facts — do not invent specs you cannot see), AND
+   b) Extra details from the user's prompt / caption (price notes, condition, city, "used once", delivery, SEO notes, etc.).
+   Merge them into one natural description — do not paste two separate blocks. Prefer Albanian when the user wrote in Albanian.
+4. Fill marketplace.category / cars.vehicleType / other enum fields from what the photos show (e.g. Instant Pot / multicooker → elektronike; sofa → mobilje-shtepi).
+5. Infer condition from photos + user text when possible (i-ri|si-i-ri|shume-mire|mire|me-defekte). If the user says "used once" / "si i ri", prefer si-i-ri or shume-mire.
+6. If the user mentions price/currency/city/phone in text, put those in the matching form fields.
+7. Photos alone are enough to build a solid draft — never leave title/description empty when images clearly show a product.
+8. Do NOT invent brands, model numbers, or technical specs that are not visible in photos and not stated in text. If unsure, describe generically ("multicooker elektrik inox", not a fake SKU).
+
+Link / caption rules (when a URL snapshot is present and few/no attached photos):
+- Prefer caption, page description, og:description, and the user's prompt for what is offered.
+- Keep snapshotImageUrls as listing photos.
+- Do NOT invent a profession from the username alone.
+
+General rules:
+- Prefer Albanian for title/description when the caption/prompt is in Albanian; otherwise match the user's language.
+- Leave truly unknown fields empty string / empty array / null — but always fill title + description when you can see or read enough.
+- Use profile.phone for contactPhone when missing. Use profile.businessName / full name for title when relevant for businesses/professionals.
 - cityName should be an Albanian city when mentioned (e.g. Tiranë, Durrës).
 - imageUrls: keep absolute http(s) URLs from the page snapshot (snapshotImageUrls) whenever present (max 8). Never drop scraped listing photos. Attached images are sent separately — describe roles via imageRoles; do not invent fake image URLs.
-- If images show work/products/venue, use them only to support details already present in the caption/text.
-- If the page is thin (Instagram login wall, blocked scraper) but caption is present, build the draft from the caption + prompt + profile.`;
+- If the page is thin (Instagram login wall, blocked scraper) but caption or photos are present, build the draft from caption + prompt + photos + profile.`;
 }
 
 const MAX_ATTACHED_IMAGES = 6;
@@ -978,10 +1106,19 @@ function sanitizeCurrentListing(raw) {
 }
 
 function buildVisionUserContent({ payload, attachedImages }) {
+  const hasImages = Array.isArray(attachedImages) && attachedImages.length > 0;
   const parts = [
     {
       type: 'text',
-      text: JSON.stringify(payload),
+      text: hasImages
+        ? [
+            'Task: Identify the product/subject in the photos below, then build a complete listing draft.',
+            'Merge visual facts from the photos with the user prompt/caption in payload.prompt (and caption/description if present).',
+            'Output JSON only. Title + description must be specific and buyer-ready.',
+            '',
+            JSON.stringify(payload),
+          ].join('\n')
+        : JSON.stringify(payload),
     },
   ];
   for (let i = 0; i < attachedImages.length; i += 1) {
@@ -989,14 +1126,24 @@ function buildVisionUserContent({ payload, attachedImages }) {
     const hint = img.hint ? ` Hint: ${img.hint}` : '';
     parts.push({
       type: 'text',
-      text: `Attached image #${i}.${hint}`,
+      text: `Attached listing photo #${i + 1}.${hint} Describe what you see and use it for title/description/category.`,
     });
     parts.push({
       type: 'image_url',
-      image_url: { url: img.url },
+      image_url: { url: img.url, detail: 'high' },
     });
   }
   return parts;
+}
+
+function parseBooleanFlag(value) {
+  if (value === true || value === false) return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === 'yes' || normalized === '1') return true;
+    if (normalized === 'false' || normalized === 'no' || normalized === '0') return false;
+  }
+  return null;
 }
 
 function parseAiListingResponse(raw, { forcedCategory, fallbackImageUrls = [] }) {
@@ -1005,6 +1152,93 @@ function parseAiListingResponse(raw, { forcedCategory, fallbackImageUrls = [] })
     parsed = JSON.parse(typeof raw === 'string' ? raw : '{}');
   } catch {
     parsed = {};
+  }
+
+  const restrictedReasons = normalizeRestrictedReasons(parsed.restrictedReasons);
+  const contentAllowedFlag = parseBooleanFlag(parsed.contentAllowed);
+  const contentBlocked =
+    contentAllowedFlag === false ||
+    (contentAllowedFlag == null && restrictedReasons.length > 0);
+
+  if (contentBlocked) {
+    const reasons = restrictedReasons.length ? restrictedReasons : ['other'];
+    return {
+      category: null,
+      detectedCategory: null,
+      preferredCategory: forcedCategory || null,
+      categoryMatch: true,
+      contentAllowed: false,
+      restrictedReasons: reasons,
+      title: typeof parsed.title === 'string' ? parsed.title.trim() : '',
+      summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : '',
+      cityName: '',
+      imageUrls: [],
+      imageRoles: [],
+      form: {},
+      error: CONTENT_RESTRICTED_CODE,
+      errorMessage: contentRestrictedMessage(reasons),
+    };
+  }
+
+  const detectedFromModel = CATEGORIES.includes(parsed.detectedCategory)
+    ? parsed.detectedCategory
+    : CATEGORIES.includes(parsed.category)
+      ? parsed.category
+      : null;
+  const explicitMatch = parseBooleanFlag(parsed.categoryMatch);
+
+  let categoryMismatch = false;
+  let detectedCategory = detectedFromModel;
+
+  if (forcedCategory) {
+    if (detectedFromModel && detectedFromModel !== forcedCategory) {
+      // True subject differs from the user-selected category — never force-post.
+      categoryMismatch = true;
+      detectedCategory = detectedFromModel;
+    } else if (explicitMatch === false) {
+      categoryMismatch = true;
+      detectedCategory = detectedFromModel || null;
+    } else {
+      detectedCategory = forcedCategory;
+    }
+  }
+
+  if (categoryMismatch) {
+    const form = parsed.form && typeof parsed.form === 'object' ? parsed.form : {};
+    const modelImageUrls = Array.isArray(parsed.imageUrls)
+      ? parsed.imageUrls.filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u))
+      : [];
+    const imageRoles = Array.isArray(parsed.imageRoles)
+      ? parsed.imageRoles
+          .map((r) => String(r || '').trim().toLowerCase())
+          .map((r) => {
+            if (r === 'cover' || r === 'main') return 'cover';
+            if (r === 'profile' || r === 'avatar') return 'profile';
+            if (r === 'portfolio' || r === 'work') return 'portfolio';
+            return 'gallery';
+          })
+          .slice(0, MAX_ATTACHED_IMAGES)
+      : [];
+    const usableCategory =
+      detectedCategory && CATEGORIES.includes(detectedCategory) ? detectedCategory : null;
+
+    return {
+      // Keep a ready draft for the true category; UI must confirm before post.
+      category: usableCategory,
+      detectedCategory: usableCategory,
+      preferredCategory: forcedCategory,
+      categoryMatch: false,
+      contentAllowed: true,
+      restrictedReasons: [],
+      title: typeof parsed.title === 'string' ? parsed.title.trim() : '',
+      summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : '',
+      cityName: typeof parsed.cityName === 'string' ? parsed.cityName.trim() : '',
+      imageUrls: mergeImageUrlLists(fallbackImageUrls, modelImageUrls),
+      imageRoles,
+      form,
+      error: CATEGORY_MISMATCH_CODE,
+      errorMessage: categoryMismatchMessage(forcedCategory, usableCategory),
+    };
   }
 
   const category =
@@ -1028,6 +1262,11 @@ function parseAiListingResponse(raw, { forcedCategory, fallbackImageUrls = [] })
 
   return {
     category,
+    detectedCategory: detectedCategory || category,
+    preferredCategory: forcedCategory || null,
+    categoryMatch: true,
+    contentAllowed: true,
+    restrictedReasons: [],
     title: typeof parsed.title === 'string' ? parsed.title.trim() : '',
     summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : '',
     cityName: typeof parsed.cityName === 'string' ? parsed.cityName.trim() : '',
@@ -1061,7 +1300,7 @@ async function callListingModel({
     body: JSON.stringify({
       model: OPENAI_MODEL,
       temperature: mode === 'edit' ? 0.15 : 0.25,
-      max_tokens: 1200,
+      max_tokens: 1800,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: buildSystemPrompt(forcedCategory, { mode }) },
@@ -1132,13 +1371,75 @@ async function interpretListing({
         index: i,
         hint: img.hint || null,
       })),
-      instruction:
-        'Build the listing from caption/description/text first. Use images only as supporting context. Do not invent professions or offers missing from the text.',
+      instruction: (attachedImages || []).length
+        ? 'Photos are primary: identify the product from images, write a concrete title and description from what you see, then weave in every useful detail from prompt/caption (price, condition, city, extras). Do not invent unseen specs. Apply CONTENT POLICY GUARD then CATEGORY GUARD before filling form fields.'
+        : 'Build the listing from caption/description/text/prompt. Do not invent professions or offers missing from the text. Apply CONTENT POLICY GUARD then CATEGORY GUARD before filling form fields.',
     },
   });
 }
 
-async function finalizeDraft({ interpreted, sourceUrl, warning, profile }) {
+async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourcePrompt }) {
+  if (interpreted?.error === CONTENT_RESTRICTED_CODE || interpreted?.contentAllowed === false) {
+    const reasons = normalizeRestrictedReasons(interpreted.restrictedReasons);
+    const errorMessage =
+      interpreted.errorMessage || contentRestrictedMessage(reasons.length ? reasons : ['other']);
+    return {
+      id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      sourceUrl: sourceUrl || '',
+      category: null,
+      detectedCategory: null,
+      preferredCategory: interpreted.preferredCategory || null,
+      title: interpreted.title || '',
+      summary: interpreted.summary || '',
+      cityName: '',
+      imageUrls: [],
+      imageRoles: [],
+      form: {},
+      warning: warning || null,
+      error: errorMessage,
+      errorCode: CONTENT_RESTRICTED_CODE,
+      restrictedReasons: reasons.length ? reasons : ['other'],
+      sourcePrompt: sourcePrompt || null,
+    };
+  }
+
+  if (interpreted?.error === CATEGORY_MISMATCH_CODE || interpreted?.categoryMatch === false) {
+    const errorMessage =
+      interpreted.errorMessage ||
+      categoryMismatchMessage(
+        interpreted.preferredCategory,
+        interpreted.detectedCategory,
+      );
+    const form = stringifyFormValues(interpreted.form);
+    const cityId = await resolveCityIdByName(interpreted.cityName || form.cityName);
+    if (cityId) form.cityId = cityId;
+    if (!form.contactPhone && profile?.phone) {
+      form.contactPhone = profile.phone;
+    }
+    if (!form.title && profile?.businessName) {
+      form.title = profile.businessName;
+    }
+
+    return {
+      id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      sourceUrl: sourceUrl || '',
+      // Draft is built for the detected category; blocked until the user switches.
+      category: interpreted.detectedCategory || interpreted.category || null,
+      detectedCategory: interpreted.detectedCategory || null,
+      preferredCategory: interpreted.preferredCategory || null,
+      title: interpreted.title || form.title || form.make || '',
+      summary: interpreted.summary || '',
+      cityName: interpreted.cityName || '',
+      imageUrls: interpreted.imageUrls || [],
+      imageRoles: interpreted.imageRoles || [],
+      form,
+      warning: warning || null,
+      error: errorMessage,
+      errorCode: CATEGORY_MISMATCH_CODE,
+      sourcePrompt: sourcePrompt || null,
+    };
+  }
+
   const form = stringifyFormValues(interpreted.form);
   const cityId = await resolveCityIdByName(interpreted.cityName || form.cityName);
   if (cityId) form.cityId = cityId;
@@ -1154,6 +1455,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile }) {
     id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     sourceUrl: sourceUrl || '',
     category: interpreted.category,
+    detectedCategory: interpreted.detectedCategory || interpreted.category,
     title: interpreted.title || form.title || form.make || 'Draft listing',
     summary: interpreted.summary || '',
     cityName: interpreted.cityName || '',
@@ -1161,6 +1463,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile }) {
     imageRoles: interpreted.imageRoles || [],
     form,
     warning: warning || null,
+    sourcePrompt: sourcePrompt || null,
   };
 }
 
@@ -1241,6 +1544,7 @@ async function importListingsFromLinks({
           sourceUrl: '',
           warning: null,
           profile,
+          sourcePrompt: prompt,
         }),
       );
     } catch (err) {
@@ -1285,6 +1589,7 @@ async function importListingsFromLinks({
             ? null
             : friendlyFetchWarning(snapshot.fetchError),
           profile,
+          sourcePrompt: prompt,
         }),
       );
     } catch (err) {
@@ -1311,4 +1616,7 @@ module.exports = {
   extractUrls,
   importListingsFromLinks,
   MAX_IMPORT_URLS,
+  CATEGORIES,
+  CATEGORY_MISMATCH_CODE,
+  CONTENT_RESTRICTED_CODE,
 };

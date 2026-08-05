@@ -89,7 +89,7 @@ export function UserSideNav() {
           }}
         >
           <BrandLogo
-            height={36}
+            height={28}
             showWordmark
             wordmarkPresentation="brand"
             markSx={{

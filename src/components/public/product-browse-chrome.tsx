@@ -184,8 +184,20 @@ export function ProductTag({
   );
 }
 
+export type ProductSearchAccent = {
+  /** Border / icon color when active or focused. */
+  color: string;
+  /** Soft fill when active or focused. */
+  soft: string;
+};
+
 /** Pill search bar shell — keyword search, mobile header search. */
-export function productSearchBarSx(active = false): SxProps<Theme> {
+export function productSearchBarSx(
+  active = false,
+  accent?: ProductSearchAccent,
+): SxProps<Theme> {
+  const accentColor = accent?.color ?? 'primary.main';
+  const accentSoft = accent?.soft ?? primaryMainAlpha(0.08);
   return {
     height: PRODUCT_BROWSE_CONTROL_HEIGHT,
     display: 'flex',
@@ -195,8 +207,8 @@ export function productSearchBarSx(active = false): SxProps<Theme> {
     py: 0.75,
     borderRadius: 999,
     border: '1px solid',
-    borderColor: active ? 'primary.main' : 'divider',
-    bgcolor: active ? primaryMainAlpha(0.08) : 'background.paper',
+    borderColor: active ? accentColor : 'divider',
+    bgcolor: active ? accentSoft : 'background.paper',
     overflow: 'hidden',
     boxSizing: 'border-box',
     textDecoration: 'none',
@@ -218,8 +230,14 @@ export const productSearchFieldSx = {
   },
 } as const;
 
-export function ProductSearchIcon() {
-  return <MagnifyingGlassIcon size={14} color="var(--mui-palette-primary-main)" style={{ flexShrink: 0 }} />;
+export function ProductSearchIcon({ color }: { color?: string } = {}) {
+  return (
+    <MagnifyingGlassIcon
+      size={14}
+      color={color ?? 'var(--mui-palette-primary-main)'}
+      style={{ flexShrink: 0 }}
+    />
+  );
 }
 
 /** Circular filter trigger beside the search bar. */

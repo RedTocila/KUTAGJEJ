@@ -30,7 +30,7 @@ export function ListingMediaActionButton({
   /** `hero` — solid dark glass; `glass` — softer dark transparent; `card` — listing card chips. */
   surface?: 'hero' | 'glass' | 'card';
   /** Accent for the active / emphasized state — amber on premium cards. */
-  accent?: 'primary' | 'warning';
+  accent?: 'primary' | 'warning' | 'error';
   onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
   const accentToken = `${accent}.main` as const;

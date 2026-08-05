@@ -4,12 +4,16 @@ import * as React from 'react';
 import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Box, Stack, Typography } from '@mui/material';
+import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_SOFT,
+  OKAZION_RED,
+  OKAZION_RED_SOFT,
+  localizeHomeBrowseCategories,
   localizeSearchCategories,
 } from '@/lib/home-categories';
 import { hardNavigate, hardRefreshToTop } from '@/lib/hard-navigate';
@@ -21,20 +25,88 @@ export type HeroCategoryCirclesVariant = 'links' | 'tabs';
 
 export interface HeroCategoryCirclesProps {
   variant?: HeroCategoryCirclesVariant;
-  /** Used when `variant="tabs"` (e.g. HeroSearch). */
+  /** Used when `variant="tabs"` (e.g. HeroSearch / search page). */
   selectedIndex?: number;
   onSelect?: (index: number) => void;
+  /**
+   * When false, omit AI Search (home hero / category strip).
+   * Search page keeps the default `true`.
+   */
+  includeAi?: boolean;
+}
+
+type AccentMode = 'ai' | 'okazion' | 'default';
+
+/** Scroll-more cue (dots + caret) — shown below the category row when more items exist. */
+function ScrollMoreHint({ color }: { color: string }) {
+  return (
+    <Stack
+      direction="row"
+      spacing={0.25}
+      sx={{ alignItems: 'center', color, flexShrink: 0 }}
+      aria-hidden
+    >
+      <Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: 'currentColor', opacity: 0.95 }} />
+      <Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: 'currentColor', opacity: 0.45 }} />
+      <Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: 'currentColor', opacity: 0.25 }} />
+      <CaretRightIcon size={14} weight="bold" />
+    </Stack>
+  );
+}
+
+function accentColor(mode: AccentMode): string {
+  if (mode === 'ai') return AI_SEARCH_BLUE;
+  if (mode === 'okazion') return OKAZION_RED;
+  return 'var(--mui-palette-primary-main)';
+}
+
+function accentSoft(mode: AccentMode): string {
+  if (mode === 'ai') return AI_SEARCH_BLUE_SOFT;
+  if (mode === 'okazion') return OKAZION_RED_SOFT;
+  return 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)';
+}
+
+function accentModeFor(id: string): AccentMode {
+  if (id === 'ai') return 'ai';
+  if (id === 'okazion') return 'okazion';
+  return 'default';
 }
 
 export function HeroCategoryCircles({
   variant = 'links',
   selectedIndex: selectedIndexProp,
   onSelect,
+  includeAi = true,
 }: HeroCategoryCirclesProps) {
   const pathname = usePathname();
   const { language } = useLanguage();
   const t = useCopy();
-  const heroVerticals = React.useMemo(() => localizeSearchCategories(language), [language]);
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const [canScrollNext, setCanScrollNext] = React.useState(false);
+  const heroVerticals = React.useMemo(
+    () => (includeAi ? localizeSearchCategories(language) : localizeHomeBrowseCategories(language)),
+    [includeAi, language],
+  );
+
+  const refreshScroll = React.useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setCanScrollNext(max > 1 && el.scrollLeft < max - 1);
+  }, []);
+
+  React.useEffect(() => {
+    refreshScroll();
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', refreshScroll, { passive: true });
+    const ro = new ResizeObserver(refreshScroll);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', refreshScroll);
+      ro.disconnect();
+    };
+  }, [refreshScroll, heroVerticals]);
 
   const selectedFromPath = React.useMemo(() => {
     if (!pathname || pathname === '/') return -1;
@@ -53,46 +125,38 @@ export function HeroCategoryCircles({
   const selectedIndex =
     variant === 'tabs' && selectedIndexProp != null ? selectedIndexProp : selectedFromPath;
 
-  const itemSx = (isAi: boolean) => ({
-    flexShrink: 0,
-    scrollSnapAlign: { xs: 'start', sm: 'none' } as const,
-    alignItems: 'center',
-    cursor: 'pointer',
-    userSelect: 'none',
-    WebkitTapHighlightColor: 'transparent',
-    '&:hover .hero-cat-circle': {
-      borderColor: isAi ? AI_SEARCH_BLUE : 'primary.main',
-      bgcolor: isAi
-        ? AI_SEARCH_BLUE_SOFT
-        : (theme: { palette: { mode: string } }) =>
-            theme.palette.mode === 'dark'
-              ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.18)'
-              : 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)',
-    },
-    '&:hover .hero-cat-label': {
-      color: isAi ? AI_SEARCH_BLUE : 'primary.main',
-    },
-    '&:active .hero-cat-circle': {
-      borderColor: isAi ? AI_SEARCH_BLUE : 'primary.main',
-      bgcolor: isAi
-        ? AI_SEARCH_BLUE_SOFT
-        : (theme: { palette: { mode: string } }) =>
-            theme.palette.mode === 'dark'
-              ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.28)'
-              : 'rgba(var(--mui-palette-primary-mainChannel) / 0.2)',
-    },
-    '&:active .hero-cat-label': {
-      color: isAi ? AI_SEARCH_BLUE : 'primary.main',
-    },
-  });
+  /** Soft tint on hover; selected never goes solid-fill. */
+  const itemSx = (mode: AccentMode) => {
+    const accent = accentColor(mode);
+    const soft = accentSoft(mode);
+    return {
+      flexShrink: 0,
+      scrollSnapAlign: { xs: 'start', sm: 'none' } as const,
+      alignItems: 'center',
+      cursor: 'pointer',
+      userSelect: 'none',
+      WebkitTapHighlightColor: 'transparent',
+      '&:hover .hero-cat-circle': {
+        borderColor: accent,
+        bgcolor: soft,
+      },
+      '&:hover .hero-cat-label': {
+        color: accent,
+      },
+      '&:active .hero-cat-circle': {
+        borderColor: accent,
+        bgcolor: soft,
+      },
+      '&:active .hero-cat-label': {
+        color: accent,
+      },
+    };
+  };
 
   return (
-    <Box
-      sx={{
-        width: '100%',
-      }}
-    >
+    <Stack spacing={0.75} sx={{ width: '100%' }}>
       <Box
+        ref={scrollRef}
         component="nav"
         aria-label={t.chrome.categoriesAria}
         sx={{
@@ -113,8 +177,9 @@ export function HeroCategoryCircles({
       >
         {heroVerticals.map((v, i) => {
           const selected = selectedIndex >= 0 && i === selectedIndex;
-          const isAi = v.id === 'ai';
-          const accent = isAi ? AI_SEARCH_BLUE : 'primary.main';
+          const mode = accentModeFor(v.id);
+          const accent = accentColor(mode);
+          const soft = accentSoft(mode);
           const body = (
             <>
               <Box
@@ -125,27 +190,20 @@ export function HeroCategoryCircles({
                   borderRadius: '50%',
                   display: 'grid',
                   placeItems: 'center',
-                  bgcolor: selected
-                    ? isAi
-                      ? AI_SEARCH_BLUE_SOFT
-                      : (theme) =>
-                          theme.palette.mode === 'dark'
-                            ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.22)'
-                            : 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
-                    : 'background.paper',
-                  border: '1px solid',
-                  borderColor: isAi ? AI_SEARCH_BLUE : selected ? accent : 'divider',
+                  bgcolor: selected ? soft : 'action.hover',
+                  border: '1.5px solid',
+                  borderColor: selected ? accent : 'divider',
                   transition: 'border-color 0.15s ease, background-color 0.15s ease',
                 }}
               >
-                <HomeVerticalIcon verticalId={v.id} size={34} />
+                <HomeVerticalIcon verticalId={v.id} size={34} color={accent} />
               </Box>
               <Typography
                 className="hero-cat-label"
                 variant="caption"
                 sx={{
                   fontWeight: selected ? 700 : 600,
-                  color: selected ? accent : 'text.secondary',
+                  color: selected ? accent : 'text.primary',
                   whiteSpace: 'nowrap',
                   transition: 'color 0.15s ease',
                 }}
@@ -157,7 +215,12 @@ export function HeroCategoryCircles({
 
           if (variant === 'tabs') {
             return (
-              <Stack key={v.id} spacing={0.4} onClick={() => onSelect?.(i)} sx={itemSx(isAi)}>
+              <Stack
+                key={v.id}
+                spacing={0.4}
+                onClick={() => onSelect?.(i)}
+                sx={itemSx(mode)}
+              >
                 {body}
               </Stack>
             );
@@ -181,7 +244,7 @@ export function HeroCategoryCircles({
                 }
               }}
               sx={{
-                ...itemSx(isAi),
+                ...itemSx(mode),
                 textDecoration: 'none',
                 color: 'inherit',
               }}
@@ -191,6 +254,12 @@ export function HeroCategoryCircles({
           );
         })}
       </Box>
-    </Box>
+
+      {canScrollNext ? (
+        <Stack direction="row" sx={{ justifyContent: 'flex-end', pr: 0.25 }}>
+          <ScrollMoreHint color="var(--mui-palette-primary-main)" />
+        </Stack>
+      ) : null}
+    </Stack>
   );
 }

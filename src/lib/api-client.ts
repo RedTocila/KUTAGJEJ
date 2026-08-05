@@ -111,10 +111,19 @@ export async function clientFetch<T = unknown>(
         ...(init?.headers as Record<string, string> | undefined),
       },
     });
-    const data = (await res.json().catch(() => ({}))) as T & { message?: string };
+    const data = (await res.json().catch(() => ({}))) as T & { message?: string; error?: string };
     if (!res.ok) {
-      const message = typeof data?.message === 'string' ? data.message : undefined;
+      const message =
+        (typeof data?.message === 'string' && data.message) ||
+        (typeof data?.error === 'string' && data.error) ||
+        undefined;
       if (message) return { ok: false, status: res.status, error: message };
+      if (res.status === 413) {
+        return { ok: false, status: 413, error: 'Fotot janë shumë të mëdha. Provoni me më pak foto.' };
+      }
+      if (res.status === 401) {
+        return { ok: false, status: 401, error: 'Sesioni skadoi. Hyni përsëri.' };
+      }
       if (res.status >= 500) {
         return { ok: false, status: res.status, error: 'Gabim serveri. Provoni përsëri.' };
       }

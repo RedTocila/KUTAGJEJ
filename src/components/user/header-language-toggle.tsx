@@ -40,7 +40,7 @@ export function HeaderLanguageToggle() {
             borderRadius: '999px !important',
             '&.Mui-selected': {
               bgcolor: 'primary.main',
-              color: 'common.black',
+              color: 'primary.contrastText',
               '&:hover': { bgcolor: 'primary.main' },
             },
           },

@@ -2,10 +2,8 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Avatar, Button, Stack, Typography } from '@mui/material';
+import { Avatar, Button, Paper, Stack, Typography, type SxProps, type Theme } from '@mui/material';
 
-import { MemberLeaveReviewButton } from '@/components/public/member-leave-review-button';
 import { ProfessionalRatingSummary } from '@/components/public/professional-listing-detail-ui';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -25,67 +23,70 @@ function sellerInitials(name: string): string {
 export function ListingSellerProfileCard({
   seller,
   headingId,
-  showSafetyNote = false,
+  cardSx,
 }: {
   seller: PublicRealEstateListingSeller | null | undefined;
   headingId?: string;
-  /** Optional platform-safety caption (real-estate historically showed this). */
-  showSafetyNote?: boolean;
+  /** Optional overrides for the card Paper (e.g. borderless hero column). */
+  cardSx?: SxProps<Theme>;
 }) {
-  const router = useRouter();
   const name = seller?.displayName?.trim() || 'Përdorues KuTaGjej';
   const memberYear = seller?.memberSince ? new Date(seller.memberSince).getFullYear() : undefined;
   const profileHref = seller?.id ? pathsPublicMemberProfile(seller.id) : null;
-  const memberId = seller?.id?.trim() || '';
   const reviewCount = seller?.reviewCount ?? 0;
-  const ratingAverage = seller?.ratingAverage;
-  const ratingLabel = formatRatingDisplay(ratingAverage);
+  const ratingLabel = formatRatingDisplay(seller?.ratingAverage);
 
   return (
-    <>
+    <Stack spacing={1.5} component="section" aria-labelledby={headingId}>
       <Typography
         id={headingId}
         variant="overline"
         color="text.secondary"
-        sx={{ fontWeight: 800, letterSpacing: '0.1em', mb: 1.5, display: 'block' }}
+        sx={{ fontWeight: 800, letterSpacing: '0.1em', display: 'block' }}
       >
         Rreth shitësit / ofertuesit
       </Typography>
 
-      <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
-        <Avatar
-          src={seller?.avatarUrl?.trim() || undefined}
-          sx={{
-            width: { xs: 64, sm: 72 },
-            height: { xs: 64, sm: 72 },
-            bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.16 : 0.12),
-            color: 'primary.main',
-            fontWeight: 800,
-            fontSize: '1.35rem',
-          }}
-          aria-hidden
-        >
-          {sellerInitials(name)}
-        </Avatar>
-        <Stack spacing={0.5} sx={{ flex: '1 1 auto', minWidth: 0 }}>
-          <Typography sx={{ fontWeight: 850, fontSize: '1.125rem', color: 'text.primary' }} noWrap>
-            {name}
-          </Typography>
-          {memberYear != null ? (
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-              Anëtar që prej {memberYear}
+      <Paper
+        variant="outlined"
+        sx={[
+          {
+            borderRadius: 2.5,
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            p: { xs: 2, sm: 2.5 },
+          },
+          ...(Array.isArray(cardSx) ? cardSx : cardSx ? [cardSx] : []),
+        ]}
+      >
+        <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+          <Avatar
+            src={seller?.avatarUrl?.trim() || undefined}
+            sx={{
+              width: { xs: 64, sm: 72 },
+              height: { xs: 64, sm: 72 },
+              bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.16 : 0.12),
+              color: 'primary.main',
+              fontWeight: 800,
+              fontSize: '1.35rem',
+            }}
+            aria-hidden
+          >
+            {sellerInitials(name)}
+          </Avatar>
+          <Stack spacing={0.5} sx={{ flex: '1 1 auto', minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 850, fontSize: '1.125rem', color: 'text.primary' }} noWrap>
+              {name}
             </Typography>
-          ) : null}
-          <ProfessionalRatingSummary rating={ratingLabel} reviewCount={reviewCount} starSize={14} />
-          {showSafetyNote ? (
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, opacity: 0.85 }}>
-              Komuniko vetëm nëpërmjet platformës ose në numrin e listuar.
-            </Typography>
-          ) : null}
+            {memberYear != null ? (
+              <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                Anëtar që prej {memberYear}
+              </Typography>
+            ) : null}
+            <ProfessionalRatingSummary rating={ratingLabel} reviewCount={reviewCount} starSize={14} />
+          </Stack>
         </Stack>
-      </Stack>
 
-      <Stack spacing={1} sx={{ mt: { xs: 2, sm: 2.25 } }}>
         <Button
           component={profileHref ? Link : 'button'}
           href={profileHref ?? undefined}
@@ -94,19 +95,24 @@ export function ListingSellerProfileCard({
           disableElevation
           fullWidth
           sx={{
+            mt: { xs: 2, sm: 2.25 },
             borderRadius: 999,
             fontWeight: 800,
             textTransform: 'none',
             py: 1.25,
-            bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'grey.900'),
-            color: 'common.white',
-            border: '1px solid',
+            bgcolor: (theme) =>
+              theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+            color: 'text.primary',
+            border: '1.5px solid',
             borderColor: (theme) =>
-              theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.14)' : 'grey.900',
+              theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.22)',
             boxShadow: 'none',
             '&:hover': {
-              bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.16)' : 'grey.800'),
-              color: 'common.white',
+              bgcolor: (theme) =>
+                theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.1)',
+              color: 'text.primary',
+              borderColor: (theme) =>
+                theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.32)',
               boxShadow: 'none',
             },
             '&.Mui-disabled': {
@@ -118,16 +124,7 @@ export function ListingSellerProfileCard({
         >
           Shiko profilin
         </Button>
-        {memberId ? (
-          <MemberLeaveReviewButton
-            memberId={memberId}
-            memberName={name}
-            pill
-            compact
-            onSubmitted={() => router.refresh()}
-          />
-        ) : null}
-      </Stack>
-    </>
+      </Paper>
+    </Stack>
   );
 }

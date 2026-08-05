@@ -49,6 +49,7 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
     case 'cars':
       return {
         id: draft.id,
+        vehicleType: str(f.vehicleType) || 'car',
         make: str(f.make),
         model: str(f.model),
         variant: str(f.variant),

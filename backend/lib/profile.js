@@ -45,9 +45,6 @@ function wrapProfile(row) {
     boostCredits: row.boost_credits ?? 0,
     autoRefreshSlots: row.auto_refresh_slots ?? 0,
     referralTiersClaimed: row.referral_tiers_claimed || [],
-    dailyShareClaimedOn: row.daily_share_claimed_on || null,
-    loginStreakDays: row.login_streak_days ?? 0,
-    loginStreakLastDay: row.login_streak_last_day || null,
     avatarUrl: row.avatar_url || '',
     lastLogin: row.last_login || null,
     lastActive: row.last_active || null,
@@ -56,6 +53,17 @@ function wrapProfile(row) {
     accountType,
     constructor: { modelName },
   };
+
+  // Only attach columns that exist on the row — later migrations may be missing after a reset.
+  if (Object.prototype.hasOwnProperty.call(row, 'daily_share_claimed_on')) {
+    user.dailyShareClaimedOn = row.daily_share_claimed_on || null;
+  }
+  if (Object.prototype.hasOwnProperty.call(row, 'login_streak_days')) {
+    user.loginStreakDays = row.login_streak_days ?? 0;
+  }
+  if (Object.prototype.hasOwnProperty.call(row, 'login_streak_last_day')) {
+    user.loginStreakLastDay = row.login_streak_last_day || null;
+  }
 
   return user;
 }

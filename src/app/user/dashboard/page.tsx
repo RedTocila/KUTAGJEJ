@@ -24,6 +24,7 @@ import { Receipt as ReceiptIcon } from '@phosphor-icons/react/dist/ssr/Receipt';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { SignOut as SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
+import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGear';
@@ -40,7 +41,7 @@ import {
   listMyRealEstateListings,
 } from '@/lib/listings-client';
 import { listPublicContracts } from '@/lib/public-contracts-client';
-import { listMySubscriptions, fetchPremiumPlanQuota } from '@/lib/payments-client';
+import { listMySubscriptions, fetchOkazionPlanQuota, fetchPremiumPlanQuota } from '@/lib/payments-client';
 import { getUserPortalAccountCategoryLabel } from '@/lib/user-portal-account-label';
 import { getUserDashboardCopy } from '@/lib/user-dashboard-copy';
 import type { ContractQuotas, PublicContract } from '@/types/contract';
@@ -57,6 +58,7 @@ import { ReferralSummaryCard } from '@/components/user/referral-summary-card';
 import { planAccentForCode } from '@/components/user/packages/package-ui';
 import { hardNavigate } from '@/lib/hard-navigate';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { OKAZION_RED } from '@/lib/home-categories';
 
 function quotasFromSub(sub: UserSubscriptionSummary | null): ContractQuotas {
   if (!sub) return FREE_PLAN_QUOTAS;
@@ -67,6 +69,7 @@ function quotasFromSub(sub: UserSubscriptionSummary | null): ContractQuotas {
     maxApartmentListings: sub.maxApartmentListings ?? FREE_PLAN_QUOTAS.maxApartmentListings,
     maxProductListings: sub.maxProductListings ?? FREE_PLAN_QUOTAS.maxProductListings,
     maxPremiumListings: sub.maxPremiumListings ?? 0,
+    maxOkazionListings: sub.maxOkazionListings ?? 0,
   };
 }
 
@@ -308,6 +311,7 @@ export default function UserDashboardPage() {
     jobs: 0,
     products: 0,
     premium: 0,
+    okazion: 0,
   });
   const [addListingOpen, setAddListingOpen] = React.useState(false);
 
@@ -338,7 +342,7 @@ export default function UserDashboardPage() {
 
   React.useEffect(() => {
     if (!user || !canPublish) {
-      setUsage({ apartments: 0, cars: 0, jobs: 0, products: 0, premium: 0 });
+      setUsage({ apartments: 0, cars: 0, jobs: 0, products: 0, premium: 0, okazion: 0 });
       return;
     }
     let cancelled = false;
@@ -348,7 +352,8 @@ export default function UserDashboardPage() {
       listMyJobListings(),
       listMyMarketplaceListings(),
       fetchPremiumPlanQuota(),
-    ]).then(([re, cars, jobs, mkt, premium]) => {
+      fetchOkazionPlanQuota(),
+    ]).then(([re, cars, jobs, mkt, premium, okazion]) => {
       if (cancelled) return;
       setUsage({
         apartments: (re.listings ?? []).length,
@@ -356,6 +361,7 @@ export default function UserDashboardPage() {
         jobs: (jobs.listings ?? []).length,
         products: (mkt.listings ?? []).length,
         premium: premium.quota?.used ?? 0,
+        okazion: okazion.quota?.used ?? 0,
       });
     });
     return () => {
@@ -379,6 +385,7 @@ export default function UserDashboardPage() {
         maxApartmentListings: freePlan.maxApartmentListings,
         maxProductListings: freePlan.maxProductListings,
         maxPremiumListings: freePlan.maxPremiumListings,
+        maxOkazionListings: freePlan.maxOkazionListings ?? 0,
       };
     }
     return FREE_PLAN_QUOTAS;
@@ -568,6 +575,16 @@ export default function UserDashboardPage() {
               convertAria={t.convertAria(t.premium)}
               unavailableLabel={t.unavailable}
             />
+            <QuotaStat
+              label={t.okazion}
+              used={usage.okazion}
+              max={quotas.maxOkazionListings}
+              icon={SealPercentIcon}
+              tone={OKAZION_RED}
+              convertTooltip={t.convertTooltip}
+              convertAria={t.convertAria(t.okazion)}
+              unavailableLabel={t.unavailable}
+            />
           </Stack>
         </Box>
       ) : null}
@@ -576,15 +593,6 @@ export default function UserDashboardPage() {
       {!canPublish ? <DailyStreakCard /> : null}
 
       <PortalLinkGroup>
-        <PortalLinkCard
-          grouped
-          href={paths.user.profile}
-          title={t.profileTitle}
-          description={t.profileDescription}
-          icon={UserGearIcon}
-          badge={categoryLabel}
-          badgeColor={categoryBadgeColor}
-        />
         <PortalLinkCard
           grouped
           href={paths.user.packagesMain}
@@ -610,6 +618,18 @@ export default function UserDashboardPage() {
             icon={ReceiptIcon}
           />
         ) : null}
+      </PortalLinkGroup>
+
+      <PortalLinkGroup>
+        <PortalLinkCard
+          grouped
+          href={paths.user.profile}
+          title={t.profileTitle}
+          description={t.profileDescription}
+          icon={UserGearIcon}
+          badge={categoryLabel}
+          badgeColor={categoryBadgeColor}
+        />
         <LanguageSwitchRow grouped />
         <PortalLinkCard
           grouped

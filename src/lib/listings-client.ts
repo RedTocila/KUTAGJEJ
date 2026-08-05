@@ -3,9 +3,38 @@
 import type { ListingCategory } from '@/types/listing-category';
 import type { ListingMetrics } from '@/lib/listing-metrics';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
-import { authHeaders } from '@/lib/api-client';
-import { getAccessToken } from '@/lib/api-client';
+import { authHeaders, authHeadersAsync, getAccessToken } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
+
+async function jsonAuthFetch<T extends Record<string, unknown>>(
+  path: string,
+  init: RequestInit,
+): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
+  try {
+    const res = await fetch(getApiUrl(path), {
+      ...init,
+      headers: {
+        ...(await authHeadersAsync()),
+        ...(init.headers as Record<string, string> | undefined),
+      },
+    });
+    const data = (await res.json().catch(() => ({}))) as T & { message?: string };
+    if (!res.ok) {
+      return {
+        ok: false,
+        error:
+          typeof data.message === 'string'
+            ? data.message
+            : res.status === 401
+              ? 'Sesioni skadoi. Hyni përsëri.'
+              : 'Nuk u ruajt njoftimi.',
+      };
+    }
+    return { ok: true, data };
+  } catch {
+    return { ok: false, error: 'Nuk u arrit lidhja me serverin.' };
+  }
+}
 
 
 export interface RealEstateListingPayload {
@@ -48,6 +77,7 @@ export async function listCategoriesPublic(): Promise<{ categories?: ListingCate
 
 export interface CarMineListing extends ListingMetrics {
   id: string;
+  vehicleType: string;
   make: string;
   model: string;
   variant: string;
@@ -69,6 +99,8 @@ export interface CarMineListing extends ListingMetrics {
   createdAt: string;
   isPremium?: boolean;
   premiumUntil?: string | null;
+  isOkazion?: boolean;
+  okazionUntil?: string | null;
 }
 
 export interface JobMineListing extends ListingMetrics {
@@ -93,6 +125,8 @@ export interface JobMineListing extends ListingMetrics {
   createdAt: string;
   isPremium?: boolean;
   premiumUntil?: string | null;
+  isOkazion?: boolean;
+  okazionUntil?: string | null;
 }
 
 export interface MarketplaceMineListing extends ListingMetrics {
@@ -111,6 +145,8 @@ export interface MarketplaceMineListing extends ListingMetrics {
   createdAt: string;
   isPremium?: boolean;
   premiumUntil?: string | null;
+  isOkazion?: boolean;
+  okazionUntil?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -144,44 +180,32 @@ export type ListingCreateResult = {
 export async function createRealEstateListing(
   body: RealEstateListingPayload,
 ): Promise<ListingCreateResult> {
-  try {
-    const res = await fetch(getApiUrl('/listings/real-estate'), {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
-    return {
-      id: data.listing?.id as string | undefined,
-      status: data.listing?.status,
-      message: typeof data.message === 'string' ? data.message : undefined,
-    };
-  } catch {
-    return { error: 'Could not reach the server.' };
-  }
+  const res = await jsonAuthFetch<{ listing?: { id?: string; status?: ListingCreateResult['status'] }; message?: string }>(
+    '/listings/real-estate',
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+  if (!res.ok) return { error: res.error };
+  return {
+    id: res.data.listing?.id,
+    status: res.data.listing?.status,
+    message: typeof res.data.message === 'string' ? res.data.message : undefined,
+  };
 }
 
 export async function updateRealEstateListing(
   id: string,
   body: RealEstateListingPayload,
 ): Promise<ListingCreateResult> {
-  try {
-    const res = await fetch(getApiUrl(`/listings/real-estate/${encodeURIComponent(id)}`), {
-      method: 'PUT',
-      headers: authHeaders(),
-      body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not update listing.' };
-    return {
-      id: data.listing?.id as string | undefined,
-      status: data.listing?.status,
-      message: typeof data.message === 'string' ? data.message : undefined,
-    };
-  } catch {
-    return { error: 'Could not reach the server.' };
-  }
+  const res = await jsonAuthFetch<{ listing?: { id?: string; status?: ListingCreateResult['status'] }; message?: string }>(
+    `/listings/real-estate/${encodeURIComponent(id)}`,
+    { method: 'PUT', body: JSON.stringify(body) },
+  );
+  if (!res.ok) return { error: res.error };
+  return {
+    id: res.data.listing?.id,
+    status: res.data.listing?.status,
+    message: typeof res.data.message === 'string' ? res.data.message : undefined,
+  };
 }
 
 export async function listMyCarListings(): Promise<{ listings?: CarMineListing[]; error?: string }> {
@@ -241,41 +265,29 @@ export interface JobListingPayload {
 }
 
 export async function createJobListing(body: JobListingPayload): Promise<ListingCreateResult> {
-  try {
-    const res = await fetch(getApiUrl('/listings/jobs'), {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
-    return {
-      id: data.listing?.id as string | undefined,
-      status: data.listing?.status,
-      message: typeof data.message === 'string' ? data.message : undefined,
-    };
-  } catch {
-    return { error: 'Could not reach the server.' };
-  }
+  const res = await jsonAuthFetch<{ listing?: { id?: string; status?: ListingCreateResult['status'] }; message?: string }>(
+    '/listings/jobs',
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+  if (!res.ok) return { error: res.error };
+  return {
+    id: res.data.listing?.id,
+    status: res.data.listing?.status,
+    message: typeof res.data.message === 'string' ? res.data.message : undefined,
+  };
 }
 
 export async function updateJobListing(id: string, body: JobListingPayload): Promise<ListingCreateResult> {
-  try {
-    const res = await fetch(getApiUrl(`/listings/jobs/${encodeURIComponent(id)}`), {
-      method: 'PUT',
-      headers: authHeaders(),
-      body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not update listing.' };
-    return {
-      id: data.listing?.id as string | undefined,
-      status: data.listing?.status,
-      message: typeof data.message === 'string' ? data.message : undefined,
-    };
-  } catch {
-    return { error: 'Could not reach the server.' };
-  }
+  const res = await jsonAuthFetch<{ listing?: { id?: string; status?: ListingCreateResult['status'] }; message?: string }>(
+    `/listings/jobs/${encodeURIComponent(id)}`,
+    { method: 'PUT', body: JSON.stringify(body) },
+  );
+  if (!res.ok) return { error: res.error };
+  return {
+    id: res.data.listing?.id,
+    status: res.data.listing?.status,
+    message: typeof res.data.message === 'string' ? res.data.message : undefined,
+  };
 }
 
 export interface MarketplaceListingPayload {
@@ -292,44 +304,32 @@ export interface MarketplaceListingPayload {
 }
 
 export async function createMarketplaceListing(body: MarketplaceListingPayload): Promise<ListingCreateResult> {
-  try {
-    const res = await fetch(getApiUrl('/listings/marketplace'), {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not save listing.' };
-    return {
-      id: data.listing?.id as string | undefined,
-      status: data.listing?.status,
-      message: typeof data.message === 'string' ? data.message : undefined,
-    };
-  } catch {
-    return { error: 'Could not reach the server.' };
-  }
+  const res = await jsonAuthFetch<{ listing?: { id?: string; status?: ListingCreateResult['status'] }; message?: string }>(
+    '/listings/marketplace',
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+  if (!res.ok) return { error: res.error };
+  return {
+    id: res.data.listing?.id,
+    status: res.data.listing?.status,
+    message: typeof res.data.message === 'string' ? res.data.message : undefined,
+  };
 }
 
 export async function updateMarketplaceListing(
   id: string,
   body: MarketplaceListingPayload,
 ): Promise<ListingCreateResult> {
-  try {
-    const res = await fetch(getApiUrl(`/listings/marketplace/${encodeURIComponent(id)}`), {
-      method: 'PUT',
-      headers: authHeaders(),
-      body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not update listing.' };
-    return {
-      id: data.listing?.id as string | undefined,
-      status: data.listing?.status,
-      message: typeof data.message === 'string' ? data.message : undefined,
-    };
-  } catch {
-    return { error: 'Could not reach the server.' };
-  }
+  const res = await jsonAuthFetch<{ listing?: { id?: string; status?: ListingCreateResult['status'] }; message?: string }>(
+    `/listings/marketplace/${encodeURIComponent(id)}`,
+    { method: 'PUT', body: JSON.stringify(body) },
+  );
+  if (!res.ok) return { error: res.error };
+  return {
+    id: res.data.listing?.id,
+    status: res.data.listing?.status,
+    message: typeof res.data.message === 'string' ? res.data.message : undefined,
+  };
 }
 
 export async function createCarListing(formData: FormData): Promise<ListingCreateResult> {
@@ -355,6 +355,7 @@ export async function createCarListing(formData: FormData): Promise<ListingCreat
 }
 
 export type CarListingJsonPayload = {
+  vehicleType: string;
   make: string;
   model: string;
   variant?: string;
@@ -374,20 +375,14 @@ export type CarListingJsonPayload = {
 };
 
 export async function updateCarListing(id: string, body: CarListingJsonPayload): Promise<ListingCreateResult> {
-  try {
-    const res = await fetch(getApiUrl(`/listings/cars/${encodeURIComponent(id)}`), {
-      method: 'PUT',
-      headers: authHeaders(),
-      body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not update listing.' };
-    return {
-      id: data.listing?.id as string | undefined,
-      status: data.listing?.status,
-      message: typeof data.message === 'string' ? data.message : undefined,
-    };
-  } catch {
-    return { error: 'Could not reach the server.' };
-  }
+  const res = await jsonAuthFetch<{ listing?: { id?: string; status?: ListingCreateResult['status'] }; message?: string }>(
+    `/listings/cars/${encodeURIComponent(id)}`,
+    { method: 'PUT', body: JSON.stringify(body) },
+  );
+  if (!res.ok) return { error: res.error };
+  return {
+    id: res.data.listing?.id,
+    status: res.data.listing?.status,
+    message: typeof res.data.message === 'string' ? res.data.message : undefined,
+  };
 }

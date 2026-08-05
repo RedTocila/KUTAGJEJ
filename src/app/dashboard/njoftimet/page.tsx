@@ -48,7 +48,7 @@ export default function ListingModerationPage() {
   const router = useRouter();
   const { user } = useUser();
   const [listings, setListings] = React.useState<AdminListingRow[]>([]);
-  const [filter, setFilter] = React.useState<'pending' | 'all'>('pending');
+  const [filter, setFilter] = React.useState<'pending' | 'all'>('all');
   const [kind, setKind] = React.useState('');
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -97,14 +97,14 @@ export default function ListingModerationPage() {
         icon={React.createElement(MegaphoneIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Përmbajtja"
         title="Njoftimet"
-        description="Çdo njoftim i ri pret miratimin para se të shfaqet publikisht."
+        description="Njoftimet publikohen menjëherë. Mund t’i heqësh ose t’i rivendosësh këtu nëse shkelin rregullat."
         actions={
           <>
-            <Button variant={filter === 'pending' ? 'contained' : 'outlined'} onClick={() => setFilter('pending')}>
-              Në pritje
-            </Button>
             <Button variant={filter === 'all' ? 'contained' : 'outlined'} onClick={() => setFilter('all')}>
               Të gjitha
+            </Button>
+            <Button variant={filter === 'pending' ? 'contained' : 'outlined'} onClick={() => setFilter('pending')}>
+              Në pritje
             </Button>
           </>
         }
@@ -182,7 +182,7 @@ export default function ListingModerationPage() {
                 <Typography>{selected.cityName}</Typography>
               </Box>
             ) : null}
-            {selected?.status === 'pending' ? (
+            {selected?.status === 'approved' || selected?.status === 'pending' || selected?.status === 'rejected' ? (
               <TextField
                 label="Shënim për përdoruesin (opsional)"
                 value={adminNote}
@@ -198,15 +198,15 @@ export default function ListingModerationPage() {
         </ProductDialogContent>
         <ProductDialogActions>
           <Button onClick={() => setSelected(null)}>Mbyll</Button>
-          {selected?.status === 'pending' ? (
-            <>
-              <Button color="error" disabled={acting} onClick={() => void review('reject')}>
-                Refuzo
-              </Button>
-              <Button variant="contained" disabled={acting} onClick={() => void review('approve')}>
-                Aprovo
-              </Button>
-            </>
+          {selected?.status === 'approved' || selected?.status === 'pending' ? (
+            <Button color="error" disabled={acting} onClick={() => void review('reject')}>
+              Hiq / Refuzo
+            </Button>
+          ) : null}
+          {selected?.status === 'rejected' || selected?.status === 'pending' ? (
+            <Button variant="contained" disabled={acting} onClick={() => void review('approve')}>
+              {selected?.status === 'rejected' ? 'Rivendos' : 'Aprovo'}
+            </Button>
           ) : null}
         </ProductDialogActions>
       </ProductDialog>

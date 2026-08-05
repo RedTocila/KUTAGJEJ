@@ -5,35 +5,51 @@ import { Suspense } from 'react';
 import RouterLink from 'next/link';
 import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
 
-import { findVertical, type HomeVerticalId } from '@/lib/home-categories';
+import {
+  findSearchCategory,
+  findVertical,
+  isHomeVerticalId,
+  OKAZION_RED,
+  OKAZION_RED_SOFT,
+  type HomeVerticalId,
+} from '@/lib/home-categories';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { paths } from '@/paths';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
 import { PortalIconBox } from '@/components/user/portal-cards';
 
 import { CategoryBrowseControls } from './listing-filters/category-browse-controls';
+import {
+  OkazionBrowseControls,
+  OkazionBrowseControlsFallback,
+} from './listing-filters/okazion-browse-controls';
 import { HomeVerticalIcon } from './home-vertical-icon';
+
+/** Browse pages that share the quiet category hero (listing verticals + OKAZION). */
+export type BrowseCategoryId = HomeVerticalId | 'okazion';
 
 /**
  * Quiet header used by every public browse page (Real Estate, Cars, Jobs,
- * Marketplace) — page title, count, and browse controls.
+ * Marketplace, OKAZION) — page title, count, and browse controls.
  */
 export function PublicCategoryHero({
   verticalId,
   total,
   cities,
 }: {
-  verticalId: HomeVerticalId;
+  verticalId: BrowseCategoryId;
   total: number;
   cities: RealEstateCityDto[];
 }) {
-  const vertical = findVertical(verticalId);
+  const label = isHomeVerticalId(verticalId)
+    ? findVertical(verticalId).label
+    : findSearchCategory(verticalId).label;
   return (
     <Box
       component="section"
       sx={{
         pt: { xs: 'max(12px, env(safe-area-inset-top, 0px))', md: 5 },
-        pb: { xs: 3, md: 5 },
+        pb: verticalId === 'okazion' ? { xs: 1.25, md: 2.5 } : { xs: 3, md: 5 },
       }}
     >
       <Container maxWidth="xl">
@@ -43,9 +59,26 @@ export function PublicCategoryHero({
             aria-label="Kthehu në faqen kryesore"
             sx={{ display: { xs: 'inline-flex', md: 'none' }, mt: 0.5 }}
           />
-          <PortalIconBox size={40}>
-            <HomeVerticalIcon verticalId={verticalId} size={22} />
-          </PortalIconBox>
+          {verticalId === 'okazion' ? (
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 2.25,
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+                bgcolor: OKAZION_RED_SOFT,
+                color: OKAZION_RED,
+              }}
+            >
+              <HomeVerticalIcon verticalId="okazion" size={22} />
+            </Box>
+          ) : (
+            <PortalIconBox size={40}>
+              <HomeVerticalIcon verticalId={verticalId} size={22} />
+            </PortalIconBox>
+          )}
           <Stack spacing={0.35} sx={{ flex: 1, minWidth: 0, pt: 0.15 }}>
             <Typography
               component="h1"
@@ -57,7 +90,7 @@ export function PublicCategoryHero({
                 minWidth: 0,
               }}
             >
-              {vertical.label}
+              {label}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.45 }}>
               {total > 0 ? `${total.toLocaleString('en-GB')} njoftime` : 'Asnjë njoftim ende'}
@@ -65,9 +98,15 @@ export function PublicCategoryHero({
           </Stack>
         </Stack>
 
-        <Suspense fallback={null}>
-          <CategoryBrowseControls verticalId={verticalId} cities={cities} />
-        </Suspense>
+        {isHomeVerticalId(verticalId) ? (
+          <Suspense fallback={null}>
+            <CategoryBrowseControls verticalId={verticalId} cities={cities} />
+          </Suspense>
+        ) : (
+          <Suspense fallback={<OkazionBrowseControlsFallback />}>
+            <OkazionBrowseControls />
+          </Suspense>
+        )}
       </Container>
     </Box>
   );
@@ -76,8 +115,16 @@ export function PublicCategoryHero({
 /**
  * Quiet "no listings yet" state for browse pages.
  */
-export function PublicCategoryEmptyState({ verticalId }: { verticalId: HomeVerticalId }) {
-  const vertical = findVertical(verticalId);
+export function PublicCategoryEmptyState({ verticalId }: { verticalId: BrowseCategoryId }) {
+  const isOkazion = verticalId === 'okazion';
+  const ctaHref = isOkazion
+    ? `${paths.user.realEstateListing}?okazion=1`
+    : findVertical(verticalId).postHref;
+  const ctaLabel = isOkazion ? 'Shto OKAZION' : 'Posto njoftim falas';
+  const emptyCopy = isOkazion
+    ? 'Nuk ka OKAZION aktive për momentin. Kontrollo përsëri së shpejti.'
+    : 'Nuk ka njoftime ende — bëhu i pari.';
+
   return (
     <Container maxWidth="xl" sx={{ py: { xs: 4, md: 6 } }}>
       <Grid container spacing={2}>
@@ -118,16 +165,16 @@ export function PublicCategoryEmptyState({ verticalId }: { verticalId: HomeVerti
       >
         <Stack spacing={1.5} sx={{ alignItems: 'center' }}>
           <Typography variant="body2" color="text.secondary">
-            Nuk ka njoftime ende — bëhu i pari.
+            {emptyCopy}
           </Typography>
           <Button
             component={RouterLink}
-            href={vertical.postHref}
+            href={ctaHref}
             variant="outlined"
             size="small"
             sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
           >
-            Posto njoftim falas
+            {ctaLabel}
           </Button>
         </Stack>
       </Box>

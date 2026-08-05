@@ -1,5 +1,5 @@
 import type { ListingMetrics } from '@/lib/listing-metrics';
-import type { BrowseFilters } from '@/lib/listing-filters';
+import type { BrowseFilters, BrowseOkazionFilters } from '@/lib/listing-filters';
 import { BROWSE_PAGE_SIZE, buildBrowseApiQuery } from '@/lib/listing-filters';
 import type { HomeVerticalId } from '@/lib/home-categories';
 import { isListingId } from '@/lib/real-estate-permalink';
@@ -9,6 +9,9 @@ export type ListingMetricsFields = ListingMetrics & {
   /** Active Premium boost window — listing floats to the top of public feeds. */
   isPremium?: boolean;
   premiumUntil?: string | null;
+  /** Active OKAZION window — red-themed short deal (5 days). */
+  isOkazion?: boolean;
+  okazionUntil?: string | null;
 };
 
 /**
@@ -109,6 +112,7 @@ export interface PublicCarListing extends ListingMetricsFields {
   id: string;
   kind: 'car';
   description: string;
+  vehicleType?: string;
   make: string;
   model: string;
   variant: string;
@@ -430,6 +434,34 @@ export async function fetchBrowseProfessionals(
     limit?: number;
     totalPages?: number;
   }>(`/public/listings/professionals${buildBrowseApiQuery(filters, limit, page)}`);
+  return parseBrowseResult(data, limit, page);
+}
+
+export type PublicOkazionListing =
+  | PublicRealEstateListing
+  | PublicCarListing
+  | PublicJobListing
+  | PublicMarketplaceListing
+  | PublicDirectoryListing;
+
+export async function fetchBrowseOkazion(
+  limit = BROWSE_PAGE_SIZE,
+  filters: BrowseOkazionFilters = {},
+  page = 1,
+): Promise<BrowseListingsResult<PublicOkazionListing>> {
+  const q = new URLSearchParams({
+    limit: String(limit),
+    page: String(page),
+  });
+  if (filters.kind) q.set('kind', filters.kind);
+  if (filters.q?.trim()) q.set('q', filters.q.trim());
+  const data = await safeJson<{
+    listings: PublicOkazionListing[];
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  }>(`/public/listings/okazion?${q.toString()}`);
   return parseBrowseResult(data, limit, page);
 }
 

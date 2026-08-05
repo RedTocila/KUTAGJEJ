@@ -11,7 +11,7 @@ import {
 } from '@/components/core/product-dialog';
 import { productButtonSx } from '@/styles/product-sx';
 
-/** Shared owner-edit dialog — black paper, blur backdrop, close control. */
+/** Shared owner-edit dialog — theme-aware paper, blur backdrop, close control. */
 export function OwnerEditSectionDialog({
   open,
   title,

@@ -23,11 +23,11 @@ export const listingContactCtaSx: SxProps<Theme> = {
   fontWeight: 800,
   textTransform: 'none',
   fontSize: '0.95rem',
-  color: 'common.black',
+  color: 'primary.contrastText',
   boxShadow: '0 10px 28px rgba(0,0,0,0.28)',
   px: 3.25,
   '&:hover': {
-    color: 'common.black',
+    color: 'primary.contrastText',
     boxShadow: '0 12px 32px rgba(0,0,0,0.34)',
   },
   '& .MuiButton-startIcon': { color: 'inherit', mr: 0.85 },

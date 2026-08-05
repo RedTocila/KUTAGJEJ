@@ -2,7 +2,12 @@
 
 const express = require('express');
 const { getSupabaseAdmin, createAuthPasswordClient } = require('../lib/supabase');
-const { getProfileById, getProfileByEmail, insertProfile, mapProfile } = require('../lib/profiles');
+const {
+  getProfileById,
+  getProfileByEmail,
+  insertProfile,
+  ensureProfileForAuthUser,
+} = require('../lib/profiles');
 const authMiddleware = require('../middleware/auth');
 const {
   allocateUniqueReferralCode,
@@ -129,14 +134,28 @@ router.post('/login', authRateLimit, async (req, res) => {
     }
 
     const emailNorm = String(email).toLowerCase().trim();
-    const { session, error } = await signInWithPassword(emailNorm, password);
+    const { session, user: authUser, error } = await signInWithPassword(emailNorm, password);
     if (error || !session) {
       return res.status(401).json({ message: 'Email ose fjalëkalim i pasaktë.' });
     }
 
-    const profile = await getProfileById(session.user.id);
+    let profile = await getProfileById(session.user.id);
+    if (!profile) {
+      // Auth user can outlive profiles after a schema reset — rebuild from metadata.
+      profile = await ensureProfileForAuthUser(authUser || session.user);
+    }
     if (!profile) {
       return res.status(401).json({ message: 'Profili nuk u gjet. Kontaktoni mbështetjen.' });
+    }
+    if (
+      profile.constructor.modelName === 'IndividualUser' ||
+      profile.constructor.modelName === 'BusinessUser'
+    ) {
+      try {
+        await ensureUserReferralCode(profile);
+      } catch (refErr) {
+        console.warn('login referral code:', refErr?.message || refErr);
+      }
     }
 
     if (
@@ -179,7 +198,10 @@ router.post('/refresh', authRateLimit, async (req, res) => {
     if (error || !data?.session?.access_token) {
       return res.status(401).json({ message: 'Invalid token' });
     }
-    const profile = await getProfileById(data.session.user.id);
+    let profile = await getProfileById(data.session.user.id);
+    if (!profile) {
+      profile = await ensureProfileForAuthUser(data.session.user);
+    }
     if (!profile) {
       return res.status(401).json({ message: 'Profili nuk u gjet. Kontaktoni mbështetjen.' });
     }

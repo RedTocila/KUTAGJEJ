@@ -1,5 +1,6 @@
 'use client';
 
+import { getAccessToken } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
 
 export interface UploadImagesResult {
@@ -10,7 +11,7 @@ export interface UploadImagesResult {
 /**
  * Upload listing images to the shared backend endpoint and return their public
  * URLs. Used by every listing category (real estate, cars, jobs, marketplace,
- * businesses, professionals). The `folder` groups uploads in Vercel Blob.
+ * businesses, professionals). The `folder` groups uploads in storage.
  */
 export async function uploadListingImages(
   files: File[],
@@ -18,7 +19,7 @@ export async function uploadListingImages(
 ): Promise<UploadImagesResult> {
   if (!files.length) return { urls: [] };
   try {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
+    const token = await getAccessToken();
     const headers: Record<string, string> = {};
     if (token) headers.Authorization = `Bearer ${token}`;
 

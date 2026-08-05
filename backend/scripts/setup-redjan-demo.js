@@ -227,8 +227,9 @@ async function seedOnePerCategory(sb, posterId, cities) {
     } else if (table === 'car_listings') {
       const { error: e } = await sb.from(table).insert({
         poster_id: posterId,
+        vehicle_type: 'car',
         make: 'BMW',
-        model: '320d',
+        model: '3 Series',
         variant: 'M Sport',
         description: 'Makina e mirëmbajtur, e rregjistruar në Shqipëri. Shërbime të dokumentuara.',
         year: 2018,
@@ -384,6 +385,7 @@ async function grantElite(sb, userId) {
       max_apartment_listings: Number(contract.max_apartment_listings) || 0,
       max_product_listings: Number(contract.max_product_listings) || 0,
       max_premium_listings: Number(contract.max_premium_listings) || 0,
+      max_okazion_listings: Number(contract.max_okazion_listings) || 0,
       starts_at: now.toISOString(),
       expires_at: expiresAt.toISOString(),
       status: 'active',

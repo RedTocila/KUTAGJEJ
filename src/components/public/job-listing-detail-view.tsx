@@ -135,7 +135,9 @@ export function JobListingDetailView({
     setShareCount(listing.shareCount ?? 0);
   }, [listing.shareCount]);
 
-  const expiresAt = listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
+  const expiresAt = listing.isOkazion
+    ? listing.okazionUntil || listing.expiresAt || getJobListingExpiresAt(listing.createdAt).toISOString()
+    : listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
   const sections = React.useMemo(() => buildJobDetailSections(listing), [listing]);
   const metaRows = React.useMemo(() => jobDetailMetaRows(listing), [listing]);
   const companyName =

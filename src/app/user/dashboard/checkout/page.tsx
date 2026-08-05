@@ -9,15 +9,17 @@ import { useUser } from '@/hooks/use-user';
 import {
   createAutoRefreshOrder,
   createCreditsOrder,
+  createOkazionOrder,
   createPremiumOrder,
   createSubscriptionOrder,
   listAutoRefreshPackages,
   listCreditPackages,
+  listOkazionPackages,
   listPremiumPackages,
 } from '@/lib/payments-client';
 import { listPublicContracts } from '@/lib/public-contracts-client';
 import { paths } from '@/paths';
-import type { AutoRefreshPackage, CreditPackage, PremiumPackage } from '@/types/payment';
+import type { AutoRefreshPackage, CreditPackage, OkazionPackage, PremiumPackage } from '@/types/payment';
 import type { PublicContract } from '@/types/contract';
 
 function formatBc(n: number) {
@@ -51,7 +53,19 @@ type PremiumCheckout = {
   returnTo: string;
 };
 
-type ReadyCheckout = CreditsCheckout | SubscriptionCheckout | AutoRefreshCheckout | PremiumCheckout;
+type OkazionCheckout = {
+  kind: 'okazion';
+  pkg: OkazionPackage;
+  quantity: number;
+  returnTo: string;
+};
+
+type ReadyCheckout =
+  | CreditsCheckout
+  | SubscriptionCheckout
+  | AutoRefreshCheckout
+  | PremiumCheckout
+  | OkazionCheckout;
 
 export default function UserCheckoutPage() {
   const router = useRouter();
@@ -66,6 +80,7 @@ export default function UserCheckoutPage() {
   const packageId = searchParams.get('packageId');
   const contractId = searchParams.get('contractId');
   const monthsRaw = searchParams.get('months');
+  const quantityRaw = searchParams.get('quantity');
   const returnToParam = searchParams.get('returnTo');
 
   React.useEffect(() => {
@@ -80,9 +95,11 @@ export default function UserCheckoutPage() {
           ? returnToParam
           : kind === 'subscription'
             ? paths.user.packagesMain
-            : kind === 'auto-refresh' || kind === 'premium'
-              ? `${paths.user.packagesExtra}?assignPremium=1`
-              : paths.user.credits;
+            : kind === 'okazion'
+              ? `${paths.user.packagesExtra}?assignOkazion=1`
+              : kind === 'auto-refresh' || kind === 'premium'
+                ? `${paths.user.packagesExtra}?assignPremium=1`
+                : paths.user.credits;
 
       if (kind === 'credits' && packageId) {
         const { packages: pkgs, error: err } = await listCreditPackages();
@@ -175,6 +192,33 @@ export default function UserCheckoutPage() {
         return;
       }
 
+      if (kind === 'okazion' && packageId) {
+        const { packages: pkgs, error: err } = await listOkazionPackages();
+        if (cancelled) return;
+        if (err) {
+          setError(err);
+          setLoading(false);
+          return;
+        }
+        const pkg = (pkgs ?? []).find((p) => p.id === packageId);
+        if (!pkg) {
+          setError('Paketa OKAZION nuk u gjet.');
+          setLoading(false);
+          return;
+        }
+        const qty = Math.min(50, Math.max(1, Math.floor(Number(quantityRaw) || 1)));
+        setCheckout({
+          kind: 'okazion',
+          pkg,
+          quantity: qty,
+          returnTo: returnToParam?.startsWith('/user/')
+            ? returnToParam
+            : `${paths.user.packagesExtra}?assignOkazion=1`,
+        });
+        setLoading(false);
+        return;
+      }
+
       if (kind === 'subscription' && contractId && monthsRaw) {
         const months = Number(monthsRaw);
         if (!Number.isFinite(months) || months <= 0) {
@@ -214,7 +258,7 @@ export default function UserCheckoutPage() {
     return () => {
       cancelled = true;
     };
-  }, [kind, packageId, contractId, monthsRaw, returnToParam]);
+  }, [kind, packageId, contractId, monthsRaw, quantityRaw, returnToParam]);
 
   const goBack = React.useCallback(() => {
     router.push(checkout?.returnTo || paths.user.credits);
@@ -227,7 +271,9 @@ export default function UserCheckoutPage() {
         ? 'Abonohu në Auto-Refresh'
         : checkout?.kind === 'premium'
           ? 'Bli Premium'
-          : 'Bli kredite';
+          : checkout?.kind === 'okazion'
+            ? 'Bli OKAZION'
+            : 'Bli kredite';
 
   return (
     <Box sx={{ width: '100%' }}>
@@ -318,6 +364,28 @@ export default function UserCheckoutPage() {
                   €{checkout.pkg.priceEur}
                 </Typography>
               </Stack>
+            ) : checkout.kind === 'okazion' ? (
+              <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography
+                    variant="overline"
+                    sx={{ fontWeight: 800, letterSpacing: 0.6, color: 'error.main', lineHeight: 1.2 }}
+                  >
+                    OKAZION
+                  </Typography>
+                  <Typography sx={{ fontWeight: 800, fontSize: '1.15rem', lineHeight: 1.25, mt: 0.25 }}>
+                    {checkout.quantity > 1
+                      ? `${checkout.pkg.labelSq} ×${checkout.quantity}`
+                      : checkout.pkg.labelSq}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                    {checkout.pkg.days} ditë për njoftim · stoko dhe apliko kur të duash
+                  </Typography>
+                </Box>
+                <Typography sx={{ fontWeight: 800, fontSize: '1.5rem', whiteSpace: 'nowrap', color: 'error.main' }}>
+                  €{checkout.pkg.priceEur * checkout.quantity}
+                </Typography>
+              </Stack>
             ) : (
               <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
                 <Box sx={{ minWidth: 0 }}>
@@ -347,7 +415,9 @@ export default function UserCheckoutPage() {
                 ? createAutoRefreshOrder(checkout.pkg.id)
                 : checkout.kind === 'premium'
                   ? createPremiumOrder(checkout.pkg.id)
-                  : createSubscriptionOrder(checkout.contract.id, checkout.months)
+                  : checkout.kind === 'okazion'
+                    ? createOkazionOrder(checkout.pkg.id, checkout.quantity)
+                    : createSubscriptionOrder(checkout.contract.id, checkout.months)
           }
           onPaid={() => {
             void checkSession();

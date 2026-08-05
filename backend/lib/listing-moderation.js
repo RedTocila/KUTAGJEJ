@@ -87,7 +87,7 @@ async function notifyAdminsListingSubmitted(kind, listingId, title) {
     refKind: kind,
     refId: listingId,
     title: title || 'Njoftim i ri',
-    message: `Njoftim i ri në ${label} pret miratimin.`,
+    message: `Njoftim i ri u publikua në ${label}.`,
   });
 }
 
@@ -184,11 +184,12 @@ async function reviewListing(kind, listingId, admin, decision, adminNote = '') {
   const { data: existing, error: selErr } = await selectQ.maybeSingle();
   if (selErr) throw selErr;
   if (!existing) return { ok: false, status: 404, message: 'Njoftimi nuk u gjet.' };
-  if (existing.status !== 'pending') {
-    return { ok: false, status: 409, message: 'Ky njoftim është shqyrtuar tashmë.' };
-  }
 
   const status = decision === 'approve' ? 'approved' : 'rejected';
+  if (existing.status === status) {
+    return { ok: false, status: 409, message: 'Ky njoftim ka tashmë këtë status.' };
+  }
+
   const { data: updated, error: updErr } = await sb
     .from(cfg.table)
     .update({

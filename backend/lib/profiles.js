@@ -95,6 +95,90 @@ async function getProfileByEmail(email) {
   return mapProfile(data);
 }
 
+function roleForAccountType(accountType) {
+  if (accountType === 'admin') return 'admin';
+  if (accountType === 'business') return 'business-user';
+  if (accountType === 'managed') return 'managed-user';
+  return 'individual-user';
+}
+
+/**
+ * Rebuild a profiles row for an auth.users account that lost its profile
+ * (e.g. after re-running the init migration which drops public.profiles).
+ */
+async function ensureProfileForAuthUser(authUser) {
+  if (!authUser?.id) return null;
+  const existing = await getProfileById(authUser.id);
+  if (existing) return existing;
+
+  const meta = authUser.user_metadata || {};
+  const email = String(authUser.email || meta.email || '')
+    .toLowerCase()
+    .trim();
+  if (!email) return null;
+
+  let accountType = String(meta.account_type || '').toLowerCase().trim();
+  if (!['admin', 'managed', 'individual', 'business'].includes(accountType)) {
+    accountType = meta.business_name || meta.nipt ? 'business' : 'individual';
+  }
+
+  const firstName = String(meta.first_name || meta.firstName || '').trim();
+  const lastName = String(meta.last_name || meta.lastName || '').trim();
+  const businessName = String(meta.business_name || meta.businessName || '').trim();
+  const businessOwner = String(meta.business_owner || meta.businessOwner || '').trim();
+  const businessCategory = String(meta.business_category || meta.businessCategory || '').trim();
+  const nipt = String(meta.nipt || '').trim() || null;
+  const phone = String(meta.phone || '').trim().slice(0, 40);
+
+  const row = {
+    id: authUser.id,
+    email,
+    first_name: firstName || (businessName ? businessName.split(/\s+/)[0] : '') || email.split('@')[0],
+    last_name: lastName,
+    phone: phone || '',
+    account_type: accountType,
+    role: roleForAccountType(accountType),
+    is_active: true,
+    boost_credits: 0,
+  };
+
+  if (accountType === 'business') {
+    row.business_name = businessName || null;
+    row.business_owner = businessOwner || [firstName, lastName].filter(Boolean).join(' ') || null;
+    row.business_category = businessCategory || null;
+    row.nipt = nipt;
+  }
+
+  try {
+    return await insertProfile(row);
+  } catch (err) {
+    // Race: another request may have inserted the same id/email.
+    const again = await getProfileById(authUser.id);
+    if (again) return again;
+    throw err;
+  }
+}
+
+/** Re-create profiles for every auth user that has no profiles row. */
+async function backfillOrphanProfiles() {
+  const sb = getSupabaseAdmin();
+  let created = 0;
+  for (let page = 1; page <= 50; page += 1) {
+    const { data, error } = await sb.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw error;
+    const users = data?.users || [];
+    for (const authUser of users) {
+      const existing = await getProfileById(authUser.id);
+      if (existing) continue;
+      await ensureProfileForAuthUser(authUser);
+      created += 1;
+      console.log('[profiles] Restored orphan profile for', authUser.email);
+    }
+    if (users.length < 200) break;
+  }
+  return created;
+}
+
 async function insertProfile(row) {
   const { data, error } = await getSupabaseAdmin().from('profiles').insert(row).select('*').single();
   if (error) throw error;
@@ -146,6 +230,8 @@ module.exports = {
   getProfileByEmail,
   insertProfile,
   createProfileForAuthUser,
+  ensureProfileForAuthUser,
+  backfillOrphanProfiles,
   camelizeRow,
   camelizeRows,
   modelNameFromAccount,

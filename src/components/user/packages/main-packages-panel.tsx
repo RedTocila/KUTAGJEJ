@@ -43,6 +43,9 @@ function planFeatureLines(plan: PublicContract): string[] {
   if (plan.maxPremiumListings > 0) {
     lines.push(`${plan.maxPremiumListings} Premium listing · 30 ditë`);
   }
+  if (plan.maxOkazionListings > 0) {
+    lines.push(`${plan.maxOkazionListings} OKAZION · 5 ditë`);
+  }
   if ((plan.boostCredits ?? 0) > 0) {
     lines.push(`${plan.boostCredits} Boost Coins`);
   }

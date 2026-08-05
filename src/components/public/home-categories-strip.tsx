@@ -8,9 +8,8 @@ import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import {
-  AI_SEARCH_BLUE,
-  AI_SEARCH_BLUE_ON,
-  localizeSearchCategories,
+  OKAZION_RED,
+  localizeHomeBrowseCategories,
 } from '@/lib/home-categories';
 import { paths } from '@/paths';
 
@@ -19,7 +18,7 @@ import { HomeVerticalIcon } from './home-vertical-icon';
 export function HomeCategoriesStrip() {
   const { language } = useLanguage();
   const t = useCopy();
-  const verticals = React.useMemo(() => localizeSearchCategories(language), [language]);
+  const verticals = React.useMemo(() => localizeHomeBrowseCategories(language), [language]);
 
   return (
     <Box
@@ -49,7 +48,8 @@ export function HomeCategoriesStrip() {
 
         <Grid container spacing={2}>
           {verticals.map((v) => {
-            const isAi = v.id === 'ai';
+            const isOkazion = v.id === 'okazion';
+            const accent = isOkazion ? OKAZION_RED : 'primary.main';
             return (
             <Grid key={v.id} size={{ xs: 12, sm: 6, md: 4, lg: 'grow' }}>
               <Stack
@@ -69,7 +69,7 @@ export function HomeCategoriesStrip() {
                   borderColor: 'divider',
                   transition: 'transform 0.15s ease, border-color 0.15s ease',
                   '&:hover': {
-                    borderColor: isAi ? AI_SEARCH_BLUE : 'primary.main',
+                    borderColor: accent,
                     transform: 'translateY(-2px)',
                   },
                 }}
@@ -82,9 +82,9 @@ export function HomeCategoriesStrip() {
                     display: 'grid',
                     placeItems: 'center',
                     flexShrink: 0,
-                    color: isAi ? AI_SEARCH_BLUE_ON : 'primary.main',
-                    bgcolor: isAi
-                      ? AI_SEARCH_BLUE
+                    color: isOkazion ? '#fff' : 'primary.main',
+                    bgcolor: isOkazion
+                      ? OKAZION_RED
                       : (theme) =>
                           theme.palette.mode === 'dark'
                             ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
@@ -94,7 +94,7 @@ export function HomeCategoriesStrip() {
                   <HomeVerticalIcon
                     verticalId={v.id}
                     size={32}
-                    color={isAi ? AI_SEARCH_BLUE_ON : undefined}
+                    color={isOkazion ? '#fff' : undefined}
                   />
                 </Box>
                 <Stack spacing={0.5} sx={{ minWidth: 0 }}>

@@ -2,6 +2,7 @@ const { getSupabaseAdmin } = require('../supabase');
 const { camelizeRows } = require('../profiles');
 const { DEFAULT_LIMIT, MAX_LIMIT, JOB_LISTING_VISIBLE_DAYS, MS_PER_DAY } = require('./constants');
 const { expandSearchTerms, namesMatch, normalizeSearchText } = require('../search-normalize');
+const { hasPremiumUntilColumn } = require('../ensure-premium-listing-schema');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -97,9 +98,14 @@ function parseSort(value) {
   return SORT_VALUES.has(raw) ? raw : 'newest';
 }
 
-/** Active Premium listings (premium_until in the future) float above the rest. */
+/** Active OKAZION, then Premium, float above the rest. */
 function premiumSortPrefix() {
-  return [{ column: 'premium_until', ascending: false, nullsFirst: false }];
+  const prefix = [{ column: 'okazion_until', ascending: false, nullsFirst: false }];
+  // null = not probed yet → include and let runListingQuery fall back on error
+  if (hasPremiumUntilColumn() !== false) {
+    prefix.push({ column: 'premium_until', ascending: false, nullsFirst: false });
+  }
+  return prefix;
 }
 
 function buildSort(sort, field = 'price') {
@@ -113,9 +119,11 @@ function buildSort(sort, field = 'price') {
   return [...premiumFirst, { column: 'created_at', ascending: false }];
 }
 
-/** Strip premium_until from a sort spec (fallback when the column is not migrated yet). */
+/** Strip featured-until columns from a sort spec (fallback when not migrated yet). */
 function withoutPremiumSort(sortSpec = []) {
-  return (sortSpec || []).filter((s) => s.column !== 'premium_until');
+  return (sortSpec || []).filter(
+    (s) => s.column !== 'premium_until' && s.column !== 'okazion_until',
+  );
 }
 
 function isPremiumActive(doc) {
@@ -126,19 +134,29 @@ function isPremiumActive(doc) {
   return Number.isFinite(ts) && ts > Date.now();
 }
 
+function isOkazionActive(doc) {
+  if (!doc) return false;
+  const raw = doc.okazionUntil ?? doc.okazion_until ?? null;
+  if (!raw) return false;
+  const ts = new Date(raw).getTime();
+  return Number.isFinite(ts) && ts > Date.now();
+}
+
 /**
- * Stable partition: active Premium first (keeping relative order), then the rest.
- * Needed because DB order by premium_until also floats *expired* timestamps above nulls.
+ * Stable partition: active OKAZION first, then Premium, then the rest.
+ * Needed because DB order by *_until also floats *expired* timestamps above nulls.
  */
 function prioritizeActivePremium(docs) {
   if (!Array.isArray(docs) || docs.length === 0) return docs || [];
+  const okazion = [];
   const premium = [];
   const rest = [];
   for (const doc of docs) {
-    if (isPremiumActive(doc)) premium.push(doc);
+    if (isOkazionActive(doc)) okazion.push(doc);
+    else if (isPremiumActive(doc)) premium.push(doc);
     else rest.push(doc);
   }
-  return [...premium, ...rest];
+  return [...okazion, ...premium, ...rest];
 }
 
 function escapeIlikeValue(value) {
@@ -236,6 +254,7 @@ module.exports = {
   buildSort,
   withoutPremiumSort,
   isPremiumActive,
+  isOkazionActive,
   prioritizeActivePremium,
   buildIlikeOrFilter,
   enrichTextSearchWithLocations,

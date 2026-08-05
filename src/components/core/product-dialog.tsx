@@ -22,6 +22,15 @@ import {
   productDialogTitleSx,
 } from '@/styles/product-sx';
 
+function mergeSx(
+  base?: object | ((theme: unknown) => object) | readonly unknown[],
+  override?: object | ((theme: unknown) => object) | readonly unknown[],
+): object | ((theme: unknown) => object) | readonly unknown[] | undefined {
+  if (!base) return override;
+  if (!override) return base;
+  return [base, override] as const;
+}
+
 function mergeDialogSlotProps(
   base: DialogProps['slotProps'],
   override?: DialogProps['slotProps'],
@@ -38,12 +47,12 @@ function mergeDialogSlotProps(
     backdrop: {
       ...base?.backdrop,
       ...override.backdrop,
-      sx: { ...baseBackdrop?.sx, ...overrideBackdrop?.sx },
+      sx: mergeSx(baseBackdrop?.sx, overrideBackdrop?.sx),
     },
     paper: {
       ...base?.paper,
       ...override.paper,
-      sx: { ...basePaper?.sx, ...overridePaper?.sx },
+      sx: mergeSx(basePaper?.sx, overridePaper?.sx),
     },
   } as DialogProps['slotProps'];
 }
@@ -52,7 +61,7 @@ export type ProductDialogProps = Omit<DialogProps, 'slotProps'> & {
   slotProps?: DialogProps['slotProps'];
 };
 
-/** Immersive dialog — black paper, blurred backdrop. */
+/** Theme-aware product dialog — paper + blurred backdrop follow light/dark mode. */
 export function ProductDialog({ slotProps, ...props }: ProductDialogProps) {
   return (
     <Dialog

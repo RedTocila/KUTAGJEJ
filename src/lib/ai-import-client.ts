@@ -8,6 +8,8 @@ export interface AiImportDraftResult {
   id: string;
   sourceUrl: string;
   category: ListingCategoryKey | null;
+  detectedCategory?: ListingCategoryKey | null;
+  preferredCategory?: ListingCategoryKey | null;
   title: string;
   summary: string;
   cityName?: string;
@@ -16,6 +18,54 @@ export interface AiImportDraftResult {
   form: Record<string, unknown>;
   warning?: string | null;
   error?: string | null;
+  errorCode?: string | null;
+  restrictedReasons?: string[] | null;
+  sourcePrompt?: string | null;
+}
+
+export const AI_CATEGORY_MISMATCH_CODE = 'category_mismatch';
+export const AI_CONTENT_RESTRICTED_CODE = 'content_restricted';
+
+export function isAiCategoryMismatch(
+  draft: Pick<AiImportDraftResult, 'error' | 'errorCode'>,
+): boolean {
+  return (
+    draft.errorCode === AI_CATEGORY_MISMATCH_CODE ||
+    draft.error === AI_CATEGORY_MISMATCH_CODE
+  );
+}
+
+export function isAiContentRestricted(
+  draft: Pick<AiImportDraftResult, 'error' | 'errorCode'>,
+): boolean {
+  return (
+    draft.errorCode === AI_CONTENT_RESTRICTED_CODE ||
+    draft.error === AI_CONTENT_RESTRICTED_CODE
+  );
+}
+
+/** Clear the mismatch block after the user switches to the detected category. */
+export function acceptAiCategoryCorrection(
+  draft: AiImportDraftResult,
+  nextCategory?: ListingCategoryKey | null,
+): AiImportDraftResult | null {
+  const category = nextCategory || draft.detectedCategory || draft.category;
+  if (!category) return null;
+  if (draft.detectedCategory && category !== draft.detectedCategory) {
+    // Switching to a non-detected category needs a fresh AI run.
+    return null;
+  }
+  if (!draft.form || Object.keys(draft.form).length === 0) {
+    return null;
+  }
+  return {
+    ...draft,
+    category,
+    detectedCategory: draft.detectedCategory || category,
+    preferredCategory: category,
+    error: null,
+    errorCode: null,
+  };
 }
 
 export interface AiImportProfileContext {
@@ -80,24 +130,8 @@ export function toAiListingDraft(draft: AiImportDraftResult): AiListingDraft | n
   };
 }
 
-/** Read local files as compressed-ish data URLs for vision (max dimension via canvas skip — keep simple). */
-export async function filesToAiImagePayload(
-  files: File[],
-  hints: string[] = [],
-): Promise<Array<{ url: string; hint?: string }>> {
-  const out: Array<{ url: string; hint?: string }> = [];
-  for (let i = 0; i < files.length; i += 1) {
-    const file = files[i];
-    if (!file || !file.type.startsWith('image/')) continue;
-    const url = await readFileAsDataUrl(file);
-    if (!url) continue;
-    out.push({
-      url,
-      hint: hints[i] || undefined,
-    });
-  }
-  return out;
-}
+const MAX_EDGE = 1600;
+const JPEG_QUALITY = 0.78;
 
 function readFileAsDataUrl(file: File): Promise<string | null> {
   return new Promise((resolve) => {
@@ -109,6 +143,59 @@ function readFileAsDataUrl(file: File): Promise<string | null> {
     reader.onerror = () => resolve(null);
     reader.readAsDataURL(file);
   });
+}
+
+/** Shrink large camera photos before sending as data URLs (vision / fallback). */
+async function compressImageFile(file: File): Promise<string | null> {
+  const source = await readFileAsDataUrl(file);
+  if (!source) return null;
+  if (typeof window === 'undefined' || typeof document === 'undefined') return source;
+
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('image load failed'));
+      el.src = source;
+    });
+
+    const scale = Math.min(1, MAX_EDGE / Math.max(img.width, img.height));
+    const width = Math.max(1, Math.round(img.width * scale));
+    const height = Math.max(1, Math.round(img.height * scale));
+    if (scale >= 1 && file.size < 900_000) return source;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return source;
+    ctx.drawImage(img, 0, 0, width, height);
+    return canvas.toDataURL('image/jpeg', JPEG_QUALITY);
+  } catch {
+    return source;
+  }
+}
+
+/**
+ * Prefer already-uploaded https URLs for AI vision.
+ * Falls back to compressed data URLs for local files (keeps payloads under proxy limits).
+ */
+export async function filesToAiImagePayload(
+  files: File[],
+  hints: string[] = [],
+): Promise<Array<{ url: string; hint?: string }>> {
+  const out: Array<{ url: string; hint?: string }> = [];
+  for (let i = 0; i < files.length; i += 1) {
+    const file = files[i];
+    if (!file || !file.type.startsWith('image/')) continue;
+    const url = await compressImageFile(file);
+    if (!url) continue;
+    out.push({
+      url,
+      hint: hints[i] || undefined,
+    });
+  }
+  return out;
 }
 
 /**
@@ -126,9 +213,6 @@ export function mergeAttachedImageUrls(input: {
   const uploaded = input.uploadedUrls.filter(Boolean);
   const remote = input.remoteUrls.filter(Boolean);
 
-  const coverIdx = roles.findIndex((r) => r === 'cover');
-  const profileIdx = roles.findIndex((r) => r === 'profile');
-
   const ordered: string[] = [];
   const used = new Set<number>();
 
@@ -138,10 +222,13 @@ export function mergeAttachedImageUrls(input: {
     used.add(idx);
   };
 
-  if (coverIdx >= 0) pushUploaded(coverIdx);
+  const coverIndex = roles.findIndex((r) => r === 'cover');
+  const profileIndex = roles.findIndex((r) => r === 'profile');
+
+  if (coverIndex >= 0) pushUploaded(coverIndex);
   else if (uploaded[0]) pushUploaded(0);
 
-  if (profileIdx >= 0) pushUploaded(profileIdx);
+  if (profileIndex >= 0) pushUploaded(profileIndex);
 
   uploaded.forEach((_, idx) => pushUploaded(idx));
 

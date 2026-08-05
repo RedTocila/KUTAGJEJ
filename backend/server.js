@@ -10,8 +10,10 @@ const { ensureContractPackages } = require('./lib/ensure-contract-packages');
 const { ensureHomeBanners } = require('./lib/ensure-home-banners');
 const { ensureAutoRefreshSchema } = require('./lib/ensure-auto-refresh-schema');
 const { ensurePremiumListingSchema } = require('./lib/ensure-premium-listing-schema');
+const { ensureOkazionListingSchema } = require('./lib/ensure-okazion-listing-schema');
 const { ensureMemberReviewsSchema } = require('./lib/ensure-member-reviews-schema');
 const { backfillMissingReferralCodes } = require('./lib/referrals');
+const { backfillOrphanProfiles } = require('./lib/profiles');
 
 const app = express();
 const corsMiddleware = require('./middleware/cors');
@@ -45,7 +47,10 @@ async function bootstrap() {
   await ensureHomeBanners();
   await ensureAutoRefreshSchema();
   await ensurePremiumListingSchema();
+  await ensureOkazionListingSchema();
   await ensureMemberReviewsSchema();
+  const restored = await backfillOrphanProfiles();
+  if (restored > 0) console.log(`✓ Restored ${restored} orphan profile(s) from auth`);
   await backfillMissingReferralCodes();
 }
 

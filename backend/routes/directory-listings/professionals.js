@@ -85,6 +85,7 @@ router.post('/professionals', authMiddleware, requirePortalUser, async (req, res
       response_time_hours: v.responseTimeHours,
       portfolio_items: v.portfolioItems,
       services_highlight: v.servicesHighlight,
+      status: 'approved',
     };
     if (v.currency != null) row.currency = v.currency;
 
@@ -95,7 +96,7 @@ router.post('/professionals', authMiddleware, requirePortalUser, async (req, res
     await notifyAdminsListingSubmitted('professionals', doc.id, doc.title);
 
     res.status(201).json({
-      message: 'Njoftimi u dërgua për aprovim..',
+      message: 'Njoftimi u publikua me sukses.',
       listing: { id: String(doc.id), title: doc.title, status: doc.status, createdAt: doc.createdAt },
     });
   } catch (err) {

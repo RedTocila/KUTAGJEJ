@@ -33,6 +33,7 @@ export function PublicFooter() {
         { label: t.verticals.cars.label, href: paths.public.cars },
         { label: t.verticals.jobs.label, href: paths.public.jobs },
         { label: t.verticals.marketplace.label, href: paths.public.marketplace },
+        { label: t.verticals.okazion.label, href: paths.public.okazion },
         { label: t.verticals.businesses.label, href: paths.public.businesses },
         { label: t.verticals.professionals.label, href: paths.public.professionals },
       ],
@@ -94,7 +95,7 @@ export function PublicFooter() {
           <Stack spacing={2} sx={{ maxWidth: 360 }}>
             <RouterLink href={paths.home} style={{ textDecoration: 'none', color: 'inherit', alignSelf: 'flex-start' }}>
               <BrandLogo
-                height={42}
+                height={32}
                 showWordmark
                 wordmarkPresentation="brand"
                 markSx={{

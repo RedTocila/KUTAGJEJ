@@ -1,21 +1,28 @@
 'use client';
 
 import * as React from 'react';
-import { Stack, TextField } from '@mui/material';
+import { Box, Stack, TextField } from '@mui/material';
+import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
+import { SteeringWheel as SteeringWheelIcon } from '@phosphor-icons/react/dist/ssr/SteeringWheel';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import { VehicleTypePicker } from '@/components/cars/vehicle-type-picker';
 import { CarListingDetailView } from '@/components/public/car-listing-detail-view';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
 import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
 import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
 import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dialog';
 import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
+import { ListingToggle } from '@/components/user/listing-form-ui';
 import {
   CAR_COLOUR_OPTIONS,
   FUEL_TYPE_OPTIONS,
-  TRANSMISSION_OPTIONS,
+  makesForVehicleType,
+  modelsForMake,
+  type VehicleType,
 } from '@/lib/car-constants';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { carMineToPublic } from '@/lib/listing-mine-to-public';
 import { updateCarListing, type CarMineListing } from '@/lib/listings-client';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
@@ -25,7 +32,15 @@ import { paths } from '@/paths';
 
 const MAX_IMAGES = 8;
 
+const TRANSMISSION_TOGGLE = [
+  { value: 'automatic', label: 'Automatik', Icon: GearSixIcon },
+  { value: 'manual', label: 'Manual', Icon: SteeringWheelIcon },
+] as const;
+
+const CURRENCY_TOGGLE = CURRENCY_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
+
 type Snapshot = {
+  vehicleType: string;
   make: string;
   model: string;
   variant: string;
@@ -44,6 +59,7 @@ type Snapshot = {
 
 function snapFrom(d: CarMineListing): Snapshot {
   return {
+    vehicleType: d.vehicleType || 'car',
     make: d.make,
     model: d.model,
     variant: d.variant,
@@ -137,6 +153,7 @@ export function CarOwnerEdit({
         return;
       }
       const res = await updateCarListing(draft.id, {
+        vehicleType: draft.vehicleType || 'car',
         make: draft.make,
         model: draft.model,
         variant: draft.variant,
@@ -170,6 +187,10 @@ export function CarOwnerEdit({
     }
   };
 
+  const vehicleType = (draft.vehicleType || 'car') as VehicleType;
+  const makeOptions = makesForVehicleType(vehicleType);
+  const modelOptions = modelsForMake(vehicleType, draft.make);
+
   const fieldSx = {
     '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'rgba(255,255,255,0.03)' },
   } as const;
@@ -177,21 +198,46 @@ export function CarOwnerEdit({
   const inlineEditors: Partial<Record<OwnerInlineField, React.ReactNode>> = {
     title: (
       <Stack spacing={1} sx={{ width: '100%', maxWidth: 560 }}>
+        <Box
+          sx={{
+            p: 1.5,
+            borderRadius: 2.5,
+            border: '1px solid',
+            borderColor: 'primary.main',
+            bgcolor: primaryMainAlpha(0.06),
+            boxShadow: `inset 0 0 0 1px ${primaryMainAlpha(0.12)}`,
+          }}
+        >
+          <VehicleTypePicker
+            value={vehicleType}
+            label="Kategoria"
+            onChange={(v) =>
+              setDraft((d) => ({
+                ...d,
+                vehicleType: v || 'car',
+                make: '',
+                model: '',
+              }))
+            }
+          />
+        </Box>
         <Stack direction="row" spacing={1.25}>
-          <TextField
+          <SearchableSelect
             label="Marka"
             value={draft.make}
-            onChange={(e) => setDraft((d) => ({ ...d, make: e.target.value }))}
-            fullWidth
-            autoFocus
-            sx={fieldSx}
+            onChange={(v) => setDraft((d) => ({ ...d, make: v, model: '' }))}
+            options={makeOptions.map((m) => ({ value: m, label: m }))}
+            emptyLabel="Zgjidhni…"
+            required
           />
-          <TextField
+          <SearchableSelect
             label="Modeli"
             value={draft.model}
-            onChange={(e) => setDraft((d) => ({ ...d, model: e.target.value }))}
-            fullWidth
-            sx={fieldSx}
+            onChange={(v) => setDraft((d) => ({ ...d, model: v }))}
+            options={modelOptions.map((m) => ({ value: m, label: m }))}
+            emptyLabel={draft.make ? 'Zgjidhni…' : 'Zgjidhni markën…'}
+            required
+            disabled={!draft.make}
           />
         </Stack>
         <TextField
@@ -206,7 +252,7 @@ export function CarOwnerEdit({
     ),
     price: (
       <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
-        <Stack direction="row" spacing={1.25}>
+        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start' }}>
           <TextField
             label="Çmimi"
             value={String(draft.price)}
@@ -222,13 +268,12 @@ export function CarOwnerEdit({
             autoFocus
             sx={fieldSx}
           />
-          <SearchableSelect
+          <ListingToggle
             label="Monedha"
             value={draft.currency === 'EUR' || draft.currency === 'LEK' ? draft.currency : 'EUR'}
             onChange={(v) => setDraft((d) => ({ ...d, currency: v === 'LEK' ? 'LEK' : 'EUR' }))}
-            options={CURRENCY_OPTIONS}
-            emptyLabel="—"
-            sx={{ minWidth: 120 }}
+            options={CURRENCY_TOGGLE}
+            fullWidth={false}
           />
         </Stack>
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
@@ -278,12 +323,11 @@ export function CarOwnerEdit({
           options={FUEL_TYPE_OPTIONS}
           emptyLabel="—"
         />
-        <SearchableSelect
+        <ListingToggle
           label="Transmisioni"
           value={draft.transmission}
           onChange={(v) => setDraft((d) => ({ ...d, transmission: v }))}
-          options={TRANSMISSION_OPTIONS}
-          emptyLabel="—"
+          options={TRANSMISSION_TOGGLE}
         />
         <SearchableSelect
           label="Ngjyra"

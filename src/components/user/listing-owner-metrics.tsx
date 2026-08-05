@@ -10,6 +10,7 @@ import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megap
 import { PencilSimple as EditIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { ForkKnife as ForkKnifeIcon } from '@phosphor-icons/react/dist/ssr/ForkKnife';
 import { ShareNetwork as ShareIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
+import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Timer as TimerIcon } from '@phosphor-icons/react/dist/ssr/Timer';
 import RouterLink from 'next/link';
@@ -18,7 +19,7 @@ import { BusinessAnnouncementDialog } from '@/components/user/business-announcem
 import type { BusinessAnnouncement } from '@/lib/listing-announcement-client';
 import type { ListingMetricKind, ListingMetrics } from '@/lib/listing-metrics';
 import { refreshListingBoost, setListingAutoRefresh } from '@/lib/listing-refresh-client';
-import { applyPremiumFromPlan } from '@/lib/payments-client';
+import { applyOkazionFromPlan, applyPremiumFromPlan } from '@/lib/payments-client';
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
 
@@ -175,6 +176,9 @@ export function ListingOwnerMetrics({
   isPremium = false,
   premiumUntil = null,
   onPremiumApplied,
+  isOkazion = false,
+  okazionUntil = null,
+  onOkazionApplied,
   onRefreshed,
 }: {
   metrics: Partial<ListingMetrics>;
@@ -189,18 +193,32 @@ export function ListingOwnerMetrics({
   isPremium?: boolean;
   premiumUntil?: string | null;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
+  /** Active OKAZION window from plan or add-on. */
+  isOkazion?: boolean;
+  okazionUntil?: string | null;
+  onOkazionApplied?: (result: { okazionUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
 }) {
   const { checkSession } = useUser();
   const [busy, setBusy] = React.useState(false);
   const [autoBusy, setAutoBusy] = React.useState(false);
   const [premiumBusy, setPremiumBusy] = React.useState(false);
+  const [okazionBusy, setOkazionBusy] = React.useState(false);
   const [premiumOn, setPremiumOn] = React.useState(Boolean(isPremium));
+  const [okazionOn, setOkazionOn] = React.useState(Boolean(isOkazion));
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setPremiumOn(Boolean(isPremium));
   }, [isPremium, premiumUntil]);
+
+  React.useEffect(() => {
+    setOkazionOn(Boolean(isOkazion));
+  }, [isOkazion, okazionUntil]);
+
+  /** Directory profiles (businesses / professionals) cannot be OKAZION. */
+  const okazionSupported =
+    kind === 'real-estate' || kind === 'car' || kind === 'job' || kind === 'marketplace';
 
   const viewCount = metrics.viewCount ?? 0;
   const clickCount = metrics.clickCount ?? 0;
@@ -260,7 +278,25 @@ export function ListingOwnerMetrics({
     }
   };
 
-  const anyBusy = busy || autoBusy || premiumBusy;
+  const handleApplyOkazion = async () => {
+    if (!listingId || !kind || okazionBusy || okazionOn) return;
+    setError(null);
+    setOkazionBusy(true);
+    try {
+      const res = await applyOkazionFromPlan({ kind, listingId });
+      if (res.error || !res.okazionUntil) {
+        setError(res.error || 'Aplikimi i OKAZION dështoi.');
+        return;
+      }
+      setOkazionOn(true);
+      onOkazionApplied?.({ okazionUntil: res.okazionUntil });
+      void checkSession();
+    } finally {
+      setOkazionBusy(false);
+    }
+  };
+
+  const anyBusy = busy || autoBusy || premiumBusy || okazionBusy;
 
   return (
     <Stack spacing={0.75} sx={{ pt: 0.85, mt: 0.35, borderTop: 1, borderColor: 'divider' }}>
@@ -354,6 +390,40 @@ export function ListingOwnerMetrics({
                 </Button>
               </span>
             </Tooltip>
+            {okazionSupported ? (
+            <Tooltip
+              title={
+                okazionOn
+                  ? okazionUntil
+                    ? `OKAZION aktiv deri më ${new Date(okazionUntil).toLocaleDateString('sq-AL')}`
+                    : 'OKAZION aktiv'
+                  : 'Bëje OKAZION me vendin nga paketa (Grow/Elite · 5 ditë)'
+              }
+            >
+              <span>
+                <Button
+                  size="small"
+                  variant={okazionOn ? 'contained' : 'outlined'}
+                  color="error"
+                  aria-label="OKAZION"
+                  disabled={anyBusy || okazionOn}
+                  onClick={() => {
+                    void handleApplyOkazion();
+                  }}
+                  startIcon={
+                    okazionBusy ? (
+                      <CircularProgress size={11} color="inherit" />
+                    ) : (
+                      <SealPercentIcon size={12} weight="bold" />
+                    )
+                  }
+                  sx={labeledBtnSx}
+                >
+                  OKAZION
+                </Button>
+              </span>
+            </Tooltip>
+            ) : null}
           </Stack>
         ) : (
           <Box />

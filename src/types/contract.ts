@@ -11,6 +11,7 @@ export interface ContractQuotas {
   maxApartmentListings: number;
   maxProductListings: number;
   maxPremiumListings: number;
+  maxOkazionListings: number;
 }
 
 export interface ContractRoleRef {
@@ -69,4 +70,5 @@ export const FREE_PLAN_QUOTAS: ContractQuotas = {
   maxApartmentListings: 10,
   maxProductListings: 5,
   maxPremiumListings: 0,
+  maxOkazionListings: 0,
 };

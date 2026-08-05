@@ -55,7 +55,7 @@ export function PublicFooter() {
           <Box sx={{ textAlign: { xs: 'center', md: 'left' }, maxWidth: 300 }}>
             <Box sx={{ mb: 2, justifyContent: { xs: 'center', md: 'flex-start' }, display: 'flex' }}>
               <BrandLogo
-                height={36}
+                height={28}
                 showWordmark
                 wordmarkPresentation="plain"
                 wordmarkSx={{

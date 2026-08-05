@@ -93,7 +93,9 @@ export function JobListingDetailDesktop({
     listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const heroImage = listing.imageUrl ?? listing.imageUrls[0] ?? null;
   const isNew = isJobListingNew(listing.createdAt);
-  const expiresAt = listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
+  const expiresAt = listing.isOkazion
+    ? listing.okazionUntil || listing.expiresAt || getJobListingExpiresAt(listing.createdAt).toISOString()
+    : listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
   const salary =
     listing.salary != null ? `${formatPrice(listing.salary, listing.currency)} / muaj` : 'Pagë e diskutueshme';
   const jobTypeLabel = findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType);

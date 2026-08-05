@@ -4,7 +4,7 @@ import { Alert } from '@mui/material';
 
 import {
   listingModerationStatusMessage,
-  LISTING_SUBMITTED_PENDING_MESSAGE,
+  LISTING_SUBMITTED_LIVE_MESSAGE,
   normalizeListingModerationStatus,
   type ListingModerationStatus,
 } from '@/lib/listing-moderation-status';
@@ -27,7 +27,7 @@ export function ListingModerationNotice({
 export function ListingSubmittedPendingAlert() {
   return (
     <Alert severity="success" sx={{ borderRadius: 1.5 }}>
-      {LISTING_SUBMITTED_PENDING_MESSAGE}
+      {LISTING_SUBMITTED_LIVE_MESSAGE}
     </Alert>
   );
 }

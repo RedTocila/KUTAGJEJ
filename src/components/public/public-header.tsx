@@ -158,7 +158,7 @@ export function PublicHeader() {
               }}
             >
               <BrandLogo
-                height={52}
+                height={40}
                 showWordmark
                 wordmarkPresentation="brand"
                 sx={{ gap: 0.25 }}
@@ -247,8 +247,8 @@ export function PublicHeader() {
                     width: 34,
                     height: 34,
                     bgcolor: 'primary.main',
-                    color: 'common.black',
-                    '&:hover': { bgcolor: 'primary.dark', color: 'common.black' },
+                    color: 'primary.contrastText',
+                    '&:hover': { bgcolor: 'primary.dark', color: 'primary.contrastText' },
                   }}
                 >
                   {React.createElement(PlusIcon, { size: 16, weight: 'bold' })}

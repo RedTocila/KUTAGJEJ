@@ -24,6 +24,15 @@ const {
   applyPremiumFromPlan,
   getPremiumQuotaSnapshot,
 } = require('../lib/premium-listing');
+const { listOkazionPackages, getOkazionPackage } = require('../lib/okazion-packages');
+const {
+  listOkazionVouchers,
+  purchaseOkazionWithBoostCoins,
+  applyOkazionVoucher,
+  applyOkazionFromPlan,
+  getOkazionQuotaSnapshot,
+  clampQuantity,
+} = require('../lib/okazion-listing');
 const { isUuid } = require('../lib/public-listings/query-helpers');
 
 const router = express.Router();
@@ -66,6 +75,10 @@ function formatPayment(doc) {
       premiumPackageId: doc.metadata?.premiumPackageId || null,
       premiumDays: doc.metadata?.premiumDays ?? null,
       premiumVoucherId: doc.metadata?.premiumVoucherId || null,
+      okazionPackageId: doc.metadata?.okazionPackageId || null,
+      okazionDays: doc.metadata?.okazionDays ?? null,
+      okazionQuantity: doc.metadata?.okazionQuantity ?? null,
+      okazionVoucherId: doc.metadata?.okazionVoucherId || null,
     },
     paidAt: doc.paidAt,
     createdAt: doc.createdAt,
@@ -109,6 +122,16 @@ router.get('/premium-packages', async (_req, res) => {
     res.json({ packages: listPremiumPackages(), pokEnv: pokClient.getConfig().env });
   } catch (error) {
     console.error('GET /payments/premium-packages:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** Public: OKAZION listing packs. */
+router.get('/okazion-packages', async (_req, res) => {
+  try {
+    res.json({ packages: listOkazionPackages(), pokEnv: pokClient.getConfig().env });
+  } catch (error) {
+    console.error('GET /payments/okazion-packages:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
 });
@@ -188,6 +211,7 @@ router.get('/subscriptions/mine', async (req, res) => {
       maxApartmentListings: Number(d.max_apartment_listings) || 0,
       maxProductListings: Number(d.max_product_listings) || 0,
       maxPremiumListings: Number(d.max_premium_listings) || 0,
+      maxOkazionListings: Number(d.max_okazion_listings) || 0,
     }));
     res.json({ subscriptions: subs });
   } catch (error) {
@@ -613,6 +637,188 @@ router.post('/premium/apply-from-plan', async (req, res) => {
     });
   } catch (error) {
     console.error('POST /payments/premium/apply-from-plan:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** Create a POK order for OKAZION packs (supports quantity stacking). */
+router.post('/okazion/order', async (req, res) => {
+  try {
+    if (!pokClient.isConfigured()) {
+      return res.status(503).json({ message: 'Pagesat nuk janë konfiguruar. Provoni më vonë.' });
+    }
+    const { packageId, quantity } = req.body || {};
+    const pkg = getOkazionPackage(packageId);
+    if (!pkg) return res.status(400).json({ message: 'Paketa OKAZION është e pavlefshme.' });
+    const qty = clampQuantity(quantity);
+
+    const amount = Number(pkg.priceEur) * qty;
+    const amountMinor = Math.round(amount * 100);
+    const description =
+      qty > 1 ? `OKAZION ×${qty}: ${pkg.labelSq}` : `OKAZION listing: ${pkg.labelSq}`;
+
+    const sb = getSupabaseAdmin();
+    const { data: paymentRow, error: pErr } = await sb
+      .from('payments')
+      .insert({
+        payer_id: req.user.id,
+        payer_email: req.user.email || '',
+        payer_name: payerLabel(req.user),
+        type: 'okazion',
+        description,
+        amount_minor: amountMinor,
+        amount,
+        currency: 'EUR',
+        pok_env: pokClient.getConfig().env,
+        status: 'pending',
+        metadata: {
+          okazionPackageId: String(pkg.id),
+          okazionDays: pkg.days,
+          okazionPriceBc: pkg.priceBc,
+          okazionUnitPriceEur: pkg.priceEur,
+          okazionQuantity: qty,
+          payerModel: req.user.constructor.modelName,
+        },
+      })
+      .select('*')
+      .single();
+    if (pErr) throw pErr;
+
+    const payment = mapPayment(paymentRow);
+
+    const order = await pokClient.createSdkOrder({
+      amount,
+      currencyCode: 'EUR',
+      webhookUrl: `${backendOrigin(req)}/api/payments/webhook/pok?paymentId=${payment.id}`,
+      redirectUrl: `${frontendOrigin()}/user/dashboard/paketat/shtese?assignOkazion=1`,
+    });
+
+    const { data: updated, error: uErr } = await sb
+      .from('payments')
+      .update({ pok_order_id: order.id, updated_at: new Date().toISOString() })
+      .eq('id', payment.id)
+      .select('*')
+      .single();
+    if (uErr) throw uErr;
+    const saved = mapPayment(updated);
+
+    res.status(201).json({
+      paymentId: String(saved.id),
+      orderId: order.id,
+      amount,
+      currency: 'EUR',
+      days: pkg.days,
+      quantity: qty,
+      pokEnv: saved.pokEnv,
+    });
+  } catch (error) {
+    console.error('POST /payments/okazion/order:', error?.message || error);
+    res.status(502).json({ message: 'Nuk u krijua dot pagesa. Provoni përsëri.' });
+  }
+});
+
+/** Buy OKAZION pack(s) with Boost Coins (no card). */
+router.post('/okazion/buy-with-credits', async (req, res) => {
+  try {
+    const { packageId, quantity } = req.body || {};
+    const result = await purchaseOkazionWithBoostCoins({
+      userId: req.user.id,
+      packageId,
+      quantity,
+    });
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ message: result.message });
+    }
+    const qty = result.quantity || 1;
+    res.json({
+      ok: true,
+      voucher: result.voucher,
+      vouchers: result.vouchers,
+      quantity: qty,
+      boostCredits: result.boostCredits,
+      cost: result.cost,
+      message:
+        qty > 1
+          ? `${qty} OKAZION u blenë me Boost Coins. Mund t'i aplikoni më vonë.`
+          : 'OKAZION u blë me Boost Coins. Zgjidhni njoftimin për ta aktivizuar.',
+    });
+  } catch (error) {
+    console.error('POST /payments/okazion/buy-with-credits:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+router.get('/okazion/vouchers', async (req, res) => {
+  try {
+    const unusedOnly = String(req.query.unusedOnly || '') === '1';
+    const vouchers = await listOkazionVouchers(req.user.id, { unusedOnly });
+    res.json({ vouchers });
+  } catch (error) {
+    console.error('GET /payments/okazion/vouchers:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+router.get('/okazion/quota', async (req, res) => {
+  try {
+    const quota = await getOkazionQuotaSnapshot(req.user.id);
+    res.json(quota);
+  } catch (error) {
+    console.error('GET /payments/okazion/quota:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+router.post('/okazion/apply', async (req, res) => {
+  try {
+    const voucherId = String(req.body?.voucherId || '').trim();
+    const kind = String(req.body?.kind || '').trim();
+    const listingId = String(req.body?.listingId || '').trim();
+    const result = await applyOkazionVoucher({
+      userId: req.user.id,
+      voucherId,
+      kind,
+      listingId,
+    });
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ message: result.message });
+    }
+    res.json({
+      ok: true,
+      voucher: result.voucher,
+      okazionUntil: result.okazionUntil,
+      message: 'Njoftimi u bë OKAZION për 5 ditë.',
+    });
+  } catch (error) {
+    console.error('POST /payments/okazion/apply:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+router.post('/okazion/apply-from-plan', async (req, res) => {
+  try {
+    const kind = String(req.body?.kind || '').trim();
+    const listingId = String(req.body?.listingId || '').trim();
+    const result = await applyOkazionFromPlan({
+      userId: req.user.id,
+      kind,
+      listingId,
+    });
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ message: result.message });
+    }
+    res.json({
+      ok: true,
+      alreadyActive: Boolean(result.alreadyActive),
+      voucher: result.voucher,
+      okazionUntil: result.okazionUntil,
+      quota: result.quota,
+      message: result.alreadyActive
+        ? 'Ky njoftim është tashmë OKAZION.'
+        : 'Njoftimi u bë OKAZION për 5 ditë nga paketa.',
+    });
+  } catch (error) {
+    console.error('POST /payments/okazion/apply-from-plan:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
 });

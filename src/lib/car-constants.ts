@@ -1,55 +1,27 @@
 /** Constants for the car listing form. */
 
-export const CAR_MAKES = [
-  'Alfa Romeo',
-  'Aston Martin',
-  'Audi',
-  'Bentley',
-  'BMW',
-  'Bugatti',
-  'Cadillac',
-  'Chevrolet',
-  'Chrysler',
-  'Citroën',
-  'Dacia',
-  'Dodge',
-  'Ferrari',
-  'Fiat',
-  'Ford',
-  'Honda',
-  'Hyundai',
-  'Infiniti',
-  'Jaguar',
-  'Jeep',
-  'Kia',
-  'Lamborghini',
-  'Land Rover',
-  'Lexus',
-  'Lincoln',
-  'Maserati',
-  'Mazda',
-  'Mercedes-Benz',
-  'Mini',
-  'Mitsubishi',
-  'Nissan',
-  'Opel',
-  'Peugeot',
-  'Porsche',
-  'Renault',
-  'Rolls-Royce',
-  'Seat',
-  'Skoda',
-  'Smart',
-  'Subaru',
-  'Suzuki',
-  'Tesla',
-  'Toyota',
-  'Volkswagen',
-  'Volvo',
-  'Other',
-] as const;
+export {
+  VEHICLE_TYPES,
+  VEHICLE_TYPE_VALUES,
+  vehicleTypeLabel,
+  makesForVehicleType,
+  modelsForMake,
+  isValidVehicleMake,
+  isValidVehicleModel,
+  isVehicleType,
+  allVehicleMakes,
+  type VehicleType,
+} from '@/lib/vehicle-catalog';
 
-export type CarMake = (typeof CAR_MAKES)[number];
+import { allVehicleMakes, makesForVehicleType } from '@/lib/vehicle-catalog';
+
+/** @deprecated Prefer makesForVehicleType(vehicleType). Flat list of car-type makes for legacy filters. */
+export const CAR_MAKES = makesForVehicleType('car');
+
+export type CarMake = string;
+
+/** All makes across vehicle types (search / SEO helpers). */
+export const ALL_VEHICLE_MAKES = allVehicleMakes();
 
 export const TRANSMISSION_OPTIONS = [
   { value: 'automatic', label: 'Automatic' },

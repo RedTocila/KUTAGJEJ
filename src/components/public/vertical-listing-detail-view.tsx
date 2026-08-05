@@ -7,7 +7,6 @@ import {
   Chip,
   Container,
   Divider,
-  Paper,
   Stack,
   Typography,
 } from '@mui/material';
@@ -363,9 +362,10 @@ export function VerticalListingDetailView(props: {
                     whatsappInquireHref={whatsappInquireHref}
                   />
                   <Divider flexItem />
-                  <Paper variant="outlined" sx={{ borderRadius: 2.5, borderColor: 'divider', bgcolor: 'background.paper', p: 2 }}>
-                    <SellerProfileInner listing={listing} />
-                  </Paper>
+                  <SellerProfileInner
+                    listing={listing}
+                    cardSx={{ border: 'none', p: 2 }}
+                  />
                 </Stack>
               </Box>
             </Stack>
@@ -429,7 +429,7 @@ export function VerticalListingDetailView(props: {
                   subtitleLine(listing)
                 )}
                 <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)} shikime</Typography>
-                {listing.kind === 'job' ? (
+                {listing.kind === 'job' && !listing.isOkazion ? (
                   <JobListingCountdown
                     expiresAt={
                       listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString()
@@ -708,14 +708,16 @@ function extrasBlock(l: AnyPublicListingDetail): React.ReactNode {
 }
 
 /** Avatar + “Rreth shitësit” + Shiko profilin (nested card in desktop hero column, or wrapped below). */
-function SellerProfileInner({ listing: l }: { listing: AnyPublicListingDetail }) {
-  return <ListingSellerProfileCard seller={l.seller} />;
+function SellerProfileInner({
+  listing: l,
+  cardSx,
+}: {
+  listing: AnyPublicListingDetail;
+  cardSx?: React.ComponentProps<typeof ListingSellerProfileCard>['cardSx'];
+}) {
+  return <ListingSellerProfileCard seller={l.seller} cardSx={cardSx} />;
 }
 
 function sellerBlock(l: AnyPublicListingDetail): React.ReactNode {
-  return (
-    <Paper variant="outlined" sx={{ borderRadius: 2.5, borderColor: 'divider', bgcolor: 'background.paper', p: { xs: 2, sm: 2.5 } }}>
-      <SellerProfileInner listing={l} />
-    </Paper>
-  );
+  return <SellerProfileInner listing={l} />;
 }

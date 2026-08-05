@@ -79,7 +79,7 @@ export default function SignInPage() {
               <Stack spacing={3}>
                 <Box sx={{ maxWidth: 240 }}>
                   <BrandLogo
-                    height={120}
+                    height={96}
                     imgSx={{
                       filter: 'drop-shadow(0 4px 14px rgba(0,0,0,0.4))',
                       maxWidth: 200,

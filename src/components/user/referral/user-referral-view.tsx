@@ -23,6 +23,7 @@ import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { PortalSurface } from '@/components/user/portal-cards';
 import { useUser } from '@/hooks/use-user';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { formatRatingDisplay } from '@/lib/format-rating';
 import { fetchMyReferralStats } from '@/lib/referrals-client';
 import type { ReferralProgram } from '@/types/referral-program';
 import type { MyReferralStats } from '@/types/referrals';
@@ -208,7 +209,7 @@ export function UserReferralView() {
                 <StatPill label="Të paguara" value={stats.paidReferralCount} />
                 <StatPill
                   label="Vlerësimi"
-                  value={stats.ratingAverage != null ? stats.ratingAverage.toFixed(1) : '—'}
+                  value={stats.ratingAverage != null ? formatRatingDisplay(stats.ratingAverage) : '—'}
                 />
                 <StatPill label="Boost Coins" value={stats.boostCredits} />
               </Stack>

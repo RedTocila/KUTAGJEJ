@@ -30,6 +30,8 @@ export interface CardMediaProps {
   FallbackIcon: PhosphorIcon;
   alt: string;
   topLeftBadge?: string;
+  /** Custom overlay on the image (e.g. rating chip) — rendered at top-left. */
+  topLeftOverlay?: React.ReactNode;
   topRightBadge?: string;
   height?: number;
   bottomOverlay?: React.ReactNode;
@@ -51,6 +53,7 @@ export function CardMedia({
   FallbackIcon,
   alt,
   topLeftBadge,
+  topLeftOverlay,
   topRightBadge,
   height = 170,
   bottomOverlay,
@@ -156,7 +159,11 @@ export function CardMedia({
         </Stack>
       )}
 
-      {topLeftBadge ? (
+      {topLeftOverlay ? (
+        <Box sx={{ position: 'absolute', top: 8, left: 8, zIndex: 3, lineHeight: 0 }}>
+          {topLeftOverlay}
+        </Box>
+      ) : topLeftBadge ? (
         <Chip
           label={topLeftBadge}
           size="small"

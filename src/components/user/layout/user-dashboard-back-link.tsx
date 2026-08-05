@@ -7,6 +7,7 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
+import { productBackButtonSx } from '@/components/public/product-browse-chrome';
 
 /**
  * Returns to the mobile profile tab (portal hub at `/user/dashboard`), or a custom parent.
@@ -60,12 +61,7 @@ export function UserDashboardCloseButton({
       onClick={() => hardNavigate(href)}
       size="small"
       sx={[
-        {
-          color: 'text.secondary',
-          width: 36,
-          height: 36,
-          '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
-        },
+        productBackButtonSx,
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
       ]}
     >

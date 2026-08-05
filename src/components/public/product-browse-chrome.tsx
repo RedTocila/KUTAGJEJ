@@ -1,0 +1,241 @@
+'use client';
+
+import * as React from 'react';
+import RouterLink from 'next/link';
+import {
+  Box,
+  IconButton,
+  Typography,
+  type IconButtonProps,
+  type SxProps,
+  type Theme,
+} from '@mui/material';
+import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
+import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
+import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
+
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+
+/** Shared height for browse search bars, filter buttons, and back buttons. */
+export const PRODUCT_BROWSE_CONTROL_HEIGHT = 36;
+
+/** Circular back control — browse headers, detail toolbars. */
+export const productBackButtonSx = {
+  width: PRODUCT_BROWSE_CONTROL_HEIGHT,
+  height: PRODUCT_BROWSE_CONTROL_HEIGHT,
+  flexShrink: 0,
+  color: 'text.primary',
+  border: '1px solid',
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+  borderRadius: '50%',
+  '&:hover': { bgcolor: 'action.hover' },
+} as const;
+
+export function ProductBackButton({
+  href,
+  onClick,
+  'aria-label': ariaLabel = 'Kthehu',
+  sx,
+  ...rest
+}: {
+  href?: string;
+  onClick?: () => void;
+  'aria-label'?: string;
+  sx?: SxProps<Theme>;
+} & Omit<IconButtonProps, 'children' | 'sx'>) {
+  const buttonSx = [productBackButtonSx, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])];
+
+  if (href) {
+    return (
+      <IconButton
+        component={RouterLink}
+        href={href}
+        aria-label={ariaLabel}
+        size="small"
+        sx={buttonSx}
+        {...rest}
+      >
+        <ArrowLeftIcon size={18} weight="bold" />
+      </IconButton>
+    );
+  }
+
+  return (
+    <IconButton aria-label={ariaLabel} onClick={onClick} size="small" sx={buttonSx} {...rest}>
+      <ArrowLeftIcon size={18} weight="bold" />
+    </IconButton>
+  );
+}
+
+/** Pill tag chrome — subcategory pills, filter chips, service tags. */
+export function productTagSx(active = false): SxProps<Theme> {
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 0.75,
+    px: 1.25,
+    py: 0.75,
+    borderRadius: 999,
+    border: '1px solid',
+    borderColor: active ? 'primary.main' : 'divider',
+    bgcolor: active ? primaryMainAlpha(0.08) : 'background.paper',
+    color: active ? 'primary.main' : 'text.primary',
+    textDecoration: 'none',
+    whiteSpace: 'nowrap',
+    fontSize: '0.825rem',
+    fontWeight: 700,
+    lineHeight: 1.2,
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+    transition: 'border-color 0.15s, background-color 0.15s, color 0.15s',
+    '&:hover': {
+      borderColor: 'primary.main',
+      color: 'primary.main',
+      bgcolor: primaryMainAlpha(0.06),
+    },
+  };
+}
+
+export const productTagIconWrapSx = {
+  width: 22,
+  height: 22,
+  borderRadius: '50%',
+  flexShrink: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: 'primary.main',
+  bgcolor: (theme: Theme) =>
+    theme.palette.mode === 'dark'
+      ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.16)'
+      : 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)',
+} as const;
+
+export function ProductTag({
+  label,
+  icon: Icon,
+  active = false,
+  href,
+  onClick,
+  onDelete,
+  component,
+  sx,
+}: {
+  label: React.ReactNode;
+  icon?: PhosphorIcon;
+  active?: boolean;
+  href?: string;
+  onClick?: () => void;
+  onDelete?: () => void;
+  component?: React.ElementType;
+  sx?: SxProps<Theme>;
+}) {
+  const resolvedComponent = component ?? (href ? RouterLink : onClick ? 'button' : 'span');
+  const isButton = resolvedComponent === 'button';
+
+  return (
+    <Box
+      component={resolvedComponent}
+      href={href}
+      onClick={onClick}
+      type={isButton ? 'button' : undefined}
+      sx={[productTagSx(active), ...(Array.isArray(sx) ? sx : sx ? [sx] : [])]}
+    >
+      {Icon ? (
+        <Box sx={productTagIconWrapSx}>
+          <Icon size={13} weight="duotone" />
+        </Box>
+      ) : null}
+      <Typography component="span" sx={{ fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 'inherit' }}>
+        {label}
+      </Typography>
+      {onDelete ? (
+        <Box
+          component="button"
+          type="button"
+          aria-label="Hiq"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onDelete();
+          }}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: 0,
+            m: 0,
+            ml: 0.15,
+            border: 'none',
+            bgcolor: 'transparent',
+            color: 'inherit',
+            opacity: 0.72,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            '&:hover': { opacity: 1 },
+          }}
+        >
+          <XIcon size={12} weight="bold" />
+        </Box>
+      ) : null}
+    </Box>
+  );
+}
+
+/** Pill search bar shell — keyword search, mobile header search. */
+export function productSearchBarSx(active = false): SxProps<Theme> {
+  return {
+    height: PRODUCT_BROWSE_CONTROL_HEIGHT,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 0.5,
+    px: 1.25,
+    py: 0.75,
+    borderRadius: 999,
+    border: '1px solid',
+    borderColor: active ? 'primary.main' : 'divider',
+    bgcolor: active ? primaryMainAlpha(0.08) : 'background.paper',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+    textDecoration: 'none',
+    color: 'inherit',
+    transition: 'border-color 0.15s, background-color 0.15s',
+  };
+}
+
+export const productSearchFieldSx = {
+  flex: 1,
+  minWidth: 0,
+  fontSize: '0.825rem',
+  fontWeight: 600,
+  py: 0,
+  '& input': { padding: 0 },
+  '& input::placeholder': {
+    opacity: 0.72,
+    fontWeight: 500,
+  },
+} as const;
+
+export function ProductSearchIcon() {
+  return <MagnifyingGlassIcon size={14} color="var(--mui-palette-primary-main)" style={{ flexShrink: 0 }} />;
+}
+
+/** Circular filter trigger beside the search bar. */
+export function productFilterButtonSx(active = false): SxProps<Theme> {
+  return {
+    width: PRODUCT_BROWSE_CONTROL_HEIGHT,
+    height: PRODUCT_BROWSE_CONTROL_HEIGHT,
+    borderRadius: '50%',
+    border: '1px solid',
+    borderColor: active ? 'primary.main' : 'divider',
+    color: active ? 'primary.contrastText' : 'text.primary',
+    bgcolor: active ? 'primary.main' : 'background.paper',
+    boxShadow: active ? `0 2px 10px ${primaryMainAlpha(0.4)}` : 'none',
+    '&:hover': {
+      bgcolor: active ? 'primary.dark' : primaryMainAlpha(0.1),
+      borderColor: 'primary.main',
+    },
+  };
+}

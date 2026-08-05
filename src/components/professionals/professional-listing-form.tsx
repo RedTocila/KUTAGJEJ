@@ -21,7 +21,6 @@ import {
   ListingTextField,
 } from '@/components/user/listing-form-ui';
 import { PROFESSIONAL_CATEGORY_OPTIONS } from '@/lib/professional-constants';
-import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import {
   createProfessionalListing,
   listMyProfessionalListings,
@@ -104,10 +103,6 @@ export function ProfessionalListingForm({
   const [responseTimeHours, setResponseTimeHours] = React.useState(
     () => String(aiPrefill?.responseTimeHours ?? '2') || '2',
   );
-  const [price, setPrice] = React.useState(() => String(aiPrefill?.price ?? ''));
-  const [currency, setCurrency] = React.useState<'' | 'EUR' | 'LEK'>(() =>
-    aiPrefill?.currency === 'EUR' || aiPrefill?.currency === 'LEK' ? aiPrefill.currency : '',
-  );
 
   // imageUrls convention: [0] = cover, [1] = profile avatar
   const [coverUrl, setCoverUrl] = React.useState<string | null>(() => {
@@ -133,8 +128,6 @@ export function ProfessionalListingForm({
     setResponseTimeHours(
       listing.responseTimeHours != null ? String(listing.responseTimeHours) : '2',
     );
-    setPrice(listing.price != null ? String(listing.price) : '');
-    setCurrency(listing.currency === 'EUR' || listing.currency === 'LEK' ? listing.currency : '');
 
     const urls = (listing.imageUrls ?? []).filter(Boolean);
     setCoverUrl(urls[0] ?? null);
@@ -295,7 +288,6 @@ export function ProfessionalListingForm({
     }
 
     const hours = Number.parseInt(responseTimeHours, 10);
-    const hasPrice = price.trim() !== '';
     const payload = {
       title: title.trim(),
       description: description.trim(),
@@ -305,8 +297,8 @@ export function ProfessionalListingForm({
       imageUrls,
       responseTimeHours: Number.isInteger(hours) && hours >= 1 ? hours : null,
       portfolioItems,
-      price: hasPrice ? Number(price) : null,
-      currency: hasPrice && currency ? currency : null,
+      price: null,
+      currency: null,
       condition: null,
       servicesHighlight: servicesHighlight.trim() || null,
     };
@@ -470,22 +462,6 @@ export function ProfessionalListingForm({
             fullWidth
             slotProps={{ htmlInput: { min: 1, max: 168 } }}
           />
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <ListingTextField
-              label="Çmimi nga (opsionale)"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              fullWidth
-            />
-            <SearchableSelect
-              label="Monedha"
-              value={currency}
-              onChange={(v) => setCurrency(v as '' | 'EUR' | 'LEK')}
-              options={CURRENCY_OPTIONS}
-              emptyLabel="—"
-              sx={{ minWidth: 120 }}
-            />
-          </Stack>
         </ListingFormSection>
 
         <ListingFormSection

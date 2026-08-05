@@ -4,8 +4,6 @@ import * as React from 'react';
 import RouterLink from 'next/link';
 import {
   Box,
-  Dialog,
-  DialogContent,
   InputAdornment,
   List,
   ListItemButton,
@@ -15,6 +13,12 @@ import {
   Typography,
 } from '@mui/material';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
+
+import {
+  ProductDialog,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 
@@ -61,18 +65,9 @@ export function AdminNavSearch({
   }, [sections, query]);
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      fullWidth
-      maxWidth="sm"
-      slotProps={{
-        paper: {
-          sx: { borderRadius: 3, overflow: 'hidden' },
-        },
-      }}
-    >
-      <Box sx={{ px: 2, pt: 2, pb: 1 }}>
+    <ProductDialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <ProductDialogTitle onClose={onClose}>Kërko faqe admin</ProductDialogTitle>
+      <Box sx={{ px: 2.5, pb: 1 }}>
         <TextField
           inputRef={inputRef}
           fullWidth
@@ -96,7 +91,7 @@ export function AdminNavSearch({
           }}
         />
       </Box>
-      <DialogContent sx={{ pt: 0, px: 1, pb: 1.5, maxHeight: 420 }}>
+      <ProductDialogContent sx={{ pt: 0, px: 1, pb: 1.5, maxHeight: 420 }}>
         {flat.length === 0 ? (
           <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 3, textAlign: 'center' }}>
             Nuk u gjet asnjë faqe.
@@ -134,7 +129,7 @@ export function AdminNavSearch({
             })}
           </List>
         )}
-      </DialogContent>
-    </Dialog>
+      </ProductDialogContent>
+    </ProductDialog>
   );
 }

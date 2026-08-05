@@ -8,10 +8,6 @@ import {
   Card,
   CardContent,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
   Grid,
   Stack,
@@ -22,6 +18,12 @@ import {
 import { UserCheck as UserCheckIcon } from '@phosphor-icons/react/dist/ssr/UserCheck';
 
 import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import { paths } from '@/paths';
 import {
   listProfessionalVerificationRequests,
@@ -136,9 +138,9 @@ export default function ProfessionalVerificationAdminPage() {
         </Grid>
       )}
 
-      <Dialog open={Boolean(selected)} onClose={() => setSelected(null)} maxWidth="sm" fullWidth>
-        <DialogTitle>Detajet e kërkesës</DialogTitle>
-        <DialogContent dividers>
+      <ProductDialog open={Boolean(selected)} onClose={() => setSelected(null)} maxWidth="sm" fullWidth>
+        <ProductDialogTitle onClose={() => setSelected(null)}>Detajet e kërkesës</ProductDialogTitle>
+        <ProductDialogContent>
           {snap ? (
             <Stack spacing={1.5}>
               <Typography sx={{ fontWeight: 800, fontSize: '1.1rem' }}>{snap.displayName}</Typography>
@@ -158,8 +160,8 @@ export default function ProfessionalVerificationAdminPage() {
               />
             </Stack>
           ) : null}
-        </DialogContent>
-        <DialogActions>
+        </ProductDialogContent>
+        <ProductDialogActions>
           <Button onClick={() => setSelected(null)} color="inherit">
             Mbyll
           </Button>
@@ -173,8 +175,8 @@ export default function ProfessionalVerificationAdminPage() {
               </Button>
             </>
           ) : null}
-        </DialogActions>
-      </Dialog>
+        </ProductDialogActions>
+      </ProductDialog>
     </Stack>
   );
 }

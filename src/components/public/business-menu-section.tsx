@@ -2,11 +2,11 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Box, Button, Divider, IconButton, Stack, Typography } from '@mui/material';
-import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
+import { Box, Button, Divider, Stack, Typography } from '@mui/material';
 import { ArrowRight as ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 
 import { formatPrice } from '@/components/public/listing-cards/format-helpers';
+import { ProductBackButton, ProductTag } from '@/components/public/product-browse-chrome';
 import {
   businessMenuSections,
   type BusinessMenuItemView,
@@ -119,33 +119,12 @@ function CategoryTags({
       {sections.map((section) => {
         const active = section.id === activeId;
         return (
-          <Box
+          <ProductTag
             key={section.id}
-            component="button"
-            type="button"
+            label={section.name}
+            active={active}
             onClick={() => onSelect(section.id)}
-            sx={{
-              flexShrink: 0,
-              cursor: 'pointer',
-              border: 'none',
-              outline: 'none',
-              borderRadius: 999,
-              px: 1.6,
-              py: 0.7,
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              lineHeight: 1.2,
-              fontFamily: 'inherit',
-              transition: 'background-color 0.15s ease, color 0.15s ease',
-              bgcolor: active ? 'primary.main' : 'action.hover',
-              color: active ? 'common.black' : 'text.secondary',
-              '&:hover': {
-                bgcolor: active ? 'primary.main' : 'action.selected',
-              },
-            }}
-          >
-            {section.name}
-          </Box>
+          />
         );
       })}
     </Stack>
@@ -188,39 +167,43 @@ export function BusinessMenuPreview({
 
   return (
     <Stack spacing={1.5}>
-      <Typography sx={{ fontWeight: 800, fontSize: '0.95rem' }}>Menu</Typography>
       <CategoryTags sections={allSections} activeId={activeId} onSelect={setActiveId} />
-      {previewItems.length > 0 ? (
-        <Stack spacing={0} divider={<Divider sx={{ borderColor: 'divider', opacity: 0.6 }} />}>
-          {previewItems.map((item) => (
-            <Box key={item.id} sx={{ py: 1.25 }}>
-              <MenuItemRow item={item} dense />
-            </Box>
-          ))}
-        </Stack>
-      ) : (
-        <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-          Nuk ka artikuj në këtë kategori.
-        </Typography>
-      )}
-      <Button
-        component={Link}
-        href={menuHref}
-        variant="text"
-        endIcon={<ArrowRightIcon size={16} weight="bold" />}
-        sx={{
-          alignSelf: 'flex-end',
-          px: 0,
-          minWidth: 0,
-          fontWeight: 700,
-          textTransform: 'none',
-          fontSize: '0.8rem',
-          color: 'primary.main',
-          '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
-        }}
-      >
-        {hasMore ? 'Shiko menunë e plotë' : 'Shiko menunë'}
-      </Button>
+      <Stack spacing={0}>
+        {previewItems.length > 0 ? (
+          <Stack spacing={0} divider={<Divider sx={{ borderColor: 'divider', opacity: 0.6 }} />}>
+            {previewItems.map((item) => (
+              <Box key={item.id} sx={{ py: 1.25 }}>
+                <MenuItemRow item={item} dense />
+              </Box>
+            ))}
+          </Stack>
+        ) : (
+          <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+            Nuk ka artikuj në këtë kategori.
+          </Typography>
+        )}
+        <Button
+          component={Link}
+          href={menuHref}
+          variant="text"
+          endIcon={<ArrowRightIcon size={16} weight="bold" />}
+          sx={{
+            alignSelf: 'flex-end',
+            px: 0,
+            py: 0,
+            mt: 0.5,
+            minWidth: 0,
+            minHeight: 0,
+            fontWeight: 700,
+            textTransform: 'none',
+            fontSize: '0.8rem',
+            color: 'primary.main',
+            '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
+          }}
+        >
+          {hasMore ? 'Shiko menunë e plotë' : 'Shiko menunë'}
+        </Button>
+      </Stack>
     </Stack>
   );
 }
@@ -256,23 +239,7 @@ export function BusinessMenuFullPage({ listing }: { listing: PublicDirectoryList
         >
           <Stack spacing={1.5}>
             <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
-              <IconButton
-                component={Link}
-                href={backHref}
-                aria-label="Kthehu te biznesi"
-                size="medium"
-                sx={{
-                  bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.92)',
-                  color: 'text.primary',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  '&:hover': {
-                    bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.98)',
-                  },
-                }}
-              >
-                <ArrowLeftIcon size={22} weight="regular" />
-              </IconButton>
+              <ProductBackButton href={backHref} aria-label="Kthehu te biznesi" />
               <Stack spacing={0.15} sx={{ minWidth: 0, flex: 1 }}>
                 <Typography component="h1" sx={{ fontWeight: 800, fontSize: '1.1rem', lineHeight: 1.2 }}>
                   Menu

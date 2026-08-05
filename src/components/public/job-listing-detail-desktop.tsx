@@ -24,7 +24,7 @@ import SchoolOutlined from '@mui/icons-material/SchoolOutlined';
 import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import TrendingUpOutlined from '@mui/icons-material/TrendingUpOutlined';
 import WorkOutlineOutlined from '@mui/icons-material/WorkOutlineOutlined';
-import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
+import { ProductBackButton } from '@/components/public/product-browse-chrome';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
@@ -97,13 +97,6 @@ export function JobListingDetailDesktop({
   const salary =
     listing.salary != null ? `${formatPrice(listing.salary, listing.currency)} / muaj` : 'Pagë e diskutueshme';
   const jobTypeLabel = findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType);
-
-  const heroControlButtonSx = {
-    bgcolor: alpha('#000', 0.45),
-    color: '#fff',
-    backdropFilter: 'blur(10px)',
-    '&:hover': { bgcolor: alpha('#000', 0.62) },
-  } as const;
 
   if (ownerPreview) return null;
 
@@ -190,16 +183,11 @@ export function JobListingDetailDesktop({
                   p: { xs: 1.5, sm: 2.5 },
                 }}
               >
-                <IconButton
-                  component={Link}
+                <ProductBackButton
                   href={paths.public.jobs}
                   aria-label="Prapa te lista e punëve"
-                  size="medium"
                   data-hero-control
-                  sx={heroControlButtonSx}
-                >
-                  <ArrowLeftIcon size={22} weight="regular" />
-                </IconButton>
+                />
                 <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
                   <Box data-hero-control component="span" sx={{ display: 'inline-flex' }}>
                     <ListingMediaActionButton

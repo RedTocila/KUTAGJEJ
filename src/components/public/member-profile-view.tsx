@@ -13,7 +13,8 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
+import { MemberLeaveReviewButton } from '@/components/public/member-leave-review-button';
+import { ProductBackButton, ProductTag } from '@/components/public/product-browse-chrome';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
@@ -31,13 +32,13 @@ import {
   HomepageMixedListingCard,
   mixedListingKey,
 } from '@/components/public/homepage-mixed-listing-card';
-import { MemberLeaveReviewButton } from '@/components/public/member-leave-review-button';
 import {
   MemberReviewsDialog,
   MemberSeeReviewsButton,
 } from '@/components/public/member-reviews-dialog';
 import { ProfessionalRatingSummary } from '@/components/public/professional-listing-detail-ui';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { formatRatingDisplay } from '@/lib/format-rating';
 import type { HomepageMixedListing } from '@/lib/homepage-latest-listings';
 import { startConversationWithMember } from '@/lib/conversations-client';
 import { listMemberReviews } from '@/lib/member-reviews-client';
@@ -373,28 +374,16 @@ export function MemberProfileView({
               } 55%, ${primaryMainAlpha(0.1)} 100%)`,
           }}
         >
-          <Button
+          <ProductBackButton
             onClick={handleBack}
-            startIcon={<ArrowLeftIcon size={18} weight="bold" />}
+            aria-label="Kthehu"
             sx={{
               position: 'absolute',
               top: { xs: 'max(10px, env(safe-area-inset-top, 0px))', sm: 14 },
               left: { xs: 8, sm: 12 },
               zIndex: 1,
-              color: 'common.white',
-              fontWeight: 750,
-              textTransform: 'none',
-              bgcolor: 'rgba(0,0,0,0.35)',
-              borderRadius: 999,
-              px: 1.5,
-              py: 0.65,
-              minWidth: 0,
-              backdropFilter: 'blur(8px)',
-              '&:hover': { bgcolor: 'rgba(0,0,0,0.5)', color: 'common.white' },
             }}
-          >
-            Kthehu
-          </Button>
+          />
         </Box>
 
         <Stack
@@ -514,11 +503,7 @@ export function MemberProfileView({
                     }}
                   >
                     <ProfessionalRatingSummary
-                      rating={
-                        member.ratingAverage != null && Number.isFinite(member.ratingAverage)
-                          ? member.ratingAverage.toFixed(1)
-                          : '0.0'
-                      }
+                      rating={formatRatingDisplay(member.ratingAverage)}
                       reviewCount={reviewCount}
                       starSize={15}
                     />
@@ -702,23 +687,12 @@ export function MemberProfileView({
                       f.key === 'all' ? totalActive : f.totalKey ? listings.totals[f.totalKey] : 0;
                     const selected = filter === f.key;
                     return (
-                      <Chip
+                      <ProductTag
                         key={f.key}
-                        clickable
-                        onClick={() => setFilter(f.key)}
                         label={`${f.label} · ${count}`}
-                        sx={{
-                          flexShrink: 0,
-                          fontWeight: 750,
-                          borderRadius: 999,
-                          bgcolor: selected ? 'primary.main' : 'transparent',
-                          color: selected ? 'grey.900' : 'text.secondary',
-                          border: '1px solid',
-                          borderColor: selected ? 'primary.main' : 'divider',
-                          '&:hover': {
-                            bgcolor: selected ? 'primary.main' : 'action.hover',
-                          },
-                        }}
+                        active={selected}
+                        onClick={() => setFilter(f.key)}
+                        sx={{ flexShrink: 0 }}
                       />
                     );
                   })}

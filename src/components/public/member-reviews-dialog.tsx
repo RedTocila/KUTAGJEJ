@@ -6,24 +6,24 @@ import {
   Box,
   Button,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
   Rating,
   Stack,
   Typography,
 } from '@mui/material';
 import { ChatCircleDots as ChatCircleDotsIcon } from '@phosphor-icons/react/dist/ssr/ChatCircleDots';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
-import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import { MemberLeaveReviewButton } from '@/components/public/member-leave-review-button';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { formatRatingDisplay } from '@/lib/format-rating';
 import { listMemberReviews, type MemberReview } from '@/lib/member-reviews-client';
 import { useUser } from '@/hooks/use-user';
-import { productDialogPaperSx, productDialogSlotProps } from '@/styles/product-sx';
 
 const DIALOG_Z_INDEX = 1400;
 const LEAVE_REVIEW_Z_INDEX = 1500;
@@ -88,68 +88,29 @@ export function MemberReviewsDialog({
   const count = Math.max(reviewCount ?? 0, reviews.length);
   const avgLabel =
     ratingAverage != null && Number.isFinite(ratingAverage)
-      ? ratingAverage.toFixed(1)
+      ? formatRatingDisplay(ratingAverage)
       : reviews.length > 0
-        ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-        : '0.0';
+        ? formatRatingDisplay(reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length)
+        : formatRatingDisplay(0);
 
   const title = memberName?.trim() ? `Vlerësimet · ${memberName.trim()}` : 'Vlerësimet';
 
   return (
-    <Dialog
+    <ProductDialog
       open={open}
       onClose={onClose}
       maxWidth="xs"
       fullWidth
       disableScrollLock={false}
       slotProps={{
-        backdrop: {
-          sx: {
-            ...productDialogSlotProps.backdrop.sx,
-            pointerEvents: 'auto',
-          },
-        },
-        paper: {
-          elevation: 0,
-          sx: {
-            ...productDialogPaperSx,
-            maxHeight: 'min(80vh, 640px)',
-          },
-        },
+        backdrop: { sx: { pointerEvents: 'auto' } },
+        paper: { sx: { maxHeight: 'min(80vh, 640px)' } },
       }}
       sx={{ zIndex: DIALOG_Z_INDEX }}
     >
-      <DialogTitle
-        sx={{
-          position: 'relative',
-          px: 2.5,
-          pt: 2.25,
-          pb: 1,
-          pr: 6,
-          fontWeight: 800,
-          fontSize: '1.125rem',
-          letterSpacing: '-0.01em',
-        }}
-      >
-        {title}
-        <IconButton
-          aria-label="Mbyll"
-          onClick={onClose}
-          size="small"
-          sx={{
-            position: 'absolute',
-            right: 12,
-            top: 12,
-            color: 'text.secondary',
-            borderRadius: 2,
-            '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
-          }}
-        >
-          <XIcon size={18} weight="bold" />
-        </IconButton>
-      </DialogTitle>
+      <ProductDialogTitle onClose={onClose}>{title}</ProductDialogTitle>
 
-      <DialogContent sx={{ px: 2.5, pb: showLeaveReview ? 1.5 : 2.5, pt: '8px !important' }}>
+      <ProductDialogContent sx={{ pb: showLeaveReview ? 1.5 : 2.5 }}>
         <Stack spacing={2}>
           <Stack
             direction="row"
@@ -242,10 +203,10 @@ export function MemberReviewsDialog({
             </Stack>
           )}
         </Stack>
-      </DialogContent>
+      </ProductDialogContent>
 
       {showLeaveReview ? (
-        <DialogActions sx={{ px: 2.5, pb: 2.5, pt: 1 }}>
+        <ProductDialogActions>
           <Box sx={{ width: '100%' }}>
             <MemberLeaveReviewButton
               memberId={memberId}
@@ -260,9 +221,9 @@ export function MemberReviewsDialog({
               }}
             />
           </Box>
-        </DialogActions>
+        </ProductDialogActions>
       ) : null}
-    </Dialog>
+    </ProductDialog>
   );
 }
 

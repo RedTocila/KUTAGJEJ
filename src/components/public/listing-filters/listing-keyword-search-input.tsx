@@ -2,13 +2,17 @@
 
 import * as React from 'react';
 import { Box, IconButton, TextField } from '@mui/material';
-import { MagnifyingGlass as SearchIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import {
+  PRODUCT_BROWSE_CONTROL_HEIGHT,
+  ProductSearchIcon,
+  productSearchBarSx,
+  productSearchFieldSx,
+} from '@/components/public/product-browse-chrome';
 
-/** Matches subcategory pill height (22px icon + py 0.75 + 1px borders). */
-export const BROWSE_CONTROL_HEIGHT = 36;
+/** @deprecated Import `PRODUCT_BROWSE_CONTROL_HEIGHT` from product-browse-chrome. */
+export const BROWSE_CONTROL_HEIGHT = PRODUCT_BROWSE_CONTROL_HEIGHT;
 
 const DEBOUNCE_MS = 320;
 
@@ -59,21 +63,10 @@ export function ListingKeywordSearchInput({
         flex: 1,
         minWidth: 0,
         width: '100%',
-        height: BROWSE_CONTROL_HEIGHT,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 0.5,
-        px: 1.25,
-        py: 0.75,
-        borderRadius: 999,
-        border: '1px solid',
-        borderColor: active ? 'primary.main' : 'divider',
-        bgcolor: active ? primaryMainAlpha(0.08) : 'background.paper',
-        overflow: 'hidden',
-        boxSizing: 'border-box',
+        ...productSearchBarSx(active),
       }}
     >
-      <SearchIcon size={14} color="var(--mui-palette-primary-main)" style={{ flexShrink: 0 }} />
+      <ProductSearchIcon />
       <TextField
         inputRef={inputRef}
         variant="standard"
@@ -86,16 +79,7 @@ export function ListingKeywordSearchInput({
         slotProps={{
           input: {
             disableUnderline: true,
-            sx: {
-              fontSize: '0.825rem',
-              fontWeight: 600,
-              py: 0,
-              '& input': { padding: 0 },
-              '& input::placeholder': {
-                opacity: 0.72,
-                fontWeight: 500,
-              },
-            },
+            sx: productSearchFieldSx,
           },
         }}
         sx={{ flex: 1, minWidth: 0 }}

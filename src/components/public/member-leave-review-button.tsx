@@ -6,23 +6,23 @@ import {
   Alert,
   Box,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
   Rating,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
-import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import { listMemberReviews, submitMemberReview } from '@/lib/member-reviews-client';
 import { useUser } from '@/hooks/use-user';
 import { paths, pathsPublicMemberProfile } from '@/paths';
-import { productButtonSx, productDialogPaperSx, productDialogSlotProps, productFieldSx } from '@/styles/product-sx';
+import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 
 const DIALOG_Z_INDEX = 1400;
 
@@ -141,57 +141,19 @@ export function MemberLeaveReviewButton({
         Lini vlerësim
       </Button>
 
-      <Dialog
+      <ProductDialog
         open={open}
         onClose={closeDialog}
         maxWidth="xs"
         fullWidth
         disableScrollLock={false}
         slotProps={{
-          backdrop: {
-            sx: {
-              ...productDialogSlotProps.backdrop.sx,
-              pointerEvents: 'auto',
-            },
-          },
-          paper: {
-            elevation: 0,
-            sx: productDialogPaperSx,
-          },
+          backdrop: { sx: { pointerEvents: 'auto' } },
         }}
         sx={{ zIndex: dialogZIndex }}
       >
-        <DialogTitle
-          sx={{
-            position: 'relative',
-            px: 2.5,
-            pt: 2.5,
-            pb: 1,
-            pr: 6,
-            fontWeight: 800,
-            fontSize: '1.125rem',
-            letterSpacing: '-0.01em',
-          }}
-        >
-          {title}
-          <IconButton
-            aria-label="Mbyll"
-            onClick={closeDialog}
-            size="small"
-            sx={{
-              position: 'absolute',
-              right: 12,
-              top: 12,
-              color: 'text.secondary',
-              borderRadius: 2,
-              '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
-            }}
-          >
-            <XIcon size={18} weight="bold" />
-          </IconButton>
-        </DialogTitle>
-
-        <DialogContent sx={{ px: 2.5, pb: 1.5, pt: '8px !important' }}>
+        <ProductDialogTitle onClose={closeDialog}>{title}</ProductDialogTitle>
+        <ProductDialogContent>
           <Stack spacing={2.25}>
             {error ? (
               <Alert severity="error" sx={{ borderRadius: 2 }}>
@@ -218,15 +180,8 @@ export function MemberLeaveReviewButton({
               sx={productFieldSx}
             />
           </Stack>
-        </DialogContent>
-
-        <DialogActions
-          sx={{
-            px: 2.5,
-            pb: 2.5,
-            pt: 1,
-          }}
-        >
+        </ProductDialogContent>
+        <ProductDialogActions>
           <Button
             variant="contained"
             disabled={submitting}
@@ -235,8 +190,8 @@ export function MemberLeaveReviewButton({
           >
             Dërgo
           </Button>
-        </DialogActions>
-      </Dialog>
+        </ProductDialogActions>
+      </ProductDialog>
     </>
   );
 }

@@ -17,7 +17,7 @@ import {
   useColorScheme,
   useTheme,
 } from '@mui/material';
-import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
+import { ProductBackButton } from '@/components/public/product-browse-chrome';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
@@ -874,14 +874,11 @@ export function UserMessagesView() {
                   color: chrome.text,
                 }}
               >
-                <IconButton
-                  type="button"
+                <ProductBackButton
                   onClick={() => router.push(paths.user.messages)}
-                  sx={{ display: { xs: 'inline-flex', md: 'none' }, color: chrome.text, p: 0.75 }}
+                  sx={{ display: { xs: 'inline-flex', md: 'none' } }}
                   aria-label={t.messages.backAria}
-                >
-                  <ArrowLeftIcon size={22} weight="bold" />
-                </IconButton>
+                />
                 <Avatar
                   src={activeConversation.listingImageUrl ?? undefined}
                   sx={{ width: 40, height: 40, flexShrink: 0 }}

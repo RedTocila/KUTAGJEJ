@@ -7,11 +7,6 @@ import {
   Avatar,
   Box,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
   Rating,
   Stack,
   TextField,
@@ -20,13 +15,20 @@ import {
 import { alpha } from '@mui/material/styles';
 import { ArrowRight as ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
-import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import { listBusinessReviews, submitBusinessReview, type BusinessReview } from '@/lib/business-reviews-client';
+import { formatRatingDisplay } from '@/lib/format-rating';
 import { ProfessionalFiveStarRating } from '@/components/public/professional-listing-detail-ui';
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
-import { productButtonSx, productDialogSlotProps, productFieldSx } from '@/styles/product-sx';
+import { productButtonSx, productFieldSx } from '@/styles/product-sx';
+import { ProductTag } from '@/components/public/product-browse-chrome';
 
 const REVIEWS_PAGE_SIZE = 10;
 const STAR_FILTERS = [5, 4, 3, 2, 1] as const;
@@ -124,43 +126,9 @@ function LeaveReviewDialog({
   onSubmit: () => void;
 }) {
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="xs"
-      fullWidth
-      slotProps={productDialogSlotProps}
-    >
-      <DialogTitle
-        sx={{
-          position: 'relative',
-          px: 2.5,
-          pt: 2.5,
-          pb: 1,
-          pr: 6,
-          fontWeight: 800,
-          fontSize: '1.125rem',
-          letterSpacing: '-0.01em',
-        }}
-      >
-        Vlerësoni biznesin
-        <IconButton
-          aria-label="Mbyll"
-          onClick={onClose}
-          size="small"
-          sx={{
-            position: 'absolute',
-            right: 12,
-            top: 12,
-            color: 'text.secondary',
-            borderRadius: 2,
-            '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
-          }}
-        >
-          <XIcon size={18} weight="bold" />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent sx={{ px: 2.5, pb: 1.5, pt: '8px !important' }}>
+    <ProductDialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <ProductDialogTitle onClose={onClose}>Vlerësoni biznesin</ProductDialogTitle>
+      <ProductDialogContent>
         <Stack spacing={2.25}>
           {error ? (
             <Alert severity="error" sx={{ borderRadius: 2 }}>
@@ -197,14 +165,8 @@ function LeaveReviewDialog({
             sx={productFieldSx}
           />
         </Stack>
-      </DialogContent>
-      <DialogActions
-        sx={{
-          px: 2.5,
-          pb: 2.5,
-          pt: 1,
-        }}
-      >
+      </ProductDialogContent>
+      <ProductDialogActions>
         <Button
           variant="contained"
           disabled={submitting}
@@ -213,8 +175,8 @@ function LeaveReviewDialog({
         >
           Dërgo
         </Button>
-      </DialogActions>
-    </Dialog>
+      </ProductDialogActions>
+    </ProductDialog>
   );
 }
 
@@ -266,47 +228,26 @@ function StarFilterTags({
         const isActive = option.value === active;
         const disabled = option.count === 0 && option.value !== 'all';
         return (
-          <Box
+          <ProductTag
             key={String(option.value)}
-            component="button"
-            type="button"
-            disabled={disabled}
-            onClick={() => onSelect(option.value)}
+            label={
+              option.value === 'all' ? (
+                option.label
+              ) : (
+                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.4 }}>
+                  <Box component="span">{option.label}</Box>
+                  <StarIcon size={12} weight="fill" />
+                </Box>
+              )
+            }
+            active={isActive}
+            onClick={disabled ? undefined : () => onSelect(option.value)}
             sx={{
-              flexShrink: 0,
-              cursor: disabled ? 'default' : 'pointer',
-              border: 'none',
-              outline: 'none',
-              borderRadius: 999,
-              px: 1.4,
-              py: 0.65,
-              fontSize: '0.78rem',
-              fontWeight: 700,
-              lineHeight: 1.2,
-              fontFamily: 'inherit',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 0.4,
               opacity: disabled ? 0.4 : 1,
-              transition: 'background-color 0.15s ease, color 0.15s ease',
-              bgcolor: isActive ? 'primary.main' : 'action.hover',
-              color: isActive ? 'primary.contrastText' : 'text.secondary',
-              '&:hover': disabled
-                ? undefined
-                : {
-                    bgcolor: isActive ? 'primary.main' : 'action.selected',
-                  },
+              cursor: disabled ? 'default' : 'pointer',
+              pointerEvents: disabled ? 'none' : 'auto',
             }}
-          >
-            {option.value === 'all' ? (
-              option.label
-            ) : (
-              <>
-                <Box component="span">{option.label}</Box>
-                <StarIcon size={12} weight="fill" />
-              </>
-            )}
-          </Box>
+          />
         );
       })}
     </Stack>
@@ -452,7 +393,7 @@ export function BusinessReviewSection({
 
   const count = reviewCount ?? 0;
   const avgValue = ratingAverage != null && Number.isFinite(Number(ratingAverage)) ? Number(ratingAverage) : 0;
-  const avgLabel = count > 0 ? avgValue.toFixed(1) : null;
+  const avgLabel = count > 0 ? formatRatingDisplay(avgValue) : null;
   const showSummary = variant === 'summary' || variant === 'full';
   const showList = variant === 'list' || variant === 'full';
   const visibleReviews = filteredReviews.slice(0, visibleCount);

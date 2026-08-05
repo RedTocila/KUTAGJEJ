@@ -7,6 +7,7 @@ import { Avatar, Button, Stack, Typography } from '@mui/material';
 
 import { MemberLeaveReviewButton } from '@/components/public/member-leave-review-button';
 import { ProfessionalRatingSummary } from '@/components/public/professional-listing-detail-ui';
+import { formatRatingDisplay } from '@/lib/format-rating';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { PublicRealEstateListingSeller } from '@/lib/public-listings-client';
 import { pathsPublicMemberProfile } from '@/paths';
@@ -38,8 +39,7 @@ export function ListingSellerProfileCard({
   const memberId = seller?.id?.trim() || '';
   const reviewCount = seller?.reviewCount ?? 0;
   const ratingAverage = seller?.ratingAverage;
-  const ratingLabel =
-    ratingAverage != null && Number.isFinite(ratingAverage) ? ratingAverage.toFixed(1) : '0.0';
+  const ratingLabel = formatRatingDisplay(ratingAverage);
 
   return (
     <>

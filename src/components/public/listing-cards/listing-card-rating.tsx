@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Box } from '@mui/material';
 
 import { ProfessionalRatingSummary } from '@/components/public/professional-listing-detail-ui';
+import { formatRatingDisplay } from '@/lib/format-rating';
 
 export type ListingCardRatingSummary = {
   ratingAverage?: number | null;
@@ -27,8 +28,8 @@ export function ListingCardRating({
 
   const rating =
     count > 0 && ratingAverage != null && Number.isFinite(ratingAverage)
-      ? ratingAverage.toFixed(1)
-      : '0.0';
+      ? formatRatingDisplay(ratingAverage)
+      : formatRatingDisplay(0);
 
   return (
     <Box sx={{ minWidth: 0 }}>

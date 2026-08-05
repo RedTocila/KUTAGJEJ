@@ -33,21 +33,23 @@ export const productButtonSx = {
   '&:hover': { boxShadow: 'none' },
 };
 
-/** Dialog paper surface — light paper, not immersive black. */
+/** Dialog paper surface — immersive black panel. */
 export const productDialogPaperSx = {
   borderRadius: 3,
   border: '1px solid',
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
+  borderColor: 'rgba(255, 255, 255, 0.1)',
+  bgcolor: '#0c0c0c',
   backgroundImage: 'none',
+  color: '#fff',
   overflow: 'hidden',
   mx: 2,
+  boxShadow: '0 24px 80px rgba(0, 0, 0, 0.55)',
 } as const;
 
 const productDialogBackdropSx = {
-  bgcolor: 'rgba(0, 0, 0, 0.62)',
-  backdropFilter: 'blur(12px)',
-  WebkitBackdropFilter: 'blur(12px)',
+  bgcolor: 'rgba(0, 0, 0, 0.72)',
+  backdropFilter: 'blur(16px)',
+  WebkitBackdropFilter: 'blur(16px)',
 } as const;
 
 /** Shared Dialog `slotProps` for product modals. */
@@ -60,3 +62,36 @@ export const productDialogSlotProps = {
     sx: productDialogPaperSx,
   },
 };
+
+export const productDialogTitleSx = {
+  position: 'relative',
+  px: 2.5,
+  pt: 2.25,
+  pb: 1,
+  pr: 6,
+  fontWeight: 800,
+  fontSize: '1.125rem',
+  letterSpacing: '-0.01em',
+} as const;
+
+export const productDialogCloseButtonSx = {
+  position: 'absolute',
+  right: 12,
+  top: 12,
+  color: 'rgba(255, 255, 255, 0.55)',
+  borderRadius: 2,
+  '&:hover': { color: '#fff', bgcolor: 'rgba(255, 255, 255, 0.08)' },
+} as const;
+
+export const productDialogContentSx = {
+  px: 2.5,
+  pb: 1.5,
+  pt: '8px !important',
+} as const;
+
+export const productDialogActionsSx = {
+  px: 2.5,
+  pb: 2.5,
+  pt: 1,
+  gap: 1,
+} as const;

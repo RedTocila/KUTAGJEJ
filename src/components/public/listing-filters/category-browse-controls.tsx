@@ -10,7 +10,6 @@ import {
 import { Funnel as FunnelIcon } from '@phosphor-icons/react/dist/ssr/Funnel';
 import { useLanguage } from '@/hooks/use-language';
 import { localizeVertical, type HomeVerticalId } from '@/lib/home-categories';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import {
   buildBrowseUrlQuery,
   countActiveBrowseFilters,
@@ -24,11 +23,14 @@ import {
   type BrowseRealEstateFilters,
 } from '@/lib/listing-filters';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import {
+  PRODUCT_BROWSE_CONTROL_HEIGHT,
+  productFilterButtonSx,
+} from '@/components/public/product-browse-chrome';
 
 import { ActiveFilterChips } from './active-filter-chips';
 import { FilterDrawerPanel } from './filter-drawer';
 import {
-  BROWSE_CONTROL_HEIGHT,
   ListingKeywordSearchInput,
 } from './listing-keyword-search-input';
 import { SubcategoryPills } from '../subcategory-pills';
@@ -38,7 +40,7 @@ const toolbarRowSx = {
   display: 'flex',
   alignItems: 'center',
   gap: 0.75,
-  minHeight: BROWSE_CONTROL_HEIGHT,
+  minHeight: PRODUCT_BROWSE_CONTROL_HEIGHT,
 } as const;
 
 function filtersEqual(a: BrowseFilters, b: BrowseFilters): boolean {
@@ -192,20 +194,7 @@ export function CategoryBrowseControls({
             <IconButton
               onClick={() => setOpen(true)}
               aria-label="Hap filtrat"
-              sx={{
-                width: BROWSE_CONTROL_HEIGHT,
-                height: BROWSE_CONTROL_HEIGHT,
-                borderRadius: '50%',
-                border: '1px solid',
-                borderColor: activeCount > 0 ? 'primary.main' : 'divider',
-                color: activeCount > 0 ? 'primary.contrastText' : 'text.primary',
-                bgcolor: activeCount > 0 ? 'primary.main' : 'background.paper',
-                boxShadow: activeCount > 0 ? `0 2px 10px ${primaryMainAlpha(0.4)}` : 'none',
-                '&:hover': {
-                  bgcolor: activeCount > 0 ? 'primary.dark' : primaryMainAlpha(0.1),
-                  borderColor: 'primary.main',
-                },
-              }}
+              sx={productFilterButtonSx(activeCount > 0)}
             >
               <FunnelIcon size={16} weight="bold" />
             </IconButton>

@@ -7,7 +7,6 @@ import {
   Box,
   Button,
   CircularProgress,
-  Dialog,
   IconButton,
   Stack,
   TextField,
@@ -20,6 +19,7 @@ import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
+import { ProductDialog } from '@/components/core/product-dialog';
 import { HomeVerticalIcon } from '@/components/public/home-vertical-icon';
 import { PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
 import { useCopy } from '@/hooks/use-copy';
@@ -740,21 +740,11 @@ export default function AiImportListingsPage() {
         </Stack>
       ) : null}
 
-      <Dialog
+      <ProductDialog
         open={Boolean(previewUrl)}
         onClose={() => setPreview(null)}
         maxWidth="md"
         fullWidth
-        slotProps={{
-          paper: {
-            sx: {
-              bgcolor: '#0b0b0b',
-              backgroundImage: 'none',
-              borderRadius: 3,
-              overflow: 'hidden',
-            },
-          },
-        }}
       >
         <Box sx={{ position: 'relative', minHeight: { xs: 280, sm: 420 } }}>
           <IconButton
@@ -863,7 +853,7 @@ export default function AiImportListingsPage() {
             </Typography>
           ) : null}
         </Box>
-      </Dialog>
+      </ProductDialog>
     </Stack>
   );
 }

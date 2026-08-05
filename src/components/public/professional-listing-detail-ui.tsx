@@ -2,8 +2,10 @@
 
 import * as React from 'react';
 import Image from 'next/image';
-import { Box, Button, Dialog, Grid, IconButton, Stack, Typography } from '@mui/material';
+import { Box, Button, Grid, IconButton, Stack, Typography } from '@mui/material';
 import type { ProfessionalPortfolioItem } from '@/lib/professional-listing-detail-content';
+import { ProductDialog } from '@/components/core/product-dialog';
+import { formatRatingDisplay } from '@/lib/format-rating';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { productPanelSx } from '@/styles/product-sx';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
@@ -34,7 +36,7 @@ export function ProfessionalFiveStarRating({
       spacing={0.15}
       component="span"
       role="img"
-      aria-label={ariaLabel ?? `${clamped.toFixed(1)} nga 5 yje`}
+      aria-label={ariaLabel ?? `${formatRatingDisplay(clamped)} nga 5 yje`}
       sx={{ alignItems: 'center', lineHeight: 0 }}
     >
       {Array.from({ length: 5 }, (_, index) => {
@@ -164,14 +166,60 @@ export function JobVerifiedBadge({
   return <ListingVerifiedBadge aria-label="Punë e verifikuar" size={size} color={color} />;
 }
 
-/** Compact rating chip — matches profile header mockup (dark box, score + count). */
+/** Compact rating chip — panel: score + review count; compact: card overlay pill (matches share/save). */
 export function ProfessionalRatingBadge({
   rating,
   reviewCount,
+  compact = false,
 }: {
   rating: string;
   reviewCount: number;
+  /** Single-line pill sized like listing card share/save chips. */
+  compact?: boolean;
 }) {
+  if (compact) {
+    return (
+      <Box
+        role="img"
+        aria-label={`${rating} nga 5 yje, ${reviewCount} vlerësime`}
+        sx={{
+          display: 'inline-flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 0.5,
+          flexShrink: 0,
+          height: 32,
+          px: 1,
+          py: 0.5,
+          borderRadius: 999,
+          bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.92)',
+          color: 'text.primary',
+          border: '1px solid',
+          borderColor: 'divider',
+          lineHeight: 0,
+        }}
+      >
+        <StarIcon
+          size={17}
+          weight="fill"
+          color="var(--mui-palette-warning-main)"
+          aria-hidden
+        />
+        <Typography
+          component="span"
+          sx={{
+            fontWeight: 700,
+            fontSize: '0.72rem',
+            lineHeight: 1,
+            color: 'inherit',
+          }}
+        >
+          {rating}
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box
       sx={{
@@ -415,21 +463,11 @@ export function ProfessionalPortfolioSection({
         ) : null}
       </Stack>
 
-      <Dialog
+      <ProductDialog
         open={Boolean(active)}
         onClose={() => setActiveIndex(null)}
         maxWidth="sm"
         fullWidth
-        slotProps={{
-          paper: {
-            sx: {
-              borderRadius: 3,
-              overflow: 'hidden',
-              bgcolor: 'background.paper',
-              m: 2,
-            },
-          },
-        }}
       >
         {active ? (
           <>
@@ -469,7 +507,7 @@ export function ProfessionalPortfolioSection({
             </Stack>
           </>
         ) : null}
-      </Dialog>
+      </ProductDialog>
     </>
   );
 }

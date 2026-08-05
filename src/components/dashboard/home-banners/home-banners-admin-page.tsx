@@ -7,10 +7,6 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControlLabel,
   IconButton,
   Stack,
@@ -29,6 +25,12 @@ import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import { usePlatformAdminGuard } from '@/hooks/use-platform-admin';
 import {
   createHomeBanner,
@@ -130,11 +132,11 @@ function BannerDialog({
   };
 
   return (
-    <Dialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="sm">
-      <DialogTitle sx={{ fontWeight: 800 }}>
+    <ProductDialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="sm">
+      <ProductDialogTitle onClose={saving ? undefined : onClose}>
         {initial ? 'Ndrysho banner-in' : 'Banner i ri'}
-      </DialogTitle>
-      <DialogContent dividers>
+      </ProductDialogTitle>
+      <ProductDialogContent>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
           {error ? (
             <Alert severity="error" sx={{ borderRadius: 1.5 }}>
@@ -238,16 +240,16 @@ function BannerDialog({
             label="Aktiv (i dukshëm në homepage)"
           />
         </Stack>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, py: 2 }}>
+      </ProductDialogContent>
+      <ProductDialogActions>
         <Button onClick={onClose} disabled={saving}>
           Anulo
         </Button>
         <Button variant="contained" onClick={handleSave} disabled={saving || uploading}>
           {saving ? 'Po ruhet...' : 'Ruaj'}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </ProductDialogActions>
+    </ProductDialog>
   );
 }
 
@@ -409,19 +411,19 @@ export function HomeBannersAdminPage() {
         }}
       />
 
-      <Dialog
+      <ProductDialog
         open={Boolean(deleting)}
         onClose={deleteBusy ? undefined : () => setDeleting(null)}
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: 800 }}>Fshi banner-in</DialogTitle>
-        <DialogContent dividers>
+        <ProductDialogTitle onClose={deleteBusy ? undefined : () => setDeleting(null)}>Fshi banner-in</ProductDialogTitle>
+        <ProductDialogContent>
           <Typography>
             A jeni i sigurt që doni të fshini <strong>{deleting?.title}</strong>?
           </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
+        </ProductDialogContent>
+        <ProductDialogActions>
           <Button onClick={() => setDeleting(null)} disabled={deleteBusy}>
             Anulo
           </Button>
@@ -442,8 +444,8 @@ export function HomeBannersAdminPage() {
           >
             {deleteBusy ? 'Po fshihet...' : 'Fshi'}
           </Button>
-        </DialogActions>
-      </Dialog>
+        </ProductDialogActions>
+      </ProductDialog>
     </Stack>
   );
 }

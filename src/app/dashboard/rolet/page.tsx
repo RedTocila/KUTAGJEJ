@@ -7,10 +7,6 @@ import {
   Box,
   Button,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   IconButton,
   Stack,
   Table,
@@ -27,6 +23,12 @@ import { Shield as ShieldIcon } from '@phosphor-icons/react/dist/ssr/Shield';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import { paths } from '@/paths';
 import type { Role } from '@/types/role';
 import { createRole, deleteRole, listRoles, updateRole } from '@/lib/admin-roles-client';
@@ -211,10 +213,10 @@ function RoleCreateDialog(props: {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <ProductDialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <Box component="form" onSubmit={submit}>
-        <DialogTitle>Shto rol</DialogTitle>
-        <DialogContent>
+        <ProductDialogTitle onClose={onClose}>Shto rol</ProductDialogTitle>
+        <ProductDialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {error ? <Alert severity="error">{error}</Alert> : null}
             <TextField label="Emri i rolit" value={name} onChange={(ev) => setName(ev.target.value)} required fullWidth />
@@ -227,15 +229,15 @@ function RoleCreateDialog(props: {
               minRows={2}
             />
           </Stack>
-        </DialogContent>
-        <DialogActions>
+        </ProductDialogContent>
+        <ProductDialogActions>
           <Button onClick={onClose}>Anulo</Button>
           <Button type="submit" variant="contained" disabled={pending}>
             {pending ? 'Duke u ruajtur…' : 'Ruaj'}
           </Button>
-        </DialogActions>
+        </ProductDialogActions>
       </Box>
-    </Dialog>
+    </ProductDialog>
   );
 }
 
@@ -281,10 +283,10 @@ function RoleEditDialog(props: {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <ProductDialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <Box component="form" onSubmit={submit}>
-        <DialogTitle>Ndrysho rolin</DialogTitle>
-        <DialogContent>
+        <ProductDialogTitle onClose={onClose}>Ndrysho rolin</ProductDialogTitle>
+        <ProductDialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {error ? <Alert severity="error">{error}</Alert> : null}
             {role?.isCore ? (
@@ -310,15 +312,15 @@ function RoleEditDialog(props: {
               minRows={2}
             />
           </Stack>
-        </DialogContent>
-        <DialogActions>
+        </ProductDialogContent>
+        <ProductDialogActions>
           <Button onClick={onClose}>Anulo</Button>
           <Button type="submit" variant="contained" disabled={pending}>
             {pending ? 'Duke u ruajtur…' : 'Ruaj'}
           </Button>
-        </DialogActions>
+        </ProductDialogActions>
       </Box>
-    </Dialog>
+    </ProductDialog>
   );
 }
 
@@ -353,9 +355,9 @@ function RoleDeleteDialog(props: {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>Fshi rolin?</DialogTitle>
-      <DialogContent>
+    <ProductDialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <ProductDialogTitle onClose={onClose}>Fshi rolin?</ProductDialogTitle>
+      <ProductDialogContent>
         {error ? (
           <Alert severity="error" sx={{ mb: 1 }}>
             {error}
@@ -364,13 +366,13 @@ function RoleDeleteDialog(props: {
         <Typography variant="body2">
           Roli <strong>{role?.name}</strong> do të hiqet nga lista. Nuk mund të fshihet nëse ka përdorues që e përdorin.
         </Typography>
-      </DialogContent>
-      <DialogActions>
+      </ProductDialogContent>
+      <ProductDialogActions>
         <Button onClick={onClose}>Anulo</Button>
         <Button color="error" variant="contained" onClick={() => void confirm()} disabled={pending}>
           {pending ? 'Duke u fshirë…' : 'Fshi'}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </ProductDialogActions>
+    </ProductDialog>
   );
 }

@@ -8,10 +8,6 @@ import {
   Button,
   Card,
   CardContent,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   IconButton,
   Stack,
   Table,
@@ -29,6 +25,12 @@ import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { PencilSimple as PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 
 import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import { paths } from '@/paths';
 import {
   createRealEstateCity,
@@ -244,9 +246,9 @@ export default function RealEstateLocationsAdminPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ fontWeight: 700 }}>{editing ? 'Ndrysho qytetin' : 'Shto qytet'}</DialogTitle>
-        <DialogContent>
+      <ProductDialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
+        <ProductDialogTitle onClose={closeDialog}>{editing ? 'Ndrysho qytetin' : 'Shto qytet'}</ProductDialogTitle>
+        <ProductDialogContent>
           <Stack spacing={2} sx={{ pt: 1, minWidth: { sm: 420 } }}>
             {formError ? <Alert severity="error">{formError}</Alert> : null}
             <TextField label="Emri i qytetit" value={cityName} onChange={(e) => setCityName(e.target.value)} required fullWidth />
@@ -267,16 +269,16 @@ export default function RealEstateLocationsAdminPage() {
               helperText="Një zonë për rresht."
             />
           </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
+        </ProductDialogContent>
+        <ProductDialogActions>
           <Button onClick={closeDialog} disabled={pending}>
             Anulo
           </Button>
           <Button variant="contained" onClick={() => void saveCity()} disabled={pending}>
             {pending ? 'Duke ruajtur…' : 'Ruaj'}
           </Button>
-        </DialogActions>
-      </Dialog>
+        </ProductDialogActions>
+      </ProductDialog>
     </Box>
   );
 }

@@ -11,7 +11,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
+import { ProductBackButton } from '@/components/public/product-browse-chrome';
 import { InstagramLogo as InstagramLogoIcon } from '@phosphor-icons/react/dist/ssr/InstagramLogo';
 import { LinkSimple as LinkSimpleIcon } from '@phosphor-icons/react/dist/ssr/LinkSimple';
 import { toPng } from 'html-to-image';
@@ -304,19 +304,11 @@ export function ListingSharePage({
           zIndex: 2,
         }}
       >
-        <IconButton
+        <ProductBackButton
           aria-label="Prapa"
           onClick={onClose}
           disabled={Boolean(busy)}
-          sx={{
-            color: '#fff',
-            bgcolor: 'rgba(255,255,255,0.08)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            '&:hover': { bgcolor: 'rgba(255,255,255,0.14)' },
-          }}
-        >
-          <ArrowLeftIcon size={22} weight="bold" />
-        </IconButton>
+        />
         <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '-0.01em' }}>
           Ndaj njoftimin
         </Typography>

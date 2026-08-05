@@ -14,37 +14,25 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { MagnifyingGlass as SearchIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { MapPinArea as MapPinAreaIcon } from '@phosphor-icons/react/dist/ssr/MapPinArea';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
+import { ProductSearchIcon, productSearchBarSx, productTagSx } from '@/components/public/product-browse-chrome';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { cleanLocationPart } from '@/lib/location-display';
 import { normalizeZoneIds } from '@/lib/listing-filters';
 import { normalizeSearchText } from '@/lib/smart-search';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 
-const pillSx = {
-  borderRadius: 999,
-  border: '1px solid',
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
-} as const;
+const pillSx = productSearchBarSx(false);
 
 const chipSx = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 0.25,
-  flexShrink: 0,
+  ...productTagSx(true),
   height: 22,
-  pl: 0.85,
-  pr: 0.25,
-  borderRadius: 999,
-  bgcolor: primaryMainAlpha(0.12),
-  color: 'primary.main',
-  border: '1px solid',
-  borderColor: primaryMainAlpha(0.28),
+  px: 0.85,
+  py: 0,
+  gap: 0.25,
 } as const;
 
 const chipsScrollerSx = {
@@ -297,7 +285,7 @@ export function LocationSearchInput({
           }}
         >
           {!cityId ? (
-            <SearchIcon size={14} color="var(--mui-palette-primary-main)" style={{ flexShrink: 0 }} />
+            <ProductSearchIcon />
           ) : null}
 
           {cityId && cityName ? (

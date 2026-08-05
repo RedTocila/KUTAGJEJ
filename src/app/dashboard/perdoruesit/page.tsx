@@ -8,10 +8,6 @@ import {
   Box,
   Button,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControlLabel,
   IconButton,
   Stack,
@@ -29,6 +25,12 @@ import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 
 import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { paths } from '@/paths';
 import type { DirectoryUser } from '@/types/directory-user';
@@ -317,10 +319,10 @@ function CreateUserDialog(props: {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <ProductDialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <Box component="form" onSubmit={submit}>
-        <DialogTitle>Shto përdorues</DialogTitle>
-        <DialogContent>
+        <ProductDialogTitle onClose={onClose}>Shto përdorues</ProductDialogTitle>
+        <ProductDialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {error ? <Alert severity="error">{error}</Alert> : null}
             {roles.length === 0 ? (
@@ -355,15 +357,15 @@ function CreateUserDialog(props: {
             <TextField label="Emri" value={firstName} onChange={(ev) => setFirstName(ev.target.value)} fullWidth />
             <TextField label="Mbiemri" value={lastName} onChange={(ev) => setLastName(ev.target.value)} fullWidth />
           </Stack>
-        </DialogContent>
-        <DialogActions>
+        </ProductDialogContent>
+        <ProductDialogActions>
           <Button onClick={onClose}>Anulo</Button>
           <Button type="submit" variant="contained" disabled={pending || roles.length === 0}>
             {pending ? 'Duke u ruajtur…' : 'Ruaj'}
           </Button>
-        </DialogActions>
+        </ProductDialogActions>
       </Box>
-    </Dialog>
+    </ProductDialog>
   );
 }
 
@@ -434,10 +436,10 @@ function EditUserDialog(props: {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <ProductDialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <Box component="form" onSubmit={submit}>
-        <DialogTitle>Ndrysho përdoruesin</DialogTitle>
-        <DialogContent>
+        <ProductDialogTitle onClose={onClose}>Ndrysho përdoruesin</ProductDialogTitle>
+        <ProductDialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {error ? <Alert severity="error">{error}</Alert> : null}
             <TextField label="Email" type="email" value={email} onChange={(ev) => setEmail(ev.target.value)} required fullWidth />
@@ -466,15 +468,15 @@ function EditUserDialog(props: {
               label="Llogaria aktive"
             />
           </Stack>
-        </DialogContent>
-        <DialogActions>
+        </ProductDialogContent>
+        <ProductDialogActions>
           <Button onClick={onClose}>Anulo</Button>
           <Button type="submit" variant="contained" disabled={pending || roles.length === 0}>
             {pending ? 'Duke u ruajtur…' : 'Ruaj'}
           </Button>
-        </DialogActions>
+        </ProductDialogActions>
       </Box>
-    </Dialog>
+    </ProductDialog>
   );
 }
 
@@ -509,9 +511,9 @@ function DeleteUserDialog(props: {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>Fshi përdoruesin?</DialogTitle>
-      <DialogContent>
+    <ProductDialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <ProductDialogTitle onClose={onClose}>Fshi përdoruesin?</ProductDialogTitle>
+      <ProductDialogContent>
         {error ? (
           <Alert severity="error" sx={{ mb: 1 }}>
             {error}
@@ -520,13 +522,13 @@ function DeleteUserDialog(props: {
         <Typography variant="body2">
           Ky veprim është i përhershëm për <strong>{user?.email}</strong>.
         </Typography>
-      </DialogContent>
-      <DialogActions>
+      </ProductDialogContent>
+      <ProductDialogActions>
         <Button onClick={onClose}>Anulo</Button>
         <Button color="error" variant="contained" onClick={() => void confirm()} disabled={pending}>
           {pending ? 'Duke u fshirë…' : 'Fshi'}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </ProductDialogActions>
+    </ProductDialog>
   );
 }

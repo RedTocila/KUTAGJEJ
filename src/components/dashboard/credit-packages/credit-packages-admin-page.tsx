@@ -7,10 +7,6 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControlLabel,
   IconButton,
   Stack,
@@ -28,6 +24,12 @@ import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { usePlatformAdminGuard } from '@/hooks/use-platform-admin';
 import {
@@ -98,11 +100,11 @@ function PackageDialog({
   };
 
   return (
-    <Dialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
-      <DialogTitle sx={{ fontWeight: 800 }}>
+    <ProductDialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
+      <ProductDialogTitle onClose={saving ? undefined : onClose}>
         {initial ? 'Ndrysho paketën' : 'Paketë e re krediti'}
-      </DialogTitle>
-      <DialogContent dividers>
+      </ProductDialogTitle>
+      <ProductDialogContent>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
           {error ? (
             <Alert severity="error" sx={{ borderRadius: 1.5 }}>
@@ -161,16 +163,16 @@ function PackageDialog({
             label="Aktive (e dukshme në dyqan)"
           />
         </Stack>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, py: 2 }}>
+      </ProductDialogContent>
+      <ProductDialogActions>
         <Button onClick={onClose} disabled={saving}>
           Anulo
         </Button>
         <Button variant="contained" onClick={handleSave} disabled={saving}>
           {saving ? 'Po ruhet...' : 'Ruaj'}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </ProductDialogActions>
+    </ProductDialog>
   );
 }
 
@@ -300,15 +302,15 @@ export function CreditPackagesAdminPage() {
         }}
       />
 
-      <Dialog open={Boolean(deleting)} onClose={deleteBusy ? undefined : () => setDeleting(null)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontWeight: 800 }}>Fshi paketën</DialogTitle>
-        <DialogContent dividers>
+      <ProductDialog open={Boolean(deleting)} onClose={deleteBusy ? undefined : () => setDeleting(null)} maxWidth="xs" fullWidth>
+        <ProductDialogTitle onClose={deleteBusy ? undefined : () => setDeleting(null)}>Fshi paketën</ProductDialogTitle>
+        <ProductDialogContent>
           <Typography>
             A jeni i sigurt që doni të fshini paketën <strong>{deleting?.labelSq}</strong>? Pagesat e
             kaluara nuk preken.
           </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
+        </ProductDialogContent>
+        <ProductDialogActions>
           <Button onClick={() => setDeleting(null)} disabled={deleteBusy}>
             Anulo
           </Button>
@@ -329,8 +331,8 @@ export function CreditPackagesAdminPage() {
           >
             {deleteBusy ? 'Po fshihet...' : 'Fshi'}
           </Button>
-        </DialogActions>
-      </Dialog>
+        </ProductDialogActions>
+      </ProductDialog>
     </Stack>
   );
 }

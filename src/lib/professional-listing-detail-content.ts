@@ -1,4 +1,5 @@
 import { formatPrice } from '@/components/public/listing-cards/format-helpers';
+import { formatRatingDisplay } from '@/lib/format-rating';
 import type { PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 
 export function professionalDisplayName(listing: PublicDirectoryListingDetail): string {
@@ -24,9 +25,9 @@ export function professionalRatingDisplay(listing: PublicDirectoryListingDetail)
   const reviews = listing.reviewCount ?? 0;
   const avg = listing.ratingAverage != null ? Number(listing.ratingAverage) : null;
   if (reviews > 0 && avg != null && Number.isFinite(avg)) {
-    return { rating: avg.toFixed(1), reviews };
+    return { rating: formatRatingDisplay(avg), reviews };
   }
-  return { rating: '0.0', reviews };
+  return { rating: formatRatingDisplay(0), reviews };
 }
 
 export function professionalResponseTime(listing: PublicDirectoryListingDetail): string | null {

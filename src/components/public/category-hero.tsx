@@ -3,12 +3,13 @@
 import * as React from 'react';
 import { Suspense } from 'react';
 import RouterLink from 'next/link';
-import { Box, Button, Container, Grid, IconButton, Stack, Typography } from '@mui/material';
-import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
+import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
 
 import { findVertical, type HomeVerticalId } from '@/lib/home-categories';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { paths } from '@/paths';
+import { ProductBackButton } from '@/components/public/product-browse-chrome';
+import { PortalIconBox } from '@/components/user/portal-cards';
 
 import { CategoryBrowseControls } from './listing-filters/category-browse-controls';
 import { HomeVerticalIcon } from './home-vertical-icon';
@@ -37,44 +38,14 @@ export function PublicCategoryHero({
     >
       <Container maxWidth="xl">
         <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start', minWidth: 0 }}>
-          <IconButton
-            component={RouterLink}
+          <ProductBackButton
             href={paths.home}
             aria-label="Kthehu në faqen kryesore"
-            size="small"
-            sx={{
-              display: { xs: 'inline-flex', md: 'none' },
-              mt: 0.5,
-              flexShrink: 0,
-              width: 36,
-              height: 36,
-              color: 'text.primary',
-              border: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'background.paper',
-              '&:hover': { bgcolor: 'action.hover' },
-            }}
-          >
-            <ArrowLeftIcon size={18} weight="bold" />
-          </IconButton>
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              mt: 0.25,
-              borderRadius: 2,
-              display: 'grid',
-              placeItems: 'center',
-              flexShrink: 0,
-              color: 'primary.main',
-              bgcolor: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
-                  : 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)',
-            }}
-          >
+            sx={{ display: { xs: 'inline-flex', md: 'none' }, mt: 0.5 }}
+          />
+          <PortalIconBox size={40}>
             <HomeVerticalIcon verticalId={verticalId} size={22} />
-          </Box>
+          </PortalIconBox>
           <Stack spacing={0.35} sx={{ flex: 1, minWidth: 0, pt: 0.15 }}>
             <Typography
               component="h1"

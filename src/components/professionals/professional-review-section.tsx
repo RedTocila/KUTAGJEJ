@@ -7,19 +7,19 @@ import {
   Avatar,
   Box,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
   Rating,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import {
   ProfessionalFiveStarRating,
   ProfessionalReviewsSectionHeader,
@@ -30,7 +30,8 @@ import {
   type ProfessionalReview,
 } from '@/lib/professional-reviews-client';
 import { mapApiReviewToView } from '@/lib/professional-listing-detail-content';
-import { productButtonSx, productDialogSlotProps, productFieldSx } from '@/styles/product-sx';
+import { formatRatingDisplay } from '@/lib/format-rating';
+import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
 
@@ -107,11 +108,9 @@ export function ProfessionalReviewSection({
   const count = reviewCount ?? reviews.length;
   const avg =
     ratingAverage != null
-      ? Number(ratingAverage).toFixed(1)
+      ? formatRatingDisplay(Number(ratingAverage))
       : reviews.length > 0
-        ? (
-            reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
-          ).toFixed(1)
+        ? formatRatingDisplay(reviews.reduce((s, r) => s + r.rating, 0) / reviews.length)
         : null;
 
   const views = reviews.map(mapApiReviewToView);
@@ -174,43 +173,9 @@ export function ProfessionalReviewSection({
       )}
 
       {showLeaveReview ? (
-        <Dialog
-          open={open}
-          onClose={() => setOpen(false)}
-          maxWidth="xs"
-          fullWidth
-          slotProps={productDialogSlotProps}
-        >
-          <DialogTitle
-            sx={{
-              position: 'relative',
-              px: 2.5,
-              pt: 2.5,
-              pb: 1,
-              pr: 6,
-              fontWeight: 800,
-              fontSize: '1.125rem',
-              letterSpacing: '-0.01em',
-            }}
-          >
-            Vlerësoni profesionistin
-            <IconButton
-              aria-label="Mbyll"
-              onClick={() => setOpen(false)}
-              size="small"
-              sx={{
-                position: 'absolute',
-                right: 12,
-                top: 12,
-                color: 'text.secondary',
-                borderRadius: 2,
-                '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
-              }}
-            >
-              <XIcon size={18} weight="bold" />
-            </IconButton>
-          </DialogTitle>
-          <DialogContent sx={{ px: 2.5, pb: 1.5, pt: '8px !important' }}>
+        <ProductDialog open={open} onClose={() => setOpen(false)} maxWidth="xs" fullWidth>
+          <ProductDialogTitle onClose={() => setOpen(false)}>Vlerësoni profesionistin</ProductDialogTitle>
+          <ProductDialogContent>
             <Stack spacing={2.25}>
               {error ? (
                 <Alert severity="error" sx={{ borderRadius: 2 }}>
@@ -247,14 +212,8 @@ export function ProfessionalReviewSection({
                 sx={productFieldSx}
               />
             </Stack>
-          </DialogContent>
-          <DialogActions
-            sx={{
-              px: 2.5,
-              pb: 2.5,
-              pt: 1,
-            }}
-          >
+          </ProductDialogContent>
+          <ProductDialogActions>
             <Button
               variant="contained"
               disabled={submitting}
@@ -263,8 +222,8 @@ export function ProfessionalReviewSection({
             >
               Dërgo
             </Button>
-          </DialogActions>
-        </Dialog>
+          </ProductDialogActions>
+        </ProductDialog>
       ) : null}
     </Stack>
   );

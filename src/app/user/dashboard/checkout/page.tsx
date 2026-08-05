@@ -224,7 +224,7 @@ export default function UserCheckoutPage() {
     checkout?.kind === 'subscription'
       ? 'Abonohu në plan'
       : checkout?.kind === 'auto-refresh'
-        ? 'Bli Auto-Refresh'
+        ? 'Abonohu në Auto-Refresh'
         : checkout?.kind === 'premium'
           ? 'Bli Premium'
           : 'Bli kredite';
@@ -288,11 +288,14 @@ export default function UserCheckoutPage() {
                     {checkout.pkg.labelSq}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-                    {checkout.pkg.slots} vende për njoftime që rifreskohen automatikisht
+                    {checkout.pkg.slots} vende · abonim mujor · rifreskim automatik sipas planit
                   </Typography>
                 </Box>
                 <Typography sx={{ fontWeight: 800, fontSize: '1.5rem', whiteSpace: 'nowrap', color: 'primary.main' }}>
                   €{checkout.pkg.priceEur.toFixed(2).replace(/\.00$/, '')}
+                  <Typography component="span" variant="body2" sx={{ fontWeight: 700, ml: 0.25 }}>
+                    /muaj
+                  </Typography>
                 </Typography>
               </Stack>
             ) : checkout.kind === 'premium' ? (

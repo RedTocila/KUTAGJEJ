@@ -1,11 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Chip } from '@mui/material';
-import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
+import { Box } from '@mui/material';
 
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { ActiveFilterChip } from '@/lib/listing-filters';
+import { ProductTag } from '@/components/public/product-browse-chrome';
 
 export function ActiveFilterChips({
   chips,
@@ -31,45 +30,15 @@ export function ActiveFilterChips({
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'nowrap', pr: 2.5, py: 0.25 }}>
         {chips.map((chip) => (
-          <Chip
+          <ProductTag
             key={chip.key}
             label={chip.label}
-            size="small"
+            active
             onDelete={() => onRemove(chip.key)}
-            deleteIcon={<XIcon size={12} />}
-            sx={{
-              flexShrink: 0,
-              height: 28,
-              fontWeight: 600,
-              fontSize: '0.78rem',
-              borderRadius: 999,
-              bgcolor: primaryMainAlpha(0.08),
-              color: 'primary.main',
-              border: '1px solid',
-              borderColor: primaryMainAlpha(0.2),
-              '& .MuiChip-deleteIcon': {
-                color: 'primary.main',
-                opacity: 0.7,
-                '&:hover': { opacity: 1 },
-              },
-            }}
           />
         ))}
         {chips.length > 1 ? (
-          <Chip
-            label="Pastro të gjitha"
-            size="small"
-            variant="outlined"
-            onClick={onClearAll}
-            sx={{
-              flexShrink: 0,
-              height: 28,
-              fontWeight: 600,
-              fontSize: '0.78rem',
-              borderRadius: 999,
-              borderColor: 'divider',
-            }}
-          />
+          <ProductTag label="Pastro të gjitha" onClick={onClearAll} />
         ) : null}
       </Box>
     </Box>

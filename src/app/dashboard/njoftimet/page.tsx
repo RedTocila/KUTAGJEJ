@@ -10,10 +10,6 @@ import {
   CardContent,
   CardMedia,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Grid,
   Stack,
   TextField,
@@ -24,6 +20,12 @@ import { paths } from '@/paths';
 import { listAdminListings, reviewAdminListing, type AdminListingRow } from '@/lib/admin-listings-client';
 import { useUser } from '@/hooks/use-user';
 import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
 
 const KIND_OPTIONS = [
@@ -162,9 +164,9 @@ export default function ListingModerationPage() {
         </Grid>
       )}
 
-      <Dialog open={Boolean(selected)} onClose={() => setSelected(null)} maxWidth="sm" fullWidth>
-        <DialogTitle>{selected?.title}</DialogTitle>
-        <DialogContent dividers>
+      <ProductDialog open={Boolean(selected)} onClose={() => setSelected(null)} maxWidth="sm" fullWidth>
+        <ProductDialogTitle onClose={() => setSelected(null)}>{selected?.title}</ProductDialogTitle>
+        <ProductDialogContent>
           <Stack spacing={2}>
             <Box>
               <Typography variant="body2" color="text.secondary">
@@ -193,8 +195,8 @@ export default function ListingModerationPage() {
               <Alert severity="info">Shënim: {selected.adminNote}</Alert>
             ) : null}
           </Stack>
-        </DialogContent>
-        <DialogActions>
+        </ProductDialogContent>
+        <ProductDialogActions>
           <Button onClick={() => setSelected(null)}>Mbyll</Button>
           {selected?.status === 'pending' ? (
             <>
@@ -206,8 +208,8 @@ export default function ListingModerationPage() {
               </Button>
             </>
           ) : null}
-        </DialogActions>
-      </Dialog>
+        </ProductDialogActions>
+      </ProductDialog>
     </Stack>
   );
 }

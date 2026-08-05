@@ -666,11 +666,6 @@ function ProfessionalCard({
         </>
       }
     >
-      {l.price != null ? (
-        <Row icon={TagIcon}>
-          <strong>nga {formatPrice(l.price, l.currency)}</strong>
-        </Row>
-      ) : null}
       {l.cityName ? <Row icon={MapPinIcon}>{l.cityName}</Row> : null}
       {l.servicesHighlight ? <Row icon={TagIcon}>{l.servicesHighlight}</Row> : null}
     </BaseCard>

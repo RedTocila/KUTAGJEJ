@@ -7,7 +7,6 @@ import {
   Box,
   Button,
   Checkbox,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -15,6 +14,7 @@ import {
   FormControlLabel,
   FormGroup,
   Grid,
+  IconButton,
   InputAdornment,
   Paper,
   Stack,
@@ -25,9 +25,12 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
+import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
+import { ProductDialog } from '@/components/core/product-dialog';
 import type { Contract } from '@/types/contract';
 import type { Role } from '@/types/role';
+import { productDialogCloseButtonSx } from '@/styles/product-sx';
 import { createContract, updateContract } from '@/lib/admin-contracts-client';
 
 function QuotaField(props: {
@@ -243,7 +246,7 @@ export function ContractFormDialog(props: {
   };
 
   return (
-    <Dialog
+    <ProductDialog
       open={open}
       onClose={props.onClose}
       fullWidth
@@ -251,15 +254,12 @@ export function ContractFormDialog(props: {
       scroll="paper"
       slotProps={{
         paper: {
-          elevation: 0,
           sx: {
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
             maxHeight: 'calc(100dvh - 24px)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            mx: 1.5,
           },
         },
       }}
@@ -271,9 +271,11 @@ export function ContractFormDialog(props: {
       >
         <Box
           sx={{
+            position: 'relative',
             px: 3,
             pt: 2,
             pb: 1.5,
+            pr: 6,
             flexShrink: 0,
             background: `linear-gradient(135deg, ${alpha(infoMain, 0.12)} 0%, transparent 70%)`,
             borderBottom: '1px solid',
@@ -286,6 +288,14 @@ export function ContractFormDialog(props: {
           <DialogTitle sx={{ p: 0, pt: 0.25, fontSize: '1.2rem', fontWeight: 800 }}>
             {isEdit ? 'Kontrata / plani' : 'Detajet e planit'}
           </DialogTitle>
+          <IconButton
+            aria-label="Mbyll"
+            onClick={props.onClose}
+            size="small"
+            sx={productDialogCloseButtonSx}
+          >
+            <XIcon size={18} weight="bold" />
+          </IconButton>
         </Box>
         <DialogContent
           sx={{
@@ -566,6 +576,6 @@ export function ContractFormDialog(props: {
           </Button>
         </DialogActions>
       </Box>
-    </Dialog>
+    </ProductDialog>
   );
 }

@@ -6,7 +6,6 @@ import {
   Avatar,
   Box,
   Button,
-  Chip,
   Stack,
   Typography,
 } from '@mui/material';
@@ -51,6 +50,7 @@ import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
 import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
 import { productPanelSx } from '@/styles/product-sx';
+import { ProductTag } from '@/components/public/product-browse-chrome';
 
 const FONT_BODY = '0.875rem';
 const FONT_CAPTION = '0.75rem';
@@ -297,24 +297,7 @@ export function ProfessionalListingDetailView({
                   <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
                     {serviceTags.map((tag, index) => {
                       const TagIcon = SERVICE_TAG_ICONS[index % SERVICE_TAG_ICONS.length]!;
-                      return (
-                        <Chip
-                          key={tag}
-                          icon={<TagIcon size={14} weight="duotone" color="var(--mui-palette-primary-main)" />}
-                          label={tag}
-                          size="small"
-                          variant="outlined"
-                          sx={{
-                            height: 32,
-                            fontWeight: 700,
-                            fontSize: FONT_CAPTION,
-                            borderRadius: 2,
-                            borderColor: 'divider',
-                            bgcolor: 'action.hover',
-                            '& .MuiChip-icon': { ml: 0.75 },
-                          }}
-                        />
-                      );
+                      return <ProductTag key={tag} label={tag} icon={TagIcon} />;
                     })}
                   </Stack>
                   )}

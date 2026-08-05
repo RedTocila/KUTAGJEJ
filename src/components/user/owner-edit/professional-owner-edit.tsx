@@ -20,7 +20,6 @@ import {
 } from '@/lib/directory-listings-client';
 import { professionalMineToPublic } from '@/lib/listing-mine-to-public';
 import { PROFESSIONAL_CATEGORY_OPTIONS } from '@/lib/professional-constants';
-import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { uploadListingImages } from '@/lib/uploads-client';
 import { paths } from '@/paths';
@@ -42,8 +41,6 @@ type Snapshot = {
   contactPhone: string | null;
   servicesHighlight: string | null;
   responseTimeHours: number | null;
-  price: number | null;
-  currency: 'EUR' | 'LEK' | null;
 };
 
 function snapFrom(d: ProfessionalMineListing): Snapshot {
@@ -56,8 +53,6 @@ function snapFrom(d: ProfessionalMineListing): Snapshot {
     contactPhone: d.contactPhone ?? null,
     servicesHighlight: d.servicesHighlight ?? null,
     responseTimeHours: d.responseTimeHours ?? null,
-    price: d.price ?? null,
-    currency: d.currency === 'EUR' || d.currency === 'LEK' ? d.currency : null,
   };
 }
 
@@ -204,9 +199,8 @@ export function ProfessionalOwnerEdit({
         imageUrls,
         responseTimeHours: draft.responseTimeHours,
         portfolioItems,
-        price: draft.price,
-        currency:
-          draft.currency === 'EUR' || draft.currency === 'LEK' ? draft.currency : (null as 'EUR' | 'LEK' | null),
+        price: null,
+        currency: null,
         condition: null as string | null,
         servicesHighlight: draft.servicesHighlight,
       };
@@ -286,32 +280,6 @@ export function ProfessionalOwnerEdit({
           fullWidth
           sx={fieldSx}
         />
-        <Stack direction="row" spacing={1.25}>
-          <TextField
-            label="Çmimi nga"
-            value={draft.price != null ? String(draft.price) : ''}
-            onChange={(e) => {
-              const raw = e.target.value.trim();
-              setDraft((d) => ({
-                ...d,
-                price: raw ? Number(raw) : null,
-                currency: raw ? d.currency || 'EUR' : null,
-              }));
-            }}
-            fullWidth
-            sx={fieldSx}
-          />
-          <SearchableSelect
-            label="Monedha"
-            value={draft.currency === 'EUR' || draft.currency === 'LEK' ? draft.currency : ''}
-            onChange={(v) =>
-              setDraft((d) => ({ ...d, currency: v === 'EUR' || v === 'LEK' ? v : null }))
-            }
-            options={CURRENCY_OPTIONS}
-            emptyLabel="—"
-            sx={{ minWidth: 120 }}
-          />
-        </Stack>
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
     ),

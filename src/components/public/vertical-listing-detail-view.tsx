@@ -609,21 +609,7 @@ function primaryPriceRow(l: AnyPublicListingDetail): React.ReactNode {
     );
   }
   if (l.kind === 'businesses') return null;
-  if (l.kind === 'professionals') {
-    const line = l.price != null ? formatPrice(l.price, l.currency) : 'Tarifë — kontakt';
-    return (
-      <Typography
-        sx={{
-          fontWeight: 950,
-          fontSize: l.price != null ? '1.75rem' : '1.1rem',
-          color: l.price != null ? 'primary.main' : 'text.secondary',
-          lineHeight: 1.1,
-        }}
-      >
-        {line}
-      </Typography>
-    );
-  }
+  if (l.kind === 'professionals') return null;
   if (l.kind === 'car') {
     return (
       <Typography sx={{ fontWeight: 950, fontSize: '1.85rem', color: 'primary.main', lineHeight: 1.1 }}>

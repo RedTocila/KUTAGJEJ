@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Alert,
@@ -8,24 +9,36 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
   Grid,
+  InputAdornment,
   List,
   ListItemButton,
   ListItemText,
   Slider,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material';
 import { ArrowClockwise as ArrowClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowClockwise';
+import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
+import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist/ssr/BuildingOffice';
+import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
+import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
+import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
+import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
+import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 
 import { useUser } from '@/hooks/use-user';
 import {
@@ -110,7 +123,32 @@ type PickerListing = {
   listingId: string;
   title: string;
   categoryLabel: string;
+  imageUrl: string | null;
 };
+
+function coverImage(imageUrls?: string[] | null): string | null {
+  const first = imageUrls?.find((url) => typeof url === 'string' && url.trim());
+  return first?.trim() || null;
+}
+
+function pickerKindIcon(kind: ListingMetricKind): PhosphorIcon {
+  switch (kind) {
+    case 'real-estate':
+      return BuildingsIcon;
+    case 'car':
+      return CarIcon;
+    case 'job':
+      return BriefcaseIcon;
+    case 'marketplace':
+      return StorefrontIcon;
+    case 'businesses':
+      return BuildingOfficeIcon;
+    case 'professionals':
+      return UsersIcon;
+    default:
+      return BuildingsIcon;
+  }
+}
 
 function checkoutAutoRefreshHref(packageId: string) {
   const q = new URLSearchParams({
@@ -158,6 +196,7 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
       listingId: l.id,
       title: l.title,
       categoryLabel: 'Pasuri',
+      imageUrl: coverImage(l.imageUrls),
     });
   }
   for (const l of cars.listings ?? []) {
@@ -169,6 +208,7 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
       listingId: l.id,
       title,
       categoryLabel: 'Makina',
+      imageUrl: coverImage(l.imageUrls),
     });
   }
   for (const l of jobs.listings ?? []) {
@@ -179,6 +219,7 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
       listingId: l.id,
       title: l.title,
       categoryLabel: 'Punë',
+      imageUrl: coverImage(l.imageUrls),
     });
   }
   for (const l of mkt.listings ?? []) {
@@ -189,6 +230,7 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
       listingId: l.id,
       title: l.title,
       categoryLabel: 'Tregu',
+      imageUrl: coverImage(l.imageUrls),
     });
   }
   for (const l of biz.listings ?? []) {
@@ -199,6 +241,7 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
       listingId: l.id,
       title: l.title,
       categoryLabel: 'Biznese',
+      imageUrl: coverImage(l.imageUrls),
     });
   }
   for (const l of pro.listings ?? []) {
@@ -209,6 +252,7 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
       listingId: l.id,
       title: l.title,
       categoryLabel: 'Profesionistë',
+      imageUrl: coverImage(l.imageUrls),
     });
   }
   return out;
@@ -269,12 +313,16 @@ function AutoRefreshSection() {
                   subtitle="Kapacitet Auto-Refresh"
                   badge={index === 1 ? <SoftChip label="Më e mirë" color="primary" /> : undefined}
                 />
-                <PlanPrice amount={formatEur(pkg.priceEur)} hint={`Shton ${pkg.slots} vende në llogari`} />
+                <PlanPrice
+                  amount={formatEur(pkg.priceEur)}
+                  suffix="/ muaj"
+                  hint={`Abonim mujor · shton ${pkg.slots} vende në llogari`}
+                />
                 <FeatureList
                   items={[
                     `${pkg.slots} njoftime me Auto-Refresh`,
                     `Aktualisht ${used}/${slots} vende në përdorim`,
-                    'Aktivizohet pas pagesës',
+                    'Aktivizohet pas pagesës së parë mujore',
                   ]}
                 />
                 <Button
@@ -283,7 +331,7 @@ function AutoRefreshSection() {
                   onClick={() => router.push(checkoutAutoRefreshHref(pkg.id))}
                   sx={{ fontWeight: 800, mt: 'auto', textTransform: 'none', borderRadius: 2, py: 1.05 }}
                 >
-                  Blej {formatEur(pkg.priceEur)}
+                  Abonohu · {formatEur(pkg.priceEur)}/muaj
                 </Button>
               </PlanCard>
             </Grid>
@@ -310,8 +358,10 @@ function PremiumListingSection() {
   const [activeVoucher, setActiveVoucher] = React.useState<PremiumVoucher | null>(null);
   const [pickerLoading, setPickerLoading] = React.useState(false);
   const [pickerListings, setPickerListings] = React.useState<PickerListing[]>([]);
+  const [pickerQuery, setPickerQuery] = React.useState('');
   const [selectedKey, setSelectedKey] = React.useState<string | null>(null);
   const [applying, setApplying] = React.useState(false);
+  const pickerSearchRef = React.useRef<HTMLInputElement>(null);
 
   const reloadVouchers = React.useCallback(async () => {
     const { vouchers } = await listPremiumVouchers(true);
@@ -339,19 +389,34 @@ function PremiumListingSection() {
   }, [reloadVouchers, searchParams]);
 
   React.useEffect(() => {
-    if (!assignOpen) return;
+    if (!assignOpen) {
+      setPickerQuery('');
+      return;
+    }
     let cancelled = false;
     setPickerLoading(true);
+    setPickerQuery('');
     setSelectedKey(null);
     void loadApprovedListingsForPicker().then((items) => {
       if (cancelled) return;
       setPickerListings(items);
       setPickerLoading(false);
     });
+    const focusTimer = window.setTimeout(() => pickerSearchRef.current?.focus(), 50);
     return () => {
       cancelled = true;
+      window.clearTimeout(focusTimer);
     };
   }, [assignOpen]);
+
+  const filteredPickerListings = React.useMemo(() => {
+    const q = pickerQuery.trim().toLowerCase();
+    if (!q) return pickerListings;
+    return pickerListings.filter(
+      (item) =>
+        item.title.toLowerCase().includes(q) || item.categoryLabel.toLowerCase().includes(q),
+    );
+  }, [pickerListings, pickerQuery]);
 
   const openAssign = (voucher: PremiumVoucher) => {
     setActiveVoucher(voucher);
@@ -519,16 +584,43 @@ function PremiumListingSection() {
         Premium nga abonimi Grow/Elite: 30 ditë — aktivizohet me butonin Premium te Shpalljet e mia.
       </Typography>
 
-      <Dialog open={assignOpen} onClose={closeAssign} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ fontWeight: 800 }}>
+      <ProductDialog open={assignOpen} onClose={closeAssign} fullWidth maxWidth="sm">
+        <ProductDialogTitle
+          onClose={closeAssign}
+          subtitle={
+            activeVoucher
+              ? `${activeVoucher.days} ditë do të aplikohen në njoftimin e zgjedhur`
+              : undefined
+          }
+        >
           Zgjidh njoftimin Premium
-          {activeVoucher ? (
-            <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block', mt: 0.5, fontWeight: 600 }}>
-              {activeVoucher.days} ditë do të aplikohen në njoftimin e zgjedhur
-            </Typography>
-          ) : null}
-        </DialogTitle>
-        <DialogContent dividers>
+        </ProductDialogTitle>
+        {!pickerLoading && pickerListings.length > 0 ? (
+          <Box sx={{ px: 2.5, pb: 1 }}>
+            <TextField
+              inputRef={pickerSearchRef}
+              fullWidth
+              placeholder="Kërko njoftimin…"
+              value={pickerQuery}
+              onChange={(e) => setPickerQuery(e.target.value)}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      {React.createElement(MagnifyingGlassIcon, { size: 20 })}
+                    </InputAdornment>
+                  ),
+                },
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                },
+              }}
+            />
+          </Box>
+        ) : null}
+        <ProductDialogContent sx={{ pt: 0, maxHeight: 360, overflowY: 'auto' }}>
           {pickerLoading ? (
             <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
               <CircularProgress size={28} />
@@ -537,29 +629,65 @@ function PremiumListingSection() {
             <Alert severity="info" sx={{ borderRadius: 2 }}>
               Nuk keni njoftime të aprovuara. Shtoni një njoftim dhe aprovoni atë, pastaj aplikoni Premium.
             </Alert>
+          ) : filteredPickerListings.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>
+              Nuk u gjet asnjë njoftim.
+            </Typography>
           ) : (
             <List disablePadding>
-              {pickerListings.map((item) => (
-                <ListItemButton
-                  key={item.key}
-                  selected={selectedKey === item.key}
-                  onClick={() => setSelectedKey(item.key)}
-                  sx={{ borderRadius: 1.5, mb: 0.5 }}
-                >
-                  <ListItemText
-                    primary={<Typography sx={{ fontWeight: 700 }}>{item.title}</Typography>}
-                    secondary={
-                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                        {item.categoryLabel}
-                      </Typography>
-                    }
-                  />
-                </ListItemButton>
-              ))}
+              {filteredPickerListings.map((item) => {
+                const KindIcon = pickerKindIcon(item.kind);
+                return (
+                  <ListItemButton
+                    key={item.key}
+                    selected={selectedKey === item.key}
+                    onClick={() => setSelectedKey(item.key)}
+                    sx={{ borderRadius: 1.5, mb: 0.5, gap: 1.25, py: 1 }}
+                  >
+                    <Box
+                      sx={{
+                        position: 'relative',
+                        width: 48,
+                        height: 48,
+                        borderRadius: 1.5,
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        bgcolor: (theme) =>
+                          theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        display: 'grid',
+                        placeItems: 'center',
+                        color: 'primary.main',
+                      }}
+                    >
+                      {item.imageUrl ? (
+                        <Image
+                          src={item.imageUrl}
+                          alt=""
+                          fill
+                          sizes="48px"
+                          style={{ objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <KindIcon size={22} weight="duotone" />
+                      )}
+                    </Box>
+                    <ListItemText
+                      primary={<Typography sx={{ fontWeight: 700 }}>{item.title}</Typography>}
+                      secondary={
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                          {item.categoryLabel}
+                        </Typography>
+                      }
+                    />
+                  </ListItemButton>
+                );
+              })}
             </List>
           )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
+        </ProductDialogContent>
+        <ProductDialogActions>
           <Button onClick={closeAssign} sx={{ fontWeight: 700 }}>
             Më vonë
           </Button>
@@ -572,8 +700,8 @@ function PremiumListingSection() {
           >
             Apliko Premium
           </Button>
-        </DialogActions>
-      </Dialog>
+        </ProductDialogActions>
+      </ProductDialog>
     </SectionBlock>
   );
 }

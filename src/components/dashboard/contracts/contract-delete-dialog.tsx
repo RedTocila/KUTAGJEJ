@@ -6,15 +6,17 @@ import {
   alpha,
   Box,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Paper,
   Typography,
   useTheme,
 } from '@mui/material';
 
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import type { Contract } from '@/types/contract';
 import { deleteContract } from '@/lib/admin-contracts-client';
 
@@ -50,20 +52,9 @@ export function ContractDeleteDialog(props: {
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="xs"
-      fullWidth
-      slotProps={{
-        paper: {
-          elevation: 0,
-          sx: { borderRadius: 2, border: '1px solid', borderColor: 'divider' },
-        },
-      }}
-    >
-      <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>Fshi kontratën?</DialogTitle>
-      <DialogContent>
+    <ProductDialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <ProductDialogTitle onClose={onClose}>Fshi kontratën?</ProductDialogTitle>
+      <ProductDialogContent>
         {error ? (
           <Alert severity="error" sx={{ mb: 1.5, borderRadius: 1.5 }}>
             {error}
@@ -87,8 +78,8 @@ export function ContractDeleteDialog(props: {
             do të hiqet përgjithmonë. Ky veprim nuk kthehet mbrapsht.
           </Typography>
         </Paper>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+      </ProductDialogContent>
+      <ProductDialogActions>
         <Button onClick={onClose} size="large" sx={{ borderRadius: 2 }}>
           Anulo
         </Button>
@@ -102,7 +93,7 @@ export function ContractDeleteDialog(props: {
         >
           {pending ? 'Duke u fshirë…' : 'Fshi'}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </ProductDialogActions>
+    </ProductDialog>
   );
 }

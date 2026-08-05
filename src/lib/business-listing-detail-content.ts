@@ -1,4 +1,5 @@
 import type { PublicDirectoryListingDetail } from '@/lib/public-listings-client';
+import { formatRatingDisplay } from '@/lib/format-rating';
 
 export type BusinessMenuItemView = {
   id: string;
@@ -31,7 +32,7 @@ export function businessRatingDisplay(listing: PublicDirectoryListingDetail): {
     return { rating: null, reviews: 0 };
   }
   const avg = Number(listing.ratingAverage);
-  return { rating: Number.isFinite(avg) ? avg.toFixed(1) : null, reviews };
+  return { rating: Number.isFinite(avg) ? formatRatingDisplay(avg) : null, reviews };
 }
 
 export function businessOpenStatusLine(listing: PublicDirectoryListingDetail): string | null {

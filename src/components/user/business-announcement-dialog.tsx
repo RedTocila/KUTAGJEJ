@@ -7,10 +7,6 @@ import {
   Button,
   Checkbox,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControlLabel,
   IconButton,
   Stack,
@@ -22,6 +18,12 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
+import {
   ANNOUNCE_COST_BC,
   clearBusinessAnnouncement,
   upsertBusinessAnnouncement,
@@ -29,7 +31,7 @@ import {
 } from '@/lib/listing-announcement-client';
 import { uploadListingImages } from '@/lib/uploads-client';
 import { useUser } from '@/hooks/use-user';
-import { productButtonSx, productDialogSlotProps, productFieldSx } from '@/styles/product-sx';
+import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 
 export type BusinessAnnouncementDialogProps = {
   open: boolean;
@@ -138,45 +140,12 @@ export function BusinessAnnouncementDialog({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      maxWidth="xs"
-      fullWidth
-      slotProps={productDialogSlotProps}
-    >
-      <DialogTitle
-        sx={{
-          position: 'relative',
-          px: 2.5,
-          pt: 2.5,
-          pb: 1,
-          pr: 6,
-          fontWeight: 800,
-          fontSize: '1.125rem',
-          letterSpacing: '-0.01em',
-        }}
-      >
+    <ProductDialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
+      <ProductDialogTitle onClose={handleClose}>
         {hasExisting ? 'Ndrysho shpalljen' : 'Shto shpallje'}
-        <IconButton
-          aria-label="Mbyll"
-          onClick={handleClose}
-          disabled={busy}
-          size="small"
-          sx={{
-            position: 'absolute',
-            right: 12,
-            top: 12,
-            color: 'text.secondary',
-            borderRadius: 2,
-            '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
-          }}
-        >
-          <XIcon size={18} weight="bold" />
-        </IconButton>
-      </DialogTitle>
+      </ProductDialogTitle>
 
-      <DialogContent sx={{ px: 2.5, pb: 1.5, pt: '8px !important' }}>
+      <ProductDialogContent>
         <Stack spacing={2.25}>
           {error ? (
             <Alert severity="error" sx={{ borderRadius: 2 }}>
@@ -366,17 +335,9 @@ export function BusinessAnnouncementDialog({
             </Alert>
           )}
         </Stack>
-      </DialogContent>
+      </ProductDialogContent>
 
-      <DialogActions
-        sx={{
-          px: 2.5,
-          pb: 2.5,
-          pt: 1,
-          gap: 1,
-          flexWrap: 'wrap',
-        }}
-      >
+      <ProductDialogActions sx={{ flexWrap: 'wrap' }}>
         {hasExisting ? (
           <Button
             color="error"
@@ -402,7 +363,7 @@ export function BusinessAnnouncementDialog({
         >
           {willCharge ? `Shpall · ${ANNOUNCE_COST_BC} BC` : 'Ruaj'}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </ProductDialogActions>
+    </ProductDialog>
   );
 }

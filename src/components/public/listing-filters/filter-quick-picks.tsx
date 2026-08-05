@@ -4,8 +4,8 @@ import * as React from 'react';
 import { Box, Typography } from '@mui/material';
 
 import type { HomeVerticalId } from '@/lib/home-categories';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { HOME_SUBCATEGORIES } from '@/lib/home-subcategories';
+import { ProductTag } from '@/components/public/product-browse-chrome';
 
 const PRIMARY_FILTER_KEY: Record<HomeVerticalId, string> = {
   'real-estate': 'cat',
@@ -70,38 +70,14 @@ export function FilterQuickPicks({
         {items.map((item) => {
           const value = valueFromHref(item.href);
           const active = value ? selectedValue === value : !selectedValue;
-          const Icon = item.Icon;
           return (
-            <Box
+            <ProductTag
               key={item.href}
-              component="button"
-              type="button"
+              label={item.label}
+              icon={item.Icon}
+              active={active}
               onClick={() => onSelect(active && value ? '' : value)}
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 0.65,
-                px: 1.15,
-                py: 0.65,
-                borderRadius: 999,
-                border: '1px solid',
-                borderColor: active ? 'primary.main' : 'divider',
-                bgcolor: active ? primaryMainAlpha(0.12) : 'background.paper',
-                color: active ? 'primary.main' : 'text.primary',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                transition: 'all 0.15s ease',
-                '&:hover': {
-                  borderColor: 'primary.main',
-                  bgcolor: primaryMainAlpha(0.08),
-                },
-              }}
-            >
-              <Icon size={15} weight="duotone" />
-              {item.label}
-            </Box>
+            />
           );
         })}
       </Box>

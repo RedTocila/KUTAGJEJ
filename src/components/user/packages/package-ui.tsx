@@ -307,7 +307,7 @@ export function SectionBlock({
           bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.08 : 0.05),
         }}
       >
-        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
+        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start' }}>
           <Box
             sx={{
               width: 40,
@@ -324,15 +324,32 @@ export function SectionBlock({
           >
             <Icon size={22} weight="duotone" />
           </Box>
-          <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography sx={{ fontWeight: 850, fontSize: '1.05rem', lineHeight: 1.2 }}>{title}</Typography>
+          <Stack spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 0.75 }}
+            >
+              <Typography sx={{ fontWeight: 850, fontSize: '1.05rem', lineHeight: 1.2, minWidth: 0 }}>
+                {title}
+              </Typography>
+              {chips ? (
+                <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexShrink: 0, ml: 'auto' }}>{chips}</Box>
+              ) : null}
+            </Stack>
             {description ? (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, fontSize: '0.82rem' }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontSize: '0.82rem', lineHeight: 1.45 }}
+              >
                 {description}
               </Typography>
             ) : null}
-          </Box>
-          {chips}
+            {chips ? (
+              <Box sx={{ display: { xs: 'flex', sm: 'none' }, flexWrap: 'wrap', gap: 0.5 }}>{chips}</Box>
+            ) : null}
+          </Stack>
         </Stack>
       </Stack>
       <Box sx={{ p: { xs: 2.25, sm: 2.75 } }}>{children}</Box>

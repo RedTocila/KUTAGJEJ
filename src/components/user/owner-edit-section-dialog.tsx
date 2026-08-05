@@ -1,20 +1,17 @@
 'use client';
 
 import * as React from 'react';
+import { Button, Stack } from '@mui/material';
+
 import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  Stack,
-} from '@mui/material';
-import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
+import { productButtonSx } from '@/styles/product-sx';
 
-import { productButtonSx, productDialogSlotProps } from '@/styles/product-sx';
-
-/** Shared owner-edit dialog — paper surface, blur backdrop. */
+/** Shared owner-edit dialog — black paper, blur backdrop, close control. */
 export function OwnerEditSectionDialog({
   open,
   title,
@@ -31,55 +28,16 @@ export function OwnerEditSectionDialog({
   applyLabel?: string;
 }) {
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      fullWidth
-      maxWidth="xs"
-      scroll="paper"
-      slotProps={productDialogSlotProps}
-    >
-      <DialogTitle
-        sx={{
-          position: 'relative',
-          px: 2.5,
-          pt: 2.5,
-          pb: 1,
-          pr: 6,
-          fontWeight: 800,
-          fontSize: '1.125rem',
-          letterSpacing: '-0.01em',
-        }}
-      >
-        {title}
-        <IconButton
-          aria-label="Mbyll"
-          onClick={onClose}
-          size="small"
-          sx={{
-            position: 'absolute',
-            right: 12,
-            top: 12,
-            color: 'text.secondary',
-            borderRadius: 2,
-            '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
-          }}
-        >
-          <XIcon size={18} weight="bold" />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent sx={{ px: 2.5, pb: 1.5, pt: '8px !important' }}>
+    <ProductDialog open={open} onClose={onClose} fullWidth maxWidth="xs" scroll="paper">
+      <ProductDialogTitle onClose={onClose}>{title}</ProductDialogTitle>
+      <ProductDialogContent>
         <Stack spacing={2.25}>{children}</Stack>
-      </DialogContent>
-      <DialogActions sx={{ px: 2.5, pb: 2.5, pt: 1 }}>
-        <Button
-          variant="contained"
-          onClick={onApply}
-          sx={{ ...productButtonSx, px: 2.5 }}
-        >
+      </ProductDialogContent>
+      <ProductDialogActions>
+        <Button variant="contained" onClick={onApply} sx={{ ...productButtonSx, px: 2.5 }}>
           {applyLabel}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </ProductDialogActions>
+    </ProductDialog>
   );
 }

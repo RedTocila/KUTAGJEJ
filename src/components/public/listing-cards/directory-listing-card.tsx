@@ -13,6 +13,7 @@ import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Sto
 import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 
+import { formatRatingDisplay } from '@/lib/format-rating';
 import { MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import type { PublicDirectoryListing } from '@/lib/public-listings-client';
 import { listingBusinessPublicHref, listingProfessionalPublicHref } from '@/paths';
@@ -20,10 +21,11 @@ import { listingBusinessPublicHref, listingProfessionalPublicHref } from '@/path
 import { BusinessPromoBanner } from './business-promo-banner';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
+import { ProfessionalRatingBadge } from '@/components/public/professional-listing-detail-ui';
+
 import {
   findOptionLabel,
   formatBusinessOpeningHoursForCard,
-  formatPrice,
   relativeAlbanianDate,
 } from './format-helpers';
 import {
@@ -197,7 +199,7 @@ function BusinessVenueCardBody({
   );
 }
 
-/** Profesionistë — hourly/project rates (keeps price line). */
+/** Profesionistë — services profile (no price line). */
 function ProfessionalListingCardBody({
   listing,
   sellerRating = null,
@@ -208,7 +210,13 @@ function ProfessionalListingCardBody({
   const viewCount = listing.viewCount ?? 0;
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
   const cardRating = resolveListingCardRating(listing, sellerRating);
-  const hasPrice = listing.price != null;
+  const reviewCount = cardRating?.reviewCount ?? 0;
+  const ratingLabel =
+    reviewCount > 0 &&
+    cardRating?.ratingAverage != null &&
+    Number.isFinite(cardRating.ratingAverage)
+      ? formatRatingDisplay(cardRating.ratingAverage)
+      : formatRatingDisplay(0);
 
   const serviceTags = React.useMemo(() => {
     const raw = String(listing.servicesHighlight ?? '').trim();
@@ -253,7 +261,9 @@ function ProfessionalListingCardBody({
           imageUrl={listing.imageUrl}
           FallbackIcon={BriefcaseIcon}
           alt={listing.title}
-          topLeftBadge={conditionLabel ?? undefined}
+          topLeftOverlay={
+            <ProfessionalRatingBadge rating={ratingLabel} reviewCount={reviewCount} compact />
+          }
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
@@ -261,7 +271,6 @@ function ProfessionalListingCardBody({
           sharePayload={{
             title: listing.title,
             category: listing.categoryLabel,
-            priceLabel: hasPrice ? formatPrice(listing.price, listing.currency) : undefined,
             badge: conditionLabel ?? undefined,
             imageUrl: listing.imageUrl,
             location: listing.cityName || undefined,
@@ -320,24 +329,6 @@ function ProfessionalListingCardBody({
           >
             {listing.title}
           </Typography>
-          <ListingCardRating
-            ratingAverage={cardRating?.ratingAverage ?? 0}
-            reviewCount={cardRating?.reviewCount ?? 0}
-            showWhenEmpty
-          />
-          {hasPrice ? (
-            <Typography
-              sx={{
-                fontWeight: 800,
-                fontSize: '1.1rem',
-                color: listing.isPremium ? 'warning.main' : 'primary.main',
-                lineHeight: 1.2,
-              }}
-            >
-              {formatPrice(listing.price, listing.currency)}
-            </Typography>
-          ) : null}
-
           <SpecRow specs={specs} />
 
           <Box sx={{ flex: 1 }} />

@@ -26,6 +26,11 @@ import { JobCard } from '@/components/public/listing-cards/job-card';
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { HeroCategoryCircles } from '@/components/public/hero-category-circles';
+import {
+  ProductSearchIcon,
+  productFilterButtonSx,
+  productSearchBarSx,
+} from '@/components/public/product-browse-chrome';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import { fetchAiSearch, type AiSearchResult } from '@/lib/ai-search-client';
@@ -377,12 +382,12 @@ export function SearchPageView() {
               display: 'flex',
               gap: 1,
               p: 1,
-              borderRadius: inputExpanded ? 2.5 : 999,
-              border: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'background.paper',
               alignItems: inputExpanded ? 'flex-end' : 'center',
               transition: 'border-radius 120ms ease',
+              ...productSearchBarSx(Boolean(query.trim())),
+              borderRadius: inputExpanded ? 2.5 : 999,
+              height: 'auto',
+              minHeight: 40,
             }}
           >
             <TextField
@@ -408,12 +413,15 @@ export function SearchPageView() {
                     <InputAdornment
                       position="start"
                       sx={{
-                        color: isAi ? AI_SEARCH_BLUE : 'text.secondary',
                         alignSelf: inputExpanded ? 'flex-start' : 'center',
                         mt: inputExpanded ? 0.75 : 0,
                       }}
                     >
-                      {isAi ? <SparkleIcon size={18} /> : <MagnifyingGlassIcon size={18} />}
+                      {isAi ? (
+                        <SparkleIcon size={18} color={AI_SEARCH_BLUE} />
+                      ) : (
+                        <ProductSearchIcon />
+                      )}
                     </InputAdornment>
                   ),
                   endAdornment: query ? (
@@ -459,19 +467,24 @@ export function SearchPageView() {
               disabled={loading && isAi}
               sx={{
                 flexShrink: 0,
-                width: 40,
-                height: 40,
                 alignSelf: inputExpanded ? 'flex-end' : 'center',
-                bgcolor: isAi ? AI_SEARCH_BLUE : 'primary.main',
-                color: isAi ? AI_SEARCH_BLUE_ON : 'common.black',
-                '&:hover': {
-                  bgcolor: isAi ? AI_SEARCH_BLUE_HOVER : 'primary.dark',
-                  color: isAi ? AI_SEARCH_BLUE_ON : 'common.black',
-                },
-                '&.Mui-disabled': {
-                  bgcolor: isAi ? AI_SEARCH_BLUE_SOFT : undefined,
-                  color: isAi ? AI_SEARCH_BLUE_ON : undefined,
-                },
+                ...productFilterButtonSx(true),
+                ...(isAi
+                  ? {
+                      bgcolor: AI_SEARCH_BLUE,
+                      color: AI_SEARCH_BLUE_ON,
+                      borderColor: AI_SEARCH_BLUE,
+                      '&:hover': { bgcolor: AI_SEARCH_BLUE_HOVER, borderColor: AI_SEARCH_BLUE_HOVER },
+                      '&.Mui-disabled': {
+                        bgcolor: AI_SEARCH_BLUE_SOFT,
+                        color: AI_SEARCH_BLUE_ON,
+                      },
+                    }
+                  : {
+                      bgcolor: 'primary.main',
+                      color: 'common.black',
+                      '&:hover': { bgcolor: 'primary.dark' },
+                    }),
               }}
             >
               {loading && isAi ? (

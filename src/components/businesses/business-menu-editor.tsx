@@ -23,6 +23,7 @@ import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { UploadSimple as UploadSimpleIcon } from '@phosphor-icons/react/dist/ssr/UploadSimple';
+import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { formatPrice } from '@/components/public/listing-cards/format-helpers';
@@ -41,6 +42,7 @@ import {
   type BusinessMineListing,
 } from '@/lib/directory-listings-client';
 import { uploadListingImages } from '@/lib/uploads-client';
+import { productButtonSx, productDialogSlotProps, productFieldSx } from '@/styles/product-sx';
 
 function newId(): string {
   return typeof crypto !== 'undefined' && crypto.randomUUID
@@ -71,9 +73,9 @@ function hydrateMenu(listing: BusinessMineListing): {
 }
 
 const fieldSx = {
+  ...productFieldSx,
   '& .MuiOutlinedInput-root': {
-    borderRadius: 1.75,
-    bgcolor: 'background.paper',
+    ...productFieldSx['& .MuiOutlinedInput-root'],
     fontSize: '0.9rem',
   },
   '& .MuiInputLabel-root': {
@@ -617,12 +619,38 @@ export function BusinessMenuEditor({
         onClose={() => setCategoryDialogOpen(false)}
         fullWidth
         maxWidth="xs"
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
+        slotProps={productDialogSlotProps}
       >
-        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>
+        <DialogTitle
+          sx={{
+            position: 'relative',
+            px: 2.5,
+            pt: 2.5,
+            pb: 1,
+            pr: 6,
+            fontWeight: 800,
+            fontSize: '1.125rem',
+            letterSpacing: '-0.01em',
+          }}
+        >
           {editingCategoryId ? 'Ndrysho kategorinë' : 'Kategori e re'}
+          <IconButton
+            aria-label="Mbyll"
+            onClick={() => setCategoryDialogOpen(false)}
+            size="small"
+            sx={{
+              position: 'absolute',
+              right: 12,
+              top: 12,
+              color: 'text.secondary',
+              borderRadius: 2,
+              '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
+            }}
+          >
+            <XIcon size={18} weight="bold" />
+          </IconButton>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ px: 2.5, pb: 1.5, pt: '8px !important' }}>
           <Box sx={{ pt: 1 }}>
             <MenuField
               label="Emri i kategorisë"
@@ -639,16 +667,13 @@ export function BusinessMenuEditor({
             />
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 2.5, pb: 2 }}>
-          <Button onClick={() => setCategoryDialogOpen(false)} sx={{ textTransform: 'none', fontWeight: 700 }}>
-            Anulo
-          </Button>
+        <DialogActions sx={{ px: 2.5, pb: 2.5, pt: 1 }}>
           <Button
             variant="contained"
             disableElevation
             onClick={saveCategoryDialog}
             disabled={!categoryNameDraft.trim()}
-            sx={{ textTransform: 'none', fontWeight: 800, borderRadius: 2 }}
+            sx={{ ...productButtonSx, px: 2.5 }}
           >
             Ruaj
           </Button>
@@ -664,12 +689,42 @@ export function BusinessMenuEditor({
         }}
         fullWidth
         maxWidth="sm"
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
+        slotProps={productDialogSlotProps}
       >
-        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>
+        <DialogTitle
+          sx={{
+            position: 'relative',
+            px: 2.5,
+            pt: 2.5,
+            pb: 1,
+            pr: 6,
+            fontWeight: 800,
+            fontSize: '1.125rem',
+            letterSpacing: '-0.01em',
+          }}
+        >
           {productDraft?.id ? 'Ndrysho artikullin' : 'Artikull i ri'}
+          <IconButton
+            aria-label="Mbyll"
+            onClick={() => {
+              if (productSaving) return;
+              setProductDialogOpen(false);
+            }}
+            disabled={productSaving}
+            size="small"
+            sx={{
+              position: 'absolute',
+              right: 12,
+              top: 12,
+              color: 'text.secondary',
+              borderRadius: 2,
+              '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
+            }}
+          >
+            <XIcon size={18} weight="bold" />
+          </IconButton>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ px: 2.5, pb: 1.5, pt: '8px !important' }}>
           {productDraft ? (
             <Stack spacing={2} sx={{ pt: 1 }}>
               {productError ? <Alert severity="error">{productError}</Alert> : null}
@@ -745,21 +800,14 @@ export function BusinessMenuEditor({
             </Stack>
           ) : null}
         </DialogContent>
-        <DialogActions sx={{ px: 2.5, pb: 2 }}>
-          <Button
-            onClick={() => setProductDialogOpen(false)}
-            disabled={productSaving}
-            sx={{ textTransform: 'none', fontWeight: 700 }}
-          >
-            Anulo
-          </Button>
+        <DialogActions sx={{ px: 2.5, pb: 2.5, pt: 1 }}>
           <Button
             variant="contained"
             disableElevation
             onClick={() => void saveProductDialog()}
             disabled={productSaving}
             startIcon={productSaving ? <CircularProgress size={14} color="inherit" /> : null}
-            sx={{ textTransform: 'none', fontWeight: 800, borderRadius: 2 }}
+            sx={{ ...productButtonSx, px: 2.5 }}
           >
             {productSaving ? 'Duke ruajtur…' : 'Ruaj artikullin'}
           </Button>

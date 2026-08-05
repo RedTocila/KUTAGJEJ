@@ -3,18 +3,25 @@
 import * as React from 'react';
 
 import { recordListingMetricEvent, type ListingMetricKind } from '@/lib/listing-metrics';
+import { recordListingView } from '@/lib/user-interest-history';
 
 /** Records a detail-page view once per mount (deduped server-side per visitor). */
 export function ListingMetricsTracker({
   listingKind,
   listingId,
+  city,
+  category,
 }: {
   listingKind: ListingMetricKind;
   listingId: string;
+  /** Optional signals used for homepage “recommended” personalization. */
+  city?: string | null;
+  category?: string | null;
 }) {
   React.useEffect(() => {
+    recordListingView({ kind: listingKind, listingId, city, category });
     void recordListingMetricEvent(listingKind, listingId, 'view');
-  }, [listingKind, listingId]);
+  }, [listingKind, listingId, city, category]);
 
   return null;
 }

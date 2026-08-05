@@ -32,6 +32,7 @@ import {
   ListingKeywordSearchInput,
 } from './listing-keyword-search-input';
 import { SubcategoryPills } from '../subcategory-pills';
+import { BrowseInterestTracker } from '@/components/public/browse-interest-tracker';
 
 const toolbarRowSx = {
   display: 'flex',
@@ -144,9 +145,20 @@ export function CategoryBrowseControls({
   const cityValue = (draft as { city?: string }).city ?? '';
   const zoneValue =
     verticalId === 'real-estate' ? normalizeZoneIds((draft as BrowseRealEstateFilters).zone) : [];
+  const interestCategory =
+    (applied as { cat?: string }).cat ??
+    (applied as { make?: string }).make ??
+    (applied as { industry?: string }).industry ??
+    (applied as { type?: string }).type;
 
   return (
     <>
+      <BrowseInterestTracker
+        verticalId={verticalId}
+        q={qValue || undefined}
+        city={(applied as { city?: string }).city}
+        category={interestCategory}
+      />
       <Box component="section" aria-label="Kontrollet e kërkimit" sx={{ mt: { xs: 1.25, md: 2 } }}>
         <Box sx={toolbarRowSx}>
           <Box sx={{ flex: 1, minWidth: 0, display: 'flex' }}>

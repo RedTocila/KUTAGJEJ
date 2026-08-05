@@ -2,7 +2,7 @@
 export const MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX = 56;
 
 /** Gap between the floating nav and the viewport bottom edge. */
-export const MOBILE_BOTTOM_NAV_FLOAT_INSET_PX = 16;
+export const MOBILE_BOTTOM_NAV_FLOAT_INSET_PX = 8;
 
 /** Extra space so scroll content doesn’t sit flush against the nav. */
 export const MOBILE_BOTTOM_NAV_CONTENT_GAP_PX = 20;

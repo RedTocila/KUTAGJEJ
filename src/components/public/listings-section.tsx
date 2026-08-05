@@ -20,8 +20,8 @@ export interface ListingsSectionProps {
   isEmpty: boolean;
   /** Override the H2 label (e.g. homepage “Njoftimet e fundit”). */
   titleOverride?: string;
-  /** Resolve title from i18n (`latestListings`). */
-  titleKey?: 'latestListings';
+  /** Resolve title from i18n (`latestListings` / `recommendedListings`). */
+  titleKey?: 'latestListings' | 'recommendedListings';
   /** Use `@mui/icons-material` category icons instead of PNG assets. */
   useMuiVerticalIcon?: boolean;
   /** Hide numeric total next to the title. */
@@ -56,7 +56,9 @@ export function ListingsSection({
   const title =
     titleKey === 'latestListings'
       ? t.home.latestListings
-      : (titleOverride ?? vertical.label);
+      : titleKey === 'recommendedListings'
+        ? t.home.recommendedListings
+        : (titleOverride ?? vertical.label);
 
   return (
     <Box

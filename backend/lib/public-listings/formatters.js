@@ -239,6 +239,9 @@ function formatDirectory(doc, cityById, reviewStats) {
       reservationsEnabled: Boolean(doc.reservationsEnabled),
       reservationUrl: doc.reservationUrl?.trim() || null,
       servicesHighlight: doc.servicesHighlight?.replace(/\s+/g, ' ').trim() || null,
+      announcementTitle: doc.announcementTitle?.replace(/\s+/g, ' ').trim() || null,
+      announcementSubtitle: doc.announcementSubtitle?.replace(/\s+/g, ' ').trim() || null,
+      announcementBannerUrl: doc.announcementBannerUrl?.trim() || null,
     };
   }
   if (vertical === 'professionals') {
@@ -253,6 +256,9 @@ function formatDirectory(doc, cityById, reviewStats) {
       openingHours: null,
       reservationsEnabled: false,
       reservationUrl: null,
+      announcementTitle: null,
+      announcementSubtitle: null,
+      announcementBannerUrl: null,
     };
   }
   return {
@@ -264,6 +270,9 @@ function formatDirectory(doc, cityById, reviewStats) {
     reservationsEnabled: false,
     reservationUrl: null,
     servicesHighlight: null,
+    announcementTitle: null,
+    announcementSubtitle: null,
+    announcementBannerUrl: null,
   };
 }
 

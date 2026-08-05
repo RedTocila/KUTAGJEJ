@@ -15,22 +15,10 @@ import {
 
 import { PortalIconBox } from '@/components/user/portal-cards';
 import { hardNavigate } from '@/lib/hard-navigate';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 
 /** Shared outlined field chrome — matches `SearchableSelect`. */
-export const listingOutlinedFieldSx = {
-  '& .MuiOutlinedInput-root': {
-    borderRadius: 2.5,
-    bgcolor: 'background.paper',
-    transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
-    '&.Mui-focused': {
-      boxShadow: `0 0 0 3px ${primaryMainAlpha(0.12)}`,
-    },
-  },
-  '& .MuiInputLabel-root': {
-    fontWeight: 600,
-  },
-} as const;
+export const listingOutlinedFieldSx = productFieldSx;
 
 /**
  * Text field with always-floating label + shared radius/focus so it matches
@@ -123,14 +111,10 @@ export function ListingFormSection({
 }
 
 const submitButtonSx = {
-  textTransform: 'none',
-  fontWeight: 800,
+  ...productButtonSx,
   px: 3,
-  borderRadius: 2.25,
   minHeight: 48,
   width: { xs: '100%', sm: 'auto' },
-  boxShadow: 'none',
-  '&:hover': { boxShadow: 'none' },
 } as const;
 
 export function ListingFormActions({

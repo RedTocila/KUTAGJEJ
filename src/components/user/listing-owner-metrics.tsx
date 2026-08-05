@@ -6,6 +6,7 @@ import { ArrowsClockwise as RefreshIcon } from '@phosphor-icons/react/dist/ssr/A
 import { BookmarkSimple as BookmarkIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { CursorClick as ClickIcon } from '@phosphor-icons/react/dist/ssr/CursorClick';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
+import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
 import { PencilSimple as EditIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { ForkKnife as ForkKnifeIcon } from '@phosphor-icons/react/dist/ssr/ForkKnife';
 import { ShareNetwork as ShareIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
@@ -13,6 +14,8 @@ import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Timer as TimerIcon } from '@phosphor-icons/react/dist/ssr/Timer';
 import RouterLink from 'next/link';
 
+import { BusinessAnnouncementDialog } from '@/components/user/business-announcement-dialog';
+import type { BusinessAnnouncement } from '@/lib/listing-announcement-client';
 import type { ListingMetricKind, ListingMetrics } from '@/lib/listing-metrics';
 import { refreshListingBoost, setListingAutoRefresh } from '@/lib/listing-refresh-client';
 import { applyPremiumFromPlan } from '@/lib/payments-client';
@@ -30,13 +33,137 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
   );
 }
 
-const btnSx = {
-  minWidth: 28,
-  width: 28,
-  height: 28,
-  p: 0,
+/** Compact labeled action chip used on owner listing cards. */
+const labeledBtnSx = {
+  minWidth: 0,
+  height: 26,
+  px: 0.85,
+  py: 0,
   borderRadius: 999,
+  textTransform: 'none' as const,
+  fontWeight: 800,
+  fontSize: '0.65rem',
+  letterSpacing: '0.01em',
+  lineHeight: 1,
+  gap: 0.35,
+  '& .MuiButton-startIcon': { mr: 0.35, ml: 0 },
 };
+
+function editHrefFor(listingId: string, kind: ListingMetricKind) {
+  return `${paths.user.editListing}?kind=${encodeURIComponent(kind)}&id=${encodeURIComponent(listingId)}`;
+}
+
+/**
+ * Top-right card actions: Menu · Shpall · Ndrysho (rightmost = Edit).
+ * Edit is always shown; Menu + Shpall only for businesses.
+ */
+export function ListingOwnerTopActions({
+  listingId,
+  kind,
+  canAnnounce = false,
+  announcement = null,
+  onAnnouncementSaved,
+}: {
+  listingId: string;
+  kind: ListingMetricKind;
+  canAnnounce?: boolean;
+  announcement?: BusinessAnnouncement | null;
+  onAnnouncementSaved?: (result: {
+    announcement: BusinessAnnouncement | null;
+    refreshedAt?: string | null;
+    boostCredits?: number;
+  }) => void;
+}) {
+  const { checkSession } = useUser();
+  const [announceOpen, setAnnounceOpen] = React.useState(false);
+  const isBusiness = kind === 'businesses';
+
+  return (
+    <>
+      <Stack
+        direction="row"
+        spacing={0.5}
+        sx={{
+          alignItems: 'center',
+          p: 0.45,
+          borderRadius: 999,
+          bgcolor: 'rgba(0,0,0,0.35)',
+          border: '1px solid rgba(255,255,255,0.22)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+        }}
+      >
+        {isBusiness ? (
+          <>
+            <Tooltip title="Ndrysho menunë">
+              <Button
+                size="small"
+                variant="outlined"
+                color="primary"
+                aria-label="Menu"
+                component={RouterLink}
+                href={`${paths.user.businessMenu}?id=${encodeURIComponent(listingId)}`}
+                startIcon={<ForkKnifeIcon size={12} weight="bold" />}
+                sx={labeledBtnSx}
+              >
+                Menu
+              </Button>
+            </Tooltip>
+            <Tooltip
+              title={
+                announcement?.title
+                  ? 'Ndrysho shpalljen'
+                  : 'Shto shpallje · 3 Boost Coins · njoftimi shkon në krye'
+              }
+            >
+              <span>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="warning"
+                  aria-label="Shpall"
+                  disabled={!canAnnounce}
+                  onClick={() => setAnnounceOpen(true)}
+                  startIcon={<MegaphoneIcon size={12} weight="fill" />}
+                  sx={labeledBtnSx}
+                >
+                  Shpall
+                </Button>
+              </span>
+            </Tooltip>
+          </>
+        ) : null}
+        <Tooltip title="Ndrysho njoftimin">
+          <Button
+            size="small"
+            variant="outlined"
+            color="inherit"
+            aria-label="Ndrysho"
+            component={RouterLink}
+            href={editHrefFor(listingId, kind)}
+            startIcon={<EditIcon size={12} weight="bold" />}
+            sx={labeledBtnSx}
+          >
+            Ndrysho
+          </Button>
+        </Tooltip>
+      </Stack>
+      {isBusiness ? (
+        <BusinessAnnouncementDialog
+          open={announceOpen}
+          listingId={listingId}
+          initial={announcement}
+          onClose={() => setAnnounceOpen(false)}
+          onSaved={(result) => {
+            onAnnouncementSaved?.(result);
+            void checkSession();
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
 
 export function ListingOwnerMetrics({
   metrics,
@@ -134,10 +261,6 @@ export function ListingOwnerMetrics({
   };
 
   const anyBusy = busy || autoBusy || premiumBusy;
-  const editHref =
-    listingId && kind
-      ? `${paths.user.editListing}?kind=${encodeURIComponent(kind)}&id=${encodeURIComponent(listingId)}`
-      : null;
 
   return (
     <Stack spacing={0.75} sx={{ pt: 0.85, mt: 0.35, borderTop: 1, borderColor: 'divider' }}>
@@ -151,128 +274,86 @@ export function ListingOwnerMetrics({
           rowGap: 0.75,
         }}
       >
-        {listingId && kind ? (
-          <Stack direction="row" spacing={0.6} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.6 }}>
-            {editHref ? (
-              <Tooltip title="Ndrysho njoftimin">
+        {listingId && kind && canRefresh ? (
+          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
+            <Tooltip title="Vendose njoftimin në krye të listës · kushton 1 Boost Coin">
+              <span>
                 <Button
                   size="small"
                   variant="outlined"
-                  color="inherit"
-                  aria-label="Ndrysho"
-                  component={RouterLink}
-                  href={editHref}
-                  sx={btnSx}
-                >
-                  <EditIcon size={14} weight="bold" />
-                </Button>
-              </Tooltip>
-            ) : null}
-            {kind === 'businesses' && listingId ? (
-              <Tooltip title="Ndrysho menunë">
-                <Button
-                  size="small"
-                  variant="outlined"
-                  color="primary"
-                  aria-label="Menu"
-                  component={RouterLink}
-                  href={`${paths.user.businessMenu}?id=${encodeURIComponent(listingId)}`}
-                  startIcon={<ForkKnifeIcon size={13} weight="bold" />}
-                  sx={{
-                    ...btnSx,
-                    width: 'auto',
-                    minWidth: 0,
-                    px: 1.1,
-                    textTransform: 'none',
-                    fontWeight: 800,
-                    fontSize: '0.7rem',
+                  color="warning"
+                  aria-label="Rifresko"
+                  disabled={anyBusy}
+                  onClick={() => {
+                    void handleRefresh();
                   }}
+                  startIcon={
+                    busy ? <CircularProgress size={11} color="inherit" /> : <RefreshIcon size={12} weight="bold" />
+                  }
+                  sx={labeledBtnSx}
                 >
-                  Menu
+                  Rifresko
                 </Button>
-              </Tooltip>
-            ) : null}
-            {canRefresh ? (
-              <>
-                <Tooltip title="Vendose njoftimin në krye të listës · kushton 1 Boost Coin">
-                  <span>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color="warning"
-                      aria-label="Rifresko · 1 BC"
-                      disabled={anyBusy}
-                      onClick={() => {
-                        void handleRefresh();
-                      }}
-                      sx={btnSx}
-                    >
-                      {busy ? (
-                        <CircularProgress size={12} color="inherit" />
-                      ) : (
-                        <RefreshIcon size={14} weight="bold" />
-                      )}
-                    </Button>
-                  </span>
-                </Tooltip>
-                <Tooltip
-                  title={
-                    autoRefreshEnabled
-                      ? 'Hiq nga Auto-Refresh'
-                      : 'Shto në Auto-Refresh (rifreskim automatik sipas planit)'
+              </span>
+            </Tooltip>
+            <Tooltip
+              title={
+                autoRefreshEnabled
+                  ? 'Hiq nga Auto-Refresh'
+                  : 'Shto në Auto-Refresh (rifreskim automatik sipas planit)'
+              }
+            >
+              <span>
+                <Button
+                  size="small"
+                  variant={autoRefreshEnabled ? 'contained' : 'outlined'}
+                  color="primary"
+                  aria-label="Auto"
+                  disabled={anyBusy}
+                  onClick={() => {
+                    void handleToggleAuto();
+                  }}
+                  startIcon={
+                    autoBusy ? <CircularProgress size={11} color="inherit" /> : <TimerIcon size={12} weight="bold" />
                   }
+                  sx={labeledBtnSx}
                 >
-                  <span>
-                    <Button
-                      size="small"
-                      variant={autoRefreshEnabled ? 'contained' : 'outlined'}
-                      color="primary"
-                      aria-label={autoRefreshEnabled ? 'Auto · ON' : 'Auto'}
-                      disabled={anyBusy}
-                      onClick={() => {
-                        void handleToggleAuto();
-                      }}
-                      sx={btnSx}
-                    >
-                      {autoBusy ? (
-                        <CircularProgress size={12} color="inherit" />
-                      ) : (
-                        <TimerIcon size={14} weight="bold" />
-                      )}
-                    </Button>
-                  </span>
-                </Tooltip>
-                <Tooltip
-                  title={
-                    premiumOn
-                      ? premiumUntil
-                        ? `Premium aktiv deri më ${new Date(premiumUntil).toLocaleDateString('sq-AL')}`
-                        : 'Premium aktiv'
-                      : 'Bëje Premium me vendin nga paketa (Grow/Elite · 30 ditë)'
+                  Auto
+                </Button>
+              </span>
+            </Tooltip>
+            <Tooltip
+              title={
+                premiumOn
+                  ? premiumUntil
+                    ? `Premium aktiv deri më ${new Date(premiumUntil).toLocaleDateString('sq-AL')}`
+                    : 'Premium aktiv'
+                  : 'Bëje Premium me vendin nga paketa (Grow/Elite · 30 ditë)'
+              }
+            >
+              <span>
+                <Button
+                  size="small"
+                  variant={premiumOn ? 'contained' : 'outlined'}
+                  color="warning"
+                  aria-label="Premium"
+                  disabled={anyBusy || premiumOn}
+                  onClick={() => {
+                    void handleApplyPremium();
+                  }}
+                  startIcon={
+                    premiumBusy ? (
+                      <CircularProgress size={11} color="inherit" />
+                    ) : (
+                      <SparkleIcon size={12} weight="bold" />
+                    )
                   }
+                  sx={labeledBtnSx}
                 >
-                  <span>
-                    <Button
-                      size="small"
-                      variant={premiumOn ? 'contained' : 'outlined'}
-                      color="warning"
-                      aria-label={premiumOn ? 'Premium · ON' : 'Premium'}
-                      disabled={anyBusy || premiumOn}
-                      onClick={() => {
-                        void handleApplyPremium();
-                      }}
-                      sx={btnSx}
-                    >
-                      {premiumBusy ? (
-                        <CircularProgress size={12} color="inherit" />
-                      ) : (
-                        <SparkleIcon size={14} weight="bold" />
-                      )}
-                    </Button>
-                  </span>
-                </Tooltip>
-              </>
-            ) : null}
+                  Premium
+                </Button>
+              </span>
+            </Tooltip>
           </Stack>
         ) : (
           <Box />

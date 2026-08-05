@@ -92,8 +92,14 @@ function BusinessVenueCardBody({
             url: listingBusinessPublicHref(listing),
           }}
           bottomOverlay={
-            listing.reservationsEnabled ? (
-              <BusinessPromoBanner servicesHighlight={listing.servicesHighlight} variant="card" overlay />
+            listing.announcementTitle?.trim() ? (
+              <BusinessPromoBanner
+                title={listing.announcementTitle}
+                subtitle={listing.announcementSubtitle}
+                bannerUrl={listing.announcementBannerUrl}
+                variant="card"
+                overlay
+              />
             ) : undefined
           }
         />

@@ -40,7 +40,10 @@ import { SpecRow, type Spec } from './spec-row';
 
 const JobListingCountdown = dynamic(
   () => import('./job-listing-countdown').then((m) => m.JobListingCountdown),
-  { ssr: false, loading: () => <JobListingCountdownPlaceholder /> },
+  {
+    ssr: false,
+    loading: () => <JobListingCountdownPlaceholder variant="overlay" />,
+  },
 );
 
 function workLocationIcon(value: string) {
@@ -126,6 +129,11 @@ export function JobCard({
           saveCount: listing.saveCount,
           url: listingJobPublicHref(listing),
         }}
+        bottomOverlay={
+          <Box sx={{ display: 'flex', justifyContent: 'flex-start', p: 1 }}>
+            <JobListingCountdown expiresAt={expiresAt} variant="overlay" />
+          </Box>
+        }
       />
       <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
         <Typography
@@ -173,17 +181,31 @@ export function JobCard({
 
         <SpecRow specs={specs} />
 
-        {listing.cityName ? (
-          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
-            <MapPinIcon size={14} weight="regular" />
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-              {listing.cityName}
-            </Typography>
-          </Stack>
-        ) : null}
-        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-          <JobListingCountdown expiresAt={expiresAt} />
-          <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{ alignItems: 'center', justifyContent: 'space-between', minHeight: 18 }}
+        >
+          {listing.cityName ? (
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
+              <MapPinIcon size={14} weight="regular" />
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                  fontWeight: 500,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {listing.cityName}
+              </Typography>
+            </Stack>
+          ) : (
+            <Box />
+          )}
+          <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}>
             <EyeIcon size={14} weight="regular" />
             <Typography variant="caption" color="text.disabled">
               {new Intl.NumberFormat('en-GB').format(viewCount)}

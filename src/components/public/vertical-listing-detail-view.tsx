@@ -61,6 +61,7 @@ import { RealEstateListingExpandableText } from '@/components/public/real-estate
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
 import { StickyListingContact } from '@/components/public/sticky-listing-contact';
 import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
+import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 import { CarCard } from '@/components/public/listing-cards/car-card';
 import {
   findOptionLabel,
@@ -72,7 +73,8 @@ import { JobListingCountdown } from '@/components/public/listing-cards/job-listi
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
-import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
+import { type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
+import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { metricKindToConversationKind } from '@/lib/conversations-client';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
@@ -84,6 +86,20 @@ type SummarySpec = {
   label: string;
   value: string;
 };
+
+function interestCategoryFromListing(listing: AnyPublicListingDetail): string | null {
+  const raw =
+    'propertyCategory' in listing
+      ? listing.propertyCategory
+      : 'industry' in listing
+        ? listing.industry
+        : 'make' in listing
+          ? listing.make
+          : 'category' in listing
+            ? listing.category
+            : null;
+  return typeof raw === 'string' && raw.trim() ? raw : null;
+}
 
 function conditionIcon(condition: string | null | undefined): SpecIcon {
   if (condition === 'i-ri' || condition === 'si-i-ri') return SparkleIcon;
@@ -195,7 +211,7 @@ function ListingContactAside(props: {
               variant="contained"
               disableElevation
               size="large"
-              sx={{ flex: 1, borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.2 }}
+              sx={{ flex: 1, ...productButtonSx, py: 1.2 }}
             >
               Kontakto shitësin
             </Button>
@@ -211,7 +227,7 @@ function ListingContactAside(props: {
                   px: 1.85,
                   minWidth: 'auto',
                   flexShrink: 0,
-                  borderRadius: 2,
+                  ...productButtonSx,
                   ...whatsappOutlinedButtonSx,
                 }}
                 aria-label="WhatsApp"
@@ -221,7 +237,7 @@ function ListingContactAside(props: {
             ) : null}
           </Stack>
         ) : (
-          <Button variant="contained" disabled fullWidth sx={{ borderRadius: 2 }}>
+          <Button variant="contained" disabled fullWidth sx={productButtonSx}>
             Nr. kontakti i padisponueshëm
           </Button>
         )}
@@ -231,7 +247,7 @@ function ListingContactAside(props: {
           variant="outlined"
           fullWidth
           size="large"
-          sx={{ borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.2 }}
+          sx={{ ...productButtonSx, py: 1.2 }}
         />
       </Stack>
     </Stack>
@@ -252,6 +268,7 @@ export function VerticalListingDetailView(props: {
   const onEditInfo = ownerEdit?.onEditInfo;
   const onEditPrice = ownerEdit?.onEditPrice ?? onEditInfo;
   const onEditSpecs = ownerEdit?.onEditSpecs ?? onEditInfo;
+  const canInline = Boolean(ownerEdit?.onStartInlineEdit);
 
   const displayPhone =
     listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
@@ -276,7 +293,14 @@ export function VerticalListingDetailView(props: {
 
   return (
     <>
-      {ownerPreview ? null : <ListingMetricsTracker listingKind={metricKind} listingId={listing.id} />}
+      {ownerPreview ? null : (
+        <ListingMetricsTracker
+          listingKind={metricKind}
+          listingId={listing.id}
+          city={'cityName' in listing ? listing.cityName : null}
+          category={interestCategoryFromListing(listing)}
+        />
+      )}
       <Box component="article" sx={{ bgcolor: 'background.default', pb: ownerPreview ? 3 : { xs: 14, md: 6 } }}>
         <Container maxWidth={false} sx={{ px: { xs: 0, md: 3 }, bgcolor: 'background.default' }}>
           <Box
@@ -351,7 +375,13 @@ export function VerticalListingDetailView(props: {
         <Container maxWidth="lg" sx={{ pt: { xs: 2.5, sm: 3 }, pb: 2 }}>
           <Stack spacing={{ xs: 3, md: 3 }} sx={{ width: '100%' }}>
             <Stack spacing={1.25}>
-              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+              <OwnerEditableSpot
+                field="title"
+                ownerEdit={ownerEdit}
+                label="Ndrysho titullin"
+                legacyOnClick={onEditInfo}
+                align="flex-start"
+              >
                 <Typography
                   variant="h3"
                   component="h1"
@@ -365,23 +395,27 @@ export function VerticalListingDetailView(props: {
                 >
                   {listingTitle(listing)}
                 </Typography>
-                {onEditInfo ? (
-                  <OwnerEditPencil label="Ndrysho titullin" onClick={onEditInfo} />
-                ) : null}
-              </Stack>
+              </OwnerEditableSpot>
 
               <Box sx={{ display: ownerPreview ? 'block' : { xs: 'block', md: 'none' } }}>
-                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                <OwnerEditableSpot
+                  field="price"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho çmimin"
+                  legacyOnClick={onEditPrice}
+                >
                   {primaryPriceRow(listing)}
-                  {onEditPrice ? (
-                    <OwnerEditPencil label="Ndrysho çmimin" onClick={onEditPrice} />
-                  ) : null}
-                </Stack>
+                </OwnerEditableSpot>
               </Box>
 
               <Stack direction="row" sx={{ flexWrap: 'wrap', gap: { xs: 1.25, sm: 2 }, color: 'text.secondary', alignItems: 'center' }}>
-                {onEditInfo ? (
-                  <Stack direction="row" spacing={0.65} sx={{ alignItems: 'center', maxWidth: '100%' }}>
+                {canInline || onEditInfo ? (
+                  <OwnerEditableSpot
+                    field="location"
+                    ownerEdit={ownerEdit}
+                    label="Ndrysho lokacionin"
+                    legacyOnClick={onEditInfo}
+                  >
                     <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
                       <MapPinIcon size={17} weight="regular" color="currentColor" />
                     </Box>
@@ -390,8 +424,7 @@ export function VerticalListingDetailView(props: {
                         ? listing.cityName
                         : 'Shtoni lokacionin'}
                     </Typography>
-                    <OwnerEditPencil label="Ndrysho lokacionin" onClick={onEditInfo} />
-                  </Stack>
+                  </OwnerEditableSpot>
                 ) : (
                   subtitleLine(listing)
                 )}
@@ -410,7 +443,12 @@ export function VerticalListingDetailView(props: {
             </Stack>
 
             <Stack spacing={1.5} component="section" aria-labelledby="vertical-summary-heading">
-              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+              <OwnerEditableSpot
+                field="specs"
+                ownerEdit={ownerEdit}
+                label="Ndrysho specifikimet"
+                legacyOnClick={onEditSpecs}
+              >
                 <Typography
                   id="vertical-summary-heading"
                   variant="overline"
@@ -419,16 +457,12 @@ export function VerticalListingDetailView(props: {
                 >
                   Përmbledhje
                 </Typography>
-                {onEditSpecs ? (
-                  <OwnerEditPencil label="Ndrysho specifikimet" onClick={onEditSpecs} />
-                ) : null}
-              </Stack>
+              </OwnerEditableSpot>
+              {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : (
               <Box
                 sx={{
+                  ...productPanelSx,
                   borderRadius: 2.5,
-                  bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.9)',
-                  border: '1px solid',
-                  borderColor: 'rgba(var(--mui-palette-dividerChannel) / 0.7)',
                   px: { xs: 0.5, sm: 0.75 },
                   py: { xs: 1.5, sm: 1.75 },
                 }}
@@ -462,22 +496,25 @@ export function VerticalListingDetailView(props: {
                   ))}
                 </Stack>
               </Box>
+              )}
             </Stack>
 
             {extrasBlock(listing)}
 
             <Stack spacing={1.5}>
-              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+              <OwnerEditableSpot
+                field="description"
+                ownerEdit={ownerEdit}
+                label="Ndrysho përshkrimin"
+                legacyOnClick={onEditSpecs}
+              >
                 <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800, letterSpacing: '0.1em' }}>
                   Përshkrimi
                 </Typography>
-                {onEditSpecs ? (
-                  <OwnerEditPencil label="Ndrysho përshkrimin" onClick={onEditSpecs} />
-                ) : null}
-              </Stack>
-              {listing.description ? (
+              </OwnerEditableSpot>
+              {ownerEdit?.editingField === 'description' && ownerEdit.inlineEditors?.description ? null : listing.description ? (
                 <RealEstateListingExpandableText text={listing.description} />
-              ) : onEditSpecs ? (
+              ) : canInline || onEditSpecs ? (
                 <Typography sx={{ color: 'text.secondary' }}>Shtoni përshkrimin</Typography>
               ) : null}
             </Stack>
@@ -487,7 +524,7 @@ export function VerticalListingDetailView(props: {
                 <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800, letterSpacing: '0.1em' }}>
                   Vendndodhja
                 </Typography>
-                <LocationMapEmbed query={mapQuery} linkLabel="Shiko zonën në hartë" />
+                <LocationMapEmbed query={mapQuery} />
               </Stack>
             ) : null}
 

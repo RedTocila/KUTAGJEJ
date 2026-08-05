@@ -8,7 +8,9 @@ import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { BusinessListingDetailView } from '@/components/public/business-listing-detail-view';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
 import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
+import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
 import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dialog';
+import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
 import {
   BUSINESS_CATEGORY_OPTIONS,
   BUSINESS_DAY_LABELS,
@@ -29,6 +31,32 @@ import { paths } from '@/paths';
 
 const MAX_IMAGES = 8;
 
+type Snapshot = {
+  title: string;
+  description: string;
+  category: string;
+  cityId: string | null;
+  cityName: string | null;
+  contactPhone: string | null;
+  servicesHighlight: string | null;
+  reservationsEnabled: boolean;
+  reservationUrl: string | null;
+};
+
+function snapFrom(d: BusinessMineListing): Snapshot {
+  return {
+    title: d.title,
+    description: d.description,
+    category: d.category,
+    cityId: d.cityId ?? null,
+    cityName: d.cityName ?? null,
+    contactPhone: d.contactPhone ?? null,
+    servicesHighlight: d.servicesHighlight ?? null,
+    reservationsEnabled: d.reservationsEnabled,
+    reservationUrl: d.reservationUrl ?? null,
+  };
+}
+
 export function BusinessOwnerEdit({
   initial,
   backHref = paths.user.myRealEstateListings,
@@ -42,20 +70,11 @@ export function BusinessOwnerEdit({
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
-  const [dialog, setDialog] = React.useState<'photos' | 'info' | 'hours' | null>(null);
-
+  const [dialog, setDialog] = React.useState<'photos' | 'hours' | null>(null);
   const [existingUrls, setExistingUrls] = React.useState(initial.imageUrls ?? []);
   const [newFiles, setNewFiles] = React.useState<File[]>([]);
-  const [info, setInfo] = React.useState({
-    title: initial.title,
-    description: initial.description,
-    category: initial.category,
-    cityId: initial.cityId ?? '',
-    contactPhone: initial.contactPhone ?? '',
-    servicesHighlight: initial.servicesHighlight ?? '',
-    reservationsEnabled: initial.reservationsEnabled,
-    reservationUrl: initial.reservationUrl ?? '',
-  });
+  const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
+  const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
   const [weeklyHours, setWeeklyHours] = React.useState<WeeklyHourRow[]>(
     initial.weeklyHours?.length ? initial.weeklyHours : defaultWeeklyHours(),
   );
@@ -69,24 +88,28 @@ export function BusinessOwnerEdit({
   const dirty = JSON.stringify(draft) !== baseline || newFiles.length > 0;
   const preview = React.useMemo(() => businessMineToPublic(draft), [draft]);
 
+  const startInline = (field: OwnerInlineField) => {
+    setSnapshot(snapFrom(draft));
+    setEditingField(field);
+  };
+
+  const cancelInline = () => {
+    if (snapshot) {
+      setDraft((d) => ({ ...d, ...snapshot }));
+    }
+    setSnapshot(null);
+    setEditingField(null);
+  };
+
+  const doneInline = () => {
+    setSnapshot(null);
+    setEditingField(null);
+  };
+
   const openPhotos = () => {
     setExistingUrls(draft.imageUrls ?? []);
     setNewFiles([]);
     setDialog('photos');
-  };
-
-  const openInfo = () => {
-    setInfo({
-      title: draft.title,
-      description: draft.description,
-      category: draft.category,
-      cityId: draft.cityId ?? '',
-      contactPhone: draft.contactPhone ?? '',
-      servicesHighlight: draft.servicesHighlight ?? '',
-      reservationsEnabled: draft.reservationsEnabled,
-      reservationUrl: draft.reservationUrl ?? '',
-    });
-    setDialog('info');
   };
 
   const openHours = () => {
@@ -110,11 +133,15 @@ export function BusinessOwnerEdit({
         uploaded = up.urls;
       }
       const imageUrls = [...existingUrls, ...uploaded].slice(0, MAX_IMAGES);
+      if (!draft.cityId) {
+        setError('Zgjidhni qytetin.');
+        return;
+      }
       const payload = {
         title: draft.title.trim(),
         description: draft.description.trim(),
         category: draft.category,
-        cityId: draft.cityId || info.cityId,
+        cityId: draft.cityId,
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
         weeklyHours: draft.weeklyHours?.length ? draft.weeklyHours : weeklyHours,
@@ -138,10 +165,105 @@ export function BusinessOwnerEdit({
       setBaseline(JSON.stringify(next));
       setExistingUrls(imageUrls);
       setNewFiles([]);
+      setEditingField(null);
       setSuccess('Biznesi u përditësua.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const fieldSx = {
+    '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'rgba(255,255,255,0.03)' },
+  } as const;
+
+  const inlineEditors: Partial<Record<OwnerInlineField, React.ReactNode>> = {
+    title: (
+      <Stack spacing={1} sx={{ width: '100%', maxWidth: 560 }}>
+        <TextField
+          label="Emri"
+          value={draft.title}
+          onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+          fullWidth
+          autoFocus
+          sx={fieldSx}
+        />
+        <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
+      </Stack>
+    ),
+    category: (
+      <Stack spacing={1.25} sx={{ width: '100%', maxWidth: 480 }}>
+        <SearchableSelect
+          label="Kategoria"
+          value={draft.category}
+          onChange={(v) => setDraft((d) => ({ ...d, category: v }))}
+          options={BUSINESS_CATEGORY_OPTIONS}
+          emptyLabel="Zgjidhni…"
+          required
+        />
+        <TextField
+          label="Çfarë ofroni"
+          value={draft.servicesHighlight ?? ''}
+          onChange={(e) => setDraft((d) => ({ ...d, servicesHighlight: e.target.value || null }))}
+          fullWidth
+          sx={fieldSx}
+        />
+        <TextField
+          label="Telefoni"
+          value={draft.contactPhone ?? ''}
+          onChange={(e) => setDraft((d) => ({ ...d, contactPhone: e.target.value || null }))}
+          fullWidth
+          sx={fieldSx}
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={draft.reservationsEnabled}
+              onChange={(e) => setDraft((d) => ({ ...d, reservationsEnabled: e.target.checked }))}
+            />
+          }
+          label="Aktivizo rezervimet"
+        />
+        <TextField
+          label="URL rezervimi (opsionale)"
+          value={draft.reservationUrl ?? ''}
+          onChange={(e) => setDraft((d) => ({ ...d, reservationUrl: e.target.value || null }))}
+          fullWidth
+          sx={fieldSx}
+        />
+        <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
+      </Stack>
+    ),
+    location: (
+      <Stack spacing={1} sx={{ width: '100%', maxWidth: 360 }}>
+        <SearchableSelect
+          label="Qyteti"
+          value={draft.cityId ?? ''}
+          onChange={(v) => {
+            const cityName = cities.find((c) => c.id === v)?.name ?? null;
+            setDraft((d) => ({ ...d, cityId: v || null, cityName }));
+          }}
+          options={cities.map((c) => ({ value: c.id, label: c.name }))}
+          emptyLabel="Zgjidhni…"
+          required
+        />
+        <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
+      </Stack>
+    ),
+    description: (
+      <Stack spacing={1} sx={{ width: '100%' }}>
+        <TextField
+          label="Përshkrimi"
+          value={draft.description}
+          onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+          fullWidth
+          multiline
+          minRows={4}
+          autoFocus
+          sx={fieldSx}
+        />
+        <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
+      </Stack>
+    ),
   };
 
   return (
@@ -179,9 +301,11 @@ export function BusinessOwnerEdit({
         ownerPreview
         ownerEdit={{
           onEditPhotos: openPhotos,
-          onEditInfo: openInfo,
           onEditHours: openHours,
           onEditMenu: () => hardNavigate(`${paths.user.businessMenu}?id=${encodeURIComponent(draft.id)}`),
+          editingField,
+          onStartInlineEdit: startInline,
+          inlineEditors,
         }}
       />
 
@@ -205,83 +329,6 @@ export function BusinessOwnerEdit({
           onExistingUrlsChange={setExistingUrls}
           max={MAX_IMAGES}
           label="Foto"
-        />
-      </OwnerEditSectionDialog>
-
-      <OwnerEditSectionDialog
-        open={dialog === 'info'}
-        title="Të dhënat e biznesit"
-        onClose={() => setDialog(null)}
-        onApply={() => {
-          const cityName = cities.find((c) => c.id === info.cityId)?.name ?? draft.cityName;
-          setDraft((d) => ({
-            ...d,
-            title: info.title.trim(),
-            description: info.description.trim(),
-            category: info.category,
-            cityId: info.cityId || null,
-            cityName,
-            contactPhone: info.contactPhone.trim() || null,
-            servicesHighlight: info.servicesHighlight.trim() || null,
-            reservationsEnabled: info.reservationsEnabled,
-            reservationUrl: info.reservationUrl.trim() || null,
-          }));
-          setDialog(null);
-        }}
-      >
-        <TextField label="Emri" value={info.title} onChange={(e) => setInfo({ ...info, title: e.target.value })} fullWidth required />
-        <SearchableSelect
-          label="Kategoria"
-          value={info.category}
-          onChange={(v) => setInfo({ ...info, category: v })}
-          options={BUSINESS_CATEGORY_OPTIONS}
-          emptyLabel="Zgjidhni…"
-          required
-        />
-        <SearchableSelect
-          label="Qyteti"
-          value={info.cityId}
-          onChange={(v) => setInfo({ ...info, cityId: v })}
-          options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni…"
-          required
-        />
-        <TextField
-          label="Përshkrimi"
-          value={info.description}
-          onChange={(e) => setInfo({ ...info, description: e.target.value })}
-          fullWidth
-          multiline
-          minRows={3}
-          required
-        />
-        <TextField
-          label="Çfarë ofroni"
-          value={info.servicesHighlight}
-          onChange={(e) => setInfo({ ...info, servicesHighlight: e.target.value })}
-          fullWidth
-        />
-        <TextField
-          label="Telefoni"
-          value={info.contactPhone}
-          onChange={(e) => setInfo({ ...info, contactPhone: e.target.value })}
-          fullWidth
-          required
-        />
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={info.reservationsEnabled}
-              onChange={(e) => setInfo({ ...info, reservationsEnabled: e.target.checked })}
-            />
-          }
-          label="Aktivizo rezervimet"
-        />
-        <TextField
-          label="URL rezervimi (opsionale)"
-          value={info.reservationUrl}
-          onChange={(e) => setInfo({ ...info, reservationUrl: e.target.value })}
-          fullWidth
         />
       </OwnerEditSectionDialog>
 

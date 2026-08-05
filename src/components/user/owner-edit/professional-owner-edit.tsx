@@ -8,11 +8,11 @@ import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { ProfessionalListingDetailView } from '@/components/public/professional-listing-detail-view';
-import {
-  ListingOwnerEditShell,
-} from '@/components/user/listing-owner-edit-shell';
+import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
 import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
+import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
 import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dialog';
+import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
 import {
   updateProfessionalListing,
   type ProfessionalMineListing,
@@ -32,6 +32,34 @@ function newId(): string {
 }
 
 type PortfolioDraft = ProfessionalPortfolioItem & { imageFile: File | null };
+
+type Snapshot = {
+  title: string;
+  description: string;
+  category: string;
+  cityId: string | null;
+  cityName: string | null;
+  contactPhone: string | null;
+  servicesHighlight: string | null;
+  responseTimeHours: number | null;
+  price: number | null;
+  currency: 'EUR' | 'LEK' | null;
+};
+
+function snapFrom(d: ProfessionalMineListing): Snapshot {
+  return {
+    title: d.title,
+    description: d.description,
+    category: d.category,
+    cityId: d.cityId ?? null,
+    cityName: d.cityName ?? null,
+    contactPhone: d.contactPhone ?? null,
+    servicesHighlight: d.servicesHighlight ?? null,
+    responseTimeHours: d.responseTimeHours ?? null,
+    price: d.price ?? null,
+    currency: d.currency === 'EUR' || d.currency === 'LEK' ? d.currency : null,
+  };
+}
 
 async function resolveUrl(existing: string | null, file: File | null): Promise<{ url: string | null; error?: string }> {
   if (file) {
@@ -55,7 +83,9 @@ export function ProfessionalOwnerEdit({
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
-  const [dialog, setDialog] = React.useState<'photos' | 'info' | 'portfolio' | null>(null);
+  const [dialog, setDialog] = React.useState<'photos' | 'portfolio' | null>(null);
+  const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
+  const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
 
   const [coverFile, setCoverFile] = React.useState<File[]>([]);
   const [avatarFile, setAvatarFile] = React.useState<File[]>([]);
@@ -65,28 +95,37 @@ export function ProfessionalOwnerEdit({
     (initial.portfolioItems ?? []).map((p) => ({ ...p, imageFile: null })),
   );
 
-  const [info, setInfo] = React.useState({
-    title: initial.title,
-    description: initial.description,
-    category: initial.category,
-    cityId: initial.cityId ?? '',
-    contactPhone: initial.contactPhone ?? '',
-    servicesHighlight: initial.servicesHighlight ?? '',
-    responseTimeHours: initial.responseTimeHours != null ? String(initial.responseTimeHours) : '2',
-    price: initial.price != null ? String(initial.price) : '',
-    currency: (initial.currency === 'EUR' || initial.currency === 'LEK' ? initial.currency : '') as '' | 'EUR' | 'LEK',
-  });
-
   React.useEffect(() => {
     void listRealEstateLocationsPublic().then((res) => {
       if (res.cities) setCities(res.cities);
     });
   }, []);
 
-  const dirty = JSON.stringify(draft) !== baseline || coverFile.length > 0 || avatarFile.length > 0
-    || portfolio.some((p) => p.imageFile);
+  const dirty =
+    JSON.stringify(draft) !== baseline ||
+    coverFile.length > 0 ||
+    avatarFile.length > 0 ||
+    portfolio.some((p) => p.imageFile);
 
   const previewListing = React.useMemo(() => professionalMineToPublic(draft), [draft]);
+
+  const startInline = (field: OwnerInlineField) => {
+    setSnapshot(snapFrom(draft));
+    setEditingField(field);
+  };
+
+  const cancelInline = () => {
+    if (snapshot) {
+      setDraft((d) => ({ ...d, ...snapshot }));
+    }
+    setSnapshot(null);
+    setEditingField(null);
+  };
+
+  const doneInline = () => {
+    setSnapshot(null);
+    setEditingField(null);
+  };
 
   const applyPhotos = () => {
     const nextCover = coverFile[0] ? URL.createObjectURL(coverFile[0]) : coverUrl;
@@ -94,25 +133,6 @@ export function ProfessionalOwnerEdit({
     setDraft((d) => ({
       ...d,
       imageUrls: [nextCover, nextAvatar].filter(Boolean),
-    }));
-    setDialog(null);
-  };
-
-  const applyInfo = () => {
-    const cityName = cities.find((c) => c.id === info.cityId)?.name ?? draft.cityName;
-    const hours = Number.parseInt(info.responseTimeHours, 10);
-    setDraft((d) => ({
-      ...d,
-      title: info.title.trim(),
-      description: info.description.trim(),
-      category: info.category,
-      cityId: info.cityId || null,
-      cityName,
-      contactPhone: info.contactPhone.trim() || null,
-      servicesHighlight: info.servicesHighlight.trim() || null,
-      responseTimeHours: Number.isInteger(hours) && hours >= 1 ? hours : null,
-      price: info.price.trim() ? Number(info.price) : null,
-      currency: info.price.trim() && info.currency ? info.currency : null,
     }));
     setDialog(null);
   };
@@ -169,16 +189,20 @@ export function ProfessionalOwnerEdit({
         });
       }
 
+      if (!draft.cityId) {
+        setError('Zgjidhni qytetin.');
+        return;
+      }
+
       const imageUrls = [cover.url, avatar.url].filter((u): u is string => Boolean(u));
-      const hours = Number.parseInt(info.responseTimeHours, 10);
       const payload = {
         title: draft.title.trim(),
         description: draft.description.trim(),
         category: draft.category,
-        cityId: draft.cityId || info.cityId,
+        cityId: draft.cityId,
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
-        responseTimeHours: draft.responseTimeHours ?? (Number.isInteger(hours) ? hours : null),
+        responseTimeHours: draft.responseTimeHours,
         portfolioItems,
         price: draft.price,
         currency:
@@ -206,10 +230,137 @@ export function ProfessionalOwnerEdit({
       setCoverFile([]);
       setAvatarFile([]);
       setPortfolio(portfolioItems.map((p) => ({ ...p, imageFile: null })));
+      setEditingField(null);
       setSuccess('Profili u përditësua.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const fieldSx = {
+    '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'rgba(255,255,255,0.03)' },
+  } as const;
+
+  const inlineEditors: Partial<Record<OwnerInlineField, React.ReactNode>> = {
+    title: (
+      <Stack spacing={1} sx={{ width: '100%', maxWidth: 560 }}>
+        <TextField
+          label="Titulli"
+          value={draft.title}
+          onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+          fullWidth
+          autoFocus
+          sx={fieldSx}
+        />
+        <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
+      </Stack>
+    ),
+    category: (
+      <Stack spacing={1.25} sx={{ width: '100%', maxWidth: 480 }}>
+        <SearchableSelect
+          label="Kategoria"
+          value={draft.category}
+          onChange={(v) => setDraft((d) => ({ ...d, category: v }))}
+          options={PROFESSIONAL_CATEGORY_OPTIONS}
+          emptyLabel="Zgjidhni…"
+          required
+        />
+        <TextField
+          label="Telefoni"
+          value={draft.contactPhone ?? ''}
+          onChange={(e) => setDraft((d) => ({ ...d, contactPhone: e.target.value || null }))}
+          fullWidth
+          sx={fieldSx}
+        />
+        <TextField
+          label="Koha e përgjigjes (orë)"
+          type="number"
+          value={draft.responseTimeHours != null ? String(draft.responseTimeHours) : ''}
+          onChange={(e) => {
+            const hours = Number.parseInt(e.target.value, 10);
+            setDraft((d) => ({
+              ...d,
+              responseTimeHours: Number.isInteger(hours) && hours >= 1 ? hours : null,
+            }));
+          }}
+          fullWidth
+          sx={fieldSx}
+        />
+        <Stack direction="row" spacing={1.25}>
+          <TextField
+            label="Çmimi nga"
+            value={draft.price != null ? String(draft.price) : ''}
+            onChange={(e) => {
+              const raw = e.target.value.trim();
+              setDraft((d) => ({
+                ...d,
+                price: raw ? Number(raw) : null,
+                currency: raw ? d.currency || 'EUR' : null,
+              }));
+            }}
+            fullWidth
+            sx={fieldSx}
+          />
+          <SearchableSelect
+            label="Monedha"
+            value={draft.currency === 'EUR' || draft.currency === 'LEK' ? draft.currency : ''}
+            onChange={(v) =>
+              setDraft((d) => ({ ...d, currency: v === 'EUR' || v === 'LEK' ? v : null }))
+            }
+            options={CURRENCY_OPTIONS}
+            emptyLabel="—"
+            sx={{ minWidth: 120 }}
+          />
+        </Stack>
+        <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
+      </Stack>
+    ),
+    services: (
+      <Stack spacing={1} sx={{ width: '100%', maxWidth: 480 }}>
+        <TextField
+          label="Shërbimet"
+          value={draft.servicesHighlight ?? ''}
+          onChange={(e) => setDraft((d) => ({ ...d, servicesHighlight: e.target.value || null }))}
+          fullWidth
+          autoFocus
+          multiline
+          minRows={2}
+          sx={fieldSx}
+        />
+        <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
+      </Stack>
+    ),
+    location: (
+      <Stack spacing={1} sx={{ width: '100%', maxWidth: 360 }}>
+        <SearchableSelect
+          label="Qyteti"
+          value={draft.cityId ?? ''}
+          onChange={(v) => {
+            const cityName = cities.find((c) => c.id === v)?.name ?? null;
+            setDraft((d) => ({ ...d, cityId: v || null, cityName }));
+          }}
+          options={cities.map((c) => ({ value: c.id, label: c.name }))}
+          emptyLabel="Zgjidhni…"
+          required
+        />
+        <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
+      </Stack>
+    ),
+    description: (
+      <Stack spacing={1} sx={{ width: '100%' }}>
+        <TextField
+          label="Përshkrimi"
+          value={draft.description}
+          onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+          fullWidth
+          multiline
+          minRows={4}
+          autoFocus
+          sx={fieldSx}
+        />
+        <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
+      </Stack>
+    ),
   };
 
   return (
@@ -258,24 +409,13 @@ export function ProfessionalOwnerEdit({
             setAvatarFile([]);
             setDialog('photos');
           },
-          onEditInfo: () => {
-            setInfo({
-              title: draft.title,
-              description: draft.description,
-              category: draft.category,
-              cityId: draft.cityId ?? '',
-              contactPhone: draft.contactPhone ?? '',
-              servicesHighlight: draft.servicesHighlight ?? '',
-              responseTimeHours: draft.responseTimeHours != null ? String(draft.responseTimeHours) : '2',
-              price: draft.price != null ? String(draft.price) : '',
-              currency: draft.currency === 'EUR' || draft.currency === 'LEK' ? draft.currency : '',
-            });
-            setDialog('info');
-          },
           onEditPortfolio: () => {
             setPortfolio((draft.portfolioItems ?? []).map((p) => ({ ...p, imageFile: null })));
             setDialog('portfolio');
           },
+          editingField,
+          onStartInlineEdit: startInline,
+          inlineEditors,
         }}
       />
 
@@ -307,76 +447,6 @@ export function ProfessionalOwnerEdit({
           max={1}
           label="Foto profili (rrethi)"
         />
-      </OwnerEditSectionDialog>
-
-      <OwnerEditSectionDialog
-        open={dialog === 'info'}
-        title="Të dhënat e profilit"
-        onClose={() => setDialog(null)}
-        onApply={applyInfo}
-      >
-        <TextField label="Titulli" value={info.title} onChange={(e) => setInfo({ ...info, title: e.target.value })} fullWidth required />
-        <SearchableSelect
-          label="Kategoria"
-          value={info.category}
-          onChange={(v) => setInfo({ ...info, category: v })}
-          options={PROFESSIONAL_CATEGORY_OPTIONS}
-          emptyLabel="Zgjidhni…"
-          required
-        />
-        <SearchableSelect
-          label="Qyteti"
-          value={info.cityId}
-          onChange={(v) => setInfo({ ...info, cityId: v })}
-          options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni…"
-          required
-        />
-        <TextField
-          label="Përshkrimi"
-          value={info.description}
-          onChange={(e) => setInfo({ ...info, description: e.target.value })}
-          fullWidth
-          multiline
-          minRows={3}
-          required
-        />
-        <TextField
-          label="Shërbimet"
-          value={info.servicesHighlight}
-          onChange={(e) => setInfo({ ...info, servicesHighlight: e.target.value })}
-          fullWidth
-        />
-        <TextField
-          label="Telefoni"
-          value={info.contactPhone}
-          onChange={(e) => setInfo({ ...info, contactPhone: e.target.value })}
-          fullWidth
-          required
-        />
-        <TextField
-          label="Koha e përgjigjes (orë)"
-          type="number"
-          value={info.responseTimeHours}
-          onChange={(e) => setInfo({ ...info, responseTimeHours: e.target.value })}
-          fullWidth
-        />
-        <Stack direction="row" spacing={1.5}>
-          <TextField
-            label="Çmimi nga"
-            value={info.price}
-            onChange={(e) => setInfo({ ...info, price: e.target.value })}
-            fullWidth
-          />
-          <SearchableSelect
-            label="Monedha"
-            value={info.currency}
-            onChange={(v) => setInfo({ ...info, currency: v as '' | 'EUR' | 'LEK' })}
-            options={CURRENCY_OPTIONS}
-            emptyLabel="—"
-            sx={{ minWidth: 120 }}
-          />
-        </Stack>
       </OwnerEditSectionDialog>
 
       <OwnerEditSectionDialog

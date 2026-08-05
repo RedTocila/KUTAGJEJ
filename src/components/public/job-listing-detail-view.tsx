@@ -47,6 +47,7 @@ import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-la
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
+import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import type { ListingSharePayload } from '@/lib/listing-share';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
@@ -122,6 +123,8 @@ export function JobListingDetailView({
 }) {
   const onEditInfo = ownerEdit?.onEditInfo;
   const onEditPrice = ownerEdit?.onEditPrice ?? onEditInfo;
+  const onEditSpecs = ownerEdit?.onEditSpecs ?? onEditInfo;
+  const canInline = Boolean(ownerEdit?.onStartInlineEdit);
   const { saved, saveCount, toggleSave } = useListingBookmark('job', listing.id, {
     saved: listing.saved,
     saveCount: listing.saveCount,
@@ -179,7 +182,14 @@ export function JobListingDetailView({
 
   return (
     <>
-      {ownerPreview ? null : <ListingMetricsTracker listingKind="job" listingId={listing.id} />}
+      {ownerPreview ? null : (
+        <ListingMetricsTracker
+          listingKind="job"
+          listingId={listing.id}
+          city={listing.cityName}
+          category={listing.industry}
+        />
+      )}
       <JobListingDetailDesktop
         listing={listing}
         similar={ownerPreview ? [] : similar}
@@ -280,7 +290,7 @@ export function JobListingDetailView({
                         px: 1.15,
                         py: 0.55,
                         borderRadius: 999,
-                        bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.78)',
+                        bgcolor: 'background.paper',
                         border: '1px solid',
                         borderColor: 'divider',
                         backdropFilter: 'blur(10px)',
@@ -326,7 +336,13 @@ export function JobListingDetailView({
                 </Box>
               </Stack>
 
-              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+              <OwnerEditableSpot
+                field="title"
+                ownerEdit={ownerEdit}
+                label="Ndrysho titullin"
+                legacyOnClick={onEditInfo}
+                align="flex-start"
+              >
                 <Typography
                   component="h1"
                   sx={{
@@ -338,51 +354,52 @@ export function JobListingDetailView({
                 >
                   {listing.title}
                 </Typography>
-                {onEditInfo ? (
-                  <OwnerEditPencil label="Ndrysho titullin" onClick={onEditInfo} />
-                ) : null}
-              </Stack>
+              </OwnerEditableSpot>
 
-              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
-                <Box
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    px: 1.15,
-                    py: 0.55,
-                    borderRadius: 999,
-                    bgcolor: primaryMainAlpha(0.14),
-                    color: 'primary.main',
-                  }}
-                >
-                  <PaymentsOutlined sx={{ fontSize: 15 }} />
-                  <Typography sx={{ fontWeight: 800, fontSize: FONT_CAPTION, lineHeight: 1 }}>
-                    {salary}
-                  </Typography>
-                </Box>
-                {onEditPrice ? (
-                  <OwnerEditPencil label="Ndrysho pagën" onClick={onEditPrice} />
-                ) : null}
-                {jobTypeLabel ? (
+              <OwnerEditableSpot
+                field="price"
+                ownerEdit={ownerEdit}
+                label="Ndrysho pagën"
+                legacyOnClick={onEditPrice}
+              >
+                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
                   <Box
                     sx={{
                       display: 'inline-flex',
                       alignItems: 'center',
+                      gap: 0.5,
                       px: 1.15,
                       py: 0.55,
                       borderRadius: 999,
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      color: 'text.secondary',
+                      bgcolor: primaryMainAlpha(0.14),
+                      color: 'primary.main',
                     }}
                   >
-                    <Typography sx={{ fontWeight: 700, fontSize: FONT_CAPTION, lineHeight: 1 }}>
-                      {jobTypeLabel}
+                    <PaymentsOutlined sx={{ fontSize: 15 }} />
+                    <Typography sx={{ fontWeight: 800, fontSize: FONT_CAPTION, lineHeight: 1 }}>
+                      {salary}
                     </Typography>
                   </Box>
-                ) : null}
-              </Stack>
+                  {jobTypeLabel ? (
+                    <Box
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        px: 1.15,
+                        py: 0.55,
+                        borderRadius: 999,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        color: 'text.secondary',
+                      }}
+                    >
+                      <Typography sx={{ fontWeight: 700, fontSize: FONT_CAPTION, lineHeight: 1 }}>
+                        {jobTypeLabel}
+                      </Typography>
+                    </Box>
+                  ) : null}
+                </Stack>
+              </OwnerEditableSpot>
 
               {listing.seller ? (
                 <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
@@ -394,6 +411,30 @@ export function JobListingDetailView({
               ) : null}
             </Stack>
 
+            <Stack spacing={1}>
+              <OwnerEditableSpot
+                field="specs"
+                ownerEdit={ownerEdit}
+                label="Ndrysho detajet"
+                legacyOnClick={onEditSpecs}
+              >
+                <Typography
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: '0.72rem',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: 'text.secondary',
+                  }}
+                >
+                  Detaje
+                </Typography>
+              </OwnerEditableSpot>
+              {ownerEdit?.editingField === 'location' && ownerEdit.inlineEditors?.location
+                ? ownerEdit.inlineEditors.location
+                : ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs
+                  ? null
+                  : (
             <Box
               sx={{
                 display: 'grid',
@@ -404,6 +445,9 @@ export function JobListingDetailView({
               {metaRows.map((row, index) => {
                 const Icon = metaIcons[index];
                 const isLocation = index === 0;
+                const locationClick = ownerEdit?.onStartInlineEdit
+                  ? () => ownerEdit.onStartInlineEdit!('location')
+                  : onEditInfo;
                 return (
                   <Box
                     key={row.label}
@@ -416,7 +460,7 @@ export function JobListingDetailView({
                       borderRadius: 2.5,
                       border: '1px solid',
                       borderColor: 'divider',
-                      bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
+                      bgcolor: 'background.paper',
                       minWidth: 0,
                     }}
                   >
@@ -458,13 +502,15 @@ export function JobListingDetailView({
                         {row.label}
                       </Typography>
                     </Box>
-                    {isLocation && onEditInfo ? (
-                      <OwnerEditPencil label="Ndrysho lokacionin" onClick={onEditInfo} />
+                    {isLocation && locationClick ? (
+                      <OwnerEditPencil label="Ndrysho lokacionin" onClick={locationClick} />
                     ) : null}
                   </Box>
                 );
               })}
             </Box>
+                  )}
+            </Stack>
 
             <JobListingDetailCountdown expiresAt={expiresAt} />
 
@@ -485,11 +531,26 @@ export function JobListingDetailView({
                 },
               }}
             >
-              <SoftSectionLabel
-                title="Përshkrimi i punës"
-                edit={onEditInfo ? { label: 'Ndrysho përshkrimin', onClick: onEditInfo } : undefined}
-              />
-              {sections.intro ? (
+              <OwnerEditableSpot
+                field="description"
+                ownerEdit={ownerEdit}
+                label="Ndrysho përshkrimin"
+                legacyOnClick={onEditInfo}
+                sx={{ mb: 1.25 }}
+              >
+                <Typography
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: '0.72rem',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: 'text.secondary',
+                  }}
+                >
+                  Përshkrimi i punës
+                </Typography>
+              </OwnerEditableSpot>
+              {ownerEdit?.editingField === 'description' && ownerEdit.inlineEditors?.description ? null : sections.intro ? (
                 <RealEstateListingExpandableText
                   text={sections.intro}
                   readMoreLabel="Shfaq më shumë"
@@ -497,7 +558,7 @@ export function JobListingDetailView({
                   fontSize={FONT_BODY}
                   maxLines={4}
                 />
-              ) : onEditInfo ? (
+              ) : canInline || onEditInfo ? (
                 <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>
                   Shtoni përshkrimin
                 </Typography>
@@ -578,7 +639,7 @@ export function JobListingDetailView({
                             mb: isLast ? 0 : 1.25,
                             p: 1.35,
                             borderRadius: 2.25,
-                            bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.5)',
+                            bgcolor: 'background.paper',
                             border: '1px solid',
                             borderColor: 'divider',
                           }}
@@ -676,7 +737,7 @@ export function JobListingDetailView({
                         width: 148,
                         p: 1.5,
                         borderRadius: 3,
-                        bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.65)',
+                        bgcolor: 'background.paper',
                         border: '1px solid',
                         borderColor: 'divider',
                         backgroundImage: `linear-gradient(160deg, ${primaryMainAlpha(0.12)} 0%, transparent 60%)`,

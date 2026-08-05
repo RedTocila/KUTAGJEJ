@@ -49,17 +49,16 @@ import { useRouter } from 'next/navigation';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
+import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
+import { productPanelSx } from '@/styles/product-sx';
 
 const FONT_BODY = '0.875rem';
 const FONT_CAPTION = '0.75rem';
 const CONTENT_MAX = 480;
 
 const surfaceSx = {
+  ...productPanelSx,
   p: 2,
-  borderRadius: 2.5,
-  bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
-  border: '1px solid',
-  borderColor: 'divider',
 } as const;
 
 const SERVICE_TAG_ICONS = [HammerIcon, PaintBrushIcon, RulerIcon, SparkleIcon, BriefcaseIcon] as const;
@@ -104,7 +103,14 @@ export function ProfessionalListingDetailView({
 
   return (
     <>
-      {ownerPreview ? null : <ListingMetricsTracker listingKind="professionals" listingId={listing.id} />}
+      {ownerPreview ? null : (
+        <ListingMetricsTracker
+          listingKind="professionals"
+          listingId={listing.id}
+          city={listing.cityName}
+          category={listing.category}
+        />
+      )}
       <ProfessionalListingDetailDesktop
         listing={listing}
         similar={ownerPreview ? [] : similar}
@@ -171,10 +177,13 @@ export function ProfessionalListingDetailView({
               </Box>
 
               <Stack spacing={0.5} sx={{ width: '100%', alignItems: 'flex-start' }}>
-                <Stack
-                  direction="row"
-                  spacing={0.75}
-                  sx={{ alignItems: 'center', justifyContent: 'flex-start', maxWidth: '100%', minWidth: 0 }}
+                <OwnerEditableSpot
+                  field="title"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho titullin"
+                  legacyOnClick={ownerEdit?.onEditInfo}
+                  align="center"
+                  sx={{ maxWidth: '100%', minWidth: 0 }}
                 >
                   <Typography
                     component="h1"
@@ -197,72 +206,69 @@ export function ProfessionalListingDetailView({
                       <ProfessionalVerifiedBadge />
                     </Box>
                   ) : null}
-                  {ownerEdit?.onEditInfo ? (
-                    <OwnerEditPencil label="Ndrysho titullin" onClick={ownerEdit.onEditInfo} />
-                  ) : null}
-                </Stack>
-                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                </OwnerEditableSpot>
+                <OwnerEditableSpot
+                  field="category"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho kategorinë"
+                  legacyOnClick={ownerEdit?.onEditInfo}
+                >
                   <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', lineHeight: 1.35, textAlign: 'left' }}>
                     {subtitle}
                   </Typography>
-                  {ownerEdit?.onEditInfo ? (
-                    <OwnerEditPencil label="Ndrysho kategorinë / shërbimet" onClick={ownerEdit.onEditInfo} />
-                  ) : null}
-                </Stack>
-                {(locationLine || rating.rating || ownerEdit?.onEditInfo) ? (
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{ alignItems: 'center', justifyContent: 'space-between', width: '100%', minWidth: 0 }}
-                  >
-                    {locationLine || ownerEdit?.onEditInfo ? (
-                      <Stack
-                        direction="row"
-                        spacing={0.5}
-                        sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0, flex: 1 }}
+                </OwnerEditableSpot>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: 'center', justifyContent: 'space-between', width: '100%', minWidth: 0 }}
+                >
+                  {locationLine || ownerEdit?.onStartInlineEdit || ownerEdit?.onEditInfo ? (
+                    <OwnerEditableSpot
+                      field="location"
+                      ownerEdit={ownerEdit}
+                      label="Ndrysho lokacionin"
+                      legacyOnClick={ownerEdit?.onEditInfo}
+                      sx={{ minWidth: 0, flex: 1 }}
+                    >
+                      <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
+                      <Typography
+                        sx={{
+                          fontSize: FONT_CAPTION,
+                          fontWeight: 600,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
                       >
-                        <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
-                        <Typography
-                          sx={{
-                            fontSize: FONT_CAPTION,
-                            fontWeight: 600,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {locationLine || 'Shtoni qytetin'}
-                        </Typography>
-                        {ownerEdit?.onEditInfo ? (
-                          <OwnerEditPencil label="Ndrysho lokacionin" onClick={ownerEdit.onEditInfo} />
-                        ) : null}
-                      </Stack>
-                    ) : (
-                      <Box sx={{ flex: 1 }} />
-                    )}
-                    {rating.rating ? (
-                      <Box sx={{ flexShrink: 0 }}>
-                        <ProfessionalRatingSummary
-                          rating={rating.rating}
-                          reviewCount={rating.reviews}
-                          starSize={14}
-                        />
-                      </Box>
-                    ) : null}
-                  </Stack>
-                ) : null}
+                        {locationLine || 'Shtoni qytetin'}
+                      </Typography>
+                    </OwnerEditableSpot>
+                  ) : (
+                    <Box sx={{ flex: 1 }} />
+                  )}
+                  <Box sx={{ flexShrink: 0 }}>
+                    <ProfessionalRatingSummary
+                      rating={rating.rating}
+                      reviewCount={rating.reviews}
+                      starSize={14}
+                    />
+                  </Box>
+                </Stack>
               </Stack>
             </Stack>
 
-            {listing.description || ownerEdit?.onEditInfo ? (
+            {listing.description || ownerEdit?.onStartInlineEdit || ownerEdit?.onEditInfo ? (
               <Box sx={surfaceSx}>
-                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1.25 }}>
+                <OwnerEditableSpot
+                  field="description"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho përshkrimin"
+                  legacyOnClick={ownerEdit?.onEditInfo}
+                  sx={{ mb: 1.25, justifyContent: 'space-between', width: '100%' }}
+                >
                   <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Rreth profesionistit</Typography>
-                  {ownerEdit?.onEditInfo ? (
-                    <OwnerEditPencil label="Ndrysho përshkrimin" onClick={ownerEdit.onEditInfo} />
-                  ) : null}
-                </Stack>
-                {listing.description ? (
+                </OwnerEditableSpot>
+                {ownerEdit?.editingField === 'description' && ownerEdit.inlineEditors?.description ? null : listing.description ? (
                   <RealEstateListingExpandableText
                     text={listing.description}
                     fontSize={FONT_BODY}
@@ -275,15 +281,19 @@ export function ProfessionalListingDetailView({
               </Box>
             ) : null}
 
-            {serviceTags.length > 0 || ownerEdit?.onEditInfo ? (
+            {serviceTags.length > 0 || ownerEdit?.onStartInlineEdit || ownerEdit?.onEditInfo ? (
               <Box sx={surfaceSx}>
                 <Stack spacing={1.25}>
-                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                  <OwnerEditableSpot
+                    field="services"
+                    ownerEdit={ownerEdit}
+                    label="Ndrysho shërbimet"
+                    legacyOnClick={ownerEdit?.onEditInfo}
+                    sx={{ justifyContent: 'space-between', width: '100%' }}
+                  >
                     <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Shërbimet e mia</Typography>
-                    {ownerEdit?.onEditInfo ? (
-                      <OwnerEditPencil label="Ndrysho shërbimet" onClick={ownerEdit.onEditInfo} />
-                    ) : null}
-                  </Stack>
+                  </OwnerEditableSpot>
+                  {ownerEdit?.editingField === 'services' && ownerEdit.inlineEditors?.services ? null : (
                   <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
                     {serviceTags.map((tag, index) => {
                       const TagIcon = SERVICE_TAG_ICONS[index % SERVICE_TAG_ICONS.length]!;
@@ -300,13 +310,14 @@ export function ProfessionalListingDetailView({
                             fontSize: FONT_CAPTION,
                             borderRadius: 2,
                             borderColor: 'divider',
-                            bgcolor: 'rgba(var(--mui-palette-background-defaultChannel) / 0.55)',
+                            bgcolor: 'action.hover',
                             '& .MuiChip-icon': { ml: 0.75 },
                           }}
                         />
                       );
                     })}
                   </Stack>
+                  )}
                 </Stack>
               </Box>
             ) : null}

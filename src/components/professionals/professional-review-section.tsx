@@ -11,12 +11,14 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
   Rating,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
+import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import {
   ProfessionalFiveStarRating,
@@ -28,6 +30,7 @@ import {
   type ProfessionalReview,
 } from '@/lib/professional-reviews-client';
 import { mapApiReviewToView } from '@/lib/professional-listing-detail-content';
+import { productButtonSx, productDialogSlotProps, productFieldSx } from '@/styles/product-sx';
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
 
@@ -171,27 +174,93 @@ export function ProfessionalReviewSection({
       )}
 
       {showLeaveReview ? (
-        <Dialog open={open} onClose={() => setOpen(false)} maxWidth="xs" fullWidth>
-          <DialogTitle>Vlerësoni profesionistin</DialogTitle>
-          <DialogContent>
-            <Stack spacing={2} sx={{ pt: 1 }}>
-              {error ? <Alert severity="error">{error}</Alert> : null}
-              <Rating value={rating} onChange={(_, v) => setRating(v)} />
+        <Dialog
+          open={open}
+          onClose={() => setOpen(false)}
+          maxWidth="xs"
+          fullWidth
+          slotProps={productDialogSlotProps}
+        >
+          <DialogTitle
+            sx={{
+              position: 'relative',
+              px: 2.5,
+              pt: 2.5,
+              pb: 1,
+              pr: 6,
+              fontWeight: 800,
+              fontSize: '1.125rem',
+              letterSpacing: '-0.01em',
+            }}
+          >
+            Vlerësoni profesionistin
+            <IconButton
+              aria-label="Mbyll"
+              onClick={() => setOpen(false)}
+              size="small"
+              sx={{
+                position: 'absolute',
+                right: 12,
+                top: 12,
+                color: 'text.secondary',
+                borderRadius: 2,
+                '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
+              }}
+            >
+              <XIcon size={18} weight="bold" />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent sx={{ px: 2.5, pb: 1.5, pt: '8px !important' }}>
+            <Stack spacing={2.25}>
+              {error ? (
+                <Alert severity="error" sx={{ borderRadius: 2 }}>
+                  {error}
+                </Alert>
+              ) : null}
+              <Box>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 1.25, fontWeight: 600, fontSize: '0.8125rem' }}
+                >
+                  Sa yje i jepni?
+                </Typography>
+                <Rating
+                  value={rating}
+                  onChange={(_, v) => setRating(v)}
+                  size="large"
+                  sx={{
+                    fontSize: '2.75rem',
+                    gap: 0.5,
+                    '& .MuiRating-iconFilled': { color: 'warning.main' },
+                    '& .MuiRating-iconHover': { color: 'warning.main' },
+                  }}
+                />
+              </Box>
               <TextField
-                label="Komenti"
+                label="Komenti (opsional)"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 multiline
                 minRows={3}
                 fullWidth
+                sx={productFieldSx}
               />
             </Stack>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpen(false)} color="inherit">
-              Anulo
-            </Button>
-            <Button variant="contained" disabled={submitting} onClick={() => void submit()}>
+          <DialogActions
+            sx={{
+              px: 2.5,
+              pb: 2.5,
+              pt: 1,
+            }}
+          >
+            <Button
+              variant="contained"
+              disabled={submitting}
+              onClick={() => void submit()}
+              sx={{ ...productButtonSx, px: 2.5 }}
+            >
               Dërgo
             </Button>
           </DialogActions>

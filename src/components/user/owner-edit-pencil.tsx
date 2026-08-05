@@ -49,13 +49,34 @@ export function OwnerEditPencil({
   );
 }
 
+/** Which field is being edited inline on the public preview. */
+export type OwnerInlineField =
+  | 'title'
+  | 'price'
+  | 'location'
+  | 'description'
+  | 'specs'
+  | 'category'
+  | 'hours'
+  | 'services';
+
 /** Handlers passed into public detail views while editing as owner. */
 export type OwnerEditHandlers = {
   onEditPhotos?: () => void;
-  onEditInfo?: () => void;
   onEditHours?: () => void;
   onEditMenu?: () => void;
   onEditPortfolio?: () => void;
+  /** @deprecated Prefer `onStartInlineEdit` — kept for gradual migration. */
+  onEditInfo?: () => void;
+  /** @deprecated Prefer `onStartInlineEdit('specs')`. */
   onEditSpecs?: () => void;
+  /** @deprecated Prefer `onStartInlineEdit('price')`. */
   onEditPrice?: () => void;
+
+  /** Currently active inline field (only one at a time). */
+  editingField?: OwnerInlineField | null;
+  /** Open inline editor for a single field (no popup form). */
+  onStartInlineEdit?: (field: OwnerInlineField) => void;
+  /** Per-field editor nodes rendered in place of the display + pencil. */
+  inlineEditors?: Partial<Record<OwnerInlineField, React.ReactNode>>;
 };

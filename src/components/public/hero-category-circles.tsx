@@ -12,6 +12,7 @@ import {
   AI_SEARCH_BLUE_SOFT,
   localizeSearchCategories,
 } from '@/lib/home-categories';
+import { hardNavigate, hardRefreshToTop } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
 
 import { HomeVerticalIcon } from './home-vertical-icon';
@@ -168,6 +169,17 @@ export function HeroCategoryCircles({
               component={RouterLink}
               href={v.href}
               spacing={0.4}
+              onClick={(event) => {
+                if (!selected) return;
+                const base = v.href.split('?')[0];
+                if (pathname === base) {
+                  hardRefreshToTop(event);
+                  return;
+                }
+                if (pathname?.startsWith(`${base}/`)) {
+                  hardNavigate(v.href, event);
+                }
+              }}
               sx={{
                 ...itemSx(isAi),
                 textDecoration: 'none',

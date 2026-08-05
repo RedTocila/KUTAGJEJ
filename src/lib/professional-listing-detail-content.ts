@@ -18,15 +18,15 @@ export function professionalSubtitle(listing: PublicDirectoryListingDetail): str
 }
 
 export function professionalRatingDisplay(listing: PublicDirectoryListingDetail): {
-  rating: string | null;
+  rating: string;
   reviews: number;
 } {
   const reviews = listing.reviewCount ?? 0;
-  if (reviews === 0 || listing.ratingAverage == null) {
-    return { rating: null, reviews: 0 };
+  const avg = listing.ratingAverage != null ? Number(listing.ratingAverage) : null;
+  if (reviews > 0 && avg != null && Number.isFinite(avg)) {
+    return { rating: avg.toFixed(1), reviews };
   }
-  const avg = Number(listing.ratingAverage);
-  return { rating: Number.isFinite(avg) ? avg.toFixed(1) : null, reviews };
+  return { rating: '0.0', reviews };
 }
 
 export function professionalResponseTime(listing: PublicDirectoryListingDetail): string | null {

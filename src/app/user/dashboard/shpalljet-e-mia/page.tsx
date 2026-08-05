@@ -60,9 +60,11 @@ import { useUser } from '@/hooks/use-user';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
-import { ListingOwnerMetrics } from '@/components/user/listing-owner-metrics';
+import { ListingOwnerMetrics, ListingOwnerTopActions } from '@/components/user/listing-owner-metrics';
 import { ListingModerationStatusChip } from '@/components/user/listing-moderation-status-chip';
 import { ListingModerationNotice, ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
+import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
+import type { BusinessAnnouncement } from '@/lib/listing-announcement-client';
 import { normalizeListingModerationStatus } from '@/lib/listing-moderation-status';
 import type { ListingMetrics, ListingMetricKind } from '@/lib/listing-metrics';
 import { fetchListingAutoRefresh } from '@/lib/listing-refresh-client';
@@ -104,11 +106,20 @@ function Row({ icon: Icon, children }: { icon: PhosphorIcon; children: React.Rea
   );
 }
 
-function CardImageHeader({ imageUrl, fallbackIcon: FallbackIcon, alt, status }: {
+function CardImageHeader({
+  imageUrl,
+  fallbackIcon: FallbackIcon,
+  alt,
+  status,
+  bottomOverlay,
+  topRightActions,
+}: {
   imageUrl: string | null;
   fallbackIcon: PhosphorIcon;
   alt: string;
   status: ReturnType<typeof normalizeListingModerationStatus>;
+  bottomOverlay?: React.ReactNode;
+  topRightActions?: React.ReactNode;
 }) {
   return (
     <Box
@@ -160,6 +171,12 @@ function CardImageHeader({ imageUrl, fallbackIcon: FallbackIcon, alt, status }: 
       <Box sx={{ position: 'absolute', top: 10, left: 10, zIndex: 2 }}>
         <ListingModerationStatusChip status={status} />
       </Box>
+      {topRightActions ? (
+        <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 2 }}>{topRightActions}</Box>
+      ) : null}
+      {bottomOverlay ? (
+        <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 2 }}>{bottomOverlay}</Box>
+      ) : null}
     </Box>
   );
 }
@@ -181,6 +198,9 @@ function BaseCard({
   premiumUntil = null,
   onPremiumApplied,
   onRefreshed,
+  announcement = null,
+  onAnnouncementSaved,
+  mediaBottomOverlay,
 }: {
   title: string;
   chips?: React.ReactNode;
@@ -198,6 +218,13 @@ function BaseCard({
   premiumUntil?: string | null;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
+  announcement?: BusinessAnnouncement | null;
+  onAnnouncementSaved?: (result: {
+    announcement: BusinessAnnouncement | null;
+    refreshedAt?: string | null;
+    boostCredits?: number;
+  }) => void;
+  mediaBottomOverlay?: React.ReactNode;
 }) {
   const moderationStatus = normalizeListingModerationStatus(status ?? undefined);
   const isPublic = moderationStatus === 'approved';
@@ -231,7 +258,24 @@ function BaseCard({
         },
       }}
     >
-      <CardImageHeader imageUrl={imageUrl} fallbackIcon={fallbackIcon} alt={title} status={moderationStatus} />
+      <CardImageHeader
+        imageUrl={imageUrl}
+        fallbackIcon={fallbackIcon}
+        alt={title}
+        status={moderationStatus}
+        bottomOverlay={mediaBottomOverlay}
+        topRightActions={
+          listingId && kind ? (
+            <ListingOwnerTopActions
+              listingId={listingId}
+              kind={kind}
+              canAnnounce={isPublic}
+              announcement={announcement}
+              onAnnouncementSaved={onAnnouncementSaved}
+            />
+          ) : undefined
+        }
+      />
       <CardContent
         sx={{
           p: 1.6,
@@ -319,6 +363,29 @@ function markListingPremium<T extends { id: string; isPremium?: boolean; premium
   return items.map((item) =>
     item.id === listingId ? { ...item, isPremium: true, premiumUntil } : item,
   );
+}
+
+function applyBusinessAnnouncement(
+  items: BusinessMineListing[],
+  listingId: string,
+  announcement: BusinessAnnouncement | null,
+  refreshedAt?: string | null,
+): BusinessMineListing[] {
+  const patched = items.map((item) => {
+    if (item.id !== listingId) return item;
+    return {
+      ...item,
+      announcementTitle: announcement?.title ?? null,
+      announcementSubtitle: announcement?.subtitle ?? null,
+      announcementBannerUrl: announcement?.bannerUrl ?? null,
+      announcementAt: announcement?.announcedAt ?? null,
+      ...(refreshedAt ? { createdAt: refreshedAt } : {}),
+    };
+  });
+  if (refreshedAt) {
+    return bumpListingToTop(patched, listingId, refreshedAt);
+  }
+  return patched;
 }
 
 function RealEstateCard({
@@ -507,12 +574,27 @@ function BusinessCard({
   l,
   onPremiumApplied,
   onRefreshed,
+  onAnnouncementSaved,
 }: {
   l: BusinessMineListing;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
+  onAnnouncementSaved?: (result: {
+    announcement: BusinessAnnouncement | null;
+    refreshedAt?: string | null;
+    boostCredits?: number;
+  }) => void;
 }) {
   const categoryLabel = findLabel(BUSINESS_CATEGORY_OPTIONS, l.category);
+  const announcement: BusinessAnnouncement | null = l.announcementTitle?.trim()
+    ? {
+        title: l.announcementTitle,
+        subtitle: l.announcementSubtitle,
+        bannerUrl: l.announcementBannerUrl,
+        announcedAt: l.announcementAt ?? null,
+      }
+    : null;
+
   return (
     <BaseCard
       title={l.title}
@@ -527,6 +609,19 @@ function BusinessCard({
       premiumUntil={l.premiumUntil ?? null}
       onPremiumApplied={onPremiumApplied}
       onRefreshed={onRefreshed}
+      announcement={announcement}
+      onAnnouncementSaved={onAnnouncementSaved}
+      mediaBottomOverlay={
+        announcement?.title ? (
+          <BusinessPromoBanner
+            title={announcement.title}
+            subtitle={announcement.subtitle}
+            bannerUrl={announcement.bannerUrl}
+            variant="card"
+            overlay
+          />
+        ) : undefined
+      }
       chips={
         <>
           <Chip size="small" label="Biznes" color="primary" variant="outlined" sx={chipSx} />
@@ -1082,6 +1177,11 @@ export default function UserMyListingsPage() {
             onRefreshed={({ refreshedAt }) => {
               setBizListings((prev) => bumpListingToTop(prev, item.listing.id, refreshedAt));
             }}
+            onAnnouncementSaved={({ announcement, refreshedAt }) => {
+              setBizListings((prev) =>
+                applyBusinessAnnouncement(prev, item.listing.id, announcement, refreshedAt),
+              );
+            }}
           />
         );
       case 'professionals':
@@ -1388,6 +1488,9 @@ export default function UserMyListingsPage() {
                 }}
                 onRefreshed={({ refreshedAt }) => {
                   setBizListings((prev) => bumpListingToTop(prev, l.id, refreshedAt));
+                }}
+                onAnnouncementSaved={({ announcement, refreshedAt }) => {
+                  setBizListings((prev) => applyBusinessAnnouncement(prev, l.id, announcement, refreshedAt));
                 }}
               />
             )}

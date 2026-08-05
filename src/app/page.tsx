@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { HeroSection } from '@/components/public/hero-section';
 import { HomepageCommunityBanner, HomepagePostBanner } from '@/components/public/homepage-community-banner';
 import { PublicShell } from '@/components/public/public-shell';
-import { HomepageMixedListingCard, mixedListingKey } from '@/components/public/homepage-mixed-listing-card';
+import { HomepageRecommendedSection } from '@/components/public/homepage-recommended-section';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { ListingsSection } from '@/components/public/listings-section';
 import { SeoIntroSection } from '@/components/public/seo-intro-section';
@@ -178,23 +178,7 @@ export default async function HomePage() {
         }}
       />
 
-      <ListingsSection
-        verticalId="real-estate"
-        isEmpty={latestMixed.length === 0}
-        titleKey="latestListings"
-        useMuiVerticalIcon
-        hideTotal
-        hideVerticalIcon
-        hideSubcategoryPills
-        hideBrowseAction
-        compactTop
-      >
-        <ListingsCarousel>
-          {latestMixed.map((item) => (
-            <HomepageMixedListingCard key={mixedListingKey(item)} item={item} />
-          ))}
-        </ListingsCarousel>
-      </ListingsSection>
+      <HomepageRecommendedSection fallbackItems={latestMixed} />
 
       <ListingsSection
         verticalId="real-estate"

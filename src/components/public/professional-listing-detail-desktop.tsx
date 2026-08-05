@@ -53,13 +53,11 @@ import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib
 import { ProfessionalReviewSection } from '@/components/professionals/professional-review-section';
 import { paths } from '@/paths';
 import { useRouter } from 'next/navigation';
+import { productPanelSx } from '@/styles/product-sx';
 
 const surfaceSx = {
+  ...productPanelSx,
   p: 2.5,
-  borderRadius: 2.5,
-  border: '1px solid',
-  borderColor: 'divider',
-  bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
 } as const;
 
 const SERVICE_TAG_ICONS = [HammerIcon, PaintBrushIcon, RulerIcon, SparkleIcon, BriefcaseIcon] as const;
@@ -189,46 +187,42 @@ export function ProfessionalListingDetailDesktop({
                         ) : null}
                       </Stack>
                       <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>{subtitle}</Typography>
-                      {(locationLine || rating.rating) ? (
-                        <Stack
-                          direction="row"
-                          spacing={1}
-                          sx={{ alignItems: 'center', justifyContent: 'space-between', width: '100%', minWidth: 0 }}
-                        >
-                          {locationLine ? (
-                            <Stack
-                              direction="row"
-                              spacing={0.5}
-                              sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0, flex: 1 }}
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{ alignItems: 'center', justifyContent: 'space-between', width: '100%', minWidth: 0 }}
+                      >
+                        {locationLine ? (
+                          <Stack
+                            direction="row"
+                            spacing={0.5}
+                            sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0, flex: 1 }}
+                          >
+                            <MapPinIcon size={15} weight="regular" color="var(--mui-palette-primary-main)" />
+                            <Typography
+                              sx={{
+                                fontSize: '0.8rem',
+                                fontWeight: 600,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
                             >
-                              <MapPinIcon size={15} weight="regular" color="var(--mui-palette-primary-main)" />
-                              <Typography
-                                sx={{
-                                  fontSize: '0.8rem',
-                                  fontWeight: 600,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                {locationLine}
-                              </Typography>
-                            </Stack>
-                          ) : (
-                            <Box sx={{ flex: 1 }} />
-                          )}
-                          {rating.rating ? (
-                            <Box sx={{ flexShrink: 0 }}>
-                              <ProfessionalRatingSummary
-                                rating={rating.rating}
-                                reviewCount={rating.reviews}
-                                starSize={16}
-                                showReviewLabel
-                              />
-                            </Box>
-                          ) : null}
-                        </Stack>
-                      ) : null}
+                              {locationLine}
+                            </Typography>
+                          </Stack>
+                        ) : (
+                          <Box sx={{ flex: 1 }} />
+                        )}
+                        <Box sx={{ flexShrink: 0 }}>
+                          <ProfessionalRatingSummary
+                            rating={rating.rating}
+                            reviewCount={rating.reviews}
+                            starSize={16}
+                            showReviewLabel
+                          />
+                        </Box>
+                      </Stack>
                     </Stack>
                   </Stack>
 

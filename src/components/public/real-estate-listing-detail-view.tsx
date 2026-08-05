@@ -36,10 +36,12 @@ import { ListingSellerProfileCard } from '@/components/public/listing-seller-pro
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { StickyListingContact } from '@/components/public/sticky-listing-contact';
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
+import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { whatsappHref } from '@/lib/listing-contact';
 import type { PublicRealEstateListing, PublicRealEstateListingDetail } from '@/lib/public-listings-client';
 import { paths } from '@/paths';
+import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 
 import {
   LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
@@ -206,7 +208,7 @@ function RealEstatePriceContactAside(props: {
               fullWidth
               size="large"
               startIcon={<PhoneIcon weight="regular" size={22} />}
-              sx={{ borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.2 }}
+              sx={{ ...productButtonSx, py: 1.2 }}
             >
               Kontakto shitësin
             </Button>
@@ -221,9 +223,7 @@ function RealEstatePriceContactAside(props: {
                 size="large"
                 startIcon={<WhatsappLogoIcon weight="regular" size={22} />}
                 sx={{
-                  borderRadius: 2,
-                  fontWeight: 800,
-                  textTransform: 'none',
+                  ...productButtonSx,
                   py: 1.2,
                   ...whatsappOutlinedButtonSx,
                 }}
@@ -238,9 +238,7 @@ function RealEstatePriceContactAside(props: {
               fullWidth
               size="large"
               sx={{
-                borderRadius: 2,
-                fontWeight: 800,
-                textTransform: 'none',
+                ...productButtonSx,
                 py: 1.2,
                 borderColor: 'divider',
                 borderWidth: 2,
@@ -250,7 +248,7 @@ function RealEstatePriceContactAside(props: {
             />
           </>
         ) : (
-          <Button variant="contained" disabled fullWidth size="large" sx={{ borderRadius: 2 }}>
+          <Button variant="contained" disabled fullWidth size="large" sx={productButtonSx}>
             Nr. kontakti i padisponueshëm
           </Button>
         )}
@@ -297,6 +295,7 @@ export function RealEstateListingDetailView({
   const onEditInfo = ownerEdit?.onEditInfo;
   const onEditPrice = ownerEdit?.onEditPrice ?? onEditInfo;
   const onEditSpecs = ownerEdit?.onEditSpecs ?? onEditInfo;
+  const canInline = Boolean(ownerEdit?.onStartInlineEdit);
   const locationFull = [listing.zoneName, listing.cityName, 'Shqipëri'].filter(Boolean).join(', ');
   const displayPhone =
     listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
@@ -358,7 +357,14 @@ export function RealEstateListingDetailView({
 
   return (
     <>
-      {ownerPreview ? null : <ListingMetricsTracker listingKind="real-estate" listingId={listing.id} />}
+      {ownerPreview ? null : (
+        <ListingMetricsTracker
+          listingKind="real-estate"
+          listingId={listing.id}
+          city={listing.cityName}
+          category={listing.propertyCategory}
+        />
+      )}
       {/* JSON-LD is emitted from the route; keep article semantics for headings + listing body. */}
       <Box component="article" sx={{ bgcolor: 'background.default' }}>
         <Container
@@ -444,10 +450,10 @@ export function RealEstateListingDetailView({
                   <Paper
                     elevation={0}
                     sx={{
-                      borderRadius: 2.5,
+                      ...productPanelSx,
                       border: 'none',
-                      bgcolor: 'rgba(var(--mui-palette-background-defaultChannel) / 0.55)',
                       p: 2,
+                      borderRadius: 2.5,
                     }}
                   >
                     <RealEstateSellerCardContents
@@ -462,7 +468,13 @@ export function RealEstateListingDetailView({
 
             <Stack spacing={{ xs: 3, md: 3.5 }} sx={{ px: { xs: 2, sm: 3, md: 0 }, pb: ownerPreview ? 3 : { xs: 18, md: 6 }, width: '100%' }}>
             <Stack spacing={1.75}>
-              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+              <OwnerEditableSpot
+                field="title"
+                ownerEdit={ownerEdit}
+                label="Ndrysho titullin"
+                legacyOnClick={onEditInfo}
+                align="flex-start"
+              >
                 <Typography
                   variant="h3"
                   component="h1"
@@ -476,13 +488,15 @@ export function RealEstateListingDetailView({
                 >
                   {listing.title}
                 </Typography>
-                {onEditInfo ? (
-                  <OwnerEditPencil label="Ndrysho titullin" onClick={onEditInfo} />
-                ) : null}
-              </Stack>
+              </OwnerEditableSpot>
 
               <Box sx={{ display: ownerPreview ? 'block' : { xs: 'block', md: 'none' } }}>
-                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                <OwnerEditableSpot
+                  field="price"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho çmimin"
+                  legacyOnClick={onEditPrice}
+                >
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
                     <Typography
                       sx={{
@@ -514,26 +528,25 @@ export function RealEstateListingDetailView({
                       </Typography>
                     </Paper>
                   </Stack>
-                  {onEditPrice ? (
-                    <OwnerEditPencil label="Ndrysho çmimin" onClick={onEditPrice} />
-                  ) : null}
-                </Stack>
+                </OwnerEditableSpot>
               </Box>
 
               <Stack spacing={1.25}>
                 <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: { xs: 1.25, sm: 2 } }}>
-                  {locationFull || onEditInfo ? (
-                    <Stack direction="row" spacing={0.65} sx={{ alignItems: 'center', maxWidth: '100%' }}>
+                  {locationFull || canInline || onEditInfo ? (
+                    <OwnerEditableSpot
+                      field="location"
+                      ownerEdit={ownerEdit}
+                      label="Ndrysho lokacionin"
+                      legacyOnClick={onEditInfo}
+                    >
                       <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
                         <MapPinIcon size={17} weight="regular" color="currentColor" />
                       </Box>
                       <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.4 }}>
                         {locationFull || 'Shtoni lokacionin'}
                       </Typography>
-                      {onEditInfo ? (
-                        <OwnerEditPencil label="Ndrysho lokacionin" onClick={onEditInfo} />
-                      ) : null}
-                    </Stack>
+                    </OwnerEditableSpot>
                   ) : null}
                   <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
                     <EyeIcon size={17} weight="regular" aria-hidden />
@@ -547,48 +560,73 @@ export function RealEstateListingDetailView({
               </Stack>
             </Stack>
 
-            <Box sx={{ position: 'relative' }}>
-              {onEditSpecs ? (
-                <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
-                  <OwnerEditPencil label="Ndrysho specifikimet" onClick={onEditSpecs} />
-                </Box>
-              ) : null}
-              <Paper
-                variant="outlined"
-                sx={{ borderRadius: 2.5, borderColor: 'divider', bgcolor: 'background.paper', px: { xs: 1, sm: 1.5 }, py: { xs: 1.75, sm: 2 } }}
+            <Stack spacing={1.25}>
+              <OwnerEditableSpot
+                field="specs"
+                ownerEdit={ownerEdit}
+                label="Ndrysho specifikimet"
+                legacyOnClick={onEditSpecs}
               >
-                <Stack direction="row" sx={{ flexWrap: 'wrap', justifyContent: 'space-evenly', rowGap: 1 }}>
-                  {listing.bedrooms != null ? (
-                    <SpecIconBox Icon={BedIcon} primary={`${listing.bedrooms}`} secondary={listing.bedrooms === 1 ? 'Dhomë gjumi' : 'Dhoma gjumi'} />
-                  ) : null}
-                  {listing.bathrooms != null ? (
-                    <SpecIconBox
-                      Icon={BathtubIcon}
-                      primary={`${listing.bathrooms}`}
-                      secondary={listing.bathrooms === 1 ? 'Tualet' : 'Tualete'}
-                    />
-                  ) : null}
-                  <SpecIconBox Icon={RulerIcon} primary={`${listing.surfaceM2} m²`} secondary="Sipërfaqe" />
-                  {listing.propertyCategory === 'parking' && listing.parkingFloor != null ? (
-                    <SpecIconBox Icon={CarIcon} primary={`Kati ${listing.parkingFloor}`} secondary="Parkim" />
-                  ) : listing.totalFloors != null ? (
-                    <SpecIconBox Icon={StairsIcon} primary={`${listing.totalFloors}`} secondary={listing.totalFloors === 1 ? 'Kat' : 'Kata'} />
-                  ) : listing.floor != null ? (
-                    <SpecIconBox Icon={StairsIcon} primary={`Kat ${listing.floor}`} secondary="Niveli" />
-                  ) : null}
-                </Stack>
-              </Paper>
-            </Box>
+                <Typography
+                  variant="overline"
+                  color="text.secondary"
+                  sx={{ fontWeight: 800, letterSpacing: '0.1em' }}
+                >
+                  Përmbledhje
+                </Typography>
+              </OwnerEditableSpot>
+              {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : (
+                <Paper
+                  variant="outlined"
+                  sx={{ borderRadius: 2.5, borderColor: 'divider', bgcolor: 'background.paper', px: { xs: 1, sm: 1.5 }, py: { xs: 1.75, sm: 2 } }}
+                >
+                  <Stack direction="row" sx={{ flexWrap: 'wrap', justifyContent: 'space-evenly', rowGap: 1 }}>
+                    {listing.bedrooms != null ? (
+                      <SpecIconBox Icon={BedIcon} primary={`${listing.bedrooms}`} secondary={listing.bedrooms === 1 ? 'Dhomë gjumi' : 'Dhoma gjumi'} />
+                    ) : null}
+                    {listing.bathrooms != null ? (
+                      <SpecIconBox
+                        Icon={BathtubIcon}
+                        primary={`${listing.bathrooms}`}
+                        secondary={listing.bathrooms === 1 ? 'Tualet' : 'Tualete'}
+                      />
+                    ) : null}
+                    <SpecIconBox Icon={RulerIcon} primary={`${listing.surfaceM2} m²`} secondary="Sipërfaqe" />
+                    {listing.propertyCategory === 'parking' && listing.parkingFloor != null ? (
+                      <SpecIconBox Icon={CarIcon} primary={`Kati ${listing.parkingFloor}`} secondary="Parkim" />
+                    ) : listing.totalFloors != null ? (
+                      <SpecIconBox Icon={StairsIcon} primary={`${listing.totalFloors}`} secondary={listing.totalFloors === 1 ? 'Kat' : 'Kata'} />
+                    ) : listing.floor != null ? (
+                      <SpecIconBox Icon={StairsIcon} primary={`Kat ${listing.floor}`} secondary="Niveli" />
+                    ) : null}
+                  </Stack>
+                </Paper>
+              )}
+            </Stack>
 
             <Stack spacing={2} component="section" aria-labelledby="re-desc-heading">
-              {sectionTitle(
-                'Përshkrimi',
-                're-desc-heading',
-                onEditSpecs ? { label: 'Ndrysho përshkrimin', onClick: onEditSpecs } : undefined,
-              )}
-              {listing.description ? (
+              <OwnerEditableSpot
+                field="description"
+                ownerEdit={ownerEdit}
+                label="Ndrysho përshkrimin"
+                legacyOnClick={onEditSpecs}
+              >
+                <Typography
+                  id="re-desc-heading"
+                  component="h2"
+                  variant="overline"
+                  sx={{
+                    letterSpacing: '0.14em',
+                    fontWeight: 800,
+                    color: 'text.secondary',
+                  }}
+                >
+                  Përshkrimi
+                </Typography>
+              </OwnerEditableSpot>
+              {ownerEdit?.editingField === 'description' && ownerEdit.inlineEditors?.description ? null : listing.description ? (
                 <RealEstateListingExpandableText text={listing.description} />
-              ) : onEditSpecs ? (
+              ) : canInline || onEditSpecs ? (
                 <Typography sx={{ color: 'text.secondary' }}>Shtoni përshkrimin</Typography>
               ) : null}
             </Stack>
@@ -653,7 +691,7 @@ export function RealEstateListingDetailView({
                     {listing.zoneName && listing.cityName ? `${listing.zoneName}, ${listing.cityName}` : listing.cityName ?? listing.zoneName}
                     {listing.cityName || listing.zoneName ? ', Shqipëri.' : '.'}
                   </Typography>
-                  <LocationMapEmbed query={locationFull} linkLabel="Shiko në hartë" />
+                  <LocationMapEmbed query={locationFull} />
                 </>
               ) : (
                 <Typography sx={{ color: 'text.secondary' }}>Vendndodhja do të përditësohet së shpejti.</Typography>

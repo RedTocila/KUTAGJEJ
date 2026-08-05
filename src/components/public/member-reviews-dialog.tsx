@@ -23,6 +23,7 @@ import { MemberLeaveReviewButton } from '@/components/public/member-leave-review
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { listMemberReviews, type MemberReview } from '@/lib/member-reviews-client';
 import { useUser } from '@/hooks/use-user';
+import { productDialogPaperSx, productDialogSlotProps } from '@/styles/product-sx';
 
 const DIALOG_Z_INDEX = 1400;
 const LEAVE_REVIEW_Z_INDEX = 1500;
@@ -104,22 +105,14 @@ export function MemberReviewsDialog({
       slotProps={{
         backdrop: {
           sx: {
-            bgcolor: 'rgba(0, 0, 0, 0.62)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
+            ...productDialogSlotProps.backdrop.sx,
             pointerEvents: 'auto',
           },
         },
         paper: {
           elevation: 0,
           sx: {
-            borderRadius: 3,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            overflow: 'hidden',
-            mx: 2,
-            backgroundImage: 'none',
+            ...productDialogPaperSx,
             maxHeight: 'min(80vh, 640px)',
           },
         },
@@ -148,6 +141,7 @@ export function MemberReviewsDialog({
             right: 12,
             top: 12,
             color: 'text.secondary',
+            borderRadius: 2,
             '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
           }}
         >

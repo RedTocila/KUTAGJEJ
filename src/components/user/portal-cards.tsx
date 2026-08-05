@@ -8,15 +8,10 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { hardNavigate } from '@/lib/hard-navigate';
+import { productPanelSx } from '@/styles/product-sx';
 
 /** Shared surface used by portal link rows and content sections. */
-export const portalCardSx = {
-  borderRadius: 3.5,
-  border: '1px solid',
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
-  overflow: 'hidden',
-} as const;
+export const portalCardSx = productPanelSx;
 
 export function PortalIconBox({
   children,

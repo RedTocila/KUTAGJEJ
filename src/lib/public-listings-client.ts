@@ -219,6 +219,10 @@ export interface PublicDirectoryListing extends ListingMetricsFields {
   reservationUrl: string | null;
   /** Short “what we offer” line for venues. */
   servicesHighlight: string | null;
+  /** Business announcement promo (title required when active). */
+  announcementTitle?: string | null;
+  announcementSubtitle?: string | null;
+  announcementBannerUrl?: string | null;
   /** Profesionistë — typical response time (hours). */
   responseTimeHours?: number | null;
 }

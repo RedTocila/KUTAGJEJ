@@ -22,8 +22,10 @@ import {
   AI_SEARCH_BLUE_HOVER,
   AI_SEARCH_BLUE_ON,
   localizeSearchCategories,
+  type HomeVerticalId,
   type SearchCategoryId,
 } from '@/lib/home-categories';
+import { recordSearchInterest } from '@/lib/user-interest-history';
 import { paths } from '@/paths';
 
 import { HeroCategoryCircles } from './hero-category-circles';
@@ -31,6 +33,10 @@ export interface HeroSearchProps {
   defaultVertical?: SearchCategoryId;
   /** Called after the user submits and navigation runs (e.g. close mobile search sheet). */
   onNavigate?: () => void;
+}
+
+function isHomeVertical(id: SearchCategoryId): id is HomeVerticalId {
+  return id !== 'ai';
 }
 
 export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
@@ -64,6 +70,9 @@ export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
       router.push(`${paths.public.search}?${params.toString()}`);
       onNavigate?.();
       return;
+    }
+    if (isHomeVertical(active.id)) {
+      recordSearchInterest({ verticalId: active.id, q: trimmed || undefined });
     }
     const params = new URLSearchParams();
     if (trimmed) params.set('q', trimmed);

@@ -8,7 +8,9 @@ import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { VerticalListingDetailView } from '@/components/public/vertical-listing-detail-view';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
 import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
+import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
 import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dialog';
+import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
 import { marketplaceMineToPublic } from '@/lib/listing-mine-to-public';
 import { updateMarketplaceListing, type MarketplaceMineListing } from '@/lib/listings-client';
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
@@ -18,6 +20,32 @@ import { uploadListingImages } from '@/lib/uploads-client';
 import { paths } from '@/paths';
 
 const MAX_IMAGES = 8;
+
+type Snapshot = {
+  title: string;
+  description: string;
+  category: string;
+  condition: string | null;
+  price: number | null;
+  currency: 'EUR' | 'LEK' | null;
+  cityId: string | null;
+  cityName: string | null;
+  contactPhone: string | null;
+};
+
+function snapFrom(d: MarketplaceMineListing): Snapshot {
+  return {
+    title: d.title,
+    description: d.description ?? '',
+    category: d.category,
+    condition: d.condition ?? null,
+    price: d.price,
+    currency: d.currency === 'EUR' || d.currency === 'LEK' ? d.currency : null,
+    cityId: d.cityId ?? null,
+    cityName: d.cityName ?? null,
+    contactPhone: d.contactPhone ?? null,
+  };
+}
 
 export function MarketplaceOwnerEdit({
   initial,
@@ -32,19 +60,11 @@ export function MarketplaceOwnerEdit({
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
-  const [dialog, setDialog] = React.useState<'photos' | 'info' | null>(null);
+  const [photosOpen, setPhotosOpen] = React.useState(false);
   const [existingUrls, setExistingUrls] = React.useState(initial.imageUrls ?? []);
   const [newFiles, setNewFiles] = React.useState<File[]>([]);
-  const [info, setInfo] = React.useState({
-    title: initial.title,
-    description: initial.description ?? '',
-    category: initial.category,
-    condition: initial.condition ?? '',
-    price: initial.price != null ? String(initial.price) : '',
-    currency: (initial.currency === 'EUR' || initial.currency === 'LEK' ? initial.currency : '') as '' | 'EUR' | 'LEK',
-    cityId: initial.cityId ?? '',
-    contactPhone: initial.contactPhone ?? '',
-  });
+  const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
+  const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
 
   React.useEffect(() => {
     void listRealEstateLocationsPublic().then((res) => {
@@ -55,24 +75,28 @@ export function MarketplaceOwnerEdit({
   const dirty = JSON.stringify(draft) !== baseline || newFiles.length > 0;
   const preview = React.useMemo(() => marketplaceMineToPublic(draft), [draft]);
 
+  const startInline = (field: OwnerInlineField) => {
+    setSnapshot(snapFrom(draft));
+    setEditingField(field);
+  };
+
+  const cancelInline = () => {
+    if (snapshot) {
+      setDraft((d) => ({ ...d, ...snapshot }));
+    }
+    setSnapshot(null);
+    setEditingField(null);
+  };
+
+  const doneInline = () => {
+    setSnapshot(null);
+    setEditingField(null);
+  };
+
   const openPhotos = () => {
     setExistingUrls(draft.imageUrls ?? []);
     setNewFiles([]);
-    setDialog('photos');
-  };
-
-  const openInfo = () => {
-    setInfo({
-      title: draft.title,
-      description: draft.description ?? '',
-      category: draft.category,
-      condition: draft.condition ?? '',
-      price: draft.price != null ? String(draft.price) : '',
-      currency: draft.currency === 'EUR' || draft.currency === 'LEK' ? draft.currency : '',
-      cityId: draft.cityId ?? '',
-      contactPhone: draft.contactPhone ?? '',
-    });
-    setDialog('info');
+    setPhotosOpen(true);
   };
 
   const onSave = async () => {
@@ -93,7 +117,7 @@ export function MarketplaceOwnerEdit({
         uploaded = up.urls;
       }
       const imageUrls = [...existingUrls, ...uploaded].slice(0, MAX_IMAGES);
-      const cityId = draft.cityId || info.cityId;
+      const cityId = draft.cityId;
       if (!cityId) {
         setError('Zgjidhni qytetin.');
         return;
@@ -119,10 +143,121 @@ export function MarketplaceOwnerEdit({
       setBaseline(JSON.stringify(next));
       setExistingUrls(imageUrls);
       setNewFiles([]);
+      setEditingField(null);
       setSuccess('Njoftimi u përditësua.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const fieldSx = {
+    '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'rgba(255,255,255,0.03)' },
+  } as const;
+
+  const inlineEditors: Partial<Record<OwnerInlineField, React.ReactNode>> = {
+    title: (
+      <Stack spacing={1} sx={{ width: '100%', maxWidth: 560 }}>
+        <TextField
+          label="Titulli"
+          value={draft.title}
+          onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+          fullWidth
+          autoFocus
+          sx={fieldSx}
+        />
+        <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
+      </Stack>
+    ),
+    price: (
+      <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
+        <Stack direction="row" spacing={1.25}>
+          <TextField
+            label="Çmimi"
+            value={draft.price != null ? String(draft.price) : ''}
+            onChange={(e) => {
+              const raw = e.target.value.trim();
+              setDraft((d) => ({
+                ...d,
+                price: raw ? Number(raw) : null,
+                currency: raw ? d.currency || 'EUR' : null,
+              }));
+            }}
+            fullWidth
+            autoFocus
+            sx={fieldSx}
+          />
+          <SearchableSelect
+            label="Monedha"
+            value={draft.currency === 'EUR' || draft.currency === 'LEK' ? draft.currency : ''}
+            onChange={(v) =>
+              setDraft((d) => ({ ...d, currency: v === 'EUR' || v === 'LEK' ? v : null }))
+            }
+            options={CURRENCY_OPTIONS}
+            emptyLabel="—"
+            sx={{ minWidth: 120 }}
+          />
+        </Stack>
+        <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
+      </Stack>
+    ),
+    location: (
+      <Stack spacing={1} sx={{ width: '100%', maxWidth: 360 }}>
+        <SearchableSelect
+          label="Qyteti"
+          value={draft.cityId ?? ''}
+          onChange={(v) => {
+            const cityName = cities.find((c) => c.id === v)?.name ?? null;
+            setDraft((d) => ({ ...d, cityId: v || null, cityName }));
+          }}
+          options={cities.map((c) => ({ value: c.id, label: c.name }))}
+          emptyLabel="Zgjidhni…"
+          required
+        />
+        <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
+      </Stack>
+    ),
+    specs: (
+      <Stack spacing={1.25} sx={{ width: '100%', maxWidth: 480 }}>
+        <SearchableSelect
+          label="Kategoria"
+          value={draft.category}
+          onChange={(v) => setDraft((d) => ({ ...d, category: v }))}
+          options={MARKETPLACE_CATEGORY_OPTIONS}
+          emptyLabel="Zgjidhni…"
+          required
+        />
+        <SearchableSelect
+          label="Gjendja"
+          value={draft.condition ?? ''}
+          onChange={(v) => setDraft((d) => ({ ...d, condition: v || null }))}
+          options={MARKETPLACE_CONDITION_OPTIONS}
+          emptyLabel="—"
+        />
+        <TextField
+          label="Telefoni"
+          value={draft.contactPhone ?? ''}
+          onChange={(e) => setDraft((d) => ({ ...d, contactPhone: e.target.value || null }))}
+          fullWidth
+          sx={fieldSx}
+        />
+        <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
+      </Stack>
+    ),
+    description: (
+      <Stack spacing={1} sx={{ width: '100%' }}>
+        <TextField
+          label="Përshkrimi"
+          value={draft.description ?? ''}
+          onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+          fullWidth
+          multiline
+          minRows={4}
+          autoFocus
+          sx={fieldSx}
+        />
+        <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
+      </Stack>
+    ),
   };
 
   return (
@@ -163,23 +298,23 @@ export function MarketplaceOwnerEdit({
         ownerPreview
         ownerEdit={{
           onEditPhotos: openPhotos,
-          onEditInfo: openInfo,
-          onEditPrice: openInfo,
-          onEditSpecs: openInfo,
+          editingField,
+          onStartInlineEdit: startInline,
+          inlineEditors,
         }}
       />
 
       <OwnerEditSectionDialog
-        open={dialog === 'photos'}
+        open={photosOpen}
         title="Fotot"
-        onClose={() => setDialog(null)}
+        onClose={() => setPhotosOpen(false)}
         onApply={() => {
           const pendingPreviews = newFiles.map((f) => URL.createObjectURL(f));
           setDraft((d) => ({
             ...d,
             imageUrls: [...existingUrls, ...pendingPreviews].slice(0, MAX_IMAGES),
           }));
-          setDialog(null);
+          setPhotosOpen(false);
         }}
       >
         <ListingImagePicker
@@ -189,79 +324,6 @@ export function MarketplaceOwnerEdit({
           onExistingUrlsChange={setExistingUrls}
           max={MAX_IMAGES}
           label="Foto"
-        />
-      </OwnerEditSectionDialog>
-
-      <OwnerEditSectionDialog
-        open={dialog === 'info'}
-        title="Të dhënat"
-        onClose={() => setDialog(null)}
-        onApply={() => {
-          const cityName = cities.find((c) => c.id === info.cityId)?.name ?? draft.cityName;
-          setDraft((d) => ({
-            ...d,
-            title: info.title.trim(),
-            description: info.description.trim(),
-            category: info.category.trim(),
-            condition: info.condition.trim() || null,
-            price: info.price.trim() ? Number(info.price) : null,
-            currency: info.price.trim() && info.currency ? info.currency : null,
-            cityId: info.cityId || null,
-            cityName,
-            contactPhone: info.contactPhone.trim() || null,
-          }));
-          setDialog(null);
-        }}
-      >
-        <TextField label="Titulli" value={info.title} onChange={(e) => setInfo({ ...info, title: e.target.value })} fullWidth required />
-        <SearchableSelect
-          label="Kategoria"
-          value={info.category}
-          onChange={(v) => setInfo({ ...info, category: v })}
-          options={MARKETPLACE_CATEGORY_OPTIONS}
-          emptyLabel="Zgjidhni…"
-          required
-        />
-        <SearchableSelect
-          label="Gjendja"
-          value={info.condition}
-          onChange={(v) => setInfo({ ...info, condition: v })}
-          options={MARKETPLACE_CONDITION_OPTIONS}
-          emptyLabel="—"
-        />
-        <TextField
-          label="Përshkrimi"
-          value={info.description}
-          onChange={(e) => setInfo({ ...info, description: e.target.value })}
-          fullWidth
-          multiline
-          minRows={3}
-        />
-        <Stack direction="row" spacing={1.5}>
-          <TextField label="Çmimi" value={info.price} onChange={(e) => setInfo({ ...info, price: e.target.value })} fullWidth />
-          <SearchableSelect
-            label="Monedha"
-            value={info.currency}
-            onChange={(v) => setInfo({ ...info, currency: v as '' | 'EUR' | 'LEK' })}
-            options={CURRENCY_OPTIONS}
-            emptyLabel="—"
-            sx={{ minWidth: 120 }}
-          />
-        </Stack>
-        <SearchableSelect
-          label="Qyteti"
-          value={info.cityId}
-          onChange={(v) => setInfo({ ...info, cityId: v })}
-          options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni…"
-          required
-        />
-        <TextField
-          label="Telefoni"
-          value={info.contactPhone}
-          onChange={(e) => setInfo({ ...info, contactPhone: e.target.value })}
-          fullWidth
-          required
         />
       </OwnerEditSectionDialog>
     </ListingOwnerEditShell>

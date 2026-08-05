@@ -127,6 +127,7 @@ app.use('/api/real-estate/locations', require('./routes/real-estate-locations'))
 app.use('/api/admin/real-estate/locations', require('./routes/admin-real-estate-locations'));
 app.use('/api/listings', require('./routes/listings'));
 app.use('/api/listings/refresh', require('./routes/listing-refresh'));
+app.use('/api/listings/announcement', require('./routes/listing-announcement'));
 app.use('/api/listings/convert-quota', require('./routes/listing-quota-convert'));
 app.use('/api/listings/cars', require('./routes/car-listings'));
 app.use('/api/listings/jobs', require('./routes/job-listings'));

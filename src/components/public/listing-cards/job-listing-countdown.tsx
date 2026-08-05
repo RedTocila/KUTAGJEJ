@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Chip, type SxProps, type Theme } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 
 import {
   formatJobListingCountdown,
@@ -21,7 +22,44 @@ const baseChipSx: SxProps<Theme> = {
   '& .MuiChip-label': { px: 1 },
 };
 
-function chipUrgencySx(urgency: JobListingCountdownUrgency) {
+const overlayChipSx: SxProps<Theme> = {
+  height: 26,
+  borderRadius: '8px',
+  fontFamily: 'monospace',
+  fontVariantNumeric: 'tabular-nums',
+  fontWeight: 700,
+  fontSize: '0.72rem',
+  letterSpacing: '0.02em',
+  border: '1px solid',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
+  boxShadow: '0 2px 12px rgba(0,0,0,0.28)',
+  '& .MuiChip-label': { px: 1.15 },
+};
+
+function chipUrgencySx(urgency: JobListingCountdownUrgency, overlay: boolean) {
+  if (overlay) {
+    if (urgency === 'critical') {
+      return {
+        color: '#fff',
+        bgcolor: alpha('#dc2626', 0.72),
+        borderColor: alpha('#fff', 0.22),
+      };
+    }
+    if (urgency === 'warning') {
+      return {
+        color: '#fff',
+        bgcolor: alpha('#d97706', 0.72),
+        borderColor: alpha('#fff', 0.22),
+      };
+    }
+    return {
+      color: '#fff',
+      bgcolor: alpha('#000', 0.52),
+      borderColor: alpha('#fff', 0.18),
+    };
+  }
+
   if (urgency === 'critical') {
     return {
       color: 'error.main',
@@ -50,13 +88,24 @@ function tickState(expiresAt: string) {
   };
 }
 
-export function JobListingCountdownPlaceholder({ chipSx }: { chipSx?: SxProps<Theme> }) {
+export function JobListingCountdownPlaceholder({
+  chipSx,
+  variant = 'default',
+}: {
+  chipSx?: SxProps<Theme>;
+  variant?: 'default' | 'overlay';
+}) {
+  const overlay = variant === 'overlay';
   return (
     <Chip
       label={PLACEHOLDER_LABEL}
       size="small"
       aria-hidden
-      sx={{ ...baseChipSx, ...chipUrgencySx('normal'), ...(chipSx as object) }}
+      sx={{
+        ...(overlay ? overlayChipSx : baseChipSx),
+        ...chipUrgencySx('normal', overlay),
+        ...(chipSx as object),
+      }}
     />
   );
 }
@@ -64,10 +113,13 @@ export function JobListingCountdownPlaceholder({ chipSx }: { chipSx?: SxProps<Th
 export function JobListingCountdown({
   expiresAt,
   chipSx,
+  variant = 'default',
 }: {
   expiresAt: string;
   chipSx?: SxProps<Theme>;
+  variant?: 'default' | 'overlay';
 }) {
+  const overlay = variant === 'overlay';
   const [mounted, setMounted] = React.useState(false);
   const [state, setState] = React.useState<{
     label: string;
@@ -88,7 +140,7 @@ export function JobListingCountdown({
   }, [expiresAt, mounted]);
 
   if (!mounted) {
-    return <JobListingCountdownPlaceholder chipSx={chipSx} />;
+    return <JobListingCountdownPlaceholder chipSx={chipSx} variant={variant} />;
   }
 
   const label = state?.label ?? PLACEHOLDER_LABEL;
@@ -100,7 +152,11 @@ export function JobListingCountdown({
       size="small"
       aria-live="polite"
       suppressHydrationWarning
-      sx={{ ...baseChipSx, ...chipUrgencySx(urgency), ...(chipSx as object) }}
+      sx={{
+        ...(overlay ? overlayChipSx : baseChipSx),
+        ...chipUrgencySx(urgency, overlay),
+        ...(chipSx as object),
+      }}
     />
   );
 }

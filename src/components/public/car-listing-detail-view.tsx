@@ -37,6 +37,7 @@ import { RealEstateListingGallery } from '@/components/public/real-estate-listin
 import { StickyListingContact } from '@/components/public/sticky-listing-contact';
 import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
+import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import {
   CAR_COLOUR_OPTIONS,
@@ -50,6 +51,7 @@ import {
 import { whatsappHref } from '@/lib/listing-contact';
 import type { PublicCarListing, PublicCarListingDetail } from '@/lib/public-listings-client';
 import { paths } from '@/paths';
+import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 
 const FUEL_SQ: Record<string, string> = {
   petrol: 'Benzinë',
@@ -250,7 +252,7 @@ function CarPriceContactAside(props: {
               fullWidth
               size="large"
               startIcon={<PhoneIcon weight="regular" size={22} />}
-              sx={{ borderRadius: 2, fontWeight: 800, textTransform: 'none', py: 1.2 }}
+              sx={{ ...productButtonSx, py: 1.2 }}
             >
               Kontakto shitësin
             </Button>
@@ -265,9 +267,7 @@ function CarPriceContactAside(props: {
                 size="large"
                 startIcon={<WhatsappLogoIcon weight="regular" size={22} />}
                 sx={{
-                  borderRadius: 2,
-                  fontWeight: 800,
-                  textTransform: 'none',
+                  ...productButtonSx,
                   py: 1.2,
                   ...whatsappOutlinedButtonSx,
                 }}
@@ -282,9 +282,7 @@ function CarPriceContactAside(props: {
               fullWidth
               size="large"
               sx={{
-                borderRadius: 2,
-                fontWeight: 800,
-                textTransform: 'none',
+                ...productButtonSx,
                 py: 1.2,
                 borderColor: 'divider',
                 borderWidth: 2,
@@ -294,7 +292,7 @@ function CarPriceContactAside(props: {
             />
           </>
         ) : (
-          <Button variant="contained" disabled fullWidth size="large" sx={{ borderRadius: 2 }}>
+          <Button variant="contained" disabled fullWidth size="large" sx={productButtonSx}>
             Nr. kontakti i padisponueshëm
           </Button>
         )}
@@ -320,6 +318,7 @@ export function CarListingDetailView({
   const onEditInfo = ownerEdit?.onEditInfo;
   const onEditPrice = ownerEdit?.onEditPrice ?? onEditInfo;
   const onEditSpecs = ownerEdit?.onEditSpecs ?? onEditInfo;
+  const canInline = Boolean(ownerEdit?.onStartInlineEdit);
   const locationFull = [listing.cityName, 'Shqipëri'].filter(Boolean).join(', ');
   const displayPhone = listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
   const viewCount = listing.viewCount ?? 0;
@@ -374,7 +373,14 @@ export function CarListingDetailView({
 
   return (
     <>
-      {ownerPreview ? null : <ListingMetricsTracker listingKind="car" listingId={listing.id} />}
+      {ownerPreview ? null : (
+        <ListingMetricsTracker
+          listingKind="car"
+          listingId={listing.id}
+          city={listing.cityName}
+          category={listing.make}
+        />
+      )}
       <Box component="article" sx={{ bgcolor: 'background.default' }}>
         <Container
           maxWidth="lg"
@@ -453,10 +459,10 @@ export function CarListingDetailView({
                     <Paper
                       elevation={0}
                       sx={{
-                        borderRadius: 2.5,
+                        ...productPanelSx,
                         border: 'none',
-                        bgcolor: 'rgba(var(--mui-palette-background-defaultChannel) / 0.55)',
                         p: 2,
+                        borderRadius: 2.5,
                       }}
                     >
                       <ListingSellerProfileCard seller={listing.seller} headingId="car-seller-heading-hero" showSafetyNote />
@@ -468,7 +474,13 @@ export function CarListingDetailView({
 
             <Stack spacing={{ xs: 3, md: 3.5 }} sx={{ px: { xs: 2, sm: 3, md: 0 }, pb: ownerPreview ? 3 : { xs: 18, md: 6 }, width: '100%' }}>
               <Stack spacing={1.75}>
-                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                <OwnerEditableSpot
+                  field="title"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho titullin"
+                  legacyOnClick={onEditInfo}
+                  align="flex-start"
+                >
                   <Typography
                     variant="h3"
                     component="h1"
@@ -482,13 +494,15 @@ export function CarListingDetailView({
                   >
                     {listing.title}
                   </Typography>
-                  {onEditInfo ? (
-                    <OwnerEditPencil label="Ndrysho titullin" onClick={onEditInfo} />
-                  ) : null}
-                </Stack>
+                </OwnerEditableSpot>
 
                 <Box sx={{ display: ownerPreview ? 'block' : { xs: 'block', md: 'none' } }}>
-                  <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                  <OwnerEditableSpot
+                    field="price"
+                    ownerEdit={ownerEdit}
+                    label="Ndrysho çmimin"
+                    legacyOnClick={onEditPrice}
+                  >
                     <Typography
                       sx={{
                         fontWeight: 900,
@@ -499,25 +513,24 @@ export function CarListingDetailView({
                     >
                       {formatPrice(listing.price, listing.currency)}
                     </Typography>
-                    {onEditPrice ? (
-                      <OwnerEditPencil label="Ndrysho çmimin" onClick={onEditPrice} />
-                    ) : null}
-                  </Stack>
+                  </OwnerEditableSpot>
                 </Box>
 
                 <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: { xs: 1.25, sm: 2 } }}>
-                  {locationFull || onEditInfo ? (
-                    <Stack direction="row" spacing={0.65} sx={{ alignItems: 'center', maxWidth: '100%' }}>
+                  {locationFull || canInline || onEditInfo ? (
+                    <OwnerEditableSpot
+                      field="location"
+                      ownerEdit={ownerEdit}
+                      label="Ndrysho lokacionin"
+                      legacyOnClick={onEditInfo}
+                    >
                       <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
                         <MapPinIcon size={17} weight="regular" color="currentColor" />
                       </Box>
                       <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.4 }}>
                         {locationFull || 'Shtoni lokacionin'}
                       </Typography>
-                      {onEditInfo ? (
-                        <OwnerEditPencil label="Ndrysho lokacionin" onClick={onEditInfo} />
-                      ) : null}
-                    </Stack>
+                    </OwnerEditableSpot>
                   ) : null}
                   <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
                     <EyeIcon size={17} weight="regular" aria-hidden />
@@ -530,54 +543,73 @@ export function CarListingDetailView({
                 </Stack>
               </Stack>
 
-              <Box sx={{ position: 'relative' }}>
-                {onEditSpecs ? (
-                  <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
-                    <OwnerEditPencil label="Ndrysho specifikimet" onClick={onEditSpecs} />
-                  </Box>
-                ) : null}
-                <Box
-                  sx={{
-                    borderRadius: 2.5,
-                    bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.9)',
-                    border: '1px solid',
-                    borderColor: 'rgba(var(--mui-palette-dividerChannel) / 0.7)',
-                    px: { xs: 0.5, sm: 0.75 },
-                    py: { xs: 1.5, sm: 1.75 },
-                  }}
+              <Stack spacing={1.25}>
+                <OwnerEditableSpot
+                  field="specs"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho specifikimet"
+                  legacyOnClick={onEditSpecs}
                 >
-                  <Stack
-                    direction="row"
-                    divider={
-                      <Divider
-                        orientation="vertical"
-                        flexItem
-                        sx={{ borderColor: 'rgba(var(--mui-palette-dividerChannel) / 0.55)', my: 0.5 }}
-                      />
-                    }
-                    sx={{ alignItems: 'stretch', width: '100%' }}
+                  <Typography
+                    variant="overline"
+                    color="text.secondary"
+                    sx={{ fontWeight: 800, letterSpacing: '0.1em' }}
                   >
-                    <SpecIconBox Icon={CalendarIcon} primary={String(listing.year)} secondary="Viti" />
-                    <SpecIconBox
-                      Icon={GaugeIcon}
-                      primary={formatKilometers(listing.kilometers).replace(' ', '\u00A0')}
-                      secondary="Kilometra"
-                    />
-                    <SpecIconBox Icon={GasPumpIcon} primary={fuel} secondary="Karburant" />
-                    <SpecIconBox Icon={GearSixIcon} primary={transmission} secondary="Transmision" />
-                  </Stack>
-                </Box>
-              </Box>
+                    Përmbledhje
+                  </Typography>
+                </OwnerEditableSpot>
+                {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : (
+                  <Box
+                    sx={{
+                      ...productPanelSx,
+                      borderRadius: 2.5,
+                      px: { xs: 0.5, sm: 0.75 },
+                      py: { xs: 1.5, sm: 1.75 },
+                    }}
+                  >
+                    <Stack
+                      direction="row"
+                      divider={
+                        <Divider
+                          orientation="vertical"
+                          flexItem
+                          sx={{ borderColor: 'rgba(var(--mui-palette-dividerChannel) / 0.55)', my: 0.5 }}
+                        />
+                      }
+                      sx={{ alignItems: 'stretch', width: '100%' }}
+                    >
+                      <SpecIconBox Icon={CalendarIcon} primary={String(listing.year)} secondary="Viti" />
+                      <SpecIconBox
+                        Icon={GaugeIcon}
+                        primary={formatKilometers(listing.kilometers).replace(' ', '\u00A0')}
+                        secondary="Kilometra"
+                      />
+                      <SpecIconBox Icon={GasPumpIcon} primary={fuel} secondary="Karburant" />
+                      <SpecIconBox Icon={GearSixIcon} primary={transmission} secondary="Transmision" />
+                    </Stack>
+                  </Box>
+                )}
+              </Stack>
 
               <Stack spacing={1.25} component="section" aria-labelledby="car-desc-heading">
-                {sectionTitle(
-                  'Përshkrimi',
-                  'car-desc-heading',
-                  onEditSpecs ? { label: 'Ndrysho përshkrimin', onClick: onEditSpecs } : undefined,
-                )}
-                {listing.description ? (
+                <OwnerEditableSpot
+                  field="description"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho përshkrimin"
+                  legacyOnClick={onEditSpecs}
+                >
+                  <Typography
+                    id="car-desc-heading"
+                    component="h2"
+                    variant="overline"
+                    sx={{ letterSpacing: '0.14em', fontWeight: 800, color: 'text.secondary' }}
+                  >
+                    Përshkrimi
+                  </Typography>
+                </OwnerEditableSpot>
+                {ownerEdit?.editingField === 'description' && ownerEdit.inlineEditors?.description ? null : listing.description ? (
                   <RealEstateListingExpandableText text={listing.description} />
-                ) : onEditSpecs ? (
+                ) : canInline || onEditSpecs ? (
                   <Typography sx={{ color: 'text.secondary' }}>Shtoni përshkrimin</Typography>
                 ) : null}
               </Stack>
@@ -618,7 +650,7 @@ export function CarListingDetailView({
               {mapQuery ? (
                 <Stack spacing={1.25} component="section" aria-labelledby="car-location-heading">
                   {sectionTitle('Vendndodhja', 'car-location-heading')}
-                  <LocationMapEmbed query={mapQuery} linkLabel="Shiko zonën në hartë" />
+                  <LocationMapEmbed query={mapQuery} />
                 </Stack>
               ) : null}
 

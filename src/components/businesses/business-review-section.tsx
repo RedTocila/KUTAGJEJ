@@ -11,6 +11,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
   Rating,
   Stack,
   TextField,
@@ -19,11 +20,13 @@ import {
 import { alpha } from '@mui/material/styles';
 import { ArrowRight as ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
+import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { listBusinessReviews, submitBusinessReview, type BusinessReview } from '@/lib/business-reviews-client';
 import { ProfessionalFiveStarRating } from '@/components/public/professional-listing-detail-ui';
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
+import { productButtonSx, productDialogSlotProps, productFieldSx } from '@/styles/product-sx';
 
 const REVIEWS_PAGE_SIZE = 10;
 const STAR_FILTERS = [5, 4, 3, 2, 1] as const;
@@ -121,12 +124,69 @@ function LeaveReviewDialog({
   onSubmit: () => void;
 }) {
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>Vlerësoni biznesin</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          {error ? <Alert severity="error">{error}</Alert> : null}
-          <Rating value={rating} onChange={(_, v) => onRatingChange(v)} />
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      slotProps={productDialogSlotProps}
+    >
+      <DialogTitle
+        sx={{
+          position: 'relative',
+          px: 2.5,
+          pt: 2.5,
+          pb: 1,
+          pr: 6,
+          fontWeight: 800,
+          fontSize: '1.125rem',
+          letterSpacing: '-0.01em',
+        }}
+      >
+        Vlerësoni biznesin
+        <IconButton
+          aria-label="Mbyll"
+          onClick={onClose}
+          size="small"
+          sx={{
+            position: 'absolute',
+            right: 12,
+            top: 12,
+            color: 'text.secondary',
+            borderRadius: 2,
+            '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
+          }}
+        >
+          <XIcon size={18} weight="bold" />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent sx={{ px: 2.5, pb: 1.5, pt: '8px !important' }}>
+        <Stack spacing={2.25}>
+          {error ? (
+            <Alert severity="error" sx={{ borderRadius: 2 }}>
+              {error}
+            </Alert>
+          ) : null}
+          <Box>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mb: 1.25, fontWeight: 600, fontSize: '0.8125rem' }}
+            >
+              Sa yje i jepni?
+            </Typography>
+            <Rating
+              value={rating}
+              onChange={(_, v) => onRatingChange(v)}
+              size="large"
+              sx={{
+                fontSize: '2.75rem',
+                gap: 0.5,
+                '& .MuiRating-iconFilled': { color: 'warning.main' },
+                '& .MuiRating-iconHover': { color: 'warning.main' },
+              }}
+            />
+          </Box>
           <TextField
             label="Komenti (opsionale)"
             value={comment}
@@ -134,14 +194,23 @@ function LeaveReviewDialog({
             multiline
             minRows={3}
             fullWidth
+            sx={productFieldSx}
           />
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} color="inherit">
-          Anulo
-        </Button>
-        <Button variant="contained" disabled={submitting} onClick={onSubmit}>
+      <DialogActions
+        sx={{
+          px: 2.5,
+          pb: 2.5,
+          pt: 1,
+        }}
+      >
+        <Button
+          variant="contained"
+          disabled={submitting}
+          onClick={onSubmit}
+          sx={{ ...productButtonSx, px: 2.5 }}
+        >
           Dërgo
         </Button>
       </DialogActions>

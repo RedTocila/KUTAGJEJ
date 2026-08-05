@@ -8,3 +8,14 @@ export function hardNavigate(href: string, event?: { preventDefault(): void }): 
   if (typeof window === 'undefined') return;
   window.location.assign(href);
 }
+
+/** Scroll to top and fully reload the current document (active-tab re-tap). */
+export function hardRefreshToTop(event?: { preventDefault(): void }): void {
+  event?.preventDefault();
+  if (typeof window === 'undefined') return;
+  if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+  }
+  window.scrollTo(0, 0);
+  window.location.reload();
+}

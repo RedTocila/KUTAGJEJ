@@ -465,7 +465,7 @@ export function JobListingDetailDesktop({
                             borderRadius: 2.5,
                             border: '1px solid',
                             borderColor: 'divider',
-                            bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.5)',
+                            bgcolor: 'background.paper',
                           }}
                         >
                           <Box
@@ -573,7 +573,7 @@ export function JobListingDetailDesktop({
                             borderRadius: 3,
                             border: '1px solid',
                             borderColor: 'divider',
-                            bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
+                            bgcolor: 'background.paper',
                             backgroundImage: `linear-gradient(160deg, ${primaryMainAlpha(0.12)} 0%, transparent 60%)`,
                           }}
                         >

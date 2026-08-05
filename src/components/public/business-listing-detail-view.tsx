@@ -20,6 +20,7 @@ import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/s
 import { BusinessVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
+import { ReservationDateField } from '@/components/core/reservation-date-field';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { BusinessMenuPreview } from '@/components/public/business-menu-section';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
@@ -30,7 +31,7 @@ import { RealEstateListingGallery } from '@/components/public/real-estate-listin
 import {
   businessCategorySubtitle,
   businessOpenStatusLine,
-  reservationDateOptions,
+  reservationDateBounds,
 } from '@/lib/business-listing-detail-content';
 import {
   setPendingBusinessReservation,
@@ -48,8 +49,10 @@ import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 import { paths } from '@/paths';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
+import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { useUser } from '@/hooks/use-user';
+import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
 const FONT_BODY = '0.875rem';
 const FONT_CAPTION = '0.75rem';
@@ -58,17 +61,14 @@ const FONT_TITLE = '1.375rem';
 const CONTENT_MAX = 480;
 
 const surfaceSx = {
+  ...productPanelSx,
   p: 2,
-  borderRadius: 3,
-  bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
-  border: '1px solid',
-  borderColor: 'divider',
 } as const;
 
 const reserveFieldSx = {
+  ...productFieldSx,
   '& .MuiOutlinedInput-root': {
-    borderRadius: 2.5,
-    bgcolor: 'rgba(var(--mui-palette-background-defaultChannel) / 0.85)',
+    ...productFieldSx['& .MuiOutlinedInput-root'],
     fontSize: FONT_BODY,
     fontWeight: 600,
   },
@@ -118,7 +118,7 @@ export function BusinessListingDetailView({
   const telHref = phone ? `tel:${phone.replace(/\s/g, '')}` : null;
   const categoryLine = React.useMemo(() => businessCategorySubtitle(listing), [listing]);
   const statusLine = React.useMemo(() => businessOpenStatusLine(listing), [listing]);
-  const dateOptions = React.useMemo(() => reservationDateOptions(), []);
+  const dateBounds = React.useMemo(() => reservationDateBounds(), []);
   const timeOptions =
     listing.reservationTimeSlots?.length ? listing.reservationTimeSlots : DEFAULT_RESERVATION_TIME_SLOTS;
   const peopleOptions =
@@ -129,10 +129,10 @@ export function BusinessListingDetailView({
   const reserveHref = listing.reservationUrl?.trim() || telHref;
 
   React.useEffect(() => {
-    if (!reserveDate && dateOptions[0]) setReserveDate(dateOptions[0].value);
+    if (!reserveDate) setReserveDate(dateBounds.min);
     if (!reserveTime && timeOptions[0]) setReserveTime(timeOptions[0]);
     if (!reservePeople && peopleOptions[0]) setReservePeople(String(peopleOptions[0]));
-  }, [dateOptions, reserveDate, reserveTime, reservePeople, timeOptions, peopleOptions]);
+  }, [dateBounds.min, reserveDate, reserveTime, reservePeople, timeOptions, peopleOptions]);
 
   const handleReserve = async () => {
     if (listing.reservationUrl?.trim()) {
@@ -205,7 +205,14 @@ export function BusinessListingDetailView({
 
   return (
     <>
-      {ownerPreview ? null : <ListingMetricsTracker listingKind="businesses" listingId={listing.id} />}
+      {ownerPreview ? null : (
+        <ListingMetricsTracker
+          listingKind="businesses"
+          listingId={listing.id}
+          city={listing.cityName}
+          category={listing.category}
+        />
+      )}
       <BusinessListingDetailDesktop
         listing={listing}
         similar={ownerPreview ? [] : similar}
@@ -220,7 +227,6 @@ export function BusinessListingDetailView({
         onReserveDate={setReserveDate}
         onReserveTime={setReserveTime}
         onReservePeople={setReservePeople}
-        dateOptions={dateOptions}
         timeOptions={timeOptions}
         peopleOptions={peopleOptions}
         reserveGuestName={reserveGuestName}
@@ -265,7 +271,13 @@ export function BusinessListingDetailView({
           <Stack spacing={2.5}>
             {/* Title & meta */}
             <Stack spacing={1.25}>
-              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+              <OwnerEditableSpot
+                field="title"
+                ownerEdit={ownerEdit}
+                label="Ndrysho titullin"
+                legacyOnClick={ownerEdit?.onEditInfo}
+                align="flex-start"
+              >
                 <Typography
                   component="h1"
                   sx={{ fontWeight: 800, fontSize: FONT_TITLE, lineHeight: 1.2 }}
@@ -273,30 +285,31 @@ export function BusinessListingDetailView({
                   {listing.title}
                 </Typography>
                 <BusinessVerifiedBadge />
-                {ownerEdit?.onEditInfo ? (
-                  <OwnerEditPencil label="Ndrysho titullin dhe të dhënat" onClick={ownerEdit.onEditInfo} />
-                ) : null}
-              </Stack>
+              </OwnerEditableSpot>
 
-              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+              <OwnerEditableSpot
+                field="category"
+                ownerEdit={ownerEdit}
+                label="Ndrysho kategorinë"
+                legacyOnClick={ownerEdit?.onEditInfo}
+              >
                 <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', lineHeight: 1.4 }}>
                   {categoryLine}
                 </Typography>
-                {ownerEdit?.onEditInfo ? (
-                  <OwnerEditPencil label="Ndrysho kategorinë" onClick={ownerEdit.onEditInfo} />
-                ) : null}
-              </Stack>
+              </OwnerEditableSpot>
 
-              {listing.cityName || ownerEdit?.onEditInfo ? (
-                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+              {listing.cityName || ownerEdit?.onStartInlineEdit || ownerEdit?.onEditInfo ? (
+                <OwnerEditableSpot
+                  field="location"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho lokacionin"
+                  legacyOnClick={ownerEdit?.onEditInfo}
+                >
                   <MapPinIcon size={16} weight="regular" />
                   <Typography sx={{ fontSize: FONT_CAPTION }}>
                     {listing.cityName ? `${listing.cityName}, Shqipëri` : 'Shtoni lokacionin'}
                   </Typography>
-                  {ownerEdit?.onEditInfo ? (
-                    <OwnerEditPencil label="Ndrysho lokacionin" onClick={ownerEdit.onEditInfo} />
-                  ) : null}
-                </Stack>
+                </OwnerEditableSpot>
               ) : null}
 
               <BusinessReviewSection
@@ -329,9 +342,27 @@ export function BusinessListingDetailView({
                 </Stack>
               ) : null}
 
-              {listing.description || ownerEdit?.onEditInfo ? (
-                <Box>
-                  {listing.description ? (
+              {listing.description || ownerEdit?.onStartInlineEdit || ownerEdit?.onEditInfo ? (
+                <Stack spacing={0.75}>
+                  <OwnerEditableSpot
+                    field="description"
+                    ownerEdit={ownerEdit}
+                    label="Ndrysho përshkrimin"
+                    legacyOnClick={ownerEdit?.onEditInfo}
+                  >
+                    <Typography
+                      sx={{
+                        fontWeight: 800,
+                        fontSize: '0.72rem',
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        color: 'text.secondary',
+                      }}
+                    >
+                      Përshkrimi
+                    </Typography>
+                  </OwnerEditableSpot>
+                  {ownerEdit?.editingField === 'description' && ownerEdit.inlineEditors?.description ? null : listing.description ? (
                     <RealEstateListingExpandableText
                       text={listing.description}
                       fontSize={FONT_BODY}
@@ -343,23 +374,32 @@ export function BusinessListingDetailView({
                       Shtoni përshkrimin
                     </Typography>
                   )}
-                  {ownerEdit?.onEditInfo ? (
-                    <Box sx={{ mt: 0.75 }}>
-                      <OwnerEditPencil label="Ndrysho përshkrimin" onClick={ownerEdit.onEditInfo} />
-                    </Box>
-                  ) : null}
-                </Box>
+                </Stack>
               ) : null}
             </Stack>
 
-            {/* Promo */}
-            {showReservation && !ownerPreview ? (
-              <ButtonBase
-                onClick={() => setReserveOpen(true)}
-                sx={{ width: '100%', textAlign: 'left', display: 'block', borderRadius: 3 }}
-              >
-                <BusinessPromoBanner servicesHighlight={listing.servicesHighlight} variant="detail" />
-              </ButtonBase>
+            {/* Promo announcement */}
+            {listing.announcementTitle?.trim() && !ownerPreview ? (
+              showReservation ? (
+                <ButtonBase
+                  onClick={() => setReserveOpen(true)}
+                  sx={{ width: '100%', textAlign: 'left', display: 'block', borderRadius: 3 }}
+                >
+                  <BusinessPromoBanner
+                    title={listing.announcementTitle}
+                    subtitle={listing.announcementSubtitle}
+                    bannerUrl={listing.announcementBannerUrl}
+                    variant="detail"
+                  />
+                </ButtonBase>
+              ) : (
+                <BusinessPromoBanner
+                  title={listing.announcementTitle}
+                  subtitle={listing.announcementSubtitle}
+                  bannerUrl={listing.announcementBannerUrl}
+                  variant="detail"
+                />
+              )
             ) : null}
 
             {/* Reservation widget */}
@@ -430,14 +470,12 @@ export function BusinessListingDetailView({
                       </Typography>
                     ) : null}
                     <Stack spacing={1.5}>
-                      <SearchableSelect
+                      <ReservationDateField
                         size="small"
                         label="Data"
                         value={reserveDate}
                         onChange={setReserveDate}
-                        options={dateOptions}
                         emptyLabel="Zgjidhni datën…"
-                        clearable={false}
                         sx={selectFieldSx()}
                       />
                       <Stack direction="row" spacing={1.25}>
@@ -510,12 +548,9 @@ export function BusinessListingDetailView({
                         disabled={usePlatformReservation ? reserveSubmitting || authLoading : !reserveHref}
                         startIcon={usePlatformReservation ? <ChatsCircleIcon size={18} weight="bold" /> : undefined}
                         sx={{
+                          ...productButtonSx,
                           py: 1.35,
-                          borderRadius: 999,
-                          fontWeight: 800,
-                          textTransform: 'none',
                           fontSize: FONT_BODY,
-                          boxShadow: 'none',
                           mt: 0.25,
                         }}
                       >

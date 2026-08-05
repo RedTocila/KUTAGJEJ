@@ -29,6 +29,7 @@ import { HeroCategoryCircles } from '@/components/public/hero-category-circles';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import { fetchAiSearch, type AiSearchResult } from '@/lib/ai-search-client';
+import { hardRefreshToTop } from '@/lib/hard-navigate';
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
@@ -320,6 +321,10 @@ export function SearchPageView() {
   const handleSelectCategory = (index: number) => {
     const next = localizedCategories[index];
     if (!next) return;
+    if (categoryId === next.id) {
+      hardRefreshToTop();
+      return;
+    }
     setCategoryId(next.id);
     setQuery('');
     setItems([]);

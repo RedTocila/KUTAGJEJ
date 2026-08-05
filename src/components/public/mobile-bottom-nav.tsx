@@ -13,12 +13,17 @@ import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/Use
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { hardNavigate, hardRefreshToTop } from '@/lib/hard-navigate';
 import {
   MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
   MOBILE_BOTTOM_NAV_FLOAT_INSET_PX,
 } from '@/lib/mobile-layout';
 import { isPostListingPath } from '@/lib/post-listing-path';
 import { paths } from '@/paths';
+
+function hrefPath(href: string): string {
+  return href.split('?')[0] || href;
+}
 
 /** Equal inset on every side between holding bar and selected pill. */
 const NAV_INSET_PX = 4;
@@ -126,6 +131,28 @@ export function MobileBottomNav() {
     setIndicatorIndex(index);
   };
 
+  const handleTabClick = (event: React.MouseEvent, item: NavItem, index: number) => {
+    moveIndicatorTo(index);
+    if (!item.activeWhen(pathname)) return;
+
+    // Already on this tab's root → scroll to top + hard refresh.
+    // Active on a related/nested route (e.g. create-listing under Home) → go to tab root.
+    if (pathname === hrefPath(item.href)) {
+      hardRefreshToTop(event);
+      return;
+    }
+    hardNavigate(item.href, event);
+  };
+
+  const handleSearchClick = (event: React.MouseEvent) => {
+    if (!searchActive) return;
+    if (pathname === paths.public.search) {
+      hardRefreshToTop(event);
+      return;
+    }
+    hardNavigate(paths.public.search, event);
+  };
+
   return (
     <Box
       component="nav"
@@ -215,7 +242,7 @@ export function MobileBottomNav() {
                     href={item.href}
                     aria-label={item.ariaLabel}
                     aria-current={active ? 'page' : undefined}
-                    onClick={() => moveIndicatorTo(index)}
+                    onClick={(event) => handleTabClick(event, item, index)}
                     sx={{
                       minWidth: 0,
                       height: '100%',
@@ -241,6 +268,7 @@ export function MobileBottomNav() {
           href={paths.public.search}
           aria-label={t.common.search}
           aria-current={searchActive ? 'page' : undefined}
+          onClick={handleSearchClick}
           sx={{
             width: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
             height: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Box, Button, Dialog, Grid, IconButton, Stack, Typography } from '@mui/material';
 import type { ProfessionalPortfolioItem } from '@/lib/professional-listing-detail-content';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { productPanelSx } from '@/styles/product-sx';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
@@ -245,6 +246,7 @@ export function ProfessionalMetaStat({
   return (
     <Box
       sx={{
+        ...productPanelSx,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -252,9 +254,6 @@ export function ProfessionalMetaStat({
         px: { xs: 0.85, sm: 1.15 },
         py: 1.15,
         borderRadius: 2.5,
-        border: '1px solid',
-        borderColor: 'divider',
-        bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
         minWidth: 0,
         height: '100%',
         textAlign: 'center',

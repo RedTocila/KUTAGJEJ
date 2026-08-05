@@ -23,6 +23,7 @@ import { BusinessVerifiedBadge } from '@/components/public/professional-listing-
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 
+import { ReservationDateField } from '@/components/core/reservation-date-field';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
@@ -43,19 +44,17 @@ import {
 } from '@/lib/listing-detail-layout';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { paths } from '@/paths';
+import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
 const surfaceSx = {
+  ...productPanelSx,
   p: 2.5,
-  borderRadius: 3,
-  border: '1px solid',
-  borderColor: 'divider',
-  bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.55)',
 } as const;
 
 const reserveFieldSx = {
+  ...productFieldSx,
   '& .MuiOutlinedInput-root': {
-    borderRadius: 2.5,
-    bgcolor: 'rgba(var(--mui-palette-background-defaultChannel) / 0.85)',
+    ...productFieldSx['& .MuiOutlinedInput-root'],
     fontSize: '0.875rem',
     fontWeight: 600,
   },
@@ -84,7 +83,6 @@ export function BusinessListingDetailDesktop({
   onReserveDate,
   onReserveTime,
   onReservePeople,
-  dateOptions,
   timeOptions,
   peopleOptions,
   onReserve,
@@ -114,7 +112,6 @@ export function BusinessListingDetailDesktop({
   onReserveDate: (v: string) => void;
   onReserveTime: (v: string) => void;
   onReservePeople: (v: string) => void;
-  dateOptions: { value: string; label: string }[];
   timeOptions: string[];
   peopleOptions: number[];
   onReserve: () => void;
@@ -230,10 +227,24 @@ export function BusinessListingDetailDesktop({
 
                 <Divider />
 
-                {showReservation ? (
-                  <ButtonBase onClick={() => onReserveOpen(true)} sx={{ width: '100%', textAlign: 'left', display: 'block', borderRadius: 3 }}>
-                    <BusinessPromoBanner servicesHighlight={listing.servicesHighlight} variant="detail" />
-                  </ButtonBase>
+                {listing.announcementTitle?.trim() ? (
+                  showReservation ? (
+                    <ButtonBase onClick={() => onReserveOpen(true)} sx={{ width: '100%', textAlign: 'left', display: 'block', borderRadius: 3 }}>
+                      <BusinessPromoBanner
+                        title={listing.announcementTitle}
+                        subtitle={listing.announcementSubtitle}
+                        bannerUrl={listing.announcementBannerUrl}
+                        variant="detail"
+                      />
+                    </ButtonBase>
+                  ) : (
+                    <BusinessPromoBanner
+                      title={listing.announcementTitle}
+                      subtitle={listing.announcementSubtitle}
+                      bannerUrl={listing.announcementBannerUrl}
+                      variant="detail"
+                    />
+                  )
                 ) : null}
 
                 {showReservation ? (
@@ -297,14 +308,12 @@ export function BusinessListingDetailDesktop({
                           </Typography>
                         ) : null}
                         <Stack spacing={1.5}>
-                          <SearchableSelect
+                          <ReservationDateField
                             size="small"
                             label="Data"
                             value={reserveDate}
                             onChange={onReserveDate}
-                            options={dateOptions}
                             emptyLabel="Zgjidhni datën…"
-                            clearable={false}
                             sx={selectFieldSx()}
                           />
                           <Stack direction="row" spacing={1.25}>
@@ -383,11 +392,8 @@ export function BusinessListingDetailDesktop({
                             onClick={onReserve}
                             disabled={usePlatformReservation ? reserveSubmitting : !reserveHref}
                             sx={{
+                              ...productButtonSx,
                               py: 1.25,
-                              borderRadius: 999,
-                              fontWeight: 800,
-                              textTransform: 'none',
-                              boxShadow: 'none',
                             }}
                           >
                             {reserveSubmitting
@@ -410,7 +416,7 @@ export function BusinessListingDetailDesktop({
                     disabled={!phoneHref}
                     fullWidth
                     startIcon={<PhoneIcon size={18} weight="regular" />}
-                    sx={{ py: 1.25, borderRadius: 2.5, fontWeight: 800, textTransform: 'none', borderWidth: 2 }}
+                    sx={{ ...productButtonSx, py: 1.25, borderWidth: 2 }}
                   >
                     Telefono
                   </Button>
@@ -420,7 +426,7 @@ export function BusinessListingDetailDesktop({
                   listingId={listing.id}
                   fullWidth
                   variant="outlined"
-                  sx={{ borderRadius: 2.5, fontWeight: 800, textTransform: 'none', py: 1.1 }}
+                  sx={{ ...productButtonSx, py: 1.1 }}
                 />
               </Stack>
             </Box>

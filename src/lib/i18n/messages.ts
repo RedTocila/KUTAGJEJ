@@ -136,6 +136,7 @@ const sq = {
   },
   home: {
     latestListings: 'Njoftimet e fundit',
+    recommendedListings: 'Të rekomanduara për ty',
     communityEyebrow: 'Komuniteti i KuTaGjej',
     communityTitle: 'Mijëra njoftime, çdo ditë — të gjitha në një vend',
     communitySubtitle:
@@ -368,6 +369,7 @@ const en: AppMessages = {
   },
   home: {
     latestListings: 'Latest listings',
+    recommendedListings: 'Recommended for you',
     communityEyebrow: 'The KuTaGjej community',
     communityTitle: 'Thousands of listings every day — all in one place',
     communitySubtitle:

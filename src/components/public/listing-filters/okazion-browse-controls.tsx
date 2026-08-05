@@ -11,6 +11,7 @@ import {
   OKAZION_RED_SOFT,
   localizeHomeVerticals,
   localizeSearchCategory,
+  type HomeVerticalId,
 } from '@/lib/home-categories';
 import {
   buildBrowseUrlQuery,
@@ -25,7 +26,7 @@ import { HomeVerticalIcon } from '@/components/public/home-vertical-icon';
 const OKAZION_SEARCH_ACCENT = { color: OKAZION_RED, soft: OKAZION_RED_SOFT } as const;
 
 /** Same verticals as create-OKAZION — no directory profiles. */
-const OKAZION_BROWSE_VERTICAL_IDS = new Set<'real-estate' | 'cars' | 'jobs' | 'marketplace'>([
+const OKAZION_BROWSE_VERTICAL_IDS = new Set<HomeVerticalId>([
   'real-estate',
   'cars',
   'jobs',

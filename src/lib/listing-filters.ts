@@ -83,13 +83,15 @@ export interface BrowseOkazionFilters {
   q?: string;
 }
 
-export type BrowseFilters =
+/** Vertical browse filters (city/sort/etc). Okazion is a separate shape. */
+export type BrowseVerticalFilters =
   | BrowseRealEstateFilters
   | BrowseCarFilters
   | BrowseJobFilters
   | BrowseMarketplaceFilters
-  | BrowseDirectoryFilters
-  | BrowseOkazionFilters;
+  | BrowseDirectoryFilters;
+
+export type BrowseFilters = BrowseVerticalFilters | BrowseOkazionFilters;
 
 export const BROWSE_PAGE_SIZE = 24;
 
@@ -309,7 +311,7 @@ export interface ActiveFilterChip {
 
 export function getActiveFilterChips(
   verticalId: HomeVerticalId,
-  filters: BrowseFilters,
+  filters: BrowseVerticalFilters,
   cities?: ReadonlyArray<{ id: string; name: string; zones?: ReadonlyArray<{ id: string; name: string }> }>,
 ): ActiveFilterChip[] {
   const chips: ActiveFilterChip[] = [];
@@ -323,7 +325,7 @@ export function getActiveFilterChips(
     push('sort', sortLabel);
   }
 
-  const cityId = (filters as { city?: string }).city;
+  const cityId = filters.city;
   if (cityId) {
     const cityName = cities?.find((c) => c.id === cityId)?.name;
     push('city', cityName || 'Qyteti');

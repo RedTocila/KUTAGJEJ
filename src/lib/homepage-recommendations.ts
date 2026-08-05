@@ -1,6 +1,6 @@
 import type { HomeVerticalId } from '@/lib/home-categories';
 import type { HomepageMixedListing } from '@/lib/homepage-latest-listings';
-import type { BrowseFilters } from '@/lib/listing-filters';
+import type { BrowseFilters, BrowseVerticalFilters } from '@/lib/listing-filters';
 import {
   fetchBrowseBusinesses,
   fetchBrowseCars,
@@ -107,7 +107,7 @@ function toMixed(
   }
 }
 
-function filtersForVertical(verticalId: HomeVerticalId, profile: InterestProfile): BrowseFilters {
+function filtersForVertical(verticalId: HomeVerticalId, profile: InterestProfile): BrowseVerticalFilters {
   const city = profile.preferredCities[0];
   const q = profile.preferredQueries[0];
   const category = profile.preferredCategories[verticalId];

@@ -109,6 +109,12 @@ export async function fetchConversations(
   return { conversations: res.data?.conversations, total: res.data?.total };
 }
 
+export async function fetchUnreadMessagesCount(): Promise<{ unreadCount?: number; error?: string }> {
+  const res = await clientFetch<{ unreadCount: number }>('/conversations/unread-count');
+  if (!res.ok) return { error: res.error ?? 'Nuk u ngarkua numri i mesazheve.' };
+  return { unreadCount: res.data?.unreadCount ?? 0 };
+}
+
 export async function fetchConversationMessages(
   conversationId: string,
   opts?: { before?: string; limit?: number },

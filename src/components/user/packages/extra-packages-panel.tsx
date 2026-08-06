@@ -80,14 +80,6 @@ const FALLBACK_AUTO_PACKAGES: AutoRefreshPackage[] = [
 
 const FALLBACK_PREMIUM_PACKAGES: PremiumPackage[] = [
   {
-    id: 'premium-5',
-    days: 5,
-    priceBc: 100,
-    priceEur: 9,
-    labelSq: '5 ditë Premium',
-    labelEn: '5 Days Premium Listing',
-  },
-  {
     id: 'premium-15',
     days: 15,
     priceBc: 200,

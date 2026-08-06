@@ -40,13 +40,19 @@ import {
   ListingTextField,
   ListingToggle,
 } from '@/components/user/listing-form-ui';
+import { ListingBoostChoiceBar } from '@/components/user/listing-boost-choice-bar';
 import {
   activateOkazionAfterCreate,
-  OkazionBoostUpsell,
   OkazionPostActions,
   type OkazionBoostMode,
   type OkazionPayMode,
 } from '@/components/user/okazion-boost-upsell';
+import {
+  activatePremiumAfterCreate,
+  PREMIUM_PACKAGE_ID,
+  PremiumPostActions,
+  type PremiumPayMode,
+} from '@/components/user/premium-boost-upsell';
 import { useUser } from '@/hooks/use-user';
 import { createCarListing, updateCarListing, type CarMineListing } from '@/lib/listings-client';
 import { contactPhoneFromStorage, resolveContactPhone } from '@/lib/listing-form-defaults';
@@ -329,12 +335,15 @@ export function CarListingForm({
   const router = useRouter();
   const searchParams = useSearchParams();
   const wantsOkazion = searchParams.get('okazion') === '1';
+  const wantsPremium = searchParams.get('premium') === '1';
 
   const [form, setForm] = React.useState<CarFormState>(() =>
     initialListing ? formFromListing(initialListing) : { ...emptyForm(), contactPhone: contactPhoneFromStorage() },
   );
-  const [okazionMode, setOkazionMode] = React.useState<OkazionBoostMode>(wantsOkazion ? 'buy-card' : 'off');
-  const okazionPayRef = React.useRef<OkazionPayMode>('buy-card');
+  const okazionPayRef = React.useRef<OkazionBoostMode>('buy-card');
+  const premiumPayRef = React.useRef<PremiumPayMode>('buy-card');
+  const premiumPackageIdRef = React.useRef(PREMIUM_PACKAGE_ID);
+  const boostKindRef = React.useRef<'premium' | 'okazion' | null>(null);
   const formRef = React.useRef<HTMLFormElement | null>(null);
   const [images, setImages] = React.useState<File[]>([]);
   const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(
@@ -597,9 +606,24 @@ export function CarListingForm({
           }
           return;
         }
-        if (id && (wantsOkazion || okazionMode !== 'off')) {
+        if (id && (wantsPremium || boostKindRef.current === 'premium')) {
+          const boost = await activatePremiumAfterCreate({
+            mode: premiumPayRef.current,
+            kind: 'car',
+            listingId: id,
+            packageId: premiumPackageIdRef.current,
+          });
+          if (boost.redirectToCheckout) {
+            router.push(boost.redirectToCheckout);
+            return;
+          }
+          if (!boost.ok && boost.message) {
+            setSubmitError(boost.message);
+          }
+          void checkSession();
+        } else if (id && (wantsOkazion || boostKindRef.current === 'okazion')) {
           const boost = await activateOkazionAfterCreate({
-            mode: wantsOkazion ? okazionPayRef.current : okazionMode,
+            mode: okazionPayRef.current,
             kind: 'car',
             listingId: id,
           });
@@ -1083,26 +1107,54 @@ export function CarListingForm({
         </FormGroup>
       </Stack>
 
-      {!isEdit && !wantsOkazion ? (
-        <OkazionBoostUpsell value={okazionMode} onChange={setOkazionMode} />
-      ) : null}
-
-      {wantsOkazion && !isEdit ? (
-        <OkazionPostActions
+      {wantsPremium && !isEdit ? (
+        <PremiumPostActions
           submitting={submitting}
           onPost={(mode) => {
+            premiumPayRef.current = mode;
+            boostKindRef.current = 'premium';
+            formRef.current?.requestSubmit();
+          }}
+        />
+      ) : wantsOkazion && !isEdit ? (
+        <OkazionPostActions
+          submitting={submitting}
+          onPost={(mode: OkazionPayMode) => {
             okazionPayRef.current = mode;
-            setOkazionMode(mode);
+            boostKindRef.current = 'okazion';
             formRef.current?.requestSubmit();
           }}
         />
       ) : (
-        <ListingFormActions
-          submitLabel={isEdit ? 'Përditëso njoftimin' : 'Posto njoftimin'}
-          submitting={submitting}
-          backHref={backHref}
-          backLabel={backLabel}
-        />
+        <Stack spacing={1.25}>
+          {!isEdit ? (
+            <ListingBoostChoiceBar
+              submitting={submitting}
+              onPostPremium={(mode, packageId) => {
+                premiumPayRef.current = mode;
+                premiumPackageIdRef.current = packageId;
+                boostKindRef.current = 'premium';
+                formRef.current?.requestSubmit();
+              }}
+              onPostOkazion={(mode) => {
+                okazionPayRef.current = mode;
+                boostKindRef.current = 'okazion';
+                formRef.current?.requestSubmit();
+              }}
+            />
+          ) : null}
+          <ListingFormActions
+            submitLabel={isEdit ? 'Përditëso njoftimin' : 'Posto falas'}
+            submitting={submitting}
+            backHref={backHref}
+            backLabel={backLabel}
+            submitProps={{
+              onClick: () => {
+                boostKindRef.current = null;
+              },
+            }}
+          />
+        </Stack>
       )}
     </Stack>
   );

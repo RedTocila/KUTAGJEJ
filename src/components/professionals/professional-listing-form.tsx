@@ -20,6 +20,11 @@ import {
   ListingFormSection,
   ListingTextField,
 } from '@/components/user/listing-form-ui';
+import {
+  activatePremiumAfterCreate,
+  PremiumPostActions,
+  type PremiumPayMode,
+} from '@/components/user/premium-boost-upsell';
 import { PROFESSIONAL_CATEGORY_OPTIONS } from '@/lib/professional-constants';
 import {
   createProfessionalListing,
@@ -38,6 +43,7 @@ import {
   resolveContactPhone,
 } from '@/lib/listing-form-defaults';
 import { useUser } from '@/hooks/use-user';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const MAX_PORTFOLIO_WORKS = 8;
 
@@ -75,7 +81,12 @@ export function ProfessionalListingForm({
   backLabel?: string;
   aiPrefill?: Record<string, unknown> | null;
 }) {
-  const { user } = useUser();
+  const { user, checkSession } = useUser();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const wantsPremium = searchParams.get('premium') === '1';
+  const premiumPayRef = React.useRef<PremiumPayMode>('buy-card');
+  const formRef = React.useRef<HTMLFormElement | null>(null);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -330,6 +341,21 @@ export function ProfessionalListingForm({
       setError(res.error);
       return;
     }
+    if (res.id && wantsPremium) {
+      const boost = await activatePremiumAfterCreate({
+        mode: premiumPayRef.current,
+        kind: 'professionals',
+        listingId: res.id,
+      });
+      if (boost.redirectToCheckout) {
+        router.push(boost.redirectToCheckout);
+        return;
+      }
+      if (!boost.ok && boost.message) {
+        setError(boost.message);
+      }
+      void checkSession();
+    }
     if (res.id) setExistingId(res.id);
     setCoverUrl(cover.url);
     setAvatarUrl(avatar.url);
@@ -354,7 +380,7 @@ export function ProfessionalListingForm({
   }
 
   return (
-    <Box component="form" onSubmit={(e) => void handleSubmit(e)}>
+    <Box component="form" ref={formRef} onSubmit={(e) => void handleSubmit(e)}>
       <Stack spacing={2.25}>
         {error ? (
           <Alert severity="error" sx={{ borderRadius: 2 }}>
@@ -554,12 +580,22 @@ export function ProfessionalListingForm({
           ))}
         </ListingFormSection>
 
-        <ListingFormActions
-          submitLabel={existingId ? 'Ruaj ndryshimet' : 'Publiko profilin'}
-          submitting={submitting}
-          backHref={backHref}
-          backLabel={backLabel}
-        />
+        {wantsPremium && !existingId ? (
+          <PremiumPostActions
+            submitting={submitting}
+            onPost={(mode) => {
+              premiumPayRef.current = mode;
+              formRef.current?.requestSubmit();
+            }}
+          />
+        ) : (
+          <ListingFormActions
+            submitLabel={existingId ? 'Ruaj ndryshimet' : 'Publiko profilin'}
+            submitting={submitting}
+            backHref={backHref}
+            backLabel={backLabel}
+          />
+        )}
       </Stack>
     </Box>
   );

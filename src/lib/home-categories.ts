@@ -9,7 +9,6 @@
 
 import { getMessages } from '@/lib/i18n/messages';
 import type { AppLanguage } from '@/lib/language';
-import { california } from '@/styles/theme/colors';
 import { paths } from '@/paths';
 
 export type HomeVerticalId =
@@ -116,20 +115,20 @@ export const HOME_VERTICALS: readonly HomeVertical[] = [
   },
 ] as const;
 
-/** Star / warning amber — same as rating stars (`warning.main`). */
-export const AI_SEARCH_BLUE = california[400];
-export const AI_SEARCH_BLUE_HOVER = california[500];
-export const AI_SEARCH_BLUE_SOFT = 'rgba(255, 187, 31, 0.28)';
-export const AI_SEARCH_BLUE_MUTED = 'rgba(255, 187, 31, 0.16)';
-/** Text color on solid AI amber buttons. */
-export const AI_SEARCH_BLUE_ON = '#000000';
+/** AI accent — light purple. */
+export const AI_SEARCH_BLUE = '#A78BFA';
+export const AI_SEARCH_BLUE_HOVER = '#8B5CF6';
+export const AI_SEARCH_BLUE_SOFT = 'rgba(167, 139, 250, 0.28)';
+export const AI_SEARCH_BLUE_MUTED = 'rgba(167, 139, 250, 0.16)';
+/** Text color on solid AI purple buttons. */
+export const AI_SEARCH_BLUE_ON = '#FFFFFF';
 
 /** AI search tab — first on /kerko; omitted from home category pickers. */
 export const AI_SEARCH_CATEGORY: SearchCategory = {
   id: 'ai',
   label: 'AI Search',
   tagline: 'Pyet si ChatGPT — gjej njoftime me gjuhë natyrore',
-  gradient: [california[300], california[400]] as const,
+  gradient: ['#C4B5FD', '#A78BFA'] as const,
   iconKey: 'sparkle',
   href: `${paths.public.search}?cat=ai`,
   searchPlaceholder: 'P.sh. apartament me qira në Tiranë deri 500€…',

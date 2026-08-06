@@ -63,8 +63,8 @@ const FALLBACK_OKAZION_PACKAGES: OkazionPackage[] = [
   {
     id: 'okazion-5',
     days: 5,
-    priceBc: 100,
-    priceEur: 5,
+    priceBc: 200,
+    priceEur: 12,
     labelSq: '5 ditë OKAZION',
     labelEn: '5 Days OKAZION Listing',
   },

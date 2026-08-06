@@ -35,8 +35,8 @@ import { productButtonSx } from '@/styles/product-sx';
 import { paths } from '@/paths';
 
 export const OKAZION_PACKAGE_ID = 'okazion-5';
-export const OKAZION_PRICE_EUR = 5;
-export const OKAZION_PRICE_BC = 100;
+export const OKAZION_PRICE_EUR = 12;
+export const OKAZION_PRICE_BC = 200;
 
 export type OkazionBoostMode = 'off' | 'plan' | 'voucher' | 'buy-bc' | 'buy-card';
 export type OkazionPayMode = 'plan' | 'buy-bc' | 'buy-card';
@@ -91,7 +91,7 @@ export function OkazionBoostUpsell({
       }}
     >
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
-        <SealPercentIcon size={22} weight="fill" color={OKAZION_ACCENT} />
+        <SealPercentIcon size={22} weight="regular" color={OKAZION_ACCENT} />
         <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT }}>OKAZION · 5 ditë</Typography>
       </Stack>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
@@ -182,7 +182,7 @@ export function OkazionPostActions({
         }}
       >
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5 }}>
-          <SealPercentIcon size={18} weight="fill" color={OKAZION_ACCENT} />
+          <SealPercentIcon size={18} weight="regular" color={OKAZION_ACCENT} />
           <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT, fontSize: '0.95rem' }}>
             OKAZION · 5 ditë
           </Typography>
@@ -214,7 +214,7 @@ export function OkazionPostActions({
           variant="contained"
           disabled={disabled || submitting}
           onClick={() => onPost('plan')}
-          startIcon={<SealPercentIcon size={18} weight="fill" />}
+          startIcon={<SealPercentIcon size={18} weight="regular" />}
           sx={{
             ...submitBtnSx,
             bgcolor: OKAZION_RED,

@@ -8,6 +8,7 @@ import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
+import { CrownSimple as CrownSimpleIcon } from '@phosphor-icons/react/dist/ssr/CrownSimple';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
@@ -24,6 +25,10 @@ import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
 import { PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
 import { OkazionTheme } from '@/components/user/okazion-theme';
 import { OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
+import {
+  PREMIUM_AMBER,
+  PREMIUM_AMBER_SOFT,
+} from '@/components/user/premium-boost-upsell';
 import { aiDraftToInitialListing } from '@/lib/ai-draft-to-listing';
 import {
   consumeAiListingDraft,
@@ -121,6 +126,7 @@ export default function UserPostListingPage() {
   const [loadingCategories, setLoadingCategories] = React.useState(true);
   const wantsAi = searchParams.get('ai') === '1';
   const wantsOkazion = searchParams.get('okazion') === '1';
+  const wantsPremium = searchParams.get('premium') === '1';
   const aiDraftId = searchParams.get('draftId');
   const aiReturnHref = paths.user.aiImport;
   const [aiInitial, setAiInitial] = React.useState<Record<string, unknown> | null>(null);
@@ -284,15 +290,37 @@ export default function UserPostListingPage() {
         <OkazionTheme enabled={wantsOkazion}>
           <>
           <PostListingHeader
-            icon={wantsOkazion ? SealPercentIcon : phaseIcon(phase)}
-            title={wantsOkazion ? 'Posto OKAZION' : activeMeta.title}
+            icon={
+              wantsOkazion
+                ? SealPercentIcon
+                : wantsPremium
+                  ? CrownSimpleIcon
+                  : phaseIcon(phase)
+            }
+            title={
+              wantsOkazion
+                ? 'Posto OKAZION'
+                : wantsPremium
+                  ? 'Posto Premium'
+                  : activeMeta.title
+            }
             description={
               wantsOkazion
                 ? 'Plotësoni njoftimin — publikohet me temë të kuqe në OKAZION për 5 ditë.'
-                : activeMeta.description
+                : wantsPremium
+                  ? 'Plotësoni njoftimin — shfaqet me prioritet në krye për 30 ditë.'
+                  : activeMeta.description
             }
-            iconColor={wantsOkazion ? OKAZION_ACCENT : undefined}
-            iconBgcolor={wantsOkazion ? OKAZION_ACCENT_SOFT : undefined}
+            iconColor={
+              wantsOkazion ? OKAZION_ACCENT : wantsPremium ? PREMIUM_AMBER : undefined
+            }
+            iconBgcolor={
+              wantsOkazion
+                ? OKAZION_ACCENT_SOFT
+                : wantsPremium
+                  ? PREMIUM_AMBER_SOFT
+                  : undefined
+            }
             closeHref={wantsAi ? aiReturnHref : paths.home}
           />
 

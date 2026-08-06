@@ -17,6 +17,7 @@ import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { CrownSimple as CrownSimpleIcon } from '@phosphor-icons/react/dist/ssr/CrownSimple';
+import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
@@ -51,15 +52,30 @@ const PREMIUM_CATEGORY_KEYS = new Set<ListingCategoryKey>([
   'marketplace',
 ]);
 
+/** Preferred order when browsing all listing types. */
+const ALL_LISTINGS_ORDER: ListingCategoryKey[] = [
+  'real-estate',
+  'cars',
+  'job-listings',
+  'businesses',
+  'professionals',
+  'marketplace',
+];
+
 function fallbackOptions(t: AppMessages): { key: ListingCategoryKey; title: string; hint: string }[] {
   return [
     { key: 'real-estate', title: t.picker.realEstate, hint: t.picker.realEstateHint },
     { key: 'cars', title: t.picker.cars, hint: t.picker.carsHint },
     { key: 'job-listings', title: t.picker.jobs, hint: t.picker.jobsHint },
-    { key: 'marketplace', title: t.picker.marketplace, hint: t.picker.marketplaceHint },
     { key: 'businesses', title: t.picker.businesses, hint: t.picker.businessesHint },
     { key: 'professionals', title: t.picker.professionals, hint: t.picker.professionalsHint },
+    { key: 'marketplace', title: t.picker.marketplace, hint: t.picker.marketplaceHint },
   ];
+}
+
+function sortAllListingsOptions<T extends { key: ListingCategoryKey }>(items: T[]): T[] {
+  const rank = new Map(ALL_LISTINGS_ORDER.map((k, i) => [k, i]));
+  return [...items].sort((a, b) => (rank.get(a.key) ?? 99) - (rank.get(b.key) ?? 99));
 }
 
 function categoryIcon(key: ListingCategoryKey): PhosphorIcon {
@@ -105,6 +121,7 @@ export function AddListingPickerDialog({
   const [hasProfessionalListing, setHasProfessionalListing] = React.useState(false);
   const [pickingOkazion, setPickingOkazion] = React.useState(initialOkazion);
   const [pickingPremium, setPickingPremium] = React.useState(false);
+  const [pickingAllListings, setPickingAllListings] = React.useState(false);
 
   useLockBodyScroll(open);
 
@@ -112,6 +129,7 @@ export function AddListingPickerDialog({
     if (!open) return;
     setPickingOkazion(Boolean(initialOkazion));
     setPickingPremium(Boolean(initialPremium));
+    setPickingAllListings(false);
   }, [open, initialOkazion, initialPremium]);
 
   React.useEffect(() => {
@@ -159,13 +177,20 @@ export function AddListingPickerDialog({
     ? availableOptions.filter((o) => OKAZION_CATEGORY_KEYS.has(o.key))
     : pickingPremium
       ? availableOptions.filter((o) => PREMIUM_CATEGORY_KEYS.has(o.key))
-      : availableOptions;
+      : pickingAllListings
+        ? sortAllListingsOptions(availableOptions)
+        : [];
 
   const handleCloseRequest = () => {
-    // Back out of OKAZION category pick before dismissing the sheet.
-    if ((pickingOkazion || pickingPremium) && !initialOkazion && !initialPremium) {
+    // Back out of category pick before dismissing the sheet.
+    if (
+      (pickingOkazion || pickingPremium || pickingAllListings) &&
+      !initialOkazion &&
+      !initialPremium
+    ) {
       setPickingOkazion(false);
       setPickingPremium(false);
+      setPickingAllListings(false);
       return;
     }
     onClose();
@@ -211,12 +236,22 @@ export function AddListingPickerDialog({
   const handleOkazion = () => {
     setPickingOkazion(true);
     setPickingPremium(false);
+    setPickingAllListings(false);
   };
 
   const handlePremium = () => {
     setPickingPremium(true);
     setPickingOkazion(false);
+    setPickingAllListings(false);
   };
+
+  const handleAllListings = () => {
+    setPickingAllListings(true);
+    setPickingOkazion(false);
+    setPickingPremium(false);
+  };
+
+  const showRootActions = !pickingOkazion && !pickingPremium && !pickingAllListings;
 
   return (
     <Drawer
@@ -271,7 +306,9 @@ export function AddListingPickerDialog({
               ? t.picker.okazionTitle
               : pickingPremium
                 ? t.picker.premiumTitle
-                : t.picker.title}
+                : pickingAllListings
+                  ? t.picker.allListingsTitle
+                  : t.picker.title}
           </Typography>
           <IconButton aria-label={t.common.close} onClick={handleCloseRequest} size="small" edge="end">
             <XIcon size={18} weight="bold" />
@@ -291,7 +328,7 @@ export function AddListingPickerDialog({
           </Box>
         ) : (
           <Stack spacing={0}>
-            {!pickingOkazion && !pickingPremium ? (
+            {!showRootActions ? null : (
               <>
                 <Box
                   component="button"
@@ -330,7 +367,7 @@ export function AddListingPickerDialog({
                     <SparkleIcon size={18} weight="duotone" />
                   </Box>
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', lineHeight: 1.25 }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.25, color: AI_SEARCH_BLUE }}>
                       {t.picker.aiImport}
                     </Typography>
                     <Typography
@@ -390,7 +427,7 @@ export function AddListingPickerDialog({
                       color: OKAZION_ACCENT,
                     }}
                   >
-                    <SealPercentIcon size={18} weight="fill" />
+                    <SealPercentIcon size={18} weight="regular" />
                   </Box>
                   <Box sx={{ minWidth: 0 }}>
                     <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.25, color: OKAZION_ACCENT }}>
@@ -453,7 +490,7 @@ export function AddListingPickerDialog({
                       color: 'warning.main',
                     }}
                   >
-                    <CrownSimpleIcon size={18} weight="fill" />
+                    <CrownSimpleIcon size={18} weight="regular" />
                   </Box>
                   <Box sx={{ minWidth: 0 }}>
                     <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.25, color: 'warning.main' }}>
@@ -481,8 +518,61 @@ export function AddListingPickerDialog({
                     mr: 0.5,
                   }}
                 />
+
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={handleAllListings}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.25,
+                    width: '100%',
+                    px: 0.5,
+                    py: 1.2,
+                    border: 0,
+                    borderRadius: 1.5,
+                    bgcolor: 'transparent',
+                    color: 'text.primary',
+                    cursor: 'pointer',
+                    font: 'inherit',
+                    textAlign: 'left',
+                    '&:hover': { bgcolor: 'action.hover' },
+                    '&:active': { bgcolor: 'action.selected' },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 1.5,
+                      display: 'grid',
+                      placeItems: 'center',
+                      flexShrink: 0,
+                      bgcolor: (theme) => `${theme.palette.primary.main}14`,
+                      color: 'primary.main',
+                    }}
+                  >
+                    <SquaresFourIcon size={18} weight="duotone" />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', lineHeight: 1.25 }}>
+                      {t.picker.allListings}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        display: 'block',
+                        lineHeight: 1.3,
+                        color: '#9CA3AF',
+                      }}
+                    >
+                      {t.picker.allListingsHint}
+                    </Typography>
+                  </Box>
+                </Box>
               </>
-            ) : null}
+            )}
 
             {options.map((opt, index) => {
               const Icon = categoryIcon(opt.key);

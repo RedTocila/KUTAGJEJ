@@ -37,6 +37,11 @@ import {
   ListingFormSection,
   ListingTextField,
 } from '@/components/user/listing-form-ui';
+import {
+  activatePremiumAfterCreate,
+  PremiumPostActions,
+  type PremiumPayMode,
+} from '@/components/user/premium-boost-upsell';
 import { BusinessAccountRequiredNotice } from '@/components/user/business-account-required-notice';
 import { uploadListingImages } from '@/lib/uploads-client';
 import { isBusinessPortalAccount } from '@/lib/user-portal-account-label';
@@ -47,6 +52,7 @@ import {
   resolveContactPhone,
 } from '@/lib/listing-form-defaults';
 import { useUser } from '@/hooks/use-user';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const MAX_BUSINESS_IMAGES = 8;
 
@@ -64,7 +70,12 @@ export function BusinessListingForm({
   backLabel,
   aiPrefill,
 }: BusinessListingFormProps) {
-  const { user } = useUser();
+  const { user, checkSession } = useUser();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const wantsPremium = searchParams.get('premium') === '1';
+  const premiumPayRef = React.useRef<PremiumPayMode>('buy-card');
+  const formRef = React.useRef<HTMLFormElement | null>(null);
   const canPostBusiness = isBusinessPortalAccount(user);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [error, setError] = React.useState<string | null>(null);
@@ -251,6 +262,21 @@ export function BusinessListingForm({
       setError(res.error);
       return;
     }
+    if (res.id && wantsPremium) {
+      const boost = await activatePremiumAfterCreate({
+        mode: premiumPayRef.current,
+        kind: 'businesses',
+        listingId: res.id,
+      });
+      if (boost.redirectToCheckout) {
+        router.push(boost.redirectToCheckout);
+        return;
+      }
+      if (!boost.ok && boost.message) {
+        setError(boost.message);
+      }
+      void checkSession();
+    }
     if (res.id) setExistingId(res.id);
     setImages([]);
     setExistingImageUrls(imageUrls);
@@ -272,7 +298,7 @@ export function BusinessListingForm({
   }
 
   return (
-    <Box component="form" onSubmit={(e) => void handleSubmit(e)}>
+    <Box component="form" ref={formRef} onSubmit={(e) => void handleSubmit(e)}>
       <Stack spacing={2.25}>
         {error ? (
           <Alert severity="error" sx={{ borderRadius: 2 }}>
@@ -476,13 +502,24 @@ export function BusinessListingForm({
           />
         </ListingFormSection>
 
-        <ListingFormActions
-          submitLabel={existingId ? 'Ruaj ndryshimet' : 'Publiko biznesin'}
-          submitting={submitting}
-          disabled={!user}
-          backHref={backHref}
-          backLabel={backLabel}
-        />
+        {wantsPremium && !existingId ? (
+          <PremiumPostActions
+            submitting={submitting}
+            disabled={!user}
+            onPost={(mode) => {
+              premiumPayRef.current = mode;
+              formRef.current?.requestSubmit();
+            }}
+          />
+        ) : (
+          <ListingFormActions
+            submitLabel={existingId ? 'Ruaj ndryshimet' : 'Publiko biznesin'}
+            submitting={submitting}
+            disabled={!user}
+            backHref={backHref}
+            backLabel={backLabel}
+          />
+        )}
       </Stack>
     </Box>
   );

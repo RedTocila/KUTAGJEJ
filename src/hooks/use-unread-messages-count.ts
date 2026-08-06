@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 
-import { fetchConversations } from '@/lib/conversations-client';
+import { fetchUnreadMessagesCount } from '@/lib/conversations-client';
 import { useUser } from '@/hooks/use-user';
 
 /** Survives public ↔ dashboard shell remounts so the badge does not flash to 0. */
@@ -35,13 +35,12 @@ export function useUnreadMessagesCount(pollMs = 30_000): number {
     let cancelled = false;
 
     const load = async () => {
-      const { conversations, error } = await fetchConversations(1, 50);
+      const { unreadCount, error } = await fetchUnreadMessagesCount();
       if (cancelled) return;
       // Keep the previous count on transient failures / empty error responses.
-      if (error || !conversations) return;
-      const unread = conversations.reduce((sum, item) => sum + Math.max(0, item.unreadCount || 0), 0);
-      cachedUnreadCount = unread;
-      setCount(unread);
+      if (error || unreadCount == null) return;
+      cachedUnreadCount = Math.max(0, unreadCount);
+      setCount(cachedUnreadCount);
     };
 
     void load();

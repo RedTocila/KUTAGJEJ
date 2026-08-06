@@ -14,8 +14,7 @@ const {
   userRoleInConversation,
   loadListingForConversation,
   findContactListingForPoster,
-  loadPortalUserDisplayName,
-  loadPortalUserPhone,
+  loadListingContactPhone,
 } = require('../lib/listing-conversations');
 const { sanitizeImageUrls } = require('../lib/image-upload');
 const { isOurStorageUrl } = require('../lib/storage-uploads');
@@ -46,6 +45,7 @@ function isUniqueViolation(err) {
   return err?.code === '23505' || err?.code === 23505;
 }
 
+/** Inbox list does not need full profile rows — models come from a batched account_type select. */
 async function attachParticipantModels(rows) {
   const ids = new Set();
   for (const row of rows) {
@@ -53,15 +53,20 @@ async function attachParticipantModels(rows) {
     if (row.inquirer_id) ids.add(row.inquirer_id);
   }
   const modelById = new Map();
-  await Promise.all(
-    [...ids].map(async (id) => {
-      const profile = await getProfileById(id);
+  const idList = [...ids];
+  if (idList.length) {
+    const { data, error } = await getSupabaseAdmin()
+      .from('profiles')
+      .select('id, account_type')
+      .in('id', idList);
+    if (error) throw error;
+    for (const row of data || []) {
       modelById.set(
-        id,
-        (profile && modelNameFromAccount(profile.accountType)) || 'IndividualUser',
+        row.id,
+        modelNameFromAccount(row.account_type) || 'IndividualUser',
       );
-    }),
-  );
+    }
+  }
   return rows.map((row) => {
     const conv = camelizeRow(row);
     conv.id = row.id;
@@ -104,6 +109,9 @@ function formatConversation(conv, userRef, state = null) {
     lastMessageIsMine: Boolean(lastSenderId && lastSenderId === String(userRef.id)),
     otherParticipantId: String(otherId),
     otherParticipantModel: otherModel,
+    otherParticipantName: null,
+    otherParticipantPhone: null,
+    listingContactPhone: null,
     pinned: Boolean(state?.pinned),
     createdAt: conv.createdAt,
     updatedAt: conv.updatedAt,
@@ -115,19 +123,18 @@ async function loadLastMessageSenderIds(conversationIds) {
   const map = new Map();
   const ids = [...new Set((conversationIds || []).map((id) => String(id || '').trim()).filter(Boolean))];
   if (!ids.length) return map;
-  await Promise.all(
-    ids.map(async (id) => {
-      const { data, error } = await getSupabaseAdmin()
-        .from('messages')
-        .select('sender_id')
-        .eq('conversation_id', id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      if (data?.sender_id) map.set(id, String(data.sender_id));
-    }),
-  );
+  const { data, error } = await getSupabaseAdmin()
+    .from('messages')
+    .select('conversation_id, sender_id, created_at')
+    .in('conversation_id', ids)
+    .order('created_at', { ascending: false })
+    .limit(Math.min(Math.max(ids.length * 4, 40), 400));
+  if (error) throw error;
+  for (const row of data || []) {
+    const cid = String(row.conversation_id);
+    if (map.has(cid)) continue;
+    if (row.sender_id) map.set(cid, String(row.sender_id));
+  }
   return map;
 }
 
@@ -258,22 +265,53 @@ function sortInboxItems(items) {
 }
 
 async function attachOtherParticipantDetails(items) {
-  return Promise.all(
-    items.map(async (item) => {
-      const [otherParticipantName, otherParticipantPhone, listing] = await Promise.all([
-        loadPortalUserDisplayName(item.otherParticipantId, item.otherParticipantModel),
-        loadPortalUserPhone(item.otherParticipantId, item.otherParticipantModel),
-        loadListingForConversation(item.listingKind, item.listingId),
-      ]);
-      const listingContactPhone = listing?.contactPhone ? String(listing.contactPhone).trim() : null;
-      return {
-        ...item,
-        otherParticipantName,
-        otherParticipantPhone: otherParticipantPhone || null,
-        listingContactPhone: listingContactPhone || null,
-      };
-    }),
+  if (!items.length) return items;
+
+  const profileIds = [
+    ...new Set(
+      items
+        .map((item) => String(item.otherParticipantId || '').trim())
+        .filter((id) => isUuid(id)),
+    ),
+  ];
+  const profileById = new Map();
+  if (profileIds.length) {
+    const { data, error } = await getSupabaseAdmin()
+      .from('profiles')
+      .select('id, account_type, first_name, last_name, business_name, business_owner, phone')
+      .in('id', profileIds);
+    if (error) throw error;
+    for (const row of data || []) {
+      profileById.set(String(row.id), row);
+    }
+  }
+
+  const displayNameFromProfile = (row) => {
+    if (!row) return null;
+    if (row.account_type === 'business') {
+      return (
+        (row.business_name && String(row.business_name).trim()) ||
+        (row.business_owner && String(row.business_owner).trim()) ||
+        `${row.first_name || ''} ${row.last_name || ''}`.replace(/\s+/g, ' ').trim() ||
+        null
+      );
+    }
+    return `${row.first_name || ''} ${row.last_name || ''}`.replace(/\s+/g, ' ').trim() || null;
+  };
+
+  const listingPhones = await Promise.all(
+    items.map((item) => loadListingContactPhone(item.listingKind, item.listingId)),
   );
+
+  return items.map((item, index) => {
+    const profile = profileById.get(String(item.otherParticipantId));
+    return {
+      ...item,
+      otherParticipantName: displayNameFromProfile(profile),
+      otherParticipantPhone: (profile?.phone && String(profile.phone).trim()) || null,
+      listingContactPhone: listingPhones[index] || null,
+    };
+  });
 }
 
 async function findConversationForUser(id, userRef) {
@@ -481,6 +519,36 @@ router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) 
   }
 });
 
+/** GET /api/conversations/unread-count — lightweight badge total */
+router.get('/unread-count', auth, requirePortalUser, async (req, res) => {
+  try {
+    const userRef = portalUserRef(req.user);
+    const hiddenIds = await loadHiddenConversationIds(userRef.id);
+    let q = getSupabaseAdmin()
+      .from('conversations')
+      .select('id, poster_id, inquirer_id, poster_unread_count, inquirer_unread_count')
+      .or(`poster_id.eq.${userRef.id},inquirer_id.eq.${userRef.id}`);
+    if (hiddenIds.length) {
+      q = q.not('id', 'in', `(${hiddenIds.join(',')})`);
+    }
+    const { data, error } = await q;
+    if (error) throw error;
+
+    let unreadCount = 0;
+    for (const row of data || []) {
+      if (String(row.poster_id) === String(userRef.id)) {
+        unreadCount += Math.max(0, row.poster_unread_count || 0);
+      } else if (String(row.inquirer_id) === String(userRef.id)) {
+        unreadCount += Math.max(0, row.inquirer_unread_count || 0);
+      }
+    }
+    res.json({ unreadCount });
+  } catch (err) {
+    console.error('GET /conversations/unread-count:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 /** GET /api/conversations — inbox */
 router.get('/', auth, requirePortalUser, async (req, res) => {
   try {
@@ -493,30 +561,30 @@ router.get('/', auth, requirePortalUser, async (req, res) => {
     const hiddenIds = await loadHiddenConversationIds(userRef.id);
     let q = getSupabaseAdmin()
       .from('conversations')
-      .select('*', { count: 'exact' })
+      .select('*')
       .or(`poster_id.eq.${userRef.id},inquirer_id.eq.${userRef.id}`)
       .order('last_message_at', { ascending: false, nullsFirst: false });
     if (hiddenIds.length) {
       q = q.not('id', 'in', `(${hiddenIds.join(',')})`);
     }
-    const { data, error, count } = await q.range(from, to);
+    const { data, error } = await q.range(from, to);
     if (error) throw error;
 
-    const total = count ?? 0;
-    const mapped = await attachParticipantModels(data || []);
-    const stateMap = await loadUserStatesByConversationIds(
-      userRef.id,
-      mapped.map((c) => String(c.id)),
-    );
-    const formatted = await attachOtherParticipantDetails(
-      await formatConversationsForUser(mapped, userRef, stateMap),
-    );
+    const rows = data || [];
+    const conversationIds = rows.map((row) => String(row.id));
+    const [mapped, stateMap] = await Promise.all([
+      attachParticipantModels(rows),
+      loadUserStatesByConversationIds(userRef.id, conversationIds),
+    ]);
+    // Inbox uses denormalized listing fields only — skip per-row profile/listing enrichment.
+    const formatted = await formatConversationsForUser(mapped, userRef, stateMap);
+    const total = formatted.length < limit && page === 1 ? formatted.length : from + formatted.length;
     res.json({
       conversations: sortInboxItems(formatted),
       page,
       limit,
       total,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
+      totalPages: Math.max(1, Math.ceil(Math.max(total, 1) / limit)),
     });
   } catch (err) {
     console.error('GET /conversations:', err?.message || err);
@@ -578,15 +646,19 @@ router.get('/:id/messages', auth, requirePortalUser, async (req, res) => {
     const messages = (rows || []).slice().reverse();
     const senderIds = [...new Set(messages.map((m) => m.sender_id).filter(Boolean))];
     const modelById = new Map();
-    await Promise.all(
-      senderIds.map(async (id) => {
-        const profile = await getProfileById(id);
+    if (senderIds.length) {
+      const { data: profiles, error: profileErr } = await getSupabaseAdmin()
+        .from('profiles')
+        .select('id, account_type')
+        .in('id', senderIds);
+      if (profileErr) throw profileErr;
+      for (const row of profiles || []) {
         modelById.set(
-          id,
-          (profile && modelNameFromAccount(profile.accountType)) || 'IndividualUser',
+          row.id,
+          modelNameFromAccount(row.account_type) || 'IndividualUser',
         );
-      }),
-    );
+      }
+    }
 
     const stateMap = await loadUserStatesByConversationIds(userRef.id, [conv.id]);
     const formatted = await formatConversationForUser(conv, userRef, stateMap.get(String(conv.id)));

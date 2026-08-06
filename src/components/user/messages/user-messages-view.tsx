@@ -58,6 +58,7 @@ import {
   type ConversationMessage,
   type ConversationSummary,
 } from '@/lib/conversations-client';
+import { setCachedUnreadMessagesCount } from '@/hooks/use-unread-messages-count';
 import {
   consumePendingBusinessReservation,
   submitBusinessReservationToMessages,
@@ -108,9 +109,10 @@ const CHAT_ACCENT = '#4ca74c';
 const CHAT_ACCENT_HOVER = '#3f9340';
 const CHAT_ACCENT_SOFT = 'rgba(76, 167, 76, 0.08)';
 const CHAT_ACCENT_GLOW = '0 2px 10px rgba(76, 167, 76, 0.45)';
-const CHAT_BUBBLE_MINE = '#1a3f2c';
-/** Incoming bubbles — lighter than chat bg so they read clearly. */
-const CHAT_BUBBLE_THEIRS = '#2e2e2e';
+const CHAT_BUBBLE_MINE_DARK = '#1a3f2c';
+const CHAT_BUBBLE_THEIRS_DARK = '#2e2e2e';
+const CHAT_BUBBLE_MINE_LIGHT = '#b3dbb3';
+const CHAT_BUBBLE_THEIRS_LIGHT = '#d0d0d0';
 /** Bubble corner radii: top-left, top-right, bottom-right, bottom-left (px). */
 const CHAT_BUBBLE_RADIUS_MINE = [12, 12, 4, 12] as const;
 const CHAT_BUBBLE_RADIUS_THEIRS = [4, 12, 12, 12] as const;
@@ -506,9 +508,12 @@ function ConversationListItem({
 function MessageBubble({
   message,
   deliveryStatus,
+  onMediaLoad,
 }: {
   message: ConversationMessage;
   deliveryStatus?: 'delivered' | 'read';
+  /** Fires when an image finishes loading so the thread can re-pin to bottom. */
+  onMediaLoad?: () => void;
 }) {
   const t = useCopy();
   const { language } = useLanguage();
@@ -557,13 +562,23 @@ function MessageBubble({
       }}
     >
       <Typography
-        sx={{
+        sx={(theme) => ({
           fontSize: '0.68rem',
           fontWeight: 600,
           lineHeight: 1.1,
-          color: imageOnly || mine ? 'rgba(255,255,255,0.75)' : 'text.secondary',
           whiteSpace: 'nowrap',
-        }}
+          color: imageOnly
+            ? 'rgba(255,255,255,0.75)'
+            : mine
+              ? 'rgba(var(--mui-palette-text-primaryChannel) / 0.45)'
+              : 'text.secondary',
+          ...theme.applyStyles('dark', {
+            color:
+              imageOnly || mine
+                ? 'rgba(255,255,255,0.75)'
+                : 'var(--mui-palette-text-secondary)',
+          }),
+        })}
       >
         {formatMessageTime(message.createdAt, locale)}
       </Typography>
@@ -571,11 +586,14 @@ function MessageBubble({
         <Box
           component="span"
           aria-label={isRead ? t.messages.read : t.messages.delivered}
-          sx={{
+          sx={(theme) => ({
             display: 'inline-flex',
             lineHeight: 0,
-            color: isRead ? '#53bdeb' : 'rgba(255,255,255,0.75)',
-          }}
+            color: isRead ? '#53bdeb' : 'rgba(var(--mui-palette-text-primaryChannel) / 0.45)',
+            ...theme.applyStyles('dark', {
+              color: isRead ? '#53bdeb' : 'rgba(255,255,255,0.75)',
+            }),
+          })}
         >
           <ChecksIcon size={14} weight="bold" />
         </Box>
@@ -593,16 +611,20 @@ function MessageBubble({
       }}
     >
       <Box
-        sx={{
+        sx={(theme) => ({
           display: 'flex',
           flexDirection: 'column',
           width: imageUrl ? 'min(82%, 280px)' : 'auto',
           maxWidth: '82%',
           overflow: 'hidden',
-          bgcolor: mine ? CHAT_BUBBLE_MINE : CHAT_BUBBLE_THEIRS,
-          color: mine ? '#fff' : 'text.primary',
+          bgcolor: mine ? CHAT_BUBBLE_MINE_LIGHT : CHAT_BUBBLE_THEIRS_LIGHT,
+          color: 'text.primary',
           borderRadius: bubbleRadius.map((r) => `${r}px`).join(' '),
-        }}
+          ...theme.applyStyles('dark', {
+            bgcolor: mine ? CHAT_BUBBLE_MINE_DARK : CHAT_BUBBLE_THEIRS_DARK,
+            color: mine ? '#fff' : 'var(--mui-palette-text-primary)',
+          }),
+        })}
       >
         {imageUrl ? (
           <Box
@@ -618,12 +640,16 @@ function MessageBubble({
               component="img"
               src={imageUrl}
               alt=""
-              loading="lazy"
+              loading="eager"
+              onLoad={onMediaLoad}
               sx={{
                 display: 'block',
                 width: '100%',
+                minHeight: 160,
                 maxHeight: 360,
+                aspectRatio: '4 / 3',
                 objectFit: 'cover',
+                bgcolor: 'action.hover',
               }}
             />
             {imageOnly ? meta : null}
@@ -805,9 +831,9 @@ function MessageComposer({
           e.preventDefault();
           submit();
         }}
-        sx={{
+        sx={(theme) => ({
           display: 'flex',
-          gap: 0.5,
+          gap: 1,
           alignItems: inputExpanded ? 'flex-end' : 'center',
           transition: 'border-radius 120ms ease',
           ...productSearchBarSx(Boolean(draft.trim()) || Boolean(attachment), {
@@ -817,16 +843,17 @@ function MessageComposer({
           borderRadius: inputExpanded ? 2.5 : 999,
           height: 'auto',
           minHeight: 40,
-          py: 0.5,
-          pl: 0.75,
-          pr: 0.5,
-          bgcolor: (theme) =>
-            theme.palette.mode === 'dark'
-              ? 'rgba(var(--mui-palette-background-paperChannel) / 0.92)'
-              : 'background.paper',
+          // Equal inset around the send circle (top/bottom/right).
+          pl: 1,
+          pr: '3px',
+          py: '3px',
+          bgcolor: 'background.paper',
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
-        }}
+          ...theme.applyStyles('dark', {
+            bgcolor: 'rgba(var(--mui-palette-background-paperChannel) / 0.92)',
+          }),
+        })}
       >
         <IconButton
           type="button"
@@ -842,7 +869,7 @@ function MessageComposer({
             mb: inputExpanded ? 0.25 : 0,
           }}
         >
-          <PaperclipIcon size={24} weight="bold" />
+          <PaperclipIcon size={22} weight="bold" />
         </IconButton>
 
         <TextField
@@ -888,8 +915,8 @@ function MessageComposer({
             flexShrink: 0,
             alignSelf: inputExpanded ? 'flex-end' : 'center',
             ...productFilterButtonSx(true),
-            width: 32,
-            height: 32,
+            width: 34,
+            height: 34,
             bgcolor: CHAT_ACCENT,
             color: '#0a0a0a',
             borderColor: CHAT_ACCENT,
@@ -914,6 +941,9 @@ function MessageComposer({
   );
 }
 
+/** Survives remounts so Messages does not blank-spinner on every visit. */
+let cachedInboxConversations: ConversationSummary[] | null = null;
+
 export function UserMessagesView() {
   const t = useCopy();
   const router = useRouter();
@@ -926,11 +956,13 @@ export function UserMessagesView() {
     read: t.messages.read,
   };
 
-  const [conversations, setConversations] = React.useState<ConversationSummary[]>([]);
+  const [conversations, setConversations] = React.useState<ConversationSummary[]>(
+    () => cachedInboxConversations ?? [],
+  );
   const [messages, setMessages] = React.useState<ConversationMessage[]>([]);
   const [activeConversation, setActiveConversation] = React.useState<ConversationSummary | null>(null);
   const [inboxFilter, setInboxFilter] = React.useState<InboxFilter>('all');
-  const [listLoading, setListLoading] = React.useState(true);
+  const [listLoading, setListLoading] = React.useState(() => !cachedInboxConversations);
   const [threadLoading, setThreadLoading] = React.useState(false);
   const [markingAllRead, setMarkingAllRead] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -948,6 +980,9 @@ export function UserMessagesView() {
   const [pinningChat, setPinningChat] = React.useState(false);
   const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
   const messagesScrollRef = React.useRef<HTMLDivElement | null>(null);
+  const messagesContentRef = React.useRef<HTMLDivElement | null>(null);
+  /** Keep the viewport pinned to the latest message until the user scrolls up. */
+  const stickToBottomRef = React.useRef(true);
   const pendingHandled = React.useRef(false);
 
   const unreadConversations = React.useMemo(
@@ -967,13 +1002,21 @@ export function UserMessagesView() {
   const selectedCount = selectedIds.size;
 
   const loadInbox = React.useCallback(async () => {
-    setListLoading(true);
+    // Show cached inbox immediately on remount while refreshing in the background.
+    if (cachedInboxConversations) {
+      setConversations(cachedInboxConversations);
+      setListLoading(false);
+    } else {
+      setListLoading(true);
+    }
     const res = await fetchConversations();
     if (res.error) {
       setError(res.error);
-      setConversations([]);
+      if (!cachedInboxConversations) setConversations([]);
     } else {
-      setConversations(sortConversationsByRecent(res.conversations ?? []));
+      const next = sortConversationsByRecent(res.conversations ?? []);
+      cachedInboxConversations = next;
+      setConversations(next);
     }
     setListLoading(false);
   }, []);
@@ -986,15 +1029,22 @@ export function UserMessagesView() {
       setError(res.error);
       setMessages([]);
       setActiveConversation(null);
-    } else {
-      setMessages(res.messages ?? []);
-      setActiveConversation(res.conversation ?? null);
-      await markConversationRead(conversationId);
-      setConversations((prev) =>
-        prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)),
-      );
+      setThreadLoading(false);
+      return;
     }
+    setMessages(res.messages ?? []);
+    setActiveConversation(res.conversation ?? null);
     setThreadLoading(false);
+
+    setConversations((prev) => {
+      const cleared = prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c));
+      cachedInboxConversations = cleared;
+      return cleared;
+    });
+    setCachedUnreadMessagesCount(
+      (cachedInboxConversations ?? []).reduce((sum, c) => sum + Math.max(0, c.unreadCount || 0), 0),
+    );
+    void markConversationRead(conversationId);
   }, []);
 
   React.useEffect(() => {
@@ -1036,6 +1086,7 @@ export function UserMessagesView() {
       return;
     }
     setMobileThreadDismissed(false);
+    stickToBottomRef.current = true;
     void loadThread(selectedId);
   }, [selectedId, loadThread]);
 
@@ -1048,22 +1099,52 @@ export function UserMessagesView() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
   }, []);
 
-  // Jump to latest message when a thread opens or new messages arrive.
-  // useLayoutEffect + rAF: scroll container may not have its final height yet
-  // on the first paint (mobile panel flex / loading → messages swap).
+  const pinThreadToBottom = React.useCallback(() => {
+    if (!stickToBottomRef.current) return;
+    scrollThreadToBottom();
+  }, [scrollThreadToBottom]);
+
+  const handleThreadScroll = React.useCallback(() => {
+    const scroller = messagesScrollRef.current;
+    if (!scroller) return;
+    const distanceFromBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
+    stickToBottomRef.current = distanceFromBottom < 96;
+  }, []);
+
+  // Jump to latest message when a thread opens or new messages arrive (while pinned).
+  // useLayoutEffect + rAF + short timeouts: images / flex layout can grow after first paint.
   React.useLayoutEffect(() => {
     if (threadLoading || !selectedId || !activeConversation) return;
+    if (!stickToBottomRef.current) return;
     scrollThreadToBottom();
     let raf2 = 0;
     const raf1 = window.requestAnimationFrame(() => {
-      scrollThreadToBottom();
-      raf2 = window.requestAnimationFrame(scrollThreadToBottom);
+      pinThreadToBottom();
+      raf2 = window.requestAnimationFrame(pinThreadToBottom);
     });
+    const t1 = window.setTimeout(pinThreadToBottom, 80);
+    const t2 = window.setTimeout(pinThreadToBottom, 250);
+    const t3 = window.setTimeout(pinThreadToBottom, 500);
     return () => {
       window.cancelAnimationFrame(raf1);
       window.cancelAnimationFrame(raf2);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
     };
-  }, [messages, threadLoading, selectedId, activeConversation, scrollThreadToBottom]);
+  }, [messages, threadLoading, selectedId, activeConversation, scrollThreadToBottom, pinThreadToBottom]);
+
+  // Re-pin when message images (or other content) change the thread height.
+  React.useEffect(() => {
+    if (threadLoading || !selectedId || !activeConversation) return;
+    const content = messagesContentRef.current;
+    if (!content || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      pinThreadToBottom();
+    });
+    ro.observe(content);
+    return () => ro.disconnect();
+  }, [threadLoading, selectedId, activeConversation, pinThreadToBottom, messages.length]);
 
   const selectConversation = (id: string) => {
     setMobileThreadDismissed(false);
@@ -1199,6 +1280,7 @@ export function UserMessagesView() {
       isMine: true,
     };
 
+    stickToBottomRef.current = true;
     setMessages((prev) => [...prev, optimistic]);
     setActiveConversation((prev) =>
       prev ? { ...prev, otherUnreadCount: (prev.otherUnreadCount ?? 0) + 1 } : prev,
@@ -1647,8 +1729,6 @@ export function UserMessagesView() {
                   py: 1,
                   flexShrink: 0,
                   bgcolor: 'background.paper',
-                  borderBottom: '1px solid',
-                  borderColor: 'divider',
                 }}
               >
                 <ProductBackButton
@@ -1744,6 +1824,7 @@ export function UserMessagesView() {
               >
                 <Box
                   ref={messagesScrollRef}
+                  onScroll={handleThreadScroll}
                   sx={{
                     flex: 1,
                     overflow: 'auto',
@@ -1756,36 +1837,39 @@ export function UserMessagesView() {
                     bgcolor: 'transparent',
                   }}
                 >
-                  {messages.length === 0 ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', px: 2, py: 3 }}>
-                      <Typography
-                        sx={{
-                          textAlign: 'center',
-                          px: 2,
-                          py: 1,
-                          borderRadius: 2.25,
-                          border: '1px solid',
-                          borderColor: 'divider',
-                          bgcolor: 'background.paper',
-                          color: 'text.secondary',
-                          fontSize: '0.8125rem',
-                          fontWeight: 600,
-                          maxWidth: 320,
-                        }}
-                      >
-                        {t.messages.startChat}
-                      </Typography>
-                    </Box>
-                  ) : (
-                    messages.map((m) => (
-                      <MessageBubble
-                        key={m.id}
-                        message={m}
-                        deliveryStatus={m.isMine ? deliveryStatuses.get(m.id) : undefined}
-                      />
-                    ))
-                  )}
-                  <div ref={messagesEndRef} />
+                  <Box ref={messagesContentRef}>
+                    {messages.length === 0 ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', px: 2, py: 3 }}>
+                        <Typography
+                          sx={{
+                            textAlign: 'center',
+                            px: 2,
+                            py: 1,
+                            borderRadius: 2.25,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: 'background.paper',
+                            color: 'text.secondary',
+                            fontSize: '0.8125rem',
+                            fontWeight: 600,
+                            maxWidth: 320,
+                          }}
+                        >
+                          {t.messages.startChat}
+                        </Typography>
+                      </Box>
+                    ) : (
+                      messages.map((m) => (
+                        <MessageBubble
+                          key={m.id}
+                          message={m}
+                          deliveryStatus={m.isMine ? deliveryStatuses.get(m.id) : undefined}
+                          onMediaLoad={pinThreadToBottom}
+                        />
+                      ))
+                    )}
+                    <div ref={messagesEndRef} />
+                  </Box>
                 </Box>
 
                 <MessageComposer onSend={handleSend} />

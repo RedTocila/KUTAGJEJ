@@ -121,6 +121,26 @@ async function loadPortalUserPhone(userId, _userModel) {
   return phone || null;
 }
 
+/** Contact phone only — no poster profile fetch (thread header). */
+async function loadListingContactPhone(kind, listingId) {
+  if (!VALID_KINDS.has(kind) || !isUuid(listingId)) return null;
+  const cfg = getKindConfig(kind);
+  if (!cfg) return null;
+
+  let q = getSupabaseAdmin()
+    .from(cfg.table)
+    .select('contact_phone')
+    .eq('id', listingId)
+    .eq('status', 'approved');
+  if (cfg.extraFilter) {
+    for (const [col, val] of Object.entries(cfg.extraFilter)) q = q.eq(col, val);
+  }
+  const { data, error } = await q.maybeSingle();
+  if (error) throw error;
+  const phone = data?.contact_phone != null ? String(data.contact_phone).trim() : '';
+  return phone || null;
+}
+
 module.exports = {
   VALID_KINDS,
   portalUserRef,
@@ -131,4 +151,5 @@ module.exports = {
   findContactListingForPoster,
   loadPortalUserDisplayName,
   loadPortalUserPhone,
+  loadListingContactPhone,
 };

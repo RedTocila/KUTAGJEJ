@@ -5,15 +5,10 @@ import { useRouter } from 'next/navigation';
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
-  Grid,
   Stack,
   Typography,
 } from '@mui/material';
-import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
-import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
-import { SealCheck as SealCheckIcon } from '@phosphor-icons/react/dist/ssr/SealCheck';
 
 import { useUser } from '@/hooks/use-user';
 import { listPublicContracts } from '@/lib/public-contracts-client';
@@ -21,16 +16,20 @@ import { listMySubscriptions } from '@/lib/payments-client';
 import type { PublicContract } from '@/types/contract';
 import { paths } from '@/paths';
 import {
-  FeatureList,
-  PlanCard,
-  PlanCardHeader,
-  PlanPrice,
-  SoftChip,
-  accentPillButtonSx,
+  PackageCheckoutCard,
   formatEur,
   planAccentForCode,
 } from './package-ui';
 import type { PlanAccent } from './package-ui';
+
+function planSubtitle(plan: PublicContract, durationLabel?: string): string {
+  const bits = [`${plan.maxListAllCategories} njoftime`];
+  if (plan.maxPremiumListings > 0) bits.push(`${plan.maxPremiumListings} Premium`);
+  if (plan.maxOkazionListings > 0) bits.push(`${plan.maxOkazionListings} OKAZION`);
+  if ((plan.boostCredits ?? 0) > 0) bits.push(`${plan.boostCredits} BC`);
+  const base = bits.join(' · ');
+  return durationLabel ? `${durationLabel} · ${base}` : base;
+}
 
 function planFeatureLines(plan: PublicContract): string[] {
   const lines: string[] = [
@@ -72,15 +71,34 @@ function planAccent(plan: PublicContract): PlanAccent {
   return planAccentForCode(plan.planCode);
 }
 
-function isHighlightedPlan(plan: PublicContract): boolean {
-  const code = (plan.planCode || '').toLowerCase();
-  return code === 'grow' || code === 'elite';
+function priceSuffixForMonths(months: number): string {
+  if (months === 1) return '/ muaj';
+  if (months === 12) return '/ vit';
+  return `/ ${months} muaj`;
 }
 
-function startingPrice(plan: PublicContract): number | null {
-  const paid = plan.priceOptions.filter((o) => o.price > 0).map((o) => o.price);
-  if (!paid.length) return 0;
-  return Math.min(...paid);
+/** Yellow pill when yearly (or longer) beats paying monthly. */
+function savingsBadge(monthlyPrice: number | null, months: number, price: number): string | null {
+  if (months <= 1 || monthlyPrice == null || monthlyPrice <= 0) return null;
+  const full = monthlyPrice * months;
+  if (price >= full) return null;
+  const pct = Math.round((1 - price / full) * 100);
+  return pct >= 5 ? `Kurseni ${pct}%` : null;
+}
+
+function offerBadge(opts: {
+  isCurrent: boolean;
+  planCode: string;
+  months: number;
+  monthlyPrice: number | null;
+  price: number;
+}): string | null {
+  if (opts.isCurrent) return 'Plani juaj';
+  const save = savingsBadge(opts.monthlyPrice, opts.months, opts.price);
+  if (save) return save;
+  if (opts.planCode === 'grow' && opts.months === 12) return 'Popullore';
+  if (opts.planCode === 'elite' && opts.months === 12) return 'Elite';
+  return null;
 }
 
 export function MainPackagesPanel() {
@@ -94,6 +112,7 @@ export function MainPackagesPanel() {
   const [error, setError] = React.useState<string | null>(null);
   const [activeContractId, setActiveContractId] = React.useState<string | null>(null);
   const [activePlanCode, setActivePlanCode] = React.useState<string | null>(null);
+  const [activeMonths, setActiveMonths] = React.useState<number | null>(null);
 
   const reload = React.useCallback(async () => {
     const [{ contracts, error: err }, subsRes] = await Promise.all([
@@ -111,6 +130,7 @@ export function MainPackagesPanel() {
       (subsRes.subscriptions ?? []).find((s) => s.status === 'active' && Number(s.priceEur) > 0) ?? null;
     setActiveContractId(active?.contractId ?? null);
     setActivePlanCode(active?.planCode ? String(active.planCode).toLowerCase() : null);
+    setActiveMonths(active?.months ?? null);
   }, [subscriberKindFilter]);
 
   React.useEffect(() => {
@@ -149,120 +169,72 @@ export function MainPackagesPanel() {
       ) : null}
 
       {!loading && !error && plans.length > 0 ? (
-        <Grid container spacing={2}>
-          {plans.map((plan) => {
+        <Stack spacing={1.25}>
+          {plans.flatMap((plan) => {
             const paidOptions = plan.priceOptions.filter((o) => o.price > 0);
             const isFree = plan.planCode === 'free' || plan.priceOptions.every((o) => o.price === 0);
             const planCode = (plan.planCode || '').toLowerCase();
             const hasPaidPlan = Boolean(activeContractId || activePlanCode);
-            const isCurrent =
+            const isPlanCurrent =
               (activeContractId != null && activeContractId === plan.id) ||
               (activePlanCode != null && planCode === activePlanCode) ||
               (!hasPaidPlan && isFree);
             const accent = planAccent(plan);
-            const highlighted = isCurrent || isHighlightedPlan(plan);
-            const from = startingPrice(plan);
-            const Icon =
-              planCode === 'elite'
-                ? CrownIcon
-                : plan.glowBadgeEnabled
-                  ? SealCheckIcon
-                  : PackageIcon;
+            const monthlyPrice = plan.price1Month ?? paidOptions.find((o) => o.months === 1)?.price ?? null;
+            const details = planFeatureLines(plan);
 
-            return (
-              <Grid key={plan.id} size={{ xs: 12, sm: 6, lg: 3 }}>
-                <PlanCard highlighted={highlighted} accent={accent}>
-                  <PlanCardHeader
-                    icon={Icon}
-                    title={plan.title}
-                    subtitle={plan.planCode ? plan.planCode.toUpperCase() : undefined}
-                    accent={accent}
-                    badge={
-                      isCurrent ? (
-                        <SoftChip label="Plani juaj" accent={accent} />
-                      ) : planCode === 'grow' ? (
-                        <SoftChip label="Popullore" accent={accent} />
-                      ) : plan.glowBadgeEnabled ? (
-                        <SoftChip label="Trust" accent={accent} />
-                      ) : undefined
-                    }
-                  />
+            if (isFree) {
+              return [
+                <PackageCheckoutCard
+                  key={plan.id}
+                  title={plan.title}
+                  subtitle={planSubtitle(plan, 'Filloni falas')}
+                  badge={isPlanCurrent ? 'Plani juaj' : null}
+                  price="€0"
+                  priceSuffix="/ muaj"
+                  accent={accent}
+                  selected={isPlanCurrent}
+                  details={details}
+                />,
+              ];
+            }
 
-                  {isFree ? (
-                    <PlanPrice amount="€0" suffix="/ muaj" hint="Filloni falas" />
-                  ) : (
-                    <PlanPrice
-                      amount={from != null ? formatEur(from) : '—'}
-                      suffix="nga"
-                      hint={
-                        isCurrent
-                          ? 'Ky është plani aktiv në llogarinë tuaj'
-                          : 'Zgjidhni kohëzgjatjen më poshtë'
-                      }
-                    />
-                  )}
+            const matchedMonths =
+              activeMonths != null && paidOptions.some((o) => o.months === activeMonths)
+                ? activeMonths
+                : Math.max(...paidOptions.map((o) => o.months));
 
-                  <FeatureList items={planFeatureLines(plan)} accent={accent} />
+            return paidOptions.map((opt) => {
+              const isCurrent = isPlanCurrent && opt.months === matchedMonths;
+              const badge = offerBadge({
+                isCurrent,
+                planCode,
+                months: opt.months,
+                monthlyPrice,
+                price: opt.price,
+              });
 
-                  {isCurrent ? (
-                    <Box
-                      role="status"
-                      sx={{
-                        ...accentPillButtonSx(accent, 'outlined'),
-                        mt: 'auto',
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textAlign: 'center',
-                        boxSizing: 'border-box',
-                        bgcolor: (t) =>
-                          t.palette.mode === 'dark'
-                            ? 'rgba(255,255,255,0.04)'
-                            : 'rgba(0,0,0,0.03)',
-                        cursor: 'default',
-                        pointerEvents: 'none',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      Plani juaj aktual
-                    </Box>
-                  ) : isFree ? (
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      sx={{ ...accentPillButtonSx(accent, 'outlined'), mt: 'auto' }}
-                    >
-                      Ndrysho planin
-                    </Button>
-                  ) : (
-                    <Stack spacing={1} sx={{ mt: 'auto' }}>
-                      {paidOptions.map((opt) => {
-                        const isPrimaryCta = opt.months === 12 || paidOptions.length === 1;
-                        return (
-                          <Button
-                            key={opt.months}
-                            fullWidth
-                            size="medium"
-                            variant={isPrimaryCta ? 'contained' : 'outlined'}
-                            onClick={() => router.push(checkoutSubscriptionHref(plan.id, opt.months))}
-                            sx={{
-                              ...accentPillButtonSx(accent, isPrimaryCta ? 'contained' : 'outlined'),
-                              whiteSpace: 'normal',
-                              lineHeight: 1.25,
-                            }}
-                          >
-                            {`Ndrysho planin · ${opt.labelSq} · ${formatEur(opt.price)}`}
-                          </Button>
-                        );
-                      })}
-                    </Stack>
-                  )}
-                </PlanCard>
-              </Grid>
-            );
+              return (
+                <PackageCheckoutCard
+                  key={`${plan.id}-${opt.months}`}
+                  title={plan.title}
+                  subtitle={planSubtitle(plan, opt.labelSq)}
+                  badge={badge}
+                  price={formatEur(opt.price)}
+                  priceSuffix={priceSuffixForMonths(opt.months)}
+                  accent={accent}
+                  selected={isCurrent}
+                  details={details}
+                  onClick={
+                    isCurrent
+                      ? undefined
+                      : () => router.push(checkoutSubscriptionHref(plan.id, opt.months))
+                  }
+                />
+              );
+            });
           })}
-        </Grid>
+        </Stack>
       ) : null}
 
       {!loading && plans.length > 0 ? (

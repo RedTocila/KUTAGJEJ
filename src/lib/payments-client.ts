@@ -125,6 +125,36 @@ export async function createAutoRefreshOrder(
   }
 }
 
+export async function buyAutoRefreshWithCredits(packageId: string): Promise<{
+  slots?: number;
+  autoRefreshSlots?: number;
+  boostCredits?: number;
+  cost?: number;
+  used?: number;
+  message?: string;
+  error?: string;
+}> {
+  try {
+    const res = await fetch(getApiUrl('/payments/auto-refresh/buy-with-credits'), {
+      method: 'POST',
+      headers: await authHeadersAsync(),
+      body: JSON.stringify({ packageId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Blerja dështoi.' };
+    return {
+      slots: typeof data.slots === 'number' ? data.slots : undefined,
+      autoRefreshSlots: typeof data.autoRefreshSlots === 'number' ? data.autoRefreshSlots : undefined,
+      boostCredits: typeof data.boostCredits === 'number' ? data.boostCredits : undefined,
+      cost: typeof data.cost === 'number' ? data.cost : undefined,
+      used: typeof data.used === 'number' ? data.used : undefined,
+      message: typeof data.message === 'string' ? data.message : undefined,
+    };
+  } catch {
+    return { error: 'Nuk u arrit lidhja me serverin.' };
+  }
+}
+
 export async function listPremiumPackages(): Promise<{
   packages?: PremiumPackage[];
   pokEnv?: PokEnv;

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { HeroSection } from '@/components/public/hero-section';
 import { HomepageCommunityBanner, HomepagePostBanner } from '@/components/public/homepage-community-banner';
 import { PublicShell } from '@/components/public/public-shell';
+import { HomepageOkazionSection } from '@/components/public/homepage-okazion-section';
 import { HomepageRecommendedSection } from '@/components/public/homepage-recommended-section';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { ListingsSection } from '@/components/public/listings-section';
@@ -17,6 +18,7 @@ import { config } from '@/config';
 import { HOME_VERTICALS } from '@/lib/home-categories';
 import { fetchHomeBanners } from '@/lib/home-banners-client';
 import {
+  fetchBrowseOkazion,
   fetchHomepageListings,
   type PublicCarListing,
   type PublicDirectoryListing,
@@ -84,7 +86,11 @@ const PLACEHOLDER_TOTALS = {
 };
 
 export default async function HomePage() {
-  const [bundle, homeBanners] = await Promise.all([fetchHomepageListings(8), fetchHomeBanners()]);
+  const [bundle, homeBanners, okazion] = await Promise.all([
+    fetchHomepageListings(8),
+    fetchHomeBanners(),
+    fetchBrowseOkazion(8),
+  ]);
   const totals = bundle.totals ?? PLACEHOLDER_TOTALS;
   const latestMixed = buildHomepageMixedLatest(bundle, 8);
 
@@ -179,6 +185,8 @@ export default async function HomePage() {
       />
 
       <HomepageRecommendedSection fallbackItems={latestMixed} />
+
+      <HomepageOkazionSection listings={okazion.listings} total={okazion.total} />
 
       <ListingsSection
         verticalId="real-estate"

@@ -29,14 +29,19 @@ export function useListingBookmark(
       router.push(paths.user.auth);
       return;
     }
+    const wasSaved = hydratedSaved;
+    setSaveCount((count) => Math.max(0, count + (wasSaved ? -1 : 1)));
+
     if (savedCtx) {
       const result = await savedCtx.toggleSaved(listingKind, listingId);
-      if (result) setSaveCount(result.saveCount);
+      if (result && !result.stale) setSaveCount(result.saveCount);
+      else if (!result) setSaveCount((count) => Math.max(0, count + (wasSaved ? 1 : -1)));
       return;
     }
     const metrics = await toggleListingSave(listingKind, listingId);
     if (metrics) setSaveCount(metrics.saveCount);
-  }, [listingKind, listingId, router, savedCtx, user]);
+    else setSaveCount((count) => Math.max(0, count + (wasSaved ? 1 : -1)));
+  }, [hydratedSaved, listingKind, listingId, router, savedCtx, user]);
 
   return { saved: hydratedSaved, saveCount, toggleSave };
 }

@@ -229,13 +229,9 @@ export default function UserPostListingPage() {
   }, []);
 
   const handleFormSuccess = React.useCallback(() => {
-    if (wantsAi) {
-      if (aiDraftId) removeAiListingDraftFromQueue(aiDraftId);
-      hardNavigate(aiReturnHref);
-      return;
-    }
-    hardNavigate(`${paths.user.myRealEstateListings}?submitted=pending`);
-  }, [wantsAi, aiDraftId, aiReturnHref]);
+    if (wantsAi && aiDraftId) removeAiListingDraftFromQueue(aiDraftId);
+    hardNavigate(paths.user.dashboard);
+  }, [wantsAi, aiDraftId]);
 
   if (!user) return null;
   if (!canPublish) return null;

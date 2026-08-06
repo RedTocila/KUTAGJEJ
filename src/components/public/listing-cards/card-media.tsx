@@ -129,15 +129,20 @@ export function CardMedia({
         router.push(paths.user.auth);
         return;
       }
+      const wasSaved = saved;
+      setSaveCount((count) => Math.max(0, count + (wasSaved ? -1 : 1)));
+
       if (savedCtx) {
         const result = await savedCtx.toggleSaved(listingKind, listingId);
-        if (result) setSaveCount(result.saveCount);
+        if (result && !result.stale) setSaveCount(result.saveCount);
+        else if (!result) setSaveCount((count) => Math.max(0, count + (wasSaved ? 1 : -1)));
         return;
       }
       const metrics = await toggleListingSave(listingKind, listingId);
       if (metrics) setSaveCount(metrics.saveCount);
+      else setSaveCount((count) => Math.max(0, count + (wasSaved ? 1 : -1)));
     },
-    [listingKind, listingId, router, savedCtx, user],
+    [listingKind, listingId, router, saved, savedCtx, user],
   );
 
   return (

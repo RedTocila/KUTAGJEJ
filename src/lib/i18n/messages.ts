@@ -147,6 +147,7 @@ const sq = {
   home: {
     latestListings: 'Njoftimet e fundit',
     recommendedListings: 'Të rekomanduara për ty',
+    okazionListings: 'OKAZION',
     communityEyebrow: 'Komuniteti i KuTaGjej',
     communityTitle: 'Mijëra njoftime, çdo ditë — të gjitha në një vend',
     communitySubtitle:
@@ -289,19 +290,17 @@ const sq = {
     formApplied: 'Formulari u mbush me AI. Kontrollo dhe publiko.',
     formEmpty: 'Nuk u gjet draft i vlefshëm.',
     formWrongCategory: 'Ky rezultat duket për një kategori tjetër. Provoni përsëri me më shumë detaje.',
-    categoryMismatch: (detectedLabel: string) =>
-      `U refuzua: zgjodhët kategorinë e gabuar. Ky njoftim i përket «${detectedLabel}».`,
-    categoryMismatchGeneric:
-      'U refuzua: zgjodhët kategorinë e gabuar. Ky përmbajtje nuk i përket kategorisë së zgjedhur.',
-    categoryMismatchHint: 'Ndrysho kategorinë këtu pa humbur draftin, ose fillo nga e para.',
+    categoryMismatch: (detectedLabel: string) => `Kategori e gabuar → ${detectedLabel}`,
+    categoryMismatchGeneric: 'Kategori e gabuar',
+    categoryMismatchHint: 'Ndrysho kategorinë pa humbur draftin.',
     contentRestricted:
       'Ky njoftim u bllokua sepse duket se përmban përmbajtje të ndaluar (p.sh. lakuriqësi, lojëra fati, droga, armë ose aktivitete të paligjshme).',
     contentRestrictedHint:
       'Nuk mund të publikohen njoftime me përmbajtje të ndaluar. Fillo nga e para me një ofertë të lejuar.',
-    switchToCategory: (label: string) => `Vazhdo te «${label}»`,
+    switchToCategory: (label: string) => `Vazhdo te ${label}`,
     changeCategoryKeepDraft: 'Ndrysho kategorinë',
     startOver: 'Fillo nga e para',
-    switchingCategory: 'Duke ndërruar kategorinë…',
+    switchingCategory: 'Duke ndërruar…',
     categorySwitched: (label: string) => `Kategoria u ndryshua në «${label}». Drafti u ruajt.`,
     editTitle: 'Ndrysho me AI',
     editHint: 'Shpjego çfarë të ndryshohet — mund të bashkëngjitësh edhe foto të reja që AI t’i lexojë',
@@ -398,6 +397,7 @@ const en: AppMessages = {
   home: {
     latestListings: 'Latest listings',
     recommendedListings: 'Recommended for you',
+    okazionListings: 'OKAZION',
     communityEyebrow: 'The KuTaGjej community',
     communityTitle: 'Thousands of listings every day — all in one place',
     communitySubtitle:
@@ -540,19 +540,17 @@ const en: AppMessages = {
     formApplied: 'Form filled with AI. Review and publish.',
     formEmpty: 'No valid draft found.',
     formWrongCategory: 'This result looks like another category. Try again with more detail.',
-    categoryMismatch: (detectedLabel: string) =>
-      `Rejected: you chose the wrong category. This listing belongs in “${detectedLabel}”.`,
-    categoryMismatchGeneric:
-      'Rejected: you chose the wrong category. This content does not match the selected category.',
-    categoryMismatchHint: 'Switch category here without losing the draft, or start over.',
+    categoryMismatch: (detectedLabel: string) => `Wrong category → ${detectedLabel}`,
+    categoryMismatchGeneric: 'Wrong category',
+    categoryMismatchHint: 'Switch category without losing the draft.',
     contentRestricted:
       'This listing was blocked because it appears to contain prohibited content (e.g. nudity, gambling, drugs, weapons, or other illegal activity).',
     contentRestrictedHint:
       'Listings with prohibited content cannot be published. Start over with an allowed offer.',
-    switchToCategory: (label: string) => `Continue in “${label}”`,
+    switchToCategory: (label: string) => `Continue in ${label}`,
     changeCategoryKeepDraft: 'Change category',
     startOver: 'Start over',
-    switchingCategory: 'Switching category…',
+    switchingCategory: 'Switching…',
     categorySwitched: (label: string) => `Category changed to “${label}”. Draft kept.`,
     editTitle: 'Edit with AI',
     editHint: 'Explain what to change — you can also attach new photos for AI to read',

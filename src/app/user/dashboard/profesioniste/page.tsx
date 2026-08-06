@@ -7,12 +7,11 @@ import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 
 import { ProfessionalListingForm } from '@/components/professionals/professional-listing-form';
 import { ProfessionalVerificationCard } from '@/components/professionals/professional-verification-card';
-import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
+import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
 
 export default function UserProfessionalsDashboardPage() {
-  const [submittedPending, setSubmittedPending] = React.useState(false);
   const [aiPrefill, setAiPrefill] = React.useState<Record<string, unknown> | null>(null);
   const [aiFormKey, setAiFormKey] = React.useState(0);
 
@@ -26,8 +25,6 @@ export default function UserProfessionalsDashboardPage() {
           Menaxhoni profilin publik, portofolin dhe orën e përgjigjes.
         </Typography>
       </Stack>
-
-      {submittedPending ? <ListingSubmittedPendingAlert /> : null}
 
       <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
         <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
@@ -51,20 +48,7 @@ export default function UserProfessionalsDashboardPage() {
               variant="outlined"
               size="small"
               startIcon={<PlusIcon size={16} weight="bold" />}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 800,
-                borderRadius: 2.5,
-                borderWidth: 1.5,
-                borderColor: 'divider',
-                color: 'text.secondary',
-                '&:hover': {
-                  borderWidth: 1.5,
-                  borderColor: 'primary.main',
-                  bgcolor: 'action.hover',
-                  color: 'text.primary',
-                },
-              }}
+              sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2 }}
             >
               Të gjitha kategoritë
             </Button>
@@ -80,9 +64,9 @@ export default function UserProfessionalsDashboardPage() {
             <ProfessionalListingForm
               key={`pro-${aiFormKey}`}
               aiPrefill={aiPrefill}
-              onSuccess={() => setSubmittedPending(true)}
-              backHref={paths.user.myRealEstateListings}
-              backLabel="Shpalljet e mia"
+              onSuccess={() => hardNavigate(paths.user.dashboard)}
+              backHref={paths.user.dashboard}
+              backLabel="Dashboard"
             />
           </Stack>
         </CardContent>

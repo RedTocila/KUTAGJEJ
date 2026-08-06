@@ -15,6 +15,7 @@ export interface AutoRefreshPackage {
   id: string;
   slots: number;
   priceEur: number;
+  priceBc: number;
   labelSq: string;
   labelEn?: string;
 }

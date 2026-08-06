@@ -15,7 +15,7 @@ const {
   listAutoRefreshPackages,
   getAutoRefreshPackage,
 } = require('../lib/auto-refresh-packages');
-const { getAutoRefreshSnapshot } = require('../lib/listing-auto-refresh');
+const { getAutoRefreshSnapshot, purchaseAutoRefreshWithBoostCoins } = require('../lib/listing-auto-refresh');
 const { listPremiumPackages, getPremiumPackage } = require('../lib/premium-packages');
 const {
   listPremiumVouchers,
@@ -464,6 +464,33 @@ router.post('/auto-refresh/order', async (req, res) => {
   } catch (error) {
     console.error('POST /payments/auto-refresh/order:', error?.message || error);
     res.status(502).json({ message: 'Nuk u krijua dot pagesa. Provoni përsëri.' });
+  }
+});
+
+/** Buy auto-refresh slot pack with Boost Coins (no card). */
+router.post('/auto-refresh/buy-with-credits', async (req, res) => {
+  try {
+    const { packageId } = req.body || {};
+    const result = await purchaseAutoRefreshWithBoostCoins({
+      userId: req.user.id,
+      packageId,
+    });
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ message: result.message });
+    }
+    const snapshot = await getAutoRefreshSnapshot(req.user.id);
+    res.json({
+      ok: true,
+      slots: result.slots,
+      autoRefreshSlots: result.autoRefreshSlots,
+      boostCredits: result.boostCredits,
+      cost: result.cost,
+      used: snapshot.used,
+      message: `U shtuan ${result.slots} vende Auto-Refresh me Boost Coins.`,
+    });
+  } catch (error) {
+    console.error('POST /payments/auto-refresh/buy-with-credits:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
   }
 });
 

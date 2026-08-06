@@ -7,22 +7,35 @@ import { Box, Button, Container, Stack, Typography } from '@mui/material';
 
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
-import { localizeVertical, type HomeVerticalId } from '@/lib/home-categories';
+import {
+  isHomeVerticalId,
+  localizeSearchCategory,
+  localizeVertical,
+  OKAZION_ACCENT,
+  OKAZION_ACCENT_SOFT,
+  type HomeVerticalId,
+  type SearchCategoryId,
+} from '@/lib/home-categories';
+import type { AppLanguage } from '@/lib/language';
+import { paths } from '@/paths';
 
 import { SubcategoryPills } from './subcategory-pills';
 import { HomeVerticalIcon } from './home-vertical-icon';
 import { VerticalIcon } from './vertical-icon';
 
+/** Homepage / browse section ids — listing verticals plus OKAZION. */
+export type ListingsSectionVerticalId = HomeVerticalId | 'okazion';
+
 export interface ListingsSectionProps {
-  verticalId: HomeVerticalId;
+  verticalId: ListingsSectionVerticalId;
   total?: number;
   children?: React.ReactNode;
   isEmpty: boolean;
   /** Override the H2 label (e.g. homepage “Njoftimet e fundit”). */
   titleOverride?: string;
-  /** Resolve title from i18n (`latestListings` / `recommendedListings`). */
-  titleKey?: 'latestListings' | 'recommendedListings';
-  /** Use `@mui/icons-material` category icons instead of PNG assets. */
+  /** Resolve title from i18n (`latestListings` / `recommendedListings` / `okazionListings`). */
+  titleKey?: 'latestListings' | 'recommendedListings' | 'okazionListings';
+  /** Use Phosphor category icons instead of PNG assets. */
   useMuiVerticalIcon?: boolean;
   /** Hide numeric total next to the title. */
   hideTotal?: boolean;
@@ -34,6 +47,25 @@ export interface ListingsSectionProps {
   hideBrowseAction?: boolean;
   /** Drop top padding — e.g. first section directly under the hero. */
   compactTop?: boolean;
+}
+
+function sectionMeta(verticalId: ListingsSectionVerticalId, language: AppLanguage) {
+  if (verticalId === 'okazion') {
+    const cat = localizeSearchCategory('okazion' satisfies SearchCategoryId, language);
+    return {
+      label: cat.label,
+      href: cat.href,
+      postHref: `${paths.user.realEstateListing}?okazion=1`,
+      isOkazion: true as const,
+    };
+  }
+  const vertical = localizeVertical(verticalId, language);
+  return {
+    label: vertical.label,
+    href: vertical.href,
+    postHref: vertical.postHref,
+    isOkazion: false as const,
+  };
 }
 
 export function ListingsSection({
@@ -52,13 +84,18 @@ export function ListingsSection({
 }: ListingsSectionProps) {
   const { language } = useLanguage();
   const t = useCopy();
-  const vertical = localizeVertical(verticalId, language);
+  const meta = sectionMeta(verticalId, language);
   const title =
     titleKey === 'latestListings'
       ? t.home.latestListings
       : titleKey === 'recommendedListings'
         ? t.home.recommendedListings
-        : (titleOverride ?? vertical.label);
+        : titleKey === 'okazionListings'
+          ? t.home.okazionListings
+          : (titleOverride ?? meta.label);
+
+  const showPills = !hideSubcategoryPills && isHomeVerticalId(verticalId);
+  const usePhosphorIcon = useMuiVerticalIcon || verticalId === 'okazion';
 
   return (
     <Box
@@ -74,7 +111,7 @@ export function ListingsSection({
         >
           <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
             {!hideVerticalIcon ? (
-              useMuiVerticalIcon ? (
+              usePhosphorIcon ? (
                 <Box
                   sx={{
                     width: 42,
@@ -83,17 +120,19 @@ export function ListingsSection({
                     display: 'grid',
                     placeItems: 'center',
                     flexShrink: 0,
-                    color: 'primary.main',
+                    color: meta.isOkazion ? OKAZION_ACCENT : 'primary.main',
                     bgcolor: (theme) =>
-                      theme.palette.mode === 'dark'
-                        ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
-                        : 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
+                      meta.isOkazion
+                        ? OKAZION_ACCENT_SOFT
+                        : theme.palette.mode === 'dark'
+                          ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
+                          : 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
                   }}
                 >
                   <HomeVerticalIcon verticalId={verticalId} size={26} />
                 </Box>
               ) : (
-                <VerticalIcon verticalId={verticalId} size={42} decorative />
+                <VerticalIcon verticalId={verticalId as HomeVerticalId} size={42} decorative />
               )
             ) : null}
             <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', minWidth: 0 }}>
@@ -105,6 +144,7 @@ export function ListingsSection({
                   fontSize: { xs: '1.1rem', md: '1.25rem' },
                   lineHeight: 1.3,
                   letterSpacing: '-0.01em',
+                  ...(meta.isOkazion ? { color: OKAZION_ACCENT } : null),
                 }}
               >
                 {title}
@@ -117,25 +157,25 @@ export function ListingsSection({
             </Stack>
           </Stack>
           {!hideBrowseAction ? (
-          <Button
-            component={RouterLink}
-            href={vertical.href}
-            size="small"
-            endIcon={<ArrowForward sx={{ fontSize: 18 }} />}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 600,
-              color: 'primary.main',
-              flexShrink: 0,
-              px: 1,
-            }}
-          >
-            {t.common.browseAll}
-          </Button>
+            <Button
+              component={RouterLink}
+              href={meta.href}
+              size="small"
+              endIcon={<ArrowForward sx={{ fontSize: 18 }} />}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                color: 'primary.main',
+                flexShrink: 0,
+                px: 1,
+              }}
+            >
+              {t.common.browseAll}
+            </Button>
           ) : null}
         </Stack>
 
-        {!hideSubcategoryPills ? <SubcategoryPills verticalId={verticalId} /> : null}
+        {showPills ? <SubcategoryPills verticalId={verticalId} /> : null}
 
         {isEmpty ? <EmptyPlaceholder verticalId={verticalId} /> : <Box>{children}</Box>}
       </Container>
@@ -143,10 +183,10 @@ export function ListingsSection({
   );
 }
 
-function EmptyPlaceholder({ verticalId }: { verticalId: HomeVerticalId }) {
+function EmptyPlaceholder({ verticalId }: { verticalId: ListingsSectionVerticalId }) {
   const { language } = useLanguage();
   const t = useCopy();
-  const vertical = localizeVertical(verticalId, language);
+  const meta = sectionMeta(verticalId, language);
   return (
     <Box
       sx={{
@@ -162,14 +202,21 @@ function EmptyPlaceholder({ verticalId }: { verticalId: HomeVerticalId }) {
       <Stack spacing={1.5} sx={{ alignItems: 'center' }}>
         <HomeVerticalIcon verticalId={verticalId} size={48} />
         <Typography variant="body2" color="text.secondary">
-          {t.common.noListingsYet(vertical.label.toLowerCase())}
+          {t.common.noListingsYet(meta.label.toLowerCase())}
         </Typography>
         <Button
           component={RouterLink}
-          href={vertical.postHref}
+          href={meta.postHref}
           size="small"
           variant="outlined"
-          sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
+          sx={{
+            textTransform: 'none',
+            fontWeight: 600,
+            borderRadius: 2,
+            ...(meta.isOkazion
+              ? { borderColor: OKAZION_ACCENT, color: OKAZION_ACCENT }
+              : null),
+          }}
         >
           {t.common.beFirstToPost}
         </Button>

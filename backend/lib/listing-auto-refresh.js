@@ -189,9 +189,80 @@ async function setListingAutoRefresh({ userId, kind, listingId, enabled }) {
   return { ok: true, enabled: Boolean(enabled), ...next };
 }
 
+async function purchaseAutoRefreshWithBoostCoins({ userId, packageId }) {
+  const { getAutoRefreshPackage } = require('./auto-refresh-packages');
+  const pkg = getAutoRefreshPackage(packageId);
+  if (!pkg) {
+    return { ok: false, status: 400, message: 'Paketa Auto-Refresh nuk është e vlefshme.' };
+  }
+  if (!userId || !isUuid(String(userId))) {
+    return { ok: false, status: 401, message: 'Auth required' };
+  }
+
+  const cost = Math.max(0, Math.floor(Number(pkg.priceBc) || 0));
+  if (cost <= 0) {
+    return { ok: false, status: 400, message: 'Paketa nuk mund të blihet me Boost Coins.' };
+  }
+
+  const sb = getSupabaseAdmin();
+  const { data: profile, error: pErr } = await sb
+    .from('profiles')
+    .select('id, boost_credits, auto_refresh_slots')
+    .eq('id', userId)
+    .maybeSingle();
+  if (pErr) throw pErr;
+  if (!profile) {
+    return { ok: false, status: 401, message: 'Profili nuk u gjet.' };
+  }
+
+  const balance = Number(profile.boost_credits) || 0;
+  if (balance < cost) {
+    return {
+      ok: false,
+      status: 400,
+      message: `Nuk keni mjaftueshëm Boost Coins. Duhet ${cost} BC.`,
+    };
+  }
+
+  const slots = Math.max(0, Math.floor(Number(pkg.slots) || 0));
+  if (slots <= 0) {
+    return { ok: false, status: 400, message: 'Paketa Auto-Refresh nuk është e vlefshme.' };
+  }
+
+  const now = new Date().toISOString();
+  const { data: spent, error: spendErr } = await sb
+    .from('profiles')
+    .update({
+      boost_credits: balance - cost,
+      auto_refresh_slots: (Number(profile.auto_refresh_slots) || 0) + slots,
+      updated_at: now,
+    })
+    .eq('id', userId)
+    .gte('boost_credits', cost)
+    .select('boost_credits, auto_refresh_slots')
+    .maybeSingle();
+  if (spendErr) throw spendErr;
+  if (!spent) {
+    return {
+      ok: false,
+      status: 400,
+      message: `Nuk keni mjaftueshëm Boost Coins. Duhet ${cost} BC.`,
+    };
+  }
+
+  return {
+    ok: true,
+    slots,
+    autoRefreshSlots: Number(spent.auto_refresh_slots) || 0,
+    boostCredits: Number(spent.boost_credits) || 0,
+    cost,
+  };
+}
+
 module.exports = {
   resolvePlanCode,
   getAutoRefreshSnapshot,
   setListingAutoRefresh,
   listEnrolled,
+  purchaseAutoRefreshWithBoostCoins,
 };

@@ -24,7 +24,6 @@ import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Brief
 import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist/ssr/BuildingOffice';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
-import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
@@ -55,6 +54,7 @@ import {
 import { listMyBusinessListings, listMyProfessionalListings } from '@/lib/directory-listings-client';
 import {
   applyPremiumVoucher,
+  buyAutoRefreshWithCredits,
   buyPremiumWithCredits,
   fetchAutoRefreshStatus,
   listPremiumPackages,
@@ -64,7 +64,7 @@ import { paths } from '@/paths';
 import type { AutoRefreshPackage, PremiumPackage, PremiumVoucher } from '@/types/payment';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import {
-  PackageOfferRow,
+  PackageCheckoutCard,
   SectionBlock,
   SoftChip,
   accentButtonSx,
@@ -74,8 +74,8 @@ import {
 import { OkazionPackagesSection } from './okazion-packages-section';
 
 const FALLBACK_AUTO_PACKAGES: AutoRefreshPackage[] = [
-  { id: 'auto-refresh-10', slots: 10, priceEur: 14.9, labelSq: '10 njoftime Auto-Refresh' },
-  { id: 'auto-refresh-20', slots: 20, priceEur: 24.9, labelSq: '20 njoftime Auto-Refresh' },
+  { id: 'auto-refresh-10', slots: 10, priceEur: 14.9, priceBc: 150, labelSq: '10 njoftime Auto-Refresh' },
+  { id: 'auto-refresh-20', slots: 20, priceEur: 24.9, priceBc: 250, labelSq: '20 njoftime Auto-Refresh' },
 ];
 
 const FALLBACK_PREMIUM_PACKAGES: PremiumPackage[] = [
@@ -258,8 +258,12 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
 
 function AutoRefreshSection() {
   const router = useRouter();
+  const { user, checkSession } = useUser();
+  const balance = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState<string | null>(null);
+  const [busyId, setBusyId] = React.useState<string | null>(null);
   const [slots, setSlots] = React.useState(0);
   const [used, setUsed] = React.useState(0);
   const [packages, setPackages] = React.useState<AutoRefreshPackage[]>(FALLBACK_AUTO_PACKAGES);
@@ -274,7 +278,14 @@ function AutoRefreshSection() {
       if (status) {
         setSlots(status.slots);
         setUsed(status.used);
-        if (status.packages?.length) setPackages(status.packages);
+        if (status.packages?.length) {
+          setPackages(
+            status.packages.map((p) => ({
+              ...p,
+              priceBc: Number(p.priceBc) || FALLBACK_AUTO_PACKAGES.find((f) => f.id === p.id)?.priceBc || 0,
+            })),
+          );
+        }
       }
       setLoading(false);
     })();
@@ -283,16 +294,46 @@ function AutoRefreshSection() {
     };
   }, []);
 
+  const onBuyCard = (pkg: AutoRefreshPackage) => {
+    router.push(checkoutAutoRefreshHref(pkg.id));
+  };
+
+  const onBuyBc = async (pkg: AutoRefreshPackage) => {
+    setBusyId(pkg.id);
+    setError(null);
+    setSuccess(null);
+    const result = await buyAutoRefreshWithCredits(pkg.id);
+    setBusyId(null);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    if (typeof result.autoRefreshSlots === 'number') setSlots(result.autoRefreshSlots);
+    if (typeof result.used === 'number') setUsed(result.used);
+    setSuccess(result.message || `U shtuan ${result.slots ?? pkg.slots} vende Auto-Refresh.`);
+    await checkSession();
+  };
+
   return (
     <SectionBlock
       icon={ArrowClockwiseIcon}
       title="Auto-Refresh"
       description="Njoftimet tuaja ngrihen automatikisht në krye sipas intervalit të planit."
-      chips={error ? undefined : <SoftChip label={`${used}/${slots} vende`} />}
+      chips={
+        <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+          <SoftChip label={`${used}/${slots} vende`} />
+          <SoftChip label={`${formatBc(balance)} BC`} color="warning" />
+        </Stack>
+      }
     >
       {error ? (
         <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError(null)}>
           {error}
+        </Alert>
+      ) : null}
+      {success ? (
+        <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setSuccess(null)}>
+          {success}
         </Alert>
       ) : null}
 
@@ -301,38 +342,59 @@ function AutoRefreshSection() {
           <CircularProgress size={24} />
         </Box>
       ) : (
-        <Stack spacing={1.1}>
-          {packages.map((pkg, index) => (
-            <PackageOfferRow
-              key={pkg.id}
-              title={`${pkg.slots} vende`}
-              badge={index === 1 ? <SoftChip compact label="Më e mirë" color="primary" /> : undefined}
-              highlighted={index === 1}
-              details={[
-                `${pkg.slots} njoftime me Auto-Refresh`,
-                `Aktualisht ${used}/${slots} vende në përdorim`,
-                'Abonim mujor — aktivizohet pas pagesës',
-                `Shton ${pkg.slots} vende në llogari`,
-              ]}
-              actions={
-                <Button
-                  size="small"
-                  variant="contained"
-                  onClick={() => router.push(checkoutAutoRefreshHref(pkg.id))}
-                  sx={{
-                    ...accentButtonSx('primary'),
-                    borderRadius: 1.75,
-                    px: { xs: 1.5, sm: 2 },
-                    py: 0.9,
-                    minWidth: { xs: 96, sm: 112 },
-                    fontSize: '0.8rem',
-                  }}
-                >
-                  {formatEur(pkg.priceEur)}/muaj
-                </Button>
-              }
-            />
-          ))}
+        <Stack spacing={1.25} sx={{ pb: { xs: 1, md: 0 } }}>
+          {packages.map((pkg, index) => {
+            const busy = busyId === pkg.id;
+            const priceBc = Number(pkg.priceBc) || 0;
+            const canAfford = balance >= priceBc && priceBc > 0;
+            return (
+              <PackageCheckoutCard
+                key={pkg.id}
+                title={`${pkg.slots} vende`}
+                subtitle={`${pkg.slots} njoftime Auto-Refresh · ${used}/${slots} në përdorim`}
+                badge={index === 1 ? 'Më e mirë' : null}
+                actions={
+                  <>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      disabled={busy}
+                      onClick={() => onBuyCard(pkg)}
+                      sx={{
+                        ...accentButtonSx('primary'),
+                        flex: 1,
+                        borderRadius: 1.75,
+                        py: 1,
+                        fontSize: '0.85rem',
+                        fontWeight: 850,
+                      }}
+                    >
+                      {formatEur(pkg.priceEur)}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      disabled={busy || !canAfford}
+                      onClick={() => void onBuyBc(pkg)}
+                      startIcon={
+                        busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={14} />
+                      }
+                      sx={{
+                        ...accentButtonSx('primary', 'outlined'),
+                        flex: 1,
+                        borderRadius: 1.75,
+                        py: 1,
+                        fontSize: '0.85rem',
+                        fontWeight: 850,
+                      }}
+                    >
+                      {formatBc(priceBc)} BC
+                    </Button>
+                  </>
+                }
+              />
+            );
+          })}
         </Stack>
       )}
     </SectionBlock>
@@ -524,23 +586,18 @@ function PremiumListingSection() {
         </Stack>
       ) : null}
 
-      <Stack spacing={1.1}>
+      <Stack spacing={1.25}>
         {packages.map((pkg) => {
           const busy = busyId === pkg.id;
           const canAfford = balance >= pkg.priceBc;
           const highlighted = pkg.days === 15;
           return (
-            <PackageOfferRow
+            <PackageCheckoutCard
               key={pkg.id}
               title={pkg.labelSq}
-              badge={highlighted ? <SoftChip compact label="Rekomanduar" color="warning" /> : undefined}
+              subtitle={`Premium për ${pkg.days} ditë · renditje e favorizuar`}
+              badge={highlighted ? 'Rekomanduar' : null}
               accent="warning"
-              highlighted={highlighted}
-              details={[
-                `Premium për ${pkg.days} ditë`,
-                'Renditje e favorizuar',
-                'Border i theksuar në kartë',
-              ]}
               actions={
                 <>
                   <Button
@@ -549,15 +606,13 @@ function PremiumListingSection() {
                     color="warning"
                     disabled={busy}
                     onClick={() => onBuyCard(pkg)}
-                    startIcon={<CreditCardIcon size={14} weight="bold" />}
-                    aria-label={`Paguaj me kartë ${formatEur(pkg.priceEur)}`}
                     sx={{
                       ...accentButtonSx('warning'),
+                      flex: 1,
                       borderRadius: 1.75,
-                      px: { xs: 1.15, sm: 1.5 },
-                      py: 0.85,
-                      minWidth: { xs: 80, sm: 96 },
-                      fontSize: '0.78rem',
+                      py: 1,
+                      fontSize: '0.85rem',
+                      fontWeight: 850,
                     }}
                   >
                     {formatEur(pkg.priceEur)}
@@ -571,17 +626,16 @@ function PremiumListingSection() {
                     startIcon={
                       busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={14} />
                     }
-                    aria-label={`Paguaj me ${formatBc(pkg.priceBc)} Boost Coins`}
                     sx={{
                       ...accentButtonSx('warning', 'outlined'),
+                      flex: 1,
                       borderRadius: 1.75,
-                      px: { xs: 1.15, sm: 1.5 },
-                      py: 0.85,
-                      minWidth: { xs: 80, sm: 96 },
-                      fontSize: '0.78rem',
+                      py: 1,
+                      fontSize: '0.85rem',
+                      fontWeight: 850,
                     }}
                   >
-                    {formatBc(pkg.priceBc)}
+                    {formatBc(pkg.priceBc)} BC
                   </Button>
                 </>
               }

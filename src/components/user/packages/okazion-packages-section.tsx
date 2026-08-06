@@ -19,7 +19,6 @@ import {
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
-import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { Minus as MinusIcon } from '@phosphor-icons/react/dist/ssr/Minus';
@@ -52,7 +51,7 @@ import {
 import { paths } from '@/paths';
 import type { OkazionPackage, OkazionVoucher } from '@/types/payment';
 import {
-  PackageOfferRow,
+  PackageCheckoutCard,
   SectionBlock,
   SoftChip,
   accentButtonSx,
@@ -401,16 +400,11 @@ export function OkazionPackagesSection() {
         </Stack>
       </Stack>
 
-      <PackageOfferRow
+      <PackageCheckoutCard
         title={quantity > 1 ? `${pkg.labelSq} ×${quantity}` : pkg.labelSq}
-        badge={<SoftChip compact label="5 ditë" color="error" />}
+        subtitle="OKAZION 5 ditë · temë e kuqe + renditje e favorizuar"
+        badge="5 ditë"
         accent="error"
-        highlighted
-        details={[
-          'OKAZION për 5 ditë për njoftim',
-          'Temë e kuqe + renditje e favorizuar',
-          'Çdo kategori · blini dhe stokoni',
-        ]}
         actions={
           <>
             <Button
@@ -419,15 +413,13 @@ export function OkazionPackagesSection() {
               color="error"
               disabled={busy}
               onClick={() => onBuyCard(pkg)}
-              startIcon={<CreditCardIcon size={14} weight="bold" />}
-              aria-label={`Paguaj me kartë ${formatEur(totalEur)}`}
               sx={{
                 ...accentButtonSx('error'),
+                flex: 1,
                 borderRadius: 1.75,
-                px: { xs: 1.15, sm: 1.5 },
-                py: 0.85,
-                minWidth: { xs: 80, sm: 96 },
-                fontSize: '0.78rem',
+                py: 1,
+                fontSize: '0.85rem',
+                fontWeight: 850,
               }}
             >
               {formatEur(totalEur)}
@@ -439,17 +431,16 @@ export function OkazionPackagesSection() {
               disabled={busy || !canAfford}
               onClick={() => void onBuyBc(pkg)}
               startIcon={busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={14} />}
-              aria-label={`Paguaj me ${formatBc(totalBc)} Boost Coins`}
               sx={{
                 ...accentButtonSx('error', 'outlined'),
+                flex: 1,
                 borderRadius: 1.75,
-                px: { xs: 1.15, sm: 1.5 },
-                py: 0.85,
-                minWidth: { xs: 80, sm: 96 },
-                fontSize: '0.78rem',
+                py: 1,
+                fontSize: '0.85rem',
+                fontWeight: 850,
               }}
             >
-              {formatBc(totalBc)}
+              {formatBc(totalBc)} BC
             </Button>
           </>
         }

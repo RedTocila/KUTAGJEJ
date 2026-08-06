@@ -4,6 +4,7 @@ import * as React from 'react';
 import { alpha, type Theme } from '@mui/material/styles';
 import { Box, ButtonBase, Chip, Collapse, Stack, Typography } from '@mui/material';
 import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
+import { Check as CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
@@ -280,6 +281,7 @@ export function FeatureDetailsDropdown({
   label = 'Detajet',
   open,
   onToggle,
+  fullWidth = false,
 }: {
   items: string[];
   accent?: PlanAccent;
@@ -287,6 +289,8 @@ export function FeatureDetailsDropdown({
   /** Controlled open state — when set, content is rendered by the parent below. */
   open?: boolean;
   onToggle?: () => void;
+  /** Stretch the toggle across the full row (easier tap target). */
+  fullWidth?: boolean;
 }) {
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
   const isControlled = open != null && onToggle != null;
@@ -304,10 +308,12 @@ export function FeatureDetailsDropdown({
         onClick={toggle}
         aria-expanded={isOpen}
         sx={{
-          display: 'inline-flex',
+          display: fullWidth ? 'flex' : 'inline-flex',
+          width: fullWidth ? '100%' : undefined,
           alignItems: 'center',
+          justifyContent: fullWidth ? 'space-between' : undefined,
           gap: 0.4,
-          py: 0.15,
+          py: fullWidth ? 0.55 : 0.15,
           px: 0,
           borderRadius: 0.75,
           color: 'text.secondary',
@@ -466,6 +472,291 @@ export function PackageOfferRow({
             <FeatureList items={details} accent={accent} compact />
           </Box>
         </Collapse>
+      ) : null}
+    </Box>
+  );
+}
+
+const PACKAGE_BADGE_YELLOW = '#facc15';
+
+/**
+ * Package card:
+ * - Clickable price on the right (Boost Coins / Auto-Refresh / main plans), or
+ * - Two equal action buttons in a row (Premium / OKAZION: € + BC).
+ * - Optional collapsible feature details at the bottom.
+ */
+export function PackageCheckoutCard({
+  title,
+  subtitle,
+  badge,
+  price,
+  priceSuffix = '/ paketë',
+  onClick,
+  actions,
+  details = [],
+  accent = 'primary',
+  selected = false,
+}: {
+  title: string;
+  subtitle?: string;
+  badge?: string | null;
+  price?: React.ReactNode;
+  priceSuffix?: string;
+  onClick?: () => void;
+  /** When set, renders a full-width row of buttons (e.g. € + BC) instead of a price column. */
+  actions?: React.ReactNode;
+  /** Feature lines shown in a collapsed "Detajet" dropdown at the bottom. */
+  details?: string[];
+  /** Hover / active border & wash — e.g. `warning` Premium, `error` OKAZION. */
+  accent?: PlanAccent;
+  /** Current / selected plan — accent border + corner checkmark. */
+  selected?: boolean;
+}) {
+  const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const hasDetails = details.length > 0;
+
+  const header = (
+    <Box sx={{ minWidth: 0, flex: 1 }}>
+      <Stack
+        direction="row"
+        spacing={0.75}
+        sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5, mb: subtitle ? 0.4 : 0 }}
+      >
+        <Typography
+          sx={{
+            fontWeight: 850,
+            fontSize: { xs: '1.05rem', sm: '1.15rem' },
+            lineHeight: 1.2,
+            color: 'text.primary',
+          }}
+        >
+          {title}
+        </Typography>
+        {badge ? (
+          <Box
+            sx={{
+              px: 1,
+              py: 0.2,
+              borderRadius: 999,
+              bgcolor: PACKAGE_BADGE_YELLOW,
+              color: '#111',
+              fontWeight: 850,
+              fontSize: '0.68rem',
+              lineHeight: 1.35,
+              flexShrink: 0,
+            }}
+          >
+            {badge}
+          </Box>
+        ) : null}
+      </Stack>
+      {subtitle ? (
+        <Typography
+          sx={{
+            fontWeight: 550,
+            fontSize: '0.82rem',
+            lineHeight: 1.35,
+            color: 'text.secondary',
+          }}
+        >
+          {subtitle}
+        </Typography>
+      ) : null}
+    </Box>
+  );
+
+  const interactiveSx = {
+    borderColor: (t: Theme) => alpha(resolveAccent(t, accent), 0.55),
+    bgcolor: (t: Theme) =>
+      t.palette.mode === 'dark'
+        ? alpha(resolveAccent(t, accent), 0.12)
+        : alpha(resolveAccent(t, accent), 0.06),
+  };
+
+  const selectedSx = selected
+    ? {
+        borderColor: (t: Theme) => resolveAccent(t, accent),
+        borderWidth: 2,
+        bgcolor: (t: Theme) =>
+          t.palette.mode === 'dark'
+            ? alpha(resolveAccent(t, accent), 0.14)
+            : alpha(resolveAccent(t, accent), 0.07),
+      }
+    : null;
+
+  const priceColumn = (
+    <Box sx={{ flexShrink: 0, textAlign: 'right', minWidth: 72 }}>
+      <Typography
+        sx={{
+          fontWeight: 900,
+          fontSize: { xs: '1.2rem', sm: '1.35rem' },
+          lineHeight: 1.1,
+          letterSpacing: '-0.02em',
+          color: 'text.primary',
+          transition: 'color 0.15s ease',
+          ...(onClick
+            ? {
+                '.MuiButtonBase-root:hover &, .MuiButtonBase-root:active &': {
+                  color: (t: Theme) => resolveAccent(t, accent),
+                },
+              }
+            : null),
+        }}
+      >
+        {price}
+      </Typography>
+      <Typography
+        sx={{
+          mt: 0.2,
+          fontWeight: 600,
+          fontSize: '0.75rem',
+          color: 'text.secondary',
+        }}
+      >
+        {priceSuffix}
+      </Typography>
+    </Box>
+  );
+
+  const mainRowPaddingY = hasDetails
+    ? { xs: 1.5, sm: 1.65 }
+    : actions
+      ? { xs: 1.75, sm: 1.9 }
+      : { xs: 1.85, sm: 2 };
+
+  const body = actions ? (
+    <Box sx={{ px: { xs: 2, sm: 2.25 }, pt: mainRowPaddingY, pb: hasDetails ? 0.75 : mainRowPaddingY }}>
+      {header}
+      <Stack direction="row" spacing={1} sx={{ mt: 1.35 }}>
+        {actions}
+      </Stack>
+    </Box>
+  ) : onClick ? (
+    <ButtonBase
+      focusRipple
+      onClick={onClick}
+      sx={{
+        display: 'block',
+        width: '100%',
+        textAlign: 'left',
+        borderRadius: 0,
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
+          px: { xs: 2, sm: 2.25 },
+          pt: mainRowPaddingY,
+          pb: hasDetails ? 0.75 : mainRowPaddingY,
+        }}
+      >
+        {header}
+        {priceColumn}
+      </Box>
+    </ButtonBase>
+  ) : (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 2,
+        px: { xs: 2, sm: 2.25 },
+        pt: mainRowPaddingY,
+        pb: hasDetails ? 0.75 : mainRowPaddingY,
+      }}
+    >
+      {header}
+      {priceColumn}
+    </Box>
+  );
+
+  return (
+    <Box
+      sx={{
+        position: 'relative',
+        borderRadius: 2.5,
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        overflow: selected ? 'visible' : 'hidden',
+        transition: 'border-color 0.15s ease, background-color 0.15s ease',
+        ...selectedSx,
+        ...(onClick || actions
+          ? {
+              '&:hover': selected ? undefined : interactiveSx,
+              '&:has(:active)': selected ? undefined : interactiveSx,
+              '&:has(.Mui-focusVisible)': selected ? undefined : interactiveSx,
+            }
+          : null),
+      }}
+    >
+      {selected ? (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: -9,
+            right: -9,
+            zIndex: 1,
+            width: 26,
+            height: 26,
+            borderRadius: '50%',
+            display: 'grid',
+            placeItems: 'center',
+            bgcolor: (t) => resolveAccent(t, accent),
+            color: '#fff',
+            boxShadow: (t) => `0 0 0 3px ${t.palette.background.default}`,
+          }}
+          aria-hidden
+        >
+          <CheckIcon size={14} weight="bold" color="currentColor" />
+        </Box>
+      ) : null}
+      {body}
+      {hasDetails ? (
+        <Box>
+          <ButtonBase
+            onClick={() => setDetailsOpen((v) => !v)}
+            aria-expanded={detailsOpen}
+            sx={{
+              display: 'flex',
+              width: '100%',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 1,
+              px: { xs: 2, sm: 2.25 },
+              py: 1.1,
+              borderTop: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 0,
+              color: 'text.secondary',
+              '&:hover': { color: (t) => resolveAccent(t, accent) },
+            }}
+          >
+            <Typography sx={{ fontWeight: 750, fontSize: '0.7rem', letterSpacing: '0.02em' }}>
+              Detajet
+            </Typography>
+            <Box
+              sx={{
+                display: 'inline-flex',
+                transition: 'transform 0.15s ease',
+                transform: detailsOpen ? 'rotate(180deg)' : 'none',
+              }}
+            >
+              <CaretDownIcon size={12} weight="bold" />
+            </Box>
+          </ButtonBase>
+          <Collapse in={detailsOpen} unmountOnExit>
+            <Box sx={{ px: { xs: 2, sm: 2.25 }, pb: { xs: 1.25, sm: 1.35 } }}>
+              <FeatureList items={details} accent={accent} compact />
+            </Box>
+          </Collapse>
+        </Box>
       ) : null}
     </Box>
   );

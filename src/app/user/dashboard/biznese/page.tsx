@@ -9,8 +9,8 @@ import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 
 import { BusinessOwnerReservations } from '@/components/businesses/business-owner-reservations';
 import { BusinessListingForm } from '@/components/businesses/business-listing-form';
-import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
+import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
 
 type Tab = 'post' | 'reservations';
@@ -37,7 +37,6 @@ const tabBtnSx = (active: boolean) => ({
 
 export default function UserBusinessesDashboardPage() {
   const [tab, setTab] = React.useState<Tab>('post');
-  const [submittedPending, setSubmittedPending] = React.useState(false);
   const [aiPrefill, setAiPrefill] = React.useState<Record<string, unknown> | null>(null);
   const [aiFormKey, setAiFormKey] = React.useState(0);
 
@@ -95,8 +94,6 @@ export default function UserBusinessesDashboardPage() {
         </Button>
       </Box>
 
-      {submittedPending ? <ListingSubmittedPendingAlert /> : null}
-
       {tab === 'post' ? (
         <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
           <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
@@ -112,7 +109,7 @@ export default function UserBusinessesDashboardPage() {
                 key={`biz-${aiFormKey}`}
                 aiPrefill={aiPrefill}
                 onSuccess={() => {
-                  setSubmittedPending(true);
+                  hardNavigate(paths.user.dashboard);
                 }}
                 backHref={paths.user.dashboard}
                 backLabel="Profili"

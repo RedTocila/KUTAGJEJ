@@ -27,7 +27,7 @@ export type SavedListingsContextValue = {
   toggleSaved: (
     kind: ListingMetricKind,
     listingId: string,
-  ) => Promise<{ saved: boolean; saveCount: number } | null>;
+  ) => Promise<{ saved: boolean; saveCount: number; stale?: boolean } | null>;
 };
 
 export const SavedListingsContext = React.createContext<SavedListingsContextValue | undefined>(undefined);
@@ -36,6 +36,10 @@ export function SavedListingsProvider({ children }: { children: React.ReactNode 
   const { user, isLoading } = useUser();
   const [ready, setReady] = React.useState(false);
   const [keys, setKeys] = React.useState<Set<string>>(() => new Set());
+  const keysRef = React.useRef(keys);
+  const toggleSeqRef = React.useRef(new Map<string, number>());
+
+  keysRef.current = keys;
 
   const refresh = React.useCallback(async () => {
     if (!canUseBookmarks(user)) {
@@ -71,8 +75,24 @@ export function SavedListingsProvider({ children }: { children: React.ReactNode 
 
   const toggleSaved = React.useCallback(
     async (kind: ListingMetricKind, listingId: string) => {
+      const key = listingMetricsKey(kind, listingId);
+      const wasSaved = keysRef.current.has(key);
+      const nextSaved = !wasSaved;
+      const seq = (toggleSeqRef.current.get(key) ?? 0) + 1;
+      toggleSeqRef.current.set(key, seq);
+
+      // Flip UI immediately; reconcile with the server when the request finishes.
+      applySaved(kind, listingId, nextSaved);
+
       const metrics = await toggleListingSave(kind, listingId);
-      if (!metrics) return null;
+      if (toggleSeqRef.current.get(key) !== seq) {
+        // A newer toggle for this listing owns the UI; keep optimistic state as-is.
+        return { saved: nextSaved, saveCount: 0, stale: true };
+      }
+      if (!metrics) {
+        applySaved(kind, listingId, wasSaved);
+        return null;
+      }
       applySaved(kind, listingId, metrics.saved);
       return { saved: metrics.saved, saveCount: metrics.saveCount };
     },

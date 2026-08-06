@@ -93,7 +93,6 @@ export function PostListingAiAssist({
   const [success, setSuccess] = React.useState<string | null>(null);
   const [inputExpanded, setInputExpanded] = React.useState(false);
   const [mismatchDraft, setMismatchDraft] = React.useState<AiImportDraftResult | null>(null);
-  const [switching, setSwitching] = React.useState(false);
   const [pendingImageUrls, setPendingImageUrls] = React.useState<string[]>([]);
 
   React.useEffect(() => {
@@ -285,61 +284,6 @@ export function PostListingAiAssist({
     openCorrectCategoryForm(mismatchDraft);
   };
 
-  const pickMismatchCategory = async (nextCategory: ListingCategoryKey) => {
-    if (!mismatchDraft) return;
-    if (mismatchDraft.detectedCategory === nextCategory) {
-      openCorrectCategoryForm(mismatchDraft);
-      return;
-    }
-    if (nextCategory === category) {
-      setMismatchDraft(null);
-      setError(null);
-      return;
-    }
-
-    const prompt = (mismatchDraft.sourcePrompt || text || '').trim();
-    const imageUrls = (
-      mismatchDraft.imageUrls?.length ? mismatchDraft.imageUrls : pendingImageUrls
-    ).filter(Boolean);
-    setSwitching(true);
-    setError(null);
-    try {
-      const res = await importListingsFromLinks({
-        text: prompt,
-        category: nextCategory,
-        profile: profileFromUser(user),
-        images: imageUrls.map((url) => ({ url })),
-        mode: 'create',
-      });
-      if (res.error) {
-        setError(res.error);
-        return;
-      }
-      const rebuilt = res.drafts[0];
-      if (!rebuilt) {
-        setError(t.aiImport.formEmpty);
-        return;
-      }
-      if (isAiCategoryMismatch(rebuilt)) {
-        setMismatchDraft({
-          ...rebuilt,
-          sourcePrompt: prompt,
-          preferredCategory: category,
-        });
-        return;
-      }
-      openCorrectCategoryForm({
-        ...rebuilt,
-        preferredCategory: nextCategory,
-        sourcePrompt: prompt,
-      });
-    } catch {
-      setError(t.aiImport.failed);
-    } finally {
-      setSwitching(false);
-    }
-  };
-
   const startOverMismatch = () => {
     if (mismatchDraft?.sourcePrompt) setText(mismatchDraft.sourcePrompt);
     if (mismatchDraft?.imageUrls?.length) setPendingImageUrls(mismatchDraft.imageUrls);
@@ -523,13 +467,10 @@ export function PostListingAiAssist({
       {mismatchDraft ? (
         <AiCategoryMismatchPanel
           draft={mismatchDraft}
-          busy={switching}
           allowCategorySwitch={!isEdit}
           onAcceptDetected={acceptMismatchDetected}
-          onPickCategory={(key) => void pickMismatchCategory(key)}
           onStartOver={startOverMismatch}
-        />
-      ) : null}
+        />      ) : null}
 
       {error ? (
         <Alert severity="error" sx={{ borderRadius: 2.5, py: 0 }}>

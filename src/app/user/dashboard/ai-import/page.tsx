@@ -120,7 +120,6 @@ export default function AiImportListingsPage() {
   const [postingId, setPostingId] = React.useState<string | null>(null);
   const [postingAll, setPostingAll] = React.useState(false);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
-  const [switchingId, setSwitchingId] = React.useState<string | null>(null);
   const [pendingImageUrls, setPendingImageUrls] = React.useState<string[]>([]);
   const [lastPrompt, setLastPrompt] = React.useState('');
 
@@ -274,76 +273,6 @@ export default function AiImportListingsPage() {
     setCategory(accepted.category);
     setError(null);
     setStatusMessage(t.aiImport.categorySwitched(categoryLabel(accepted.category)));
-  };
-
-  const switchMismatchCategory = async (
-    draft: AiImportDraftResult,
-    nextCategory: ListingCategoryKey,
-  ) => {
-    if (draft.detectedCategory && nextCategory === draft.detectedCategory) {
-      acceptMismatch(draft);
-      return;
-    }
-
-    const prompt = (draft.sourcePrompt || lastPrompt || text || draft.sourceUrl || '').trim();
-    const imageUrls = (draft.imageUrls?.length ? draft.imageUrls : pendingImageUrls).filter(Boolean);
-    if (!prompt && imageUrls.length === 0) {
-      setError(t.aiImport.empty);
-      return;
-    }
-
-    setSwitchingId(draft.id);
-    setError(null);
-    setStatusMessage(null);
-    try {
-      const res = await importListingsFromLinks({
-        text: prompt,
-        category: nextCategory,
-        images: imageUrls.map((url) => ({ url })),
-      });
-      if (res.error) {
-        setError(res.error);
-        return;
-      }
-      const rebuilt = res.drafts[0];
-      if (!rebuilt) {
-        setError(t.aiImport.formEmpty);
-        return;
-      }
-      const shaped: AiImportDraftResult = {
-        ...rebuilt,
-        id: draft.id,
-        sourcePrompt: prompt,
-        imageUrls: imageUrls.length
-          ? mergeAttachedImageUrls({
-              remoteUrls: rebuilt.imageUrls ?? [],
-              uploadedUrls: imageUrls,
-              roles: rebuilt.imageRoles,
-              max: nextCategory === 'professionals' ? 2 : 8,
-            })
-          : rebuilt.imageUrls ?? [],
-      };
-      if (isAiCategoryMismatch(shaped)) {
-        const next = drafts.map((d) => (d.id === draft.id ? shaped : d));
-        persistDrafts(next);
-        setCategory(nextCategory);
-        return;
-      }
-      const ready = toAiListingDraft(shaped);
-      if (!ready) {
-        setError(shaped.error || t.aiImport.formEmpty);
-        return;
-      }
-      const accepted = { ...shaped, error: null, errorCode: null };
-      const next = drafts.map((d) => (d.id === draft.id ? accepted : d));
-      persistDrafts(next);
-      setCategory(nextCategory);
-      setStatusMessage(t.aiImport.categorySwitched(categoryLabel(nextCategory)));
-    } catch {
-      setError(t.aiImport.failed);
-    } finally {
-      setSwitchingId(null);
-    }
   };
 
   const startOverMismatch = (draft: AiImportDraftResult) => {
@@ -864,7 +793,6 @@ export default function AiImportListingsPage() {
             const restricted = isAiContentRestricted(draft);
             const failed = (Boolean(draft.error) || !draft.category) && !mismatch;
             const images = draftImageUrls(draft);
-            const busySwitch = switchingId === draft.id;
             return (
               <Box
                 key={draft.id}
@@ -872,8 +800,8 @@ export default function AiImportListingsPage() {
                   p: 2,
                   borderRadius: 2.5,
                   border: '1px solid',
-                  borderColor: mismatch || failed || restricted ? 'error.light' : 'divider',
-                  bgcolor: mismatch || failed || restricted ? 'error.light' : 'background.paper',
+                  borderColor: mismatch || restricted || failed ? 'error.main' : 'divider',
+                  bgcolor: 'background.paper',
                 }}
               >
                 <Stack spacing={1.25}>
@@ -883,7 +811,15 @@ export default function AiImportListingsPage() {
                     </Box>
                     <Stack spacing={0.35} sx={{ minWidth: 0, flex: 1 }}>
                       <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
-                        <Typography sx={{ fontWeight: 800, fontSize: '0.98rem', flex: 1, minWidth: 0 }}>
+                        <Typography
+                          sx={{
+                            fontWeight: 800,
+                            fontSize: '0.98rem',
+                            flex: 1,
+                            minWidth: 0,
+                            color: 'text.primary',
+                          }}
+                        >
                           {draft.title ||
                             categoryLabel(draft.detectedCategory || draft.category) ||
                             (restricted ? t.aiImport.contentRestricted.slice(0, 48) : '')}
@@ -897,25 +833,27 @@ export default function AiImportListingsPage() {
                           <XIcon size={16} weight="bold" />
                         </IconButton>
                       </Stack>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ wordBreak: 'break-all' }}
-                      >
-                        {draft.sourceUrl}
-                      </Typography>
+                      {!mismatch && draft.sourceUrl ? (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ wordBreak: 'break-all' }}
+                        >
+                          {draft.sourceUrl}
+                        </Typography>
+                      ) : null}
                       {draft.category && !mismatch && !restricted ? (
                         <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
                           {categoryLabel(draft.category)}
                           {draft.cityName ? ` · ${draft.cityName}` : ''}
                         </Typography>
                       ) : null}
-                      {draft.summary && !restricted ? (
+                      {draft.summary && !restricted && !mismatch ? (
                         <Typography variant="body2" color="text.secondary">
                           {draft.summary}
                         </Typography>
                       ) : null}
-                      {draft.warning ? (
+                      {draft.warning && !mismatch ? (
                         <Alert severity="warning" sx={{ borderRadius: 2, py: 0 }}>
                           {draft.warning}
                         </Alert>
@@ -940,9 +878,7 @@ export default function AiImportListingsPage() {
                       {mismatch ? (
                         <AiCategoryMismatchPanel
                           draft={draft}
-                          busy={busySwitch}
                           onAcceptDetected={() => acceptMismatch(draft)}
-                          onPickCategory={(key) => void switchMismatchCategory(draft, key)}
                           onStartOver={() => startOverMismatch(draft)}
                         />
                       ) : null}

@@ -38,6 +38,8 @@ import {
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
 
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
 import { useUser } from '@/hooks/use-user';
 import {
   convertListingQuotas,
@@ -52,6 +54,7 @@ import {
   listMyRealEstateListings,
 } from '@/lib/listings-client';
 import { listMyBusinessListings, listMyProfessionalListings } from '@/lib/directory-listings-client';
+import { localizedLabel } from '@/lib/language';
 import {
   applyPremiumVoucher,
   buyAutoRefreshWithCredits,
@@ -74,8 +77,22 @@ import {
 import { OkazionPackagesSection } from './okazion-packages-section';
 
 const FALLBACK_AUTO_PACKAGES: AutoRefreshPackage[] = [
-  { id: 'auto-refresh-10', slots: 10, priceEur: 14.9, priceBc: 150, labelSq: '10 njoftime Auto-Refresh' },
-  { id: 'auto-refresh-20', slots: 20, priceEur: 24.9, priceBc: 250, labelSq: '20 njoftime Auto-Refresh' },
+  {
+    id: 'auto-refresh-10',
+    slots: 10,
+    priceEur: 14.9,
+    priceBc: 150,
+    labelSq: '10 njoftime Auto-Refresh',
+    labelEn: '10 Auto-Refresh listings',
+  },
+  {
+    id: 'auto-refresh-20',
+    slots: 20,
+    priceEur: 24.9,
+    priceBc: 250,
+    labelSq: '20 njoftime Auto-Refresh',
+    labelEn: '20 Auto-Refresh listings',
+  },
 ];
 
 const FALLBACK_PREMIUM_PACKAGES: PremiumPackage[] = [
@@ -250,6 +267,8 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
 
 function AutoRefreshSection() {
   const router = useRouter();
+  const t = useCopy();
+  const { language } = useLanguage();
   const { user, checkSession } = useUser();
   const balance = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
   const [loading, setLoading] = React.useState(true);
@@ -272,10 +291,14 @@ function AutoRefreshSection() {
         setUsed(status.used);
         if (status.packages?.length) {
           setPackages(
-            status.packages.map((p) => ({
-              ...p,
-              priceBc: Number(p.priceBc) || FALLBACK_AUTO_PACKAGES.find((f) => f.id === p.id)?.priceBc || 0,
-            })),
+            status.packages.map((p) => {
+              const fallback = FALLBACK_AUTO_PACKAGES.find((f) => f.id === p.id);
+              return {
+                ...p,
+                priceBc: Number(p.priceBc) || fallback?.priceBc || 0,
+                labelEn: p.labelEn || fallback?.labelEn,
+              };
+            }),
           );
         }
       }
@@ -342,9 +365,9 @@ function AutoRefreshSection() {
             return (
               <PackageCheckoutCard
                 key={pkg.id}
-                title={`${pkg.slots} vende`}
-                subtitle={`${pkg.slots} njoftime Auto-Refresh · ${used}/${slots} në përdorim`}
-                badge={index === 1 ? 'Më e mirë' : null}
+                title={t.packages.slots(pkg.slots)}
+                subtitle={`${localizedLabel(language, pkg.labelSq, pkg.labelEn)} · ${t.packages.inUse(used, slots)}`}
+                badge={index === 1 ? t.packages.bestValue : null}
                 actions={
                   <>
                     <Button
@@ -396,6 +419,8 @@ function AutoRefreshSection() {
 function PremiumListingSection() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useCopy();
+  const { language } = useLanguage();
   const { user, checkSession } = useUser();
   const balance = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
 
@@ -568,10 +593,10 @@ function PremiumListingSection() {
               }}
             >
               <Typography variant="body2" sx={{ fontWeight: 750 }}>
-                {v.days} ditë Premium · e papërdorur
+                {t.packages.unusedPremiumDays(v.days)}
               </Typography>
               <Button size="small" variant="contained" color="warning" onClick={() => openAssign(v)} sx={{ fontWeight: 800 }}>
-                Zgjidh njoftimin
+                {t.packages.selectListing}
               </Button>
             </Stack>
           ))}
@@ -586,9 +611,9 @@ function PremiumListingSection() {
           return (
             <PackageCheckoutCard
               key={pkg.id}
-              title={pkg.labelSq}
-              subtitle={`Premium për ${pkg.days} ditë · renditje e favorizuar`}
-              badge={highlighted ? 'Rekomanduar' : null}
+              title={localizedLabel(language, pkg.labelSq, pkg.labelEn)}
+              subtitle={t.packages.premiumCardSubtitle(pkg.days)}
+              badge={highlighted ? t.packages.bestValue : null}
               accent="warning"
               actions={
                 <>
@@ -637,26 +662,24 @@ function PremiumListingSection() {
       </Stack>
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
-        Premium nga abonimi Grow/Elite: 30 ditë — aktivizohet me butonin Premium te Shpalljet e mia.
+        {t.packages.premiumGrowEliteNote}
       </Typography>
 
       <ProductDialog open={assignOpen} onClose={closeAssign} fullWidth maxWidth="sm">
         <ProductDialogTitle
           onClose={closeAssign}
           subtitle={
-            activeVoucher
-              ? `${activeVoucher.days} ditë do të aplikohen në njoftimin e zgjedhur`
-              : undefined
+            activeVoucher ? t.packages.applyDaysToListing(activeVoucher.days) : undefined
           }
         >
-          Zgjidh njoftimin Premium
+          {t.packages.selectPremiumListing}
         </ProductDialogTitle>
         {!pickerLoading && pickerListings.length > 0 ? (
           <Box sx={{ px: 2.5, pb: 1 }}>
             <TextField
               inputRef={pickerSearchRef}
               fullWidth
-              placeholder="Kërko njoftimin…"
+              placeholder={t.packages.searchListing}
               value={pickerQuery}
               onChange={(e) => setPickerQuery(e.target.value)}
               slotProps={{
@@ -683,11 +706,11 @@ function PremiumListingSection() {
             </Box>
           ) : pickerListings.length === 0 ? (
             <Alert severity="info" sx={{ borderRadius: 2 }}>
-              Nuk keni njoftime të aprovuara. Shtoni një njoftim dhe aprovoni atë, pastaj aplikoni Premium.
+              {t.packages.noApprovedListingsPremium}
             </Alert>
           ) : filteredPickerListings.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>
-              Nuk u gjet asnjë njoftim.
+              {t.packages.noListingFound}
             </Typography>
           ) : (
             <List disablePadding>

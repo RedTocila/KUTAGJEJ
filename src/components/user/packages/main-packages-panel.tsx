@@ -10,7 +10,9 @@ import {
   Typography,
 } from '@mui/material';
 
+import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
+import type { AppMessages } from '@/lib/i18n/messages';
 import { listPublicContracts } from '@/lib/public-contracts-client';
 import { listMySubscriptions } from '@/lib/payments-client';
 import type { PublicContract } from '@/types/contract';
@@ -21,34 +23,42 @@ import {
 } from './package-ui';
 import type { PlanAccent } from './package-ui';
 
-function planSubtitle(plan: PublicContract, durationLabel?: string): string {
-  const bits = [`${plan.maxListAllCategories} njoftime`];
+function durationLabel(t: AppMessages, months: number): string {
+  if (months === 1) return t.packages.monthly;
+  if (months === 3) return t.packages.months3;
+  if (months === 6) return t.packages.months6;
+  if (months === 12) return t.packages.yearly;
+  return t.packages.perMonths(months).replace(/^\//, '').trim();
+}
+
+function planSubtitle(t: AppMessages, plan: PublicContract, duration?: string): string {
+  const bits = [t.packages.listingsCount(plan.maxListAllCategories)];
   if (plan.maxPremiumListings > 0) bits.push(`${plan.maxPremiumListings} Premium`);
   if (plan.maxOkazionListings > 0) bits.push(`${plan.maxOkazionListings} OKAZION`);
   if ((plan.boostCredits ?? 0) > 0) bits.push(`${plan.boostCredits} BC`);
   const base = bits.join(' · ');
-  return durationLabel ? `${durationLabel} · ${base}` : base;
+  return duration ? `${duration} · ${base}` : base;
 }
 
-function planFeatureLines(plan: PublicContract): string[] {
+function planFeatureLines(t: AppMessages, plan: PublicContract): string[] {
   const lines: string[] = [
-    `Deri në ${plan.maxListAllCategories} njoftime (të gjitha kategoritë)`,
-    `${plan.maxApartmentListings} njoftime apartamente`,
-    `${plan.maxCarListings} njoftime makina`,
-    `${plan.maxJobListings} njoftime pune`,
-    `${plan.maxProductListings} njoftime produkte`,
+    t.packages.upToListings(plan.maxListAllCategories),
+    t.packages.apartmentListings(plan.maxApartmentListings),
+    t.packages.carListings(plan.maxCarListings),
+    t.packages.jobListings(plan.maxJobListings),
+    t.packages.productListings(plan.maxProductListings),
   ];
   if (plan.maxPremiumListings > 0) {
-    lines.push(`${plan.maxPremiumListings} Premium listing · 30 ditë`);
+    lines.push(t.packages.premiumListingDays(plan.maxPremiumListings, 30));
   }
   if (plan.maxOkazionListings > 0) {
-    lines.push(`${plan.maxOkazionListings} OKAZION · 5 ditë`);
+    lines.push(t.packages.okazionListingDays(plan.maxOkazionListings, 5));
   }
   if ((plan.boostCredits ?? 0) > 0) {
     lines.push(`${plan.boostCredits} Boost Coins`);
   }
   if (plan.refreshEveryHours != null) {
-    lines.push(`Rifresko postimin pas ${plan.refreshEveryHours} orësh`);
+    lines.push(t.packages.refreshAfterHours(plan.refreshEveryHours));
   }
   if (plan.glowBadgeEnabled) {
     lines.push('Trust Badge');
@@ -68,36 +78,40 @@ function checkoutSubscriptionHref(contractId: string, months: number) {
 
 const MAIN_PACKAGES_ACCENT: PlanAccent = 'primary';
 
-function priceSuffixForMonths(months: number): string {
-  if (months === 1) return '/ muaj';
-  if (months === 12) return '/ vit';
-  return `/ ${months} muaj`;
+function priceSuffixForMonths(t: AppMessages, months: number): string {
+  if (months === 1) return t.packages.perMonth;
+  if (months === 12) return t.packages.perYear;
+  return t.packages.perMonths(months);
 }
 
 /** Yellow pill when yearly (or longer) beats paying monthly. */
-function savingsBadge(monthlyPrice: number | null, months: number, price: number): string | null {
+function savingsBadge(t: AppMessages, monthlyPrice: number | null, months: number, price: number): string | null {
   if (months <= 1 || monthlyPrice == null || monthlyPrice <= 0) return null;
   const full = monthlyPrice * months;
   if (price >= full) return null;
   const pct = Math.round((1 - price / full) * 100);
-  return pct >= 5 ? `Kurseni ${pct}%` : null;
+  return pct >= 5 ? t.packages.savePct(pct) : null;
 }
 
-function offerBadge(opts: {
-  isCurrent: boolean;
-  months: number;
-  monthlyPrice: number | null;
-  price: number;
-}): string | null {
-  if (opts.isCurrent) return 'Plani juaj';
-  const save = savingsBadge(opts.monthlyPrice, opts.months, opts.price);
+function offerBadge(
+  t: AppMessages,
+  opts: {
+    isCurrent: boolean;
+    months: number;
+    monthlyPrice: number | null;
+    price: number;
+  },
+): string | null {
+  if (opts.isCurrent) return t.packages.yourPlan;
+  const save = savingsBadge(t, opts.monthlyPrice, opts.months, opts.price);
   if (save) return save;
-  if (opts.months === 12) return 'Vjetore';
+  if (opts.months === 12) return t.packages.annual;
   return null;
 }
 
 export function MainPackagesPanel() {
   const router = useRouter();
+  const t = useCopy();
   const { user } = useUser();
   const subscriberKindFilter =
     user?.accountType === 'business' || user?.role === 'business-user' ? 'company' : 'agent';
@@ -171,7 +185,7 @@ export function MainPackagesPanel() {
 
       {!loading && !error && plans.length === 0 ? (
         <Alert severity="info" sx={{ borderRadius: 2 }}>
-          Për momentin nuk ka plan aktiv me çmim për llogarinë tuaj.
+          {t.packages.noActivePlan}
         </Alert>
       ) : null}
 
@@ -188,19 +202,17 @@ export function MainPackagesPanel() {
               (!hasPaidPlan && isFree);
             const accent = MAIN_PACKAGES_ACCENT;
             const monthlyPrice = plan.price1Month ?? paidOptions.find((o) => o.months === 1)?.price ?? null;
-            const details = planFeatureLines(plan);
+            const details = planFeatureLines(t, plan);
 
             if (isFree) {
               return [
                 <PackageCheckoutCard
                   key={plan.id}
                   title={plan.title}
-                  subtitle={
-                    isPlanCurrent ? planSubtitle(plan, 'Filloni falas · Prek për të ndryshuar planin') : planSubtitle(plan, 'Filloni falas')
-                  }
-                  badge={isPlanCurrent ? 'Plani juaj' : null}
+                  subtitle={planSubtitle(t, plan, t.packages.startFree)}
+                  badge={isPlanCurrent ? t.packages.yourPlan : null}
                   price="€0"
-                  priceSuffix="/ muaj"
+                  priceSuffix={t.packages.perMonth}
                   accent={accent}
                   selected={isPlanCurrent}
                   details={details}
@@ -223,7 +235,7 @@ export function MainPackagesPanel() {
 
             return paidOptions.map((opt) => {
               const isCurrent = isPlanCurrent && opt.months === matchedMonths;
-              const badge = offerBadge({
+              const badge = offerBadge(t, {
                 isCurrent,
                 months: opt.months,
                 monthlyPrice,
@@ -234,10 +246,10 @@ export function MainPackagesPanel() {
                 <PackageCheckoutCard
                   key={`${plan.id}-${opt.months}`}
                   title={plan.title}
-                  subtitle={planSubtitle(plan, opt.labelSq)}
+                  subtitle={planSubtitle(t, plan, durationLabel(t, opt.months))}
                   badge={badge}
                   price={formatEur(opt.price)}
-                  priceSuffix={priceSuffixForMonths(opt.months)}
+                  priceSuffix={priceSuffixForMonths(t, opt.months)}
                   accent={accent}
                   selected={isCurrent}
                   details={details}
@@ -255,7 +267,7 @@ export function MainPackagesPanel() {
 
       {!loading && plans.length > 0 ? (
         <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
-          Abonimi aktivizohet pas pagesës së suksesshme. Kuotat zbatohen menjëherë në llogarinë tuaj.
+          {t.packages.subscriptionNote}
         </Typography>
       ) : null}
     </Stack>

@@ -31,3 +31,13 @@ export function writeStoredLanguage(language: AppLanguage): void {
     // ignore quota / private mode
   }
 }
+
+/** Prefer `labelEn` when English is active; otherwise `labelSq`. */
+export function localizedLabel(
+  language: AppLanguage,
+  labelSq: string,
+  labelEn?: string | null,
+): string {
+  if (language === 'en' && labelEn?.trim()) return labelEn.trim();
+  return labelSq;
+}

@@ -18,6 +18,7 @@ import { Receipt as ReceiptIcon } from '@phosphor-icons/react/dist/ssr/Receipt';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { PortalIconBox, PortalSectionCard } from '@/components/user/portal-cards';
+import { useCopy } from '@/hooks/use-copy';
 import { listMyPayments, listMySubscriptions, listOkazionVouchers, listPremiumVouchers } from '@/lib/payments-client';
 import type { Payment, PaymentStatus, PaymentType, UserSubscriptionSummary } from '@/types/payment';
 
@@ -95,6 +96,7 @@ function formatMoney(amount: number, currency: string): string {
 }
 
 export default function MyPaymentsPage() {
+  const t = useCopy();
   const [payments, setPayments] = React.useState<Payment[]>([]);
   const [boostSpends, setBoostSpends] = React.useState<BoostSpendRow[]>([]);
   const [subscriptions, setSubscriptions] = React.useState<UserSubscriptionSummary[]>([]);
@@ -159,7 +161,7 @@ export default function MyPaymentsPage() {
     <Stack spacing={2.5}>
       <UserPageHeader
         icon={<ReceiptIcon size={20} weight="duotone" />}
-        title="Pagesat e mia"
+        title={t.nav.payments}
         description="Abonimet aktive dhe historiku i shpenzimeve."
       />
 

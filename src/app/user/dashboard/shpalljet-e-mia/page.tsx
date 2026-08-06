@@ -56,6 +56,7 @@ import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS, WORK_LOCATION_OPTIONS } from '@
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import { BUSINESS_CATEGORY_OPTIONS } from '@/lib/business-constants';
 import { PROFESSIONAL_CATEGORY_OPTIONS } from '@/lib/professional-constants';
+import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
@@ -979,6 +980,7 @@ export default function UserMyListingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
+  const t = useCopy();
   const [tab, setTab] = React.useState(0);
   const [showSubmittedAlert, setShowSubmittedAlert] = React.useState(false);
   const [addListingOpen, setAddListingOpen] = React.useState(false);
@@ -1386,7 +1388,7 @@ export default function UserMyListingsPage() {
       <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <UserPageHeader
           icon={<ListBulletsIcon size={20} weight="duotone" />}
-          title="Shpalljet e mia"
+          title={t.nav.myListings}
           description="Menaxhoni njoftimet tuaja sipas kategorisë."
           sx={{ flex: 1, minWidth: 0 }}
         />

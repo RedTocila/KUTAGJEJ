@@ -6,6 +6,7 @@ import { Box, Divider, ListItemIcon, MenuItem, MenuList, Popover, Typography } f
 import { SignOut as SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
 import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGear';
 
+import { useCopy } from '@/hooks/use-copy';
 import { paths } from '@/paths';
 import { authClient } from '@/lib/auth/client';
 
@@ -17,6 +18,7 @@ export interface UserPortalPopoverProps {
 }
 
 export function UserPortalPopover({ anchorEl, onClose, open, email }: UserPortalPopoverProps) {
+  const t = useCopy();
   const handleSignOut = React.useCallback((): void => {
     onClose();
     void authClient.signOut();
@@ -31,7 +33,7 @@ export function UserPortalPopover({ anchorEl, onClose, open, email }: UserPortal
       slotProps={{ paper: { sx: { width: '260px' } } }}
     >
       <Box sx={{ p: '16px 20px' }}>
-        <Typography variant="subtitle1">Llogaria ime</Typography>
+        <Typography variant="subtitle1">{t.common.myAccount}</Typography>
         <Typography color="text.secondary" variant="body2" sx={{ wordBreak: 'break-word' }}>
           {email || '—'}
         </Typography>
@@ -42,13 +44,13 @@ export function UserPortalPopover({ anchorEl, onClose, open, email }: UserPortal
           <ListItemIcon sx={{ minWidth: 36 }}>
             {React.createElement(UserGearIcon, { fontSize: 'var(--icon-fontSize-md)' })}
           </ListItemIcon>
-          Profili im
+          {t.nav.profile}
         </MenuItem>
         <MenuItem onClick={handleSignOut}>
           <ListItemIcon sx={{ minWidth: 36 }}>
             {React.createElement(SignOutIcon, { fontSize: 'var(--icon-fontSize-md)' })}
           </ListItemIcon>
-          Dil
+          {t.nav.signOut}
         </MenuItem>
       </MenuList>
     </Popover>

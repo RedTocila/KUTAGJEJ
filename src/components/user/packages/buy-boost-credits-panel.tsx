@@ -10,6 +10,7 @@ import {
   Typography,
 } from '@mui/material';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
+import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import { listCreditPackages } from '@/lib/payments-client';
 import type { CreditPackage } from '@/types/payment';
@@ -52,6 +53,7 @@ function packageSubtitle(pkg: CreditPackage): string {
 
 export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boolean }) {
   const router = useRouter();
+  const t = useCopy();
   const { user } = useUser();
   const [packages, setPackages] = React.useState<CreditPackage[]>(FALLBACK_CREDIT_PACKAGES);
   const [loading, setLoading] = React.useState(true);
@@ -93,10 +95,10 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
               </Typography>
             </Stack>
             <Typography variant="body2" color="text.secondary">
-              Zgjidhni një paketë për të promovuar njoftimet tuaja.
+              {t.packages.boostCoinsDescription}
             </Typography>
           </Box>
-          <BalanceChip balance={balance} />
+          <BalanceChip balance={balance} label={t.packages.balance} />
         </Stack>
       ) : (
         <Stack
@@ -104,16 +106,16 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
           sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}
         >
           <Typography variant="body2" color="text.secondary">
-            Sa më e madhe paketa, aq më shumë Boost Coins (dhe bonus).
+            {t.packages.boostCoinsBigger}
           </Typography>
-          <BalanceChip balance={balance} />
+          <BalanceChip balance={balance} label={t.packages.balance} />
         </Stack>
       )}
 
       {error ? (
         <Alert severity="warning" sx={{ borderRadius: 2 }}>
           {error}
-          {usingFallback ? ' Po shfaqen paketat standarde.' : ''}
+          {usingFallback ? t.packages.fallbackCatalog : ''}
         </Alert>
       ) : null}
 
@@ -143,7 +145,7 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
   );
 }
 
-function BalanceChip({ balance }: { balance: number }) {
+function BalanceChip({ balance, label }: { balance: number; label: string }) {
   return (
     <Stack
       direction="row"
@@ -154,14 +156,14 @@ function BalanceChip({ balance }: { balance: number }) {
         py: 0.85,
         borderRadius: 999,
         border: '1px solid',
-        borderColor: (t) => `${t.palette.warning.main}55`,
-        bgcolor: (t) => `${t.palette.warning.main}14`,
+        borderColor: (theme) => `${theme.palette.warning.main}55`,
+        bgcolor: (theme) => `${theme.palette.warning.main}14`,
         color: 'warning.main',
       }}
     >
       <BoostCoinIcon size={20} />
       <Typography component="span" sx={{ color: 'text.primary', fontWeight: 650, fontSize: '0.85rem' }}>
-        Balanca
+        {label}
       </Typography>
       <Typography component="span" sx={{ fontWeight: 850 }}>
         {formatBc(balance)} BC

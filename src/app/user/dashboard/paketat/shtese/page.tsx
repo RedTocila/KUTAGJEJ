@@ -6,10 +6,12 @@ import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/S
 
 import { ExtraPackagesPanel } from '@/components/user/packages/extra-packages-panel';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
+import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 
 export default function ExtraPackagesPage() {
   const { user } = useUser();
+  const t = useCopy();
 
   if (!user) return null;
 
@@ -17,8 +19,8 @@ export default function ExtraPackagesPage() {
     <Stack spacing={3}>
       <UserPageHeader
         icon={<SquaresFourIcon size={20} weight="duotone" />}
-        title="Paketat shtesë"
-        description="Shtesa për njoftime — OKAZION, auto-refresh, premium dhe konvertim."
+        title={t.nav.packagesExtra}
+        description={t.packages.extraDescription}
       />
       <React.Suspense
         fallback={

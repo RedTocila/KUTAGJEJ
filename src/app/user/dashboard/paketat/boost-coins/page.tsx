@@ -5,10 +5,12 @@ import { Stack } from '@mui/material';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { BuyBoostCreditsPanel } from '@/components/user/packages/buy-boost-credits-panel';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
+import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 
 export default function BoostCoinsPackagesPage() {
   const { user } = useUser();
+  const t = useCopy();
 
   if (!user) return null;
 
@@ -16,8 +18,8 @@ export default function BoostCoinsPackagesPage() {
     <Stack spacing={3}>
       <UserPageHeader
         icon={<BoostCoinIcon size={22} />}
-        title="Bli Boost Coins"
-        description="Zgjidhni një paketë për të promovuar njoftimet tuaja."
+        title={t.nav.buyBoostCoins}
+        description={t.packages.boostCoinsDescription}
       />
       <BuyBoostCreditsPanel showHeader={false} />
     </Stack>

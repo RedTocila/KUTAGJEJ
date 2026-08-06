@@ -33,6 +33,8 @@ import {
   ProductDialogContent,
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
 import { useUser } from '@/hooks/use-user';
 import {
   listMyCarListings,
@@ -41,6 +43,7 @@ import {
   listMyRealEstateListings,
 } from '@/lib/listings-client';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
+import { localizedLabel } from '@/lib/language';
 import { OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
 import {
   applyOkazionVoucher,
@@ -169,6 +172,8 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
 export function OkazionPackagesSection() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useCopy();
+  const { language } = useLanguage();
   const { user, checkSession } = useUser();
   const balance = Number(user?.boostCredits) || 0;
 
@@ -300,6 +305,7 @@ export function OkazionPackagesSection() {
   };
 
   const pkg = packages[0] || FALLBACK_OKAZION_PACKAGES[0];
+  const pkgTitle = localizedLabel(language, pkg.labelSq, pkg.labelEn);
   const totalEur = pkg.priceEur * quantity;
   const totalBc = pkg.priceBc * quantity;
   const canAfford = balance >= totalBc;
@@ -381,7 +387,7 @@ export function OkazionPackagesSection() {
             disabled={quantity <= 1}
             onClick={() => setQuantity((q) => Math.max(1, q - 1))}
             sx={{ minWidth: 36, px: 0 }}
-            aria-label="Zvogëlo"
+            aria-label={t.packages.decrease}
           >
             <MinusIcon size={14} weight="bold" />
           </Button>
@@ -393,7 +399,7 @@ export function OkazionPackagesSection() {
             disabled={quantity >= 50}
             onClick={() => setQuantity((q) => Math.min(50, q + 1))}
             sx={{ minWidth: 36, px: 0 }}
-            aria-label="Rrit"
+            aria-label={t.packages.increase}
           >
             <PlusIcon size={14} weight="bold" />
           </Button>
@@ -401,9 +407,9 @@ export function OkazionPackagesSection() {
       </Stack>
 
       <PackageCheckoutCard
-        title={quantity > 1 ? `${pkg.labelSq} ×${quantity}` : pkg.labelSq}
-        subtitle="OKAZION 5 ditë · temë e kuqe + renditje e favorizuar"
-        badge="5 ditë"
+        title={quantity > 1 ? `${pkgTitle} ×${quantity}` : pkgTitle}
+        subtitle={t.packages.okazionCardSubtitle}
+        badge={t.packages.daysShort(5)}
         accent="error"
         actions={
           <>
@@ -447,7 +453,7 @@ export function OkazionPackagesSection() {
       />
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
-        Grow: 5 OKAZION · Elite: 10 OKAZION — aktivizohen te Shpalljet e mia ose kur postoni njoftim.
+        {t.packages.okazionGrowEliteNote}
       </Typography>
 
       <ProductDialog open={assignOpen} onClose={closeAssign} fullWidth maxWidth="sm">
@@ -466,7 +472,7 @@ export function OkazionPackagesSection() {
             <TextField
               inputRef={pickerSearchRef}
               fullWidth
-              placeholder="Kërko njoftimin…"
+              placeholder={t.packages.searchListing}
               value={pickerQuery}
               onChange={(e) => setPickerQuery(e.target.value)}
               slotProps={{
@@ -493,7 +499,7 @@ export function OkazionPackagesSection() {
             </Box>
           ) : pickerListings.length === 0 ? (
             <Alert severity="info" sx={{ borderRadius: 2 }}>
-              Nuk keni njoftime të aprovuara. Shtoni një njoftim, pastaj aplikoni OKAZION.
+              {t.packages.noApprovedListingsOkazion}
             </Alert>
           ) : filteredPickerListings.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>

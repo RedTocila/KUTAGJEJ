@@ -24,6 +24,7 @@ import { ShareNetwork as ShareIcon } from '@phosphor-icons/react/dist/ssr/ShareN
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
+import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import { listMyBusinessListings, listMyProfessionalListings } from '@/lib/directory-listings-client';
 import {
@@ -120,6 +121,7 @@ function TotalCard({
 
 export default function UserStatisticsPage() {
   const { user } = useUser();
+  const t = useCopy();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [rows, setRows] = React.useState<StatRow[]>([]);
@@ -287,7 +289,7 @@ export default function UserStatisticsPage() {
     <Stack spacing={3}>
       <UserPageHeader
         icon={<ChartLineUpIcon size={20} weight="duotone" />}
-        title="Statistikat"
+        title={t.nav.statistics}
         description="Si kanë shkuar njoftimet tuaja — shikime, kontakte (leads), ndarje dhe ruajtje."
       />
 

@@ -6,21 +6,23 @@ import { Button, IconButton, type SxProps, type Theme } from '@mui/material';
 import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
-import { paths } from '@/paths';
 import { productBackButtonSx } from '@/components/public/product-browse-chrome';
+import { useCopy } from '@/hooks/use-copy';
+import { paths } from '@/paths';
 
 /**
  * Returns to the mobile profile tab (portal hub at `/user/dashboard`), or a custom parent.
  */
 export function UserDashboardBackLink({
   href = paths.user.dashboard,
-  label = 'Kthehu te profili',
+  label,
   sx,
 }: {
   href?: string;
   label?: string;
   sx?: SxProps<Theme>;
 }) {
+  const t = useCopy();
   return (
     <Button
       component={RouterLink}
@@ -40,7 +42,7 @@ export function UserDashboardBackLink({
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
       ]}
     >
-      {label}
+      {label ?? t.chrome.backToProfile}
     </Button>
   );
 }
@@ -53,11 +55,12 @@ export function UserDashboardCloseButton({
   href?: string;
   sx?: SxProps<Theme>;
 }) {
+  const t = useCopy();
   return (
     <IconButton
       component={RouterLink}
       href={href}
-      aria-label="Mbyll"
+      aria-label={t.common.close}
       size="small"
       sx={[
         productBackButtonSx,

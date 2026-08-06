@@ -6,6 +6,7 @@ import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/Cre
 import { CrownSimple as CrownSimpleIcon } from '@phosphor-icons/react/dist/ssr/CrownSimple';
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
+import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import {
@@ -52,6 +53,7 @@ export function PremiumPostActions({
   disabled?: boolean;
   onPost: (mode: PremiumPayMode) => void;
 }) {
+  const t = useCopy();
   const { user } = useUser();
   const balance = Number(user?.boostCredits) || 0;
   const canBc = balance >= PREMIUM_PRICE_BC;
@@ -86,13 +88,13 @@ export function PremiumPostActions({
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5 }}>
           <CrownSimpleIcon size={18} weight="regular" color={PREMIUM_AMBER} />
           <Typography sx={{ fontWeight: 800, color: PREMIUM_AMBER, fontSize: '0.95rem' }}>
-            Premium · {PREMIUM_DAYS} ditë
+            {t.packages.premiumDaysTitle(PREMIUM_DAYS)}
           </Typography>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, lineHeight: 1.4 }}>
           {hasPlanSlot
-            ? `Përdoret vendi nga paketa juaj (${planRemaining} të mbetura). Njoftimi shfaqet me prioritet për ${PREMIUM_DAYS} ditë.`
-            : `Njoftimi shfaqet me prioritet në krye për ${PREMIUM_DAYS} ditë.`}
+            ? t.packages.premiumWithPlan(planRemaining ?? 0, PREMIUM_DAYS)
+            : t.packages.premiumWithoutPlan(PREMIUM_DAYS)}
         </Typography>
       </Box>
 
@@ -108,7 +110,7 @@ export function PremiumPostActions({
             '&.Mui-disabled': { bgcolor: PREMIUM_AMBER, color: PREMIUM_AMBER_ON, opacity: 0.55 },
           }}
         >
-          Duke ngarkuar…
+          {t.packages.loadingEllipsis}
         </Button>
       ) : hasPlanSlot ? (
         <Button
@@ -125,7 +127,7 @@ export function PremiumPostActions({
             '&.Mui-disabled': { bgcolor: PREMIUM_AMBER, color: PREMIUM_AMBER_ON, opacity: 0.55 },
           }}
         >
-          {submitting ? 'Duke postuar…' : 'Posto'}
+          {submitting ? t.packages.posting : t.packages.post}
         </Button>
       ) : (
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
@@ -143,7 +145,7 @@ export function PremiumPostActions({
               '&.Mui-disabled': { bgcolor: PREMIUM_AMBER, color: PREMIUM_AMBER_ON, opacity: 0.55 },
             }}
           >
-            {submitting ? 'Duke postuar…' : `Posto · ${PREMIUM_PRICE_EUR}€`}
+            {submitting ? t.packages.posting : `${t.packages.post} · ${PREMIUM_PRICE_EUR}€`}
           </Button>
           <Button
             type="button"
@@ -160,10 +162,10 @@ export function PremiumPostActions({
             }}
           >
             {submitting
-              ? 'Duke postuar…'
+              ? t.packages.posting
               : canBc
-                ? `Posto · ${PREMIUM_PRICE_BC} BC`
-                : `${PREMIUM_PRICE_BC} BC (balancë e pamjaftueshme)`}
+                ? `${t.packages.post} · ${PREMIUM_PRICE_BC} BC`
+                : `${PREMIUM_PRICE_BC} BC ${t.packages.insufficientBc}`}
           </Button>
         </Stack>
       )}

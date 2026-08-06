@@ -1326,7 +1326,7 @@ export function UserMessagesView() {
       const up = await uploadListingImages([file], 'messages');
       if (up.error || !up.urls[0]) {
         rollback();
-        setError(up.error ?? 'Nuk u ngarkua fotoja.');
+        setError(up.error ?? t.messages.uploadFailed);
         return false;
       }
       imageUrl = up.urls[0];
@@ -1335,7 +1335,7 @@ export function UserMessagesView() {
     const res = await sendConversationMessage(conversationId, body, imageUrl);
     if (res.error || !res.message) {
       rollback();
-      setError(res.error ?? 'Mesazhi nuk u dërgua.');
+      setError(res.error ?? t.messages.sendFailed);
       return false;
     }
 

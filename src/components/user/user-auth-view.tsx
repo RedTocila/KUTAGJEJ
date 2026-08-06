@@ -188,6 +188,7 @@ function SignInFields({
   showPassword: boolean;
   setShowPassword: (v: boolean) => void;
 }) {
+  const t = useCopy();
   return (
     <Stack spacing={2.25}>
       <Controller
@@ -196,7 +197,7 @@ function SignInFields({
         render={({ field }) => (
           <FormControl error={Boolean(errors.email)} fullWidth>
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.email))}>
-              Email
+              {t.auth.email}
             </Typography>
             <OutlinedInput {...field} id="signin-email" placeholder="ju@shembull.com" type="email" sx={outlinedDarkSx} />
             {errors.email ? <FormHelperText>{errors.email.message}</FormHelperText> : null}
@@ -209,7 +210,7 @@ function SignInFields({
         render={({ field }) => (
           <FormControl error={Boolean(errors.password)} fullWidth>
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.password))}>
-              Fjalëkalimi
+              {t.auth.password}
             </Typography>
             <OutlinedInput
               {...field}
@@ -220,7 +221,7 @@ function SignInFields({
               endAdornment={
                 <InputAdornment position="end">
                   <IconButton
-                    aria-label={showPassword ? 'Fshih fjalëkalimin' : 'Shfaq fjalëkalimin'}
+                    aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
                     edge="end"
                     onClick={() => setShowPassword(!showPassword)}
                     sx={{ color: 'rgba(255,255,255,0.75)' }}
@@ -249,6 +250,7 @@ function RegisterFieldsIndividual({
   showPassword: boolean;
   setShowPassword: (v: boolean) => void;
 }) {
+  const t = useCopy();
   return (
     <Stack spacing={2}>
       <Box
@@ -264,9 +266,9 @@ function RegisterFieldsIndividual({
           render={({ field }) => (
             <FormControl error={Boolean(errors.firstName)} fullWidth>
               <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.firstName))}>
-                Emri
+                {t.auth.firstName}
               </Typography>
-              <OutlinedInput {...field} autoComplete="given-name" placeholder="Emri" sx={outlinedDarkSx} />
+              <OutlinedInput {...field} autoComplete="given-name" placeholder={t.auth.firstName} sx={outlinedDarkSx} />
               {errors.firstName ? <FormHelperText>{errors.firstName.message}</FormHelperText> : null}
             </FormControl>
           )}
@@ -277,9 +279,9 @@ function RegisterFieldsIndividual({
           render={({ field }) => (
             <FormControl error={Boolean(errors.lastName)} fullWidth>
               <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.lastName))}>
-                Mbiemri
+                {t.auth.lastName}
               </Typography>
-              <OutlinedInput {...field} autoComplete="family-name" placeholder="Mbiemri" sx={outlinedDarkSx} />
+              <OutlinedInput {...field} autoComplete="family-name" placeholder={t.auth.lastName} sx={outlinedDarkSx} />
               {errors.lastName ? <FormHelperText>{errors.lastName.message}</FormHelperText> : null}
             </FormControl>
           )}
@@ -313,7 +315,7 @@ function RegisterFieldsIndividual({
         render={({ field }) => (
           <FormControl error={Boolean(errors.email)} fullWidth>
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.email))}>
-              Email
+              {t.auth.email}
             </Typography>
             <OutlinedInput {...field} autoComplete="email" placeholder="ju@shembull.com" type="email" sx={outlinedDarkSx} />
             {errors.email ? <FormHelperText>{errors.email.message}</FormHelperText> : null}
@@ -326,7 +328,7 @@ function RegisterFieldsIndividual({
         render={({ field }) => (
           <FormControl error={Boolean(errors.password)} fullWidth>
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.password))}>
-              Fjalëkalimi
+              {t.auth.password}
             </Typography>
             <OutlinedInput
               {...field}
@@ -337,7 +339,7 @@ function RegisterFieldsIndividual({
               endAdornment={
                 <InputAdornment position="end">
                   <IconButton
-                    aria-label={showPassword ? 'Fshih fjalëkalimin' : 'Shfaq fjalëkalimin'}
+                    aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
                     edge="end"
                     onClick={() => setShowPassword(!showPassword)}
                     sx={{ color: 'rgba(255,255,255,0.75)' }}
@@ -357,12 +359,12 @@ function RegisterFieldsIndividual({
         render={({ field }) => (
           <FormControl error={Boolean(errors.confirmPassword)} fullWidth>
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.confirmPassword))}>
-              Konfirmo fjalëkalimin
+              {t.auth.confirmPassword}
             </Typography>
             <OutlinedInput
               {...field}
               autoComplete="new-password"
-              placeholder="Përsërit fjalëkalimin"
+              placeholder={t.auth.confirmPassword}
               type={showPassword ? 'text' : 'password'}
               sx={outlinedDarkSx}
             />
@@ -385,6 +387,7 @@ function RegisterFieldsBusiness({
   showPassword: boolean;
   setShowPassword: (v: boolean) => void;
 }) {
+  const t = useCopy();
   return (
     <Stack spacing={2}>
       <Controller
@@ -461,7 +464,7 @@ function RegisterFieldsBusiness({
         render={({ field }) => (
           <FormControl error={Boolean(errors.email)} fullWidth>
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.email))}>
-              Email
+              {t.auth.email}
             </Typography>
             <OutlinedInput {...field} autoComplete="email" placeholder="ju@biznesi.com" type="email" sx={outlinedDarkSx} />
             {errors.email ? <FormHelperText>{errors.email.message}</FormHelperText> : null}
@@ -474,7 +477,7 @@ function RegisterFieldsBusiness({
         render={({ field }) => (
           <FormControl error={Boolean(errors.password)} fullWidth>
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.password))}>
-              Fjalëkalimi
+              {t.auth.password}
             </Typography>
             <OutlinedInput
               {...field}
@@ -485,7 +488,7 @@ function RegisterFieldsBusiness({
               endAdornment={
                 <InputAdornment position="end">
                   <IconButton
-                    aria-label={showPassword ? 'Fshih fjalëkalimin' : 'Shfaq fjalëkalimin'}
+                    aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
                     edge="end"
                     onClick={() => setShowPassword(!showPassword)}
                     sx={{ color: 'rgba(255,255,255,0.75)' }}
@@ -505,12 +508,12 @@ function RegisterFieldsBusiness({
         render={({ field }) => (
           <FormControl error={Boolean(errors.confirmPassword)} fullWidth>
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.confirmPassword))}>
-              Konfirmo fjalëkalimin
+              {t.auth.confirmPassword}
             </Typography>
             <OutlinedInput
               {...field}
               autoComplete="new-password"
-              placeholder="Përsërit fjalëkalimin"
+              placeholder={t.auth.confirmPassword}
               type={showPassword ? 'text' : 'password'}
               sx={outlinedDarkSx}
             />
@@ -729,7 +732,7 @@ export function UserAuthView() {
                         fullWidth
                         sx={{ py: 1.5, color: 'common.white' }}
                       >
-                        {signInForm.formState.isSubmitting ? 'Duke u identifikuar…' : 'Vazhdo në panel'}
+                        {signInForm.formState.isSubmitting ? t.auth.signingIn : t.auth.continueToPanel}
                       </Button>
                     </Stack>
                   </Box>
@@ -808,7 +811,7 @@ export function UserAuthView() {
                             fullWidth
                             sx={{ py: 1.5, color: 'common.white' }}
                           >
-                            {individualForm.formState.isSubmitting ? 'Duke u krijuar llogaria…' : 'Krijo llogari'}
+                            {individualForm.formState.isSubmitting ? t.auth.creatingAccount : t.auth.submitRegister}
                           </Button>
                         </Stack>
                       </Box>
@@ -833,7 +836,9 @@ export function UserAuthView() {
                             fullWidth
                             sx={{ py: 1.5, color: 'common.white' }}
                           >
-                            {businessForm.formState.isSubmitting ? 'Duke u krijuar llogaria…' : 'Krijo llogari biznesi'}
+                            {businessForm.formState.isSubmitting
+                              ? t.auth.creatingAccount
+                              : t.auth.createBusinessAccount}
                           </Button>
                         </Stack>
                       </Box>

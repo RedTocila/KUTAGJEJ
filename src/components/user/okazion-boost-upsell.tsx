@@ -14,6 +14,7 @@ import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/Cre
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
+import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import {
@@ -59,6 +60,7 @@ export function OkazionBoostUpsell({
   value: OkazionBoostMode;
   onChange: (mode: OkazionBoostMode) => void;
 }) {
+  const t = useCopy();
   const { user } = useUser();
   const balance = Number(user?.boostCredits) || 0;
   const [planRemaining, setPlanRemaining] = React.useState(0);
@@ -92,39 +94,38 @@ export function OkazionBoostUpsell({
     >
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
         <SealPercentIcon size={22} weight="regular" color={OKAZION_ACCENT} />
-        <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT }}>OKAZION · 5 ditë</Typography>
+        <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT }}>{t.packages.okazion5Days}</Typography>
       </Stack>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
-        Shfaqe njoftimin me temë të kuqe në OKAZION. {OKAZION_PRICE_EUR}€ ose {OKAZION_PRICE_BC} BC —
-        ose përdor vendin nga Grow/Elite.
+        {t.packages.okazionUpsellBody(OKAZION_PRICE_EUR, OKAZION_PRICE_BC)}
       </Typography>
 
       <RadioGroup value={value} onChange={(e) => onChange(e.target.value as OkazionBoostMode)}>
-        <FormControlLabel value="off" control={<Radio color="error" size="small" sx={{ color: OKAZION_ACCENT, '&.Mui-checked': { color: OKAZION_ACCENT } }} />} label="Jo tani" />
+        <FormControlLabel value="off" control={<Radio color="error" size="small" sx={{ color: OKAZION_ACCENT, '&.Mui-checked': { color: OKAZION_ACCENT } }} />} label={t.packages.notNow} />
         {planRemaining > 0 ? (
           <FormControlLabel
             value="plan"
             control={<Radio size="small" sx={{ color: OKAZION_ACCENT, '&.Mui-checked': { color: OKAZION_ACCENT } }} />}
-            label={`Përdor vendin e paketës (${planRemaining} të mbetura)`}
+            label={`${t.packages.usePlanSlot} (${planRemaining})`}
           />
         ) : null}
         {unusedCount > 0 ? (
           <FormControlLabel
             value="voucher"
             control={<Radio size="small" sx={{ color: OKAZION_ACCENT, '&.Mui-checked': { color: OKAZION_ACCENT } }} />}
-            label={`Përdor voucher të blerë (${unusedCount} gati)`}
+            label={t.packages.useBoughtVoucher(unusedCount)}
           />
         ) : null}
         <FormControlLabel
           value="buy-bc"
           control={<Radio size="small" sx={{ color: OKAZION_ACCENT, '&.Mui-checked': { color: OKAZION_ACCENT } }} />}
           disabled={balance < OKAZION_PRICE_BC}
-          label={`Bli tani me ${OKAZION_PRICE_BC} BC${balance < OKAZION_PRICE_BC ? ' (balancë e pamjaftueshme)' : ''}`}
+          label={`${t.packages.buyNow} · ${OKAZION_PRICE_BC} BC${balance < OKAZION_PRICE_BC ? ` ${t.packages.insufficientBc}` : ''}`}
         />
         <FormControlLabel
           value="buy-card"
           control={<Radio size="small" sx={{ color: OKAZION_ACCENT, '&.Mui-checked': { color: OKAZION_ACCENT } }} />}
-          label={`Bli tani me kartë · ${OKAZION_PRICE_EUR}€`}
+          label={`${t.packages.buyNow} · ${OKAZION_PRICE_EUR}€`}
         />
       </RadioGroup>
 
@@ -150,6 +151,7 @@ export function OkazionPostActions({
   disabled?: boolean;
   onPost: (mode: OkazionPayMode) => void;
 }) {
+  const t = useCopy();
   const { user } = useUser();
   const balance = Number(user?.boostCredits) || 0;
   const canBc = balance >= OKAZION_PRICE_BC;
@@ -184,13 +186,13 @@ export function OkazionPostActions({
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5 }}>
           <SealPercentIcon size={18} weight="regular" color={OKAZION_ACCENT} />
           <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT, fontSize: '0.95rem' }}>
-            OKAZION · 5 ditë
+            {t.packages.okazion5Days}
           </Typography>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, lineHeight: 1.4 }}>
           {hasPlanSlot
-            ? `Përdoret vendi nga paketa juaj (${planRemaining} të mbetura). Njoftimi shfaqet me temë të kuqe për 5 ditë.`
-            : 'Njoftimi shfaqet me temë të kuqe në OKAZION për 5 ditë.'}
+            ? t.packages.premiumWithPlan(planRemaining ?? 0, 5)
+            : t.packages.okazionPaySubtitle}
         </Typography>
       </Box>
 
@@ -206,7 +208,7 @@ export function OkazionPostActions({
             '&.Mui-disabled': { bgcolor: OKAZION_RED, color: OKAZION_RED_ON, opacity: 0.55 },
           }}
         >
-          Duke ngarkuar…
+          {t.packages.loadingEllipsis}
         </Button>
       ) : hasPlanSlot ? (
         <Button
@@ -223,7 +225,7 @@ export function OkazionPostActions({
             '&.Mui-disabled': { bgcolor: OKAZION_RED, color: OKAZION_RED_ON, opacity: 0.55 },
           }}
         >
-          {submitting ? 'Duke postuar…' : 'Posto'}
+          {submitting ? t.packages.posting : t.packages.post}
         </Button>
       ) : (
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
@@ -241,7 +243,7 @@ export function OkazionPostActions({
               '&.Mui-disabled': { bgcolor: OKAZION_RED, color: OKAZION_RED_ON, opacity: 0.55 },
             }}
           >
-            {submitting ? 'Duke postuar…' : `Posto · ${OKAZION_PRICE_EUR}€`}
+            {submitting ? t.packages.posting : `${t.packages.post} · ${OKAZION_PRICE_EUR}€`}
           </Button>
           <Button
             type="button"
@@ -258,10 +260,10 @@ export function OkazionPostActions({
             }}
           >
             {submitting
-              ? 'Duke postuar…'
+              ? t.packages.posting
               : canBc
-                ? `Posto · ${OKAZION_PRICE_BC} BC`
-                : `${OKAZION_PRICE_BC} BC (balancë e pamjaftueshme)`}
+                ? `${t.packages.post} · ${OKAZION_PRICE_BC} BC`
+                : `${OKAZION_PRICE_BC} BC ${t.packages.insufficientBc}`}
           </Button>
         </Stack>
       )}

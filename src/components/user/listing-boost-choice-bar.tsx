@@ -25,6 +25,7 @@ import {
   PREMIUM_PACKAGE_ID,
   type PremiumPayMode,
 } from '@/components/user/premium-boost-upsell';
+import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import {
   OKAZION_ACCENT,
@@ -84,6 +85,7 @@ export function ListingBoostChoiceBar({
   onPostPremium: (mode: PremiumPayMode, packageId: string) => void;
   onPostOkazion: (mode: Exclude<OkazionBoostMode, 'off'>) => void;
 }) {
+  const t = useCopy();
   const { user } = useUser();
   const balance = Number(user?.boostCredits) || 0;
 
@@ -195,12 +197,12 @@ export function ListingBoostChoiceBar({
       <ProductDialog open={dialog === 'premium'} onClose={closeDialog} fullWidth maxWidth="xs">
         <ProductDialogTitle
           onClose={closeDialog}
-          subtitle="Njoftimi shfaqet me prioritet në krye. Zgjidhni kohëzgjatjen dhe mënyrën e pagesës."
+          subtitle={t.packages.premiumPaySubtitle}
         >
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <CrownSimpleIcon size={20} weight="regular" color={PREMIUM_AMBER} />
             <Box component="span" sx={{ color: PREMIUM_AMBER }}>
-              Posto Premium
+              {t.packages.postPremium}
             </Box>
           </Stack>
         </ProductDialogTitle>
@@ -220,7 +222,7 @@ export function ListingBoostChoiceBar({
                   }}
                 >
                   <Typography sx={{ fontWeight: 800, color: PREMIUM_AMBER, mb: 1 }}>
-                    {pkg.days} ditë · {pkg.priceEur}€ / {pkg.priceBc} BC
+                    {t.packages.daysPrice(pkg.days, pkg.priceEur, pkg.priceBc)}
                   </Typography>
                   <Stack direction="row" spacing={1}>
                     <Button
@@ -278,12 +280,12 @@ export function ListingBoostChoiceBar({
       <ProductDialog open={dialog === 'okazion'} onClose={closeDialog} fullWidth maxWidth="xs">
         <ProductDialogTitle
           onClose={closeDialog}
-          subtitle="Njoftimi shfaqet me temë të kuqe në OKAZION për 5 ditë."
+          subtitle={t.packages.okazionPaySubtitle}
         >
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <SealPercentIcon size={20} weight="regular" color={OKAZION_ACCENT} />
             <Box component="span" sx={{ color: OKAZION_ACCENT }}>
-              Posto OKAZION
+              {t.packages.postOkazion}
             </Box>
           </Stack>
         </ProductDialogTitle>
@@ -299,7 +301,7 @@ export function ListingBoostChoiceBar({
             }}
           >
             <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT }}>
-              5 ditë · {OKAZION_PRICE_EUR}€ / {OKAZION_PRICE_BC} BC
+              {t.packages.daysPrice(5, OKAZION_PRICE_EUR, OKAZION_PRICE_BC)}
             </Typography>
           </Box>
           <Stack direction="row" spacing={1}>
@@ -347,7 +349,7 @@ export function ListingBoostChoiceBar({
             >
               {balance >= OKAZION_PRICE_BC
                 ? `${OKAZION_PRICE_BC} BC`
-                : `${OKAZION_PRICE_BC} BC (pamjaftueshme)`}
+                : `${OKAZION_PRICE_BC} BC ${t.packages.insufficientBc}`}
             </Button>
           </Stack>
         </ProductDialogContent>

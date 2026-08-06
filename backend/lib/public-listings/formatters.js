@@ -31,6 +31,12 @@ function featuredCardFields(doc) {
   };
 }
 
+/** List cards only need the cover — never ship full galleries. */
+function coverImageUrls(doc) {
+  const cover = pickImage(doc);
+  return cover ? [cover] : [];
+}
+
 function formatRealEstate(doc, cityById) {
   const city = cityById.get(doc.cityId);
   const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
@@ -55,7 +61,7 @@ function formatRealEstate(doc, cityById) {
     condition: doc.condition ?? null,
     contactPhone: doc.contactPhone ?? null,
     imageUrl: pickImage(doc),
-    imageUrls: doc.imageUrls ?? [],
+    imageUrls: coverImageUrls(doc),
     createdAt: doc.createdAt,
     permalinkPath: realEstatePermalink(doc),
     ...featuredCardFields(doc),
@@ -120,7 +126,7 @@ function formatCar(doc, cityById) {
     cityName: city?.name ?? null,
     contactPhone: doc.contactPhone ?? null,
     imageUrl: Array.isArray(doc.imageUrls) && doc.imageUrls.length > 0 ? doc.imageUrls[0] : null,
-    imageUrls: doc.imageUrls ?? [],
+    imageUrls: coverImageUrls(doc),
     createdAt: doc.createdAt,
     permalinkPath: listingPermalinkFromSlugSource(carSlugSource(doc), doc.id),
     ...featuredCardFields(doc),
@@ -144,7 +150,7 @@ function formatJob(doc, cityById) {
     currency: doc.currency ?? null,
     contactPhone: doc.contactPhone ?? null,
     imageUrl: pickImage(doc),
-    imageUrls: doc.imageUrls ?? [],
+    imageUrls: coverImageUrls(doc),
     createdAt: doc.createdAt,
     expiresAt: jobListingExpiresAt(doc.createdAt),
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
@@ -173,7 +179,7 @@ function formatMarketplace(doc, cityById) {
     cityName: city?.name ?? null,
     contactPhone: doc.contactPhone ?? null,
     imageUrl: pickImage(doc),
-    imageUrls: doc.imageUrls ?? [],
+    imageUrls: coverImageUrls(doc),
     createdAt: doc.createdAt,
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
     ...featuredCardFields(doc),
@@ -240,7 +246,7 @@ function formatDirectory(doc, cityById, reviewStats) {
     cityName: city?.name ?? null,
     contactPhone: doc.contactPhone ?? null,
     imageUrl: pickImage(doc),
-    imageUrls: doc.imageUrls ?? [],
+    imageUrls: coverImageUrls(doc),
     createdAt: doc.createdAt,
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
     // Directory profiles support Premium only — OKAZION is for sellable ads.

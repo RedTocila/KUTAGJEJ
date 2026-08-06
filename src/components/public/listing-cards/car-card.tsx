@@ -31,9 +31,11 @@ import { SpecRow, type Spec } from './spec-row';
 export function CarCard({
   listing,
   sellerRating = null,
+  imagePriority = false,
 }: {
   listing: PublicCarListing;
   sellerRating?: ListingCardRatingSummary | null;
+  imagePriority?: boolean;
 }) {
   const title = [listing.make, listing.model, listing.variant].filter(Boolean).join(' ');
   const viewCount = listing.viewCount ?? 0;
@@ -72,6 +74,7 @@ export function CarCard({
         premium={Boolean(listing.isPremium)}
         okazion={Boolean(listing.isOkazion)}
         okazionUntil={listing.okazionUntil}
+        priority={imagePriority}
         sharePayload={{
           title,
           category: listing.make,

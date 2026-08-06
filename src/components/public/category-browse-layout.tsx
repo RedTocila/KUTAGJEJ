@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Container, Grid, Stack, Typography } from '@mui/material';
+import { Box, Container, Grid, Stack, Typography } from '@mui/material';
 
 import { BrowsePagination } from '@/components/public/listing-filters/browse-pagination';
 import {
@@ -25,6 +25,8 @@ interface CategoryBrowseLayoutProps {
   cities: RealEstateCityDto[];
   /** Most-viewed listings for the category slider (max 10). */
   topViewed?: TopViewedListing[];
+  /** Append pages on scroll instead of paging the whole route. */
+  enableInfiniteScroll?: boolean;
   children: React.ReactNode;
 }
 
@@ -38,6 +40,7 @@ export function CategoryBrowseLayout({
   hasFilters,
   cities,
   topViewed = [],
+  enableInfiniteScroll = false,
   children,
 }: CategoryBrowseLayoutProps) {
   const rangeStart = shownCount === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -59,20 +62,45 @@ export function CategoryBrowseLayout({
             sx={{
               pt: isOkazion ? { xs: 1.5, md: 3 } : { xs: 4, md: 6 },
               pb: { xs: 4, md: 6 },
+              position: 'relative',
             }}
           >
             <Stack spacing={3}>
               <Typography variant="body2" color="text.secondary">
-                {totalPages > 1
+                {totalPages > 1 && !enableInfiniteScroll
                   ? `Shfaqen ${rangeStart.toLocaleString('en-GB')}–${rangeEnd.toLocaleString('en-GB')} nga ${total.toLocaleString('en-GB')} njoftime`
                   : hasFilters
                     ? `${shownCount} nga ${total.toLocaleString('en-GB')} njoftime`
                     : `${total.toLocaleString('en-GB')} njoftime`}
               </Typography>
               {children}
-              <React.Suspense fallback={null}>
-                <BrowsePagination page={page} totalPages={totalPages} />
-              </React.Suspense>
+              {enableInfiniteScroll ? (
+                totalPages > 1 ? (
+                  <Box
+                    component="nav"
+                    aria-label="Pagination"
+                    sx={{
+                      position: 'absolute',
+                      width: 1,
+                      height: 1,
+                      padding: 0,
+                      margin: -1,
+                      overflow: 'hidden',
+                      clip: 'rect(0, 0, 0, 0)',
+                      whiteSpace: 'nowrap',
+                      border: 0,
+                    }}
+                  >
+                    <React.Suspense fallback={null}>
+                      <BrowsePagination page={page} totalPages={totalPages} />
+                    </React.Suspense>
+                  </Box>
+                ) : null
+              ) : (
+                <React.Suspense fallback={null}>
+                  <BrowsePagination page={page} totalPages={totalPages} />
+                </React.Suspense>
+              )}
             </Stack>
           </Container>
         )}

@@ -9,20 +9,26 @@ import type { HomepageMixedListing } from '@/lib/homepage-latest-listings';
 export function HomepageMixedListingCard({
   item,
   sellerRating = null,
+  imagePriority = false,
 }: {
   item: HomepageMixedListing;
   /** Shown on profile listing grids (falls back when the listing has no own reviews). */
   sellerRating?: ListingCardRatingSummary | null;
+  imagePriority?: boolean;
 }) {
   switch (item.kind) {
     case 'real-estate':
-      return <RealEstateCard listing={item.listing} sellerRating={sellerRating} />;
+      return (
+        <RealEstateCard listing={item.listing} sellerRating={sellerRating} imagePriority={imagePriority} />
+      );
     case 'cars':
-      return <CarCard listing={item.listing} sellerRating={sellerRating} />;
+      return <CarCard listing={item.listing} sellerRating={sellerRating} imagePriority={imagePriority} />;
     case 'jobs':
-      return <JobCard listing={item.listing} sellerRating={sellerRating} />;
+      return <JobCard listing={item.listing} sellerRating={sellerRating} imagePriority={imagePriority} />;
     case 'marketplace':
-      return <MarketplaceCard listing={item.listing} sellerRating={sellerRating} />;
+      return (
+        <MarketplaceCard listing={item.listing} sellerRating={sellerRating} imagePriority={imagePriority} />
+      );
     case 'businesses':
     case 'professionals':
       return <DirectoryListingCard listing={item.listing} sellerRating={sellerRating} />;

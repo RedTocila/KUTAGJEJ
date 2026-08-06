@@ -2,7 +2,8 @@ import * as React from 'react';
 import type { Metadata } from 'next';
 import { Grid } from '@mui/material';
 
-import { CategoryBrowseGrid, CategoryBrowseLayout } from '@/components/public/category-browse-layout';
+import { BrowseInfiniteGrid } from '@/components/public/browse-infinite-grid';
+import { CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { generateBrowseMetadata } from '@/lib/browse-page-seo';
 import {
@@ -48,14 +49,20 @@ export default async function JobsBrowsePage({ searchParams }: PageProps) {
       hasFilters={hasFilters}
       cities={cities}
       topViewed={topViewed}
+      enableInfiniteScroll
     >
-      <CategoryBrowseGrid>
-        {listings.map((listing) => (
-          <Grid key={listing.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+      <BrowseInfiniteGrid
+        verticalId="jobs"
+        filters={filters}
+        initialListings={listings}
+        initialPage={currentPage}
+        totalPages={totalPages}
+        renderCard={(listing) => (
+          <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
             <JobCard listing={listing} />
           </Grid>
-        ))}
-      </CategoryBrowseGrid>
+        )}
+      />
     </CategoryBrowseLayout>
   );
 }

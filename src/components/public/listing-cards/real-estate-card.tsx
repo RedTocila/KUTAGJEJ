@@ -41,9 +41,11 @@ const FURNISHING_LABEL: Record<string, string> = {
 export function RealEstateCard({
   listing,
   sellerRating = null,
+  imagePriority = false,
 }: {
   listing: PublicRealEstateListing;
   sellerRating?: ListingCardRatingSummary | null;
+  imagePriority?: boolean;
 }) {
   const t = useCopy();
   const location = [listing.zoneName, listing.cityName].filter(Boolean).join(', ');
@@ -105,6 +107,7 @@ export function RealEstateCard({
           premium={Boolean(listing.isPremium)}
         okazion={Boolean(listing.isOkazion)}
         okazionUntil={listing.okazionUntil}
+          priority={imagePriority}
           sharePayload={{
             title: listing.title,
             category: propertyCategoryLabel(listing.propertyCategory),

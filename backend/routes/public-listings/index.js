@@ -124,21 +124,26 @@ router.get('/latest', optionalAuth, async (req, res) => {
   try {
     const limit = clampLimit(req.query.limit);
     const saver = saverFromUser(req.user);
-    const [realEstate, cars, jobs, marketplace, businesses, professionals] = await Promise.all([
+    const [
+      realEstate,
+      cars,
+      jobs,
+      marketplace,
+      businesses,
+      professionals,
+      countRe,
+      countCarsVal,
+      countJobsVal,
+      countMkt,
+      countBiz,
+      countPro,
+    ] = await Promise.all([
       latestRealEstate(limit),
       latestCars(limit),
       latestJobs(limit),
       latestMarketplace(limit),
       latestDirectory('businesses', limit),
       latestDirectory('professionals', limit),
-    ]);
-    const bundle = { realEstate, cars, jobs, marketplace, businesses, professionals };
-    if (saver) {
-      for (const key of Object.keys(bundle)) {
-        bundle[key] = await enrichListingsSaverState(bundle[key], saver);
-      }
-    }
-    const counts = await Promise.all([
       countRealEstate(),
       countCars(),
       countActiveJobs(),
@@ -146,6 +151,14 @@ router.get('/latest', optionalAuth, async (req, res) => {
       countDirectory({ eq: { vertical: 'businesses' } }),
       countDirectory({ eq: { vertical: 'professionals' } }),
     ]);
+    const bundle = { realEstate, cars, jobs, marketplace, businesses, professionals };
+    if (saver) {
+      await Promise.all(
+        Object.keys(bundle).map(async (key) => {
+          bundle[key] = await enrichListingsSaverState(bundle[key], saver);
+        }),
+      );
+    }
     res.json({
       realEstate: bundle.realEstate,
       cars: bundle.cars,
@@ -154,16 +167,63 @@ router.get('/latest', optionalAuth, async (req, res) => {
       businesses: bundle.businesses,
       professionals: bundle.professionals,
       totals: {
-        realEstate: counts[0],
-        cars: counts[1],
-        jobs: counts[2],
-        marketplace: counts[3],
-        businesses: counts[4],
-        professionals: counts[5],
+        realEstate: countRe,
+        cars: countCarsVal,
+        jobs: countJobsVal,
+        marketplace: countMkt,
+        businesses: countBiz,
+        professionals: countPro,
       },
     });
   } catch (err) {
     console.error('GET /public/listings/latest:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+const LATEST_VERTICAL_HANDLERS = {
+  'real-estate': {
+    list: (limit) => latestRealEstate(limit),
+    count: () => countRealEstate(),
+  },
+  cars: {
+    list: (limit) => latestCars(limit),
+    count: () => countCars(),
+  },
+  jobs: {
+    list: (limit) => latestJobs(limit),
+    count: () => countActiveJobs(),
+  },
+  marketplace: {
+    list: (limit) => latestMarketplace(limit),
+    count: () => countMarketplace(),
+  },
+  businesses: {
+    list: (limit) => latestDirectory('businesses', limit),
+    count: () => countDirectory({ eq: { vertical: 'businesses' } }),
+  },
+  professionals: {
+    list: (limit) => latestDirectory('professionals', limit),
+    count: () => countDirectory({ eq: { vertical: 'professionals' } }),
+  },
+};
+
+/** GET /api/public/listings/latest/:vertical — one homepage carousel (lazy sections). */
+router.get('/latest/:vertical', optionalAuth, async (req, res) => {
+  try {
+    const vertical = String(req.params.vertical ?? '').trim();
+    const handlers = LATEST_VERTICAL_HANDLERS[vertical];
+    if (!handlers) {
+      res.status(400).json({ message: 'Invalid vertical' });
+      return;
+    }
+    const limit = clampLimit(req.query.limit);
+    let [listings, total] = await Promise.all([handlers.list(limit), handlers.count()]);
+    const saver = saverFromUser(req.user);
+    if (saver) listings = await enrichListingsSaverState(listings, saver);
+    res.json({ listings, vertical, total });
+  } catch (err) {
+    console.error('GET /public/listings/latest/:vertical:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -291,8 +351,10 @@ router.get('/real-estate', optionalAuth, async (req, res) => {
     const parsed = parseRealEstateFilters(req.query);
     const filter = await finalizeTextSearch(parsed.filter, req.query);
     const sort = parsed.sort;
-    const total = await countRealEstate(filter);
-    let listings = await queryRealEstate(limit, filter, sort, skip);
+    let [total, listings] = await Promise.all([
+      countRealEstate(filter),
+      queryRealEstate(limit, filter, sort, skip),
+    ]);
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
     res.json(buildPaginatedResponse(listings, total, limit, page));
@@ -308,8 +370,10 @@ router.get('/cars', optionalAuth, async (req, res) => {
     const parsed = parseCarFilters(req.query);
     const filter = await finalizeTextSearch(parsed.filter, req.query);
     const sort = parsed.sort;
-    const total = await countCars(filter);
-    let listings = await queryCars(limit, filter, sort, skip);
+    let [total, listings] = await Promise.all([
+      countCars(filter),
+      queryCars(limit, filter, sort, skip),
+    ]);
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
     res.json(buildPaginatedResponse(listings, total, limit, page));
@@ -325,8 +389,10 @@ router.get('/jobs', optionalAuth, async (req, res) => {
     const parsed = parseJobFilters(req.query);
     const filter = await finalizeTextSearch(parsed.filter, req.query);
     const sort = parsed.sort;
-    const total = await countJobs(filter);
-    let listings = await queryJobs(limit, filter, sort, skip);
+    let [total, listings] = await Promise.all([
+      countJobs(filter),
+      queryJobs(limit, filter, sort, skip),
+    ]);
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
     res.json(buildPaginatedResponse(listings, total, limit, page));
@@ -342,8 +408,10 @@ router.get('/marketplace', optionalAuth, async (req, res) => {
     const parsed = parseMarketplaceFilters(req.query);
     const filter = await finalizeTextSearch(parsed.filter, req.query);
     const sort = parsed.sort;
-    const total = await countMarketplace(filter);
-    let listings = await queryMarketplace(limit, filter, sort, skip);
+    let [total, listings] = await Promise.all([
+      countMarketplace(filter),
+      queryMarketplace(limit, filter, sort, skip),
+    ]);
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
     res.json(buildPaginatedResponse(listings, total, limit, page));
@@ -359,8 +427,10 @@ router.get('/businesses', optionalAuth, async (req, res) => {
     const parsed = parseDirectoryFilters(req.query, 'businesses');
     const filter = await finalizeTextSearch(parsed.filter, req.query);
     const sort = parsed.sort;
-    const total = await countDirectory(filter);
-    let listings = await queryDirectory('businesses', limit, filter, sort, skip);
+    let [total, listings] = await Promise.all([
+      countDirectory(filter),
+      queryDirectory('businesses', limit, filter, sort, skip),
+    ]);
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
     res.json(buildPaginatedResponse(listings, total, limit, page));
@@ -376,8 +446,10 @@ router.get('/professionals', optionalAuth, async (req, res) => {
     const parsed = parseDirectoryFilters(req.query, 'professionals');
     const filter = await finalizeTextSearch(parsed.filter, req.query);
     const sort = parsed.sort;
-    const total = await countDirectory(filter);
-    let listings = await queryDirectory('professionals', limit, filter, sort, skip);
+    let [total, listings] = await Promise.all([
+      countDirectory(filter),
+      queryDirectory('professionals', limit, filter, sort, skip),
+    ]);
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
     res.json(buildPaginatedResponse(listings, total, limit, page));

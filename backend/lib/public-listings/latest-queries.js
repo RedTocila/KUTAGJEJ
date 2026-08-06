@@ -36,6 +36,129 @@ const TABLE_BY_KIND = {
   professionals: 'directory_listings',
 };
 
+/** Card-only columns — avoids shipping gallery arrays, menus, portfolios, admin fields. */
+const LIST_SELECT_BY_TABLE = {
+  real_estate_listings: [
+    'id',
+    'title',
+    'description',
+    'property_category',
+    'transaction_type',
+    'price',
+    'original_price',
+    'currency',
+    'surface_m2',
+    'city_id',
+    'zone_id',
+    'bedrooms',
+    'bathrooms',
+    'floor',
+    'furnishing',
+    'year_built',
+    'condition',
+    'contact_phone',
+    'image_urls',
+    'permalink_slug',
+    'premium_until',
+    'okazion_until',
+    'status',
+    'created_at',
+  ].join(','),
+  car_listings: [
+    'id',
+    'description',
+    'vehicle_type',
+    'make',
+    'model',
+    'variant',
+    'year',
+    'kilometers',
+    'transmission',
+    'fuel_type',
+    'price',
+    'original_price',
+    'currency',
+    'color',
+    'city_id',
+    'contact_phone',
+    'image_urls',
+    'permalink_slug',
+    'premium_until',
+    'okazion_until',
+    'status',
+    'created_at',
+  ].join(','),
+  job_listings: [
+    'id',
+    'title',
+    'description',
+    'industry',
+    'education',
+    'experience',
+    'job_type',
+    'work_location',
+    'salary',
+    'currency',
+    'city_id',
+    'contact_phone',
+    'image_urls',
+    'permalink_slug',
+    'premium_until',
+    'okazion_until',
+    'status',
+    'created_at',
+  ].join(','),
+  marketplace_listings: [
+    'id',
+    'transaction_type',
+    'title',
+    'description',
+    'category',
+    'condition',
+    'price',
+    'original_price',
+    'currency',
+    'city_id',
+    'contact_phone',
+    'image_urls',
+    'permalink_slug',
+    'premium_until',
+    'okazion_until',
+    'status',
+    'created_at',
+  ].join(','),
+  directory_listings: [
+    'id',
+    'vertical',
+    'title',
+    'description',
+    'category',
+    'condition',
+    'price',
+    'currency',
+    'opening_hours',
+    'weekly_hours',
+    'reservations_enabled',
+    'reservation_url',
+    'services_highlight',
+    'response_time_hours',
+    'city_id',
+    'contact_phone',
+    'image_urls',
+    'permalink_slug',
+    'premium_until',
+    'announcement_title',
+    'announcement_subtitle',
+    'announcement_banner_url',
+    'status',
+    'created_at',
+  ].join(','),
+};
+
+function listSelectForTable(table) {
+  return LIST_SELECT_BY_TABLE[table] || '*';
+}
+
 function baseFilterForKind(kind) {
   if (kind === 'job') return activeJobCreatedAtFilter();
   if (kind === 'businesses' || kind === 'professionals') return { eq: { vertical: kind } };
@@ -54,7 +177,7 @@ async function runListingQuery(table, filterSpec, sortSpec, limit, skip = 0) {
   const effectiveSort = sortSpec && sortSpec.length ? sortSpec : buildSort('newest');
 
   const run = async (spec) => {
-    let q = applyFilterSpec(sb.from(table).select('*'), filterSpec);
+    let q = applyFilterSpec(sb.from(table).select(listSelectForTable(table)), filterSpec);
     q = applySort(q, spec);
     if (limit > 0) q = q.range(skip, skip + limit - 1);
     return q;

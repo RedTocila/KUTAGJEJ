@@ -1,11 +1,11 @@
 import { getApiUrl } from '@/lib/api-config';
 
-const DEFAULT_TIMEOUT_MS = 4000;
+const DEFAULT_TIMEOUT_MS = 8000;
 
 /**
  * Resilient JSON fetch for Server Components.
- * - Short timeout so a stalled API never blocks SSR.
- * - ISR-aligned cache (60s) to reduce Mongo load.
+ * - Short timeout so a stalled API never blocks SSR forever (8s).
+ * - ISR-aligned cache (60s) to reduce DB load.
  * - Never throws; returns null on failure.
  */
 export async function safeServerJson<T>(path: string, init?: RequestInit): Promise<T | null> {

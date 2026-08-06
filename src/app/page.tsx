@@ -5,6 +5,7 @@ import { HomepageCommunityBanner, HomepagePostBanner } from '@/components/public
 import { PublicShell } from '@/components/public/public-shell';
 import { HomepageOkazionSection } from '@/components/public/homepage-okazion-section';
 import { HomepageRecommendedSection } from '@/components/public/homepage-recommended-section';
+import { LazyHomeSection } from '@/components/public/lazy-home-section';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { ListingsSection } from '@/components/public/listings-section';
 import { SeoIntroSection } from '@/components/public/seo-intro-section';
@@ -19,7 +20,7 @@ import { HOME_VERTICALS } from '@/lib/home-categories';
 import { fetchHomeBanners } from '@/lib/home-banners-client';
 import {
   fetchBrowseOkazion,
-  fetchHomepageListings,
+  fetchLatestVertical,
   type PublicCarListing,
   type PublicDirectoryListing,
   type PublicJobListing,
@@ -76,22 +77,34 @@ export const metadata: Metadata = {
   category: 'classifieds',
 };
 
-const PLACEHOLDER_TOTALS = {
-  realEstate: 0,
-  cars: 0,
-  jobs: 0,
-  marketplace: 0,
-  businesses: 0,
-  professionals: 0,
-};
-
 export default async function HomePage() {
-  const [bundle, homeBanners, okazion] = await Promise.all([
-    fetchHomepageListings(8),
+  // Above-the-fold only: banners, OKAZION, and the 3 verticals used for hero stats + recommended mix.
+  // Remaining vertical carousels lazy-load on scroll (see LazyHomeSection).
+  const [homeBanners, okazion, realEstate, cars, jobs] = await Promise.all([
     fetchHomeBanners(),
     fetchBrowseOkazion(8),
+    fetchLatestVertical<PublicRealEstateListing>('real-estate', 8),
+    fetchLatestVertical<PublicCarListing>('cars', 8),
+    fetchLatestVertical<PublicJobListing>('jobs', 8),
   ]);
-  const totals = bundle.totals ?? PLACEHOLDER_TOTALS;
+
+  const bundle = {
+    realEstate: realEstate.listings,
+    cars: cars.listings,
+    jobs: jobs.listings,
+    marketplace: [] as PublicMarketplaceListing[],
+    businesses: [] as PublicDirectoryListing[],
+    professionals: [] as PublicDirectoryListing[],
+    totals: {
+      realEstate: realEstate.total,
+      cars: cars.total,
+      jobs: jobs.total,
+      marketplace: 0,
+      businesses: 0,
+      professionals: 0,
+    },
+  };
+  const totals = bundle.totals;
   const latestMixed = buildHomepageMixedLatest(bundle, 8);
 
   const jsonLd = {
@@ -195,77 +208,44 @@ export default async function HomePage() {
         useMuiVerticalIcon
       >
         <ListingsCarousel>
-          {bundle.realEstate.map((listing) => (
-            <RealEstateCard key={listing.id} listing={listing} />
+          {bundle.realEstate.map((listing, index) => (
+            <RealEstateCard key={listing.id} listing={listing} imagePriority={index < 4} />
           ))}
         </ListingsCarousel>
       </ListingsSection>
 
-      <ListingsSection verticalId="cars" total={totals.cars} isEmpty={bundle.cars.length === 0} useMuiVerticalIcon>
-        <ListingsCarousel>
-          {bundle.cars.map((listing) => (
-            <CarCard key={listing.id} listing={listing} />
-          ))}
-        </ListingsCarousel>
-      </ListingsSection>
-
-      <HomepageCommunityBanner
-        activeListingsCount={
-          totals.realEstate +
-          totals.cars +
-          totals.jobs +
-          totals.marketplace +
-          totals.businesses +
-          totals.professionals
-        }
+      <LazyHomeSection<PublicCarListing>
+        verticalId="cars"
+        initialListings={bundle.cars}
+        initialTotal={totals.cars}
+        renderCard={(listing) => <CarCard key={listing.id} listing={listing} />}
       />
 
-      <ListingsSection verticalId="jobs" total={totals.jobs} isEmpty={bundle.jobs.length === 0} useMuiVerticalIcon>
-        <ListingsCarousel>
-          {bundle.jobs.map((listing) => (
-            <JobCard key={listing.id} listing={listing} />
-          ))}
-        </ListingsCarousel>
-      </ListingsSection>
+      <HomepageCommunityBanner
+        activeListingsCount={totals.realEstate + totals.cars + totals.jobs}
+      />
 
-      <ListingsSection
+      <LazyHomeSection<PublicJobListing>
+        verticalId="jobs"
+        initialListings={bundle.jobs}
+        initialTotal={totals.jobs}
+        renderCard={(listing) => <JobCard key={listing.id} listing={listing} />}
+      />
+
+      <LazyHomeSection<PublicMarketplaceListing>
         verticalId="marketplace"
-        total={totals.marketplace}
-        isEmpty={bundle.marketplace.length === 0}
-        useMuiVerticalIcon
-      >
-        <ListingsCarousel>
-          {bundle.marketplace.map((listing) => (
-            <MarketplaceCard key={listing.id} listing={listing} />
-          ))}
-        </ListingsCarousel>
-      </ListingsSection>
+        renderCard={(listing) => <MarketplaceCard key={listing.id} listing={listing} />}
+      />
 
-      <ListingsSection
+      <LazyHomeSection<PublicDirectoryListing>
         verticalId="businesses"
-        total={totals.businesses}
-        isEmpty={bundle.businesses.length === 0}
-        useMuiVerticalIcon
-      >
-        <ListingsCarousel>
-          {bundle.businesses.map((listing) => (
-            <DirectoryListingCard key={listing.id} listing={listing} />
-          ))}
-        </ListingsCarousel>
-      </ListingsSection>
+        renderCard={(listing) => <DirectoryListingCard key={listing.id} listing={listing} />}
+      />
 
-      <ListingsSection
+      <LazyHomeSection<PublicDirectoryListing>
         verticalId="professionals"
-        total={totals.professionals}
-        isEmpty={bundle.professionals.length === 0}
-        useMuiVerticalIcon
-      >
-        <ListingsCarousel>
-          {bundle.professionals.map((listing) => (
-            <DirectoryListingCard key={listing.id} listing={listing} />
-          ))}
-        </ListingsCarousel>
-      </ListingsSection>
+        renderCard={(listing) => <DirectoryListingCard key={listing.id} listing={listing} />}
+      />
 
       <HomepagePostBanner />
 

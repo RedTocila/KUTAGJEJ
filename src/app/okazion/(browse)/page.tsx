@@ -2,7 +2,8 @@ import * as React from 'react';
 import type { Metadata } from 'next';
 import { Grid } from '@mui/material';
 
-import { CategoryBrowseGrid, CategoryBrowseLayout } from '@/components/public/category-browse-layout';
+import { BrowseInfiniteGrid } from '@/components/public/browse-infinite-grid';
+import { CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 import { CarCard } from '@/components/public/listing-cards/car-card';
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
@@ -67,14 +68,20 @@ export default async function OkazionBrowsePage({ searchParams }: PageProps) {
       pageSize={BROWSE_PAGE_SIZE}
       hasFilters={hasFilters}
       cities={[]}
+      enableInfiniteScroll
     >
-      <CategoryBrowseGrid>
-        {listings.map((listing) => (
-          <Grid key={`${listing.kind}:${listing.id}`} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+      <BrowseInfiniteGrid
+        verticalId="okazion"
+        filters={filters}
+        initialListings={listings}
+        initialPage={currentPage}
+        totalPages={totalPages}
+        renderCard={(listing) => (
+          <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
             <OkazionCard listing={listing} />
           </Grid>
-        ))}
-      </CategoryBrowseGrid>
+        )}
+      />
     </CategoryBrowseLayout>
   );
 }

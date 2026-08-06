@@ -34,9 +34,11 @@ function conditionIcon(condition: string | null) {
 export function MarketplaceCard({
   listing,
   sellerRating = null,
+  imagePriority = false,
 }: {
   listing: PublicMarketplaceListing;
   sellerRating?: ListingCardRatingSummary | null;
+  imagePriority?: boolean;
 }) {
   const viewCount = listing.viewCount ?? 0;
   const categoryLabel = findOptionLabel(MARKETPLACE_CATEGORY_OPTIONS, listing.category);
@@ -69,6 +71,7 @@ export function MarketplaceCard({
         premium={Boolean(listing.isPremium)}
         okazion={Boolean(listing.isOkazion)}
         okazionUntil={listing.okazionUntil}
+        priority={imagePriority}
         sharePayload={{
           title: listing.title,
           category: categoryLabel,

@@ -323,6 +323,28 @@ export async function fetchHomepageListings(limit = 8): Promise<PublicListingsBu
   };
 }
 
+export type HomepageLatestVerticalId =
+  | 'real-estate'
+  | 'cars'
+  | 'jobs'
+  | 'marketplace'
+  | 'businesses'
+  | 'professionals';
+
+export async function fetchLatestVertical<T = unknown>(
+  vertical: HomepageLatestVerticalId,
+  limit = 8,
+): Promise<{ listings: T[]; total: number; vertical: string }> {
+  const data = await safeJson<{ listings?: T[]; total?: number; vertical?: string }>(
+    `/public/listings/latest/${vertical}?limit=${limit}`,
+  );
+  return {
+    listings: data?.listings ?? [],
+    total: data?.total ?? 0,
+    vertical: data?.vertical ?? vertical,
+  };
+}
+
 export interface BrowseListingsResult<T> {
   listings: T[];
   total: number;

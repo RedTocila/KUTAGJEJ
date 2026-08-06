@@ -56,9 +56,11 @@ function workLocationIcon(value: string) {
 export function JobCard({
   listing,
   sellerRating = null,
+  imagePriority = false,
 }: {
   listing: PublicJobListing;
   sellerRating?: ListingCardRatingSummary | null;
+  imagePriority?: boolean;
 }) {
   const viewCount = listing.viewCount ?? 0;
   const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
@@ -103,6 +105,7 @@ export function JobCard({
         premium={Boolean(listing.isPremium)}
         okazion={Boolean(listing.isOkazion)}
         okazionUntil={listing.okazionUntil}
+        priority={imagePriority}
         sharePayload={{
           title: listing.title,
           category: industryLabel,

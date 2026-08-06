@@ -60,6 +60,8 @@ export interface CardMediaProps {
   sharePayload?: Omit<ListingSharePayload, 'listingKind' | 'listingId' | 'title'> & {
     title?: string;
   };
+  /** Eager-load for above-the-fold cards (LCP). */
+  priority?: boolean;
 }
 
 export function CardMedia({
@@ -80,6 +82,7 @@ export function CardMedia({
   okazion = false,
   okazionUntil = null,
   sharePayload,
+  priority = false,
 }: CardMediaProps) {
   const router = useRouter();
   const { user } = useUser();
@@ -167,6 +170,7 @@ export function CardMedia({
           alt={alt}
           fill
           sizes="(max-width: 600px) 100vw, 320px"
+          priority={priority}
           style={{ objectFit: 'cover' }}
         />
       ) : (

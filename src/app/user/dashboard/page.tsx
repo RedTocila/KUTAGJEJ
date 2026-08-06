@@ -52,7 +52,6 @@ import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { DailyStreakCard } from '@/components/user/daily-streak-card';
-import { HeaderLanguageToggle } from '@/components/user/header-language-toggle';
 import { LanguageSwitchRow } from '@/components/user/language-switch-row';
 import { PortalLinkCard, PortalLinkGroup, portalCardSx } from '@/components/user/portal-cards';
 import { ReferralSummaryCard } from '@/components/user/referral-summary-card';
@@ -405,8 +404,19 @@ export default function UserDashboardPage() {
             spacing={0.75}
             sx={{ display: { xs: 'flex', lg: 'none' }, alignItems: 'center', mr: -0.5 }}
           >
-            <HeaderLanguageToggle />
             <ThemeModeToggle />
+            <Tooltip title={t.signOut}>
+              <IconButton
+                size="large"
+                aria-label={t.signOut}
+                onClick={() => {
+                  void authClient.signOut();
+                }}
+                sx={{ color: 'text.secondary' }}
+              >
+                <SignOutIcon size={22} />
+              </IconButton>
+            </Tooltip>
           </Stack>
         </Stack>
 

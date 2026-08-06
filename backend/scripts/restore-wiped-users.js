@@ -137,11 +137,12 @@ async function ensureDirectoryListing(sb, { posterId, vertical, title, descripti
     created_at: now,
     updated_at: now,
   };
+  // Keep cards looking like normal listings — do not surface restore notes as labels.
+  row.services_highlight = null;
   if (vertical === 'professionals') {
     row.currency = 'EUR';
     row.response_time_hours = 24;
     row.portfolio_items = [];
-    row.services_highlight = description.slice(0, 120);
     row.weekly_hours = {};
   } else {
     row.weekly_hours = {};
@@ -150,7 +151,6 @@ async function ensureDirectoryListing(sb, { posterId, vertical, title, descripti
     row.reservations_enabled = false;
     row.reservation_time_slots = [];
     row.reservation_party_sizes = [];
-    row.services_highlight = description.slice(0, 120);
   }
 
   const { data, error } = await sb.from('directory_listings').insert(row).select('id').single();
@@ -262,7 +262,7 @@ async function main() {
         posterId: profile.id,
         vertical: 'professionals',
         title: businessName,
-        description: `${businessName} — shërbim profesional. (Rikthyer pas rivendosjes së databazës.)`,
+        description: '',
         category: 'sherbim',
         cityId: city?.id || null,
         imageUrls: proImages,
@@ -296,7 +296,7 @@ async function main() {
         posterId: profile.id,
         vertical: 'businesses',
         title: businessName,
-        description: `${businessName} — biznes. (Rikthyer pas rivendosjes së databazës.)`,
+        description: '',
         category: 'kafe',
         cityId: city?.id || null,
         imageUrls: bizImages,

@@ -69,8 +69,16 @@ export function ProductBackButton({
   );
 }
 
+export type ProductTagAccent = {
+  color: string;
+  soft: string;
+};
+
 /** Pill tag chrome — subcategory pills, filter chips, service tags. */
-export function productTagSx(active = false): SxProps<Theme> {
+export function productTagSx(active = false, accent?: ProductTagAccent): SxProps<Theme> {
+  const accentColor = accent?.color ?? 'primary.main';
+  const accentSoft = accent?.soft ?? primaryMainAlpha(0.08);
+  const hoverSoft = accent?.soft ?? primaryMainAlpha(0.06);
   return {
     display: 'inline-flex',
     alignItems: 'center',
@@ -79,9 +87,9 @@ export function productTagSx(active = false): SxProps<Theme> {
     py: 0.75,
     borderRadius: 999,
     border: '1px solid',
-    borderColor: active ? 'primary.main' : 'divider',
-    bgcolor: active ? primaryMainAlpha(0.08) : 'background.paper',
-    color: active ? 'primary.main' : 'text.primary',
+    borderColor: active ? accentColor : 'divider',
+    bgcolor: active ? accentSoft : 'background.paper',
+    color: active ? accentColor : 'text.primary',
     textDecoration: 'none',
     whiteSpace: 'nowrap',
     fontSize: '0.825rem',
@@ -91,32 +99,38 @@ export function productTagSx(active = false): SxProps<Theme> {
     cursor: 'pointer',
     transition: 'border-color 0.15s, background-color 0.15s, color 0.15s',
     '&:hover': {
-      borderColor: 'primary.main',
-      color: 'primary.main',
-      bgcolor: primaryMainAlpha(0.06),
+      borderColor: accentColor,
+      color: accentColor,
+      bgcolor: hoverSoft,
     },
   };
 }
 
-export const productTagIconWrapSx = {
-  width: 22,
-  height: 22,
-  borderRadius: '50%',
-  flexShrink: 0,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: 'primary.main',
-  bgcolor: (theme: Theme) =>
-    theme.palette.mode === 'dark'
-      ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.16)'
-      : 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)',
-} as const;
+export function productTagIconWrapSx(accent?: ProductTagAccent): SxProps<Theme> {
+  const accentColor = accent?.color ?? 'primary.main';
+  return {
+    width: 22,
+    height: 22,
+    borderRadius: '50%',
+    flexShrink: 0,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: accentColor,
+    bgcolor: accent?.soft
+      ? accent.soft
+      : (theme: Theme) =>
+          theme.palette.mode === 'dark'
+            ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.16)'
+            : 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)',
+  };
+}
 
 export function ProductTag({
   label,
   icon: Icon,
   active = false,
+  accent,
   href,
   onClick,
   onDelete,
@@ -126,6 +140,7 @@ export function ProductTag({
   label: React.ReactNode;
   icon?: PhosphorIcon;
   active?: boolean;
+  accent?: ProductTagAccent;
   href?: string;
   onClick?: () => void;
   onDelete?: () => void;
@@ -141,10 +156,10 @@ export function ProductTag({
       href={href}
       onClick={onClick}
       type={isButton ? 'button' : undefined}
-      sx={[productTagSx(active), ...(Array.isArray(sx) ? sx : sx ? [sx] : [])]}
+      sx={[productTagSx(active, accent), ...(Array.isArray(sx) ? sx : sx ? [sx] : [])]}
     >
       {Icon ? (
-        <Box sx={productTagIconWrapSx}>
+        <Box sx={productTagIconWrapSx(accent)}>
           <Icon size={13} weight="duotone" />
         </Box>
       ) : null}

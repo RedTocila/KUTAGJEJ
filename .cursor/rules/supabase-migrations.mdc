@@ -1,0 +1,13 @@
+---
+description: Additive-only rules when editing Supabase migrations or SQL repair scripts
+globs: supabase/migrations/**/*.sql,backend/scripts/**/*.sql,backend/scripts/repair*.js,backend/scripts/restore*.js
+alwaysApply: false
+---
+
+# Migration / SQL file rules
+
+- **Never** add `DROP TABLE` / `TRUNCATE` for listings, profiles, subscriptions, payments, cities, or other app data tables to init or repair SQL.
+- `20260801160000_init.sql` is historical bootstrap: keep `CREATE TABLE IF NOT EXISTS` only — no reset block.
+- New work = new timestamped migration file, not edits that recreate the whole schema.
+- Repair scripts must be idempotent `ADD COLUMN IF NOT EXISTS` / `CREATE … IF NOT EXISTS`.
+- Seed / restore scripts may insert data; they must not drop tables.

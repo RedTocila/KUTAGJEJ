@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { alpha, Box, Divider, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import { SignOut as SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
@@ -8,7 +9,6 @@ import { SignOut as SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
 import type { NavItemConfig } from '@/types/nav';
 import { paths } from '@/paths';
 import { isNavItemActive } from '@/lib/is-nav-item-active';
-import { hardNavigate } from '@/lib/hard-navigate';
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
 import { HeaderLanguageToggle } from '@/components/user/header-language-toggle';
@@ -68,9 +68,8 @@ export function UserSideNav() {
     >
       <Stack spacing={1.5} sx={{ px: 3, pt: 0, pb: 2 }}>
         <Box
-          component="a"
+          component={RouterLink}
           href={paths.home}
-          onClick={(event) => hardNavigate(paths.home, event)}
           sx={{
             display: 'inline-flex',
             flexDirection: 'column',
@@ -141,19 +140,17 @@ function UserNavRow({ item, pathname }: { item: NavItemConfig; pathname: string 
   return (
     <Box component="li" sx={{ display: 'block', listStyle: 'none' }}>
       <Box
-        component="a"
+        component={opensPicker || external ? 'a' : RouterLink}
         href={opensPicker ? '#' : href}
         target={external ? '_blank' : undefined}
         rel={external ? 'noreferrer' : undefined}
         onClick={
           opensPicker
-            ? (event) => {
+            ? (event: React.MouseEvent) => {
                 event.preventDefault();
                 addListingPicker?.openAddListingPicker();
               }
-            : external
-              ? undefined
-              : (event) => hardNavigate(href, event)
+            : undefined
         }
         sx={{
           alignItems: 'center',

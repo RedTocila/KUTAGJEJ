@@ -121,19 +121,25 @@ export function CategoryBrowseControls({
   );
 
   const applyDraft = (next: BrowseFilters, closePanel = false) => {
-    router.push(`${pathname}${buildBrowseUrlQuery(next)}`);
+    React.startTransition(() => {
+      router.push(`${pathname}${buildBrowseUrlQuery(next)}`);
+    });
     if (closePanel) setOpen(false);
   };
 
   const apply = () => applyDraft(draft, true);
   const clear = () => {
-    router.push(pathname);
+    React.startTransition(() => {
+      router.push(pathname);
+    });
     setOpen(false);
   };
 
   const removeChip = (key: string) => {
     const next = removeBrowseFilterKey(applied, key);
-    router.push(`${pathname}${buildBrowseUrlQuery(next)}`);
+    React.startTransition(() => {
+      router.push(`${pathname}${buildBrowseUrlQuery(next)}`);
+    });
   };
 
   const applyKeyword = React.useCallback(

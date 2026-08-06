@@ -1,48 +1,15 @@
 -- KuTaGjej fresh schema (Supabase Postgres). No Mongo migration.
 -- ╔══════════════════════════════════════════════════════════════════════════╗
--- ║  DANGER: This file DROPS all app tables (profiles, listings, payments,  ║
--- ║  subscriptions, referrals, …). Auth users are kept but their data is    ║
--- ║  destroyed. NEVER re-run against a live / production database.          ║
--- ║  Prefer additive migrations under supabase/migrations/ instead.         ║
+-- ║  SAFE: No DROP TABLE. Re-running this file must NOT wipe live data.     ║
+-- ║  Tables use IF NOT EXISTS. For a true local wipe use `supabase db reset` ║
+-- ║  on a throwaway project only — never against production.                 ║
+-- ║  Prefer additive migrations under supabase/migrations/ for changes.      ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 
 create extension if not exists "pgcrypto";
 
--- ─── reset (idempotent re-apply) ─────────────────────────────────────────────
-drop table if exists public.referral_signups cascade;
-drop table if exists public.listing_metric_dedups cascade;
-drop table if exists public.listing_engagements cascade;
-drop table if exists public.admin_notifications cascade;
-drop table if exists public.job_employer_verification_requests cascade;
-drop table if exists public.professional_verification_requests cascade;
-drop table if exists public.user_subscriptions cascade;
-drop table if exists public.okazion_listing_vouchers cascade;
-drop table if exists public.premium_listing_vouchers cascade;
-drop table if exists public.payments cascade;
-drop table if exists public.saved_listings cascade;
-drop table if exists public.listing_auto_refresh cascade;
-drop table if exists public.professional_listing_reviews cascade;
-drop table if exists public.business_listing_reviews cascade;
-drop table if exists public.member_reviews cascade;
-drop table if exists public.business_reservations cascade;
-drop table if exists public.messages cascade;
-drop table if exists public.conversations cascade;
-drop table if exists public.directory_listings cascade;
-drop table if exists public.marketplace_listings cascade;
-drop table if exists public.job_listings cascade;
-drop table if exists public.car_listings cascade;
-drop table if exists public.real_estate_listings cascade;
-drop table if exists public.referral_programs cascade;
-drop table if exists public.home_banners cascade;
-drop table if exists public.credit_packages cascade;
-drop table if exists public.contracts cascade;
-drop table if exists public.real_estate_cities cascade;
-drop table if exists public.listing_categories cascade;
-drop table if exists public.profiles cascade;
-drop table if exists public.roles cascade;
-
 -- ─── profiles (auth.users) ───────────────────────────────────────────────────
-create table public.profiles (
+create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   email text not null unique,
   first_name text not null default '',
@@ -78,7 +45,7 @@ create index profiles_account_type_idx on public.profiles (account_type);
 create index profiles_referred_by_id_idx on public.profiles (referred_by_id);
 
 -- ─── roles ───────────────────────────────────────────────────────────────────
-create table public.roles (
+create table if not exists public.roles (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
   description text not null default '',
@@ -91,7 +58,7 @@ alter table public.profiles
   add constraint profiles_role_id_fkey foreign key (role_id) references public.roles (id) on delete set null;
 
 -- ─── catalog ─────────────────────────────────────────────────────────────────
-create table public.listing_categories (
+create table if not exists public.listing_categories (
   id uuid primary key default gen_random_uuid(),
   key text not null unique,
   title text not null,
@@ -101,7 +68,7 @@ create table public.listing_categories (
   updated_at timestamptz not null default now()
 );
 
-create table public.real_estate_cities (
+create table if not exists public.real_estate_cities (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   slug text not null unique,
@@ -109,7 +76,7 @@ create table public.real_estate_cities (
   updated_at timestamptz not null default now()
 );
 
-create table public.contracts (
+create table if not exists public.contracts (
   id uuid primary key default gen_random_uuid(),
   title text not null default '',
   content text not null default '',
@@ -140,7 +107,7 @@ create table public.contracts (
 
 create index contracts_plan_code_idx on public.contracts (plan_code);
 
-create table public.credit_packages (
+create table if not exists public.credit_packages (
   id uuid primary key default gen_random_uuid(),
   credits integer not null,
   bonus_credits integer not null default 0,
@@ -156,7 +123,7 @@ create table public.credit_packages (
 
 create index credit_packages_active_sort_idx on public.credit_packages (active, sort_order);
 
-create table public.home_banners (
+create table if not exists public.home_banners (
   id uuid primary key default gen_random_uuid(),
   title text not null default '',
   subtitle text not null default '',
@@ -169,7 +136,7 @@ create table public.home_banners (
   updated_at timestamptz not null default now()
 );
 
-create table public.referral_programs (
+create table if not exists public.referral_programs (
   id text primary key default 'default',
   page_title text not null default '',
   page_subtitle text not null default '',
@@ -195,7 +162,7 @@ create table public.referral_programs (
 );
 
 -- ─── listings (shared moderation columns) ────────────────────────────────────
-create table public.real_estate_listings (
+create table if not exists public.real_estate_listings (
   id uuid primary key default gen_random_uuid(),
   poster_id uuid not null references public.profiles (id) on delete cascade,
   property_category text,
@@ -233,7 +200,7 @@ create index real_estate_listings_status_idx on public.real_estate_listings (sta
 create index real_estate_listings_premium_until_idx on public.real_estate_listings (premium_until desc nulls last);
 create index real_estate_listings_okazion_until_idx on public.real_estate_listings (okazion_until desc nulls last);
 
-create table public.car_listings (
+create table if not exists public.car_listings (
   id uuid primary key default gen_random_uuid(),
   poster_id uuid not null references public.profiles (id) on delete cascade,
   vehicle_type text not null default 'car',
@@ -269,7 +236,7 @@ create index car_listings_vehicle_type_idx on public.car_listings (vehicle_type)
 create index car_listings_premium_until_idx on public.car_listings (premium_until desc nulls last);
 create index car_listings_okazion_until_idx on public.car_listings (okazion_until desc nulls last);
 
-create table public.job_listings (
+create table if not exists public.job_listings (
   id uuid primary key default gen_random_uuid(),
   poster_id uuid not null references public.profiles (id) on delete cascade,
   title text not null default '',
@@ -302,7 +269,7 @@ create index job_listings_status_idx on public.job_listings (status);
 create index job_listings_premium_until_idx on public.job_listings (premium_until desc nulls last);
 create index job_listings_okazion_until_idx on public.job_listings (okazion_until desc nulls last);
 
-create table public.marketplace_listings (
+create table if not exists public.marketplace_listings (
   id uuid primary key default gen_random_uuid(),
   poster_id uuid not null references public.profiles (id) on delete cascade,
   transaction_type text,
@@ -330,7 +297,7 @@ create index marketplace_listings_status_idx on public.marketplace_listings (sta
 create index marketplace_listings_premium_until_idx on public.marketplace_listings (premium_until desc nulls last);
 create index marketplace_listings_okazion_until_idx on public.marketplace_listings (okazion_until desc nulls last);
 
-create table public.directory_listings (
+create table if not exists public.directory_listings (
   id uuid primary key default gen_random_uuid(),
   vertical text not null check (vertical in ('businesses', 'professionals')),
   poster_id uuid not null references public.profiles (id) on delete cascade,
@@ -373,7 +340,7 @@ create index directory_listings_status_idx on public.directory_listings (status)
 create index directory_listings_premium_until_idx on public.directory_listings (premium_until desc nulls last);
 
 -- ─── messaging ───────────────────────────────────────────────────────────────
-create table public.conversations (
+create table if not exists public.conversations (
   id uuid primary key default gen_random_uuid(),
   listing_kind text not null,
   listing_id uuid not null,
@@ -392,7 +359,7 @@ create table public.conversations (
 create index conversations_poster_idx on public.conversations (poster_id, last_message_at desc nulls last);
 create index conversations_inquirer_idx on public.conversations (inquirer_id, last_message_at desc nulls last);
 
-create table public.messages (
+create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
   conversation_id uuid not null references public.conversations (id) on delete cascade,
   sender_id uuid not null references public.profiles (id) on delete cascade,
@@ -403,7 +370,7 @@ create table public.messages (
 create index messages_conversation_created_idx on public.messages (conversation_id, created_at);
 
 -- ─── reviews / reservations / saved ──────────────────────────────────────────
-create table public.business_reservations (
+create table if not exists public.business_reservations (
   id uuid primary key default gen_random_uuid(),
   listing_id uuid not null references public.directory_listings (id) on delete cascade,
   guest_name text not null default '',
@@ -417,7 +384,7 @@ create table public.business_reservations (
   updated_at timestamptz not null default now()
 );
 
-create table public.business_listing_reviews (
+create table if not exists public.business_listing_reviews (
   id uuid primary key default gen_random_uuid(),
   listing_id uuid not null references public.directory_listings (id) on delete cascade,
   reviewer_id uuid not null references public.profiles (id) on delete cascade,
@@ -428,7 +395,7 @@ create table public.business_listing_reviews (
   unique (listing_id, reviewer_id)
 );
 
-create table public.professional_listing_reviews (
+create table if not exists public.professional_listing_reviews (
   id uuid primary key default gen_random_uuid(),
   listing_id uuid not null references public.directory_listings (id) on delete cascade,
   reviewer_id uuid not null references public.profiles (id) on delete cascade,
@@ -439,7 +406,7 @@ create table public.professional_listing_reviews (
   unique (listing_id, reviewer_id)
 );
 
-create table public.member_reviews (
+create table if not exists public.member_reviews (
   id uuid primary key default gen_random_uuid(),
   member_id uuid not null references public.profiles (id) on delete cascade,
   reviewer_id uuid not null references public.profiles (id) on delete cascade,
@@ -451,7 +418,7 @@ create table public.member_reviews (
   check (member_id <> reviewer_id)
 );
 
-create table public.saved_listings (
+create table if not exists public.saved_listings (
   id uuid primary key default gen_random_uuid(),
   saver_id uuid not null references public.profiles (id) on delete cascade,
   listing_kind text not null,
@@ -461,7 +428,7 @@ create table public.saved_listings (
   unique (saver_id, listing_kind, listing_id)
 );
 
-create table public.listing_auto_refresh (
+create table if not exists public.listing_auto_refresh (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,
   listing_kind text not null,
@@ -476,7 +443,7 @@ create index listing_auto_refresh_user_idx on public.listing_auto_refresh (user_
 create index listing_auto_refresh_due_idx on public.listing_auto_refresh (enabled, last_refreshed_at);
 
 -- ─── billing ─────────────────────────────────────────────────────────────────
-create table public.payments (
+create table if not exists public.payments (
   id uuid primary key default gen_random_uuid(),
   payer_id uuid references public.profiles (id) on delete set null,
   payer_email text not null default '',
@@ -500,7 +467,7 @@ create index payments_payer_idx on public.payments (payer_id);
 create index payments_pok_order_idx on public.payments (pok_order_id);
 create index payments_created_idx on public.payments (created_at desc);
 
-create table public.premium_listing_vouchers (
+create table if not exists public.premium_listing_vouchers (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,
   package_id text not null,
@@ -518,7 +485,7 @@ create table public.premium_listing_vouchers (
 );
 create index premium_listing_vouchers_user_idx on public.premium_listing_vouchers (user_id, status);
 
-create table public.okazion_listing_vouchers (
+create table if not exists public.okazion_listing_vouchers (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,
   package_id text not null,
@@ -536,7 +503,7 @@ create table public.okazion_listing_vouchers (
 );
 create index okazion_listing_vouchers_user_idx on public.okazion_listing_vouchers (user_id, status);
 
-create table public.user_subscriptions (
+create table if not exists public.user_subscriptions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,
   contract_id uuid references public.contracts (id) on delete set null,
@@ -568,7 +535,7 @@ create index user_subscriptions_user_idx on public.user_subscriptions (user_id);
 create index user_subscriptions_expires_idx on public.user_subscriptions (expires_at);
 
 -- ─── verification / admin ────────────────────────────────────────────────────
-create table public.professional_verification_requests (
+create table if not exists public.professional_verification_requests (
   id uuid primary key default gen_random_uuid(),
   applicant_id uuid not null references public.profiles (id) on delete cascade,
   status text not null default 'pending',
@@ -581,7 +548,7 @@ create table public.professional_verification_requests (
   updated_at timestamptz not null default now()
 );
 
-create table public.job_employer_verification_requests (
+create table if not exists public.job_employer_verification_requests (
   id uuid primary key default gen_random_uuid(),
   applicant_id uuid not null references public.profiles (id) on delete cascade,
   status text not null default 'pending',
@@ -594,7 +561,7 @@ create table public.job_employer_verification_requests (
   updated_at timestamptz not null default now()
 );
 
-create table public.admin_notifications (
+create table if not exists public.admin_notifications (
   id uuid primary key default gen_random_uuid(),
   type text not null,
   ref_kind text,
@@ -608,7 +575,7 @@ create table public.admin_notifications (
 create index admin_notifications_created_idx on public.admin_notifications (created_at desc);
 
 -- ─── metrics / referrals ─────────────────────────────────────────────────────
-create table public.listing_engagements (
+create table if not exists public.listing_engagements (
   id uuid primary key default gen_random_uuid(),
   listing_kind text not null,
   listing_id uuid not null,
@@ -620,7 +587,7 @@ create table public.listing_engagements (
   unique (listing_kind, listing_id)
 );
 
-create table public.listing_metric_dedups (
+create table if not exists public.listing_metric_dedups (
   id uuid primary key default gen_random_uuid(),
   listing_kind text not null,
   listing_id uuid not null,
@@ -632,7 +599,7 @@ create table public.listing_metric_dedups (
   unique (listing_kind, listing_id, visitor_key, event_type)
 );
 
-create table public.referral_signups (
+create table if not exists public.referral_signups (
   id uuid primary key default gen_random_uuid(),
   referrer_id uuid not null references public.profiles (id) on delete cascade,
   referred_user_id uuid not null unique references public.profiles (id) on delete cascade,
@@ -691,4 +658,4 @@ create policy "public read contracts" on public.contracts for select using (true
 create policy "public read referral_programs" on public.referral_programs for select using (true);
 create policy "users read own profile" on public.profiles for select using (auth.uid() = id);
 
--- Create storage bucket `listings` (public) in the Supabase dashboard if needed.
+-- Create storage bucket `uploads` (public) — see 20260806120000_uploads_bucket.sql.

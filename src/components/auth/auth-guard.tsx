@@ -11,7 +11,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, error, isLoading, checkSession } = useUser();
   const [isChecking, setIsChecking] = React.useState(() => !user);
+  /** When a session token exists, never blank the screen — soft-nav stays interactive. */
+  const [hasCachedAuth, setHasCachedAuth] = React.useState(false);
   const sessionRetryDone = React.useRef(false);
+
+  React.useLayoutEffect(() => {
+    setHasCachedAuth(Boolean(localStorage.getItem('custom-auth-token')));
+  }, []);
 
   React.useEffect(() => {
     if (isLoading) return;
@@ -22,6 +28,9 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     if (!user) {
       const hasToken =
         typeof window !== 'undefined' && Boolean(localStorage.getItem('custom-auth-token'));
+      if (hasToken) {
+        setHasCachedAuth(true);
+      }
       if (hasToken && !sessionRetryDone.current) {
         sessionRetryDone.current = true;
         void checkSession();
@@ -85,10 +94,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return <Alert color="error">{error}</Alert>;
   }
 
+  const showBlocker = isChecking && !user && !hasCachedAuth;
+
   return (
     <Box sx={{ position: 'relative', minHeight: '100%' }}>
       {children}
-      {isChecking ? (
+      {showBlocker ? (
         <Box
           sx={{
             position: 'fixed',

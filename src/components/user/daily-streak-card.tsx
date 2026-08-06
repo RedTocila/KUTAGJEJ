@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import RouterLink from 'next/link';
 import { Box, LinearProgress, Stack, Typography } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { Circle as CircleIcon } from '@phosphor-icons/react/dist/ssr/Circle';
@@ -12,7 +13,6 @@ import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { fetchMyReferralStats } from '@/lib/referrals-client';
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
-import { hardNavigate } from '@/lib/hard-navigate';
 
 function DailyCheckRow({
   done,
@@ -174,9 +174,8 @@ export function DailyStreakCard() {
           }}
         >
           <Box
-            component="a"
+            component={RouterLink}
             href={paths.home}
-            onClick={(event) => hardNavigate(paths.home, event)}
             sx={{
               display: 'block',
               textDecoration: 'none',

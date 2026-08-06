@@ -17,6 +17,7 @@ import {
   listRealEstateLocationsPublic,
   type RealEstateCityDto,
 } from '@/lib/real-estate-locations-client';
+import { mirrorRemoteImageUrls } from '@/lib/uploads-client';
 
 export type AiDraftPostResult = {
   draftId: string;
@@ -64,22 +65,17 @@ function resolveCity(
   );
 }
 
-async function fetchImageFiles(urls: string[]): Promise<File[]> {
-  const files: File[] = [];
-  for (let i = 0; i < Math.min(urls.length, 8); i += 1) {
-    const url = urls[i];
-    try {
-      const res = await fetch(url);
-      if (!res.ok) continue;
-      const blob = await res.blob();
-      if (!blob.type.startsWith('image/')) continue;
-      const ext = blob.type.split('/')[1]?.split('+')[0] || 'jpg';
-      files.push(new File([blob], `ai-image-${i + 1}.${ext}`, { type: blob.type }));
-    } catch {
-      /* skip broken remote image */
-    }
+/** Host AI-scraped photos on our CDN (avoids CORS / hotlink breakage). */
+async function hostDraftImages(
+  urls: string[],
+  folder: string,
+): Promise<{ urls: string[]; error?: string }> {
+  if (!urls.length) return { urls: [] };
+  const mirrored = await mirrorRemoteImageUrls(urls, folder);
+  if (mirrored.error && !mirrored.urls.length) {
+    return { urls: [], error: mirrored.error };
   }
-  return files;
+  return { urls: mirrored.urls };
 }
 
 /**
@@ -112,7 +108,7 @@ export async function postAiListingDraft(
   }
 
   const f = draft.form || {};
-  const imageUrls = (draft.imageUrls || []).filter((u) => {
+  const rawImageUrls = (draft.imageUrls || []).filter((u) => {
     if (!/^https?:\/\//i.test(u)) return false;
     const lower = u.toLowerCase();
     if (/facebook\.com\/(?:tr|tr\/)\b|[?&]ev=pageview\b/i.test(lower)) return false;
@@ -135,6 +131,23 @@ export async function postAiListingDraft(
     const city = resolveCity(cities, str(f.cityId), draft.cityName || str(f.cityName));
     const cityId = city?.id || str(f.cityId);
     const zoneId = str(f.zoneId) || city?.zones?.[0]?.id || '';
+
+    const folderByCategory: Record<string, string> = {
+      'real-estate': 'real-estate',
+      cars: 'cars',
+      'job-listings': 'jobs',
+      marketplace: 'marketplace',
+      businesses: 'businesses',
+      professionals: 'professionals',
+    };
+    const hosted = await hostDraftImages(
+      rawImageUrls,
+      folderByCategory[draft.category] || 'listings',
+    );
+    if (hosted.error && rawImageUrls.length > 0 && !hosted.urls.length) {
+      return { draftId: draft.id, ok: false, error: hosted.error };
+    }
+    const imageUrls = hosted.urls;
 
     let result: ListingCreateResult;
 
@@ -231,8 +244,9 @@ export async function postAiListingDraft(
         if (Array.isArray(f.extras)) {
           for (const extra of f.extras) fd.append('extras[]', String(extra));
         }
-        const files = await fetchImageFiles(imageUrls);
-        for (const file of files) fd.append('images', file, file.name);
+        if (imageUrls.length) {
+          fd.append('imageUrls', JSON.stringify(imageUrls));
+        }
         result = await createCarListing(fd);
         break;
       }

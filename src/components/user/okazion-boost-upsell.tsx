@@ -39,7 +39,7 @@ export const OKAZION_PRICE_EUR = 5;
 export const OKAZION_PRICE_BC = 100;
 
 export type OkazionBoostMode = 'off' | 'plan' | 'voucher' | 'buy-bc' | 'buy-card';
-export type OkazionPayMode = 'buy-bc' | 'buy-card';
+export type OkazionPayMode = 'plan' | 'buy-bc' | 'buy-card';
 
 const submitBtnSx = {
   ...productButtonSx,
@@ -138,7 +138,8 @@ export function OkazionBoostUpsell({
 }
 
 /**
- * OKAZION create flow footer — only two pay-and-post actions (crimson theme).
+ * OKAZION create flow footer.
+ * Uses a Grow/Elite package slot when available; otherwise card / Boost Coins.
  */
 export function OkazionPostActions({
   submitting = false,
@@ -152,6 +153,22 @@ export function OkazionPostActions({
   const { user } = useUser();
   const balance = Number(user?.boostCredits) || 0;
   const canBc = balance >= OKAZION_PRICE_BC;
+  const [planRemaining, setPlanRemaining] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const quota = await fetchOkazionPlanQuota();
+      if (cancelled) return;
+      setPlanRemaining(quota.quota?.remaining ?? 0);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const hasPlanSlot = (planRemaining ?? 0) > 0;
+  const quotaLoaded = planRemaining !== null;
 
   return (
     <Stack spacing={1.25} sx={{ pt: 0.5 }}>
@@ -171,17 +188,33 @@ export function OkazionPostActions({
           </Typography>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, lineHeight: 1.4 }}>
-          Njoftimi shfaqet me temë të kuqe në OKAZION për 5 ditë.
+          {hasPlanSlot
+            ? `Përdoret vendi nga paketa juaj (${planRemaining} të mbetura). Njoftimi shfaqet me temë të kuqe për 5 ditë.`
+            : 'Njoftimi shfaqet me temë të kuqe në OKAZION për 5 ditë.'}
         </Typography>
       </Box>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+      {!quotaLoaded ? (
+        <Button
+          type="button"
+          variant="contained"
+          disabled
+          sx={{
+            ...submitBtnSx,
+            bgcolor: OKAZION_RED,
+            color: OKAZION_RED_ON,
+            '&.Mui-disabled': { bgcolor: OKAZION_RED, color: OKAZION_RED_ON, opacity: 0.55 },
+          }}
+        >
+          Duke ngarkuar…
+        </Button>
+      ) : hasPlanSlot ? (
         <Button
           type="button"
           variant="contained"
           disabled={disabled || submitting}
-          onClick={() => onPost('buy-card')}
-          startIcon={<CreditCardIcon size={18} weight="bold" />}
+          onClick={() => onPost('plan')}
+          startIcon={<SealPercentIcon size={18} weight="fill" />}
           sx={{
             ...submitBtnSx,
             bgcolor: OKAZION_RED,
@@ -190,29 +223,48 @@ export function OkazionPostActions({
             '&.Mui-disabled': { bgcolor: OKAZION_RED, color: OKAZION_RED_ON, opacity: 0.55 },
           }}
         >
-          {submitting ? 'Duke postuar…' : `Posto · ${OKAZION_PRICE_EUR}€`}
+          {submitting ? 'Duke postuar…' : 'Posto'}
         </Button>
-        <Button
-          type="button"
-          variant="outlined"
-          disabled={disabled || submitting || !canBc}
-          onClick={() => onPost('buy-bc')}
-          startIcon={<BoostCoinIcon size={18} />}
-          sx={{
-            ...submitBtnSx,
-            borderColor: OKAZION_RED,
-            color: OKAZION_RED,
-            '&:hover': { borderColor: OKAZION_RED_DARK, bgcolor: OKAZION_RED_SOFT, boxShadow: 'none' },
-            '&.Mui-disabled': { borderColor: OKAZION_RED, color: OKAZION_RED, opacity: 0.45 },
-          }}
-        >
-          {submitting
-            ? 'Duke postuar…'
-            : canBc
-              ? `Posto · ${OKAZION_PRICE_BC} BC`
-              : `${OKAZION_PRICE_BC} BC (balancë e pamjaftueshme)`}
-        </Button>
-      </Stack>
+      ) : (
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+          <Button
+            type="button"
+            variant="contained"
+            disabled={disabled || submitting}
+            onClick={() => onPost('buy-card')}
+            startIcon={<CreditCardIcon size={18} weight="bold" />}
+            sx={{
+              ...submitBtnSx,
+              bgcolor: OKAZION_RED,
+              color: OKAZION_RED_ON,
+              '&:hover': { bgcolor: OKAZION_RED_DARK, boxShadow: 'none' },
+              '&.Mui-disabled': { bgcolor: OKAZION_RED, color: OKAZION_RED_ON, opacity: 0.55 },
+            }}
+          >
+            {submitting ? 'Duke postuar…' : `Posto · ${OKAZION_PRICE_EUR}€`}
+          </Button>
+          <Button
+            type="button"
+            variant="outlined"
+            disabled={disabled || submitting || !canBc}
+            onClick={() => onPost('buy-bc')}
+            startIcon={<BoostCoinIcon size={18} />}
+            sx={{
+              ...submitBtnSx,
+              borderColor: OKAZION_RED,
+              color: OKAZION_RED,
+              '&:hover': { borderColor: OKAZION_RED_DARK, bgcolor: OKAZION_RED_SOFT, boxShadow: 'none' },
+              '&.Mui-disabled': { borderColor: OKAZION_RED, color: OKAZION_RED, opacity: 0.45 },
+            }}
+          >
+            {submitting
+              ? 'Duke postuar…'
+              : canBc
+                ? `Posto · ${OKAZION_PRICE_BC} BC`
+                : `${OKAZION_PRICE_BC} BC (balancë e pamjaftueshme)`}
+          </Button>
+        </Stack>
+      )}
     </Stack>
   );
 }

@@ -42,6 +42,9 @@ const RESTRICTED_REASON_CODES = [
   'other',
 ];
 
+/** Hard policy blocks — never reclassify these as category mismatch. */
+const HARD_RESTRICTED_REASON_CODES = RESTRICTED_REASON_CODES.filter((c) => c !== 'other');
+
 const RESTRICTED_REASON_LABELS = {
   nudity: 'nudity / adult sexual content',
   sexual: 'sexual services or pornography',
@@ -55,6 +58,10 @@ const RESTRICTED_REASON_LABELS = {
   illegal: 'other illegal activity',
   other: 'restricted content',
 };
+
+function hasHardRestrictedReasons(reasons) {
+  return normalizeRestrictedReasons(reasons).some((r) => HARD_RESTRICTED_REASON_CODES.includes(r));
+}
 
 function isOpenAiConfigured() {
   return Boolean(String(process.env.OPENAI_API_KEY || '').trim());
@@ -946,9 +953,9 @@ CATEGORY GUARD (CRITICAL):
 ${categoryDefinitions}
 Set "detectedCategory" to the same value as "category", and "categoryMatch": true.`;
 
-  const contentPolicyInstruction = `CONTENT POLICY GUARD (CRITICAL — runs before category):
+  const contentPolicyInstruction = `CONTENT POLICY GUARD (CRITICAL — only for truly prohibited content):
 KuTaGjej does NOT allow listings that involve restricted or prohibited content. Inspect photos, caption, page text, and prompt carefully.
-Set "contentAllowed": false and fill "restrictedReasons" (string array) when ANY of the following is clearly intended or depicted:
+Set "contentAllowed": false and fill "restrictedReasons" (string array) ONLY when ANY of the following is clearly intended or depicted:
 - nudity / pornography / adult sexual content / sexual services ("nudity" or "sexual")
 - gambling, betting, casinos, lottery schemes ("gambling")
 - illegal drugs, narcotics, or controlled substance sales ("drugs")
@@ -958,13 +965,17 @@ Set "contentAllowed": false and fill "restrictedReasons" (string array) when ANY
 - scams, phishing, fake documents, pyramid schemes ("fraud")
 - counterfeit / pirated branded goods sold as genuine ("counterfeit")
 - other clearly illegal activity (trafficking, stolen goods, etc.) ("illegal")
-- otherwise prohibited content that does not fit above ("other")
+Use "other" ONLY for similarly illegal/prohibited material that has no better code above — NEVER for "wrong category", "does not match preferredCategory", or ordinary allowed goods/services in another vertical.
+
+WRONG CATEGORY IS NOT PROHIBITED CONTENT (CRITICAL):
+- A normal car/property/job/marketplace/business/professional listing under the wrong preferredCategory MUST keep contentAllowed true, restrictedReasons [], and use CATEGORY GUARD (categoryMatch false + detectedCategory).
+- Example: user selected real-estate but pasted a BMW for sale → contentAllowed true, categoryMatch false, detectedCategory "cars". Do NOT set contentAllowed false.
 
 Rules:
-1. If contentAllowed is false: do NOT invent a sellable draft. Set title/summary to short refusal notes, form to {}, categoryMatch true, detectedCategory to preferredCategory when provided (or "marketplace"), and list every matching restrictedReasons code.
+1. If contentAllowed is false (hard prohibited only): do NOT invent a sellable draft. Set title/summary to short refusal notes, form to {}, categoryMatch true, detectedCategory to preferredCategory when provided (or "marketplace"), and list every matching restrictedReasons code.
 2. Lingerie, swimwear, medical anatomy diagrams, toy guns clearly for kids, alcohol/tobacco sold legally as products, and casino-themed decorations that are NOT gambling services are usually ALLOWED (contentAllowed true) unless they are explicit adult content or real gambling offers.
 3. When contentAllowed is true: set restrictedReasons to [].
-4. Prefer blocking when intent is clear; if truly ambiguous and looks like a normal marketplace/job/property post, allow it.`;
+4. Prefer blocking only when prohibited intent is clear; if truly ambiguous and looks like a normal marketplace/job/property/car post, allow it and apply CATEGORY GUARD.`;
 
   const modeInstruction =
     mode === 'edit'
@@ -973,7 +984,7 @@ You receive the current listing JSON plus the user's edit instructions (and opti
 Return an UPDATED full draft. Keep fields the user did not ask to change. Apply only the requested edits.
 If they ask to add/replace images, set imageRoles for attached images and/or keep/merge imageUrls.
 When new photos are attached, re-identify the product/subject from the photos and refresh title/description accordingly, then merge the user's edit notes.
-Still apply the CONTENT POLICY GUARD and CATEGORY GUARD: block restricted content; if new photos/text clearly show a different vertical than preferredCategory, set categoryMatch false.`
+Still apply the CONTENT POLICY GUARD and CATEGORY GUARD: block only truly prohibited content; if new photos/text clearly show a different vertical than preferredCategory, set categoryMatch false with contentAllowed true (wrong category is not prohibited content).`
       : `MODE: CREATE a new listing from the user's prompt and/or website links and/or attached images.
 Use seller profile/signup info as defaults when the prompt omits contact details, business name, phone, etc.`;
 
@@ -1146,6 +1157,139 @@ function parseBooleanFlag(value) {
   return null;
 }
 
+function buildCategoryMismatchResult(parsed, { forcedCategory, detectedCategory, fallbackImageUrls }) {
+  const form = parsed.form && typeof parsed.form === 'object' ? parsed.form : {};
+  const modelImageUrls = Array.isArray(parsed.imageUrls)
+    ? parsed.imageUrls.filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u))
+    : [];
+  const imageRoles = Array.isArray(parsed.imageRoles)
+    ? parsed.imageRoles
+        .map((r) => String(r || '').trim().toLowerCase())
+        .map((r) => {
+          if (r === 'cover' || r === 'main') return 'cover';
+          if (r === 'profile' || r === 'avatar') return 'profile';
+          if (r === 'portfolio' || r === 'work') return 'portfolio';
+          return 'gallery';
+        })
+        .slice(0, MAX_ATTACHED_IMAGES)
+    : [];
+  const usableCategory =
+    detectedCategory && CATEGORIES.includes(detectedCategory) ? detectedCategory : null;
+
+  return {
+    // Keep a ready draft for the true category; UI must confirm before post.
+    category: usableCategory,
+    detectedCategory: usableCategory,
+    preferredCategory: forcedCategory,
+    categoryMatch: false,
+    contentAllowed: true,
+    restrictedReasons: [],
+    title: typeof parsed.title === 'string' ? parsed.title.trim() : '',
+    summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : '',
+    cityName: typeof parsed.cityName === 'string' ? parsed.cityName.trim() : '',
+    imageUrls: mergeImageUrlLists(fallbackImageUrls, modelImageUrls),
+    imageRoles,
+    form,
+    error: CATEGORY_MISMATCH_CODE,
+    errorMessage: categoryMismatchMessage(forcedCategory, usableCategory),
+  };
+}
+
+function resolveCategorySignals(parsed, forcedCategory) {
+  const detectedFromModel = CATEGORIES.includes(parsed.detectedCategory)
+    ? parsed.detectedCategory
+    : CATEGORIES.includes(parsed.category)
+      ? parsed.category
+      : null;
+  const inferredFromForm = inferCategoryFromForm(parsed.form);
+  const explicitMatch = parseBooleanFlag(parsed.categoryMatch);
+
+  let categoryMismatch = false;
+  let detectedCategory = detectedFromModel;
+
+  if (forcedCategory) {
+    if (detectedFromModel && detectedFromModel !== forcedCategory) {
+      // True subject differs from the user-selected category — never force-post.
+      categoryMismatch = true;
+      detectedCategory = detectedFromModel;
+    } else if (
+      CATEGORIES.includes(parsed.category) &&
+      parsed.category !== forcedCategory
+    ) {
+      categoryMismatch = true;
+      detectedCategory = parsed.category;
+    } else if (inferredFromForm && inferredFromForm !== forcedCategory) {
+      categoryMismatch = true;
+      detectedCategory = inferredFromForm;
+    } else if (explicitMatch === false) {
+      categoryMismatch = true;
+      detectedCategory = detectedFromModel || inferredFromForm || null;
+    } else {
+      detectedCategory = forcedCategory;
+    }
+  }
+
+  return { categoryMismatch, detectedCategory, detectedFromModel, explicitMatch };
+}
+
+/** Infer listing vertical from filled form fields when the model mislabels category. */
+function inferCategoryFromForm(form) {
+  if (!form || typeof form !== 'object') return null;
+  const filled = (key) => {
+    const value = form[key];
+    if (value == null) return false;
+    if (Array.isArray(value)) return value.length > 0;
+    return String(value).trim() !== '';
+  };
+
+  if (
+    filled('vehicleType') ||
+    filled('make') ||
+    filled('kilometers') ||
+    filled('fuelType') ||
+    filled('transmission')
+  ) {
+    return 'cars';
+  }
+  if (
+    filled('propertyCategory') ||
+    filled('surfaceM2') ||
+    filled('bedrooms') ||
+    filled('bathrooms') ||
+    filled('furnishing') ||
+    filled('totalFloors')
+  ) {
+    return 'real-estate';
+  }
+  if (
+    filled('jobType') ||
+    filled('workLocation') ||
+    filled('responsibilities') ||
+    filled('requirements') ||
+    filled('industry')
+  ) {
+    return 'job-listings';
+  }
+  if (filled('responseTimeHours') && filled('servicesHighlight')) {
+    return 'professionals';
+  }
+  if (
+    filled('servicesHighlight') &&
+    (filled('category') || filled('title')) &&
+    !filled('vehicleType') &&
+    !filled('propertyCategory') &&
+    !filled('jobType')
+  ) {
+    // businesses form is thinner; only claim it when marketplace-style product fields are absent
+    if (!filled('condition') && !filled('price')) return 'businesses';
+    if (filled('condition') || form.transactionType === 'shes') return 'marketplace';
+  }
+  if (filled('condition') && (form.transactionType === 'shes' || filled('category'))) {
+    return 'marketplace';
+  }
+  return null;
+}
+
 function parseAiListingResponse(raw, { forcedCategory, fallbackImageUrls = [] }) {
   let parsed;
   try {
@@ -1159,6 +1303,18 @@ function parseAiListingResponse(raw, { forcedCategory, fallbackImageUrls = [] })
   const contentBlocked =
     contentAllowedFlag === false ||
     (contentAllowedFlag == null && restrictedReasons.length > 0);
+
+  const { categoryMismatch, detectedCategory } = resolveCategorySignals(parsed, forcedCategory);
+
+  // Model sometimes marks wrong-category posts as contentAllowed:false with "other".
+  // Prefer category mismatch (with switch UI) unless a hard prohibited reason is present.
+  if (contentBlocked && categoryMismatch && !hasHardRestrictedReasons(restrictedReasons)) {
+    return buildCategoryMismatchResult(parsed, {
+      forcedCategory,
+      detectedCategory,
+      fallbackImageUrls,
+    });
+  }
 
   if (contentBlocked) {
     const reasons = restrictedReasons.length ? restrictedReasons : ['other'];
@@ -1180,65 +1336,12 @@ function parseAiListingResponse(raw, { forcedCategory, fallbackImageUrls = [] })
     };
   }
 
-  const detectedFromModel = CATEGORIES.includes(parsed.detectedCategory)
-    ? parsed.detectedCategory
-    : CATEGORIES.includes(parsed.category)
-      ? parsed.category
-      : null;
-  const explicitMatch = parseBooleanFlag(parsed.categoryMatch);
-
-  let categoryMismatch = false;
-  let detectedCategory = detectedFromModel;
-
-  if (forcedCategory) {
-    if (detectedFromModel && detectedFromModel !== forcedCategory) {
-      // True subject differs from the user-selected category — never force-post.
-      categoryMismatch = true;
-      detectedCategory = detectedFromModel;
-    } else if (explicitMatch === false) {
-      categoryMismatch = true;
-      detectedCategory = detectedFromModel || null;
-    } else {
-      detectedCategory = forcedCategory;
-    }
-  }
-
   if (categoryMismatch) {
-    const form = parsed.form && typeof parsed.form === 'object' ? parsed.form : {};
-    const modelImageUrls = Array.isArray(parsed.imageUrls)
-      ? parsed.imageUrls.filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u))
-      : [];
-    const imageRoles = Array.isArray(parsed.imageRoles)
-      ? parsed.imageRoles
-          .map((r) => String(r || '').trim().toLowerCase())
-          .map((r) => {
-            if (r === 'cover' || r === 'main') return 'cover';
-            if (r === 'profile' || r === 'avatar') return 'profile';
-            if (r === 'portfolio' || r === 'work') return 'portfolio';
-            return 'gallery';
-          })
-          .slice(0, MAX_ATTACHED_IMAGES)
-      : [];
-    const usableCategory =
-      detectedCategory && CATEGORIES.includes(detectedCategory) ? detectedCategory : null;
-
-    return {
-      // Keep a ready draft for the true category; UI must confirm before post.
-      category: usableCategory,
-      detectedCategory: usableCategory,
-      preferredCategory: forcedCategory,
-      categoryMatch: false,
-      contentAllowed: true,
-      restrictedReasons: [],
-      title: typeof parsed.title === 'string' ? parsed.title.trim() : '',
-      summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : '',
-      cityName: typeof parsed.cityName === 'string' ? parsed.cityName.trim() : '',
-      imageUrls: mergeImageUrlLists(fallbackImageUrls, modelImageUrls),
-      imageRoles,
-      form,
-      error: CATEGORY_MISMATCH_CODE,
-      errorMessage: categoryMismatchMessage(forcedCategory, usableCategory),
-    };
+    return buildCategoryMismatchResult(parsed, {
+      forcedCategory,
+      detectedCategory,
+      fallbackImageUrls,
+    });
   }
 
   const category =
@@ -1372,37 +1475,14 @@ async function interpretListing({
         hint: img.hint || null,
       })),
       instruction: (attachedImages || []).length
-        ? 'Photos are primary: identify the product from images, write a concrete title and description from what you see, then weave in every useful detail from prompt/caption (price, condition, city, extras). Do not invent unseen specs. Apply CONTENT POLICY GUARD then CATEGORY GUARD before filling form fields.'
-        : 'Build the listing from caption/description/text/prompt. Do not invent professions or offers missing from the text. Apply CONTENT POLICY GUARD then CATEGORY GUARD before filling form fields.',
+        ? 'Photos are primary: identify the product from images, write a concrete title and description from what you see, then weave in every useful detail from prompt/caption (price, condition, city, extras). Do not invent unseen specs. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.'
+        : 'Build the listing from caption/description/text/prompt. Do not invent professions or offers missing from the text. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.',
     },
   });
 }
 
 async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourcePrompt }) {
-  if (interpreted?.error === CONTENT_RESTRICTED_CODE || interpreted?.contentAllowed === false) {
-    const reasons = normalizeRestrictedReasons(interpreted.restrictedReasons);
-    const errorMessage =
-      interpreted.errorMessage || contentRestrictedMessage(reasons.length ? reasons : ['other']);
-    return {
-      id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      sourceUrl: sourceUrl || '',
-      category: null,
-      detectedCategory: null,
-      preferredCategory: interpreted.preferredCategory || null,
-      title: interpreted.title || '',
-      summary: interpreted.summary || '',
-      cityName: '',
-      imageUrls: [],
-      imageRoles: [],
-      form: {},
-      warning: warning || null,
-      error: errorMessage,
-      errorCode: CONTENT_RESTRICTED_CODE,
-      restrictedReasons: reasons.length ? reasons : ['other'],
-      sourcePrompt: sourcePrompt || null,
-    };
-  }
-
+  // Prefer category mismatch so the UI can offer a category switch instead of a hard block.
   if (interpreted?.error === CATEGORY_MISMATCH_CODE || interpreted?.categoryMatch === false) {
     const errorMessage =
       interpreted.errorMessage ||
@@ -1436,6 +1516,30 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
       warning: warning || null,
       error: errorMessage,
       errorCode: CATEGORY_MISMATCH_CODE,
+      sourcePrompt: sourcePrompt || null,
+    };
+  }
+
+  if (interpreted?.error === CONTENT_RESTRICTED_CODE || interpreted?.contentAllowed === false) {
+    const reasons = normalizeRestrictedReasons(interpreted.restrictedReasons);
+    const errorMessage =
+      interpreted.errorMessage || contentRestrictedMessage(reasons.length ? reasons : ['other']);
+    return {
+      id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      sourceUrl: sourceUrl || '',
+      category: null,
+      detectedCategory: null,
+      preferredCategory: interpreted.preferredCategory || null,
+      title: interpreted.title || '',
+      summary: interpreted.summary || '',
+      cityName: '',
+      imageUrls: [],
+      imageRoles: [],
+      form: {},
+      warning: warning || null,
+      error: errorMessage,
+      errorCode: CONTENT_RESTRICTED_CODE,
+      restrictedReasons: reasons.length ? reasons : ['other'],
       sourcePrompt: sourcePrompt || null,
     };
   }
@@ -1615,6 +1719,7 @@ module.exports = {
   isOpenAiConfigured,
   extractUrls,
   importListingsFromLinks,
+  parseAiListingResponse,
   MAX_IMPORT_URLS,
   CATEGORIES,
   CATEGORY_MISMATCH_CODE,

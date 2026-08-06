@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import RouterLink from 'next/link';
 import { Box, Button, IconButton, LinearProgress, Stack, Typography } from '@mui/material';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
@@ -16,7 +17,6 @@ import { ShareMyListingsDialog } from '@/components/user/share-my-listings-dialo
 import { useLanguage } from '@/hooks/use-language';
 import { useUser } from '@/hooks/use-user';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { hardNavigate } from '@/lib/hard-navigate';
 import { fetchMyReferralStats } from '@/lib/referrals-client';
 import type { ReferralNextTier } from '@/types/referrals';
 import { paths } from '@/paths';
@@ -166,9 +166,8 @@ export function ReferralSummaryCard() {
   return (
     <>
     <Box
-      component="a"
+      component={RouterLink}
       href={paths.user.referral}
-      onClick={(event) => hardNavigate(paths.user.referral, event)}
       sx={{
         ...portalCardSx,
         p: { xs: 2, sm: 2.25 },

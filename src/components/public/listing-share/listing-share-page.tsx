@@ -7,21 +7,21 @@ import {
   Box,
   Button,
   CircularProgress,
-  IconButton,
   Stack,
   Typography,
 } from '@mui/material';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
+import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { InstagramLogo as InstagramLogoIcon } from '@phosphor-icons/react/dist/ssr/InstagramLogo';
 import { LinkSimple as LinkSimpleIcon } from '@phosphor-icons/react/dist/ssr/LinkSimple';
-import { toPng } from 'html-to-image';
+import { toJpeg } from 'html-to-image';
 
 import {
   ListingStoryTemplate,
   STORY_HEIGHT,
   STORY_WIDTH,
+  StoryBackground,
 } from '@/components/public/listing-share/listing-story-template';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { claimDailyShareReward } from '@/lib/daily-share-client';
 import {
   DAILY_SHARE_BOOST_CREDITS,
@@ -31,6 +31,9 @@ import {
 import { recordListingMetricEvent, type ListingMetrics } from '@/lib/listing-metrics';
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
+
+const BRAND_GREEN = '#76ba1b';
+const SHEET_BG = 'rgba(12, 12, 12, 0.94)';
 
 async function shareOrCopyLink(title: string, url: string): Promise<'shared' | 'copied'> {
   try {
@@ -45,26 +48,12 @@ async function shareOrCopyLink(title: string, url: string): Promise<'shared' | '
   return 'copied';
 }
 
-async function shareStoryImage(file: File, title: string, url: string): Promise<'shared' | 'downloaded'> {
-  const canShareFiles =
-    typeof navigator !== 'undefined' &&
-    typeof navigator.share === 'function' &&
-    typeof navigator.canShare === 'function' &&
-    navigator.canShare({ files: [file] });
+function isMobileUa(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
 
-  if (canShareFiles) {
-    try {
-      await navigator.share({
-        files: [file],
-        title,
-        text: `${title}\n${url}`,
-      });
-      return 'shared';
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') throw err;
-    }
-  }
-
+function downloadFile(file: File) {
   const objectUrl = URL.createObjectURL(file);
   const a = document.createElement('a');
   a.href = objectUrl;
@@ -73,29 +62,92 @@ async function shareStoryImage(file: File, title: string, url: string): Promise<
   a.click();
   a.remove();
   URL.revokeObjectURL(objectUrl);
+}
+
+/** Opens Instagram’s story camera when the app is installed (image must already be shared/saved). */
+function openInstagramStoryCamera(): boolean {
+  if (typeof window === 'undefined' || !isMobileUa()) return false;
+  const ua = navigator.userAgent;
+  try {
+    if (/Android/i.test(ua)) {
+      window.location.href =
+        'intent://story-camera#Intent;scheme=instagram;package=com.instagram.android;end';
+      return true;
+    }
+    window.location.href = 'instagram://story-camera';
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Share the story image so Instagram can open Stories with it.
+ * Critical: share **files only** (no text/url) — mixing text makes Instagram skip Stories.
+ */
+async function shareStoryImage(file: File): Promise<'shared' | 'downloaded' | 'opened'> {
+  const fileOnly = { files: [file] };
+  const canShareFiles =
+    typeof navigator !== 'undefined' &&
+    typeof navigator.share === 'function' &&
+    typeof navigator.canShare === 'function' &&
+    navigator.canShare(fileOnly);
+
+  if (canShareFiles) {
+    try {
+      // Files-only → OS share sheet lists Instagram Stories with the image attached.
+      await navigator.share(fileOnly);
+      return 'shared';
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') throw err;
+    }
+  }
+
+  downloadFile(file);
+  if (openInstagramStoryCamera()) return 'opened';
   return 'downloaded';
 }
 
 function dataUrlToFile(dataUrl: string, filename: string): File {
   const [header, data] = dataUrl.split(',');
-  const mime = /data:(.*?);/.exec(header ?? '')?.[1] ?? 'image/png';
+  const mime = /data:(.*?);/.exec(header ?? '')?.[1] ?? 'image/jpeg';
   const binary = atob(data ?? '');
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
   return new File([bytes], filename, { type: mime });
 }
 
+async function waitForImages(root: HTMLElement): Promise<void> {
+  const imgs = Array.from(root.querySelectorAll('img'));
+  await Promise.all(
+    imgs.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete && img.naturalWidth > 0) {
+            resolve();
+            return;
+          }
+          const done = () => resolve();
+          img.addEventListener('load', done, { once: true });
+          img.addEventListener('error', done, { once: true });
+          window.setTimeout(done, 2500);
+        }),
+    ),
+  );
+}
+
 const btnSx = {
-  height: 52,
-  borderRadius: 999,
+  height: 54,
+  borderRadius: 2,
   fontWeight: 800,
   textTransform: 'none' as const,
-  fontSize: '0.95rem',
+  fontSize: '0.98rem',
   boxShadow: 'none',
-  px: 3,
+  px: 2.5,
+  letterSpacing: '-0.01em',
 };
 
-/** Full-page share experience — branded story template + standard app buttons. */
+/** Full-page share experience — branded story template + Instagram Stories flow. */
 export function ListingSharePage({
   open,
   onClose,
@@ -148,7 +200,7 @@ export function ListingSharePage({
       const w = el.clientWidth;
       const h = el.clientHeight;
       if (w < 8 || h < 8) return;
-      const scale = Math.min(w / STORY_WIDTH, h / STORY_HEIGHT);
+      const scale = Math.min(w / STORY_WIDTH, h / STORY_HEIGHT) * 0.96;
       setPreviewScale(Math.max(0.12, scale));
     };
 
@@ -234,31 +286,38 @@ export function ListingSharePage({
     setAwaitingPostConfirm(false);
     try {
       await bumpShareMetric();
-      const dataUrl = await toPng(storyRef.current, {
+      await waitForImages(storyRef.current);
+      // Brief paint settle so fonts/images are ready for capture.
+      await new Promise((r) => window.setTimeout(r, 80));
+
+      const dataUrl = await toJpeg(storyRef.current, {
         cacheBust: true,
         pixelRatio: 1,
+        quality: 0.95,
         width: STORY_WIDTH,
         height: STORY_HEIGHT,
+        backgroundColor: '#0a0a0a',
         style: { transform: 'none', transformOrigin: 'top left' },
       });
-      const file = dataUrlToFile(dataUrl, `kutagjej-story-${payload.listingId.slice(0, 8)}.png`);
-      const url = resolveListingShareUrl(payload);
-      const result = await shareStoryImage(file, payload.title, url);
-      setFeedback(
-        result === 'downloaded'
-          ? 'Story u shkarkua — ngarkoje në Instagram Stories.'
-          : 'Nëse e hapët Instagram, përfundo postimin e Story.',
-      );
+      const file = dataUrlToFile(dataUrl, `kutagjej-story-${payload.listingId.slice(0, 8)}.jpg`);
+      const result = await shareStoryImage(file);
 
-      // Never auto-claim: Web Share / download only prepare the image — posting is separate.
+      if (result === 'shared') {
+        setFeedback('Zgjidh Instagram → Story për ta postuar me këtë imazh.');
+      } else if (result === 'opened') {
+        setFeedback('Story u ruajt — hap Instagram Stories dhe zgjidhe nga galeria.');
+      } else {
+        setFeedback('Story u shkarkua — ngarkoje në Instagram Stories.');
+      }
+
       if (user) {
         setAwaitingPostConfirm(true);
         setRewardNote(
-          `Mbasi ta postosh në Instagram Stories, konfirmo më poshtë për +${DAILY_SHARE_BOOST_CREDITS} Boost Coins.`,
+          `Mbasi ta postosh në Instagram Stories, konfirmo për +${DAILY_SHARE_BOOST_CREDITS} Boost Coins.`,
         );
       } else {
         setRewardNote(
-          `Hyr në llogari për të marrë +${DAILY_SHARE_BOOST_CREDITS} Boost Coins nga shpërblimi ditor i ndarjes.`,
+          `Hyr në llogari për të marrë +${DAILY_SHARE_BOOST_CREDITS} Boost Coins nga shpërblimi ditor.`,
         );
       }
     } catch (err) {
@@ -287,14 +346,20 @@ export function ListingSharePage({
         zIndex: 1600,
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: 'background.default',
-        color: 'text.primary',
+        bgcolor: '#0a0a0a',
+        color: '#fff',
       }}
     >
+      {/* Immersive branded backdrop behind preview */}
+      <Box aria-hidden sx={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.55 }}>
+        <StoryBackground />
+      </Box>
+
       {/* Top bar */}
       <Stack
         direction="row"
         sx={{
+          position: 'relative',
           alignItems: 'center',
           justifyContent: 'space-between',
           px: { xs: 1.25, sm: 2 },
@@ -308,24 +373,39 @@ export function ListingSharePage({
           aria-label="Prapa"
           onClick={onClose}
           disabled={Boolean(busy)}
+          sx={{
+            color: '#fff',
+            borderColor: 'rgba(255,255,255,0.18)',
+            bgcolor: 'rgba(255,255,255,0.06)',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' },
+          }}
         />
-        <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '-0.01em' }}>
+        <Typography
+          sx={{
+            fontWeight: 800,
+            fontSize: '1.05rem',
+            letterSpacing: '-0.02em',
+            color: '#fff',
+          }}
+        >
           Ndaj njoftimin
         </Typography>
         <Box sx={{ width: 40 }} />
       </Stack>
 
-      {/* Story preview — fills remaining space */}
+      {/* Story preview */}
       <Box
         ref={previewWrapRef}
         sx={{
+          position: 'relative',
+          zIndex: 1,
           flex: 1,
           minHeight: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          px: 1.5,
-          py: 1,
+          px: 2,
+          py: 0.5,
           overflow: 'hidden',
         }}
       >
@@ -333,9 +413,9 @@ export function ListingSharePage({
           sx={{
             width: STORY_WIDTH * previewScale,
             height: STORY_HEIGHT * previewScale,
-            borderRadius: 2,
+            borderRadius: 3,
             overflow: 'hidden',
-            boxShadow: '0 16px 48px rgba(0,0,0,0.45)',
+            boxShadow: `0 0 0 1px rgba(118,186,27,0.35), 0 24px 64px rgba(0,0,0,0.65)`,
             position: 'relative',
           }}
         >
@@ -370,50 +450,74 @@ export function ListingSharePage({
         <ListingStoryTemplate ref={storyRef} payload={payload} />
       </Box>
 
-      {/* Bottom actions */}
+      {/* Bottom actions — always dark glass, matches story brand */}
       <Box
         sx={{
+          position: 'relative',
+          zIndex: 2,
           flexShrink: 0,
           px: { xs: 1.75, sm: 3 },
-          pt: 1.25,
-          pb: { xs: 'max(16px, env(safe-area-inset-bottom))', sm: 2.5 },
-          bgcolor: (theme) =>
-            theme.palette.mode === 'dark' ? 'rgba(10,10,10,0.92)' : 'rgba(255,255,255,0.94)',
-          borderTop: '1px solid',
-          borderColor: 'divider',
-          backdropFilter: 'blur(12px)',
+          pt: 1.75,
+          pb: { xs: 'max(18px, env(safe-area-inset-bottom))', sm: 2.75 },
+          bgcolor: SHEET_BG,
+          borderTop: '1px solid rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 -16px 48px rgba(0,0,0,0.45)',
         }}
       >
-        <Stack spacing={1.25} sx={{ maxWidth: 440, mx: 'auto', width: '100%' }}>
-          <Typography
+        <Stack spacing={1.35} sx={{ maxWidth: 440, mx: 'auto', width: '100%' }}>
+          <Stack
+            direction="row"
+            spacing={1.25}
             sx={{
-              textAlign: 'center',
-              fontSize: '0.8rem',
-              lineHeight: 1.45,
-              color: 'text.secondary',
-              px: 0.5,
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
+              rowGap: 0.75,
             }}
           >
-            Instagram Story përfundon shpërblimin ditor:{' '}
-            <Box component="span" sx={{ fontWeight: 800, color: 'primary.main' }}>
-              +{DAILY_SHARE_BOOST_CREDITS} Boost Coins
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.65,
+                px: 1.15,
+                py: 0.55,
+                borderRadius: 999,
+                bgcolor: 'rgba(118,186,27,0.18)',
+                border: '1px solid rgba(118,186,27,0.45)',
+                color: BRAND_GREEN,
+              }}
+            >
+              <BoostCoinIcon size={15} />
+              <Typography sx={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '-0.01em', color: 'inherit' }}>
+                +{DAILY_SHARE_BOOST_CREDITS} Boost Coins
+              </Typography>
             </Box>
-            {' '}
-            (vetëm pasi ta postosh dhe të konfirmosh)
-            {!user ? (
-              <>
-                {' '}
-                —{' '}
-                <Box
-                  component="a"
-                  href={paths.user.auth}
-                  sx={{ color: 'primary.main', fontWeight: 700, textDecoration: 'none' }}
-                >
-                  hyr për t&apos;i marrë
-                </Box>
-              </>
-            ) : null}
-          </Typography>
+            <Typography
+              sx={{
+                textAlign: 'center',
+                fontSize: '0.78rem',
+                lineHeight: 1.4,
+                color: 'rgba(255,255,255,0.55)',
+                fontWeight: 500,
+              }}
+            >
+              pasi ta postosh Story dhe të konfirmosh
+              {!user ? (
+                <>
+                  {' · '}
+                  <Box
+                    component="a"
+                    href={paths.user.auth}
+                    sx={{ color: BRAND_GREEN, fontWeight: 700, textDecoration: 'none' }}
+                  >
+                    hyr
+                  </Box>
+                </>
+              ) : null}
+            </Typography>
+          </Stack>
 
           <Button
             type="button"
@@ -425,15 +529,17 @@ export function ListingSharePage({
             onClick={() => void handleShareStory()}
             startIcon={
               busy === 'story' ? (
-                <CircularProgress size={18} color="inherit" />
+                <CircularProgress size={18} sx={{ color: '#0a0a0a' }} />
               ) : (
-                <InstagramLogoIcon size={20} weight="fill" />
+                <InstagramLogoIcon size={22} weight="fill" />
               )
             }
             sx={{
               ...btnSx,
-              color: 'primary.contrastText',
-              '&:hover': { color: 'primary.contrastText', boxShadow: 'none' },
+              bgcolor: BRAND_GREEN,
+              color: '#0a0a0a',
+              '&:hover': { bgcolor: '#86c92a', color: '#0a0a0a', boxShadow: 'none' },
+              '&.Mui-disabled': { bgcolor: 'rgba(118,186,27,0.35)', color: 'rgba(10,10,10,0.5)' },
             }}
           >
             Ndaj si Instagram Story
@@ -448,18 +554,24 @@ export function ListingSharePage({
             onClick={() => void handleShareLink()}
             startIcon={
               busy === 'link' ? (
-                <CircularProgress size={18} color="inherit" />
+                <CircularProgress size={18} sx={{ color: '#fff' }} />
               ) : (
                 <LinkSimpleIcon size={18} weight="bold" />
               )
             }
             sx={{
               ...btnSx,
-              borderColor: 'divider',
-              color: 'text.primary',
+              borderColor: 'rgba(255,255,255,0.22)',
+              color: '#fff',
+              bgcolor: 'rgba(255,255,255,0.04)',
               '&:hover': {
-                borderColor: 'primary.main',
-                bgcolor: primaryMainAlpha(0.1),
+                borderColor: BRAND_GREEN,
+                bgcolor: 'rgba(118,186,27,0.12)',
+                color: '#fff',
+              },
+              '&.Mui-disabled': {
+                borderColor: 'rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.35)',
               },
             }}
           >
@@ -467,15 +579,18 @@ export function ListingSharePage({
           </Button>
 
           {feedback ? (
-            <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary', fontWeight: 550 }}>
+            <Typography
+              variant="body2"
+              sx={{ textAlign: 'center', color: 'rgba(255,255,255,0.65)', fontWeight: 550, fontSize: '0.8rem' }}
+            >
               {feedback}
             </Typography>
           ) : null}
+
           {awaitingPostConfirm && user ? (
             <Button
               type="button"
               variant="contained"
-              color="success"
               disableElevation
               size="large"
               fullWidth
@@ -486,24 +601,45 @@ export function ListingSharePage({
               }
               sx={{
                 ...btnSx,
-                bgcolor: 'success.main',
-                color: 'common.white',
-                '&:hover': { bgcolor: 'success.dark', boxShadow: 'none' },
+                bgcolor: 'rgba(255,255,255,0.1)',
+                color: '#fff',
+                border: '1px solid rgba(118,186,27,0.55)',
+                '&:hover': { bgcolor: 'rgba(118,186,27,0.2)', boxShadow: 'none' },
               }}
             >
               E postova në Instagram — merr +{DAILY_SHARE_BOOST_CREDITS} BC
             </Button>
           ) : null}
+
           {rewardNote ? (
             <Alert
               severity={awaitingPostConfirm ? 'info' : 'success'}
-              sx={{ borderRadius: 2, py: 0.2 }}
+              sx={{
+                borderRadius: 2,
+                py: 0.15,
+                bgcolor: awaitingPostConfirm ? 'rgba(56,189,248,0.12)' : 'rgba(118,186,27,0.12)',
+                color: '#fff',
+                border: '1px solid',
+                borderColor: awaitingPostConfirm ? 'rgba(56,189,248,0.35)' : 'rgba(118,186,27,0.35)',
+                '& .MuiAlert-icon': { color: awaitingPostConfirm ? '#38bdf8' : BRAND_GREEN },
+              }}
             >
               {rewardNote}
             </Alert>
           ) : null}
+
           {error ? (
-            <Alert severity="error" sx={{ borderRadius: 2, py: 0.2 }}>
+            <Alert
+              severity="error"
+              sx={{
+                borderRadius: 2,
+                py: 0.15,
+                bgcolor: 'rgba(248,113,113,0.12)',
+                color: '#fff',
+                border: '1px solid rgba(248,113,113,0.35)',
+                '& .MuiAlert-icon': { color: '#f87171' },
+              }}
+            >
               {error}
             </Alert>
           ) : null}

@@ -96,6 +96,8 @@ export function AddListingPickerDialog({
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [categories, setCategories] = React.useState<ListingCategory[]>([]);
+  const [hasBusinessListing, setHasBusinessListing] = React.useState(false);
+  const [hasProfessionalListing, setHasProfessionalListing] = React.useState(false);
   const [pickingOkazion, setPickingOkazion] = React.useState(initialOkazion);
 
   React.useEffect(() => {
@@ -109,10 +111,17 @@ export function AddListingPickerDialog({
     setLoading(true);
     setError(null);
     void (async () => {
-      const res = await listCategoriesPublic();
+      const [catRes, bizRes, proRes] = await Promise.all([
+        listCategoriesPublic(),
+        listMyBusinessListings(),
+        listMyProfessionalListings(),
+      ]);
       if (cancelled) return;
-      if (res.error) setError(res.error);
-      setCategories(res.categories ?? []);
+      if (catRes.error) setError(catRes.error);
+      setCategories(catRes.categories ?? []);
+      // Directory profiles: one per account — hide add options when one already exists.
+      setHasBusinessListing((bizRes.listings?.length ?? 0) > 0);
+      setHasProfessionalListing((proRes.listings?.length ?? 0) > 0);
       setLoading(false);
     })();
     return () => {
@@ -132,9 +141,14 @@ export function AddListingPickerDialog({
           hint: fallbackByKey[c.key]?.hint ?? '',
         }))
       : localizedFallback;
+  const availableOptions = allOptions.filter((o) => {
+    if (o.key === 'businesses' && hasBusinessListing) return false;
+    if (o.key === 'professionals' && hasProfessionalListing) return false;
+    return true;
+  });
   const options = pickingOkazion
-    ? allOptions.filter((o) => OKAZION_CATEGORY_KEYS.has(o.key))
-    : allOptions;
+    ? availableOptions.filter((o) => OKAZION_CATEGORY_KEYS.has(o.key))
+    : availableOptions;
 
   const handleCloseRequest = () => {
     // Back out of OKAZION category pick before dismissing the sheet.

@@ -1,9 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Box, Stack, Typography } from '@mui/material';
+import { Box } from '@mui/material';
+import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
+import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
+import { CarProfile as CarProfileIcon } from '@phosphor-icons/react/dist/ssr/CarProfile';
+import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { useLanguage } from '@/hooks/use-language';
 import {
@@ -19,9 +23,11 @@ import {
   type BrowseOkazionFilters,
 } from '@/lib/listing-filters';
 import { paths } from '@/paths';
-import { PRODUCT_BROWSE_CONTROL_HEIGHT } from '@/components/public/product-browse-chrome';
+import {
+  PRODUCT_BROWSE_CONTROL_HEIGHT,
+  ProductTag,
+} from '@/components/public/product-browse-chrome';
 import { ListingKeywordSearchInput } from '@/components/public/listing-filters/listing-keyword-search-input';
-import { HomeVerticalIcon } from '@/components/public/home-vertical-icon';
 
 const OKAZION_SEARCH_ACCENT = { color: OKAZION_ACCENT, soft: OKAZION_ACCENT_SOFT } as const;
 
@@ -32,6 +38,16 @@ const OKAZION_BROWSE_VERTICAL_IDS = new Set<HomeVerticalId>([
   'jobs',
   'marketplace',
 ]);
+
+const OKAZION_VERTICAL_ICONS: Record<
+  'real-estate' | 'cars' | 'jobs' | 'marketplace',
+  PhosphorIcon
+> = {
+  'real-estate': BuildingsIcon,
+  cars: CarProfileIcon,
+  jobs: BriefcaseIcon,
+  marketplace: StorefrontIcon,
+};
 
 const toolbarRowSx = {
   display: 'flex',
@@ -90,84 +106,37 @@ export function OkazionBrowseControls() {
         </Box>
       </Box>
 
-      <Stack
+      <Box
         role="navigation"
         aria-label="Kategoritë kryesore"
-        direction="row"
         sx={{
           mt: { xs: 1.5, md: 2 },
-          width: '100%',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
         }}
       >
-        {verticals.map((vertical) => {
-          const active = applied.kind === vertical.id;
-          const href = buildOkazionHref({
-            q: applied.q,
-            kind: active ? undefined : vertical.id,
-          });
-          return (
-            <Stack
-              key={vertical.id}
-              component={RouterLink}
-              href={href}
-              spacing={0.45}
-              sx={{
-                flex: 1,
-                minWidth: 0,
-                alignItems: 'center',
-                textDecoration: 'none',
-                color: 'inherit',
-                cursor: 'pointer',
-                userSelect: 'none',
-                WebkitTapHighlightColor: 'transparent',
-                '&:hover .okazion-cat-circle': {
-                  borderColor: OKAZION_ACCENT,
-                  bgcolor: OKAZION_ACCENT_SOFT,
-                },
-                '&:hover .okazion-cat-label': {
-                  color: OKAZION_ACCENT,
-                },
-                '&:active .okazion-cat-circle': {
-                  borderColor: OKAZION_ACCENT,
-                  bgcolor: OKAZION_ACCENT_SOFT,
-                },
-              }}
-            >
-              <Box
-                className="okazion-cat-circle"
-                sx={{
-                  width: { xs: 72, sm: 76 },
-                  height: { xs: 72, sm: 76 },
-                  borderRadius: '50%',
-                  display: 'grid',
-                  placeItems: 'center',
-                  bgcolor: active ? OKAZION_ACCENT_SOFT : 'background.paper',
-                  border: '1px solid',
-                  borderColor: active ? OKAZION_ACCENT : 'divider',
-                  transition: 'border-color 0.15s ease, background-color 0.15s ease',
-                }}
-              >
-                <HomeVerticalIcon verticalId={vertical.id} size={40} color={OKAZION_ACCENT} />
-              </Box>
-              <Typography
-                className="okazion-cat-label"
-                variant="caption"
-                sx={{
-                  fontWeight: active ? 700 : 600,
-                  color: active ? OKAZION_ACCENT : 'text.secondary',
-                  whiteSpace: 'nowrap',
-                  fontSize: { xs: '0.72rem', sm: '0.78rem' },
-                  transition: 'color 0.15s ease',
-                }}
-              >
-                {vertical.label}
-              </Typography>
-            </Stack>
-          );
-        })}
-      </Stack>
+        <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, width: 'max-content', pr: 1 }}>
+          {verticals.map((vertical) => {
+            const active = applied.kind === vertical.id;
+            const href = buildOkazionHref({
+              q: applied.q,
+              kind: active ? undefined : vertical.id,
+            });
+            return (
+              <ProductTag
+                key={vertical.id}
+                href={href}
+                label={vertical.label}
+                icon={OKAZION_VERTICAL_ICONS[vertical.id as keyof typeof OKAZION_VERTICAL_ICONS]}
+                active={active}
+                accent={OKAZION_SEARCH_ACCENT}
+              />
+            );
+          })}
+        </Box>
+      </Box>
     </Box>
   );
 }
@@ -179,24 +148,20 @@ export function OkazionBrowseControlsFallback() {
       <Box sx={{ ...toolbarRowSx, opacity: 0.5 }}>
         <Box sx={{ flex: 1, height: PRODUCT_BROWSE_CONTROL_HEIGHT, borderRadius: 2.5, bgcolor: 'action.hover' }} />
       </Box>
-      <Stack
-        direction="row"
-        sx={{ mt: { xs: 1.5, md: 2 }, width: '100%', justifyContent: 'space-between' }}
-      >
+      <Box sx={{ mt: { xs: 1.5, md: 2 }, display: 'flex', gap: 1 }}>
         {(['real-estate', 'cars', 'jobs', 'marketplace'] as const).map((id) => (
-          <Stack key={id} spacing={0.45} sx={{ flex: 1, alignItems: 'center', minWidth: 0 }}>
-            <Box
-              sx={{
-                width: { xs: 72, sm: 76 },
-                height: { xs: 72, sm: 76 },
-                borderRadius: '50%',
-                bgcolor: 'action.hover',
-              }}
-            />
-            <Box sx={{ width: 44, height: 10, borderRadius: 1, bgcolor: 'action.hover' }} />
-          </Stack>
+          <Box
+            key={id}
+            sx={{
+              height: 34,
+              width: 88,
+              borderRadius: 999,
+              bgcolor: 'action.hover',
+              flexShrink: 0,
+            }}
+          />
         ))}
-      </Stack>
+      </Box>
     </Box>
   );
 }

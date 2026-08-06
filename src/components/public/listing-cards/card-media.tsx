@@ -49,9 +49,9 @@ export interface CardMediaProps {
   shareCount?: number;
   saveCount?: number;
   saved?: boolean;
-  /** Premium listing — amber bookmark accent. */
+  /** Premium listing — amber card chrome (bookmark stays primary green). */
   premium?: boolean;
-  /** OKAZION listing — red accent / badge. */
+  /** OKAZION listing — red badge / countdown (bookmark stays primary green). */
   okazion?: boolean;
   /** When OKAZION ends (ISO). Countdown falls back to 5 days if omitted. */
   okazionUntil?: string | null;
@@ -289,7 +289,7 @@ export function CardMedia({
           aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
           count={saveCount}
           active={saved}
-          accent={okazion ? 'error' : premium ? 'warning' : 'primary'}
+          accent="primary"
           icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} />}
           onClick={handleSave}
         />

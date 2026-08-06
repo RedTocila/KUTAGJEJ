@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import RouterLink from 'next/link';
 import {
   Box,
   Button,
@@ -56,7 +57,6 @@ import { LanguageSwitchRow } from '@/components/user/language-switch-row';
 import { PortalLinkCard, PortalLinkGroup, portalCardSx } from '@/components/user/portal-cards';
 import { ReferralSummaryCard } from '@/components/user/referral-summary-card';
 import { planAccentForCode } from '@/components/user/packages/package-ui';
-import { hardNavigate } from '@/lib/hard-navigate';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
 
@@ -150,9 +150,8 @@ function ActionTile({
 
   return (
     <Box
-      component="a"
+      component={RouterLink}
       href={href || paths.user.dashboard}
-      onClick={(event) => hardNavigate(href || paths.user.dashboard, event)}
       sx={{ ...sx, textDecoration: 'none', color: 'inherit' }}
     >
       {content}
@@ -270,9 +269,8 @@ function QuotaStat({
       {convertible ? (
         <Tooltip title={convertTooltip} arrow>
           <IconButton
-            component="a"
+            component={RouterLink}
             href={`${paths.user.packagesExtra}#convert`}
-            onClick={(event) => hardNavigate(`${paths.user.packagesExtra}#convert`, event)}
             size="small"
             aria-label={convertAria}
             sx={{
@@ -413,9 +411,8 @@ export default function UserDashboardPage() {
         </Stack>
 
         <Box
-          component="a"
+          component={RouterLink}
           href={paths.user.credits}
-          onClick={(event) => hardNavigate(paths.user.credits, event)}
           sx={{
             alignSelf: 'flex-start',
             textDecoration: 'none',

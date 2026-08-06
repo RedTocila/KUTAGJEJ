@@ -38,16 +38,14 @@ export const STORY_WIDTH = 1080;
 export const STORY_HEIGHT = 1920;
 
 /**
- * Exact feed long-card proportions (from the listing card screenshot), enlarged for story.
- * Aspect ≈ 3:5 (portrait). Media ≈ 45% of height. Body is compact — no stretch gaps.
+ * Feed-style listing card for the story canvas.
+ * Taller media, compact body — avoids empty black stretch when specs/price are missing.
  */
-const CARD_W = 720;
-/** width / height — tall long card */
-const CARD_ASPECT = '3 / 5';
-const MEDIA_FRAC = 0.45;
+const CARD_W = 760;
+const MEDIA_H = 520;
 const GREEN = '#76ba1b';
-/** Scale factor vs ~360px mobile card (720/360). */
-const S = 2;
+/** Scale factor vs ~360px mobile card (760/360). */
+const S = 2.1;
 
 const SPEC_ICONS: Record<ListingShareSpecIcon, PhosphorIcon> = {
   bed: BedIcon,
@@ -76,7 +74,7 @@ const SPEC_ICONS: Record<ListingShareSpecIcon, PhosphorIcon> = {
 };
 
 /** Dark branded backdrop matching the share-story template art. */
-function StoryBackground() {
+export function StoryBackground() {
   return (
     <Box aria-hidden sx={{ position: 'absolute', inset: 0, overflow: 'hidden', bgcolor: '#0a0a0a' }}>
       <Box
@@ -241,7 +239,7 @@ function SpecChip({ icon, label }: { icon: ListingShareSpecIcon; label: string }
 }
 
 /**
- * Long card — outer size fixed. Every info element enlarged to fill the body (no empty gap).
+ * Listing card — height follows content so sparse listings stay tight (no empty black gap).
  */
 function TemplateListingCard({ payload }: { payload: ListingSharePayload }) {
   const specs = (payload.specs ?? []).filter((s) => s.label).slice(0, 6);
@@ -253,11 +251,11 @@ function TemplateListingCard({ payload }: { payload: ListingSharePayload }) {
     <Box
       sx={{
         width: CARD_W,
-        aspectRatio: CARD_ASPECT,
-        borderRadius: 2 * S,
+        borderRadius: 2.25 * S,
         overflow: 'hidden',
-        bgcolor: '#181818',
-        border: `${2 * S}px solid ${GREEN}`,
+        bgcolor: '#141414',
+        border: `${2.5 * S}px solid ${GREEN}`,
+        boxShadow: '0 28px 80px rgba(0,0,0,0.55)',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
@@ -267,10 +265,11 @@ function TemplateListingCard({ payload }: { payload: ListingSharePayload }) {
         sx={{
           position: 'relative',
           width: '100%',
-          flex: `0 0 ${MEDIA_FRAC * 100}%`,
+          height: MEDIA_H,
           borderBottom: '1px solid rgba(255,255,255,0.08)',
           bgcolor: 'rgba(118,186,27,0.06)',
           overflow: 'hidden',
+          flexShrink: 0,
         }}
       >
         {payload.imageUrl ? (
@@ -332,63 +331,52 @@ function TemplateListingCard({ payload }: { payload: ListingSharePayload }) {
         </Stack>
       </Box>
 
-      <Stack
-        spacing={3}
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          px: 3.75,
-          py: 3.75,
-          bgcolor: '#181818',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Stack spacing={2}>
-          {payload.category ? (
-            <Typography
-              sx={{
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                fontSize: 24,
-                color: 'rgba(255,255,255,0.58)',
-                lineHeight: 1.1,
-              }}
-            >
-              {payload.category}
-            </Typography>
-          ) : null}
-
+      <Stack spacing={2.25} sx={{ px: 3.5, py: 3.25, bgcolor: '#141414' }}>
+        {payload.category ? (
           <Typography
             sx={{
-              fontWeight: 800,
-              fontSize: 44,
-              lineHeight: 1.18,
-              color: '#fff',
-              display: '-webkit-box',
-              WebkitLineClamp: 3,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              fontSize: 22,
+              color: 'rgba(255,255,255,0.55)',
+              lineHeight: 1.1,
             }}
           >
-            {payload.title}
+            {payload.category}
           </Typography>
+        ) : null}
 
-          {payload.priceLabel ? (
-            <Typography sx={{ fontWeight: 900, fontSize: 56, color: GREEN, lineHeight: 1.05 }}>
-              {payload.priceLabel}
-            </Typography>
-          ) : null}
-        </Stack>
+        <Typography
+          sx={{
+            fontWeight: 800,
+            fontSize: 42,
+            lineHeight: 1.2,
+            color: '#fff',
+            display: '-webkit-box',
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {payload.title}
+        </Typography>
+
+        {payload.priceLabel ? (
+          <Typography sx={{ fontWeight: 900, fontSize: 52, color: GREEN, lineHeight: 1.05 }}>
+            {payload.priceLabel}
+          </Typography>
+        ) : null}
 
         {specs.length > 0 ? (
           <Box
             sx={{
               display: 'flex',
               flexWrap: 'wrap',
-              rowGap: 1.75,
-              columnGap: 1.75,
+              rowGap: 1.5,
+              columnGap: 1.5,
               alignItems: 'center',
+              pt: 0.5,
             }}
           >
             {specs.map((spec, i) => (
@@ -397,28 +385,26 @@ function TemplateListingCard({ payload }: { payload: ListingSharePayload }) {
           </Box>
         ) : null}
 
-        <Stack spacing={2.5}>
-          {payload.location ? (
-            <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', color: 'rgba(255,255,255,0.92)' }}>
-              <Box sx={{ color: GREEN, display: 'inline-flex', lineHeight: 0 }}>
-                <MapPinIcon size={30} weight="fill" />
-              </Box>
-              <Typography sx={{ fontWeight: 650, fontSize: 28, lineHeight: 1.25 }}>
-                {payload.location}
-              </Typography>
-            </Stack>
-          ) : null}
-
-          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography sx={{ fontSize: 24, color: 'rgba(255,255,255,0.45)', fontWeight: 550 }}>
-              {posted ?? ''}
+        {payload.location ? (
+          <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', color: 'rgba(255,255,255,0.92)', pt: 0.5 }}>
+            <Box sx={{ color: GREEN, display: 'inline-flex', lineHeight: 0 }}>
+              <MapPinIcon size={28} weight="fill" />
+            </Box>
+            <Typography sx={{ fontWeight: 650, fontSize: 26, lineHeight: 1.25 }}>
+              {payload.location}
             </Typography>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', color: 'rgba(255,255,255,0.45)' }}>
-              <EyeIcon size={26} weight="regular" />
-              <Typography sx={{ fontSize: 24, fontWeight: 650 }}>
-                {new Intl.NumberFormat('en-GB').format(viewCount)}
-              </Typography>
-            </Stack>
+          </Stack>
+        ) : null}
+
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', pt: 0.75 }}>
+          <Typography sx={{ fontSize: 22, color: 'rgba(255,255,255,0.42)', fontWeight: 550 }}>
+            {posted ?? ''}
+          </Typography>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', color: 'rgba(255,255,255,0.42)' }}>
+            <EyeIcon size={24} weight="regular" />
+            <Typography sx={{ fontSize: 22, fontWeight: 650 }}>
+              {new Intl.NumberFormat('en-GB').format(viewCount)}
+            </Typography>
           </Stack>
         </Stack>
       </Stack>
@@ -452,29 +438,29 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
             position: 'relative',
             zIndex: 1,
             height: '100%',
-            px: 8,
-            pt: 5,
-            pb: 5,
+            px: 7,
+            pt: 10,
+            pb: 8,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Stack spacing={0.85} sx={{ alignItems: 'center', mb: 4, mt: 1.5, flexShrink: 0 }}>
+          <Stack spacing={1} sx={{ alignItems: 'center', mb: 5, flexShrink: 0 }}>
             <Box
               component="img"
               src={brandLogoSrc}
               alt={config.site.name}
-              sx={{ width: 96, height: 96, objectFit: 'contain' }}
+              sx={{ width: 88, height: 88, objectFit: 'contain' }}
             />
-            <Typography sx={{ fontWeight: 800, fontSize: 44, letterSpacing: '-0.02em', lineHeight: 1, color: '#fff' }}>
+            <Typography sx={{ fontWeight: 800, fontSize: 48, letterSpacing: '-0.03em', lineHeight: 1, color: '#fff' }}>
               {config.site.name}
             </Typography>
             <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-              <Typography sx={{ fontWeight: 500, fontSize: 22, color: 'rgba(255,255,255,0.88)' }}>
+              <Typography sx={{ fontWeight: 500, fontSize: 24, color: 'rgba(255,255,255,0.82)' }}>
                 Gjithçka në një vend.
               </Typography>
               <Box sx={{ color: GREEN, display: 'inline-flex', lineHeight: 0 }}>
-                <MapPinIcon size={20} weight="fill" />
+                <MapPinIcon size={22} weight="fill" />
               </Box>
             </Stack>
           </Stack>

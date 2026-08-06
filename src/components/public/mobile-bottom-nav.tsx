@@ -135,7 +135,7 @@ export function MobileBottomNav() {
     moveIndicatorTo(index);
     if (!item.activeWhen(pathname)) return;
 
-    // Already on this tab's root → scroll to top + hard refresh.
+    // Already on this tab's root → scroll to top + soft refresh.
     // Active on a related/nested route (e.g. create-listing under Home) → go to tab root.
     if (pathname === hrefPath(item.href)) {
       hardRefreshToTop(event);

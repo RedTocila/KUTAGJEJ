@@ -1,13 +1,13 @@
 'use client';
 
 import * as React from 'react';
+import RouterLink from 'next/link';
 import { alpha } from '@mui/material/styles';
 import { Box, Chip, Divider, Stack, Typography, type SxProps, type Theme } from '@mui/material';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { hardNavigate } from '@/lib/hard-navigate';
 import { productPanelSx } from '@/styles/product-sx';
 
 /** Shared surface used by portal link rows and content sections. */
@@ -60,9 +60,8 @@ export function PortalLinkCard({
 }) {
   return (
     <Box
-      component="a"
+      component={RouterLink}
       href={href}
-      onClick={(event) => hardNavigate(href, event)}
       sx={{
         textDecoration: 'none',
         color: 'inherit',

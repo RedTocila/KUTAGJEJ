@@ -536,12 +536,26 @@ router.post('/portal/convert-to-business', authMiddleware, requirePortalUser, as
   }
 });
 
+function parseAvatar(req, res, next) {
+  imageUpload.single('avatar')(req, res, (err) => {
+    if (!err) return next();
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ message: 'Foto duhet të jetë nën 8 MB.' });
+    }
+    if (/images are allowed/i.test(err.message || '')) {
+      return res.status(400).json({ message: 'Lejohen vetëm foto JPEG, PNG, WEBP dhe GIF.' });
+    }
+    console.error('POST /portal/avatar multer:', err?.message || err);
+    return res.status(400).json({ message: 'Nuk u arrit ngarkimi i fotos.' });
+  });
+}
+
 /** POST /api/auth/portal/avatar — upload + persist profile photo in one step. */
 router.post(
   '/portal/avatar',
   authMiddleware,
   requirePortalUser,
-  imageUpload.single('avatar'),
+  parseAvatar,
   async (req, res) => {
     try {
       if (!req.file) {
@@ -552,12 +566,6 @@ router.post(
       await req.admin.save();
       return res.json({ message: 'Foto e profilit u përditësua.', admin: formatUser(req.admin), avatarUrl });
     } catch (err) {
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).json({ message: 'Foto duhet të jetë nën 8 MB.' });
-      }
-      if (/images are allowed/i.test(err.message || '')) {
-        return res.status(400).json({ message: 'Lejohen vetëm foto JPEG, PNG, WEBP dhe GIF.' });
-      }
       console.error('POST /portal/avatar:', err?.message || err);
       return res.status(500).json({ message: 'Gabim serveri.' });
     }

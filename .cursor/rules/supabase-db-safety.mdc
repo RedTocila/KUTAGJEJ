@@ -1,0 +1,29 @@
+---
+description: Prevent destructive Supabase resets that wipe production data
+alwaysApply: true
+---
+
+# Supabase / production DB safety
+
+Live project `ksemrbndoenxdxijokke` holds real users, listings, packages, and coins.
+
+## Never on production
+
+- Run `supabase/migrations/20260801160000_init.sql` (or any full bootstrap) in the SQL Editor
+- `DROP TABLE` / `TRUNCATE` on app tables (listings, profiles, subscriptions, payments, cities, …)
+- `supabase db reset` or re-apply init against the live project
+- “Fix schema by re-running init” — that wiped production twice
+
+## Do instead
+
+- Schema changes: **new additive** migration only  
+  `supabase/migrations/YYYYMMDDHHMMSS_description.sql`
+- Prefer `ALTER TABLE … ADD COLUMN IF NOT EXISTS`, `CREATE TABLE IF NOT EXISTS`
+- Missing columns on live: use / extend `backend/scripts/repair-missing-schema.sql` (ALTERs only)
+- Local throwaway DBs only for reset experiments; never the shared cloud project
+
+## Before running any SQL against live
+
+1. Skim for `DROP`, `TRUNCATE`, `DELETE FROM` without a tight `WHERE`
+2. If unsure, stop and ask the user
+3. Read `docs/db-safety.md`

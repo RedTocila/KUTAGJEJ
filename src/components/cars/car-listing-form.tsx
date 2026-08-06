@@ -50,7 +50,7 @@ import {
 import { useUser } from '@/hooks/use-user';
 import { createCarListing, updateCarListing, type CarMineListing } from '@/lib/listings-client';
 import { contactPhoneFromStorage, resolveContactPhone } from '@/lib/listing-form-defaults';
-import { uploadListingImages } from '@/lib/uploads-client';
+import { mirrorRemoteImageUrls, uploadListingImages } from '@/lib/uploads-client';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 // ---------------------------------------------------------------------------
@@ -522,6 +522,29 @@ export function CarListingForm({
           return;
         }
       } else {
+        // Mirror AI-scraped remote URLs into our storage (browser fetch is blocked by CORS).
+        let hostedUrls: string[] = [];
+        if (existingImageUrls.length) {
+          const mirrored = await mirrorRemoteImageUrls(existingImageUrls, 'cars');
+          if (mirrored.error && !mirrored.urls.length) {
+            setSubmitError(mirrored.error);
+            return;
+          }
+          hostedUrls = mirrored.urls;
+        }
+
+        let uploaded: string[] = [];
+        if (images.length) {
+          const up = await uploadListingImages(images, 'cars');
+          if (up.error) {
+            setSubmitError(up.error);
+            return;
+          }
+          uploaded = up.urls;
+        }
+
+        const imageUrls = [...hostedUrls, ...uploaded].slice(0, MAX_IMAGES);
+
         const fd = new FormData();
         fd.append('vehicleType', form.vehicleType);
         fd.append('make', form.make);
@@ -540,7 +563,9 @@ export function CarListingForm({
         form.extras.forEach((e) => fd.append('extras[]', e));
         fd.append('contactPhone', form.contactPhone.trim());
         fd.append('cityId', form.cityId);
-        images.forEach((img) => fd.append('images', img, img.name));
+        if (imageUrls.length) {
+          fd.append('imageUrls', JSON.stringify(imageUrls));
+        }
 
         const { error, id } = await createCarListing(fd);
         if (error) {

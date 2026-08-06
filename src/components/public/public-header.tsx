@@ -22,6 +22,7 @@ import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
+import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
 
 import { HeaderMobileSearch } from './header-mobile-search';
@@ -84,7 +85,7 @@ export function PublicHeader() {
       setAddListingOpen(true);
       return;
     }
-    window.location.assign(paths.user.auth);
+    hardNavigate(paths.user.auth);
   };
 
   return (

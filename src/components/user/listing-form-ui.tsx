@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import RouterLink from 'next/link';
 import {
   Box,
   Button,
@@ -15,7 +16,6 @@ import {
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { PortalIconBox } from '@/components/user/portal-cards';
-import { hardNavigate } from '@/lib/hard-navigate';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 
@@ -147,9 +147,10 @@ export function ListingFormActions({
     >
       {backHref ? (
         <Button
+          component={RouterLink}
+          href={backHref}
           color="inherit"
           variant="outlined"
-          onClick={() => hardNavigate(backHref)}
           sx={{
             textTransform: 'none',
             fontWeight: 700,

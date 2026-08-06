@@ -2,7 +2,6 @@
 
 const express = require('express');
 const multer = require('multer');
-const { put } = require('@vercel/blob');
 const authMiddleware = require('../middleware/auth');
 const { getSupabaseAdmin } = require('../lib/supabase');
 const { camelizeRow, camelizeRows } = require('../lib/profiles');
@@ -13,6 +12,7 @@ const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers
 const { premiumFieldsFromDoc } = require('../lib/premium-listing');
 const { okazionFieldsFromDoc } = require('../lib/okazion-listing');
 const { sanitizeImageUrls } = require('../lib/image-upload');
+const { uploadBuffersToSupabase } = require('../lib/storage-uploads');
 
 const router = express.Router();
 
@@ -36,20 +36,6 @@ function requirePortalUser(req, res, next) {
     return res.status(403).json({ message: 'This action is only available for individual or business accounts.' });
   }
   next();
-}
-
-async function uploadToBlob(buffer, originalName, mimetype) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return null;
-  }
-  const ext = originalName.split('.').pop() || 'jpg';
-  const filename = `car-listings/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const blob = await put(filename, buffer, {
-    access: 'public',
-    contentType: mimetype,
-    token: process.env.BLOB_READ_WRITE_TOKEN,
-  });
-  return blob.url;
 }
 
 function parseExtras(fields) {
@@ -129,11 +115,15 @@ router.post(
       if (!v.ok) return res.status(400).json({ message: v.message });
 
       const files = req.files || [];
-      const imageUrls = [];
-      for (const file of files) {
-        const url = await uploadToBlob(file.buffer, file.originalname, file.mimetype);
-        if (url) imageUrls.push(url);
-      }
+      const uploadedUrls = files.length
+        ? await uploadBuffersToSupabase(files, 'cars')
+        : [];
+      // AI / form drafts may already have mirrored public URLs in imageUrls.
+      const providedUrls = sanitizeImageUrls(fields.imageUrls, MAX_CAR_IMAGES);
+      const imageUrls = [...providedUrls, ...uploadedUrls]
+        .filter(Boolean)
+        .filter((url, idx, arr) => arr.indexOf(url) === idx)
+        .slice(0, MAX_CAR_IMAGES);
 
       const cityId = String(fields.cityId).trim();
       if (!isUuid(cityId)) return res.status(400).json({ message: 'City not found.' });

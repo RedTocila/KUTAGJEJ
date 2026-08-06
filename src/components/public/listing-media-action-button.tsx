@@ -29,7 +29,7 @@ export function ListingMediaActionButton({
   disabled?: boolean;
   /** `hero` — solid dark glass; `glass` — softer dark transparent; `card` — listing card chips. */
   surface?: 'hero' | 'glass' | 'card';
-  /** Accent for the active / emphasized state — amber on premium cards. */
+  /** Accent for the active / emphasized state. Bookmark should stay `primary` (green). */
   accent?: 'primary' | 'warning' | 'error';
   onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }) {

@@ -10,6 +10,7 @@ const { sanitizeImageUrls } = require('../lib/image-upload');
 const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers');
 const { premiumFieldsFromDoc } = require('../lib/premium-listing');
 const { okazionFieldsFromDoc } = require('../lib/okazion-listing');
+const { parseComparePrice } = require('../lib/listing-compare-price');
 
 const router = express.Router();
 
@@ -83,6 +84,7 @@ router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
         category: d.category,
         condition: d.condition ?? null,
         price: d.price ?? null,
+        originalPrice: d.originalPrice ?? null,
         currency: d.currency ?? null,
         cityId: d.cityId ? String(d.cityId) : null,
         cityName: city?.name ?? null,
@@ -119,6 +121,9 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
 
     const selling = SELLING.has(body.transactionType);
     const hasPrice = selling && body.price !== null && body.price !== undefined && String(body.price).trim() !== '';
+    const price = hasPrice ? Number(body.price) : null;
+    const cmp = parseComparePrice(hasPrice ? body.originalPrice : null, price);
+    if (!cmp.ok) return res.status(400).json({ message: cmp.message });
 
     const row = {
       poster_id: req.user.id,
@@ -127,7 +132,8 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       description: String(body.description).trim(),
       category: body.category,
       condition: selling && body.condition ? body.condition : null,
-      price: hasPrice ? Number(body.price) : null,
+      price,
+      original_price: cmp.value,
       city_id: cityId,
       contact_phone: String(body.contactPhone || '').trim(),
       image_urls: sanitizeImageUrls(body.imageUrls, MAX_MARKETPLACE_IMAGES),
@@ -185,6 +191,9 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
 
     const selling = SELLING.has(body.transactionType);
     const hasPrice = selling && body.price !== null && body.price !== undefined && String(body.price).trim() !== '';
+    const price = hasPrice ? Number(body.price) : null;
+    const cmp = parseComparePrice(hasPrice ? body.originalPrice : null, price);
+    if (!cmp.ok) return res.status(400).json({ message: cmp.message });
 
     const patch = {
       transaction_type: body.transactionType,
@@ -192,7 +201,8 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
       description: String(body.description).trim(),
       category: body.category,
       condition: selling && body.condition ? body.condition : null,
-      price: hasPrice ? Number(body.price) : null,
+      price,
+      original_price: cmp.value,
       currency: hasPrice ? body.currency : null,
       city_id: cityId,
       contact_phone: String(body.contactPhone || '').trim(),

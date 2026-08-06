@@ -126,6 +126,43 @@ create index if not exists okazion_listing_vouchers_user_idx
 
 alter table public.okazion_listing_vouchers enable row level security;
 
+-- Compare-at ("was") prices for deals
+alter table public.real_estate_listings
+  add column if not exists original_price numeric;
+alter table public.car_listings
+  add column if not exists original_price numeric;
+alter table public.marketplace_listings
+  add column if not exists original_price numeric;
+
+-- Chat message image attachments
+alter table public.messages
+  add column if not exists image_url text not null default '';
+
+-- Per-user chat pin / hide ("delete for me")
+create table if not exists public.conversation_user_state (
+  conversation_id uuid not null references public.conversations (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  pinned boolean not null default false,
+  pinned_at timestamptz,
+  hidden_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (conversation_id, user_id)
+);
+
+create index if not exists conversation_user_state_user_idx
+  on public.conversation_user_state (user_id, hidden_at);
+
+create index if not exists conversation_user_state_user_pinned_idx
+  on public.conversation_user_state (user_id, pinned, pinned_at desc nulls last)
+  where pinned = true;
+
+alter table public.conversation_user_state enable row level security;
+
+-- Inbox delivered/delivered ticks need last message sender
+alter table public.conversations
+  add column if not exists last_message_sender_id uuid references public.profiles (id) on delete set null;
+
 -- Car vehicle type
 alter table public.car_listings
   add column if not exists vehicle_type text;

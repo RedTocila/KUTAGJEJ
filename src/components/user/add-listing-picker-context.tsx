@@ -7,6 +7,8 @@ import { useUser } from '@/hooks/use-user';
 
 type AddListingPickerContextValue = {
   openAddListingPicker: () => void;
+  /** True while the add-listing sheet is open (hide chrome that would sit under it). */
+  addListingPickerOpen: boolean;
 };
 
 const AddListingPickerContext = React.createContext<AddListingPickerContextValue | null>(null);
@@ -39,7 +41,10 @@ export function AddListingPickerProvider({ children }: { children: React.ReactNo
     setOpen(true);
   }, [canPublish]);
 
-  const value = React.useMemo(() => ({ openAddListingPicker }), [openAddListingPicker]);
+  const value = React.useMemo(
+    () => ({ openAddListingPicker, addListingPickerOpen: open }),
+    [openAddListingPicker, open],
+  );
 
   return (
     <AddListingPickerContext.Provider value={value}>

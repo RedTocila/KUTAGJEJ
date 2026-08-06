@@ -435,7 +435,7 @@ export function ListingOwnerMetrics({
               title={
                 autoRefreshEnabled
                   ? 'Hiq nga Auto-Refresh'
-                  : 'Shto në Auto-Refresh (rifreskim automatik sipas planit)'
+                  : 'Shto në Auto-Refresh · rifreshim automatik sipas planit · 1 BC për çdo rifreskim'
               }
             >
               <span>

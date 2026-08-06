@@ -2,8 +2,15 @@
 
 const { getSupabaseAdmin } = require('./supabase');
 const { isUuid } = require('./public-listings/query-helpers');
-const { isValidKind, TABLE_BY_KIND } = require('./listing-refresh');
+const {
+  isValidKind,
+  TABLE_BY_KIND,
+  refreshListingWithBoost,
+  getRefreshWindowHours,
+} = require('./listing-refresh');
 const { refreshHoursForPlanCode } = require('./auto-refresh-packages');
+
+const AUTO_REFRESH_BATCH_LIMIT = 200;
 
 function resolvePlanCode(sub) {
   if (!sub) return 'free';
@@ -279,6 +286,106 @@ async function purchaseAutoRefreshWithBoostCoins({ userId, packageId }) {
   };
 }
 
+/**
+ * Process enrolled Auto-Refresh listings that are due.
+ * Each successful bump uses the same path as manual refresh (1 BC + created_at bump).
+ */
+async function processDueAutoRefreshes({ limit = AUTO_REFRESH_BATCH_LIMIT } = {}) {
+  const sb = getSupabaseAdmin();
+  const batchLimit = Math.max(1, Math.min(500, Math.floor(Number(limit) || AUTO_REFRESH_BATCH_LIMIT)));
+
+  const { data: rows, error } = await sb
+    .from('listing_auto_refresh')
+    .select('user_id, listing_kind, listing_id, last_refreshed_at')
+    .eq('enabled', true)
+    .order('last_refreshed_at', { ascending: true })
+    .limit(batchLimit);
+
+  if (error) {
+    if (String(error.message || '').includes('listing_auto_refresh')) {
+      return { ok: true, scanned: 0, refreshed: 0, skipped: 0, failed: 0 };
+    }
+    throw error;
+  }
+
+  const hoursByUser = new Map();
+  let refreshed = 0;
+  let skipped = 0;
+  let failed = 0;
+  const failures = [];
+
+  for (const row of rows || []) {
+    const userId = String(row.user_id || '');
+    const kind = String(row.listing_kind || '');
+    const listingId = String(row.listing_id || '');
+    if (!userId || !isValidKind(kind) || !listingId) {
+      skipped += 1;
+      continue;
+    }
+
+    let hours = hoursByUser.get(userId);
+    if (hours == null) {
+      try {
+        hours = await getRefreshWindowHours(sb, userId);
+      } catch (err) {
+        failed += 1;
+        failures.push({
+          userId,
+          kind,
+          listingId,
+          message: err?.message || 'Failed to resolve refresh window',
+        });
+        continue;
+      }
+      hoursByUser.set(userId, hours);
+    }
+
+    const lastMs = row.last_refreshed_at ? new Date(row.last_refreshed_at).getTime() : NaN;
+    if (Number.isFinite(lastMs) && hours > 0) {
+      const requiredMs = hours * 60 * 60 * 1000;
+      if (Date.now() - lastMs < requiredMs) {
+        skipped += 1;
+        continue;
+      }
+    }
+
+    try {
+      const result = await refreshListingWithBoost({
+        userId,
+        kind,
+        listingId,
+      });
+      if (result.ok) {
+        refreshed += 1;
+      } else {
+        // Cooldown / missing BC / unapproved — keep enrollment and retry later.
+        skipped += 1;
+        if (result.status && result.status >= 500) {
+          failed += 1;
+          failures.push({ userId, kind, listingId, message: result.message });
+        }
+      }
+    } catch (err) {
+      failed += 1;
+      failures.push({
+        userId,
+        kind,
+        listingId,
+        message: err?.message || 'Auto-refresh failed',
+      });
+    }
+  }
+
+  return {
+    ok: true,
+    scanned: (rows || []).length,
+    refreshed,
+    skipped,
+    failed,
+    failures: failures.slice(0, 20),
+  };
+}
+
 module.exports = {
   resolvePlanCode,
   getAutoRefreshSnapshot,
@@ -286,4 +393,5 @@ module.exports = {
   listEnrolled,
   listCooldownAnchors,
   purchaseAutoRefreshWithBoostCoins,
+  processDueAutoRefreshes,
 };

@@ -13,6 +13,7 @@ const { premiumFieldsFromDoc } = require('../lib/premium-listing');
 const { okazionFieldsFromDoc } = require('../lib/okazion-listing');
 const { sanitizeImageUrls } = require('../lib/image-upload');
 const { uploadBuffersToSupabase } = require('../lib/storage-uploads');
+const { parseComparePrice } = require('../lib/listing-compare-price');
 
 const router = express.Router();
 
@@ -67,6 +68,7 @@ function formatMineListing(doc, cityById) {
     transmission: doc.transmission,
     fuelType: doc.fuelType,
     price: doc.price,
+    originalPrice: doc.originalPrice ?? null,
     currency: doc.currency,
     color: doc.color,
     finish: doc.finish ?? [],
@@ -136,6 +138,10 @@ router.post(
       if (cityErr) throw cityErr;
       if (!city) return res.status(400).json({ message: 'City not found.' });
 
+      const price = Number(fields.price);
+      const cmp = parseComparePrice(fields.originalPrice, price);
+      if (!cmp.ok) return res.status(400).json({ message: cmp.message });
+
       const row = {
         poster_id: req.user.id,
         vehicle_type: String(fields.vehicleType).trim().toLowerCase(),
@@ -147,7 +153,8 @@ router.post(
         kilometers: Number(fields.kilometers),
         transmission: fields.transmission,
         fuel_type: fields.fuelType,
-        price: Number(fields.price),
+        price,
+        original_price: cmp.value,
         currency: fields.currency,
         color: String(fields.color).trim().toLowerCase(),
         finish: parseFinish(fields),
@@ -232,6 +239,10 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
       ? extrasRaw.map((e) => String(e).trim()).filter(Boolean)
       : parseExtras(fields);
 
+    const price = Number(fields.price);
+    const cmp = parseComparePrice(fields.originalPrice, price);
+    if (!cmp.ok) return res.status(400).json({ message: cmp.message });
+
     const patch = {
       vehicle_type: String(fields.vehicleType).trim().toLowerCase(),
       make: String(fields.make).trim(),
@@ -242,7 +253,8 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
       kilometers: Number(fields.kilometers),
       transmission: fields.transmission,
       fuel_type: fields.fuelType,
-      price: Number(fields.price),
+      price,
+      original_price: cmp.value,
       currency: fields.currency,
       color: String(fields.color).trim().toLowerCase(),
       finish,

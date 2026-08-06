@@ -19,6 +19,7 @@ const { sanitizeImageUrls } = require('../lib/image-upload');
 const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers');
 const { premiumFieldsFromDoc } = require('../lib/premium-listing');
 const { okazionFieldsFromDoc } = require('../lib/okazion-listing');
+const { parseComparePrice } = require('../lib/listing-compare-price');
 
 const router = express.Router();
 
@@ -50,6 +51,7 @@ function formatMineListing(doc, cityById) {
     propertyCategory: doc.propertyCategory,
     transactionType: doc.transactionType,
     price: doc.price,
+    originalPrice: doc.originalPrice ?? null,
     currency: doc.currency,
     surfaceM2: doc.surfaceM2,
     cityName: city?.name ?? null,
@@ -121,13 +123,18 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
     const propertyCategory = String(req.body.propertyCategory).trim().toLowerCase();
     const contactPhone = String(req.body.contactPhone ?? '').trim();
 
+    const price = Number(req.body.price);
+    const cmp = parseComparePrice(req.body.originalPrice, price);
+    if (!cmp.ok) return res.status(400).json({ message: cmp.message });
+
     const row = {
       poster_id: req.user.id,
       property_category: propertyCategory,
       title: String(req.body.title).trim(),
       description: String(req.body.description).trim(),
       transaction_type: req.body.transactionType,
-      price: Number(req.body.price),
+      price,
+      original_price: cmp.value,
       currency: req.body.currency,
       surface_m2: Number(req.body.surfaceM2),
       city_id: cityId,
@@ -210,12 +217,17 @@ router.put('/real-estate/:id', authMiddleware, requirePortalUser, async (req, re
     const propertyCategory = String(req.body.propertyCategory).trim().toLowerCase();
     const contactPhone = String(req.body.contactPhone ?? '').trim();
 
+    const price = Number(req.body.price);
+    const cmp = parseComparePrice(req.body.originalPrice, price);
+    if (!cmp.ok) return res.status(400).json({ message: cmp.message });
+
     const patch = {
       property_category: propertyCategory,
       title: String(req.body.title).trim(),
       description: String(req.body.description).trim(),
       transaction_type: req.body.transactionType,
-      price: Number(req.body.price),
+      price,
+      original_price: cmp.value,
       currency: req.body.currency,
       surface_m2: Number(req.body.surfaceM2),
       city_id: cityId,

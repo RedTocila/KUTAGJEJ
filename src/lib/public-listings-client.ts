@@ -31,6 +31,8 @@ export interface PublicRealEstateListing extends ListingMetricsFields {
   propertyCategory: string;
   transactionType: 'rent' | 'sale';
   price: number;
+  /** Optional previous (“was”) price — shown struck when higher than `price`. */
+  originalPrice?: number | null;
   currency: 'EUR' | 'LEK';
   surfaceM2: number;
   cityName: string | null;
@@ -86,6 +88,7 @@ export interface PublicRealEstateListingDetail extends ListingMetricsFields {
   propertyCategory: string;
   transactionType: 'rent' | 'sale';
   price: number;
+  originalPrice?: number | null;
   currency: 'EUR' | 'LEK';
   surfaceM2: number;
   cityName: string | null;
@@ -121,6 +124,8 @@ export interface PublicCarListing extends ListingMetricsFields {
   transmission: 'automatic' | 'manual';
   fuelType: string;
   price: number;
+  /** Optional previous (“was”) price — shown struck when higher than `price`. */
+  originalPrice?: number | null;
   currency: 'EUR' | 'LEK';
   color: string;
   cityName: string | null;
@@ -181,6 +186,8 @@ export interface PublicMarketplaceListing extends ListingMetricsFields {
   category: string;
   condition: string | null;
   price: number | null;
+  /** Optional previous (“was”) price — shown struck when higher than `price`. */
+  originalPrice?: number | null;
   currency: 'EUR' | 'LEK' | null;
   cityName: string | null;
   contactPhone: string | null;

@@ -203,6 +203,7 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
 module.exports = {
   REFRESH_COST,
   refreshListingWithBoost,
+  getRefreshWindowHours,
   isValidKind,
   TABLE_BY_KIND,
 };

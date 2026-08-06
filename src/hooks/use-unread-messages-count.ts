@@ -5,6 +5,9 @@ import * as React from 'react';
 import { fetchConversations } from '@/lib/conversations-client';
 import { useUser } from '@/hooks/use-user';
 
+/** Survives public ↔ dashboard shell remounts so the badge does not flash to 0. */
+let cachedUnreadCount = 0;
+
 function canUseMessages(user: ReturnType<typeof useUser>['user']): boolean {
   return Boolean(
     user &&
@@ -15,22 +18,29 @@ function canUseMessages(user: ReturnType<typeof useUser>['user']): boolean {
 }
 
 export function useUnreadMessagesCount(pollMs = 30_000): number {
-  const { user } = useUser();
-  const [count, setCount] = React.useState(0);
+  const { user, isLoading } = useUser();
+  const [count, setCount] = React.useState(cachedUnreadCount);
   const enabled = canUseMessages(user);
 
   React.useEffect(() => {
     if (!enabled) {
-      setCount(0);
+      // Keep the badge while session is still restoring after a remount.
+      if (!isLoading) {
+        cachedUnreadCount = 0;
+        setCount(0);
+      }
       return;
     }
 
     let cancelled = false;
 
     const load = async () => {
-      const { conversations } = await fetchConversations(1, 50);
+      const { conversations, error } = await fetchConversations(1, 50);
       if (cancelled) return;
-      const unread = (conversations ?? []).reduce((sum, item) => sum + Math.max(0, item.unreadCount || 0), 0);
+      // Keep the previous count on transient failures / empty error responses.
+      if (error || !conversations) return;
+      const unread = conversations.reduce((sum, item) => sum + Math.max(0, item.unreadCount || 0), 0);
+      cachedUnreadCount = unread;
       setCount(unread);
     };
 
@@ -43,7 +53,12 @@ export function useUnreadMessagesCount(pollMs = 30_000): number {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [enabled, pollMs]);
+  }, [enabled, isLoading, pollMs]);
 
   return count;
+}
+
+/** Optimistically sync the nav badge after mark-read / send flows. */
+export function setCachedUnreadMessagesCount(next: number): void {
+  cachedUnreadCount = Math.max(0, next);
 }

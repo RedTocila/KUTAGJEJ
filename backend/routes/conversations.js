@@ -17,8 +17,30 @@ const {
   loadPortalUserDisplayName,
   loadPortalUserPhone,
 } = require('../lib/listing-conversations');
+const { sanitizeImageUrls } = require('../lib/image-upload');
+const { isOurStorageUrl } = require('../lib/storage-uploads');
 
 const router = express.Router();
+
+function formatMessageRow(m, senderModel, userRef) {
+  return {
+    id: String(m.id),
+    conversationId: String(m.conversation_id),
+    senderId: String(m.sender_id),
+    senderModel,
+    body: m.body || '',
+    imageUrl: m.image_url || null,
+    createdAt: m.created_at,
+    isMine: isSamePortalUser({ id: m.sender_id, model: senderModel }, userRef),
+  };
+}
+
+function previewMessageText(body, imageUrl) {
+  const text = String(body || '').trim();
+  if (text) return text;
+  if (imageUrl) return '📷 Foto';
+  return '';
+}
 
 function isUniqueViolation(err) {
   return err?.code === '23505' || err?.code === 23505;
@@ -52,7 +74,7 @@ async function attachParticipantModels(rows) {
   });
 }
 
-function formatConversation(conv, userRef) {
+function formatConversation(conv, userRef, state = null) {
   const role = userRoleInConversation(conv, userRef);
   const unreadCount =
     role === 'poster'
@@ -62,6 +84,7 @@ function formatConversation(conv, userRef) {
         : 0;
   const otherId = role === 'poster' ? conv.inquirerId : conv.posterId;
   const otherModel = role === 'poster' ? conv.inquirerModel : conv.posterModel;
+  const lastSenderId = conv.lastMessageSenderId ? String(conv.lastMessageSenderId) : '';
   return {
     id: String(conv.id || conv._id),
     listingKind: conv.listingKind,
@@ -70,13 +93,168 @@ function formatConversation(conv, userRef) {
     listingImageUrl: conv.listingImageUrl || null,
     role,
     unreadCount,
+    otherUnreadCount:
+      role === 'poster'
+        ? conv.inquirerUnreadCount ?? 0
+        : role === 'inquirer'
+          ? conv.posterUnreadCount ?? 0
+          : 0,
     lastMessageText: conv.lastMessageText || '',
     lastMessageAt: conv.lastMessageAt,
+    lastMessageIsMine: Boolean(lastSenderId && lastSenderId === String(userRef.id)),
     otherParticipantId: String(otherId),
     otherParticipantModel: otherModel,
+    pinned: Boolean(state?.pinned),
     createdAt: conv.createdAt,
     updatedAt: conv.updatedAt,
   };
+}
+
+/** Latest message sender per conversation (fallback when last_message_sender_id is unset). */
+async function loadLastMessageSenderIds(conversationIds) {
+  const map = new Map();
+  const ids = [...new Set((conversationIds || []).map((id) => String(id || '').trim()).filter(Boolean))];
+  if (!ids.length) return map;
+  await Promise.all(
+    ids.map(async (id) => {
+      const { data, error } = await getSupabaseAdmin()
+        .from('messages')
+        .select('sender_id')
+        .eq('conversation_id', id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (data?.sender_id) map.set(id, String(data.sender_id));
+    }),
+  );
+  return map;
+}
+
+async function formatConversationsForUser(convs, userRef, stateMap = new Map()) {
+  const missingSenderIds = convs
+    .filter((c) => !c.lastMessageSenderId && (c.lastMessageAt || c.lastMessageText))
+    .map((c) => String(c.id));
+  const senderMap = await loadLastMessageSenderIds(missingSenderIds);
+  return convs.map((c) => {
+    const id = String(c.id);
+    const enriched =
+      !c.lastMessageSenderId && senderMap.has(id)
+        ? { ...c, lastMessageSenderId: senderMap.get(id) }
+        : c;
+    return formatConversation(enriched, userRef, stateMap.get(id));
+  });
+}
+
+async function formatConversationForUser(conv, userRef, state = null) {
+  const [formatted] = await formatConversationsForUser(
+    [conv],
+    userRef,
+    new Map([[String(conv.id), state]]),
+  );
+  return formatted;
+}
+
+async function loadUserStatesByConversationIds(userId, conversationIds) {
+  const map = new Map();
+  if (!conversationIds.length) return map;
+  const { data, error } = await getSupabaseAdmin()
+    .from('conversation_user_state')
+    .select('conversation_id, pinned, pinned_at, hidden_at')
+    .eq('user_id', userId)
+    .in('conversation_id', conversationIds);
+  if (error) throw error;
+  for (const row of data || []) {
+    map.set(String(row.conversation_id), row);
+  }
+  return map;
+}
+
+async function loadHiddenConversationIds(userId) {
+  const { data, error } = await getSupabaseAdmin()
+    .from('conversation_user_state')
+    .select('conversation_id')
+    .eq('user_id', userId)
+    .not('hidden_at', 'is', null);
+  if (error) throw error;
+  return (data || []).map((row) => String(row.conversation_id));
+}
+
+async function upsertConversationUserState(conversationId, userId, patch) {
+  const sb = getSupabaseAdmin();
+  const now = new Date().toISOString();
+  const { data: existing, error: findErr } = await sb
+    .from('conversation_user_state')
+    .select('conversation_id, pinned, pinned_at, hidden_at')
+    .eq('conversation_id', conversationId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (findErr) throw findErr;
+
+  const next = {
+    conversation_id: conversationId,
+    user_id: userId,
+    pinned: existing?.pinned ?? false,
+    pinned_at: existing?.pinned_at ?? null,
+    hidden_at: existing?.hidden_at ?? null,
+    updated_at: now,
+    ...patch,
+  };
+  if (Object.prototype.hasOwnProperty.call(patch, 'pinned')) {
+    next.pinned = Boolean(patch.pinned);
+    next.pinned_at = next.pinned ? (existing?.pinned && existing?.pinned_at) || now : null;
+  }
+
+  if (existing) {
+    const { data, error } = await sb
+      .from('conversation_user_state')
+      .update({
+        pinned: next.pinned,
+        pinned_at: next.pinned_at,
+        hidden_at: next.hidden_at,
+        updated_at: now,
+      })
+      .eq('conversation_id', conversationId)
+      .eq('user_id', userId)
+      .select('conversation_id, pinned, pinned_at, hidden_at')
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  const { data, error } = await sb
+    .from('conversation_user_state')
+    .insert({
+      conversation_id: conversationId,
+      user_id: userId,
+      pinned: next.pinned,
+      pinned_at: next.pinned_at,
+      hidden_at: next.hidden_at,
+      created_at: now,
+      updated_at: now,
+    })
+    .select('conversation_id, pinned, pinned_at, hidden_at')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function clearHiddenForConversation(conversationId) {
+  const { error } = await getSupabaseAdmin()
+    .from('conversation_user_state')
+    .update({ hidden_at: null, updated_at: new Date().toISOString() })
+    .eq('conversation_id', conversationId)
+    .not('hidden_at', 'is', null);
+  if (error) throw error;
+}
+
+function sortInboxItems(items) {
+  return [...items].sort((a, b) => {
+    if (Boolean(a.pinned) !== Boolean(b.pinned)) return a.pinned ? -1 : 1;
+    const at = new Date(a.lastMessageAt || a.updatedAt || 0).getTime();
+    const bt = new Date(b.lastMessageAt || b.updatedAt || 0).getTime();
+    return (Number.isNaN(bt) ? 0 : bt) - (Number.isNaN(at) ? 0 : at);
+  });
 }
 
 async function attachOtherParticipantDetails(items) {
@@ -191,7 +369,9 @@ router.post('/', auth, requirePortalUser, async (req, res) => {
     }
 
     const [conv] = await attachParticipantModels([row]);
-    const formatted = formatConversation(conv, userRef);
+    await upsertConversationUserState(conv.id, userRef.id, { hidden_at: null });
+    const stateMap = await loadUserStatesByConversationIds(userRef.id, [conv.id]);
+    const formatted = await formatConversationForUser(conv, userRef, stateMap.get(String(conv.id)));
     const [withName] = await attachOtherParticipantDetails([formatted]);
     res.status(raceHit ? 200 : 201).json({ conversation: withName });
   } catch (err) {
@@ -235,7 +415,13 @@ router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) 
 
     if (existingRows?.length) {
       const [existing] = await attachParticipantModels(existingRows);
-      const formatted = formatConversation(existing, userRef);
+      await upsertConversationUserState(existing.id, userRef.id, { hidden_at: null });
+      const stateMap = await loadUserStatesByConversationIds(userRef.id, [existing.id]);
+      const formatted = await formatConversationForUser(
+        existing,
+        userRef,
+        stateMap.get(String(existing.id)),
+      );
       const [withName] = await attachOtherParticipantDetails([formatted]);
       return res.status(200).json({ conversation: withName });
     }
@@ -284,7 +470,9 @@ router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) 
     }
 
     const [conv] = await attachParticipantModels([row]);
-    const formatted = formatConversation(conv, userRef);
+    await upsertConversationUserState(conv.id, userRef.id, { hidden_at: null });
+    const stateMap = await loadUserStatesByConversationIds(userRef.id, [conv.id]);
+    const formatted = await formatConversationForUser(conv, userRef, stateMap.get(String(conv.id)));
     const [withName] = await attachOtherParticipantDetails([formatted]);
     return res.status(201).json({ conversation: withName });
   } catch (err) {
@@ -302,21 +490,29 @@ router.get('/', auth, requirePortalUser, async (req, res) => {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    const { data, error, count } = await getSupabaseAdmin()
+    const hiddenIds = await loadHiddenConversationIds(userRef.id);
+    let q = getSupabaseAdmin()
       .from('conversations')
       .select('*', { count: 'exact' })
       .or(`poster_id.eq.${userRef.id},inquirer_id.eq.${userRef.id}`)
-      .order('last_message_at', { ascending: false, nullsFirst: false })
-      .range(from, to);
+      .order('last_message_at', { ascending: false, nullsFirst: false });
+    if (hiddenIds.length) {
+      q = q.not('id', 'in', `(${hiddenIds.join(',')})`);
+    }
+    const { data, error, count } = await q.range(from, to);
     if (error) throw error;
 
     const total = count ?? 0;
     const mapped = await attachParticipantModels(data || []);
+    const stateMap = await loadUserStatesByConversationIds(
+      userRef.id,
+      mapped.map((c) => String(c.id)),
+    );
     const formatted = await attachOtherParticipantDetails(
-      mapped.map((c) => formatConversation(c, userRef)),
+      await formatConversationsForUser(mapped, userRef, stateMap),
     );
     res.json({
-      conversations: formatted,
+      conversations: sortInboxItems(formatted),
       page,
       limit,
       total,
@@ -324,6 +520,35 @@ router.get('/', auth, requirePortalUser, async (req, res) => {
     });
   } catch (err) {
     console.error('GET /conversations:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/** POST /api/conversations/hide — hide one or more chats for the current user */
+router.post('/hide', auth, requirePortalUser, async (req, res) => {
+  try {
+    const userRef = portalUserRef(req.user);
+    const rawIds = Array.isArray(req.body?.ids) ? req.body.ids : [];
+    const ids = [...new Set(rawIds.map((id) => String(id || '').trim()).filter((id) => isUuid(id)))];
+    if (!ids.length) {
+      return res.status(400).json({ message: 'Nuk u zgjodh asnjë bisedë.' });
+    }
+    if (ids.length > 50) {
+      return res.status(400).json({ message: 'Shumë biseda të zgjedhura.' });
+    }
+
+    const hiddenAt = new Date().toISOString();
+    const hidden = [];
+    for (const id of ids) {
+      const conv = await findConversationForUser(id, userRef);
+      if (!conv) continue;
+      await upsertConversationUserState(conv.id, userRef.id, { hidden_at: hiddenAt });
+      hidden.push(String(conv.id));
+    }
+
+    res.json({ ok: true, ids: hidden });
+  } catch (err) {
+    console.error('POST /conversations/hide:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -363,21 +588,14 @@ router.get('/:id/messages', auth, requirePortalUser, async (req, res) => {
       }),
     );
 
-    const formatted = formatConversation(conv, userRef);
+    const stateMap = await loadUserStatesByConversationIds(userRef.id, [conv.id]);
+    const formatted = await formatConversationForUser(conv, userRef, stateMap.get(String(conv.id)));
     const [withName] = await attachOtherParticipantDetails([formatted]);
 
     res.json({
       messages: messages.map((m) => {
         const senderModel = modelById.get(m.sender_id) || 'IndividualUser';
-        return {
-          id: String(m.id),
-          conversationId: String(m.conversation_id),
-          senderId: String(m.sender_id),
-          senderModel,
-          body: m.body,
-          createdAt: m.created_at,
-          isMine: isSamePortalUser({ id: m.sender_id, model: senderModel }, userRef),
-        };
+        return formatMessageRow(m, senderModel, userRef);
       }),
       conversation: withName,
     });
@@ -387,11 +605,60 @@ router.get('/:id/messages', auth, requirePortalUser, async (req, res) => {
   }
 });
 
+/** PATCH /api/conversations/:id/pin — pin or unpin for current user */
+router.patch('/:id/pin', auth, requirePortalUser, async (req, res) => {
+  try {
+    const userRef = portalUserRef(req.user);
+    const conv = await findConversationForUser(req.params.id, userRef);
+    if (!conv) return res.status(404).json({ message: 'Biseda nuk u gjet.' });
+
+    const pinned =
+      typeof req.body?.pinned === 'boolean'
+        ? req.body.pinned
+        : !(await loadUserStatesByConversationIds(userRef.id, [conv.id])).get(String(conv.id))?.pinned;
+
+    const state = await upsertConversationUserState(conv.id, userRef.id, { pinned });
+    const formatted = await formatConversationForUser(conv, userRef, state);
+    const [withName] = await attachOtherParticipantDetails([formatted]);
+    res.json({ conversation: withName });
+  } catch (err) {
+    console.error('PATCH /conversations/:id/pin:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/** DELETE /api/conversations/:id — hide chat for current user */
+router.delete('/:id', auth, requirePortalUser, async (req, res) => {
+  try {
+    const userRef = portalUserRef(req.user);
+    const conv = await findConversationForUser(req.params.id, userRef);
+    if (!conv) return res.status(404).json({ message: 'Biseda nuk u gjet.' });
+
+    await upsertConversationUserState(conv.id, userRef.id, {
+      hidden_at: new Date().toISOString(),
+    });
+    res.json({ ok: true, id: String(conv.id) });
+  } catch (err) {
+    console.error('DELETE /conversations/:id:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 /** POST /api/conversations/:id/messages */
 router.post('/:id/messages', auth, requirePortalUser, async (req, res) => {
   try {
     const body = String(req.body?.body ?? '').trim();
-    if (!body) return res.status(400).json({ message: 'Mesazhi nuk mund të jetë bosh.' });
+    const imageUrls = sanitizeImageUrls(
+      req.body?.imageUrl != null ? [req.body.imageUrl] : req.body?.imageUrls,
+      1,
+    );
+    const imageUrl = imageUrls[0] || '';
+    if (imageUrl && !isOurStorageUrl(imageUrl)) {
+      return res.status(400).json({ message: 'URL e fotos nuk është e vlefshme.' });
+    }
+    if (!body && !imageUrl) {
+      return res.status(400).json({ message: 'Mesazhi nuk mund të jetë bosh.' });
+    }
     if (body.length > 2000) return res.status(400).json({ message: 'Mesazhi është shumë i gjatë.' });
 
     const userRef = portalUserRef(req.user);
@@ -418,6 +685,7 @@ router.post('/:id/messages', auth, requirePortalUser, async (req, res) => {
         conversation_id: conv.id,
         sender_id: userRef.id,
         body,
+        image_url: imageUrl,
       })
       .select('*')
       .single();
@@ -425,8 +693,9 @@ router.post('/:id/messages', auth, requirePortalUser, async (req, res) => {
 
     const role = userRoleInConversation(conv, userRef);
     const patch = {
-      last_message_text: body,
+      last_message_text: previewMessageText(body, imageUrl),
       last_message_at: msg.created_at,
+      last_message_sender_id: userRef.id,
       updated_at: new Date().toISOString(),
     };
     if (role === 'poster') {
@@ -434,19 +703,18 @@ router.post('/:id/messages', auth, requirePortalUser, async (req, res) => {
     } else if (role === 'inquirer') {
       patch.poster_unread_count = (raw.poster_unread_count ?? 0) + 1;
     }
-    const { error: updErr } = await sb.from('conversations').update(patch).eq('id', conv.id);
+    let { error: updErr } = await sb.from('conversations').update(patch).eq('id', conv.id);
+    // Column may be missing until migration/repair is applied.
+    if (updErr && /last_message_sender_id/i.test(String(updErr.message || updErr))) {
+      delete patch.last_message_sender_id;
+      ({ error: updErr } = await sb.from('conversations').update(patch).eq('id', conv.id));
+    }
     if (updErr) throw updErr;
 
+    await clearHiddenForConversation(conv.id);
+
     res.status(201).json({
-      message: {
-        id: String(msg.id),
-        conversationId: String(msg.conversation_id),
-        senderId: String(msg.sender_id),
-        senderModel: userRef.model,
-        body: msg.body,
-        createdAt: msg.created_at,
-        isMine: true,
-      },
+      message: formatMessageRow(msg, userRef.model, userRef),
     });
   } catch (err) {
     console.error('POST /conversations/:id/messages:', err?.message || err);

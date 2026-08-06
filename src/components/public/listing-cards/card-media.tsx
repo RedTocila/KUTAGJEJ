@@ -10,6 +10,7 @@ import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
+import { CrownSimple as CrownIcon } from '@phosphor-icons/react/dist/ssr/CrownSimple';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
@@ -145,6 +146,9 @@ export function CardMedia({
     [listingKind, listingId, router, saved, savedCtx, user],
   );
 
+  // OKAZION badge wins when both are active (same priority as before for chrome).
+  const showPremiumCrown = premium && !okazion;
+
   return (
     <Box
       sx={{
@@ -181,7 +185,7 @@ export function CardMedia({
         </Stack>
       )}
 
-      {(okazion || topLeftOverlay || topLeftBadge) ? (
+      {(okazion || showPremiumCrown || topLeftOverlay || topLeftBadge) ? (
         <Stack
           spacing={0.6}
           sx={{
@@ -209,10 +213,26 @@ export function CardMedia({
                 '& .MuiChip-label': { px: 1.1 },
               }}
             />
-          ) : null}
-          {topLeftOverlay ? (
+          ) : showPremiumCrown ? (
+            <Box
+              aria-label="Premium"
+              sx={{
+                width: 28,
+                height: 28,
+                borderRadius: '999px',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+                bgcolor: 'warning.main',
+                color: '#fff',
+                boxShadow: '0 2px 10px rgba(245, 166, 35, 0.55)',
+              }}
+            >
+              <CrownIcon size={15} weight="fill" />
+            </Box>
+          ) : topLeftOverlay ? (
             <Box sx={{ lineHeight: 0 }}>{topLeftOverlay}</Box>
-          ) : !okazion && topLeftBadge ? (
+          ) : topLeftBadge ? (
             <Chip
               label={topLeftBadge}
               size="small"

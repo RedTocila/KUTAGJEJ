@@ -60,6 +60,7 @@ type MarketplaceFormState = {
   category: string;
   condition: string;
   price: string;
+  originalPrice: string;
   currency: '' | 'EUR' | 'LEK';
   cityId: string;
   contactPhone: string;
@@ -73,6 +74,7 @@ function emptyForm(): MarketplaceFormState {
     category: '',
     condition: '',
     price: '',
+    originalPrice: '',
     currency: '',
     cityId: '',
     contactPhone: '',
@@ -85,10 +87,18 @@ function validateForm(f: MarketplaceFormState): string | null {
   if (!f.category) return 'Ju lutem zgjidhni kategorinë e artikullit.';
   if (!f.condition) return 'Ju lutem zgjidhni gjendjen e artikullit.';
 
+  let price: number | null = null;
   if (f.price.trim()) {
-    const p = parseFloatStrict(f.price);
-    if (p === null || p < 0) return 'Çmimi duhet të jetë një numër pozitiv.';
+    price = parseFloatStrict(f.price);
+    if (price === null || price < 0) return 'Çmimi duhet të jetë një numër pozitiv.';
     if (f.currency !== 'EUR' && f.currency !== 'LEK') return 'Ju lutem zgjidhni monedhën.';
+  }
+
+  if (f.originalPrice.trim()) {
+    if (price === null) return 'Vendosni çmimin aktual për të shtuar çmimin e mëparshëm.';
+    const was = parseFloatStrict(f.originalPrice);
+    if (was === null || was < 0) return 'Çmimi i mëparshëm duhet të jetë një numër pozitiv.';
+    if (was <= price) return 'Çmimi i mëparshëm duhet të jetë më i lartë se çmimi aktual.';
   }
 
   if (!f.cityId) return 'Ju lutem zgjidhni qytetin.';
@@ -112,6 +122,7 @@ function formFromListing(l: MarketplaceMineListing): MarketplaceFormState {
     category: l.category || '',
     condition: l.condition || '',
     price: hasPrice ? String(l.price) : '',
+    originalPrice: l.originalPrice != null ? String(l.originalPrice) : '',
     currency: l.currency === 'EUR' || l.currency === 'LEK' ? l.currency : hasPrice ? 'EUR' : '',
     cityId: l.cityId ? String(l.cityId) : '',
     contactPhone: l.contactPhone || '',
@@ -215,6 +226,7 @@ export function MarketplaceListingForm({
         category: form.category,
         condition: form.condition,
         price: hasPrice ? parseFloatStrict(form.price) : null,
+        originalPrice: hasPrice && form.originalPrice.trim() ? parseFloatStrict(form.originalPrice) : null,
         currency: hasPrice ? form.currency : null,
         cityId: form.cityId,
         contactPhone: form.contactPhone.trim(),
@@ -327,6 +339,17 @@ export function MarketplaceListingForm({
             placeholder="p.sh. 5000"
             helperText="Opsionale — lëreni bosh nëse është me marrëveshje."
             slotProps={{ input: { endAdornment: <InputAdornment position="end">/ copë</InputAdornment> } }}
+          />
+          <ListingTextField
+            label="Çmimi i mëparshëm"
+            type="text"
+            inputMode="decimal"
+            value={form.originalPrice}
+            onChange={onField('originalPrice')}
+            fullWidth
+            placeholder="p.sh. 6500"
+            disabled={!form.price.trim()}
+            helperText="Opsionale — shfaqet i përshkruar (ishte…)."
           />
           <SearchableSelect
             label="Monedha"

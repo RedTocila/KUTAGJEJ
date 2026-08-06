@@ -1,5 +1,17 @@
 /** Pure formatting helpers used by the public listing cards. */
 
+import { OKAZION_ACCENT } from '@/lib/home-categories';
+
+/** Price/salary color: OKAZION red, else Premium amber, else primary. */
+export function listingPriceAccentColor(flags: {
+  isPremium?: boolean | null;
+  isOkazion?: boolean | null;
+}): string {
+  if (flags.isOkazion) return OKAZION_ACCENT;
+  if (flags.isPremium) return 'warning.main';
+  return 'primary.main';
+}
+
 export function formatPrice(value: number | null | undefined, currency: string | null | undefined): string {
   if (value === null || value === undefined) return 'Me marrëveshje';
   const formatted = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 }).format(value);

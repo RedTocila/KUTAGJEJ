@@ -10,28 +10,50 @@ import {
   Button,
   Card,
   CircularProgress,
+  DialogContentText,
   IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
   Stack,
   TextField,
   Typography,
-  useColorScheme,
-  useTheme,
 } from '@mui/material';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
+import { Check as CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { Checks as ChecksIcon } from '@phosphor-icons/react/dist/ssr/Checks';
+import { CheckSquare as CheckSquareIcon } from '@phosphor-icons/react/dist/ssr/CheckSquare';
+import { Paperclip as PaperclipIcon } from '@phosphor-icons/react/dist/ssr/Paperclip';
 import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
-import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
+import { PhoneCall as PhoneCallIcon } from '@phosphor-icons/react/dist/ssr/PhoneCall';
+import { PushPin as PushPinIcon } from '@phosphor-icons/react/dist/ssr/PushPin';
+import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
+import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
+import {
+  productFilterButtonSx,
+  productSearchBarSx,
+} from '@/components/public/product-browse-chrome';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import {
   consumePendingListingChat,
   fetchConversationMessages,
   fetchConversations,
+  hideConversations,
   markConversationRead,
   sendConversationMessage,
+  setConversationPinned,
   startConversation,
   type ConversationMessage,
   type ConversationSummary,
@@ -43,6 +65,7 @@ import {
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { languageHtmlLang } from '@/lib/language';
 import { whatsappHref } from '@/lib/listing-contact';
+import { uploadListingImages } from '@/lib/uploads-client';
 import {
   listingBusinessPublicHref,
   listingCarPublicHref,
@@ -80,12 +103,26 @@ function listingPublicHref(kind: ConversationSummary['listingKind'], listingId: 
   }
 }
 
+/** Chat accents (dark-mode greens from design). */
+const CHAT_ACCENT = '#4ca74c';
+const CHAT_ACCENT_HOVER = '#3f9340';
+const CHAT_ACCENT_SOFT = 'rgba(76, 167, 76, 0.08)';
+const CHAT_ACCENT_GLOW = '0 2px 10px rgba(76, 167, 76, 0.45)';
+const CHAT_BUBBLE_MINE = '#1a3f2c';
+/** Incoming bubbles — lighter than chat bg so they read clearly. */
+const CHAT_BUBBLE_THEIRS = '#2e2e2e';
+/** Bubble corner radii: top-left, top-right, bottom-right, bottom-left (px). */
+const CHAT_BUBBLE_RADIUS_MINE = [12, 12, 4, 12] as const;
+const CHAT_BUBBLE_RADIUS_THEIRS = [4, 12, 12, 12] as const;
+const CHAT_IMAGE_INSET = 3;
+
 function formatMessageTime(iso: string, locale: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
 }
 
@@ -97,7 +134,7 @@ function formatConversationListTime(iso: string, locale: string, yesterday: stri
   const startMsg = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const dayDiff = Math.round((startToday.getTime() - startMsg.getTime()) / 86_400_000);
   if (dayDiff === 0) {
-    return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false });
   }
   if (dayDiff === 1) return yesterday;
   if (dayDiff < 7) {
@@ -115,7 +152,10 @@ function conversationActivityAt(item: ConversationSummary): number {
 }
 
 function sortConversationsByRecent(items: ConversationSummary[]): ConversationSummary[] {
-  return [...items].sort((a, b) => conversationActivityAt(b) - conversationActivityAt(a));
+  return [...items].sort((a, b) => {
+    if (Boolean(a.pinned) !== Boolean(b.pinned)) return a.pinned ? -1 : 1;
+    return conversationActivityAt(b) - conversationActivityAt(a);
+  });
 }
 
 function filterConversations(items: ConversationSummary[], filter: InboxFilter): ConversationSummary[] {
@@ -124,65 +164,133 @@ function filterConversations(items: ConversationSummary[], filter: InboxFilter):
   return items;
 }
 
-/** Always dark chat chrome — readable WhatsApp-like layout with brand colors. */
-function useChatChrome() {
-  const theme = useTheme();
-  return {
-    header: '#171717',
-    wallpaper: '#0a0a0a',
-    wallpaperPattern: 'rgba(255,255,255,0.035)',
-    bubbleOut: theme.palette.primary.main,
-    bubbleOutText: theme.palette.primary.contrastText || '#0a0a0a',
-    bubbleIn: '#262626',
-    bubbleInText: '#fafafa',
-    composer: '#171717',
-    input: '#262626',
-    inputText: '#fafafa',
-    inputPlaceholder: 'rgba(250,250,250,0.45)',
-    send: theme.palette.primary.main,
-    sendIcon: theme.palette.primary.contrastText || '#0a0a0a',
-    timeOut: 'rgba(0,0,0,0.55)',
-    timeIn: 'rgba(250,250,250,0.55)',
-    emptyChip: 'rgba(23,23,23,0.92)',
-    text: '#fafafa',
-    textMuted: '#d4d4d4',
-    action: theme.palette.primary.main,
-    whatsapp: '#25D366',
-    divider: '#404040',
-  };
+/** Last N of my messages are still unread by the other party → delivered; older → read. */
+function deliveryStatusByMessageId(
+  messages: ConversationMessage[],
+  otherUnreadCount: number,
+): Map<string, 'delivered' | 'read'> {
+  const map = new Map<string, 'delivered' | 'read'>();
+  let remaining = Math.max(0, otherUnreadCount);
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const msg = messages[i];
+    if (!msg.isMine) continue;
+    if (remaining > 0) {
+      map.set(msg.id, 'delivered');
+      remaining -= 1;
+    } else {
+      map.set(msg.id, 'read');
+    }
+  }
+  return map;
 }
+
+const LONG_PRESS_MS = 480;
 
 function ConversationListItem({
   item,
   active,
   isLast,
-  onSelect,
+  selectionMode,
+  selected,
+  onOpen,
+  onToggleSelect,
+  onOpenActions,
 }: {
   item: ConversationSummary;
   active: boolean;
   isLast?: boolean;
-  onSelect: (id: string) => void;
+  selectionMode: boolean;
+  selected: boolean;
+  onOpen: (id: string) => void;
+  onToggleSelect: (id: string) => void;
+  onOpenActions: (id: string, anchor: HTMLElement, point?: { left: number; top: number }) => void;
 }) {
   const t = useCopy();
   const { language } = useLanguage();
   const locale = languageHtmlLang(language);
   const unread = item.unreadCount > 0;
+  const pinned = Boolean(item.pinned);
+  const lastMine = Boolean(item.lastMessageIsMine);
+  const lastDeliveryStatus: 'delivered' | 'read' | null = lastMine
+    ? (item.otherUnreadCount ?? 0) > 0
+      ? 'delivered'
+      : 'read'
+    : null;
   const timeLabel = formatConversationListTime(
     item.lastMessageAt || item.updatedAt,
     locale,
     t.messages.yesterday,
   );
+  const title = item.listingTitle?.trim() || t.messages.userFallback;
   const preview = item.lastMessageText || t.messages.noMessagesYet;
-  const subtitle = item.listingTitle
-    ? `${item.listingTitle} · ${preview}`
-    : preview;
+  const longPressTimer = React.useRef<number | null>(null);
+  const suppressClick = React.useRef(false);
+  const touchOrigin = React.useRef<{ x: number; y: number } | null>(null);
+  const rootRef = React.useRef<HTMLButtonElement | null>(null);
+
+  const clearLongPress = React.useCallback(() => {
+    if (longPressTimer.current != null) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    touchOrigin.current = null;
+  }, []);
+
+  const startLongPress = (clientX: number, clientY: number) => {
+    if (selectionMode) return;
+    clearLongPress();
+    touchOrigin.current = { x: clientX, y: clientY };
+    longPressTimer.current = window.setTimeout(() => {
+      longPressTimer.current = null;
+      suppressClick.current = true;
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate(12);
+      }
+      const el = rootRef.current;
+      if (el) onOpenActions(item.id, el, { left: clientX, top: clientY });
+    }, LONG_PRESS_MS);
+  };
+
+  React.useEffect(() => () => clearLongPress(), [clearLongPress]);
 
   return (
     <Box
+      ref={rootRef}
       component="button"
       type="button"
-      onClick={() => onSelect(item.id)}
-      aria-current={active ? 'true' : undefined}
+      onClick={() => {
+        if (suppressClick.current) {
+          suppressClick.current = false;
+          return;
+        }
+        if (selectionMode) {
+          onToggleSelect(item.id);
+          return;
+        }
+        onOpen(item.id);
+      }}
+      onContextMenu={(e) => {
+        if (selectionMode) return;
+        e.preventDefault();
+        onOpenActions(item.id, e.currentTarget, { left: e.clientX, top: e.clientY });
+      }}
+      onTouchStart={(e) => {
+        const touch = e.touches[0];
+        if (!touch) return;
+        startLongPress(touch.clientX, touch.clientY);
+      }}
+      onTouchMove={(e) => {
+        const origin = touchOrigin.current;
+        const touch = e.touches[0];
+        if (!origin || !touch) return;
+        if (Math.abs(touch.clientX - origin.x) > 12 || Math.abs(touch.clientY - origin.y) > 12) {
+          clearLongPress();
+        }
+      }}
+      onTouchEnd={clearLongPress}
+      onTouchCancel={clearLongPress}
+      aria-current={!selectionMode && active ? 'true' : undefined}
+      aria-pressed={selectionMode ? selected : undefined}
       sx={{
         display: 'flex',
         alignItems: 'center',
@@ -197,48 +305,98 @@ function ConversationListItem({
         font: 'inherit',
         color: 'inherit',
         cursor: 'pointer',
-        bgcolor: (t) =>
-          active
-            ? t.palette.mode === 'dark'
-              ? 'rgba(255,255,255,0.06)'
-              : 'rgba(0,0,0,0.05)'
-            : 'transparent',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        bgcolor: (theme) => {
+          if (selectionMode && selected) {
+            return theme.palette.mode === 'dark' ? 'rgba(76,167,76,0.14)' : 'rgba(76,167,76,0.1)';
+          }
+          if (active && !selectionMode) {
+            return theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+          }
+          return 'transparent';
+        },
         WebkitTapHighlightColor: 'transparent',
         transition: 'background-color 0.12s ease',
         '&:hover': {
-          bgcolor: (t) =>
-            t.palette.mode === 'dark'
-              ? active
+          bgcolor: (theme) => {
+            if (selectionMode && selected) {
+              return theme.palette.mode === 'dark' ? 'rgba(76,167,76,0.18)' : 'rgba(76,167,76,0.14)';
+            }
+            return theme.palette.mode === 'dark'
+              ? active && !selectionMode
                 ? 'rgba(255,255,255,0.08)'
                 : 'rgba(255,255,255,0.04)'
-              : active
+              : active && !selectionMode
                 ? 'rgba(0,0,0,0.06)'
-                : 'rgba(0,0,0,0.03)',
+                : 'rgba(0,0,0,0.03)';
+          },
         },
         '&:active': {
-          bgcolor: (t) =>
-            t.palette.mode === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
+          bgcolor: (theme) =>
+            theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
         },
       }}
     >
-      <Avatar
-        src={item.listingImageUrl ?? undefined}
-        variant="rounded"
-        sx={{
-          width: 49,
-          height: 49,
-          flexShrink: 0,
-          my: 1.15,
-          borderRadius: 1.5,
-          bgcolor: (t) =>
-            t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-          color: 'text.secondary',
-          fontWeight: 700,
-          fontSize: '1.1rem',
-        }}
-      >
-        {(item.otherParticipantName || item.listingTitle || 'P').slice(0, 1).toUpperCase()}
-      </Avatar>
+      {selectionMode ? (
+        <Box
+          aria-hidden
+          sx={{
+            width: 22,
+            height: 22,
+            borderRadius: '50%',
+            flexShrink: 0,
+            display: 'grid',
+            placeItems: 'center',
+            border: '2px solid',
+            borderColor: selected ? CHAT_ACCENT : 'divider',
+            bgcolor: selected ? CHAT_ACCENT : 'transparent',
+            color: selected ? '#0a0a0a' : 'transparent',
+          }}
+        >
+          <CheckIcon size={12} weight="bold" />
+        </Box>
+      ) : null}
+
+      <Box sx={{ position: 'relative', flexShrink: 0, my: 1.15 }}>
+        <Avatar
+          src={item.listingImageUrl ?? undefined}
+          variant="rounded"
+          sx={{
+            width: 49,
+            height: 49,
+            borderRadius: 1.5,
+            bgcolor: (theme) =>
+              theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+            color: 'text.secondary',
+            fontWeight: 700,
+            fontSize: '1.1rem',
+          }}
+        >
+          {title.slice(0, 1).toUpperCase()}
+        </Avatar>
+        {pinned && !selectionMode ? (
+          <Box
+            aria-label={t.messages.pinnedAria}
+            sx={{
+              position: 'absolute',
+              right: -4,
+              bottom: -4,
+              width: 18,
+              height: 18,
+              borderRadius: '50%',
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: 'background.paper',
+              color: 'text.secondary',
+              border: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
+            <PushPinIcon size={10} weight="fill" />
+          </Box>
+        ) : null}
+      </Box>
 
       <Stack
         spacing={0.2}
@@ -247,8 +405,8 @@ function ConversationListItem({
           minWidth: 0,
           py: 1.35,
           borderBottom: isLast ? 'none' : '1px solid',
-          borderColor: (t) =>
-            t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+          borderColor: (theme) =>
+            theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
         }}
       >
         <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}>
@@ -261,7 +419,7 @@ function ConversationListItem({
             }}
             noWrap
           >
-            {item.otherParticipantName ?? t.messages.userFallback}
+            {title}
           </Typography>
           {timeLabel ? (
             <Typography
@@ -269,7 +427,7 @@ function ConversationListItem({
                 flexShrink: 0,
                 fontSize: '0.75rem',
                 fontWeight: unread ? 600 : 400,
-                color: unread ? 'primary.main' : 'text.secondary',
+                color: 'rgba(var(--mui-palette-text-primaryChannel) / 0.45)',
                 lineHeight: 1.2,
                 ml: 1,
               }}
@@ -280,19 +438,44 @@ function ConversationListItem({
         </Stack>
 
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', minHeight: 22 }}>
-          <Typography
-            sx={{
-              flex: 1,
-              minWidth: 0,
-              fontSize: '0.875rem',
-              fontWeight: unread ? 500 : 400,
-              lineHeight: 1.35,
-              color: 'text.secondary',
-            }}
-            noWrap
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{ flex: 1, minWidth: 0, alignItems: 'center' }}
           >
-            {subtitle}
-          </Typography>
+            {lastDeliveryStatus ? (
+              <Box
+                component="span"
+                aria-label={
+                  lastDeliveryStatus === 'read' ? t.messages.read : t.messages.delivered
+                }
+                sx={{
+                  display: 'inline-flex',
+                  flexShrink: 0,
+                  lineHeight: 0,
+                  color:
+                    lastDeliveryStatus === 'read'
+                      ? '#53bdeb'
+                      : 'rgba(var(--mui-palette-text-primaryChannel) / 0.45)',
+                }}
+              >
+                <ChecksIcon size={16} weight="bold" />
+              </Box>
+            ) : null}
+            <Typography
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                fontSize: '0.875rem',
+                fontWeight: unread ? 500 : 400,
+                lineHeight: 1.35,
+                color: 'rgba(var(--mui-palette-text-primaryChannel) / 0.45)',
+              }}
+              noWrap
+            >
+              {preview}
+            </Typography>
+          </Stack>
           {unread ? (
             <Box
               sx={{
@@ -322,93 +505,417 @@ function ConversationListItem({
 
 function MessageBubble({
   message,
-  chrome,
+  deliveryStatus,
 }: {
   message: ConversationMessage;
-  chrome: ReturnType<typeof useChatChrome>;
+  deliveryStatus?: 'delivered' | 'read';
 }) {
+  const t = useCopy();
   const { language } = useLanguage();
   const locale = languageHtmlLang(language);
   const mine = message.isMine;
+  const isRead = deliveryStatus === 'read';
+  const imageUrl = String(message.imageUrl || '').trim();
+  const body = String(message.body || '').trim();
+  const imageOnly = Boolean(imageUrl) && !body;
+  const metaWidth = mine && deliveryStatus ? 58 : 42;
+  const bubbleRadius = mine ? CHAT_BUBBLE_RADIUS_MINE : CHAT_BUBBLE_RADIUS_THEIRS;
+  // Concentric with bubble; caption images also round the bottom edge.
+  const imageRadius = body
+    ? [
+        Math.max(8, bubbleRadius[0] - CHAT_IMAGE_INSET),
+        Math.max(8, bubbleRadius[1] - CHAT_IMAGE_INSET),
+        8,
+        8,
+      ]
+        .map((r) => `${r}px`)
+        .join(' ')
+    : bubbleRadius.map((r) => `${Math.max(0, r - CHAT_IMAGE_INSET)}px`).join(' ');
+
+  const meta = (
+    <Box
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 0.4,
+        pointerEvents: 'none',
+        ...(imageOnly
+          ? {
+              position: 'absolute',
+              right: 8,
+              bottom: 8,
+              px: 0.6,
+              py: 0.25,
+              borderRadius: 1,
+              bgcolor: 'rgba(0,0,0,0.45)',
+            }
+          : {
+              position: 'absolute',
+              right: 10,
+              bottom: 8,
+            }),
+      }}
+    >
+      <Typography
+        sx={{
+          fontSize: '0.68rem',
+          fontWeight: 600,
+          lineHeight: 1.1,
+          color: imageOnly || mine ? 'rgba(255,255,255,0.75)' : 'text.secondary',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {formatMessageTime(message.createdAt, locale)}
+      </Typography>
+      {mine && deliveryStatus ? (
+        <Box
+          component="span"
+          aria-label={isRead ? t.messages.read : t.messages.delivered}
+          sx={{
+            display: 'inline-flex',
+            lineHeight: 0,
+            color: isRead ? '#53bdeb' : 'rgba(255,255,255,0.75)',
+          }}
+        >
+          <ChecksIcon size={14} weight="bold" />
+        </Box>
+      ) : null}
+    </Box>
+  );
+
   return (
     <Box
       sx={{
         display: 'flex',
         justifyContent: mine ? 'flex-end' : 'flex-start',
-        px: 1.25,
-        py: 0.2,
+        px: { xs: 1.5, md: 2 },
+        py: 0.35,
       }}
     >
       <Box
         sx={{
-          position: 'relative',
-          maxWidth: '78%',
-          px: 1.1,
-          pt: 0.55,
-          pb: 0.4,
-          bgcolor: mine ? chrome.bubbleOut : chrome.bubbleIn,
-          color: mine ? chrome.bubbleOutText : chrome.bubbleInText,
-          borderRadius: mine ? '8px 0 8px 8px' : '0 8px 8px 8px',
-          boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            width: 8,
-            height: 13,
-            ...(mine
-              ? {
-                  right: -7,
-                  bgcolor: chrome.bubbleOut,
-                  clipPath: 'polygon(0 0, 100% 0, 0 100%)',
-                }
-              : {
-                  left: -7,
-                  bgcolor: chrome.bubbleIn,
-                  clipPath: 'polygon(0 0, 100% 0, 100% 100%)',
-                }),
-          },
+          display: 'flex',
+          flexDirection: 'column',
+          width: imageUrl ? 'min(82%, 280px)' : 'auto',
+          maxWidth: '82%',
+          overflow: 'hidden',
+          bgcolor: mine ? CHAT_BUBBLE_MINE : CHAT_BUBBLE_THEIRS,
+          color: mine ? '#fff' : 'text.primary',
+          borderRadius: bubbleRadius.map((r) => `${r}px`).join(' '),
         }}
       >
-        <Typography
-          variant="body2"
-          component="span"
+        {imageUrl ? (
+          <Box
+            sx={{
+              position: 'relative',
+              lineHeight: 0,
+              m: `${CHAT_IMAGE_INSET}px`,
+              borderRadius: imageRadius,
+              overflow: 'hidden',
+            }}
+          >
+            <Box
+              component="img"
+              src={imageUrl}
+              alt=""
+              loading="lazy"
+              sx={{
+                display: 'block',
+                width: '100%',
+                maxHeight: 360,
+                objectFit: 'cover',
+              }}
+            />
+            {imageOnly ? meta : null}
+          </Box>
+        ) : null}
+        {!imageOnly ? (
+          <Box
+            sx={{
+              position: 'relative',
+              px: 1.35,
+              pt: 0.75,
+              pb: 0.75,
+              minWidth: body ? undefined : metaWidth + 16,
+            }}
+          >
+            {body ? (
+              <Typography
+                component="div"
+                variant="body2"
+                sx={{
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  fontSize: '0.9375rem',
+                  fontWeight: 500,
+                  lineHeight: 1.4,
+                }}
+              >
+                {body}
+                <Box
+                  component="span"
+                  aria-hidden
+                  sx={{
+                    display: 'inline-block',
+                    width: metaWidth,
+                    height: '1.15em',
+                    verticalAlign: 'bottom',
+                  }}
+                />
+              </Typography>
+            ) : null}
+            {meta}
+          </Box>
+        ) : null}
+      </Box>
+    </Box>
+  );
+}
+
+/** Isolated composer — keeps draft keystrokes from re-rendering the thread. */
+function MessageComposer({
+  onSend,
+}: {
+  onSend: (body: string, file?: File | null) => Promise<boolean>;
+}) {
+  const t = useCopy();
+  const [draft, setDraft] = React.useState('');
+  const [attachment, setAttachment] = React.useState<File | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = React.useState<string | null>(null);
+  const [inputExpanded, setInputExpanded] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const inputRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const canSend = draft.trim().length > 0 || Boolean(attachment);
+
+  React.useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el || !draft) {
+      setInputExpanded(false);
+      return;
+    }
+    const measure = () => {
+      const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight) || 20;
+      setInputExpanded(el.scrollHeight > lineHeight + 4);
+    };
+    measure();
+    const raf = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(raf);
+  }, [draft]);
+
+  React.useEffect(() => {
+    if (!attachment) {
+      setAttachmentPreview(null);
+      return undefined;
+    }
+    const url = URL.createObjectURL(attachment);
+    setAttachmentPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [attachment]);
+
+  const clearAttachment = () => {
+    setAttachment(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const submit = () => {
+    const body = draft.trim();
+    if (!body && !attachment) return;
+    const file = attachment;
+    setDraft('');
+    clearAttachment();
+    void onSend(body, file).then((ok) => {
+      if (!ok) setDraft(body);
+    });
+  };
+
+  return (
+    <Box
+      sx={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 2,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        gap: 0.75,
+        px: { xs: 1.25, md: 1.5 },
+        pt: 0.5,
+        pb: { xs: 'max(10px, env(safe-area-inset-bottom))', md: 1.25 },
+        bgcolor: 'transparent',
+        pointerEvents: 'none',
+        '& > *': { pointerEvents: 'auto' },
+      }}
+    >
+      {attachmentPreview ? (
+        <Box sx={{ position: 'relative', width: 72, height: 72, alignSelf: 'flex-start' }}>
+          <Box
+            component="img"
+            src={attachmentPreview}
+            alt=""
+            sx={{
+              width: 72,
+              height: 72,
+              objectFit: 'cover',
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'rgba(0,0,0,0.45)',
+              display: 'block',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+            }}
+          />
+          <IconButton
+            type="button"
+            size="small"
+            onClick={clearAttachment}
+            aria-label={t.messages.removeAttachAria}
+            sx={{
+              position: 'absolute',
+              top: -6,
+              right: -6,
+              width: 22,
+              height: 22,
+              bgcolor: 'rgba(0,0,0,0.65)',
+              border: '1px solid',
+              borderColor: 'rgba(255,255,255,0.25)',
+              color: '#fff',
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.8)', color: '#fff' },
+            }}
+          >
+            <XIcon size={12} weight="bold" />
+          </IconButton>
+        </Box>
+      ) : null}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0] ?? null;
+          setAttachment(file);
+        }}
+      />
+
+      <Box
+        component="form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+        sx={{
+          display: 'flex',
+          gap: 0.5,
+          alignItems: inputExpanded ? 'flex-end' : 'center',
+          transition: 'border-radius 120ms ease',
+          ...productSearchBarSx(Boolean(draft.trim()) || Boolean(attachment), {
+            color: CHAT_ACCENT,
+            soft: CHAT_ACCENT_SOFT,
+          }),
+          borderRadius: inputExpanded ? 2.5 : 999,
+          height: 'auto',
+          minHeight: 40,
+          py: 0.5,
+          pl: 0.75,
+          pr: 0.5,
+          bgcolor: (theme) =>
+            theme.palette.mode === 'dark'
+              ? 'rgba(var(--mui-palette-background-paperChannel) / 0.92)'
+              : 'background.paper',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+      >
+        <IconButton
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          aria-label={t.messages.attachAria}
+          size="small"
           sx={{
-            display: 'inline',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            fontSize: '0.9375rem',
-            lineHeight: 1.35,
+            flexShrink: 0,
+            p: 0.5,
+            color: CHAT_ACCENT,
+            opacity: attachment ? 1 : 0.85,
+            alignSelf: inputExpanded ? 'flex-end' : 'center',
+            mb: inputExpanded ? 0.25 : 0,
           }}
         >
-          {message.body}
-        </Typography>
-        <Typography
-          component="span"
+          <PaperclipIcon size={24} weight="bold" />
+        </IconButton>
+
+        <TextField
+          fullWidth
+          multiline
+          maxRows={5}
+          placeholder={t.messages.placeholder}
+          value={draft}
+          inputRef={inputRef}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              submit();
+            }
+          }}
+          size="small"
           sx={{
-            display: 'inline-block',
-            float: 'right',
-            position: 'relative',
-            top: 6,
-            ml: 1.25,
-            mb: -0.15,
-            fontSize: '0.68rem',
-            lineHeight: 1,
-            color: mine ? chrome.timeOut : chrome.timeIn,
-            whiteSpace: 'nowrap',
+            '& .MuiOutlinedInput-root': {
+              bgcolor: 'transparent',
+              alignItems: inputExpanded ? 'flex-start' : 'center',
+              py: 0.25,
+              pl: 0,
+              fontSize: '0.9rem',
+              fontWeight: 500,
+              '& fieldset': { border: 'none' },
+            },
+            '& .MuiOutlinedInput-input': {
+              pl: 0,
+            },
+            '& textarea': {
+              resize: 'none',
+              lineHeight: 1.4,
+            },
+          }}
+        />
+
+        <IconButton
+          type="submit"
+          disabled={!canSend}
+          aria-label={t.messages.sendAria}
+          sx={{
+            flexShrink: 0,
+            alignSelf: inputExpanded ? 'flex-end' : 'center',
+            ...productFilterButtonSx(true),
+            width: 32,
+            height: 32,
+            bgcolor: CHAT_ACCENT,
+            color: '#0a0a0a',
+            borderColor: CHAT_ACCENT,
+            boxShadow: canSend ? CHAT_ACCENT_GLOW : 'none',
+            '&:hover': {
+              bgcolor: CHAT_ACCENT_HOVER,
+              borderColor: CHAT_ACCENT_HOVER,
+              boxShadow: canSend ? CHAT_ACCENT_GLOW : 'none',
+            },
+            '&.Mui-disabled': {
+              bgcolor: CHAT_ACCENT,
+              color: '#0a0a0a',
+              opacity: 0.4,
+              boxShadow: 'none',
+            },
           }}
         >
-          {formatMessageTime(message.createdAt, locale)}
-        </Typography>
+          <PaperPlaneTiltIcon size={16} weight="fill" />
+        </IconButton>
       </Box>
     </Box>
   );
 }
 
 export function UserMessagesView() {
-  const chrome = useChatChrome();
   const t = useCopy();
-  const { setMode } = useColorScheme();
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('c');
@@ -419,21 +926,28 @@ export function UserMessagesView() {
     read: t.messages.read,
   };
 
-  React.useEffect(() => {
-    setMode('dark');
-  }, [setMode]);
-
   const [conversations, setConversations] = React.useState<ConversationSummary[]>([]);
   const [messages, setMessages] = React.useState<ConversationMessage[]>([]);
   const [activeConversation, setActiveConversation] = React.useState<ConversationSummary | null>(null);
   const [inboxFilter, setInboxFilter] = React.useState<InboxFilter>('all');
   const [listLoading, setListLoading] = React.useState(true);
   const [threadLoading, setThreadLoading] = React.useState(false);
-  const [sending, setSending] = React.useState(false);
   const [markingAllRead, setMarkingAllRead] = React.useState(false);
-  const [draft, setDraft] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
+  /** Instant mobile dismiss before URL `?c=` clears (router can lag). */
+  const [mobileThreadDismissed, setMobileThreadDismissed] = React.useState(false);
+  const [selectionMode, setSelectionMode] = React.useState(false);
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(() => new Set());
+  const [actionConversationId, setActionConversationId] = React.useState<string | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = React.useState<null | {
+    el: HTMLElement;
+    position?: { top: number; left: number };
+  }>(null);
+  const [pendingDeleteIds, setPendingDeleteIds] = React.useState<string[] | null>(null);
+  const [deletingChats, setDeletingChats] = React.useState(false);
+  const [pinningChat, setPinningChat] = React.useState(false);
   const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
+  const messagesScrollRef = React.useRef<HTMLDivElement | null>(null);
   const pendingHandled = React.useRef(false);
 
   const unreadConversations = React.useMemo(
@@ -446,6 +960,11 @@ export function UserMessagesView() {
     () => filterConversations(conversations, inboxFilter),
     [conversations, inboxFilter],
   );
+  const actionConversation = React.useMemo(
+    () => conversations.find((c) => c.id === actionConversationId) ?? null,
+    [conversations, actionConversationId],
+  );
+  const selectedCount = selectedIds.size;
 
   const loadInbox = React.useCallback(async () => {
     setListLoading(true);
@@ -513,17 +1032,141 @@ export function UserMessagesView() {
     if (!selectedId) {
       setActiveConversation(null);
       setMessages([]);
+      setMobileThreadDismissed(false);
       return;
     }
+    setMobileThreadDismissed(false);
     void loadThread(selectedId);
   }, [selectedId, loadThread]);
 
-  React.useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const scrollThreadToBottom = React.useCallback(() => {
+    const scroller = messagesScrollRef.current;
+    if (scroller) {
+      scroller.scrollTop = scroller.scrollHeight;
+      return;
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+  }, []);
+
+  // Jump to latest message when a thread opens or new messages arrive.
+  // useLayoutEffect + rAF: scroll container may not have its final height yet
+  // on the first paint (mobile panel flex / loading → messages swap).
+  React.useLayoutEffect(() => {
+    if (threadLoading || !selectedId || !activeConversation) return;
+    scrollThreadToBottom();
+    let raf2 = 0;
+    const raf1 = window.requestAnimationFrame(() => {
+      scrollThreadToBottom();
+      raf2 = window.requestAnimationFrame(scrollThreadToBottom);
+    });
+    return () => {
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
+    };
+  }, [messages, threadLoading, selectedId, activeConversation, scrollThreadToBottom]);
 
   const selectConversation = (id: string) => {
+    setMobileThreadDismissed(false);
+    if (id === selectedId) return;
     router.push(`${paths.user.messages}?c=${encodeURIComponent(id)}`);
+  };
+
+  const handleBackToInbox = () => {
+    // Show inbox immediately; URL sync can take a tick on mobile.
+    setMobileThreadDismissed(true);
+    router.replace(paths.user.messages);
+  };
+
+  const closeActionMenu = () => {
+    setActionMenuAnchor(null);
+    setActionConversationId(null);
+  };
+
+  const openActionMenu = (
+    id: string,
+    el: HTMLElement,
+    point?: { left: number; top: number },
+  ) => {
+    setActionConversationId(id);
+    setActionMenuAnchor({
+      el,
+      position: point ? { top: point.top, left: point.left } : undefined,
+    });
+  };
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const enterSelectionMode = (seedId?: string) => {
+    closeActionMenu();
+    setSelectionMode(true);
+    setSelectedIds(seedId ? new Set([seedId]) : new Set());
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const removeConversationsLocally = (ids: string[]) => {
+    const idSet = new Set(ids);
+    setConversations((prev) => prev.filter((c) => !idSet.has(c.id)));
+    if (selectedId && idSet.has(selectedId)) {
+      handleBackToInbox();
+    }
+    setSelectedIds((prev) => {
+      const next = new Set([...prev].filter((id) => !idSet.has(id)));
+      return next;
+    });
+  };
+
+  const handleTogglePin = async () => {
+    if (!actionConversation || pinningChat) return;
+    const nextPinned = !actionConversation.pinned;
+    closeActionMenu();
+    setPinningChat(true);
+    const res = await setConversationPinned(actionConversation.id, nextPinned);
+    setPinningChat(false);
+    if (res.error) {
+      setError(res.error);
+      return;
+    }
+    setConversations((prev) =>
+      sortConversationsByRecent(
+        prev.map((c) =>
+          c.id === actionConversation.id
+            ? { ...c, pinned: res.conversation?.pinned ?? nextPinned }
+            : c,
+        ),
+      ),
+    );
+  };
+
+  const requestDeleteIds = (ids: string[]) => {
+    closeActionMenu();
+    const unique = [...new Set(ids.filter(Boolean))];
+    if (!unique.length) return;
+    setPendingDeleteIds(unique);
+  };
+
+  const confirmDeleteChats = async () => {
+    if (!pendingDeleteIds?.length || deletingChats) return;
+    setDeletingChats(true);
+    const res = await hideConversations(pendingDeleteIds);
+    setDeletingChats(false);
+    if (res.error) {
+      setError(res.error);
+      return;
+    }
+    removeConversationsLocally(res.ids ?? pendingDeleteIds);
+    setPendingDeleteIds(null);
+    exitSelectionMode();
   };
 
   const handleMarkAllRead = async () => {
@@ -535,38 +1178,113 @@ export function UserMessagesView() {
     setMarkingAllRead(false);
   };
 
-  const handleSend = async () => {
-    const body = draft.trim();
-    if (!selectedId || !body) return;
-    setSending(true);
-    const res = await sendConversationMessage(selectedId, body);
-    setSending(false);
-    if (res.error) {
-      setError(res.error);
-      return;
-    }
-    if (res.message) {
-      setMessages((prev) => [...prev, res.message!]);
-      setDraft('');
+  const handleSend = async (body: string, file?: File | null): Promise<boolean> => {
+    if (!selectedId || (!body && !file)) return false;
+    setError(null);
+
+    const conversationId = selectedId;
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const createdAt = new Date().toISOString();
+    const localPreviewUrl = file ? URL.createObjectURL(file) : null;
+    const preview = body.trim() || (file ? t.messages.photoPreview : body);
+
+    const optimistic: ConversationMessage = {
+      id: tempId,
+      conversationId,
+      senderId: 'me',
+      senderModel: 'IndividualUser',
+      body,
+      imageUrl: localPreviewUrl,
+      createdAt,
+      isMine: true,
+    };
+
+    setMessages((prev) => [...prev, optimistic]);
+    setActiveConversation((prev) =>
+      prev ? { ...prev, otherUnreadCount: (prev.otherUnreadCount ?? 0) + 1 } : prev,
+    );
+    setConversations((prev) =>
+      sortConversationsByRecent(
+        prev.map((c) =>
+          c.id === conversationId
+            ? {
+                ...c,
+                lastMessageText: preview,
+                lastMessageAt: createdAt,
+                lastMessageIsMine: true,
+                otherUnreadCount: (c.otherUnreadCount ?? 0) + 1,
+              }
+            : c,
+        ),
+      ),
+    );
+
+    const rollback = () => {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setActiveConversation((prev) =>
+        prev
+          ? { ...prev, otherUnreadCount: Math.max(0, (prev.otherUnreadCount ?? 0) - 1) }
+          : prev,
+      );
       setConversations((prev) =>
-        sortConversationsByRecent(
-          prev.map((c) =>
-            c.id === selectedId
-              ? {
-                  ...c,
-                  lastMessageText: res.message!.body,
-                  lastMessageAt: res.message!.createdAt,
-                }
-              : c,
-          ),
+        prev.map((c) =>
+          c.id === conversationId
+            ? {
+                ...c,
+                otherUnreadCount: Math.max(0, (c.otherUnreadCount ?? 0) - 1),
+              }
+            : c,
         ),
       );
+      if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+    };
+
+    let imageUrl: string | undefined;
+    if (file) {
+      const up = await uploadListingImages([file], 'messages');
+      if (up.error || !up.urls[0]) {
+        rollback();
+        setError(up.error ?? 'Nuk u ngarkua fotoja.');
+        return false;
+      }
+      imageUrl = up.urls[0];
     }
+
+    const res = await sendConversationMessage(conversationId, body, imageUrl);
+    if (res.error || !res.message) {
+      rollback();
+      setError(res.error ?? 'Mesazhi nuk u dërgua.');
+      return false;
+    }
+
+    const sent = res.message;
+    setMessages((prev) => prev.map((m) => (m.id === tempId ? sent : m)));
+    if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+    setConversations((prev) =>
+      sortConversationsByRecent(
+        prev.map((c) =>
+          c.id === conversationId
+            ? {
+                ...c,
+                lastMessageText:
+                  sent.body?.trim() || (sent.imageUrl ? t.messages.photoPreview : sent.body),
+                lastMessageAt: sent.createdAt,
+                lastMessageIsMine: true,
+              }
+            : c,
+        ),
+      ),
+    );
+    return true;
   };
 
-  const showThreadOnMobile = Boolean(selectedId);
+  const showThreadOnMobile = Boolean(selectedId) && !mobileThreadDismissed;
   const contactPhone = activeConversation ? conversationContactPhone(activeConversation) : null;
   const contactWhatsapp = whatsappHref(contactPhone);
+  const deliveryStatuses = React.useMemo(
+    () => deliveryStatusByMessageId(messages, activeConversation?.otherUnreadCount ?? 0),
+    [messages, activeConversation?.otherUnreadCount],
+  );
 
   return (
     <Stack
@@ -586,7 +1304,7 @@ export function UserMessagesView() {
           px: { xs: 2, md: 0 },
           pt: { xs: 1.25, md: 0 },
           pb: { xs: 0.75, md: 0 },
-          // WhatsApp-style: title only on mobile; keep description on desktop.
+          // Mobile: title only; keep description on desktop.
           '& .MuiTypography-body2': { display: { xs: 'none', md: 'block' } },
           '& > .MuiBox-root': { display: { xs: 'none', md: 'inline-flex' } },
           '& .MuiTypography-h5': {
@@ -672,6 +1390,58 @@ export function UserMessagesView() {
             </Stack>
 
             {conversations.length > 0 ? (
+              selectionMode ? (
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: 'center', justifyContent: 'space-between', minHeight: 40, gap: 1 }}
+                >
+                  <Typography
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: '0.9rem',
+                      color: 'text.primary',
+                      minWidth: 0,
+                    }}
+                  >
+                    {t.messages.selectedCount(selectedCount)}
+                  </Typography>
+                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexShrink: 0 }}>
+                    <Button
+                      type="button"
+                      size="small"
+                      color="error"
+                      disabled={selectedCount === 0 || deletingChats}
+                      startIcon={<TrashIcon size={14} weight="bold" />}
+                      onClick={() => requestDeleteIds([...selectedIds])}
+                      sx={{
+                        textTransform: 'none',
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        minWidth: 0,
+                        px: 0.75,
+                      }}
+                    >
+                      {t.messages.deleteChats(selectedCount || 1)}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="small"
+                      onClick={exitSelectionMode}
+                      sx={{
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        fontSize: '0.8rem',
+                        minWidth: 0,
+                        px: 0.5,
+                        color: 'text.secondary',
+                      }}
+                    >
+                      {t.common.cancel}
+                    </Button>
+                  </Stack>
+                </Stack>
+              ) : (
               <Stack
                 direction="row"
                 spacing={1}
@@ -706,8 +1476,8 @@ export function UserMessagesView() {
                         border: '1px solid',
                         borderColor: selected
                           ? 'primary.main'
-                          : (t) =>
-                              t.palette.mode === 'dark' ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)',
+                          : (theme) =>
+                              theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)',
                         borderRadius: 999,
                         cursor: 'pointer',
                         font: 'inherit',
@@ -718,8 +1488,8 @@ export function UserMessagesView() {
                         '&:hover': {
                           borderColor: selected
                             ? 'primary.main'
-                            : (t) =>
-                                t.palette.mode === 'dark' ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.28)',
+                            : (theme) =>
+                                theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.28)',
                           color: selected ? 'primary.main' : 'text.primary',
                         },
                       }}
@@ -752,6 +1522,7 @@ export function UserMessagesView() {
                   );
                 })}
               </Stack>
+              )
             ) : null}
           </Stack>
 
@@ -820,6 +1591,7 @@ export function UserMessagesView() {
                 flex: 1,
                 overflow: 'auto',
                 pb: { xs: 10, md: 0 },
+                position: 'relative',
               }}
             >
               {filteredConversations.map((item, index) => (
@@ -828,7 +1600,11 @@ export function UserMessagesView() {
                   item={item}
                   active={item.id === selectedId}
                   isLast={index === filteredConversations.length - 1}
-                  onSelect={selectConversation}
+                  selectionMode={selectionMode}
+                  selected={selectedIds.has(item.id)}
+                  onOpen={selectConversation}
+                  onToggleSelect={toggleSelected}
+                  onOpenActions={openActionMenu}
                 />
               ))}
             </Box>
@@ -864,29 +1640,55 @@ export function UserMessagesView() {
                 direction="row"
                 spacing={1}
                 sx={{
+                  position: 'relative',
+                  zIndex: 2,
                   alignItems: 'center',
-                  px: 1,
-                  py: 0.85,
+                  px: { xs: 1.25, md: 1.5 },
+                  py: 1,
                   flexShrink: 0,
-                  bgcolor: chrome.header,
+                  bgcolor: 'background.paper',
                   borderBottom: '1px solid',
-                  borderColor: chrome.divider,
-                  color: chrome.text,
+                  borderColor: 'divider',
                 }}
               >
                 <ProductBackButton
-                  onClick={() => router.push(paths.user.messages)}
-                  sx={{ display: { xs: 'inline-flex', md: 'none' } }}
+                  type="button"
+                  onClick={handleBackToInbox}
+                  sx={{
+                    display: { xs: 'inline-flex', md: 'none' },
+                    position: 'relative',
+                    zIndex: 3,
+                    pointerEvents: 'auto',
+                  }}
                   aria-label={t.messages.backAria}
                 />
                 <Avatar
                   src={activeConversation.listingImageUrl ?? undefined}
-                  sx={{ width: 40, height: 40, flexShrink: 0 }}
+                  variant="rounded"
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    flexShrink: 0,
+                    borderRadius: 1.75,
+                    bgcolor: (theme) =>
+                      theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                  }}
                 >
-                  {(activeConversation.otherParticipantName ?? 'P').slice(0, 1).toUpperCase()}
+                  {(activeConversation.listingTitle || activeConversation.otherParticipantName || 'P')
+                    .slice(0, 1)
+                    .toUpperCase()}
                 </Avatar>
-                <Stack spacing={0.1} sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography sx={{ fontWeight: 600, fontSize: '1rem', lineHeight: 1.25, color: chrome.text }} noWrap>
+                <Stack spacing={0.15} sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      lineHeight: 1.25,
+                      letterSpacing: '-0.01em',
+                      color: 'text.primary',
+                    }}
+                    noWrap
+                  >
                     {activeConversation.otherParticipantName ?? t.messages.userFallback}
                   </Typography>
                   <Typography
@@ -894,9 +1696,10 @@ export function UserMessagesView() {
                     href={listingPublicHref(activeConversation.listingKind, activeConversation.listingId)}
                     variant="caption"
                     sx={{
-                      fontWeight: 600,
-                      color: chrome.action,
+                      fontWeight: 700,
+                      color: CHAT_ACCENT,
                       textDecoration: 'none',
+                      lineHeight: 1.2,
                       '&:hover': { textDecoration: 'underline' },
                     }}
                     noWrap
@@ -910,9 +1713,9 @@ export function UserMessagesView() {
                       component="a"
                       href={`tel:${contactPhone.replace(/\s/g, '')}`}
                       aria-label={t.messages.phoneAria}
-                      sx={{ color: chrome.action }}
+                      sx={{ color: CHAT_ACCENT }}
                     >
-                      <PhoneIcon size={22} weight="regular" />
+                      <PhoneCallIcon size={24} weight="fill" />
                     </IconButton>
                     {contactWhatsapp ? (
                       <IconButton
@@ -921,9 +1724,9 @@ export function UserMessagesView() {
                         rel="noopener noreferrer"
                         target="_blank"
                         aria-label="WhatsApp"
-                        sx={{ color: chrome.whatsapp }}
+                        sx={{ color: '#25D366' }}
                       >
-                        <WhatsappLogoIcon size={22} weight="regular" />
+                        <WhatsappLogoIcon size={24} weight="fill" />
                       </IconButton>
                     ) : null}
                   </Stack>
@@ -932,121 +1735,165 @@ export function UserMessagesView() {
 
               <Box
                 sx={{
+                  position: 'relative',
                   flex: 1,
-                  overflow: 'auto',
-                  py: 1.25,
                   minHeight: 0,
-                  bgcolor: chrome.wallpaper,
-                  backgroundImage: `radial-gradient(${chrome.wallpaperPattern} 1.2px, transparent 1.2px)`,
-                  backgroundSize: '18px 18px',
+                  display: 'flex',
+                  flexDirection: 'column',
                 }}
               >
-                {messages.length === 0 ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', px: 2, py: 3 }}>
-                    <Typography
-                      sx={{
-                        textAlign: 'center',
-                        px: 2,
-                        py: 1,
-                        borderRadius: 1.5,
-                        bgcolor: chrome.emptyChip,
-                        color: chrome.textMuted,
-                        fontSize: '0.8rem',
-                        maxWidth: 320,
-                        boxShadow: '0 1px 1px rgba(0,0,0,0.12)',
-                      }}
-                    >
-                      {t.messages.startChat}
-                    </Typography>
-                  </Box>
-                ) : (
-                  messages.map((m) => <MessageBubble key={m.id} message={m} chrome={chrome} />)
-                )}
-                <div ref={messagesEndRef} />
-              </Box>
-
-              <Stack
-                direction="row"
-                spacing={0.75}
-                sx={{
-                  px: 1,
-                  pt: 0.65,
-                  alignItems: 'center',
-                  flexShrink: 0,
-                  bgcolor: chrome.composer,
-                  borderTop: '1px solid',
-                  borderColor: chrome.divider,
-                  pb: { xs: 'max(8px, env(safe-area-inset-bottom))', md: 0.85 },
-                }}
-              >
-                <TextField
-                  fullWidth
-                  multiline
-                  maxRows={5}
-                  placeholder={t.messages.placeholder}
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      void handleSend();
-                    }
-                  }}
-                  size="small"
+                <Box
+                  ref={messagesScrollRef}
                   sx={{
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: chrome.input,
-                      color: chrome.inputText,
-                      borderRadius: 999,
-                      minHeight: 36,
-                      alignItems: 'center',
-                      py: 0.25,
-                      px: 1.25,
-                      fontSize: '0.9rem',
-                      '& fieldset': { border: 'none' },
-                      '&.Mui-focused fieldset': { border: 'none' },
+                    flex: 1,
+                    overflow: 'auto',
+                    pt: 1.5,
+                    pb: {
+                      xs: 'max(88px, calc(72px + env(safe-area-inset-bottom)))',
+                      md: 11,
                     },
-                    '& .MuiInputBase-input': {
-                      color: chrome.inputText,
-                      py: 0.65,
-                      lineHeight: 1.35,
-                      '&::placeholder': {
-                        color: chrome.inputPlaceholder,
-                        opacity: 1,
-                      },
-                    },
-                  }}
-                />
-                <IconButton
-                  type="button"
-                  disabled={sending || !draft.trim()}
-                  onClick={() => void handleSend()}
-                  aria-label={t.messages.sendAria}
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    flexShrink: 0,
-                    bgcolor: chrome.send,
-                    color: chrome.sendIcon,
-                    '&:hover': { bgcolor: 'primary.dark' },
-                    '&.Mui-disabled': {
-                      bgcolor: chrome.send,
-                      color: chrome.sendIcon,
-                      opacity: 0.45,
-                    },
+                    minHeight: 0,
+                    bgcolor: 'transparent',
                   }}
                 >
-                  {sending ? (
-                    <CircularProgress size={16} sx={{ color: chrome.sendIcon }} />
+                  {messages.length === 0 ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', px: 2, py: 3 }}>
+                      <Typography
+                        sx={{
+                          textAlign: 'center',
+                          px: 2,
+                          py: 1,
+                          borderRadius: 2.25,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          bgcolor: 'background.paper',
+                          color: 'text.secondary',
+                          fontSize: '0.8125rem',
+                          fontWeight: 600,
+                          maxWidth: 320,
+                        }}
+                      >
+                        {t.messages.startChat}
+                      </Typography>
+                    </Box>
                   ) : (
-                    <PaperPlaneTiltIcon size={18} weight="fill" />
+                    messages.map((m) => (
+                      <MessageBubble
+                        key={m.id}
+                        message={m}
+                        deliveryStatus={m.isMine ? deliveryStatuses.get(m.id) : undefined}
+                      />
+                    ))
                   )}
-                </IconButton>
-              </Stack>
-            </>
+                  <div ref={messagesEndRef} />
+                </Box>
+
+                <MessageComposer onSend={handleSend} />
+              </Box>            </>
           ) : null}
         </Box>
       </Card>
+
+      <Menu
+        open={Boolean(actionMenuAnchor)}
+        anchorEl={actionMenuAnchor?.el ?? null}
+        onClose={closeActionMenu}
+        anchorReference={actionMenuAnchor?.position ? 'anchorPosition' : 'anchorEl'}
+        anchorPosition={
+          actionMenuAnchor?.position
+            ? { top: actionMenuAnchor.position.top, left: actionMenuAnchor.position.left }
+            : undefined
+        }
+        slotProps={{
+          paper: {
+            sx: {
+              minWidth: 200,
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+            },
+          },
+          list: {
+            'aria-label': t.messages.actionsAria,
+            dense: true,
+          },
+        }}
+      >
+        <MenuItem
+          disabled={pinningChat}
+          onClick={() => {
+            void handleTogglePin();
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 36, color: 'text.secondary' }}>
+            <PushPinIcon size={18} weight={actionConversation?.pinned ? 'fill' : 'regular'} />
+          </ListItemIcon>
+          <ListItemText primary={actionConversation?.pinned ? t.messages.unpin : t.messages.pin} />
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (actionConversationId) enterSelectionMode(actionConversationId);
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 36, color: 'text.secondary' }}>
+            <CheckSquareIcon size={18} weight="regular" />
+          </ListItemIcon>
+          <ListItemText primary={t.messages.select} />
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (actionConversationId) requestDeleteIds([actionConversationId]);
+          }}
+          sx={{ color: 'error.main' }}
+        >
+          <ListItemIcon sx={{ minWidth: 36, color: 'error.main' }}>
+            <TrashIcon size={18} weight="regular" />
+          </ListItemIcon>
+          <ListItemText primary={t.messages.deleteChat} />
+        </MenuItem>
+      </Menu>
+
+      <ProductDialog
+        open={Boolean(pendingDeleteIds?.length)}
+        onClose={deletingChats ? undefined : () => setPendingDeleteIds(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <ProductDialogTitle onClose={deletingChats ? undefined : () => setPendingDeleteIds(null)}>
+          {(pendingDeleteIds?.length ?? 0) > 1
+            ? t.messages.deleteConfirmManyTitle(pendingDeleteIds!.length)
+            : t.messages.deleteConfirmTitle}
+        </ProductDialogTitle>
+        <ProductDialogContent>
+          <DialogContentText sx={{ m: 0, color: 'text.secondary' }}>
+            {(pendingDeleteIds?.length ?? 0) > 1
+              ? t.messages.deleteConfirmManyBody
+              : t.messages.deleteConfirmBody}
+          </DialogContentText>
+        </ProductDialogContent>
+        <ProductDialogActions>
+          <Button
+            onClick={() => setPendingDeleteIds(null)}
+            disabled={deletingChats}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            {t.common.cancel}
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={deletingChats}
+            onClick={() => void confirmDeleteChats()}
+            sx={{ textTransform: 'none', fontWeight: 700 }}
+          >
+            {deletingChats ? (
+              <CircularProgress size={18} color="inherit" />
+            ) : (
+              t.messages.deleteChats(pendingDeleteIds?.length ?? 1)
+            )}
+          </Button>
+        </ProductDialogActions>
+      </ProductDialog>
     </Stack>
   );
 }

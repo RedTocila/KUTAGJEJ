@@ -9,6 +9,7 @@ import type { HomeVerticalId } from '@/lib/home-categories';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { getFilterFieldConfig, type BrowseFilters } from '@/lib/listing-filters';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 
 import {
   FilterNumberField,
@@ -383,17 +384,16 @@ export function FilterDrawerPanel({
 }) {
   React.useEffect(() => {
     if (!open) return undefined;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => {
-      document.body.style.overflow = prev;
       window.removeEventListener('keydown', onKey);
     };
   }, [open, onClose]);
+
+  useLockBodyScroll(open);
 
   return (
     <>
@@ -409,6 +409,7 @@ export function FilterDrawerPanel({
           WebkitBackdropFilter: 'blur(10px)',
           opacity: open ? 1 : 0,
           pointerEvents: open ? 'auto' : 'none',
+          touchAction: 'none',
           transition: 'opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       />
@@ -417,6 +418,7 @@ export function FilterDrawerPanel({
         role="dialog"
         aria-modal="true"
         aria-label="Paneli i filtrave"
+        data-scroll-lock-allow=""
         sx={{
           position: 'fixed',
           top: 0,
@@ -435,6 +437,7 @@ export function FilterDrawerPanel({
           pointerEvents: open ? 'auto' : 'none',
           transition: 'transform 0.42s cubic-bezier(0.22, 1, 0.36, 1)',
           overflow: 'hidden',
+          overscrollBehavior: 'contain',
         }}
       >
         <Box

@@ -318,7 +318,7 @@ function AutoRefreshSection() {
     <SectionBlock
       icon={ArrowClockwiseIcon}
       title="Auto-Refresh"
-      description="Njoftimet tuaja ngrihen automatikisht në krye sipas intervalit të planit."
+      description="Njoftimet tuaja ngrihen automatikisht në krye sipas intervalit të planit · 1 BC për çdo rifreskim."
       chips={
         <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
           <SoftChip label={`${used}/${slots} vende`} />

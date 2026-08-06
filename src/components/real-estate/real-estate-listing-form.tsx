@@ -71,6 +71,7 @@ type FormState = {
   description: string;
   transactionType: '' | 'rent' | 'sale';
   price: string;
+  originalPrice: string;
   surfaceM2: string;
   cityId: string;
   zoneId: string;
@@ -93,6 +94,7 @@ function emptyForm(): FormState {
     description: '',
     transactionType: '',
     price: '',
+    originalPrice: '',
     surfaceM2: '',
     cityId: '',
     zoneId: '',
@@ -132,6 +134,11 @@ function validateForm(f: FormState): string | null {
   const price = parseFloatStrict(f.price);
   if (price === null || price < 0) return 'Vendosni një çmim të vlefshëm.';
   if (f.currency !== 'EUR' && f.currency !== 'LEK') return 'Ju lutemi zgjidhni monedhën.';
+  if (f.originalPrice.trim()) {
+    const was = parseFloatStrict(f.originalPrice);
+    if (was === null || was < 0) return 'Çmimi i mëparshëm duhet të jetë një numër pozitiv.';
+    if (was <= price) return 'Çmimi i mëparshëm duhet të jetë më i lartë se çmimi aktual.';
+  }
   const surface = parseFloatStrict(f.surfaceM2);
   if (surface === null || surface <= 0) return 'Sipërfaqja duhet të jetë numër pozitiv (m²).';
   if (!f.cityId || !f.zoneId) return 'Ju lutemi zgjidhni qytetin dhe zonën.';
@@ -190,6 +197,7 @@ function buildPayload(f: FormState): RealEstateListingPayload {
     description: f.description.trim(),
     transactionType: f.transactionType as 'rent' | 'sale',
     price: parseFloatStrict(f.price)!,
+    originalPrice: f.originalPrice.trim() ? parseFloatStrict(f.originalPrice) : null,
     currency: f.currency as 'EUR' | 'LEK',
     surfaceM2: parseFloatStrict(f.surfaceM2)!,
     cityId: f.cityId,
@@ -216,6 +224,7 @@ function formFromListing(l: RealEstateMineListing): FormState {
     description: l.description || '',
     transactionType: l.transactionType === 'rent' || l.transactionType === 'sale' ? l.transactionType : '',
     price: l.price != null ? String(l.price) : '',
+    originalPrice: l.originalPrice != null ? String(l.originalPrice) : '',
     surfaceM2: l.surfaceM2 != null ? String(l.surfaceM2) : '',
     cityId: l.cityId ? String(l.cityId) : '',
     zoneId: l.zoneId ? String(l.zoneId) : '',
@@ -434,6 +443,15 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           onChange={onField('price')}
           required
           fullWidth
+        />
+        <ListingTextField
+          label="Çmimi i mëparshëm"
+          type="text"
+          inputMode="decimal"
+          value={form.originalPrice}
+          onChange={onField('originalPrice')}
+          fullWidth
+          helperText="Opsionale — shfaqet i përshkruar (ishte…)."
         />
         <SearchableSelect
           label="Monedha"

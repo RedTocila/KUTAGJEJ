@@ -4,6 +4,7 @@ const { computeOpenStatus, formatWeeklyHoursLine } = require('../business-hours'
 const { BUSINESS_CATEGORY_LABELS, PROFESSIONAL_CATEGORY_LABELS } = require('./constants');
 const { jobListingExpiresAt, isPremiumActive, isOkazionActive } = require('./query-helpers');
 const { pickImage, snippet, carSlugSource, carDisplayTitle } = require('./text-helpers');
+const { comparePriceFromDoc } = require('../listing-compare-price');
 
 function premiumCardFields(doc) {
   const until = doc.premiumUntil ?? doc.premium_until ?? null;
@@ -41,6 +42,7 @@ function formatRealEstate(doc, cityById) {
     propertyCategory: doc.propertyCategory,
     transactionType: doc.transactionType,
     price: doc.price,
+    originalPrice: comparePriceFromDoc(doc, 'originalPrice', 'original_price'),
     currency: doc.currency,
     surfaceM2: doc.surfaceM2,
     cityName: city?.name ?? null,
@@ -72,6 +74,7 @@ function formatRealEstateDetail(doc, cityById, seller) {
     propertyCategory: doc.propertyCategory,
     transactionType: doc.transactionType,
     price: doc.price,
+    originalPrice: comparePriceFromDoc(doc, 'originalPrice', 'original_price'),
     currency: doc.currency,
     surfaceM2: doc.surfaceM2,
     cityName: city?.name ?? null,
@@ -111,6 +114,7 @@ function formatCar(doc, cityById) {
     transmission: doc.transmission,
     fuelType: doc.fuelType,
     price: doc.price,
+    originalPrice: comparePriceFromDoc(doc, 'originalPrice', 'original_price'),
     currency: doc.currency,
     color: doc.color,
     cityName: city?.name ?? null,
@@ -164,6 +168,7 @@ function formatMarketplace(doc, cityById) {
     category: doc.category,
     condition: doc.condition ?? null,
     price: doc.price ?? null,
+    originalPrice: comparePriceFromDoc(doc, 'originalPrice', 'original_price'),
     currency: doc.currency ?? null,
     cityName: city?.name ?? null,
     contactPhone: doc.contactPhone ?? null,

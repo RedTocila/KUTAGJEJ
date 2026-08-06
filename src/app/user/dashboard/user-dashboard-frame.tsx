@@ -6,7 +6,7 @@ import { Box, Container, GlobalStyles, Stack } from '@mui/material';
 
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { MobileBottomNav } from '@/components/public/mobile-bottom-nav';
-import { AddListingPickerProvider } from '@/components/user/add-listing-picker-context';
+import { AddListingPickerProvider, useOptionalAddListingPicker } from '@/components/user/add-listing-picker-context';
 import {
   UserDashboardBackLink,
   UserDashboardCloseButton,
@@ -87,6 +87,44 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
     <AuthGuard>
       <AddListingPickerProvider>
         <OwnerEditHeaderActionsProvider>
+          <UserDashboardFrameInner
+            showMobileBottomNav={showMobileBottomNav}
+            showBackLink={showBackLink}
+            backHref={backHref}
+            backLabel={backLabel}
+            isMessages={isMessages}
+            showFrameClose={showFrameClose}
+          >
+            {children}
+          </UserDashboardFrameInner>
+        </OwnerEditHeaderActionsProvider>
+      </AddListingPickerProvider>
+    </AuthGuard>
+  );
+}
+
+function UserDashboardFrameInner({
+  children,
+  showMobileBottomNav,
+  showBackLink,
+  backHref,
+  backLabel,
+  isMessages,
+  showFrameClose,
+}: {
+  children: React.ReactNode;
+  showMobileBottomNav: boolean;
+  showBackLink: boolean;
+  backHref: string;
+  backLabel: string;
+  isMessages: boolean;
+  showFrameClose: boolean;
+}) {
+  const addListingPicker = useOptionalAddListingPicker();
+  const hideChromeForPicker = Boolean(addListingPicker?.addListingPickerOpen);
+
+  return (
+    <>
           <GlobalStyles
             styles={{
               body: {
@@ -112,6 +150,7 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
                     overflow: { xs: 'hidden', md: 'visible' },
                   }
                 : null),
+              ...(hideChromeForPicker ? { pointerEvents: 'none', userSelect: 'none' } : null),
             }}
           >
             <UserSideNav />
@@ -162,10 +201,8 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
                 </Container>
               </main>
             </Box>
-            {showMobileBottomNav ? <MobileBottomNav /> : null}
+            {showMobileBottomNav && !hideChromeForPicker ? <MobileBottomNav /> : null}
           </Box>
-        </OwnerEditHeaderActionsProvider>
-      </AddListingPickerProvider>
-    </AuthGuard>
+    </>
   );
 }

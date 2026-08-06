@@ -62,6 +62,7 @@ import { StickyListingContact } from '@/components/public/sticky-listing-contact
 import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
 import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 import { CarCard } from '@/components/public/listing-cards/car-card';
+import { ListingPrice } from '@/components/public/listing-cards/listing-price';
 import {
   findOptionLabel,
   formatKilometers,
@@ -593,28 +594,55 @@ function subtitleLine(l: AnyPublicListingDetail): React.ReactNode {
 
 function primaryPriceRow(l: AnyPublicListingDetail): React.ReactNode {
   if (l.kind === 'job') {
-    const line =
-      l.salary != null ? `${formatPrice(l.salary, l.currency)} / muaj` : 'Pagë e diskutueshme';
+    if (l.salary == null) {
+      return (
+        <Typography sx={{ fontWeight: 950, fontSize: '1.75rem', color: 'primary.main', lineHeight: 1.1 }}>
+          Pagë e diskutueshme
+        </Typography>
+      );
+    }
     return (
-      <Typography sx={{ fontWeight: 950, fontSize: '1.75rem', color: 'primary.main', lineHeight: 1.1 }}>
-        {line}
-      </Typography>
+      <ListingPrice
+        price={l.salary}
+        currency={l.currency}
+        isPremium={l.isPremium}
+        isOkazion={l.isOkazion}
+        fontSize="1.75rem"
+        fontWeight={950}
+        suffix={
+          <Typography component="span" variant="body2" sx={{ ml: 0.5, fontWeight: 600, color: 'text.secondary' }}>
+            / muaj
+          </Typography>
+        }
+      />
     );
   }
   if (l.kind === 'marketplace') {
     return (
-      <Typography sx={{ fontWeight: 950, fontSize: '1.75rem', color: 'primary.main', lineHeight: 1.1 }}>
-        {formatPrice(l.price, l.currency)}
-      </Typography>
+      <ListingPrice
+        price={l.price}
+        originalPrice={l.originalPrice}
+        currency={l.currency}
+        isPremium={l.isPremium}
+        isOkazion={l.isOkazion}
+        fontSize="1.75rem"
+        fontWeight={950}
+      />
     );
   }
   if (l.kind === 'businesses') return null;
   if (l.kind === 'professionals') return null;
   if (l.kind === 'car') {
     return (
-      <Typography sx={{ fontWeight: 950, fontSize: '1.85rem', color: 'primary.main', lineHeight: 1.1 }}>
-        {formatPrice(l.price, l.currency)}
-      </Typography>
+      <ListingPrice
+        price={l.price}
+        originalPrice={l.originalPrice}
+        currency={l.currency}
+        isPremium={l.isPremium}
+        isOkazion={l.isOkazion}
+        fontSize="1.85rem"
+        fontWeight={950}
+      />
     );
   }
   return null;

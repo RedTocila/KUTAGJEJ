@@ -23,6 +23,7 @@ import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
 import { formatPrice, relativeAlbanianDate } from './format-helpers';
+import { ListingPrice } from './listing-price';
 import {
   ListingCardRating,
   resolveListingCardRating,
@@ -148,21 +149,20 @@ export function RealEstateCard({
             reviewCount={cardRating.reviewCount}
           />
         ) : null}
-        <Typography
-          sx={{
-            fontWeight: 800,
-            fontSize: '1.1rem',
-            color: listing.isPremium ? 'warning.main' : 'primary.main',
-            lineHeight: 1.2,
-          }}
-        >
-          {formatPrice(listing.price, listing.currency)}
-          {listing.transactionType === 'rent' ? (
-            <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 500 }}>
-              / muaj
-            </Typography>
-          ) : null}
-        </Typography>
+        <ListingPrice
+          price={listing.price}
+          originalPrice={listing.originalPrice}
+          currency={listing.currency}
+          isPremium={listing.isPremium}
+          isOkazion={listing.isOkazion}
+          suffix={
+            listing.transactionType === 'rent' ? (
+              <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 500 }}>
+                / muaj
+              </Typography>
+            ) : null
+          }
+        />
 
         <CardDescription text={listing.description} />
 

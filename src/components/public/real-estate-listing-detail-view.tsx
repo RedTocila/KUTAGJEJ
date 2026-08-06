@@ -30,6 +30,7 @@ import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { formatPrice, relativeAlbanianDate } from '@/components/public/listing-cards/format-helpers';
+import { ListingPrice } from '@/components/public/listing-cards/listing-price';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingSellerProfileCard } from '@/components/public/listing-seller-profile-card';
@@ -162,14 +163,22 @@ function RealEstatePriceContactAside(props: {
   return (
     <Stack spacing={2}>
       <Stack spacing={0.75}>
-        <Typography sx={{ fontWeight: 950, fontSize: '1.9rem', color: 'primary.main', lineHeight: 1.08 }}>
-          {formatPrice(listing.price, listing.currency)}
-          {listing.transactionType === 'rent' ? (
-            <Typography component="span" variant="body2" sx={{ ml: 0.5, fontWeight: 600, color: 'text.secondary' }}>
-              / muaj
-            </Typography>
-          ) : null}
-        </Typography>
+        <ListingPrice
+          price={listing.price}
+          originalPrice={listing.originalPrice}
+          currency={listing.currency}
+          isPremium={listing.isPremium}
+          isOkazion={listing.isOkazion}
+          fontSize="1.9rem"
+          fontWeight={950}
+          suffix={
+            listing.transactionType === 'rent' ? (
+              <Typography component="span" variant="body2" sx={{ ml: 0.5, fontWeight: 600, color: 'text.secondary' }}>
+                / muaj
+              </Typography>
+            ) : null
+          }
+        />
         <Paper
           variant="outlined"
           sx={{
@@ -496,21 +505,22 @@ export function RealEstateListingDetailView({
                   legacyOnClick={onEditPrice}
                 >
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
-                    <Typography
-                      sx={{
-                        fontWeight: 900,
-                        fontSize: { xs: '1.85rem', sm: '2.15rem' },
-                        color: 'primary.main',
-                        lineHeight: 1.1,
-                      }}
-                    >
-                      {formatPrice(listing.price, listing.currency)}
-                      {listing.transactionType === 'rent' ? (
-                        <Typography component="span" variant="subtitle2" sx={{ ml: 0.5, fontWeight: 600, color: 'text.secondary' }}>
-                          / muaj
-                        </Typography>
-                      ) : null}
-                    </Typography>
+                    <ListingPrice
+                      price={listing.price}
+                      originalPrice={listing.originalPrice}
+                      currency={listing.currency}
+                      isPremium={listing.isPremium}
+                      isOkazion={listing.isOkazion}
+                      fontSize="1.85rem"
+                      fontWeight={900}
+                      suffix={
+                        listing.transactionType === 'rent' ? (
+                          <Typography component="span" variant="subtitle2" sx={{ ml: 0.5, fontWeight: 600, color: 'text.secondary' }}>
+                            / muaj
+                          </Typography>
+                        ) : null
+                      }
+                    />
                     <Paper
                       variant="outlined"
                       sx={{

@@ -7,9 +7,18 @@ const { refreshListingWithBoost } = require('../lib/listing-refresh');
 const {
   getAutoRefreshSnapshot,
   setListingAutoRefresh,
+  processDueAutoRefreshes,
 } = require('../lib/listing-auto-refresh');
 
 const router = express.Router();
+
+function authorizeCron(req) {
+  const secret = String(process.env.CRON_SECRET || '').trim();
+  if (!secret) return false;
+  const header = String(req.get('x-cron-secret') || '').trim();
+  const bearer = String(req.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  return header === secret || bearer === secret;
+}
 
 router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
   try {
@@ -72,6 +81,21 @@ router.post('/auto', authMiddleware, requirePortalUser, async (req, res) => {
     });
   } catch (err) {
     console.error('POST /listings/refresh/auto:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/** Internal/cron: process due Auto-Refresh enrollments (1 BC each). */
+router.post('/auto/run', async (req, res) => {
+  try {
+    if (!authorizeCron(req)) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const limit = Number(req.body?.limit || req.query?.limit) || undefined;
+    const result = await processDueAutoRefreshes({ limit });
+    res.json(result);
+  } catch (err) {
+    console.error('POST /listings/refresh/auto/run:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });

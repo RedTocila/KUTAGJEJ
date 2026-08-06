@@ -30,6 +30,7 @@ import { CardShell } from './card-shell';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 
 import { findOptionLabel, formatPrice } from './format-helpers';
+import { ListingPrice } from './listing-price';
 import { JobListingCountdownPlaceholder } from './job-listing-countdown';
 import {
   ListingCardRating,
@@ -65,7 +66,7 @@ export function JobCard({
   const workLocationLabel = findOptionLabel(WORK_LOCATION_OPTIONS, listing.workLocation);
   const experienceLabel = findOptionLabel(JOB_EXPERIENCE_OPTIONS, listing.experience);
   const educationLabel = findOptionLabel(JOB_EDUCATION_OPTIONS, listing.education);
-  const salary =
+  const salaryLabel =
     listing.salary != null ? `${formatPrice(listing.salary, listing.currency)} / muaj` : 'Pagë e diskutueshme';
   const expiresAt = listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
   const cardRating = resolveListingCardRating(null, sellerRating);
@@ -105,7 +106,7 @@ export function JobCard({
         sharePayload={{
           title: listing.title,
           category: industryLabel,
-          priceLabel: salary,
+          priceLabel: salaryLabel,
           badge: jobTypeLabel,
           imageUrl: listing.imageUrl,
           location: listing.cityName || undefined,
@@ -167,16 +168,31 @@ export function JobCard({
             reviewCount={cardRating.reviewCount}
           />
         ) : null}
-        <Typography
-          sx={{
-            fontWeight: 800,
-            fontSize: '1rem',
-            color: listing.isPremium ? 'warning.main' : 'primary.main',
-            lineHeight: 1.2,
-          }}
-        >
-          {salary}
-        </Typography>
+        {listing.salary != null ? (
+          <ListingPrice
+            price={listing.salary}
+            currency={listing.currency}
+            isPremium={listing.isPremium}
+            isOkazion={listing.isOkazion}
+            fontSize="1rem"
+            suffix={
+              <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 500 }}>
+                / muaj
+              </Typography>
+            }
+          />
+        ) : (
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: '1rem',
+              color: 'primary.main',
+              lineHeight: 1.2,
+            }}
+          >
+            Pagë e diskutueshme
+          </Typography>
+        )}
 
         <CardDescription text={listing.description} />
 

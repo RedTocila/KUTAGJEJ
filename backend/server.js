@@ -14,10 +14,50 @@ const { ensureOkazionListingSchema } = require('./lib/ensure-okazion-listing-sch
 const { ensureMemberReviewsSchema } = require('./lib/ensure-member-reviews-schema');
 const { backfillMissingReferralCodes } = require('./lib/referrals');
 const { backfillOrphanProfiles } = require('./lib/profiles');
+const { processDueAutoRefreshes } = require('./lib/listing-auto-refresh');
 
 const app = express();
 const corsMiddleware = require('./middleware/cors');
 const helmet = require('helmet');
+
+/** How often the local process scans for due Auto-Refresh listings. */
+const AUTO_REFRESH_TICK_MS = Math.max(
+  60_000,
+  Number(process.env.AUTO_REFRESH_TICK_MS) || 5 * 60 * 1000,
+);
+
+let autoRefreshTimer = null;
+let autoRefreshRunning = false;
+
+async function runAutoRefreshTick() {
+  if (autoRefreshRunning) return;
+  autoRefreshRunning = true;
+  try {
+    const result = await processDueAutoRefreshes();
+    if (result.refreshed > 0 || result.failed > 0) {
+      console.log(
+        `[auto-refresh] scanned=${result.scanned} refreshed=${result.refreshed} skipped=${result.skipped} failed=${result.failed}`,
+      );
+    }
+  } catch (err) {
+    console.error('[auto-refresh] tick failed:', err?.message || err);
+  } finally {
+    autoRefreshRunning = false;
+  }
+}
+
+function startAutoRefreshScheduler() {
+  if (autoRefreshTimer) return;
+  // Delay first tick so boot/migrations settle.
+  const bootDelay = setTimeout(() => {
+    void runAutoRefreshTick();
+    autoRefreshTimer = setInterval(() => {
+      void runAutoRefreshTick();
+    }, AUTO_REFRESH_TICK_MS);
+    if (typeof autoRefreshTimer.unref === 'function') autoRefreshTimer.unref();
+  }, 15_000);
+  if (typeof bootDelay.unref === 'function') bootDelay.unref();
+}
 
 app.use(
   helmet({
@@ -160,6 +200,8 @@ const startServer = async () => {
     const PORT = Number(process.env.PORT) || 5001;
     app.listen(PORT, () => {
       console.log(`KuTaGjej API listening on http://localhost:${PORT}`);
+      startAutoRefreshScheduler();
+      console.log(`[auto-refresh] scheduler started (every ${Math.round(AUTO_REFRESH_TICK_MS / 1000)}s)`);
     });
   } catch (error) {
     console.error('Failed to start server:', error.message);

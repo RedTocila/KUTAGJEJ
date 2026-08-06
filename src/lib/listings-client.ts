@@ -43,6 +43,7 @@ export interface RealEstateListingPayload {
   description: string;
   transactionType: 'rent' | 'sale';
   price: number;
+  originalPrice?: number | null;
   currency: 'EUR' | 'LEK';
   surfaceM2: number;
   cityId: string;
@@ -87,6 +88,7 @@ export interface CarMineListing extends ListingMetrics {
   transmission: string;
   fuelType: string;
   price: number;
+  originalPrice?: number | null;
   currency: string;
   color: string;
   finish: string[];
@@ -136,6 +138,7 @@ export interface MarketplaceMineListing extends ListingMetrics {
   category: string;
   condition: string | null;
   price: number | null;
+  originalPrice?: number | null;
   currency: string | null;
   cityId?: string | null;
   cityName: string | null;
@@ -297,6 +300,7 @@ export interface MarketplaceListingPayload {
   category: string;
   condition: string | null;
   price: number | null;
+  originalPrice?: number | null;
   currency: string | null;
   cityId: string;
   contactPhone: string;
@@ -365,6 +369,7 @@ export type CarListingJsonPayload = {
   transmission: string;
   fuelType: string;
   price: number;
+  originalPrice?: number | null;
   currency: string;
   color: string;
   finish: string[];

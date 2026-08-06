@@ -275,9 +275,15 @@ function TemplateListingCard({ payload }: { payload: ListingSharePayload }) {
         {payload.imageUrl ? (
           <Box
             component="img"
+            data-story-listing-image=""
             src={payload.imageUrl}
             alt=""
-            crossOrigin="anonymous"
+            // Remote URLs need CORS for canvas export; data:/blob: URLs must omit it.
+            crossOrigin={
+              payload.imageUrl.startsWith('data:') || payload.imageUrl.startsWith('blob:')
+                ? undefined
+                : 'anonymous'
+            }
             sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (

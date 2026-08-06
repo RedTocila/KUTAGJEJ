@@ -40,8 +40,12 @@ export interface ConversationSummary {
   listingImageUrl: string | null;
   role: 'poster' | 'inquirer';
   unreadCount: number;
+  /** Unread count on the other participant's side (for delivered/read on my messages). */
+  otherUnreadCount?: number;
   lastMessageText: string;
   lastMessageAt: string;
+  /** True when the latest message in the thread was sent by the current user. */
+  lastMessageIsMine?: boolean;
   otherParticipantId: string;
   otherParticipantModel: 'IndividualUser' | 'BusinessUser';
   otherParticipantName: string | null;
@@ -49,6 +53,8 @@ export interface ConversationSummary {
   otherParticipantPhone?: string | null;
   /** Listing contact phone (seller number shown on the ad). */
   listingContactPhone?: string | null;
+  /** Pinned to the top of the inbox for the current user. */
+  pinned?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -59,6 +65,7 @@ export interface ConversationMessage {
   senderId: string;
   senderModel: 'IndividualUser' | 'BusinessUser';
   body: string;
+  imageUrl?: string | null;
   createdAt: string;
   isMine: boolean;
 }
@@ -125,10 +132,17 @@ export async function fetchConversationMessages(
 export async function sendConversationMessage(
   conversationId: string,
   body: string,
+  imageUrl?: string | null,
 ): Promise<{ message?: ConversationMessage; error?: string }> {
   const res = await clientFetch<{ message: ConversationMessage }>(
     `/conversations/${conversationId}/messages`,
-    { method: 'POST', body: JSON.stringify({ body }) },
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        body,
+        ...(imageUrl ? { imageUrl } : null),
+      }),
+    },
   );
   if (!res.ok) return { error: res.error ?? 'Mesazhi nuk u dërgua.' };
   return { message: res.data?.message };
@@ -138,6 +152,41 @@ export async function markConversationRead(conversationId: string): Promise<{ er
   const res = await clientFetch(`/conversations/${conversationId}/read`, { method: 'PATCH' });
   if (!res.ok) return { error: res.error ?? 'Nuk u përditësua statusi.' };
   return {};
+}
+
+export async function setConversationPinned(
+  conversationId: string,
+  pinned: boolean,
+): Promise<{ conversation?: ConversationSummary; error?: string }> {
+  const res = await clientFetch<{ conversation: ConversationSummary }>(
+    `/conversations/${encodeURIComponent(conversationId)}/pin`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ pinned }),
+    },
+  );
+  if (!res.ok) return { error: res.error ?? 'Nuk u përditësua fiksimi.' };
+  return { conversation: res.data?.conversation };
+}
+
+export async function hideConversations(
+  ids: string[],
+): Promise<{ ids?: string[]; error?: string }> {
+  const unique = [...new Set(ids.map((id) => String(id || '').trim()).filter(Boolean))];
+  if (unique.length === 1) {
+    const res = await clientFetch<{ ok: boolean; id: string }>(
+      `/conversations/${encodeURIComponent(unique[0]!)}`,
+      { method: 'DELETE' },
+    );
+    if (!res.ok) return { error: res.error ?? 'Nuk u fshi biseda.' };
+    return { ids: res.data?.id ? [res.data.id] : unique };
+  }
+  const res = await clientFetch<{ ok: boolean; ids: string[] }>('/conversations/hide', {
+    method: 'POST',
+    body: JSON.stringify({ ids: unique }),
+  });
+  if (!res.ok) return { error: res.error ?? 'Nuk u fshinë bisedat.' };
+  return { ids: res.data?.ids ?? unique };
 }
 
 const PENDING_CHAT_KEY = 'kutagjej-pending-listing-chat';

@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
+import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 import {
   productDialogActionsSx,
   productDialogCloseButtonSx,
@@ -62,10 +63,14 @@ export type ProductDialogProps = Omit<DialogProps, 'slotProps'> & {
 };
 
 /** Theme-aware product dialog — paper + blurred backdrop follow light/dark mode. */
-export function ProductDialog({ slotProps, ...props }: ProductDialogProps) {
+export function ProductDialog({ slotProps, open = false, ...props }: ProductDialogProps) {
+  // Own lock: blocks scroll/click-through behind the modal (incl. iOS).
+  useLockBodyScroll(Boolean(open));
   return (
     <Dialog
       {...props}
+      open={open}
+      disableScrollLock
       slotProps={mergeDialogSlotProps(productDialogSlotProps, slotProps)}
     />
   );

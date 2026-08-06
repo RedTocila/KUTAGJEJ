@@ -25,11 +25,13 @@ import {
 import { claimDailyShareReward } from '@/lib/daily-share-client';
 import {
   DAILY_SHARE_BOOST_CREDITS,
+  embedImageAsDataUrl,
   resolveListingShareUrl,
   type ListingSharePayload,
 } from '@/lib/listing-share';
 import { recordListingMetricEvent, type ListingMetrics } from '@/lib/listing-metrics';
 import { useUser } from '@/hooks/use-user';
+import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 import { paths } from '@/paths';
 
 const BRAND_GREEN = '#76ba1b';
@@ -130,10 +132,40 @@ async function waitForImages(root: HTMLElement): Promise<void> {
           const done = () => resolve();
           img.addEventListener('load', done, { once: true });
           img.addEventListener('error', done, { once: true });
-          window.setTimeout(done, 2500);
+          window.setTimeout(done, 4000);
         }),
     ),
   );
+}
+
+/** Replace listing photo src with an embedded data URL on the live DOM (Safari-safe). */
+async function ensureListingImageEmbedded(root: HTMLElement, imageUrl: string | null | undefined) {
+  if (!imageUrl) return;
+  const img = root.querySelector<HTMLImageElement>('img[data-story-listing-image]');
+  if (!img) return;
+  if (img.src.startsWith('data:image/') && img.complete && img.naturalWidth > 0) return;
+
+  const embedded = await embedImageAsDataUrl(imageUrl);
+  if (!embedded) return;
+
+  await new Promise<void>((resolve) => {
+    const done = () => resolve();
+    img.addEventListener('load', done, { once: true });
+    img.addEventListener('error', done, { once: true });
+    img.removeAttribute('crossorigin');
+    img.src = embedded;
+    if (img.complete && img.naturalWidth > 0) done();
+    else window.setTimeout(done, 4000);
+  });
+}
+
+function needsStoryCaptureWarmup(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  // All iOS browsers use WebKit and often drop remote images on the first html-to-image pass.
+  if (/iP(hone|ad|od)/.test(ua)) return true;
+  // iPadOS desktop UA
+  return /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
 }
 
 const btnSx = {
@@ -170,6 +202,10 @@ export function ListingSharePage({
   const [awaitingPostConfirm, setAwaitingPostConfirm] = React.useState(false);
   const [previewScale, setPreviewScale] = React.useState(0.28);
   const [mounted, setMounted] = React.useState(false);
+  /** Pre-inlined cover photo for story JPEG (Safari drops remote `<img>` pixels). */
+  const embeddedImageRef = React.useRef<string | null>(null);
+
+  useLockBodyScroll(open && mounted && Boolean(payload));
 
   React.useEffect(() => {
     setMounted(true);
@@ -182,14 +218,27 @@ export function ListingSharePage({
       setRewardNote(null);
       setError(null);
       setAwaitingPostConfirm(false);
+      embeddedImageRef.current = null;
       return;
     }
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+
+    const remote = payload?.imageUrl?.trim();
+    if (!remote || remote.startsWith('data:')) {
+      embeddedImageRef.current = remote?.startsWith('data:') ? remote : null;
+      return;
+    }
+
+    let cancelled = false;
+    embeddedImageRef.current = null;
+    void (async () => {
+      const embedded = await embedImageAsDataUrl(remote);
+      if (!cancelled && embedded) embeddedImageRef.current = embedded;
+    })();
+
     return () => {
-      document.body.style.overflow = prev;
+      cancelled = true;
     };
-  }, [open]);
+  }, [open, payload?.listingId, payload?.imageUrl]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -286,19 +335,35 @@ export function ListingSharePage({
     setAwaitingPostConfirm(false);
     try {
       await bumpShareMetric();
+
+      // Inline remote listing photo before capture — otherwise Instagram gets a black media area
+      // (Safari / html-to-image drops cross-origin pixels).
+      await ensureListingImageEmbedded(
+        storyRef.current,
+        embeddedImageRef.current ?? payload.imageUrl,
+      );
       await waitForImages(storyRef.current);
       // Brief paint settle so fonts/images are ready for capture.
-      await new Promise((r) => window.setTimeout(r, 80));
+      await new Promise((r) => window.setTimeout(r, 120));
 
-      const dataUrl = await toJpeg(storyRef.current, {
+      const jpegOpts = {
         cacheBust: true,
         pixelRatio: 1,
         quality: 0.95,
         width: STORY_WIDTH,
         height: STORY_HEIGHT,
         backgroundColor: '#0a0a0a',
+        fetchRequestInit: { mode: 'cors' as RequestMode, credentials: 'omit' as RequestCredentials },
         style: { transform: 'none', transformOrigin: 'top left' },
-      });
+      };
+
+      // Safari/iOS often needs a warm-up pass before images stick in the export.
+      if (needsStoryCaptureWarmup()) {
+        await toJpeg(storyRef.current, jpegOpts);
+        await new Promise((r) => window.setTimeout(r, 60));
+      }
+
+      const dataUrl = await toJpeg(storyRef.current, jpegOpts);
       const file = dataUrlToFile(dataUrl, `kutagjej-story-${payload.listingId.slice(0, 8)}.jpg`);
       const result = await shareStoryImage(file);
 
@@ -348,6 +413,8 @@ export function ListingSharePage({
         flexDirection: 'column',
         bgcolor: '#0a0a0a',
         color: '#fff',
+        overscrollBehavior: 'none',
+        touchAction: 'manipulation',
       }}
     >
       {/* Immersive branded backdrop behind preview */}
@@ -433,7 +500,7 @@ export function ListingSharePage({
         </Box>
       </Box>
 
-      {/* Offscreen export canvas */}
+      {/* Offscreen export canvas — keep painted (no opacity/visibility hide) so Safari embeds images */}
       <Box
         aria-hidden
         sx={{
@@ -443,7 +510,7 @@ export function ListingSharePage({
           width: STORY_WIDTH,
           height: STORY_HEIGHT,
           pointerEvents: 'none',
-          opacity: 0,
+          zIndex: -1,
           overflow: 'hidden',
         }}
       >

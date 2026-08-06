@@ -94,6 +94,7 @@ type CarFormState = {
   transmission: '' | 'automatic' | 'manual';
   fuelType: string;
   price: string;
+  originalPrice: string;
   currency: '' | 'EUR' | 'LEK';
   color: string;
   isMatte: boolean;
@@ -115,6 +116,7 @@ function emptyForm(): CarFormState {
     transmission: '',
     fuelType: '',
     price: '',
+    originalPrice: '',
     currency: '',
     color: '',
     isMatte: false,
@@ -155,6 +157,14 @@ function validateForm(f: CarFormState): FieldErrors {
   if (price === null || price < 0) errors.price = 'Enter a valid price.';
   if (f.currency !== 'EUR' && f.currency !== 'LEK') errors.currency = 'Please choose a currency.';
 
+  if (f.originalPrice.trim()) {
+    const was = parseFloatStrict(f.originalPrice);
+    if (was === null || was < 0) errors.originalPrice = 'Enter a valid previous price.';
+    else if (price !== null && was <= price) {
+      errors.originalPrice = 'Previous price must be higher than the current price.';
+    }
+  }
+
   if (!f.color) errors.color = 'Please select the exterior colour.';
 
   if (!f.cityId) errors.cityId = 'Please select a city.';
@@ -180,6 +190,7 @@ const FIELD_ORDER: (keyof CarFormState)[] = [
   'transmission',
   'fuelType',
   'price',
+  'originalPrice',
   'currency',
   'contactPhone',
   'color',
@@ -203,6 +214,9 @@ function mapServerErrorToField(message: string): keyof CarFormState | null {
   if (m.includes('kilomet')) return 'kilometers';
   if (m.includes('transmission')) return 'transmission';
   if (m.includes('fuel')) return 'fuelType';
+  if (m.includes('mëparshëm') || m.includes('meparshem') || m.includes('previous') || m.includes('original')) {
+    return 'originalPrice';
+  }
   if (m.includes('price') || m.includes('currency')) return m.includes('currency') ? 'currency' : 'price';
   if (m.includes('colour') || m.includes('color')) return 'color';
   if (m.includes('phone')) return 'contactPhone';
@@ -282,6 +296,7 @@ function formFromListing(l: CarMineListing): CarFormState {
     transmission: l.transmission === 'automatic' || l.transmission === 'manual' ? l.transmission : '',
     fuelType: l.fuelType || '',
     price: l.price != null ? String(l.price) : '',
+    originalPrice: l.originalPrice != null ? String(l.originalPrice) : '',
     currency: l.currency === 'EUR' || l.currency === 'LEK' ? l.currency : '',
     color: l.color || '',
     isMatte: finish.includes('matte'),
@@ -501,6 +516,7 @@ export function CarListingForm({
           transmission: form.transmission,
           fuelType: form.fuelType,
           price: Number(form.price),
+          originalPrice: form.originalPrice.trim() ? Number(form.originalPrice) : null,
           currency: form.currency,
           color: form.color,
           finish,
@@ -556,6 +572,7 @@ export function CarListingForm({
         fd.append('transmission', form.transmission);
         fd.append('fuelType', form.fuelType);
         fd.append('price', form.price.trim());
+        if (form.originalPrice.trim()) fd.append('originalPrice', form.originalPrice.trim());
         fd.append('currency', form.currency);
         fd.append('color', form.color);
         if (form.isMatte) fd.append('finish', 'matte');
@@ -902,6 +919,16 @@ export function CarListingForm({
             fullWidth
             error={Boolean(fieldErrors.price)}
             helperText={fieldErrors.price}
+          />
+          <ListingTextField
+            label="Previous price"
+            type="text"
+            inputMode="decimal"
+            value={form.originalPrice}
+            onChange={onField('originalPrice')}
+            fullWidth
+            error={Boolean(fieldErrors.originalPrice)}
+            helperText={fieldErrors.originalPrice || 'Optional — shown as the old struck-through price.'}
           />
           <ListingToggle
             label="Currency"

@@ -32,6 +32,7 @@ import { AI_SEARCH_BLUE, OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-
 import { paths } from '@/paths';
 import type { ListingCategory, ListingCategoryKey } from '@/types/listing-category';
 import { useCopy } from '@/hooks/use-copy';
+import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 import type { AppMessages } from '@/lib/i18n/messages';
 
 export type AddListingPickOptions = { okazion?: boolean; premium?: boolean };
@@ -104,6 +105,8 @@ export function AddListingPickerDialog({
   const [hasProfessionalListing, setHasProfessionalListing] = React.useState(false);
   const [pickingOkazion, setPickingOkazion] = React.useState(initialOkazion);
   const [pickingPremium, setPickingPremium] = React.useState(false);
+
+  useLockBodyScroll(open);
 
   React.useEffect(() => {
     if (!open) return;
@@ -220,14 +223,26 @@ export function AddListingPickerDialog({
       anchor="bottom"
       open={open}
       onClose={handleCloseRequest}
+      disableScrollLock
       slotProps={{
+        backdrop: {
+          sx: {
+            // Ensure backdrop eats all pointer/touch events under the sheet.
+            pointerEvents: 'auto',
+            touchAction: 'none',
+          },
+        },
         paper: {
           sx: {
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
             maxHeight: '70dvh',
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
             backgroundImage: 'none',
             pb: 'env(safe-area-inset-bottom, 0px)',
+            // Above mobile bottom nav (appBar) so nav cannot be clicked while open.
+            zIndex: (theme) => theme.zIndex.modal + 1,
           },
         },
       }}

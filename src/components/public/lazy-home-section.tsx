@@ -3,14 +3,31 @@
 import * as React from 'react';
 import { Box, Skeleton, Stack } from '@mui/material';
 
+import { CarCard } from '@/components/public/listing-cards/car-card';
+import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
+import { JobCard } from '@/components/public/listing-cards/job-card';
+import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
+import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
-import { ListingsSection, type ListingsSectionVerticalId } from '@/components/public/listings-section';
+import { ListingsSection } from '@/components/public/listings-section';
 import {
   fetchLatestVertical,
   type HomepageLatestVerticalId,
+  type PublicCarListing,
+  type PublicDirectoryListing,
+  type PublicJobListing,
+  type PublicMarketplaceListing,
+  type PublicRealEstateListing,
 } from '@/lib/public-listings-client';
 
-const sectionCache = new Map<string, { listings: unknown[]; total: number }>();
+type HomeListing =
+  | PublicRealEstateListing
+  | PublicCarListing
+  | PublicJobListing
+  | PublicMarketplaceListing
+  | PublicDirectoryListing;
+
+const sectionCache = new Map<string, { listings: HomeListing[]; total: number }>();
 
 function cacheKey(vertical: string, limit: number) {
   return `${vertical}:${limit}`;
@@ -30,35 +47,48 @@ function CarouselSkeleton() {
   );
 }
 
+function renderListingCard(verticalId: HomepageLatestVerticalId, listing: HomeListing) {
+  switch (verticalId) {
+    case 'real-estate':
+      return <RealEstateCard key={listing.id} listing={listing as PublicRealEstateListing} />;
+    case 'cars':
+      return <CarCard key={listing.id} listing={listing as PublicCarListing} />;
+    case 'jobs':
+      return <JobCard key={listing.id} listing={listing as PublicJobListing} />;
+    case 'marketplace':
+      return <MarketplaceCard key={listing.id} listing={listing as PublicMarketplaceListing} />;
+    case 'businesses':
+    case 'professionals':
+      return <DirectoryListingCard key={listing.id} listing={listing as PublicDirectoryListing} />;
+    default:
+      return null;
+  }
+}
+
 /**
  * Homepage vertical carousel that loads when scrolled near the viewport.
  * Keeps an in-memory cache so soft navigations back to `/` don’t refetch.
+ * Cards are rendered inside this client module (no function props from the server).
  */
-export function LazyHomeSection<T>({
+export function LazyHomeSection({
   verticalId,
   limit = 8,
-  renderCard,
   initialListings,
   initialTotal,
 }: {
-  verticalId: HomepageLatestVerticalId & ListingsSectionVerticalId;
+  verticalId: HomepageLatestVerticalId;
   limit?: number;
-  renderCard: (listing: T) => React.ReactNode;
   /** When SSR already loaded this vertical, skip the network trip. */
-  initialListings?: T[];
+  initialListings?: HomeListing[];
   initialTotal?: number;
 }) {
   const key = cacheKey(verticalId, limit);
   const cached = sectionCache.get(key);
-  const [listings, setListings] = React.useState<T[]>(
-    () => initialListings ?? (cached?.listings as T[] | undefined) ?? [],
+  const [listings, setListings] = React.useState<HomeListing[]>(
+    () => initialListings ?? cached?.listings ?? [],
   );
-  const [total, setTotal] = React.useState(
-    () => initialTotal ?? cached?.total ?? 0,
-  );
-  const [loaded, setLoaded] = React.useState(
-    () => Boolean(initialListings) || Boolean(cached),
-  );
+  const [total, setTotal] = React.useState(() => initialTotal ?? cached?.total ?? 0);
+  const [loaded, setLoaded] = React.useState(() => Boolean(initialListings) || Boolean(cached));
   const [active, setActive] = React.useState(() => Boolean(initialListings) || Boolean(cached));
   const rootRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -89,13 +119,13 @@ export function LazyHomeSection<T>({
       const hit = sectionCache.get(key);
       if (hit) {
         if (!cancelled) {
-          setListings(hit.listings as T[]);
+          setListings(hit.listings);
           setTotal(hit.total);
           setLoaded(true);
         }
         return;
       }
-      const res = await fetchLatestVertical<T>(verticalId, limit);
+      const res = await fetchLatestVertical<HomeListing>(verticalId, limit);
       if (cancelled) return;
       sectionCache.set(key, { listings: res.listings, total: res.total });
       setListings(res.listings);
@@ -119,7 +149,7 @@ export function LazyHomeSection<T>({
           <CarouselSkeleton />
         ) : (
           <ListingsCarousel>
-            {listings.map((listing) => renderCard(listing))}
+            {listings.map((listing) => renderListingCard(verticalId, listing))}
           </ListingsCarousel>
         )}
       </ListingsSection>

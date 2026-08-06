@@ -3,6 +3,11 @@
 import * as React from 'react';
 import { Box, Button, CircularProgress, Grid, Stack } from '@mui/material';
 
+import { CarCard } from '@/components/public/listing-cards/car-card';
+import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
+import { JobCard } from '@/components/public/listing-cards/job-card';
+import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
+import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import {
   BROWSE_PAGE_SIZE,
   type BrowseFilters,
@@ -16,6 +21,12 @@ import {
   fetchBrowseOkazion,
   fetchBrowseProfessionals,
   fetchBrowseRealEstate,
+  type PublicCarListing,
+  type PublicDirectoryListing,
+  type PublicJobListing,
+  type PublicMarketplaceListing,
+  type PublicOkazionListing,
+  type PublicRealEstateListing,
 } from '@/lib/public-listings-client';
 
 export type BrowseInfiniteVerticalId =
@@ -27,13 +38,59 @@ export type BrowseInfiniteVerticalId =
   | 'professionals'
   | 'okazion';
 
-type ListingWithId = { id: string; kind?: string };
+type BrowseListing =
+  | PublicRealEstateListing
+  | PublicCarListing
+  | PublicJobListing
+  | PublicMarketplaceListing
+  | PublicDirectoryListing
+  | PublicOkazionListing;
+
+function listingKey(listing: BrowseListing) {
+  const kind = 'kind' in listing && listing.kind ? listing.kind : '';
+  return kind ? `${kind}:${listing.id}` : listing.id;
+}
+
+function OkazionCard({ listing }: { listing: PublicOkazionListing }) {
+  switch (listing.kind) {
+    case 'real-estate':
+      return <RealEstateCard listing={listing} />;
+    case 'car':
+      return <CarCard listing={listing} />;
+    case 'job':
+      return <JobCard listing={listing} />;
+    case 'marketplace':
+      return <MarketplaceCard listing={listing} />;
+    default:
+      return null;
+  }
+}
+
+function renderBrowseCard(verticalId: BrowseInfiniteVerticalId, listing: BrowseListing) {
+  switch (verticalId) {
+    case 'real-estate':
+      return <RealEstateCard listing={listing as PublicRealEstateListing} />;
+    case 'cars':
+      return <CarCard listing={listing as PublicCarListing} />;
+    case 'jobs':
+      return <JobCard listing={listing as PublicJobListing} />;
+    case 'marketplace':
+      return <MarketplaceCard listing={listing as PublicMarketplaceListing} />;
+    case 'businesses':
+    case 'professionals':
+      return <DirectoryListingCard listing={listing as PublicDirectoryListing} />;
+    case 'okazion':
+      return <OkazionCard listing={listing as PublicOkazionListing} />;
+    default:
+      return null;
+  }
+}
 
 async function fetchPage(
   verticalId: BrowseInfiniteVerticalId,
   filters: BrowseFilters | BrowseOkazionFilters,
   page: number,
-): Promise<{ listings: ListingWithId[]; totalPages: number }> {
+): Promise<{ listings: BrowseListing[]; totalPages: number }> {
   switch (verticalId) {
     case 'real-estate':
       return fetchBrowseRealEstate(BROWSE_PAGE_SIZE, filters as BrowseFilters, page);
@@ -54,42 +111,38 @@ async function fetchPage(
   }
 }
 
-function listingKey(listing: ListingWithId) {
-  return listing.kind ? `${listing.kind}:${listing.id}` : listing.id;
-}
-
 /**
  * First page comes from SSR; further pages append on scroll (or “Load more”).
+ * Cards are rendered inside this client module (no function props from the server).
  */
-export function BrowseInfiniteGrid<T extends ListingWithId>({
+export function BrowseInfiniteGrid({
   verticalId,
   filters,
   initialListings,
   initialPage,
   totalPages,
-  renderCard,
 }: {
   verticalId: BrowseInfiniteVerticalId;
   filters: BrowseFilters | BrowseOkazionFilters;
-  initialListings: T[];
+  initialListings: BrowseListing[];
   initialPage: number;
   totalPages: number;
-  renderCard: (listing: T) => React.ReactNode;
 }) {
-  const [listings, setListings] = React.useState<T[]>(initialListings);
+  const [listings, setListings] = React.useState<BrowseListing[]>(initialListings);
   const [page, setPage] = React.useState(initialPage);
   const [pagesTotal, setPagesTotal] = React.useState(totalPages);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(false);
   const sentinelRef = React.useRef<HTMLDivElement | null>(null);
   const loadingRef = React.useRef(false);
+  const filtersKey = JSON.stringify(filters);
 
   React.useEffect(() => {
     setListings(initialListings);
     setPage(initialPage);
     setPagesTotal(totalPages);
     setError(false);
-  }, [initialListings, initialPage, totalPages, verticalId, filters]);
+  }, [initialListings, initialPage, totalPages, verticalId, filtersKey]);
 
   const hasMore = page < pagesTotal;
 
@@ -103,7 +156,7 @@ export function BrowseInfiniteGrid<T extends ListingWithId>({
       const res = await fetchPage(verticalId, filters, nextPage);
       setListings((prev) => {
         const seen = new Set(prev.map(listingKey));
-        const appended = (res.listings as T[]).filter((l) => !seen.has(listingKey(l)));
+        const appended = res.listings.filter((l) => !seen.has(listingKey(l)));
         return [...prev, ...appended];
       });
       setPage(nextPage);
@@ -136,7 +189,9 @@ export function BrowseInfiniteGrid<T extends ListingWithId>({
     <Stack spacing={3}>
       <Grid container spacing={{ xs: 2, md: 2.5 }}>
         {listings.map((listing) => (
-          <React.Fragment key={listingKey(listing)}>{renderCard(listing)}</React.Fragment>
+          <Grid key={listingKey(listing)} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+            {renderBrowseCard(verticalId, listing)}
+          </Grid>
         ))}
       </Grid>
 

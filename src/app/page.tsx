@@ -10,10 +10,6 @@ import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { ListingsSection } from '@/components/public/listings-section';
 import { SeoIntroSection } from '@/components/public/seo-intro-section';
 import { buildHomepageMixedLatest } from '@/lib/homepage-latest-listings';
-import { CarCard } from '@/components/public/listing-cards/car-card';
-import { JobCard } from '@/components/public/listing-cards/job-card';
-import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
-import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { config } from '@/config';
 import { HOME_VERTICALS } from '@/lib/home-categories';
@@ -214,38 +210,27 @@ export default async function HomePage() {
         </ListingsCarousel>
       </ListingsSection>
 
-      <LazyHomeSection<PublicCarListing>
+      <LazyHomeSection
         verticalId="cars"
         initialListings={bundle.cars}
         initialTotal={totals.cars}
-        renderCard={(listing) => <CarCard key={listing.id} listing={listing} />}
       />
 
       <HomepageCommunityBanner
         activeListingsCount={totals.realEstate + totals.cars + totals.jobs}
       />
 
-      <LazyHomeSection<PublicJobListing>
+      <LazyHomeSection
         verticalId="jobs"
         initialListings={bundle.jobs}
         initialTotal={totals.jobs}
-        renderCard={(listing) => <JobCard key={listing.id} listing={listing} />}
       />
 
-      <LazyHomeSection<PublicMarketplaceListing>
-        verticalId="marketplace"
-        renderCard={(listing) => <MarketplaceCard key={listing.id} listing={listing} />}
-      />
+      <LazyHomeSection verticalId="marketplace" />
 
-      <LazyHomeSection<PublicDirectoryListing>
-        verticalId="businesses"
-        renderCard={(listing) => <DirectoryListingCard key={listing.id} listing={listing} />}
-      />
+      <LazyHomeSection verticalId="businesses" />
 
-      <LazyHomeSection<PublicDirectoryListing>
-        verticalId="professionals"
-        renderCard={(listing) => <DirectoryListingCard key={listing.id} listing={listing} />}
-      />
+      <LazyHomeSection verticalId="professionals" />
 
       <HomepagePostBanner />
 

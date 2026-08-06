@@ -10,6 +10,7 @@ import {
   type SxProps,
   type Theme,
 } from '@mui/material';
+import type { SystemStyleObject } from '@mui/system';
 import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
@@ -210,7 +211,7 @@ export type ProductSearchAccent = {
 export function productSearchBarSx(
   active = false,
   accent?: ProductSearchAccent,
-): SxProps<Theme> {
+): SystemStyleObject<Theme> {
   const accentColor = accent?.color ?? 'primary.main';
   const accentSoft = accent?.soft ?? primaryMainAlpha(0.08);
   return {

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Box, Stack } from '@mui/material';
+import { Badge, Box, Stack } from '@mui/material';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
@@ -11,6 +11,7 @@ import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/di
 import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle';
 
 import { useCopy } from '@/hooks/use-copy';
+import { useUnreadMessagesCount } from '@/hooks/use-unread-messages-count';
 import { useUser } from '@/hooks/use-user';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { hardNavigate, hardRefreshToTop } from '@/lib/hard-navigate';
@@ -42,6 +43,7 @@ interface NavItem {
 export function MobileBottomNav() {
   const pathname = usePathname();
   const { user } = useUser();
+  const unreadMessages = useUnreadMessagesCount();
   const t = useCopy();
   const isAuthed = Boolean(user);
   const searchActive = Boolean(pathname?.startsWith(paths.public.search));
@@ -234,6 +236,7 @@ export function MobileBottomNav() {
               {items.map((item, index) => {
                 const Icon = item.icon;
                 const active = item.activeWhen(pathname);
+                const isMessages = item.id === 'messages';
 
                 return (
                   <Box
@@ -255,7 +258,14 @@ export function MobileBottomNav() {
                       transition: 'color 200ms ease',
                     }}
                   >
-                    <Icon size={24} weight={active ? 'fill' : 'regular'} />
+                    <Badge
+                      color="error"
+                      badgeContent={unreadMessages > 99 ? '99+' : unreadMessages}
+                      invisible={!isMessages || unreadMessages <= 0}
+                      overlap="circular"
+                    >
+                      <Icon size={24} weight={active ? 'fill' : 'regular'} />
+                    </Badge>
                   </Box>
                 );
               })}

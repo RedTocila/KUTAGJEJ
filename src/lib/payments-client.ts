@@ -262,6 +262,7 @@ export async function applyPremiumVoucher(params: {
 }): Promise<{
   voucher?: PremiumVoucher;
   premiumUntil?: string;
+  refreshedAt?: string;
   message?: string;
   error?: string;
 }> {
@@ -276,6 +277,7 @@ export async function applyPremiumVoucher(params: {
     return {
       voucher: data.voucher as PremiumVoucher,
       premiumUntil: typeof data.premiumUntil === 'string' ? data.premiumUntil : undefined,
+      refreshedAt: typeof data.refreshedAt === 'string' ? data.refreshedAt : undefined,
       message: typeof data.message === 'string' ? data.message : undefined,
     };
   } catch {
@@ -288,6 +290,7 @@ export async function applyPremiumFromPlan(params: {
   listingId: string;
 }): Promise<{
   premiumUntil?: string;
+  refreshedAt?: string;
   alreadyActive?: boolean;
   quota?: PremiumPlanQuota;
   message?: string;
@@ -303,6 +306,7 @@ export async function applyPremiumFromPlan(params: {
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Aplikimi dështoi.' };
     return {
       premiumUntil: typeof data.premiumUntil === 'string' ? data.premiumUntil : undefined,
+      refreshedAt: typeof data.refreshedAt === 'string' ? data.refreshedAt : undefined,
       alreadyActive: Boolean(data.alreadyActive),
       quota: data.quota
         ? {
@@ -434,6 +438,7 @@ export async function applyOkazionVoucher(params: {
 }): Promise<{
   voucher?: OkazionVoucher;
   okazionUntil?: string;
+  refreshedAt?: string;
   message?: string;
   error?: string;
 }> {
@@ -448,6 +453,7 @@ export async function applyOkazionVoucher(params: {
     return {
       voucher: data.voucher as OkazionVoucher,
       okazionUntil: typeof data.okazionUntil === 'string' ? data.okazionUntil : undefined,
+      refreshedAt: typeof data.refreshedAt === 'string' ? data.refreshedAt : undefined,
       message: typeof data.message === 'string' ? data.message : undefined,
     };
   } catch {
@@ -460,6 +466,7 @@ export async function applyOkazionFromPlan(params: {
   listingId: string;
 }): Promise<{
   okazionUntil?: string;
+  refreshedAt?: string;
   alreadyActive?: boolean;
   quota?: OkazionPlanQuota;
   message?: string;
@@ -475,6 +482,7 @@ export async function applyOkazionFromPlan(params: {
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Aplikimi dështoi.' };
     return {
       okazionUntil: typeof data.okazionUntil === 'string' ? data.okazionUntil : undefined,
+      refreshedAt: typeof data.refreshedAt === 'string' ? data.refreshedAt : undefined,
       alreadyActive: Boolean(data.alreadyActive),
       quota: data.quota
         ? {

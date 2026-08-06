@@ -477,8 +477,6 @@ export function PackageOfferRow({
   );
 }
 
-const PACKAGE_BADGE_YELLOW = '#facc15';
-
 /**
  * Package card:
  * - Clickable price on the right (Boost Coins / Auto-Refresh / main plans), or
@@ -538,11 +536,13 @@ export function PackageCheckoutCard({
               px: 1,
               py: 0.2,
               borderRadius: 999,
-              bgcolor: PACKAGE_BADGE_YELLOW,
-              color: '#111',
+              bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.25 : 0.14),
+              color: (t) => resolveAccent(t, accent),
               fontWeight: 850,
               fontSize: '0.68rem',
               lineHeight: 1.35,
+              border: '1px solid',
+              borderColor: (t) => alpha(resolveAccent(t, accent), 0.45),
               flexShrink: 0,
             }}
           >
@@ -596,7 +596,7 @@ export function PackageCheckoutCard({
           transition: 'color 0.15s ease',
           ...(onClick
             ? {
-                '.MuiButtonBase-root:hover &, .MuiButtonBase-root:active &': {
+                '.package-checkout-card:hover &, .package-checkout-card:active &': {
                   color: (t: Theme) => resolveAccent(t, accent),
                 },
               }
@@ -631,33 +631,6 @@ export function PackageCheckoutCard({
         {actions}
       </Stack>
     </Box>
-  ) : onClick ? (
-    <ButtonBase
-      focusRipple
-      onClick={onClick}
-      sx={{
-        display: 'block',
-        width: '100%',
-        textAlign: 'left',
-        borderRadius: 0,
-      }}
-    >
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 2,
-          px: { xs: 2, sm: 2.25 },
-          pt: mainRowPaddingY,
-          pb: hasDetails ? 0.75 : mainRowPaddingY,
-        }}
-      >
-        {header}
-        {priceColumn}
-      </Box>
-    </ButtonBase>
   ) : (
     <Box
       sx={{
@@ -678,6 +651,20 @@ export function PackageCheckoutCard({
 
   return (
     <Box
+      className="package-checkout-card"
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
       sx={{
         position: 'relative',
         borderRadius: 2.5,
@@ -686,6 +673,7 @@ export function PackageCheckoutCard({
         bgcolor: 'background.paper',
         overflow: selected ? 'visible' : 'hidden',
         transition: 'border-color 0.15s ease, background-color 0.15s ease',
+        cursor: onClick ? 'pointer' : undefined,
         ...selectedSx,
         ...(onClick || actions
           ? {
@@ -721,20 +709,41 @@ export function PackageCheckoutCard({
       {hasDetails ? (
         <Box>
           <ButtonBase
-            onClick={() => setDetailsOpen((v) => !v)}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setDetailsOpen((v) => !v);
+            }}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onTouchStart={(event) => {
+              event.stopPropagation();
+            }}
             aria-expanded={detailsOpen}
             sx={{
+              position: 'relative',
               display: 'flex',
               width: '100%',
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: 1,
               px: { xs: 2, sm: 2.25 },
-              py: 1.1,
-              borderTop: '1px solid',
-              borderColor: 'divider',
+              py: 0.6,
+              minHeight: 28,
               borderRadius: 0,
               color: 'text.secondary',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: { xs: 16, sm: 20 },
+                right: { xs: 16, sm: 20 },
+                height: 0,
+                borderTop: '1px solid',
+                borderColor: 'divider',
+              },
               '&:hover': { color: (t) => resolveAccent(t, accent) },
             }}
           >

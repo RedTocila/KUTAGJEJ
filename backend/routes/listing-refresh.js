@@ -28,7 +28,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       refreshedAt: result.refreshedAt,
       boostCredits: result.boostCredits,
       cost: result.cost,
-      message: 'Njoftimi u rifreskua dhe u vendos në krye të listës.',
+      message: 'Njoftimi u rifreskua.',
     });
   } catch (err) {
     console.error('POST /listings/refresh:', err?.message || err);

@@ -2,6 +2,7 @@
 
 const { getSupabaseAdmin } = require('./supabase');
 const { isUuid } = require('./public-listings/query-helpers');
+const { refreshHoursForPlanCode } = require('./auto-refresh-packages');
 
 const REFRESH_COST = 1;
 
@@ -16,6 +17,42 @@ const TABLE_BY_KIND = {
 
 function isValidKind(kind) {
   return Boolean(TABLE_BY_KIND[kind]);
+}
+
+function resolvePlanCode(sub) {
+  if (!sub) return 'free';
+  const code = String(sub.plan_code || '').trim().toLowerCase();
+  if (code && code !== 'free') return code;
+  const title = String(sub.contract_title || '').toLowerCase();
+  if (title.includes('elite')) return 'elite';
+  if (title.includes('grow')) return 'grow';
+  if (title.includes('starter')) return 'starter';
+  if (code) return code;
+  return 'free';
+}
+
+async function getRefreshWindowHours(sb, userId) {
+  const now = new Date();
+  const { data, error } = await sb
+    .from('user_subscriptions')
+    .select('plan_code, contract_title, refresh_every_hours, status, expires_at, price_eur')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(30);
+  if (error) throw error;
+  const active =
+    (data || []).find(
+      (s) =>
+        s.status === 'active' &&
+        Number(s.price_eur) > 0 &&
+        (!s.expires_at || new Date(s.expires_at) >= now),
+    ) || null;
+
+  if (active?.refresh_every_hours != null && Number(active.refresh_every_hours) > 0) {
+    return Number(active.refresh_every_hours);
+  }
+  const planCode = resolvePlanCode(active);
+  return refreshHoursForPlanCode(planCode);
 }
 
 /**
@@ -33,7 +70,7 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
   const table = TABLE_BY_KIND[kind];
   const sb = getSupabaseAdmin();
 
-  let listingQ = sb.from(table).select('id, poster_id, status').eq('id', listingId);
+  let listingQ = sb.from(table).select('id, poster_id, status, created_at').eq('id', listingId);
   if (kind === 'businesses' || kind === 'professionals') {
     listingQ = listingQ.eq('vertical', kind);
   }
@@ -51,6 +88,40 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
       status: 400,
       message: 'Vetëm njoftimet e aprovuara mund të rifreskohen.',
     };
+  }
+
+  const refreshEveryHours = await getRefreshWindowHours(sb, userId);
+  const { data: refreshMeta, error: refreshMetaErr } = await sb
+    .from('listing_auto_refresh')
+    .select('last_refreshed_at, enabled')
+    .eq('user_id', userId)
+    .eq('listing_kind', kind)
+    .eq('listing_id', listingId)
+    .maybeSingle();
+  if (refreshMetaErr) {
+    if (!String(refreshMetaErr.message || '').includes('listing_auto_refresh')) {
+      throw refreshMetaErr;
+    }
+  }
+  const lastRefreshMs = refreshMeta?.last_refreshed_at
+    ? new Date(refreshMeta.last_refreshed_at).getTime()
+    : NaN;
+  if (Number.isFinite(lastRefreshMs) && refreshEveryHours > 0) {
+    const nowMs = Date.now();
+    const elapsedMs = nowMs - lastRefreshMs;
+    const requiredMs = refreshEveryHours * 60 * 60 * 1000;
+    if (elapsedMs < requiredMs) {
+      const remainingMs = requiredMs - elapsedMs;
+      const remainingMinutes = Math.ceil(remainingMs / (60 * 1000));
+      const remainingHours = Math.ceil(remainingMinutes / 60);
+      return {
+        ok: false,
+        status: 400,
+        message: `Mund ta rifreskoni këtë njoftim pas ${remainingHours} ore${
+          remainingHours === 1 ? '' : 'sh'
+        }.`,
+      };
+    }
   }
 
   const { data: profile, error: profileErr } = await sb
@@ -100,6 +171,25 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
       .update({ boost_credits: balance, updated_at: new Date().toISOString() })
       .eq('id', userId);
     throw bumpErr;
+  }
+
+  // Persist manual refresh anchor so cooldown applies per listing (not global / created_at).
+  try {
+    await sb.from('listing_auto_refresh').upsert(
+      {
+        user_id: userId,
+        listing_kind: kind,
+        listing_id: listingId,
+        enabled: Boolean(refreshMeta?.enabled),
+        last_refreshed_at: now,
+        updated_at: now,
+      },
+      { onConflict: 'user_id,listing_kind,listing_id' },
+    );
+  } catch (metaErr) {
+    if (!String(metaErr?.message || '').includes('listing_auto_refresh')) {
+      throw metaErr;
+    }
   }
 
   return {

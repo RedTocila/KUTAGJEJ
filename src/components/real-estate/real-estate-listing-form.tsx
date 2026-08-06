@@ -625,7 +625,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         />
       ) : (
         <ListingFormActions
-          submitLabel={isEdit ? 'Përditëso njoftimin' : 'Ruaj njoftimin'}
+          submitLabel={isEdit ? 'Përditëso njoftimin' : 'Posto njoftimin'}
           submitting={submitting}
           disabled={loadingRefs}
           backHref={backHref}

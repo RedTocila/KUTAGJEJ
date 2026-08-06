@@ -145,6 +145,23 @@ async function upsertBusinessAnnouncement({ userId, listingId, title, subtitle, 
     return { ok: false, status: 404, message: 'Njoftimi nuk u gjet.' };
   }
 
+  if (shouldCharge) {
+    try {
+      await sb.from('listing_auto_refresh').upsert(
+        {
+          user_id: userId,
+          listing_kind: 'businesses',
+          listing_id: listingId,
+          last_refreshed_at: now,
+          updated_at: now,
+        },
+        { onConflict: 'user_id,listing_kind,listing_id' },
+      );
+    } catch (refreshErr) {
+      if (!String(refreshErr?.message || '').includes('listing_auto_refresh')) throw refreshErr;
+    }
+  }
+
   return {
     ok: true,
     charged: shouldCharge,

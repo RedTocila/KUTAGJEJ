@@ -48,10 +48,17 @@ export type AutoRefreshEnrollment = {
   lastRefreshedAt?: string | null;
 };
 
+export type ListingRefreshCooldown = {
+  kind: string;
+  listingId: string;
+  lastRefreshedAt?: string | null;
+};
+
 export async function fetchListingAutoRefresh(): Promise<{
   slots?: number;
   used?: number;
   enrolled?: AutoRefreshEnrollment[];
+  cooldowns?: ListingRefreshCooldown[];
   planCode?: string;
   refreshEveryHours?: number;
   error?: string;
@@ -69,6 +76,7 @@ export async function fetchListingAutoRefresh(): Promise<{
       slots: Number(data.slots) || 0,
       used: Number(data.used) || 0,
       enrolled: Array.isArray(data.enrolled) ? (data.enrolled as AutoRefreshEnrollment[]) : [],
+      cooldowns: Array.isArray(data.cooldowns) ? (data.cooldowns as ListingRefreshCooldown[]) : [],
       planCode: typeof data.planCode === 'string' ? data.planCode : undefined,
       refreshEveryHours:
         typeof data.refreshEveryHours === 'number' ? data.refreshEveryHours : undefined,

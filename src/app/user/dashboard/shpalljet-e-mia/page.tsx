@@ -60,7 +60,11 @@ import { useUser } from '@/hooks/use-user';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
-import { ListingOwnerMetrics, ListingOwnerTopActions } from '@/components/user/listing-owner-metrics';
+import {
+  ListingOwnerMetrics,
+  ListingOwnerStats,
+  ListingOwnerTopActions,
+} from '@/components/user/listing-owner-metrics';
 import { ListingModerationStatusChip } from '@/components/user/listing-moderation-status-chip';
 import { ListingModerationNotice, ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
@@ -73,6 +77,10 @@ import { hardNavigate } from '@/lib/hard-navigate';
 import type { ListingCategoryKey } from '@/types/listing-category';
 
 function autoRefreshKey(kind: string, listingId: string) {
+  return `${kind}:${listingId}`;
+}
+
+function refreshCooldownKey(kind: string, listingId: string) {
   return `${kind}:${listingId}`;
 }
 
@@ -111,6 +119,8 @@ function CardImageHeader({
   fallbackIcon: FallbackIcon,
   alt,
   status,
+  isPremium = false,
+  isOkazion = false,
   bottomOverlay,
   topRightActions,
 }: {
@@ -118,9 +128,36 @@ function CardImageHeader({
   fallbackIcon: PhosphorIcon;
   alt: string;
   status: ReturnType<typeof normalizeListingModerationStatus>;
+  isPremium?: boolean;
+  isOkazion?: boolean;
   bottomOverlay?: React.ReactNode;
   topRightActions?: React.ReactNode;
 }) {
+  const topLeftLabel = (() => {
+    if (isOkazion) {
+      return (
+        <Chip
+          size="small"
+          label="OKAZION"
+          color="error"
+          sx={{ fontWeight: 800, height: 24, fontSize: '0.7rem', '& .MuiChip-label': { px: 1 } }}
+        />
+      );
+    }
+    if (isPremium) {
+      return (
+        <Chip
+          size="small"
+          label="Premium"
+          color="warning"
+          sx={{ fontWeight: 800, height: 24, fontSize: '0.7rem', '& .MuiChip-label': { px: 1 } }}
+        />
+      );
+    }
+    if (status !== 'approved') return <ListingModerationStatusChip status={status} />;
+    return null;
+  })();
+
   return (
     <Box
       sx={{
@@ -168,9 +205,7 @@ function CardImageHeader({
           zIndex: 1,
         }}
       />
-      <Box sx={{ position: 'absolute', top: 10, left: 10, zIndex: 2 }}>
-        <ListingModerationStatusChip status={status} />
-      </Box>
+      {topLeftLabel ? <Box sx={{ position: 'absolute', top: 10, left: 10, zIndex: 2 }}>{topLeftLabel}</Box> : null}
       {topRightActions ? (
         <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 2 }}>{topRightActions}</Box>
       ) : null}
@@ -204,6 +239,8 @@ function BaseCard({
   announcement = null,
   onAnnouncementSaved,
   mediaBottomOverlay,
+  refreshEveryHours,
+  lastRefreshedAt,
 }: {
   title: string;
   chips?: React.ReactNode;
@@ -231,6 +268,8 @@ function BaseCard({
     boostCredits?: number;
   }) => void;
   mediaBottomOverlay?: React.ReactNode;
+  refreshEveryHours?: number;
+  lastRefreshedAt?: string | null;
 }) {
   const moderationStatus = normalizeListingModerationStatus(status ?? undefined);
   const isPublic = moderationStatus === 'approved';
@@ -243,24 +282,16 @@ function BaseCard({
         display: 'flex',
         flexDirection: 'column',
         border: '1px solid',
-        borderColor: isOkazion ? 'error.main' : isPremium ? 'warning.main' : isPublic ? 'divider' : 'warning.light',
+        borderColor: 'divider',
         borderRadius: 2.5,
         overflow: 'hidden',
         bgcolor: 'background.paper',
         opacity: isPublic ? 1 : 0.94,
-        boxShadow: isPremium
-          ? (t) =>
-              t.palette.mode === 'dark'
-                ? '0 0 0 1px rgba(245, 166, 35, 0.22), 0 6px 18px rgba(245, 166, 35, 0.08)'
-                : '0 0 0 1px rgba(245, 166, 35, 0.2), 0 6px 16px rgba(245, 166, 35, 0.1)'
-          : 'none',
+        boxShadow: 'none',
         transition: 'box-shadow 0.2s, border-color 0.2s',
         '&:hover': {
-          borderColor: isPremium ? 'warning.dark' : isPublic ? 'primary.main' : 'warning.main',
-          boxShadow: (t) =>
-            isPremium
-              ? undefined
-              : `0 8px 22px ${t.palette.mode === 'dark' ? 'rgba(0,0,0,0.32)' : 'rgba(0,0,0,0.07)'}`,
+          borderColor: isPublic ? 'primary.main' : 'warning.main',
+          boxShadow: (t) => `0 8px 22px ${t.palette.mode === 'dark' ? 'rgba(0,0,0,0.32)' : 'rgba(0,0,0,0.07)'}`,
         },
       }}
     >
@@ -269,6 +300,8 @@ function BaseCard({
         fallbackIcon={fallbackIcon}
         alt={title}
         status={moderationStatus}
+        isPremium={isPremium}
+        isOkazion={isOkazion}
         bottomOverlay={mediaBottomOverlay}
         topRightActions={
           listingId && kind ? (
@@ -319,7 +352,21 @@ function BaseCard({
         </Stack>
         {chips ? <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>{chips}</Stack> : null}
         {!isPublic ? <ListingModerationNotice status={moderationStatus} /> : null}
-        <Stack spacing={0.15}>{children}</Stack>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ alignItems: 'flex-end', justifyContent: 'space-between', minWidth: 0 }}
+        >
+          <Stack spacing={0.15} sx={{ minWidth: 0, flex: 1 }}>
+            {children}
+          </Stack>
+          {metrics ? (
+            <ListingOwnerStats
+              metrics={metrics}
+              sx={{ flexShrink: 0, pb: 0.1, maxWidth: '45%', justifyContent: 'flex-end' }}
+            />
+          ) : null}
+        </Stack>
         <Box sx={{ flex: 1 }} />
         {metrics ? (
           <ListingOwnerMetrics
@@ -336,6 +383,9 @@ function BaseCard({
             onOkazionApplied={onOkazionApplied}
             onPremiumApplied={onPremiumApplied}
             onRefreshed={onRefreshed}
+            lastRefreshedAt={lastRefreshedAt}
+            refreshEveryHours={refreshEveryHours}
+            hideStats
           />
         ) : null}
       </CardContent>
@@ -415,6 +465,8 @@ function RealEstateCard({
   onPremiumApplied,
   onOkazionApplied,
   onRefreshed,
+  refreshEveryHours,
+  lastRefreshedAt,
 }: {
   l: RealEstateMineListing;
   autoRefreshEnabled?: boolean;
@@ -422,6 +474,8 @@ function RealEstateCard({
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onOkazionApplied?: (result: { okazionUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
+  refreshEveryHours?: number;
+  lastRefreshedAt?: string | null;
 }) {
   const location = [l.cityName, l.zoneName].filter(Boolean).join(' · ') || '—';
   return (
@@ -443,6 +497,8 @@ function RealEstateCard({
       onPremiumApplied={onPremiumApplied}
       onOkazionApplied={onOkazionApplied}
       onRefreshed={onRefreshed}
+      lastRefreshedAt={lastRefreshedAt}
+      refreshEveryHours={refreshEveryHours}
       chips={<>
         <Chip size="small" label={l.transactionType === 'rent' ? 'Qera' : 'Shitje'} color={l.transactionType === 'rent' ? 'info' : 'secondary'} variant="outlined" sx={chipSx} />
         <Chip size="small" label={propertyCategoryLabel(l.propertyCategory)} variant="outlined" sx={chipSx} />
@@ -466,6 +522,8 @@ function CarCard({
   onPremiumApplied,
   onOkazionApplied,
   onRefreshed,
+  refreshEveryHours,
+  lastRefreshedAt,
 }: {
   l: CarMineListing;
   autoRefreshEnabled?: boolean;
@@ -473,6 +531,8 @@ function CarCard({
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onOkazionApplied?: (result: { okazionUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
+  refreshEveryHours?: number;
+  lastRefreshedAt?: string | null;
 }) {
   const title = [l.make, l.model, l.variant].filter(Boolean).join(' ');
   return (
@@ -494,6 +554,8 @@ function CarCard({
       onPremiumApplied={onPremiumApplied}
       onOkazionApplied={onOkazionApplied}
       onRefreshed={onRefreshed}
+      lastRefreshedAt={lastRefreshedAt}
+      refreshEveryHours={refreshEveryHours}
       chips={<>
         <Chip size="small" label={l.year} variant="outlined" sx={chipSx} />
         <Chip size="small" label={l.transmission} variant="outlined" sx={chipSx} />
@@ -517,6 +579,8 @@ function JobCard({
   onPremiumApplied,
   onOkazionApplied,
   onRefreshed,
+  refreshEveryHours,
+  lastRefreshedAt,
 }: {
   l: JobMineListing;
   autoRefreshEnabled?: boolean;
@@ -524,6 +588,8 @@ function JobCard({
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onOkazionApplied?: (result: { okazionUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
+  refreshEveryHours?: number;
+  lastRefreshedAt?: string | null;
 }) {
   const industryLabel = findLabel(JOB_INDUSTRY_OPTIONS, l.industry);
   const jobTypeLabel = findLabel(JOB_TYPE_OPTIONS, l.jobType);
@@ -547,6 +613,8 @@ function JobCard({
       onPremiumApplied={onPremiumApplied}
       onOkazionApplied={onOkazionApplied}
       onRefreshed={onRefreshed}
+      lastRefreshedAt={lastRefreshedAt}
+      refreshEveryHours={refreshEveryHours}
       chips={<>
         <Chip size="small" label={jobTypeLabel} variant="outlined" sx={chipSx} />
         <Chip size="small" label={workLocLabel} variant="outlined" color="info" sx={chipSx} />
@@ -570,6 +638,8 @@ function MarketplaceCard({
   onPremiumApplied,
   onOkazionApplied,
   onRefreshed,
+  refreshEveryHours,
+  lastRefreshedAt,
 }: {
   l: MarketplaceMineListing;
   autoRefreshEnabled?: boolean;
@@ -577,6 +647,8 @@ function MarketplaceCard({
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onOkazionApplied?: (result: { okazionUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
+  refreshEveryHours?: number;
+  lastRefreshedAt?: string | null;
 }) {
   const categoryLabel = findLabel(MARKETPLACE_CATEGORY_OPTIONS, l.category);
   const conditionLabel = findLabel(MARKETPLACE_CONDITION_OPTIONS, l.condition);
@@ -599,6 +671,8 @@ function MarketplaceCard({
       onPremiumApplied={onPremiumApplied}
       onOkazionApplied={onOkazionApplied}
       onRefreshed={onRefreshed}
+      lastRefreshedAt={lastRefreshedAt}
+      refreshEveryHours={refreshEveryHours}
       chips={<>
         <Chip size="small" label={categoryLabel} variant="outlined" sx={chipSx} />
         {l.condition ? <Chip size="small" label={conditionLabel} variant="outlined" color="success" sx={chipSx} /> : null}
@@ -615,6 +689,8 @@ function BusinessCard({
   onPremiumApplied,
   onRefreshed,
   onAnnouncementSaved,
+  refreshEveryHours,
+  lastRefreshedAt,
 }: {
   l: BusinessMineListing;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
@@ -624,6 +700,8 @@ function BusinessCard({
     refreshedAt?: string | null;
     boostCredits?: number;
   }) => void;
+  refreshEveryHours?: number;
+  lastRefreshedAt?: string | null;
 }) {
   const categoryLabel = findLabel(BUSINESS_CATEGORY_OPTIONS, l.category);
   const announcement: BusinessAnnouncement | null = l.announcementTitle?.trim()
@@ -649,6 +727,8 @@ function BusinessCard({
       premiumUntil={l.premiumUntil ?? null}
       onPremiumApplied={onPremiumApplied}
       onRefreshed={onRefreshed}
+      lastRefreshedAt={lastRefreshedAt}
+      refreshEveryHours={refreshEveryHours}
       announcement={announcement}
       onAnnouncementSaved={onAnnouncementSaved}
       mediaBottomOverlay={
@@ -679,10 +759,14 @@ function ProfessionalCard({
   l,
   onPremiumApplied,
   onRefreshed,
+  refreshEveryHours,
+  lastRefreshedAt,
 }: {
   l: ProfessionalMineListing;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
+  refreshEveryHours?: number;
+  lastRefreshedAt?: string | null;
 }) {
   const categoryLabel = findLabel(PROFESSIONAL_CATEGORY_OPTIONS, l.category);
   return (
@@ -699,6 +783,8 @@ function ProfessionalCard({
       premiumUntil={l.premiumUntil ?? null}
       onPremiumApplied={onPremiumApplied}
       onRefreshed={onRefreshed}
+      lastRefreshedAt={lastRefreshedAt}
+      refreshEveryHours={refreshEveryHours}
       chips={
         <>
           <Chip size="small" label="Profesionist" color="secondary" variant="outlined" sx={chipSx} />
@@ -911,6 +997,8 @@ export default function UserMyListingsPage() {
   const [loading, setLoading] = React.useState(true);
   const [errors, setErrors] = React.useState<(string | null)[]>([null, null, null, null, null, null]);
   const [autoRefreshKeys, setAutoRefreshKeys] = React.useState<Set<string>>(() => new Set());
+  const [refreshCooldownByKey, setRefreshCooldownByKey] = React.useState<Record<string, string>>({});
+  const [refreshEveryHours, setRefreshEveryHours] = React.useState(48);
 
   const canView =
     Boolean(user) &&
@@ -962,6 +1050,13 @@ export default function UserMyListingsPage() {
       setAutoRefreshKeys(
         new Set((auto.enrolled ?? []).map((e) => autoRefreshKey(e.kind, e.listingId))),
       );
+      const cooldownMap: Record<string, string> = {};
+      for (const cooldown of auto.cooldowns ?? []) {
+        if (!cooldown.lastRefreshedAt) continue;
+        cooldownMap[refreshCooldownKey(cooldown.kind, cooldown.listingId)] = cooldown.lastRefreshedAt;
+      }
+      setRefreshCooldownByKey(cooldownMap);
+      setRefreshEveryHours(Number(auto.refreshEveryHours) > 0 ? Number(auto.refreshEveryHours) : 48);
       setLoading(false);
     });
 
@@ -1160,8 +1255,13 @@ export default function UserMyListingsPage() {
             onOkazionApplied={({ okazionUntil }) => {
               setReListings((prev) => markListingOkazion(prev, item.listing.id, okazionUntil));
             }}
+            lastRefreshedAt={refreshCooldownByKey[refreshCooldownKey('real-estate', item.listing.id)] ?? null}
+            refreshEveryHours={refreshEveryHours}
             onRefreshed={({ refreshedAt }) => {
-              setReListings((prev) => bumpListingToTop(prev, item.listing.id, refreshedAt));
+              setRefreshCooldownByKey((prev) => ({
+                ...prev,
+                [refreshCooldownKey('real-estate', item.listing.id)]: refreshedAt,
+              }));
             }}
           />
         );
@@ -1177,8 +1277,13 @@ export default function UserMyListingsPage() {
             onOkazionApplied={({ okazionUntil }) => {
               setCarListings((prev) => markListingOkazion(prev, item.listing.id, okazionUntil));
             }}
+            lastRefreshedAt={refreshCooldownByKey[refreshCooldownKey('car', item.listing.id)] ?? null}
+            refreshEveryHours={refreshEveryHours}
             onRefreshed={({ refreshedAt }) => {
-              setCarListings((prev) => bumpListingToTop(prev, item.listing.id, refreshedAt));
+              setRefreshCooldownByKey((prev) => ({
+                ...prev,
+                [refreshCooldownKey('car', item.listing.id)]: refreshedAt,
+              }));
             }}
           />
         );
@@ -1194,8 +1299,13 @@ export default function UserMyListingsPage() {
             onOkazionApplied={({ okazionUntil }) => {
               setJobListings((prev) => markListingOkazion(prev, item.listing.id, okazionUntil));
             }}
+            lastRefreshedAt={refreshCooldownByKey[refreshCooldownKey('job', item.listing.id)] ?? null}
+            refreshEveryHours={refreshEveryHours}
             onRefreshed={({ refreshedAt }) => {
-              setJobListings((prev) => bumpListingToTop(prev, item.listing.id, refreshedAt));
+              setRefreshCooldownByKey((prev) => ({
+                ...prev,
+                [refreshCooldownKey('job', item.listing.id)]: refreshedAt,
+              }));
             }}
           />
         );
@@ -1211,8 +1321,13 @@ export default function UserMyListingsPage() {
             onOkazionApplied={({ okazionUntil }) => {
               setMktListings((prev) => markListingOkazion(prev, item.listing.id, okazionUntil));
             }}
+            lastRefreshedAt={refreshCooldownByKey[refreshCooldownKey('marketplace', item.listing.id)] ?? null}
+            refreshEveryHours={refreshEveryHours}
             onRefreshed={({ refreshedAt }) => {
-              setMktListings((prev) => bumpListingToTop(prev, item.listing.id, refreshedAt));
+              setRefreshCooldownByKey((prev) => ({
+                ...prev,
+                [refreshCooldownKey('marketplace', item.listing.id)]: refreshedAt,
+              }));
             }}
           />
         );
@@ -1223,10 +1338,21 @@ export default function UserMyListingsPage() {
             onPremiumApplied={({ premiumUntil }) => {
               setBizListings((prev) => markListingPremium(prev, item.listing.id, premiumUntil));
             }}
+            lastRefreshedAt={refreshCooldownByKey[refreshCooldownKey('businesses', item.listing.id)] ?? null}
+            refreshEveryHours={refreshEveryHours}
             onRefreshed={({ refreshedAt }) => {
-              setBizListings((prev) => bumpListingToTop(prev, item.listing.id, refreshedAt));
+              setRefreshCooldownByKey((prev) => ({
+                ...prev,
+                [refreshCooldownKey('businesses', item.listing.id)]: refreshedAt,
+              }));
             }}
             onAnnouncementSaved={({ announcement, refreshedAt }) => {
+              if (refreshedAt) {
+                setRefreshCooldownByKey((prev) => ({
+                  ...prev,
+                  [refreshCooldownKey('businesses', item.listing.id)]: refreshedAt,
+                }));
+              }
               setBizListings((prev) =>
                 applyBusinessAnnouncement(prev, item.listing.id, announcement, refreshedAt),
               );
@@ -1240,8 +1366,13 @@ export default function UserMyListingsPage() {
             onPremiumApplied={({ premiumUntil }) => {
               setProListings((prev) => markListingPremium(prev, item.listing.id, premiumUntil));
             }}
+            lastRefreshedAt={refreshCooldownByKey[refreshCooldownKey('professionals', item.listing.id)] ?? null}
+            refreshEveryHours={refreshEveryHours}
             onRefreshed={({ refreshedAt }) => {
-              setProListings((prev) => bumpListingToTop(prev, item.listing.id, refreshedAt));
+              setRefreshCooldownByKey((prev) => ({
+                ...prev,
+                [refreshCooldownKey('professionals', item.listing.id)]: refreshedAt,
+              }));
             }}
           />
         );
@@ -1453,8 +1584,13 @@ export default function UserMyListingsPage() {
                 onOkazionApplied={({ okazionUntil }) => {
                   setReListings((prev) => markListingOkazion(prev, l.id, okazionUntil));
                 }}
+                lastRefreshedAt={refreshCooldownByKey[refreshCooldownKey('real-estate', l.id)] ?? null}
+                refreshEveryHours={refreshEveryHours}
                 onRefreshed={({ refreshedAt }) => {
-                  setReListings((prev) => bumpListingToTop(prev, l.id, refreshedAt));
+                  setRefreshCooldownByKey((prev) => ({
+                    ...prev,
+                    [refreshCooldownKey('real-estate', l.id)]: refreshedAt,
+                  }));
                 }}
               />
             )}
@@ -1477,8 +1613,13 @@ export default function UserMyListingsPage() {
                 onOkazionApplied={({ okazionUntil }) => {
                   setCarListings((prev) => markListingOkazion(prev, l.id, okazionUntil));
                 }}
+                lastRefreshedAt={refreshCooldownByKey[refreshCooldownKey('car', l.id)] ?? null}
+                refreshEveryHours={refreshEveryHours}
                 onRefreshed={({ refreshedAt }) => {
-                  setCarListings((prev) => bumpListingToTop(prev, l.id, refreshedAt));
+                  setRefreshCooldownByKey((prev) => ({
+                    ...prev,
+                    [refreshCooldownKey('car', l.id)]: refreshedAt,
+                  }));
                 }}
               />
             )}
@@ -1501,8 +1642,13 @@ export default function UserMyListingsPage() {
                 onOkazionApplied={({ okazionUntil }) => {
                   setJobListings((prev) => markListingOkazion(prev, l.id, okazionUntil));
                 }}
+                lastRefreshedAt={refreshCooldownByKey[refreshCooldownKey('job', l.id)] ?? null}
+                refreshEveryHours={refreshEveryHours}
                 onRefreshed={({ refreshedAt }) => {
-                  setJobListings((prev) => bumpListingToTop(prev, l.id, refreshedAt));
+                  setRefreshCooldownByKey((prev) => ({
+                    ...prev,
+                    [refreshCooldownKey('job', l.id)]: refreshedAt,
+                  }));
                 }}
               />
             )}
@@ -1525,8 +1671,13 @@ export default function UserMyListingsPage() {
                 onOkazionApplied={({ okazionUntil }) => {
                   setMktListings((prev) => markListingOkazion(prev, l.id, okazionUntil));
                 }}
+                lastRefreshedAt={refreshCooldownByKey[refreshCooldownKey('marketplace', l.id)] ?? null}
+                refreshEveryHours={refreshEveryHours}
                 onRefreshed={({ refreshedAt }) => {
-                  setMktListings((prev) => bumpListingToTop(prev, l.id, refreshedAt));
+                  setRefreshCooldownByKey((prev) => ({
+                    ...prev,
+                    [refreshCooldownKey('marketplace', l.id)]: refreshedAt,
+                  }));
                 }}
               />
             )}
@@ -1547,10 +1698,21 @@ export default function UserMyListingsPage() {
                 onPremiumApplied={({ premiumUntil }) => {
                   setBizListings((prev) => markListingPremium(prev, l.id, premiumUntil));
                 }}
+                lastRefreshedAt={refreshCooldownByKey[refreshCooldownKey('businesses', l.id)] ?? null}
+                refreshEveryHours={refreshEveryHours}
                 onRefreshed={({ refreshedAt }) => {
-                  setBizListings((prev) => bumpListingToTop(prev, l.id, refreshedAt));
+                  setRefreshCooldownByKey((prev) => ({
+                    ...prev,
+                    [refreshCooldownKey('businesses', l.id)]: refreshedAt,
+                  }));
                 }}
                 onAnnouncementSaved={({ announcement, refreshedAt }) => {
+                  if (refreshedAt) {
+                    setRefreshCooldownByKey((prev) => ({
+                      ...prev,
+                      [refreshCooldownKey('businesses', l.id)]: refreshedAt,
+                    }));
+                  }
                   setBizListings((prev) => applyBusinessAnnouncement(prev, l.id, announcement, refreshedAt));
                 }}
               />
@@ -1572,8 +1734,13 @@ export default function UserMyListingsPage() {
                 onPremiumApplied={({ premiumUntil }) => {
                   setProListings((prev) => markListingPremium(prev, l.id, premiumUntil));
                 }}
+                lastRefreshedAt={refreshCooldownByKey[refreshCooldownKey('professionals', l.id)] ?? null}
+                refreshEveryHours={refreshEveryHours}
                 onRefreshed={({ refreshedAt }) => {
-                  setProListings((prev) => bumpListingToTop(prev, l.id, refreshedAt));
+                  setRefreshCooldownByKey((prev) => ({
+                    ...prev,
+                    [refreshCooldownKey('professionals', l.id)]: refreshedAt,
+                  }));
                 }}
               />
             )}

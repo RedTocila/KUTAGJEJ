@@ -217,9 +217,10 @@ export default function UserPostListingPage() {
     setAiReady(true);
   }, [wantsAi, searchParams]);
 
-  const handleSheetPick = (key: ListingCategoryKey, opts?: { okazion?: boolean }) => {
+  const handleSheetPick = (key: ListingCategoryKey, opts?: { okazion?: boolean; premium?: boolean }) => {
     const q = new URLSearchParams({ category: key });
     if (opts?.okazion || searchParams.get('okazion') === '1') q.set('okazion', '1');
+    if (opts?.premium || searchParams.get('premium') === '1') q.set('premium', '1');
     hardNavigate(`${paths.user.realEstateListing}?${q.toString()}`);
   };
 
@@ -275,6 +276,7 @@ export default function UserPostListingPage() {
           onClose={() => hardNavigate(paths.user.dashboard)}
           onPick={handleSheetPick}
           initialOkazion={searchParams.get('okazion') === '1'}
+          initialPremium={searchParams.get('premium') === '1'}
         />
       ) : null}
 

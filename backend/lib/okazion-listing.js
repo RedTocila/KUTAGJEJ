@@ -1,7 +1,7 @@
 'use strict';
 
 const { getSupabaseAdmin } = require('./supabase');
-const { isUuid } = require('./public-listings/query-helpers');
+const { isUuid, isPremiumActive } = require('./public-listings/query-helpers');
 const { isValidKind, TABLE_BY_KIND } = require('./listing-refresh');
 const { getOkazionPackage } = require('./okazion-packages');
 
@@ -229,7 +229,10 @@ async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
     };
   }
   const table = TABLE_BY_KIND[kind];
-  let listingQ = sb.from(table).select('id, poster_id, status, okazion_until').eq('id', listingId);
+  let listingQ = sb
+    .from(table)
+    .select('id, poster_id, status, okazion_until, premium_until')
+    .eq('id', listingId);
   const { data: listing, error: listingErr } = await listingQ.maybeSingle();
   if (listingErr) {
     if (String(listingErr.message || '').includes('okazion_until')) {
@@ -252,6 +255,13 @@ async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
       ok: false,
       status: 400,
       message: 'Vetëm njoftimet e aprovuara mund të bëhen OKAZION.',
+    };
+  }
+  if (isPremiumActive(listing)) {
+    return {
+      ok: false,
+      status: 400,
+      message: 'Ky njoftim është Premium aktiv. Nuk mund të bëhet OKAZION derisa të mbarojë Premium.',
     };
   }
   return { ok: true, listing, table };
@@ -278,6 +288,23 @@ async function bumpListingOkazion(sb, table, listingId, until, now) {
     })
     .eq('id', listingId);
   if (bumpErr) throw bumpErr;
+}
+
+async function markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt }) {
+  try {
+    await sb.from('listing_auto_refresh').upsert(
+      {
+        user_id: userId,
+        listing_kind: kind,
+        listing_id: listingId,
+        last_refreshed_at: refreshedAt,
+        updated_at: refreshedAt,
+      },
+      { onConflict: 'user_id,listing_kind,listing_id' },
+    );
+  } catch (error) {
+    if (!String(error?.message || '').includes('listing_auto_refresh')) throw error;
+  }
 }
 
 async function getActiveSubscriptionOkazionMax(userId) {
@@ -405,6 +432,7 @@ async function applyOkazionVoucher({ userId, voucherId, kind, listingId }) {
   const days = Number(voucher.days) || 0;
   const { now, until } = computeOkazionUntil(loaded.listing, days);
   await bumpListingOkazion(sb, loaded.table, listingId, until, now);
+  await markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt: now.toISOString() });
 
   const { data: applied, error: applyErr } = await sb
     .from('okazion_listing_vouchers')
@@ -428,6 +456,7 @@ async function applyOkazionVoucher({ userId, voucherId, kind, listingId }) {
     ok: true,
     voucher: mapVoucher(applied),
     okazionUntil: until.toISOString(),
+    refreshedAt: now.toISOString(),
   };
 }
 
@@ -476,6 +505,7 @@ async function applyOkazionFromPlan({ userId, kind, listingId }) {
 
   const { now, until } = computeOkazionUntil(loaded.listing, PLAN_OKAZION_DAYS);
   await bumpListingOkazion(sb, loaded.table, listingId, until, now);
+  await markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt: now.toISOString() });
 
   const { data: voucherRow, error: insErr } = await sb
     .from('okazion_listing_vouchers')
@@ -500,6 +530,7 @@ async function applyOkazionFromPlan({ userId, kind, listingId }) {
     ok: true,
     voucher: mapVoucher(voucherRow),
     okazionUntil: until.toISOString(),
+    refreshedAt: now.toISOString(),
     quota: await getOkazionQuotaSnapshot(userId),
   };
 }

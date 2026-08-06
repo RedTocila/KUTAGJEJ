@@ -1071,7 +1071,7 @@ export function CarListingForm({
         />
       ) : (
         <ListingFormActions
-          submitLabel={isEdit ? 'Përditëso njoftimin' : 'Ruaj njoftimin'}
+          submitLabel={isEdit ? 'Përditëso njoftimin' : 'Posto njoftimin'}
           submitting={submitting}
           backHref={backHref}
           backLabel={backLabel}

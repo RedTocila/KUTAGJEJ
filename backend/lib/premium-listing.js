@@ -189,7 +189,10 @@ async function purchasePremiumWithBoostCoins({ userId, packageId }) {
 
 async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
   const table = TABLE_BY_KIND[kind];
-  let listingQ = sb.from(table).select('id, poster_id, status, premium_until').eq('id', listingId);
+  let listingQ = sb
+    .from(table)
+    .select('id, poster_id, status, premium_until, okazion_until')
+    .eq('id', listingId);
   if (kind === 'businesses' || kind === 'professionals') {
     listingQ = listingQ.eq('vertical', kind);
   }
@@ -217,6 +220,13 @@ async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
       message: 'Vetëm njoftimet e aprovuara mund të bëhen Premium.',
     };
   }
+  if (listing.okazion_until && new Date(listing.okazion_until) > new Date()) {
+    return {
+      ok: false,
+      status: 400,
+      message: 'Ky njoftim është OKAZION aktiv. Nuk mund të bëhet Premium derisa të mbarojë OKAZION.',
+    };
+  }
   return { ok: true, listing, table };
 }
 
@@ -236,12 +246,28 @@ async function bumpListingPremium(sb, table, listingId, until, now) {
     .from(table)
     .update({
       premium_until: until.toISOString(),
-      // Keep Premium listings near the top of "newest" within the featured group.
       created_at: now.toISOString(),
       updated_at: now.toISOString(),
     })
     .eq('id', listingId);
   if (bumpErr) throw bumpErr;
+}
+
+async function markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt }) {
+  try {
+    await sb.from('listing_auto_refresh').upsert(
+      {
+        user_id: userId,
+        listing_kind: kind,
+        listing_id: listingId,
+        last_refreshed_at: refreshedAt,
+        updated_at: refreshedAt,
+      },
+      { onConflict: 'user_id,listing_kind,listing_id' },
+    );
+  } catch (error) {
+    if (!String(error?.message || '').includes('listing_auto_refresh')) throw error;
+  }
 }
 
 async function getActiveSubscriptionPremiumMax(userId) {
@@ -365,6 +391,7 @@ async function applyPremiumVoucher({ userId, voucherId, kind, listingId }) {
   const days = Number(voucher.days) || 0;
   const { now, until } = computePremiumUntil(loaded.listing, days);
   await bumpListingPremium(sb, loaded.table, listingId, until, now);
+  await markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt: now.toISOString() });
 
   const { data: applied, error: applyErr } = await sb
     .from('premium_listing_vouchers')
@@ -388,6 +415,7 @@ async function applyPremiumVoucher({ userId, voucherId, kind, listingId }) {
     ok: true,
     voucher: mapVoucher(applied),
     premiumUntil: until.toISOString(),
+    refreshedAt: now.toISOString(),
   };
 }
 
@@ -436,6 +464,7 @@ async function applyPremiumFromPlan({ userId, kind, listingId }) {
 
   const { now, until } = computePremiumUntil(loaded.listing, PLAN_PREMIUM_DAYS);
   await bumpListingPremium(sb, loaded.table, listingId, until, now);
+  await markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt: now.toISOString() });
 
   const { data: voucherRow, error: insErr } = await sb
     .from('premium_listing_vouchers')
@@ -470,6 +499,7 @@ async function applyPremiumFromPlan({ userId, kind, listingId }) {
     ok: true,
     voucher: mapVoucher(voucherRow),
     premiumUntil: until.toISOString(),
+    refreshedAt: now.toISOString(),
     quota: await getPremiumQuotaSnapshot(userId),
   };
 }

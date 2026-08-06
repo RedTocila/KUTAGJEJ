@@ -70,6 +70,24 @@ async function listEnrolled(userId) {
   }));
 }
 
+async function listCooldownAnchors(userId) {
+  const sb = getSupabaseAdmin();
+  const { data, error } = await sb
+    .from('listing_auto_refresh')
+    .select('listing_kind, listing_id, last_refreshed_at')
+    .eq('user_id', userId)
+    .not('last_refreshed_at', 'is', null);
+  if (error) {
+    if (String(error.message || '').includes('listing_auto_refresh')) return [];
+    throw error;
+  }
+  return (data || []).map((row) => ({
+    kind: row.listing_kind,
+    listingId: String(row.listing_id),
+    lastRefreshedAt: row.last_refreshed_at || null,
+  }));
+}
+
 async function getAutoRefreshSnapshot(userId) {
   const sb = getSupabaseAdmin();
 
@@ -87,9 +105,10 @@ async function getAutoRefreshSnapshot(userId) {
     slots = Number(profile?.auto_refresh_slots) || 0;
   }
 
-  const [used, enrolled, active] = await Promise.all([
+  const [used, enrolled, cooldowns, active] = await Promise.all([
     countEnabledSlots(userId),
     listEnrolled(userId),
+    listCooldownAnchors(userId),
     getActivePaidSubscription(userId),
   ]);
 
@@ -103,6 +122,7 @@ async function getAutoRefreshSnapshot(userId) {
     slots,
     used,
     enrolled,
+    cooldowns,
     planCode,
     refreshEveryHours,
   };
@@ -264,5 +284,6 @@ module.exports = {
   getAutoRefreshSnapshot,
   setListingAutoRefresh,
   listEnrolled,
+  listCooldownAnchors,
   purchaseAutoRefreshWithBoostCoins,
 };

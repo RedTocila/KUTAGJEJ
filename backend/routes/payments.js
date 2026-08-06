@@ -631,6 +631,7 @@ router.post('/premium/apply', async (req, res) => {
       ok: true,
       voucher: result.voucher,
       premiumUntil: result.premiumUntil,
+      refreshedAt: result.refreshedAt,
       message: 'Njoftimi u bë Premium.',
     });
   } catch (error) {
@@ -657,6 +658,7 @@ router.post('/premium/apply-from-plan', async (req, res) => {
       alreadyActive: Boolean(result.alreadyActive),
       voucher: result.voucher,
       premiumUntil: result.premiumUntil,
+      refreshedAt: result.refreshedAt,
       quota: result.quota,
       message: result.alreadyActive
         ? 'Ky njoftim është tashmë Premium.'
@@ -814,6 +816,7 @@ router.post('/okazion/apply', async (req, res) => {
       ok: true,
       voucher: result.voucher,
       okazionUntil: result.okazionUntil,
+      refreshedAt: result.refreshedAt,
       message: 'Njoftimi u bë OKAZION për 5 ditë.',
     });
   } catch (error) {
@@ -839,6 +842,7 @@ router.post('/okazion/apply-from-plan', async (req, res) => {
       alreadyActive: Boolean(result.alreadyActive),
       voucher: result.voucher,
       okazionUntil: result.okazionUntil,
+      refreshedAt: result.refreshedAt,
       quota: result.quota,
       message: result.alreadyActive
         ? 'Ky njoftim është tashmë OKAZION.'

@@ -18,7 +18,6 @@ import { paths } from '@/paths';
 import {
   PackageCheckoutCard,
   formatEur,
-  planAccentForCode,
 } from './package-ui';
 import type { PlanAccent } from './package-ui';
 
@@ -67,9 +66,7 @@ function checkoutSubscriptionHref(contractId: string, months: number) {
   return `${paths.user.checkout}?${q.toString()}`;
 }
 
-function planAccent(plan: PublicContract): PlanAccent {
-  return planAccentForCode(plan.planCode);
-}
+const MAIN_PACKAGES_ACCENT: PlanAccent = 'primary';
 
 function priceSuffixForMonths(months: number): string {
   if (months === 1) return '/ muaj';
@@ -88,7 +85,6 @@ function savingsBadge(monthlyPrice: number | null, months: number, price: number
 
 function offerBadge(opts: {
   isCurrent: boolean;
-  planCode: string;
   months: number;
   monthlyPrice: number | null;
   price: number;
@@ -96,8 +92,7 @@ function offerBadge(opts: {
   if (opts.isCurrent) return 'Plani juaj';
   const save = savingsBadge(opts.monthlyPrice, opts.months, opts.price);
   if (save) return save;
-  if (opts.planCode === 'grow' && opts.months === 12) return 'Popullore';
-  if (opts.planCode === 'elite' && opts.months === 12) return 'Elite';
+  if (opts.months === 12) return 'Vjetore';
   return null;
 }
 
@@ -148,6 +143,18 @@ export function MainPackagesPanel() {
 
   if (!user) return null;
 
+  const firstPaidTarget = React.useMemo(() => {
+    for (const plan of plans) {
+      const paidOptions = plan.priceOptions.filter((o) => o.price > 0);
+      if (!paidOptions.length) continue;
+      const monthly = paidOptions.find((o) => o.months === 1);
+      const target = monthly ?? paidOptions[0];
+      if (!target) continue;
+      return { contractId: plan.id, months: target.months };
+    }
+    return null;
+  }, [plans]);
+
   return (
     <Stack spacing={2.5}>
       {loading ? (
@@ -179,7 +186,7 @@ export function MainPackagesPanel() {
               (activeContractId != null && activeContractId === plan.id) ||
               (activePlanCode != null && planCode === activePlanCode) ||
               (!hasPaidPlan && isFree);
-            const accent = planAccent(plan);
+            const accent = MAIN_PACKAGES_ACCENT;
             const monthlyPrice = plan.price1Month ?? paidOptions.find((o) => o.months === 1)?.price ?? null;
             const details = planFeatureLines(plan);
 
@@ -188,13 +195,23 @@ export function MainPackagesPanel() {
                 <PackageCheckoutCard
                   key={plan.id}
                   title={plan.title}
-                  subtitle={planSubtitle(plan, 'Filloni falas')}
+                  subtitle={
+                    isPlanCurrent ? planSubtitle(plan, 'Filloni falas · Prek për të ndryshuar planin') : planSubtitle(plan, 'Filloni falas')
+                  }
                   badge={isPlanCurrent ? 'Plani juaj' : null}
                   price="€0"
                   priceSuffix="/ muaj"
                   accent={accent}
                   selected={isPlanCurrent}
                   details={details}
+                  onClick={
+                    firstPaidTarget
+                      ? () =>
+                          router.push(
+                            checkoutSubscriptionHref(firstPaidTarget.contractId, firstPaidTarget.months),
+                          )
+                      : undefined
+                  }
                 />,
               ];
             }
@@ -208,7 +225,6 @@ export function MainPackagesPanel() {
               const isCurrent = isPlanCurrent && opt.months === matchedMonths;
               const badge = offerBadge({
                 isCurrent,
-                planCode,
                 months: opt.months,
                 monthlyPrice,
                 price: opt.price,

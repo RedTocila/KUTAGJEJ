@@ -3,7 +3,7 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
-import { alpha, Box, Divider, Drawer, Stack, Typography } from '@mui/material';
+import { Badge, alpha, Box, Divider, Drawer, Stack, Typography } from '@mui/material';
 
 import type { NavItemConfig } from '@/types/nav';
 import { paths } from '@/paths';
@@ -13,6 +13,7 @@ import { BrandLogo } from '@/components/brand/brand-logo';
 import { getLocalizedUserPortalNavItems } from './user-nav-config';
 import { userPortalNavIcons } from './user-portal-nav-icons';
 import { useCopy } from '@/hooks/use-copy';
+import { useUnreadMessagesCount } from '@/hooks/use-unread-messages-count';
 import { useUser } from '@/hooks/use-user';
 import { useOptionalAddListingPicker } from '@/components/user/add-listing-picker-context';
 
@@ -24,6 +25,7 @@ export interface UserMobileNavProps {
 export function UserMobileNav({ open, onClose }: UserMobileNavProps) {
   const pathname = usePathname();
   const { user } = useUser();
+  const unreadMessages = useUnreadMessagesCount();
   const t = useCopy();
   const navItems = React.useMemo(() => getLocalizedUserPortalNavItems(user ?? null, t), [user, t]);
 
@@ -88,7 +90,13 @@ export function UserMobileNav({ open, onClose }: UserMobileNavProps) {
       <Box component="nav" sx={{ flex: '1 1 auto', p: '12px', overflowY: 'auto' }}>
         <Stack component="ul" spacing={1} sx={{ listStyle: 'none', m: 0, p: 0 }}>
           {navItems.map((item) => (
-            <UserMobileNavRow key={item.key} item={item} pathname={pathname} onNavigate={onClose} />
+            <UserMobileNavRow
+              key={item.key}
+              item={item}
+              pathname={pathname}
+              onNavigate={onClose}
+              unreadMessages={unreadMessages}
+            />
           ))}
         </Stack>
       </Box>
@@ -100,10 +108,12 @@ function UserMobileNavRow({
   item,
   pathname,
   onNavigate,
+  unreadMessages,
 }: {
   item: NavItemConfig;
   pathname: string;
   onNavigate?: () => void;
+  unreadMessages: number;
 }) {
   const { href, icon, title, disabled, external, matcher, key } = item;
   const addListingPicker = useOptionalAddListingPicker();
@@ -111,6 +121,7 @@ function UserMobileNavRow({
   const active = isNavItemActive({ disabled, external, href, matcher, pathname });
   const IconComponent = icon ? userPortalNavIcons[icon] : null;
   const opensPicker = key === 'real-estate';
+  const isMessages = key === 'messages';
 
   return (
     <Box component="li" sx={{ display: 'block', listStyle: 'none' }}>
@@ -154,13 +165,20 @@ function UserMobileNavRow({
         }}
       >
         <Box sx={{ alignItems: 'center', display: 'flex', justifyContent: 'center', flex: '0 0 auto' }}>
-          {IconComponent
-            ? React.createElement(IconComponent, {
+          {IconComponent ? (
+            <Badge
+              color="error"
+              badgeContent={unreadMessages > 99 ? '99+' : unreadMessages}
+              invisible={!isMessages || unreadMessages <= 0}
+              overlap="circular"
+            >
+              {React.createElement(IconComponent, {
                 fill: active ? 'var(--NavItem-icon-active-color)' : 'var(--NavItem-icon-color)',
                 fontSize: 'var(--icon-fontSize-md)',
                 weight: active ? 'fill' : undefined,
-              })
-            : null}
+              })}
+            </Badge>
+          ) : null}
         </Box>
         <Typography component="span" sx={{ color: 'inherit', fontSize: '0.875rem', fontWeight: active ? 600 : 500, lineHeight: '28px' }}>
           {title}

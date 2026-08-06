@@ -3,7 +3,7 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
-import { alpha, Box, Divider, IconButton, Stack, Tooltip, Typography } from '@mui/material';
+import { Badge, alpha, Box, Divider, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import { SignOut as SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
 
 import type { NavItemConfig } from '@/types/nav';
@@ -17,6 +17,7 @@ import { authClient } from '@/lib/auth/client';
 import { getLocalizedUserPortalNavItems } from './user-nav-config';
 import { userPortalNavIcons } from './user-portal-nav-icons';
 import { useCopy } from '@/hooks/use-copy';
+import { useUnreadMessagesCount } from '@/hooks/use-unread-messages-count';
 import { useUser } from '@/hooks/use-user';
 import { useOptionalAddListingPicker } from '@/components/user/add-listing-picker-context';
 
@@ -24,6 +25,7 @@ export function UserSideNav() {
   const pathname = usePathname();
   const { user } = useUser();
   const t = useCopy();
+  const unreadMessages = useUnreadMessagesCount();
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -104,7 +106,7 @@ export function UserSideNav() {
       <Box component="nav" sx={{ flex: '1 1 auto', p: '12px', overflowY: 'auto' }}>
         <Stack component="ul" spacing={1} sx={{ listStyle: 'none', m: 0, p: 0 }}>
           {navItems.map((item) => (
-            <UserNavRow key={item.key} item={item} pathname={pathname} />
+            <UserNavRow key={item.key} item={item} pathname={pathname} unreadMessages={unreadMessages} />
           ))}
         </Stack>
       </Box>
@@ -129,13 +131,22 @@ export function UserSideNav() {
   );
 }
 
-function UserNavRow({ item, pathname }: { item: NavItemConfig; pathname: string }) {
+function UserNavRow({
+  item,
+  pathname,
+  unreadMessages,
+}: {
+  item: NavItemConfig;
+  pathname: string;
+  unreadMessages: number;
+}) {
   const { href, icon, title, disabled, external, matcher, key } = item;
   const addListingPicker = useOptionalAddListingPicker();
   if (!href) return null;
   const active = isNavItemActive({ disabled, external, href, matcher, pathname });
   const IconComponent = icon ? userPortalNavIcons[icon] : null;
   const opensPicker = key === 'real-estate';
+  const isMessages = key === 'messages';
 
   return (
     <Box component="li" sx={{ display: 'block', listStyle: 'none' }}>
@@ -172,13 +183,20 @@ function UserNavRow({ item, pathname }: { item: NavItemConfig; pathname: string 
         }}
       >
         <Box sx={{ alignItems: 'center', display: 'flex', justifyContent: 'center', flex: '0 0 auto' }}>
-          {IconComponent
-            ? React.createElement(IconComponent, {
+          {IconComponent ? (
+            <Badge
+              color="error"
+              badgeContent={unreadMessages > 99 ? '99+' : unreadMessages}
+              invisible={!isMessages || unreadMessages <= 0}
+              overlap="circular"
+            >
+              {React.createElement(IconComponent, {
                 fill: active ? 'var(--NavItem-icon-active-color)' : 'var(--NavItem-icon-color)',
                 fontSize: 'var(--icon-fontSize-md)',
                 weight: active ? 'fill' : undefined,
-              })
-            : null}
+              })}
+            </Badge>
+          ) : null}
         </Box>
         <Typography
           component="span"

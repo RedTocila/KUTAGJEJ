@@ -104,15 +104,13 @@ export function ListingSellerProfileCard({
               theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
             color: 'text.primary',
             border: '1.5px solid',
-            borderColor: (theme) =>
-              theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.22)',
+            borderColor: 'divider',
             boxShadow: 'none',
             '&:hover': {
               bgcolor: (theme) =>
                 theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.1)',
               color: 'text.primary',
-              borderColor: (theme) =>
-                theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.32)',
+              borderColor: 'divider',
               boxShadow: 'none',
             },
             '&.Mui-disabled': {

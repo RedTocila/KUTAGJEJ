@@ -16,6 +16,7 @@ import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Brief
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
+import { CrownSimple as CrownSimpleIcon } from '@phosphor-icons/react/dist/ssr/CrownSimple';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
@@ -33,10 +34,16 @@ import type { ListingCategory, ListingCategoryKey } from '@/types/listing-catego
 import { useCopy } from '@/hooks/use-copy';
 import type { AppMessages } from '@/lib/i18n/messages';
 
-export type AddListingPickOptions = { okazion?: boolean };
+export type AddListingPickOptions = { okazion?: boolean; premium?: boolean };
 
 /** OKAZION is for sellable ads only — not directory profiles. */
 const OKAZION_CATEGORY_KEYS = new Set<ListingCategoryKey>([
+  'real-estate',
+  'cars',
+  'job-listings',
+  'marketplace',
+]);
+const PREMIUM_CATEGORY_KEYS = new Set<ListingCategoryKey>([
   'real-estate',
   'cars',
   'job-listings',
@@ -73,17 +80,12 @@ function categoryIcon(key: ListingCategoryKey): PhosphorIcon {
   }
 }
 
-function navigateToPostCategory(key: ListingCategoryKey, okazion: boolean) {
-  const q = new URLSearchParams({ category: key });
-  if (okazion) q.set('okazion', '1');
-  hardNavigate(`${paths.user.realEstateListing}?${q.toString()}`);
-}
-
 export function AddListingPickerDialog({
   open,
   onClose,
   onPick,
   initialOkazion = false,
+  initialPremium = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -91,6 +93,8 @@ export function AddListingPickerDialog({
   onPick?: (key: ListingCategoryKey, opts?: AddListingPickOptions) => void;
   /** Deep-link: open already in “pick category for OKAZION” mode. */
   initialOkazion?: boolean;
+  /** Deep-link: open already in “pick category for Premium” mode. */
+  initialPremium?: boolean;
 }) {
   const t = useCopy();
   const [loading, setLoading] = React.useState(false);
@@ -99,11 +103,13 @@ export function AddListingPickerDialog({
   const [hasBusinessListing, setHasBusinessListing] = React.useState(false);
   const [hasProfessionalListing, setHasProfessionalListing] = React.useState(false);
   const [pickingOkazion, setPickingOkazion] = React.useState(initialOkazion);
+  const [pickingPremium, setPickingPremium] = React.useState(false);
 
   React.useEffect(() => {
     if (!open) return;
     setPickingOkazion(Boolean(initialOkazion));
-  }, [open, initialOkazion]);
+    setPickingPremium(Boolean(initialPremium));
+  }, [open, initialOkazion, initialPremium]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -148,12 +154,15 @@ export function AddListingPickerDialog({
   });
   const options = pickingOkazion
     ? availableOptions.filter((o) => OKAZION_CATEGORY_KEYS.has(o.key))
-    : availableOptions;
+    : pickingPremium
+      ? availableOptions.filter((o) => PREMIUM_CATEGORY_KEYS.has(o.key))
+      : availableOptions;
 
   const handleCloseRequest = () => {
     // Back out of OKAZION category pick before dismissing the sheet.
-    if (pickingOkazion && !initialOkazion) {
+    if ((pickingOkazion || pickingPremium) && !initialOkazion && !initialPremium) {
       setPickingOkazion(false);
+      setPickingPremium(false);
       return;
     }
     onClose();
@@ -161,8 +170,9 @@ export function AddListingPickerDialog({
 
   const handlePick = (key: ListingCategoryKey) => {
     if (pickingOkazion && !OKAZION_CATEGORY_KEYS.has(key)) return;
+    if (pickingPremium && !PREMIUM_CATEGORY_KEYS.has(key)) return;
     if (onPick) {
-      onPick(key, pickingOkazion ? { okazion: true } : undefined);
+      onPick(key, pickingOkazion ? { okazion: true } : pickingPremium ? { premium: true } : undefined);
       return;
     }
     void (async () => {
@@ -183,7 +193,10 @@ export function AddListingPickerDialog({
         }
       }
       onClose();
-      navigateToPostCategory(key, pickingOkazion);
+      const q = new URLSearchParams({ category: key });
+      if (pickingOkazion) q.set('okazion', '1');
+      if (pickingPremium) q.set('premium', '1');
+      hardNavigate(`${paths.user.realEstateListing}?${q.toString()}`);
     })();
   };
 
@@ -194,6 +207,12 @@ export function AddListingPickerDialog({
 
   const handleOkazion = () => {
     setPickingOkazion(true);
+    setPickingPremium(false);
+  };
+
+  const handlePremium = () => {
+    setPickingPremium(true);
+    setPickingOkazion(false);
   };
 
   return (
@@ -233,7 +252,11 @@ export function AddListingPickerDialog({
               color: pickingOkazion ? OKAZION_ACCENT : 'text.primary',
             }}
           >
-            {pickingOkazion ? t.picker.okazionTitle : t.picker.title}
+            {pickingOkazion
+              ? t.picker.okazionTitle
+              : pickingPremium
+                ? t.picker.premiumTitle
+                : t.picker.title}
           </Typography>
           <IconButton aria-label={t.common.close} onClick={handleCloseRequest} size="small" edge="end">
             <XIcon size={18} weight="bold" />
@@ -253,7 +276,7 @@ export function AddListingPickerDialog({
           </Box>
         ) : (
           <Stack spacing={0}>
-            {!pickingOkazion ? (
+            {!pickingOkazion && !pickingPremium ? (
               <>
                 <Box
                   component="button"
@@ -356,7 +379,7 @@ export function AddListingPickerDialog({
                   </Box>
                   <Box sx={{ minWidth: 0 }}>
                     <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.25, color: OKAZION_ACCENT }}>
-                      {t.picker.okazion}
+                      {t.picker.postAsOkazion}
                     </Typography>
                     <Typography
                       variant="caption"
@@ -367,6 +390,69 @@ export function AddListingPickerDialog({
                       }}
                     >
                       {t.picker.okazionHint}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Box
+                  sx={{
+                    height: '1px',
+                    bgcolor: 'divider',
+                    opacity: 0.55,
+                    ml: 6.5,
+                    mr: 0.5,
+                  }}
+                />
+
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={handlePremium}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.25,
+                    width: '100%',
+                    px: 0.5,
+                    py: 1.2,
+                    border: 0,
+                    borderRadius: 1.5,
+                    bgcolor: 'transparent',
+                    color: 'text.primary',
+                    cursor: 'pointer',
+                    font: 'inherit',
+                    textAlign: 'left',
+                    '&:hover': { bgcolor: 'action.hover' },
+                    '&:active': { bgcolor: 'action.selected' },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 1.5,
+                      display: 'grid',
+                      placeItems: 'center',
+                      flexShrink: 0,
+                      bgcolor: (theme) => `${theme.palette.warning.main}1f`,
+                      color: 'warning.main',
+                    }}
+                  >
+                    <CrownSimpleIcon size={18} weight="fill" />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.25, color: 'warning.main' }}>
+                      {t.picker.postAsPremium}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        display: 'block',
+                        lineHeight: 1.3,
+                        color: '#9CA3AF',
+                      }}
+                    >
+                      {t.picker.premiumHint}
                     </Typography>
                   </Box>
                 </Box>
@@ -431,8 +517,10 @@ export function AddListingPickerDialog({
                         bgcolor: (theme) =>
                           pickingOkazion
                             ? OKAZION_ACCENT_SOFT
+                            : pickingPremium
+                              ? `${theme.palette.warning.main}1f`
                             : `${theme.palette.primary.main}14`,
-                        color: pickingOkazion ? OKAZION_ACCENT : 'primary.main',
+                        color: pickingOkazion ? OKAZION_ACCENT : pickingPremium ? 'warning.main' : 'primary.main',
                       }}
                     >
                       <Icon size={18} weight="duotone" />

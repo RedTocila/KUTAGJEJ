@@ -13,6 +13,7 @@ import { ShareNetwork as ShareIcon } from '@phosphor-icons/react/dist/ssr/ShareN
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Timer as TimerIcon } from '@phosphor-icons/react/dist/ssr/Timer';
+import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import RouterLink from 'next/link';
 
 import { BusinessAnnouncementDialog } from '@/components/user/business-announcement-dialog';
@@ -34,13 +35,48 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
   );
 }
 
+export function ListingOwnerStats({
+  metrics,
+  sx,
+}: {
+  metrics: Partial<ListingMetrics>;
+  sx?: object;
+}) {
+  const viewCount = metrics.viewCount ?? 0;
+  const clickCount = metrics.clickCount ?? 0;
+  const shareCount = metrics.shareCount ?? 0;
+  const saveCount = metrics.saveCount ?? 0;
+
+  return (
+    <Stack
+      direction="row"
+      sx={{
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: 1.1,
+        flexWrap: 'wrap',
+        rowGap: 0.5,
+        ...sx,
+      }}
+    >
+      <Stat icon={<EyeIcon size={13} />} label="shikime" value={viewCount} />
+      <Stat icon={<ClickIcon size={13} />} label="klikime" value={clickCount} />
+      <Stat icon={<ShareIcon size={13} />} label="ndarje" value={shareCount} />
+      <Stat icon={<BookmarkIcon size={13} />} label="ruajtje" value={saveCount} />
+    </Stack>
+  );
+}
+
 /** Compact labeled action chip used on owner listing cards. */
+const ACTION_RADIUS_PX = '12px';
+const ACTION_CONTAINER_RADIUS_PX = '16px';
+
 const labeledBtnSx = {
   minWidth: 0,
   height: 26,
   px: 0.85,
   py: 0,
-  borderRadius: 999,
+  borderRadius: ACTION_RADIUS_PX,
   textTransform: 'none' as const,
   fontWeight: 800,
   fontSize: '0.65rem',
@@ -52,6 +88,13 @@ const labeledBtnSx = {
 
 function editHrefFor(listingId: string, kind: ListingMetricKind) {
   return `${paths.user.editListing}?kind=${encodeURIComponent(kind)}&id=${encodeURIComponent(listingId)}`;
+}
+
+function formatCountdown(ms: number): string {
+  const totalMinutes = Math.max(0, Math.ceil(ms / (60 * 1000)));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 /**
@@ -87,7 +130,7 @@ export function ListingOwnerTopActions({
         sx={{
           alignItems: 'center',
           p: 0.45,
-          borderRadius: 999,
+          borderRadius: ACTION_CONTAINER_RADIUS_PX,
           bgcolor: 'rgba(0,0,0,0.35)',
           border: '1px solid rgba(255,255,255,0.22)',
           backdropFilter: 'blur(10px)',
@@ -180,6 +223,9 @@ export function ListingOwnerMetrics({
   okazionUntil = null,
   onOkazionApplied,
   onRefreshed,
+  lastRefreshedAt,
+  refreshEveryHours,
+  hideStats = false,
 }: {
   metrics: Partial<ListingMetrics>;
   listingId?: string;
@@ -198,6 +244,12 @@ export function ListingOwnerMetrics({
   okazionUntil?: string | null;
   onOkazionApplied?: (result: { okazionUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
+  /** Last manual/auto refresh anchor; uses listing createdAt on initial load. */
+  lastRefreshedAt?: string | null;
+  /** Cooldown window from active package/subscription. */
+  refreshEveryHours?: number | null;
+  /** Hide stats row when rendered externally. */
+  hideStats?: boolean;
 }) {
   const { checkSession } = useUser();
   const [busy, setBusy] = React.useState(false);
@@ -206,6 +258,8 @@ export function ListingOwnerMetrics({
   const [okazionBusy, setOkazionBusy] = React.useState(false);
   const [premiumOn, setPremiumOn] = React.useState(Boolean(isPremium));
   const [okazionOn, setOkazionOn] = React.useState(Boolean(isOkazion));
+  const [nowMs, setNowMs] = React.useState(() => Date.now());
+  const [lastRefreshAtLocal, setLastRefreshAtLocal] = React.useState<string | null>(lastRefreshedAt ?? null);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -216,14 +270,29 @@ export function ListingOwnerMetrics({
     setOkazionOn(Boolean(isOkazion));
   }, [isOkazion, okazionUntil]);
 
+  React.useEffect(() => {
+    setLastRefreshAtLocal(lastRefreshedAt ?? null);
+  }, [lastRefreshedAt]);
+
+  const refreshWindowHours = Math.max(1, Number(refreshEveryHours) || 48);
+  const nextRefreshAtMs = React.useMemo(() => {
+    if (!lastRefreshAtLocal) return null;
+    const baseMs = new Date(lastRefreshAtLocal).getTime();
+    if (!Number.isFinite(baseMs)) return null;
+    return baseMs + refreshWindowHours * 60 * 60 * 1000;
+  }, [lastRefreshAtLocal, refreshWindowHours]);
+  const remainingRefreshMs = nextRefreshAtMs == null ? 0 : Math.max(0, nextRefreshAtMs - nowMs);
+  const refreshLocked = remainingRefreshMs > 0;
+
+  React.useEffect(() => {
+    if (!refreshLocked) return undefined;
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [refreshLocked]);
+
   /** Directory profiles (businesses / professionals) cannot be OKAZION. */
   const okazionSupported =
     kind === 'real-estate' || kind === 'car' || kind === 'job' || kind === 'marketplace';
-
-  const viewCount = metrics.viewCount ?? 0;
-  const clickCount = metrics.clickCount ?? 0;
-  const shareCount = metrics.shareCount ?? 0;
-  const saveCount = metrics.saveCount ?? 0;
 
   const handleRefresh = async () => {
     if (!listingId || !kind || busy) return;
@@ -235,6 +304,7 @@ export function ListingOwnerMetrics({
         setError(res.error || 'Rifreskimi dështoi.');
         return;
       }
+      setLastRefreshAtLocal(res.refreshedAt);
       onRefreshed?.({ refreshedAt: res.refreshedAt, boostCredits: res.boostCredits ?? 0 });
       void checkSession();
     } finally {
@@ -272,6 +342,9 @@ export function ListingOwnerMetrics({
       }
       setPremiumOn(true);
       onPremiumApplied?.({ premiumUntil: res.premiumUntil });
+      const refreshedAt = res.refreshedAt ?? new Date().toISOString();
+      setLastRefreshAtLocal(refreshedAt);
+      onRefreshed?.({ refreshedAt, boostCredits: 0 });
       void checkSession();
     } finally {
       setPremiumBusy(false);
@@ -290,6 +363,9 @@ export function ListingOwnerMetrics({
       }
       setOkazionOn(true);
       onOkazionApplied?.({ okazionUntil: res.okazionUntil });
+      const refreshedAt = res.refreshedAt ?? new Date().toISOString();
+      setLastRefreshAtLocal(refreshedAt);
+      onRefreshed?.({ refreshedAt, boostCredits: 0 });
       void checkSession();
     } finally {
       setOkazionBusy(false);
@@ -297,21 +373,28 @@ export function ListingOwnerMetrics({
   };
 
   const anyBusy = busy || autoBusy || premiumBusy || okazionBusy;
+  const refreshButtonDisabled = anyBusy || refreshLocked;
+  const refreshTimer = formatCountdown(remainingRefreshMs);
+  const premiumDisabled = anyBusy || premiumOn || okazionOn;
+  const okazionDisabled = anyBusy || okazionOn || premiumOn;
 
   return (
-    <Stack spacing={0.75} sx={{ pt: 0.85, mt: 0.35, borderTop: 1, borderColor: 'divider' }}>
-      <Stack
-        direction="row"
-        sx={{
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 1,
-          flexWrap: 'wrap',
-          rowGap: 0.75,
-        }}
-      >
+    <Stack spacing={0.75} sx={{ pt: 0.5, mt: 0.35 }}>
+      {!hideStats ? <ListingOwnerStats metrics={metrics} sx={{ pb: 0.4 }} /> : null}
+
+      <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 0.8 }}>
         {listingId && kind && canRefresh ? (
-          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
+          <Stack
+            direction="row"
+            sx={{
+              width: '100%',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 0.5,
+              '& > *': { flex: 1, minWidth: 0 },
+              '& .MuiButton-root': { width: '100%', justifyContent: 'center' },
+            }}
+          >
             <Tooltip title="Vendose njoftimin në krye të listës · kushton 1 Boost Coin">
               <span>
                 <Button
@@ -319,16 +402,32 @@ export function ListingOwnerMetrics({
                   variant="outlined"
                   color="warning"
                   aria-label="Rifresko"
-                  disabled={anyBusy}
+                  disabled={refreshButtonDisabled}
                   onClick={() => {
                     void handleRefresh();
                   }}
                   startIcon={
                     busy ? <CircularProgress size={11} color="inherit" /> : <RefreshIcon size={12} weight="bold" />
                   }
-                  sx={labeledBtnSx}
+                  sx={{
+                    ...labeledBtnSx,
+                    ...(refreshLocked
+                      ? {
+                          borderColor: 'action.disabled',
+                          color: 'text.disabled',
+                          bgcolor: 'action.hover',
+                          opacity: 1,
+                          '&.Mui-disabled': {
+                            borderColor: 'action.disabled',
+                            color: 'text.disabled',
+                            bgcolor: 'action.hover',
+                            opacity: 1,
+                          },
+                        }
+                      : null),
+                  }}
                 >
-                  Rifresko
+                  {refreshLocked ? refreshTimer : 'Rifresko'}
                 </Button>
               </span>
             </Tooltip>
@@ -350,7 +449,14 @@ export function ListingOwnerMetrics({
                     void handleToggleAuto();
                   }}
                   startIcon={
-                    autoBusy ? <CircularProgress size={11} color="inherit" /> : <TimerIcon size={12} weight="bold" />
+                    autoBusy ? (
+                      <CircularProgress size={11} color="inherit" />
+                    ) : (
+                      <TimerIcon size={12} weight="bold" />
+                    )
+                  }
+                  endIcon={
+                    !autoBusy && autoRefreshEnabled ? <CheckCircleIcon size={11} weight="fill" /> : undefined
                   }
                   sx={labeledBtnSx}
                 >
@@ -364,6 +470,8 @@ export function ListingOwnerMetrics({
                   ? premiumUntil
                     ? `Premium aktiv deri më ${new Date(premiumUntil).toLocaleDateString('sq-AL')}`
                     : 'Premium aktiv'
+                  : okazionOn
+                    ? 'Nuk mund të aktivizoni Premium kur OKAZION është aktiv.'
                   : 'Bëje Premium me vendin nga paketa (Grow/Elite · 30 ditë)'
               }
             >
@@ -373,7 +481,7 @@ export function ListingOwnerMetrics({
                   variant={premiumOn ? 'contained' : 'outlined'}
                   color="warning"
                   aria-label="Premium"
-                  disabled={anyBusy || premiumOn}
+                  disabled={premiumDisabled}
                   onClick={() => {
                     void handleApplyPremium();
                   }}
@@ -397,6 +505,8 @@ export function ListingOwnerMetrics({
                   ? okazionUntil
                     ? `OKAZION aktiv deri më ${new Date(okazionUntil).toLocaleDateString('sq-AL')}`
                     : 'OKAZION aktiv'
+                  : premiumOn
+                    ? 'Nuk mund të aktivizoni OKAZION kur Premium është aktiv.'
                   : 'Bëje OKAZION me vendin nga paketa (Grow/Elite · 5 ditë)'
               }
             >
@@ -406,7 +516,7 @@ export function ListingOwnerMetrics({
                   variant={okazionOn ? 'contained' : 'outlined'}
                   color="error"
                   aria-label="OKAZION"
-                  disabled={anyBusy || okazionOn}
+                  disabled={okazionDisabled}
                   onClick={() => {
                     void handleApplyOkazion();
                   }}
@@ -428,18 +538,7 @@ export function ListingOwnerMetrics({
         ) : (
           <Box />
         )}
-
-        <Stack
-          direction="row"
-          spacing={1.1}
-          sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5, ml: { xs: 0, sm: 'auto' } }}
-        >
-          <Stat icon={<EyeIcon size={13} />} label="shikime" value={viewCount} />
-          <Stat icon={<ClickIcon size={13} />} label="klikime" value={clickCount} />
-          <Stat icon={<ShareIcon size={13} />} label="ndarje" value={shareCount} />
-          <Stat icon={<BookmarkIcon size={13} />} label="ruajtje" value={saveCount} />
-        </Stack>
-      </Stack>
+      </Box>
       {error ? (
         <Typography variant="caption" color="error" sx={{ fontSize: '0.68rem', fontWeight: 600 }}>
           {error}

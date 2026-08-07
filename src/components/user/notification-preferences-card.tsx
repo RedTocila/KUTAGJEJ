@@ -104,7 +104,7 @@ export function NotificationPreferencesCard() {
               disabled={loading || savingKey === key}
               onChange={(_, checked) => void onToggle(key, checked)}
               edge="end"
-              inputProps={{ 'aria-label': labels[key].title }}
+              slotProps={{ input: { 'aria-label': labels[key].title } }}
             />
           </Box>
         ))}

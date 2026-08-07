@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Badge, Box, Stack } from '@mui/material';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
@@ -42,7 +42,6 @@ interface NavItem {
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { user } = useUser();
   const unreadMessages = useUnreadMessagesCount();
   const t = useCopy();
@@ -143,7 +142,12 @@ export function MobileBottomNav() {
     if (pathname === hrefPath(item.href)) {
       // Open conversation (`?c=`) still uses the messages path — retap must clear it
       // and show the inbox instead of refreshing the same thread.
-      if (item.id === 'messages' && searchParams.get('c')) {
+      // Read from window (click-only) so this nav can prerender without useSearchParams/Suspense.
+      if (
+        item.id === 'messages' &&
+        typeof window !== 'undefined' &&
+        new URLSearchParams(window.location.search).get('c')
+      ) {
         hardNavigate(item.href, event);
         return;
       }

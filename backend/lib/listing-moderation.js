@@ -210,6 +210,21 @@ async function reviewListing(kind, listingId, admin, decision, adminNote = '') {
     loadPosterModelMap([doc.posterId]),
   ]);
 
+  try {
+    const { notifyListingStatus } = require('./user-notifications');
+    if (doc.posterId) {
+      await notifyListingStatus({
+        posterId: doc.posterId,
+        listingKind: kind,
+        listingId: listingId,
+        listingTitle: listingTitle(kind, doc),
+        approved: status === 'approved',
+      });
+    }
+  } catch (notifyErr) {
+    console.warn('notifyListingStatus:', notifyErr?.message || notifyErr);
+  }
+
   return {
     ok: true,
     listing: formatAdminListing(kind, doc, cityById, posterModelMap),

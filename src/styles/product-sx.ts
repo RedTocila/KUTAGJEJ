@@ -35,8 +35,8 @@ export const productButtonSx = {
   '&:hover': { boxShadow: 'none' },
 };
 
-/** Dialog paper — follows light/dark color scheme. */
-export const productDialogPaperSx = (theme: Theme) => ({
+/** Shared black paper surface for dark-mode menus / dialogs. */
+export const productSurfacePaperSx = (theme: Theme) => ({
   borderRadius: 3,
   border: '1px solid',
   borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'divider',
@@ -44,12 +44,20 @@ export const productDialogPaperSx = (theme: Theme) => ({
   backgroundImage: 'none',
   color: 'text.primary',
   overflow: 'hidden',
-  mx: 2,
   boxShadow:
     theme.palette.mode === 'dark'
       ? '0 24px 80px rgba(0, 0, 0, 0.55)'
       : '0 20px 56px rgba(15, 23, 10, 0.16)',
 });
+
+/** Dialog paper — follows light/dark color scheme. */
+export const productDialogPaperSx = (theme: Theme) => ({
+  ...productSurfacePaperSx(theme),
+  mx: 2,
+});
+
+/** Popover / account menu paper — same black surface as product dialogs. */
+export const productPopoverPaperSx = (theme: Theme) => productSurfacePaperSx(theme);
 
 const productDialogBackdropSx = (theme: Theme) => ({
   bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.72)' : 'rgba(15, 23, 10, 0.42)',

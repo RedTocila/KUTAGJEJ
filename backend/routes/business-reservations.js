@@ -17,7 +17,7 @@ router.post('/', optionalAuth, async (req, res) => {
     const { data: listing, error: listingErr } = await sb
       .from('directory_listings')
       .select(
-        'id, reservations_enabled, reservation_time_slots, reservation_party_sizes',
+        'id, poster_id, title, reservations_enabled, reservation_time_slots, reservation_party_sizes',
       )
       .eq('id', v.listingId)
       .eq('vertical', 'businesses')
@@ -70,6 +70,22 @@ router.post('/', optionalAuth, async (req, res) => {
       .select('*')
       .single();
     if (error) throw error;
+
+    if (listing.poster_id) {
+      try {
+        const { notifyBusinessReservation } = require('../lib/user-notifications');
+        await notifyBusinessReservation({
+          posterId: listing.poster_id,
+          listingId: listing.id,
+          listingTitle: listing.title || '',
+          guestName: v.guestName,
+          reservationDate: v.reservationDate,
+          timeSlot: v.timeSlot,
+        });
+      } catch (notifyErr) {
+        console.warn('notifyBusinessReservation:', notifyErr?.message || notifyErr);
+      }
+    }
 
     res.status(201).json({
       reservation: {

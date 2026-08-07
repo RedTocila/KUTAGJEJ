@@ -12,6 +12,7 @@ import { isNavItemActive } from '@/lib/is-nav-item-active';
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
 import { HeaderLanguageToggle } from '@/components/user/header-language-toggle';
+import { UserNotificationsMenu } from '@/components/user/layout/user-notifications-menu';
 import { authClient } from '@/lib/auth/client';
 
 import { getLocalizedUserPortalNavItems } from './user-nav-config';
@@ -112,6 +113,7 @@ export function UserSideNav() {
       </Box>
       <Divider />
       <Box sx={{ px: 1.5, py: 1.25, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0.75 }}>
+        <UserNotificationsMenu />
         <HeaderLanguageToggle />
         <ThemeModeToggle />
         <Tooltip title={t.nav.signOut}>

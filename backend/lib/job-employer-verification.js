@@ -177,6 +177,16 @@ async function reviewVerificationRequest(admin, requestId, decision, adminNote) 
     if (profileErr) throw profileErr;
   }
 
+  try {
+    const { notifyVerificationResult } = require('./user-notifications');
+    await notifyVerificationResult({
+      userId: doc.applicant_id,
+      approved: status === 'approved',
+    });
+  } catch (notifyErr) {
+    console.warn('notifyVerificationResult:', notifyErr?.message || notifyErr);
+  }
+
   return { ok: true, request: formatVerificationRequest(updated) };
 }
 

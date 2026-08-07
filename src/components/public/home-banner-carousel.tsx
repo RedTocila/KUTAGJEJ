@@ -6,8 +6,6 @@ import { Box, Stack, Typography } from '@mui/material';
 import { ArrowUpRight as ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 
 import type { HomeBannerDto } from '@/lib/home-banners-client';
-import { useCopy } from '@/hooks/use-copy';
-import type { AppMessages } from '@/lib/i18n/messages';
 
 export interface HomeBannerCarouselProps {
   banners?: HomeBannerDto[];
@@ -15,92 +13,6 @@ export interface HomeBannerCarouselProps {
 
 const SLIDE_MS = 480;
 const SWIPE_THRESHOLD = 48;
-
-const MAX_SLIDES = 7;
-
-function fallbackBanners(home: AppMessages['home']): HomeBannerDto[] {
-  return [
-    {
-      id: 'fallback-1',
-      title: home.banner1,
-      subtitle: '',
-      imageUrl: '',
-      ctaLabel: '',
-      ctaHref: '/user/dashboard/prona',
-      order: 1,
-    },
-    {
-      id: 'fallback-2',
-      title: home.banner2,
-      subtitle: '',
-      imageUrl: '',
-      ctaLabel: '',
-      ctaHref: '/prona',
-      order: 2,
-    },
-    {
-      id: 'fallback-3',
-      title: home.banner3,
-      subtitle: '',
-      imageUrl: '',
-      ctaLabel: '',
-      ctaHref: '/prona',
-      order: 3,
-    },
-    {
-      id: 'fallback-4',
-      title: home.banner4,
-      subtitle: '',
-      imageUrl: '',
-      ctaLabel: '',
-      ctaHref: '/makina',
-      order: 4,
-    },
-    {
-      id: 'fallback-5',
-      title: home.banner5,
-      subtitle: '',
-      imageUrl: '',
-      ctaLabel: '',
-      ctaHref: '/pune',
-      order: 5,
-    },
-    {
-      id: 'fallback-6',
-      title: home.banner6,
-      subtitle: '',
-      imageUrl: '',
-      ctaLabel: '',
-      ctaHref: '/tregu',
-      order: 6,
-    },
-    {
-      id: 'fallback-7',
-      title: home.banner7,
-      subtitle: '',
-      imageUrl: '',
-      ctaLabel: '',
-      ctaHref: '/biznese',
-      order: 7,
-    },
-  ];
-}
-
-function resolveSlides(banners: HomeBannerDto[], home: AppMessages['home']): HomeBannerDto[] {
-  const fallbacks = fallbackBanners(home);
-  const fromApi = banners.slice(0, MAX_SLIDES);
-  if (fromApi.length >= MAX_SLIDES) return fromApi;
-
-  const usedTitles = new Set(fromApi.map((b) => b.title).filter(Boolean));
-  const pads = fallbacks
-    .filter((b) => !usedTitles.has(b.title))
-    .slice(0, MAX_SLIDES - fromApi.length)
-    .map((b) => ({ ...b, id: `pad-${b.id}` }));
-
-  const merged = [...fromApi, ...pads];
-  if (merged.length > 0) return merged;
-  return fallbacks.slice(0, MAX_SLIDES);
-}
 
 function slideHref(slide: HomeBannerDto): string | null {
   const href = slide.ctaHref?.trim();
@@ -266,8 +178,7 @@ function BannerSlidePanel({
 }
 
 export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
-  const t = useCopy();
-  const slides = React.useMemo(() => resolveSlides(banners, t.home), [banners, t.home]);
+  const slides = banners;
   const [idx, setIdx] = React.useState(0);
   const [dragOffset, setDragOffset] = React.useState(0);
   const [isDragging, setIsDragging] = React.useState(false);
@@ -337,6 +248,8 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
 
   const safeIdx = slides.length > 0 ? idx % slides.length : 0;
   const slideBasis = slides.length > 0 ? 100 / slides.length : 100;
+
+  if (slides.length === 0) return null;
 
   return (
     <Box component="section" aria-label="Banner kryesor" sx={{ width: '100%' }}>

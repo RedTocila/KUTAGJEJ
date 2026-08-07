@@ -785,6 +785,24 @@ router.post('/:id/messages', auth, requirePortalUser, async (req, res) => {
 
     await clearHiddenForConversation(conv.id);
 
+    try {
+      const { notifyNewMessage, displayNameForUserId } = require('../lib/user-notifications');
+      const recipientId = role === 'poster' ? conv.inquirerId : conv.posterId;
+      if (recipientId) {
+        const senderName = await displayNameForUserId(userRef.id);
+        await notifyNewMessage({
+          recipientId,
+          conversationId: conv.id,
+          senderId: userRef.id,
+          senderName,
+          listingTitle: conv.listingTitle || '',
+          preview: previewMessageText(body, imageUrl),
+        });
+      }
+    } catch (notifyErr) {
+      console.warn('notifyNewMessage:', notifyErr?.message || notifyErr);
+    }
+
     res.status(201).json({
       message: formatMessageRow(msg, userRef.model, userRef),
     });

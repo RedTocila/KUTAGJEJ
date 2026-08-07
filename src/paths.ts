@@ -42,6 +42,10 @@ export const paths = {
     savedListings: '/user/dashboard/te-ruajturat',
     /** In-app messages tied to listings. */
     messages: '/user/dashboard/mesazhet',
+    /** In-app notification inbox. */
+    notifications: '/user/dashboard/njoftimet',
+    /** Notification preference toggles. */
+    notificationSettings: '/user/dashboard/njoftimet/cilesimet',
     /** Referral program — invite link and stats. */
     referral: '/user/dashboard/referral',
     /** Buy boost credits with POK Payments. */

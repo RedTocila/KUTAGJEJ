@@ -55,11 +55,13 @@ const EMPTY_FORM: HomeBannerInput = {
 function BannerDialog({
   open,
   initial,
+  defaultOrder,
   onClose,
   onSaved,
 }: {
   open: boolean;
   initial: AdminHomeBanner | null;
+  defaultOrder: number;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -83,9 +85,9 @@ function BannerDialog({
         isActive: initial.isActive,
       });
     } else {
-      setForm(EMPTY_FORM);
+      setForm({ ...EMPTY_FORM, order: defaultOrder });
     }
-  }, [open, initial]);
+  }, [open, initial, defaultOrder]);
 
   const handleUpload = async (file: File | undefined) => {
     if (!file) return;
@@ -224,7 +226,7 @@ function BannerDialog({
             value={form.order}
             onChange={(e) => setForm((f) => ({ ...f, order: Number(e.target.value) }))}
             fullWidth
-            helperText="Numri më i vogël shfaqet i pari (max 3 në homepage)."
+            helperText="Numri më i vogël shfaqet i pari."
           />
           <FormControlLabel
             control={
@@ -274,6 +276,9 @@ export function HomeBannersAdminPage() {
   }, [user, isPlatformAdmin, load]);
 
   if (!user || !isPlatformAdmin) return null;
+
+  const nextOrder =
+    banners.reduce((max, b) => (Number.isFinite(b.order) ? Math.max(max, b.order) : max), 0) + 1;
 
   return (
     <Stack spacing={3}>
@@ -400,6 +405,7 @@ export function HomeBannersAdminPage() {
       <BannerDialog
         open={dialogOpen}
         initial={editing}
+        defaultOrder={nextOrder}
         onClose={() => setDialogOpen(false)}
         onSaved={() => {
           setDialogOpen(false);

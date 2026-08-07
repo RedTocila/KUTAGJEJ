@@ -131,6 +131,16 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     }
 
     const name = await reviewerDisplayName(reviewerId);
+    try {
+      const { notifyMemberReview } = require('../lib/user-notifications');
+      await notifyMemberReview({
+        memberId,
+        reviewerId,
+        rating: v.rating,
+      });
+    } catch (notifyErr) {
+      console.warn('notifyMemberReview:', notifyErr?.message || notifyErr);
+    }
     return res.status(201).json({ review: formatReview(created, name) });
   } catch (err) {
     console.error('POST /member-reviews:', err?.message || err);

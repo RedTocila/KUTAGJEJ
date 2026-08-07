@@ -21,6 +21,7 @@ import { FileText as FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileTex
 import { ListBullets as ListBulletsIcon } from '@phosphor-icons/react/dist/ssr/ListBullets';
 import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
+import { Bell as BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
 import { Receipt as ReceiptIcon } from '@phosphor-icons/react/dist/ssr/Receipt';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { SignOut as SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
@@ -53,6 +54,7 @@ import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { DailyStreakCard } from '@/components/user/daily-streak-card';
 import { LanguageSwitchRow } from '@/components/user/language-switch-row';
+import { UserNotificationsMenu } from '@/components/user/layout/user-notifications-menu';
 import { PortalLinkCard, PortalLinkGroup, portalCardSx } from '@/components/user/portal-cards';
 import { ReferralSummaryCard } from '@/components/user/referral-summary-card';
 import { planAccentForCode } from '@/components/user/packages/package-ui';
@@ -404,6 +406,7 @@ export default function UserDashboardPage() {
             spacing={0.75}
             sx={{ display: { xs: 'flex', lg: 'none' }, alignItems: 'center', mr: -0.5 }}
           >
+            <UserNotificationsMenu />
             <ThemeModeToggle />
             <Tooltip title={t.signOut}>
               <IconButton
@@ -636,6 +639,13 @@ export default function UserDashboardPage() {
           icon={UserGearIcon}
           badge={categoryLabel}
           badgeColor={categoryBadgeColor}
+        />
+        <PortalLinkCard
+          grouped
+          href={paths.user.notificationSettings}
+          title={t.notificationsTitle}
+          description={t.notificationsDescription}
+          icon={BellIcon}
         />
         <LanguageSwitchRow grouped />
         <PortalLinkCard

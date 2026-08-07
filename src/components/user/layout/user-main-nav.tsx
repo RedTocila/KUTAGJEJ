@@ -12,6 +12,7 @@ import type { AppMessages } from '@/lib/i18n/messages';
 import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
 import { useOptionalAddListingPicker } from '@/components/user/add-listing-picker-context';
 import { HeaderLanguageToggle } from '@/components/user/header-language-toggle';
+import { UserNotificationsMenu } from '@/components/user/layout/user-notifications-menu';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 
@@ -20,6 +21,8 @@ import { UserPortalPopover } from './user-portal-popover';
 
 function titleForPath(pathname: string, t: AppMessages): string {
   if (pathname.startsWith(paths.user.profile)) return t.nav.profile;
+  if (pathname.startsWith(paths.user.notificationSettings)) return t.notifications.prefsTitle;
+  if (pathname.startsWith(paths.user.notifications)) return t.notifications.title;
   if (pathname.startsWith(paths.user.messages)) return t.nav.messages;
   if (pathname.startsWith(paths.user.savedListings)) return t.nav.saved;
   if (pathname.startsWith(paths.user.myRealEstateListings)) return t.nav.myListings;
@@ -105,6 +108,7 @@ export function UserMainNav() {
                 </IconButton>
               </Tooltip>
             ) : null}
+            <UserNotificationsMenu />
             <HeaderLanguageToggle />
             <ThemeModeToggle />
             <Tooltip title={t.common.myAccount}>

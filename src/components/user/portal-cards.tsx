@@ -156,6 +156,7 @@ export function PortalSectionCard({
   children,
   headerExtra,
   noDivider = false,
+  id,
 }: {
   title: string;
   description?: string;
@@ -163,9 +164,10 @@ export function PortalSectionCard({
   children: React.ReactNode;
   headerExtra?: React.ReactNode;
   noDivider?: boolean;
+  id?: string;
 }) {
   return (
-    <Box sx={portalCardSx}>
+    <Box id={id} sx={portalCardSx}>
       <Stack
         direction="row"
         spacing={1.5}

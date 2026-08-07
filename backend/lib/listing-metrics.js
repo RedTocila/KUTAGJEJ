@@ -352,6 +352,16 @@ async function toggleSavedListing(req, { kind, listingId }) {
     });
     if (error) throw error;
     saved = true;
+    try {
+      const { notifyListingSaved } = require('./user-notifications');
+      await notifyListingSaved({
+        metricsKind: kind,
+        listingId,
+        saverId: saver.saverId,
+      });
+    } catch (notifyErr) {
+      console.warn('notifyListingSaved:', notifyErr?.message || notifyErr);
+    }
   }
 
   const saveCount = await countSaves(kind, listingId);

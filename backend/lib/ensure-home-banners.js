@@ -1,100 +1,37 @@
 const { getSupabaseAdmin } = require('./supabase');
 
-const DEFAULT_BANNERS = [
-  {
-    title: 'Posto njoftimin tënd falas në sekonda',
-    subtitle: '',
-    imageUrl: '',
-    ctaLabel: 'Posto tani',
-    ctaHref: '/user/dashboard/prona',
-    order: 1,
-    isActive: true,
-  },
-  {
-    title: 'Gjej atë që kërkon, më shpejt',
-    subtitle: '',
-    imageUrl: '',
-    ctaLabel: 'Eksploro njoftimet',
-    ctaHref: '/prona',
-    order: 2,
-    isActive: true,
-  },
-  {
-    title: 'Prona në Tiranë, Durrës e gjithë Shqipërinë',
-    subtitle: '',
-    imageUrl: '',
-    ctaLabel: 'Shfleto pronat',
-    ctaHref: '/prona',
-    order: 3,
-    isActive: true,
-  },
-  {
-    title: 'Makina të reja dhe të përdorura',
-    subtitle: '',
-    imageUrl: '',
-    ctaLabel: 'Shfleto makinat',
-    ctaHref: '/makina',
-    order: 4,
-    isActive: true,
-  },
-  {
-    title: 'Oferta pune pranë teje',
-    subtitle: '',
-    imageUrl: '',
-    ctaLabel: 'Shfleto punët',
-    ctaHref: '/pune',
-    order: 5,
-    isActive: true,
-  },
-  {
-    title: 'Tregu online – bli e shit lehtë',
-    subtitle: '',
-    imageUrl: '',
-    ctaLabel: 'Shfleto tregun',
-    ctaHref: '/tregu',
-    order: 6,
-    isActive: true,
-  },
-  {
-    title: 'Zbulo biznese lokale pranë teje',
-    subtitle: '',
-    imageUrl: '',
-    ctaLabel: 'Shfleto bizneset',
-    ctaHref: '/biznese',
-    order: 7,
-    isActive: true,
-  },
-];
+/** Titles of the old auto-seeded placeholder slides (no image). */
+const LEGACY_EMPTY_SEED_TITLES = new Set([
+  'Posto njoftimin tënd falas në sekonda',
+  'Gjej atë që kërkon, më shpejt',
+  'Prona në Tiranë, Durrës e gjithë Shqipërinë',
+  'Makina të reja dhe të përdorura',
+  'Oferta pune pranë teje',
+  'Tregu online – bli e shit lehtë',
+  'Zbulo biznese lokale pranë teje',
+]);
 
-function bannerToRow(b) {
-  return {
-    title: b.title,
-    subtitle: b.subtitle || '',
-    image_url: b.imageUrl,
-    cta_label: b.ctaLabel,
-    cta_href: b.ctaHref,
-    order: b.order,
-    is_active: b.isActive !== false,
-  };
+function isEmptyImage(url) {
+  return !String(url || '').trim();
 }
 
 async function ensureHomeBanners() {
   const sb = getSupabaseAdmin();
-  const { data: existing, error: findErr } = await sb.from('home_banners').select('title');
+
+  // Remove legacy empty seeded banners. Do not re-seed or enforce a fixed count —
+  // admins may keep any number of banners (including zero).
+  const { data: rows, error: findErr } = await sb
+    .from('home_banners')
+    .select('id, title, image_url, subtitle');
   if (findErr) throw findErr;
 
-  const existingTitles = new Set((existing || []).map((b) => b.title));
+  const legacyIds = (rows || [])
+    .filter((r) => isEmptyImage(r.image_url) && LEGACY_EMPTY_SEED_TITLES.has(String(r.title || '')))
+    .map((r) => r.id);
 
-  if (!existing || existing.length === 0) {
-    const { error } = await sb.from('home_banners').insert(DEFAULT_BANNERS.map(bannerToRow));
-    if (error) throw error;
-    return;
-  }
-
-  const missing = DEFAULT_BANNERS.filter((b) => !existingTitles.has(b.title));
-  if (missing.length > 0) {
-    const { error } = await sb.from('home_banners').insert(missing.map(bannerToRow));
-    if (error) throw error;
+  if (legacyIds.length > 0) {
+    const { error: delErr } = await sb.from('home_banners').delete().in('id', legacyIds);
+    if (delErr) throw delErr;
   }
 
   // Drop legacy subtitles so slides show headline only.

@@ -315,9 +315,11 @@ const EMPTY_BUNDLE: PublicListingsBundle = {
   totals: { realEstate: 0, cars: 0, jobs: 0, marketplace: 0, businesses: 0, professionals: 0 },
 };
 
-export async function fetchHomepageListings(limit = 8): Promise<PublicListingsBundle> {
+export async function fetchHomepageListings(
+  limit = 8,
+): Promise<PublicListingsBundle & { ok: boolean }> {
   const data = await safeJson<PublicListingsBundle>(`/public/listings/latest?limit=${limit}`);
-  if (!data) return EMPTY_BUNDLE;
+  if (!data) return { ...EMPTY_BUNDLE, ok: false };
   return {
     realEstate: data.realEstate ?? [],
     cars: data.cars ?? [],
@@ -326,6 +328,7 @@ export async function fetchHomepageListings(limit = 8): Promise<PublicListingsBu
     businesses: data.businesses ?? [],
     professionals: data.professionals ?? [],
     totals: data.totals ?? EMPTY_BUNDLE.totals,
+    ok: true,
   };
 }
 
@@ -340,14 +343,18 @@ export type HomepageLatestVerticalId =
 export async function fetchLatestVertical<T = unknown>(
   vertical: HomepageLatestVerticalId,
   limit = 8,
-): Promise<{ listings: T[]; total: number; vertical: string }> {
+): Promise<{ listings: T[]; total: number; vertical: string; ok: boolean }> {
   const data = await safeJson<{ listings?: T[]; total?: number; vertical?: string }>(
     `/public/listings/latest/${vertical}?limit=${limit}`,
   );
+  if (!data) {
+    return { listings: [], total: 0, vertical, ok: false };
+  }
   return {
-    listings: data?.listings ?? [],
-    total: data?.total ?? 0,
-    vertical: data?.vertical ?? vertical,
+    listings: data.listings ?? [],
+    total: data.total ?? 0,
+    vertical: data.vertical ?? vertical,
+    ok: true,
   };
 }
 
@@ -357,6 +364,8 @@ export interface BrowseListingsResult<T> {
   page: number;
   limit: number;
   totalPages: number;
+  /** False when the API request failed (vs a real empty result). */
+  ok: boolean;
 }
 
 export async function fetchBrowseRealEstate(
@@ -385,15 +394,19 @@ function parseBrowseResult<T>(
   limit: number,
   page: number,
 ): BrowseListingsResult<T> {
-  const listings = data?.listings ?? [];
-  const total = data?.total ?? listings.length;
-  const resolvedLimit = data?.limit ?? limit;
+  if (!data) {
+    return { listings: [], total: 0, page, limit, totalPages: 1, ok: false };
+  }
+  const listings = data.listings ?? [];
+  const total = data.total ?? listings.length;
+  const resolvedLimit = data.limit ?? limit;
   return {
     listings,
     total,
-    page: data?.page ?? page,
+    page: data.page ?? page,
     limit: resolvedLimit,
-    totalPages: data?.totalPages ?? Math.max(1, Math.ceil(total / resolvedLimit)),
+    totalPages: data.totalPages ?? Math.max(1, Math.ceil(total / resolvedLimit)),
+    ok: true,
   };
 }
 

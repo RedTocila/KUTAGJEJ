@@ -47,10 +47,16 @@ function CarouselSkeleton() {
   );
 }
 
-function renderListingCard(verticalId: HomepageLatestVerticalId, listing: HomeListing) {
+function renderListingCard(verticalId: HomepageLatestVerticalId, listing: HomeListing, index: number) {
   switch (verticalId) {
     case 'real-estate':
-      return <RealEstateCard key={listing.id} listing={listing as PublicRealEstateListing} />;
+      return (
+        <RealEstateCard
+          key={listing.id}
+          listing={listing as PublicRealEstateListing}
+          imagePriority={index < 4}
+        />
+      );
     case 'cars':
       return <CarCard key={listing.id} listing={listing as PublicCarListing} />;
     case 'jobs':
@@ -69,27 +75,41 @@ function renderListingCard(verticalId: HomepageLatestVerticalId, listing: HomeLi
  * Homepage vertical carousel that loads when scrolled near the viewport.
  * Keeps an in-memory cache so soft navigations back to `/` don’t refetch.
  * Cards are rendered inside this client module (no function props from the server).
+ *
+ * When SSR returned a failed empty (`initialOk === false`), we treat it as unloaded
+ * and refetch on the client so a cold/timeout first paint can recover without refresh.
  */
 export function LazyHomeSection({
   verticalId,
   limit = 8,
   initialListings,
   initialTotal,
+  initialOk = true,
+  eager = false,
 }: {
   verticalId: HomepageLatestVerticalId;
   limit?: number;
   /** When SSR already loaded this vertical, skip the network trip. */
   initialListings?: HomeListing[];
   initialTotal?: number;
+  /** False when SSR fetch failed (empty is not trustworthy). */
+  initialOk?: boolean;
+  /** Skip IntersectionObserver and load immediately (above-the-fold). */
+  eager?: boolean;
 }) {
   const key = cacheKey(verticalId, limit);
   const cached = sectionCache.get(key);
+  const ssrTrusted =
+    initialListings !== undefined && (initialOk || initialListings.length > 0);
+
   const [listings, setListings] = React.useState<HomeListing[]>(
-    () => initialListings ?? cached?.listings ?? [],
+    () => (ssrTrusted ? initialListings! : cached?.listings) ?? [],
   );
-  const [total, setTotal] = React.useState(() => initialTotal ?? cached?.total ?? 0);
-  const [loaded, setLoaded] = React.useState(() => Boolean(initialListings) || Boolean(cached));
-  const [active, setActive] = React.useState(() => Boolean(initialListings) || Boolean(cached));
+  const [total, setTotal] = React.useState(
+    () => (ssrTrusted ? initialTotal : undefined) ?? cached?.total ?? 0,
+  );
+  const [loaded, setLoaded] = React.useState(() => ssrTrusted || Boolean(cached));
+  const [active, setActive] = React.useState(() => eager || ssrTrusted || Boolean(cached));
   const rootRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
@@ -127,7 +147,10 @@ export function LazyHomeSection({
       }
       const res = await fetchLatestVertical<HomeListing>(verticalId, limit);
       if (cancelled) return;
-      sectionCache.set(key, { listings: res.listings, total: res.total });
+      // Only cache successful responses — failed empties must not stick forever.
+      if (res.ok) {
+        sectionCache.set(key, { listings: res.listings, total: res.total });
+      }
       setListings(res.listings);
       setTotal(res.total);
       setLoaded(true);
@@ -149,7 +172,7 @@ export function LazyHomeSection({
           <CarouselSkeleton />
         ) : (
           <ListingsCarousel>
-            {listings.map((listing) => renderListingCard(verticalId, listing))}
+            {listings.map((listing, index) => renderListingCard(verticalId, listing, index))}
           </ListingsCarousel>
         )}
       </ListingsSection>

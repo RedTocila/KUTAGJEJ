@@ -1,16 +1,14 @@
 import * as React from 'react';
 import type { Metadata } from 'next';
+import { unstable_noStore as noStore } from 'next/cache';
 import { HeroSection } from '@/components/public/hero-section';
 import { HomepageCommunityBanner, HomepagePostBanner } from '@/components/public/homepage-community-banner';
 import { PublicShell } from '@/components/public/public-shell';
 import { HomepageOkazionSection } from '@/components/public/homepage-okazion-section';
 import { HomepageRecommendedSection } from '@/components/public/homepage-recommended-section';
 import { LazyHomeSection } from '@/components/public/lazy-home-section';
-import { ListingsCarousel } from '@/components/public/listings-carousel';
-import { ListingsSection } from '@/components/public/listings-section';
 import { SeoIntroSection } from '@/components/public/seo-intro-section';
 import { buildHomepageMixedLatest } from '@/lib/homepage-latest-listings';
-import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { config } from '@/config';
 import { HOME_VERTICALS } from '@/lib/home-categories';
 import { fetchHomeBanners } from '@/lib/home-banners-client';
@@ -102,6 +100,12 @@ export default async function HomePage() {
   };
   const totals = bundle.totals;
   const latestMixed = buildHomepageMixedLatest(bundle, 8);
+  // SSR failures collapse to [] — tell client sections so they can recover without a hard refresh.
+  const listingsSsrOk = realEstate.ok || cars.ok || jobs.ok;
+  if (!listingsSsrOk) {
+    // Prevent ISR from pinning a failed empty homepage for `revalidate` seconds.
+    noStore();
+  }
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -195,25 +199,25 @@ export default async function HomePage() {
 
       <HomepageRecommendedSection fallbackItems={latestMixed} />
 
-      <HomepageOkazionSection listings={okazion.listings} total={okazion.total} />
+      <HomepageOkazionSection
+        listings={okazion.listings}
+        total={okazion.total}
+        ssrOk={okazion.ok}
+      />
 
-      <ListingsSection
+      <LazyHomeSection
         verticalId="real-estate"
-        total={totals.realEstate}
-        isEmpty={bundle.realEstate.length === 0}
-        useMuiVerticalIcon
-      >
-        <ListingsCarousel>
-          {bundle.realEstate.map((listing, index) => (
-            <RealEstateCard key={listing.id} listing={listing} imagePriority={index < 4} />
-          ))}
-        </ListingsCarousel>
-      </ListingsSection>
+        initialListings={bundle.realEstate}
+        initialTotal={totals.realEstate}
+        initialOk={realEstate.ok}
+        eager
+      />
 
       <LazyHomeSection
         verticalId="cars"
         initialListings={bundle.cars}
         initialTotal={totals.cars}
+        initialOk={cars.ok}
       />
 
       <HomepageCommunityBanner
@@ -224,6 +228,7 @@ export default async function HomePage() {
         verticalId="jobs"
         initialListings={bundle.jobs}
         initialTotal={totals.jobs}
+        initialOk={jobs.ok}
       />
 
       <LazyHomeSection verticalId="marketplace" />

@@ -10,6 +10,7 @@ import {
   Button,
   Card,
   CircularProgress,
+  Dialog,
   DialogContentText,
   IconButton,
   ListItemIcon,
@@ -50,9 +51,14 @@ import {
   consumePendingListingChat,
   fetchConversationMessages,
   fetchConversations,
+  getCachedConversations,
+  getCachedThread,
   hideConversations,
   markConversationRead,
+  removeCachedThreads,
   sendConversationMessage,
+  setCachedConversations,
+  setCachedThread,
   setConversationPinned,
   startConversation,
   type ConversationMessage,
@@ -525,6 +531,7 @@ function MessageBubble({
   const imageOnly = Boolean(imageUrl) && !body;
   const metaWidth = mine && deliveryStatus ? 58 : 42;
   const bubbleRadius = mine ? CHAT_BUBBLE_RADIUS_MINE : CHAT_BUBBLE_RADIUS_THEIRS;
+  const [previewOpen, setPreviewOpen] = React.useState(false);
   // Concentric with bubble; caption images also round the bottom edge.
   const imageRadius = body
     ? [
@@ -602,6 +609,7 @@ function MessageBubble({
   );
 
   return (
+    <>
     <Box
       sx={{
         display: 'flex',
@@ -641,6 +649,16 @@ function MessageBubble({
               src={imageUrl}
               alt=""
               loading="eager"
+              role="button"
+              tabIndex={0}
+              aria-label={t.messages.imagePreviewAria}
+              onClick={() => setPreviewOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setPreviewOpen(true);
+                }
+              }}
               onLoad={onMediaLoad}
               sx={{
                 display: 'block',
@@ -650,6 +668,7 @@ function MessageBubble({
                 aspectRatio: '4 / 3',
                 objectFit: 'cover',
                 bgcolor: 'action.hover',
+                cursor: 'pointer',
               }}
             />
             {imageOnly ? meta : null}
@@ -695,6 +714,74 @@ function MessageBubble({
         ) : null}
       </Box>
     </Box>
+
+    {imageUrl ? (
+      <Dialog
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        fullScreen
+        slotProps={{
+          paper: {
+            sx: {
+              bgcolor: 'rgba(0,0,0,0.96)',
+              backgroundImage: 'none',
+              display: 'flex',
+              flexDirection: 'column',
+            },
+          },
+        }}
+      >
+        <IconButton
+          type="button"
+          onClick={() => setPreviewOpen(false)}
+          aria-label={t.messages.closePreviewAria}
+          sx={{
+            position: 'fixed',
+            top: { xs: 'max(12px, env(safe-area-inset-top))', md: 16 },
+            right: { xs: 'max(12px, env(safe-area-inset-right))', md: 16 },
+            zIndex: 1,
+            width: 44,
+            height: 44,
+            color: '#fff',
+            bgcolor: 'rgba(255,255,255,0.12)',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.22)', color: '#fff' },
+          }}
+        >
+          <XIcon size={22} weight="bold" />
+        </IconButton>
+        <Box
+          onClick={() => setPreviewOpen(false)}
+          sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            height: '100%',
+            p: { xs: 1.5, md: 3 },
+            cursor: 'zoom-out',
+          }}
+        >
+          <Box
+            component="img"
+            src={imageUrl}
+            alt=""
+            onClick={(e) => e.stopPropagation()}
+            sx={{
+              display: 'block',
+              maxWidth: '100%',
+              maxHeight: '100%',
+              width: 'auto',
+              height: 'auto',
+              objectFit: 'contain',
+              borderRadius: 1,
+              userSelect: 'none',
+            }}
+          />
+        </Box>
+      </Dialog>
+    ) : null}
+    </>
   );
 }
 
@@ -834,6 +921,7 @@ function MessageComposer({
         sx={(theme) => ({
           display: 'flex',
           gap: 1,
+          p: 1,
           alignItems: inputExpanded ? 'flex-end' : 'center',
           transition: 'border-radius 120ms ease',
           ...productSearchBarSx(Boolean(draft.trim()) || Boolean(attachment), {
@@ -843,10 +931,6 @@ function MessageComposer({
           borderRadius: inputExpanded ? 2.5 : 999,
           height: 'auto',
           minHeight: 40,
-          // Equal inset around the send circle (top/bottom/right).
-          pl: 1,
-          pr: '3px',
-          py: '3px',
           bgcolor: 'background.paper',
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
@@ -915,8 +999,6 @@ function MessageComposer({
             flexShrink: 0,
             alignSelf: inputExpanded ? 'flex-end' : 'center',
             ...productFilterButtonSx(true),
-            width: 34,
-            height: 34,
             bgcolor: CHAT_ACCENT,
             color: '#0a0a0a',
             borderColor: CHAT_ACCENT,
@@ -934,21 +1016,18 @@ function MessageComposer({
             },
           }}
         >
-          <PaperPlaneTiltIcon size={16} weight="fill" />
+          <PaperPlaneTiltIcon size={18} weight="fill" />
         </IconButton>
       </Box>
     </Box>
   );
 }
 
-/** Survives remounts so Messages does not blank-spinner on every visit. */
-let cachedInboxConversations: ConversationSummary[] | null = null;
-
 export function UserMessagesView() {
   const t = useCopy();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const selectedId = searchParams.get('c');
+  const urlSelectedId = searchParams.get('c');
 
   const inboxFilterLabels: Record<InboxFilter, string> = {
     all: t.messages.all,
@@ -957,17 +1036,30 @@ export function UserMessagesView() {
   };
 
   const [conversations, setConversations] = React.useState<ConversationSummary[]>(
-    () => cachedInboxConversations ?? [],
+    () => getCachedConversations() ?? [],
   );
-  const [messages, setMessages] = React.useState<ConversationMessage[]>([]);
-  const [activeConversation, setActiveConversation] = React.useState<ConversationSummary | null>(null);
+  const [messages, setMessages] = React.useState<ConversationMessage[]>(() =>
+    urlSelectedId ? (getCachedThread(urlSelectedId)?.messages ?? []) : [],
+  );
+  const [activeConversation, setActiveConversation] = React.useState<ConversationSummary | null>(() => {
+    if (!urlSelectedId) return null;
+    return (
+      getCachedThread(urlSelectedId)?.conversation ??
+      getCachedConversations()?.find((c) => c.id === urlSelectedId) ??
+      null
+    );
+  });
   const [inboxFilter, setInboxFilter] = React.useState<InboxFilter>('all');
-  const [listLoading, setListLoading] = React.useState(() => !cachedInboxConversations);
-  const [threadLoading, setThreadLoading] = React.useState(false);
+  const [listLoading, setListLoading] = React.useState(() => !getCachedConversations());
+  const [threadLoading, setThreadLoading] = React.useState(() =>
+    Boolean(urlSelectedId) && !getCachedThread(urlSelectedId!),
+  );
   const [markingAllRead, setMarkingAllRead] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   /** Instant mobile dismiss before URL `?c=` clears (router can lag). */
   const [mobileThreadDismissed, setMobileThreadDismissed] = React.useState(false);
+  /** Instant open before URL `?c=` updates (router can lag). */
+  const [instantSelectedId, setInstantSelectedId] = React.useState<string | null>(null);
   const [selectionMode, setSelectionMode] = React.useState(false);
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(() => new Set());
   const [actionConversationId, setActionConversationId] = React.useState<string | null>(null);
@@ -984,6 +1076,20 @@ export function UserMessagesView() {
   /** Keep the viewport pinned to the latest message until the user scrolls up. */
   const stickToBottomRef = React.useRef(true);
   const pendingHandled = React.useRef(false);
+  const selectedIdRef = React.useRef<string | null>(null);
+  const conversationsRef = React.useRef(conversations);
+  conversationsRef.current = conversations;
+  const activeConversationRef = React.useRef(activeConversation);
+  activeConversationRef.current = activeConversation;
+
+  const selectedId = mobileThreadDismissed ? null : (instantSelectedId ?? urlSelectedId);
+  selectedIdRef.current = selectedId;
+
+  React.useEffect(() => {
+    if (instantSelectedId && urlSelectedId === instantSelectedId) {
+      setInstantSelectedId(null);
+    }
+  }, [urlSelectedId, instantSelectedId]);
 
   const unreadConversations = React.useMemo(
     () => conversations.filter((c) => c.unreadCount > 0),
@@ -1001,10 +1107,38 @@ export function UserMessagesView() {
   );
   const selectedCount = selectedIds.size;
 
+  const hydrateThreadLocally = React.useCallback((conversationId: string) => {
+    const cached = getCachedThread(conversationId);
+    const fromInbox =
+      conversationsRef.current.find((c) => c.id === conversationId) ??
+      getCachedConversations()?.find((c) => c.id === conversationId) ??
+      null;
+
+    if (cached) {
+      setMessages(cached.messages);
+      setActiveConversation(cached.conversation);
+      setThreadLoading(false);
+      return true;
+    }
+
+    setMessages([]);
+    if (fromInbox) {
+      setActiveConversation(fromInbox);
+      // Header paints now; messages area keeps a light loader until fetch lands.
+      setThreadLoading(true);
+      return true;
+    }
+
+    setActiveConversation(null);
+    setThreadLoading(true);
+    return false;
+  }, []);
+
   const loadInbox = React.useCallback(async () => {
     // Show cached inbox immediately on remount while refreshing in the background.
-    if (cachedInboxConversations) {
-      setConversations(cachedInboxConversations);
+    const cached = getCachedConversations();
+    if (cached) {
+      setConversations(sortConversationsByRecent(cached));
       setListLoading(false);
     } else {
       setListLoading(true);
@@ -1012,40 +1146,50 @@ export function UserMessagesView() {
     const res = await fetchConversations();
     if (res.error) {
       setError(res.error);
-      if (!cachedInboxConversations) setConversations([]);
+      if (!getCachedConversations()) setConversations([]);
     } else {
       const next = sortConversationsByRecent(res.conversations ?? []);
-      cachedInboxConversations = next;
+      setCachedConversations(next);
       setConversations(next);
     }
     setListLoading(false);
   }, []);
 
   const loadThread = React.useCallback(async (conversationId: string) => {
-    setThreadLoading(true);
+    hydrateThreadLocally(conversationId);
     setError(null);
     const res = await fetchConversationMessages(conversationId);
+    if (selectedIdRef.current !== conversationId) return;
+
     if (res.error) {
       setError(res.error);
-      setMessages([]);
-      setActiveConversation(null);
+      if (!getCachedThread(conversationId)) {
+        setMessages([]);
+        setActiveConversation(null);
+      }
       setThreadLoading(false);
       return;
     }
-    setMessages(res.messages ?? []);
-    setActiveConversation(res.conversation ?? null);
+
+    const nextMessages = res.messages ?? [];
+    const nextConversation = res.conversation ?? null;
+    if (nextConversation) {
+      setCachedThread(conversationId, nextMessages, nextConversation);
+      setActiveConversation(nextConversation);
+    }
+    setMessages(nextMessages);
     setThreadLoading(false);
 
     setConversations((prev) => {
       const cleared = prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c));
-      cachedInboxConversations = cleared;
+      setCachedConversations(cleared);
       return cleared;
     });
     setCachedUnreadMessagesCount(
-      (cachedInboxConversations ?? []).reduce((sum, c) => sum + Math.max(0, c.unreadCount || 0), 0),
+      (getCachedConversations() ?? []).reduce((sum, c) => sum + Math.max(0, c.unreadCount || 0), 0),
     );
     void markConversationRead(conversationId);
-  }, []);
+  }, [hydrateThreadLocally]);
 
   React.useEffect(() => {
     void loadInbox();
@@ -1082,13 +1226,13 @@ export function UserMessagesView() {
     if (!selectedId) {
       setActiveConversation(null);
       setMessages([]);
-      setMobileThreadDismissed(false);
+      if (!urlSelectedId) setMobileThreadDismissed(false);
       return;
     }
     setMobileThreadDismissed(false);
     stickToBottomRef.current = true;
     void loadThread(selectedId);
-  }, [selectedId, loadThread]);
+  }, [selectedId, loadThread, urlSelectedId]);
 
   const scrollThreadToBottom = React.useCallback(() => {
     const scroller = messagesScrollRef.current;
@@ -1114,7 +1258,8 @@ export function UserMessagesView() {
   // Jump to latest message when a thread opens or new messages arrive (while pinned).
   // useLayoutEffect + rAF + short timeouts: images / flex layout can grow after first paint.
   React.useLayoutEffect(() => {
-    if (threadLoading || !selectedId || !activeConversation) return;
+    if (!selectedId || !activeConversation) return;
+    if (threadLoading && messages.length === 0) return;
     if (!stickToBottomRef.current) return;
     scrollThreadToBottom();
     let raf2 = 0;
@@ -1136,7 +1281,8 @@ export function UserMessagesView() {
 
   // Re-pin when message images (or other content) change the thread height.
   React.useEffect(() => {
-    if (threadLoading || !selectedId || !activeConversation) return;
+    if (!selectedId || !activeConversation) return;
+    if (threadLoading && messages.length === 0) return;
     const content = messagesContentRef.current;
     if (!content || typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(() => {
@@ -1149,12 +1295,17 @@ export function UserMessagesView() {
   const selectConversation = (id: string) => {
     setMobileThreadDismissed(false);
     if (id === selectedId) return;
+    // Paint the thread immediately; URL sync can take a tick on mobile.
+    setInstantSelectedId(id);
+    stickToBottomRef.current = true;
+    hydrateThreadLocally(id);
     router.push(`${paths.user.messages}?c=${encodeURIComponent(id)}`);
   };
 
   const handleBackToInbox = () => {
     // Show inbox immediately; URL sync can take a tick on mobile.
     setMobileThreadDismissed(true);
+    setInstantSelectedId(null);
     router.replace(paths.user.messages);
   };
 
@@ -1197,7 +1348,12 @@ export function UserMessagesView() {
 
   const removeConversationsLocally = (ids: string[]) => {
     const idSet = new Set(ids);
-    setConversations((prev) => prev.filter((c) => !idSet.has(c.id)));
+    removeCachedThreads(ids);
+    setConversations((prev) => {
+      const next = prev.filter((c) => !idSet.has(c.id));
+      setCachedConversations(next);
+      return next;
+    });
     if (selectedId && idSet.has(selectedId)) {
       handleBackToInbox();
     }
@@ -1218,15 +1374,17 @@ export function UserMessagesView() {
       setError(res.error);
       return;
     }
-    setConversations((prev) =>
-      sortConversationsByRecent(
+    setConversations((prev) => {
+      const next = sortConversationsByRecent(
         prev.map((c) =>
           c.id === actionConversation.id
             ? { ...c, pinned: res.conversation?.pinned ?? nextPinned }
             : c,
         ),
-      ),
-    );
+      );
+      setCachedConversations(next);
+      return next;
+    });
   };
 
   const requestDeleteIds = (ids: string[]) => {
@@ -1255,7 +1413,12 @@ export function UserMessagesView() {
     setMarkingAllRead(true);
     const ids = unreadConversations.map((c) => c.id);
     await Promise.all(ids.map((id) => markConversationRead(id)));
-    setConversations((prev) => prev.map((c) => (c.unreadCount > 0 ? { ...c, unreadCount: 0 } : c)));
+    setConversations((prev) => {
+      const next = prev.map((c) => (c.unreadCount > 0 ? { ...c, unreadCount: 0 } : c));
+      setCachedConversations(next);
+      return next;
+    });
+    setCachedUnreadMessagesCount(0);
     setMarkingAllRead(false);
   };
 
@@ -1281,12 +1444,22 @@ export function UserMessagesView() {
     };
 
     stickToBottomRef.current = true;
-    setMessages((prev) => [...prev, optimistic]);
+    setMessages((prev) => {
+      const next = [...prev, optimistic];
+      const conv = activeConversationRef.current;
+      if (conv) {
+        setCachedThread(conversationId, next, {
+          ...conv,
+          otherUnreadCount: (conv.otherUnreadCount ?? 0) + 1,
+        });
+      }
+      return next;
+    });
     setActiveConversation((prev) =>
       prev ? { ...prev, otherUnreadCount: (prev.otherUnreadCount ?? 0) + 1 } : prev,
     );
-    setConversations((prev) =>
-      sortConversationsByRecent(
+    setConversations((prev) => {
+      const next = sortConversationsByRecent(
         prev.map((c) =>
           c.id === conversationId
             ? {
@@ -1298,8 +1471,10 @@ export function UserMessagesView() {
               }
             : c,
         ),
-      ),
-    );
+      );
+      setCachedConversations(next);
+      return next;
+    });
 
     const rollback = () => {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
@@ -1340,10 +1515,15 @@ export function UserMessagesView() {
     }
 
     const sent = res.message;
-    setMessages((prev) => prev.map((m) => (m.id === tempId ? sent : m)));
+    setMessages((prev) => {
+      const next = prev.map((m) => (m.id === tempId ? sent : m));
+      const conv = activeConversation;
+      if (conv) setCachedThread(conversationId, next, conv);
+      return next;
+    });
     if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
-    setConversations((prev) =>
-      sortConversationsByRecent(
+    setConversations((prev) => {
+      const next = sortConversationsByRecent(
         prev.map((c) =>
           c.id === conversationId
             ? {
@@ -1355,12 +1535,14 @@ export function UserMessagesView() {
               }
             : c,
         ),
-      ),
-    );
+      );
+      setCachedConversations(next);
+      return next;
+    });
     return true;
   };
 
-  const showThreadOnMobile = Boolean(selectedId) && !mobileThreadDismissed;
+  const showThreadOnMobile = Boolean(selectedId);
   const contactPhone = activeConversation ? conversationContactPhone(activeConversation) : null;
   const contactWhatsapp = whatsappHref(contactPhone);
   const deliveryStatuses = React.useMemo(
@@ -1707,7 +1889,7 @@ export function UserMessagesView() {
             <Stack sx={{ flex: 1, alignItems: 'center', justifyContent: 'center', px: 3, textAlign: 'center' }}>
               <Typography color="text.secondary">{t.messages.pickConversation}</Typography>
             </Stack>
-          ) : threadLoading ? (
+          ) : threadLoading && !activeConversation ? (
             <Stack sx={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
               <CircularProgress size={28} />
             </Stack>
@@ -1720,13 +1902,14 @@ export function UserMessagesView() {
               ) : null}
               <Stack
                 direction="row"
-                spacing={1}
+                spacing={1.1}
                 sx={{
                   position: 'relative',
                   zIndex: 2,
                   alignItems: 'center',
                   px: { xs: 1.25, md: 1.5 },
-                  py: 1,
+                  py: 1.25,
+                  minHeight: 64,
                   flexShrink: 0,
                   bgcolor: 'background.paper',
                 }}
@@ -1739,6 +1922,9 @@ export function UserMessagesView() {
                     position: 'relative',
                     zIndex: 3,
                     pointerEvents: 'auto',
+                    width: 40,
+                    height: 40,
+                    '& svg': { width: 20, height: 20 },
                   }}
                   aria-label={t.messages.backAria}
                 />
@@ -1746,10 +1932,10 @@ export function UserMessagesView() {
                   src={activeConversation.listingImageUrl ?? undefined}
                   variant="rounded"
                   sx={{
-                    width: 40,
-                    height: 40,
+                    width: 46,
+                    height: 46,
                     flexShrink: 0,
-                    borderRadius: 1.75,
+                    borderRadius: 1.85,
                     bgcolor: (theme) =>
                       theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                   }}
@@ -1758,11 +1944,11 @@ export function UserMessagesView() {
                     .slice(0, 1)
                     .toUpperCase()}
                 </Avatar>
-                <Stack spacing={0.15} sx={{ flex: 1, minWidth: 0 }}>
+                <Stack spacing={0.2} sx={{ flex: 1, minWidth: 0 }}>
                   <Typography
                     sx={{
                       fontWeight: 700,
-                      fontSize: '0.95rem',
+                      fontSize: '1.025rem',
                       lineHeight: 1.25,
                       letterSpacing: '-0.01em',
                       color: 'text.primary',
@@ -1777,6 +1963,7 @@ export function UserMessagesView() {
                     variant="caption"
                     sx={{
                       fontWeight: 700,
+                      fontSize: '0.78rem',
                       color: CHAT_ACCENT,
                       textDecoration: 'none',
                       lineHeight: 1.2,
@@ -1793,9 +1980,9 @@ export function UserMessagesView() {
                       component="a"
                       href={`tel:${contactPhone.replace(/\s/g, '')}`}
                       aria-label={t.messages.phoneAria}
-                      sx={{ color: CHAT_ACCENT }}
+                      sx={{ color: CHAT_ACCENT, width: 40, height: 40 }}
                     >
-                      <PhoneCallIcon size={24} weight="fill" />
+                      <PhoneCallIcon size={26} weight="fill" />
                     </IconButton>
                     {contactWhatsapp ? (
                       <IconButton
@@ -1804,9 +1991,9 @@ export function UserMessagesView() {
                         rel="noopener noreferrer"
                         target="_blank"
                         aria-label="WhatsApp"
-                        sx={{ color: '#25D366' }}
+                        sx={{ color: '#25D366', width: 40, height: 40 }}
                       >
-                        <WhatsappLogoIcon size={24} weight="fill" />
+                        <WhatsappLogoIcon size={26} weight="fill" />
                       </IconButton>
                     ) : null}
                   </Stack>
@@ -1838,7 +2025,11 @@ export function UserMessagesView() {
                   }}
                 >
                   <Box ref={messagesContentRef}>
-                    {messages.length === 0 ? (
+                    {threadLoading && messages.length === 0 ? (
+                      <Stack sx={{ alignItems: 'center', justifyContent: 'center', py: 6 }}>
+                        <CircularProgress size={24} />
+                      </Stack>
+                    ) : messages.length === 0 ? (
                       <Box sx={{ display: 'flex', justifyContent: 'center', px: 2, py: 3 }}>
                         <Typography
                           sx={{

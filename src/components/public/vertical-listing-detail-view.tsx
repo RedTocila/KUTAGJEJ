@@ -16,6 +16,7 @@ import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calenda
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
+import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { GasPump as GasPumpIcon } from '@phosphor-icons/react/dist/ssr/GasPump';
 import { Gauge as GaugeIcon } from '@phosphor-icons/react/dist/ssr/Gauge';
 import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
@@ -67,7 +68,7 @@ import {
   findOptionLabel,
   formatKilometers,
   formatPrice,
-  relativeAlbanianDate,
+  postedLabelSq,
 } from '@/components/public/listing-cards/format-helpers';
 import { JobListingCountdown } from '@/components/public/listing-cards/job-listing-countdown';
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
@@ -409,37 +410,46 @@ export function VerticalListingDetailView(props: {
                 </OwnerEditableSpot>
               </Box>
 
-              <Stack direction="row" sx={{ flexWrap: 'wrap', gap: { xs: 1.25, sm: 2 }, color: 'text.secondary', alignItems: 'center' }}>
-                {canInline || onEditInfo ? (
-                  <OwnerEditableSpot
-                    field="location"
-                    ownerEdit={ownerEdit}
-                    label="Ndrysho lokacionin"
-                    legacyOnClick={onEditInfo}
-                  >
-                    <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
-                      <MapPinIcon size={17} weight="regular" color="currentColor" />
-                    </Box>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                      {'cityName' in listing && listing.cityName
-                        ? listing.cityName
-                        : 'Shtoni lokacionin'}
-                    </Typography>
-                  </OwnerEditableSpot>
-                ) : (
-                  subtitleLine(listing)
-                )}
-                <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)} shikime</Typography>
-                {listing.kind === 'job' && !listing.isOkazion ? (
-                  <JobListingCountdown
-                    expiresAt={
-                      listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString()
-                    }
-                    chipSx={{ height: 28, fontSize: '0.8rem' }}
-                  />
-                ) : (
-                  <Typography variant="body2">{relativeAlbanianDate(listing.updatedAt ?? listing.createdAt)}</Typography>
-                )}
+              <Stack spacing={1.25}>
+                <Stack direction="row" sx={{ flexWrap: 'wrap', gap: { xs: 1.25, sm: 2 }, color: 'text.secondary', alignItems: 'center' }}>
+                  {canInline || onEditInfo ? (
+                    <OwnerEditableSpot
+                      field="location"
+                      ownerEdit={ownerEdit}
+                      label="Ndrysho lokacionin"
+                      legacyOnClick={onEditInfo}
+                    >
+                      <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
+                        <MapPinIcon size={17} weight="regular" color="currentColor" />
+                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                        {'cityName' in listing && listing.cityName
+                          ? listing.cityName
+                          : 'Shtoni lokacionin'}
+                      </Typography>
+                    </OwnerEditableSpot>
+                  ) : (
+                    subtitleLine(listing)
+                  )}
+                  {listing.kind === 'job' && !listing.isOkazion ? (
+                    <JobListingCountdown
+                      expiresAt={
+                        listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString()
+                      }
+                      chipSx={{ height: 28, fontSize: '0.8rem' }}
+                    />
+                  ) : null}
+                </Stack>
+                <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
+                  <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
+                    <CalendarIcon size={17} weight="regular" aria-hidden />
+                    <Typography variant="body2">{postedLabelSq(listing.createdAt)}</Typography>
+                  </Stack>
+                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}>
+                    <EyeIcon size={17} weight="regular" aria-hidden />
+                    <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)} shikime</Typography>
+                  </Stack>
+                </Stack>
               </Stack>
             </Stack>
 

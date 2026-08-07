@@ -45,20 +45,20 @@ export interface BusinessMenuPayload {
 export interface BusinessMineListing extends ListingMetrics {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   category: string;
   cityId: string | null;
   cityName: string | null;
-  contactPhone: string | null;
+  contactPhone?: string | null;
   imageUrls: string[];
-  openingHours: string | null;
-  weeklyHours: WeeklyHourRow[];
-  menuCategories: BusinessMenuCategory[];
-  menuItems: BusinessMenuItem[];
-  reservationsEnabled: boolean;
-  reservationUrl: string | null;
-  reservationTimeSlots: string[];
-  reservationPartySizes: number[];
+  openingHours?: string | null;
+  weeklyHours?: WeeklyHourRow[];
+  menuCategories?: BusinessMenuCategory[];
+  menuItems?: BusinessMenuItem[];
+  reservationsEnabled?: boolean;
+  reservationUrl?: string | null;
+  reservationTimeSlots?: string[];
+  reservationPartySizes?: number[];
   servicesHighlight: string | null;
   announcementTitle: string | null;
   announcementSubtitle: string | null;
@@ -66,7 +66,7 @@ export interface BusinessMineListing extends ListingMetrics {
   announcementAt?: string | null;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
   isPremium?: boolean;
   premiumUntil?: string | null;
 }
@@ -94,6 +94,23 @@ export async function listMyBusinessListings(): Promise<{
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not load listings.' };
     return { listings: data.listings as BusinessMineListing[] };
+  } catch {
+    return { error: 'Could not reach the server.' };
+  }
+}
+
+export async function getMyBusinessListing(id: string): Promise<{
+  listing?: BusinessMineListing;
+  error?: string;
+}> {
+  try {
+    const res = await fetch(getApiUrl(`/listings/directory/businesses/mine/${encodeURIComponent(id)}`), {
+      headers: authHeaders(),
+      cache: 'no-store',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not load listing.' };
+    return { listing: data.listing as BusinessMineListing };
   } catch {
     return { error: 'Could not reach the server.' };
   }
@@ -209,21 +226,21 @@ export interface ProfessionalListingPayload {
 export interface ProfessionalMineListing extends ListingMetrics {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   category: string;
   condition: string | null;
   price: number | null;
   currency: string | null;
   cityId: string | null;
   cityName: string | null;
-  contactPhone: string | null;
+  contactPhone?: string | null;
   imageUrls: string[];
-  responseTimeHours: number | null;
-  portfolioItems: ProfessionalPortfolioItem[];
+  responseTimeHours?: number | null;
+  portfolioItems?: ProfessionalPortfolioItem[];
   servicesHighlight: string | null;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
   isPremium?: boolean;
   premiumUntil?: string | null;
 }
@@ -240,6 +257,23 @@ export async function listMyProfessionalListings(): Promise<{
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not load listings.' };
     return { listings: data.listings as ProfessionalMineListing[] };
+  } catch {
+    return { error: 'Could not reach the server.' };
+  }
+}
+
+export async function getMyProfessionalListing(id: string): Promise<{
+  listing?: ProfessionalMineListing;
+  error?: string;
+}> {
+  try {
+    const res = await fetch(getApiUrl(`/listings/directory/professionals/mine/${encodeURIComponent(id)}`), {
+      headers: authHeaders(),
+      cache: 'no-store',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not load listing.' };
+    return { listing: data.listing as ProfessionalMineListing };
   } catch {
     return { error: 'Could not reach the server.' };
   }

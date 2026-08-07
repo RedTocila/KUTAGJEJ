@@ -12,16 +12,16 @@ import { ProfessionalOwnerEdit } from '@/components/user/owner-edit/professional
 import { RealEstateOwnerEdit } from '@/components/user/owner-edit/real-estate-owner-edit';
 import { useUser } from '@/hooks/use-user';
 import {
-  listMyBusinessListings,
-  listMyProfessionalListings,
+  getMyBusinessListing,
+  getMyProfessionalListing,
   type BusinessMineListing,
   type ProfessionalMineListing,
 } from '@/lib/directory-listings-client';
 import {
-  listMyCarListings,
-  listMyJobListings,
-  listMyMarketplaceListings,
-  listMyRealEstateListings,
+  getMyCarListing,
+  getMyJobListing,
+  getMyMarketplaceListing,
+  getMyRealEstateListing,
   type CarMineListing,
   type JobMineListing,
   type MarketplaceMineListing,
@@ -91,59 +91,35 @@ export default function EditListingPage() {
       };
 
       if (kind === 'real-estate') {
-        const res = await listMyRealEstateListings();
+        const res = await getMyRealEstateListing(listingId);
         if (cancelled) return;
-        if (res.error) fail(res.error);
-        else {
-          const found = (res.listings ?? []).find((l) => l.id === listingId) ?? null;
-          if (!found) fail('Njoftimi nuk u gjet.');
-          setReListing(found);
-        }
+        if (res.error || !res.listing) fail(res.error ?? 'Njoftimi nuk u gjet.');
+        else setReListing(res.listing);
       } else if (kind === 'car') {
-        const res = await listMyCarListings();
+        const res = await getMyCarListing(listingId);
         if (cancelled) return;
-        if (res.error) fail(res.error);
-        else {
-          const found = (res.listings ?? []).find((l) => l.id === listingId) ?? null;
-          if (!found) fail('Njoftimi nuk u gjet.');
-          setCarListing(found);
-        }
+        if (res.error || !res.listing) fail(res.error ?? 'Njoftimi nuk u gjet.');
+        else setCarListing(res.listing);
       } else if (kind === 'job') {
-        const res = await listMyJobListings();
+        const res = await getMyJobListing(listingId);
         if (cancelled) return;
-        if (res.error) fail(res.error);
-        else {
-          const found = (res.listings ?? []).find((l) => l.id === listingId) ?? null;
-          if (!found) fail('Njoftimi nuk u gjet.');
-          setJobListing(found);
-        }
+        if (res.error || !res.listing) fail(res.error ?? 'Njoftimi nuk u gjet.');
+        else setJobListing(res.listing);
       } else if (kind === 'marketplace') {
-        const res = await listMyMarketplaceListings();
+        const res = await getMyMarketplaceListing(listingId);
         if (cancelled) return;
-        if (res.error) fail(res.error);
-        else {
-          const found = (res.listings ?? []).find((l) => l.id === listingId) ?? null;
-          if (!found) fail('Njoftimi nuk u gjet.');
-          setMktListing(found);
-        }
+        if (res.error || !res.listing) fail(res.error ?? 'Njoftimi nuk u gjet.');
+        else setMktListing(res.listing);
       } else if (kind === 'businesses') {
-        const res = await listMyBusinessListings();
+        const res = await getMyBusinessListing(listingId);
         if (cancelled) return;
-        if (res.error) fail(res.error);
-        else {
-          const found = (res.listings ?? []).find((l) => l.id === listingId) ?? null;
-          if (!found) fail('Njoftimi nuk u gjet.');
-          setBizListing(found);
-        }
+        if (res.error || !res.listing) fail(res.error ?? 'Njoftimi nuk u gjet.');
+        else setBizListing(res.listing);
       } else {
-        const res = await listMyProfessionalListings();
+        const res = await getMyProfessionalListing(listingId);
         if (cancelled) return;
-        if (res.error) fail(res.error);
-        else {
-          const found = (res.listings ?? []).find((l) => l.id === listingId) ?? null;
-          if (!found) fail('Njoftimi nuk u gjet.');
-          setProListing(found);
-        }
+        if (res.error || !res.listing) fail(res.error ?? 'Njoftimi nuk u gjet.');
+        else setProListing(res.listing);
       }
       if (!cancelled) setLoading(false);
     })();

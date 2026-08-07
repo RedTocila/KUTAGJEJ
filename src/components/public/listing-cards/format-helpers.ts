@@ -39,6 +39,17 @@ export function relativeAlbanianDate(iso: string): string {
   return date.toLocaleDateString('sq-AL', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+function calendarDayKey(date: Date): string {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+/** Relative posted label for listing detail pages (`Postuar sot` / `2 ditë më parë`). */
+export function postedLabelSq(iso: string): string {
+  const d = new Date(iso);
+  if (calendarDayKey(d) === calendarDayKey(new Date())) return 'Postuar sot';
+  return relativeAlbanianDate(iso);
+}
+
 export function findOptionLabel<T extends { value: string; label: string }>(
   options: readonly T[],
   value: string | null | undefined,

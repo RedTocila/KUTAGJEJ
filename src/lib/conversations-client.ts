@@ -93,6 +93,41 @@ export async function startConversationWithMember(
   return { conversation: res.data?.conversation };
 }
 
+/** Survives remounts / route changes so Chats paints instantly. */
+let cachedInboxConversations: ConversationSummary[] | null = null;
+const cachedThreads = new Map<
+  string,
+  { messages: ConversationMessage[]; conversation: ConversationSummary }
+>();
+let inboxPrefetch: Promise<ConversationSummary[] | null> | null = null;
+
+export function getCachedConversations(): ConversationSummary[] | null {
+  return cachedInboxConversations;
+}
+
+export function setCachedConversations(next: ConversationSummary[] | null): void {
+  cachedInboxConversations = next;
+}
+
+export function getCachedThread(conversationId: string): {
+  messages: ConversationMessage[];
+  conversation: ConversationSummary;
+} | null {
+  return cachedThreads.get(conversationId) ?? null;
+}
+
+export function setCachedThread(
+  conversationId: string,
+  messages: ConversationMessage[],
+  conversation: ConversationSummary,
+): void {
+  cachedThreads.set(conversationId, { messages, conversation });
+}
+
+export function removeCachedThreads(ids: string[]): void {
+  for (const id of ids) cachedThreads.delete(id);
+}
+
 export async function fetchConversations(
   page = 1,
   limit = 30,
@@ -106,7 +141,25 @@ export async function fetchConversations(
     total: number;
   }>(`/conversations?page=${page}&limit=${limit}`);
   if (!res.ok) return { error: res.error ?? 'Nuk u ngarkuan bisedat.' };
+  if (res.data?.conversations) {
+    cachedInboxConversations = res.data.conversations;
+  }
   return { conversations: res.data?.conversations, total: res.data?.total };
+}
+
+/** Warm the inbox cache so opening Chats does not wait on the list fetch. */
+export function prefetchConversations(): Promise<ConversationSummary[] | null> {
+  if (cachedInboxConversations) return Promise.resolve(cachedInboxConversations);
+  if (inboxPrefetch) return inboxPrefetch;
+  inboxPrefetch = fetchConversations()
+    .then((res) => {
+      if (res.error || !res.conversations) return cachedInboxConversations;
+      return res.conversations;
+    })
+    .finally(() => {
+      inboxPrefetch = null;
+    });
+  return inboxPrefetch;
 }
 
 export async function fetchUnreadMessagesCount(): Promise<{ unreadCount?: number; error?: string }> {

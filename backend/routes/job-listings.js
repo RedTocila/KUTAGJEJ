@@ -3,14 +3,12 @@
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
 const { getSupabaseAdmin } = require('../lib/supabase');
-const { camelizeRow, camelizeRows } = require('../lib/profiles');
+const { camelizeRow } = require('../lib/profiles');
 const { validateJobPayload } = require('../lib/job-field-rules');
-const { attachOwnerMetrics } = require('../lib/listing-metrics');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls } = require('../lib/image-upload');
-const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers');
-const { premiumFieldsFromDoc } = require('../lib/premium-listing');
-const { okazionFieldsFromDoc } = require('../lib/okazion-listing');
+const { isUuid } = require('../lib/public-listings/query-helpers');
+const { formatMineJob, formatMineJobFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
 
 const router = express.Router();
 
@@ -24,50 +22,35 @@ function requirePortalUser(req, res, next) {
   next();
 }
 
-function formatMineListing(doc, cityById) {
-  const city = cityById?.get(String(doc.cityId));
-  return {
-    id: String(doc.id),
-    title: doc.title,
-    description: doc.description,
-    industry: doc.industry,
-    cityId: doc.cityId ? String(doc.cityId) : null,
-    cityName: city?.name ?? null,
-    education: doc.education,
-    experience: doc.experience,
-    jobType: doc.jobType,
-    workLocation: doc.workLocation,
-    salary: doc.salary ?? null,
-    currency: doc.currency ?? null,
-    contactPhone: doc.contactPhone ?? null,
-    responsibilities: doc.responsibilities ?? [],
-    requirements: doc.requirements ?? [],
-    benefits: doc.benefits ?? [],
-    imageUrls: doc.imageUrls ?? [],
-    status: doc.status || 'pending',
-    createdAt: doc.createdAt,
-    updatedAt: doc.updatedAt,
-    ...premiumFieldsFromDoc(doc),
-    ...okazionFieldsFromDoc(doc),
-  };
-}
-
 /** GET /api/listings/jobs/mine */
 router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
   try {
-    const { data, error } = await getSupabaseAdmin()
-      .from('job_listings')
-      .select('*')
-      .eq('poster_id', req.user.id)
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-
-    const docs = camelizeRows(data);
-    const cityById = await buildCityIndex(docs);
-    const listings = docs.map((d) => formatMineListing(d, cityById));
-    res.json({ listings: await attachOwnerMetrics(listings, 'job') });
+    const listings = await loadMineKind(req.user.id, {
+      table: 'job_listings',
+      metricKind: 'job',
+      format: formatMineJob,
+    });
+    res.json({ listings });
   } catch (err) {
     console.error('GET /listings/jobs/mine:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/** GET /api/listings/jobs/mine/:id */
+router.get('/mine/:id', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    if (!isUuid(req.params.id)) return res.status(400).json({ message: 'ID e pavlefshme.' });
+    const listing = await loadMineListingById(req.user.id, {
+      table: 'job_listings',
+      listingId: req.params.id,
+      metricKind: 'job',
+      format: formatMineJobFull,
+    });
+    if (!listing) return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
+    res.json({ listing });
+  } catch (err) {
+    console.error('GET /listings/jobs/mine/:id:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });

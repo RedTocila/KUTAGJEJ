@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 
-import { fetchUnreadMessagesCount } from '@/lib/conversations-client';
+import { fetchUnreadMessagesCount, prefetchConversations } from '@/lib/conversations-client';
 import { useUser } from '@/hooks/use-user';
 
 /** Survives public ↔ dashboard shell remounts so the badge does not flash to 0. */
@@ -43,6 +43,8 @@ export function useUnreadMessagesCount(pollMs = 30_000): number {
       setCount(cachedUnreadCount);
     };
 
+    // Warm inbox in the background so tapping Chats paints immediately.
+    void prefetchConversations();
     void load();
     const timer = window.setInterval(() => {
       void load();

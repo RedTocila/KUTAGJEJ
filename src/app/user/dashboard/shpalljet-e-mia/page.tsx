@@ -7,9 +7,12 @@ import { format } from 'date-fns';
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
+  CircularProgress,
+  DialogContentText,
   Grid,
   IconButton,
   InputAdornment,
@@ -22,6 +25,8 @@ import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Brief
 import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist/ssr/BuildingOffice';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
+import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
+import { Circle as CircleIcon } from '@phosphor-icons/react/dist/ssr/Circle';
 import { ListBullets as ListBulletsIcon } from '@phosphor-icons/react/dist/ssr/ListBullets';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
@@ -31,23 +36,21 @@ import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/S
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
 import { Speedometer as SpeedometerIcon } from '@phosphor-icons/react/dist/ssr/Speedometer';
+import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { paths } from '@/paths';
 import {
-  listMyCarListings,
-  listMyJobListings,
-  listMyMarketplaceListings,
-  listMyRealEstateListings,
+  deleteMyListings,
+  listMyListings,
   type CarMineListing,
+  type DeleteMyListingItem,
   type JobMineListing,
   type MarketplaceMineListing,
 } from '@/lib/listings-client';
 import {
-  listMyBusinessListings,
-  listMyProfessionalListings,
   type BusinessMineListing,
   type ProfessionalMineListing,
 } from '@/lib/directory-listings-client';
@@ -60,6 +63,12 @@ import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import {
   ListingOwnerMetrics,
@@ -83,6 +92,32 @@ function autoRefreshKey(kind: string, listingId: string) {
 
 function refreshCooldownKey(kind: string, listingId: string) {
   return `${kind}:${listingId}`;
+}
+
+function listingSelectionKey(kind: ListingMetricKind, listingId: string) {
+  return `${kind}:${listingId}`;
+}
+
+function parseListingSelectionKey(key: string): DeleteMyListingItem | null {
+  const idx = key.indexOf(':');
+  if (idx <= 0) return null;
+  const kind = key.slice(0, idx) as ListingMetricKind;
+  const id = key.slice(idx + 1);
+  if (!id) return null;
+  return { kind, id };
+}
+
+type MyListingsSelectionApi = {
+  selectionMode: boolean;
+  isSelected: (key: string) => boolean;
+  toggleSelected: (key: string) => void;
+  requestDelete: (items: DeleteMyListingItem[]) => void;
+};
+
+const MyListingsSelectionContext = React.createContext<MyListingsSelectionApi | null>(null);
+
+function useMyListingsSelection() {
+  return React.useContext(MyListingsSelectionContext);
 }
 
 // ---------------------------------------------------------------------------
@@ -124,6 +159,8 @@ function CardImageHeader({
   isOkazion = false,
   bottomOverlay,
   topRightActions,
+  selectionMode = false,
+  selected = false,
 }: {
   imageUrl: string | null;
   fallbackIcon: PhosphorIcon;
@@ -133,8 +170,11 @@ function CardImageHeader({
   isOkazion?: boolean;
   bottomOverlay?: React.ReactNode;
   topRightActions?: React.ReactNode;
+  selectionMode?: boolean;
+  selected?: boolean;
 }) {
   const topLeftLabel = (() => {
+    if (selectionMode) return null;
     if (isOkazion) {
       return (
         <Chip
@@ -179,7 +219,7 @@ function CardImageHeader({
           alt={alt}
           fill
           sizes="(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          quality={85}
+          quality={75}
           style={{ objectFit: 'cover', objectPosition: 'center' }}
         />
       ) : (
@@ -206,8 +246,35 @@ function CardImageHeader({
           zIndex: 1,
         }}
       />
+      {selectionMode ? (
+        <Box
+          aria-hidden
+          sx={{
+            position: 'absolute',
+            top: 8,
+            left: 8,
+            zIndex: 2,
+            width: 28,
+            height: 28,
+            borderRadius: '50%',
+            display: 'grid',
+            placeItems: 'center',
+            bgcolor: 'rgba(0,0,0,0.35)',
+            border: '1px solid rgba(255,255,255,0.22)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            color: selected ? 'primary.main' : 'common.white',
+          }}
+        >
+          {selected ? (
+            <CheckCircleIcon size={18} weight="fill" />
+          ) : (
+            <CircleIcon size={18} weight="bold" />
+          )}
+        </Box>
+      ) : null}
       {topLeftLabel ? <Box sx={{ position: 'absolute', top: 10, left: 10, zIndex: 2 }}>{topLeftLabel}</Box> : null}
-      {topRightActions ? (
+      {!selectionMode && topRightActions ? (
         <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 2 }}>{topRightActions}</Box>
       ) : null}
       {bottomOverlay ? (
@@ -274,25 +341,45 @@ function BaseCard({
 }) {
   const moderationStatus = normalizeListingModerationStatus(status ?? undefined);
   const isPublic = moderationStatus === 'approved';
+  const selection = useMyListingsSelection();
+  const selectionKey = listingId && kind ? listingSelectionKey(kind, listingId) : null;
+  const selectionMode = Boolean(selection?.selectionMode && selectionKey);
+  const selected = Boolean(selectionKey && selection?.isSelected(selectionKey));
 
   return (
     <Card
       elevation={0}
+      role={selectionMode ? 'button' : undefined}
+      aria-pressed={selectionMode ? selected : undefined}
+      aria-label={selectionMode ? (selected ? 'Hiq zgjedhjen' : 'Zgjidh njoftimin') : undefined}
+      onClick={
+        selectionMode && selectionKey
+          ? () => selection?.toggleSelected(selectionKey)
+          : undefined
+      }
       sx={{
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
         border: '1px solid',
-        borderColor: 'divider',
+        borderColor: selected ? 'primary.main' : 'divider',
         borderRadius: 2.5,
         overflow: 'hidden',
         bgcolor: 'background.paper',
         opacity: isPublic ? 1 : 0.94,
-        boxShadow: 'none',
+        boxShadow: selected ? (t) => `0 0 0 1px ${t.palette.primary.main}` : 'none',
+        cursor: selectionMode ? 'pointer' : undefined,
         transition: 'box-shadow 0.2s, border-color 0.2s',
         '&:hover': {
-          borderColor: isPublic ? 'primary.main' : 'warning.main',
-          boxShadow: (t) => `0 8px 22px ${t.palette.mode === 'dark' ? 'rgba(0,0,0,0.32)' : 'rgba(0,0,0,0.07)'}`,
+          borderColor: selected
+            ? 'primary.main'
+            : isPublic
+              ? 'primary.main'
+              : 'warning.main',
+          boxShadow: (t) =>
+            selected
+              ? `0 0 0 1px ${t.palette.primary.main}`
+              : `0 8px 22px ${t.palette.mode === 'dark' ? 'rgba(0,0,0,0.32)' : 'rgba(0,0,0,0.07)'}`,
         },
       }}
     >
@@ -304,6 +391,8 @@ function BaseCard({
         isPremium={isPremium}
         isOkazion={isOkazion}
         bottomOverlay={mediaBottomOverlay}
+        selectionMode={selectionMode}
+        selected={selected}
         topRightActions={
           listingId && kind ? (
             <ListingOwnerTopActions
@@ -312,6 +401,9 @@ function BaseCard({
               canAnnounce={isPublic}
               announcement={announcement}
               onAnnouncementSaved={onAnnouncementSaved}
+              onDeleteRequest={(id, deleteKind) => {
+                selection?.requestDelete([{ kind: deleteKind, id }]);
+              }}
             />
           ) : undefined
         }
@@ -369,7 +461,7 @@ function BaseCard({
           ) : null}
         </Stack>
         <Box sx={{ flex: 1 }} />
-        {metrics ? (
+        {metrics && !selectionMode ? (
           <ListingOwnerMetrics
             metrics={metrics}
             listingId={listingId}
@@ -1001,6 +1093,11 @@ export default function UserMyListingsPage() {
   const [autoRefreshKeys, setAutoRefreshKeys] = React.useState<Set<string>>(() => new Set());
   const [refreshCooldownByKey, setRefreshCooldownByKey] = React.useState<Record<string, string>>({});
   const [refreshEveryHours, setRefreshEveryHours] = React.useState(48);
+  const [selectionMode, setSelectionMode] = React.useState(false);
+  const [selectedKeys, setSelectedKeys] = React.useState<Set<string>>(() => new Set());
+  const [pendingDeleteItems, setPendingDeleteItems] = React.useState<DeleteMyListingItem[] | null>(null);
+  const [deletingListings, setDeletingListings] = React.useState(false);
+  const [actionError, setActionError] = React.useState<string | null>(null);
 
   const canView =
     Boolean(user) &&
@@ -1025,30 +1122,16 @@ export default function UserMyListingsPage() {
     let cancelled = false;
     setLoading(true);
 
-    void Promise.all([
-      listMyRealEstateListings(),
-      listMyCarListings(),
-      listMyJobListings(),
-      listMyMarketplaceListings(),
-      listMyBusinessListings(),
-      listMyProfessionalListings(),
-      fetchListingAutoRefresh(),
-    ]).then(([re, cars, jobs, mkt, biz, pro, auto]) => {
+    void Promise.all([listMyListings(), fetchListingAutoRefresh()]).then(([mine, auto]) => {
       if (cancelled) return;
-      setReListings(re.listings ?? []);
-      setCarListings(cars.listings ?? []);
-      setJobListings(jobs.listings ?? []);
-      setMktListings(mkt.listings ?? []);
-      setBizListings(biz.listings ?? []);
-      setProListings(pro.listings ?? []);
-      setErrors([
-        re.error ?? null,
-        cars.error ?? null,
-        jobs.error ?? null,
-        mkt.error ?? null,
-        biz.error ?? null,
-        pro.error ?? null,
-      ]);
+      const err = mine.error ?? null;
+      setReListings(mine.realEstate ?? []);
+      setCarListings(mine.cars ?? []);
+      setJobListings(mine.jobs ?? []);
+      setMktListings(mine.marketplace ?? []);
+      setBizListings(mine.businesses ?? []);
+      setProListings(mine.professionals ?? []);
+      setErrors([err, err, err, err, err, err]);
       setAutoRefreshKeys(
         new Set((auto.enrolled ?? []).map((e) => autoRefreshKey(e.kind, e.listingId))),
       );
@@ -1074,6 +1157,116 @@ export default function UserMyListingsPage() {
       return next;
     });
   }, []);
+
+  const enterSelectionMode = React.useCallback((seedKey?: string) => {
+    setSelectionMode(true);
+    setSelectedKeys(() => (seedKey ? new Set([seedKey]) : new Set()));
+    setActionError(null);
+  }, []);
+
+  const exitSelectionMode = React.useCallback(() => {
+    setSelectionMode(false);
+    setSelectedKeys(new Set());
+  }, []);
+
+  const toggleSelected = React.useCallback((key: string) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const isSelected = React.useCallback((key: string) => selectedKeys.has(key), [selectedKeys]);
+
+  const requestDelete = React.useCallback((items: DeleteMyListingItem[]) => {
+    const unique = [
+      ...new Map(
+        items
+          .filter((item) => item.kind && item.id)
+          .map((item) => [`${item.kind}:${item.id}`, item] as const),
+      ).values(),
+    ];
+    if (!unique.length) return;
+    setPendingDeleteItems(unique);
+    setActionError(null);
+  }, []);
+
+  const removeListingsLocally = React.useCallback((items: DeleteMyListingItem[]) => {
+    const byKind = new Map<ListingMetricKind, Set<string>>();
+    for (const item of items) {
+      const set = byKind.get(item.kind) ?? new Set<string>();
+      set.add(item.id);
+      byKind.set(item.kind, set);
+    }
+    const filterOut = <T extends { id: string }>(list: T[], kind: ListingMetricKind) => {
+      const ids = byKind.get(kind);
+      if (!ids?.size) return list;
+      return list.filter((row) => !ids.has(row.id));
+    };
+    setReListings((prev) => filterOut(prev, 'real-estate'));
+    setCarListings((prev) => filterOut(prev, 'car'));
+    setJobListings((prev) => filterOut(prev, 'job'));
+    setMktListings((prev) => filterOut(prev, 'marketplace'));
+    setBizListings((prev) => filterOut(prev, 'businesses'));
+    setProListings((prev) => filterOut(prev, 'professionals'));
+    setAutoRefreshKeys((prev) => {
+      const next = new Set(prev);
+      for (const item of items) next.delete(autoRefreshKey(item.kind, item.id));
+      return next;
+    });
+    setRefreshCooldownByKey((prev) => {
+      const next = { ...prev };
+      for (const item of items) delete next[refreshCooldownKey(item.kind, item.id)];
+      return next;
+    });
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      for (const item of items) next.delete(listingSelectionKey(item.kind, item.id));
+      return next;
+    });
+  }, []);
+
+  const confirmDeleteListings = React.useCallback(async () => {
+    if (!pendingDeleteItems?.length || deletingListings) return;
+    setDeletingListings(true);
+    setActionError(null);
+    const res = await deleteMyListings(pendingDeleteItems);
+    setDeletingListings(false);
+    if (res.error && (!res.deleted || res.deleted.length === 0)) {
+      setActionError(res.error);
+      return;
+    }
+    if (res.deleted?.length) removeListingsLocally(res.deleted);
+    if (res.failed?.length && res.deleted?.length) {
+      setActionError(res.error ?? `Disa njoftime nuk u fshinë (${res.failed.length}).`);
+    } else if (res.failed?.length) {
+      setActionError(res.failed[0]?.message ?? res.error ?? 'Njoftimet nuk u fshinë.');
+      return;
+    }
+    setPendingDeleteItems(null);
+    exitSelectionMode();
+  }, [pendingDeleteItems, deletingListings, removeListingsLocally, exitSelectionMode]);
+
+  const selectionApi = React.useMemo<MyListingsSelectionApi>(
+    () => ({
+      selectionMode,
+      isSelected,
+      toggleSelected,
+      requestDelete,
+    }),
+    [selectionMode, isSelected, toggleSelected, requestDelete],
+  );
+
+  const selectedCount = selectedKeys.size;
+  const totalListingsCount =
+    reListings.length +
+    carListings.length +
+    jobListings.length +
+    mktListings.length +
+    bizListings.length +
+    proListings.length;
 
   const unifiedItems = React.useMemo<UnifiedMineItem[]>(() => {
     const items: UnifiedMineItem[] = [
@@ -1384,6 +1577,7 @@ export default function UserMyListingsPage() {
   };
 
   return (
+    <MyListingsSelectionContext.Provider value={selectionApi}>
     <Stack spacing={{ xs: 2.5, md: 3 }}>
       <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <UserPageHeader
@@ -1392,32 +1586,108 @@ export default function UserMyListingsPage() {
           description="Menaxhoni njoftimet tuaja sipas kategorisë."
           sx={{ flex: 1, minWidth: 0 }}
         />
-        <IconButton
-          color="primary"
-          aria-label="Posto njoftim"
-          onClick={() => setAddListingOpen(true)}
-          sx={{
-            mt: 0.15,
-            flexShrink: 0,
-            width: 40,
-            height: 40,
-            borderRadius: 2.25,
-            bgcolor: 'primary.main',
-            color: 'primary.contrastText',
-            '&:hover': { bgcolor: 'primary.dark' },
-          }}
-        >
-          <PlusIcon size={20} weight="bold" />
-        </IconButton>
+        <Stack direction="row" spacing={0.75} sx={{ flexShrink: 0, mt: 0.15 }}>
+          {!loading && totalListingsCount > 0 && !selectionMode ? (
+            <IconButton
+              color="inherit"
+              aria-label={t.myListings.selectModeAria}
+              onClick={() => enterSelectionMode()}
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 2.25,
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+                color: 'text.secondary',
+                '&:hover': { borderColor: 'primary.main', color: 'primary.main' },
+              }}
+            >
+              <CheckCircleIcon size={20} weight="bold" />
+            </IconButton>
+          ) : null}
+          <IconButton
+            color="primary"
+            aria-label="Posto njoftim"
+            onClick={() => setAddListingOpen(true)}
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: 2.25,
+              bgcolor: 'primary.main',
+              color: 'primary.contrastText',
+              '&:hover': { bgcolor: 'primary.dark' },
+            }}
+          >
+            <PlusIcon size={20} weight="bold" />
+          </IconButton>
+        </Stack>
       </Stack>
 
       {showSubmittedAlert ? <ListingSubmittedPendingAlert /> : null}
+
+      {actionError ? (
+        <Alert severity="error" sx={{ borderRadius: 2 }} onClose={() => setActionError(null)}>
+          {actionError}
+        </Alert>
+      ) : null}
 
       {!loading && pendingCount > 0 ? (
         <Alert severity="info" sx={{ borderRadius: 2 }}>
           Keni <strong>{pendingCount}</strong>{' '}
           {pendingCount === 1 ? 'njoftim' : 'njoftime'} që nuk shfaqen ende publikisht.
         </Alert>
+      ) : null}
+
+      {selectionMode ? (
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ alignItems: 'center', justifyContent: 'space-between', minHeight: 40, gap: 1 }}
+        >
+          <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', color: 'text.primary', minWidth: 0 }}>
+            {t.myListings.selectedCount(selectedCount)}
+          </Typography>
+          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexShrink: 0 }}>
+            <Button
+              type="button"
+              size="small"
+              color="error"
+              disabled={selectedCount === 0 || deletingListings}
+              startIcon={<TrashIcon size={14} weight="bold" />}
+              onClick={() => {
+                const items = [...selectedKeys]
+                  .map(parseListingSelectionKey)
+                  .filter((item): item is DeleteMyListingItem => Boolean(item));
+                requestDelete(items);
+              }}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                minWidth: 0,
+                px: 0.75,
+              }}
+            >
+              {t.myListings.deleteListings(selectedCount || 1)}
+            </Button>
+            <Button
+              type="button"
+              size="small"
+              onClick={exitSelectionMode}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                minWidth: 0,
+                px: 0.5,
+                color: 'text.secondary',
+              }}
+            >
+              {t.common.cancel}
+            </Button>
+          </Stack>
+        </Stack>
       ) : null}
 
       <TextField
@@ -1451,9 +1721,9 @@ export default function UserMyListingsPage() {
           },
         }}
         sx={{
-          bgcolor: 'background.paper',
           '& .MuiOutlinedInput-root': {
             borderRadius: 2.5,
+            bgcolor: 'background.paper',
           },
         }}
       />
@@ -1755,6 +2025,49 @@ export default function UserMyListingsPage() {
         onClose={() => setAddListingOpen(false)}
         onPick={handleAddListingPick}
       />
+
+      <ProductDialog
+        open={Boolean(pendingDeleteItems?.length)}
+        onClose={deletingListings ? undefined : () => setPendingDeleteItems(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <ProductDialogTitle onClose={deletingListings ? undefined : () => setPendingDeleteItems(null)}>
+          {(pendingDeleteItems?.length ?? 0) > 1
+            ? t.myListings.deleteConfirmManyTitle(pendingDeleteItems!.length)
+            : t.myListings.deleteConfirmTitle}
+        </ProductDialogTitle>
+        <ProductDialogContent>
+          <DialogContentText sx={{ m: 0, color: 'text.secondary' }}>
+            {(pendingDeleteItems?.length ?? 0) > 1
+              ? t.myListings.deleteConfirmManyBody
+              : t.myListings.deleteConfirmBody}
+          </DialogContentText>
+        </ProductDialogContent>
+        <ProductDialogActions>
+          <Button
+            onClick={() => setPendingDeleteItems(null)}
+            disabled={deletingListings}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            {t.common.cancel}
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={deletingListings}
+            onClick={() => void confirmDeleteListings()}
+            sx={{ textTransform: 'none', fontWeight: 700 }}
+          >
+            {deletingListings ? (
+              <CircularProgress size={18} color="inherit" />
+            ) : (
+              t.myListings.deleteListings(pendingDeleteItems?.length ?? 1)
+            )}
+          </Button>
+        </ProductDialogActions>
+      </ProductDialog>
     </Stack>
+    </MyListingsSelectionContext.Provider>
   );
 }

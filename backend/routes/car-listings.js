@@ -4,16 +4,15 @@ const express = require('express');
 const multer = require('multer');
 const authMiddleware = require('../middleware/auth');
 const { getSupabaseAdmin } = require('../lib/supabase');
-const { camelizeRow, camelizeRows } = require('../lib/profiles');
+const { camelizeRow } = require('../lib/profiles');
 const { validateCarPayload, FINISH_VALUES } = require('../lib/car-field-rules');
-const { attachOwnerMetrics } = require('../lib/listing-metrics');
 const { notifyAdminsListingSubmitted, listingTitle } = require('../lib/listing-moderation');
-const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers');
-const { premiumFieldsFromDoc } = require('../lib/premium-listing');
-const { okazionFieldsFromDoc } = require('../lib/okazion-listing');
+const { isUuid } = require('../lib/public-listings/query-helpers');
 const { sanitizeImageUrls } = require('../lib/image-upload');
 const { uploadBuffersToSupabase } = require('../lib/storage-uploads');
 const { parseComparePrice } = require('../lib/listing-compare-price');
+const { formatMineCar, formatMineCarFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
+
 
 const router = express.Router();
 
@@ -54,52 +53,33 @@ function parseFinish(fields) {
   return arr.map((f) => String(f).trim()).filter((f) => FINISH_VALUES.includes(f));
 }
 
-function formatMineListing(doc, cityById) {
-  const city = cityById?.get(String(doc.cityId));
-  return {
-    id: String(doc.id),
-    vehicleType: doc.vehicleType || 'car',
-    make: doc.make,
-    model: doc.model,
-    variant: doc.variant || '',
-    description: doc.description,
-    year: doc.year,
-    kilometers: doc.kilometers,
-    transmission: doc.transmission,
-    fuelType: doc.fuelType,
-    price: doc.price,
-    originalPrice: doc.originalPrice ?? null,
-    currency: doc.currency,
-    color: doc.color,
-    finish: doc.finish ?? [],
-    extras: doc.extras ?? [],
-    contactPhone: doc.contactPhone ?? null,
-    cityId: doc.cityId ? String(doc.cityId) : null,
-    cityName: city?.name ?? null,
-    imageUrls: doc.imageUrls ?? [],
-    status: doc.status || 'pending',
-    createdAt: doc.createdAt,
-    updatedAt: doc.updatedAt,
-    ...premiumFieldsFromDoc(doc),
-    ...okazionFieldsFromDoc(doc),
-  };
-}
-
 router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
   try {
-    const { data, error } = await getSupabaseAdmin()
-      .from('car_listings')
-      .select('*')
-      .eq('poster_id', req.user.id)
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-
-    const docs = camelizeRows(data);
-    const cityById = await buildCityIndex(docs);
-    const listings = docs.map((d) => formatMineListing(d, cityById));
-    res.json({ listings: await attachOwnerMetrics(listings, 'car') });
+    const listings = await loadMineKind(req.user.id, {
+      table: 'car_listings',
+      metricKind: 'car',
+      format: formatMineCar,
+    });
+    res.json({ listings });
   } catch (err) {
     console.error('GET /listings/cars/mine:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/mine/:id', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    if (!isUuid(req.params.id)) return res.status(400).json({ message: 'Invalid listing id.' });
+    const listing = await loadMineListingById(req.user.id, {
+      table: 'car_listings',
+      listingId: req.params.id,
+      metricKind: 'car',
+      format: formatMineCarFull,
+    });
+    if (!listing) return res.status(404).json({ message: 'Listing not found.' });
+    res.json({ listing });
+  } catch (err) {
+    console.error('GET /listings/cars/mine/:id:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });

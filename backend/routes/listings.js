@@ -3,8 +3,7 @@
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
 const { getSupabaseAdmin } = require('../lib/supabase');
-const { camelizeRow, camelizeRows } = require('../lib/profiles');
-const { attachOwnerMetrics } = require('../lib/listing-metrics');
+const { camelizeRow } = require('../lib/profiles');
 const {
   validateRealEstatePayload,
   needsCondition,
@@ -16,10 +15,15 @@ const {
 } = require('../lib/real-estate-field-rules');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls } = require('../lib/image-upload');
-const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers');
-const { premiumFieldsFromDoc } = require('../lib/premium-listing');
-const { okazionFieldsFromDoc } = require('../lib/okazion-listing');
+const { isUuid } = require('../lib/public-listings/query-helpers');
 const { parseComparePrice } = require('../lib/listing-compare-price');
+const {
+  formatMineRealEstate,
+  formatMineRealEstateFull,
+  loadMineKind,
+  loadMineListingById,
+  loadMineListingsForPoster,
+} = require('../lib/mine-listings');
 
 const router = express.Router();
 
@@ -41,58 +45,46 @@ router.get('/', authMiddleware, async (_req, res) => {
   }
 });
 
-function formatMineListing(doc, cityById) {
-  const city = cityById.get(String(doc.cityId));
-  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
-  return {
-    id: String(doc.id),
-    title: doc.title,
-    description: doc.description,
-    propertyCategory: doc.propertyCategory,
-    transactionType: doc.transactionType,
-    price: doc.price,
-    originalPrice: doc.originalPrice ?? null,
-    currency: doc.currency,
-    surfaceM2: doc.surfaceM2,
-    cityName: city?.name ?? null,
-    zoneName: zone?.name ?? null,
-    cityId: doc.cityId ? String(doc.cityId) : null,
-    zoneId: doc.zoneId ? String(doc.zoneId) : null,
-    contactPhone: doc.contactPhone ?? null,
-    condition: doc.condition ?? null,
-    apartmentTypeSlug: doc.apartmentTypeSlug ?? null,
-    floor: doc.floor ?? null,
-    totalFloors: doc.totalFloors ?? null,
-    parkingFloor: doc.parkingFloor ?? null,
-    bedrooms: doc.bedrooms ?? null,
-    bathrooms: doc.bathrooms ?? null,
-    furnishing: doc.furnishing ?? null,
-    yearBuilt: doc.yearBuilt ?? null,
-    imageUrls: doc.imageUrls ?? [],
-    status: doc.status || 'pending',
-    createdAt: doc.createdAt,
-    updatedAt: doc.updatedAt,
-    ...premiumFieldsFromDoc(doc),
-    ...okazionFieldsFromDoc(doc),
-  };
-}
+/** Aggregated slim mine payload for the dashboard (all verticals, one round-trip). */
+router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    const payload = await loadMineListingsForPoster(req.user.id);
+    res.json(payload);
+  } catch (error) {
+    console.error('GET /listings/mine:', error?.message || error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
-/** Portal user: their saved real-estate listings (newest first). */
+/** Portal user: their real-estate listings (newest first, card fields only). */
 router.get('/real-estate/mine', authMiddleware, requirePortalUser, async (req, res) => {
   try {
-    const { data, error } = await getSupabaseAdmin()
-      .from('real_estate_listings')
-      .select('*')
-      .eq('poster_id', req.user.id)
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-
-    const docs = camelizeRows(data);
-    const cityById = await buildCityIndex(docs);
-    const listings = docs.map((d) => formatMineListing(d, cityById));
-    res.json({ listings: await attachOwnerMetrics(listings, 'real-estate') });
+    const listings = await loadMineKind(req.user.id, {
+      table: 'real_estate_listings',
+      metricKind: 'real-estate',
+      format: formatMineRealEstate,
+    });
+    res.json({ listings });
   } catch (error) {
     console.error('GET /listings/real-estate/mine:', error?.message || error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/** Full listing for owner edit. */
+router.get('/real-estate/mine/:id', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    if (!isUuid(req.params.id)) return res.status(400).json({ message: 'Invalid listing id.' });
+    const listing = await loadMineListingById(req.user.id, {
+      table: 'real_estate_listings',
+      listingId: req.params.id,
+      metricKind: 'real-estate',
+      format: formatMineRealEstateFull,
+    });
+    if (!listing) return res.status(404).json({ message: 'Listing not found.' });
+    res.json({ listing });
+  } catch (error) {
+    console.error('GET /listings/real-estate/mine/:id:', error?.message || error);
     res.status(500).json({ message: 'Server error' });
   }
 });

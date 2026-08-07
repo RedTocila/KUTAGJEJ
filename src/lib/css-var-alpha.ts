@@ -10,3 +10,15 @@ export function primaryMainAlpha(opacity: number): string {
 export function secondaryMainAlpha(opacity: number): string {
   return `rgba(var(--mui-palette-secondary-mainChannel) / ${opacity})`;
 }
+
+export function warningMainAlpha(opacity: number): string {
+  return `rgba(var(--mui-palette-warning-mainChannel) / ${opacity})`;
+}
+
+export function errorMainAlpha(opacity: number): string {
+  return `rgba(var(--mui-palette-error-mainChannel) / ${opacity})`;
+}
+
+export function infoMainAlpha(opacity: number): string {
+  return `rgba(var(--mui-palette-info-mainChannel) / ${opacity})`;
+}

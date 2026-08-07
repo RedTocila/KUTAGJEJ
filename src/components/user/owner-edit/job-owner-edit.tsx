@@ -41,7 +41,7 @@ type Snapshot = {
 function snapFrom(d: JobMineListing): Snapshot {
   return {
     title: d.title,
-    description: d.description,
+    description: d.description ?? '',
     industry: d.industry,
     cityId: d.cityId ?? null,
     cityName: d.cityName ?? null,
@@ -141,7 +141,7 @@ export function JobOwnerEdit({
       }
       const res = await updateJobListing(draft.id, {
         title: draft.title.trim(),
-        description: draft.description.trim(),
+        description: (draft.description ?? '').trim(),
         industry: draft.industry,
         cityId,
         education: draft.education,
@@ -307,7 +307,7 @@ export function JobOwnerEdit({
       <Stack spacing={1} sx={{ width: '100%' }}>
         <TextField
           label="Përshkrimi"
-          value={draft.description}
+          value={draft.description ?? ''}
           onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
           fullWidth
           multiline

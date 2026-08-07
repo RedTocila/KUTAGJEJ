@@ -46,7 +46,7 @@ type Snapshot = {
 function snapFrom(d: ProfessionalMineListing): Snapshot {
   return {
     title: d.title,
-    description: d.description,
+    description: d.description ?? '',
     category: d.category,
     cityId: d.cityId ?? null,
     cityName: d.cityName ?? null,
@@ -192,7 +192,7 @@ export function ProfessionalOwnerEdit({
       const imageUrls = [cover.url, avatar.url].filter((u): u is string => Boolean(u));
       const payload = {
         title: draft.title.trim(),
-        description: draft.description.trim(),
+        description: (draft.description ?? '').trim(),
         category: draft.category,
         cityId: draft.cityId,
         contactPhone: draft.contactPhone ?? '',
@@ -318,7 +318,7 @@ export function ProfessionalOwnerEdit({
       <Stack spacing={1} sx={{ width: '100%' }}>
         <TextField
           label="Përshkrimi"
-          value={draft.description}
+          value={draft.description ?? ''}
           onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
           fullWidth
           multiline

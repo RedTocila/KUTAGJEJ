@@ -14,6 +14,7 @@ import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/S
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Timer as TimerIcon } from '@phosphor-icons/react/dist/ssr/Timer';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
+import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import RouterLink from 'next/link';
 
 import { BusinessAnnouncementDialog } from '@/components/user/business-announcement-dialog';
@@ -21,6 +22,11 @@ import type { BusinessAnnouncement } from '@/lib/listing-announcement-client';
 import type { ListingMetricKind, ListingMetrics } from '@/lib/listing-metrics';
 import { refreshListingBoost, setListingAutoRefresh } from '@/lib/listing-refresh-client';
 import { applyOkazionFromPlan, applyPremiumFromPlan } from '@/lib/payments-client';
+import {
+  errorMainAlpha,
+  primaryMainAlpha,
+  warningMainAlpha,
+} from '@/lib/css-var-alpha';
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
 
@@ -83,8 +89,34 @@ const labeledBtnSx = {
   letterSpacing: '0.01em',
   lineHeight: 1,
   gap: 0.35,
+  boxShadow: 'none',
+  border: 'none',
+  '&:hover': { boxShadow: 'none' },
   '& .MuiButton-startIcon': { mr: 0.35, ml: 0 },
 };
+
+function fadedToneSx(
+  bg: string,
+  hoverBg: string,
+  color: string,
+): Record<string, unknown> {
+  return {
+    bgcolor: bg,
+    color,
+    boxShadow: 'none',
+    '&:hover': {
+      bgcolor: hoverBg,
+      boxShadow: 'none',
+    },
+  };
+}
+
+const fadedPrimarySx = fadedToneSx(primaryMainAlpha(0.28), primaryMainAlpha(0.42), 'primary.main');
+const fadedWarningSx = fadedToneSx(warningMainAlpha(0.28), warningMainAlpha(0.42), 'warning.main');
+const fadedErrorSx = fadedToneSx(errorMainAlpha(0.28), errorMainAlpha(0.42), 'error.main');
+const fadedPrimaryStrongSx = fadedToneSx(primaryMainAlpha(0.45), primaryMainAlpha(0.58), 'primary.main');
+const fadedWarningStrongSx = fadedToneSx(warningMainAlpha(0.45), warningMainAlpha(0.58), 'warning.main');
+const fadedErrorStrongSx = fadedToneSx(errorMainAlpha(0.45), errorMainAlpha(0.58), 'error.main');
 
 function editHrefFor(listingId: string, kind: ListingMetricKind) {
   return `${paths.user.editListing}?kind=${encodeURIComponent(kind)}&id=${encodeURIComponent(listingId)}`;
@@ -98,8 +130,8 @@ function formatCountdown(ms: number): string {
 }
 
 /**
- * Top-right card actions: Menu · Shpall · Ndrysho (rightmost = Edit).
- * Edit is always shown; Menu + Shpall only for businesses.
+ * Top-right card actions: Menu · Shpall · Ndrysho · trash (rightmost = Delete).
+ * Edit + Delete are always shown; Menu + Shpall only for businesses.
  */
 export function ListingOwnerTopActions({
   listingId,
@@ -107,6 +139,7 @@ export function ListingOwnerTopActions({
   canAnnounce = false,
   announcement = null,
   onAnnouncementSaved,
+  onDeleteRequest,
 }: {
   listingId: string;
   kind: ListingMetricKind;
@@ -117,6 +150,7 @@ export function ListingOwnerTopActions({
     refreshedAt?: string | null;
     boostCredits?: number;
   }) => void;
+  onDeleteRequest?: (listingId: string, kind: ListingMetricKind) => void;
 }) {
   const { checkSession } = useUser();
   const [announceOpen, setAnnounceOpen] = React.useState(false);
@@ -143,13 +177,13 @@ export function ListingOwnerTopActions({
             <Tooltip title="Ndrysho menunë">
               <Button
                 size="small"
-                variant="outlined"
+                variant="contained"
                 color="primary"
                 aria-label="Menu"
                 component={RouterLink}
                 href={`${paths.user.businessMenu}?id=${encodeURIComponent(listingId)}`}
                 startIcon={<ForkKnifeIcon size={12} weight="bold" />}
-                sx={labeledBtnSx}
+                sx={{ ...labeledBtnSx, ...fadedPrimarySx }}
               >
                 Menu
               </Button>
@@ -164,13 +198,13 @@ export function ListingOwnerTopActions({
               <span>
                 <Button
                   size="small"
-                  variant="outlined"
+                  variant="contained"
                   color="warning"
                   aria-label="Shpall"
                   disabled={!canAnnounce}
                   onClick={() => setAnnounceOpen(true)}
                   startIcon={<MegaphoneIcon size={12} weight="fill" />}
-                  sx={labeledBtnSx}
+                  sx={{ ...labeledBtnSx, ...fadedWarningSx }}
                 >
                   Shpall
                 </Button>
@@ -181,17 +215,37 @@ export function ListingOwnerTopActions({
         <Tooltip title="Ndrysho njoftimin">
           <Button
             size="small"
-            variant="outlined"
-            color="inherit"
+            variant="contained"
+            color="primary"
             aria-label="Ndrysho"
             component={RouterLink}
             href={editHrefFor(listingId, kind)}
             startIcon={<EditIcon size={12} weight="bold" />}
-            sx={labeledBtnSx}
+            sx={{ ...labeledBtnSx, ...fadedPrimarySx }}
           >
             Ndrysho
           </Button>
         </Tooltip>
+        {onDeleteRequest ? (
+          <Tooltip title="Fshi njoftimin">
+            <Button
+              size="small"
+              variant="contained"
+              color="error"
+              aria-label="Fshi"
+              onClick={() => onDeleteRequest(listingId, kind)}
+              sx={{
+                ...labeledBtnSx,
+                ...fadedErrorSx,
+                width: 26,
+                px: 0,
+                minWidth: 26,
+              }}
+            >
+              <TrashIcon size={12} weight="bold" />
+            </Button>
+          </Tooltip>
+        ) : null}
       </Stack>
       {isBusiness ? (
         <BusinessAnnouncementDialog
@@ -399,8 +453,8 @@ export function ListingOwnerMetrics({
               <span>
                 <Button
                   size="small"
-                  variant="outlined"
-                  color="warning"
+                  variant="contained"
+                  color="primary"
                   aria-label="Rifresko"
                   disabled={refreshButtonDisabled}
                   onClick={() => {
@@ -413,18 +467,17 @@ export function ListingOwnerMetrics({
                     ...labeledBtnSx,
                     ...(refreshLocked
                       ? {
-                          borderColor: 'action.disabled',
-                          color: 'text.disabled',
                           bgcolor: 'action.hover',
+                          color: 'text.disabled',
+                          boxShadow: 'none',
                           opacity: 1,
                           '&.Mui-disabled': {
-                            borderColor: 'action.disabled',
-                            color: 'text.disabled',
                             bgcolor: 'action.hover',
+                            color: 'text.disabled',
                             opacity: 1,
                           },
                         }
-                      : null),
+                      : fadedPrimarySx),
                   }}
                 >
                   {refreshLocked ? refreshTimer : 'Rifresko'}
@@ -441,7 +494,7 @@ export function ListingOwnerMetrics({
               <span>
                 <Button
                   size="small"
-                  variant={autoRefreshEnabled ? 'contained' : 'outlined'}
+                  variant="contained"
                   color="primary"
                   aria-label="Auto"
                   disabled={anyBusy}
@@ -458,7 +511,10 @@ export function ListingOwnerMetrics({
                   endIcon={
                     !autoBusy && autoRefreshEnabled ? <CheckCircleIcon size={11} weight="fill" /> : undefined
                   }
-                  sx={labeledBtnSx}
+                  sx={{
+                    ...labeledBtnSx,
+                    ...(autoRefreshEnabled ? fadedPrimaryStrongSx : fadedPrimarySx),
+                  }}
                 >
                   Auto
                 </Button>
@@ -478,7 +534,7 @@ export function ListingOwnerMetrics({
               <span>
                 <Button
                   size="small"
-                  variant={premiumOn ? 'contained' : 'outlined'}
+                  variant="contained"
                   color="warning"
                   aria-label="Premium"
                   disabled={premiumDisabled}
@@ -492,7 +548,10 @@ export function ListingOwnerMetrics({
                       <SparkleIcon size={12} weight="bold" />
                     )
                   }
-                  sx={labeledBtnSx}
+                  sx={{
+                    ...labeledBtnSx,
+                    ...(premiumOn ? fadedWarningStrongSx : fadedWarningSx),
+                  }}
                 >
                   Premium
                 </Button>
@@ -513,7 +572,7 @@ export function ListingOwnerMetrics({
               <span>
                 <Button
                   size="small"
-                  variant={okazionOn ? 'contained' : 'outlined'}
+                  variant="contained"
                   color="error"
                   aria-label="OKAZION"
                   disabled={okazionDisabled}
@@ -527,7 +586,10 @@ export function ListingOwnerMetrics({
                       <SealPercentIcon size={12} weight="bold" />
                     )
                   }
-                  sx={labeledBtnSx}
+                  sx={{
+                    ...labeledBtnSx,
+                    ...(okazionOn ? fadedErrorStrongSx : fadedErrorSx),
+                  }}
                 >
                   OKAZION
                 </Button>

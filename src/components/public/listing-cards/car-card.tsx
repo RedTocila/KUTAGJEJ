@@ -134,8 +134,6 @@ export function CarCard({
 
         <CardDescription text={listing.description} />
 
-        <Box sx={{ flex: 1 }} />
-
         <SpecRow specs={specs} />
 
         {listing.cityName ? (
@@ -146,6 +144,9 @@ export function CarCard({
             </Typography>
           </Stack>
         ) : null}
+
+        <Box sx={{ flex: 1 }} />
+
         <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="caption" color="text.disabled">
             {relativeAlbanianDate(listing.createdAt)}

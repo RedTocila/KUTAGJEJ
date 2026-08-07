@@ -39,7 +39,7 @@ type Snapshot = {
 function snapFrom(d: RealEstateMineListing): Snapshot {
   return {
     title: d.title,
-    description: d.description,
+    description: d.description ?? '',
     price: d.price,
     currency: d.currency,
     surfaceM2: d.surfaceM2,
@@ -133,7 +133,7 @@ export function RealEstateOwnerEdit({
       const res = await updateRealEstateListing(draft.id, {
         propertyCategory: draft.propertyCategory,
         title: draft.title.trim(),
-        description: draft.description.trim(),
+        description: (draft.description ?? '').trim(),
         transactionType: draft.transactionType,
         price: draft.price,
         currency: draft.currency,
@@ -293,7 +293,7 @@ export function RealEstateOwnerEdit({
       <Stack spacing={1} sx={{ width: '100%' }}>
         <TextField
           label="Përshkrimi"
-          value={draft.description}
+          value={draft.description ?? ''}
           onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
           fullWidth
           multiline

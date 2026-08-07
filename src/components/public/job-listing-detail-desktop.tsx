@@ -27,6 +27,8 @@ import WorkOutlineOutlined from '@mui/icons-material/WorkOutlineOutlined';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
+import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
+import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
@@ -35,7 +37,7 @@ import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
-import { findOptionLabel, formatPrice } from '@/components/public/listing-cards/format-helpers';
+import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
 import { listingContactCtaSx } from '@/components/public/sticky-listing-contact';
 import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
@@ -93,6 +95,7 @@ export function JobListingDetailDesktop({
     listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const heroImage = listing.imageUrl ?? listing.imageUrls[0] ?? null;
   const isNew = isJobListingNew(listing.createdAt);
+  const viewCount = listing.viewCount ?? 0;
   const expiresAt = listing.isOkazion
     ? listing.okazionUntil || listing.expiresAt || getJobListingExpiresAt(listing.createdAt).toISOString()
     : listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
@@ -310,6 +313,23 @@ export function JobListingDetailDesktop({
                   </Typography>
                   {listing.seller?.verified ? <JobVerifiedBadge size={16} /> : null}
                 </Box>
+              </Stack>
+              <Stack
+                direction="row"
+                sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5, width: '100%', maxWidth: 420 }}
+              >
+                <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', color: 'rgba(255,255,255,0.75)', minWidth: 0 }}>
+                  <CalendarIcon size={16} weight="regular" aria-hidden />
+                  <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>
+                    {postedLabelSq(listing.createdAt)}
+                  </Typography>
+                </Stack>
+                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'rgba(255,255,255,0.75)', flexShrink: 0 }}>
+                  <EyeIcon size={16} weight="regular" aria-hidden />
+                  <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>
+                    {new Intl.NumberFormat('sq-AL').format(viewCount)} shikime
+                  </Typography>
+                </Stack>
               </Stack>
               {listing.seller ? (
                 <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>

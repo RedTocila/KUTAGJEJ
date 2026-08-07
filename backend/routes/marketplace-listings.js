@@ -3,14 +3,12 @@
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
 const { getSupabaseAdmin } = require('../lib/supabase');
-const { camelizeRow, camelizeRows } = require('../lib/profiles');
-const { attachOwnerMetrics } = require('../lib/listing-metrics');
+const { camelizeRow } = require('../lib/profiles');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls } = require('../lib/image-upload');
-const { isUuid, buildCityIndex } = require('../lib/public-listings/query-helpers');
-const { premiumFieldsFromDoc } = require('../lib/premium-listing');
-const { okazionFieldsFromDoc } = require('../lib/okazion-listing');
+const { isUuid } = require('../lib/public-listings/query-helpers');
 const { parseComparePrice } = require('../lib/listing-compare-price');
+const { formatMineMarketplace, formatMineMarketplaceFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
 
 const router = express.Router();
 
@@ -65,41 +63,31 @@ function requirePortalUser(req, res, next) {
 
 router.get('/mine', authMiddleware, requirePortalUser, async (req, res) => {
   try {
-    const { data, error } = await getSupabaseAdmin()
-      .from('marketplace_listings')
-      .select('*')
-      .eq('poster_id', req.user.id)
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-
-    const docs = camelizeRows(data);
-    const cityById = await buildCityIndex(docs);
-
-    const listings = docs.map((d) => {
-      const city = cityById.get(String(d.cityId));
-      return {
-        id: String(d.id),
-        transactionType: d.transactionType,
-        title: d.title,
-        category: d.category,
-        condition: d.condition ?? null,
-        price: d.price ?? null,
-        originalPrice: d.originalPrice ?? null,
-        currency: d.currency ?? null,
-        cityId: d.cityId ? String(d.cityId) : null,
-        cityName: city?.name ?? null,
-        contactPhone: d.contactPhone ?? null,
-        description: d.description ?? '',
-        imageUrls: d.imageUrls ?? [],
-        status: d.status || 'pending',
-        createdAt: d.createdAt,
-        ...premiumFieldsFromDoc(d),
-        ...okazionFieldsFromDoc(d),
-      };
+    const listings = await loadMineKind(req.user.id, {
+      table: 'marketplace_listings',
+      metricKind: 'marketplace',
+      format: formatMineMarketplace,
     });
-    res.json({ listings: await attachOwnerMetrics(listings, 'marketplace') });
+    res.json({ listings });
   } catch (err) {
     console.error('GET /listings/marketplace/mine:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/mine/:id', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    if (!isUuid(req.params.id)) return res.status(400).json({ message: 'ID e pavlefshme.' });
+    const listing = await loadMineListingById(req.user.id, {
+      table: 'marketplace_listings',
+      listingId: req.params.id,
+      metricKind: 'marketplace',
+      format: formatMineMarketplaceFull,
+    });
+    if (!listing) return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
+    res.json({ listing });
+  } catch (err) {
+    console.error('GET /listings/marketplace/mine/:id:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });

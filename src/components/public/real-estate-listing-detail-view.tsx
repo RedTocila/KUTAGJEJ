@@ -29,7 +29,7 @@ import { RealEstateListingGallery } from '@/components/public/real-estate-listin
 import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
-import { formatPrice, relativeAlbanianDate } from '@/components/public/listing-cards/format-helpers';
+import { formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
 import { ListingPrice } from '@/components/public/listing-cards/listing-price';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
@@ -81,16 +81,6 @@ function propertyCategoryLabelSq(slug: string): string {
     'agricultural-land': 'Tokë bujqësore',
   };
   return m[slug] ?? slug.replace(/-/g, ' ');
-}
-
-function calendarDay(date: Date): string {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-}
-
-function postedLabelSq(iso: string): string {
-  const d = new Date(iso);
-  if (calendarDay(d) === calendarDay(new Date())) return 'Postuar sot';
-  return relativeAlbanianDate(iso);
 }
 
 function sectionTitle(text: string, id: string, edit?: { label: string; onClick: () => void }) {
@@ -540,29 +530,29 @@ export function RealEstateListingDetailView({
               </Box>
 
               <Stack spacing={1.25}>
-                <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: { xs: 1.25, sm: 2 } }}>
-                  {locationFull || canInline || onEditInfo ? (
-                    <OwnerEditableSpot
-                      field="location"
-                      ownerEdit={ownerEdit}
-                      label="Ndrysho lokacionin"
-                      legacyOnClick={onEditInfo}
-                    >
-                      <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
-                        <MapPinIcon size={17} weight="regular" color="currentColor" />
-                      </Box>
-                      <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.4 }}>
-                        {locationFull || 'Shtoni lokacionin'}
-                      </Typography>
-                    </OwnerEditableSpot>
-                  ) : null}
-                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+                {locationFull || canInline || onEditInfo ? (
+                  <OwnerEditableSpot
+                    field="location"
+                    ownerEdit={ownerEdit}
+                    label="Ndrysho lokacionin"
+                    legacyOnClick={onEditInfo}
+                  >
+                    <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
+                      <MapPinIcon size={17} weight="regular" color="currentColor" />
+                    </Box>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.4 }}>
+                      {locationFull || 'Shtoni lokacionin'}
+                    </Typography>
+                  </OwnerEditableSpot>
+                ) : null}
+                <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
+                  <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
+                    <CalendarIcon size={17} weight="regular" aria-hidden />
+                    <Typography variant="body2">{postedLabelSq(listing.createdAt)}</Typography>
+                  </Stack>
+                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}>
                     <EyeIcon size={17} weight="regular" aria-hidden />
                     <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)} shikime</Typography>
-                  </Stack>
-                  <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', color: 'text.secondary' }}>
-                    <CalendarIcon size={17} weight="regular" aria-hidden />
-                    <Typography variant="body2">{postedLabelSq(listing.updatedAt ?? listing.createdAt)}</Typography>
                   </Stack>
                 </Stack>
               </Stack>

@@ -20,6 +20,8 @@ import TrendingUpOutlined from '@mui/icons-material/TrendingUpOutlined';
 import WorkOutlineOutlined from '@mui/icons-material/WorkOutlineOutlined';
 import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
 import CalendarTodayOutlined from '@mui/icons-material/CalendarTodayOutlined';
+import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
+import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
 
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
@@ -27,7 +29,7 @@ import { RealEstateListingExpandableText } from '@/components/public/real-estate
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
 import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
 import { StickyListingContact } from '@/components/public/sticky-listing-contact';
-import { findOptionLabel, formatPrice } from '@/components/public/listing-cards/format-helpers';
+import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
 import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import {
@@ -146,6 +148,7 @@ export function JobListingDetailView({
   const companyAvatarUrl = React.useMemo(() => jobCompanyAvatarUrl(listing), [listing]);
   const companyInitials = React.useMemo(() => jobCompanyInitials(companyName), [companyName]);
   const isNew = isJobListingNew(listing.createdAt);
+  const viewCount = listing.viewCount ?? 0;
 
   const [shareOpen, setShareOpen] = React.useState(false);
 
@@ -402,6 +405,24 @@ export function JobListingDetailView({
                   ) : null}
                 </Stack>
               </OwnerEditableSpot>
+
+              <Stack
+                direction="row"
+                sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5, width: '100%' }}
+              >
+                <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
+                  <CalendarIcon size={16} weight="regular" aria-hidden />
+                  <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', fontWeight: 600 }}>
+                    {postedLabelSq(listing.createdAt)}
+                  </Typography>
+                </Stack>
+                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}>
+                  <EyeIcon size={16} weight="regular" aria-hidden />
+                  <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', fontWeight: 600 }}>
+                    {new Intl.NumberFormat('sq-AL').format(viewCount)} shikime
+                  </Typography>
+                </Stack>
+              </Stack>
 
               {listing.seller ? (
                 <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>

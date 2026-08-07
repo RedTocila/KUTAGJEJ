@@ -170,8 +170,6 @@ function BusinessVenueCardBody({
             </Stack>
           ) : null}
 
-          <Box sx={{ flex: 1 }} />
-
           {listing.cityName ? (
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
               <MapPinIcon size={14} weight="regular" />
@@ -180,6 +178,8 @@ function BusinessVenueCardBody({
               </Typography>
             </Stack>
           ) : null}
+
+          <Box sx={{ flex: 1 }} />
 
           <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="caption" color="text.disabled">
@@ -329,8 +329,6 @@ function ProfessionalListingCardBody({
           </Typography>
           <SpecRow specs={specs} />
 
-          <Box sx={{ flex: 1 }} />
-
           {listing.cityName ? (
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
               <MapPinIcon size={14} weight="regular" />
@@ -339,6 +337,9 @@ function ProfessionalListingCardBody({
               </Typography>
             </Stack>
           ) : null}
+
+          <Box sx={{ flex: 1 }} />
+
           <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="caption" color="text.disabled">
               {relativeAlbanianDate(listing.createdAt)}

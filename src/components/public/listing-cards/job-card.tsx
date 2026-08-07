@@ -29,7 +29,7 @@ import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 
-import { findOptionLabel, formatPrice } from './format-helpers';
+import { findOptionLabel, formatPrice, relativeAlbanianDate } from './format-helpers';
 import { ListingPrice } from './listing-price';
 import { JobListingCountdownPlaceholder } from './job-listing-countdown';
 import {
@@ -199,35 +199,33 @@ export function JobCard({
 
         <CardDescription text={listing.description} />
 
-        <Box sx={{ flex: 1 }} />
-
         <SpecRow specs={specs} />
 
-        <Stack
-          direction="row"
-          spacing={0.5}
-          sx={{ alignItems: 'center', justifyContent: 'space-between', minHeight: 18 }}
-        >
-          {listing.cityName ? (
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
-              <MapPinIcon size={14} weight="regular" />
-              <Typography
-                variant="caption"
-                sx={{
-                  color: 'text.secondary',
-                  fontWeight: 500,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {listing.cityName}
-              </Typography>
-            </Stack>
-          ) : (
-            <Box />
-          )}
-          <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}>
+        {listing.cityName ? (
+          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
+            <MapPinIcon size={14} weight="regular" />
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+                fontWeight: 500,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {listing.cityName}
+            </Typography>
+          </Stack>
+        ) : null}
+
+        <Box sx={{ flex: 1 }} />
+
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="caption" color="text.disabled">
+            {relativeAlbanianDate(listing.createdAt)}
+          </Typography>
+          <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
             <EyeIcon size={14} weight="regular" />
             <Typography variant="caption" color="text.disabled">
               {new Intl.NumberFormat('en-GB').format(viewCount)}

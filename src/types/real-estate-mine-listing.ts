@@ -1,10 +1,10 @@
 import type { ListingMetrics } from '@/lib/listing-metrics';
 
-/** One row from `GET /api/listings/real-estate/mine`. */
+/** One row from mine listing APIs (card fields; galleries are cover-only). */
 export interface RealEstateMineListing extends ListingMetrics {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   propertyCategory: string;
   transactionType: 'rent' | 'sale';
   price: number;
@@ -15,7 +15,7 @@ export interface RealEstateMineListing extends ListingMetrics {
   zoneName: string | null;
   cityId?: string | null;
   zoneId?: string | null;
-  contactPhone: string | null;
+  contactPhone?: string | null;
   condition: string | null;
   apartmentTypeSlug: string | null;
   floor: number | null;
@@ -28,7 +28,7 @@ export interface RealEstateMineListing extends ListingMetrics {
   imageUrls: string[];
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
   isPremium?: boolean;
   premiumUntil?: string | null;
   isOkazion?: boolean;

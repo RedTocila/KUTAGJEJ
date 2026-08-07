@@ -186,3 +186,37 @@ set max_okazion_listings = 10
 where status = 'active'
   and lower(coalesce(plan_code, '')) = 'elite'
   and coalesce(max_okazion_listings, 0) = 0;
+
+-- Browse + mine performance indexes (50k+ listings)
+create index if not exists real_estate_listings_status_created_at_idx
+  on public.real_estate_listings (status, created_at desc);
+create index if not exists car_listings_status_created_at_idx
+  on public.car_listings (status, created_at desc);
+create index if not exists job_listings_status_created_at_idx
+  on public.job_listings (status, created_at desc);
+create index if not exists marketplace_listings_status_created_at_idx
+  on public.marketplace_listings (status, created_at desc);
+create index if not exists directory_listings_status_created_at_idx
+  on public.directory_listings (status, created_at desc);
+
+create index if not exists real_estate_listings_status_premium_created_at_idx
+  on public.real_estate_listings (status, premium_until desc nulls last, created_at desc);
+create index if not exists car_listings_status_premium_created_at_idx
+  on public.car_listings (status, premium_until desc nulls last, created_at desc);
+create index if not exists job_listings_status_premium_created_at_idx
+  on public.job_listings (status, premium_until desc nulls last, created_at desc);
+create index if not exists marketplace_listings_status_premium_created_at_idx
+  on public.marketplace_listings (status, premium_until desc nulls last, created_at desc);
+create index if not exists directory_listings_status_premium_created_at_idx
+  on public.directory_listings (status, premium_until desc nulls last, created_at desc);
+
+create index if not exists real_estate_listings_poster_created_at_idx
+  on public.real_estate_listings (poster_id, created_at desc);
+create index if not exists car_listings_poster_created_at_idx
+  on public.car_listings (poster_id, created_at desc);
+create index if not exists job_listings_poster_created_at_idx
+  on public.job_listings (poster_id, created_at desc);
+create index if not exists marketplace_listings_poster_created_at_idx
+  on public.marketplace_listings (poster_id, created_at desc);
+create index if not exists directory_listings_poster_created_at_idx
+  on public.directory_listings (poster_id, created_at desc);

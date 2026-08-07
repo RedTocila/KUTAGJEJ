@@ -25,7 +25,7 @@ import {
   findOptionLabel,
   formatKilometers,
   formatPrice,
-  relativeAlbanianDate,
+  postedLabelSq,
 } from '@/components/public/listing-cards/format-helpers';
 import { ListingPrice } from '@/components/public/listing-cards/listing-price';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
@@ -94,16 +94,6 @@ const FINISH_SQ: Record<string, string> = {
   matte: 'Mat',
   metallic: 'Metalik',
 };
-
-function calendarDay(date: Date): string {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-}
-
-function postedLabelSq(iso: string): string {
-  const d = new Date(iso);
-  if (calendarDay(d) === calendarDay(new Date())) return 'Postuar sot';
-  return relativeAlbanianDate(iso);
-}
 
 function fuelLabel(value: string): string {
   return FUEL_SQ[value] ?? findOptionLabel(FUEL_TYPE_OPTIONS, value);
@@ -525,7 +515,7 @@ export function CarListingDetailView({
                   </OwnerEditableSpot>
                 </Box>
 
-                <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: { xs: 1.25, sm: 2 } }}>
+                <Stack spacing={1.25}>
                   {locationFull || canInline || onEditInfo ? (
                     <OwnerEditableSpot
                       field="location"
@@ -541,13 +531,15 @@ export function CarListingDetailView({
                       </Typography>
                     </OwnerEditableSpot>
                   ) : null}
-                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
-                    <EyeIcon size={17} weight="regular" aria-hidden />
-                    <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)} shikime</Typography>
-                  </Stack>
-                  <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', color: 'text.secondary' }}>
-                    <CalendarIcon size={17} weight="regular" aria-hidden />
-                    <Typography variant="body2">{postedLabelSq(listing.updatedAt ?? listing.createdAt)}</Typography>
+                  <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
+                    <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
+                      <CalendarIcon size={17} weight="regular" aria-hidden />
+                      <Typography variant="body2">{postedLabelSq(listing.createdAt)}</Typography>
+                    </Stack>
+                    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}>
+                      <EyeIcon size={17} weight="regular" aria-hidden />
+                      <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)} shikime</Typography>
+                    </Stack>
                   </Stack>
                 </Stack>
               </Stack>

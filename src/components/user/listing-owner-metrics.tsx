@@ -30,8 +30,18 @@ import {
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
 
-function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
-  return (
+function Stat({
+  icon,
+  label,
+  value,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  onClick?: () => void;
+}) {
+  const body = (
     <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', color: 'text.secondary' }} title={label}>
       {icon}
       <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem' }}>
@@ -39,14 +49,43 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
       </Typography>
     </Stack>
   );
+
+  if (!onClick) return body;
+
+  return (
+    <Box
+      component="button"
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        m: 0,
+        p: 0,
+        border: 0,
+        bgcolor: 'transparent',
+        cursor: 'pointer',
+        borderRadius: 1,
+        WebkitTapHighlightColor: 'transparent',
+        '&:hover': { color: 'primary.main', '& .MuiTypography-root': { color: 'primary.main' } },
+        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
+      }}
+    >
+      {body}
+    </Box>
+  );
 }
 
 export function ListingOwnerStats({
   metrics,
   sx,
+  onSavesClick,
 }: {
   metrics: Partial<ListingMetrics>;
   sx?: object;
+  /** Opens Grow/Elite “who saved” leads when the save count is pressed. */
+  onSavesClick?: () => void;
 }) {
   const viewCount = metrics.viewCount ?? 0;
   const clickCount = metrics.clickCount ?? 0;
@@ -68,7 +107,12 @@ export function ListingOwnerStats({
       <Stat icon={<EyeIcon size={13} />} label="shikime" value={viewCount} />
       <Stat icon={<ClickIcon size={13} />} label="klikime" value={clickCount} />
       <Stat icon={<ShareIcon size={13} />} label="ndarje" value={shareCount} />
-      <Stat icon={<BookmarkIcon size={13} />} label="ruajtje" value={saveCount} />
+      <Stat
+        icon={<BookmarkIcon size={13} />}
+        label={onSavesClick ? 'ruajtje · shiko interesuarit' : 'ruajtje'}
+        value={saveCount}
+        onClick={onSavesClick}
+      />
     </Stack>
   );
 }
@@ -280,6 +324,7 @@ export function ListingOwnerMetrics({
   lastRefreshedAt,
   refreshEveryHours,
   hideStats = false,
+  onSavesClick,
 }: {
   metrics: Partial<ListingMetrics>;
   listingId?: string;
@@ -304,6 +349,8 @@ export function ListingOwnerMetrics({
   refreshEveryHours?: number | null;
   /** Hide stats row when rendered externally. */
   hideStats?: boolean;
+  /** Opens Grow/Elite saver leads for this listing. */
+  onSavesClick?: () => void;
 }) {
   const { checkSession } = useUser();
   const [busy, setBusy] = React.useState(false);
@@ -434,7 +481,9 @@ export function ListingOwnerMetrics({
 
   return (
     <Stack spacing={0.75} sx={{ pt: 0.5, mt: 0.35 }}>
-      {!hideStats ? <ListingOwnerStats metrics={metrics} sx={{ pb: 0.4 }} /> : null}
+      {!hideStats ? (
+        <ListingOwnerStats metrics={metrics} sx={{ pb: 0.4 }} onSavesClick={onSavesClick} />
+      ) : null}
 
       <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 0.8 }}>
         {listingId && kind && canRefresh ? (

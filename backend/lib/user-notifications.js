@@ -242,7 +242,7 @@ async function notifyListingSaved({ metricsKind, listingId, saverId }) {
     userId: brief.posterId,
     type: 'listing_saved',
     title: `${saverName} ruajti njoftimin tuaj`,
-    message: `«${brief.title}» u shtua te të ruajturat nga ${saverName}.`,
+    message: `«${brief.title}» u shtua te të ruajturat nga ${saverName}. Me Grow/Elite shih interesuarit te njoftimet e mia.`,
     refKind: metricsKind,
     refId: listingId,
     actorId: saverId,

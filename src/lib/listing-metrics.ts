@@ -118,6 +118,56 @@ export async function fetchSavedListings(
   }
 }
 
+export type ListingSaverLead = {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  savedAt: string;
+};
+
+/** Owner-only: people who saved a listing (Grow / Elite). */
+export async function fetchListingSavers(
+  listingKind: ListingMetricKind,
+  listingId: string,
+  page = 1,
+  limit = 30,
+): Promise<{
+  savers?: ListingSaverLead[];
+  total?: number;
+  page?: number;
+  totalPages?: number;
+  error?: string;
+  code?: string;
+}> {
+  try {
+    const params = new URLSearchParams({
+      listingKind,
+      listingId,
+      page: String(page),
+      limit: String(limit),
+    });
+    const res = await fetch(getApiUrl(`/listing-metrics/savers?${params}`), {
+      headers: authHeaders(),
+      cache: 'no-store',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return {
+        error: typeof data.message === 'string' ? data.message : 'Gabim.',
+        code: typeof data.code === 'string' ? data.code : undefined,
+      };
+    }
+    return {
+      savers: (data.savers ?? []) as ListingSaverLead[],
+      total: data.total,
+      page: data.page,
+      totalPages: data.totalPages,
+    };
+  } catch {
+    return { error: 'Nuk u arrit lidhja me serverin.' };
+  }
+}
+
 export async function fetchListingMetricsBatch(
   refs: { kind: ListingMetricKind; listingId: string }[],
 ): Promise<Record<string, ListingMetrics & { saved?: boolean }>> {

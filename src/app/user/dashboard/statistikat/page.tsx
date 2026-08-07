@@ -24,6 +24,7 @@ import { ShareNetwork as ShareIcon } from '@phosphor-icons/react/dist/ssr/ShareN
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
+import { ListingSavesLeadsDialog } from '@/components/user/listing-saves-leads-dialog';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import { listMyBusinessListings, listMyProfessionalListings } from '@/lib/directory-listings-client';
@@ -129,6 +130,11 @@ export default function UserStatisticsPage() {
   const deferredSearch = React.useDeferredValue(search);
   const searchQuery = React.useMemo(() => normalizeSearch(deferredSearch), [deferredSearch]);
   const hasSearch = searchQuery.length > 0;
+  const [leadsTarget, setLeadsTarget] = React.useState<{
+    kind: ListingMetricKind;
+    listingId: string;
+    title: string;
+  } | null>(null);
 
   const canPublish =
     Boolean(user) &&
@@ -490,12 +496,37 @@ export default function UserStatisticsPage() {
                           {formatNum(row.shareCount)}
                         </Typography>
                       </Stack>
-                      <Stack direction="row" spacing={0.4} sx={{ alignItems: 'center' }} title="Ruajtje">
+                      <Box
+                        component="button"
+                        type="button"
+                        title="Ruajtje · shiko interesuarit"
+                        aria-label="Ruajtje · shiko interesuarit"
+                        onClick={() =>
+                          setLeadsTarget({
+                            kind: row.kind,
+                            listingId: row.listingId,
+                            title: row.title,
+                          })
+                        }
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 0.4,
+                          m: 0,
+                          p: 0,
+                          border: 0,
+                          bgcolor: 'transparent',
+                          cursor: 'pointer',
+                          color: 'inherit',
+                          WebkitTapHighlightColor: 'transparent',
+                          '&:hover': { color: 'primary.main' },
+                        }}
+                      >
                         <BookmarkIcon size={15} />
                         <Typography variant="caption" sx={{ fontWeight: 800 }}>
                           {formatNum(row.saveCount)}
                         </Typography>
-                      </Stack>
+                      </Box>
                     </Stack>
                   </Stack>
                 ))}
@@ -504,6 +535,16 @@ export default function UserStatisticsPage() {
           </Stack>
         </>
       )}
+
+      {leadsTarget ? (
+        <ListingSavesLeadsDialog
+          open
+          onClose={() => setLeadsTarget(null)}
+          listingKind={leadsTarget.kind}
+          listingId={leadsTarget.listingId}
+          listingTitle={leadsTarget.title}
+        />
+      ) : null}
     </Stack>
   );
 }

@@ -373,7 +373,7 @@ async function grantElite(sb, userId) {
       listing_category_key: contract.listing_category_key ?? null,
       subscriber_kind: contract.subscriber_kind ?? 'agent',
       months: 12,
-      price_eur: Number(contract.price_1_month) || 129.9,
+      price_eur: Number(contract.price_1_month) || 149,
       refresh_every_hours: contract.refresh_every_hours ?? 6,
       glow_badge_enabled: Boolean(contract.glow_badge_enabled),
       boost_credits_granted: boost,

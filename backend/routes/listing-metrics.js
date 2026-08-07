@@ -107,4 +107,31 @@ router.get('/batch', metricsRateLimit, optionalAuth, async (req, res) => {
   }
 });
 
+/** GET /api/listing-metrics/savers?listingKind=&listingId=&page=1&limit=30 — owner leads (Grow/Elite). */
+router.get('/savers', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    const { listListingSaversForOwner } = require('../lib/listing-savers');
+    const kind = String(req.query.listingKind ?? '').trim();
+    const listingId = String(req.query.listingId ?? '').trim();
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 30));
+    const result = await listListingSaversForOwner(req.user.id, { kind, listingId, page, limit });
+    if (!result.ok) {
+      const body = { message: result.message };
+      if (result.code) body.code = result.code;
+      return res.status(result.status).json(body);
+    }
+    res.json({
+      savers: result.savers,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+    });
+  } catch (err) {
+    console.error('GET /listing-metrics/savers:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

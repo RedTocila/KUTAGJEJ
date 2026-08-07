@@ -47,7 +47,7 @@ const PACKAGE_TIERS = [
     planCode: 'grow',
     title: 'GROW',
     sortOrder: 2,
-    price1Month: 49.9,
+    price1Month: 59,
     maxListAllCategories: 1,
     maxJobListings: 200,
     maxCarListings: 40,
@@ -60,13 +60,13 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: true,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/40 Cars · 0/250 Apartments · 0/50 Products · 0/200 Jobs · 0/20 Premium (30 days) · 0/5 OKAZION (5 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Premium Badge',
+      '0/1 List in All Categories · 0/40 Cars · 0/250 Apartments · 0/50 Products · 0/200 Jobs · 0/20 Premium (30 days) · 0/5 OKAZION (5 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Premium Badge · See who saved your listings (leads)',
   },
   {
     planCode: 'elite',
     title: 'ELITE',
     sortOrder: 3,
-    price1Month: 129.9,
+    price1Month: 149,
     maxListAllCategories: 1,
     maxJobListings: 500,
     maxCarListings: 150,
@@ -79,7 +79,7 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: true,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/150 Cars · 0/1000 Apartments · 0/200 Products · 0/500 Jobs · 0/30 Premium (30 days) · 0/10 OKAZION (5 days) · 2000 Boost Coins · Refresh same listing after 6 hours · Premium Badge',
+      '0/1 List in All Categories · 0/150 Cars · 0/1000 Apartments · 0/200 Products · 0/500 Jobs · 0/30 Premium (30 days) · 0/10 OKAZION (5 days) · 2000 Boost Coins · Refresh same listing after 6 hours · Premium Badge · See who saved your listings (leads)',
   },
 ];
 

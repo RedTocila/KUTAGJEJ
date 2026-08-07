@@ -390,6 +390,7 @@ async function enrichListingsSaverState(listings, saver) {
 
 module.exports = {
   LISTING_KINDS,
+  TABLE_BY_KIND,
   isValidKind,
   emptyMetrics,
   metricsKey,

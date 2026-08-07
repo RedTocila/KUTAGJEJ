@@ -63,6 +63,7 @@ function planFeatureLines(t: AppMessages, plan: PublicContract): string[] {
   }
   if (plan.glowBadgeEnabled) {
     lines.push(t.packages.premiumBadge);
+    lines.push(t.packages.saveLeads);
   }
   return lines;
 }

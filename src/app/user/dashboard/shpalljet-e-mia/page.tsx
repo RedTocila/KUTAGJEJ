@@ -75,6 +75,7 @@ import {
   ListingOwnerStats,
   ListingOwnerTopActions,
 } from '@/components/user/listing-owner-metrics';
+import { ListingSavesLeadsDialog } from '@/components/user/listing-saves-leads-dialog';
 import { ListingModerationStatusChip } from '@/components/user/listing-moderation-status-chip';
 import { ListingModerationNotice, ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
@@ -345,6 +346,13 @@ function BaseCard({
   const selectionKey = listingId && kind ? listingSelectionKey(kind, listingId) : null;
   const selectionMode = Boolean(selection?.selectionMode && selectionKey);
   const selected = Boolean(selectionKey && selection?.isSelected(selectionKey));
+  const [savesOpen, setSavesOpen] = React.useState(false);
+  const openSaves =
+    listingId && kind && !selectionMode
+      ? () => {
+          setSavesOpen(true);
+        }
+      : undefined;
 
   return (
     <Card
@@ -457,6 +465,7 @@ function BaseCard({
             <ListingOwnerStats
               metrics={metrics}
               sx={{ flexShrink: 0, pb: 0.1, maxWidth: '45%', justifyContent: 'flex-end' }}
+              onSavesClick={openSaves}
             />
           ) : null}
         </Stack>
@@ -479,9 +488,19 @@ function BaseCard({
             lastRefreshedAt={lastRefreshedAt}
             refreshEveryHours={refreshEveryHours}
             hideStats
+            onSavesClick={openSaves}
           />
         ) : null}
       </CardContent>
+      {listingId && kind ? (
+        <ListingSavesLeadsDialog
+          open={savesOpen}
+          onClose={() => setSavesOpen(false)}
+          listingKind={kind}
+          listingId={listingId}
+          listingTitle={title}
+        />
+      ) : null}
     </Card>
   );
 }

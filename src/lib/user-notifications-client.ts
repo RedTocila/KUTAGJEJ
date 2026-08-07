@@ -62,6 +62,14 @@ export async function markUserNotificationRead(id: string): Promise<{ error?: st
   }
 }
 
+export async function markUserNotificationsRead(ids: string[]): Promise<{ error?: string }> {
+  const unique = [...new Set(ids.map((id) => String(id || '').trim()).filter(Boolean))];
+  if (unique.length === 0) return {};
+  const results = await Promise.all(unique.map((id) => markUserNotificationRead(id)));
+  const firstError = results.find((r) => r.error)?.error;
+  return firstError ? { error: firstError } : {};
+}
+
 export async function markAllUserNotificationsRead(): Promise<{ error?: string }> {
   try {
     const res = await fetch(getApiUrl('/user-notifications/read-all'), {

@@ -59,7 +59,12 @@ function SubcategoryPillsList({
       sx={{
         mt: { xs: 1.5, md: 2 },
         mb: 1.5,
+        width: '100%',
+        maxWidth: '100%',
+        minWidth: 0,
         overflowX: 'auto',
+        overflowY: 'hidden',
+        overscrollBehaviorX: 'contain',
         WebkitOverflowScrolling: 'touch',
         scrollbarWidth: 'none',
         '&::-webkit-scrollbar': { display: 'none' },
@@ -67,7 +72,7 @@ function SubcategoryPillsList({
         WebkitMaskImage: 'linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)',
       }}
     >
-      <Stack direction="row" spacing={1} sx={{ pr: 3, width: 'max-content', flexWrap: 'nowrap' }}>
+      <Stack direction="row" spacing={1} sx={{ pr: 3, width: 'max-content', maxWidth: 'none', flexWrap: 'nowrap' }}>
         {items.map((item) => (
           <ProductTag
             key={`${item.href}-${item.label}`}

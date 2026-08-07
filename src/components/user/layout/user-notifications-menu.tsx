@@ -8,8 +8,6 @@ import {
   Divider,
   IconButton,
   Link,
-  MenuItem,
-  MenuList,
   Popover,
   Stack,
   Tooltip,
@@ -17,28 +15,21 @@ import {
 } from '@mui/material';
 import { Bell as BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
 
+import { UserNotificationRow } from '@/components/user/user-notification-row';
+import {
+  SavedListingPreviewDialog,
+  type SavedListingPreviewTarget,
+} from '@/components/user/saved-listing-preview-dialog';
+import { groupUserNotifications } from '@/lib/notification-display';
 import {
   listUserNotifications,
   markAllUserNotificationsRead,
-  markUserNotificationRead,
   type UserNotification,
 } from '@/lib/user-notifications-client';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
 import { productPopoverPaperSx } from '@/styles/product-sx';
-
-function relativeTime(iso: string, t: ReturnType<typeof useCopy>): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  if (!Number.isFinite(ms) || ms < 0) return '';
-  const mins = Math.floor(ms / 60_000);
-  if (mins < 1) return t.notifications.justNow;
-  if (mins < 60) return t.notifications.minutesAgo(mins);
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return t.notifications.hoursAgo(hours);
-  const days = Math.floor(hours / 24);
-  return t.notifications.daysAgo(days);
-}
 
 export function UserNotificationsMenu() {
   const { user } = useUser();
@@ -47,6 +38,7 @@ export function UserNotificationsMenu() {
   const [unread, setUnread] = React.useState(0);
   const [items, setItems] = React.useState<UserNotification[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [listingPreview, setListingPreview] = React.useState<SavedListingPreviewTarget | null>(null);
 
   const canUse =
     Boolean(user) &&
@@ -57,7 +49,7 @@ export function UserNotificationsMenu() {
   const refresh = React.useCallback(async () => {
     if (!canUse) return;
     setLoading(true);
-    const res = await listUserNotifications(false, 8);
+    const res = await listUserNotifications(false, 16);
     if (!res.error) {
       setUnread(res.unread ?? 0);
       setItems(res.notifications ?? []);
@@ -70,6 +62,8 @@ export function UserNotificationsMenu() {
     const id = window.setInterval(() => void refresh(), 45_000);
     return () => window.clearInterval(id);
   }, [refresh]);
+
+  const groups = React.useMemo(() => groupUserNotifications(items).slice(0, 8), [items]);
 
   if (!canUse) return null;
 
@@ -101,14 +95,14 @@ export function UserNotificationsMenu() {
             elevation: 0,
             sx: (theme) => ({
               ...productPopoverPaperSx(theme),
-              width: 300,
+              width: 340,
             }),
           },
         }}
       >
-        <Box sx={{ p: '16px 20px' }}>
+        <Box sx={{ px: 2, pt: 1.5, pb: 1 }}>
           <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: '0.98rem' }}>
               {t.notifications.title}
             </Typography>
             <Link
@@ -117,7 +111,7 @@ export function UserNotificationsMenu() {
               underline="hover"
               variant="body2"
               onClick={() => setAnchorEl(null)}
-              sx={{ fontWeight: 600, color: 'primary.main', flexShrink: 0 }}
+              sx={{ fontWeight: 600, color: 'primary.main', flexShrink: 0, fontSize: '0.8rem' }}
             >
               {t.notifications.viewAll}
             </Link>
@@ -126,88 +120,52 @@ export function UserNotificationsMenu() {
             <Typography
               color="primary"
               variant="body2"
-              sx={{ mt: 0.5, cursor: 'pointer', fontWeight: 600 }}
+              sx={{ mt: 0.35, cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
               onClick={() => {
                 void markAllUserNotificationsRead().then(() => refresh());
               }}
             >
               {t.notifications.markAllRead}
             </Typography>
-          ) : (
-            <Typography color="text.secondary" variant="body2" sx={{ mt: 0.35 }}>
-              {loading && items.length === 0 ? t.common.loading : t.notifications.empty}
+          ) : groups.length === 0 ? (
+            <Typography color="text.secondary" variant="body2" sx={{ mt: 0.25, fontSize: '0.8rem' }}>
+              {loading ? t.common.loading : t.notifications.empty}
             </Typography>
-          )}
+          ) : null}
         </Box>
-        {items.length > 0 ? (
+        {groups.length > 0 ? (
           <>
             <Divider
               sx={(theme) => ({
                 borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
               })}
             />
-            <MenuList
-              disablePadding
-              sx={(theme) => ({
-                p: '8px',
-                '& .MuiMenuItem-root': {
-                  borderRadius: 1.5,
-                  color: 'text.primary',
-                  '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.04)' : 'action.hover',
-                  },
-                },
-              })}
-            >
-              {items.map((item) => {
-                const href = item.href || paths.user.notifications;
-                const unreadItem = !item.readAt;
-                return (
-                  <MenuItem
-                    key={item.id}
-                    component={RouterLink}
-                    href={href}
-                    onClick={() => {
-                      setAnchorEl(null);
-                      if (unreadItem) {
-                        void markUserNotificationRead(item.id).then(() => refresh());
-                      }
-                    }}
-                    sx={{
-                      alignItems: 'flex-start',
-                      py: 1.1,
-                      bgcolor: unreadItem
-                        ? (theme) =>
-                            theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.04)' : 'action.hover'
-                        : undefined,
-                      whiteSpace: 'normal',
-                    }}
-                  >
-                    <Box sx={{ minWidth: 0, width: '100%' }}>
-                      <Typography
-                        variant="body2"
-                        sx={{ fontWeight: unreadItem ? 700 : 600, lineHeight: 1.35 }}
-                      >
-                        {item.title}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ display: 'block', mt: 0.25, lineHeight: 1.35 }}
-                      >
-                        {item.message}
-                      </Typography>
-                      <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.35 }}>
-                        {relativeTime(item.createdAt, t)}
-                      </Typography>
-                    </Box>
-                  </MenuItem>
-                );
-              })}
-            </MenuList>
+            <Stack spacing={0.75} sx={{ p: 1 }}>
+              {groups.map((group) => (
+                <UserNotificationRow
+                  key={group.ids.join('-')}
+                  group={group}
+                  compact
+                  onOpened={() => {
+                    setAnchorEl(null);
+                    void refresh();
+                  }}
+                  onViewListing={(target) => {
+                    setListingPreview(target);
+                    setAnchorEl(null);
+                    void refresh();
+                  }}
+                />
+              ))}
+            </Stack>
           </>
         ) : null}
       </Popover>
+      <SavedListingPreviewDialog
+        open={Boolean(listingPreview)}
+        target={listingPreview}
+        onClose={() => setListingPreview(null)}
+      />
     </>
   );
 }

@@ -442,6 +442,10 @@ const sq = {
     minutesAgo: (n: number) => (n === 1 ? '1 minutë më parë' : `${n} minuta më parë`),
     hoursAgo: (n: number) => (n === 1 ? '1 orë më parë' : `${n} orë më parë`),
     daysAgo: (n: number) => (n === 1 ? '1 ditë më parë' : `${n} ditë më parë`),
+    contactSaver: 'Kontakto',
+    viewListing: 'Shiko njoftimin',
+    stackedMessages: (n: number, name: string) =>
+      n === 1 ? `Mesazh i ri nga ${name}` : `${n} mesazhe nga ${name}`,
     prefsTitle: 'Cilësimet e njoftimeve',
     prefsDescription: 'Zgjidhni për cilat ngjarje doni njoftime në panel.',
     tags: {
@@ -861,6 +865,10 @@ const en: AppMessages = {
     minutesAgo: (n: number) => (n === 1 ? '1 minute ago' : `${n} minutes ago`),
     hoursAgo: (n: number) => (n === 1 ? '1 hour ago' : `${n} hours ago`),
     daysAgo: (n: number) => (n === 1 ? '1 day ago' : `${n} days ago`),
+    contactSaver: 'Contact',
+    viewListing: 'View listing',
+    stackedMessages: (n: number, name: string) =>
+      n === 1 ? `New message from ${name}` : `${n} messages from ${name}`,
     prefsTitle: 'Notification settings',
     prefsDescription: 'Choose which events send you in-app notifications.',
     tags: {

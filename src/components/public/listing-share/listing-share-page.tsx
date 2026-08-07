@@ -281,9 +281,10 @@ export function ListingSharePage({
     setError(null);
     setFeedback(null);
     try {
-      await bumpShareMetric();
       const url = resolveListingShareUrl(payload);
       const result = await shareOrCopyLink(payload.title, url);
+      // Count only after a completed share/copy — cancelled sheets throw AbortError.
+      await bumpShareMetric();
       setFeedback(result === 'copied' ? 'Linku u kopjua.' : 'Linku u nda.');
     } catch (err) {
       if (!(err instanceof DOMException && err.name === 'AbortError')) {
@@ -334,8 +335,6 @@ export function ListingSharePage({
     setRewardNote(null);
     setAwaitingPostConfirm(false);
     try {
-      await bumpShareMetric();
-
       // Inline remote listing photo before capture — otherwise Instagram gets a black media area
       // (Safari / html-to-image drops cross-origin pixels).
       await ensureListingImageEmbedded(
@@ -366,6 +365,9 @@ export function ListingSharePage({
       const dataUrl = await toJpeg(storyRef.current, jpegOpts);
       const file = dataUrlToFile(dataUrl, `kutagjej-story-${payload.listingId.slice(0, 8)}.jpg`);
       const result = await shareStoryImage(file);
+
+      // Count only after the OS share / save / download succeeded — not on cancel.
+      await bumpShareMetric();
 
       if (result === 'shared') {
         setFeedback('Zgjidh Instagram → Story për ta postuar me këtë imazh.');

@@ -12,6 +12,9 @@
 html {
   height: 100%;
   background-color: var(--mui-palette-background-default, #f7faf4);
+  /* Keep horizontal swipe strips local — never let the document pan left/right. */
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
 }
 
 body {
@@ -19,6 +22,8 @@ body {
   margin: 0;
   background-color: var(--mui-palette-background-default, #f7faf4);
   color: var(--mui-palette-text-primary, #1a2118);
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
 }
 
 /* Cold-start splash (React-owned overlay in SplashScreen) */

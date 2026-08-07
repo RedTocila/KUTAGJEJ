@@ -27,8 +27,6 @@ import {
   Typography,
 } from '@mui/material';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
-import { HandWaving as HandWavingIcon } from '@phosphor-icons/react/dist/ssr/HandWaving';
-import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { EyeSlash as EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlash';
@@ -37,18 +35,17 @@ import { Controller, useForm, type Control } from 'react-hook-form';
 import { z as zod } from 'zod';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
-import { config } from '@/config';
 import { useCopy } from '@/hooks/use-copy';
 import { authClient } from '@/lib/auth/client';
 import { getDefaultAuthenticatedPath } from '@/lib/auth/post-login-path';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { rememberListingLocation } from '@/lib/listing-form-defaults';
 import {
   listRealEstateLocationsPublic,
   type RealEstateCityDto,
 } from '@/lib/real-estate-locations-client';
 import { paths } from '@/paths';
-
-const { name: siteName } = config.site;
+import { productButtonSx, productSurfacePaperSx } from '@/styles/product-sx';
 
 const signInSchema = zod.object({
   email: zod.string().min(1, { message: 'Emaili është i detyrueshëm' }).email('Email i pavlefshëm'),
@@ -101,16 +98,21 @@ type BusinessRegisterValues = zod.infer<typeof businessRegisterSchema>;
 const fieldLabelSx = (error: boolean) => ({
   mb: 1,
   fontWeight: 600,
-  color: error ? 'error.main' : 'common.white',
+  color: error ? 'error.main' : 'text.primary',
   fontSize: '0.75rem',
 });
 
-const outlinedDarkSx = {
-  color: 'common.white',
-  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.35)' },
-  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.7)' },
-  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'common.white' },
-  '& input::placeholder': { color: 'rgba(255,255,255,0.6)', opacity: 1 },
+const outlinedFieldSx = {
+  borderRadius: 2.5,
+  bgcolor: 'background.default',
+  transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
+  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.main' },
+  '&.Mui-focused': {
+    boxShadow: `0 0 0 3px ${primaryMainAlpha(0.12)}`,
+    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.main' },
+  },
+  '& input::placeholder': { color: 'text.disabled', opacity: 1 },
 };
 
 function BasedCityRegisterField<T extends { basedCityId: string }>({
@@ -140,8 +142,8 @@ function BasedCityRegisterField<T extends { basedCityId: string }>({
             {...field}
             displayEmpty
             sx={{
-              ...outlinedDarkSx,
-              '& .MuiSelect-icon': { color: 'rgba(255,255,255,0.75)' },
+              ...outlinedFieldSx,
+              '& .MuiSelect-icon': { color: 'text.secondary' },
             }}
             MenuProps={{
               slotProps: {
@@ -186,7 +188,7 @@ function AcceptTermsField<T extends { acceptTerms: boolean }>({
               mx: 0,
               gap: 1,
               '& .MuiFormControlLabel-label': {
-                color: 'rgba(226,232,240,0.9)',
+                color: 'text.secondary',
                 fontSize: '0.85rem',
                 lineHeight: 1.45,
                 pt: 0.35,
@@ -199,9 +201,9 @@ function AcceptTermsField<T extends { acceptTerms: boolean }>({
                 onBlur={field.onBlur}
                 slotProps={{ input: { ref: field.ref } }}
                 sx={{
-                  color: 'rgba(255,255,255,0.45)',
+                  color: 'text.disabled',
                   p: 0.5,
-                  '&.Mui-checked': { color: 'primary.light' },
+                  '&.Mui-checked': { color: 'primary.main' },
                 }}
               />
             }
@@ -213,7 +215,7 @@ function AcceptTermsField<T extends { acceptTerms: boolean }>({
                   href={paths.public.terms}
                   target="_blank"
                   rel="noopener noreferrer"
-                  sx={{ color: 'primary.light', fontWeight: 600 }}
+                  sx={{ color: 'primary.main', fontWeight: 700 }}
                   onClick={(event) => event.stopPropagation()}
                 >
                   kushtet e përdorimit
@@ -224,7 +226,7 @@ function AcceptTermsField<T extends { acceptTerms: boolean }>({
                   href={paths.public.privacy}
                   target="_blank"
                   rel="noopener noreferrer"
-                  sx={{ color: 'primary.light', fontWeight: 600 }}
+                  sx={{ color: 'primary.main', fontWeight: 700 }}
                   onClick={(event) => event.stopPropagation()}
                 >
                   politikën e privatësisë
@@ -262,7 +264,7 @@ function SignInFields({
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.email))}>
               {t.auth.email}
             </Typography>
-            <OutlinedInput {...field} id="signin-email" placeholder="ju@shembull.com" type="email" sx={outlinedDarkSx} />
+            <OutlinedInput {...field} id="signin-email" placeholder="ju@shembull.com" type="email" sx={outlinedFieldSx} />
             {errors.email ? <FormHelperText>{errors.email.message}</FormHelperText> : null}
           </FormControl>
         )}
@@ -280,14 +282,14 @@ function SignInFields({
               id="signin-password"
               placeholder="••••••••"
               type={showPassword ? 'text' : 'password'}
-              sx={outlinedDarkSx}
+              sx={outlinedFieldSx}
               endAdornment={
                 <InputAdornment position="end">
                   <IconButton
                     aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
                     edge="end"
                     onClick={() => setShowPassword(!showPassword)}
-                    sx={{ color: 'rgba(255,255,255,0.75)' }}
+                    sx={{ color: 'text.secondary' }}
                   >
                     {showPassword ? <EyeIcon size={20} /> : <EyeSlashIcon size={20} />}
                   </IconButton>
@@ -335,7 +337,7 @@ function RegisterFieldsIndividual({
               <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.firstName))}>
                 {t.auth.firstName}
               </Typography>
-              <OutlinedInput {...field} autoComplete="given-name" placeholder={t.auth.firstName} sx={outlinedDarkSx} />
+              <OutlinedInput {...field} autoComplete="given-name" placeholder={t.auth.firstName} sx={outlinedFieldSx} />
               {errors.firstName ? <FormHelperText>{errors.firstName.message}</FormHelperText> : null}
             </FormControl>
           )}
@@ -348,7 +350,7 @@ function RegisterFieldsIndividual({
               <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.lastName))}>
                 {t.auth.lastName}
               </Typography>
-              <OutlinedInput {...field} autoComplete="family-name" placeholder={t.auth.lastName} sx={outlinedDarkSx} />
+              <OutlinedInput {...field} autoComplete="family-name" placeholder={t.auth.lastName} sx={outlinedFieldSx} />
               {errors.lastName ? <FormHelperText>{errors.lastName.message}</FormHelperText> : null}
             </FormControl>
           )}
@@ -370,7 +372,7 @@ function RegisterFieldsIndividual({
               autoComplete="tel"
               placeholder="+355 69 …"
               type="tel"
-              sx={outlinedDarkSx}
+              sx={outlinedFieldSx}
             />
             {errors.phone ? <FormHelperText>{errors.phone.message}</FormHelperText> : null}
           </FormControl>
@@ -390,7 +392,7 @@ function RegisterFieldsIndividual({
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.email))}>
               {t.auth.email}
             </Typography>
-            <OutlinedInput {...field} autoComplete="email" placeholder="ju@shembull.com" type="email" sx={outlinedDarkSx} />
+            <OutlinedInput {...field} autoComplete="email" placeholder="ju@shembull.com" type="email" sx={outlinedFieldSx} />
             {errors.email ? <FormHelperText>{errors.email.message}</FormHelperText> : null}
           </FormControl>
         )}
@@ -408,14 +410,14 @@ function RegisterFieldsIndividual({
               autoComplete="new-password"
               placeholder="Të paktën 6 karaktere"
               type={showPassword ? 'text' : 'password'}
-              sx={outlinedDarkSx}
+              sx={outlinedFieldSx}
               endAdornment={
                 <InputAdornment position="end">
                   <IconButton
                     aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
                     edge="end"
                     onClick={() => setShowPassword(!showPassword)}
-                    sx={{ color: 'rgba(255,255,255,0.75)' }}
+                    sx={{ color: 'text.secondary' }}
                   >
                     {showPassword ? <EyeIcon size={20} /> : <EyeSlashIcon size={20} />}
                   </IconButton>
@@ -439,7 +441,7 @@ function RegisterFieldsIndividual({
               autoComplete="new-password"
               placeholder={t.auth.confirmPassword}
               type={showPassword ? 'text' : 'password'}
-              sx={outlinedDarkSx}
+              sx={outlinedFieldSx}
             />
             {errors.confirmPassword ? <FormHelperText>{errors.confirmPassword.message}</FormHelperText> : null}
           </FormControl>
@@ -475,7 +477,7 @@ function RegisterFieldsBusiness({
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.nipt))}>
               NIPT
             </Typography>
-            <OutlinedInput {...field} placeholder="Numri i identifikimit të biznesit" sx={outlinedDarkSx} />
+            <OutlinedInput {...field} placeholder="Numri i identifikimit të biznesit" sx={outlinedFieldSx} />
             {errors.nipt ? <FormHelperText>{errors.nipt.message}</FormHelperText> : null}
           </FormControl>
         )}
@@ -488,7 +490,7 @@ function RegisterFieldsBusiness({
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.businessName))}>
               Emri i biznesit
             </Typography>
-            <OutlinedInput {...field} placeholder="Emri i kompanisë ose aktivitetit" sx={outlinedDarkSx} />
+            <OutlinedInput {...field} placeholder="Emri i kompanisë ose aktivitetit" sx={outlinedFieldSx} />
             {errors.businessName ? <FormHelperText>{errors.businessName.message}</FormHelperText> : null}
           </FormControl>
         )}
@@ -501,7 +503,7 @@ function RegisterFieldsBusiness({
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.businessOwner))}>
               Pronari i biznesit
             </Typography>
-            <OutlinedInput {...field} placeholder="Emri i plotë i përfaqësuesit" sx={outlinedDarkSx} />
+            <OutlinedInput {...field} placeholder="Emri i plotë i përfaqësuesit" sx={outlinedFieldSx} />
             {errors.businessOwner ? <FormHelperText>{errors.businessOwner.message}</FormHelperText> : null}
           </FormControl>
         )}
@@ -514,7 +516,7 @@ function RegisterFieldsBusiness({
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.businessCategory))}>
               Kategoria e biznesit
             </Typography>
-            <OutlinedInput {...field} placeholder="p.sh. Restorant, Shërbime, Retail…" sx={outlinedDarkSx} />
+            <OutlinedInput {...field} placeholder="p.sh. Restorant, Shërbime, Retail…" sx={outlinedFieldSx} />
             {errors.businessCategory ? <FormHelperText>{errors.businessCategory.message}</FormHelperText> : null}
           </FormControl>
         )}
@@ -530,7 +532,7 @@ function RegisterFieldsBusiness({
                 (opsional)
               </Typography>
             </Typography>
-            <OutlinedInput {...field} autoComplete="tel" placeholder="+355 69 …" type="tel" sx={outlinedDarkSx} />
+            <OutlinedInput {...field} autoComplete="tel" placeholder="+355 69 …" type="tel" sx={outlinedFieldSx} />
             {errors.phone ? <FormHelperText>{errors.phone.message}</FormHelperText> : null}
           </FormControl>
         )}
@@ -549,7 +551,7 @@ function RegisterFieldsBusiness({
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.email))}>
               {t.auth.email}
             </Typography>
-            <OutlinedInput {...field} autoComplete="email" placeholder="ju@biznesi.com" type="email" sx={outlinedDarkSx} />
+            <OutlinedInput {...field} autoComplete="email" placeholder="ju@biznesi.com" type="email" sx={outlinedFieldSx} />
             {errors.email ? <FormHelperText>{errors.email.message}</FormHelperText> : null}
           </FormControl>
         )}
@@ -567,14 +569,14 @@ function RegisterFieldsBusiness({
               autoComplete="new-password"
               placeholder="Të paktën 6 karaktere"
               type={showPassword ? 'text' : 'password'}
-              sx={outlinedDarkSx}
+              sx={outlinedFieldSx}
               endAdornment={
                 <InputAdornment position="end">
                   <IconButton
                     aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
                     edge="end"
                     onClick={() => setShowPassword(!showPassword)}
-                    sx={{ color: 'rgba(255,255,255,0.75)' }}
+                    sx={{ color: 'text.secondary' }}
                   >
                     {showPassword ? <EyeIcon size={20} /> : <EyeSlashIcon size={20} />}
                   </IconButton>
@@ -598,7 +600,7 @@ function RegisterFieldsBusiness({
               autoComplete="new-password"
               placeholder={t.auth.confirmPassword}
               type={showPassword ? 'text' : 'password'}
-              sx={outlinedDarkSx}
+              sx={outlinedFieldSx}
             />
             {errors.confirmPassword ? <FormHelperText>{errors.confirmPassword.message}</FormHelperText> : null}
           </FormControl>
@@ -783,291 +785,250 @@ export function UserAuthView() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor:
-          'radial-gradient(ellipse 120% 80% at 50% -20%, #1a4301 0%, #0d2201 35%, #050804 70%, #000000 100%)',
-        py: 4,
+        bgcolor: 'background.default',
+        backgroundImage: (theme) =>
+          theme.palette.mode === 'dark'
+            ? 'radial-gradient(ellipse 70% 55% at 50% 38%, rgba(118, 186, 27, 0.18), transparent 70%)'
+            : 'radial-gradient(ellipse 70% 55% at 50% 38%, rgba(118, 186, 27, 0.14), transparent 70%)',
+        py: { xs: 3, md: 5 },
         px: 2,
       }}
     >
-      <Container maxWidth="md">
-        <Card
-          elevation={10}
-          sx={{
-            overflow: 'hidden',
-            borderRadius: 4,
-            backdropFilter: 'blur(18px)',
-            background: 'linear-gradient(145deg, rgba(13,34,8,0.97), rgba(5,13,6,0.99))',
-            border: '1px solid rgba(166, 226, 46, 0.18)',
-            boxShadow: '0 32px 80px rgba(5, 13, 6, 0.75), 0 0 48px rgba(118, 186, 27, 0.12)',
-          }}
-        >
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1.05fr 0.95fr' },
-            }}
-          >
-            <CardContent sx={{ p: { xs: 3, md: 4 }, borderRight: { md: '1px solid rgba(200, 239, 152, 0.12)' } }}>
-              <Stack spacing={2}>
-                <Box>
-                  <Typography variant="overline" sx={{ color: 'primary.light', letterSpacing: 1 }}>
-                    {siteName}
-                  </Typography>
-                  <Typography variant="h4" sx={{ color: 'common.white', mt: 0.5, fontWeight: 700, lineHeight: 1.2 }}>
-                    Mirë se vini
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(226,232,240,0.85)', mt: 1, maxWidth: 420 }}>
-                    Hyni në llogarinë tuaj ose krijoni një të re në pak hapa — e thjeshtë dhe e shpejtë.
-                  </Typography>
-                </Box>
+      <Container maxWidth={false} disableGutters sx={{ width: '100%', maxWidth: 480 }}>
+        <Card elevation={0} sx={(theme) => ({ ...productSurfacePaperSx(theme) })}>
+          <CardContent sx={{ p: { xs: 3, sm: 3.5 } }}>
+            <Stack spacing={2.5}>
+              <Box>
+                <BrandLogo
+                  height={36}
+                  showWordmark
+                  wordmarkPresentation="brand"
+                  wordmarkSx={{ fontSize: '1.15rem' }}
+                  sx={{ mb: 2 }}
+                />
+                <Typography
+                  variant="h4"
+                  sx={{ color: 'text.primary', fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.02em' }}
+                >
+                  Mirë se vini
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.55, maxWidth: 420 }}>
+                  Hyni në llogarinë tuaj ose krijoni një të re në pak hapa — e thjeshtë dhe e shpejtë.
+                </Typography>
+              </Box>
 
-                <Tabs
-                  value={tab}
-                  onChange={(_, v) => setTab(v)}
-                  variant="fullWidth"
+              <Tabs
+                value={tab}
+                onChange={(_, v) => setTab(v)}
+                variant="fullWidth"
+                sx={{
+                  minHeight: 44,
+                  borderBottom: '1px solid',
+                  borderColor: 'divider',
+                  '& .MuiTab-root': {
+                    color: 'text.secondary',
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    fontSize: '1rem',
+                  },
+                  '& .Mui-selected': { color: 'primary.main !important' },
+                  '& .MuiTabs-indicator': { bgcolor: 'primary.main', height: 3, borderRadius: 1 },
+                }}
+              >
+                <Tab label={t.auth.login} disableRipple />
+                <Tab label={t.auth.register} disableRipple />
+              </Tabs>
+
+              {tab === 0 ? (
+                <Box component="form" onSubmit={onSignIn} noValidate>
+                  <Stack spacing={2.5}>
+                    <SignInFields
+                      control={signInForm.control}
+                      errors={signInForm.formState.errors}
+                      showPassword={showPwSignIn}
+                      setShowPassword={setShowPwSignIn}
+                    />
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      size="large"
+                      disabled={signInForm.formState.isSubmitting}
+                      fullWidth
+                      sx={{ ...productButtonSx, py: 1.5, minHeight: 48 }}
+                    >
+                      {signInForm.formState.isSubmitting ? t.auth.signingIn : t.auth.continueToPanel}
+                    </Button>
+                  </Stack>
+                </Box>
+              ) : (
+                <Box>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 1 }}
+                  >
+                    Lloji i llogarisë
+                  </Typography>
+                  <ToggleButtonGroup
+                    exclusive
+                    fullWidth
+                    value={registerKind}
+                    onChange={(_, v) => v && setRegisterKind(v)}
+                    sx={{
+                      mb: 2.5,
+                      gap: 1,
+                      '& .MuiToggleButtonGroup-grouped': {
+                        border: '1px solid !important',
+                        borderColor: 'divider !important',
+                        borderRadius: '12px !important',
+                        color: 'text.primary',
+                        textTransform: 'none',
+                        fontWeight: 700,
+                        py: 1.25,
+                        '&.Mui-selected': {
+                          bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.16 : 0.12),
+                          borderColor: 'primary.main !important',
+                          color: 'primary.main',
+                        },
+                      },
+                    }}
+                  >
+                    <ToggleButton value="individual">
+                      <UserIcon style={{ marginRight: 8 }} size={20} />
+                      {t.auth.individual}
+                    </ToggleButton>
+                    <ToggleButton value="business">
+                      <BuildingsIcon style={{ marginRight: 8 }} size={20} />
+                      {t.auth.business}
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+
+                  <FormControl fullWidth sx={{ mb: 2 }}>
+                    <Typography component="label" variant="caption" sx={fieldLabelSx(false)}>
+                      Kodi i referimit (opsional)
+                    </Typography>
+                    <OutlinedInput
+                      value={referralCode}
+                      onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                      placeholder="P.sh. A1B2C3D4"
+                      sx={outlinedFieldSx}
+                    />
+                    {refFromUrl ? (
+                      <FormHelperText sx={{ color: 'primary.main' }}>
+                        U aplikua automatikisht nga linku i ftesës.
+                      </FormHelperText>
+                    ) : null}
+                  </FormControl>
+
+                  {registerKind === 'individual' ? (
+                    <Box component="form" onSubmit={onRegisterIndividual} noValidate>
+                      <Stack spacing={2.5}>
+                        <RegisterFieldsIndividual
+                          control={individualForm.control}
+                          errors={individualForm.formState.errors}
+                          showPassword={showPwReg}
+                          setShowPassword={setShowPwReg}
+                          cities={cities}
+                          citiesLoading={citiesLoading}
+                        />
+                        <AcceptTermsField
+                          control={individualForm.control}
+                          error={individualForm.formState.errors.acceptTerms?.message}
+                        />
+                        <Button
+                          type="submit"
+                          variant="contained"
+                          size="large"
+                          disabled={individualForm.formState.isSubmitting}
+                          fullWidth
+                          sx={{ ...productButtonSx, py: 1.5, minHeight: 48 }}
+                        >
+                          {individualForm.formState.isSubmitting ? t.auth.creatingAccount : t.auth.submitRegister}
+                        </Button>
+                      </Stack>
+                    </Box>
+                  ) : (
+                    <Box component="form" onSubmit={onRegisterBusiness} noValidate>
+                      <Stack spacing={2.5}>
+                        <RegisterFieldsBusiness
+                          control={businessForm.control}
+                          errors={businessForm.formState.errors}
+                          showPassword={showPwReg}
+                          setShowPassword={setShowPwReg}
+                          cities={cities}
+                          citiesLoading={citiesLoading}
+                        />
+                        <AcceptTermsField
+                          control={businessForm.control}
+                          error={businessForm.formState.errors.acceptTerms?.message}
+                        />
+                        <Button
+                          type="submit"
+                          variant="contained"
+                          size="large"
+                          disabled={businessForm.formState.isSubmitting}
+                          fullWidth
+                          sx={{ ...productButtonSx, py: 1.5, minHeight: 48 }}
+                        >
+                          {businessForm.formState.isSubmitting
+                            ? t.auth.creatingAccount
+                            : t.auth.createBusinessAccount}
+                        </Button>
+                      </Stack>
+                    </Box>
+                  )}
+                </Box>
+              )}
+
+              {tab === 0 && signInRoot ? (
+                <Box
                   sx={{
-                    minHeight: 44,
-                    '& .MuiTab-root': {
-                      color: 'rgba(255,255,255,0.65)',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                    },
-                    '& .Mui-selected': { color: 'primary.light !important' },
-                    '& .MuiTabs-indicator': { bgcolor: 'primary.light', height: 3, borderRadius: 1 },
+                    p: 2,
+                    borderRadius: 2.5,
+                    bgcolor: (theme) =>
+                      theme.palette.mode === 'dark' ? 'rgba(255,80,80,0.12)' : 'error.lighter',
+                    border: '1px solid',
+                    borderColor: 'error.main',
                   }}
                 >
-                  <Tab label={t.auth.login} disableRipple />
-                  <Tab label={t.auth.register} disableRipple />
-                </Tabs>
-
-                {tab === 0 ? (
-                  <Box component="form" onSubmit={onSignIn} noValidate>
-                    <Stack spacing={2.5}>
-                      <SignInFields
-                        control={signInForm.control}
-                        errors={signInForm.formState.errors}
-                        showPassword={showPwSignIn}
-                        setShowPassword={setShowPwSignIn}
-                      />
-                      <Button
-                        type="submit"
-                        variant="contained"
-                        size="large"
-                        disabled={signInForm.formState.isSubmitting}
-                        fullWidth
-                        sx={{ py: 1.5, color: 'common.white' }}
-                      >
-                        {signInForm.formState.isSubmitting ? t.auth.signingIn : t.auth.continueToPanel}
-                      </Button>
-                    </Stack>
-                  </Box>
-                ) : (
-                  <Box>
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.75)', fontWeight: 600, display: 'block', mb: 1 }}>
-                      Lloji i llogarisë
-                    </Typography>
-                    <ToggleButtonGroup
-                      exclusive
-                      fullWidth
-                      value={registerKind}
-                      onChange={(_, v) => v && setRegisterKind(v)}
-                      sx={{
-                        mb: 2.5,
-                        gap: 1,
-                        '& .MuiToggleButtonGroup-grouped': {
-                          border: '1px solid rgba(166, 226, 46, 0.28) !important',
-                          borderRadius: '12px !important',
-                          color: 'rgba(255,255,255,0.85)',
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          py: 1.25,
-                          '&.Mui-selected': {
-                            bgcolor: 'rgba(166, 226, 46, 0.18)',
-                            color: 'primary.light',
-                          },
-                        },
-                      }}
-                    >
-                      <ToggleButton value="individual">
-                        <UserIcon style={{ marginRight: 8 }} size={20} />
-                        {t.auth.individual}
-                      </ToggleButton>
-                      <ToggleButton value="business">
-                        <BuildingsIcon style={{ marginRight: 8 }} size={20} />
-                        {t.auth.business}
-                      </ToggleButton>
-                    </ToggleButtonGroup>
-
-                    <FormControl fullWidth sx={{ mb: 2 }}>
-                      <Typography component="label" variant="caption" sx={fieldLabelSx(false)}>
-                        Kodi i referimit (opsional)
-                      </Typography>
-                      <OutlinedInput
-                        value={referralCode}
-                        onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                        placeholder="P.sh. A1B2C3D4"
-                        sx={outlinedDarkSx}
-                      />
-                      {refFromUrl ? (
-                        <FormHelperText sx={{ color: 'primary.light' }}>
-                          U aplikua automatikisht nga linku i ftesës.
-                        </FormHelperText>
-                      ) : null}
-                    </FormControl>
-
-                    {registerKind === 'individual' ? (
-                      <Box component="form" onSubmit={onRegisterIndividual} noValidate>
-                        <Stack spacing={2.5}>
-                          <RegisterFieldsIndividual
-                            control={individualForm.control}
-                            errors={individualForm.formState.errors}
-                            showPassword={showPwReg}
-                            setShowPassword={setShowPwReg}
-                            cities={cities}
-                            citiesLoading={citiesLoading}
-                          />
-                          <AcceptTermsField
-                            control={individualForm.control}
-                            error={individualForm.formState.errors.acceptTerms?.message}
-                          />
-                          <Button
-                            type="submit"
-                            variant="contained"
-                            size="large"
-                            disabled={individualForm.formState.isSubmitting}
-                            fullWidth
-                            sx={{ py: 1.5, color: 'common.white' }}
-                          >
-                            {individualForm.formState.isSubmitting ? t.auth.creatingAccount : t.auth.submitRegister}
-                          </Button>
-                        </Stack>
-                      </Box>
-                    ) : (
-                      <Box component="form" onSubmit={onRegisterBusiness} noValidate>
-                        <Stack spacing={2.5}>
-                          <RegisterFieldsBusiness
-                            control={businessForm.control}
-                            errors={businessForm.formState.errors}
-                            showPassword={showPwReg}
-                            setShowPassword={setShowPwReg}
-                            cities={cities}
-                            citiesLoading={citiesLoading}
-                          />
-                          <AcceptTermsField
-                            control={businessForm.control}
-                            error={businessForm.formState.errors.acceptTerms?.message}
-                          />
-                          <Button
-                            type="submit"
-                            variant="contained"
-                            size="large"
-                            disabled={businessForm.formState.isSubmitting}
-                            fullWidth
-                            sx={{ py: 1.5, color: 'common.white' }}
-                          >
-                            {businessForm.formState.isSubmitting
-                              ? t.auth.creatingAccount
-                              : t.auth.createBusinessAccount}
-                          </Button>
-                        </Stack>
-                      </Box>
-                    )}
-                  </Box>
-                )}
-
-                {tab === 0 && signInRoot ? (
-                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'error.dark', border: '1px solid', borderColor: 'error.main' }}>
-                    <Typography variant="body2" sx={{ color: 'error.light' }}>
-                      {signInRoot.message}
-                    </Typography>
-                  </Box>
-                ) : null}
-                {tab === 1 && registerKind === 'individual' && indRoot ? (
-                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'error.dark', border: '1px solid', borderColor: 'error.main' }}>
-                    <Typography variant="body2" sx={{ color: 'error.light' }}>
-                      {indRoot.message}
-                    </Typography>
-                  </Box>
-                ) : null}
-                {tab === 1 && registerKind === 'business' && busRoot ? (
-                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'error.dark', border: '1px solid', borderColor: 'error.main' }}>
-                    <Typography variant="body2" sx={{ color: 'error.light' }}>
-                      {busRoot.message}
-                    </Typography>
-                  </Box>
-                ) : null}
-              </Stack>
-            </CardContent>
-
-            <Box
-              sx={{
-                display: { xs: 'none', md: 'flex' },
-                flexDirection: 'column',
-                justifyContent: 'center',
-                p: 4,
-                bgcolor:
-                  'radial-gradient(circle at top left, rgba(166,226,46,0.22), rgba(34,197,94,0.12), transparent 58%)',
-              }}
-            >
-              <Stack spacing={3}>
-                <BrandLogo
-                  height={80}
-                  imgSx={{
-                    filter: 'drop-shadow(0 4px 14px rgba(0,0,0,0.4))',
-                    maxWidth: 200,
+                  <Typography variant="body2" color="error.main">
+                    {signInRoot.message}
+                  </Typography>
+                </Box>
+              ) : null}
+              {tab === 1 && registerKind === 'individual' && indRoot ? (
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 2.5,
+                    bgcolor: (theme) =>
+                      theme.palette.mode === 'dark' ? 'rgba(255,80,80,0.12)' : 'error.lighter',
+                    border: '1px solid',
+                    borderColor: 'error.main',
                   }}
-                />
-                <Stack spacing={2}>
-                  <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start' }}>
-                    <Box
-                      sx={{
-                        color: 'primary.light',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        width: 40,
-                        height: 40,
-                        borderRadius: 2,
-                        bgcolor: 'rgba(166, 226, 46, 0.12)',
-                        border: '1px solid rgba(166, 226, 46, 0.25)',
-                        mt: 0.25,
-                      }}
-                    >
-                      <HandWavingIcon size={22} weight="duotone" />
-                    </Box>
-                    <Typography variant="body1" sx={{ color: 'common.white', fontWeight: 600, lineHeight: 1.45 }}>
-                      Një vend për individët dhe bizneset — menaxhoni gjithçka nga paneli juaj.
-                    </Typography>
-                  </Stack>
-                  <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start' }}>
-                    <Box
-                      sx={{
-                        color: 'primary.light',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        width: 40,
-                        height: 40,
-                        borderRadius: 2,
-                        bgcolor: 'rgba(166, 226, 46, 0.12)',
-                        border: '1px solid rgba(166, 226, 46, 0.25)',
-                        mt: 0.25,
-                      }}
-                    >
-                      <SparkleIcon size={22} weight="duotone" />
-                    </Box>
-                    <Typography variant="body2" sx={{ color: 'rgba(226,232,240,0.92)', lineHeight: 1.55 }}>
-                      Pas hyrjes do të ridrejtoheni te paneli juaj personal. Mund të ndërroni llogarinë ose të dilni kur të
-                      doni.
-                    </Typography>
-                  </Stack>
-                </Stack>
-              </Stack>
-            </Box>
-          </Box>
+                >
+                  <Typography variant="body2" color="error.main">
+                    {indRoot.message}
+                  </Typography>
+                </Box>
+              ) : null}
+              {tab === 1 && registerKind === 'business' && busRoot ? (
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 2.5,
+                    bgcolor: (theme) =>
+                      theme.palette.mode === 'dark' ? 'rgba(255,80,80,0.12)' : 'error.lighter',
+                    border: '1px solid',
+                    borderColor: 'error.main',
+                  }}
+                >
+                  <Typography variant="body2" color="error.main">
+                    {busRoot.message}
+                  </Typography>
+                </Box>
+              ) : null}
+            </Stack>
+          </CardContent>
         </Card>
       </Container>
     </Box>

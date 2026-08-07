@@ -125,12 +125,15 @@ export function HeroCategoryCircles({
         justifyContent: 'flex-start',
         overflowX: 'auto',
         overflowY: 'hidden',
+        overscrollBehaviorX: 'contain',
         WebkitOverflowScrolling: 'touch',
         scrollSnapType: { xs: 'x proximity', sm: 'none' },
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
         pb: { xs: 0, sm: 0.75 },
         width: '100%',
+        maxWidth: '100%',
+        minWidth: 0,
         '&::-webkit-scrollbar': { display: 'none' },
       }}
     >

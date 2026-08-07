@@ -14,7 +14,13 @@ import { Bell as BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
 
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { portalCardSx } from '@/components/user/portal-cards';
+import { UserNotificationRow } from '@/components/user/user-notification-row';
+import {
+  SavedListingPreviewDialog,
+  type SavedListingPreviewTarget,
+} from '@/components/user/saved-listing-preview-dialog';
 import { useCopy } from '@/hooks/use-copy';
+import { groupUserNotifications } from '@/lib/notification-display';
 import {
   NOTIFICATION_TAGS,
   notificationTagForType,
@@ -23,24 +29,11 @@ import {
 import {
   listUserNotifications,
   markAllUserNotificationsRead,
-  markUserNotificationRead,
   type UserNotification,
 } from '@/lib/user-notifications-client';
 import { paths } from '@/paths';
 
 type FilterTag = 'all' | NotificationTag;
-
-function relativeTime(iso: string, t: ReturnType<typeof useCopy>): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  if (!Number.isFinite(ms) || ms < 0) return '';
-  const mins = Math.floor(ms / 60_000);
-  if (mins < 1) return t.notifications.justNow;
-  if (mins < 60) return t.notifications.minutesAgo(mins);
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return t.notifications.hoursAgo(hours);
-  const days = Math.floor(hours / 24);
-  return t.notifications.daysAgo(days);
-}
 
 function tagLabel(tag: NotificationTag, t: ReturnType<typeof useCopy>): string {
   return t.notifications.tags[tag];
@@ -53,6 +46,7 @@ export default function UserNotificationsPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [filter, setFilter] = React.useState<FilterTag>('all');
+  const [listingPreview, setListingPreview] = React.useState<SavedListingPreviewTarget | null>(null);
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -78,9 +72,11 @@ export default function UserNotificationsPage() {
     return items.filter((item) => notificationTagForType(item.type) === filter);
   }, [filter, items]);
 
+  const groups = React.useMemo(() => groupUserNotifications(filtered), [filtered]);
+
   const counts = React.useMemo(() => {
     const map: Record<FilterTag, number> = {
-      all: items.length,
+      all: 0,
       messages: 0,
       listing_saved: 0,
       listing_status: 0,
@@ -88,19 +84,15 @@ export default function UserNotificationsPage() {
       reservations: 0,
       verification: 0,
     };
-    for (const item of items) {
-      const tag = notificationTagForType(item.type);
+    // Count after stacking so message chips match what the user sees.
+    const allGroups = groupUserNotifications(items);
+    map.all = allGroups.length;
+    for (const group of allGroups) {
+      const tag = notificationTagForType(group.primary.type);
       if (tag) map[tag] += 1;
     }
     return map;
   }, [items]);
-
-  const onOpenItem = async (item: UserNotification) => {
-    if (!item.readAt) {
-      await markUserNotificationRead(item.id);
-      void refresh();
-    }
-  };
 
   return (
     <Stack spacing={2.5} sx={{ maxWidth: 720, mx: 'auto', width: '100%' }}>
@@ -179,85 +171,59 @@ export default function UserNotificationsPage() {
           <Typography color="text.secondary" variant="body2" sx={{ px: 0.5, py: 2 }}>
             {t.common.loading}
           </Typography>
-        ) : filtered.length === 0 ? (
+        ) : groups.length === 0 ? (
           <Typography color="text.secondary" variant="body2" sx={{ px: 0.5, py: 2 }}>
             {t.notifications.empty}
           </Typography>
         ) : (
-          <Stack
-            spacing={0}
-            sx={{
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'divider',
-              overflow: 'hidden',
-              '& > *:not(:last-child)': {
-                borderBottom: '1px solid',
-                borderColor: 'divider',
-              },
-            }}
-          >
-            {filtered.map((item) => {
-              const tag = notificationTagForType(item.type);
-              const href = item.href || paths.user.dashboard;
-              const unreadItem = !item.readAt;
+          <Stack spacing={1}>
+            {groups.map((group) => {
+              const tag = notificationTagForType(group.primary.type);
               return (
                 <Box
-                  key={item.id}
-                  component={RouterLink}
-                  href={href}
-                  onClick={() => {
-                    void onOpenItem(item);
-                  }}
+                  key={group.ids.join('-')}
                   sx={{
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    display: 'block',
-                    px: { xs: 1.5, sm: 2 },
-                    py: 1.5,
-                    bgcolor: unreadItem
-                      ? (theme) =>
-                          theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'action.hover'
-                      : 'transparent',
-                    transition: 'background-color 0.15s ease',
-                    '&:hover': {
-                      bgcolor: (theme) =>
-                        theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'action.selected',
-                    },
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    overflow: 'hidden',
                   }}
                 >
-                  <Stack spacing={0.6}>
-                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Typography sx={{ fontWeight: unreadItem ? 800 : 700, fontSize: '0.95rem', lineHeight: 1.35 }}>
-                        {item.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.disabled" sx={{ flexShrink: 0 }}>
-                        {relativeTime(item.createdAt, t)}
-                      </Typography>
-                    </Stack>
-                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.45 }}>
-                      {item.message}
-                    </Typography>
-                    {tag ? (
-                      <Chip
-                        size="small"
-                        label={tagLabel(tag, t)}
-                        sx={{
-                          alignSelf: 'flex-start',
-                          height: 22,
-                          fontWeight: 700,
-                          fontSize: '0.7rem',
-                          borderRadius: 1.5,
-                        }}
-                      />
-                    ) : null}
-                  </Stack>
+                  <UserNotificationRow
+                    group={group}
+                    onOpened={() => void refresh()}
+                    onViewListing={(target) => {
+                      setListingPreview(target);
+                      void refresh();
+                    }}
+                    showTag={
+                      tag ? (
+                        <Chip
+                          size="small"
+                          label={tagLabel(tag, t)}
+                          sx={{
+                            alignSelf: 'flex-start',
+                            height: 22,
+                            fontWeight: 700,
+                            fontSize: '0.7rem',
+                            borderRadius: 1.5,
+                            mt: 0.25,
+                          }}
+                        />
+                      ) : null
+                    }
+                  />
                 </Box>
               );
             })}
           </Stack>
         )}
       </Box>
+      <SavedListingPreviewDialog
+        open={Boolean(listingPreview)}
+        target={listingPreview}
+        onClose={() => setListingPreview(null)}
+      />
     </Stack>
   );
 }

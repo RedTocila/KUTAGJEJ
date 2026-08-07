@@ -44,6 +44,7 @@ import {
   productSearchBarSx,
 } from '@/components/public/product-browse-chrome';
 import { ChatCallIcon, ChatWhatsappIcon } from '@/components/user/messages/chat-contact-icons';
+import { useMessagesThreadChrome } from '@/contexts/messages-thread-chrome-context';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import {
@@ -1026,6 +1027,7 @@ export function UserMessagesView() {
   const t = useCopy();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const threadChrome = useMessagesThreadChrome();
   const urlSelectedId = searchParams.get('c');
 
   const inboxFilterLabels: Record<InboxFilter, string> = {
@@ -1296,15 +1298,17 @@ export function UserMessagesView() {
     if (id === selectedId) return;
     // Paint the thread immediately; URL sync can take a tick on mobile.
     setInstantSelectedId(id);
+    threadChrome?.setThreadUiOpen(true);
     stickToBottomRef.current = true;
     hydrateThreadLocally(id);
     router.push(`${paths.user.messages}?c=${encodeURIComponent(id)}`);
   };
 
   const handleBackToInbox = () => {
-    // Show inbox immediately; URL sync can take a tick on mobile.
+    // Show inbox + bottom nav immediately; URL sync can take a tick on mobile.
     setMobileThreadDismissed(true);
     setInstantSelectedId(null);
+    threadChrome?.setThreadUiOpen(false);
     router.replace(paths.user.messages);
   };
 

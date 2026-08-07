@@ -205,6 +205,28 @@ async function createUserNotification({
   }
 }
 
+/** Public listing detail path from metrics kind (id fallback — permalink resolver accepts uuid). */
+function listingPublicHrefFromMetrics(metricsKind, listingId) {
+  const id = encodeURIComponent(String(listingId || '').trim());
+  if (!id) return null;
+  switch (String(metricsKind || '')) {
+    case 'real-estate':
+      return `/prona/${id}`;
+    case 'car':
+      return `/makina/${id}`;
+    case 'job':
+      return `/pune/${id}`;
+    case 'marketplace':
+      return `/tregu/${id}`;
+    case 'businesses':
+      return `/biznese/${id}`;
+    case 'professionals':
+      return `/profesioniste/${id}`;
+    default:
+      return null;
+  }
+}
+
 async function notifyNewMessage({
   recipientId,
   conversationId,
@@ -215,20 +237,63 @@ async function notifyNewMessage({
 }) {
   const name = senderName || (await displayNameForUserId(senderId)) || 'Dikush';
   const listingBit = listingTitle ? ` për «${listingTitle}»` : '';
+  const title = `Mesazh i ri nga ${name}`;
+  const message = preview
+    ? String(preview).slice(0, 180)
+    : `${name} ju dërgoi një mesazh${listingBit}.`;
+  const href = conversationId
+    ? `/user/dashboard/mesazhet?c=${encodeURIComponent(conversationId)}`
+    : '/user/dashboard/mesazhet';
+
+  // Stack unread messages from the same sender into one notification.
+  const recipient = String(recipientId || '').trim();
+  const actor = senderId && isUuid(String(senderId)) ? String(senderId) : null;
+  if (isUuid(recipient) && actor) {
+    try {
+      const { data: existingRows, error: selErr } = await getSupabaseAdmin()
+        .from('user_notifications')
+        .select('id')
+        .eq('user_id', recipient)
+        .eq('type', 'new_message')
+        .eq('actor_id', actor)
+        .is('read_at', null)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      const existing = existingRows?.[0];
+      if (!selErr && existing?.id) {
+        const now = new Date().toISOString();
+        const { data: updated, error: updErr } = await getSupabaseAdmin()
+          .from('user_notifications')
+          .update({
+            title: String(title).slice(0, 200),
+            message: String(message || '').slice(0, 1000),
+            actor_name: String(name).slice(0, 120),
+            ref_kind: 'conversation',
+            ref_id: conversationId && isUuid(String(conversationId)) ? String(conversationId) : null,
+            href: href ? String(href).slice(0, 500) : null,
+            created_at: now,
+            updated_at: now,
+          })
+          .eq('id', existing.id)
+          .select('*')
+          .single();
+        if (!updErr && updated) return formatNotification(updated);
+      }
+    } catch (err) {
+      console.warn('notifyNewMessage stack:', err?.message || err);
+    }
+  }
+
   return createUserNotification({
     userId: recipientId,
     type: 'new_message',
-    title: `Mesazh i ri nga ${name}`,
-    message: preview
-      ? String(preview).slice(0, 180)
-      : `${name} ju dërgoi një mesazh${listingBit}.`,
+    title,
+    message,
     refKind: 'conversation',
     refId: conversationId,
     actorId: senderId,
     actorName: name,
-    href: conversationId
-      ? `/user/dashboard/mesazhet?c=${encodeURIComponent(conversationId)}`
-      : '/user/dashboard/mesazhet',
+    href,
   });
 }
 
@@ -243,16 +308,17 @@ async function notifyListingSaved({ metricsKind, listingId, saverId }) {
   if (!entitled) return null;
 
   const saverName = (await displayNameForUserId(saverId)) || 'Dikush';
+  const listingHref = listingPublicHrefFromMetrics(metricsKind, listingId);
   return createUserNotification({
     userId: brief.posterId,
     type: 'listing_saved',
     title: `${saverName} ruajti njoftimin tuaj`,
-    message: `«${brief.title}» u shtua te të ruajturat nga ${saverName}. Hap njoftimet e mia për të kontaktuar.`,
+    message: `«${brief.title}» u shtua te të ruajturat.`,
     refKind: metricsKind,
     refId: listingId,
     actorId: saverId,
     actorName: saverName,
-    href: '/user/dashboard/shpalljet-e-mia',
+    href: listingHref,
   });
 }
 

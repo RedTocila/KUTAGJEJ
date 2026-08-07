@@ -111,7 +111,12 @@ export function OkazionBrowseControls() {
         aria-label="Kategoritë kryesore"
         sx={{
           mt: { xs: 1.5, md: 2 },
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0,
           overflowX: 'auto',
+          overflowY: 'hidden',
+          overscrollBehaviorX: 'contain',
           WebkitOverflowScrolling: 'touch',
           scrollbarWidth: 'none',
           '&::-webkit-scrollbar': { display: 'none' },
@@ -120,7 +125,7 @@ export function OkazionBrowseControls() {
             'linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)',
         }}
       >
-        <Stack direction="row" spacing={1} sx={{ pr: 3, width: 'max-content', flexWrap: 'nowrap' }}>
+        <Stack direction="row" spacing={1} sx={{ pr: 3, width: 'max-content', maxWidth: 'none', flexWrap: 'nowrap' }}>
           {verticals.map((vertical) => {
             const active = applied.kind === vertical.id;
             const href = buildOkazionHref({
@@ -154,12 +159,17 @@ export function OkazionBrowseControlsFallback() {
       <Box
         sx={{
           mt: { xs: 1.5, md: 2 },
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0,
           overflowX: 'auto',
+          overflowY: 'hidden',
+          overscrollBehaviorX: 'contain',
           scrollbarWidth: 'none',
           '&::-webkit-scrollbar': { display: 'none' },
         }}
       >
-        <Stack direction="row" spacing={1} sx={{ width: 'max-content', flexWrap: 'nowrap' }}>
+        <Stack direction="row" spacing={1} sx={{ width: 'max-content', maxWidth: 'none', flexWrap: 'nowrap' }}>
           {(['real-estate', 'cars', 'jobs', 'marketplace'] as const).map((id) => (
             <Box
               key={id}

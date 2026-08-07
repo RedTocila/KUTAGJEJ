@@ -33,7 +33,16 @@ export function PublicShell({
   hideFooter?: boolean;
 }) {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+        width: '100%',
+        maxWidth: '100%',
+        overflowX: 'hidden',
+      }}
+    >
       {hideHeader ? null : hideHeaderBelowMd ? (
         <Box sx={{ display: { xs: 'none', md: 'block' } }}>
           <PublicHeader />
@@ -41,7 +50,16 @@ export function PublicShell({
       ) : (
         <PublicHeader />
       )}
-      <Box component="main" sx={{ flex: '1 1 auto', pb: { xs: MOBILE_CONTENT_BOTTOM_PADDING, md: 0 } }}>
+      <Box
+        component="main"
+        sx={{
+          flex: '1 1 auto',
+          minWidth: 0,
+          maxWidth: '100%',
+          overflowX: 'hidden',
+          pb: { xs: MOBILE_CONTENT_BOTTOM_PADDING, md: 0 },
+        }}
+      >
         {children}
       </Box>
       {hideFooter ? null : <PublicFooter />}

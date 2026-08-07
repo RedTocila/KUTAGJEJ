@@ -396,9 +396,13 @@ export function CategoryTopViewedSlider({
       aria-label={byRating ? 'Njoftimet më të vlerësuara' : 'Njoftimet më të shikuara'}
       sx={{
         py: { xs: 2, md: 2.5 },
+        width: '100%',
+        maxWidth: '100%',
+        minWidth: 0,
+        overflowX: 'hidden',
       }}
     >
-      <Container maxWidth="xl">
+      <Container maxWidth="xl" sx={{ minWidth: 0 }}>
         <Typography
           component="h2"
           sx={{
@@ -411,7 +415,7 @@ export function CategoryTopViewedSlider({
           {byRating ? 'Më të vlerësuarat' : 'Më të shikuarat'}
         </Typography>
 
-        <Stack spacing={1.35} sx={{ width: '100%' }}>
+        <Stack spacing={1.35} sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
           <Box
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
@@ -419,6 +423,11 @@ export function CategoryTopViewedSlider({
             onTouchCancel={handleTouchCancel}
             sx={{
               position: 'relative',
+              width: '100%',
+              maxWidth: '100%',
+              // Flex min-content would otherwise expand to the full N× track width
+              // and push the document into horizontal page scroll.
+              minWidth: 0,
               borderRadius: 3,
               overflow: 'hidden',
               border: '1px solid',
@@ -428,6 +437,7 @@ export function CategoryTopViewedSlider({
                   ? '0 8px 24px rgba(0,0,0,0.1)'
                   : '0 10px 28px rgba(0,0,0,0.18)',
               touchAction: 'pan-y',
+              overscrollBehaviorX: 'none',
               cursor: slides.length > 1 ? 'grab' : undefined,
               userSelect: 'none',
               WebkitUserSelect: 'none',
@@ -437,6 +447,7 @@ export function CategoryTopViewedSlider({
               sx={{
                 display: 'flex',
                 width: `${slides.length * 100}%`,
+                maxWidth: 'none',
                 transform: `translate3d(calc(-${safeIdx * slideBasis}% + ${dragOffset}px), 0, 0)`,
                 transition: isDragging
                   ? 'none'
@@ -448,7 +459,7 @@ export function CategoryTopViewedSlider({
               }}
             >
               {slides.map((slide) => (
-                <Box key={slide.id} sx={{ flex: `0 0 ${slideBasis}%`, minWidth: 0 }}>
+                <Box key={slide.id} sx={{ flex: `0 0 ${slideBasis}%`, minWidth: 0, maxWidth: `${slideBasis}%` }}>
                   <ListingSlidePanel slide={slide} suppressNavRef={suppressNavRef} />
                 </Box>
               ))}

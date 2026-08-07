@@ -16,6 +16,7 @@ import {
   OwnerEditHeaderActionsProvider,
   useOwnerEditHeaderActionsSlot,
 } from '@/components/user/owner-edit-header-actions';
+import { MessagesThreadChromeProvider } from '@/contexts/messages-thread-chrome-context';
 import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 import { isPostListingPath } from '@/lib/post-listing-path';
 import { paths } from '@/paths';
@@ -77,7 +78,15 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
   const showFrameClose =
     pathname === paths.user.businessesListing ||
     pathname === paths.user.professionalsListing;
-  const messageThreadOpen = isMessages && Boolean(searchParams.get('c'));
+  const urlThreadOpen = isMessages && Boolean(searchParams.get('c'));
+  /** Optimistic override from the messages view (back / open) before URL catches up. */
+  const [threadUiOpen, setThreadUiOpen] = React.useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    setThreadUiOpen(null);
+  }, [urlThreadOpen, isMessages]);
+
+  const messageThreadOpen = threadUiOpen ?? urlThreadOpen;
   const showMobileBottomNav = !messageThreadOpen;
   const showBackLink = !isDashboardHome && !isMessages && !isSavedListings && !isPostListing;
   const backHref = paths.user.dashboard;
@@ -87,16 +96,18 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
     <AuthGuard>
       <AddListingPickerProvider>
         <OwnerEditHeaderActionsProvider>
-          <UserDashboardFrameInner
-            showMobileBottomNav={showMobileBottomNav}
-            showBackLink={showBackLink}
-            backHref={backHref}
-            backLabel={backLabel}
-            isMessages={isMessages}
-            showFrameClose={showFrameClose}
-          >
-            {children}
-          </UserDashboardFrameInner>
+          <MessagesThreadChromeProvider setThreadUiOpen={setThreadUiOpen}>
+            <UserDashboardFrameInner
+              showMobileBottomNav={showMobileBottomNav}
+              showBackLink={showBackLink}
+              backHref={backHref}
+              backLabel={backLabel}
+              isMessages={isMessages}
+              showFrameClose={showFrameClose}
+            >
+              {children}
+            </UserDashboardFrameInner>
+          </MessagesThreadChromeProvider>
         </OwnerEditHeaderActionsProvider>
       </AddListingPickerProvider>
     </AuthGuard>

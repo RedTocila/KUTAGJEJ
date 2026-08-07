@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Badge, Box, Stack } from '@mui/material';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
@@ -42,6 +42,7 @@ interface NavItem {
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useUser();
   const unreadMessages = useUnreadMessagesCount();
   const t = useCopy();
@@ -140,6 +141,12 @@ export function MobileBottomNav() {
     // Already on this tab's root → scroll to top + soft refresh.
     // Active on a related/nested route (e.g. create-listing under Home) → go to tab root.
     if (pathname === hrefPath(item.href)) {
+      // Open conversation (`?c=`) still uses the messages path — retap must clear it
+      // and show the inbox instead of refreshing the same thread.
+      if (item.id === 'messages' && searchParams.get('c')) {
+        hardNavigate(item.href, event);
+        return;
+      }
       hardRefreshToTop(event);
       return;
     }

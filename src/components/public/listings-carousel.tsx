@@ -69,14 +69,18 @@ export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps)
   const childArray = React.Children.toArray(children);
 
   return (
-    <Box sx={{ position: 'relative' }}>
+    <Box sx={{ position: 'relative', width: '100%', maxWidth: '100%', minWidth: 0 }}>
       <Box
         ref={scrollRef}
         sx={{
           display: 'flex',
           gap: { xs: 1.25, md: 1.75 },
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0,
           overflowX: 'auto',
           overflowY: 'hidden',
+          overscrollBehaviorX: 'contain',
           scrollSnapType: 'x mandatory',
           scrollPadding: { xs: '0 12px', md: '0 4px' },
           // Native rubber-band & momentum on iOS without showing scrollbars.

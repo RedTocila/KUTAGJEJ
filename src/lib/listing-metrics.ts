@@ -186,14 +186,13 @@ export async function fetchListingMetricsBatch(
   }
 }
 
-/** Records a share on click, then opens the native share sheet or copies the URL. */
+/** Opens the native share sheet or copies the URL, then records a share only on success. */
 export async function shareListing(opts: {
   title: string;
   listingKind: ListingMetricKind;
   listingId: string;
   url?: string;
 }): Promise<ListingMetrics | null> {
-  const metrics = await recordListingMetricEvent(opts.listingKind, opts.listingId, 'share');
   const url = opts.url ?? (typeof window !== 'undefined' ? window.location.href : '');
 
   try {
@@ -201,12 +200,15 @@ export async function shareListing(opts: {
       await navigator.share({ title: opts.title, text: opts.title, url });
     } else if (typeof navigator !== 'undefined') {
       await navigator.clipboard.writeText(url);
+    } else {
+      return null;
     }
   } catch {
-    /* cancelled or blocked */
+    /* cancelled or blocked — do not count as a share */
+    return null;
   }
 
-  return metrics;
+  return recordListingMetricEvent(opts.listingKind, opts.listingId, 'share');
 }
 
 export async function recordListingMetricEvent(

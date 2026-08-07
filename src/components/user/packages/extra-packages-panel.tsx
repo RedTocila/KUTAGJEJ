@@ -80,7 +80,7 @@ const FALLBACK_AUTO_PACKAGES: AutoRefreshPackage[] = [
   {
     id: 'auto-refresh-10',
     slots: 10,
-    priceEur: 14.9,
+    priceEur: 14,
     priceBc: 150,
     labelSq: '10 njoftime Auto-Refresh',
     labelEn: '10 Auto-Refresh listings',
@@ -88,7 +88,7 @@ const FALLBACK_AUTO_PACKAGES: AutoRefreshPackage[] = [
   {
     id: 'auto-refresh-20',
     slots: 20,
-    priceEur: 24.9,
+    priceEur: 24,
     priceBc: 250,
     labelSq: '20 njoftime Auto-Refresh',
     labelEn: '20 Auto-Refresh listings',

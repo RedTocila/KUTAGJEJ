@@ -237,12 +237,17 @@ async function notifyListingSaved({ metricsKind, listingId, saverId }) {
   if (!brief) return null;
   if (String(brief.posterId) === String(saverId)) return null;
 
+  // Save-lead alerts are a Grow / Elite perk only.
+  const { posterHasTrustBadge } = require('./public-listings/load-poster-brief');
+  const entitled = await posterHasTrustBadge(brief.posterId);
+  if (!entitled) return null;
+
   const saverName = (await displayNameForUserId(saverId)) || 'Dikush';
   return createUserNotification({
     userId: brief.posterId,
     type: 'listing_saved',
     title: `${saverName} ruajti njoftimin tuaj`,
-    message: `«${brief.title}» u shtua te të ruajturat nga ${saverName}. Me Grow/Elite shih interesuarit te njoftimet e mia.`,
+    message: `«${brief.title}» u shtua te të ruajturat nga ${saverName}. Hap njoftimet e mia për të kontaktuar.`,
     refKind: metricsKind,
     refId: listingId,
     actorId: saverId,

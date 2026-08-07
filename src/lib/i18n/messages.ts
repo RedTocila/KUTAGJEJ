@@ -460,7 +460,7 @@ const sq = {
       },
       listing_saved: {
         title: 'Ruajtje të njoftimeve',
-        description: 'Njoftohu kush e ruan njoftimin tuaj.',
+        description: 'Njoftohu kush e ruan njoftimin tuaj (vetëm me Grow / Elite).',
       },
       listing_status: {
         title: 'Statusi i njoftimeve',
@@ -879,7 +879,7 @@ const en: AppMessages = {
       },
       listing_saved: {
         title: 'Listing saves',
-        description: 'Get notified who saved your listing.',
+        description: 'Get notified who saved your listing (Grow / Elite only).',
       },
       listing_status: {
         title: 'Listing status',

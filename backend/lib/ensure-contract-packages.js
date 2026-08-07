@@ -28,7 +28,7 @@ const PACKAGE_TIERS = [
     planCode: 'starter',
     title: 'STARTER',
     sortOrder: 1,
-    price1Month: 14.9,
+    price1Month: 14,
     maxListAllCategories: 1,
     maxJobListings: 50,
     maxCarListings: 15,

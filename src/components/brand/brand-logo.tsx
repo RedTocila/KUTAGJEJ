@@ -6,6 +6,7 @@ import { Box, Typography, type BoxProps, type SxProps, type Theme } from '@mui/m
 import { brandLogoSrc, config } from '@/config';
 
 export type BrandWordmarkPresentation = 'brand' | 'plain';
+export type BrandWordmarkLayout = 'inline' | 'stacked';
 
 export interface BrandLogoProps {
   /** Pixel height of the logo image; width follows aspect ratio unless `width` is set. */
@@ -18,6 +19,11 @@ export interface BrandLogoProps {
    * `plain`: single-line name using `wordmarkSx` only.
    */
   wordmarkPresentation?: BrandWordmarkPresentation;
+  /**
+   * `inline`: segments/name on one horizontal line (default).
+   * `stacked`: brand segments one under the other (narrower header mark).
+   */
+  wordmarkLayout?: BrandWordmarkLayout;
   sx?: BoxProps['sx'];
   imgSx?: SxProps<Theme>;
   wordmarkSx?: SxProps<Theme>;
@@ -38,6 +44,7 @@ export function BrandLogo({
   width,
   showWordmark = false,
   wordmarkPresentation = 'plain',
+  wordmarkLayout = 'inline',
   sx,
   imgSx,
   wordmarkSx,
@@ -45,6 +52,7 @@ export function BrandLogo({
 }: BrandLogoProps) {
   const segments = resolvedWordmarkSegments();
   const useBrandSplit = Boolean(showWordmark && wordmarkPresentation === 'brand' && segments);
+  const stacked = wordmarkLayout === 'stacked' && useBrandSplit;
 
   const img = (
     <Box
@@ -86,13 +94,23 @@ export function BrandLogo({
             component="span"
             sx={{
               fontWeight: 700,
-              lineHeight: 1.2,
               letterSpacing: '-0.04em',
               display: 'inline-flex',
-              alignItems: 'baseline',
-              columnGap: 0.25,
               WebkitFontSmoothing: 'antialiased',
               MozOsxFontSmoothing: 'grayscale',
+              ...(stacked
+                ? {
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    justifyContent: 'center',
+                    lineHeight: 1.02,
+                    rowGap: 0,
+                  }
+                : {
+                    alignItems: 'baseline',
+                    columnGap: 0.25,
+                    lineHeight: 1.2,
+                  }),
               ...wordmarkSx,
             }}
           >

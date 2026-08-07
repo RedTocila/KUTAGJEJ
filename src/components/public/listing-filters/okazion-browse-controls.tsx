@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Box } from '@mui/material';
+import { Box, Stack } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { CarProfile as CarProfileIcon } from '@phosphor-icons/react/dist/ssr/CarProfile';
@@ -111,33 +111,34 @@ export function OkazionBrowseControls() {
         aria-label="Kategoritë kryesore"
         sx={{
           mt: { xs: 1.5, md: 2 },
-          width: '100%',
-          maxWidth: '100%',
-          minWidth: 0,
-          overflowX: 'hidden',
-          display: 'flex',
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: 1,
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+          maskImage: 'linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)',
+          WebkitMaskImage:
+            'linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)',
         }}
       >
-        {verticals.map((vertical) => {
-          const active = applied.kind === vertical.id;
-          const href = buildOkazionHref({
-            q: applied.q,
-            kind: active ? undefined : vertical.id,
-          });
-          return (
-            <ProductTag
-              key={vertical.id}
-              href={href}
-              label={vertical.label}
-              icon={OKAZION_VERTICAL_ICONS[vertical.id as keyof typeof OKAZION_VERTICAL_ICONS]}
-              active={active}
-              accent={OKAZION_SEARCH_ACCENT}
-            />
-          );
-        })}
+        <Stack direction="row" spacing={1} sx={{ pr: 3, width: 'max-content', flexWrap: 'nowrap' }}>
+          {verticals.map((vertical) => {
+            const active = applied.kind === vertical.id;
+            const href = buildOkazionHref({
+              q: applied.q,
+              kind: active ? undefined : vertical.id,
+            });
+            return (
+              <ProductTag
+                key={vertical.id}
+                href={href}
+                label={vertical.label}
+                icon={OKAZION_VERTICAL_ICONS[vertical.id as keyof typeof OKAZION_VERTICAL_ICONS]}
+                active={active}
+                accent={OKAZION_SEARCH_ACCENT}
+              />
+            );
+          })}
+        </Stack>
       </Box>
     </Box>
   );
@@ -150,19 +151,28 @@ export function OkazionBrowseControlsFallback() {
       <Box sx={{ ...toolbarRowSx, opacity: 0.5 }}>
         <Box sx={{ flex: 1, height: PRODUCT_BROWSE_CONTROL_HEIGHT, borderRadius: 2.5, bgcolor: 'action.hover' }} />
       </Box>
-      <Box sx={{ mt: { xs: 1.5, md: 2 }, display: 'flex', gap: 1 }}>
-        {(['real-estate', 'cars', 'jobs', 'marketplace'] as const).map((id) => (
-          <Box
-            key={id}
-            sx={{
-              height: 34,
-              width: 88,
-              borderRadius: 999,
-              bgcolor: 'action.hover',
-              flexShrink: 0,
-            }}
-          />
-        ))}
+      <Box
+        sx={{
+          mt: { xs: 1.5, md: 2 },
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+        }}
+      >
+        <Stack direction="row" spacing={1} sx={{ width: 'max-content', flexWrap: 'nowrap' }}>
+          {(['real-estate', 'cars', 'jobs', 'marketplace'] as const).map((id) => (
+            <Box
+              key={id}
+              sx={{
+                height: 34,
+                width: 88,
+                borderRadius: 999,
+                bgcolor: 'action.hover',
+                flexShrink: 0,
+              }}
+            />
+          ))}
+        </Stack>
       </Box>
     </Box>
   );

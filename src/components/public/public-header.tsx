@@ -27,7 +27,7 @@ import { paths } from '@/paths';
 
 import { HeaderMobileSearch } from './header-mobile-search';
 
-const TOOLBAR_MIN_HEIGHT = { xs: 64, md: 76 } as const;
+const TOOLBAR_MIN_HEIGHT = { xs: 72, md: 88 } as const;
 
 /**
  * Hides the header while scrolling down, shows it when scrolling up (or when
@@ -145,7 +145,7 @@ export function PublicHeader() {
           maxWidth="xl"
           sx={{ pl: { xs: 1, sm: 2, md: 3 }, pr: { xs: 1.5, sm: 2, md: 3 } }}
         >
-          <Toolbar disableGutters sx={{ minHeight: { xs: 64, md: 76 }, gap: { xs: 1, md: 2 } }}>
+          <Toolbar disableGutters sx={{ minHeight: TOOLBAR_MIN_HEIGHT, gap: { xs: 1, md: 2 } }}>
             <Box
               component={RouterLink}
               href={paths.home}
@@ -159,12 +159,17 @@ export function PublicHeader() {
               }}
             >
               <BrandLogo
-                height={40}
+                height={56}
                 showWordmark
                 wordmarkPresentation="brand"
-                sx={{ gap: 0.25 }}
-                imgSx={{ mr: -0.5 }}
-                wordmarkSx={{ fontSize: { xs: '1.05rem', md: '1.2rem' }, ml: -0.25 }}
+                wordmarkLayout="stacked"
+                sx={{ gap: '0.5px' }}
+                imgSx={{ height: { xs: 52, md: 62 }, width: 'auto' }}
+                wordmarkSx={{
+                  fontSize: { xs: '1.05rem', md: '1.22rem' },
+                  lineHeight: 1.02,
+                  letterSpacing: '-0.05em',
+                }}
               />
             </Box>
 
@@ -172,7 +177,7 @@ export function PublicHeader() {
 
             <Stack
               direction="row"
-              spacing={1}
+              spacing={1.25}
               sx={{
                 alignItems: 'center',
                 display: { xs: 'none', md: 'flex' },
@@ -180,23 +185,31 @@ export function PublicHeader() {
                 ml: { md: 'auto' },
               }}
             >
-              <ThemeModeToggle />
+              <ThemeModeToggle iconSize={26} />
               {user ? (
                 <>
                   <Tooltip title={t.common.myPanel}>
                     <IconButton
                       component={RouterLink}
                       href={accountHref}
-                      sx={{ color: 'text.secondary' }}
+                      sx={{ color: 'text.secondary', width: 44, height: 44 }}
                     >
-                      {React.createElement(UserCircleIcon, { size: 24 })}
+                      {React.createElement(UserCircleIcon, { size: 28 })}
                     </IconButton>
                   </Tooltip>
                   <Button
                     onClick={openPostPicker}
                     variant="contained"
-                    startIcon={React.createElement(PlusIcon, { size: 18, weight: 'bold' })}
-                    sx={{ borderRadius: 2, fontWeight: 700, textTransform: 'none', px: 2 }}
+                    size="large"
+                    startIcon={React.createElement(PlusIcon, { size: 20, weight: 'bold' })}
+                    sx={{
+                      borderRadius: 2.25,
+                      fontWeight: 700,
+                      textTransform: 'none',
+                      px: 2.5,
+                      py: 1.1,
+                      fontSize: '0.95rem',
+                    }}
                   >
                     {t.common.postListing}
                   </Button>
@@ -206,14 +219,17 @@ export function PublicHeader() {
                   <Button
                     component={RouterLink}
                     href={paths.user.auth}
+                    size="large"
                     sx={{
-                      borderRadius: 2,
+                      borderRadius: 2.25,
                       color: 'text.primary',
                       fontWeight: 600,
                       textTransform: 'none',
-                      px: 2,
+                      px: 2.5,
+                      py: 1.1,
+                      fontSize: '0.95rem',
                     }}
-                    startIcon={React.createElement(SignInIcon, { size: 18 })}
+                    startIcon={React.createElement(SignInIcon, { size: 20 })}
                   >
                     {t.common.login}
                   </Button>
@@ -221,8 +237,16 @@ export function PublicHeader() {
                     component={RouterLink}
                     href={paths.user.realEstateListing}
                     variant="contained"
-                    startIcon={React.createElement(PlusIcon, { size: 18, weight: 'bold' })}
-                    sx={{ borderRadius: 2, fontWeight: 700, textTransform: 'none', px: 2 }}
+                    size="large"
+                    startIcon={React.createElement(PlusIcon, { size: 20, weight: 'bold' })}
+                    sx={{
+                      borderRadius: 2.25,
+                      fontWeight: 700,
+                      textTransform: 'none',
+                      px: 2.5,
+                      py: 1.1,
+                      fontSize: '0.95rem',
+                    }}
                   >
                     {t.common.postFree}
                   </Button>
@@ -232,7 +256,7 @@ export function PublicHeader() {
 
             <Stack
               direction="row"
-              spacing={0.5}
+              spacing={0.75}
               sx={{
                 alignItems: 'center',
                 display: { xs: 'flex', md: 'none' },
@@ -245,14 +269,14 @@ export function PublicHeader() {
                   onClick={openPostPicker}
                   aria-label={t.common.postListing}
                   sx={{
-                    width: 34,
-                    height: 34,
+                    width: 40,
+                    height: 40,
                     bgcolor: 'primary.main',
                     color: 'primary.contrastText',
                     '&:hover': { bgcolor: 'primary.dark', color: 'primary.contrastText' },
                   }}
                 >
-                  {React.createElement(PlusIcon, { size: 16, weight: 'bold' })}
+                  {React.createElement(PlusIcon, { size: 18, weight: 'bold' })}
                 </IconButton>
               </Tooltip>
             </Stack>

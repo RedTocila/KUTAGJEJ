@@ -8,6 +8,8 @@ import { useCopy } from '@/hooks/use-copy';
 import { paths } from '@/paths';
 import { ProductSearchIcon, productSearchBarSx } from '@/components/public/product-browse-chrome';
 
+const HEADER_SEARCH_HEIGHT = 42;
+
 /** Mobile header search control — opens the full-page search experience. */
 export function HeaderMobileSearch() {
   const t = useCopy();
@@ -22,6 +24,8 @@ export function HeaderMobileSearch() {
         minWidth: 0,
         display: { xs: 'flex', md: 'none' },
         ...productSearchBarSx(false),
+        height: HEADER_SEARCH_HEIGHT,
+        px: 1.5,
         '&:hover': { bgcolor: 'action.hover' },
       }}
     >
@@ -30,7 +34,7 @@ export function HeaderMobileSearch() {
         <Typography
           component="span"
           noWrap
-          sx={{ fontSize: '0.825rem', fontWeight: 500, color: 'text.secondary' }}
+          sx={{ fontSize: '0.9rem', fontWeight: 500, color: 'text.secondary' }}
         >
           {t.chrome.searchPlaceholder}
         </Typography>

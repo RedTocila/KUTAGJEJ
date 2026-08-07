@@ -21,6 +21,90 @@ body {
   color: var(--mui-palette-text-primary, #1a2118);
 }
 
+/* Cold-start splash (React-owned overlay in SplashScreen) */
+.kutagjej-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 42%, rgba(118, 186, 27, 0.14), transparent 70%),
+    #f7faf4;
+  opacity: 1;
+  transition: opacity 0.42s ease;
+  pointer-events: auto;
+}
+
+html.dark .kutagjej-splash {
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 42%, rgba(118, 186, 27, 0.18), transparent 70%),
+    #0a0a0a;
+}
+
+.kutagjej-splash--hide {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.kutagjej-splash__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.kutagjej-splash__logo {
+  width: min(52vw, 168px);
+  height: auto;
+  display: block;
+  animation: kutagjejSplashLogoIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.kutagjej-splash__bar {
+  width: 48px;
+  height: 3px;
+  border-radius: 999px;
+  background: #76ba1b;
+  transform-origin: center;
+  animation: kutagjejSplashBar 1.1s ease-in-out infinite;
+}
+
+@keyframes kutagjejSplashLogoIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes kutagjejSplashBar {
+  0%,
+  100% {
+    transform: scaleX(0.45);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kutagjej-splash {
+    transition: none;
+  }
+
+  .kutagjej-splash__logo,
+  .kutagjej-splash__bar {
+    animation: none;
+  }
+}
+
 /*
  * iOS Safari auto-zooms focused fields when font-size < 16px.
  * Keep mobile inputs at 16px so search bars, filters and forms do not jump.

@@ -14,7 +14,7 @@ function resolveColorScheme(colorScheme: ReturnType<typeof useColorScheme>['colo
   return 'light';
 }
 
-export function ThemeModeToggle() {
+export function ThemeModeToggle({ iconSize = 22 }: { iconSize?: number }) {
   const t = useCopy();
   const { setMode, colorScheme } = useColorScheme();
   const [mounted, setMounted] = React.useState(false);
@@ -28,7 +28,7 @@ export function ThemeModeToggle() {
   if (!mounted) {
     return (
       <IconButton size="large" disabled sx={{ color: 'text.secondary' }}>
-        <Box sx={{ width: 22, height: 22 }} />
+        <Box sx={{ width: iconSize, height: iconSize }} />
       </IconButton>
     );
   }
@@ -43,8 +43,8 @@ export function ThemeModeToggle() {
         sx={{ color: 'text.secondary' }}
       >
         {resolved === 'dark'
-          ? React.createElement(SunIcon, { size: 22 })
-          : React.createElement(MoonIcon, { size: 22 })}
+          ? React.createElement(SunIcon, { size: iconSize })
+          : React.createElement(MoonIcon, { size: iconSize })}
       </IconButton>
     </Tooltip>
   );

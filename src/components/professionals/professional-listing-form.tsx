@@ -38,10 +38,12 @@ import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderati
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { uploadListingImages } from '@/lib/uploads-client';
 import {
+  knownCreateDefaultsFromStorage,
   professionalTitleFromUser,
   profileDefaultsFromStorage,
   resolveContactPhone,
 } from '@/lib/listing-form-defaults';
+import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
 import { useUser } from '@/hooks/use-user';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -92,6 +94,9 @@ export function ProfessionalListingForm({
   const [submitting, setSubmitting] = React.useState(false);
   const [checkingExisting, setCheckingExisting] = React.useState(true);
   const [existingId, setExistingId] = React.useState<string | null>(null);
+  const { defaults: knownDefaults, rememberLocation } = useCreateListingDefaults({
+    enabled: !existingId,
+  });
   const [saveNotice, setSaveNotice] = React.useState<string | null>(null);
   const [createdPending, setCreatedPending] = React.useState(false);
 
@@ -102,11 +107,15 @@ export function ProfessionalListingForm({
   });
   const [description, setDescription] = React.useState(() => String(aiPrefill?.description ?? ''));
   const [category, setCategory] = React.useState(() => String(aiPrefill?.category ?? ''));
-  const [cityId, setCityId] = React.useState(() => String(aiPrefill?.cityId ?? ''));
+  const [cityId, setCityId] = React.useState(() => {
+    const fromAi = String(aiPrefill?.cityId ?? '').trim();
+    if (fromAi) return fromAi;
+    return knownCreateDefaultsFromStorage().cityId;
+  });
   const [contactPhone, setContactPhone] = React.useState(() => {
     const fromAi = String(aiPrefill?.contactPhone ?? '').trim();
     if (fromAi) return fromAi;
-    return profileDefaultsFromStorage().phone;
+    return profileDefaultsFromStorage().phone || knownCreateDefaultsFromStorage().contactPhone;
   });
   const [servicesHighlight, setServicesHighlight] = React.useState(() =>
     String(aiPrefill?.servicesHighlight ?? ''),
@@ -191,10 +200,10 @@ export function ProfessionalListingForm({
     };
   }, [applyExistingListing]);
 
-  // Prefill empty create fields from signup/profile (never overwrite AI, existing listing, or typed input).
+  // Prefill empty create fields from signup/profile / last listing (never overwrite AI or typed input).
   React.useEffect(() => {
     if (checkingExisting || existingId) return;
-    const phone = resolveContactPhone(user);
+    const phone = resolveContactPhone(user) || knownDefaults.contactPhone;
     if (phone) {
       setContactPhone((prev) => (prev.trim() ? prev : phone));
     }
@@ -205,7 +214,10 @@ export function ProfessionalListingForm({
     if (typeof user?.avatar === 'string' && user.avatar.trim()) {
       setAvatarUrl((prev) => prev || user.avatar!.trim());
     }
-  }, [user, checkingExisting, existingId]);
+    if (knownDefaults.cityId) {
+      setCityId((prev) => (prev.trim() ? prev : knownDefaults.cityId));
+    }
+  }, [user, checkingExisting, existingId, knownDefaults.contactPhone, knownDefaults.cityId]);
 
   const addPortfolio = () => {
     setPortfolio((prev) => {
@@ -341,6 +353,7 @@ export function ProfessionalListingForm({
       setError(res.error);
       return;
     }
+    rememberLocation({ cityId });
     if (res.id && wantsPremium) {
       const boost = await activatePremiumAfterCreate({
         mode: premiumPayRef.current,

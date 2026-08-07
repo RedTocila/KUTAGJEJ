@@ -78,6 +78,9 @@ export interface AiImportProfileContext {
   businessOwner?: string | null;
   businessCategory?: string | null;
   nipt?: string | null;
+  /** Preferred city from past listings (profile has no city field). */
+  preferredCityId?: string | null;
+  preferredCityName?: string | null;
 }
 
 export async function importListingsFromLinks(input: {

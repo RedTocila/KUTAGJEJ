@@ -29,6 +29,24 @@ const router = express.Router();
 
 const MAX_REAL_ESTATE_IMAGES = 8;
 
+function filled(v) {
+  return v !== undefined && v !== null && String(v).trim() !== '';
+}
+
+/** Optional category-detail columns — null when blank / not applicable. */
+function realEstateCategoryFields(propertyCategory, body) {
+  return {
+    condition: needsCondition(propertyCategory) && filled(body.condition) ? body.condition : null,
+    floor: needsFloor(propertyCategory) && filled(body.floor) ? Number(body.floor) : null,
+    total_floors: needsTotalFloors(propertyCategory) && filled(body.totalFloors) ? Number(body.totalFloors) : null,
+    parking_floor: needsParkingFloor(propertyCategory) && filled(body.parkingFloor) ? Number(body.parkingFloor) : null,
+    bedrooms: needsBedroomsBathFurnishing(propertyCategory) && filled(body.bedrooms) ? Number(body.bedrooms) : null,
+    bathrooms: needsBedroomsBathFurnishing(propertyCategory) && filled(body.bathrooms) ? Number(body.bathrooms) : null,
+    furnishing: needsBedroomsBathFurnishing(propertyCategory) && filled(body.furnishing) ? body.furnishing : null,
+    year_built: needsYearBuilt(propertyCategory) && filled(body.yearBuilt) ? Number(body.yearBuilt) : null,
+  };
+}
+
 function requirePortalUser(req, res, next) {
   const model = req.user?.constructor?.modelName;
   if (model !== 'IndividualUser' && model !== 'BusinessUser') {
@@ -132,14 +150,7 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
       city_id: cityId,
       zone_id: zoneId,
       contact_phone: contactPhone,
-      condition: needsCondition(propertyCategory) ? req.body.condition : null,
-      floor: needsFloor(propertyCategory) ? Number(req.body.floor) : null,
-      total_floors: needsTotalFloors(propertyCategory) ? Number(req.body.totalFloors) : null,
-      parking_floor: needsParkingFloor(propertyCategory) ? Number(req.body.parkingFloor) : null,
-      bedrooms: needsBedroomsBathFurnishing(propertyCategory) ? Number(req.body.bedrooms) : null,
-      bathrooms: needsBedroomsBathFurnishing(propertyCategory) ? Number(req.body.bathrooms) : null,
-      furnishing: needsBedroomsBathFurnishing(propertyCategory) ? req.body.furnishing : null,
-      year_built: needsYearBuilt(propertyCategory) ? Number(req.body.yearBuilt) : null,
+      ...realEstateCategoryFields(propertyCategory, req.body),
       image_urls: sanitizeImageUrls(req.body.imageUrls, MAX_REAL_ESTATE_IMAGES),
       status: 'approved',
     };
@@ -225,14 +236,7 @@ router.put('/real-estate/:id', authMiddleware, requirePortalUser, async (req, re
       city_id: cityId,
       zone_id: zoneId,
       contact_phone: contactPhone,
-      condition: needsCondition(propertyCategory) ? req.body.condition : null,
-      floor: needsFloor(propertyCategory) ? Number(req.body.floor) : null,
-      total_floors: needsTotalFloors(propertyCategory) ? Number(req.body.totalFloors) : null,
-      parking_floor: needsParkingFloor(propertyCategory) ? Number(req.body.parkingFloor) : null,
-      bedrooms: needsBedroomsBathFurnishing(propertyCategory) ? Number(req.body.bedrooms) : null,
-      bathrooms: needsBedroomsBathFurnishing(propertyCategory) ? Number(req.body.bathrooms) : null,
-      furnishing: needsBedroomsBathFurnishing(propertyCategory) ? req.body.furnishing : null,
-      year_built: needsYearBuilt(propertyCategory) ? Number(req.body.yearBuilt) : null,
+      ...realEstateCategoryFields(propertyCategory, req.body),
       image_urls: sanitizeImageUrls(req.body.imageUrls, MAX_REAL_ESTATE_IMAGES),
       updated_at: new Date().toISOString(),
     };

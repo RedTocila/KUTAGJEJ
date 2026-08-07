@@ -54,7 +54,11 @@ import { createRealEstateListing, updateRealEstateListing, type RealEstateListin
 import { uploadListingImages } from '@/lib/uploads-client';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
-import { contactPhoneFromStorage, resolveContactPhone } from '@/lib/listing-form-defaults';
+import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
+import {
+  applyEmptyKnownDefaults,
+  knownCreateDefaultsFromStorage,
+} from '@/lib/listing-form-defaults';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 const MAX_REAL_ESTATE_IMAGES = 8;
@@ -151,36 +155,42 @@ function validateForm(f: FormState): string | null {
 
   const cat = f.propertyCategory;
 
-  if (needsCondition(cat)) {
+  if (needsCondition(cat) && f.condition) {
     const ok = CONDITION_OPTIONS.some((o) => o.value === f.condition);
     if (!ok) return 'Ju lutemi zgjidhni gjendjen.';
   }
 
-  if (needsFloor(cat)) {
+  if (needsFloor(cat) && f.floor.trim()) {
     const fl = parseIntStrict(f.floor);
     if (fl === null) return 'Kati duhet të jetë numër i plotë (p.sh. 1, 2, …).';
   }
 
-  if (needsTotalFloors(cat)) {
+  if (needsTotalFloors(cat) && f.totalFloors.trim()) {
     const tf = parseIntStrict(f.totalFloors);
     if (tf === null || tf < 1) return 'Numri i kateve duhet të jetë numër i plotë pozitiv.';
   }
 
-  if (needsParkingFloor(cat)) {
+  if (needsParkingFloor(cat) && f.parkingFloor.trim()) {
     const pf = parseIntStrict(f.parkingFloor);
     if (pf === null) return 'Niveli i parkimit duhet të jetë numër i plotë (negativ për nëntokë).';
   }
 
   if (needsBedroomsBathFurnishing(cat)) {
-    const br = parseIntStrict(f.bedrooms);
-    const ba = parseIntStrict(f.bathrooms);
-    if (br === null || br < 0) return 'Dhomat e gjumit duhet të jenë numër i plotë (0 ose më shumë).';
-    if (ba === null || ba < 0) return 'Banjot duhet të jenë numër i plotë (0 ose më shumë).';
-    const okF = FURNISHING_OPTIONS.some((o) => o.value === f.furnishing);
-    if (!okF) return 'Ju lutemi zgjidhni mobilimin.';
+    if (f.bedrooms.trim()) {
+      const br = parseIntStrict(f.bedrooms);
+      if (br === null || br < 0) return 'Dhomat e gjumit duhet të jenë numër i plotë (0 ose më shumë).';
+    }
+    if (f.bathrooms.trim()) {
+      const ba = parseIntStrict(f.bathrooms);
+      if (ba === null || ba < 0) return 'Banjot duhet të jenë numër i plotë (0 ose më shumë).';
+    }
+    if (f.furnishing) {
+      const okF = FURNISHING_OPTIONS.some((o) => o.value === f.furnishing);
+      if (!okF) return 'Ju lutemi zgjidhni mobilimin.';
+    }
   }
 
-  if (needsYearBuilt(cat)) {
+  if (needsYearBuilt(cat) && f.yearBuilt.trim()) {
     const y = parseIntStrict(f.yearBuilt);
     if (y === null || y < 1800 || y > 2100) return 'Viti i ndërtimit duhet të jetë vit i vlefshëm.';
   }
@@ -210,16 +220,20 @@ function buildPayload(f: FormState): RealEstateListingPayload {
     zoneId: f.zoneId,
     contactPhone: f.contactPhone.trim(),
   };
-  if (needsCondition(cat)) payload.condition = f.condition as RealEstateListingPayload['condition'];
-  if (needsFloor(cat)) payload.floor = parseIntStrict(f.floor)!;
-  if (needsTotalFloors(cat)) payload.totalFloors = parseIntStrict(f.totalFloors)!;
-  if (needsParkingFloor(cat)) payload.parkingFloor = parseIntStrict(f.parkingFloor)!;
-  if (needsBedroomsBathFurnishing(cat)) {
-    payload.bedrooms = parseIntStrict(f.bedrooms)!;
-    payload.bathrooms = parseIntStrict(f.bathrooms)!;
-    payload.furnishing = f.furnishing as RealEstateListingPayload['furnishing'];
+  if (needsCondition(cat) && f.condition) {
+    payload.condition = f.condition as RealEstateListingPayload['condition'];
   }
-  if (needsYearBuilt(cat)) payload.yearBuilt = parseIntStrict(f.yearBuilt)!;
+  if (needsFloor(cat) && f.floor.trim()) payload.floor = parseIntStrict(f.floor)!;
+  if (needsTotalFloors(cat) && f.totalFloors.trim()) payload.totalFloors = parseIntStrict(f.totalFloors)!;
+  if (needsParkingFloor(cat) && f.parkingFloor.trim()) payload.parkingFloor = parseIntStrict(f.parkingFloor)!;
+  if (needsBedroomsBathFurnishing(cat)) {
+    if (f.bedrooms.trim()) payload.bedrooms = parseIntStrict(f.bedrooms)!;
+    if (f.bathrooms.trim()) payload.bathrooms = parseIntStrict(f.bathrooms)!;
+    if (f.furnishing) payload.furnishing = f.furnishing as RealEstateListingPayload['furnishing'];
+  }
+  if (needsYearBuilt(cat) && f.yearBuilt.trim()) {
+    payload.yearBuilt = parseIntStrict(f.yearBuilt)!;
+  }
   return payload;
 }
 
@@ -250,14 +264,21 @@ function formFromListing(l: RealEstateMineListing): FormState {
 export function RealEstateListingForm(props: RealEstateListingFormProps) {
   const { onSuccess, backHref, backLabel = 'Prapa', editListingId, initialListing } = props;
   const isEdit = Boolean(editListingId);
-  const { user, checkSession } = useUser();
+  const { checkSession } = useUser();
+  const { applyTo: applyKnown, rememberLocation } = useCreateListingDefaults({
+    enabled: !isEdit,
+    withZone: true,
+  });
   const router = useRouter();
   const searchParams = useSearchParams();
   const wantsOkazion = searchParams.get('okazion') === '1';
   const wantsPremium = searchParams.get('premium') === '1';
-  const [form, setForm] = React.useState<FormState>(() =>
-    initialListing ? formFromListing(initialListing) : { ...emptyForm(), contactPhone: contactPhoneFromStorage() },
-  );
+  const [form, setForm] = React.useState<FormState>(() => {
+    const base = initialListing ? formFromListing(initialListing) : emptyForm();
+    return applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage(), {
+      withZone: true,
+    }) as FormState;
+  });
   const okazionPayRef = React.useRef<OkazionBoostMode>('buy-card');
   const premiumPayRef = React.useRef<PremiumPayMode>('buy-card');
   const premiumPackageIdRef = React.useRef(PREMIUM_PACKAGE_ID);
@@ -300,25 +321,19 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
 
   React.useEffect(() => {
     if (!initialListing) return;
-    setForm(formFromListing(initialListing));
+    setForm(
+      applyEmptyKnownDefaults(formFromListing(initialListing), knownCreateDefaultsFromStorage(), {
+        withZone: true,
+      }) as FormState,
+    );
     setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
     setImages([]);
   }, [initialListing]);
 
   React.useEffect(() => {
-    if (!user || isEdit) return;
-    const isPortal =
-      user.accountType === 'individual' ||
-      user.accountType === 'business' ||
-      user.role === 'business-user';
-    if (!isPortal) return;
-    const p = resolveContactPhone(user);
-    if (!p) return;
-    setForm((prev) => {
-      if (prev.contactPhone.trim()) return prev;
-      return { ...prev, contactPhone: p };
-    });
-  }, [user, isEdit]);
+    if (isEdit) return;
+    setForm((prev) => applyKnown(prev) as FormState);
+  }, [isEdit, applyKnown]);
 
   const onField =
     (key: keyof FormState) =>
@@ -353,6 +368,9 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
       if (result.error) {
         setSubmitError(result.error);
         return;
+      }
+      if (!isEdit) {
+        rememberLocation({ cityId: form.cityId, zoneId: form.zoneId });
       }
       if (!isEdit && result.id && (wantsPremium || boostKindRef.current === 'premium')) {
         const boost = await activatePremiumAfterCreate({
@@ -546,7 +564,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           onChange={(v) => setForm((p) => ({ ...p, condition: v as FormState['condition'] }))}
           options={CONDITION_OPTIONS}
           emptyLabel="Zgjidh…"
-          required
+          clearable
           disabled={loadingRefs}
         />
       ) : null}
@@ -558,9 +576,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           inputMode="numeric"
           value={form.floor}
           onChange={onField('floor')}
-          required
           fullWidth
-          helperText="Në cilin kat ndodhet njësia (p.sh. 1 = kati i parë)."
         />
       ) : null}
 
@@ -571,9 +587,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           inputMode="numeric"
           value={form.totalFloors}
           onChange={onField('totalFloors')}
-          required
           fullWidth
-          helperText="Sa kate ka vila në total."
         />
       ) : null}
 
@@ -584,9 +598,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           inputMode="numeric"
           value={form.parkingFloor}
           onChange={onField('parkingFloor')}
-          required
           fullWidth
-          helperText="Përdorni numra negativë për nivelet nëntokësore (p.sh. -1, -2)."
         />
       ) : null}
 
@@ -598,7 +610,6 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
             inputMode="numeric"
             value={form.bedrooms}
             onChange={onField('bedrooms')}
-            required
             fullWidth
           />
           <ListingTextField
@@ -607,7 +618,6 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
             inputMode="numeric"
             value={form.bathrooms}
             onChange={onField('bathrooms')}
-            required
             fullWidth
           />
         </Stack>
@@ -620,7 +630,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           onChange={(v) => setForm((p) => ({ ...p, furnishing: v as FormState['furnishing'] }))}
           options={FURNISHING_OPTIONS}
           emptyLabel="Zgjidh…"
-          required
+          clearable
           disabled={loadingRefs}
         />
       ) : null}
@@ -632,7 +642,6 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           inputMode="numeric"
           value={form.yearBuilt}
           onChange={onField('yearBuilt')}
-          required
           fullWidth
         />
       ) : null}

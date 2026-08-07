@@ -23,7 +23,7 @@ interface CategoryBrowseLayoutProps {
   pageSize: number;
   hasFilters: boolean;
   cities: RealEstateCityDto[];
-  /** Most-viewed listings for the category slider (max 10). */
+  /** Featured listings for the category card (most-viewed, or highest-rated for businesses/professionals). */
   topViewed?: TopViewedListing[];
   /** Append pages on scroll instead of paging the whole route. */
   enableInfiniteScroll?: boolean;

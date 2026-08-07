@@ -55,7 +55,11 @@ import {
 } from '@/components/user/premium-boost-upsell';
 import { useUser } from '@/hooks/use-user';
 import { createCarListing, updateCarListing, type CarMineListing } from '@/lib/listings-client';
-import { contactPhoneFromStorage, resolveContactPhone } from '@/lib/listing-form-defaults';
+import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
+import {
+  applyEmptyKnownDefaults,
+  knownCreateDefaultsFromStorage,
+} from '@/lib/listing-form-defaults';
 import { mirrorRemoteImageUrls, uploadListingImages } from '@/lib/uploads-client';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -331,15 +335,17 @@ export function CarListingForm({
   initialListing,
 }: CarListingFormProps) {
   const isEdit = Boolean(editListingId);
-  const { user, checkSession } = useUser();
+  const { checkSession } = useUser();
+  const { applyTo: applyKnown, rememberLocation } = useCreateListingDefaults({ enabled: !isEdit });
   const router = useRouter();
   const searchParams = useSearchParams();
   const wantsOkazion = searchParams.get('okazion') === '1';
   const wantsPremium = searchParams.get('premium') === '1';
 
-  const [form, setForm] = React.useState<CarFormState>(() =>
-    initialListing ? formFromListing(initialListing) : { ...emptyForm(), contactPhone: contactPhoneFromStorage() },
-  );
+  const [form, setForm] = React.useState<CarFormState>(() => {
+    const base = initialListing ? formFromListing(initialListing) : emptyForm();
+    return applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage()) as CarFormState;
+  });
   const okazionPayRef = React.useRef<OkazionBoostMode>('buy-card');
   const premiumPayRef = React.useRef<PremiumPayMode>('buy-card');
   const premiumPackageIdRef = React.useRef(PREMIUM_PACKAGE_ID);
@@ -373,21 +379,17 @@ export function CarListingForm({
 
   React.useEffect(() => {
     if (!initialListing) return;
-    setForm(formFromListing(initialListing));
+    setForm(
+      applyEmptyKnownDefaults(formFromListing(initialListing), knownCreateDefaultsFromStorage()) as CarFormState,
+    );
     setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
     setImages([]);
   }, [initialListing]);
 
-  // Pre-fill phone from user profile when it becomes available.
   React.useEffect(() => {
     if (isEdit) return;
-    const p = resolveContactPhone(user);
-    if (!p) return;
-    setForm((prev) => {
-      if (prev.contactPhone.trim()) return prev;
-      return { ...prev, contactPhone: p };
-    });
-  }, [user, isEdit]);
+    setForm((prev) => applyKnown(prev) as CarFormState);
+  }, [isEdit, applyKnown]);
 
   // -------------------------------------------------------------------------
   // Field handlers
@@ -636,6 +638,9 @@ export function CarListingForm({
           }
           void checkSession();
         }
+      }
+      if (!isEdit) {
+        rememberLocation({ cityId: form.cityId });
       }
       onSuccess?.();
     } finally {

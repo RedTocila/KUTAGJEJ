@@ -36,6 +36,7 @@ import {
   AI_SEARCH_BLUE_SOFT,
 } from '@/lib/home-categories';
 import { hardNavigate } from '@/lib/hard-navigate';
+import { knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
 import { paths } from '@/paths';
 import { uploadListingImages } from '@/lib/uploads-client';
 import type { ListingCategoryKey } from '@/types/listing-category';
@@ -53,6 +54,7 @@ const UPLOAD_FOLDER: Record<ListingCategoryKey, string> = {
 
 function profileFromUser(user: ReturnType<typeof useUser>['user']) {
   if (!user) return null;
+  const loc = knownCreateDefaultsFromStorage(user.id);
   return {
     accountType: user.accountType ?? null,
     firstName: user.firstName ?? null,
@@ -63,6 +65,8 @@ function profileFromUser(user: ReturnType<typeof useUser>['user']) {
     businessOwner: user.businessOwner ?? null,
     businessCategory: user.businessCategory ?? null,
     nipt: user.nipt ?? null,
+    preferredCityId: loc.cityId || null,
+    preferredCityName: loc.cityName || null,
   };
 }
 

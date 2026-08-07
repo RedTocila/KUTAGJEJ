@@ -37,6 +37,7 @@ import {
   toAiListingDraft,
   type AiImportDraftResult,
 } from '@/lib/ai-import-client';
+import { knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
@@ -219,10 +220,26 @@ export default function AiImportListingsPage() {
       setLastPrompt(trimmed);
       setPendingImageUrls(uploadedUrls);
 
+      const loc = knownCreateDefaultsFromStorage(user?.id);
       const res = await importListingsFromLinks({
         text: trimmed,
         category,
         images: imagePayload,
+        profile: user
+          ? {
+              accountType: user.accountType ?? null,
+              firstName: user.firstName ?? null,
+              lastName: user.lastName ?? null,
+              phone: user.phone ?? null,
+              email: user.email ?? null,
+              businessName: user.businessName ?? null,
+              businessOwner: user.businessOwner ?? null,
+              businessCategory: user.businessCategory ?? null,
+              nipt: user.nipt ?? null,
+              preferredCityId: loc.cityId || null,
+              preferredCityName: loc.cityName || null,
+            }
+          : null,
       });
       if (res.error) {
         setError(res.error);

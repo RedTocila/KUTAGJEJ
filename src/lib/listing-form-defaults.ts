@@ -1,6 +1,8 @@
 import type { User } from '@/types/user';
 import { BUSINESS_CATEGORY_OPTIONS } from '@/lib/business-constants';
 
+const LOCATION_STORAGE_KEY = 'listing-location-defaults';
+
 /** Sync read of cached profile phone (available before `useUser` hydrates). */
 export function contactPhoneFromStorage(): string {
   if (typeof window === 'undefined') return '';
@@ -89,4 +91,110 @@ export function profileDefaultsFromStorage(): {
   } catch {
     return { phone: '', title: '', businessName: '', businessCategory: '', firstName: '', lastName: '' };
   }
+}
+
+export type ListingLocationDefaults = {
+  cityId: string;
+  zoneId: string;
+  cityName: string;
+  userId: string;
+};
+
+function emptyLocationDefaults(): ListingLocationDefaults {
+  return { cityId: '', zoneId: '', cityName: '', userId: '' };
+}
+
+/** Last-used listing location (profile has no city — inferred from past posts). */
+export function locationDefaultsFromStorage(userId?: string | null): ListingLocationDefaults {
+  if (typeof window === 'undefined') return emptyLocationDefaults();
+  try {
+    const raw = localStorage.getItem(LOCATION_STORAGE_KEY);
+    if (!raw) return emptyLocationDefaults();
+    const parsed = JSON.parse(raw) as Partial<ListingLocationDefaults>;
+    const storedUserId = typeof parsed.userId === 'string' ? parsed.userId : '';
+    if (userId && storedUserId && storedUserId !== userId) return emptyLocationDefaults();
+    return {
+      cityId: typeof parsed.cityId === 'string' ? parsed.cityId.trim() : '',
+      zoneId: typeof parsed.zoneId === 'string' ? parsed.zoneId.trim() : '',
+      cityName: typeof parsed.cityName === 'string' ? parsed.cityName.trim() : '',
+      userId: storedUserId,
+    };
+  } catch {
+    return emptyLocationDefaults();
+  }
+}
+
+/** Persist city/zone after a successful create so the next listing starts prefilled. */
+export function rememberListingLocation(
+  loc: { cityId?: string | null; zoneId?: string | null; cityName?: string | null },
+  userId?: string | null,
+): void {
+  if (typeof window === 'undefined') return;
+  const cityId = typeof loc.cityId === 'string' ? loc.cityId.trim() : '';
+  if (!cityId) return;
+  const next: ListingLocationDefaults = {
+    cityId,
+    zoneId: typeof loc.zoneId === 'string' ? loc.zoneId.trim() : '',
+    cityName: typeof loc.cityName === 'string' ? loc.cityName.trim() : '',
+    userId: typeof userId === 'string' ? userId : '',
+  };
+  try {
+    localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore quota */
+  }
+}
+
+export type CreateListingKnownDefaults = {
+  contactPhone: string;
+  cityId: string;
+  zoneId: string;
+  cityName: string;
+};
+
+/** Sync snapshot of known defaults for create forms / AI drafts (empty-only apply). */
+export function knownCreateDefaultsFromStorage(userId?: string | null): CreateListingKnownDefaults {
+  const loc = locationDefaultsFromStorage(userId);
+  return {
+    contactPhone: contactPhoneFromStorage(),
+    cityId: loc.cityId,
+    zoneId: loc.zoneId,
+    cityName: loc.cityName,
+  };
+}
+
+/**
+ * Fill only empty create fields from known profile / last-listing defaults.
+ * Never overwrites values the user or AI already set.
+ */
+export function applyEmptyKnownDefaults<T extends Record<string, unknown>>(
+  form: T,
+  defaults: CreateListingKnownDefaults,
+  opts?: { withZone?: boolean },
+): T {
+  const next = { ...form };
+  const phone = String(next.contactPhone ?? '').trim();
+  if (!phone && defaults.contactPhone) {
+    (next as Record<string, unknown>).contactPhone = defaults.contactPhone;
+  }
+
+  const cityId = String(next.cityId ?? '').trim();
+  if (!cityId && defaults.cityId) {
+    (next as Record<string, unknown>).cityId = defaults.cityId;
+  }
+
+  if (opts?.withZone) {
+    const resolvedCity = String(next.cityId ?? '').trim();
+    const zoneId = String(next.zoneId ?? '').trim();
+    if (!zoneId && defaults.zoneId && resolvedCity && resolvedCity === defaults.cityId) {
+      (next as Record<string, unknown>).zoneId = defaults.zoneId;
+    }
+  }
+
+  const cityName = String(next.cityName ?? '').trim();
+  if (!cityName && defaults.cityName) {
+    (next as Record<string, unknown>).cityName = defaults.cityName;
+  }
+
+  return next;
 }

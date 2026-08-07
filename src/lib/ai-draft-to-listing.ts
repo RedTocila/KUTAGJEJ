@@ -1,4 +1,5 @@
 import type { AiListingDraft } from '@/lib/ai-listing-draft';
+import { applyEmptyKnownDefaults, knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
 
 function num(value: unknown): number | null {
   if (value == null || value === '') return null;
@@ -10,6 +11,10 @@ function str(value: unknown): string {
   return value == null ? '' : String(value);
 }
 
+function withKnownDefaults(record: Record<string, unknown>, withZone = false): Record<string, unknown> {
+  return applyEmptyKnownDefaults(record, knownCreateDefaultsFromStorage(), { withZone });
+}
+
 /** Shape AI draft fields into the mine-listing objects forms already understand. */
 export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, unknown> {
   const f = draft.form || {};
@@ -17,7 +22,7 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
 
   switch (draft.category) {
     case 'real-estate':
-      return {
+      return withKnownDefaults({
         id: draft.id,
         title: str(f.title) || draft.title,
         description: str(f.description),
@@ -44,10 +49,10 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
         status: 'pending',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      };
+      }, true);
 
     case 'cars':
-      return {
+      return withKnownDefaults({
         id: draft.id,
         vehicleType: str(f.vehicleType) || 'car',
         make: str(f.make),
@@ -67,10 +72,10 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
         cityId: str(f.cityId) || null,
         cityName: draft.cityName || null,
         imageUrls,
-      };
+      });
 
     case 'job-listings':
-      return {
+      return withKnownDefaults({
         id: draft.id,
         title: str(f.title) || draft.title,
         description: str(f.description),
@@ -88,10 +93,10 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
         requirements: Array.isArray(f.requirements) ? f.requirements.map(String) : [],
         benefitIds: [],
         imageUrls,
-      };
+      });
 
     case 'marketplace':
-      return {
+      return withKnownDefaults({
         id: draft.id,
         title: str(f.title) || draft.title,
         description: str(f.description),
@@ -104,10 +109,10 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
         cityName: draft.cityName || null,
         contactPhone: str(f.contactPhone),
         imageUrls,
-      };
+      });
 
     case 'businesses':
-      return {
+      return withKnownDefaults({
         title: str(f.title) || draft.title,
         description: str(f.description),
         category: str(f.category),
@@ -115,10 +120,10 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
         contactPhone: str(f.contactPhone),
         servicesHighlight: str(f.servicesHighlight),
         imageUrls,
-      };
+      });
 
     case 'professionals':
-      return {
+      return withKnownDefaults({
         title: str(f.title) || draft.title,
         description: str(f.description),
         category: str(f.category),
@@ -129,10 +134,10 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
         price: str(f.price),
         currency: f.currency === 'LEK' || f.currency === 'EUR' ? f.currency : '',
         imageUrls,
-      };
+      });
 
     default:
-      return { title: draft.title, description: '', imageUrls };
+      return withKnownDefaults({ title: draft.title, description: '', imageUrls });
   }
 }
 

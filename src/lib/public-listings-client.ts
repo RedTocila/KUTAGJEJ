@@ -533,7 +533,7 @@ export type TopViewedListing =
   | PublicMarketplaceListing
   | PublicDirectoryListing;
 
-/** Most-viewed listings for a public category page slider (max 10). */
+/** Featured listings for a category page slider (max 10). Views for commerce; ratings for businesses/professionals. */
 export async function fetchTopViewedListings(
   verticalId: HomeVerticalId,
   limit = TOP_VIEWED_LIMIT,

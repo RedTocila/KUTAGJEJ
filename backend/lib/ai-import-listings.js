@@ -1047,6 +1047,7 @@ General rules:
 - Prefer Albanian for title/description when the caption/prompt is in Albanian; otherwise match the user's language.
 - Leave truly unknown fields empty string / empty array / null — but always fill title + description when you can see or read enough.
 - Use profile.phone for contactPhone when missing. Use profile.businessName / full name for title when relevant for businesses/professionals.
+- Use profile.preferredCityId / preferredCityName for city when the content does not mention a city.
 - cityName should be an Albanian city when mentioned (e.g. Tiranë, Durrës).
 - imageUrls: keep absolute http(s) URLs from the page snapshot (snapshotImageUrls) whenever present (max 8). Never drop scraped listing photos. Attached images are sent separately — describe roles via imageRoles; do not invent fake image URLs.
 - If the page is thin (Instagram login wall, blocked scraper) but caption or photos are present, build the draft from caption + prompt + photos + profile.`;
@@ -1104,7 +1105,28 @@ function sanitizeProfile(raw) {
     businessOwner: String(raw.businessOwner || '').trim().slice(0, 120) || null,
     businessCategory: String(raw.businessCategory || '').trim().slice(0, 80) || null,
     nipt: String(raw.nipt || '').trim().slice(0, 40) || null,
+    preferredCityId: String(raw.preferredCityId || '').trim().slice(0, 80) || null,
+    preferredCityName: String(raw.preferredCityName || '').trim().slice(0, 80) || null,
   };
+}
+
+function applyProfileDefaultsToForm(form, profile) {
+  if (!profile || !form || typeof form !== 'object') return form;
+  if (!form.contactPhone && profile.phone) {
+    form.contactPhone = profile.phone;
+  }
+  if (!form.title && profile.businessName) {
+    form.title = profile.businessName;
+  } else if (!form.title && profile.fullName) {
+    form.title = profile.fullName;
+  }
+  if (!form.cityId && profile.preferredCityId) {
+    form.cityId = profile.preferredCityId;
+  }
+  if (!form.cityName && profile.preferredCityName) {
+    form.cityName = profile.preferredCityName;
+  }
+  return form;
 }
 
 function sanitizeCurrentListing(raw) {
@@ -1491,14 +1513,12 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
         interpreted.detectedCategory,
       );
     const form = stringifyFormValues(interpreted.form);
-    const cityId = await resolveCityIdByName(interpreted.cityName || form.cityName);
+    const cityId =
+      (await resolveCityIdByName(interpreted.cityName || form.cityName || profile?.preferredCityName)) ||
+      profile?.preferredCityId ||
+      null;
     if (cityId) form.cityId = cityId;
-    if (!form.contactPhone && profile?.phone) {
-      form.contactPhone = profile.phone;
-    }
-    if (!form.title && profile?.businessName) {
-      form.title = profile.businessName;
-    }
+    applyProfileDefaultsToForm(form, profile);
 
     return {
       id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -1509,7 +1529,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
       preferredCategory: interpreted.preferredCategory || null,
       title: interpreted.title || form.title || form.make || '',
       summary: interpreted.summary || '',
-      cityName: interpreted.cityName || '',
+      cityName: interpreted.cityName || form.cityName || profile?.preferredCityName || '',
       imageUrls: interpreted.imageUrls || [],
       imageRoles: interpreted.imageRoles || [],
       form,
@@ -1545,15 +1565,12 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
   }
 
   const form = stringifyFormValues(interpreted.form);
-  const cityId = await resolveCityIdByName(interpreted.cityName || form.cityName);
+  const cityId =
+    (await resolveCityIdByName(interpreted.cityName || form.cityName || profile?.preferredCityName)) ||
+    profile?.preferredCityId ||
+    null;
   if (cityId) form.cityId = cityId;
-
-  if (!form.contactPhone && profile?.phone) {
-    form.contactPhone = profile.phone;
-  }
-  if (!form.title && profile?.businessName) {
-    form.title = profile.businessName;
-  }
+  applyProfileDefaultsToForm(form, profile);
 
   return {
     id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -1562,7 +1579,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
     detectedCategory: interpreted.detectedCategory || interpreted.category,
     title: interpreted.title || form.title || form.make || 'Draft listing',
     summary: interpreted.summary || '',
-    cityName: interpreted.cityName || '',
+    cityName: interpreted.cityName || form.cityName || profile?.preferredCityName || '',
     imageUrls: interpreted.imageUrls,
     imageRoles: interpreted.imageRoles || [],
     form,

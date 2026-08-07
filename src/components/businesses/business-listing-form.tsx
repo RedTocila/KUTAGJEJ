@@ -48,9 +48,11 @@ import { isBusinessPortalAccount } from '@/lib/user-portal-account-label';
 import {
   businessCategoryFromUser,
   businessTitleFromUser,
+  knownCreateDefaultsFromStorage,
   profileDefaultsFromStorage,
   resolveContactPhone,
 } from '@/lib/listing-form-defaults';
+import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
 import { useUser } from '@/hooks/use-user';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -83,6 +85,9 @@ export function BusinessListingForm({
   const [submitting, setSubmitting] = React.useState(false);
   const [checkingExisting, setCheckingExisting] = React.useState(true);
   const [existingId, setExistingId] = React.useState<string | null>(null);
+  const { defaults: knownDefaults, rememberLocation } = useCreateListingDefaults({
+    enabled: !existingId,
+  });
   const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(() => {
     const urls = aiPrefill?.imageUrls;
     return Array.isArray(urls)
@@ -103,11 +108,15 @@ export function BusinessListingForm({
     if (fromAi) return fromAi;
     return profileDefaultsFromStorage().businessCategory;
   });
-  const [cityId, setCityId] = React.useState(() => String(aiPrefill?.cityId ?? ''));
+  const [cityId, setCityId] = React.useState(() => {
+    const fromAi = String(aiPrefill?.cityId ?? '').trim();
+    if (fromAi) return fromAi;
+    return knownCreateDefaultsFromStorage().cityId;
+  });
   const [contactPhone, setContactPhone] = React.useState(() => {
     const fromAi = String(aiPrefill?.contactPhone ?? '').trim();
     if (fromAi) return fromAi;
-    return profileDefaultsFromStorage().phone;
+    return profileDefaultsFromStorage().phone || knownCreateDefaultsFromStorage().contactPhone;
   });
   const [servicesHighlight, setServicesHighlight] = React.useState(() =>
     String(aiPrefill?.servicesHighlight ?? ''),
@@ -173,16 +182,17 @@ export function BusinessListingForm({
     };
   }, [canPostBusiness, applyExistingListing]);
 
-  // Prefill empty create fields from signup/profile.
+  // Prefill empty create fields from signup/profile / last listing location.
   React.useEffect(() => {
     if (!canPostBusiness || checkingExisting || existingId) return;
-    const phone = resolveContactPhone(user);
+    const phone = resolveContactPhone(user) || knownDefaults.contactPhone;
     if (phone) setContactPhone((prev) => (prev.trim() ? prev : phone));
     const name = businessTitleFromUser(user);
     if (name) setTitle((prev) => (prev.trim() ? prev : name));
     const cat = businessCategoryFromUser(user);
     if (cat) setCategory((prev) => (prev.trim() ? prev : cat));
-  }, [user, canPostBusiness, checkingExisting, existingId]);
+    if (knownDefaults.cityId) setCityId((prev) => (prev.trim() ? prev : knownDefaults.cityId));
+  }, [user, canPostBusiness, checkingExisting, existingId, knownDefaults.contactPhone, knownDefaults.cityId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -262,6 +272,7 @@ export function BusinessListingForm({
       setError(res.error);
       return;
     }
+    rememberLocation({ cityId });
     if (res.id && wantsPremium) {
       const boost = await activatePremiumAfterCreate({
         mode: premiumPayRef.current,

@@ -81,7 +81,7 @@ async function loadApprovedById(table, id, extraEq = {}) {
 
 router.use(publicCache(60));
 
-/** GET /api/public/listings/top-viewed?vertical=cars&limit=10 — most-viewed listings for a category. */
+/** GET /api/public/listings/top-viewed?vertical=cars&limit=10 — most-viewed (or highest-rated for businesses/professionals). */
 router.get('/top-viewed', optionalAuth, async (req, res) => {
   try {
     const vertical = String(req.query.vertical ?? '').trim();

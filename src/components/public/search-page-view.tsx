@@ -514,7 +514,7 @@ export function SearchPageView() {
                       bgcolor: AI_SEARCH_BLUE,
                       color: AI_SEARCH_BLUE_ON,
                       borderColor: AI_SEARCH_BLUE,
-                      boxShadow: '0 2px 10px rgba(255, 187, 31, 0.45)',
+                      boxShadow: '0 2px 10px rgba(167, 139, 250, 0.45)',
                       '&:hover': { bgcolor: AI_SEARCH_BLUE_HOVER, borderColor: AI_SEARCH_BLUE_HOVER },
                       '&.Mui-disabled': {
                         bgcolor: AI_SEARCH_BLUE_SOFT,

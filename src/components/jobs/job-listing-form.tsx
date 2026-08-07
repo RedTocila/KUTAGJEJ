@@ -48,7 +48,11 @@ import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { useUser } from '@/hooks/use-user';
 import { createJobListing, updateJobListing, type JobMineListing } from '@/lib/listings-client';
-import { contactPhoneFromStorage, resolveContactPhone } from '@/lib/listing-form-defaults';
+import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
+import {
+  applyEmptyKnownDefaults,
+  knownCreateDefaultsFromStorage,
+} from '@/lib/listing-form-defaults';
 import { uploadListingImages } from '@/lib/uploads-client';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -212,15 +216,17 @@ export function JobListingForm({
   initialListing,
 }: JobListingFormProps) {
   const isEdit = Boolean(editListingId);
-  const { user, checkSession } = useUser();
+  const { checkSession } = useUser();
+  const { applyTo: applyKnown, rememberLocation } = useCreateListingDefaults({ enabled: !isEdit });
   const router = useRouter();
   const searchParams = useSearchParams();
   const wantsOkazion = searchParams.get('okazion') === '1';
   const wantsPremium = searchParams.get('premium') === '1';
 
-  const [form, setForm] = React.useState<JobFormState>(() =>
-    initialListing ? formFromListing(initialListing) : { ...emptyForm(), contactPhone: contactPhoneFromStorage() },
-  );
+  const [form, setForm] = React.useState<JobFormState>(() => {
+    const base = initialListing ? formFromListing(initialListing) : emptyForm();
+    return applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage()) as JobFormState;
+  });
   const okazionPayRef = React.useRef<OkazionBoostMode>('buy-card');
   const premiumPayRef = React.useRef<PremiumPayMode>('buy-card');
   const premiumPackageIdRef = React.useRef(PREMIUM_PACKAGE_ID);
@@ -250,20 +256,17 @@ export function JobListingForm({
 
   React.useEffect(() => {
     if (!initialListing) return;
-    setForm(formFromListing(initialListing));
+    setForm(
+      applyEmptyKnownDefaults(formFromListing(initialListing), knownCreateDefaultsFromStorage()) as JobFormState,
+    );
     setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
     setImages([]);
   }, [initialListing]);
 
   React.useEffect(() => {
     if (isEdit) return;
-    const p = resolveContactPhone(user);
-    if (!p) return;
-    setForm((prev) => {
-      if (prev.contactPhone.trim()) return prev;
-      return { ...prev, contactPhone: p };
-    });
-  }, [user, isEdit]);
+    setForm((prev) => applyKnown(prev) as JobFormState);
+  }, [isEdit, applyKnown]);
 
   // -------------------------------------------------------------------------
   // Handlers
@@ -325,6 +328,9 @@ export function JobListingForm({
       if (result.error) {
         setSubmitError(result.error);
         return;
+      }
+      if (!isEdit) {
+        rememberLocation({ cityId: form.cityId });
       }
       if (!isEdit && result.id && (wantsPremium || boostKindRef.current === 'premium')) {
         const boost = await activatePremiumAfterCreate({

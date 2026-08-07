@@ -222,10 +222,104 @@ async function formatDocsForKind(kind, docs) {
 }
 
 /**
+ * Aggregate review rows into ranking entries sorted by average rating, then review count.
+ */
+function rankListingIdsByReviews(rows) {
+  const sums = new Map();
+  for (const row of rows || []) {
+    const id = String(row.listing_id || '');
+    if (!id) continue;
+    const entry = sums.get(id) || { count: 0, total: 0 };
+    entry.count += 1;
+    entry.total += Number(row.rating) || 0;
+    sums.set(id, entry);
+  }
+
+  return [...sums.entries()]
+    .map(([id, entry]) => ({
+      id,
+      reviewCount: entry.count,
+      ratingAverage: entry.count > 0 ? entry.total / entry.count : 0,
+    }))
+    .sort((a, b) => {
+      if (b.ratingAverage !== a.ratingAverage) return b.ratingAverage - a.ratingAverage;
+      return b.reviewCount - a.reviewCount;
+    });
+}
+
+/**
+ * Top businesses/professionals by star rating (avg, then review count).
+ * Falls back to newest approved listings when review data is sparse.
+ */
+async function topRatedDirectoryByKind(kind, limit) {
+  const table = TABLE_BY_KIND[kind];
+  if (!table || limit <= 0) return [];
+  if (kind !== 'businesses' && kind !== 'professionals') return [];
+
+  const reviewTable =
+    kind === 'businesses' ? 'business_listing_reviews' : 'professional_listing_reviews';
+  const baseFilter = baseFilterForKind(kind);
+  const sb = getSupabaseAdmin();
+
+  const { data: reviews, error: revErr } = await sb.from(reviewTable).select('listing_id, rating');
+  if (revErr) throw revErr;
+
+  const ranked = rankListingIdsByReviews(reviews);
+  const orderedDocs = [];
+  const seen = new Set();
+
+  const candidateIds = ranked
+    .slice(0, Math.max(limit * 3, 20))
+    .map((r) => r.id)
+    .filter(isUuid);
+
+  if (candidateIds.length) {
+    const filter = mergePublicFilter(mergeSpecs(baseFilter, { in: { id: candidateIds } }));
+    const docs = await runListingQuery(table, filter, [], candidateIds.length, 0);
+    const byId = new Map(docs.map((d) => [String(d.id), d]));
+    for (const r of ranked) {
+      const doc = byId.get(String(r.id));
+      if (!doc) continue;
+      const id = String(doc.id);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      orderedDocs.push(doc);
+      if (orderedDocs.length >= limit) break;
+    }
+  }
+
+  if (orderedDocs.length < limit) {
+    const fillers = await runListingQuery(
+      table,
+      mergePublicFilter(baseFilter),
+      buildDirectorySort('newest'),
+      limit * 2,
+      0,
+    );
+    for (const doc of fillers) {
+      const id = String(doc.id);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      orderedDocs.push(doc);
+      if (orderedDocs.length >= limit) break;
+    }
+  }
+
+  if (orderedDocs.length === 0) return [];
+  // Keep pure rating order — do not float OKAZION/Premium above higher-rated listings.
+  return formatDocsForKind(kind, orderedDocs);
+}
+
+/**
  * Top listings for a vertical by view count (listing_engagements).
- * Falls back to newest approved listings when engagement data is sparse.
+ * Businesses & professionals use star ratings instead.
+ * Falls back to newest approved listings when engagement/review data is sparse.
  */
 async function topViewedByKind(kind, limit) {
+  if (kind === 'businesses' || kind === 'professionals') {
+    return topRatedDirectoryByKind(kind, limit);
+  }
+
   const table = TABLE_BY_KIND[kind];
   if (!table || limit <= 0) return [];
 
@@ -238,7 +332,7 @@ async function topViewedByKind(kind, limit) {
     .eq('listing_kind', kind)
     .gt('view_count', 0)
     .order('view_count', { ascending: false })
-    .limit(Math.max(limit * 3, limit));
+    .limit(Math.max(limit * 3, 20));
   if (engErr) throw engErr;
 
   const orderedDocs = [];
@@ -263,14 +357,10 @@ async function topViewedByKind(kind, limit) {
   }
 
   if (orderedDocs.length < limit) {
-    const fillerSort =
-      kind === 'businesses' || kind === 'professionals'
-        ? buildDirectorySort('newest')
-        : buildSort('newest');
     const fillers = await runListingQuery(
       table,
       mergePublicFilter(baseFilter),
-      fillerSort,
+      buildSort('newest'),
       limit * 2,
       0,
     );

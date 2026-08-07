@@ -95,43 +95,47 @@ function validateRealEstatePayload(body) {
     return { ok: false, message: 'Phone number contains invalid characters.' };
   }
 
-  if (needsCondition(cat)) {
-    const c = body?.condition;
-    if (!CONDITION_SLUGS.includes(c)) {
-      return { ok: false, message: 'Condition is required for this category.' };
+  const filled = (v) => v !== undefined && v !== null && String(v).trim() !== '';
+
+  if (needsCondition(cat) && filled(body?.condition)) {
+    if (!CONDITION_SLUGS.includes(body.condition)) {
+      return { ok: false, message: 'Condition is invalid for this category.' };
     }
   }
 
-  if (needsFloor(cat)) {
-    const f = Number(body?.floor);
+  if (needsFloor(cat) && filled(body?.floor)) {
+    const f = Number(body.floor);
     if (!Number.isInteger(f)) return { ok: false, message: 'Floor must be a whole number.' };
   }
 
-  if (needsTotalFloors(cat)) {
-    const tf = Number(body?.totalFloors);
+  if (needsTotalFloors(cat) && filled(body?.totalFloors)) {
+    const tf = Number(body.totalFloors);
     if (!Number.isInteger(tf) || tf < 1) {
       return { ok: false, message: 'Total floors must be a positive integer.' };
     }
   }
 
-  if (needsParkingFloor(cat)) {
-    const pf = Number(body?.parkingFloor);
+  if (needsParkingFloor(cat) && filled(body?.parkingFloor)) {
+    const pf = Number(body.parkingFloor);
     if (!Number.isInteger(pf)) return { ok: false, message: 'Parking floor level must be a whole number (can be negative).' };
   }
 
   if (needsBedroomsBathFurnishing(cat)) {
-    const br = Number(body?.bedrooms);
-    const ba = Number(body?.bathrooms);
-    if (!Number.isInteger(br) || br < 0) return { ok: false, message: 'Bedrooms must be a non-negative integer.' };
-    if (!Number.isInteger(ba) || ba < 0) return { ok: false, message: 'Bathrooms must be a non-negative integer.' };
-    const fur = body?.furnishing;
-    if (!FURNISHING_SLUGS.includes(fur)) {
-      return { ok: false, message: 'Furnishing is required for this category.' };
+    if (filled(body?.bedrooms)) {
+      const br = Number(body.bedrooms);
+      if (!Number.isInteger(br) || br < 0) return { ok: false, message: 'Bedrooms must be a non-negative integer.' };
+    }
+    if (filled(body?.bathrooms)) {
+      const ba = Number(body.bathrooms);
+      if (!Number.isInteger(ba) || ba < 0) return { ok: false, message: 'Bathrooms must be a non-negative integer.' };
+    }
+    if (filled(body?.furnishing) && !FURNISHING_SLUGS.includes(body.furnishing)) {
+      return { ok: false, message: 'Furnishing is invalid for this category.' };
     }
   }
 
-  if (needsYearBuilt(cat)) {
-    const y = Number(body?.yearBuilt);
+  if (needsYearBuilt(cat) && filled(body?.yearBuilt)) {
+    const y = Number(body.yearBuilt);
     if (!Number.isInteger(y) || y < 1800 || y > 2100) {
       return { ok: false, message: 'Year built must be a valid year.' };
     }

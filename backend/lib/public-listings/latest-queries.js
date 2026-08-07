@@ -26,6 +26,7 @@ const {
   formatMarketplace,
   formatDirectory,
 } = require('./formatters');
+const { loadVerifiedPosterIdSet, loadTrustBadgePosterIdSet } = require('./load-poster-brief');
 
 const TABLE_BY_KIND = {
   'real-estate': 'real_estate_listings',
@@ -62,6 +63,7 @@ const LIST_SELECT_BY_TABLE = {
     'okazion_until',
     'status',
     'created_at',
+    'poster_id',
   ].join(','),
   car_listings: [
     'id',
@@ -85,6 +87,7 @@ const LIST_SELECT_BY_TABLE = {
     'okazion_until',
     'status',
     'created_at',
+    'poster_id',
   ].join(','),
   job_listings: [
     'id',
@@ -104,6 +107,7 @@ const LIST_SELECT_BY_TABLE = {
     'okazion_until',
     'status',
     'created_at',
+    'poster_id',
   ].join(','),
   marketplace_listings: [
     'id',
@@ -122,6 +126,7 @@ const LIST_SELECT_BY_TABLE = {
     'okazion_until',
     'status',
     'created_at',
+    'poster_id',
   ].join(','),
   directory_listings: [
     'id',
@@ -147,6 +152,7 @@ const LIST_SELECT_BY_TABLE = {
     'announcement_banner_url',
     'status',
     'created_at',
+    'poster_id',
   ].join(','),
 };
 
@@ -198,27 +204,43 @@ async function countListingQuery(table, filterSpec) {
   return count ?? 0;
 }
 
+async function attachSellerVerified(docs, listings) {
+  const posterIds = docs.map((d) => d.posterId);
+  const [verifiedIds, trustIds] = await Promise.all([
+    loadVerifiedPosterIdSet(posterIds),
+    loadTrustBadgePosterIdSet(posterIds),
+  ]);
+  return listings.map((listing, i) => {
+    const posterId = docs[i]?.posterId ? String(docs[i].posterId) : '';
+    return {
+      ...listing,
+      sellerVerified: Boolean(posterId && verifiedIds.has(posterId)),
+      sellerTrustBadge: Boolean(posterId && trustIds.has(posterId)),
+    };
+  });
+}
+
 async function formatDocsForKind(kind, docs) {
   const cityById = await buildCityIndex(docs);
+  let listings;
   if (kind === 'real-estate') {
-    return attachMetricsToListings(docs.map((d) => formatRealEstate(d, cityById)));
+    listings = await attachMetricsToListings(docs.map((d) => formatRealEstate(d, cityById)));
+  } else if (kind === 'car') {
+    listings = await attachMetricsToListings(docs.map((d) => formatCar(d, cityById)));
+  } else if (kind === 'job') {
+    listings = await attachMetricsToListings(docs.map((d) => formatJob(d, cityById)));
+  } else if (kind === 'marketplace') {
+    listings = await attachMetricsToListings(docs.map((d) => formatMarketplace(d, cityById)));
+  } else {
+    let reviewStats = null;
+    if (kind === 'businesses') {
+      reviewStats = await reviewStatsByListingIds(docs.map((d) => d.id));
+    } else if (kind === 'professionals') {
+      reviewStats = await professionalReviewStatsByListingIds(docs.map((d) => d.id));
+    }
+    listings = await attachMetricsToListings(docs.map((d) => formatDirectory(d, cityById, reviewStats)));
   }
-  if (kind === 'car') {
-    return attachMetricsToListings(docs.map((d) => formatCar(d, cityById)));
-  }
-  if (kind === 'job') {
-    return attachMetricsToListings(docs.map((d) => formatJob(d, cityById)));
-  }
-  if (kind === 'marketplace') {
-    return attachMetricsToListings(docs.map((d) => formatMarketplace(d, cityById)));
-  }
-  let reviewStats = null;
-  if (kind === 'businesses') {
-    reviewStats = await reviewStatsByListingIds(docs.map((d) => d.id));
-  } else if (kind === 'professionals') {
-    reviewStats = await professionalReviewStatsByListingIds(docs.map((d) => d.id));
-  }
-  return attachMetricsToListings(docs.map((d) => formatDirectory(d, cityById, reviewStats)));
+  return attachSellerVerified(docs, listings);
 }
 
 /**
@@ -385,8 +407,7 @@ async function queryRealEstate(limit, filter = {}, sort = null, skip = 0) {
     limit,
     skip,
   );
-  const cityById = await buildCityIndex(docs);
-  return attachMetricsToListings(docs.map((d) => formatRealEstate(d, cityById)));
+  return formatDocsForKind('real-estate', docs);
 }
 
 async function countRealEstate(filter = {}) {
@@ -395,8 +416,7 @@ async function countRealEstate(filter = {}) {
 
 async function queryCars(limit, filter = {}, sort = null, skip = 0) {
   const docs = await runListingQuery('car_listings', mergePublicFilter(filter), sort, limit, skip);
-  const cityById = await buildCityIndex(docs);
-  return attachMetricsToListings(docs.map((d) => formatCar(d, cityById)));
+  return formatDocsForKind('car', docs);
 }
 
 async function countCars(filter = {}) {
@@ -411,8 +431,7 @@ async function queryJobs(limit, filter, sort = null, skip = 0) {
     limit,
     skip,
   );
-  const cityById = await buildCityIndex(docs);
-  return attachMetricsToListings(docs.map((d) => formatJob(d, cityById)));
+  return formatDocsForKind('job', docs);
 }
 
 async function countJobs(filter) {
@@ -431,8 +450,7 @@ async function queryMarketplace(limit, filter = {}, sort = null, skip = 0) {
     limit,
     skip,
   );
-  const cityById = await buildCityIndex(docs);
-  return attachMetricsToListings(docs.map((d) => formatMarketplace(d, cityById)));
+  return formatDocsForKind('marketplace', docs);
 }
 
 async function countMarketplace(filter = {}) {
@@ -447,14 +465,7 @@ async function queryDirectory(vertical, limit, filter = { eq: { vertical } }, so
     limit,
     skip,
   );
-  const cityById = await buildCityIndex(docs);
-  let reviewStats = null;
-  if (vertical === 'businesses') {
-    reviewStats = await reviewStatsByListingIds(docs.map((d) => d.id));
-  } else if (vertical === 'professionals') {
-    reviewStats = await professionalReviewStatsByListingIds(docs.map((d) => d.id));
-  }
-  return attachMetricsToListings(docs.map((d) => formatDirectory(d, cityById, reviewStats)));
+  return formatDocsForKind(vertical, docs);
 }
 
 async function countDirectory(filter = {}) {

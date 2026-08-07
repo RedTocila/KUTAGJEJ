@@ -45,6 +45,7 @@ import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placehold
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { JobListingDetailDesktop } from '@/components/public/job-listing-detail-desktop';
 import { JobVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
+import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
 import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
@@ -358,6 +359,12 @@ export function JobListingDetailView({
                   }}
                 >
                   {listing.title}
+                  <ListingDetailTitleBadges
+                    verified={Boolean(listing.seller?.verified)}
+                    trustBadge={Boolean(listing.seller?.trustBadge)}
+                    verifiedLabel="Punë e verifikuar"
+                    size={18}
+                  />
                 </Typography>
               </OwnerEditableSpot>
 

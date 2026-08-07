@@ -17,7 +17,7 @@ import { alpha } from '@mui/material/styles';
 import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
-import { BusinessVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
+import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
 import { ReservationDateField } from '@/components/core/reservation-date-field';
@@ -283,8 +283,12 @@ export function BusinessListingDetailView({
                   sx={{ fontWeight: 800, fontSize: FONT_TITLE, lineHeight: 1.2 }}
                 >
                   {listing.title}
+                  <ListingDetailTitleBadges
+                    verified={Boolean(listing.seller?.verified)}
+                    trustBadge={Boolean(listing.seller?.trustBadge)}
+                    verifiedLabel="Biznes i verifikuar"
+                  />
                 </Typography>
-                <BusinessVerifiedBadge />
               </OwnerEditableSpot>
 
               <OwnerEditableSpot

@@ -24,13 +24,19 @@ import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/S
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 
-import { JobEmployerVerificationCard } from '@/components/jobs/job-employer-verification-card';
-import { ProfessionalVerificationCard } from '@/components/professionals/professional-verification-card';
+import { SearchableSelect } from '@/components/core/searchable-select';
 import { PortalSectionCard, PortalSurface } from '@/components/user/portal-cards';
+import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
+import { AccountVerificationCard } from '@/components/user/account-verification-card';
 import { useUser } from '@/hooks/use-user';
 import { authClient } from '@/lib/auth/client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { rememberListingLocation } from '@/lib/listing-form-defaults';
 import { memberInitials } from '@/lib/public-member-client';
+import {
+  listRealEstateLocationsPublic,
+  type RealEstateCityDto,
+} from '@/lib/real-estate-locations-client';
 import { pathsPublicMemberProfile } from '@/paths';
 
 const AVATAR_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif';
@@ -76,6 +82,9 @@ export default function UserProfilePage() {
   const [businessCategory, setBusinessCategory] = React.useState('');
   const [niptInput, setNiptInput] = React.useState('');
   const [phoneInput, setPhoneInput] = React.useState('');
+  const [basedCityId, setBasedCityId] = React.useState('');
+  const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
+  const [citiesLoading, setCitiesLoading] = React.useState(false);
   const [profileSaving, setProfileSaving] = React.useState(false);
   const [profileMsg, setProfileMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [convertSaving, setConvertSaving] = React.useState(false);
@@ -105,6 +114,7 @@ export default function UserProfilePage() {
     setBusinessCategory(typeof user.businessCategory === 'string' ? user.businessCategory : '');
     setNiptInput(typeof user.nipt === 'string' ? user.nipt : '');
     setPhoneInput(typeof user.phone === 'string' ? user.phone : '');
+    setBasedCityId(typeof user.basedCityId === 'string' ? user.basedCityId : '');
   }, [
     user?.id,
     user?.firstName,
@@ -114,7 +124,21 @@ export default function UserProfilePage() {
     user?.businessCategory,
     user?.nipt,
     user?.phone,
+    user?.basedCityId,
   ]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setCitiesLoading(true);
+    void listRealEstateLocationsPublic().then((res) => {
+      if (cancelled) return;
+      setCitiesLoading(false);
+      if (res.cities) setCities(res.cities);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!upgradeBusiness || isBusiness) return;
@@ -136,16 +160,25 @@ export default function UserProfilePage() {
             businessOwner: businessOwner.trim(),
             businessCategory: businessCategory.trim(),
             phone: phoneInput.trim(),
+            basedCityId: basedCityId || null,
           }
         : {
             firstName: firstName.trim(),
             lastName: lastName.trim(),
             phone: phoneInput.trim(),
+            basedCityId: basedCityId || null,
           };
-      const { error } = await authClient.updatePortalProfile(body);
+      const { error, admin } = await authClient.updatePortalProfile(body);
       if (error) {
         setProfileMsg({ type: 'error', text: error });
         return;
+      }
+      const cityName =
+        (typeof admin?.basedCityName === 'string' && admin.basedCityName.trim()) ||
+        cities.find((c) => c.id === basedCityId)?.name ||
+        '';
+      if (basedCityId) {
+        rememberListingLocation({ cityId: basedCityId, cityName }, user.id);
       }
       setProfileMsg({ type: 'success', text: 'Profili u ruajt.' });
       await checkSession();
@@ -350,17 +383,31 @@ export default function UserProfilePage() {
           </Box>
 
           <Stack spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, width: '100%' }}>
-            <Typography
-              component="h1"
-              sx={{
-                fontWeight: 800,
-                fontSize: { xs: '1.35rem', sm: '1.5rem' },
-                lineHeight: 1.2,
-                letterSpacing: '-0.02em',
-              }}
+            <Stack
+              direction="row"
+              spacing={0.75}
+              sx={{ alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', maxWidth: '100%' }}
             >
-              {displayName}
-            </Typography>
+              <Typography
+                component="h1"
+                sx={{
+                  fontWeight: 800,
+                  fontSize: { xs: '1.35rem', sm: '1.5rem' },
+                  lineHeight: 1.2,
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {displayName}
+                {user.verified ? (
+                  <Box
+                    component="span"
+                    sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
+                  >
+                    <ListingVerifiedBadge size={22} aria-label="Llogaria e verifikuar" />
+                  </Box>
+                ) : null}
+              </Typography>
+            </Stack>
 
             <Stack
               direction="row"
@@ -523,6 +570,16 @@ export default function UserProfilePage() {
                 slotProps={{ htmlInput: { maxLength: 40 } }}
               />
 
+              <SearchableSelect
+                label="Ku jeni bazuar"
+                value={basedCityId}
+                onChange={setBasedCityId}
+                options={cities.map((c) => ({ value: c.id, label: c.name }))}
+                emptyLabel="Zgjidhni qytetin…"
+                clearable
+                disabled={citiesLoading || cities.length === 0}
+              />
+
               <Button
                 type="submit"
                 variant="contained"
@@ -595,17 +652,13 @@ export default function UserProfilePage() {
         </Box>
       ) : null}
 
-      {/* Profession & Jobs are separate listing categories — verification lives here */}
       {canEdit ? (
         <PortalSectionCard
-          title="Verifikime"
-          description="Për kategoritë Profesionistë dhe Punë. Opsionale — nuk ndryshojnë llojin e llogarisë (Biznes / Individ)."
+          title="Verifiko llogarinë"
+          description="Opsionale — nuk ndryshon llojin e llogarisë (Biznes / Individ)."
           icon={<ShieldCheckIcon size={22} weight="duotone" />}
         >
-          <Stack spacing={1.5}>
-            <ProfessionalVerificationCard embedded />
-            <JobEmployerVerificationCard embedded />
-          </Stack>
+          <AccountVerificationCard />
         </PortalSectionCard>
       ) : null}
 

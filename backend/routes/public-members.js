@@ -4,7 +4,7 @@ const express = require('express');
 const { getSupabaseAdmin } = require('../lib/supabase');
 const { camelizeRows } = require('../lib/profiles');
 const publicCache = require('../middleware/public-cache');
-const { loadPosterBrief } = require('../lib/public-listings/load-poster-brief');
+const { loadPosterBrief, posterHasTrustBadge } = require('../lib/public-listings/load-poster-brief');
 const {
   activeJobCreatedAtFilter,
   applyFilterSpec,
@@ -196,9 +196,22 @@ router.get('/:id', publicCache(), async (req, res) => {
       resolveReferralBadges(id, loaded.posterModel),
       getReceivedReviewStats(id, loaded.posterModel),
     ]);
+
+    const sellerVerified = Boolean(loaded.member?.verified);
+    const sellerTrustBadge = await posterHasTrustBadge(id);
+    const stampVerified = (rows) =>
+      (rows || []).map((row) => ({ ...row, sellerVerified, sellerTrustBadge }));
+    listings.realEstate = stampVerified(listings.realEstate);
+    listings.cars = stampVerified(listings.cars);
+    listings.jobs = stampVerified(listings.jobs);
+    listings.marketplace = stampVerified(listings.marketplace);
+    listings.businesses = stampVerified(listings.businesses);
+    listings.professionals = stampVerified(listings.professionals);
+
     return res.json({
       member: {
         ...loaded.member,
+        trustBadge: sellerTrustBadge,
         ratingAverage: reviewStats.ratingAverage,
         reviewCount: reviewStats.reviewCount,
       },

@@ -128,7 +128,13 @@ export function ListingVerifiedShieldBadge({
       component="span"
       aria-label={decorative ? undefined : ariaLabel}
       aria-hidden={decorative ? true : undefined}
-      sx={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0, lineHeight: 0 }}
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        flexShrink: 0,
+        lineHeight: 0,
+        verticalAlign: 'middle',
+      }}
     >
       <ShieldCheckIcon size={size} weight="fill" color={color} aria-hidden />
     </Box>

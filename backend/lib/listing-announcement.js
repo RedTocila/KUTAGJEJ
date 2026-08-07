@@ -114,6 +114,7 @@ async function upsertBusinessAnnouncement({ userId, listingId, title, subtitle, 
   };
   if (shouldCharge) {
     patch.announcement_at = now;
+    // Public feed bump only — updated_at already reflects the announcement edit.
     patch.created_at = now;
   }
 

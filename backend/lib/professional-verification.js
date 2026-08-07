@@ -10,7 +10,8 @@ const { createAdminNotification } = require('./listing-moderation');
 const { isUuid } = require('./public-listings/query-helpers');
 
 function isProfessionalVerified(userDoc) {
-  return Boolean(userDoc?.professionalsVerifiedAt);
+  // Account verification is shared across professionals + jobs listing badges.
+  return Boolean(userDoc?.professionalsVerifiedAt || userDoc?.jobsEmployerVerifiedAt);
 }
 
 async function getApplicantVerificationStatus(user) {
@@ -40,7 +41,7 @@ async function submitVerificationRequest(user, message) {
   if (!portal) return { ok: false, status: 404, message: 'User not found.' };
 
   if (isProfessionalVerified(portal)) {
-    return { ok: false, status: 400, message: 'Profili juaj është tashmë i verifikuar për Profesionistë.' };
+    return { ok: false, status: 400, message: 'Llogaria juaj është tashmë e verifikuar.' };
   }
 
   const { data: pending, error: pendingErr } = await getSupabaseAdmin()
@@ -74,8 +75,8 @@ async function submitVerificationRequest(user, message) {
     type: 'professional_verification',
     refKind: 'professionals',
     refId: doc.id,
-    title: 'Kërkesë verifikimi profesionisti',
-    message: `${snap.displayName || 'Përdorues'} dërgoi një kërkesë verifikimi për Profesionistë.`,
+    title: 'Kërkesë verifikimi llogarie',
+    message: `${snap.displayName || 'Përdorues'} dërgoi një kërkesë për verifikim llogarie.`,
   });
 
   return { ok: true, request: formatVerificationRequest(doc) };
@@ -115,9 +116,14 @@ async function reviewVerificationRequest(admin, requestId, decision, adminNote) 
   if (updateErr) throw updateErr;
 
   if (status === 'approved') {
+    // One account verification covers both listing contexts (professionals + jobs).
     const { error: profileErr } = await sb
       .from('profiles')
-      .update({ professionals_verified_at: now, updated_at: now })
+      .update({
+        professionals_verified_at: now,
+        jobs_employer_verified_at: now,
+        updated_at: now,
+      })
       .eq('id', doc.applicant_id);
     if (profileErr) throw profileErr;
   }

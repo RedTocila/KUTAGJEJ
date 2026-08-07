@@ -23,6 +23,7 @@ import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
 import { formatPrice, relativeAlbanianDate } from './format-helpers';
+import { ListingTitleWithVerified } from './listing-title-with-verified';
 import { ListingPrice } from './listing-price';
 import {
   ListingCardRating,
@@ -130,22 +131,12 @@ export function RealEstateCard({
         >
           {propertyCategoryLabel(listing.propertyCategory)}
         </Typography>
-        <Typography
-          component="h3"
+        <ListingTitleWithVerified
           id={`listing-card-title-${listing.id}`}
-          sx={{
-            fontWeight: 700,
-            fontSize: '0.95rem',
-            lineHeight: 1.4,
-            color: 'text.primary',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {listing.title}
-        </Typography>
+          title={listing.title}
+          verified={Boolean(listing.sellerVerified)}
+          trustBadge={Boolean(listing.sellerTrustBadge)}
+        />
         {cardRating ? (
           <ListingCardRating
             ratingAverage={cardRating.ratingAverage}

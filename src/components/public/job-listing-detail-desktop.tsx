@@ -48,6 +48,7 @@ import {
   type JobDetailBenefit,
 } from '@/lib/job-listing-detail-content';
 import { JobVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
+import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { LISTING_DETAIL_STICKY_TOP_MD } from '@/lib/listing-detail-layout';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -257,9 +258,32 @@ export function JobListingDetailDesktop({
               </Stack>
               <Typography
                 component="h1"
-                sx={{ fontWeight: 800, fontSize: '2rem', lineHeight: 1.15, color: '#fff', letterSpacing: '-0.02em', maxWidth: 720 }}
+                sx={{
+                  fontWeight: 800,
+                  fontSize: '2rem',
+                  lineHeight: 1.15,
+                  color: '#fff',
+                  letterSpacing: '-0.02em',
+                  maxWidth: 720,
+                }}
               >
                 {listing.title}
+                {listing.seller?.verified ? (
+                  <Box
+                    component="span"
+                    sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
+                  >
+                    <JobVerifiedBadge size={22} color="#fff" />
+                  </Box>
+                ) : null}
+                {listing.seller?.trustBadge ? (
+                  <Box
+                    component="span"
+                    sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
+                  >
+                    <ListingTrustBadge size={22} />
+                  </Box>
+                ) : null}
               </Typography>
               <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
                 <Box

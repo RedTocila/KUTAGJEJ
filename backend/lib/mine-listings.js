@@ -92,6 +92,7 @@ const MINE_SELECT = {
     'image_urls',
     'status',
     'created_at',
+    'updated_at',
     'premium_until',
     'okazion_until',
   ].join(','),
@@ -227,6 +228,7 @@ function formatMineMarketplace(doc, cityById) {
     imageUrls: coverImageUrls(doc),
     status: doc.status || 'pending',
     createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
     ...premiumFieldsFromDoc(doc),
     ...okazionFieldsFromDoc(doc),
   };
@@ -453,18 +455,34 @@ function formatMineProfessionalFull(doc, cityById) {
 
 async function queryMineRows(table, posterId, { limit, extraEq } = {}) {
   const cap = Number.isFinite(limit) && limit > 0 ? limit : DEFAULT_LIMIT_PER_KIND;
+  // Prefer updated_at so refresh/premium bumps (which only touch created_at) do not
+  // reshuffle the owner's dashboard. Fall back to created_at if the column is missing.
   let q = getSupabaseAdmin()
     .from(table)
     .select(MINE_SELECT[table] || '*')
     .eq('poster_id', posterId)
-    .order('created_at', { ascending: false })
+    .order('updated_at', { ascending: false })
     .limit(cap);
   if (extraEq) {
     for (const [col, val] of Object.entries(extraEq)) {
       q = q.eq(col, val);
     }
   }
-  const { data, error } = await q;
+  let { data, error } = await q;
+  if (error && /updated_at/i.test(String(error.message || ''))) {
+    q = getSupabaseAdmin()
+      .from(table)
+      .select(MINE_SELECT[table] || '*')
+      .eq('poster_id', posterId)
+      .order('created_at', { ascending: false })
+      .limit(cap);
+    if (extraEq) {
+      for (const [col, val] of Object.entries(extraEq)) {
+        q = q.eq(col, val);
+      }
+    }
+    ({ data, error } = await q);
+  }
   if (error) throw error;
   return camelizeRows(data);
 }

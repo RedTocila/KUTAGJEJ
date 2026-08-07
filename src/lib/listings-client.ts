@@ -100,6 +100,7 @@ export interface CarMineListing extends ListingMetrics {
   imageUrls: string[];
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
+  updatedAt?: string;
   isPremium?: boolean;
   premiumUntil?: string | null;
   isOkazion?: boolean;
@@ -126,6 +127,7 @@ export interface JobMineListing extends ListingMetrics {
   imageUrls: string[];
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
+  updatedAt?: string;
   isPremium?: boolean;
   premiumUntil?: string | null;
   isOkazion?: boolean;
@@ -147,6 +149,7 @@ export interface MarketplaceMineListing extends ListingMetrics {
   imageUrls: string[];
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
+  updatedAt?: string;
   isPremium?: boolean;
   premiumUntil?: string | null;
   isOkazion?: boolean;

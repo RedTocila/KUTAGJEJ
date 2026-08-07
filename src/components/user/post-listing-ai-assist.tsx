@@ -29,6 +29,7 @@ import {
   type AiImportDraftResult,
 } from '@/lib/ai-import-client';
 import { saveAiListingDraft } from '@/lib/ai-listing-draft';
+import { hostAiDraftImages } from '@/lib/ai-draft-post';
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
@@ -38,7 +39,7 @@ import {
 import { hardNavigate } from '@/lib/hard-navigate';
 import { knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
 import { paths } from '@/paths';
-import { uploadListingImages } from '@/lib/uploads-client';
+import { isOurStorageUrl, uploadListingImages } from '@/lib/uploads-client';
 import type { ListingCategoryKey } from '@/types/listing-category';
 
 const MAX_AI_IMAGES = 6;
@@ -55,6 +56,8 @@ const UPLOAD_FOLDER: Record<ListingCategoryKey, string> = {
 function profileFromUser(user: ReturnType<typeof useUser>['user']) {
   if (!user) return null;
   const loc = knownCreateDefaultsFromStorage(user.id);
+  const basedCityId = typeof user.basedCityId === 'string' ? user.basedCityId.trim() : '';
+  const basedCityName = typeof user.basedCityName === 'string' ? user.basedCityName.trim() : '';
   return {
     accountType: user.accountType ?? null,
     firstName: user.firstName ?? null,
@@ -65,8 +68,8 @@ function profileFromUser(user: ReturnType<typeof useUser>['user']) {
     businessOwner: user.businessOwner ?? null,
     businessCategory: user.businessCategory ?? null,
     nipt: user.nipt ?? null,
-    preferredCityId: loc.cityId || null,
-    preferredCityName: loc.cityName || null,
+    preferredCityId: basedCityId || loc.cityId || null,
+    preferredCityName: basedCityName || loc.cityName || null,
   };
 }
 
@@ -127,7 +130,7 @@ export function PostListingAiAssist({
   const appliedMsg = isEdit ? t.aiImport.editApplied : t.aiImport.formApplied;
   const canSubmit = Boolean(text.trim() || files.length > 0 || pendingImageUrls.length > 0);
 
-  const openCorrectCategoryForm = (draft: AiImportDraftResult) => {
+  const openCorrectCategoryForm = async (draft: AiImportDraftResult) => {
     const accepted = acceptAiCategoryCorrection(draft) ?? {
       ...draft,
       category: draft.detectedCategory || draft.category,
@@ -139,8 +142,16 @@ export function PostListingAiAssist({
       setError(t.aiImport.formEmpty);
       return;
     }
-    saveAiListingDraft(ready);
-    const href = `${paths.user.realEstateListing}?category=${encodeURIComponent(ready.category)}&ai=1&draftId=${encodeURIComponent(ready.id)}`;
+    let imageUrls = ready.imageUrls || [];
+    const needsHost = imageUrls.some((u) => /^https?:\/\//i.test(u) && !isOurStorageUrl(u));
+    if (needsHost) {
+      const folder = UPLOAD_FOLDER[ready.category] || 'listings';
+      const hosted = await hostAiDraftImages(imageUrls, folder);
+      if (hosted.urls.length) imageUrls = hosted.urls;
+    }
+    const withImages = { ...ready, imageUrls };
+    saveAiListingDraft(withImages);
+    const href = `${paths.user.realEstateListing}?category=${encodeURIComponent(withImages.category)}&ai=1&draftId=${encodeURIComponent(withImages.id)}`;
     hardNavigate(href);
   };
 
@@ -266,7 +277,14 @@ export function PostListingAiAssist({
             })
           : ready.imageUrls ?? [];
 
-      const shaped = aiDraftToInitialListing({ ...ready, imageUrls });
+      let hostedUrls = imageUrls;
+      const needsHost = imageUrls.some((u) => /^https?:\/\//i.test(u) && !isOurStorageUrl(u));
+      if (needsHost) {
+        const hosted = await hostAiDraftImages(imageUrls, UPLOAD_FOLDER[category] || 'listings');
+        if (hosted.urls.length) hostedUrls = hosted.urls;
+      }
+
+      const shaped = aiDraftToInitialListing({ ...ready, imageUrls: hostedUrls });
       const payload =
         isEdit && currentListing ? mergeAiIntoListing(currentListing, shaped) : shaped;
 
@@ -285,7 +303,7 @@ export function PostListingAiAssist({
 
   const acceptMismatchDetected = () => {
     if (!mismatchDraft) return;
-    openCorrectCategoryForm(mismatchDraft);
+    void openCorrectCategoryForm(mismatchDraft);
   };
 
   const startOverMismatch = () => {

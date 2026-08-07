@@ -1,11 +1,21 @@
 'use strict';
 
 const { getSupabaseAdmin } = require('./supabase');
+const {
+  VEHICLE_TYPE_VALUES,
+  makesForVehicleType,
+  modelsForMake,
+  isValidVehicleMake,
+} = require('./vehicle-catalog');
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 /** Max listing/source links processed in one import request. */
 const MAX_IMPORT_URLS = 20;
+/** Max images kept on a car listing draft (matches create-form / API). */
+const MAX_CAR_LISTING_IMAGES = 5;
+/** Max remote snapshot photos sent to vision (OpenAI). */
+const MAX_SNAPSHOT_VISION_IMAGES = 3;
 
 const CATEGORIES = [
   'real-estate',
@@ -543,6 +553,53 @@ function isSocialMediaUrl(url) {
   }
 }
 
+/**
+ * First useful line of an Instagram caption for a listing title hint.
+ * Skips @mentions-only / hashtag-only lines. Never returns a profile handle.
+ */
+function titleHintFromCaption(caption) {
+  const raw = String(caption || '').trim();
+  if (!raw) return null;
+  const lines = raw
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+  for (const line of lines) {
+    const withoutTags = line
+      .replace(/#[\p{L}\p{N}_]+/gu, ' ')
+      .replace(/@[\p{L}\p{N}._]+/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    // Need real words after stripping tags — avoid "#sale #moto" as a title.
+    if (withoutTags.length < 3) continue;
+    const candidate = withoutTags.slice(0, 90).trim();
+    // Drop lines that are only emojis / punctuation.
+    if (!/[\p{L}\p{N}]/u.test(candidate)) continue;
+    return candidate;
+  }
+  return raw.slice(0, 90).trim() || null;
+}
+
+function normalizeNameKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^@+/, '')
+    .replace(/\s+/g, ' ');
+}
+
+/** True when a draft title is just the IG profile / KuTaGjej business name. */
+function isProfileLikeTitle(title, { authorName, businessName, fullName } = {}) {
+  const key = normalizeNameKey(title);
+  if (!key || key.length < 2) return false;
+  const suspects = [authorName, businessName, fullName]
+    .map(normalizeNameKey)
+    .filter(Boolean);
+  if (suspects.some((s) => key === s || key === `@${s}`)) return true;
+  // Instagram oEmbed often returns display name; GraphQL returns username — both bad as titles.
+  return false;
+}
+
 function isInstagramUrl(url) {
   try {
     const host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
@@ -598,7 +655,7 @@ async function fetchInstagramOEmbed(url) {
 
 function collectInstagramMediaImages(mediaNode) {
   const urls = [];
-  if (!mediaNode || typeof mediaNode !== 'object') return urls;
+  if (!mediaNode || typeof mediaNode !== 'object') return { urls, isCarousel: false };
   const push = (raw) => {
     const value = decodeHtmlEntities(String(raw || '').trim());
     if (/^https?:\/\//i.test(value) && !isLikelyJunkImageUrl(value) && !urls.includes(value)) {
@@ -612,12 +669,14 @@ function collectInstagramMediaImages(mediaNode) {
       push(edge?.node?.display_url);
       if (urls.length >= MAX_SNAPSHOT_IMAGES) break;
     }
-    return urls;
+    return { urls, isCarousel: true };
   }
 
+  // Single photo/reel: keep ONE image (display_url). Do not also push thumbnail_src —
+  // that doubles the same frame with a different CDN URL.
   push(mediaNode.display_url);
-  push(mediaNode.thumbnail_src);
-  return urls;
+  if (!urls.length) push(mediaNode.thumbnail_src);
+  return { urls: urls.slice(0, 1), isCarousel: false };
 }
 
 /** Public Instagram shortcode media (includes carousel children when available). */
@@ -658,10 +717,12 @@ async function fetchInstagramShortcodeMedia(shortcode) {
       Array.isArray(captionEdges) && captionEdges[0]?.node?.text
         ? String(captionEdges[0].node.text).trim()
         : null;
+    const collected = collectInstagramMediaImages(media);
     return {
       caption,
       authorName: media.owner?.username ? String(media.owner.username) : null,
-      imageUrls: collectInstagramMediaImages(media),
+      imageUrls: collected.urls,
+      isCarousel: collected.isCarousel,
     };
   } catch {
     return null;
@@ -700,7 +761,7 @@ async function fetchInstagramCarouselViaProfile(shortcode, authorName) {
     const edges = data?.data?.user?.edge_owner_to_timeline_media?.edges;
     if (!Array.isArray(edges)) return [];
     const match = edges.find((edge) => edge?.node?.shortcode === shortcode)?.node;
-    return collectInstagramMediaImages(match);
+    return collectInstagramMediaImages(match).urls;
   } catch {
     return [];
   } finally {
@@ -723,20 +784,46 @@ async function enrichInstagramSnapshot(url) {
   ]).finally(() => clearTimeout(crawlerTimeout));
 
   const crawlerHtml = crawlerResult?.html || '';
+
+  // Prefer the post's own media only. HTML extraction pulls profile grid / ads /
+  // unrelated frames ("random screenshots").
   let imageUrls = mergeImageUrlLists(
     graphql?.imageUrls,
     oembed?.thumbnailUrl ? [oembed.thumbnailUrl] : [],
-    extractImageCandidates(crawlerHtml, url),
   );
+  let isCarousel = Boolean(graphql?.isCarousel);
 
-  // GraphQL is rate-limited sometimes; profile timeline still includes sidecar children.
-  const graphqlCount = Array.isArray(graphql?.imageUrls) ? graphql.imageUrls.length : 0;
-  if (shortcode && graphqlCount <= 1) {
+  // Profile timeline: only when GraphQL failed entirely (0 images), to recover
+  // carousel children. Never merge profile/HTML when we already have post media.
+  if (shortcode && imageUrls.length === 0) {
     const fromProfile = await fetchInstagramCarouselViaProfile(
       shortcode,
       graphql?.authorName || oembed?.authorName,
     );
+    if (fromProfile.length > 1) isCarousel = true;
     imageUrls = mergeImageUrlLists(fromProfile, imageUrls);
+  } else if (shortcode && graphql?.isCarousel && imageUrls.length <= 1) {
+    const fromProfile = await fetchInstagramCarouselViaProfile(
+      shortcode,
+      graphql?.authorName || oembed?.authorName,
+    );
+    if (fromProfile.length > imageUrls.length) {
+      imageUrls = mergeImageUrlLists(fromProfile, imageUrls);
+      isCarousel = true;
+    }
+  }
+
+  // Last resort only: og:image from HTML when GraphQL/oEmbed returned nothing.
+  if (!imageUrls.length) {
+    imageUrls = mergeImageUrlLists(
+      imageUrls,
+      extractImageCandidates(crawlerHtml, url).slice(0, 1),
+    );
+  }
+
+  // Single-frame posts must stay at 1 photo (no thumbnail duplicates / HTML noise).
+  if (!isCarousel && imageUrls.length > 1) {
+    imageUrls = imageUrls.slice(0, 1);
   }
 
   const caption =
@@ -744,14 +831,16 @@ async function enrichInstagramSnapshot(url) {
     oembed?.caption ||
     extractMeta(crawlerHtml, 'property', 'og:description') ||
     null;
-  const authorName = graphql?.authorName || oembed?.authorName || null;
-  const title =
-    (authorName ? `@${authorName}` : null) ||
-    extractMeta(crawlerHtml, 'property', 'og:title') ||
-    null;
+  // Prefer oEmbed display name for "author" context, but never use it as listing title.
+  const authorName = oembed?.authorName || graphql?.authorName || null;
+  const title = titleHintFromCaption(caption);
 
   const textParts = [];
-  if (authorName) textParts.push(`Instagram author: @${authorName}`);
+  if (authorName) {
+    textParts.push(
+      `Instagram author (profile only — NOT the listing title): ${authorName}`,
+    );
+  }
   if (caption) textParts.push(`Post caption / description:\n${caption}`);
 
   return {
@@ -764,6 +853,7 @@ async function enrichInstagramSnapshot(url) {
     authorName,
     text: textParts.filter(Boolean).join('\n\n').slice(0, 6000),
     imageUrls,
+    isCarousel,
     social: true,
     fetchError: caption || imageUrls.length ? null : 'Could not open this Instagram link',
   };
@@ -983,7 +1073,7 @@ Rules:
 You receive the current listing JSON plus the user's edit instructions (and optional images/links).
 Return an UPDATED full draft. Keep fields the user did not ask to change. Apply only the requested edits.
 If they ask to add/replace images, set imageRoles for attached images and/or keep/merge imageUrls.
-When new photos are attached, re-identify the product/subject from the photos and refresh title/description accordingly, then merge the user's edit notes.
+When new photos are attached, re-identify the product/subject from the photos and refresh title/description accordingly (DESCRIPTION STYLE: listed bullets + keywords), then merge the user's edit notes.
 Still apply the CONTENT POLICY GUARD and CATEGORY GUARD: block only truly prohibited content; if new photos/text clearly show a different vertical than preferredCategory, set categoryMatch false with contentAllowed true (wrong category is not prohibited content).`
       : `MODE: CREATE a new listing from the user's prompt and/or website links and/or attached images.
 Use seller profile/signup info as defaults when the prompt omits contact details, business name, phone, etc.`;
@@ -1018,6 +1108,9 @@ imageRoles: optional array aligned with attachedImages order. Values: cover | pr
 Form fields by category:
 real-estate: propertyCategory (apartment|villa|penthouse-duplex|room-studio-attic|parking|shop|office|building-plot|agricultural-land|commercial-local|warehouse), title, description, transactionType (rent|sale), price, surfaceM2, currency (EUR|LEK), condition, floor, totalFloors, bedrooms, bathrooms, furnishing, yearBuilt, contactPhone
 cars: vehicleType (car|suv|van|truck|motorcycle|boat), make, model, variant, description, year, kilometers, transmission (automatic|manual), fuelType (petrol|diesel|electric|hybrid-petrol|plugin-hybrid|lpg), price, currency (EUR|LEK), color, contactPhone
+  - LOOK at photos: scooters, bikes, motorcycles, dirt bikes → vehicleType "motorcycle" (NOT "car"/Vetura). Cars/sedans → "car". SUVs → "suv".
+  - make/model MUST match common catalog spellings when visible or named (Yamaha, Honda, BMW, Mercedes-Benz, Volkswagen, …). Example: Yamaha Ténéré / TMAX → vehicleType motorcycle, make "Yamaha", model "Ténéré" or "TMAX".
+  - Scooter / maxi-scooter / TMAX → motorcycle.
 job-listings: title, description, industry, education, experience, jobType (full-time|part-time|remote|internship|freelance), workLocation (onsite|hybrid|remote), salary, currency, contactPhone, responsibilities (string[]), requirements (string[])
 marketplace: transactionType (always "shes"), title, description, category (elektronike|mobilje-shtepi|veshje-aksesore|libra-shkolla|sport-hobi|lodra|automjete-pjese|ushqime-bujqesi|sherbime|te-tjera), condition (i-ri|si-i-ri|shume-mire|mire|me-defekte), price, currency, contactPhone
 businesses: title, description, category (restorant|bar|kafe|brunch|piceri-fast-food|pasticeri), contactPhone, servicesHighlight
@@ -1025,13 +1118,23 @@ professionals: title, description, category (konsulent|freelance|sherbim|kurse|d
   - fitness trainers / personal training / gym coaching / workout courses → category "kurse"
   - apps, digital products, subscriptions sold as products → marketplace (category "sherbime" or "sport-hobi") is OK when the post is mainly selling a product/app
 
+DESCRIPTION STYLE for form.description (CRITICAL — never one big paragraph):
+Write a clean, scannable, SEO-friendly description with real newlines in the JSON string. Structure:
+1) Opening line — one short sentence with what is offered + searchable keywords (brand/model/product, key attribute, city when known).
+2) Blank line, then a bullet list using "• " for every known fact. Skip unknown fields. Typical bullets (pick what applies): Marka, Modeli, Tipi, Viti, Kilometrazhi, Karburanti, Transmisioni, Çmimi, Gjendja, Ngjyra, Sipërfaqja, Dhoma, Banjo, Produkti, Kategoria, Qyteti, Orari, Shërbimi.
+3) Optional: 1–2 short extra lines with selling points from photos/caption (no hashtag dumps).
+4) Closing CTA — one short line, e.g. "Kontaktoni për më shumë detaje."
+Rules: Prefer Albanian when the source is Albanian. Weave keywords naturally (e.g. "Yamaha TMAX", "apartament me qira Tiranë"). Strip hashtags, @mentions, emoji spam, URLs, and promo noise. Do NOT paste the raw caption. Do NOT write a single wall of text. Aim under ~900 characters (hard max ~1200).
+Example:
+Ofrohet Yamaha TMAX 530, scooter në Tiranë.\\n\\n• Marka: Yamaha\\n• Modeli: TMAX 530\\n• Tipi: Motor / scooter\\n• Gjendja: Shumë mirë\\n• Qyteti: Tiranë\\n\\nKontaktoni për interes.
+
 Vision + text fusion (CRITICAL when attached images are present):
 1. LOOK carefully at every attached photo. Identify what is shown: product type, brand/model if readable on the item or packaging, color, material, size cues, condition, quantity, accessories, room/context.
 2. Write form.title that a buyer would search for (brand + product name + key attribute when visible).
-3. Write form.description as a complete marketplace-ready text that COMBINES:
+3. Write form.description in DESCRIPTION STYLE above. COMBINE:
    a) What you see in the photos (concrete visual facts — do not invent specs you cannot see), AND
-   b) Extra details from the user's prompt / caption (price notes, condition, city, "used once", delivery, SEO notes, etc.).
-   Merge them into one natural description — do not paste two separate blocks. Prefer Albanian when the user wrote in Albanian.
+   b) Extra details from the user's prompt / caption (price notes, condition, city, "used once", delivery, etc.).
+   Merge into one listed description — never paste two separate blocks or the raw caption.
 4. Fill marketplace.category / cars.vehicleType / other enum fields from what the photos show (e.g. Instant Pot / multicooker → elektronike; sofa → mobilje-shtepi).
 5. Infer condition from photos + user text when possible (i-ri|si-i-ri|shume-mire|mire|me-defekte). If the user says "used once" / "si i ri", prefer si-i-ri or shume-mire.
 6. If the user mentions price/currency/city/phone in text, put those in the matching form fields.
@@ -1040,16 +1143,20 @@ Vision + text fusion (CRITICAL when attached images are present):
 
 Link / caption rules (when a URL snapshot is present and few/no attached photos):
 - Prefer caption, page description, og:description, and the user's prompt for what is offered.
-- Keep snapshotImageUrls as listing photos.
+- Keep snapshotImageUrls as listing photos — only the post's own photos (carousel frames). Never invent extra images.
 - Do NOT invent a profession from the username alone.
+- Instagram / social posts: each post needs its OWN listing title derived from THAT post's caption (and photos). NEVER use authorName, Instagram @handle, profile display name, or profile.businessName / fullName as the listing title when the caption describes a product, vehicle, service, job, or offer. Example: caption about a Yamaha T-MAX → title about the scooter, not "Geshtenja Light".
+- Description: ANALYZE the caption — do NOT paste it verbatim. Rewrite in DESCRIPTION STYLE (listed bullets + keywords). Extract price, city, make/model, phone into form fields.
+- payload.title is only a caption hint (or null) — never treat authorName as the title.
 
 General rules:
 - Prefer Albanian for title/description when the caption/prompt is in Albanian; otherwise match the user's language.
 - Leave truly unknown fields empty string / empty array / null — but always fill title + description when you can see or read enough.
-- Use profile.phone for contactPhone when missing. Use profile.businessName / full name for title when relevant for businesses/professionals.
+- Use profile.phone for contactPhone when missing.
+- Use profile.businessName / full name for title ONLY for businesses/professionals AND ONLY when the caption does not describe a specific offer (generic "about the shop/pro" posts). Never reuse the same profile name for every Instagram post.
 - Use profile.preferredCityId / preferredCityName for city when the content does not mention a city.
 - cityName should be an Albanian city when mentioned (e.g. Tiranë, Durrës).
-- imageUrls: keep absolute http(s) URLs from the page snapshot (snapshotImageUrls) whenever present (max 8). Never drop scraped listing photos. Attached images are sent separately — describe roles via imageRoles; do not invent fake image URLs.
+- imageUrls: keep absolute http(s) URLs from the page snapshot (snapshotImageUrls) whenever present (max 8; for cars max 5). Never drop scraped listing photos that belong to the post. Attached images are sent separately — describe roles via imageRoles; do not invent fake image URLs.
 - If the page is thin (Instagram login wall, blocked scraper) but caption or photos are present, build the draft from caption + prompt + photos + profile.`;
 }
 
@@ -1110,15 +1217,18 @@ function sanitizeProfile(raw) {
   };
 }
 
-function applyProfileDefaultsToForm(form, profile) {
+function applyProfileDefaultsToForm(form, profile, { allowProfileTitle = true } = {}) {
   if (!profile || !form || typeof form !== 'object') return form;
   if (!form.contactPhone && profile.phone) {
     form.contactPhone = profile.phone;
   }
-  if (!form.title && profile.businessName) {
-    form.title = profile.businessName;
-  } else if (!form.title && profile.fullName) {
-    form.title = profile.fullName;
+  // Never stamp the same business/profile name onto every social post title.
+  if (allowProfileTitle) {
+    if (!form.title && profile.businessName) {
+      form.title = profile.businessName;
+    } else if (!form.title && profile.fullName) {
+      form.title = profile.fullName;
+    }
   }
   if (!form.cityId && profile.preferredCityId) {
     form.cityId = profile.preferredCityId;
@@ -1127,6 +1237,388 @@ function applyProfileDefaultsToForm(form, profile) {
     form.cityName = profile.preferredCityName;
   }
   return form;
+}
+
+/**
+ * After the model returns: ensure caption drives title, strip profile-like titles,
+ * and never dump the raw Instagram caption into description (SEO rewrite is required).
+ */
+function applyCaptionFallbacks(interpreted, snapshot, profile) {
+  if (!interpreted || typeof interpreted !== 'object') return interpreted;
+  const caption = String(snapshot?.caption || snapshot?.description || '').trim();
+  const authorName = snapshot?.authorName || null;
+  const form = interpreted.form && typeof interpreted.form === 'object' ? interpreted.form : {};
+  interpreted.form = form;
+
+  const captionTitle = titleHintFromCaption(caption);
+  const profileOpts = {
+    authorName,
+    businessName: profile?.businessName,
+    fullName: profile?.fullName,
+  };
+
+  let title = String(interpreted.title || form.title || '').trim();
+  if (!title || isProfileLikeTitle(title, profileOpts)) {
+    if (captionTitle && !isProfileLikeTitle(captionTitle, profileOpts)) {
+      title = captionTitle;
+    } else if (captionTitle) {
+      title = captionTitle;
+    }
+  }
+  if (title) {
+    interpreted.title = title;
+    if (!form.title || isProfileLikeTitle(form.title, profileOpts)) {
+      form.title = title;
+    }
+  }
+
+  const seoMeta = listingSeoMetaFromForm(form, interpreted);
+  const description = String(form.description || '').trim();
+  const captionNorm = caption.replace(/\s+/g, ' ').trim();
+  const descIsRawCaption =
+    Boolean(captionNorm) &&
+    (description === caption ||
+      description === captionNorm ||
+      (captionNorm.length > 40 &&
+        description.length > 40 &&
+        description.slice(0, 80) === captionNorm.slice(0, 80)));
+
+  if ((!description || descIsRawCaption) && caption) {
+    form.description = refineCaptionToSeoDescription(caption, seoMeta);
+  } else if (description) {
+    form.description = ensureListedSeoDescription(description, seoMeta);
+  }
+
+  return interpreted;
+}
+
+function listingSeoMetaFromForm(form = {}, interpreted = {}) {
+  return {
+    title: interpreted.title || form.title,
+    make: form.make,
+    model: form.model,
+    variant: form.variant,
+    vehicleType: form.vehicleType,
+    year: form.year,
+    kilometers: form.kilometers,
+    transmission: form.transmission,
+    fuelType: form.fuelType,
+    color: form.color,
+    condition: form.condition,
+    price: form.price,
+    currency: form.currency,
+    surfaceM2: form.surfaceM2,
+    bedrooms: form.bedrooms,
+    bathrooms: form.bathrooms,
+    category: form.category || form.propertyCategory,
+    cityName: interpreted.cityName || form.cityName,
+  };
+}
+
+function vehicleTypeLabelSq(vehicleType) {
+  const v = String(vehicleType || '').trim().toLowerCase();
+  if (v === 'motorcycle') return 'Motor / scooter';
+  if (v === 'car') return 'Veturë';
+  if (v === 'suv') return 'SUV';
+  if (v === 'van') return 'Furgon';
+  if (v === 'truck') return 'Kamion';
+  if (v === 'boat') return 'Varkë';
+  return '';
+}
+
+function cleanCaptionNoise(raw) {
+  let text = String(raw || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/https?:\/\/\S+/gi, ' ')
+    .replace(/#[\p{L}\p{N}_]+/gu, ' ')
+    .replace(/@[\p{L}\p{N}._]+/gu, ' ')
+    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  text = text.replace(/^[\s.,;:!?\-–—]+/, '').trim();
+  return text;
+}
+
+function descriptionLooksListed(desc) {
+  const d = String(desc || '').trim();
+  if (!d) return false;
+  if (/^[•\-\*]\s+/m.test(d) || /\n\s*[•\-\*]\s+/.test(d)) return true;
+  const lines = d.split(/\n/).map((l) => l.trim()).filter(Boolean);
+  return lines.length >= 3;
+}
+
+function buildSeoDescriptionBullets(meta = {}) {
+  const bullets = [];
+  const push = (label, value) => {
+    const v = String(value ?? '').trim();
+    if (!v) return;
+    bullets.push(`• ${label}: ${v}`);
+  };
+
+  push('Marka', meta.make);
+  push('Modeli', meta.model);
+  push('Varianti', meta.variant);
+  push('Tipi', vehicleTypeLabelSq(meta.vehicleType));
+  push('Viti', meta.year);
+  if (meta.kilometers) {
+    const km = String(meta.kilometers).trim();
+    push('Kilometrazhi', /km/i.test(km) ? km : `${km} km`);
+  }
+  push('Karburanti', meta.fuelType);
+  push('Transmisioni', meta.transmission);
+  push('Ngjyra', meta.color);
+  push('Gjendja', meta.condition);
+  if (meta.price) {
+    const cur = String(meta.currency || '').trim();
+    push('Çmimi', cur ? `${meta.price} ${cur}` : meta.price);
+  }
+  if (meta.surfaceM2) {
+    const s = String(meta.surfaceM2).trim();
+    push('Sipërfaqja', /m/i.test(s) ? s : `${s} m²`);
+  }
+  push('Dhoma', meta.bedrooms);
+  push('Banjo', meta.bathrooms);
+  push('Kategoria', meta.category);
+  push('Qyteti', meta.cityName);
+  return bullets;
+}
+
+function buildSeoDescriptionOpener(meta = {}) {
+  const vehicleLabel = vehicleTypeLabelSq(meta.vehicleType);
+  const product =
+    meta.make && meta.model
+      ? `${meta.make} ${meta.model}`
+      : meta.make || meta.model || String(meta.title || '').trim();
+  const bits = [
+    product || null,
+    vehicleLabel || null,
+    meta.cityName ? `në ${meta.cityName}` : null,
+  ].filter(Boolean);
+  if (bits.length) return `Ofrohet ${bits.join(', ')}.`;
+  return 'Ofrohet për shitje.';
+}
+
+function splitUsefulDetailLines(text, { max = 3 } = {}) {
+  const cleaned = cleanCaptionNoise(text);
+  if (!cleaned) return [];
+  const chunks = cleaned
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((s) => s.replace(/\s+/g, ' ').trim())
+    .filter((s) => s.length >= 12 && s.length <= 160);
+  const out = [];
+  for (const chunk of chunks) {
+    if (out.length >= max) break;
+    // Skip lines that are mostly the same as structured opener keywords.
+    if (/^(ofrohet|shit(et|e)|kontaktoni)\b/i.test(chunk)) continue;
+    out.push(chunk.replace(/^[•\-\*]\s*/, '').replace(/\.$/, ''));
+  }
+  return out;
+}
+
+/**
+ * Build a listed, keyword-friendly SEO description from caption + structured fields.
+ */
+function refineCaptionToSeoDescription(caption, meta = {}) {
+  const raw = String(caption || '').trim();
+  const text = cleanCaptionNoise(raw);
+  if (!text && !meta.title && !meta.make) return '';
+
+  const opener = buildSeoDescriptionOpener(meta);
+  const bullets = buildSeoDescriptionBullets(meta);
+  const extras = splitUsefulDetailLines(text, { max: bullets.length >= 4 ? 2 : 3 }).map(
+    (line) => `• ${line}`,
+  );
+
+  const parts = [opener];
+  if (bullets.length || extras.length) {
+    parts.push('', ...bullets, ...extras);
+  } else if (text) {
+    parts.push('', `• ${text.slice(0, 280)}`);
+  }
+  parts.push('', 'Kontaktoni për më shumë detaje.');
+
+  return parts.join('\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1200);
+}
+
+/**
+ * If the model returned a wall of text, reshape into listed SEO style while keeping useful prose.
+ */
+function ensureListedSeoDescription(description, meta = {}) {
+  const desc = String(description || '').trim();
+  if (!desc) return refineCaptionToSeoDescription('', meta);
+  if (descriptionLooksListed(desc)) {
+    return cleanCaptionNoise(desc).slice(0, 1200);
+  }
+
+  const opener = buildSeoDescriptionOpener(meta);
+  const bullets = buildSeoDescriptionBullets(meta);
+  const extras = splitUsefulDetailLines(desc, { max: 3 }).map((line) => `• ${line}`);
+  const parts = [opener];
+  if (bullets.length || extras.length) {
+    parts.push('', ...bullets, ...extras);
+  } else {
+    parts.push('', `• ${cleanCaptionNoise(desc).slice(0, 280)}`);
+  }
+  if (!/kontaktoni/i.test(desc)) {
+    parts.push('', 'Kontaktoni për më shumë detaje.');
+  }
+  return parts.join('\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1200);
+}
+
+function normalizeVehicleTypeValue(raw) {
+  const v = String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ');
+  if (!v) return '';
+  if (VEHICLE_TYPE_VALUES.includes(v)) return v;
+  if (
+    /motor|moto|scooter|scuter|motorçiklet|motociklet|bike(?!car)|tmax|tenere|ténéré|vespa|enduro|cross/.test(
+      v,
+    )
+  ) {
+    return 'motorcycle';
+  }
+  if (/suv|crossover|jeep/.test(v)) return 'suv';
+  if (/furgon|van|minivan/.test(v)) return 'van';
+  if (/kamion|truck|camion/.test(v)) return 'truck';
+  if (/boat|vark|jaht|yacht/.test(v)) return 'boat';
+  if (/car|vetur|sedan|makin/.test(v)) return 'car';
+  return '';
+}
+
+function findCatalogMakeInText(text, vehicleType) {
+  const hay = String(text || '').toLowerCase();
+  if (!hay || !vehicleType) return null;
+  const makes = makesForVehicleType(vehicleType).filter((m) => m !== 'Other');
+  // Longer names first (Mercedes-Benz before …).
+  const sorted = [...makes].sort((a, b) => b.length - a.length);
+  for (const make of sorted) {
+    const key = make.toLowerCase();
+    const alt = key.replace(/-/g, '[\\s-]?');
+    const re = new RegExp(`(?:^|[^a-z0-9])${alt}(?:[^a-z0-9]|$)`, 'i');
+    if (re.test(hay)) return make;
+  }
+  return null;
+}
+
+function findCatalogModelInText(text, vehicleType, make) {
+  const hay = String(text || '').toLowerCase();
+  if (!hay || !vehicleType || !make) return null;
+  const hayLoose = hay.normalize('NFD').replace(/\p{M}/gu, '');
+  const models = modelsForMake(vehicleType, make).filter((m) => m !== 'Other');
+  const sorted = [...models].sort((a, b) => b.length - a.length);
+  for (const model of sorted) {
+    const key = model
+      .toLowerCase()
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\s+/g, '\\s*');
+    // Accent-insensitive-ish for Ténéré / Tenere
+    const loose = key.normalize('NFD').replace(/\p{M}/gu, '');
+    if (new RegExp(`(?:^|[^a-z0-9])${loose}(?:[^a-z0-9]|$)`, 'i').test(hayLoose)) {
+      return model;
+    }
+  }
+  // Common aliases
+  if (make === 'Yamaha') {
+    if (/\bt[\s-]?max\b/i.test(hay) || /\btmax\b/i.test(hay)) return 'TMAX';
+    if (/\bt[eé]n[eé]r[eé]\b/i.test(hayLoose)) return 'Ténéré';
+  }
+  return null;
+}
+
+function inferVehicleTypeFromText(text) {
+  const hay = String(text || '').toLowerCase();
+  if (!hay) return '';
+  if (
+    /motorçiklet|motociklet|\bmotor\b|\bmoto\b|scooter|scuter|tmax|t-max|ténéré|tenere|vespa|enduro|\bcbr\b|\bmt-0|\byzf\b/.test(
+      hay,
+    )
+  ) {
+    return 'motorcycle';
+  }
+  if (/\bsuv\b|crossover/.test(hay)) return 'suv';
+  if (/\bfurgon\b|\bvan\b/.test(hay)) return 'van';
+  if (/\bkamion\b|\btruck\b/.test(hay)) return 'truck';
+  if (/\bvark|\bboat\b|\byacht\b/.test(hay)) return 'boat';
+  return '';
+}
+
+/**
+ * Fill / correct cars form fields from caption + catalog after the model runs.
+ */
+function normalizeCarFormFields(form, snapshot, interpreted) {
+  if (!form || typeof form !== 'object') return form;
+  const blob = [
+    snapshot?.caption,
+    snapshot?.description,
+    snapshot?.text,
+    interpreted?.title,
+    form.title,
+    form.description,
+    form.make,
+    form.model,
+    form.variant,
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  let vehicleType =
+    normalizeVehicleTypeValue(form.vehicleType) || inferVehicleTypeFromText(blob);
+  if (!vehicleType && VEHICLE_TYPE_VALUES.includes(String(form.vehicleType || '').trim())) {
+    vehicleType = String(form.vehicleType).trim();
+  }
+
+  // If make is a motorcycle-only brand, force motorcycle.
+  if (!vehicleType || vehicleType === 'car') {
+    const motoMake = findCatalogMakeInText(blob, 'motorcycle');
+    if (motoMake) vehicleType = 'motorcycle';
+  }
+
+  if (vehicleType) form.vehicleType = vehicleType;
+
+  let make = String(form.make || '').trim();
+  if (vehicleType) {
+    if (make && !isValidVehicleMake(vehicleType, make)) {
+      const matched = makesForVehicleType(vehicleType).find(
+        (m) => m.toLowerCase() === make.toLowerCase(),
+      );
+      make = matched || findCatalogMakeInText(make, vehicleType) || make;
+    }
+    if (!make || !isValidVehicleMake(vehicleType, make)) {
+      make = findCatalogMakeInText(blob, vehicleType) || make;
+    }
+    if (make && isValidVehicleMake(vehicleType, make)) {
+      form.make = make;
+    } else if (make) {
+      // Keep orphan so the UI can show it; prefer catalog when possible.
+      const catalogHit = findCatalogMakeInText(make, vehicleType);
+      form.make = catalogHit || make;
+    }
+  }
+
+  let model = String(form.model || '').trim();
+  if (vehicleType && form.make && (!model || model.length < 2)) {
+    const found = findCatalogModelInText(blob, vehicleType, form.make);
+    if (found) form.model = found;
+  } else if (vehicleType && form.make && model) {
+    const models = modelsForMake(vehicleType, form.make);
+    const exact = models.find((m) => m.toLowerCase() === model.toLowerCase());
+    if (exact) form.model = exact;
+    else {
+      const found = findCatalogModelInText(model, vehicleType, form.make);
+      if (found) form.model = found;
+    }
+  }
+
+  return form;
+}
+
+function maxImagesForCategory(category) {
+  if (category === 'cars') return MAX_CAR_LISTING_IMAGES;
+  if (category === 'professionals') return 2;
+  return MAX_SNAPSHOT_IMAGES;
 }
 
 function sanitizeCurrentListing(raw) {
@@ -1459,6 +1951,66 @@ async function callListingModel({
   });
 }
 
+async function fetchImageAsDataUrl(url) {
+  const raw = String(url || '').trim();
+  if (!/^https?:\/\//i.test(raw)) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  try {
+    let host = '';
+    try {
+      host = new URL(raw).hostname.replace(/^www\./, '').toLowerCase();
+    } catch {
+      host = '';
+    }
+    const isInstagramCdn =
+      host.includes('cdninstagram.com') ||
+      host.includes('fbcdn.net') ||
+      host.includes('instagram.com');
+    const res = await fetch(raw, {
+      signal: controller.signal,
+      redirect: 'follow',
+      headers: {
+        Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        'User-Agent': BROWSER_UA,
+        ...(isInstagramCdn
+          ? { Referer: 'https://www.instagram.com/', Origin: 'https://www.instagram.com' }
+          : {}),
+      },
+    });
+    if (!res.ok) return null;
+    const contentType = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (contentType && !contentType.startsWith('image/')) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (!buf.length || buf.length > 4_500_000) return null;
+    const mime = contentType && contentType.startsWith('image/') ? contentType : 'image/jpeg';
+    const dataUrl = `data:${mime};base64,${buf.toString('base64')}`;
+    if (dataUrl.length > MAX_IMAGE_CHARS) return null;
+    return dataUrl;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/** Download a few scraped post photos so the model can visually identify vehicle type/make. */
+async function prepareSnapshotVisionImages(snapshotImageUrls) {
+  const urls = Array.isArray(snapshotImageUrls) ? snapshotImageUrls : [];
+  const out = [];
+  for (const url of urls) {
+    if (out.length >= MAX_SNAPSHOT_VISION_IMAGES) break;
+    const dataUrl = await fetchImageAsDataUrl(url);
+    if (dataUrl) {
+      out.push({
+        url: dataUrl,
+        hint: 'Scraped listing photo — identify the product/vehicle and fill vehicleType/make/model when visible.',
+      });
+    }
+  }
+  return out;
+}
+
 async function interpretListing({
   url,
   snapshot,
@@ -1469,10 +2021,19 @@ async function interpretListing({
   prompt,
   currentListing,
 }) {
+  const userAttached = attachedImages || [];
+  // When the user didn't attach photos, analyze the scraped post images with vision.
+  let visionImages = userAttached;
+  if (!visionImages.length && Array.isArray(snapshot?.imageUrls) && snapshot.imageUrls.length) {
+    visionImages = await prepareSnapshotVisionImages(snapshot.imageUrls);
+  }
+
+  const motorcycleMakes = makesForVehicleType('motorcycle').filter((m) => m !== 'Other').slice(0, 40);
+
   return callListingModel({
     preferredCategory,
     mode: mode === 'edit' ? 'edit' : 'create',
-    attachedImages: attachedImages || [],
+    attachedImages: visionImages,
     userPayload: {
       source: url ? 'link' : 'prompt',
       url: url || null,
@@ -1490,47 +2051,75 @@ async function interpretListing({
       authorName: snapshot?.authorName || null,
       snapshotImageUrls: snapshot?.imageUrls || [],
       imageUrls: snapshot?.imageUrls || [],
+      isCarousel: Boolean(snapshot?.isCarousel),
       text: snapshot?.text || null,
-      attachedImageCount: (attachedImages || []).length,
-      attachedImageHints: (attachedImages || []).map((img, i) => ({
+      vehicleCatalogHints:
+        preferredCategory === 'cars' || !preferredCategory
+          ? {
+              vehicleTypes: VEHICLE_TYPE_VALUES,
+              motorcycleMakes,
+              note:
+                'If photos/caption show a motorcycle/scooter, set vehicleType=motorcycle and pick make from motorcycleMakes when possible.',
+            }
+          : null,
+      attachedImageCount: visionImages.length,
+      attachedImageHints: visionImages.map((img, i) => ({
         index: i,
         hint: img.hint || null,
       })),
-      instruction: (attachedImages || []).length
-        ? 'Photos are primary: identify the product from images, write a concrete title and description from what you see, then weave in every useful detail from prompt/caption (price, condition, city, extras). Do not invent unseen specs. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.'
-        : 'Build the listing from caption/description/text/prompt. Do not invent professions or offers missing from the text. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.',
+      instruction: visionImages.length
+        ? 'Photos are primary: identify the product/vehicle from images (motorcycle vs car!), write a concrete title and a listed SEO-friendly form.description (short opener + • keyword bullets + CTA — never one paragraph or raw hashtags), then weave in every useful detail from prompt/caption (price, condition, city, make/model). Do not invent unseen specs. Never use authorName / Instagram profile name as title. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.'
+        : 'Build the listing from caption/description/text/prompt. Title must come from the post caption (what is offered), never from authorName or profile.businessName when caption exists. Rewrite caption into a listed SEO-friendly form.description (short opener + • keyword bullets + CTA — do not paste raw caption or write one wall of text). Extract structured fields. Do not invent professions or offers missing from the text. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.',
     },
   });
 }
 
-async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourcePrompt }) {
+async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourcePrompt, snapshot }) {
+  const hasCaption = Boolean(String(snapshot?.caption || snapshot?.description || '').trim());
+  const socialSource = Boolean(snapshot?.social) || isInstagramUrl(sourceUrl);
+  // Social posts must not all inherit the same KuTaGjej business/profile name.
+  const allowProfileTitle = !(socialSource && hasCaption);
+
   // Prefer category mismatch so the UI can offer a category switch instead of a hard block.
   if (interpreted?.error === CATEGORY_MISMATCH_CODE || interpreted?.categoryMatch === false) {
+    applyCaptionFallbacks(interpreted, snapshot, profile);
     const errorMessage =
       interpreted.errorMessage ||
       categoryMismatchMessage(
         interpreted.preferredCategory,
         interpreted.detectedCategory,
       );
-    const form = stringifyFormValues(interpreted.form);
+    let form = stringifyFormValues(interpreted.form);
+    const detected = interpreted.detectedCategory || interpreted.category || null;
+    if (detected === 'cars') {
+      form = normalizeCarFormFields(form, snapshot, interpreted);
+    }
     const cityId =
       (await resolveCityIdByName(interpreted.cityName || form.cityName || profile?.preferredCityName)) ||
       profile?.preferredCityId ||
       null;
     if (cityId) form.cityId = cityId;
-    applyProfileDefaultsToForm(form, profile);
+    applyProfileDefaultsToForm(form, profile, { allowProfileTitle });
+
+    const imageCap = maxImagesForCategory(detected);
+    let imageUrls = Array.isArray(interpreted.imageUrls)
+      ? interpreted.imageUrls.slice(0, imageCap)
+      : [];
+    if (snapshot?.social && snapshot?.isCarousel === false) {
+      imageUrls = imageUrls.slice(0, 1);
+    }
 
     return {
       id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       sourceUrl: sourceUrl || '',
       // Draft is built for the detected category; blocked until the user switches.
-      category: interpreted.detectedCategory || interpreted.category || null,
+      category: detected,
       detectedCategory: interpreted.detectedCategory || null,
       preferredCategory: interpreted.preferredCategory || null,
       title: interpreted.title || form.title || form.make || '',
       summary: interpreted.summary || '',
       cityName: interpreted.cityName || form.cityName || profile?.preferredCityName || '',
-      imageUrls: interpreted.imageUrls || [],
+      imageUrls,
       imageRoles: interpreted.imageRoles || [],
       form,
       warning: warning || null,
@@ -1564,13 +2153,66 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
     };
   }
 
-  const form = stringifyFormValues(interpreted.form);
+  applyCaptionFallbacks(interpreted, snapshot, profile);
+  let form = stringifyFormValues(interpreted.form);
+  const category = interpreted.category;
+  if (category === 'cars') {
+    form = normalizeCarFormFields(form, snapshot, interpreted);
+    // Refresh SEO blurb once make/model/type are known.
+    const caption = String(snapshot?.caption || snapshot?.description || '').trim();
+    const seoMeta = listingSeoMetaFromForm(form, interpreted);
+    if (caption) {
+      const desc = String(form.description || '').trim();
+      const captionNorm = caption.replace(/\s+/g, ' ').trim();
+      const looksRaw =
+        !desc ||
+        desc === caption ||
+        desc === captionNorm ||
+        (captionNorm.length > 40 && desc.slice(0, 80) === captionNorm.slice(0, 80));
+      if (looksRaw) {
+        form.description = refineCaptionToSeoDescription(caption, seoMeta);
+      } else {
+        form.description = ensureListedSeoDescription(desc, seoMeta);
+      }
+    } else if (form.description) {
+      form.description = ensureListedSeoDescription(form.description, seoMeta);
+    }
+  } else if (form.description) {
+    form.description = ensureListedSeoDescription(
+      form.description,
+      listingSeoMetaFromForm(form, interpreted),
+    );
+  }
   const cityId =
     (await resolveCityIdByName(interpreted.cityName || form.cityName || profile?.preferredCityName)) ||
     profile?.preferredCityId ||
     null;
   if (cityId) form.cityId = cityId;
-  applyProfileDefaultsToForm(form, profile);
+  applyProfileDefaultsToForm(form, profile, { allowProfileTitle });
+
+  // If profile defaults still left a profile-like title, prefer caption again.
+  if (
+    hasCaption &&
+    isProfileLikeTitle(form.title || interpreted.title, {
+      authorName: snapshot?.authorName,
+      businessName: profile?.businessName,
+      fullName: profile?.fullName,
+    })
+  ) {
+    const captionTitle = titleHintFromCaption(snapshot?.caption || snapshot?.description);
+    if (captionTitle) {
+      form.title = captionTitle;
+      interpreted.title = captionTitle;
+    }
+  }
+
+  const imageCap = maxImagesForCategory(category);
+  const imageUrls = Array.isArray(interpreted.imageUrls)
+    ? interpreted.imageUrls.slice(0, imageCap)
+    : [];
+  // Single-frame Instagram posts: never keep more than one photo.
+  const cappedImages =
+    snapshot?.social && snapshot?.isCarousel === false ? imageUrls.slice(0, 1) : imageUrls;
 
   return {
     id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -1580,7 +2222,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
     title: interpreted.title || form.title || form.make || 'Draft listing',
     summary: interpreted.summary || '',
     cityName: interpreted.cityName || form.cityName || profile?.preferredCityName || '',
-    imageUrls: interpreted.imageUrls,
+    imageUrls: cappedImages,
     imageRoles: interpreted.imageRoles || [],
     form,
     warning: warning || null,
@@ -1711,6 +2353,7 @@ async function importListingsFromLinks({
             : friendlyFetchWarning(snapshot.fetchError),
           profile,
           sourcePrompt: prompt,
+          snapshot,
         }),
       );
     } catch (err) {

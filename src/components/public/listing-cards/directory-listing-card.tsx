@@ -28,11 +28,11 @@ import {
   formatBusinessOpeningHoursForCard,
   relativeAlbanianDate,
 } from './format-helpers';
-import {
-  ListingCardRating,
+import { ListingCardRating,
   resolveListingCardRating,
   type ListingCardRatingSummary,
 } from './listing-card-rating';
+import { ListingTitleWithVerified } from './listing-title-with-verified';
 import { SpecRow, type Spec } from './spec-row';
 
 function conditionIcon(condition: string | null) {
@@ -112,21 +112,11 @@ function BusinessVenueCardBody({
           >
             {listing.categoryLabel}
           </Typography>
-          <Typography
-            component="h3"
-            sx={{
-              fontWeight: 700,
-              fontSize: '0.95rem',
-              lineHeight: 1.4,
-              color: 'text.primary',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {listing.title}
-          </Typography>
+          <ListingTitleWithVerified
+            title={listing.title}
+            verified={Boolean(listing.sellerVerified)}
+            trustBadge={Boolean(listing.sellerTrustBadge)}
+          />
 
           {cardRating ? (
             <ListingCardRating
@@ -312,21 +302,11 @@ function ProfessionalListingCardBody({
           >
             {listing.categoryLabel}
           </Typography>
-          <Typography
-            component="h3"
-            sx={{
-              fontWeight: 700,
-              fontSize: '0.95rem',
-              lineHeight: 1.4,
-              color: 'text.primary',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {listing.title}
-          </Typography>
+          <ListingTitleWithVerified
+            title={listing.title}
+            verified={Boolean(listing.sellerVerified)}
+            trustBadge={Boolean(listing.sellerTrustBadge)}
+          />
           <SpecRow specs={specs} />
 
           {listing.cityName ? (

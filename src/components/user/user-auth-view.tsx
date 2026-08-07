@@ -16,7 +16,9 @@ import {
   IconButton,
   InputAdornment,
   Link as MuiLink,
+  MenuItem,
   OutlinedInput,
+  Select,
   Stack,
   Tab,
   Tabs,
@@ -39,6 +41,11 @@ import { config } from '@/config';
 import { useCopy } from '@/hooks/use-copy';
 import { authClient } from '@/lib/auth/client';
 import { getDefaultAuthenticatedPath } from '@/lib/auth/post-login-path';
+import { rememberListingLocation } from '@/lib/listing-form-defaults';
+import {
+  listRealEstateLocationsPublic,
+  type RealEstateCityDto,
+} from '@/lib/real-estate-locations-client';
 import { paths } from '@/paths';
 
 const { name: siteName } = config.site;
@@ -59,6 +66,7 @@ const individualRegisterSchema = zod
     firstName: zod.string().min(1, { message: 'Emri është i detyrueshëm' }),
     lastName: zod.string().min(1, { message: 'Mbiemri është i detyrueshëm' }),
     phone: zod.string().max(40, { message: 'Numri i telefonit është shumë i gjatë' }),
+    basedCityId: zod.string(),
     email: zod.string().min(1, { message: 'Emaili është i detyrueshëm' }).email('Email i pavlefshëm'),
     password: zod.string().min(6, { message: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere' }),
     confirmPassword: zod.string().min(1, { message: 'Konfirmo fjalëkalimin' }),
@@ -76,6 +84,7 @@ const businessRegisterSchema = zod
     businessOwner: zod.string().min(1, { message: 'Pronari i biznesit është i detyrueshëm' }),
     businessCategory: zod.string().min(1, { message: 'Kategoria është e detyrueshme' }),
     phone: zod.string().max(40, { message: 'Numri i telefonit është shumë i gjatë' }),
+    basedCityId: zod.string(),
     email: zod.string().min(1, { message: 'Emaili është i detyrueshëm' }).email('Email i pavlefshëm'),
     password: zod.string().min(6, { message: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere' }),
     confirmPassword: zod.string().min(1, { message: 'Konfirmo fjalëkalimin' }),
@@ -103,6 +112,60 @@ const outlinedDarkSx = {
   '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'common.white' },
   '& input::placeholder': { color: 'rgba(255,255,255,0.6)', opacity: 1 },
 };
+
+function BasedCityRegisterField<T extends { basedCityId: string }>({
+  control,
+  error,
+  cities,
+  citiesLoading,
+}: {
+  control: Control<T>;
+  error?: string;
+  cities: RealEstateCityDto[];
+  citiesLoading: boolean;
+}) {
+  return (
+    <Controller
+      control={control}
+      name={'basedCityId' as never}
+      render={({ field }) => (
+        <FormControl error={Boolean(error)} fullWidth disabled={citiesLoading || cities.length === 0}>
+          <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(error))}>
+            Ku jeni bazuar{' '}
+            <Typography component="span" variant="caption" sx={{ fontWeight: 400, opacity: 0.75 }}>
+              (opsional)
+            </Typography>
+          </Typography>
+          <Select
+            {...field}
+            displayEmpty
+            sx={{
+              ...outlinedDarkSx,
+              '& .MuiSelect-icon': { color: 'rgba(255,255,255,0.75)' },
+            }}
+            MenuProps={{
+              slotProps: {
+                paper: {
+                  sx: { maxHeight: 320 },
+                },
+              },
+            }}
+          >
+            <MenuItem value="">
+              <em>Zgjidhni qytetin…</em>
+            </MenuItem>
+            {cities.map((c) => (
+              <MenuItem key={c.id} value={c.id}>
+                {c.name}
+              </MenuItem>
+            ))}
+          </Select>
+          {error ? <FormHelperText>{error}</FormHelperText> : null}
+        </FormControl>
+      )}
+    />
+  );
+}
 
 function AcceptTermsField<T extends { acceptTerms: boolean }>({
   control,
@@ -244,11 +307,15 @@ function RegisterFieldsIndividual({
   errors,
   showPassword,
   setShowPassword,
+  cities,
+  citiesLoading,
 }: {
   control: ReturnType<typeof useForm<IndividualRegisterValues>>['control'];
   errors: ReturnType<typeof useForm<IndividualRegisterValues>>['formState']['errors'];
   showPassword: boolean;
   setShowPassword: (v: boolean) => void;
+  cities: RealEstateCityDto[];
+  citiesLoading: boolean;
 }) {
   const t = useCopy();
   return (
@@ -308,6 +375,12 @@ function RegisterFieldsIndividual({
             {errors.phone ? <FormHelperText>{errors.phone.message}</FormHelperText> : null}
           </FormControl>
         )}
+      />
+      <BasedCityRegisterField
+        control={control}
+        error={errors.basedCityId?.message}
+        cities={cities}
+        citiesLoading={citiesLoading}
       />
       <Controller
         control={control}
@@ -381,11 +454,15 @@ function RegisterFieldsBusiness({
   errors,
   showPassword,
   setShowPassword,
+  cities,
+  citiesLoading,
 }: {
   control: ReturnType<typeof useForm<BusinessRegisterValues>>['control'];
   errors: ReturnType<typeof useForm<BusinessRegisterValues>>['formState']['errors'];
   showPassword: boolean;
   setShowPassword: (v: boolean) => void;
+  cities: RealEstateCityDto[];
+  citiesLoading: boolean;
 }) {
   const t = useCopy();
   return (
@@ -457,6 +534,12 @@ function RegisterFieldsBusiness({
             {errors.phone ? <FormHelperText>{errors.phone.message}</FormHelperText> : null}
           </FormControl>
         )}
+      />
+      <BasedCityRegisterField
+        control={control}
+        error={errors.basedCityId?.message}
+        cities={cities}
+        citiesLoading={citiesLoading}
       />
       <Controller
         control={control}
@@ -537,6 +620,8 @@ export function UserAuthView() {
   const [showPwSignIn, setShowPwSignIn] = React.useState(false);
   const [showPwReg, setShowPwReg] = React.useState(false);
   const [referralCode, setReferralCode] = React.useState(refFromUrl);
+  const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
+  const [citiesLoading, setCitiesLoading] = React.useState(false);
 
   React.useEffect(() => {
     if (refFromUrl) {
@@ -552,6 +637,19 @@ export function UserAuthView() {
     }
   }, [typeFromUrl]);
 
+  React.useEffect(() => {
+    let cancelled = false;
+    setCitiesLoading(true);
+    void listRealEstateLocationsPublic().then((res) => {
+      if (cancelled) return;
+      setCitiesLoading(false);
+      if (res.cities) setCities(res.cities);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const signInForm = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
     defaultValues: { email: '', password: '' },
@@ -563,6 +661,7 @@ export function UserAuthView() {
       firstName: '',
       lastName: '',
       phone: '',
+      basedCityId: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -578,6 +677,7 @@ export function UserAuthView() {
       businessOwner: '',
       businessCategory: '',
       phone: '',
+      basedCityId: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -608,6 +708,7 @@ export function UserAuthView() {
       email: values.email,
       password: values.password,
       phone: values.phone.trim() || undefined,
+      basedCityId: values.basedCityId.trim() || undefined,
       referralCode: referralCode.trim() || undefined,
     });
     if (error) {
@@ -617,6 +718,18 @@ export function UserAuthView() {
     if (!user) {
       individualForm.setError('root', { type: 'server', message: 'Regjistrimi dështoi.' });
       return;
+    }
+    if (values.basedCityId.trim()) {
+      rememberListingLocation(
+        {
+          cityId: values.basedCityId.trim(),
+          cityName:
+            (typeof user.basedCityName === 'string' && user.basedCityName.trim()) ||
+            cities.find((c) => c.id === values.basedCityId)?.name ||
+            '',
+        },
+        user.id,
+      );
     }
     window.location.href = getDefaultAuthenticatedPath(user);
   });
@@ -632,6 +745,7 @@ export function UserAuthView() {
       email: values.email,
       password: values.password,
       phone: values.phone.trim() || undefined,
+      basedCityId: values.basedCityId.trim() || undefined,
       referralCode: referralCode.trim() || undefined,
     });
     if (error) {
@@ -641,6 +755,18 @@ export function UserAuthView() {
     if (!user) {
       businessForm.setError('root', { type: 'server', message: 'Regjistrimi dështoi.' });
       return;
+    }
+    if (values.basedCityId.trim()) {
+      rememberListingLocation(
+        {
+          cityId: values.basedCityId.trim(),
+          cityName:
+            (typeof user.basedCityName === 'string' && user.basedCityName.trim()) ||
+            cities.find((c) => c.id === values.basedCityId)?.name ||
+            '',
+        },
+        user.id,
+      );
     }
     window.location.href = getDefaultAuthenticatedPath(user);
   });
@@ -798,6 +924,8 @@ export function UserAuthView() {
                             errors={individualForm.formState.errors}
                             showPassword={showPwReg}
                             setShowPassword={setShowPwReg}
+                            cities={cities}
+                            citiesLoading={citiesLoading}
                           />
                           <AcceptTermsField
                             control={individualForm.control}
@@ -823,6 +951,8 @@ export function UserAuthView() {
                             errors={businessForm.formState.errors}
                             showPassword={showPwReg}
                             setShowPassword={setShowPwReg}
+                            cities={cities}
+                            citiesLoading={citiesLoading}
                           />
                           <AcceptTermsField
                             control={businessForm.control}

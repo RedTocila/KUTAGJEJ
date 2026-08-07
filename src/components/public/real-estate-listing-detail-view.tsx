@@ -34,6 +34,7 @@ import { ListingPrice } from '@/components/public/listing-cards/listing-price';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingSellerProfileCard } from '@/components/public/listing-seller-profile-card';
+import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { StickyListingContact } from '@/components/public/sticky-listing-contact';
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
@@ -484,6 +485,10 @@ export function RealEstateListingDetailView({
                   }}
                 >
                   {listing.title}
+                  <ListingDetailTitleBadges
+                    verified={Boolean(listing.seller?.verified)}
+                    trustBadge={Boolean(listing.seller?.trustBadge)}
+                  />
                 </Typography>
               </OwnerEditableSpot>
 

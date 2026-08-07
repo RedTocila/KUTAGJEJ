@@ -6,7 +6,6 @@ import { Button, Card, CardContent, Stack, Typography } from '@mui/material';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 
 import { ProfessionalListingForm } from '@/components/professionals/professional-listing-form';
-import { ProfessionalVerificationCard } from '@/components/professionals/professional-verification-card';
 import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
 import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
@@ -71,8 +70,6 @@ export default function UserProfessionalsDashboardPage() {
           </Stack>
         </CardContent>
       </Card>
-
-      <ProfessionalVerificationCard />
     </Stack>
   );
 }

@@ -1,27 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Alert, Button, Chip, Stack, TextField, Typography } from '@mui/material';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 
 import {
-  fetchJobEmployerVerificationStatus,
-  submitJobEmployerVerificationRequest,
-  type JobEmployerVerificationStatus,
-} from '@/lib/job-employer-verification-client';
+  fetchProfessionalVerificationStatus,
+  submitProfessionalVerificationRequest,
+  type ProfessionalVerificationRequest,
+  type ProfessionalVerificationStatus,
+} from '@/lib/professional-verification-client';
 
-export function JobEmployerVerificationCard({ embedded = false }: { embedded?: boolean }) {
-  const [status, setStatus] = React.useState<JobEmployerVerificationStatus | null>(null);
+export function AccountVerificationCard() {
+  const [status, setStatus] = React.useState<ProfessionalVerificationStatus | null>(null);
   const [message, setMessage] = React.useState('');
   const [loading, setLoading] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
@@ -31,7 +22,7 @@ export function JobEmployerVerificationCard({ embedded = false }: { embedded?: b
   const refresh = React.useCallback(async () => {
     setLoading(true);
     setError(null);
-    const res = await fetchJobEmployerVerificationStatus();
+    const res = await fetchProfessionalVerificationStatus();
     if (res.error) setError(res.error);
     else setStatus(res.status ?? null);
     setLoading(false);
@@ -45,9 +36,10 @@ export function JobEmployerVerificationCard({ embedded = false }: { embedded?: b
     setSubmitting(true);
     setError(null);
     setSuccess(null);
-    const res = await submitJobEmployerVerificationRequest(message);
-    if (res.error) setError(res.error);
-    else {
+    const res = await submitProfessionalVerificationRequest(message);
+    if (res.error) {
+      setError(res.error);
+    } else {
       setSuccess('Kërkesa u dërgua. Do të njoftoheni pas shqyrtimit nga administratori.');
       setMessage('');
       await refresh();
@@ -55,17 +47,12 @@ export function JobEmployerVerificationCard({ embedded = false }: { embedded?: b
     setSubmitting(false);
   };
 
-  const latest = status?.latestRequest;
+  const latest: ProfessionalVerificationRequest | null = status?.latestRequest ?? null;
 
-  const body = (
+  return (
     <Stack spacing={2}>
-      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
-        <ShieldCheckIcon size={22} weight="duotone" color="var(--mui-palette-primary-main)" />
-        <Typography sx={{ fontWeight: 800, fontSize: '0.98rem' }}>Verifikimi për Punë</Typography>
-      </Stack>
-
       <Typography variant="body2" color="text.secondary">
-        Shenja e verifikuar shfaqet te njoftimet e punës dhe rrit besimin e kandidatëve.
+        Pas aprovimit, shenja e verifikuar shfaqet në profilin tuaj publik.
       </Typography>
 
       {loading ? (
@@ -78,11 +65,19 @@ export function JobEmployerVerificationCard({ embedded = false }: { embedded?: b
       {success ? <Alert severity="success">{success}</Alert> : null}
 
       {status?.verified ? (
-        <Chip label="Profili i verifikuar" color="success" sx={{ alignSelf: 'flex-start', fontWeight: 700 }} />
+        <Chip
+          icon={<ShieldCheckIcon size={16} weight="fill" />}
+          label="Llogaria e verifikuar"
+          color="success"
+          sx={{ alignSelf: 'flex-start', fontWeight: 700 }}
+        />
       ) : latest?.status === 'pending' ? (
         <Alert severity="info">
-          Kërkesa juaj është në pritje (e dërguar{' '}
-          {new Date(latest.createdAt).toLocaleDateString('sq-AL')}). Administratori do ta shqyrtojë së shpejti.
+          Kërkesa juaj është në pritje
+          {latest.createdAt
+            ? ` (e dërguar ${new Date(latest.createdAt).toLocaleDateString('sq-AL')})`
+            : ''}
+          . Administratori do ta shqyrtojë së shpejti.
         </Alert>
       ) : latest?.status === 'rejected' ? (
         <Alert severity="warning">
@@ -100,7 +95,7 @@ export function JobEmployerVerificationCard({ embedded = false }: { embedded?: b
             fullWidth
             multiline
             minRows={2}
-            placeholder="p.sh. Kompania jonë operon që prej 2018…"
+            placeholder="p.sh. Informacion shtesë për verifikimin…"
           />
           <Button
             variant="contained"
@@ -113,27 +108,5 @@ export function JobEmployerVerificationCard({ embedded = false }: { embedded?: b
         </>
       ) : null}
     </Stack>
-  );
-
-  if (embedded) {
-    return (
-      <Box
-        sx={{
-          p: 2,
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
-        }}
-      >
-        {body}
-      </Box>
-    );
-  }
-
-  return (
-    <Card variant="outlined" sx={{ borderRadius: 2 }}>
-      <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>{body}</CardContent>
-    </Card>
   );
 }

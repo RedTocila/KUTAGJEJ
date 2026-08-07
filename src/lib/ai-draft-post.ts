@@ -66,7 +66,7 @@ function resolveCity(
 }
 
 /** Host AI-scraped photos on our CDN (avoids CORS / hotlink breakage). */
-async function hostDraftImages(
+export async function hostAiDraftImages(
   urls: string[],
   folder: string,
 ): Promise<{ urls: string[]; error?: string }> {
@@ -140,7 +140,7 @@ export async function postAiListingDraft(
       businesses: 'businesses',
       professionals: 'professionals',
     };
-    const hosted = await hostDraftImages(
+    const hosted = await hostAiDraftImages(
       rawImageUrls,
       folderByCategory[draft.category] || 'listings',
     );

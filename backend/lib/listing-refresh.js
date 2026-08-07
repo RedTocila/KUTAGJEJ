@@ -160,9 +160,11 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
     };
   }
 
+  // Bump public “newest” sort only. Leave updated_at alone so “My listings”
+  // (ordered by updated_at) does not jump the card to the top.
   const { error: bumpErr } = await sb
     .from(table)
-    .update({ created_at: now, updated_at: now })
+    .update({ created_at: now })
     .eq('id', listingId);
   if (bumpErr) {
     // Best-effort refund if bump fails after debit.

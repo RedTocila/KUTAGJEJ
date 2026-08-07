@@ -37,6 +37,8 @@ function wrapProfile(row) {
     businessName: row.business_name || '',
     businessOwner: row.business_owner || '',
     businessCategory: row.business_category || '',
+    basedCityId: row.based_city_id || null,
+    basedCityName: row.based_city_name || '',
     createdBy: row.created_by || null,
     jobsEmployerVerifiedAt: row.jobs_employer_verified_at || null,
     professionalsVerifiedAt: row.professionals_verified_at || null,
@@ -82,6 +84,8 @@ function profileUpdateFromCamel(fields) {
     businessName: 'business_name',
     businessOwner: 'business_owner',
     businessCategory: 'business_category',
+    basedCityId: 'based_city_id',
+    basedCityName: 'based_city_name',
     createdBy: 'created_by',
     jobsEmployerVerifiedAt: 'jobs_employer_verified_at',
     professionalsVerifiedAt: 'professionals_verified_at',
@@ -106,6 +110,8 @@ function profileUpdateFromCamel(fields) {
     if (out[key] === '') out[key] = null;
   }
   if (out.avatar_url === '') out.avatar_url = null;
+  if (out.based_city_id === '') out.based_city_id = null;
+  if (out.based_city_name === '') out.based_city_name = null;
   return out;
 }
 

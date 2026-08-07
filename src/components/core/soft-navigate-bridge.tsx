@@ -1,19 +1,29 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import {
   registerAppRouterNavigation,
   unregisterAppRouterNavigation,
 } from '@/lib/hard-navigate';
 
+function scrollWindowToTop() {
+  if (typeof window === 'undefined') return;
+  if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+  }
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+}
+
 /**
  * Registers App Router `push` / `refresh` for imperative helpers in `hard-navigate.ts`.
  * Keeps in-app clicks instant (no full document reload).
+ * Also resets scroll to the top on every pathname change (e.g. opening a listing).
  */
 export function SoftNavigateBridge({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   React.useEffect(() => {
     registerAppRouterNavigation(
@@ -32,6 +42,10 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
       unregisterAppRouterNavigation();
     };
   }, [router]);
+
+  React.useLayoutEffect(() => {
+    scrollWindowToTop();
+  }, [pathname]);
 
   return children;
 }

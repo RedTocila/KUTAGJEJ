@@ -296,7 +296,7 @@ function ImagePreview({ file, onRemove }: ImagePreviewProps) {
 function formFromListing(l: CarMineListing): CarFormState {
   const finish = l.finish ?? [];
   return {
-    vehicleType: (l.vehicleType as VehicleType) || 'car',
+    vehicleType: (l.vehicleType as VehicleType) || '',
     make: l.make || '',
     model: l.model || '',
     variant: l.variant || '',
@@ -353,7 +353,7 @@ export function CarListingForm({
   const formRef = React.useRef<HTMLFormElement | null>(null);
   const [images, setImages] = React.useState<File[]>([]);
   const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(
-    () => (initialListing?.imageUrls ?? []).filter(Boolean),
+    () => (initialListing?.imageUrls ?? []).filter(Boolean).slice(0, MAX_IMAGES),
   );
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [loadingCities, setLoadingCities] = React.useState(true);
@@ -382,7 +382,7 @@ export function CarListingForm({
     setForm(
       applyEmptyKnownDefaults(formFromListing(initialListing), knownCreateDefaultsFromStorage()) as CarFormState,
     );
-    setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
+    setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean).slice(0, MAX_IMAGES));
     setImages([]);
   }, [initialListing]);
 

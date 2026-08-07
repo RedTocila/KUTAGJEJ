@@ -6,7 +6,8 @@ const { createAdminNotification } = require('./listing-moderation');
 const { isUuid } = require('./public-listings/query-helpers');
 
 function isJobsEmployerVerified(userDoc) {
-  return Boolean(userDoc?.jobsEmployerVerifiedAt);
+  // Account verification is shared across listing contexts.
+  return Boolean(userDoc?.jobsEmployerVerifiedAt || userDoc?.professionalsVerifiedAt);
 }
 
 function buildApplicantSnapshot(userDoc, modelName) {
@@ -89,7 +90,7 @@ async function submitVerificationRequest(user, message) {
   if (!portal) return { ok: false, status: 404, message: 'User not found.' };
 
   if (isJobsEmployerVerified(portal)) {
-    return { ok: false, status: 400, message: 'Profili juaj është tashmë i verifikuar për Punë.' };
+    return { ok: false, status: 400, message: 'Llogaria juaj është tashmë e verifikuar.' };
   }
 
   const { data: pending, error: pendingErr } = await getSupabaseAdmin()
@@ -164,9 +165,14 @@ async function reviewVerificationRequest(admin, requestId, decision, adminNote) 
   if (updateErr) throw updateErr;
 
   if (status === 'approved') {
+    // One account verification covers both listing contexts (professionals + jobs).
     const { error: profileErr } = await sb
       .from('profiles')
-      .update({ jobs_employer_verified_at: now, updated_at: now })
+      .update({
+        jobs_employer_verified_at: now,
+        professionals_verified_at: now,
+        updated_at: now,
+      })
       .eq('id', doc.applicant_id);
     if (profileErr) throw profileErr;
   }

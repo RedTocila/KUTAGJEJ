@@ -67,6 +67,11 @@ alter table public.profiles
 alter table public.profiles
   add column if not exists auto_refresh_slots integer not null default 0
     check (auto_refresh_slots >= 0);
+alter table public.profiles
+  add column if not exists based_city_id uuid
+    references public.real_estate_cities (id) on delete set null;
+alter table public.profiles
+  add column if not exists based_city_name text;
 
 -- Business announcements
 alter table public.directory_listings

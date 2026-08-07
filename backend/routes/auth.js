@@ -16,6 +16,7 @@ const {
   referralFieldsForUser,
 } = require('../lib/referrals');
 const { imageUpload } = require('../lib/image-upload');
+const { isUuid } = require('../lib/public-listings/query-helpers');
 const crypto = require('crypto');
 
 const router = express.Router();
@@ -23,6 +24,32 @@ const rateLimit = require('../middleware/rate-limit');
 
 const authRateLimit = rateLimit({ windowMs: 60_000, max: 15 });
 const UPLOADS_BUCKET = 'uploads';
+
+/**
+ * Resolve optional based-city from request body.
+ * Returns { ok: true, id, name } | { ok: true, id: null, name: null } | { ok: false, message }.
+ */
+async function resolveBasedCity(raw) {
+  if (raw === undefined) return { ok: true, skipped: true };
+  const id = String(raw ?? '').trim();
+  if (!id) return { ok: true, id: null, name: null };
+  if (!isUuid(id)) return { ok: false, message: 'Qyteti i zgjedhur nuk është i vlefshëm.' };
+  const { data, error } = await getSupabaseAdmin()
+    .from('real_estate_cities')
+    .select('id, name')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return { ok: false, message: 'Qyteti i zgjedhur nuk u gjet.' };
+  return { ok: true, id: data.id, name: data.name || '' };
+}
+
+function portalBasedCityFields(user) {
+  return {
+    basedCityId: user.basedCityId || null,
+    basedCityName: user.basedCityName || '',
+  };
+}
 
 async function uploadAvatarBuffer(file) {
   const sb = getSupabaseAdmin();
@@ -73,6 +100,8 @@ const formatUser = (user) => {
       avatar: user.avatarUrl || '',
       boostCredits: Number(user.boostCredits) || 0,
       autoRefreshSlots: Number(user.autoRefreshSlots) || 0,
+      verified: Boolean(user.professionalsVerifiedAt || user.jobsEmployerVerifiedAt),
+      ...portalBasedCityFields(user),
       ...referralFieldsForUser(user),
     };
   }
@@ -88,6 +117,8 @@ const formatUser = (user) => {
       avatar: user.avatarUrl || '',
       boostCredits: Number(user.boostCredits) || 0,
       autoRefreshSlots: Number(user.autoRefreshSlots) || 0,
+      verified: Boolean(user.professionalsVerifiedAt || user.jobsEmployerVerifiedAt),
+      ...portalBasedCityFields(user),
       ...referralFieldsForUser(user),
     };
   }
@@ -238,6 +269,8 @@ router.post('/register', authRateLimit, async (req, res) => {
         return res.status(400).json({ message: 'Emri dhe mbiemri janë të detyrueshëm.' });
       }
       const phone = String(req.body.phone || '').trim().slice(0, 40);
+      const based = await resolveBasedCity(req.body.basedCityId ?? req.body.cityId);
+      if (!based.ok) return res.status(400).json({ message: based.message });
       const referralCode = await allocateUniqueReferralCode();
 
       const authUser = await createAuthUser({
@@ -255,6 +288,8 @@ router.post('/register', authRateLimit, async (req, res) => {
         account_type: 'individual',
         role: 'individual-user',
         referral_code: referralCode,
+        based_city_id: based.skipped ? null : based.id,
+        based_city_name: based.skipped ? null : based.name,
         is_active: true,
       });
 
@@ -292,6 +327,8 @@ router.post('/register', authRateLimit, async (req, res) => {
 
       const parts = businessOwner.split(/\s+/).filter(Boolean);
       const phone = String(req.body.phone || '').trim().slice(0, 40);
+      const based = await resolveBasedCity(req.body.basedCityId ?? req.body.cityId);
+      if (!based.ok) return res.status(400).json({ message: based.message });
       const referralCode = await allocateUniqueReferralCode();
 
       const authUser = await createAuthUser({
@@ -313,6 +350,8 @@ router.post('/register', authRateLimit, async (req, res) => {
         business_owner: businessOwner,
         business_category: businessCategory,
         referral_code: referralCode,
+        based_city_id: based.skipped ? null : based.id,
+        based_city_name: based.skipped ? null : based.name,
         is_active: true,
       });
 
@@ -417,6 +456,17 @@ router.put('/portal/update-profile', authMiddleware, requirePortalUser, async (r
 
     if (body.phone !== undefined) {
       req.admin.phone = String(body.phone ?? '').trim().slice(0, 40);
+    }
+
+    if (body.basedCityId !== undefined || body.cityId !== undefined) {
+      const based = await resolveBasedCity(
+        body.basedCityId !== undefined ? body.basedCityId : body.cityId,
+      );
+      if (!based.ok) return res.status(400).json({ message: based.message });
+      if (!based.skipped) {
+        req.admin.basedCityId = based.id;
+        req.admin.basedCityName = based.name || '';
+      }
     }
 
     if (body.avatar !== undefined || body.avatarUrl !== undefined) {

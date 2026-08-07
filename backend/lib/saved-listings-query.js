@@ -139,7 +139,13 @@ async function listSavedListingsForSaver(saver, { page = 1, limit = 24 } = {}) {
   ]);
 
   const refs = loaded.map((r) => ({ kind: r.kind, listingId: String(r.doc.id) }));
-  const metricsMap = await fetchMetricsMap(refs, saver);
+  const { loadVerifiedPosterIdSet, loadTrustBadgePosterIdSet } = require('./public-listings/load-poster-brief');
+  const posterIds = loaded.map((r) => r.doc.posterId);
+  const [metricsMap, verifiedIds, trustIds] = await Promise.all([
+    fetchMetricsMap(refs, saver),
+    loadVerifiedPosterIdSet(posterIds),
+    loadTrustBadgePosterIdSet(posterIds),
+  ]);
 
   const items = [];
   for (const row of loaded) {
@@ -147,6 +153,7 @@ async function listSavedListingsForSaver(saver, { page = 1, limit = 24 } = {}) {
     const formatted = await formatSavedRow(row.kind, row.doc, cityById, reviewStats);
     if (!formatted) continue;
     const m = metricsMap.get(metricsKey(row.kind, formatted.id)) ?? {};
+    const posterId = row.doc.posterId ? String(row.doc.posterId) : '';
     items.push({
       kind: row.kind,
       kindLabel: KIND_LABELS[row.kind] ?? row.kind,
@@ -158,6 +165,8 @@ async function listSavedListingsForSaver(saver, { page = 1, limit = 24 } = {}) {
       permalinkPath: formatted.permalinkPath ?? null,
       listing: {
         ...formatted,
+        sellerVerified: Boolean(posterId && verifiedIds.has(posterId)),
+        sellerTrustBadge: Boolean(posterId && trustIds.has(posterId)),
         viewCount: m.viewCount ?? 0,
         clickCount: m.clickCount ?? 0,
         shareCount: m.shareCount ?? 0,

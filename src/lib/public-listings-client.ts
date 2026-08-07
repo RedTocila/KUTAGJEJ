@@ -12,6 +12,10 @@ export type ListingMetricsFields = ListingMetrics & {
   /** Active OKAZION window — red-themed short deal (5 days). */
   isOkazion?: boolean;
   okazionUntil?: string | null;
+  /** Poster has an approved account verification badge. */
+  sellerVerified?: boolean;
+  /** Poster has an active Grow or Elite package (Trust Badge stamp on titles). */
+  sellerTrustBadge?: boolean;
 };
 
 /**
@@ -61,6 +65,8 @@ export interface PublicRealEstateListingSeller {
   memberSince: string;
   /** Admin-approved verification (jobs and/or professionals, depending on context). */
   verified?: boolean;
+  /** Active Grow or Elite package — Trust Badge stamp on titles. */
+  trustBadge?: boolean;
   /** Business accounts — registered owner name. */
   businessOwner?: string | null;
   /** Business accounts — free-text category. */

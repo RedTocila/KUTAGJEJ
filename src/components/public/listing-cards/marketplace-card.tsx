@@ -19,6 +19,7 @@ import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
 import { findOptionLabel, formatPrice, relativeAlbanianDate } from './format-helpers';
 import { ListingPrice } from './listing-price';
+import { ListingTitleWithVerified } from './listing-title-with-verified';
 import {
   ListingCardRating,
   resolveListingCardRating,
@@ -107,21 +108,11 @@ export function MarketplaceCard({
         >
           {categoryLabel}
         </Typography>
-        <Typography
-          component="h3"
-          sx={{
-            fontWeight: 700,
-            fontSize: '0.95rem',
-            lineHeight: 1.4,
-            color: 'text.primary',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {listing.title}
-        </Typography>
+        <ListingTitleWithVerified
+          title={listing.title}
+          verified={Boolean(listing.sellerVerified)}
+          trustBadge={Boolean(listing.sellerTrustBadge)}
+        />
         {cardRating ? (
           <ListingCardRating
             ratingAverage={cardRating.ratingAverage}

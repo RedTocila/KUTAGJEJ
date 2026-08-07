@@ -55,9 +55,9 @@ import {
   saveAiListingDraftQueue,
   type AiListingDraft,
 } from '@/lib/ai-listing-draft';
-import { postAiListingDraft, postAiListingDrafts } from '@/lib/ai-draft-post';
+import { postAiListingDraft, postAiListingDrafts, hostAiDraftImages } from '@/lib/ai-draft-post';
 import { hardNavigate } from '@/lib/hard-navigate';
-import { uploadListingImages } from '@/lib/uploads-client';
+import { isOurStorageUrl, uploadListingImages } from '@/lib/uploads-client';
 import { paths } from '@/paths';
 import type { ListingCategoryKey } from '@/types/listing-category';
 
@@ -119,6 +119,7 @@ export default function AiImportListingsPage() {
   const [drafts, setDrafts] = React.useState<AiImportDraftResult[]>([]);
   const [preview, setPreview] = React.useState<{ urls: string[]; index: number } | null>(null);
   const [postingId, setPostingId] = React.useState<string | null>(null);
+  const [openingId, setOpeningId] = React.useState<string | null>(null);
   const [postingAll, setPostingAll] = React.useState(false);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [pendingImageUrls, setPendingImageUrls] = React.useState<string[]>([]);
@@ -305,7 +306,7 @@ export default function AiImportListingsPage() {
     setStatusMessage(null);
   };
 
-  const openDraft = (draft: AiImportDraftResult) => {
+  const openDraft = async (draft: AiImportDraftResult) => {
     if (isAiContentRestricted(draft)) {
       setError(t.aiImport.contentRestricted);
       return;
@@ -319,9 +320,36 @@ export default function AiImportListingsPage() {
       setError(draft.error || t.aiImport.formEmpty);
       return;
     }
-    saveAiListingDraft(ready);
-    const href = `${paths.user.realEstateListing}?category=${encodeURIComponent(ready.category)}&ai=1&draftId=${encodeURIComponent(ready.id)}`;
-    hardNavigate(href);
+
+    setOpeningId(draft.id);
+    setError(null);
+    try {
+      // Copy Instagram/CDN photos onto our storage so the listing form can show them
+      // (hotlink protection blocks raw cdninstagram URLs without referrerPolicy, and
+      // submit paths for some categories need hosted URLs).
+      const remote = (ready.imageUrls || []).filter(
+        (u) => /^https?:\/\//i.test(u) && !isOurStorageUrl(u),
+      );
+      let imageUrls = ready.imageUrls || [];
+      if (remote.length) {
+        const folder = ready.category ? UPLOAD_FOLDER[ready.category] : 'listings';
+        const hosted = await hostAiDraftImages(imageUrls, folder || 'listings');
+        if (hosted.urls.length) {
+          imageUrls = hosted.urls;
+        }
+      }
+      const withImages = { ...ready, imageUrls };
+      saveAiListingDraft(withImages);
+      // Keep draft queue in sync so returning to this page still shows hosted URLs.
+      persistDrafts(
+        drafts.map((d) => (d.id === draft.id ? { ...d, imageUrls } : d)),
+      );
+      const href = `${paths.user.realEstateListing}?category=${encodeURIComponent(withImages.category)}&ai=1&draftId=${encodeURIComponent(withImages.id)}`;
+      hardNavigate(href);
+    } catch {
+      setError(t.aiImport.failed);
+      setOpeningId(null);
+    }
   };
 
   const dismissDraft = (draftId: string) => {
@@ -750,7 +778,7 @@ export default function AiImportListingsPage() {
             >
               <Button
                 variant="contained"
-                disabled={postingAll || postingId != null || readyDrafts.length === 0}
+                disabled={postingAll || postingId != null || openingId != null || readyDrafts.length === 0}
                 onClick={() => void postAll()}
                 startIcon={
                   postingAll ? <CircularProgress size={14} color="inherit" /> : undefined
@@ -776,7 +804,7 @@ export default function AiImportListingsPage() {
               <Button
                 variant="contained"
                 aria-label={t.aiImport.deleteAll}
-                disabled={postingAll || postingId != null || drafts.length === 0}
+                disabled={postingAll || postingId != null || openingId != null || drafts.length === 0}
                 onClick={deleteAllDrafts}
                 sx={{
                   textTransform: 'none',
@@ -954,7 +982,7 @@ export default function AiImportListingsPage() {
                     <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
                       <Button
                         variant="contained"
-                        disabled={postingAll || postingId != null}
+                        disabled={postingAll || postingId != null || openingId != null}
                         onClick={() => void postOne(draft)}
                         startIcon={
                           postingId === draft.id ? (
@@ -986,8 +1014,13 @@ export default function AiImportListingsPage() {
                       </Button>
                       <Button
                         variant="outlined"
-                        disabled={postingAll || postingId != null}
-                        onClick={() => openDraft(draft)}
+                        disabled={postingAll || postingId != null || openingId != null}
+                        onClick={() => void openDraft(draft)}
+                        startIcon={
+                          openingId === draft.id ? (
+                            <CircularProgress size={14} color="inherit" />
+                          ) : undefined
+                        }
                         sx={{
                           textTransform: 'none',
                           fontWeight: 800,
@@ -1000,7 +1033,7 @@ export default function AiImportListingsPage() {
                           },
                         }}
                       >
-                        {t.aiImport.openForm}
+                        {openingId === draft.id ? t.aiImport.openingForm : t.aiImport.openForm}
                       </Button>
                     </Stack>
                   ) : null}

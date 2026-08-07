@@ -51,10 +51,12 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
         updatedAt: new Date().toISOString(),
       }, true);
 
-    case 'cars':
+    case 'cars': {
+      const vehicleType = str(f.vehicleType);
       return withKnownDefaults({
         id: draft.id,
-        vehicleType: str(f.vehicleType) || 'car',
+        // Prefer empty over wrong default "car" when AI left type unset.
+        vehicleType: vehicleType || '',
         make: str(f.make),
         model: str(f.model),
         variant: str(f.variant),
@@ -71,8 +73,9 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
         contactPhone: str(f.contactPhone),
         cityId: str(f.cityId) || null,
         cityName: draft.cityName || null,
-        imageUrls,
+        imageUrls: imageUrls.slice(0, 5),
       });
+    }
 
     case 'job-listings':
       return withKnownDefaults({

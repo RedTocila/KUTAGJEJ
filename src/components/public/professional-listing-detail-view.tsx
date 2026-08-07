@@ -28,6 +28,7 @@ import {
   ProfessionalRatingSummary,
   ProfessionalVerifiedBadge,
 } from '@/components/public/professional-listing-detail-ui';
+import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
@@ -200,12 +201,23 @@ export function ProfessionalListingDetailView({
                     }}
                   >
                     {displayName}
+                    {isVerified ? (
+                      <Box
+                        component="span"
+                        sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
+                      >
+                        <ProfessionalVerifiedBadge />
+                      </Box>
+                    ) : null}
+                    {listing.seller?.trustBadge ? (
+                      <Box
+                        component="span"
+                        sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
+                      >
+                        <ListingTrustBadge size={22} />
+                      </Box>
+                    ) : null}
                   </Typography>
-                  {isVerified ? (
-                    <Box sx={{ flexShrink: 0, display: 'inline-flex', lineHeight: 0 }}>
-                      <ProfessionalVerifiedBadge />
-                    </Box>
-                  ) : null}
                 </OwnerEditableSpot>
                 <OwnerEditableSpot
                   field="category"

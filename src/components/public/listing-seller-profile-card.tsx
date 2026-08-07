@@ -2,9 +2,9 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Avatar, Button, Paper, Stack, Typography, type SxProps, type Theme } from '@mui/material';
+import { Avatar, Box, Button, Paper, Stack, Typography, type SxProps, type Theme } from '@mui/material';
 
-import { ProfessionalRatingSummary } from '@/components/public/professional-listing-detail-ui';
+import { ProfessionalRatingSummary, ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { PublicRealEstateListingSeller } from '@/lib/public-listings-client';
@@ -75,9 +75,19 @@ export function ListingSellerProfileCard({
             {sellerInitials(name)}
           </Avatar>
           <Stack spacing={0.5} sx={{ flex: '1 1 auto', minWidth: 0 }}>
-            <Typography sx={{ fontWeight: 850, fontSize: '1.125rem', color: 'text.primary' }} noWrap>
-              {name}
-            </Typography>
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+              <Typography sx={{ fontWeight: 850, fontSize: '1.125rem', color: 'text.primary' }} noWrap>
+                {name}
+                {seller?.verified ? (
+                  <Box
+                    component="span"
+                    sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.45, lineHeight: 0 }}
+                  >
+                    <ListingVerifiedBadge size={18} aria-label="Profil i verifikuar" />
+                  </Box>
+                ) : null}
+              </Typography>
+            </Stack>
             {memberYear != null ? (
               <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
                 Anëtar që prej {memberYear}

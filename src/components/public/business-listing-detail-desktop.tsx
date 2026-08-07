@@ -19,7 +19,7 @@ import { alpha } from '@mui/material/styles';
 import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
 import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
-import { BusinessVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
+import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 
@@ -193,8 +193,12 @@ export function BusinessListingDetailDesktop({
                   <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
                     <Typography component="h1" sx={{ fontWeight: 800, fontSize: '1.35rem', lineHeight: 1.2 }}>
                       {listing.title}
+                      <ListingDetailTitleBadges
+                        verified={Boolean(listing.seller?.verified)}
+                        trustBadge={Boolean(listing.seller?.trustBadge)}
+                        verifiedLabel="Biznes i verifikuar"
+                      />
                     </Typography>
-                    <BusinessVerifiedBadge />
                   </Stack>
                   <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', lineHeight: 1.4 }}>{categoryLine}</Typography>
                   {listing.cityName ? (

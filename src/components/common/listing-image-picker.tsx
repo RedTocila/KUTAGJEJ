@@ -65,7 +65,12 @@ function UrlPreview({ url, onRemove }: { url: string; onRemove: () => void }) {
   return (
     <Box sx={THUMB_SX}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+      <img
+        src={url}
+        alt=""
+        referrerPolicy="no-referrer"
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+      />
       <IconButton
         size="small"
         onClick={onRemove}

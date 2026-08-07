@@ -60,6 +60,7 @@ export type RegisterParams =
       email: string;
       password: string;
       phone?: string;
+      basedCityId?: string;
       referralCode?: string;
     }
   | {
@@ -71,6 +72,7 @@ export type RegisterParams =
       email: string;
       password: string;
       phone?: string;
+      basedCityId?: string;
       referralCode?: string;
     };
 
@@ -223,6 +225,7 @@ class AuthClient {
     businessName?: string;
     businessOwner?: string;
     businessCategory?: string;
+    basedCityId?: string | null;
     /** Public profile photo URL; empty string clears it. */
     avatar?: string;
   }): Promise<{ admin?: User; error?: string }> {

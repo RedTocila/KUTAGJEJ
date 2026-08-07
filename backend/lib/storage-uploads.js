@@ -94,13 +94,31 @@ async function mirrorRemoteImageUrl(url, folder = 'listings') {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
+    let host = '';
+    try {
+      host = new URL(raw).hostname.replace(/^www\./, '').toLowerCase();
+    } catch {
+      host = '';
+    }
+    const isInstagramCdn =
+      host.includes('cdninstagram.com') ||
+      host.includes('fbcdn.net') ||
+      host.includes('instagram.com');
+
     const res = await fetch(raw, {
       signal: controller.signal,
       redirect: 'follow',
       headers: {
         Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        // Instagram CDN often blocks generic bots; use a browser UA + referer.
         'User-Agent':
-          'Mozilla/5.0 (compatible; KuTaGjejBot/1.0; +https://kutagjej.vercel.app)',
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        ...(isInstagramCdn
+          ? {
+              Referer: 'https://www.instagram.com/',
+              Origin: 'https://www.instagram.com',
+            }
+          : {}),
       },
     });
     if (!res.ok) return null;

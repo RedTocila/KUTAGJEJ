@@ -9,6 +9,7 @@ import {
   knownCreateDefaultsFromStorage,
   locationDefaultsFromStorage,
   rememberListingLocation,
+  resolveBasedCity,
   resolveContactPhone,
   type CreateListingKnownDefaults,
   type ListingLocationDefaults,
@@ -64,7 +65,7 @@ async function resolveLocationFromMine(userId?: string | null): Promise<ListingL
 }
 
 /**
- * Known create defaults (phone from profile, city/zone from last listing).
+ * Known create defaults (phone + based city from profile, zone from last listing).
  * Empty-only — safe to re-apply after AI prefill.
  */
 export function useCreateListingDefaults(options?: {
@@ -102,11 +103,17 @@ export function useCreateListingDefaults(options?: {
 
   const defaults = React.useMemo<CreateListingKnownDefaults>(() => {
     const fromStorage = knownCreateDefaultsFromStorage(userId);
+    const fromProfile = resolveBasedCity(user);
+    const cityId = fromProfile.cityId || location.cityId || fromStorage.cityId;
+    const zoneId =
+      fromProfile.cityId && fromProfile.cityId !== location.cityId
+        ? ''
+        : location.zoneId || fromStorage.zoneId;
     return {
       contactPhone: resolveContactPhone(user) || fromStorage.contactPhone,
-      cityId: location.cityId || fromStorage.cityId,
-      zoneId: location.zoneId || fromStorage.zoneId,
-      cityName: location.cityName || fromStorage.cityName,
+      cityId,
+      zoneId,
+      cityName: fromProfile.cityName || location.cityName || fromStorage.cityName,
     };
   }, [user, userId, location.cityId, location.zoneId, location.cityName]);
 

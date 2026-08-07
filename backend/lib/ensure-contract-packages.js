@@ -38,10 +38,10 @@ const PACKAGE_TIERS = [
     maxOkazionListings: 0,
     boostCredits: 150,
     refreshEveryHours: 24,
-    glowBadgeEnabled: true,
+    glowBadgeEnabled: false,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/15 Car · 0/25 Apartment · 0/15 Product · 0/50 Job · 150 Boost Coins · Refresh same listing after 24 hours · Trust Badge',
+      '0/1 List in All Categories · 0/15 Car · 0/25 Apartment · 0/15 Product · 0/50 Job · 150 Boost Coins · Refresh same listing after 24 hours',
   },
   {
     planCode: 'grow',

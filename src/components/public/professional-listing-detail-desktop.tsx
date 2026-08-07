@@ -34,6 +34,7 @@ import {
   ProfessionalRatingSummary,
   ProfessionalVerifiedBadge,
 } from '@/components/public/professional-listing-detail-ui';
+import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import {
   LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
@@ -179,12 +180,23 @@ export function ProfessionalListingDetailDesktop({
                           }}
                         >
                           {displayName}
+                          {isVerified ? (
+                            <Box
+                              component="span"
+                              sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
+                            >
+                              <ProfessionalVerifiedBadge />
+                            </Box>
+                          ) : null}
+                          {listing.seller?.trustBadge ? (
+                            <Box
+                              component="span"
+                              sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
+                            >
+                              <ListingTrustBadge size={22} />
+                            </Box>
+                          ) : null}
                         </Typography>
-                        {isVerified ? (
-                          <Box sx={{ flexShrink: 0, display: 'inline-flex', lineHeight: 0 }}>
-                            <ProfessionalVerifiedBadge />
-                          </Box>
-                        ) : null}
                       </Stack>
                       <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>{subtitle}</Typography>
                       <Stack

@@ -55,6 +55,7 @@ import type {
 
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingSellerProfileCard } from '@/components/public/listing-seller-profile-card';
+import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
@@ -396,6 +397,12 @@ export function VerticalListingDetailView(props: {
                   }}
                 >
                   {listingTitle(listing)}
+                  {'seller' in listing ? (
+                    <ListingDetailTitleBadges
+                      verified={Boolean(listing.seller?.verified)}
+                      trustBadge={Boolean(listing.seller?.trustBadge)}
+                    />
+                  ) : null}
                 </Typography>
               </OwnerEditableSpot>
 

@@ -21,6 +21,7 @@ import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/C
 import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
 import { Medal as MedalIcon } from '@phosphor-icons/react/dist/ssr/Medal';
 import { SealCheck as SealCheckIcon } from '@phosphor-icons/react/dist/ssr/SealCheck';
+import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
@@ -436,16 +437,15 @@ export function MemberProfileView({
                     }}
                   >
                     {name}
+                    {member.verified ? (
+                      <Box
+                        component="span"
+                        sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
+                      >
+                        <ListingVerifiedBadge size={22} aria-label="Profil i verifikuar" />
+                      </Box>
+                    ) : null}
                   </Typography>
-                  {member.verified ? (
-                    <Box
-                      component="span"
-                      title="Profil i verifikuar"
-                      sx={{ display: 'inline-flex', color: 'primary.main', flexShrink: 0 }}
-                    >
-                      <SealCheckIcon size={22} weight="fill" aria-label="Profil i verifikuar" />
-                    </Box>
-                  ) : null}
                 </Stack>
 
                 <Stack

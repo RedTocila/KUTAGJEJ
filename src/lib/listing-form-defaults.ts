@@ -25,6 +25,35 @@ export function resolveContactPhone(user: Pick<User, 'phone'> | null | undefined
   return contactPhoneFromUser(user) || contactPhoneFromStorage();
 }
 
+export function basedCityFromUser(
+  user: Pick<User, 'basedCityId' | 'basedCityName'> | null | undefined,
+): { cityId: string; cityName: string } {
+  const cityId = typeof user?.basedCityId === 'string' ? user.basedCityId.trim() : '';
+  const cityName = typeof user?.basedCityName === 'string' ? user.basedCityName.trim() : '';
+  return { cityId, cityName };
+}
+
+/** Sync read of cached based city (available before `useUser` hydrates). */
+export function basedCityFromStorage(): { cityId: string; cityName: string } {
+  if (typeof window === 'undefined') return { cityId: '', cityName: '' };
+  try {
+    const raw = localStorage.getItem('user-data');
+    if (!raw) return { cityId: '', cityName: '' };
+    return basedCityFromUser(JSON.parse(raw) as User);
+  } catch {
+    return { cityId: '', cityName: '' };
+  }
+}
+
+/** Prefer live user profile based city, then localStorage cache. */
+export function resolveBasedCity(
+  user: Pick<User, 'basedCityId' | 'basedCityName'> | null | undefined,
+): { cityId: string; cityName: string } {
+  const fromUser = basedCityFromUser(user);
+  if (fromUser.cityId) return fromUser;
+  return basedCityFromStorage();
+}
+
 /** Professional profile title from individual name or business name. */
 export function professionalTitleFromUser(
   user: Pick<User, 'firstName' | 'lastName' | 'businessName'> | null | undefined,
@@ -104,7 +133,7 @@ function emptyLocationDefaults(): ListingLocationDefaults {
   return { cityId: '', zoneId: '', cityName: '', userId: '' };
 }
 
-/** Last-used listing location (profile has no city — inferred from past posts). */
+/** Last-used listing location (fallback when profile has no based city). */
 export function locationDefaultsFromStorage(userId?: string | null): ListingLocationDefaults {
   if (typeof window === 'undefined') return emptyLocationDefaults();
   try {
@@ -154,12 +183,13 @@ export type CreateListingKnownDefaults = {
 
 /** Sync snapshot of known defaults for create forms / AI drafts (empty-only apply). */
 export function knownCreateDefaultsFromStorage(userId?: string | null): CreateListingKnownDefaults {
+  const fromProfile = basedCityFromStorage();
   const loc = locationDefaultsFromStorage(userId);
   return {
     contactPhone: contactPhoneFromStorage(),
-    cityId: loc.cityId,
-    zoneId: loc.zoneId,
-    cityName: loc.cityName,
+    cityId: fromProfile.cityId || loc.cityId,
+    zoneId: fromProfile.cityId && fromProfile.cityId !== loc.cityId ? '' : loc.zoneId,
+    cityName: fromProfile.cityName || loc.cityName,
   };
 }
 

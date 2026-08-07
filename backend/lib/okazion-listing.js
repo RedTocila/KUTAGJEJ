@@ -283,8 +283,8 @@ async function bumpListingOkazion(sb, table, listingId, until, now) {
     .from(table)
     .update({
       okazion_until: until.toISOString(),
+      // Public feed bump only — keep updated_at so My listings order stays put.
       created_at: now.toISOString(),
-      updated_at: now.toISOString(),
     })
     .eq('id', listingId);
   if (bumpErr) throw bumpErr;

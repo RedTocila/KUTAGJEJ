@@ -44,6 +44,8 @@ function mapProfile(row) {
       businessName: this.businessName,
       businessOwner: this.businessOwner,
       businessCategory: this.businessCategory,
+      basedCityId: this.basedCityId,
+      basedCityName: this.basedCityName,
       createdBy: this.createdBy,
       jobsEmployerVerifiedAt: this.jobsEmployerVerifiedAt,
       professionalsVerifiedAt: this.professionalsVerifiedAt,

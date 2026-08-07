@@ -20,6 +20,11 @@ export interface User {
   businessCategory?: string;
   /** Optional; used for listings contact and profile. */
   phone?: string;
+  /** Home / “based in” city — prefills listing forms. */
+  basedCityId?: string | null;
+  basedCityName?: string | null;
+  /** Admin-approved account verification. */
+  verified?: boolean;
 
   [key: string]: unknown;
 }

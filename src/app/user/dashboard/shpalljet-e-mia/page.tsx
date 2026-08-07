@@ -496,17 +496,6 @@ function coverImage(imageUrls?: string[] | null): string | null {
 // Real-estate card
 // ---------------------------------------------------------------------------
 
-function bumpListingToTop<T extends { id: string; createdAt: string }>(
-  items: T[],
-  listingId: string,
-  refreshedAt: string,
-): T[] {
-  const idx = items.findIndex((x) => x.id === listingId);
-  if (idx < 0) return items;
-  const next = { ...items[idx], createdAt: refreshedAt };
-  return [next, ...items.filter((_, i) => i !== idx)];
-}
-
 function markListingPremium<T extends { id: string; isPremium?: boolean; premiumUntil?: string | null }>(
   items: T[],
   listingId: string,
@@ -532,9 +521,9 @@ function applyBusinessAnnouncement(
   items: BusinessMineListing[],
   listingId: string,
   announcement: BusinessAnnouncement | null,
-  refreshedAt?: string | null,
+  _refreshedAt?: string | null,
 ): BusinessMineListing[] {
-  const patched = items.map((item) => {
+  return items.map((item) => {
     if (item.id !== listingId) return item;
     return {
       ...item,
@@ -542,13 +531,8 @@ function applyBusinessAnnouncement(
       announcementSubtitle: announcement?.subtitle ?? null,
       announcementBannerUrl: announcement?.bannerUrl ?? null,
       announcementAt: announcement?.announcedAt ?? null,
-      ...(refreshedAt ? { createdAt: refreshedAt } : {}),
     };
   });
-  if (refreshedAt) {
-    return bumpListingToTop(patched, listingId, refreshedAt);
-  }
-  return patched;
 }
 
 function RealEstateCard({
@@ -971,12 +955,12 @@ function TabGrid<T>({ loading, error, items, renderCard, emptyLabel, getKey }: {
 type CategoryTabKey = 'all' | 'real-estate' | 'car' | 'job' | 'marketplace' | 'businesses' | 'professionals';
 
 type UnifiedMineItem =
-  | { key: string; kind: 'real-estate'; createdAt: string; listing: RealEstateMineListing }
-  | { key: string; kind: 'car'; createdAt: string; listing: CarMineListing }
-  | { key: string; kind: 'job'; createdAt: string; listing: JobMineListing }
-  | { key: string; kind: 'marketplace'; createdAt: string; listing: MarketplaceMineListing }
-  | { key: string; kind: 'businesses'; createdAt: string; listing: BusinessMineListing }
-  | { key: string; kind: 'professionals'; createdAt: string; listing: ProfessionalMineListing };
+  | { key: string; kind: 'real-estate'; createdAt: string; sortAt: string; listing: RealEstateMineListing }
+  | { key: string; kind: 'car'; createdAt: string; sortAt: string; listing: CarMineListing }
+  | { key: string; kind: 'job'; createdAt: string; sortAt: string; listing: JobMineListing }
+  | { key: string; kind: 'marketplace'; createdAt: string; sortAt: string; listing: MarketplaceMineListing }
+  | { key: string; kind: 'businesses'; createdAt: string; sortAt: string; listing: BusinessMineListing }
+  | { key: string; kind: 'professionals'; createdAt: string; sortAt: string; listing: ProfessionalMineListing };
 
 function normalizeSearch(value: string): string {
   return value.trim().toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
@@ -1269,45 +1253,53 @@ export default function UserMyListingsPage() {
     proListings.length;
 
   const unifiedItems = React.useMemo<UnifiedMineItem[]>(() => {
+    const sortAtOf = (listing: { createdAt: string; updatedAt?: string | null }) =>
+      listing.updatedAt || listing.createdAt;
     const items: UnifiedMineItem[] = [
       ...reListings.map((listing) => ({
         key: `real-estate:${listing.id}`,
         kind: 'real-estate' as const,
         createdAt: listing.createdAt,
+        sortAt: sortAtOf(listing),
         listing,
       })),
       ...carListings.map((listing) => ({
         key: `car:${listing.id}`,
         kind: 'car' as const,
         createdAt: listing.createdAt,
+        sortAt: sortAtOf(listing),
         listing,
       })),
       ...jobListings.map((listing) => ({
         key: `job:${listing.id}`,
         kind: 'job' as const,
         createdAt: listing.createdAt,
+        sortAt: sortAtOf(listing),
         listing,
       })),
       ...mktListings.map((listing) => ({
         key: `marketplace:${listing.id}`,
         kind: 'marketplace' as const,
         createdAt: listing.createdAt,
+        sortAt: sortAtOf(listing),
         listing,
       })),
       ...bizListings.map((listing) => ({
         key: `businesses:${listing.id}`,
         kind: 'businesses' as const,
         createdAt: listing.createdAt,
+        sortAt: sortAtOf(listing),
         listing,
       })),
       ...proListings.map((listing) => ({
         key: `professionals:${listing.id}`,
         kind: 'professionals' as const,
         createdAt: listing.createdAt,
+        sortAt: sortAtOf(listing),
         listing,
       })),
     ];
-    items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    items.sort((a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime());
     return items;
   }, [reListings, carListings, jobListings, mktListings, bizListings, proListings]);
 

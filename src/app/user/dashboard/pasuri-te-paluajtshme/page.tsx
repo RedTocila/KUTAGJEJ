@@ -16,7 +16,6 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { RealEstateListingForm } from '@/components/real-estate/real-estate-listing-form';
 import { CarListingForm } from '@/components/cars/car-listing-form';
 import { JobListingForm } from '@/components/jobs/job-listing-form';
-import { JobEmployerVerificationCard } from '@/components/jobs/job-employer-verification-card';
 import { MarketplaceListingForm } from '@/components/marketplace/marketplace-listing-form';
 import { BusinessListingForm } from '@/components/businesses/business-listing-form';
 import { ProfessionalListingForm } from '@/components/professionals/professional-listing-form';
@@ -323,8 +322,6 @@ export default function UserPostListingPage() {
             }
             closeHref={wantsAi ? aiReturnHref : paths.home}
           />
-
-          {phase === 'jobs-form' ? <JobEmployerVerificationCard /> : null}
 
           <PostListingFormSurface>
             {activeCategory ? (

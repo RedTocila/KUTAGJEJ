@@ -155,7 +155,7 @@ export async function uploadListingImages(
   }
 }
 
-function isOurStorageUrl(url: string): boolean {
+export function isOurStorageUrl(url: string): boolean {
   return (
     /\/storage\/v1\/object\/public\/uploads\//i.test(url) ||
     /\.public\.blob\.vercel-storage\.com\//i.test(url)

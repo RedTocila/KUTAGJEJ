@@ -19,6 +19,12 @@ export function ListingCardLink({
       onClick={(event) => {
         void recordListingMetricEvent(listingKind, listingId, 'click');
         onClick?.(event);
+        if (!event.defaultPrevented) {
+          // Ensure detail pages open from the top (soft nav can keep browse scroll).
+          if (typeof window !== 'undefined') {
+            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+          }
+        }
       }}
     />
   );

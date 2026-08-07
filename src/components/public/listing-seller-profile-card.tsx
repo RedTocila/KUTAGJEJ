@@ -4,6 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Avatar, Box, Button, Paper, Stack, Typography, type SxProps, type Theme } from '@mui/material';
 
+import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { ProfessionalRatingSummary, ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -84,6 +85,14 @@ export function ListingSellerProfileCard({
                     sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.45, lineHeight: 0 }}
                   >
                     <ListingVerifiedBadge size={18} aria-label="Profil i verifikuar" />
+                  </Box>
+                ) : null}
+                {seller?.trustBadge ? (
+                  <Box
+                    component="span"
+                    sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.45, lineHeight: 0 }}
+                  >
+                    <ListingTrustBadge size={18} />
                   </Box>
                 ) : null}
               </Typography>

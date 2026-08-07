@@ -17,6 +17,7 @@ import { listPublicContracts } from '@/lib/public-contracts-client';
 import { listMySubscriptions } from '@/lib/payments-client';
 import type { PublicContract } from '@/types/contract';
 import { paths } from '@/paths';
+import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import {
   PackageCheckoutCard,
   formatEur,
@@ -61,7 +62,7 @@ function planFeatureLines(t: AppMessages, plan: PublicContract): string[] {
     lines.push(t.packages.refreshAfterHours(plan.refreshEveryHours));
   }
   if (plan.glowBadgeEnabled) {
-    lines.push('Trust Badge');
+    lines.push(t.packages.premiumBadge);
   }
   return lines;
 }
@@ -203,6 +204,9 @@ export function MainPackagesPanel() {
             const accent = MAIN_PACKAGES_ACCENT;
             const monthlyPrice = plan.price1Month ?? paidOptions.find((o) => o.months === 1)?.price ?? null;
             const details = planFeatureLines(t, plan);
+            const titleAdornment = plan.glowBadgeEnabled ? (
+              <ListingTrustBadge size={20} />
+            ) : undefined;
 
             if (isFree) {
               return [
@@ -211,6 +215,7 @@ export function MainPackagesPanel() {
                   title={plan.title}
                   subtitle={planSubtitle(t, plan, t.packages.startFree)}
                   badge={isPlanCurrent ? t.packages.yourPlan : null}
+                  titleAdornment={titleAdornment}
                   price="€0"
                   priceSuffix={t.packages.perMonth}
                   accent={accent}
@@ -248,6 +253,7 @@ export function MainPackagesPanel() {
                   title={plan.title}
                   subtitle={planSubtitle(t, plan, durationLabel(t, opt.months))}
                   badge={badge}
+                  titleAdornment={titleAdornment}
                   price={formatEur(opt.price)}
                   priceSuffix={priceSuffixForMonths(t, opt.months)}
                   accent={accent}

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { alpha } from '@mui/material/styles';
-import { Box, Chip, LinearProgress, Stack, Typography, useTheme } from '@mui/material';
+import { Box, Button, Chip, LinearProgress, Stack, Typography, useTheme } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { Circle as CircleIcon } from '@phosphor-icons/react/dist/ssr/Circle';
 import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
@@ -31,28 +31,41 @@ function TierLine({
   reward,
   done,
   accent,
+  progressPercent,
+  action,
 }: {
   title: string;
   hint: string;
   reward: string;
   done: boolean;
   accent: Accent;
+  /** 0–100; when set, shows a thin bar under the hint (login streak). */
+  progressPercent?: number;
+  action?: React.ReactNode;
 }) {
   const theme = useTheme();
   const main = theme.palette[accent].main;
+  const showProgress = typeof progressPercent === 'number';
   return (
     <Stack
       direction="row"
       spacing={1}
       sx={{
-        alignItems: 'center',
+        alignItems: showProgress ? 'flex-start' : 'center',
         py: 0.7,
         px: 0.85,
         borderRadius: 1.25,
         bgcolor: done ? alpha(main, 0.09) : 'transparent',
       }}
     >
-      <Box sx={{ display: 'inline-flex', color: done ? main : 'text.disabled', flexShrink: 0 }}>
+      <Box
+        sx={{
+          display: 'inline-flex',
+          color: done ? main : 'text.disabled',
+          flexShrink: 0,
+          pt: showProgress ? 0.15 : 0,
+        }}
+      >
         {done ? <CheckCircleIcon size={16} weight="fill" /> : <CircleIcon size={16} weight="regular" />}
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -62,13 +75,28 @@ function TierLine({
         <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
           {hint}
         </Typography>
+        {showProgress ? (
+          <LinearProgress
+            variant="determinate"
+            value={Math.max(0, Math.min(100, progressPercent))}
+            color={accent}
+            sx={{
+              mt: 0.65,
+              height: 5,
+              borderRadius: 999,
+              bgcolor: alpha(main, 0.14),
+              '& .MuiLinearProgress-bar': { borderRadius: 999 },
+            }}
+          />
+        ) : null}
       </Box>
+      {action}
       <Chip
         size="small"
         label={reward}
         color={accent}
         variant={done ? 'filled' : 'outlined'}
-        sx={{ height: 22, fontWeight: 800, fontSize: '0.68rem', flexShrink: 0 }}
+        sx={{ height: 22, fontWeight: 800, fontSize: '0.68rem', flexShrink: 0, mt: showProgress ? 0.1 : 0 }}
       />
     </Stack>
   );
@@ -278,6 +306,7 @@ export function ProgramDisplay({
   dailyShareClaimedToday = false,
   dailyShareBoostCredits = 3,
   loginStreakDays = 0,
+  onShareClick,
 }: {
   program: ReferralProgram;
   referralCount?: number;
@@ -287,10 +316,15 @@ export function ProgramDisplay({
   dailyShareClaimedToday?: boolean;
   dailyShareBoostCredits?: number;
   loginStreakDays?: number;
+  /** When set, shows a share action on the daily share row (user portal). */
+  onShareClick?: () => void;
 }) {
   const freeThresholds = program.freeTiers.map((t) => t.referralsRequired);
   const paidThresholds = program.paidTiers.map((t) => t.paidReferralsRequired);
   const reviewThresholds = program.reviewMilestones.map((m) => m.reviewsRequired);
+  const streakRequired = Math.max(1, program.loginStreak.daysRequired);
+  const streakCurrent = Math.max(0, Math.min(loginStreakDays, streakRequired));
+  const streakProgress = Math.round((streakCurrent / streakRequired) * 100);
 
   return (
     <Stack spacing={1.5}>
@@ -506,17 +540,44 @@ export function ProgramDisplay({
             reward={`+${dailyShareBoostCredits} BC`}
             done={dailyShareClaimedToday}
             accent="primary"
+            action={
+              onShareClick ? (
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="primary"
+                  startIcon={<ShareNetworkIcon size={13} weight="bold" />}
+                  onClick={onShareClick}
+                  sx={{
+                    flexShrink: 0,
+                    textTransform: 'none',
+                    fontWeight: 800,
+                    fontSize: '0.68rem',
+                    minWidth: 0,
+                    height: 26,
+                    px: 1.1,
+                    borderRadius: 999,
+                    boxShadow: 'none',
+                    '&:hover': { boxShadow: 'none' },
+                    '& .MuiButton-startIcon': { mr: 0.45 },
+                  }}
+                >
+                  Ndaj
+                </Button>
+              ) : undefined
+            }
           />
           <TierLine
-            title={`${program.loginStreak.daysRequired} ditë radhazi`}
+            title={`${streakRequired} ditë radhazi`}
             hint={
-              loginStreakDays > 0
-                ? `${Math.min(loginStreakDays, program.loginStreak.daysRequired)}/${program.loginStreak.daysRequired} ditë`
+              streakCurrent > 0
+                ? `${streakCurrent}/${streakRequired} ditë`
                 : 'Hyr çdo ditë në platformë'
             }
             reward={`+${program.loginStreak.boostCredits} BC`}
-            done={loginStreakDays >= program.loginStreak.daysRequired}
+            done={streakCurrent >= streakRequired}
             accent="primary"
+            progressPercent={streakProgress}
           />
         </Stack>
       </Box>

@@ -32,7 +32,7 @@ async function loadVerifiedPosterIdSet(posterIds) {
 }
 
 /**
- * Poster ids with an active Grow or Elite subscription (Trust Badge on listing titles).
+ * Poster ids with an active Grow or Elite subscription (Premium Badge on listing titles).
  * Starter / Free never qualify — even if an old snapshot had glow_badge_enabled.
  */
 async function loadTrustBadgePosterIdSet(posterIds) {

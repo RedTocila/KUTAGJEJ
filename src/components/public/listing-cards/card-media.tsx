@@ -10,7 +10,7 @@ import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
-import { CrownSimple as CrownIcon } from '@phosphor-icons/react/dist/ssr/CrownSimple';
+import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';

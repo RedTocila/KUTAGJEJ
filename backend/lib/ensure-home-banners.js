@@ -4,7 +4,7 @@ const DEFAULT_BANNERS = [
   {
     title: 'Posto njoftimin tënd falas në sekonda',
     subtitle: '',
-    imageUrl: '/KuTaGjejLogo.png',
+    imageUrl: '',
     ctaLabel: 'Posto tani',
     ctaHref: '/user/dashboard/prona',
     order: 1,
@@ -13,7 +13,7 @@ const DEFAULT_BANNERS = [
   {
     title: 'Gjej atë që kërkon, më shpejt',
     subtitle: '',
-    imageUrl: '/KuTaGjejLogo.png',
+    imageUrl: '',
     ctaLabel: 'Eksploro njoftimet',
     ctaHref: '/prona',
     order: 2,
@@ -22,7 +22,7 @@ const DEFAULT_BANNERS = [
   {
     title: 'Prona në Tiranë, Durrës e gjithë Shqipërinë',
     subtitle: '',
-    imageUrl: '/KuTaGjejLogo.png',
+    imageUrl: '',
     ctaLabel: 'Shfleto pronat',
     ctaHref: '/prona',
     order: 3,
@@ -31,7 +31,7 @@ const DEFAULT_BANNERS = [
   {
     title: 'Makina të reja dhe të përdorura',
     subtitle: '',
-    imageUrl: '/KuTaGjejLogo.png',
+    imageUrl: '',
     ctaLabel: 'Shfleto makinat',
     ctaHref: '/makina',
     order: 4,
@@ -40,7 +40,7 @@ const DEFAULT_BANNERS = [
   {
     title: 'Oferta pune pranë teje',
     subtitle: '',
-    imageUrl: '/KuTaGjejLogo.png',
+    imageUrl: '',
     ctaLabel: 'Shfleto punët',
     ctaHref: '/pune',
     order: 5,
@@ -49,7 +49,7 @@ const DEFAULT_BANNERS = [
   {
     title: 'Tregu online – bli e shit lehtë',
     subtitle: '',
-    imageUrl: '/KuTaGjejLogo.png',
+    imageUrl: '',
     ctaLabel: 'Shfleto tregun',
     ctaHref: '/tregu',
     order: 6,
@@ -58,7 +58,7 @@ const DEFAULT_BANNERS = [
   {
     title: 'Zbulo biznese lokale pranë teje',
     subtitle: '',
-    imageUrl: '/KuTaGjejLogo.png',
+    imageUrl: '',
     ctaLabel: 'Shfleto bizneset',
     ctaHref: '/biznese',
     order: 7,

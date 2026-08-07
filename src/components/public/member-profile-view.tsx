@@ -21,7 +21,7 @@ import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/C
 import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
 import { Medal as MedalIcon } from '@phosphor-icons/react/dist/ssr/Medal';
 import { SealCheck as SealCheckIcon } from '@phosphor-icons/react/dist/ssr/SealCheck';
-import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
+import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
@@ -37,7 +37,10 @@ import {
   MemberReviewsDialog,
   MemberSeeReviewsButton,
 } from '@/components/public/member-reviews-dialog';
-import { ProfessionalRatingSummary } from '@/components/public/professional-listing-detail-ui';
+import {
+  ListingVerifiedBadge,
+  ProfessionalRatingSummary,
+} from '@/components/public/professional-listing-detail-ui';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import type { HomepageMixedListing } from '@/lib/homepage-latest-listings';
@@ -443,6 +446,14 @@ export function MemberProfileView({
                         sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
                       >
                         <ListingVerifiedBadge size={22} aria-label="Profil i verifikuar" />
+                      </Box>
+                    ) : null}
+                    {member.trustBadge ? (
+                      <Box
+                        component="span"
+                        sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
+                      >
+                        <ListingTrustBadge size={22} />
                       </Box>
                     ) : null}
                   </Typography>

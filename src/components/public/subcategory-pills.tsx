@@ -9,9 +9,9 @@ import type { HomeVerticalId } from '@/lib/home-categories';
 import { ProductTag } from '@/components/public/product-browse-chrome';
 
 /**
- * Horizontally-scrollable strip of subcategory pills shown beneath each
- * section header. On mobile the row scrolls; on desktop it wraps onto a
- * single line that the user can flick through with a swipe / wheel.
+ * Subcategory pills shown beneath each section header.
+ * Pills wrap onto new rows so the page only scrolls vertically
+ * (no horizontal swipe / page overflow).
  *
  * Wrapped in Suspense because `useSearchParams` requires a boundary for
  * static prerender (e.g. homepage sections).
@@ -60,17 +60,22 @@ function SubcategoryPillsList({
       sx={{
         mt: { xs: 1.5, md: 2 },
         mb: 1.5,
-        overflowX: 'auto',
-        WebkitOverflowScrolling: 'touch',
-        scrollbarWidth: 'none',
-        '&::-webkit-scrollbar': { display: 'none' },
-        maskImage:
-          'linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)',
-        WebkitMaskImage:
-          'linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)',
+        width: '100%',
+        maxWidth: '100%',
+        minWidth: 0,
+        overflowX: 'hidden',
       }}
     >
-      <Stack direction="row" spacing={1} sx={{ pr: 3, width: 'max-content' }}>
+      <Stack
+        direction="row"
+        useFlexGap
+        spacing={1}
+        sx={{
+          flexWrap: 'wrap',
+          width: '100%',
+          maxWidth: '100%',
+        }}
+      >
         {items.map((item) => (
           <ProductTag
             key={`${item.href}-${item.label}`}

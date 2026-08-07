@@ -402,7 +402,7 @@ export function ContractFormDialog(props: {
                   color="primary"
                 />
               }
-              label="Trust Badge (Grow / Elite titles)"
+              label="Premium Badge (Grow / Elite titles)"
             />
 
             <FormControlLabel

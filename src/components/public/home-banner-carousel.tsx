@@ -91,7 +91,7 @@ function resolveSlides(banners: HomeBannerDto[], home: AppMessages['home']): Hom
   const fromApi = banners.slice(0, MAX_SLIDES);
   if (fromApi.length >= MAX_SLIDES) return fromApi;
 
-  const usedTitles = new Set(fromApi.map((b) => b.title));
+  const usedTitles = new Set(fromApi.map((b) => b.title).filter(Boolean));
   const pads = fallbacks
     .filter((b) => !usedTitles.has(b.title))
     .slice(0, MAX_SLIDES - fromApi.length)
@@ -128,9 +128,7 @@ function BannerSlidePanel({
         width: '100%',
         minHeight: { xs: 240, sm: 260 },
         backgroundColor: 'background.paper',
-        backgroundImage: imageBg
-          ? `linear-gradient(115deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.2) 100%), url(${imageBg})`
-          : visual.bg,
+        backgroundImage: imageBg ? `url(${imageBg})` : visual.bg,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         '@keyframes particleFloat': {
@@ -185,32 +183,8 @@ function BannerSlidePanel({
               }}
             />
           ))}
-          <Box
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              background:
-                'linear-gradient(95deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.18) 52%, rgba(0, 0, 0, 0.1) 100%)',
-              pointerEvents: 'none',
-            }}
-          />
         </>
       ) : null}
-
-      <Box
-        aria-hidden
-        sx={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: '55%',
-          background:
-            'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.38) 42%, rgba(0,0,0,0) 100%)',
-          pointerEvents: 'none',
-          zIndex: 0,
-        }}
-      />
 
       <Stack
         direction="row"
@@ -226,19 +200,21 @@ function BannerSlidePanel({
         }}
       >
         <Stack spacing={0} sx={{ maxWidth: '88%', flex: 1, minWidth: 0, alignItems: 'flex-start' }}>
-          <Typography
-            component="h2"
-            sx={{
-              fontWeight: 800,
-              fontSize: { xs: '1.2rem', sm: '1.35rem' },
-              lineHeight: 1.15,
-              letterSpacing: '-0.02em',
-              textAlign: 'left',
-              textShadow: '0 1px 18px rgba(0,0,0,0.35)',
-            }}
-          >
-            {slide.title}
-          </Typography>
+          {slide.title ? (
+            <Typography
+              component="h2"
+              sx={{
+                fontWeight: 800,
+                fontSize: { xs: '1.2rem', sm: '1.35rem' },
+                lineHeight: 1.15,
+                letterSpacing: '-0.02em',
+                textAlign: 'left',
+                textShadow: '0 1px 18px rgba(0,0,0,0.35)',
+              }}
+            >
+              {slide.title}
+            </Typography>
+          ) : null}
         </Stack>
 
         {href ? (

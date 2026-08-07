@@ -18,7 +18,11 @@ export function OwnerInlineEditActions({
   onCancel: () => void;
 }) {
   return (
-    <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', pt: 0.25 }}>
+    <Stack
+      direction="row"
+      spacing={0.75}
+      sx={{ alignItems: 'center', justifyContent: 'space-between', width: '100%', pt: 0.25 }}
+    >
       <Button
         size="small"
         color="inherit"

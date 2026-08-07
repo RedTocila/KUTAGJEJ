@@ -111,31 +111,33 @@ export function OkazionBrowseControls() {
         aria-label="Kategoritë kryesore"
         sx={{
           mt: { xs: 1.5, md: 2 },
-          overflowX: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          scrollbarWidth: 'none',
-          '&::-webkit-scrollbar': { display: 'none' },
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0,
+          overflowX: 'hidden',
+          display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 1,
         }}
       >
-        <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, width: 'max-content', pr: 1 }}>
-          {verticals.map((vertical) => {
-            const active = applied.kind === vertical.id;
-            const href = buildOkazionHref({
-              q: applied.q,
-              kind: active ? undefined : vertical.id,
-            });
-            return (
-              <ProductTag
-                key={vertical.id}
-                href={href}
-                label={vertical.label}
-                icon={OKAZION_VERTICAL_ICONS[vertical.id as keyof typeof OKAZION_VERTICAL_ICONS]}
-                active={active}
-                accent={OKAZION_SEARCH_ACCENT}
-              />
-            );
-          })}
-        </Box>
+        {verticals.map((vertical) => {
+          const active = applied.kind === vertical.id;
+          const href = buildOkazionHref({
+            q: applied.q,
+            kind: active ? undefined : vertical.id,
+          });
+          return (
+            <ProductTag
+              key={vertical.id}
+              href={href}
+              label={vertical.label}
+              icon={OKAZION_VERTICAL_ICONS[vertical.id as keyof typeof OKAZION_VERTICAL_ICONS]}
+              active={active}
+              accent={OKAZION_SEARCH_ACCENT}
+            />
+          );
+        })}
       </Box>
     </Box>
   );

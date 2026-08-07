@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
+import { alpha } from '@mui/material/styles';
 import { Box, Button, IconButton, LinearProgress, Stack, Typography } from '@mui/material';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
@@ -18,7 +19,6 @@ import { useLanguage } from '@/hooks/use-language';
 import { useUser } from '@/hooks/use-user';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { fetchMyReferralStats } from '@/lib/referrals-client';
-import type { ReferralNextTier } from '@/types/referrals';
 import { paths } from '@/paths';
 
 const AMBER = '#F5A623';
@@ -42,10 +42,6 @@ const copy = {
     subtitle: 'Ndani kodin me miqtë dhe fitoni Boost Coins.',
     copyCode: 'Kopjo kodin',
     copied: 'U kopjua',
-    nextGoal: 'Hapi tjetër',
-    remaining: (n: number) => (n === 1 ? 'Edhe 1 referim' : `Edhe ${n} referime`),
-    allDone: 'Keni arritur të gjitha nivelet aktuale.',
-    openFull: 'Shiko detajet',
     streakTitle: 'Aktivitet ditor',
     streakDays: (n: number) => `${n} ditë radhazi`,
     shareDone: 'Ndajë sot ✓',
@@ -58,10 +54,6 @@ const copy = {
     subtitle: 'Share your code with friends and earn Boost Coins.',
     copyCode: 'Copy code',
     copied: 'Copied',
-    nextGoal: 'Next goal',
-    remaining: (n: number) => (n === 1 ? '1 more referral' : `${n} more referrals`),
-    allDone: 'You’ve reached all current tiers.',
-    openFull: 'See details',
     streakTitle: 'Daily activity',
     streakDays: (n: number) => `${n}-day streak`,
     shareDone: 'Shared today ✓',
@@ -71,15 +63,13 @@ const copy = {
   },
 } as const;
 
-/** Compact referral hub — code, copy, next goal + daily streak — opens full referral page. */
+/** Compact referral hub — code, copy + daily streak — opens full referral page. */
 export function ReferralSummaryCard() {
   const { user, checkSession } = useUser();
   const { language } = useLanguage();
   const t = copy[language];
   const [loading, setLoading] = React.useState(true);
   const [code, setCode] = React.useState('');
-  const [referralCount, setReferralCount] = React.useState(0);
-  const [nextTier, setNextTier] = React.useState<ReferralNextTier | null>(null);
   const [copied, setCopied] = React.useState(false);
   const [streakDays, setStreakDays] = React.useState(0);
   const [daysRequired, setDaysRequired] = React.useState(7);
@@ -99,8 +89,6 @@ export function ReferralSummaryCard() {
     const res = await fetchMyReferralStats();
     if (res.referral) {
       setCode(res.referral.code || '');
-      setReferralCount(res.referral.referralCount ?? 0);
-      setNextTier(res.referral.nextTier ?? null);
       setStreakDays(res.referral.loginStreakDays ?? 0);
       setDaysRequired(
         res.referral.loginStreakDaysRequired ?? res.program?.loginStreak.daysRequired ?? 7,
@@ -153,12 +141,6 @@ export function ReferralSummaryCard() {
 
   if (!canView) return null;
 
-  const next = nextTier;
-  const progress =
-    next && next.referralsRequired > 0
-      ? Math.min(100, Math.round((referralCount / next.referralsRequired) * 100))
-      : 100;
-
   const required = Math.max(1, daysRequired);
   const streakCurrent = Math.max(0, Math.min(streakDays, required));
   const streakProgress = Math.round((streakCurrent / required) * 100);
@@ -177,9 +159,29 @@ export function ReferralSummaryCard() {
         color: 'inherit',
         display: 'block',
         cursor: 'pointer',
-        transition: 'border-color 0.15s ease, background-color 0.15s ease',
+        WebkitTapHighlightColor: 'transparent',
+        transition: 'border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
         '&:hover': {
-          borderColor: 'primary.main',
+          borderColor: (theme) => alpha(theme.palette.primary.main, 0.5),
+          bgcolor: (theme) =>
+            theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'action.hover',
+          transform: 'translateY(-1px)',
+          boxShadow: (theme) =>
+            theme.palette.mode === 'dark'
+              ? `0 8px 24px ${alpha(theme.palette.common.black, 0.35)}`
+              : `0 8px 22px ${alpha(theme.palette.common.black, 0.1)}`,
+          '& .referral-card-caret': {
+            color: 'primary.main',
+            transform: 'translateX(2px)',
+          },
+          '& .referral-amber-row': {
+            borderColor: AMBER,
+            bgcolor: (theme) =>
+              theme.palette.mode === 'dark' ? 'rgba(245, 166, 35, 0.2)' : 'rgba(245, 166, 35, 0.18)',
+          },
+        },
+        '&:active': {
+          transform: 'translateY(0)',
         },
       }}
     >
@@ -204,8 +206,16 @@ export function ReferralSummaryCard() {
               <Typography sx={{ fontWeight: 850, fontSize: '0.98rem', lineHeight: 1.25 }}>
                 {t.title}
               </Typography>
-              <Box sx={{ color: 'text.disabled', display: 'inline-flex' }}>
-                <CaretRightIcon size={16} weight="bold" />
+              <Box
+                className="referral-card-caret"
+                sx={{
+                  color: 'primary.main',
+                  display: 'inline-flex',
+                  opacity: 0.85,
+                  transition: 'transform 0.15s ease, color 0.15s ease',
+                }}
+              >
+                <CaretRightIcon size={18} weight="bold" />
               </Box>
             </Stack>
             <Typography
@@ -271,59 +281,6 @@ export function ReferralSummaryCard() {
             {t.copied}
           </Typography>
         ) : null}
-
-        <Box>
-          {next ? (
-            <>
-              <Stack
-                direction="row"
-                sx={{ alignItems: 'baseline', justifyContent: 'space-between', mb: 0.55 }}
-              >
-                <Typography sx={{ fontWeight: 750, fontSize: '0.84rem', minWidth: 0, pr: 1 }}>
-                  {t.nextGoal}: {next.title}
-                </Typography>
-                <Typography
-                  sx={{ fontWeight: 800, fontSize: '0.8rem', color: 'primary.main', flexShrink: 0 }}
-                >
-                  {loading ? '…' : `${referralCount}/${next.referralsRequired}`}
-                  {!loading ? (
-                    <Typography
-                      component="span"
-                      sx={{ ml: 0.65, fontWeight: 700, fontSize: '0.7rem', color: 'text.secondary' }}
-                    >
-                      +{next.boostCredits} BC
-                    </Typography>
-                  ) : null}
-                </Typography>
-              </Stack>
-              <LinearProgress
-                variant="determinate"
-                value={loading ? 0 : progress}
-                sx={{
-                  height: 6,
-                  borderRadius: 999,
-                  bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.14 : 0.1),
-                  '& .MuiLinearProgress-bar': { borderRadius: 999 },
-                }}
-              />
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ display: 'block', mt: 0.5, lineHeight: 1.35 }}
-              >
-                {t.remaining(next.remaining)} · {t.openFull}
-              </Typography>
-            </>
-          ) : (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ display: 'block', lineHeight: 1.35 }}
-            >
-              {loading ? '…' : t.allDone}
-            </Typography>
-          )}
-        </Box>
 
         <Box sx={{ pt: 1.15, borderTop: '1px solid', borderColor: 'divider' }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.75 }}>
@@ -452,6 +409,7 @@ export function ReferralSummaryCard() {
           </Stack>
 
           <Stack
+            className="referral-amber-row"
             direction="row"
             spacing={1}
             sx={{
@@ -465,6 +423,7 @@ export function ReferralSummaryCard() {
                 theme.palette.mode === 'dark' ? AMBER_BORDER_DARK : AMBER_BORDER_LIGHT,
               bgcolor: (theme) =>
                 theme.palette.mode === 'dark' ? AMBER_SOFT_DARK : AMBER_SOFT_LIGHT,
+              transition: 'border-color 0.15s ease, background-color 0.15s ease',
             }}
           >
             <Box
@@ -485,6 +444,8 @@ export function ReferralSummaryCard() {
             <Typography
               variant="caption"
               sx={{
+                flex: 1,
+                minWidth: 0,
                 color: AMBER,
                 fontWeight: 700,
                 lineHeight: 1.35,
@@ -493,6 +454,9 @@ export function ReferralSummaryCard() {
             >
               {t.lifetimeHint}
             </Typography>
+            <Box sx={{ color: AMBER, display: 'inline-flex', flexShrink: 0, opacity: 0.9 }}>
+              <CaretRightIcon size={16} weight="bold" />
+            </Box>
           </Stack>
         </Box>
       </Stack>

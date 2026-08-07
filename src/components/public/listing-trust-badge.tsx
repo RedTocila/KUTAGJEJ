@@ -7,12 +7,12 @@ const AMBER = '#f59e0b';
 const STAR_YELLOW = '#fde047';
 
 /**
- * Grow / Elite Trust Badge — amber scalloped seal with yellow star
+ * Grow / Elite Premium Badge — amber scalloped seal with yellow star
  * (silhouette from the verified-stamp icon, amber instead of blue).
  */
 export function ListingTrustBadge({
   size = 18,
-  'aria-label': ariaLabel = 'Trust Badge — paketë Grow ose Elite',
+  'aria-label': ariaLabel = 'Premium Badge — paketë Grow ose Elite',
   sx,
 }: {
   size?: number;

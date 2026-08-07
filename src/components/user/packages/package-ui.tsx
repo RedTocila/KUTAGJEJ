@@ -487,6 +487,7 @@ export function PackageCheckoutCard({
   title,
   subtitle,
   badge,
+  titleAdornment,
   price,
   priceSuffix = '/ paketë',
   onClick,
@@ -498,6 +499,8 @@ export function PackageCheckoutCard({
   title: string;
   subtitle?: string;
   badge?: string | null;
+  /** Shown immediately to the right of the title (e.g. Grow/Elite Premium Badge seal). */
+  titleAdornment?: React.ReactNode;
   price?: React.ReactNode;
   priceSuffix?: string;
   onClick?: () => void;
@@ -520,16 +523,21 @@ export function PackageCheckoutCard({
         spacing={0.75}
         sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5, mb: subtitle ? 0.4 : 0 }}
       >
-        <Typography
-          sx={{
-            fontWeight: 850,
-            fontSize: { xs: '1.05rem', sm: '1.15rem' },
-            lineHeight: 1.2,
-            color: 'text.primary',
-          }}
-        >
-          {title}
-        </Typography>
+        <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', minWidth: 0 }}>
+          <Typography
+            sx={{
+              fontWeight: 850,
+              fontSize: { xs: '1.05rem', sm: '1.15rem' },
+              lineHeight: 1.2,
+              color: 'text.primary',
+            }}
+          >
+            {title}
+          </Typography>
+          {titleAdornment ? (
+            <Box sx={{ display: 'inline-flex', flexShrink: 0, lineHeight: 0 }}>{titleAdornment}</Box>
+          ) : null}
+        </Stack>
         {badge ? (
           <Box
             sx={{

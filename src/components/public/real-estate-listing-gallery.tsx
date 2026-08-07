@@ -296,7 +296,16 @@ export function RealEstateListingGallery(props: {
   }, [listingId, listingKind, saveCount, sharePayload, title, urls]);
 
   return (
-    <Box sx={{ position: 'relative', width: '100%', bgcolor: 'background.default' }}>
+    <Box
+      sx={{
+        position: 'relative',
+        width: '100%',
+        bgcolor: 'background.default',
+        // Single-image: match multi-image thumbnail strip vertical padding (pt 1.25 + pb)
+        // so the title below isn't flush against the hero.
+        ...(!showPlaceholder && urls.length === 1 ? { pb: { xs: 2.5, sm: 3 } } : null),
+      }}
+    >
       <Box
         ref={viewportRef}
         role={hasMultipleImages ? 'group' : undefined}

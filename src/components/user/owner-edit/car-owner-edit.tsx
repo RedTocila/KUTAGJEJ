@@ -252,7 +252,7 @@ export function CarOwnerEdit({
     ),
     price: (
       <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
-        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start' }}>
+        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
           <TextField
             label="Çmimi"
             value={String(draft.price)}

@@ -21,6 +21,7 @@ import { UsersThree as UsersThreeIcon } from '@phosphor-icons/react/dist/ssr/Use
 import { ProgramDisplay } from '@/components/dashboard/referral/referral-program-display';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { PortalSurface } from '@/components/user/portal-cards';
+import { ShareMyListingsDialog } from '@/components/user/share-my-listings-dialog';
 import { useUser } from '@/hooks/use-user';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { formatRatingDisplay } from '@/lib/format-rating';
@@ -77,6 +78,7 @@ export function UserReferralView() {
   const [error, setError] = React.useState<string | null>(null);
   const [copyMsg, setCopyMsg] = React.useState<string | null>(null);
   const [program, setProgram] = React.useState<ReferralProgram | undefined>(undefined);
+  const [sharePickerOpen, setSharePickerOpen] = React.useState(false);
 
   const canView =
     Boolean(user) &&
@@ -334,6 +336,7 @@ export function UserReferralView() {
                 dailyShareClaimedToday={Boolean(stats.dailyShareClaimedToday)}
                 dailyShareBoostCredits={stats.dailyShareBoostCredits ?? 3}
                 loginStreakDays={stats.loginStreakDays ?? 0}
+                onShareClick={() => setSharePickerOpen(true)}
                 compact
               />
             </Stack>
@@ -341,9 +344,13 @@ export function UserReferralView() {
         </>
       ) : null}
 
-      <Button variant="text" onClick={() => void load()} disabled={loading} sx={{ alignSelf: 'center', fontWeight: 700 }}>
-        Rifresko
-      </Button>
+      <ShareMyListingsDialog
+        open={sharePickerOpen}
+        onClose={() => setSharePickerOpen(false)}
+        onShareComplete={() => {
+          void load();
+        }}
+      />
     </Stack>
   );
 }

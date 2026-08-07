@@ -102,10 +102,6 @@ function BannerDialog({
 
   const handleSave = async () => {
     const title = form.title.trim();
-    if (!title) {
-      setError('Titulli është i detyrueshëm.');
-      return;
-    }
     const href = form.ctaHref.trim();
     if (href && !href.startsWith('/')) {
       setError('Linku duhet të fillojë me "/" (p.sh. /prona).');
@@ -144,11 +140,11 @@ function BannerDialog({
             </Alert>
           ) : null}
           <TextField
-            label="Titulli"
+            label="Titulli (opsional)"
             value={form.title}
             onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
             fullWidth
-            required
+            helperText="Mund të lini bosh nëse banner-i është vetëm imazh."
             slotProps={{ htmlInput: { maxLength: 140 } }}
           />
           <TextField
@@ -356,7 +352,7 @@ export function HomeBannersAdminPage() {
                       />
                       <Box sx={{ minWidth: 0 }}>
                         <Typography sx={{ fontWeight: 700, fontSize: '0.9rem' }} noWrap>
-                          {b.title}
+                          {b.title || (b.imageUrl ? 'Pa titull (imazh)' : 'Pa titull')}
                         </Typography>
                         {b.subtitle ? (
                           <Typography variant="caption" color="text.secondary" noWrap>
@@ -420,7 +416,8 @@ export function HomeBannersAdminPage() {
         <ProductDialogTitle onClose={deleteBusy ? undefined : () => setDeleting(null)}>Fshi banner-in</ProductDialogTitle>
         <ProductDialogContent>
           <Typography>
-            A jeni i sigurt që doni të fshini <strong>{deleting?.title}</strong>?
+            A jeni i sigurt që doni të fshini{' '}
+            <strong>{deleting?.title || 'këtë banner'}</strong>?
           </Typography>
         </ProductDialogContent>
         <ProductDialogActions>

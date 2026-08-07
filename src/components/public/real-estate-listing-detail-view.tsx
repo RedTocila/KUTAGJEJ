@@ -706,6 +706,7 @@ export function RealEstateListingDetailView({
                   <Box
                     sx={{
                       mx: { xs: -2, sm: -3, md: 0 },
+                      px: { xs: 2, sm: 3, md: 0 },
                       '& > div > div': { py: '8px 0 0 !important' },
                     }}
                   >

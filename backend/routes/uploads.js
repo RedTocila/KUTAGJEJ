@@ -10,8 +10,9 @@ const router = express.Router();
 
 function requirePortalUser(req, res, next) {
   const model = req.user?.constructor?.modelName;
-  if (model !== 'IndividualUser' && model !== 'BusinessUser') {
-    return res.status(403).json({ message: 'Vetëm llogaritë individuale ose biznesi mund të ngarkojnë foto.' });
+  // Portal users upload listing photos; platform admins upload home banners, etc.
+  if (model !== 'IndividualUser' && model !== 'BusinessUser' && model !== 'Admin') {
+    return res.status(403).json({ message: 'Vetëm llogaritë individuale, biznesi ose admin mund të ngarkojnë foto.' });
   }
   next();
 }

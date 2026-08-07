@@ -937,7 +937,7 @@ export function CarListingForm({
           Price &amp; contact
         </Typography>
 
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'flex-start' } }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
           <ListingTextField
             label="Price"
             type="text"

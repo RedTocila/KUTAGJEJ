@@ -671,6 +671,8 @@ export function CarListingDetailView({
                   <Box
                     sx={{
                       mx: { xs: -2, sm: -3, md: 0 },
+                      // Match cancelled Stack padding so the first card aligns with the title.
+                      px: { xs: 2, sm: 3, md: 0 },
                       '& > div > div': { py: '8px 0 0 !important' },
                     }}
                   >

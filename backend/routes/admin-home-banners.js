@@ -16,7 +16,9 @@ function normalizePayload(body) {
   return {
     title: String(body?.title || '').trim(),
     subtitle: String(body?.subtitle || '').trim(),
-    imageUrl: String(body?.imageUrl || '').trim() || '/KuTaGjejLogo.png',
+    // Empty = platform gradient on homepage (do not invent a relative logo path —
+    // display only treats https?:// URLs as custom images).
+    imageUrl: String(body?.imageUrl || '').trim(),
     ctaLabel: String(body?.ctaLabel || '').trim(),
     ctaHref: String(body?.ctaHref || '').trim(),
     order: Number.isFinite(Number(body?.order)) ? Number(body.order) : 0,
@@ -25,7 +27,7 @@ function normalizePayload(body) {
 }
 
 function validate(payload) {
-  if (!payload.title) return 'Titulli është i detyrueshëm.';
+  // Title is optional — image-only banners are allowed.
   if (payload.ctaHref && !payload.ctaHref.startsWith('/')) {
     return 'Linku duhet të fillojë me "/" (p.sh. /prona).';
   }

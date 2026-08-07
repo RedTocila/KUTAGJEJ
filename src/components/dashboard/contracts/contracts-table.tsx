@@ -231,7 +231,7 @@ export function ContractsTable({ contracts, loading, onCreate, onEdit, onDelete 
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
                       {row.glowBadgeEnabled ? (
-                        <Chip size="small" label="Trust" sx={{ height: 22, fontSize: '0.7rem' }} />
+                        <Chip size="small" label="Premium" sx={{ height: 22, fontSize: '0.7rem' }} />
                       ) : null}
                       {row.dailyBoostAccess ? (
                         <Chip size="small" label="Ditore" sx={{ height: 22, fontSize: '0.7rem' }} />

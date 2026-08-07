@@ -197,30 +197,13 @@ export function ListingToggle({
 }) {
   return (
     <Box sx={{ width: fullWidth ? '100%' : 'auto', minWidth: fullWidth ? undefined : 160 }}>
-      {label ? (
-        <Typography
-          component="label"
-          variant="caption"
-          sx={{
-            display: 'block',
-            mb: 0.75,
-            fontWeight: 600,
-            fontSize: '0.875rem',
-            color: error ? 'error.main' : 'text.secondary',
-          }}
-        >
-          {label}
-          {required ? ' *' : ''}
-        </Typography>
-      ) : null}
+      {/* fieldset + legend matches outlined TextField height/label so row layouts align */}
       <Box
-        role="radiogroup"
-        aria-label={label}
+        component="fieldset"
         sx={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${options.length}, 1fr)`,
-          gap: 0.5,
-          p: 0.5,
+          m: 0,
+          p: 0,
+          minInlineSize: 0,
           borderRadius: 2.5,
           border: '1.5px solid',
           borderColor: error ? 'error.main' : value ? 'primary.main' : 'divider',
@@ -229,45 +212,75 @@ export function ListingToggle({
           transition: 'border-color 0.15s, background-color 0.15s, box-shadow 0.15s',
         }}
       >
-        {options.map((opt) => {
-          const active = value === opt.value;
-          const Icon = opt.Icon;
-          return (
-            <Box
-              key={opt.value}
-              component="button"
-              type="button"
-              role="radio"
-              aria-checked={active}
-              onClick={() => onChange(opt.value)}
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 0.65,
-                minHeight: 42,
-                px: 1.25,
-                borderRadius: 2,
-                border: 'none',
-                bgcolor: active ? 'primary.main' : 'transparent',
-                color: active ? 'primary.contrastText' : 'text.secondary',
-                fontWeight: 800,
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                transition: 'background-color 0.15s, color 0.15s, box-shadow 0.15s',
-                boxShadow: active ? `0 3px 12px ${primaryMainAlpha(0.35)}` : 'none',
-                '&:hover': {
-                  bgcolor: active ? 'primary.main' : primaryMainAlpha(0.1),
-                  color: active ? 'primary.contrastText' : 'text.primary',
-                },
-              }}
-            >
-              {Icon ? <Icon size={16} weight={active ? 'fill' : 'duotone'} /> : null}
-              {opt.label}
-            </Box>
-          );
-        })}
+        {label ? (
+          <Typography
+            component="legend"
+            sx={{
+              px: 0.5,
+              ml: 1,
+              float: 'unset',
+              width: 'auto',
+              fontWeight: 600,
+              fontSize: '0.75rem',
+              lineHeight: 1,
+              color: error ? 'error.main' : value ? 'primary.main' : 'text.secondary',
+            }}
+          >
+            {label}
+            {required ? ' *' : ''}
+          </Typography>
+        ) : null}
+        <Box
+          role="radiogroup"
+          aria-label={label}
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${options.length}, 1fr)`,
+            gap: 0.5,
+            p: 0.5,
+            minHeight: 48,
+          }}
+        >
+          {options.map((opt) => {
+            const active = value === opt.value;
+            const Icon = opt.Icon;
+            return (
+              <Box
+                key={opt.value}
+                component="button"
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => onChange(opt.value)}
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 0.65,
+                  minHeight: 42,
+                  px: 1.25,
+                  borderRadius: 2,
+                  border: 'none',
+                  bgcolor: active ? 'primary.main' : 'transparent',
+                  color: active ? 'primary.contrastText' : 'text.secondary',
+                  fontWeight: 800,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'background-color 0.15s, color 0.15s, box-shadow 0.15s',
+                  boxShadow: active ? `0 3px 12px ${primaryMainAlpha(0.35)}` : 'none',
+                  '&:hover': {
+                    bgcolor: active ? 'primary.main' : primaryMainAlpha(0.1),
+                    color: active ? 'primary.contrastText' : 'text.primary',
+                  },
+                }}
+              >
+                {Icon ? <Icon size={16} weight={active ? 'fill' : 'duotone'} /> : null}
+                {opt.label}
+              </Box>
+            );
+          })}
+        </Box>
       </Box>
       {helperText ? (
         <Typography variant="caption" color={error ? 'error' : 'text.secondary'} sx={{ mt: 0.5, display: 'block' }}>

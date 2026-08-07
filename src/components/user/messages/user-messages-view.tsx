@@ -34,10 +34,8 @@ import { Checks as ChecksIcon } from '@phosphor-icons/react/dist/ssr/Checks';
 import { CheckSquare as CheckSquareIcon } from '@phosphor-icons/react/dist/ssr/CheckSquare';
 import { Paperclip as PaperclipIcon } from '@phosphor-icons/react/dist/ssr/Paperclip';
 import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
-import { PhoneCall as PhoneCallIcon } from '@phosphor-icons/react/dist/ssr/PhoneCall';
 import { PushPin as PushPinIcon } from '@phosphor-icons/react/dist/ssr/PushPin';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
-import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
@@ -45,6 +43,7 @@ import {
   productFilterButtonSx,
   productSearchBarSx,
 } from '@/components/public/product-browse-chrome';
+import { ChatCallIcon, ChatWhatsappIcon } from '@/components/user/messages/chat-contact-icons';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import {
@@ -82,6 +81,7 @@ import {
   listingRealEstatePublicHref,
   paths,
 } from '@/paths';
+import { logoGreen } from '@/styles/theme/colors';
 
 function conversationContactPhone(conv: ConversationSummary): string | null {
   const listingPhone = conv.listingContactPhone?.trim() || '';
@@ -110,15 +110,16 @@ function listingPublicHref(kind: ConversationSummary['listingKind'], listingId: 
   }
 }
 
-/** Chat accents (dark-mode greens from design). */
-const CHAT_ACCENT = '#4ca74c';
-const CHAT_ACCENT_HOVER = '#3f9340';
-const CHAT_ACCENT_SOFT = 'rgba(76, 167, 76, 0.08)';
-const CHAT_ACCENT_GLOW = '0 2px 10px rgba(76, 167, 76, 0.45)';
-const CHAT_BUBBLE_MINE_DARK = '#1a3f2c';
+/** Chat accents — platform brand greens (`logoGreen` / primary). */
+const CHAT_ACCENT = logoGreen[500];
+const CHAT_ACCENT_HOVER = logoGreen[600];
+const CHAT_ACCENT_SOFT = 'rgba(130, 201, 30, 0.1)';
+const CHAT_ACCENT_GLOW = '0 2px 10px rgba(130, 201, 30, 0.45)';
+const CHAT_BUBBLE_MINE_DARK = logoGreen[600];
 const CHAT_BUBBLE_THEIRS_DARK = '#2e2e2e';
-const CHAT_BUBBLE_MINE_LIGHT = '#b3dbb3';
+const CHAT_BUBBLE_MINE_LIGHT = logoGreen[200];
 const CHAT_BUBBLE_THEIRS_LIGHT = '#d0d0d0';
+const CHAT_BUBBLE_MINE_INK = logoGreen[950];
 /** Bubble corner radii: top-left, top-right, bottom-right, bottom-left (px). */
 const CHAT_BUBBLE_RADIUS_MINE = [12, 12, 4, 12] as const;
 const CHAT_BUBBLE_RADIUS_THEIRS = [4, 12, 12, 12] as const;
@@ -577,12 +578,13 @@ function MessageBubble({
           color: imageOnly
             ? 'rgba(255,255,255,0.75)'
             : mine
-              ? 'rgba(var(--mui-palette-text-primaryChannel) / 0.45)'
+              ? 'rgba(13, 34, 1, 0.55)'
               : 'text.secondary',
           ...theme.applyStyles('dark', {
-            color:
-              imageOnly || mine
-                ? 'rgba(255,255,255,0.75)'
+            color: imageOnly
+              ? 'rgba(255,255,255,0.75)'
+              : mine
+                ? 'rgba(13, 34, 1, 0.55)'
                 : 'var(--mui-palette-text-secondary)',
           }),
         })}
@@ -593,14 +595,11 @@ function MessageBubble({
         <Box
           component="span"
           aria-label={isRead ? t.messages.read : t.messages.delivered}
-          sx={(theme) => ({
+          sx={{
             display: 'inline-flex',
             lineHeight: 0,
-            color: isRead ? '#53bdeb' : 'rgba(var(--mui-palette-text-primaryChannel) / 0.45)',
-            ...theme.applyStyles('dark', {
-              color: isRead ? '#53bdeb' : 'rgba(255,255,255,0.75)',
-            }),
-          })}
+            color: isRead ? '#1a6b8a' : 'rgba(13, 34, 1, 0.55)',
+          }}
         >
           <ChecksIcon size={14} weight="bold" />
         </Box>
@@ -626,11 +625,11 @@ function MessageBubble({
           maxWidth: '82%',
           overflow: 'hidden',
           bgcolor: mine ? CHAT_BUBBLE_MINE_LIGHT : CHAT_BUBBLE_THEIRS_LIGHT,
-          color: 'text.primary',
+          color: mine ? CHAT_BUBBLE_MINE_INK : 'text.primary',
           borderRadius: bubbleRadius.map((r) => `${r}px`).join(' '),
           ...theme.applyStyles('dark', {
             bgcolor: mine ? CHAT_BUBBLE_MINE_DARK : CHAT_BUBBLE_THEIRS_DARK,
-            color: mine ? '#fff' : 'var(--mui-palette-text-primary)',
+            color: mine ? CHAT_BUBBLE_MINE_INK : 'var(--mui-palette-text-primary)',
           }),
         })}
       >
@@ -1982,7 +1981,7 @@ export function UserMessagesView() {
                       aria-label={t.messages.phoneAria}
                       sx={{ color: CHAT_ACCENT, width: 40, height: 40 }}
                     >
-                      <PhoneCallIcon size={26} weight="fill" />
+                      <ChatCallIcon size={26} />
                     </IconButton>
                     {contactWhatsapp ? (
                       <IconButton
@@ -1993,7 +1992,7 @@ export function UserMessagesView() {
                         aria-label="WhatsApp"
                         sx={{ color: '#25D366', width: 40, height: 40 }}
                       >
-                        <WhatsappLogoIcon size={26} weight="fill" />
+                        <ChatWhatsappIcon size={26} />
                       </IconButton>
                     ) : null}
                   </Stack>

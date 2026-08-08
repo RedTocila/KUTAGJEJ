@@ -220,7 +220,7 @@ export function MainPackagesPanel() {
         sx={{
           ...productButtonSx,
           fontWeight: 750,
-          borderRadius: 2.5,
+          borderRadius: 2,
           py: 1,
         }}
       >

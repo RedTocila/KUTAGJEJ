@@ -558,6 +558,14 @@ function MessageBubble({
   const metaWidth = mine && deliveryStatus ? 58 : 42;
   const bubbleRadius = mine ? CHAT_BUBBLE_RADIUS_MINE : CHAT_BUBBLE_RADIUS_THEIRS;
   const [previewOpen, setPreviewOpen] = React.useState(false);
+  const [imageLoaded, setImageLoaded] = React.useState(false);
+  const [imageFailed, setImageFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    setImageLoaded(false);
+    setImageFailed(false);
+  }, [imageUrl]);
+
   // Concentric with bubble; caption images also round the bottom edge.
   const imageRadius = body
     ? [
@@ -569,6 +577,30 @@ function MessageBubble({
         .map((r) => `${r}px`)
         .join(' ')
     : bubbleRadius.map((r) => `${Math.max(0, r - CHAT_IMAGE_INSET)}px`).join(' ');
+
+  const handleImageLoad = React.useCallback(() => {
+    setImageLoaded(true);
+    setImageFailed(false);
+    onMediaLoad?.();
+  }, [onMediaLoad]);
+
+  const handleImageError = React.useCallback(() => {
+    setImageLoaded(true);
+    setImageFailed(true);
+  }, []);
+
+  const imgRef = React.useCallback(
+    (node: HTMLImageElement | null) => {
+      if (!node) return;
+      // Cached images may already be complete before onLoad attaches.
+      if (node.complete && node.naturalWidth > 0) {
+        handleImageLoad();
+      } else if (node.complete && node.naturalWidth === 0) {
+        handleImageError();
+      }
+    },
+    [handleImageError, handleImageLoad],
+  );
 
   const meta = (
     <Box
@@ -666,35 +698,77 @@ function MessageBubble({
               m: `${CHAT_IMAGE_INSET}px`,
               borderRadius: imageRadius,
               overflow: 'hidden',
+              bgcolor: 'action.hover',
+              minHeight: 160,
             }}
           >
-            <Box
-              component="img"
-              src={imageUrl}
-              alt=""
-              loading="eager"
-              role="button"
-              tabIndex={0}
-              aria-label={t.messages.imagePreviewAria}
-              onClick={() => setPreviewOpen(true)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
+            {!imageLoaded ? (
+              <Box
+                aria-hidden
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: 1,
+                  display: 'grid',
+                  placeItems: 'center',
+                  bgcolor: (theme) =>
+                    theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                }}
+              >
+                <CircularProgress size={28} thickness={4} />
+              </Box>
+            ) : null}
+            {imageFailed ? (
+              <Box
+                sx={{
+                  display: 'grid',
+                  placeItems: 'center',
+                  width: '100%',
+                  minHeight: 160,
+                  aspectRatio: '4 / 3',
+                  px: 2,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 650, textAlign: 'center' }}>
+                  {t.messages.imageLoadFailed}
+                </Typography>
+              </Box>
+            ) : (
+              <Box
+                component="img"
+                ref={imgRef}
+                src={imageUrl}
+                alt=""
+                loading="eager"
+                role="button"
+                tabIndex={0}
+                aria-label={t.messages.imagePreviewAria}
+                onClick={() => {
+                  if (!imageLoaded) return;
                   setPreviewOpen(true);
-                }
-              }}
-              onLoad={onMediaLoad}
-              sx={{
-                display: 'block',
-                width: '100%',
-                minHeight: 160,
-                maxHeight: 360,
-                aspectRatio: '4 / 3',
-                objectFit: 'cover',
-                bgcolor: 'action.hover',
-                cursor: 'pointer',
-              }}
-            />
+                }}
+                onKeyDown={(e) => {
+                  if (!imageLoaded) return;
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setPreviewOpen(true);
+                  }
+                }}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+                sx={{
+                  display: 'block',
+                  width: '100%',
+                  minHeight: 160,
+                  maxHeight: 360,
+                  aspectRatio: '4 / 3',
+                  objectFit: 'cover',
+                  cursor: imageLoaded ? 'pointer' : 'default',
+                  opacity: imageLoaded ? 1 : 0,
+                  transition: 'opacity 0.15s ease',
+                }}
+              />
+            )}
             {imageOnly ? meta : null}
           </Box>
         ) : null}
@@ -784,24 +858,38 @@ function MessageBubble({
             height: '100%',
             p: { xs: 1.5, md: 3 },
             cursor: 'zoom-out',
+            position: 'relative',
           }}
         >
-          <Box
-            component="img"
-            src={imageUrl}
-            alt=""
-            onClick={(e) => e.stopPropagation()}
-            sx={{
-              display: 'block',
-              maxWidth: '100%',
-              maxHeight: '100%',
-              width: 'auto',
-              height: 'auto',
-              objectFit: 'contain',
-              borderRadius: 1,
-              userSelect: 'none',
-            }}
-          />
+          {!imageLoaded && !imageFailed ? (
+            <CircularProgress size={36} thickness={4} sx={{ color: '#fff', position: 'absolute' }} />
+          ) : null}
+          {!imageFailed ? (
+            <Box
+              component="img"
+              src={imageUrl}
+              alt=""
+              onLoad={handleImageLoad}
+              onError={handleImageError}
+              onClick={(e) => e.stopPropagation()}
+              sx={{
+                display: 'block',
+                maxWidth: '100%',
+                maxHeight: '100%',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+                borderRadius: 1,
+                userSelect: 'none',
+                opacity: imageLoaded ? 1 : 0,
+                transition: 'opacity 0.15s ease',
+              }}
+            />
+          ) : (
+            <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 650 }}>
+              {t.messages.imageLoadFailed}
+            </Typography>
+          )}
         </Box>
       </Dialog>
     ) : null}

@@ -439,6 +439,14 @@ const sq = {
     title: 'Gjuha',
     description: 'Zgjidhni shqip ose anglisht për ndërfaqen.',
   },
+  support: {
+    title: 'Mbështetja',
+    description: 'Telefononi ose shkruani në WhatsApp për ndihmë.',
+    dialogTitle: 'Kontaktoni mbështetjen',
+    dialogDescription: 'Zgjidhni si doni të na kontaktoni.',
+    call: 'Telefono',
+    whatsapp: 'WhatsApp',
+  },
   notifications: {
     title: 'Njoftimet',
     empty: 'Nuk keni njoftime ende.',
@@ -869,6 +877,14 @@ const en: AppMessages = {
   language: {
     title: 'Language',
     description: 'Choose Albanian or English for the interface.',
+  },
+  support: {
+    title: 'Support',
+    description: 'Call or message us on WhatsApp for help.',
+    dialogTitle: 'Contact support',
+    dialogDescription: 'Choose how you’d like to reach us.',
+    call: 'Call',
+    whatsapp: 'WhatsApp',
   },
   notifications: {
     title: 'Notifications',

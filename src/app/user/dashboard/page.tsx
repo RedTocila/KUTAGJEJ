@@ -57,6 +57,7 @@ import { LanguageSwitchRow } from '@/components/user/language-switch-row';
 import { UserNotificationsMenu } from '@/components/user/layout/user-notifications-menu';
 import { PortalLinkCard, PortalLinkGroup, portalCardSx } from '@/components/user/portal-cards';
 import { ReferralSummaryCard } from '@/components/user/referral-summary-card';
+import { SupportContactRow } from '@/components/user/support-contact-row';
 import { planAccentForCode } from '@/components/user/packages/package-ui';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
@@ -648,6 +649,7 @@ export default function UserDashboardPage() {
           icon={BellIcon}
         />
         <LanguageSwitchRow grouped />
+        <SupportContactRow grouped />
         <PortalLinkCard
           grouped
           href={paths.public.terms}

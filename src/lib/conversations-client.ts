@@ -34,10 +34,15 @@ export function publicListingKindToConversationKind(
 
 export interface ConversationSummary {
   id: string;
-  listingKind: ConversationListingKind;
-  listingId: string;
+  listingKind: ConversationListingKind | null;
+  listingId: string | null;
   listingTitle: string;
   listingImageUrl: string | null;
+  /**
+   * Who opened the thread: `inquirer` = contacted from a listing;
+   * `poster` = owner outreach (e.g. contact saver) or direct chat.
+   */
+  startedBy?: 'poster' | 'inquirer';
   role: 'poster' | 'inquirer';
   unreadCount: number;
   /** Unread count on the other participant's side (for delivered/read on my messages). */
@@ -51,6 +56,8 @@ export interface ConversationSummary {
   otherParticipantName: string | null;
   /** Account phone of the other participant, when available. */
   otherParticipantPhone?: string | null;
+  /** Profile avatar of the other participant, when available. */
+  otherParticipantAvatarUrl?: string | null;
   /** Listing contact phone (seller number shown on the ad). */
   listingContactPhone?: string | null;
   /** Pinned to the top of the inbox for the current user. */
@@ -84,10 +91,18 @@ export async function startConversation(
 
 export async function startConversationWithMember(
   memberId: string,
+  opts?: { listingKind?: string; listingId?: string },
 ): Promise<{ conversation?: ConversationSummary; error?: string }> {
+  const listingKind = opts?.listingKind ? String(opts.listingKind).trim() : '';
+  const listingId = opts?.listingId ? String(opts.listingId).trim() : '';
   const res = await clientFetch<{ conversation: ConversationSummary }>(
     `/conversations/with-member/${encodeURIComponent(memberId)}`,
-    { method: 'POST' },
+    {
+      method: 'POST',
+      body: JSON.stringify(
+        listingKind && listingId ? { listingKind, listingId } : {},
+      ),
+    },
   );
   if (!res.ok) return { error: res.error ?? 'Nuk u krijua biseda.' };
   return { conversation: res.data?.conversation };

@@ -91,7 +91,11 @@ function conversationContactPhone(conv: ConversationSummary): string | null {
   return otherPhone || listingPhone || null;
 }
 
-function listingPublicHref(kind: ConversationSummary['listingKind'], listingId: string): string {
+function listingPublicHref(
+  kind: ConversationSummary['listingKind'],
+  listingId: ConversationSummary['listingId'],
+): string | null {
+  if (!kind || !listingId) return null;
   const entry = { id: listingId, permalinkPath: null as string | null };
   switch (kind) {
     case 'real-estate':
@@ -194,6 +198,16 @@ function deliveryStatusByMessageId(
   return map;
 }
 
+/** Listing chrome only if this user opened chat via a listing “Kontakto”. */
+function isPersonFocusedConversation(
+  item: Pick<ConversationSummary, 'role' | 'listingContext' | 'listingId'>,
+): boolean {
+  if (!item.listingId) return true;
+  // Seller / outreach / profile contact → person. Listing CTA inquirer → listing.
+  if (item.listingContext === true && item.role === 'inquirer') return false;
+  return true;
+}
+
 const LONG_PRESS_MS = 480;
 
 function ConversationListItem({
@@ -231,7 +245,11 @@ function ConversationListItem({
     locale,
     t.messages.yesterday,
   );
-  const title = item.listingTitle?.trim() || t.messages.userFallback;
+  const showListing = !isPersonFocusedConversation(item) && Boolean(item.listingTitle?.trim());
+  const title = showListing
+    ? item.listingTitle.trim()
+    : item.otherParticipantName?.trim() || t.messages.userFallback;
+  const avatarUrl = showListing ? item.listingImageUrl : item.otherParticipantAvatarUrl;
   const preview = item.lastMessageText || t.messages.noMessagesYet;
   const longPressTimer = React.useRef<number | null>(null);
   const suppressClick = React.useRef(false);
@@ -370,17 +388,26 @@ function ConversationListItem({
 
       <Box sx={{ position: 'relative', flexShrink: 0, my: 1.15 }}>
         <Avatar
-          src={item.listingImageUrl ?? undefined}
-          variant="rounded"
+          src={avatarUrl ?? undefined}
+          variant={showListing ? 'rounded' : 'circular'}
           sx={{
             width: 49,
             height: 49,
-            borderRadius: 1.5,
-            bgcolor: (theme) =>
-              theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-            color: 'text.secondary',
+            borderRadius: showListing ? 1.5 : '50%',
             fontWeight: 700,
             fontSize: '1.1rem',
+            ...(avatarUrl
+              ? {
+                  bgcolor: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? 'rgba(255,255,255,0.08)'
+                      : 'rgba(0,0,0,0.06)',
+                  color: 'text.secondary',
+                }
+              : {
+                  bgcolor: 'primary.main',
+                  color: 'primary.contrastText',
+                }),
           }}
         >
           {title.slice(0, 1).toUpperCase()}
@@ -1548,6 +1575,20 @@ export function UserMessagesView() {
   const showThreadOnMobile = Boolean(selectedId);
   const contactPhone = activeConversation ? conversationContactPhone(activeConversation) : null;
   const contactWhatsapp = whatsappHref(contactPhone);
+  const showListingInHeader = Boolean(
+    activeConversation &&
+      !isPersonFocusedConversation(activeConversation) &&
+      activeConversation.listingTitle?.trim(),
+  );
+  const activeListingHref =
+    showListingInHeader && activeConversation
+      ? listingPublicHref(activeConversation.listingKind, activeConversation.listingId)
+      : null;
+  const threadHeaderName =
+    activeConversation?.otherParticipantName?.trim() || t.messages.userFallback;
+  const threadHeaderAvatar = showListingInHeader
+    ? activeConversation?.listingImageUrl
+    : activeConversation?.otherParticipantAvatarUrl;
   const deliveryStatuses = React.useMemo(
     () => deliveryStatusByMessageId(messages, activeConversation?.otherUnreadCount ?? 0),
     [messages, activeConversation?.otherUnreadCount],
@@ -1932,22 +1973,39 @@ export function UserMessagesView() {
                   aria-label={t.messages.backAria}
                 />
                 <Avatar
-                  src={activeConversation.listingImageUrl ?? undefined}
-                  variant="rounded"
+                  src={threadHeaderAvatar ?? undefined}
+                  variant={showListingInHeader ? 'rounded' : 'circular'}
                   sx={{
                     width: 46,
                     height: 46,
                     flexShrink: 0,
-                    borderRadius: 1.85,
-                    bgcolor: (theme) =>
-                      theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                    borderRadius: showListingInHeader ? 1.85 : '50%',
+                    fontWeight: 800,
+                    fontSize: '1rem',
+                    ...(threadHeaderAvatar
+                      ? {
+                          bgcolor: (theme) =>
+                            theme.palette.mode === 'dark'
+                              ? 'rgba(255,255,255,0.08)'
+                              : 'rgba(0,0,0,0.06)',
+                        }
+                      : {
+                          bgcolor: 'primary.main',
+                          color: 'primary.contrastText',
+                        }),
                   }}
                 >
-                  {(activeConversation.listingTitle || activeConversation.otherParticipantName || 'P')
-                    .slice(0, 1)
-                    .toUpperCase()}
+                  {threadHeaderName.slice(0, 1).toUpperCase()}
                 </Avatar>
-                <Stack spacing={0.2} sx={{ flex: 1, minWidth: 0 }}>
+                <Stack
+                  spacing={0.2}
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                    justifyContent: 'center',
+                    alignSelf: 'stretch',
+                  }}
+                >
                   <Typography
                     sx={{
                       fontWeight: 700,
@@ -1958,24 +2016,28 @@ export function UserMessagesView() {
                     }}
                     noWrap
                   >
-                    {activeConversation.otherParticipantName ?? t.messages.userFallback}
+                    {threadHeaderName}
                   </Typography>
-                  <Typography
-                    component={Link}
-                    href={listingPublicHref(activeConversation.listingKind, activeConversation.listingId)}
-                    variant="caption"
-                    sx={{
-                      fontWeight: 700,
-                      fontSize: '0.78rem',
-                      color: CHAT_ACCENT,
-                      textDecoration: 'none',
-                      lineHeight: 1.2,
-                      '&:hover': { textDecoration: 'underline' },
-                    }}
-                    noWrap
-                  >
-                    {activeConversation.listingTitle}
-                  </Typography>
+                  {showListingInHeader ? (
+                    <Typography
+                      component={activeListingHref ? Link : 'span'}
+                      href={activeListingHref || undefined}
+                      variant="caption"
+                      sx={{
+                        fontWeight: 700,
+                        fontSize: '0.78rem',
+                        color: activeListingHref ? CHAT_ACCENT : 'text.secondary',
+                        textDecoration: 'none',
+                        lineHeight: 1.2,
+                        ...(activeListingHref
+                          ? { '&:hover': { textDecoration: 'underline' } }
+                          : null),
+                      }}
+                      noWrap
+                    >
+                      {activeConversation.listingTitle}
+                    </Typography>
+                  ) : null}
                 </Stack>
                 {contactPhone ? (
                   <Stack direction="row" spacing={0} sx={{ flexShrink: 0 }}>
@@ -1990,7 +2052,7 @@ export function UserMessagesView() {
                     {contactWhatsapp ? (
                       <IconButton
                         component="a"
-                        href={`${contactWhatsapp}?text=${encodeURIComponent(t.messages.whatsappIntro(activeConversation.listingTitle))}`}
+                        href={`${contactWhatsapp}?text=${encodeURIComponent(t.messages.whatsappIntro(showListingInHeader ? activeConversation.listingTitle : threadHeaderName))}`}
                         rel="noopener noreferrer"
                         target="_blank"
                         aria-label="WhatsApp"

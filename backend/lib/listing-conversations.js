@@ -121,8 +121,17 @@ async function loadPortalUserPhone(userId, _userModel) {
   return phone || null;
 }
 
+/** Normalize API / metrics kinds (`car` → `cars`) to conversation listing kinds. */
+function normalizeConversationListingKind(kind) {
+  const k = String(kind || '').trim();
+  if (k === 'car') return 'cars';
+  if (k === 'job') return 'jobs';
+  return k;
+}
+
 /** Contact phone only — no poster profile fetch (thread header). */
 async function loadListingContactPhone(kind, listingId) {
+  if (!kind || !listingId) return null;
   if (!VALID_KINDS.has(kind) || !isUuid(listingId)) return null;
   const cfg = getKindConfig(kind);
   if (!cfg) return null;
@@ -149,6 +158,7 @@ module.exports = {
   userRoleInConversation,
   loadListingForConversation,
   findContactListingForPoster,
+  normalizeConversationListingKind,
   loadPortalUserDisplayName,
   loadPortalUserPhone,
   loadListingContactPhone,

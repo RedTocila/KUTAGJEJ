@@ -14,6 +14,7 @@ const {
   userRoleInConversation,
   loadListingForConversation,
   findContactListingForPoster,
+  normalizeConversationListingKind,
   loadListingContactPhone,
 } = require('../lib/listing-conversations');
 const { sanitizeImageUrls } = require('../lib/image-upload');
@@ -92,10 +93,12 @@ function formatConversation(conv, userRef, state = null) {
   const lastSenderId = conv.lastMessageSenderId ? String(conv.lastMessageSenderId) : '';
   return {
     id: String(conv.id || conv._id),
-    listingKind: conv.listingKind,
-    listingId: String(conv.listingId),
-    listingTitle: conv.listingTitle,
+    listingKind: conv.listingKind || null,
+    listingId: conv.listingId ? String(conv.listingId) : null,
+    listingTitle: conv.listingTitle || '',
     listingImageUrl: conv.listingImageUrl || null,
+    /** `poster` = owner opened chat (saver outreach / direct); `inquirer` = contacted from a listing. */
+    startedBy: conv.startedBy === 'poster' ? 'poster' : 'inquirer',
     role,
     unreadCount,
     otherUnreadCount:
@@ -111,6 +114,7 @@ function formatConversation(conv, userRef, state = null) {
     otherParticipantModel: otherModel,
     otherParticipantName: null,
     otherParticipantPhone: null,
+    otherParticipantAvatarUrl: null,
     listingContactPhone: null,
     pinned: Boolean(state?.pinned),
     createdAt: conv.createdAt,
@@ -264,7 +268,7 @@ function sortInboxItems(items) {
   });
 }
 
-async function attachOtherParticipantDetails(items) {
+async function attachOtherParticipantDetails(items, { includeListingPhones = true } = {}) {
   if (!items.length) return items;
 
   const profileIds = [
@@ -278,7 +282,7 @@ async function attachOtherParticipantDetails(items) {
   if (profileIds.length) {
     const { data, error } = await getSupabaseAdmin()
       .from('profiles')
-      .select('id, account_type, first_name, last_name, business_name, business_owner, phone')
+      .select('id, account_type, first_name, last_name, business_name, business_owner, phone, avatar_url')
       .in('id', profileIds);
     if (error) throw error;
     for (const row of data || []) {
@@ -299,9 +303,11 @@ async function attachOtherParticipantDetails(items) {
     return `${row.first_name || ''} ${row.last_name || ''}`.replace(/\s+/g, ' ').trim() || null;
   };
 
-  const listingPhones = await Promise.all(
-    items.map((item) => loadListingContactPhone(item.listingKind, item.listingId)),
-  );
+  const listingPhones = includeListingPhones
+    ? await Promise.all(
+        items.map((item) => loadListingContactPhone(item.listingKind, item.listingId)),
+      )
+    : items.map(() => null);
 
   return items.map((item, index) => {
     const profile = profileById.get(String(item.otherParticipantId));
@@ -309,6 +315,7 @@ async function attachOtherParticipantDetails(items) {
       ...item,
       otherParticipantName: displayNameFromProfile(profile),
       otherParticipantPhone: (profile?.phone && String(profile.phone).trim()) || null,
+      otherParticipantAvatarUrl: (profile?.avatar_url && String(profile.avatar_url).trim()) || null,
       listingContactPhone: listingPhones[index] || null,
     };
   });
@@ -374,6 +381,7 @@ router.post('/', auth, requirePortalUser, async (req, res) => {
           listing_image_url: listing.imageUrl || '',
           poster_id: listing.posterId,
           inquirer_id: userRef.id,
+          started_by: 'inquirer',
         })
         .select('*')
         .single();
@@ -425,6 +433,42 @@ async function resolveMemberPosterModel(memberId) {
   return modelNameFromAccount(profile.accountType);
 }
 
+async function respondWithConversation(res, row, userRef, statusCode) {
+  const [conv] = await attachParticipantModels([row]);
+  await upsertConversationUserState(conv.id, userRef.id, { hidden_at: null });
+  const stateMap = await loadUserStatesByConversationIds(userRef.id, [conv.id]);
+  const formatted = await formatConversationForUser(conv, userRef, stateMap.get(String(conv.id)));
+  const [withName] = await attachOtherParticipantDetails([formatted]);
+  return res.status(statusCode).json({ conversation: withName });
+}
+
+async function findDirectConversationBetween(userIdA, userIdB) {
+  const { data, error } = await getSupabaseAdmin()
+    .from('conversations')
+    .select('*')
+    .is('listing_id', null)
+    .or(
+      `and(poster_id.eq.${userIdA},inquirer_id.eq.${userIdB}),and(poster_id.eq.${userIdB},inquirer_id.eq.${userIdA})`,
+    )
+    .order('last_message_at', { ascending: false, nullsFirst: false })
+    .limit(1);
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
+async function markConversationStartedByPoster(row) {
+  if (!row?.id) return row;
+  if (String(row.started_by || '') === 'poster') return row;
+  const { data, error } = await getSupabaseAdmin()
+    .from('conversations')
+    .update({ started_by: 'poster', updated_at: new Date().toISOString() })
+    .eq('id', row.id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data || row;
+}
+
 /** POST /api/conversations/with-member/:memberId — open chat with a public profile member. */
 router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) => {
   try {
@@ -441,6 +485,57 @@ router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) 
       return res.status(400).json({ message: 'Nuk mund të dërgoni mesazh te profili juaj.' });
     }
 
+    const listingKind = normalizeConversationListingKind(req.body?.listingKind ?? req.body?.listing_kind);
+    const listingId = String(req.body?.listingId ?? req.body?.listing_id ?? '').trim();
+    const hasListingContext = Boolean(listingKind && listingId);
+
+    // Outreach about the caller's own listing (e.g. contact someone who saved it).
+    if (hasListingContext) {
+      if (!VALID_KINDS.has(listingKind) || !isUuid(listingId)) {
+        return res.status(400).json({ message: 'Njoftimi nuk është i vlefshëm.' });
+      }
+      const listing = await loadListingForConversation(listingKind, listingId);
+      if (!listing) {
+        return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
+      }
+      if (!isSamePortalUser({ id: listing.posterId, model: listing.posterModel }, userRef)) {
+        return res.status(403).json({ message: 'Nuk mund të nisni bisedën për këtë njoftim.' });
+      }
+
+      let row = await findExistingInquirerThread(listingKind, listingId, memberId);
+      let created = false;
+      if (!row) {
+        const { data, error } = await getSupabaseAdmin()
+          .from('conversations')
+          .insert({
+            listing_kind: listingKind,
+            listing_id: listingId,
+            listing_title: listing.title,
+            listing_image_url: listing.imageUrl || '',
+            poster_id: listing.posterId,
+            inquirer_id: memberId,
+            started_by: 'poster',
+          })
+          .select('*')
+          .single();
+        if (error) {
+          if (isUniqueViolation(error)) {
+            row = await findExistingInquirerThread(listingKind, listingId, memberId);
+            if (row) row = await markConversationStartedByPoster(row);
+          } else {
+            throw error;
+          }
+        } else {
+          row = data;
+          created = true;
+        }
+      } else {
+        row = await markConversationStartedByPoster(row);
+      }
+      if (!row) return res.status(500).json({ message: 'Server error' });
+      return respondWithConversation(res, row, userRef, created ? 201 : 200);
+    }
+
     const { data: existingRows, error: existingErr } = await getSupabaseAdmin()
       .from('conversations')
       .select('*')
@@ -452,67 +547,78 @@ router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) 
     if (existingErr) throw existingErr;
 
     if (existingRows?.length) {
-      const [existing] = await attachParticipantModels(existingRows);
-      await upsertConversationUserState(existing.id, userRef.id, { hidden_at: null });
-      const stateMap = await loadUserStatesByConversationIds(userRef.id, [existing.id]);
-      const formatted = await formatConversationForUser(
-        existing,
-        userRef,
-        stateMap.get(String(existing.id)),
-      );
-      const [withName] = await attachOtherParticipantDetails([formatted]);
-      return res.status(200).json({ conversation: withName });
+      return respondWithConversation(res, existingRows[0], userRef, 200);
     }
 
     const contact = await findContactListingForPoster(memberId, posterModel);
-    if (!contact) {
-      return res.status(400).json({
-        message: 'Ky anëtar nuk ka njoftime aktive për të nisur bisedën.',
-      });
+    if (contact) {
+      const listing = await loadListingForConversation(contact.kind, contact.listingId);
+      if (listing) {
+        let row = await findExistingInquirerThread(contact.kind, contact.listingId, userRef.id);
+        let created = false;
+        if (!row) {
+          const { data, error } = await getSupabaseAdmin()
+            .from('conversations')
+            .insert({
+              listing_kind: contact.kind,
+              listing_id: contact.listingId,
+              listing_title: listing.title,
+              listing_image_url: listing.imageUrl || '',
+              poster_id: listing.posterId,
+              inquirer_id: userRef.id,
+              started_by: 'inquirer',
+            })
+            .select('*')
+            .single();
+          if (error) {
+            if (isUniqueViolation(error)) {
+              row = await findExistingInquirerThread(contact.kind, contact.listingId, userRef.id);
+            } else {
+              throw error;
+            }
+          } else {
+            row = data;
+            created = true;
+          }
+        }
+        if (!row) return res.status(500).json({ message: 'Server error' });
+        return respondWithConversation(res, row, userRef, created ? 201 : 200);
+      }
     }
 
-    const listing = await loadListingForConversation(contact.kind, contact.listingId);
-    if (!listing) {
-      return res.status(400).json({
-        message: 'Ky anëtar nuk ka njoftime aktive për të nisur bisedën.',
-      });
-    }
-
-    let row = await findExistingInquirerThread(contact.kind, contact.listingId, userRef.id);
+    // Member has no active listing — start a direct (listing-less) thread.
+    let row = await findDirectConversationBetween(userRef.id, memberId);
+    let created = false;
     if (!row) {
       const { data, error } = await getSupabaseAdmin()
         .from('conversations')
         .insert({
-          listing_kind: contact.kind,
-          listing_id: contact.listingId,
-          listing_title: listing.title,
-          listing_image_url: listing.imageUrl || '',
-          poster_id: listing.posterId,
-          inquirer_id: userRef.id,
+          listing_kind: null,
+          listing_id: null,
+          listing_title: '',
+          listing_image_url: '',
+          poster_id: userRef.id,
+          inquirer_id: memberId,
+          started_by: 'poster',
         })
         .select('*')
         .single();
       if (error) {
         if (isUniqueViolation(error)) {
-          row = await findExistingInquirerThread(contact.kind, contact.listingId, userRef.id);
+          row = await findDirectConversationBetween(userRef.id, memberId);
+          if (row) row = await markConversationStartedByPoster(row);
         } else {
           throw error;
         }
       } else {
         row = data;
+        created = true;
       }
+    } else {
+      row = await markConversationStartedByPoster(row);
     }
-
-    if (!row) {
-      return res.status(500).json({ message: 'Server error' });
-    }
-
-    const [conv] = await attachParticipantModels([row]);
-    await upsertConversationUserState(conv.id, userRef.id, { hidden_at: null });
-    const stateMap = await loadUserStatesByConversationIds(userRef.id, [conv.id]);
-    const formatted = await formatConversationForUser(conv, userRef, stateMap.get(String(conv.id)));
-    const [withName] = await attachOtherParticipantDetails([formatted]);
-    return res.status(201).json({ conversation: withName });
+    if (!row) return res.status(500).json({ message: 'Server error' });
+    return respondWithConversation(res, row, userRef, created ? 201 : 200);
   } catch (err) {
     console.error('POST /conversations/with-member/:memberId', err?.message || err);
     res.status(500).json({ message: 'Server error' });
@@ -576,11 +682,13 @@ router.get('/', auth, requirePortalUser, async (req, res) => {
       attachParticipantModels(rows),
       loadUserStatesByConversationIds(userRef.id, conversationIds),
     ]);
-    // Inbox uses denormalized listing fields only — skip per-row profile/listing enrichment.
     const formatted = await formatConversationsForUser(mapped, userRef, stateMap);
-    const total = formatted.length < limit && page === 1 ? formatted.length : from + formatted.length;
+    const withNames = await attachOtherParticipantDetails(formatted, {
+      includeListingPhones: false,
+    });
+    const total = withNames.length < limit && page === 1 ? withNames.length : from + withNames.length;
     res.json({
-      conversations: sortInboxItems(formatted),
+      conversations: sortInboxItems(withNames),
       page,
       limit,
       total,

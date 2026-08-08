@@ -934,19 +934,36 @@ function ConvertListingSection() {
                       setSelected((prev) => ({ ...prev, [kind]: n }));
                     }}
                     valueLabelDisplay="auto"
-                    sx={{ flex: 1, color: 'warning.main' }}
+                    sx={{ flex: 1, minWidth: 0, color: 'warning.main' }}
                   />
-                  <Typography
-                    sx={{
-                      minWidth: 64,
-                      textAlign: 'right',
-                      fontWeight: 800,
-                      fontSize: '0.9rem',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {value} → BC {formatBc(rowBc)}
-                  </Typography>
+                  {/* Fixed width from max label so digit growth never shrinks the slider */}
+                  <Box sx={{ position: 'relative', flexShrink: 0 }}>
+                    <Typography
+                      aria-hidden
+                      sx={{
+                        visibility: 'hidden',
+                        fontWeight: 800,
+                        fontSize: '0.9rem',
+                        whiteSpace: 'nowrap',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      {max} → BC {formatBc(max * rate)}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        textAlign: 'right',
+                        fontWeight: 800,
+                        fontSize: '0.9rem',
+                        whiteSpace: 'nowrap',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      {value} → BC {formatBc(rowBc)}
+                    </Typography>
+                  </Box>
                 </Stack>
               </Box>
             );

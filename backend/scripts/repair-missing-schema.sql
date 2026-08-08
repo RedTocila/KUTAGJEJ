@@ -164,9 +164,23 @@ create index if not exists conversation_user_state_user_pinned_idx
 
 alter table public.conversation_user_state enable row level security;
 
--- Inbox delivered/delivered ticks need last message sender
+-- Inbox read/delivered ticks need last message sender
 alter table public.conversations
   add column if not exists last_message_sender_id uuid references public.profiles (id) on delete set null;
+
+-- Direct (listing-less) member chats — contact savers / profiles with no active posts
+alter table public.conversations
+  alter column listing_kind drop not null;
+alter table public.conversations
+  alter column listing_id drop not null;
+alter table public.conversations
+  add column if not exists started_by text not null default 'inquirer';
+create unique index if not exists conversations_direct_pair_uidx
+  on public.conversations (
+    least(poster_id, inquirer_id),
+    greatest(poster_id, inquirer_id)
+  )
+  where listing_id is null;
 
 -- Car vehicle type
 alter table public.car_listings

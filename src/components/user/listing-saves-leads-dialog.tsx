@@ -21,7 +21,7 @@ import {
   ProductDialogContent,
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
-import { startConversationWithMember } from '@/lib/conversations-client';
+import { metricKindToConversationKind, startConversationWithMember } from '@/lib/conversations-client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import {
   fetchListingSavers,
@@ -103,7 +103,10 @@ export function ListingSavesLeadsDialog({
     setContactError(null);
     setContactingId(memberId);
     try {
-      const res = await startConversationWithMember(memberId);
+      const res = await startConversationWithMember(memberId, {
+        listingKind: metricKindToConversationKind(listingKind),
+        listingId,
+      });
       if (res.error || !res.conversation?.id) {
         setContactError(res.error || 'Nuk u hap biseda.');
         return;

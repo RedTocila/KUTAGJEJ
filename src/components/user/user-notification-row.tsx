@@ -90,7 +90,10 @@ export function UserNotificationRow({
     setContacting(true);
     try {
       await markRead();
-      const res = await startConversationWithMember(primary.actorId);
+      const res = await startConversationWithMember(primary.actorId, {
+        listingKind: primary.refKind || undefined,
+        listingId: primary.refId || undefined,
+      });
       if (res.error || !res.conversation?.id) {
         setContactError(res.error || 'Nuk u hap biseda.');
         return;

@@ -520,6 +520,7 @@ export function PackageCheckoutCard({
   onClick,
   actions,
   details = [],
+  footer,
   accent = 'primary',
   selected = false,
 }: {
@@ -535,6 +536,8 @@ export function PackageCheckoutCard({
   actions?: React.ReactNode;
   /** Feature lines shown in a collapsed "Detajet" dropdown at the bottom. */
   details?: FeatureListItem[];
+  /** Optional row under details (e.g. cancel subscription). */
+  footer?: React.ReactNode;
   /** Hover / active border & wash — e.g. `warning` Premium, `error` OKAZION. */
   accent?: PlanAccent;
   /** Current / selected plan — accent border + corner checkmark. */
@@ -542,6 +545,7 @@ export function PackageCheckoutCard({
 }) {
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const hasDetails = details.length > 0;
+  const hasFooter = Boolean(footer);
 
   const header = (
     <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -653,14 +657,14 @@ export function PackageCheckoutCard({
     </Box>
   );
 
-  const mainRowPaddingY = hasDetails
+  const mainRowPaddingY = hasDetails || hasFooter
     ? { xs: 1.5, sm: 1.65 }
     : actions
       ? { xs: 1.75, sm: 1.9 }
       : { xs: 1.85, sm: 2 };
 
   const body = actions ? (
-    <Box sx={{ px: { xs: 2, sm: 2.25 }, pt: mainRowPaddingY, pb: hasDetails ? 0.75 : mainRowPaddingY }}>
+    <Box sx={{ px: { xs: 2, sm: 2.25 }, pt: mainRowPaddingY, pb: hasDetails || hasFooter ? 0.75 : mainRowPaddingY }}>
       {header}
       <Stack direction="row" spacing={1} sx={{ mt: 1.35 }}>
         {actions}
@@ -676,7 +680,7 @@ export function PackageCheckoutCard({
         gap: 2,
         px: { xs: 2, sm: 2.25 },
         pt: mainRowPaddingY,
-        pb: hasDetails ? 0.75 : mainRowPaddingY,
+        pb: hasDetails || hasFooter ? 0.75 : mainRowPaddingY,
       }}
     >
       {header}
@@ -796,10 +800,29 @@ export function PackageCheckoutCard({
             </Box>
           </ButtonBase>
           <Collapse in={detailsOpen} unmountOnExit>
-            <Box sx={{ px: { xs: 2, sm: 2.25 }, pb: { xs: 1.25, sm: 1.35 } }}>
+            <Box sx={{ px: { xs: 2, sm: 2.25 }, pb: hasFooter ? 0.75 : { xs: 1.25, sm: 1.35 } }}>
               <FeatureList items={details} accent={accent} compact />
             </Box>
           </Collapse>
+        </Box>
+      ) : null}
+      {hasFooter ? (
+        <Box
+          sx={{
+            px: { xs: 2, sm: 2.25 },
+            pb: { xs: 1.35, sm: 1.5 },
+            pt: hasDetails ? 0 : 0.25,
+          }}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          onMouseDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+        >
+          {footer}
         </Box>
       ) : null}
     </Box>

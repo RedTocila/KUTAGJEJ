@@ -542,3 +542,21 @@ export async function listMySubscriptions(): Promise<{
     return { error: 'Nuk u arrit lidhja me serverin.' };
   }
 }
+
+export async function cancelMySubscription(
+  subscriptionId: string,
+): Promise<{ subscription?: UserSubscriptionSummary; error?: string }> {
+  try {
+    const res = await apiFetch(getApiUrl(`/payments/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`), {
+      method: 'POST',
+      headers: await authHeadersAsync({ 'Content-Type': 'application/json' }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { error: typeof data.message === 'string' ? data.message : 'Anulimi dështoi.' };
+    }
+    return { subscription: data.subscription as UserSubscriptionSummary };
+  } catch {
+    return { error: 'Nuk u arrit lidhja me serverin.' };
+  }
+}

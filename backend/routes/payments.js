@@ -221,6 +221,75 @@ router.get('/subscriptions/mine', async (req, res) => {
   }
 });
 
+/** Cancel one of the current user's active subscriptions (ends access immediately). */
+router.post('/subscriptions/:id/cancel', async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    if (!isUuid(id)) {
+      return res.status(400).json({ message: 'Abonim i pavlefshëm.' });
+    }
+
+    const { data: existing, error: findErr } = await getSupabaseAdmin()
+      .from('user_subscriptions')
+      .select('id, status, user_id')
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+    if (findErr) throw findErr;
+    if (!existing) {
+      return res.status(404).json({ message: 'Abonimi nuk u gjet.' });
+    }
+    if (existing.status !== 'active') {
+      return res.status(400).json({ message: 'Ky abonim nuk është aktiv.' });
+    }
+
+    const nowIso = new Date().toISOString();
+    const { data: updated, error: updErr } = await getSupabaseAdmin()
+      .from('user_subscriptions')
+      .update({
+        status: 'canceled',
+        updated_at: nowIso,
+      })
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .eq('status', 'active')
+      .select('*')
+      .maybeSingle();
+    if (updErr) throw updErr;
+    if (!updated) {
+      return res.status(409).json({ message: 'Abonimi nuk mund të anulohet.' });
+    }
+
+    res.json({
+      subscription: {
+        id: String(updated.id),
+        contractId: updated.contract_id ? String(updated.contract_id) : null,
+        contractTitle: updated.contract_title || '',
+        planCode: updated.plan_code || null,
+        months: updated.months,
+        priceEur: updated.price_eur != null ? Number(updated.price_eur) : null,
+        startsAt: updated.starts_at,
+        expiresAt: updated.expires_at,
+        status: 'canceled',
+        glowBadgeEnabled: Boolean(updated.glow_badge_enabled),
+        dailyBoostAccess: Boolean(updated.daily_boost_access),
+        boostCreditsGranted: updated.boost_credits_granted,
+        refreshEveryHours: updated.refresh_every_hours ?? null,
+        maxListAllCategories: Number(updated.max_list_all_categories) || 0,
+        maxJobListings: Number(updated.max_job_listings) || 0,
+        maxCarListings: Number(updated.max_car_listings) || 0,
+        maxApartmentListings: Number(updated.max_apartment_listings) || 0,
+        maxProductListings: Number(updated.max_product_listings) || 0,
+        maxPremiumListings: Number(updated.max_premium_listings) || 0,
+        maxOkazionListings: Number(updated.max_okazion_listings) || 0,
+      },
+    });
+  } catch (error) {
+    console.error('POST /payments/subscriptions/:id/cancel:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
 /** Current auto-refresh capacity, usage, and interval from the active plan. */
 router.get('/auto-refresh/status', async (req, res) => {
   try {

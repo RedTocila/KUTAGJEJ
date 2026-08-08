@@ -4,6 +4,7 @@ import * as React from 'react';
 import {
   Alert,
   Box,
+  Button,
   Chip,
   CircularProgress,
   Stack,
@@ -15,12 +16,25 @@ import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/Cre
 import { CurrencyEur as CurrencyEurIcon } from '@phosphor-icons/react/dist/ssr/CurrencyEur';
 import { Receipt as ReceiptIcon } from '@phosphor-icons/react/dist/ssr/Receipt';
 
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { PortalIconBox, PortalSectionCard } from '@/components/user/portal-cards';
 import { useCopy } from '@/hooks/use-copy';
-import { listMyPayments, listMySubscriptions, listOkazionVouchers, listPremiumVouchers } from '@/lib/payments-client';
+import {
+  cancelMySubscription,
+  listMyPayments,
+  listMySubscriptions,
+  listOkazionVouchers,
+  listPremiumVouchers,
+} from '@/lib/payments-client';
 import type { Payment, PaymentStatus, PaymentType, UserSubscriptionSummary } from '@/types/payment';
+import { productButtonSx } from '@/styles/product-sx';
 
 type SpendCategory = 'money' | 'boost';
 
@@ -103,6 +117,10 @@ export default function MyPaymentsPage() {
   const [category, setCategory] = React.useState<SpendCategory>('money');
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = React.useState<UserSubscriptionSummary | null>(null);
+  const [canceling, setCanceling] = React.useState(false);
+  const [cancelError, setCancelError] = React.useState<string | null>(null);
+  const [cancelSuccess, setCancelSuccess] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -157,6 +175,23 @@ export default function MyPaymentsPage() {
     };
   }, []);
 
+  const handleConfirmCancel = async () => {
+    if (!cancelTarget || canceling) return;
+    setCanceling(true);
+    setCancelError(null);
+    const res = await cancelMySubscription(cancelTarget.id);
+    setCanceling(false);
+    if (res.error || !res.subscription) {
+      setCancelError(res.error || t.myPayments.cancelFailed);
+      return;
+    }
+    setSubscriptions((prev) =>
+      prev.map((sub) => (sub.id === res.subscription!.id ? { ...sub, ...res.subscription! } : sub)),
+    );
+    setCancelSuccess(t.myPayments.cancelSuccess);
+    setCancelTarget(null);
+  };
+
   return (
     <Stack spacing={2.5}>
       <UserPageHeader
@@ -171,6 +206,12 @@ export default function MyPaymentsPage() {
         </Alert>
       ) : null}
 
+      {cancelSuccess ? (
+        <Alert severity="success" sx={{ borderRadius: 2.5 }} onClose={() => setCancelSuccess(null)}>
+          {cancelSuccess}
+        </Alert>
+      ) : null}
+
       {loading ? (
         <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
           <CircularProgress size={28} />
@@ -179,8 +220,8 @@ export default function MyPaymentsPage() {
         <Stack spacing={1.75}>
           {subscriptions.length > 0 ? (
             <PortalSectionCard
-              title="Abonimet"
-              description="Planet aktive dhe skadimi i tyre."
+              title={t.myPayments.subscriptionsTitle}
+              description={t.myPayments.subscriptionsDescription}
               icon={<CreditCardIcon size={22} weight="duotone" />}
             >
               <Stack spacing={1.25}>
@@ -192,7 +233,8 @@ export default function MyPaymentsPage() {
                       borderRadius: 2.5,
                       border: '1px solid',
                       borderColor: 'divider',
-                      bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+                      bgcolor: (theme) =>
+                        theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
                     }}
                   >
                     <Stack
@@ -204,13 +246,35 @@ export default function MyPaymentsPage() {
                       <Chip
                         size="small"
                         color={sub.status === 'active' ? 'success' : 'default'}
-                        label={sub.status === 'active' ? 'Aktiv' : sub.status === 'expired' ? 'Skaduar' : 'Anuluar'}
+                        label={
+                          sub.status === 'active'
+                            ? t.myPayments.active
+                            : sub.status === 'expired'
+                              ? t.myPayments.expired
+                              : t.myPayments.canceled
+                        }
                         sx={{ fontWeight: 700 }}
                       />
                     </Stack>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                       {sub.months} muaj · {sub.priceEur} € · skadon {formatDate(sub.expiresAt)}
                     </Typography>
+                    {sub.status === 'active' ? (
+                      <Box sx={{ mt: 1.25 }}>
+                        <Button
+                          size="small"
+                          color="error"
+                          variant="outlined"
+                          onClick={() => {
+                            setCancelError(null);
+                            setCancelTarget(sub);
+                          }}
+                          sx={{ ...productButtonSx, fontWeight: 750 }}
+                        >
+                          {t.myPayments.cancelSubscription}
+                        </Button>
+                      </Box>
+                    ) : null}
                   </Box>
                 ))}
               </Stack>
@@ -411,6 +475,47 @@ export default function MyPaymentsPage() {
           </PortalSectionCard>
         </Stack>
       )}
+
+      <ProductDialog
+        open={Boolean(cancelTarget)}
+        onClose={canceling ? undefined : () => setCancelTarget(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <ProductDialogTitle onClose={canceling ? undefined : () => setCancelTarget(null)}>
+          {t.myPayments.cancelConfirmTitle}
+        </ProductDialogTitle>
+        <ProductDialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5, fontWeight: 550 }}>
+            {cancelTarget
+              ? `${cancelTarget.contractTitle || 'Abonim'} · ${cancelTarget.months} muaj. ${t.myPayments.cancelConfirmBody}`
+              : t.myPayments.cancelConfirmBody}
+          </Typography>
+          {cancelError ? (
+            <Alert severity="error" sx={{ mt: 1.5, borderRadius: 2 }}>
+              {cancelError}
+            </Alert>
+          ) : null}
+        </ProductDialogContent>
+        <ProductDialogActions>
+          <Button
+            onClick={() => setCancelTarget(null)}
+            disabled={canceling}
+            sx={productButtonSx}
+          >
+            {t.myPayments.keepSubscription}
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={canceling}
+            onClick={() => void handleConfirmCancel()}
+            sx={productButtonSx}
+          >
+            {canceling ? t.myPayments.canceling : t.myPayments.cancelConfirmCta}
+          </Button>
+        </ProductDialogActions>
+      </ProductDialog>
     </Stack>
   );
 }

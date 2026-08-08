@@ -5,26 +5,35 @@ import { useRouter } from 'next/navigation';
 import {
   Alert,
   Box,
+  Button,
   CircularProgress,
   Stack,
   Typography,
 } from '@mui/material';
 
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
+import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
+import { PackageLeadsFeatureLabel } from '@/components/user/leads-how-it-works';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import type { AppMessages } from '@/lib/i18n/messages';
+import { cancelMySubscription, listMySubscriptions } from '@/lib/payments-client';
 import { listPublicContracts } from '@/lib/public-contracts-client';
-import { listMySubscriptions } from '@/lib/payments-client';
-import type { PublicContract } from '@/types/contract';
 import { paths } from '@/paths';
-import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
-import { PackageLeadsFeatureLabel } from '@/components/user/leads-how-it-works';
+import { productButtonSx } from '@/styles/product-sx';
+import type { PublicContract } from '@/types/contract';
+import type { UserSubscriptionSummary } from '@/types/payment';
 import {
   PackageCheckoutCard,
   formatEur,
   type FeatureListItem,
+  type PlanAccent,
 } from './package-ui';
-import type { PlanAccent } from './package-ui';
 
 function durationLabel(t: AppMessages, months: number): string {
   if (months === 1) return t.packages.monthly;
@@ -123,9 +132,17 @@ export function MainPackagesPanel() {
   const [plans, setPlans] = React.useState<PublicContract[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [activeContractId, setActiveContractId] = React.useState<string | null>(null);
-  const [activePlanCode, setActivePlanCode] = React.useState<string | null>(null);
-  const [activeMonths, setActiveMonths] = React.useState<number | null>(null);
+  const [activeSubscription, setActiveSubscription] = React.useState<UserSubscriptionSummary | null>(null);
+  const [cancelOpen, setCancelOpen] = React.useState(false);
+  const [canceling, setCanceling] = React.useState(false);
+  const [cancelError, setCancelError] = React.useState<string | null>(null);
+  const [cancelSuccess, setCancelSuccess] = React.useState<string | null>(null);
+
+  const activeContractId = activeSubscription?.contractId ?? null;
+  const activePlanCode = activeSubscription?.planCode
+    ? String(activeSubscription.planCode).toLowerCase()
+    : null;
+  const activeMonths = activeSubscription?.months ?? null;
 
   const reload = React.useCallback(async () => {
     const [{ contracts, error: err }, subsRes] = await Promise.all([
@@ -141,9 +158,7 @@ export function MainPackagesPanel() {
     }
     const active =
       (subsRes.subscriptions ?? []).find((s) => s.status === 'active' && Number(s.priceEur) > 0) ?? null;
-    setActiveContractId(active?.contractId ?? null);
-    setActivePlanCode(active?.planCode ? String(active.planCode).toLowerCase() : null);
-    setActiveMonths(active?.months ?? null);
+    setActiveSubscription(active);
   }, [subscriberKindFilter]);
 
   React.useEffect(() => {
@@ -159,6 +174,22 @@ export function MainPackagesPanel() {
     };
   }, [user, reload]);
 
+  const handleConfirmCancel = async () => {
+    if (!activeSubscription || canceling) return;
+    setCanceling(true);
+    setCancelError(null);
+    const res = await cancelMySubscription(activeSubscription.id);
+    setCanceling(false);
+    if (res.error || !res.subscription) {
+      setCancelError(res.error || t.myPayments.cancelFailed);
+      return;
+    }
+    setActiveSubscription(null);
+    setCancelSuccess(t.myPayments.cancelSuccess);
+    setCancelOpen(false);
+    await reload();
+  };
+
   if (!user) return null;
 
   const firstPaidTarget = React.useMemo(() => {
@@ -173,6 +204,30 @@ export function MainPackagesPanel() {
     return null;
   }, [plans]);
 
+  const cancelFooter =
+    activeSubscription ? (
+      <Button
+        size="medium"
+        color="error"
+        variant="outlined"
+        fullWidth
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setCancelError(null);
+          setCancelOpen(true);
+        }}
+        sx={{
+          ...productButtonSx,
+          fontWeight: 750,
+          borderRadius: 2.5,
+          py: 1,
+        }}
+      >
+        {t.myPayments.cancelSubscription}
+      </Button>
+    ) : null;
+
   return (
     <Stack spacing={2.5}>
       {loading ? (
@@ -184,6 +239,12 @@ export function MainPackagesPanel() {
       {error ? (
         <Alert severity="warning" sx={{ borderRadius: 2 }}>
           {error}
+        </Alert>
+      ) : null}
+
+      {cancelSuccess ? (
+        <Alert severity="success" sx={{ borderRadius: 2 }} onClose={() => setCancelSuccess(null)}>
+          {cancelSuccess}
         </Alert>
       ) : null}
 
@@ -262,6 +323,7 @@ export function MainPackagesPanel() {
                   accent={accent}
                   selected={isCurrent}
                   details={details}
+                  footer={isCurrent ? cancelFooter : undefined}
                   onClick={
                     isCurrent
                       ? undefined
@@ -279,6 +341,43 @@ export function MainPackagesPanel() {
           {t.packages.subscriptionNote}
         </Typography>
       ) : null}
+
+      <ProductDialog
+        open={cancelOpen}
+        onClose={canceling ? undefined : () => setCancelOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <ProductDialogTitle onClose={canceling ? undefined : () => setCancelOpen(false)}>
+          {t.myPayments.cancelConfirmTitle}
+        </ProductDialogTitle>
+        <ProductDialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5, fontWeight: 550 }}>
+            {activeSubscription
+              ? `${activeSubscription.contractTitle || 'Abonim'} · ${activeSubscription.months} muaj. ${t.myPayments.cancelConfirmBody}`
+              : t.myPayments.cancelConfirmBody}
+          </Typography>
+          {cancelError ? (
+            <Alert severity="error" sx={{ mt: 1.5, borderRadius: 2 }}>
+              {cancelError}
+            </Alert>
+          ) : null}
+        </ProductDialogContent>
+        <ProductDialogActions>
+          <Button onClick={() => setCancelOpen(false)} disabled={canceling} sx={productButtonSx}>
+            {t.myPayments.keepSubscription}
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={canceling}
+            onClick={() => void handleConfirmCancel()}
+            sx={productButtonSx}
+          >
+            {canceling ? t.myPayments.canceling : t.myPayments.cancelConfirmCta}
+          </Button>
+        </ProductDialogActions>
+      </ProductDialog>
     </Stack>
   );
 }

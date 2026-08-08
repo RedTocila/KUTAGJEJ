@@ -171,13 +171,27 @@ class AuthClient {
     Cookies.remove(AUTH_REFRESH_KEY);
     Cookies.remove('user-data');
     Cookies.remove('user');
+
+    // Clear the browser session locally so redirect is never blocked by a hung
+    // network revoke. A previous `await signOut()` left the UI logged-in until refresh.
     try {
-      await getSupabaseBrowserClient().auth.signOut();
+      await Promise.race([
+        getSupabaseBrowserClient().auth.signOut({ scope: 'local' }),
+        new Promise<void>((resolve) => {
+          window.setTimeout(resolve, 500);
+        }),
+      ]);
+    } catch {
+      /* ignore */
+    }
+    try {
+      localStorage.removeItem('kutagjej-auth');
     } catch {
       /* ignore */
     }
 
-    window.location.href = target;
+    // Full document navigation so UserProvider remounts without a stale user.
+    window.location.assign(target);
   }
 
   async updateAdminProfile(body: {

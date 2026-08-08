@@ -80,8 +80,9 @@ function openInstagramStoryCamera(): boolean {
 }
 
 /**
- * Share the story image so Instagram can open Stories with it.
+ * Share the story image so Instagram can open Stories / Post with it.
  * Critical: share **files only** (no text/url) — mixing text makes Instagram skip Stories.
+ * Listing URL is copied separately so the user can add a Link sticker (Story) or caption (Post).
  */
 async function shareStoryImage(file: File): Promise<'shared' | 'downloaded'> {
   const fileOnly = { files: [file] };
@@ -103,6 +104,15 @@ async function shareStoryImage(file: File): Promise<'shared' | 'downloaded'> {
 
   downloadFile(file);
   return 'downloaded';
+}
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function dataUrlToFile(dataUrl: string, filename: string): File {
@@ -305,6 +315,7 @@ export function ListingSharePage({
     setError(null);
     setFeedback(null);
     try {
+      const listingUrl = resolveListingShareUrl(payload);
       // Inline remote listing photo before capture — otherwise Instagram gets a black media area
       // (Safari / html-to-image drops cross-origin pixels).
       await ensureListingImageEmbedded(
@@ -343,6 +354,11 @@ export function ListingSharePage({
         throw new Error('story capture empty');
       }
       const file = dataUrlToFile(dataUrl, `kutagjej-story-${payload.listingId.slice(0, 8)}.jpg`);
+
+      // Copy listing link first so it's ready for Instagram Link sticker / Post caption.
+      // Instagram Web Share cannot attach a clickable URL with the image (Stories need files-only).
+      const linkCopied = listingUrl ? await copyText(listingUrl) : false;
+
       const shareResult = await shareStoryImage(file);
 
       // Count only after the OS share / save / download succeeded — not on cancel.
@@ -354,11 +370,23 @@ export function ListingSharePage({
       await metricPromise;
 
       if (result === 'shared') {
-        setFeedback('Zgjidh Instagram → Story për ta postuar me këtë imazh.');
+        setFeedback(
+          linkCopied
+            ? 'Imazhi u nda. Në Story shto Link sticker; në Post ngjit linkun në caption.'
+            : 'Zgjidh Instagram → Story ose Post. Pastaj shto linkun e njoftimit.',
+        );
       } else if (result === 'opened') {
-        setFeedback('Story u ruajt — hap Instagram Stories dhe zgjidhe nga galeria.');
+        setFeedback(
+          linkCopied
+            ? 'Story u ruajt dhe linku u kopjua — hap Instagram dhe shto Link sticker.'
+            : 'Story u ruajt — hap Instagram Stories dhe zgjidhe nga galeria.',
+        );
       } else {
-        setFeedback('Story u shkarkua — ngarkoje në Instagram Stories.');
+        setFeedback(
+          linkCopied
+            ? 'Story u shkarkua dhe linku u kopjua — ngarkoje në Instagram dhe shto linkun.'
+            : 'Story u shkarkua — ngarkoje në Instagram Stories.',
+        );
       }
     } catch (err) {
       if (!(err instanceof DOMException && err.name === 'AbortError')) {
@@ -531,8 +559,23 @@ export function ListingSharePage({
               '&.Mui-disabled': { bgcolor: 'rgba(118,186,27,0.35)', color: 'rgba(10,10,10,0.5)' },
             }}
           >
-            Ndaj si Instagram Story
+            Ndaj në Instagram
           </Button>
+
+          <Typography
+            variant="body2"
+            sx={{
+              textAlign: 'center',
+              color: 'rgba(255,255,255,0.45)',
+              fontWeight: 500,
+              fontSize: '0.72rem',
+              lineHeight: 1.35,
+              px: 0.5,
+              mt: -0.35,
+            }}
+          >
+            Story / Post: imazhi + linku i njoftimit (kopjohet automatikisht)
+          </Typography>
 
           <Button
             type="button"
@@ -564,7 +607,7 @@ export function ListingSharePage({
               },
             }}
           >
-            Ndaj linkun
+            Ndaj linkun (chat)
           </Button>
 
           {feedback ? (

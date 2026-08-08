@@ -13,7 +13,7 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 /** Max listing/source links processed in one import request. */
 const MAX_IMPORT_URLS = 20;
 /** Max images kept on a car listing draft (matches create-form / API). */
-const MAX_CAR_LISTING_IMAGES = 5;
+const MAX_CAR_LISTING_IMAGES = 8;
 /** Max remote snapshot photos sent to vision (OpenAI). */
 const MAX_SNAPSHOT_VISION_IMAGES = 3;
 
@@ -201,9 +201,18 @@ const BROWSER_UA =
 const CRAWLER_UA =
   'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
 const IG_WEB_APP_ID = '936619743392459';
-/** Instagram web GraphQL doc used by Polaris post pages. */
-const IG_SHORTCODE_DOC_ID = '10015901848480474';
+/**
+ * PolarisPostRootQuery — returns v1/iPhone-shaped media (carousel_media).
+ * Instagram deprecated older shortcode doc_ids for anonymous scrapers (mid-2026).
+ */
+const IG_SHORTCODE_DOC_ID = '27128499623469141';
+/** Legacy xdt_shortcode_media query — kept as a fallback. */
+const IG_SHORTCODE_DOC_ID_LEGACY = '10015901848480474';
 const MAX_SNAPSHOT_IMAGES = 8;
+
+/** Cached anonymous Instagram CSRF + cookie jar (required by GraphQL). */
+let igCsrfCache = { token: null, cookie: null, fetchedAt: 0 };
+const IG_CSRF_TTL_MS = 25 * 60 * 1000;
 
 function decodeHtmlEntities(value) {
   return String(value || '')
@@ -619,6 +628,67 @@ function extractInstagramShortcode(url) {
   }
 }
 
+/** Instagram anonymous GraphQL requires an X-CSRFToken (cookie alone is rejected). */
+async function fetchInstagramCsrfSession(signal) {
+  const now = Date.now();
+  if (
+    igCsrfCache.token &&
+    igCsrfCache.cookie &&
+    now - igCsrfCache.fetchedAt < IG_CSRF_TTL_MS
+  ) {
+    return igCsrfCache;
+  }
+  try {
+    const res = await fetch('https://www.instagram.com/', {
+      method: 'GET',
+      redirect: 'follow',
+      signal,
+      headers: {
+        'User-Agent': BROWSER_UA,
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    const setCookies =
+      typeof res.headers.getSetCookie === 'function'
+        ? res.headers.getSetCookie()
+        : [res.headers.get('set-cookie')].filter(Boolean);
+    let token = null;
+    const cookieParts = [];
+    for (const raw of setCookies) {
+      const first = String(raw || '').split(';')[0].trim();
+      if (first) cookieParts.push(first);
+      const match = String(raw || '').match(/(?:^|,\s*)csrftoken=([^;,\s]+)/i);
+      if (match?.[1]) token = match[1];
+    }
+    if (!token) return igCsrfCache.token ? igCsrfCache : { token: null, cookie: null, fetchedAt: 0 };
+    igCsrfCache = {
+      token,
+      cookie: cookieParts.join('; '),
+      fetchedAt: now,
+    };
+    return igCsrfCache;
+  } catch {
+    return igCsrfCache.token ? igCsrfCache : { token: null, cookie: null, fetchedAt: 0 };
+  }
+}
+
+function instagramAuthHeaders(csrfSession, shortcode) {
+  const headers = {
+    'User-Agent': BROWSER_UA,
+    Accept: '*/*',
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'X-IG-App-ID': IG_WEB_APP_ID,
+    Referer: shortcode
+      ? `https://www.instagram.com/p/${shortcode}/`
+      : 'https://www.instagram.com/',
+  };
+  if (csrfSession?.token) {
+    headers['X-CSRFToken'] = csrfSession.token;
+    if (csrfSession.cookie) headers.Cookie = csrfSession.cookie;
+  }
+  return headers;
+}
+
 /** Instagram HTML is often a login shell; oEmbed returns the real post caption. */
 async function fetchInstagramOEmbed(url) {
   const endpoint = `https://www.instagram.com/api/v1/oembed/?omitscript=true&url=${encodeURIComponent(url)}`;
@@ -653,6 +723,33 @@ async function fetchInstagramOEmbed(url) {
   }
 }
 
+/** Best display URL from v1 image_versions2 candidates (largest first). */
+function bestInstagramImageVersionUrl(mediaNode) {
+  const candidates = mediaNode?.image_versions2?.candidates;
+  if (Array.isArray(candidates) && candidates.length) {
+    const sorted = [...candidates].sort(
+      (a, b) => (Number(b?.width) || 0) * (Number(b?.height) || 0) -
+        (Number(a?.width) || 0) * (Number(a?.height) || 0),
+    );
+    const url = String(sorted[0]?.url || '').trim();
+    if (/^https?:\/\//i.test(url)) return url;
+  }
+  return null;
+}
+
+function isInstagramCarouselNode(mediaNode) {
+  if (!mediaNode || typeof mediaNode !== 'object') return false;
+  if (Number(mediaNode.media_type) === 8) return true;
+  if (mediaNode.product_type === 'carousel_container') return true;
+  const typename = String(mediaNode.__typename || '');
+  if (/sidecar|carousel/i.test(typename)) return true;
+  const children = mediaNode.edge_sidecar_to_children?.edges;
+  if (Array.isArray(children) && children.length > 1) return true;
+  const carousel = mediaNode.carousel_media;
+  if (Array.isArray(carousel) && carousel.length > 1) return true;
+  return false;
+}
+
 function collectInstagramMediaImages(mediaNode) {
   const urls = [];
   if (!mediaNode || typeof mediaNode !== 'object') return { urls, isCarousel: false };
@@ -663,67 +760,130 @@ function collectInstagramMediaImages(mediaNode) {
     }
   };
 
+  // Legacy GraphQL sidecar children.
   const children = mediaNode.edge_sidecar_to_children?.edges;
   if (Array.isArray(children) && children.length) {
     for (const edge of children) {
-      push(edge?.node?.display_url);
+      const node = edge?.node;
+      push(node?.display_url || bestInstagramImageVersionUrl(node));
       if (urls.length >= MAX_SNAPSHOT_IMAGES) break;
     }
     return { urls, isCarousel: true };
   }
 
-  // Single photo/reel: keep ONE image (display_url). Do not also push thumbnail_src —
+  // Polaris / v1 API carousel_media.
+  const carousel = mediaNode.carousel_media;
+  if (Array.isArray(carousel) && carousel.length) {
+    for (const item of carousel) {
+      push(bestInstagramImageVersionUrl(item) || item?.display_url);
+      if (urls.length >= MAX_SNAPSHOT_IMAGES) break;
+    }
+    return { urls, isCarousel: true };
+  }
+
+  // Single photo/reel: keep ONE image. Do not also push thumbnail_src —
   // that doubles the same frame with a different CDN URL.
-  push(mediaNode.display_url);
+  push(
+    mediaNode.display_url ||
+      bestInstagramImageVersionUrl(mediaNode) ||
+      mediaNode.thumbnail_src,
+  );
   if (!urls.length) push(mediaNode.thumbnail_src);
-  return { urls: urls.slice(0, 1), isCarousel: false };
+  return {
+    urls: urls.slice(0, 1),
+    isCarousel: isInstagramCarouselNode(mediaNode),
+  };
+}
+
+function parseInstagramShortcodePayload(data) {
+  if (!data || typeof data !== 'object') return null;
+
+  // New PolarisPostRootQuery → v1 web_info.items[0]
+  const polarisItem = data?.data?.xdt_api__v1__media__shortcode__web_info?.items?.[0];
+  if (polarisItem && typeof polarisItem === 'object') {
+    const collected = collectInstagramMediaImages(polarisItem);
+    const captionText =
+      polarisItem.caption && typeof polarisItem.caption === 'object'
+        ? String(polarisItem.caption.text || '').trim()
+        : String(polarisItem.caption || '').trim();
+    return {
+      caption: captionText || null,
+      authorName: polarisItem.user?.username
+        ? String(polarisItem.user.username)
+        : polarisItem.owner?.username
+          ? String(polarisItem.owner.username)
+          : null,
+      imageUrls: collected.urls,
+      isCarousel: collected.isCarousel || Number(polarisItem.media_type) === 8,
+    };
+  }
+
+  // Legacy xdt_shortcode_media
+  const media = data?.data?.xdt_shortcode_media;
+  if (!media || typeof media !== 'object') return null;
+  const captionEdges = media.edge_media_to_caption?.edges;
+  const caption =
+    Array.isArray(captionEdges) && captionEdges[0]?.node?.text
+      ? String(captionEdges[0].node.text).trim()
+      : null;
+  const collected = collectInstagramMediaImages(media);
+  return {
+    caption,
+    authorName: media.owner?.username ? String(media.owner.username) : null,
+    imageUrls: collected.urls,
+    isCarousel: collected.isCarousel,
+  };
 }
 
 /** Public Instagram shortcode media (includes carousel children when available). */
 async function fetchInstagramShortcodeMedia(shortcode) {
   if (!shortcode) return null;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12000);
+  const timeout = setTimeout(() => controller.abort(), 14000);
   try {
-    const body = new URLSearchParams({
-      variables: JSON.stringify({
-        shortcode,
-        fetch_tagged_user_count: null,
-        hoisted_comment_id: null,
-        hoisted_reply_id: null,
-      }),
-      doc_id: IG_SHORTCODE_DOC_ID,
-    });
-    const res = await fetch('https://www.instagram.com/graphql/query', {
-      method: 'POST',
-      redirect: 'follow',
-      signal: controller.signal,
-      headers: {
-        'User-Agent': BROWSER_UA,
-        Accept: '*/*',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-IG-App-ID': IG_WEB_APP_ID,
-        Referer: `https://www.instagram.com/p/${shortcode}/`,
-      },
-      body,
-    });
-    if (!res.ok) return null;
-    const data = await res.json().catch(() => null);
-    const media = data?.data?.xdt_shortcode_media;
-    if (!media || typeof media !== 'object') return null;
+    const csrfSession = await fetchInstagramCsrfSession(controller.signal);
+    if (!csrfSession?.token) return null;
 
-    const captionEdges = media.edge_media_to_caption?.edges;
-    const caption =
-      Array.isArray(captionEdges) && captionEdges[0]?.node?.text
-        ? String(captionEdges[0].node.text).trim()
-        : null;
-    const collected = collectInstagramMediaImages(media);
-    return {
-      caption,
-      authorName: media.owner?.username ? String(media.owner.username) : null,
-      imageUrls: collected.urls,
-      isCarousel: collected.isCarousel,
-    };
+    const attempts = [
+      {
+        doc_id: IG_SHORTCODE_DOC_ID,
+        variables: {
+          shortcode,
+          __relay_internal__pv__PolarisAIGMMediaWebLabelEnabledrelayprovider: false,
+        },
+      },
+      {
+        doc_id: IG_SHORTCODE_DOC_ID_LEGACY,
+        variables: {
+          shortcode,
+          fetch_tagged_user_count: null,
+          hoisted_comment_id: null,
+          hoisted_reply_id: null,
+        },
+      },
+    ];
+
+    for (const attempt of attempts) {
+      const body = new URLSearchParams({
+        variables: JSON.stringify(attempt.variables),
+        doc_id: attempt.doc_id,
+        server_timestamps: 'true',
+      });
+      const res = await fetch('https://www.instagram.com/graphql/query', {
+        method: 'POST',
+        redirect: 'follow',
+        signal: controller.signal,
+        headers: instagramAuthHeaders(csrfSession, shortcode),
+        body,
+      });
+      if (!res.ok) continue;
+      const data = await res.json().catch(() => null);
+      const parsed = parseInstagramShortcodePayload(data);
+      if (parsed && (parsed.imageUrls?.length || parsed.caption)) {
+        return parsed;
+      }
+    }
+    return null;
   } catch {
     return null;
   } finally {
@@ -742,6 +902,7 @@ async function fetchInstagramCarouselViaProfile(shortcode, authorName) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
   try {
+    const csrfSession = await fetchInstagramCsrfSession(controller.signal);
     const res = await fetch(
       `https://www.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`,
       {
@@ -753,6 +914,12 @@ async function fetchInstagramCarouselViaProfile(shortcode, authorName) {
           Accept: '*/*',
           'X-IG-App-ID': IG_WEB_APP_ID,
           Referer: `https://www.instagram.com/${username}/`,
+          ...(csrfSession?.token
+            ? {
+                'X-CSRFToken': csrfSession.token,
+                ...(csrfSession.cookie ? { Cookie: csrfSession.cookie } : {}),
+              }
+            : {}),
         },
       },
     );
@@ -793,23 +960,16 @@ async function enrichInstagramSnapshot(url) {
   );
   let isCarousel = Boolean(graphql?.isCarousel);
 
-  // Profile timeline: only when GraphQL failed entirely (0 images), to recover
-  // carousel children. Never merge profile/HTML when we already have post media.
-  if (shortcode && imageUrls.length === 0) {
-    const fromProfile = await fetchInstagramCarouselViaProfile(
-      shortcode,
-      graphql?.authorName || oembed?.authorName,
-    );
-    if (fromProfile.length > 1) isCarousel = true;
-    imageUrls = mergeImageUrlLists(fromProfile, imageUrls);
-  } else if (shortcode && graphql?.isCarousel && imageUrls.length <= 1) {
+  // Profile timeline fallback: recover carousel children when GraphQL returned
+  // nothing or only the cover frame. Match is by shortcode (not the whole grid).
+  if (shortcode && imageUrls.length <= 1) {
     const fromProfile = await fetchInstagramCarouselViaProfile(
       shortcode,
       graphql?.authorName || oembed?.authorName,
     );
     if (fromProfile.length > imageUrls.length) {
       imageUrls = mergeImageUrlLists(fromProfile, imageUrls);
-      isCarousel = true;
+      if (fromProfile.length > 1) isCarousel = true;
     }
   }
 
@@ -1121,19 +1281,26 @@ professionals: title, description, category (konsulent|freelance|sherbim|kurse|d
 DESCRIPTION STYLE for form.description (CRITICAL — never one big paragraph):
 Write a clean, scannable, SEO-friendly description with real newlines in the JSON string. Structure:
 1) Opening line — one short sentence with what is offered + searchable keywords (brand/model/product, key attribute, city when known).
-2) Blank line, then a bullet list using "• " for every known fact. Skip unknown fields. Typical bullets (pick what applies): Marka, Modeli, Tipi, Viti, Kilometrazhi, Karburanti, Transmisioni, Çmimi, Gjendja, Ngjyra, Sipërfaqja, Dhoma, Banjo, Produkti, Kategoria, Qyteti, Orari, Shërbimi.
-3) Optional: 1–2 short extra lines with selling points from photos/caption (no hashtag dumps).
+2) Blank line, then a bullet list using "• " for every known structured fact. Skip unknown fields. Typical bullets (pick what applies): Marka, Modeli, Varianti, Tipi, Viti, Kilometrazhi, Karburanti, Transmisioni, Çmimi, Gjendja, Ngjyra, Sipërfaqja, Dhoma, Banjo, Produkti, Kategoria, Qyteti, Orari, Shërbimi.
+3) Buyer-critical extras from the caption/prompt (REQUIRED when present — not optional). Add more "• " bullets for EVERY useful offer detail buyers care about, including:
+   - Transport / shipping / RoRo / delivery time (e.g. "Përfshirë transport me RoRo, 35 ditë")
+   - What the price includes or excludes (doganë, TVSH, registration, accessories)
+   - Warranty, financing / këste, negotiable price, trade-in
+   - Condition notes, accident/service history, ownership history
+   - Important equipment / extras named in the caption
+   - Offer cities / pickup locations when part of the deal (city names are enough; skip full street addresses)
 4) Closing CTA — one short line, e.g. "Kontaktoni për më shumë detaje."
-Rules: Prefer Albanian when the source is Albanian. Weave keywords naturally (e.g. "Yamaha TMAX", "apartament me qira Tiranë"). Strip hashtags, @mentions, emoji spam, URLs, and promo noise. Do NOT paste the raw caption. Do NOT write a single wall of text. Aim under ~900 characters (hard max ~1200).
+CAPTION COMPLETENESS (CRITICAL): Read the FULL caption line by line, including text inside parentheses. Never drop a buyer-relevant clause just to shorten the description. Parenthetical price notes like "(Përfshirë transport me RoRo 35 ditë)" MUST become their own bullet(s).
+Strip only: hashtag dumps, @mentions, emoji spam, URLs, English brand-disclaimer boilerplate, and empty trust fluff. Keep real offer facts. Do NOT paste the raw caption. Do NOT write a single wall of text. Prefer under ~1100 characters (hard max ~1600) — completeness beats brevity when a fact helps the buyer.
 Example:
-Ofrohet Yamaha TMAX 530, scooter në Tiranë.\\n\\n• Marka: Yamaha\\n• Modeli: TMAX 530\\n• Tipi: Motor / scooter\\n• Gjendja: Shumë mirë\\n• Qyteti: Tiranë\\n\\nKontaktoni për interes.
+Ofrohet Mercedes-Benz S-Class S350L, 2015, në Tiranë.\\n\\n• Marka: Mercedes-Benz\\n• Modeli: S-Class\\n• Varianti: S350L d 4MATIC\\n• Viti: 2015\\n• Kilometrazhi: 270000 km\\n• Çmimi: 17900 EUR\\n• Transport: Përfshirë transport me RoRo, 35 ditë\\n• Qyteti: Tiranë / Prishtinë\\n\\nKontaktoni për interes.
 
 Vision + text fusion (CRITICAL when attached images are present):
 1. LOOK carefully at every attached photo. Identify what is shown: product type, brand/model if readable on the item or packaging, color, material, size cues, condition, quantity, accessories, room/context.
 2. Write form.title that a buyer would search for (brand + product name + key attribute when visible).
 3. Write form.description in DESCRIPTION STYLE above. COMBINE:
    a) What you see in the photos (concrete visual facts — do not invent specs you cannot see), AND
-   b) Extra details from the user's prompt / caption (price notes, condition, city, "used once", delivery, etc.).
+   b) EVERY useful detail from the user's prompt / caption (price notes, condition, city, "used once", transport/shipping, what's included, warranty, delivery days, etc.).
    Merge into one listed description — never paste two separate blocks or the raw caption.
 4. Fill marketplace.category / cars.vehicleType / other enum fields from what the photos show (e.g. Instant Pot / multicooker → elektronike; sofa → mobilje-shtepi).
 5. Infer condition from photos + user text when possible (i-ri|si-i-ri|shume-mire|mire|me-defekte). If the user says "used once" / "si i ri", prefer si-i-ri or shume-mire.
@@ -1146,7 +1313,7 @@ Link / caption rules (when a URL snapshot is present and few/no attached photos)
 - Keep snapshotImageUrls as listing photos — only the post's own photos (carousel frames). Never invent extra images.
 - Do NOT invent a profession from the username alone.
 - Instagram / social posts: each post needs its OWN listing title derived from THAT post's caption (and photos). NEVER use authorName, Instagram @handle, profile display name, or profile.businessName / fullName as the listing title when the caption describes a product, vehicle, service, job, or offer. Example: caption about a Yamaha T-MAX → title about the scooter, not "Geshtenja Light".
-- Description: ANALYZE the caption — do NOT paste it verbatim. Rewrite in DESCRIPTION STYLE (listed bullets + keywords). Extract price, city, make/model, phone into form fields.
+- Description: ANALYZE the FULL caption — do NOT paste it verbatim. Rewrite in DESCRIPTION STYLE (listed bullets + keywords). Extract price, city, make/model, phone into form fields. Preserve transport/shipping, inclusions, warranty, delivery time, and other buyer facts from the caption (including parenthetical notes on the price line).
 - payload.title is only a caption hint (or null) — never treat authorName as the title.
 
 General rules:
@@ -1156,7 +1323,7 @@ General rules:
 - Use profile.businessName / full name for title ONLY for businesses/professionals AND ONLY when the caption does not describe a specific offer (generic "about the shop/pro" posts). Never reuse the same profile name for every Instagram post.
 - Use profile.preferredCityId / preferredCityName for city when the content does not mention a city.
 - cityName should be an Albanian city when mentioned (e.g. Tiranë, Durrës).
-- imageUrls: keep absolute http(s) URLs from the page snapshot (snapshotImageUrls) whenever present (max 8; for cars max 5). Never drop scraped listing photos that belong to the post. Attached images are sent separately — describe roles via imageRoles; do not invent fake image URLs.
+- imageUrls: keep absolute http(s) URLs from the page snapshot (snapshotImageUrls) whenever present (max 8). Never drop scraped listing photos that belong to the post. Attached images are sent separately — describe roles via imageRoles; do not invent fake image URLs.
 - If the page is thin (Instagram login wall, blocked scraper) but caption or photos are present, build the draft from caption + prompt + photos + profile.`;
 }
 
@@ -1272,7 +1439,10 @@ function applyCaptionFallbacks(interpreted, snapshot, profile) {
     }
   }
 
-  const seoMeta = listingSeoMetaFromForm(form, interpreted);
+  const seoMeta = {
+    ...listingSeoMetaFromForm(form, interpreted),
+    caption,
+  };
   const description = String(form.description || '').trim();
   const captionNorm = caption.replace(/\s+/g, ' ').trim();
   const descIsRawCaption =
@@ -1287,6 +1457,8 @@ function applyCaptionFallbacks(interpreted, snapshot, profile) {
     form.description = refineCaptionToSeoDescription(caption, seoMeta);
   } else if (description) {
     form.description = ensureListedSeoDescription(description, seoMeta);
+  } else if (caption) {
+    form.description = refineCaptionToSeoDescription(caption, seoMeta);
   }
 
   return interpreted;
@@ -1399,21 +1571,176 @@ function buildSeoDescriptionOpener(meta = {}) {
   return 'Ofrohet për shitje.';
 }
 
-function splitUsefulDetailLines(text, { max = 3 } = {}) {
-  const cleaned = cleanCaptionNoise(text);
-  if (!cleaned) return [];
-  const chunks = cleaned
-    .split(/(?<=[.!?])\s+|\n+/)
-    .map((s) => s.replace(/\s+/g, ' ').trim())
-    .filter((s) => s.length >= 12 && s.length <= 160);
-  const out = [];
-  for (const chunk of chunks) {
-    if (out.length >= max) break;
-    // Skip lines that are mostly the same as structured opener keywords.
-    if (/^(ofrohet|shit(et|e)|kontaktoni)\b/i.test(chunk)) continue;
-    out.push(chunk.replace(/^[•\-\*]\s*/, '').replace(/\.$/, ''));
+const SEO_DESCRIPTION_MAX_CHARS = 1600;
+
+/** Buyer-critical caption facts that must not be dropped during SEO rewrite. */
+const BUYER_DETAIL_RE =
+  /\b(roro|ro[\s-]?ro|transport|shipping|delivery|d[eë]rges|dogan|customs|p[eë]rfshir|included|include|garanci|warranty|financ|k[eë]ste|pages[eë]|negoci|aksident|accident|servis|service history|k[eë]mbim|trade[\s-]?in|tvsh|vat|regjistrim|registration|import|eksport|export|porosit)\b/i;
+
+const CAPTION_NOISE_LINE_RE =
+  /\b(not affiliated|all items (are )?pre[- ]?owned|disclaimer|kontrollo i sigurt|vetem me stafin|vetëm me stafin|na gjeni cdo dite|na gjeni çdo ditë|for entertainment|trademark)\b/i;
+
+function normalizeFactKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isCaptionNoiseLine(line) {
+  const t = String(line || '').trim();
+  if (!t) return true;
+  if (CAPTION_NOISE_LINE_RE.test(t)) return true;
+  if (/^(adresa|kontakt|tel|phone)\s*:/i.test(t)) return true;
+  if (/^\+?\d[\d\s().-]{6,}$/.test(t)) return true;
+  if (/^(ofrohet|shit(et|e)|kontaktoni)\b/i.test(t)) return true;
+  return false;
+}
+
+function formatBuyerDetailBullet(raw) {
+  let text = cleanCaptionNoise(raw)
+    .replace(/^[•\-\*]+\s*/, '')
+    .replace(/^[\s([{\\]+/, '')
+    .replace(/[\s)\]}]+$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text) return null;
+
+  // Normalize common transport / inclusion phrasing into a labeled bullet.
+  if (/\b(roro|ro[\s-]?ro|transport|shipping|delivery|d[eë]rges)/i.test(text)) {
+    text = text.replace(/^p[eë]rfshir[eë]\s+/i, 'Përfshirë ');
+    if (!/^transport\s*:/i.test(text)) text = `Transport: ${text}`;
+  } else if (/\b(garanci|warranty)\b/i.test(text) && !/^garanci\s*:/i.test(text)) {
+    text = `Garanci: ${text}`;
+  } else if (/\b(financ|k[eë]ste)\b/i.test(text) && !/^financ/i.test(text)) {
+    text = `Financim: ${text}`;
   }
-  return out;
+
+  if (text.length < 8 || text.length > 180) return null;
+  return text;
+}
+
+/**
+ * Pull buyer-critical facts from a raw Instagram/caption text.
+ * Prefers parenthetical price notes and transport/shipping/warranty lines.
+ */
+function extractBuyerDetailFacts(caption, { max = 8 } = {}) {
+  const raw = String(caption || '').trim();
+  if (!raw) return [];
+
+  const candidates = [];
+  const pushCandidate = (value, priority) => {
+    const formatted = formatBuyerDetailBullet(value);
+    if (!formatted || isCaptionNoiseLine(formatted)) return;
+    // Drop street addresses / office directions — phones go to contactPhone.
+    if (/\b(adresa|rruga|sheshi|pejton|street|avenue|blvd)\b/i.test(formatted)) {
+      return;
+    }
+    const key = normalizeFactKey(formatted);
+    if (!key || key.length < 8) return;
+    if (candidates.some((c) => c.key === key || c.key.includes(key) || key.includes(c.key))) {
+      return;
+    }
+    // Prefer one transport / one warranty / one financing bullet.
+    const topic =
+      /\b(roro|transport|shipping|delivery|d[eë]rges)\b/i.test(formatted)
+        ? 'transport'
+        : /\b(garanci|warranty)\b/i.test(formatted)
+          ? 'garanci'
+          : /\b(financ|k[eë]ste)\b/i.test(formatted)
+            ? 'financim'
+            : null;
+    if (topic && candidates.some((c) => c.topic === topic)) return;
+    candidates.push({ text: formatted, key, priority, topic });
+  };
+
+  // Parenthetical notes often hold the most important offer facts
+  // e.g. "(Perfshire transport me RoRo 35 dite)".
+  const parenRe = /\(([^)]{8,160})\)/g;
+  let parenMatch;
+  while ((parenMatch = parenRe.exec(raw))) {
+    const inner = parenMatch[1];
+    if (BUYER_DETAIL_RE.test(inner) || /\d/.test(inner)) {
+      pushCandidate(inner, 0);
+    }
+  }
+
+  const cleaned = cleanCaptionNoise(raw);
+  const chunks = cleaned
+    .split(/\n+|(?<=[.!?])\s+|;\s+/)
+    .map((s) => s.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
+  for (const chunk of chunks) {
+    if (isCaptionNoiseLine(chunk)) continue;
+    // Only keep lines that clearly carry buyer-critical offer facts.
+    if (!BUYER_DETAIL_RE.test(chunk)) continue;
+    pushCandidate(chunk, 1);
+  }
+
+  candidates.sort((a, b) => a.priority - b.priority || a.text.length - b.text.length);
+  return candidates.slice(0, max).map((c) => c.text);
+}
+
+function descriptionAlreadyCoversFact(description, fact) {
+  const descKey = normalizeFactKey(description);
+  const factKey = normalizeFactKey(fact);
+  if (!descKey || !factKey) return true;
+  if (descKey.includes(factKey) || factKey.includes(descKey)) return true;
+
+  const tokens = factKey.split(' ').filter((t) => t.length >= 4);
+  if (!tokens.length) return descKey.includes(factKey);
+  // Distinctive tokens: require most of them (transport + roro + dite, etc.).
+  const distinctive = tokens.filter(
+    (t) =>
+      !/^(me|per|nga|dhe|the|and|with|from|for|nese|vetem|cdo|dite|days|euro|eur|lek)$/i.test(
+        t,
+      ),
+  );
+  const check = distinctive.length ? distinctive : tokens;
+  const hit = check.filter((t) => descKey.includes(t)).length;
+  return hit >= Math.ceil(check.length * 0.7);
+}
+
+/**
+ * If the model (or SEO rewrite) omitted buyer-critical caption facts, append them as bullets.
+ */
+function mergeMissingCaptionDetails(description, caption) {
+  const desc = String(description || '').trim();
+  const facts = extractBuyerDetailFacts(caption, { max: 8 });
+  if (!facts.length) return desc;
+
+  const missing = facts.filter((fact) => !descriptionAlreadyCoversFact(desc, fact));
+  if (!missing.length) return desc;
+
+  const bullets = missing.map((fact) => (fact.startsWith('•') ? fact : `• ${fact}`));
+  if (!desc) {
+    return [...bullets, '', 'Kontaktoni për më shumë detaje.']
+      .join('\n')
+      .trim()
+      .slice(0, SEO_DESCRIPTION_MAX_CHARS);
+  }
+
+  const ctaRe = /\n+Kontaktoni[^\n]*$/i;
+  if (ctaRe.test(desc)) {
+    return desc
+      .replace(ctaRe, `\n${bullets.join('\n')}\n\nKontaktoni për më shumë detaje.`)
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+      .slice(0, SEO_DESCRIPTION_MAX_CHARS);
+  }
+
+  return `${desc}\n${bullets.join('\n')}`
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, SEO_DESCRIPTION_MAX_CHARS);
+}
+
+function splitUsefulDetailLines(text, { max = 6 } = {}) {
+  return extractBuyerDetailFacts(text, { max });
 }
 
 /**
@@ -1426,8 +1753,8 @@ function refineCaptionToSeoDescription(caption, meta = {}) {
 
   const opener = buildSeoDescriptionOpener(meta);
   const bullets = buildSeoDescriptionBullets(meta);
-  const extras = splitUsefulDetailLines(text, { max: bullets.length >= 4 ? 2 : 3 }).map(
-    (line) => `• ${line}`,
+  const extras = splitUsefulDetailLines(raw, { max: 6 }).map((line) =>
+    line.startsWith('•') ? line : `• ${line}`,
   );
 
   const parts = [opener];
@@ -1438,32 +1765,43 @@ function refineCaptionToSeoDescription(caption, meta = {}) {
   }
   parts.push('', 'Kontaktoni për më shumë detaje.');
 
-  return parts.join('\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1200);
+  return mergeMissingCaptionDetails(
+    parts.join('\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, SEO_DESCRIPTION_MAX_CHARS),
+    raw,
+  );
 }
 
 /**
  * If the model returned a wall of text, reshape into listed SEO style while keeping useful prose.
+ * Always merge missing buyer-critical caption facts when meta.caption is provided.
  */
 function ensureListedSeoDescription(description, meta = {}) {
   const desc = String(description || '').trim();
-  if (!desc) return refineCaptionToSeoDescription('', meta);
+  const caption = String(meta.caption || '').trim();
+  if (!desc) return refineCaptionToSeoDescription(caption, meta);
+
+  let next;
   if (descriptionLooksListed(desc)) {
-    return cleanCaptionNoise(desc).slice(0, 1200);
+    next = cleanCaptionNoise(desc).slice(0, SEO_DESCRIPTION_MAX_CHARS);
+  } else {
+    const opener = buildSeoDescriptionOpener(meta);
+    const bullets = buildSeoDescriptionBullets(meta);
+    const extras = splitUsefulDetailLines(desc, { max: 6 }).map((line) =>
+      line.startsWith('•') ? line : `• ${line}`,
+    );
+    const parts = [opener];
+    if (bullets.length || extras.length) {
+      parts.push('', ...bullets, ...extras);
+    } else {
+      parts.push('', `• ${cleanCaptionNoise(desc).slice(0, 280)}`);
+    }
+    if (!/kontaktoni/i.test(desc)) {
+      parts.push('', 'Kontaktoni për më shumë detaje.');
+    }
+    next = parts.join('\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, SEO_DESCRIPTION_MAX_CHARS);
   }
 
-  const opener = buildSeoDescriptionOpener(meta);
-  const bullets = buildSeoDescriptionBullets(meta);
-  const extras = splitUsefulDetailLines(desc, { max: 3 }).map((line) => `• ${line}`);
-  const parts = [opener];
-  if (bullets.length || extras.length) {
-    parts.push('', ...bullets, ...extras);
-  } else {
-    parts.push('', `• ${cleanCaptionNoise(desc).slice(0, 280)}`);
-  }
-  if (!/kontaktoni/i.test(desc)) {
-    parts.push('', 'Kontaktoni për më shumë detaje.');
-  }
-  return parts.join('\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1200);
+  return caption ? mergeMissingCaptionDetails(next, caption) : next;
 }
 
 function normalizeVehicleTypeValue(raw) {
@@ -2068,8 +2406,8 @@ async function interpretListing({
         hint: img.hint || null,
       })),
       instruction: visionImages.length
-        ? 'Photos are primary: identify the product/vehicle from images (motorcycle vs car!), write a concrete title and a listed SEO-friendly form.description (short opener + • keyword bullets + CTA — never one paragraph or raw hashtags), then weave in every useful detail from prompt/caption (price, condition, city, make/model). Do not invent unseen specs. Never use authorName / Instagram profile name as title. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.'
-        : 'Build the listing from caption/description/text/prompt. Title must come from the post caption (what is offered), never from authorName or profile.businessName when caption exists. Rewrite caption into a listed SEO-friendly form.description (short opener + • keyword bullets + CTA — do not paste raw caption or write one wall of text). Extract structured fields. Do not invent professions or offers missing from the text. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.',
+        ? 'Photos are primary: identify the product/vehicle from images (motorcycle vs car!), write a concrete title and a listed SEO-friendly form.description (short opener + • keyword bullets + CTA — never one paragraph or raw hashtags), then weave in EVERY useful detail from prompt/caption — especially transport/shipping/RoRo, delivery days, what price includes, warranty, financing, condition notes, and parenthetical price notes. Do not invent unseen specs. Never use authorName / Instagram profile name as title. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.'
+        : 'Build the listing from caption/description/text/prompt. Title must come from the post caption (what is offered), never from authorName or profile.businessName when caption exists. Rewrite caption into a listed SEO-friendly form.description (short opener + • keyword bullets + CTA — do not paste raw caption or write one wall of text). Extract structured fields AND preserve buyer-critical caption facts (transport/RoRo/shipping days, inclusions, warranty, financing, condition). Do not invent professions or offers missing from the text. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.',
     },
   });
 }
@@ -2160,7 +2498,10 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
     form = normalizeCarFormFields(form, snapshot, interpreted);
     // Refresh SEO blurb once make/model/type are known.
     const caption = String(snapshot?.caption || snapshot?.description || '').trim();
-    const seoMeta = listingSeoMetaFromForm(form, interpreted);
+    const seoMeta = {
+      ...listingSeoMetaFromForm(form, interpreted),
+      caption,
+    };
     if (caption) {
       const desc = String(form.description || '').trim();
       const captionNorm = caption.replace(/\s+/g, ' ').trim();
@@ -2178,10 +2519,10 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
       form.description = ensureListedSeoDescription(form.description, seoMeta);
     }
   } else if (form.description) {
-    form.description = ensureListedSeoDescription(
-      form.description,
-      listingSeoMetaFromForm(form, interpreted),
-    );
+    form.description = ensureListedSeoDescription(form.description, {
+      ...listingSeoMetaFromForm(form, interpreted),
+      caption: String(snapshot?.caption || snapshot?.description || '').trim(),
+    });
   }
   const cityId =
     (await resolveCityIdByName(interpreted.cityName || form.cityName || profile?.preferredCityName)) ||

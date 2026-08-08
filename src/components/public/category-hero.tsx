@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Suspense } from 'react';
 import RouterLink from 'next/link';
-import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
+import { Box, Button, Container, Grid, Stack, Typography, useScrollTrigger } from '@mui/material';
 
 import {
   findSearchCategory,
@@ -17,6 +17,7 @@ import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { paths } from '@/paths';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
 import { PortalIconBox } from '@/components/user/portal-cards';
+import { useScrollRevealHidden } from '@/hooks/use-scroll-reveal-hidden';
 
 import { CategoryBrowseControls } from './listing-filters/category-browse-controls';
 import {
@@ -31,6 +32,9 @@ export type BrowseCategoryId = HomeVerticalId | 'okazion';
 /**
  * Quiet header used by every public browse page (Real Estate, Cars, Jobs,
  * Marketplace, OKAZION) — page title, count, and browse controls.
+ *
+ * On mobile, fixes to the top and hides while scrolling down / reveals on scroll up
+ * (back | category + search/tags). Desktop keeps a static in-flow hero.
  */
 export function PublicCategoryHero({
   verticalId,
@@ -44,71 +48,140 @@ export function PublicCategoryHero({
   const label = isHomeVerticalId(verticalId)
     ? findVertical(verticalId).label
     : findSearchCategory(verticalId).label;
-  return (
-    <Box
-      component="section"
-      sx={{
-        pt: { xs: 'max(12px, env(safe-area-inset-top, 0px))', md: 5 },
-        pb: verticalId === 'okazion' ? { xs: 1.25, md: 2.5 } : { xs: 3, md: 5 },
-      }}
-    >
-      <Container maxWidth="xl">
-        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start', minWidth: 0 }}>
-          <ProductBackButton
-            href={paths.home}
-            aria-label="Kthehu në faqen kryesore"
-            sx={{ display: { xs: 'inline-flex', md: 'none' }, mt: 0.5 }}
-          />
-          {verticalId === 'okazion' ? (
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: 2.25,
-                display: 'grid',
-                placeItems: 'center',
-                flexShrink: 0,
-                bgcolor: OKAZION_ACCENT_SOFT,
-                color: OKAZION_ACCENT,
-              }}
-            >
-              <HomeVerticalIcon verticalId="okazion" size={22} />
-            </Box>
-          ) : (
-            <PortalIconBox size={40}>
-              <HomeVerticalIcon verticalId={verticalId} size={22} />
-            </PortalIconBox>
-          )}
-          <Stack spacing={0.35} sx={{ flex: 1, minWidth: 0, pt: 0.15 }}>
-            <Typography
-              component="h1"
-              sx={{
-                fontWeight: 700,
-                fontSize: { xs: '1.4rem', md: '1.75rem' },
-                lineHeight: 1.2,
-                letterSpacing: '-0.015em',
-                minWidth: 0,
-              }}
-            >
-              {label}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.45 }}>
-              {total > 0 ? `${total.toLocaleString('en-GB')} njoftime` : 'Asnjë njoftim ende'}
-            </Typography>
-          </Stack>
-        </Stack>
+  const elevated = useScrollTrigger({ disableHysteresis: true, threshold: 8 });
+  const chromeHidden = useScrollRevealHidden({ alwaysShowBelowY: 24 });
+  const [mounted, setMounted] = React.useState(false);
+  const barRef = React.useRef<HTMLDivElement>(null);
+  const [barHeight, setBarHeight] = React.useState(0);
 
-        {isHomeVerticalId(verticalId) ? (
-          <Suspense fallback={null}>
-            <CategoryBrowseControls verticalId={verticalId} cities={cities} />
-          </Suspense>
-        ) : (
-          <Suspense fallback={<OkazionBrowseControlsFallback />}>
-            <OkazionBrowseControls />
-          </Suspense>
-        )}
-      </Container>
-    </Box>
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  React.useEffect(() => {
+    const el = barRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+
+    const sync = () => setBarHeight(el.getBoundingClientRect().height);
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [verticalId, total]);
+
+  return (
+    <>
+      <Box
+        ref={barRef}
+        component="section"
+        sx={(theme) => {
+          const paperAlpha = theme.palette.mode === 'dark' ? 0.94 : 0.96;
+          const frosted = `rgb(var(--mui-palette-background-paperChannel) / ${paperAlpha})`;
+          const blur = 'saturate(180%) blur(14px)';
+          const showFrost = mounted && elevated;
+
+          return {
+            position: { xs: 'fixed', md: 'static' },
+            top: { xs: 0, md: 'auto' },
+            left: { xs: 0, md: 'auto' },
+            right: { xs: 0, md: 'auto' },
+            zIndex: { xs: theme.zIndex.appBar, md: 'auto' },
+            pt: {
+              xs: 'max(10px, env(safe-area-inset-top, 0px))',
+              md: 5,
+            },
+            pb: verticalId === 'okazion' ? { xs: 1.25, md: 2.5 } : { xs: 1.5, md: 5 },
+            bgcolor: {
+              xs: showFrost ? frosted : 'background.default',
+              md: 'transparent',
+            },
+            backdropFilter: { xs: showFrost ? blur : 'none', md: 'none' },
+            WebkitBackdropFilter: { xs: showFrost ? blur : 'none', md: 'none' },
+            transform: {
+              xs: chromeHidden ? 'translateY(-100%)' : 'translateY(0)',
+              md: 'none',
+            },
+            transition: theme.transitions.create(['transform', 'background-color', 'backdrop-filter'], {
+              duration: 220,
+              easing: theme.transitions.easing.easeInOut,
+            }),
+            willChange: { xs: 'transform', md: 'auto' },
+            '@media (prefers-reduced-motion: reduce)': {
+              transition: 'background-color 0.2s ease',
+            },
+          };
+        }}
+      >
+        <Container maxWidth="xl">
+          <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start', minWidth: 0 }}>
+            <ProductBackButton
+              href={paths.home}
+              aria-label="Kthehu në faqen kryesore"
+              sx={{ display: { xs: 'inline-flex', md: 'none' }, mt: 0.5 }}
+            />
+            {verticalId === 'okazion' ? (
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 2.25,
+                  display: 'grid',
+                  placeItems: 'center',
+                  flexShrink: 0,
+                  bgcolor: OKAZION_ACCENT_SOFT,
+                  color: OKAZION_ACCENT,
+                }}
+              >
+                <HomeVerticalIcon verticalId="okazion" size={22} />
+              </Box>
+            ) : (
+              <PortalIconBox size={40}>
+                <HomeVerticalIcon verticalId={verticalId} size={22} />
+              </PortalIconBox>
+            )}
+            <Stack spacing={0.35} sx={{ flex: 1, minWidth: 0, pt: 0.15 }}>
+              <Typography
+                component="h1"
+                sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: '1.4rem', md: '1.75rem' },
+                  lineHeight: 1.2,
+                  letterSpacing: '-0.015em',
+                  minWidth: 0,
+                }}
+              >
+                {label}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.45 }}>
+                {total > 0 ? `${total.toLocaleString('en-GB')} njoftime` : 'Asnjë njoftim ende'}
+              </Typography>
+            </Stack>
+          </Stack>
+
+          {isHomeVerticalId(verticalId) ? (
+            <Suspense fallback={null}>
+              <CategoryBrowseControls verticalId={verticalId} cities={cities} />
+            </Suspense>
+          ) : (
+            <Suspense fallback={<OkazionBrowseControlsFallback />}>
+              <OkazionBrowseControls />
+            </Suspense>
+          )}
+        </Container>
+      </Box>
+
+      {/* Spacer only while the chrome is `position: fixed` on mobile */}
+      <Box
+        aria-hidden
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          height: barHeight || 'auto',
+          minHeight: barHeight ? undefined : 120,
+          pointerEvents: 'none',
+          visibility: 'hidden',
+        }}
+      />
+    </>
   );
 }
 

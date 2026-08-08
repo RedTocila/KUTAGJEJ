@@ -59,7 +59,10 @@ export interface PublicMemberReferralBadge {
   progress?: number;
 }
 
-/** Fallback slots so the profile always shows badge placeholders if the API omits them. */
+/**
+ * Canonical badge slots (same order as `resolveReferralBadges`).
+ * Used to fill placeholders when the API omits any — e.g. review tiers.
+ */
 export const DEFAULT_MEMBER_REFERRAL_BADGES: PublicMemberReferralBadge[] = [
   {
     id: 'free-tier-1',
@@ -117,16 +120,6 @@ export const DEFAULT_MEMBER_REFERRAL_BADGES: PublicMemberReferralBadge[] = [
     progress: 0,
   },
   {
-    id: 'network-builder',
-    kind: 'network-builder',
-    label: 'Network Builder',
-    lifetimePercent: 10,
-    earned: false,
-    metric: 'free-referrals',
-    threshold: 100,
-    progress: 0,
-  },
-  {
     id: 'paid-tier-1',
     kind: 'paid-tier',
     label: 'Starter Promoter',
@@ -157,6 +150,16 @@ export const DEFAULT_MEMBER_REFERRAL_BADGES: PublicMemberReferralBadge[] = [
     earned: false,
     metric: 'paid-referrals',
     threshold: 15,
+    progress: 0,
+  },
+  {
+    id: 'network-builder',
+    kind: 'network-builder',
+    label: 'Network Builder',
+    lifetimePercent: 10,
+    earned: false,
+    metric: 'free-referrals',
+    threshold: 100,
     progress: 0,
   },
   {
@@ -224,19 +227,51 @@ export const DEFAULT_MEMBER_REFERRAL_BADGES: PublicMemberReferralBadge[] = [
   },
 ];
 
+function normalizeMemberReferralBadge(
+  badge: PublicMemberReferralBadge,
+  fallback?: PublicMemberReferralBadge,
+): PublicMemberReferralBadge {
+  return {
+    ...(fallback || {}),
+    ...badge,
+    earned: Boolean(badge.earned),
+    threshold:
+      typeof badge.threshold === 'number'
+        ? badge.threshold
+        : fallback?.threshold,
+    progress:
+      typeof badge.progress === 'number' ? badge.progress : fallback?.progress,
+    metric: badge.metric ?? fallback?.metric,
+  };
+}
+
+/**
+ * Overlay API badge state onto the full canonical slot list so review tiers
+ * (and any other omitted badges) still appear as locked placeholders.
+ */
 export function mergeMemberReferralBadges(
   fromApi: PublicMemberReferralBadge[] | undefined | null,
 ): PublicMemberReferralBadge[] {
-  if (Array.isArray(fromApi) && fromApi.length > 0) {
-    return fromApi.map((b) => ({
-      ...b,
-      earned: Boolean(b.earned),
-      threshold: typeof b.threshold === 'number' ? b.threshold : undefined,
-      progress: typeof b.progress === 'number' ? b.progress : undefined,
-      metric: b.metric,
-    }));
+  const apiList = Array.isArray(fromApi) ? fromApi : [];
+  if (apiList.length === 0) {
+    return DEFAULT_MEMBER_REFERRAL_BADGES.map((b) => ({ ...b }));
   }
-  return DEFAULT_MEMBER_REFERRAL_BADGES.map((b) => ({ ...b }));
+
+  const byId = new Map(apiList.map((b) => [String(b.id), b]));
+  const defaultIds = new Set(DEFAULT_MEMBER_REFERRAL_BADGES.map((b) => b.id));
+
+  const merged = DEFAULT_MEMBER_REFERRAL_BADGES.map((fallback) => {
+    const from = byId.get(fallback.id);
+    return from ? normalizeMemberReferralBadge(from, fallback) : { ...fallback };
+  });
+
+  for (const badge of apiList) {
+    const id = String(badge.id);
+    if (defaultIds.has(id)) continue;
+    merged.push(normalizeMemberReferralBadge(badge));
+  }
+
+  return merged;
 }
 
 export interface PublicMemberProfile {

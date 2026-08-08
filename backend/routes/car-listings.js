@@ -16,7 +16,7 @@ const { formatMineCar, formatMineCarFull, loadMineKind, loadMineListingById } = 
 
 const router = express.Router();
 
-const MAX_CAR_IMAGES = 5;
+const MAX_CAR_IMAGES = 8;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -88,7 +88,7 @@ router.post(
   '/',
   authMiddleware,
   requirePortalUser,
-  upload.array('images', 5),
+  upload.array('images', MAX_CAR_IMAGES),
   async (req, res) => {
     try {
       const fields = req.body;

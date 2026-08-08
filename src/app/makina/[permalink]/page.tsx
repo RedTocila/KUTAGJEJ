@@ -46,6 +46,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: listing.title,
     descriptionSnippet: descSnippet(listing.description) || listing.title,
     pathHref,
+    imageUrls: listing.imageUrls,
+    imageUrl: listing.imageUrl,
   });
 }
 

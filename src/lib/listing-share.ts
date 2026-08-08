@@ -63,6 +63,19 @@ export function resolveListingShareUrl(payload: ListingSharePayload): string {
   return '';
 }
 
+/** Short host+path for story art (no protocol / www). */
+export function formatListingShareUrlLabel(url: string): string {
+  try {
+    const u = new URL(url);
+    const host = u.host.replace(/^www\./i, '');
+    const path = u.pathname.replace(/\/$/, '') || '';
+    const full = `${host}${path}${u.search}`;
+    return full.length > 64 ? `${full.slice(0, 61)}…` : full;
+  } catch {
+    return url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').slice(0, 64);
+  }
+}
+
 function isAlreadyProxied(url: string): boolean {
   return /\/api\/public\/image-proxy(?:\?|$)/i.test(url);
 }

@@ -19,7 +19,7 @@ import {
   MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
   MOBILE_BOTTOM_NAV_FLOAT_INSET_PX,
 } from '@/lib/mobile-layout';
-import { isPostListingPath } from '@/lib/post-listing-path';
+import { isPublicBrowsePath } from '@/lib/public-browse-path';
 import { paths } from '@/paths';
 
 function hrefPath(href: string): string {
@@ -46,7 +46,8 @@ export function MobileBottomNav() {
   const unreadMessages = useUnreadMessagesCount();
   const t = useCopy();
   const isAuthed = Boolean(user);
-  const searchActive = Boolean(pathname?.startsWith(paths.public.search));
+  const searchActive =
+    Boolean(pathname?.startsWith(paths.public.search)) || isPublicBrowsePath(pathname);
   const [indicatorIndex, setIndicatorIndex] = React.useState(persistedFromIndex);
   const [transitionReady, setTransitionReady] = React.useState(false);
 
@@ -56,7 +57,7 @@ export function MobileBottomNav() {
         id: 'home',
         ariaLabel: t.chrome.navHome,
         href: paths.home,
-        activeWhen: (p) => p === paths.home || isPostListingPath(p),
+        activeWhen: (p) => p === paths.home,
         icon: HouseIcon,
       },
       {
@@ -81,8 +82,7 @@ export function MobileBottomNav() {
           Boolean(
             p?.startsWith('/user/dashboard') &&
               !p.startsWith(paths.user.messages) &&
-              !p.startsWith(paths.user.savedListings) &&
-              !isPostListingPath(p),
+              !p.startsWith(paths.user.savedListings),
           ),
         icon: UserCircleIcon,
       },
@@ -138,7 +138,7 @@ export function MobileBottomNav() {
     if (!item.activeWhen(pathname)) return;
 
     // Already on this tab's root → scroll to top + soft refresh.
-    // Active on a related/nested route (e.g. create-listing under Home) → go to tab root.
+    // Active on a nested route (e.g. settings under Profile) → go to tab root.
     if (pathname === hrefPath(item.href)) {
       // Open conversation (`?c=`) still uses the messages path — retap must clear it
       // and show the inbox instead of refreshing the same thread.

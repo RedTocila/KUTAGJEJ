@@ -34,6 +34,8 @@ import { relativeAlbanianDate } from '@/components/public/listing-cards/format-h
 import { brandLogoSrc, config } from '@/config';
 import { brandWordmarkFontFamily } from '@/styles/brand-font';
 import {
+  formatListingShareUrlLabel,
+  resolveListingShareUrl,
   resolveStoryImageSrc,
   type ListingSharePayload,
   type ListingShareSpecIcon,
@@ -448,6 +450,9 @@ function TemplateListingCard({ payload }: { payload: ListingSharePayload }) {
  */
 export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
   function ListingStoryTemplate({ payload }, ref) {
+    const shareUrl = resolveListingShareUrl(payload);
+    const urlLabel = shareUrl ? formatListingShareUrlLabel(shareUrl) : '';
+
     return (
       <Box
         ref={ref}
@@ -506,6 +511,34 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
           </Stack>
 
           <TemplateListingCard payload={payload} />
+
+          {urlLabel ? (
+            <Stack spacing={1} sx={{ alignItems: 'center', mt: 5, flexShrink: 0, maxWidth: CARD_W }}>
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  fontSize: 22,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.45)',
+                }}
+              >
+                Hap njoftimin
+              </Typography>
+              <Typography
+                sx={{
+                  fontWeight: 650,
+                  fontSize: 28,
+                  lineHeight: 1.25,
+                  color: GREEN,
+                  textAlign: 'center',
+                  wordBreak: 'break-all',
+                }}
+              >
+                {urlLabel}
+              </Typography>
+            </Stack>
+          ) : null}
         </Stack>
       </Box>
     );

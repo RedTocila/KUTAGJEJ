@@ -318,7 +318,7 @@ function formFromListing(l: CarMineListing): CarFormState {
 }
 
 const YEAR_OPTIONS = carYearOptions();
-const MAX_IMAGES = 5;
+const MAX_IMAGES = 8;
 
 const TRANSMISSION_TOGGLE = [
   { value: 'automatic', label: 'Automatic', Icon: GearSixIcon },

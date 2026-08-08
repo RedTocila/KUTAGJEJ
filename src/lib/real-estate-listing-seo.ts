@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { formatPrice } from '@/components/public/listing-cards/format-helpers';
 import { config } from '@/config';
 import type { PublicRealEstateListingDetail } from '@/lib/public-listings-client';
+import { listingSocialImages } from '@/lib/public-vertical-listing-metadata';
 import { pathsPublicRealEstateListingDetail } from '@/paths';
 
 function metaSnippet(text: string, max = 158): string {
@@ -40,12 +41,8 @@ export function buildRealEstateListingMetadata(listing: PublicRealEstateListingD
     : metaSnippet(`${listing.title} ${loc}`);
 
   const title = `${listing.title} — ${formatPrice(listing.price, listing.currency)}`;
-  const images =
-    listing.imageUrls.length > 0
-      ? listing.imageUrls
-      : listing.imageUrl
-        ? [listing.imageUrl]
-        : undefined;
+  const images = listingSocialImages(listing.imageUrls, listing.imageUrl, listing.title);
+  const primaryImage = images[0]?.url;
 
   return {
     title,
@@ -59,14 +56,13 @@ export function buildRealEstateListingMetadata(listing: PublicRealEstateListingD
       title,
       description: desc,
       siteName: config.site.name,
-      ...(images?.[0]
-        ? { images: images.map((url) => ({ url, alt: listing.title })) }
-        : {}),
+      images,
     },
     twitter: {
-      card: images?.[0] ? 'summary_large_image' : 'summary',
+      card: primaryImage ? 'summary_large_image' : 'summary',
       title,
       description: desc,
+      images: primaryImage ? [primaryImage] : undefined,
     },
   };
 }

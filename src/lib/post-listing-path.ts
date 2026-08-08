@@ -5,8 +5,7 @@ function pathMatches(pathname: string | null, base: string): boolean {
 }
 
 /**
- * Create-listing / AI Build routes — use close (X) instead of profile back link,
- * and keep the mobile bottom-nav Home tab selected.
+ * Create-listing / AI Build routes — use close (X) instead of profile back link.
  */
 export function isPostListingPath(pathname: string | null): boolean {
   if (!pathname) return false;

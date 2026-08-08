@@ -73,7 +73,7 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
         contactPhone: str(f.contactPhone),
         cityId: str(f.cityId) || null,
         cityName: draft.cityName || null,
-        imageUrls: imageUrls.slice(0, 5),
+        imageUrls: imageUrls.slice(0, 8),
       });
     }
 

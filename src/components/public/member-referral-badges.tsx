@@ -408,12 +408,19 @@ export function MemberReferralBadgesRow({
   const [expanded, setExpanded] = React.useState(false);
   const open = Boolean(selected);
 
-  if (!badges.length) return null;
+  const orderedBadges = React.useMemo(() => {
+    if (!badges.length) return badges;
+    // Earned first so completed badges appear in the collapsed preview row.
+    return [...badges].sort((a, b) => Number(Boolean(b.earned)) - Number(Boolean(a.earned)));
+  }, [badges]);
+
+  if (!orderedBadges.length) return null;
 
   const isGrid = layout === 'grid';
   const previewCount = Math.max(1, columns);
-  const canCollapse = isGrid && collapsible && badges.length > previewCount;
-  const visibleBadges = canCollapse && !expanded ? badges.slice(0, previewCount) : badges;
+  const canCollapse = isGrid && collapsible && orderedBadges.length > previewCount;
+  const visibleBadges =
+    canCollapse && !expanded ? orderedBadges.slice(0, previewCount) : orderedBadges;
 
   return (
     <>

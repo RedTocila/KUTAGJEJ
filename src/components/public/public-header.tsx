@@ -3,6 +3,7 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import {
+  AppBar,
   Box,
   Button,
   Container,
@@ -10,6 +11,7 @@ import {
   Stack,
   Toolbar,
   Tooltip,
+  useScrollTrigger,
 } from '@mui/material';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { SignIn as SignInIcon } from '@phosphor-icons/react/dist/ssr/SignIn';
@@ -19,6 +21,7 @@ import { BrandLogo } from '@/components/brand/brand-logo';
 import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { useCopy } from '@/hooks/use-copy';
+import { useScrollRevealHidden } from '@/hooks/use-scroll-reveal-hidden';
 import { useUser } from '@/hooks/use-user';
 import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
@@ -30,7 +33,14 @@ const TOOLBAR_MIN_HEIGHT = { xs: 72, md: 88 } as const;
 export function PublicHeader() {
   const { user } = useUser();
   const t = useCopy();
+  const elevated = useScrollTrigger({ disableHysteresis: true, threshold: 8 });
+  const headerHidden = useScrollRevealHidden();
+  const [mounted, setMounted] = React.useState(false);
   const [addListingOpen, setAddListingOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const accountHref =
     user?.accountType === 'admin' ? paths.dashboard.overview : paths.user.dashboard;
@@ -44,24 +54,55 @@ export function PublicHeader() {
 
   return (
     <>
-      <Box
+      <AppBar
+        position="fixed"
+        elevation={0}
         component="header"
         suppressHydrationWarning
-        sx={{
-          // Must scroll with the page — never stick/fixed over categories.
-          position: 'static !important',
-          top: 'auto',
-          left: 'auto',
-          right: 'auto',
-          transform: 'none',
-          color: 'text.primary',
-          bgcolor: 'transparent',
-          backgroundImage: 'none',
-          borderBottom: 0,
-          boxShadow: 'none',
-          outline: 'none',
-          transition: 'none',
-          zIndex: 'auto',
+        sx={(theme) => {
+          const paperAlpha = theme.palette.mode === 'dark' ? 0.92 : 0.96;
+          const paperAlphaRest = theme.palette.mode === 'dark' ? 0.7 : 0.85;
+          const frosted = `rgb(var(--mui-palette-background-paperChannel) / ${paperAlpha})`;
+          const frostedRest = `rgb(var(--mui-palette-background-paperChannel) / ${paperAlphaRest})`;
+          const blur = 'saturate(180%) blur(14px)';
+          const isLight = theme.palette.mode === 'light';
+
+          const backgroundColor = !mounted
+            ? 'transparent'
+            : {
+                xs: elevated ? frosted : 'transparent',
+                md: elevated ? frosted : isLight ? 'transparent' : frostedRest,
+              };
+
+          const backdrop = !mounted
+            ? 'none'
+            : {
+                xs: elevated ? blur : 'none',
+                md: elevated ? blur : isLight ? 'none' : blur,
+              };
+
+          return {
+            top: 0,
+            left: 0,
+            right: 0,
+            color: 'text.primary',
+            backgroundColor,
+            backdropFilter: backdrop,
+            WebkitBackdropFilter: backdrop,
+            borderBottom: 'none',
+            boxShadow: 'none',
+            backgroundImage: 'none',
+            transform: headerHidden ? 'translateY(-100%)' : 'translateY(0)',
+            transition: theme.transitions.create(['transform', 'background-color'], {
+              duration: 220,
+              easing: theme.transitions.easing.easeInOut,
+            }),
+            zIndex: theme.zIndex.appBar,
+            willChange: 'transform',
+            '@media (prefers-reduced-motion: reduce)': {
+              transition: 'background-color 0.2s ease',
+            },
+          };
         }}
       >
         <Container
@@ -205,7 +246,17 @@ export function PublicHeader() {
             </Stack>
           </Toolbar>
         </Container>
-      </Box>
+      </AppBar>
+      {/* Keeps document flow under `position: fixed` so content is not covered */}
+      <Toolbar
+        disableGutters
+        aria-hidden
+        sx={{
+          minHeight: TOOLBAR_MIN_HEIGHT,
+          visibility: 'hidden',
+          pointerEvents: 'none',
+        }}
+      />
       <AddListingPickerDialog open={addListingOpen} onClose={() => setAddListingOpen(false)} />
     </>
   );

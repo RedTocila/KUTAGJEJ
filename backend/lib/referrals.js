@@ -1,7 +1,10 @@
 const crypto = require('crypto');
 const { getSupabaseAdmin } = require('./supabase');
 const { getProfileById, mapProfile } = require('./profiles');
-const { ensureReferralProgram } = require('./ensure-referral-program');
+const {
+  ensureReferralProgram,
+  DEFAULT_REFERRAL_PROGRAM_DOC,
+} = require('./ensure-referral-program');
 
 const PORTAL_ACCOUNT_TYPES = ['individual', 'business'];
 
@@ -261,9 +264,12 @@ async function resolveReferralBadges(userId, userModel) {
     });
   }
 
-  const reviewMilestones = [...programField(program, 'reviewMilestones', 'review_milestones', [])].sort(
-    (a, b) => Number(a.reviewsRequired) - Number(b.reviewsRequired),
-  );
+  const rawReviewMilestones = programField(program, 'reviewMilestones', 'review_milestones', []);
+  const reviewMilestones = [
+    ...(Array.isArray(rawReviewMilestones) && rawReviewMilestones.length > 0
+      ? rawReviewMilestones
+      : DEFAULT_REFERRAL_PROGRAM_DOC.reviewMilestones || []),
+  ].sort((a, b) => Number(a.reviewsRequired) - Number(b.reviewsRequired));
   for (const milestone of reviewMilestones) {
     const required = Number(milestone.reviewsRequired) || 0;
     if (required <= 0) continue;

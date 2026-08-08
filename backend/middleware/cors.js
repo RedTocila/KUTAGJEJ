@@ -3,6 +3,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'https://kutagjej.al',
   'https://www.kutagjej.al',
+  'https://kutagjej.vercel.app',
   'https://ku-ta-gjej.vercel.app',
   'https://ku-ta-gjej-front.vercel.app',
   ...(process.env.CORS_EXTRA_ORIGINS || '')

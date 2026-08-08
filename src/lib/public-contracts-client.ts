@@ -1,6 +1,7 @@
 'use client';
 
 import type { PublicContract } from '@/types/contract';
+import { apiFetch } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
 
 
@@ -14,7 +15,7 @@ export async function listPublicContracts(params?: {
     if (params?.subscriberKind) sp.set('subscriberKind', params.subscriberKind);
     const q = sp.toString();
     const url = getApiUrl(q ? `/contracts?${q}` : '/contracts');
-    const res = await fetch(url);
+    const res = await apiFetch(url);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista dështoi.' };
     return { contracts: data.contracts as PublicContract[] };

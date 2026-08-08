@@ -49,7 +49,7 @@ export async function getAccessToken(): Promise<string | null> {
   if (!refresh) return null;
 
   try {
-    const res = await fetch(getApiUrl('/auth/refresh'), {
+    const res = await apiFetch(getApiUrl('/auth/refresh'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken: refresh }),
@@ -98,13 +98,45 @@ export interface ClientFetchResult<T> {
   error?: string;
 }
 
+const RETRYABLE_STATUSES = new Set([408, 425, 429, 502, 503, 504]);
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Browser fetch with short retries for cold starts / flaky mobile networks.
+ * Does not retry typical 4xx (except timeout/rate-limit).
+ */
+export async function apiFetch(input: string, init?: RequestInit, retries = 2): Promise<Response> {
+  let lastError: unknown;
+  const attempts = Math.max(1, retries + 1);
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      const res = await fetch(input, init);
+      if (RETRYABLE_STATUSES.has(res.status) && attempt < attempts - 1) {
+        await sleep(250 * 2 ** attempt);
+        continue;
+      }
+      return res;
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts - 1) {
+        await sleep(250 * 2 ** attempt);
+        continue;
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('Network request failed');
+}
+
 /** Authenticated browser fetch with consistent error parsing. */
 export async function clientFetch<T = unknown>(
   path: string,
   init?: RequestInit,
 ): Promise<ClientFetchResult<T>> {
   try {
-    const res = await fetch(getApiUrl(path), {
+    const res = await apiFetch(getApiUrl(path), {
       ...init,
       headers: {
         ...(await authHeadersAsync()),

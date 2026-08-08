@@ -16,8 +16,7 @@ import { usePathname } from 'next/navigation';
 import { List as ListIcon, X as XIcon } from '@phosphor-icons/react/dist/ssr';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { getApiUrl } from '@/lib/api-config';
 
 interface NavPage {
   title: string;
@@ -34,7 +33,7 @@ export function PublicHeader() {
   React.useEffect(() => {
     const fetchNavPages = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/pages/navigation`);
+        const response = await fetch(getApiUrl('/pages/navigation'));
         if (response.ok) {
           const data = await response.json();
           setNavPages(data.pages || []);

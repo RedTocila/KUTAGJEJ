@@ -15,7 +15,7 @@ import type {
   PremiumVoucher,
   UserSubscriptionSummary,
 } from '@/types/payment';
-import { authHeadersAsync } from '@/lib/api-client';
+import { apiFetch, authHeadersAsync } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
 
 export async function listCreditPackages(): Promise<{
@@ -24,7 +24,7 @@ export async function listCreditPackages(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/payments/credit-packages'), { cache: 'no-store' });
+    const res = await apiFetch(getApiUrl('/payments/credit-packages'), { cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista dështoi.' };
     return { packages: data.packages as CreditPackage[], pokEnv: data.pokEnv as PokEnv };
@@ -39,7 +39,7 @@ export async function listAutoRefreshPackages(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/payments/auto-refresh-packages'), { cache: 'no-store' });
+    const res = await apiFetch(getApiUrl('/payments/auto-refresh-packages'), { cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista dështoi.' };
     return { packages: data.packages as AutoRefreshPackage[], pokEnv: data.pokEnv as PokEnv };
@@ -53,7 +53,7 @@ export async function fetchAutoRefreshStatus(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/payments/auto-refresh/status'), {
+    const res = await apiFetch(getApiUrl('/payments/auto-refresh/status'), {
       headers: await authHeadersAsync(),
       cache: 'no-store',
     });
@@ -78,7 +78,7 @@ export async function createSubscriptionOrder(
   months: number,
 ): Promise<{ order?: CreatedOrder; error?: string }> {
   try {
-    const res = await fetch(getApiUrl('/payments/subscription/order'), {
+    const res = await apiFetch(getApiUrl('/payments/subscription/order'), {
       method: 'POST',
       headers: await authHeadersAsync(),
       body: JSON.stringify({ contractId, months }),
@@ -95,7 +95,7 @@ export async function createCreditsOrder(
   packageId: string,
 ): Promise<{ order?: CreatedOrder; error?: string }> {
   try {
-    const res = await fetch(getApiUrl('/payments/credits/order'), {
+    const res = await apiFetch(getApiUrl('/payments/credits/order'), {
       method: 'POST',
       headers: await authHeadersAsync(),
       body: JSON.stringify({ packageId }),
@@ -112,7 +112,7 @@ export async function createAutoRefreshOrder(
   packageId: string,
 ): Promise<{ order?: CreatedOrder; error?: string }> {
   try {
-    const res = await fetch(getApiUrl('/payments/auto-refresh/order'), {
+    const res = await apiFetch(getApiUrl('/payments/auto-refresh/order'), {
       method: 'POST',
       headers: await authHeadersAsync(),
       body: JSON.stringify({ packageId }),
@@ -135,7 +135,7 @@ export async function buyAutoRefreshWithCredits(packageId: string): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/payments/auto-refresh/buy-with-credits'), {
+    const res = await apiFetch(getApiUrl('/payments/auto-refresh/buy-with-credits'), {
       method: 'POST',
       headers: await authHeadersAsync(),
       body: JSON.stringify({ packageId }),
@@ -161,7 +161,7 @@ export async function listPremiumPackages(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/payments/premium-packages'), { cache: 'no-store' });
+    const res = await apiFetch(getApiUrl('/payments/premium-packages'), { cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista dështoi.' };
     return { packages: data.packages as PremiumPackage[], pokEnv: data.pokEnv as PokEnv };
@@ -174,7 +174,7 @@ export async function createPremiumOrder(
   packageId: string,
 ): Promise<{ order?: CreatedOrder; error?: string }> {
   try {
-    const res = await fetch(getApiUrl('/payments/premium/order'), {
+    const res = await apiFetch(getApiUrl('/payments/premium/order'), {
       method: 'POST',
       headers: await authHeadersAsync(),
       body: JSON.stringify({ packageId }),
@@ -195,7 +195,7 @@ export async function buyPremiumWithCredits(packageId: string): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/payments/premium/buy-with-credits'), {
+    const res = await apiFetch(getApiUrl('/payments/premium/buy-with-credits'), {
       method: 'POST',
       headers: await authHeadersAsync(),
       body: JSON.stringify({ packageId }),
@@ -219,7 +219,7 @@ export async function listPremiumVouchers(unusedOnly = false): Promise<{
 }> {
   try {
     const q = unusedOnly ? '?unusedOnly=1' : '';
-    const res = await fetch(getApiUrl(`/payments/premium/vouchers${q}`), {
+    const res = await apiFetch(getApiUrl(`/payments/premium/vouchers${q}`), {
       headers: await authHeadersAsync(),
       cache: 'no-store',
     });
@@ -236,7 +236,7 @@ export async function fetchPremiumPlanQuota(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/payments/premium/quota'), {
+    const res = await apiFetch(getApiUrl('/payments/premium/quota'), {
       headers: await authHeadersAsync(),
       cache: 'no-store',
     });
@@ -267,7 +267,7 @@ export async function applyPremiumVoucher(params: {
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/payments/premium/apply'), {
+    const res = await apiFetch(getApiUrl('/payments/premium/apply'), {
       method: 'POST',
       headers: await authHeadersAsync(),
       body: JSON.stringify(params),
@@ -297,7 +297,7 @@ export async function applyPremiumFromPlan(params: {
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/payments/premium/apply-from-plan'), {
+    const res = await apiFetch(getApiUrl('/payments/premium/apply-from-plan'), {
       method: 'POST',
       headers: await authHeadersAsync(),
       body: JSON.stringify(params),
@@ -329,7 +329,7 @@ export async function listOkazionPackages(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/payments/okazion-packages'), { cache: 'no-store' });
+    const res = await apiFetch(getApiUrl('/payments/okazion-packages'), { cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista dështoi.' };
     return { packages: data.packages as OkazionPackage[], pokEnv: data.pokEnv as PokEnv };
@@ -343,7 +343,7 @@ export async function createOkazionOrder(
   quantity = 1,
 ): Promise<{ order?: CreatedOrder; error?: string }> {
   try {
-    const res = await fetch(getApiUrl('/payments/okazion/order'), {
+    const res = await apiFetch(getApiUrl('/payments/okazion/order'), {
       method: 'POST',
       headers: await authHeadersAsync(),
       body: JSON.stringify({ packageId, quantity }),
@@ -369,7 +369,7 @@ export async function buyOkazionWithCredits(
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/payments/okazion/buy-with-credits'), {
+    const res = await apiFetch(getApiUrl('/payments/okazion/buy-with-credits'), {
       method: 'POST',
       headers: await authHeadersAsync(),
       body: JSON.stringify({ packageId, quantity }),
@@ -395,7 +395,7 @@ export async function listOkazionVouchers(unusedOnly = false): Promise<{
 }> {
   try {
     const q = unusedOnly ? '?unusedOnly=1' : '';
-    const res = await fetch(getApiUrl(`/payments/okazion/vouchers${q}`), {
+    const res = await apiFetch(getApiUrl(`/payments/okazion/vouchers${q}`), {
       headers: await authHeadersAsync(),
       cache: 'no-store',
     });
@@ -412,7 +412,7 @@ export async function fetchOkazionPlanQuota(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/payments/okazion/quota'), {
+    const res = await apiFetch(getApiUrl('/payments/okazion/quota'), {
       headers: await authHeadersAsync(),
       cache: 'no-store',
     });
@@ -443,7 +443,7 @@ export async function applyOkazionVoucher(params: {
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/payments/okazion/apply'), {
+    const res = await apiFetch(getApiUrl('/payments/okazion/apply'), {
       method: 'POST',
       headers: await authHeadersAsync(),
       body: JSON.stringify(params),
@@ -473,7 +473,7 @@ export async function applyOkazionFromPlan(params: {
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/payments/okazion/apply-from-plan'), {
+    const res = await apiFetch(getApiUrl('/payments/okazion/apply-from-plan'), {
       method: 'POST',
       headers: await authHeadersAsync(),
       body: JSON.stringify(params),
@@ -503,7 +503,7 @@ export async function verifyPayment(
   paymentId: string,
 ): Promise<{ payment?: Payment; paid?: boolean; error?: string }> {
   try {
-    const res = await fetch(getApiUrl(`/payments/${encodeURIComponent(paymentId)}/verify`), {
+    const res = await apiFetch(getApiUrl(`/payments/${encodeURIComponent(paymentId)}/verify`), {
       method: 'POST',
       headers: await authHeadersAsync(),
     });
@@ -517,7 +517,7 @@ export async function verifyPayment(
 
 export async function listMyPayments(): Promise<{ payments?: Payment[]; error?: string }> {
   try {
-    const res = await fetch(getApiUrl('/payments/mine'), { headers: await authHeadersAsync(), cache: 'no-store' });
+    const res = await apiFetch(getApiUrl('/payments/mine'), { headers: await authHeadersAsync(), cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista dështoi.' };
     return { payments: data.payments as Payment[] };
@@ -531,7 +531,7 @@ export async function listMySubscriptions(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/payments/subscriptions/mine'), {
+    const res = await apiFetch(getApiUrl('/payments/subscriptions/mine'), {
       headers: await authHeadersAsync(),
       cache: 'no-store',
     });

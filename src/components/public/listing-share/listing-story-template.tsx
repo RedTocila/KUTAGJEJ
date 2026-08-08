@@ -34,8 +34,6 @@ import { relativeAlbanianDate } from '@/components/public/listing-cards/format-h
 import { brandLogoSrc, config } from '@/config';
 import { brandWordmarkFontFamily } from '@/styles/brand-font';
 import {
-  formatListingShareUrlLabel,
-  resolveListingShareUrl,
   resolveStoryImageSrc,
   type ListingSharePayload,
   type ListingShareSpecIcon,
@@ -450,9 +448,6 @@ function TemplateListingCard({ payload }: { payload: ListingSharePayload }) {
  */
 export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
   function ListingStoryTemplate({ payload }, ref) {
-    const shareUrl = resolveListingShareUrl(payload);
-    const urlLabel = shareUrl ? formatListingShareUrlLabel(shareUrl) : '';
-
     return (
       <Box
         ref={ref}
@@ -469,77 +464,64 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
       >
         <StoryBackground />
 
-        <Stack
+        <Box
           sx={{
             position: 'relative',
             zIndex: 1,
             height: '100%',
             px: 7,
-            pt: 10,
-            pb: 8,
+            py: 8,
+            display: 'grid',
+            gridTemplateRows: '1.35fr auto 0.55fr',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyItems: 'center',
           }}
         >
-          <Stack spacing={1} sx={{ alignItems: 'center', mb: 5, flexShrink: 0 }}>
-            <Box
-              component="img"
-              src={brandLogoSrc}
-              alt={config.site.name}
-              sx={{ width: 88, height: 88, objectFit: 'contain' }}
-            />
-            <Typography
-              sx={{
-                fontFamily: brandWordmarkFontFamily,
-                fontWeight: 700,
-                fontSize: 48,
-                letterSpacing: '-0.03em',
-                lineHeight: 1,
-                color: '#fff',
-              }}
-            >
-              {config.site.name}
-            </Typography>
-            <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-              <Typography sx={{ fontWeight: 500, fontSize: 24, color: 'rgba(255,255,255,0.82)' }}>
-                Gjithçka në një vend.
+          <Box
+            sx={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: 0,
+            }}
+          >
+            <Stack spacing={1} sx={{ alignItems: 'center', flexShrink: 0 }}>
+              <Box
+                component="img"
+                src={brandLogoSrc}
+                alt={config.site.name}
+                sx={{ width: 108, height: 108, objectFit: 'contain' }}
+              />
+              <Typography
+                sx={{
+                  fontFamily: brandWordmarkFontFamily,
+                  fontWeight: 700,
+                  fontSize: 56,
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1,
+                  color: '#fff',
+                }}
+              >
+                {config.site.name}
               </Typography>
-              <Box sx={{ color: GREEN, display: 'inline-flex', lineHeight: 0 }}>
-                <MapPinIcon size={22} weight="fill" />
-              </Box>
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                <Typography sx={{ fontWeight: 500, fontSize: 28, color: 'rgba(255,255,255,0.82)' }}>
+                  Gjithçka në një vend.
+                </Typography>
+                <Box sx={{ color: GREEN, display: 'inline-flex', lineHeight: 0 }}>
+                  <MapPinIcon size={26} weight="fill" />
+                </Box>
+              </Stack>
             </Stack>
-          </Stack>
+          </Box>
 
           <TemplateListingCard payload={payload} />
 
-          {urlLabel ? (
-            <Stack spacing={1} sx={{ alignItems: 'center', mt: 5, flexShrink: 0, maxWidth: CARD_W }}>
-              <Typography
-                sx={{
-                  fontWeight: 700,
-                  fontSize: 22,
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.45)',
-                }}
-              >
-                Hap njoftimin
-              </Typography>
-              <Typography
-                sx={{
-                  fontWeight: 650,
-                  fontSize: 28,
-                  lineHeight: 1.25,
-                  color: GREEN,
-                  textAlign: 'center',
-                  wordBreak: 'break-all',
-                }}
-              >
-                {urlLabel}
-              </Typography>
-            </Stack>
-          ) : null}
-        </Stack>
+          {/* Balances the top row so the listing sits in the vertical middle */}
+          <Box aria-hidden sx={{ width: '100%', height: '100%', minHeight: 0 }} />
+        </Box>
       </Box>
     );
   },

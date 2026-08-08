@@ -248,6 +248,9 @@ router.post('/subscriptions/:id/cancel', async (req, res) => {
       .from('user_subscriptions')
       .update({
         status: 'canceled',
+        // End access immediately. Plans are prepaid one-shots (no POK auto-renew);
+        // the next charge only happens if the user starts a new checkout.
+        expires_at: nowIso,
         updated_at: nowIso,
       })
       .eq('id', id)

@@ -352,7 +352,7 @@ const sq = {
     cancelSubscription: 'Anulo abonimin',
     cancelConfirmTitle: 'Anulo abonimin?',
     cancelConfirmBody:
-      'Do të humbni menjëherë aksesin te përfitimet e planit (kuota, Leads, Premium Badge, etj.). Pagesa e kryer nuk rimbursohet automatikisht.',
+      'Aksesi te plani ndalon menjëherë (kuota, Leads, Premium Badge, etj.). Nuk do të ngarkohet përsëri derisa të riblini ose të ndërroni paketë. Pagesa e kryer nuk rimbursohet automatikisht.',
     cancelConfirmCta: 'Po, anulo',
     keepSubscription: 'Mbaje abonimin',
     cancelSuccess: 'Abonimi u anulua.',
@@ -852,7 +852,7 @@ const en: AppMessages = {
     cancelSubscription: 'Cancel subscription',
     cancelConfirmTitle: 'Cancel subscription?',
     cancelConfirmBody:
-      'You will lose access to plan benefits immediately (quotas, Leads, Premium Badge, etc.). Completed payments are not refunded automatically.',
+      'Plan access stops immediately (quotas, Leads, Premium Badge, etc.). You will not be charged again until you resubscribe or switch packages. Completed payments are not refunded automatically.',
     cancelConfirmCta: 'Yes, cancel',
     keepSubscription: 'Keep subscription',
     cancelSuccess: 'Subscription canceled.',

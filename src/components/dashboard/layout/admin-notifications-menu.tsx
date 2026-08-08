@@ -81,7 +81,17 @@ export function AdminNotificationsMenu() {
         onClose={() => setAnchorEl(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        slotProps={{ paper: { sx: { width: 360, maxWidth: '95vw' } } }}
+        slotProps={{
+          backdrop: {
+            invisible: false,
+            sx: {
+              backgroundColor: 'rgba(8, 12, 18, 0.08)',
+              backdropFilter: 'blur(3px)',
+              WebkitBackdropFilter: 'blur(3px)',
+            },
+          },
+          paper: { sx: { width: 360, maxWidth: '95vw' } },
+        }}
       >
         <Box sx={{ px: 2, py: 1.5 }}>
           <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>

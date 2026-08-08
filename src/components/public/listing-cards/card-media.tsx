@@ -20,6 +20,7 @@ import { useListingSavedState } from '@/hooks/use-listing-saved-state';
 import { useUser } from '@/hooks/use-user';
 import type { ListingSharePayload } from '@/lib/listing-share';
 import {
+  fetchListingMetrics,
   toggleListingSave,
   type ListingMetricKind,
 } from '@/lib/listing-metrics';
@@ -90,15 +91,26 @@ export function CardMedia({
   const saved = useListingSavedState(listingKind, listingId, initialSaved);
   const [shareCount, setShareCount] = React.useState(initialShareCount);
   const [saveCount, setSaveCount] = React.useState(initialSaveCount);
+  const [metricsReady, setMetricsReady] = React.useState(false);
   const [shareOpen, setShareOpen] = React.useState(false);
 
   React.useEffect(() => {
-    setShareCount(initialShareCount);
-  }, [initialShareCount]);
+    let cancelled = false;
+    setMetricsReady(false);
 
-  React.useEffect(() => {
-    setSaveCount(initialSaveCount);
-  }, [initialSaveCount]);
+    void fetchListingMetrics(listingKind, listingId).then((metrics) => {
+      if (cancelled) return;
+      if (metrics) {
+        setShareCount(metrics.shareCount);
+        setSaveCount(metrics.saveCount);
+      }
+      setMetricsReady(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [listingId, listingKind]);
 
   const resolvedSharePayload = React.useMemo<ListingSharePayload>(
     () => ({
@@ -134,6 +146,7 @@ export function CardMedia({
         return;
       }
       const wasSaved = saved;
+      setMetricsReady(true);
       setSaveCount((count) => Math.max(0, count + (wasSaved ? -1 : 1)));
 
       if (savedCtx) {
@@ -310,13 +323,13 @@ export function CardMedia({
       >
         <ListingMediaActionButton
           aria-label="Ndaj njoftimin"
-          count={shareCount}
+          count={metricsReady ? shareCount : null}
           icon={<ShareNetworkIcon size={17} weight="regular" />}
           onClick={handleShare}
         />
         <ListingMediaActionButton
           aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
-          count={saveCount}
+          count={metricsReady ? saveCount : null}
           active={saved}
           accent="primary"
           icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} />}

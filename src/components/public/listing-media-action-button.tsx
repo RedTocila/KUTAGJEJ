@@ -23,7 +23,7 @@ export function ListingMediaActionButton({
   onClick,
 }: {
   'aria-label': string;
-  count: number;
+  count: number | null;
   icon: React.ReactNode;
   active?: boolean;
   disabled?: boolean;
@@ -104,7 +104,7 @@ export function ListingMediaActionButton({
           pointerEvents: 'none',
         }}
       >
-        {count}
+        {count ?? '…'}
       </Typography>
     </IconButton>
   );

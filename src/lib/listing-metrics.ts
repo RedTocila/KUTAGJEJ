@@ -186,6 +186,48 @@ export async function fetchListingMetricsBatch(
   }
 }
 
+type PendingMetricRequest = {
+  ref: { kind: ListingMetricKind; listingId: string };
+  resolve: (metrics: ListingMetrics | null) => void;
+};
+
+let pendingMetricRequests = new Map<string, PendingMetricRequest[]>();
+let metricFlushScheduled = false;
+
+/**
+ * Refresh one listing's volatile counters without using the cached public
+ * listing response. Requests made by cards in the same render are coalesced
+ * into one batch call.
+ */
+export function fetchListingMetrics(
+  kind: ListingMetricKind,
+  listingId: string,
+): Promise<ListingMetrics | null> {
+  return new Promise((resolve) => {
+    const key = listingMetricsKey(kind, listingId);
+    const requests = pendingMetricRequests.get(key) ?? [];
+    requests.push({ ref: { kind, listingId }, resolve });
+    pendingMetricRequests.set(key, requests);
+
+    if (metricFlushScheduled) return;
+    metricFlushScheduled = true;
+
+    queueMicrotask(async () => {
+      const batch = pendingMetricRequests;
+      pendingMetricRequests = new Map();
+      metricFlushScheduled = false;
+
+      const refs = Array.from(batch.values(), (entries) => entries[0]!.ref);
+      const metricsByKey = await fetchListingMetricsBatch(refs);
+
+      for (const [metricKey, entries] of batch) {
+        const metrics = metricsByKey[metricKey] ?? null;
+        for (const entry of entries) entry.resolve(metrics);
+      }
+    });
+  });
+}
+
 /** Opens the native share sheet or copies the URL, then records a share only on success. */
 export async function shareListing(opts: {
   title: string;
@@ -221,6 +263,10 @@ export async function recordListingMetricEvent(
       method: 'POST',
       headers: metricHeaders(),
       body: JSON.stringify({ listingKind, listingId, event }),
+      // Sharing can move the browser into another app immediately. Keep the
+      // request alive so the metric still reaches the API while the page is
+      // being suspended or unloaded.
+      keepalive: event === 'share',
     });
     if (!res.ok) return null;
     const data = (await res.json()) as ListingMetrics;

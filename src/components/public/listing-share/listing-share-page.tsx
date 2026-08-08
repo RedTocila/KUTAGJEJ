@@ -88,7 +88,7 @@ function openInstagramStoryCamera(): boolean {
  * Share the story image so Instagram can open Stories with it.
  * Critical: share **files only** (no text/url) — mixing text makes Instagram skip Stories.
  */
-async function shareStoryImage(file: File): Promise<'shared' | 'downloaded' | 'opened'> {
+async function shareStoryImage(file: File): Promise<'shared' | 'downloaded'> {
   const fileOnly = { files: [file] };
   const canShareFiles =
     typeof navigator !== 'undefined' &&
@@ -107,7 +107,6 @@ async function shareStoryImage(file: File): Promise<'shared' | 'downloaded' | 'o
   }
 
   downloadFile(file);
-  if (openInstagramStoryCamera()) return 'opened';
   return 'downloaded';
 }
 
@@ -389,10 +388,15 @@ export function ListingSharePage({
         throw new Error('story capture empty');
       }
       const file = dataUrlToFile(dataUrl, `kutagjej-story-${payload.listingId.slice(0, 8)}.jpg`);
-      const result = await shareStoryImage(file);
+      const shareResult = await shareStoryImage(file);
 
       // Count only after the OS share / save / download succeeded — not on cancel.
-      await bumpShareMetric();
+      // Start the keepalive request before opening Instagram, which can suspend
+      // this page before any later JavaScript gets a chance to run.
+      const metricPromise = bumpShareMetric();
+      const result =
+        shareResult === 'downloaded' && openInstagramStoryCamera() ? 'opened' : shareResult;
+      await metricPromise;
 
       if (result === 'shared') {
         setFeedback('Zgjidh Instagram → Story për ta postuar me këtë imazh.');

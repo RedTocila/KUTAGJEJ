@@ -91,6 +91,14 @@ export function UserNotificationsMenu() {
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         slotProps={{
+          backdrop: {
+            invisible: false,
+            sx: {
+              backgroundColor: 'rgba(8, 12, 18, 0.08)',
+              backdropFilter: 'blur(3px)',
+              WebkitBackdropFilter: 'blur(3px)',
+            },
+          },
           paper: {
             elevation: 0,
             sx: (theme) => ({

@@ -123,27 +123,12 @@ async function ensureEngagement(kind, listingId) {
 }
 
 async function incrementEngagement(kind, listingId, event) {
-  await ensureEngagement(kind, listingId);
-  const sb = getSupabaseAdmin();
-  const { data: row, error: selErr } = await sb
-    .from('listing_engagements')
-    .select('*')
-    .eq('listing_kind', kind)
-    .eq('listing_id', listingId)
-    .single();
-  if (selErr) throw selErr;
-
-  const patch = { updated_at: new Date().toISOString() };
-  if (event === 'view') patch.view_count = (row.view_count ?? 0) + 1;
-  else if (event === 'click') patch.click_count = (row.click_count ?? 0) + 1;
-  else if (event === 'share') patch.share_count = (row.share_count ?? 0) + 1;
-
-  const { error: updErr } = await sb
-    .from('listing_engagements')
-    .update(patch)
-    .eq('listing_kind', kind)
-    .eq('listing_id', listingId);
-  if (updErr) throw updErr;
+  const { error } = await getSupabaseAdmin().rpc('increment_listing_engagement', {
+    p_listing_kind: kind,
+    p_listing_id: listingId,
+    p_event: event,
+  });
+  if (error) throw error;
 }
 
 async function countSaves(kind, listingId) {

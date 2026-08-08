@@ -287,6 +287,8 @@ const sq = {
     refreshAfterHours: (h: number) => `Rifresko postimin pas ${h} orësh`,
     premiumBadge: 'Premium Badge',
     saveLeads: 'Leads: kontakto nga ruajtje, ndarje dhe interes i lartë',
+    saveLeadsLabel: 'Leads',
+    saveLeadsRest: ': kontakto nga ruajtje, ndarje dhe interes i lartë',
     yourPlan: 'Plani juaj',
     savePct: (pct: number) => `Kurseni ${pct}%`,
     annual: 'Vjetore',
@@ -483,6 +485,29 @@ const sq = {
     leadsEmpty: 'Nuk keni leads ende.',
     leadsUpgrade: 'Leads janë të disponueshme me paketat Grow ose Elite.',
     leadsUpgradeCta: 'Shiko paketat',
+    leadsHowItWorks: {
+      aria: 'Si funksionojnë Leads',
+      title: 'Si funksionojnë Leads',
+      intro:
+        'Me Grow ose Elite merrni njoftime kur dikush tregon interes për njoftimet tuaja — dhe mund t\'i kontaktoni direkt.',
+      types: {
+        listing_saved: {
+          title: 'Ruajtje',
+          description:
+            'Kur dikush ruan njoftimin tuaj, shfaqet si lead. Hapeni për të parë kush e ruajti dhe dërgoni mesazh.',
+        },
+        listing_shared: {
+          title: 'Ndarje',
+          description:
+            'Kur dikush ndan njoftimin tuaj, merrni lead me kontaktin e tyre që të ndiqni interesin.',
+        },
+        listing_hot_lead: {
+          title: 'Interes i lartë',
+          description:
+            'Kur dikush tregon interes të fortë për njoftimin tuaj pa ju kontaktuar — p.sh. duke e eksploruar, duke parë detaje, duke e ruajtur ose ndarë, ose duke u kthyer më vonë — merrni lead interes.',
+        },
+      },
+    },
     prefs: {
       messages: {
         title: 'Mesazhe të reja',
@@ -499,7 +524,7 @@ const sq = {
       listing_hot_lead: {
         title: 'Interes i lartë',
         description:
-          'Njoftohu kur dikush shikon me kujdes njoftimin (kohë, foto, kontakt, kthim) — Grow / Elite.',
+          'Njoftohu kur dikush tregon interes të fortë pa ju kontaktuar (eksplorim, detaje, ruajtje/ndarje, kthim) — Grow / Elite.',
       },
       listing_status: {
         title: 'Statusi i njoftimeve',
@@ -748,6 +773,8 @@ const en: AppMessages = {
     refreshAfterHours: (h: number) => `Refresh listing after ${h} hours`,
     premiumBadge: 'Premium Badge',
     saveLeads: 'Leads: contact from saves, shares & high interest',
+    saveLeadsLabel: 'Leads',
+    saveLeadsRest: ': contact from saves, shares & high interest',
     yourPlan: 'Your plan',
     savePct: (pct: number) => `Save ${pct}%`,
     annual: 'Annual',
@@ -940,6 +967,29 @@ const en: AppMessages = {
     leadsEmpty: 'No leads yet.',
     leadsUpgrade: 'Leads are available with Grow or Elite packages.',
     leadsUpgradeCta: 'View packages',
+    leadsHowItWorks: {
+      aria: 'How Leads work',
+      title: 'How Leads work',
+      intro:
+        'With Grow or Elite you get notified when someone shows interest in your listings — and you can contact them directly.',
+      types: {
+        listing_saved: {
+          title: 'Saves',
+          description:
+            'When someone saves your listing, it appears as a lead. Open it to see who saved it and send a message.',
+        },
+        listing_shared: {
+          title: 'Shares',
+          description:
+            'When someone shares your listing, you get a lead with their contact so you can follow up.',
+        },
+        listing_hot_lead: {
+          title: 'High interest',
+          description:
+            'When someone shows strong interest in your listing without contacting you — for example, by spending time exploring it, viewing multiple details, saving or sharing it, or coming back later — you get an interest lead.',
+        },
+      },
+    },
     prefs: {
       messages: {
         title: 'New messages',
@@ -956,7 +1006,7 @@ const en: AppMessages = {
       listing_hot_lead: {
         title: 'High interest',
         description:
-          'Get notified when someone carefully views your listing (time, photos, contact, return) — Grow / Elite.',
+          'Get notified when someone shows strong interest without contacting you (exploring, details, save/share, return) — Grow / Elite.',
       },
       listing_status: {
         title: 'Listing status',

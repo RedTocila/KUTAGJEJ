@@ -16,6 +16,8 @@ import { UsersThree as UsersThreeIcon } from '@phosphor-icons/react/dist/ssr/Use
 
 import { ProductTag } from '@/components/public/product-browse-chrome';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
+import { LeadsHelpButton } from '@/components/user/leads-how-it-works';
+import { useOwnerEditHeaderActions } from '@/components/user/owner-edit-header-actions';
 import { UserNotificationRow } from '@/components/user/user-notification-row';
 import {
   SavedListingPreviewDialog,
@@ -52,6 +54,8 @@ export default function UserLeadsPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [filter, setFilter] = React.useState<LeadFilterTag>('all');
   const [listingPreview, setListingPreview] = React.useState<SavedListingPreviewTarget | null>(null);
+
+  useOwnerEditHeaderActions(() => <LeadsHelpButton />, []);
 
   const refresh = React.useCallback(async () => {
     setLoading(true);

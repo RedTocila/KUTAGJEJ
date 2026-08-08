@@ -12,17 +12,22 @@ export function ListingMetricsTracker({
   listingId,
   city,
   category,
+  ownerId,
 }: {
   listingKind: ListingMetricKind;
   listingId: string;
   /** Optional signals used for homepage “recommended” personalization. */
   city?: string | null;
   category?: string | null;
+  /** Seller id — enables multi-listing High Interest signals. */
+  ownerId?: string | null;
 }) {
   React.useEffect(() => {
     recordListingView({ kind: listingKind, listingId, city, category });
     void recordListingMetricEvent(listingKind, listingId, 'view');
   }, [listingKind, listingId, city, category]);
 
-  return <ListingHotLeadTracker listingKind={listingKind} listingId={listingId} />;
+  return (
+    <ListingHotLeadTracker listingKind={listingKind} listingId={listingId} ownerId={ownerId} />
+  );
 }

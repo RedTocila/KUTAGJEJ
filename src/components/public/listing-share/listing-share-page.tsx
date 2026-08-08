@@ -21,6 +21,7 @@ import {
   StoryBackground,
 } from '@/components/public/listing-share/listing-story-template';
 import { resolveListingShareUrl, type ListingSharePayload } from '@/lib/listing-share';
+import { emitHotLeadShare } from '@/lib/listing-hot-lead';
 import { recordListingMetricEvent, type ListingMetrics } from '@/lib/listing-metrics';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 
@@ -115,7 +116,10 @@ export function ListingSharePage({
   const bumpShareMetric = React.useCallback(async () => {
     if (!payload) return null;
     const metrics = await recordListingMetricEvent(payload.listingKind, payload.listingId, 'share');
-    if (metrics) onShared?.(metrics);
+    if (metrics) {
+      onShared?.(metrics);
+      emitHotLeadShare(payload.listingKind, payload.listingId);
+    }
     return metrics;
   }, [onShared, payload]);
 

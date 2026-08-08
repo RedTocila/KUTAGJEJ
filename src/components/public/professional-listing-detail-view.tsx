@@ -110,6 +110,7 @@ export function ProfessionalListingDetailView({
           listingId={listing.id}
           city={listing.cityName}
           category={listing.category}
+          ownerId={listing.seller?.id}
         />
       )}
       <ProfessionalListingDetailDesktop

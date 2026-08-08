@@ -9,6 +9,7 @@ import {
   toggleListingSave,
   type ListingMetricKind,
 } from '@/lib/listing-metrics';
+import { emitHotLeadSave } from '@/lib/listing-hot-lead';
 
 function canUseBookmarks(user: ReturnType<typeof useUser>['user']) {
   return (
@@ -94,6 +95,9 @@ export function SavedListingsProvider({ children }: { children: React.ReactNode 
         return null;
       }
       applySaved(kind, listingId, metrics.saved);
+      if (metrics.saved && !wasSaved) {
+        emitHotLeadSave(kind, listingId);
+      }
       return { saved: metrics.saved, saveCount: metrics.saveCount };
     },
     [applySaved],

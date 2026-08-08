@@ -11,6 +11,7 @@ import {
   setPendingListingChat,
   startConversation,
 } from '@/lib/conversations-client';
+import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { paths } from '@/paths';
 
@@ -65,6 +66,8 @@ export function StickyListingContact({
   const openChat = async () => {
     setError(null);
     if (isLoading) return;
+
+    emitHotLeadContactAction({ listingKind, listingId });
 
     if (!user && !hasStoredSession()) {
       setPendingListingChat({ listingKind, listingId });

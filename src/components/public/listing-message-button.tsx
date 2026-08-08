@@ -11,6 +11,7 @@ import {
   setPendingListingChat,
   startConversation,
 } from '@/lib/conversations-client';
+import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
 import { paths } from '@/paths';
 
 export interface ListingMessageButtonProps extends Omit<ButtonProps, 'onClick'> {
@@ -37,6 +38,8 @@ export function ListingMessageButton({
   const handleClick = async () => {
     setError(null);
     if (isLoading) return;
+
+    emitHotLeadContactAction({ listingKind, listingId });
 
     const hasToken = typeof window !== 'undefined' && Boolean(localStorage.getItem('custom-auth-token'));
     if (!user && !hasToken) {

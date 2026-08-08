@@ -194,6 +194,7 @@ export function JobListingDetailView({
           listingId={listing.id}
           city={listing.cityName}
           category={listing.industry}
+          ownerId={listing.seller?.id}
         />
       )}
       <JobListingDetailDesktop

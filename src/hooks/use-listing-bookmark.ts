@@ -7,6 +7,7 @@ import { useSavedListingsOptional } from '@/contexts/saved-listings-context';
 import { useListingSavedState } from '@/hooks/use-listing-saved-state';
 import { useUser } from '@/hooks/use-user';
 import { toggleListingSave, type ListingMetricKind } from '@/lib/listing-metrics';
+import { emitHotLeadSave } from '@/lib/listing-hot-lead';
 import { paths } from '@/paths';
 
 export function useListingBookmark(
@@ -39,8 +40,10 @@ export function useListingBookmark(
       return;
     }
     const metrics = await toggleListingSave(listingKind, listingId);
-    if (metrics) setSaveCount(metrics.saveCount);
-    else setSaveCount((count) => Math.max(0, count + (wasSaved ? 1 : -1)));
+    if (metrics) {
+      setSaveCount(metrics.saveCount);
+      if (metrics.saved && !wasSaved) emitHotLeadSave(listingKind, listingId);
+    } else setSaveCount((count) => Math.max(0, count + (wasSaved ? 1 : -1)));
   }, [hydratedSaved, listingKind, listingId, router, savedCtx, user]);
 
   return { saved: hydratedSaved, saveCount, toggleSave };

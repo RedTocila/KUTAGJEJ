@@ -301,6 +301,7 @@ export function VerticalListingDetailView(props: {
           listingId={listing.id}
           city={'cityName' in listing ? listing.cityName : null}
           category={interestCategoryFromListing(listing)}
+          ownerId={listing.seller?.id}
         />
       )}
       <Box component="article" sx={{ bgcolor: 'background.default', pb: ownerPreview ? 3 : { xs: 14, md: 6 } }}>

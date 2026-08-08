@@ -245,28 +245,55 @@ export function PlanPrice({
   );
 }
 
+export type FeatureListItem =
+  | string
+  | {
+      id: string;
+      label: React.ReactNode;
+    };
+
+function featureItemKey(item: FeatureListItem, index: number): string {
+  return typeof item === 'string' ? item : item.id || String(index);
+}
+
+function featureItemContent(item: FeatureListItem): React.ReactNode {
+  return typeof item === 'string' ? item : item.label;
+}
+
 export function FeatureList({
   items,
   accent = 'primary',
   compact = false,
 }: {
-  items: string[];
+  items: FeatureListItem[];
   accent?: PlanAccent;
   compact?: boolean;
 }) {
   return (
     <Stack spacing={compact ? 0.4 : 0.7} sx={{ mb: compact ? 0 : 2, flex: compact ? undefined : 1, mt: compact ? 0.35 : 0 }}>
-      {items.map((line) => (
-        <Stack key={line} direction="row" spacing={0.65} sx={{ alignItems: 'flex-start' }}>
+      {items.map((item, index) => (
+        <Stack
+          key={featureItemKey(item, index)}
+          direction="row"
+          spacing={0.65}
+          sx={{ alignItems: 'flex-start', width: '100%' }}
+        >
           <Box sx={{ color: (t) => resolveAccent(t, accent), mt: '1px', flexShrink: 0, display: 'inline-flex' }}>
             <CheckCircleIcon size={compact ? 13 : 16} weight="fill" />
           </Box>
           <Typography
             variant="body2"
             color="text.secondary"
-            sx={{ fontWeight: 600, lineHeight: 1.3, fontSize: compact ? '0.72rem' : undefined }}
+            component="div"
+            sx={{
+              fontWeight: 600,
+              lineHeight: 1.3,
+              fontSize: compact ? '0.72rem' : undefined,
+              flex: 1,
+              minWidth: 0,
+            }}
           >
-            {line}
+            {featureItemContent(item)}
           </Typography>
         </Stack>
       ))}
@@ -283,7 +310,7 @@ export function FeatureDetailsDropdown({
   onToggle,
   fullWidth = false,
 }: {
-  items: string[];
+  items: FeatureListItem[];
   accent?: PlanAccent;
   label?: string;
   /** Controlled open state — when set, content is rendered by the parent below. */
@@ -363,7 +390,7 @@ export function PackageOfferRow({
   priceSuffix?: string;
   /** Secondary price line (e.g. Boost Coins amount). */
   meta?: React.ReactNode;
-  details?: string[];
+  details?: FeatureListItem[];
   accent?: PlanAccent;
   highlighted?: boolean;
   actions: React.ReactNode;
@@ -507,7 +534,7 @@ export function PackageCheckoutCard({
   /** When set, renders a full-width row of buttons (e.g. € + BC) instead of a price column. */
   actions?: React.ReactNode;
   /** Feature lines shown in a collapsed "Detajet" dropdown at the bottom. */
-  details?: string[];
+  details?: FeatureListItem[];
   /** Hover / active border & wash — e.g. `warning` Premium, `error` OKAZION. */
   accent?: PlanAccent;
   /** Current / selected plan — accent border + corner checkmark. */

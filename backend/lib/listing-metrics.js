@@ -24,18 +24,60 @@ const TABLE_BY_KIND = {
 const DEDUP_MS = {
   view: 30 * 60 * 1000,
   click: 10 * 60 * 1000,
-  hot_lead: 24 * 60 * 60 * 1000,
+  hot_lead: 48 * 60 * 60 * 1000,
 };
 
-const HOT_LEAD_SIGNAL_KEYS = ['dwell', 'photos', 'contact', 'returned'];
+const HOT_LEAD_SIGNAL_KEYS = [
+  'dwell',
+  'photos',
+  'scroll',
+  'details',
+  'saved',
+  'shared',
+  'returned',
+  'multiListing',
+  'repeatView',
+];
+
+const HOT_LEAD_HIGH_INTENT_KEYS = new Set([
+  'saved',
+  'shared',
+  'returned',
+  'multiListing',
+  'repeatView',
+]);
 
 function countHotLeadSignals(signals) {
   if (!signals || typeof signals !== 'object') return 0;
   let n = 0;
   for (const key of HOT_LEAD_SIGNAL_KEYS) {
+    // returned + repeatView are the same 2+ visit behavior — count once.
+    if (key === 'repeatView') continue;
+    if (key === 'returned') {
+      if (signals.returned === true || signals.repeatView === true) n += 1;
+      continue;
+    }
     if (signals[key] === true) n += 1;
   }
   return n;
+}
+
+function countHotLeadHighIntentSignals(signals) {
+  if (!signals || typeof signals !== 'object') return 0;
+  let n = 0;
+  for (const key of HOT_LEAD_HIGH_INTENT_KEYS) {
+    if (key === 'repeatView') continue;
+    if (key === 'returned') {
+      if (signals.returned === true || signals.repeatView === true) n += 1;
+      continue;
+    }
+    if (signals[key] === true) n += 1;
+  }
+  return n;
+}
+
+function qualifiesAsHotLead(signals) {
+  return countHotLeadSignals(signals) >= 3 && countHotLeadHighIntentSignals(signals) >= 1;
 }
 
 function metricsKey(kind, listingId) {
@@ -261,8 +303,13 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null 
     return { ok: false, status: 400, message: 'Invalid event.' };
   }
 
-  if (event === 'hot_lead' && countHotLeadSignals(signals) < 2) {
-    return { ok: false, status: 400, message: 'Hot lead requires at least 2 engagement signals.' };
+  if (event === 'hot_lead' && !qualifiesAsHotLead(signals)) {
+    return {
+      ok: false,
+      status: 400,
+      message:
+        'Hot lead requires at least 3 engagement signals including 1 high-intent behavior.',
+    };
   }
 
   const exists = await listingExists(kind, listingId);

@@ -52,6 +52,7 @@ import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner
 import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { useUser } from '@/hooks/use-user';
+import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
 import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
 const FONT_BODY = '0.875rem';
@@ -136,6 +137,7 @@ export function BusinessListingDetailView({
 
   const handleReserve = async () => {
     if (listing.reservationUrl?.trim()) {
+      emitHotLeadContactAction({ listingKind: 'businesses', listingId: listing.id });
       const url = new URL(listing.reservationUrl.trim());
       if (reserveDate) url.searchParams.set('date', reserveDate);
       if (reserveTime) url.searchParams.set('time', reserveTime);
@@ -158,6 +160,8 @@ export function BusinessListingDetailView({
         setReserveFeedback('Shkruani numrin e telefonit.');
         return;
       }
+
+      emitHotLeadContactAction({ listingKind: 'businesses', listingId: listing.id });
 
       const draft = {
         listingId: listing.id,
@@ -200,7 +204,10 @@ export function BusinessListingDetailView({
       setReserveFeedback(res.error ?? 'Rezervimi nuk u dërgua.');
       return;
     }
-    if (telHref) window.location.href = telHref;
+    if (telHref) {
+      emitHotLeadContactAction({ listingKind: 'businesses', listingId: listing.id });
+      window.location.href = telHref;
+    }
   };
 
   return (
@@ -211,6 +218,7 @@ export function BusinessListingDetailView({
           listingId={listing.id}
           city={listing.cityName}
           category={listing.category}
+          ownerId={listing.seller?.id}
         />
       )}
       <BusinessListingDetailDesktop

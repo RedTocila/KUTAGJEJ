@@ -381,6 +381,7 @@ export function CarListingDetailView({
           listingId={listing.id}
           city={listing.cityName}
           category={listing.make}
+          ownerId={listing.seller?.id}
         />
       )}
       <Box component="article" sx={{ bgcolor: 'background.default' }}>

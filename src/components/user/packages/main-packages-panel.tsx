@@ -18,9 +18,11 @@ import { listMySubscriptions } from '@/lib/payments-client';
 import type { PublicContract } from '@/types/contract';
 import { paths } from '@/paths';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
+import { PackageLeadsFeatureLabel } from '@/components/user/leads-how-it-works';
 import {
   PackageCheckoutCard,
   formatEur,
+  type FeatureListItem,
 } from './package-ui';
 import type { PlanAccent } from './package-ui';
 
@@ -41,8 +43,8 @@ function planSubtitle(t: AppMessages, plan: PublicContract, duration?: string): 
   return duration ? `${duration} · ${base}` : base;
 }
 
-function planFeatureLines(t: AppMessages, plan: PublicContract): string[] {
-  const lines: string[] = [
+function planFeatureLines(t: AppMessages, plan: PublicContract): FeatureListItem[] {
+  const lines: FeatureListItem[] = [
     t.packages.upToListings(plan.maxListAllCategories),
     t.packages.apartmentListings(plan.maxApartmentListings),
     t.packages.carListings(plan.maxCarListings),
@@ -63,7 +65,7 @@ function planFeatureLines(t: AppMessages, plan: PublicContract): string[] {
   }
   if (plan.glowBadgeEnabled) {
     lines.push(t.packages.premiumBadge);
-    lines.push(t.packages.saveLeads);
+    lines.push({ id: 'save-leads', label: <PackageLeadsFeatureLabel /> });
   }
   return lines;
 }

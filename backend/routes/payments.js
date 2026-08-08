@@ -163,13 +163,14 @@ router.post('/webhook/pok', async (req, res) => {
 // Everything below requires an authenticated portal user (individual / business).
 router.use(authMiddleware, requirePortalUser);
 
-/** List the current user's own payments. */
+/** List the current user's successful (paid) payments. */
 router.get('/mine', async (req, res) => {
   try {
     const { data, error } = await getSupabaseAdmin()
       .from('payments')
       .select('*')
       .eq('payer_id', req.user.id)
+      .eq('status', 'paid')
       .order('created_at', { ascending: false })
       .limit(100);
     if (error) throw error;

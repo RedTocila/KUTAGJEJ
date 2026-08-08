@@ -118,7 +118,7 @@ export default function MyPaymentsPage() {
       const errors = [p.error, s.error, premium.error, okazion.error].filter(Boolean);
       if (errors.length) setError(errors[0] as string);
 
-      setPayments(p.payments ?? []);
+      setPayments((p.payments ?? []).filter((payment) => payment.status === 'paid'));
       setSubscriptions(s.subscriptions ?? []);
 
       const rows: BoostSpendRow[] = [];

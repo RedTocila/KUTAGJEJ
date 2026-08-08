@@ -24,6 +24,7 @@ import { ShareNetwork as ShareIcon } from '@phosphor-icons/react/dist/ssr/ShareN
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
+import { LeadsTopHeaderButton } from '@/components/user/leads-top-header-button';
 import { ListingSavesLeadsDialog } from '@/components/user/listing-saves-leads-dialog';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
@@ -293,6 +294,7 @@ export default function UserStatisticsPage() {
 
   return (
     <Stack spacing={3}>
+      <LeadsTopHeaderButton />
       <UserPageHeader
         icon={<ChartLineUpIcon size={20} weight="duotone" />}
         title={t.nav.statistics}

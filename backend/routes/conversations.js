@@ -13,7 +13,6 @@ const {
   userParticipatesInConversation,
   userRoleInConversation,
   loadListingForConversation,
-  findContactListingForPoster,
   normalizeConversationListingKind,
   loadListingContactPhone,
 } = require('../lib/listing-conversations');
@@ -550,43 +549,7 @@ router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) 
       return respondWithConversation(res, existingRows[0], userRef, 200);
     }
 
-    const contact = await findContactListingForPoster(memberId, posterModel);
-    if (contact) {
-      const listing = await loadListingForConversation(contact.kind, contact.listingId);
-      if (listing) {
-        let row = await findExistingInquirerThread(contact.kind, contact.listingId, userRef.id);
-        let created = false;
-        if (!row) {
-          const { data, error } = await getSupabaseAdmin()
-            .from('conversations')
-            .insert({
-              listing_kind: contact.kind,
-              listing_id: contact.listingId,
-              listing_title: listing.title,
-              listing_image_url: listing.imageUrl || '',
-              poster_id: listing.posterId,
-              inquirer_id: userRef.id,
-              started_by: 'inquirer',
-            })
-            .select('*')
-            .single();
-          if (error) {
-            if (isUniqueViolation(error)) {
-              row = await findExistingInquirerThread(contact.kind, contact.listingId, userRef.id);
-            } else {
-              throw error;
-            }
-          } else {
-            row = data;
-            created = true;
-          }
-        }
-        if (!row) return res.status(500).json({ message: 'Server error' });
-        return respondWithConversation(res, row, userRef, created ? 201 : 200);
-      }
-    }
-
-    // Member has no active listing — start a direct (listing-less) thread.
+    // Profile / member contact — always a person thread (not tied to their listing).
     let row = await findDirectConversationBetween(userRef.id, memberId);
     let created = false;
     if (!row) {

@@ -26,15 +26,21 @@ import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
+import { MemberReferralBadgesRow } from '@/components/public/member-referral-badges';
 import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { AccountVerificationCard } from '@/components/user/account-verification-card';
 import { PortalSectionCard, PortalSurface } from '@/components/user/portal-cards';
 import { useUser } from '@/hooks/use-user';
+import { clientFetch } from '@/lib/api-client';
 import { authClient } from '@/lib/auth/client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { rememberListingLocation } from '@/lib/listing-form-defaults';
 import { listMySubscriptions } from '@/lib/payments-client';
-import { memberInitials } from '@/lib/public-member-client';
+import {
+  memberInitials,
+  mergeMemberReferralBadges,
+  type PublicMemberReferralBadge,
+} from '@/lib/public-member-client';
 import {
   listRealEstateLocationsPublic,
   type RealEstateCityDto,
@@ -98,6 +104,7 @@ export default function UserProfilePage() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   /** Grow / Elite Premium Badge — same gate as public profile & listing titles. */
   const [showPremiumBadge, setShowPremiumBadge] = React.useState(false);
+  const [referralBadges, setReferralBadges] = React.useState<PublicMemberReferralBadge[]>([]);
 
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
@@ -162,6 +169,23 @@ export default function UserProfilePage() {
         return true;
       });
       setShowPremiumBadge(hasGrowOrElite);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  React.useEffect(() => {
+    if (!user?.id) {
+      setReferralBadges([]);
+      return;
+    }
+    let cancelled = false;
+    void clientFetch<{ badges?: PublicMemberReferralBadge[] }>(
+      `/public/members/${encodeURIComponent(user.id)}`,
+    ).then((res) => {
+      if (cancelled) return;
+      setReferralBadges(mergeMemberReferralBadges(res.ok ? res.data?.badges : null));
     });
     return () => {
       cancelled = true;
@@ -339,7 +363,16 @@ export default function UserProfilePage() {
   const businessCategoryLabel = isBusiness ? String(user.businessCategory || '').trim() : '';
 
   return (
-    <Stack spacing={2} sx={{ maxWidth: 640, mx: 'auto', width: '100%' }}>
+    <Stack
+      spacing={2}
+      sx={{
+        maxWidth: 640,
+        mx: 'auto',
+        width: '100%',
+        // Match SearchableSelect (“Ku jeni bazuar”) rounded corners
+        '& .MuiOutlinedInput-root': { borderRadius: 2.5 },
+      }}
+    >
       {/* Identity preview — same public profile visitors see */}
       <PortalSurface>
         <Stack
@@ -476,6 +509,25 @@ export default function UserProfilePage() {
                 </Typography>
               ) : null}
             </Stack>
+
+            {referralBadges.length > 0 ? (
+              <Box sx={{ width: '100%', pt: 0.5 }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', fontWeight: 700, mb: 1, textAlign: 'center' }}
+                >
+                  Badges
+                </Typography>
+                <MemberReferralBadgesRow
+                  badges={referralBadges}
+                  dense
+                  layout="grid"
+                  columns={5}
+                  selfView
+                />
+              </Box>
+            ) : null}
           </Stack>
 
           {avatarMsg ? (

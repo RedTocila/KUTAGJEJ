@@ -24,7 +24,19 @@ const TABLE_BY_KIND = {
 const DEDUP_MS = {
   view: 30 * 60 * 1000,
   click: 10 * 60 * 1000,
+  hot_lead: 24 * 60 * 60 * 1000,
 };
+
+const HOT_LEAD_SIGNAL_KEYS = ['dwell', 'photos', 'contact', 'returned'];
+
+function countHotLeadSignals(signals) {
+  if (!signals || typeof signals !== 'object') return 0;
+  let n = 0;
+  for (const key of HOT_LEAD_SIGNAL_KEYS) {
+    if (signals[key] === true) n += 1;
+  }
+  return n;
+}
 
 function metricsKey(kind, listingId) {
   return `${kind}:${String(listingId)}`;
@@ -241,12 +253,16 @@ async function attachOwnerMetrics(listings, kind) {
   return enriched.map(({ kind: _k, ...rest }) => rest);
 }
 
-async function recordListingEvent(req, { kind, listingId, event }) {
+async function recordListingEvent(req, { kind, listingId, event, signals = null }) {
   if (!isValidKind(kind) || !isUuid(listingId)) {
     return { ok: false, status: 400, message: 'Invalid listing.' };
   }
-  if (!['view', 'click', 'share'].includes(event)) {
+  if (!['view', 'click', 'share', 'hot_lead'].includes(event)) {
     return { ok: false, status: 400, message: 'Invalid event.' };
+  }
+
+  if (event === 'hot_lead' && countHotLeadSignals(signals) < 2) {
+    return { ok: false, status: 400, message: 'Hot lead requires at least 2 engagement signals.' };
   }
 
   const exists = await listingExists(kind, listingId);
@@ -255,7 +271,7 @@ async function recordListingEvent(req, { kind, listingId, event }) {
   const visitorKey = visitorKeyFromRequest(req);
   let incremented = true;
 
-  if (event === 'view' || event === 'click') {
+  if (event === 'view' || event === 'click' || event === 'hot_lead') {
     if (!visitorKey) {
       return { ok: false, status: 400, message: 'Visitor id required.' };
     }
@@ -273,8 +289,38 @@ async function recordListingEvent(req, { kind, listingId, event }) {
     }
   }
 
-  if (event === 'share' || incremented) {
+  if (event === 'share' || (incremented && event !== 'hot_lead')) {
     await incrementEngagement(kind, listingId, event);
+  }
+
+  if (event === 'share') {
+    const sharer = saverFromUser(req.user);
+    if (sharer) {
+      try {
+        const { notifyListingShared } = require('./user-notifications');
+        await notifyListingShared({
+          metricsKind: kind,
+          listingId,
+          sharerId: sharer.saverId,
+        });
+      } catch (err) {
+        console.warn('notifyListingShared:', err?.message || err);
+      }
+    }
+  }
+
+  if (event === 'hot_lead' && incremented) {
+    const viewer = saverFromUser(req.user);
+    try {
+      const { notifyListingHotLead } = require('./user-notifications');
+      await notifyListingHotLead({
+        metricsKind: kind,
+        listingId,
+        viewerId: viewer?.saverId || null,
+      });
+    } catch (err) {
+      console.warn('notifyListingHotLead:', err?.message || err);
+    }
   }
 
   const saveCount = await countSaves(kind, listingId);

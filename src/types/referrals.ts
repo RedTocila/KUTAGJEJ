@@ -36,9 +36,6 @@ export interface MyReferralStats {
   nextTier: ReferralNextTier | null;
   referredBy: ReferralUserBrief | null;
   referredUsers: ReferralSignupEntry[];
-  /** True when today's Instagram story share reward was already claimed. */
-  dailyShareClaimedToday?: boolean;
-  dailyShareBoostCredits?: number;
   loginStreakDays?: number;
   loginStreakDaysRequired?: number;
   loginStreakBoostCredits?: number;

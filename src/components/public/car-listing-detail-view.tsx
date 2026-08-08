@@ -240,7 +240,7 @@ function CarPriceContactAside(props: {
         ) : null}
       </Stack>
       <Divider flexItem />
-      <Stack spacing={1.25}>
+      <Stack spacing={1.25} data-listing-contact="">
         {displayPhone ? (
           <>
             <Button

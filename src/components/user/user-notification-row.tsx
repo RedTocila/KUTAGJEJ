@@ -3,7 +3,7 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
+import { Box, CircularProgress, IconButton, Stack, Typography } from '@mui/material';
 import { ChatCircle as ChatIcon } from '@phosphor-icons/react/dist/ssr/ChatCircle';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 
@@ -17,7 +17,6 @@ import {
 import { markUserNotificationsRead } from '@/lib/user-notifications-client';
 import { useCopy } from '@/hooks/use-copy';
 import { paths } from '@/paths';
-import { productButtonSx } from '@/styles/product-sx';
 
 function relativeTime(iso: string, t: ReturnType<typeof useCopy>): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -59,6 +58,9 @@ export function UserNotificationRow({
   const [contactError, setContactError] = React.useState<string | null>(null);
 
   const isSave = primary.type === 'listing_saved';
+  const isShare = primary.type === 'listing_shared';
+  const isHotLead = primary.type === 'listing_hot_lead';
+  const isLead = isSave || isShare || isHotLead;
   const isMessage = primary.type === 'new_message';
 
   const title =
@@ -67,7 +69,7 @@ export function UserNotificationRow({
       : primary.title;
 
   const message = notificationDisplayMessage(primary);
-  const canPreviewListing = Boolean(isSave && primary.refId && primary.refKind);
+  const canPreviewListing = Boolean(isLead && primary.refId && primary.refKind);
   const messageHref = isMessage ? messageHrefFromNotification(primary) : primary.href || paths.user.notifications;
 
   const markRead = React.useCallback(async () => {
@@ -105,16 +107,16 @@ export function UserNotificationRow({
     }
   };
 
-  const handleViewListing = async (event: React.MouseEvent) => {
+  const handleViewListing = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
     if (!primary.refId || !primary.refKind) return;
-    await markRead();
     onViewListing?.({
       listingKind: primary.refKind,
       listingId: primary.refId,
       titleHint: titleHintFromSaveMessage(message),
     });
+    void markRead();
   };
 
   const handleGenericOpen = async () => {
@@ -122,15 +124,54 @@ export function UserNotificationRow({
     onOpened?.();
   };
 
-  const actionBtnSx = {
-    textTransform: 'none' as const,
-    fontWeight: 800,
-    borderRadius: compact ? 1.25 : 1.5,
-    minHeight: compact ? 24 : 28,
-    px: compact ? 0.85 : 1.1,
-    py: 0.15,
-    fontSize: compact ? '0.65rem' : '0.72rem',
-  };
+  const iconBtnSx = {
+    width: compact ? 28 : 32,
+    height: compact ? 28 : 32,
+    borderRadius: 1.25,
+  } as const;
+
+  const leadActions =
+    isLead && (primary.actorId || canPreviewListing) ? (
+      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexShrink: 0, ml: 1 }}>
+        {primary.actorId ? (
+          <IconButton
+            size="small"
+            color="primary"
+            disabled={contacting}
+            aria-label={t.notifications.contactSaver}
+            onClick={(e) => void handleContact(e)}
+            sx={{
+              ...iconBtnSx,
+              bgcolor: 'primary.main',
+              color: 'primary.contrastText',
+              '&:hover': { bgcolor: 'primary.dark' },
+              '&.Mui-disabled': { bgcolor: 'primary.main', color: 'primary.contrastText', opacity: 0.7 },
+            }}
+          >
+            {contacting ? (
+              <CircularProgress size={compact ? 12 : 14} color="inherit" />
+            ) : (
+              <ChatIcon size={compact ? 14 : 16} weight="bold" />
+            )}
+          </IconButton>
+        ) : null}
+        {canPreviewListing ? (
+          <IconButton
+            size="small"
+            color="primary"
+            aria-label={t.notifications.viewListing}
+            onClick={(e) => void handleViewListing(e)}
+            sx={{
+              ...iconBtnSx,
+              border: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
+            <EyeIcon size={compact ? 14 : 16} weight="bold" />
+          </IconButton>
+        ) : null}
+      </Stack>
+    ) : null;
 
   const body = (
     <Stack spacing={compact ? 0.2 : 0.55} sx={{ minWidth: 0, width: '100%' }}>
@@ -162,61 +203,29 @@ export function UserNotificationRow({
           </Typography>
         </Stack>
       </Stack>
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{
-          display: '-webkit-box',
-          WebkitLineClamp: compact ? 1 : 3,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          lineHeight: 1.3,
-          fontSize: compact ? '0.68rem' : '0.8rem',
-        }}
-      >
-        {message}
-      </Typography>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+        <Typography
+          variant="caption"
+          sx={{
+            display: '-webkit-box',
+            WebkitLineClamp: compact ? 1 : 3,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            lineHeight: 1.3,
+            fontSize: compact ? '0.68rem' : '0.8rem',
+            minWidth: 0,
+            flex: 1,
+            color: 'rgba(var(--mui-palette-text-primaryChannel) / 0.45)',
+          }}
+        >
+          {message}
+        </Typography>
+        {leadActions}
+      </Stack>
       {contactError ? (
         <Typography variant="caption" color="error" sx={{ lineHeight: 1.3 }}>
           {contactError}
         </Typography>
-      ) : null}
-      {isSave ? (
-        <Stack direction="row" spacing={0.5} sx={{ pt: compact ? 0.15 : 0.35, flexWrap: 'wrap' }}>
-          {primary.actorId ? (
-            <Button
-              size="small"
-              variant="contained"
-              color="primary"
-              disabled={contacting}
-              onClick={(e) => void handleContact(e)}
-              startIcon={
-                contacting ? (
-                  <CircularProgress size={compact ? 10 : 12} color="inherit" />
-                ) : (
-                  <ChatIcon size={compact ? 12 : 14} weight="bold" />
-                )
-              }
-              sx={{ ...productButtonSx, ...actionBtnSx }}
-            >
-              {t.notifications.contactSaver}
-            </Button>
-          ) : null}
-          {canPreviewListing ? (
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={(e) => void handleViewListing(e)}
-              startIcon={<EyeIcon size={compact ? 12 : 14} weight="bold" />}
-              sx={{
-                ...actionBtnSx,
-                borderColor: 'divider',
-              }}
-            >
-              {t.notifications.viewListing}
-            </Button>
-          ) : null}
-        </Stack>
       ) : null}
     </Stack>
   );
@@ -239,7 +248,7 @@ export function UserNotificationRow({
     },
   } as const;
 
-  if (isSave) {
+  if (isLead) {
     return <Box sx={shellSx}>{body}</Box>;
   }
 

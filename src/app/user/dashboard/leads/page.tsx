@@ -11,10 +11,10 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { Bell as BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
+import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
+import { UsersThree as UsersThreeIcon } from '@phosphor-icons/react/dist/ssr/UsersThree';
 
 import { ProductTag } from '@/components/public/product-browse-chrome';
-import { LeadsTopHeaderButton } from '@/components/user/leads-top-header-button';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { UserNotificationRow } from '@/components/user/user-notification-row';
 import {
@@ -22,47 +22,46 @@ import {
   type SavedListingPreviewTarget,
 } from '@/components/user/saved-listing-preview-dialog';
 import { useCopy } from '@/hooks/use-copy';
+import { useGrowOrEliteEntitlement } from '@/hooks/use-grow-or-elite-entitlement';
 import { groupUserNotifications } from '@/lib/notification-display';
 import { notificationFilterIcon } from '@/lib/notification-filter-tags';
 import {
   isLeadNotificationType,
-  NOTIFICATION_TAGS,
+  LEAD_NOTIFICATION_TAGS,
   notificationTagForType,
   type NotificationTag,
 } from '@/lib/notification-tags';
 import {
   listUserNotifications,
-  markAllUserNotificationsRead,
+  markUserNotificationsRead,
   type UserNotification,
 } from '@/lib/user-notifications-client';
 import { paths } from '@/paths';
 
-type InboxFilterTag = 'all' | 'messages' | 'listing_status' | 'reviews' | 'reservations' | 'verification';
+type LeadFilterTag = 'all' | 'listing_saved' | 'listing_shared' | 'listing_hot_lead';
 
 function tagLabel(tag: NotificationTag, t: ReturnType<typeof useCopy>): string {
   return t.notifications.tags[tag];
 }
 
-export default function UserNotificationsPage() {
+export default function UserLeadsPage() {
   const t = useCopy();
+  const entitled = useGrowOrEliteEntitlement();
   const [items, setItems] = React.useState<UserNotification[]>([]);
-  const [unread, setUnread] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [filter, setFilter] = React.useState<InboxFilterTag>('all');
+  const [filter, setFilter] = React.useState<LeadFilterTag>('all');
   const [listingPreview, setListingPreview] = React.useState<SavedListingPreviewTarget | null>(null);
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
     setError(null);
-    const res = await listUserNotifications(false, 80);
-    if (res.error) {
-      setError(res.error);
+    const notifRes = await listUserNotifications(false, 80);
+    if (notifRes.error) {
+      setError(notifRes.error);
       setItems([]);
-      setUnread(0);
     } else {
-      setItems(res.notifications ?? []);
-      setUnread(res.unread ?? 0);
+      setItems((notifRes.notifications ?? []).filter((n) => isLeadNotificationType(n.type)));
     }
     setLoading(false);
   }, []);
@@ -71,111 +70,113 @@ export default function UserNotificationsPage() {
     void refresh();
   }, [refresh]);
 
-  const inboxItems = React.useMemo(
-    () => items.filter((n) => !isLeadNotificationType(n.type)),
-    [items],
-  );
-
   const filtered = React.useMemo(() => {
-    if (filter === 'all') return inboxItems;
-    return inboxItems.filter((item) => notificationTagForType(item.type) === filter);
-  }, [filter, inboxItems]);
+    if (filter === 'all') return items;
+    return items.filter((item) => notificationTagForType(item.type) === filter);
+  }, [filter, items]);
 
   const groups = React.useMemo(() => groupUserNotifications(filtered), [filtered]);
 
   const counts = React.useMemo(() => {
-    const map: Record<InboxFilterTag, number> = {
-      all: 0,
-      messages: 0,
-      listing_status: 0,
-      reviews: 0,
-      reservations: 0,
-      verification: 0,
+    const map: Record<LeadFilterTag, number> = {
+      all: items.length,
+      listing_saved: 0,
+      listing_shared: 0,
+      listing_hot_lead: 0,
     };
-    const allGroups = groupUserNotifications(inboxItems);
-    map.all = allGroups.length;
-    for (const group of allGroups) {
-      const tag = notificationTagForType(group.primary.type);
-      if (tag === 'messages' || tag === 'listing_status' || tag === 'reviews' || tag === 'reservations' || tag === 'verification') {
+    for (const item of items) {
+      const tag = notificationTagForType(item.type);
+      if (tag === 'listing_saved' || tag === 'listing_shared' || tag === 'listing_hot_lead') {
         map[tag] += 1;
       }
     }
     return map;
-  }, [inboxItems]);
+  }, [items]);
+
+  const unreadLeadIds = React.useMemo(
+    () => items.filter((n) => !n.readAt).map((n) => n.id),
+    [items],
+  );
 
   return (
     <Stack spacing={2.5} sx={{ maxWidth: 720, mx: 'auto', width: '100%' }}>
-      <LeadsTopHeaderButton />
-      <Stack spacing={1.25}>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1.5}
+        sx={{ alignItems: { sm: 'flex-start' }, justifyContent: 'space-between' }}
+      >
         <UserPageHeader
-          icon={React.createElement(BellIcon, { size: 22, weight: 'duotone' })}
-          title={t.notifications.title}
-          description={t.notifications.pageDescription}
+          icon={React.createElement(UsersThreeIcon, { size: 22, weight: 'duotone' })}
+          title={t.notifications.leadsTitle}
+          description={t.notifications.leadsDescription}
         />
-        <Stack
-          direction="row"
-          spacing={1}
-          useFlexGap
-          sx={{
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            pl: { xs: 0, sm: '52px' },
-          }}
-        >
+        {entitled && unreadLeadIds.length > 0 ? (
           <Button
-            component={RouterLink}
-            href={paths.user.notificationSettings}
             size="small"
-            variant="text"
-            sx={{ fontWeight: 700, borderRadius: 2, px: 0 }}
+            variant="outlined"
+            onClick={() => {
+              void markUserNotificationsRead(unreadLeadIds).then(() => refresh());
+            }}
+            sx={{ fontWeight: 700, borderRadius: 2, alignSelf: { xs: 'stretch', sm: 'center' } }}
           >
-            {t.notifications.managePrefs}
+            {t.notifications.markAllRead}
           </Button>
-          {unread > 0 ? (
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={() => {
-                void markAllUserNotificationsRead().then(() => refresh());
-              }}
-              sx={{ fontWeight: 700, borderRadius: 2 }}
-            >
-              {t.notifications.markAllRead}
-            </Button>
-          ) : null}
-        </Stack>
+        ) : null}
       </Stack>
 
-      <Stack direction="row" useFlexGap spacing={1} sx={{ flexWrap: 'wrap' }}>
-        {(
-          [
-            { key: 'all' as const, label: t.notifications.tags.all },
-            ...NOTIFICATION_TAGS.map((tag) => ({ key: tag, label: tagLabel(tag, t) })),
-          ] as { key: InboxFilterTag; label: string }[]
-        ).map(({ key, label }) => {
-          const selected = filter === key;
-          const count = counts[key];
-          return (
-            <ProductTag
-              key={key}
-              icon={notificationFilterIcon(key)}
-              label={count > 0 ? `${label} (${count})` : label}
-              active={selected}
-              onClick={() => setFilter(key)}
-            />
-          );
-        })}
-      </Stack>
+      {entitled === false ? (
+        <Alert
+          severity="info"
+          icon={<CrownIcon size={22} weight="duotone" />}
+          action={
+            <Button
+              component={RouterLink}
+              href={paths.user.packagesMain}
+              color="inherit"
+              size="small"
+              sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}
+            >
+              {t.notifications.leadsUpgradeCta}
+            </Button>
+          }
+          sx={{ borderRadius: 2.5 }}
+        >
+          {t.notifications.leadsUpgrade}
+        </Alert>
+      ) : null}
+
+      {entitled ? (
+        <Stack direction="row" useFlexGap spacing={1} sx={{ flexWrap: 'wrap' }}>
+          {(
+            [
+              { key: 'all' as const, label: t.notifications.tags.all },
+              ...LEAD_NOTIFICATION_TAGS.map((tag) => ({ key: tag, label: tagLabel(tag, t) })),
+            ] as { key: LeadFilterTag; label: string }[]
+          ).map(({ key, label }) => {
+            const selected = filter === key;
+            const count = counts[key];
+            return (
+              <ProductTag
+                key={key}
+                icon={notificationFilterIcon(key)}
+                label={count > 0 ? `${label} (${count})` : label}
+                active={selected}
+                onClick={() => setFilter(key)}
+              />
+            );
+          })}
+        </Stack>
+      ) : null}
 
       {error ? <Alert severity="error">{error}</Alert> : null}
 
-      {loading && items.length === 0 ? (
+      {entitled === null || (loading && items.length === 0) ? (
         <Typography color="text.secondary" variant="body2" sx={{ py: 1 }}>
           {t.common.loading}
         </Typography>
-      ) : groups.length === 0 ? (
+      ) : entitled === false ? null : groups.length === 0 ? (
         <Typography color="text.secondary" variant="body2" sx={{ py: 1 }}>
-          {t.notifications.empty}
+          {t.notifications.leadsEmpty}
         </Typography>
       ) : (
         <Box

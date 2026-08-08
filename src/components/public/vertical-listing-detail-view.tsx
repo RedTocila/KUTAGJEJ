@@ -204,7 +204,7 @@ function ListingContactAside(props: {
         ) : null}
       </Stack>
       <Divider />
-      <Stack spacing={1.25}>
+      <Stack spacing={1.25} data-listing-contact="">
         {displayPhone ? (
           <Stack direction="row" spacing={1.25}>
             <Button

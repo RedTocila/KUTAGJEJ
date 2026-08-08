@@ -51,8 +51,6 @@ export type ListingSharePayload = {
   url?: string;
 };
 
-export const DAILY_SHARE_BOOST_CREDITS = 3;
-
 export function resolveListingShareUrl(payload: ListingSharePayload): string {
   if (payload.url) {
     if (payload.url.startsWith('http')) return payload.url;

@@ -195,6 +195,9 @@ async function resolveReferralBadges(userId, userModel) {
       description: `${tier.referralsRequired} referime`,
       level: Number(tier.level) || 0,
       earned: referralCount >= Number(tier.referralsRequired),
+      metric: 'free-referrals',
+      threshold: Number(tier.referralsRequired) || 0,
+      progress: referralCount,
     });
   }
 
@@ -209,6 +212,9 @@ async function resolveReferralBadges(userId, userModel) {
       description: `${tier.paidReferralsRequired} referime të paguara`,
       level: Number(tier.tier) || 0,
       earned: paidReferralCount >= Number(tier.paidReferralsRequired),
+      metric: 'paid-referrals',
+      threshold: Number(tier.paidReferralsRequired) || 0,
+      progress: paidReferralCount,
     });
   }
 
@@ -221,6 +227,9 @@ async function resolveReferralBadges(userId, userModel) {
 
   const networkBuilderBadge = programField(program, 'networkBuilderBadge', 'network_builder_badge', null);
   if (networkBuilderBadge) {
+    const freeThreshold = freeTiers.length
+      ? Number(freeTiers[freeTiers.length - 1].referralsRequired)
+      : 0;
     badges.push({
       id: 'network-builder',
       kind: 'network-builder',
@@ -228,11 +237,17 @@ async function resolveReferralBadges(userId, userModel) {
       description: networkBuilderBadge.description || '',
       lifetimePercent: networkBuilderBadge.lifetimePercent,
       earned: freeComplete,
+      metric: 'free-referrals',
+      threshold: freeThreshold,
+      progress: referralCount,
     });
   }
 
   const revenueDriverBadge = programField(program, 'revenueDriverBadge', 'revenue_driver_badge', null);
   if (revenueDriverBadge) {
+    const paidThreshold = paidTiers.length
+      ? Number(paidTiers[paidTiers.length - 1].paidReferralsRequired)
+      : 0;
     badges.push({
       id: 'revenue-driver',
       kind: 'revenue-driver',
@@ -240,6 +255,28 @@ async function resolveReferralBadges(userId, userModel) {
       description: revenueDriverBadge.description || '',
       lifetimePercent: revenueDriverBadge.lifetimePercent,
       earned: paidComplete,
+      metric: 'paid-referrals',
+      threshold: paidThreshold,
+      progress: paidReferralCount,
+    });
+  }
+
+  const reviewMilestones = [...programField(program, 'reviewMilestones', 'review_milestones', [])].sort(
+    (a, b) => Number(a.reviewsRequired) - Number(b.reviewsRequired),
+  );
+  for (const milestone of reviewMilestones) {
+    const required = Number(milestone.reviewsRequired) || 0;
+    if (required <= 0) continue;
+    badges.push({
+      id: `review-tier-${required}`,
+      kind: 'review-tier',
+      label: `${required} Vlerësime`,
+      description: `${required} vlerësime`,
+      level: required,
+      earned: reviewCount >= required,
+      metric: 'reviews',
+      threshold: required,
+      progress: reviewCount,
     });
   }
 
@@ -254,6 +291,9 @@ async function resolveReferralBadges(userId, userModel) {
       description: trustedReviewerBadge.description || '',
       lifetimePercent: trustedReviewerBadge.lifetimePercent,
       earned: trustedEarned,
+      metric: 'reviews',
+      threshold: trustedRequired,
+      progress: reviewCount,
     });
   }
 
@@ -266,6 +306,9 @@ async function resolveReferralBadges(userId, userModel) {
       description: platformDominatorBadge.description || '',
       lifetimePercent: platformDominatorBadge.lifetimePercent,
       earned: freeComplete && paidComplete && trustedEarned,
+      metric: 'combo',
+      threshold: 3,
+      progress: (freeComplete ? 1 : 0) + (paidComplete ? 1 : 0) + (trustedEarned ? 1 : 0),
     });
   }
 

@@ -412,7 +412,7 @@ export function BusinessListingDetailDesktop({
                   </Box>
                 ) : null}
 
-                <Stack direction="row" spacing={1}>
+                <Stack direction="row" spacing={1} data-listing-contact="">
                   <Button
                     component={phoneHref ? 'a' : 'button'}
                     href={phoneHref ?? undefined}

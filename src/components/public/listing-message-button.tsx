@@ -81,6 +81,7 @@ export function ListingMessageButton({
           : startIcon ?? (children ? undefined : <ChatsCircleIcon weight="regular" size={20} />)
       }
       {...buttonProps}
+      data-listing-contact=""
     >
       {children ?? label}
     </Button>

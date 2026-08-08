@@ -12,6 +12,7 @@ export function UserPageHeader({
   icon,
   title,
   description,
+  action,
   sx,
   iconSx,
   descriptionSx,
@@ -19,13 +20,19 @@ export function UserPageHeader({
   icon: React.ReactNode;
   title: string;
   description?: string;
+  /** Optional control aligned to the right of the title row (e.g. Leads). */
+  action?: React.ReactNode;
   sx?: SxProps<Theme>;
   /** Optional override for the icon tile (color / bgcolor). */
   iconSx?: SxProps<Theme>;
   descriptionSx?: SxProps<Theme>;
 }) {
   return (
-    <Stack direction="row" spacing={1.5} sx={[{ alignItems: 'flex-start', minWidth: 0 }, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])]}>
+    <Stack
+      direction="row"
+      spacing={1.5}
+      sx={[{ alignItems: 'flex-start', minWidth: 0, width: '100%' }, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])]}
+    >
       <Box
         sx={[
           {
@@ -46,13 +53,20 @@ export function UserPageHeader({
         {icon}
       </Box>
       <Stack spacing={0.4} sx={{ minWidth: 0, flex: 1, pt: 0.2 }}>
-        <Typography
-          variant="h5"
-          component="h1"
-          sx={{ fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.01em' }}
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, minWidth: 0 }}
         >
-          {title}
-        </Typography>
+          <Typography
+            variant="h5"
+            component="h1"
+            sx={{ fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.01em', minWidth: 0 }}
+          >
+            {title}
+          </Typography>
+          {action ? <Box sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}>{action}</Box> : null}
+        </Stack>
         {description ? (
           <Typography
             variant="body2"

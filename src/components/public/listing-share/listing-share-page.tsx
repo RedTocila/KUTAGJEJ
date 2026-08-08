@@ -11,7 +11,6 @@ import {
   Typography,
 } from '@mui/material';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
-import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { InstagramLogo as InstagramLogoIcon } from '@phosphor-icons/react/dist/ssr/InstagramLogo';
 import { LinkSimple as LinkSimpleIcon } from '@phosphor-icons/react/dist/ssr/LinkSimple';
 import { toJpeg } from 'html-to-image';
@@ -22,18 +21,14 @@ import {
   STORY_WIDTH,
   StoryBackground,
 } from '@/components/public/listing-share/listing-story-template';
-import { claimDailyShareReward } from '@/lib/daily-share-client';
 import {
-  DAILY_SHARE_BOOST_CREDITS,
   embedImageAsDataUrl,
   resolveListingShareUrl,
   resolveStoryImageSrc,
   type ListingSharePayload,
 } from '@/lib/listing-share';
 import { recordListingMetricEvent, type ListingMetrics } from '@/lib/listing-metrics';
-import { useUser } from '@/hooks/use-user';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
-import { paths } from '@/paths';
 
 const BRAND_GREEN = '#76ba1b';
 const SHEET_BG = 'rgba(12, 12, 12, 0.94)';
@@ -206,15 +201,11 @@ export function ListingSharePage({
   payload: ListingSharePayload | null;
   onShared?: (metrics: ListingMetrics) => void;
 }) {
-  const { user } = useUser();
   const storyRef = React.useRef<HTMLDivElement>(null);
   const previewWrapRef = React.useRef<HTMLDivElement>(null);
-  const [busy, setBusy] = React.useState<'link' | 'story' | 'claim' | null>(null);
+  const [busy, setBusy] = React.useState<'link' | 'story' | null>(null);
   const [feedback, setFeedback] = React.useState<string | null>(null);
-  const [rewardNote, setRewardNote] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-  /** Share/download finished — user must confirm they posted before claiming. */
-  const [awaitingPostConfirm, setAwaitingPostConfirm] = React.useState(false);
   const [previewScale, setPreviewScale] = React.useState(0.28);
   const [mounted, setMounted] = React.useState(false);
   /** Pre-inlined cover photo for story JPEG (Safari drops remote `<img>` pixels). */
@@ -230,9 +221,7 @@ export function ListingSharePage({
     if (!open) {
       setBusy(null);
       setFeedback(null);
-      setRewardNote(null);
       setError(null);
-      setAwaitingPostConfirm(false);
       embeddedImageRef.current = null;
       return;
     }
@@ -310,45 +299,11 @@ export function ListingSharePage({
     }
   }, [busy, bumpShareMetric, payload]);
 
-  const applyClaimResult = React.useCallback((claim: Awaited<ReturnType<typeof claimDailyShareReward>>) => {
-    setAwaitingPostConfirm(false);
-    if (claim.error) {
-      setRewardNote('Nuk u regjistrua shpërblimi. Provo përsëri.');
-      return;
-    }
-    if (claim.awarded) {
-      setRewardNote(
-        claim.message ??
-          `Ke fituar +${claim.creditsAwarded || DAILY_SHARE_BOOST_CREDITS} Boost Coins për ndarjen e sotme.`,
-      );
-      return;
-    }
-    if (claim.alreadyClaimed) {
-      setRewardNote('Shpërblimi ditor i ndarjes në Instagram është marrë tashmë sot.');
-    }
-  }, []);
-
-  const handleConfirmPosted = React.useCallback(async () => {
-    if (!user || busy || !awaitingPostConfirm) return;
-    setBusy('claim');
-    setError(null);
-    try {
-      const claim = await claimDailyShareReward();
-      applyClaimResult(claim);
-    } catch {
-      setRewardNote('Nuk u regjistrua shpërblimi. Provo përsëri.');
-    } finally {
-      setBusy(null);
-    }
-  }, [applyClaimResult, awaitingPostConfirm, busy, user]);
-
   const handleShareStory = React.useCallback(async () => {
     if (!payload || busy || !storyRef.current) return;
     setBusy('story');
     setError(null);
     setFeedback(null);
-    setRewardNote(null);
-    setAwaitingPostConfirm(false);
     try {
       // Inline remote listing photo before capture — otherwise Instagram gets a black media area
       // (Safari / html-to-image drops cross-origin pixels).
@@ -405,17 +360,6 @@ export function ListingSharePage({
       } else {
         setFeedback('Story u shkarkua — ngarkoje në Instagram Stories.');
       }
-
-      if (user) {
-        setAwaitingPostConfirm(true);
-        setRewardNote(
-          `Mbasi ta postosh në Instagram Stories, konfirmo për +${DAILY_SHARE_BOOST_CREDITS} Boost Coins.`,
-        );
-      } else {
-        setRewardNote(
-          `Hyr në llogari për të marrë +${DAILY_SHARE_BOOST_CREDITS} Boost Coins nga shpërblimi ditor.`,
-        );
-      }
     } catch (err) {
       if (!(err instanceof DOMException && err.name === 'AbortError')) {
         setError('Nuk u krijua story. Provo përsëri.');
@@ -423,7 +367,7 @@ export function ListingSharePage({
     } finally {
       setBusy(null);
     }
-  }, [busy, bumpShareMetric, payload, user]);
+  }, [busy, bumpShareMetric, payload]);
 
   if (!mounted || !open || !payload) return null;
 
@@ -564,59 +508,6 @@ export function ListingSharePage({
         }}
       >
         <Stack spacing={1.35} sx={{ maxWidth: 440, mx: 'auto', width: '100%' }}>
-          <Stack
-            direction="row"
-            spacing={1.25}
-            sx={{
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexWrap: 'wrap',
-              rowGap: 0.75,
-            }}
-          >
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 0.65,
-                px: 1.15,
-                py: 0.55,
-                borderRadius: 999,
-                bgcolor: 'rgba(118,186,27,0.18)',
-                border: '1px solid rgba(118,186,27,0.45)',
-                color: BRAND_GREEN,
-              }}
-            >
-              <BoostCoinIcon size={15} />
-              <Typography sx={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '-0.01em', color: 'inherit' }}>
-                +{DAILY_SHARE_BOOST_CREDITS} Boost Coins
-              </Typography>
-            </Box>
-            <Typography
-              sx={{
-                textAlign: 'center',
-                fontSize: '0.78rem',
-                lineHeight: 1.4,
-                color: 'rgba(255,255,255,0.55)',
-                fontWeight: 500,
-              }}
-            >
-              pasi ta postosh Story dhe të konfirmosh
-              {!user ? (
-                <>
-                  {' · '}
-                  <Box
-                    component="a"
-                    href={paths.user.auth}
-                    sx={{ color: BRAND_GREEN, fontWeight: 700, textDecoration: 'none' }}
-                  >
-                    hyr
-                  </Box>
-                </>
-              ) : null}
-            </Typography>
-          </Stack>
-
           <Button
             type="button"
             variant="contained"
@@ -683,47 +574,6 @@ export function ListingSharePage({
             >
               {feedback}
             </Typography>
-          ) : null}
-
-          {awaitingPostConfirm && user ? (
-            <Button
-              type="button"
-              variant="contained"
-              disableElevation
-              size="large"
-              fullWidth
-              disabled={Boolean(busy)}
-              onClick={() => void handleConfirmPosted()}
-              startIcon={
-                busy === 'claim' ? <CircularProgress size={18} color="inherit" /> : undefined
-              }
-              sx={{
-                ...btnSx,
-                bgcolor: 'rgba(255,255,255,0.1)',
-                color: '#fff',
-                border: '1px solid rgba(118,186,27,0.55)',
-                '&:hover': { bgcolor: 'rgba(118,186,27,0.2)', boxShadow: 'none' },
-              }}
-            >
-              E postova në Instagram — merr +{DAILY_SHARE_BOOST_CREDITS} BC
-            </Button>
-          ) : null}
-
-          {rewardNote ? (
-            <Alert
-              severity={awaitingPostConfirm ? 'info' : 'success'}
-              sx={{
-                borderRadius: 2,
-                py: 0.15,
-                bgcolor: awaitingPostConfirm ? 'rgba(56,189,248,0.12)' : 'rgba(118,186,27,0.12)',
-                color: '#fff',
-                border: '1px solid',
-                borderColor: awaitingPostConfirm ? 'rgba(56,189,248,0.35)' : 'rgba(118,186,27,0.35)',
-                '& .MuiAlert-icon': { color: awaitingPostConfirm ? '#38bdf8' : BRAND_GREEN },
-              }}
-            >
-              {rewardNote}
-            </Alert>
           ) : null}
 
           {error ? (

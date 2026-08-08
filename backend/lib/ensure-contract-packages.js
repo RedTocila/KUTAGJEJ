@@ -60,7 +60,7 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: true,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/40 Cars · 0/250 Apartments · 0/50 Products · 0/200 Jobs · 0/20 Premium (30 days) · 0/5 OKAZION (5 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Premium Badge · See who saved your listings (leads)',
+      '0/1 List in All Categories · 0/40 Cars · 0/250 Apartments · 0/50 Products · 0/200 Jobs · 0/20 Premium (30 days) · 0/5 OKAZION (5 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Premium Badge · Leads: contact from saves, shares & high interest',
   },
   {
     planCode: 'elite',
@@ -79,7 +79,7 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: true,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/150 Cars · 0/1000 Apartments · 0/200 Products · 0/500 Jobs · 0/30 Premium (30 days) · 0/10 OKAZION (5 days) · 2000 Boost Coins · Refresh same listing after 6 hours · Premium Badge · See who saved your listings (leads)',
+      '0/1 List in All Categories · 0/150 Cars · 0/1000 Apartments · 0/200 Products · 0/500 Jobs · 0/30 Premium (30 days) · 0/10 OKAZION (5 days) · 2000 Boost Coins · Refresh same listing after 6 hours · Premium Badge · Leads: contact from saves, shares & high interest',
   },
 ];
 

@@ -286,7 +286,7 @@ const sq = {
     okazionListingDays: (n: number, days: number) => `${n} OKAZION · ${days} ditë`,
     refreshAfterHours: (h: number) => `Rifresko postimin pas ${h} orësh`,
     premiumBadge: 'Premium Badge',
-    saveLeads: 'Shiko kush e ruajti njoftimin (leads) dhe kontaktoi',
+    saveLeads: 'Leads: kontakto nga ruajtje, ndarje dhe interes i lartë',
     yourPlan: 'Plani juaj',
     savePct: (pct: number) => `Kurseni ${pct}%`,
     annual: 'Vjetore',
@@ -443,7 +443,8 @@ const sq = {
     title: 'Mbështetja',
     description: 'Telefononi ose shkruani në WhatsApp për ndihmë.',
     dialogTitle: 'Kontaktoni mbështetjen',
-    dialogDescription: 'Zgjidhni si doni të na kontaktoni.',
+    dialogDescription:
+      'Përshkruani problemin që po hasni dhe ne do t’ju përgjigjemi sa më shpejt të jetë e mundur.',
     call: 'Telefono',
     whatsapp: 'WhatsApp',
   },
@@ -468,11 +469,20 @@ const sq = {
       all: 'Të gjitha',
       messages: 'Mesazhe',
       listing_saved: 'Ruajtje',
+      listing_shared: 'Ndarje',
+      listing_hot_lead: 'Interes',
       listing_status: 'Statusi',
       reviews: 'Vlerësime',
       reservations: 'Rezervime',
       verification: 'Verifikimi',
+      leads: 'Leads',
     },
+    leadsTitle: 'Leads',
+    leadsDescription:
+      'Ruajtje, ndarje dhe interes i lartë për njoftimet tuaja — vetëm me Grow / Elite.',
+    leadsEmpty: 'Nuk keni leads ende.',
+    leadsUpgrade: 'Leads janë të disponueshme me paketat Grow ose Elite.',
+    leadsUpgradeCta: 'Shiko paketat',
     prefs: {
       messages: {
         title: 'Mesazhe të reja',
@@ -481,6 +491,15 @@ const sq = {
       listing_saved: {
         title: 'Ruajtje të njoftimeve',
         description: 'Njoftohu kush e ruan njoftimin tuaj (vetëm me Grow / Elite).',
+      },
+      listing_shared: {
+        title: 'Ndarje të njoftimeve',
+        description: 'Njoftohu kush e ndan njoftimin tuaj (vetëm me Grow / Elite).',
+      },
+      listing_hot_lead: {
+        title: 'Interes i lartë',
+        description:
+          'Njoftohu kur dikush shikon me kujdes njoftimin (kohë, foto, kontakt, kthim) — Grow / Elite.',
       },
       listing_status: {
         title: 'Statusi i njoftimeve',
@@ -728,7 +747,7 @@ const en: AppMessages = {
     okazionListingDays: (n: number, days: number) => `${n} OKAZION · ${days} days`,
     refreshAfterHours: (h: number) => `Refresh listing after ${h} hours`,
     premiumBadge: 'Premium Badge',
-    saveLeads: 'See who saved your listing (leads) and contact them',
+    saveLeads: 'Leads: contact from saves, shares & high interest',
     yourPlan: 'Your plan',
     savePct: (pct: number) => `Save ${pct}%`,
     annual: 'Annual',
@@ -882,7 +901,8 @@ const en: AppMessages = {
     title: 'Support',
     description: 'Call or message us on WhatsApp for help.',
     dialogTitle: 'Contact support',
-    dialogDescription: 'Choose how you’d like to reach us.',
+    dialogDescription:
+      'Describe the issue you are facing and we will get back to you as soon as possible.',
     call: 'Call',
     whatsapp: 'WhatsApp',
   },
@@ -907,11 +927,19 @@ const en: AppMessages = {
       all: 'All',
       messages: 'Messages',
       listing_saved: 'Saves',
+      listing_shared: 'Shares',
+      listing_hot_lead: 'Interest',
       listing_status: 'Status',
       reviews: 'Reviews',
       reservations: 'Reservations',
       verification: 'Verification',
+      leads: 'Leads',
     },
+    leadsTitle: 'Leads',
+    leadsDescription: 'Saves, shares, and high interest on your listings — Grow / Elite only.',
+    leadsEmpty: 'No leads yet.',
+    leadsUpgrade: 'Leads are available with Grow or Elite packages.',
+    leadsUpgradeCta: 'View packages',
     prefs: {
       messages: {
         title: 'New messages',
@@ -920,6 +948,15 @@ const en: AppMessages = {
       listing_saved: {
         title: 'Listing saves',
         description: 'Get notified who saved your listing (Grow / Elite only).',
+      },
+      listing_shared: {
+        title: 'Listing shares',
+        description: 'Get notified who shared your listing (Grow / Elite only).',
+      },
+      listing_hot_lead: {
+        title: 'High interest',
+        description:
+          'Get notified when someone carefully views your listing (time, photos, contact, return) — Grow / Elite.',
       },
       listing_status: {
         title: 'Listing status',

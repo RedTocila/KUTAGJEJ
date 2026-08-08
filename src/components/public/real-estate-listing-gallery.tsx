@@ -24,6 +24,7 @@ import { OwnerEditPencil } from '@/components/user/owner-edit-pencil';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { ListingSharePayload } from '@/lib/listing-share';
 import { type ListingMetricKind } from '@/lib/listing-metrics';
+import { emitListingPhotoView } from '@/lib/listing-hot-lead';
 import type { ListingGalleryPlaceholderKey } from '@/lib/listing-gallery-placeholder';
 import { paths } from '@/paths';
 
@@ -149,6 +150,11 @@ export function RealEstateListingGallery(props: {
     const thumb = thumbnailRefs.current[active];
     thumb?.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', inline: 'center', block: 'nearest' });
   }, [active, prefersReducedMotion]);
+
+  React.useEffect(() => {
+    if (!listingKind || !listingId || showPlaceholder) return;
+    emitListingPhotoView(listingKind, listingId, active);
+  }, [active, listingId, listingKind, showPlaceholder]);
 
   const PLACEHOLDER_BY_KEY: Record<ListingGalleryPlaceholderKey, typeof HouseIcon> = {
     house: HouseIcon,

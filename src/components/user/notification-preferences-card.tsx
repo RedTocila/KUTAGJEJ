@@ -15,6 +15,8 @@ import {
 const PREF_ORDER: (keyof NotificationPreferences)[] = [
   'messages',
   'listing_saved',
+  'listing_shared',
+  'listing_hot_lead',
   'listing_status',
   'reviews',
   'reservations',
@@ -24,6 +26,8 @@ const PREF_ORDER: (keyof NotificationPreferences)[] = [
 const DEFAULT_PREFS: NotificationPreferences = {
   messages: true,
   listing_saved: true,
+  listing_shared: true,
+  listing_hot_lead: true,
   listing_status: true,
   reviews: true,
   reservations: true,

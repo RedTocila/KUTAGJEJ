@@ -13,11 +13,6 @@ const {
   getReceivedReviewStats,
   loadPortalUserBrief,
 } = require('../lib/referrals');
-const {
-  DAILY_SHARE_BOOST_CREDITS,
-  claimDailyShareReward,
-  isDailyShareClaimedToday,
-} = require('../lib/daily-share-reward');
 const { recordLoginStreak } = require('../lib/login-streak');
 
 const router = express.Router();
@@ -99,8 +94,6 @@ router.get('/me', auth, requirePortalUser, async (req, res) => {
           : null,
         referredBy,
         referredUsers,
-        dailyShareClaimedToday: isDailyShareClaimedToday(user.dailyShareClaimedOn),
-        dailyShareBoostCredits: DAILY_SHARE_BOOST_CREDITS,
         loginStreakDays: loginStreak.days,
         loginStreakDaysRequired: loginStreak.daysRequired,
         loginStreakBoostCredits: loginStreak.boostCredits,
@@ -111,23 +104,6 @@ router.get('/me', auth, requirePortalUser, async (req, res) => {
     });
   } catch (err) {
     console.error('GET /referrals/me:', err?.message || err);
-    res.status(500).json({ message: 'Gabim serveri.' });
-  }
-});
-
-/** POST /api/referrals/daily-share — claim +3 BC after user confirms Instagram story post (once/day). */
-router.post('/daily-share', auth, requirePortalUser, async (req, res) => {
-  try {
-    const result = await claimDailyShareReward(req.user);
-    res.json({
-      ...result,
-      dailyShareBoostCredits: DAILY_SHARE_BOOST_CREDITS,
-      message: result.awarded
-        ? `Ke fituar +${DAILY_SHARE_BOOST_CREDITS} Boost Coins për ndarjen e sotme.`
-        : 'Shpërblimi ditor i ndarjes është marrë tashmë sot.',
-    });
-  } catch (err) {
-    console.error('POST /referrals/daily-share:', err?.message || err);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
 });

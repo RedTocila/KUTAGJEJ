@@ -44,6 +44,8 @@ export const paths = {
     messages: '/user/dashboard/mesazhet',
     /** In-app notification inbox. */
     notifications: '/user/dashboard/njoftimet',
+    /** Grow/Elite leads: saves + shares + hot interest. */
+    leads: '/user/dashboard/leads',
     /** Notification preference toggles. */
     notificationSettings: '/user/dashboard/njoftimet/cilesimet',
     /** Referral program — invite link and stats. */

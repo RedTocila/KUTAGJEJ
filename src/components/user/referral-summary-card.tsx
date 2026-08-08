@@ -3,18 +3,14 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import { alpha } from '@mui/material/styles';
-import { Box, Button, IconButton, LinearProgress, Stack, Typography } from '@mui/material';
+import { Box, IconButton, LinearProgress, Stack, Typography } from '@mui/material';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
-import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
-import { Circle as CircleIcon } from '@phosphor-icons/react/dist/ssr/Circle';
 import { Copy as CopyIcon } from '@phosphor-icons/react/dist/ssr/Copy';
 import { Fire as FireIcon } from '@phosphor-icons/react/dist/ssr/Fire';
 import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
-import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 
 import { portalCardSx } from '@/components/user/portal-cards';
-import { ShareMyListingsDialog } from '@/components/user/share-my-listings-dialog';
 import { useLanguage } from '@/hooks/use-language';
 import { useUser } from '@/hooks/use-user';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -44,9 +40,6 @@ const copy = {
     copied: 'U kopjua',
     streakTitle: 'Aktivitet ditor',
     streakDays: (n: number) => `${n} ditë radhazi`,
-    shareDone: 'Ndajë sot ✓',
-    shareTodo: 'Ndaj sot',
-    shareButton: 'Ndaj',
     lifetimeHint: 'Përfundo të gjitha referimet dhe merr 20% zbritje përgjithmonë.',
   },
   en: {
@@ -56,9 +49,6 @@ const copy = {
     copied: 'Copied',
     streakTitle: 'Daily activity',
     streakDays: (n: number) => `${n}-day streak`,
-    shareDone: 'Shared today ✓',
-    shareTodo: 'Share today',
-    shareButton: 'Share',
     lifetimeHint: 'Completing all referrals gives you 20% off forever.',
   },
 } as const;
@@ -74,9 +64,6 @@ export function ReferralSummaryCard() {
   const [streakDays, setStreakDays] = React.useState(0);
   const [daysRequired, setDaysRequired] = React.useState(7);
   const [streakReward, setStreakReward] = React.useState(5);
-  const [shareDone, setShareDone] = React.useState(false);
-  const [shareReward, setShareReward] = React.useState(3);
-  const [sharePickerOpen, setSharePickerOpen] = React.useState(false);
 
   const canView =
     Boolean(user) &&
@@ -96,8 +83,6 @@ export function ReferralSummaryCard() {
       setStreakReward(
         res.referral.loginStreakBoostCredits ?? res.program?.loginStreak.boostCredits ?? 5,
       );
-      setShareDone(Boolean(res.referral.dailyShareClaimedToday));
-      setShareReward(res.referral.dailyShareBoostCredits ?? 3);
       if (res.referral.loginStreakAwarded) {
         void checkSession();
       }
@@ -133,12 +118,6 @@ export function ReferralSummaryCard() {
     window.setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleOpenShare = (event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setSharePickerOpen(true);
-  };
-
   if (!canView) return null;
 
   const required = Math.max(1, daysRequired);
@@ -146,7 +125,6 @@ export function ReferralSummaryCard() {
   const streakProgress = Math.round((streakCurrent / required) * 100);
 
   return (
-    <>
     <Box
       component={RouterLink}
       href={paths.user.referral}
@@ -331,84 +309,6 @@ export function ReferralSummaryCard() {
           </Typography>
 
           <Stack
-            direction="row"
-            spacing={1}
-            sx={{
-              alignItems: 'center',
-              mt: 0.9,
-              px: 1.1,
-              py: 0.85,
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'divider',
-              bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-            }}
-          >
-            <Box
-              sx={{
-                color: shareDone ? 'primary.main' : 'text.disabled',
-                display: 'inline-flex',
-                flexShrink: 0,
-              }}
-            >
-              {shareDone ? (
-                <CheckCircleIcon size={16} weight="fill" />
-              ) : (
-                <CircleIcon size={16} weight="regular" />
-              )}
-            </Box>
-            <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography
-                variant="caption"
-                sx={{
-                  display: 'block',
-                  fontWeight: 750,
-                  lineHeight: 1.25,
-                  color: shareDone ? 'text.secondary' : 'text.primary',
-                  textDecoration: shareDone ? 'line-through' : 'none',
-                }}
-              >
-                {shareDone ? t.shareDone : t.shareTodo}
-                <Typography
-                  component="span"
-                  variant="caption"
-                  sx={{
-                    ml: 0.55,
-                    fontWeight: 800,
-                    color: shareDone ? 'text.disabled' : 'primary.main',
-                  }}
-                >
-                  +{shareReward} BC
-                </Typography>
-              </Typography>
-            </Box>
-            <Button
-              size="small"
-              variant="contained"
-              color="primary"
-              disabled={loading}
-              startIcon={<ShareNetworkIcon size={14} weight="bold" />}
-              onClick={handleOpenShare}
-              sx={{
-                flexShrink: 0,
-                textTransform: 'none',
-                fontWeight: 800,
-                fontSize: '0.75rem',
-                minWidth: 0,
-                height: 30,
-                px: 1.35,
-                borderRadius: 999,
-                boxShadow: 'none',
-                '&:hover': { boxShadow: 'none' },
-                '& .MuiButton-startIcon': { mr: 0.55 },
-              }}
-            >
-              {t.shareButton}
-            </Button>
-          </Stack>
-
-          <Stack
             className="referral-amber-row"
             direction="row"
             spacing={1}
@@ -461,15 +361,5 @@ export function ReferralSummaryCard() {
         </Box>
       </Stack>
     </Box>
-
-    <ShareMyListingsDialog
-      open={sharePickerOpen}
-      onClose={() => setSharePickerOpen(false)}
-      onShareComplete={() => {
-        void refreshStats();
-        void checkSession();
-      }}
-    />
-    </>
   );
 }

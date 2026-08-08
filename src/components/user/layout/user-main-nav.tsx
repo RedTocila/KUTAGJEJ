@@ -22,6 +22,7 @@ import { UserPortalPopover } from './user-portal-popover';
 function titleForPath(pathname: string, t: AppMessages): string {
   if (pathname.startsWith(paths.user.profile)) return t.nav.profile;
   if (pathname.startsWith(paths.user.notificationSettings)) return t.notifications.prefsTitle;
+  if (pathname.startsWith(paths.user.leads)) return t.notifications.leadsTitle;
   if (pathname.startsWith(paths.user.notifications)) return t.notifications.title;
   if (pathname.startsWith(paths.user.messages)) return t.nav.messages;
   if (pathname.startsWith(paths.user.savedListings)) return t.nav.saved;

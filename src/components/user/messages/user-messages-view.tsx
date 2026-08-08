@@ -198,14 +198,11 @@ function deliveryStatusByMessageId(
   return map;
 }
 
-/** Listing chrome only if this user opened chat via a listing “Kontakto”. */
+/** Listing chrome only when *you* contacted from a listing (inquirer). All other chats show the person. */
 function isPersonFocusedConversation(
-  item: Pick<ConversationSummary, 'role' | 'listingContext' | 'listingId'>,
+  item: Pick<ConversationSummary, 'role' | 'listingId'>,
 ): boolean {
-  if (!item.listingId) return true;
-  // Seller / outreach / profile contact → person. Listing CTA inquirer → listing.
-  if (item.listingContext === true && item.role === 'inquirer') return false;
-  return true;
+  return item.role !== 'inquirer' || !item.listingId;
 }
 
 const LONG_PRESS_MS = 480;

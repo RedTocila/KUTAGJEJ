@@ -268,6 +268,8 @@ create table if not exists public.user_notification_preferences (
   user_id uuid primary key references public.profiles (id) on delete cascade,
   messages boolean not null default true,
   listing_saved boolean not null default true,
+  listing_shared boolean not null default true,
+  listing_hot_lead boolean not null default true,
   listing_status boolean not null default true,
   reviews boolean not null default true,
   reservations boolean not null default true,
@@ -275,6 +277,12 @@ create table if not exists public.user_notification_preferences (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.user_notification_preferences
+  add column if not exists listing_shared boolean not null default true;
+
+alter table public.user_notification_preferences
+  add column if not exists listing_hot_lead boolean not null default true;
 
 alter table public.user_notifications enable row level security;
 alter table public.user_notification_preferences enable row level security;

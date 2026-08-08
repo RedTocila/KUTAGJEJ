@@ -2,14 +2,15 @@
 
 import * as React from 'react';
 import { alpha } from '@mui/material/styles';
-import { Box, Button, Chip, LinearProgress, Stack, Typography, useTheme } from '@mui/material';
+import { Box, Chip, LinearProgress, Stack, Typography, useTheme } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { Circle as CircleIcon } from '@phosphor-icons/react/dist/ssr/Circle';
+import { CirclesThreePlus as CirclesThreePlusIcon } from '@phosphor-icons/react/dist/ssr/CirclesThreePlus';
 import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
+import { CurrencyCircleDollar as CurrencyCircleDollarIcon } from '@phosphor-icons/react/dist/ssr/CurrencyCircleDollar';
 import { SealCheck as SealCheckIcon } from '@phosphor-icons/react/dist/ssr/SealCheck';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
-import { TrendUp as TrendUpIcon } from '@phosphor-icons/react/dist/ssr/TrendUp';
 import { UserPlus as UserPlusIcon } from '@phosphor-icons/react/dist/ssr/UserPlus';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
@@ -303,21 +304,14 @@ export function ProgramDisplay({
   paidReferralCount = 0,
   reviewCount = 0,
   compact = false,
-  dailyShareClaimedToday = false,
-  dailyShareBoostCredits = 3,
   loginStreakDays = 0,
-  onShareClick,
 }: {
   program: ReferralProgram;
   referralCount?: number;
   paidReferralCount?: number;
   reviewCount?: number;
   compact?: boolean;
-  dailyShareClaimedToday?: boolean;
-  dailyShareBoostCredits?: number;
   loginStreakDays?: number;
-  /** When set, shows a share action on the daily share row (user portal). */
-  onShareClick?: () => void;
 }) {
   const freeThresholds = program.freeTiers.map((t) => t.referralsRequired);
   const paidThresholds = program.paidTiers.map((t) => t.paidReferralsRequired);
@@ -354,7 +348,7 @@ export function ProgramDisplay({
         unit="referime"
         thresholds={freeThresholds}
         accent="primary"
-        badge={<MiniBadge badge={program.networkBuilderBadge} Icon={ShareNetworkIcon} tone="green" />}
+        badge={<MiniBadge badge={program.networkBuilderBadge} Icon={CirclesThreePlusIcon} tone="green" />}
       >
         {program.freeTiers.map((t) => (
           <TierLine
@@ -377,7 +371,7 @@ export function ProgramDisplay({
         unit="të paguara"
         thresholds={paidThresholds}
         accent="primary"
-        badge={<MiniBadge badge={program.revenueDriverBadge} Icon={TrendUpIcon} tone="green" />}
+        badge={<MiniBadge badge={program.revenueDriverBadge} Icon={CurrencyCircleDollarIcon} tone="green" />}
       >
         {program.paidTiers.map((t) => (
           <TierLine
@@ -404,7 +398,7 @@ export function ProgramDisplay({
         unit="vlerësime"
         thresholds={reviewThresholds}
         accent="warning"
-        badge={<MiniBadge badge={program.trustedReviewerBadge} Icon={StarIcon} tone="gold" />}
+        badge={<MiniBadge badge={program.trustedReviewerBadge} Icon={SealCheckIcon} tone="gold" />}
       >
         {program.reviewMilestones.map((m, i) => (
           <TierLine
@@ -534,39 +528,6 @@ export function ProgramDisplay({
           </Box>
         </Stack>
         <Stack spacing={0.15} sx={{ px: 1.15, py: 1 }}>
-          <TierLine
-            title="Ndaj çdo ditë"
-            hint="Ndaj një njoftim si Instagram Story"
-            reward={`+${dailyShareBoostCredits} BC`}
-            done={dailyShareClaimedToday}
-            accent="primary"
-            action={
-              onShareClick ? (
-                <Button
-                  size="small"
-                  variant="contained"
-                  color="primary"
-                  startIcon={<ShareNetworkIcon size={13} weight="bold" />}
-                  onClick={onShareClick}
-                  sx={{
-                    flexShrink: 0,
-                    textTransform: 'none',
-                    fontWeight: 800,
-                    fontSize: '0.68rem',
-                    minWidth: 0,
-                    height: 26,
-                    px: 1.1,
-                    borderRadius: 999,
-                    boxShadow: 'none',
-                    '&:hover': { boxShadow: 'none' },
-                    '& .MuiButton-startIcon': { mr: 0.45 },
-                  }}
-                >
-                  Ndaj
-                </Button>
-              ) : undefined
-            }
-          />
           <TierLine
             title={`${streakRequired} ditë radhazi`}
             hint={

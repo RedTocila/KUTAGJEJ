@@ -22,13 +22,14 @@ function requirePortalUser(req, res, next) {
   next();
 }
 
-/** POST /api/listing-metrics/event — view | click | share (anonymous or signed-in). */
+/** POST /api/listing-metrics/event — view | click | share | hot_lead (anonymous or signed-in). */
 router.post('/event', metricsRateLimit, optionalAuth, async (req, res) => {
   try {
     const kind = String(req.body?.listingKind ?? '').trim();
     const listingId = String(req.body?.listingId ?? '').trim();
     const event = String(req.body?.event ?? '').trim();
-    const result = await recordListingEvent(req, { kind, listingId, event });
+    const signals = req.body?.signals && typeof req.body.signals === 'object' ? req.body.signals : null;
+    const result = await recordListingEvent(req, { kind, listingId, event, signals });
     if (!result.ok) return res.status(result.status).json({ message: result.message });
     res.json(result.metrics);
   } catch (err) {

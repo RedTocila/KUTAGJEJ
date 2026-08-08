@@ -20,6 +20,8 @@ export type UserNotification = {
 export type NotificationPreferences = {
   messages: boolean;
   listing_saved: boolean;
+  listing_shared: boolean;
+  listing_hot_lead: boolean;
   listing_status: boolean;
   reviews: boolean;
   reservations: boolean;

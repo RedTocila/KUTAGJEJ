@@ -18,16 +18,10 @@ import { ProductBackButton, ProductTag } from '@/components/public/product-brows
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
-import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
-import { Medal as MedalIcon } from '@phosphor-icons/react/dist/ssr/Medal';
-import { SealCheck as SealCheckIcon } from '@phosphor-icons/react/dist/ssr/SealCheck';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
-import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
-import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
+import { MemberReferralBadgesRow } from '@/components/public/member-referral-badges';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
-import { TrendUp as TrendUpIcon } from '@phosphor-icons/react/dist/ssr/TrendUp';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
-import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import {
   HomepageMixedListingCard,
@@ -66,24 +60,6 @@ const FILTERS: { key: FilterKey; label: string; totalKey?: keyof PublicMemberLis
   { key: 'businesses', label: 'Biznese', totalKey: 'businesses' },
   { key: 'professionals', label: 'Profesionistë', totalKey: 'professionals' },
 ];
-
-function badgeVisual(kind: string): { Icon: PhosphorIcon; accent: string } {
-  switch (kind) {
-    case 'platform-dominator':
-      return { Icon: CrownIcon, accent: '#f0a020' };
-    case 'trusted-reviewer':
-      return { Icon: StarIcon, accent: '#f0a020' };
-    case 'network-builder':
-      return { Icon: ShareNetworkIcon, accent: 'var(--mui-palette-primary-main)' };
-    case 'revenue-driver':
-      return { Icon: TrendUpIcon, accent: 'var(--mui-palette-primary-main)' };
-    case 'paid-tier':
-      return { Icon: MedalIcon, accent: '#f0a020' };
-    case 'free-tier':
-    default:
-      return { Icon: MedalIcon, accent: 'var(--mui-palette-primary-main)' };
-  }
-}
 
 function memberSinceParts(iso: string | undefined): { year: number; monthYear: string } | null {
   if (!iso) return null;
@@ -175,106 +151,6 @@ function MemberContactButton({
         </Typography>
       ) : null}
     </Box>
-  );
-}
-
-function ReferralBadgesRow({ badges }: { badges: PublicMemberReferralBadge[] }) {
-  return (
-    <Stack
-      direction="row"
-      spacing={1}
-      sx={{
-        overflowX: 'auto',
-        pb: 0.25,
-        mx: { xs: -0.25, sm: 0 },
-        px: { xs: 0.25, sm: 0 },
-        scrollbarWidth: 'none',
-        '&::-webkit-scrollbar': { display: 'none' },
-      }}
-    >
-      {badges.map((badge) => {
-        const { Icon, accent } = badgeVisual(badge.kind);
-        const earned = Boolean(badge.earned);
-        const titleParts = [
-          badge.label,
-          earned ? 'E fituar' : 'Ende e pafituar',
-          badge.description,
-          typeof badge.lifetimePercent === 'number' ? `${badge.lifetimePercent}% Lifetime` : null,
-        ].filter(Boolean);
-        return (
-          <Box
-            key={badge.id}
-            title={titleParts.join(' · ')}
-            sx={{
-              flexShrink: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 0.45,
-              width: 56,
-              opacity: earned ? 1 : 0.42,
-              filter: earned ? 'none' : 'grayscale(0.65)',
-            }}
-          >
-            <Box
-              sx={{
-                position: 'relative',
-                width: 40,
-                height: 40,
-                borderRadius: 1.5,
-                display: 'grid',
-                placeItems: 'center',
-                bgcolor: earned
-                  ? accent
-                  : (theme) =>
-                      theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
-                color: earned ? '#0a0a0a' : 'text.disabled',
-                border: '1px solid',
-                borderColor: earned ? 'transparent' : 'divider',
-              }}
-            >
-              <Icon size={18} weight={earned ? 'fill' : 'regular'} />
-              {earned ? (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    bottom: -3,
-                    right: -3,
-                    width: 14,
-                    height: 14,
-                    borderRadius: '50%',
-                    bgcolor: '#d98f00',
-                    display: 'grid',
-                    placeItems: 'center',
-                    border: '1.5px solid',
-                    borderColor: 'background.paper',
-                  }}
-                >
-                  <SealCheckIcon size={8} weight="fill" color="#fff" />
-                </Box>
-              ) : null}
-            </Box>
-            <Typography
-              variant="caption"
-              sx={{
-                fontWeight: earned ? 750 : 600,
-                textAlign: 'center',
-                lineHeight: 1.15,
-                color: earned ? 'text.primary' : 'text.disabled',
-                fontSize: '0.6rem',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-                width: '100%',
-              }}
-            >
-              {badge.label}
-            </Typography>
-          </Box>
-        );
-      })}
-    </Stack>
   );
 }
 
@@ -521,7 +397,13 @@ export function MemberProfileView({
                   </ButtonBase>
                 </Stack>
 
-                <ReferralBadgesRow badges={displayBadges} />
+                <MemberReferralBadgesRow
+                  badges={displayBadges}
+                  selfView={isOwnProfile}
+                  layout="grid"
+                  columns={5}
+                  collapsible
+                />
               </Stack>
             </Stack>
 

@@ -30,10 +30,17 @@ export interface PublicMemberListingsBundle {
 export type PublicMemberReferralBadgeKind =
   | 'free-tier'
   | 'paid-tier'
+  | 'review-tier'
   | 'network-builder'
   | 'revenue-driver'
   | 'trusted-reviewer'
   | 'platform-dominator';
+
+export type PublicMemberReferralBadgeMetric =
+  | 'free-referrals'
+  | 'paid-referrals'
+  | 'reviews'
+  | 'combo';
 
 export interface PublicMemberReferralBadge {
   id: string;
@@ -44,21 +51,80 @@ export interface PublicMemberReferralBadge {
   level?: number;
   /** Whether the member has unlocked this badge. */
   earned: boolean;
+  /** What progress this badge tracks. */
+  metric?: PublicMemberReferralBadgeMetric | string;
+  /** Required count to unlock (referrals, reviews, or combo parts). */
+  threshold?: number;
+  /** Current progress toward the threshold. */
+  progress?: number;
 }
 
 /** Fallback slots so the profile always shows badge placeholders if the API omits them. */
 export const DEFAULT_MEMBER_REFERRAL_BADGES: PublicMemberReferralBadge[] = [
-  { id: 'free-tier-1', kind: 'free-tier', label: 'Starter', description: '1 referim', level: 1, earned: false },
-  { id: 'free-tier-2', kind: 'free-tier', label: 'Active', description: '5 referime', level: 2, earned: false },
-  { id: 'free-tier-3', kind: 'free-tier', label: 'Promoter', description: '20 referime', level: 3, earned: false },
-  { id: 'free-tier-4', kind: 'free-tier', label: 'Influencer', description: '50 referime', level: 4, earned: false },
-  { id: 'free-tier-5', kind: 'free-tier', label: 'Promoter', description: '100 referime', level: 5, earned: false },
+  {
+    id: 'free-tier-1',
+    kind: 'free-tier',
+    label: 'Starter',
+    description: '1 referim',
+    level: 1,
+    earned: false,
+    metric: 'free-referrals',
+    threshold: 1,
+    progress: 0,
+  },
+  {
+    id: 'free-tier-2',
+    kind: 'free-tier',
+    label: 'Active',
+    description: '5 referime',
+    level: 2,
+    earned: false,
+    metric: 'free-referrals',
+    threshold: 5,
+    progress: 0,
+  },
+  {
+    id: 'free-tier-3',
+    kind: 'free-tier',
+    label: 'Promoter',
+    description: '20 referime',
+    level: 3,
+    earned: false,
+    metric: 'free-referrals',
+    threshold: 20,
+    progress: 0,
+  },
+  {
+    id: 'free-tier-4',
+    kind: 'free-tier',
+    label: 'Influencer',
+    description: '50 referime',
+    level: 4,
+    earned: false,
+    metric: 'free-referrals',
+    threshold: 50,
+    progress: 0,
+  },
+  {
+    id: 'free-tier-5',
+    kind: 'free-tier',
+    label: 'Promoter',
+    description: '100 referime',
+    level: 5,
+    earned: false,
+    metric: 'free-referrals',
+    threshold: 100,
+    progress: 0,
+  },
   {
     id: 'network-builder',
     kind: 'network-builder',
     label: 'Network Builder',
     lifetimePercent: 10,
     earned: false,
+    metric: 'free-referrals',
+    threshold: 100,
+    progress: 0,
   },
   {
     id: 'paid-tier-1',
@@ -67,6 +133,9 @@ export const DEFAULT_MEMBER_REFERRAL_BADGES: PublicMemberReferralBadge[] = [
     description: '1 referim i paguar',
     level: 1,
     earned: false,
+    metric: 'paid-referrals',
+    threshold: 1,
+    progress: 0,
   },
   {
     id: 'paid-tier-2',
@@ -75,6 +144,9 @@ export const DEFAULT_MEMBER_REFERRAL_BADGES: PublicMemberReferralBadge[] = [
     description: '5 referime të paguara',
     level: 2,
     earned: false,
+    metric: 'paid-referrals',
+    threshold: 5,
+    progress: 0,
   },
   {
     id: 'paid-tier-3',
@@ -83,6 +155,9 @@ export const DEFAULT_MEMBER_REFERRAL_BADGES: PublicMemberReferralBadge[] = [
     description: '15 referime të paguara',
     level: 3,
     earned: false,
+    metric: 'paid-referrals',
+    threshold: 15,
+    progress: 0,
   },
   {
     id: 'revenue-driver',
@@ -90,6 +165,42 @@ export const DEFAULT_MEMBER_REFERRAL_BADGES: PublicMemberReferralBadge[] = [
     label: 'Revenue Driver',
     lifetimePercent: 5,
     earned: false,
+    metric: 'paid-referrals',
+    threshold: 15,
+    progress: 0,
+  },
+  {
+    id: 'review-tier-10',
+    kind: 'review-tier',
+    label: '10 Vlerësime',
+    description: '10 vlerësime',
+    level: 10,
+    earned: false,
+    metric: 'reviews',
+    threshold: 10,
+    progress: 0,
+  },
+  {
+    id: 'review-tier-35',
+    kind: 'review-tier',
+    label: '35 Vlerësime',
+    description: '35 vlerësime',
+    level: 35,
+    earned: false,
+    metric: 'reviews',
+    threshold: 35,
+    progress: 0,
+  },
+  {
+    id: 'review-tier-100',
+    kind: 'review-tier',
+    label: '100 Vlerësime',
+    description: '100 vlerësime',
+    level: 100,
+    earned: false,
+    metric: 'reviews',
+    threshold: 100,
+    progress: 0,
   },
   {
     id: 'trusted-reviewer',
@@ -97,6 +208,9 @@ export const DEFAULT_MEMBER_REFERRAL_BADGES: PublicMemberReferralBadge[] = [
     label: 'Trusted',
     lifetimePercent: 5,
     earned: false,
+    metric: 'reviews',
+    threshold: 100,
+    progress: 0,
   },
   {
     id: 'platform-dominator',
@@ -104,6 +218,9 @@ export const DEFAULT_MEMBER_REFERRAL_BADGES: PublicMemberReferralBadge[] = [
     label: 'Platform Dominator',
     lifetimePercent: 20,
     earned: false,
+    metric: 'combo',
+    threshold: 3,
+    progress: 0,
   },
 ];
 
@@ -111,7 +228,13 @@ export function mergeMemberReferralBadges(
   fromApi: PublicMemberReferralBadge[] | undefined | null,
 ): PublicMemberReferralBadge[] {
   if (Array.isArray(fromApi) && fromApi.length > 0) {
-    return fromApi.map((b) => ({ ...b, earned: Boolean(b.earned) }));
+    return fromApi.map((b) => ({
+      ...b,
+      earned: Boolean(b.earned),
+      threshold: typeof b.threshold === 'number' ? b.threshold : undefined,
+      progress: typeof b.progress === 'number' ? b.progress : undefined,
+      metric: b.metric,
+    }));
   }
   return DEFAULT_MEMBER_REFERRAL_BADGES.map((b) => ({ ...b }));
 }

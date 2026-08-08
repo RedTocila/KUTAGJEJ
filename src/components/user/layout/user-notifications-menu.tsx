@@ -14,6 +14,7 @@ import {
   Typography,
 } from '@mui/material';
 import { Bell as BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
+import { ArrowRight as ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 
 import { UserNotificationRow } from '@/components/user/user-notification-row';
 import {
@@ -117,18 +118,32 @@ export function UserNotificationsMenu() {
             <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: '0.98rem' }}>
               {t.notifications.title}
             </Typography>
-            {unread > 0 ? (
-              <Typography
-                color="primary"
-                variant="body2"
-                sx={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', flexShrink: 0 }}
-                onClick={() => {
-                  void markAllUserNotificationsRead().then(() => refresh());
-                }}
-              >
-                {t.notifications.markAllRead}
-              </Typography>
-            ) : null}
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexShrink: 0 }}>
+              {unread > 0 ? (
+                <Typography
+                  color="primary"
+                  variant="body2"
+                  sx={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
+                  onClick={() => {
+                    void markAllUserNotificationsRead().then(() => refresh());
+                  }}
+                >
+                  {t.notifications.markAllRead}
+                </Typography>
+              ) : null}
+              <Tooltip title={t.notifications.viewAll}>
+                <IconButton
+                  component={RouterLink}
+                  href={paths.user.notifications}
+                  aria-label={t.notifications.viewAll}
+                  size="small"
+                  onClick={() => setAnchorEl(null)}
+                  sx={{ color: 'primary.main', width: 28, height: 28 }}
+                >
+                  <ArrowRightIcon size={16} weight="bold" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
           </Stack>
           {groups.length === 0 ? (
             <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5, fontSize: '0.8rem' }}>
@@ -173,8 +188,8 @@ export function UserNotificationsMenu() {
                       void refresh();
                     }}
                     onViewListing={(target) => {
-                      setListingPreview(target);
                       setAnchorEl(null);
+                      setListingPreview(target);
                       void refresh();
                     }}
                   />

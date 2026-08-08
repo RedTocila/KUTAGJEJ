@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 
+import { ListingHotLeadTracker } from '@/components/public/listing-hot-lead-tracker';
 import { recordListingMetricEvent, type ListingMetricKind } from '@/lib/listing-metrics';
 import { recordListingView } from '@/lib/user-interest-history';
 
@@ -23,5 +24,5 @@ export function ListingMetricsTracker({
     void recordListingMetricEvent(listingKind, listingId, 'view');
   }, [listingKind, listingId, city, category]);
 
-  return null;
+  return <ListingHotLeadTracker listingKind={listingKind} listingId={listingId} />;
 }

@@ -106,7 +106,14 @@ function ensureBooted() {
 
 /** On Vercel, boot before handling traffic so a missing env surfaces as 503 JSON. */
 app.use(async (req, res, next) => {
-  if (req.path === '/' || req.path === '/api/health' || req.path.endsWith('/health')) return next();
+  if (
+    req.path === '/' ||
+    req.path === '/api/health' ||
+    req.path.endsWith('/health') ||
+    req.path === '/api/public/image-proxy'
+  ) {
+    return next();
+  }
   try {
     await ensureBooted();
     next();
@@ -195,6 +202,7 @@ app.use('/api/listing-metrics', require('./routes/listing-metrics'));
 app.use('/api/job-employer-verification', require('./routes/job-employer-verification'));
 app.use('/api/admin/job-employer-verification', require('./routes/admin-job-employer-verification'));
 app.use('/api/public/home-banners', require('./routes/public-home-banners'));
+app.use('/api/public/image-proxy', require('./routes/public-image-proxy'));
 
 const startServer = async () => {
   try {

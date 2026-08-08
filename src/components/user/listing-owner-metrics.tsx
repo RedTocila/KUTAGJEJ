@@ -1,7 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Button, CircularProgress, Stack, Tooltip, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  CircularProgress,
+  DialogContentText,
+  Stack,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import { ArrowsClockwise as RefreshIcon } from '@phosphor-icons/react/dist/ssr/ArrowsClockwise';
 import { BookmarkSimple as BookmarkIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { CursorClick as ClickIcon } from '@phosphor-icons/react/dist/ssr/CursorClick';
@@ -17,6 +25,12 @@ import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/C
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import RouterLink from 'next/link';
 
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
 import { BusinessAnnouncementDialog } from '@/components/user/business-announcement-dialog';
 import type { BusinessAnnouncement } from '@/lib/listing-announcement-client';
 import type { ListingMetricKind, ListingMetrics } from '@/lib/listing-metrics';
@@ -27,6 +41,7 @@ import {
   primaryMainAlpha,
   warningMainAlpha,
 } from '@/lib/css-var-alpha';
+import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
 
@@ -352,6 +367,7 @@ export function ListingOwnerMetrics({
   /** Opens Grow/Elite saver leads for this listing. */
   onSavesClick?: () => void;
 }) {
+  const t = useCopy();
   const { checkSession } = useUser();
   const [busy, setBusy] = React.useState(false);
   const [autoBusy, setAutoBusy] = React.useState(false);
@@ -362,6 +378,7 @@ export function ListingOwnerMetrics({
   const [nowMs, setNowMs] = React.useState(() => Date.now());
   const [lastRefreshAtLocal, setLastRefreshAtLocal] = React.useState<string | null>(lastRefreshedAt ?? null);
   const [error, setError] = React.useState<string | null>(null);
+  const [confirmBoost, setConfirmBoost] = React.useState<'premium' | 'okazion' | null>(null);
 
   React.useEffect(() => {
     setPremiumOn(Boolean(isPremium));
@@ -431,6 +448,11 @@ export function ListingOwnerMetrics({
     }
   };
 
+  const closeConfirmBoost = () => {
+    if (premiumBusy || okazionBusy) return;
+    setConfirmBoost(null);
+  };
+
   const handleApplyPremium = async () => {
     if (!listingId || !kind || premiumBusy || premiumOn) return;
     setError(null);
@@ -438,10 +460,12 @@ export function ListingOwnerMetrics({
     try {
       const res = await applyPremiumFromPlan({ kind, listingId });
       if (res.error || !res.premiumUntil) {
+        setConfirmBoost(null);
         setError(res.error || 'Aplikimi i Premium dështoi.');
         return;
       }
       setPremiumOn(true);
+      setConfirmBoost(null);
       onPremiumApplied?.({ premiumUntil: res.premiumUntil });
       const refreshedAt = res.refreshedAt ?? new Date().toISOString();
       setLastRefreshAtLocal(refreshedAt);
@@ -459,10 +483,12 @@ export function ListingOwnerMetrics({
     try {
       const res = await applyOkazionFromPlan({ kind, listingId });
       if (res.error || !res.okazionUntil) {
+        setConfirmBoost(null);
         setError(res.error || 'Aplikimi i OKAZION dështoi.');
         return;
       }
       setOkazionOn(true);
+      setConfirmBoost(null);
       onOkazionApplied?.({ okazionUntil: res.okazionUntil });
       const refreshedAt = res.refreshedAt ?? new Date().toISOString();
       setLastRefreshAtLocal(refreshedAt);
@@ -470,6 +496,16 @@ export function ListingOwnerMetrics({
       void checkSession();
     } finally {
       setOkazionBusy(false);
+    }
+  };
+
+  const handleConfirmBoost = () => {
+    if (confirmBoost === 'premium') {
+      void handleApplyPremium();
+      return;
+    }
+    if (confirmBoost === 'okazion') {
+      void handleApplyOkazion();
     }
   };
 
@@ -588,7 +624,8 @@ export function ListingOwnerMetrics({
                   aria-label="Premium"
                   disabled={premiumDisabled}
                   onClick={() => {
-                    void handleApplyPremium();
+                    setError(null);
+                    setConfirmBoost('premium');
                   }}
                   startIcon={
                     premiumBusy ? (
@@ -626,7 +663,8 @@ export function ListingOwnerMetrics({
                   aria-label="OKAZION"
                   disabled={okazionDisabled}
                   onClick={() => {
-                    void handleApplyOkazion();
+                    setError(null);
+                    setConfirmBoost('okazion');
                   }}
                   startIcon={
                     okazionBusy ? (
@@ -655,6 +693,56 @@ export function ListingOwnerMetrics({
           {error}
         </Typography>
       ) : null}
+
+      <ProductDialog
+        open={confirmBoost !== null}
+        onClose={closeConfirmBoost}
+        maxWidth="xs"
+        fullWidth
+      >
+        <ProductDialogTitle onClose={closeConfirmBoost}>
+          {confirmBoost === 'okazion'
+            ? t.myListings.okazionConfirmTitle
+            : t.myListings.premiumConfirmTitle}
+        </ProductDialogTitle>
+        <ProductDialogContent>
+          <DialogContentText sx={{ m: 0, color: 'text.secondary' }}>
+            {confirmBoost === 'okazion'
+              ? t.myListings.okazionConfirmBody
+              : t.myListings.premiumConfirmBody}
+          </DialogContentText>
+        </ProductDialogContent>
+        <ProductDialogActions>
+          <Button
+            color="error"
+            onClick={closeConfirmBoost}
+            disabled={premiumBusy || okazionBusy}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            {t.common.cancel}
+          </Button>
+          <Button
+            color={confirmBoost === 'okazion' ? 'error' : 'warning'}
+            variant="contained"
+            disabled={premiumBusy || okazionBusy}
+            onClick={handleConfirmBoost}
+            startIcon={
+              premiumBusy || okazionBusy ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : confirmBoost === 'okazion' ? (
+                <SealPercentIcon size={16} weight="bold" />
+              ) : (
+                <SparkleIcon size={16} weight="bold" />
+              )
+            }
+            sx={{ textTransform: 'none', fontWeight: 700 }}
+          >
+            {confirmBoost === 'okazion'
+              ? t.myListings.okazionConfirmAction
+              : t.myListings.premiumConfirmAction}
+          </Button>
+        </ProductDialogActions>
+      </ProductDialog>
     </Stack>
   );
 }

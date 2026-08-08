@@ -119,34 +119,56 @@ export function UserNotificationRow({
     onOpened?.();
   };
 
+  const actionBtnSx = {
+    textTransform: 'none' as const,
+    fontWeight: 800,
+    borderRadius: compact ? 1.25 : 1.5,
+    minHeight: compact ? 24 : 28,
+    px: compact ? 0.85 : 1.1,
+    py: 0.15,
+    fontSize: compact ? '0.65rem' : '0.72rem',
+  };
+
   const body = (
-    <Stack spacing={compact ? 0.35 : 0.55} sx={{ minWidth: 0, width: '100%' }}>
+    <Stack spacing={compact ? 0.2 : 0.55} sx={{ minWidth: 0, width: '100%' }}>
       <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <Typography
           variant={compact ? 'body2' : 'body1'}
           sx={{
             fontWeight: unread ? 800 : 700,
-            fontSize: compact ? '0.84rem' : '0.95rem',
-            lineHeight: 1.3,
+            fontSize: compact ? '0.78rem' : '0.95rem',
+            lineHeight: 1.25,
             pr: 0.5,
+            minWidth: 0,
           }}
         >
           {title}
         </Typography>
-        <Typography variant="caption" color="text.disabled" sx={{ flexShrink: 0, lineHeight: 1.4, mt: 0.15 }}>
-          {relativeTime(primary.createdAt, t)}
-        </Typography>
+        <Stack
+          direction="row"
+          spacing={0.75}
+          sx={{ alignItems: 'center', flexShrink: 0, mt: 0.05 }}
+        >
+          {showTag}
+          <Typography
+            variant="caption"
+            color="text.disabled"
+            sx={{ lineHeight: 1.3, fontSize: compact ? '0.65rem' : undefined }}
+          >
+            {relativeTime(primary.createdAt, t)}
+          </Typography>
+        </Stack>
       </Stack>
       <Typography
         variant="caption"
         color="text.secondary"
         sx={{
           display: '-webkit-box',
-          WebkitLineClamp: compact ? 2 : 3,
+          WebkitLineClamp: compact ? 1 : 3,
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
-          lineHeight: 1.35,
-          fontSize: compact ? '0.72rem' : '0.8rem',
+          lineHeight: 1.3,
+          fontSize: compact ? '0.68rem' : '0.8rem',
         }}
       >
         {message}
@@ -157,7 +179,7 @@ export function UserNotificationRow({
         </Typography>
       ) : null}
       {isSave ? (
-        <Stack direction="row" spacing={0.75} sx={{ pt: 0.35, flexWrap: 'wrap' }}>
+        <Stack direction="row" spacing={0.5} sx={{ pt: compact ? 0.15 : 0.35, flexWrap: 'wrap' }}>
           {primary.actorId ? (
             <Button
               size="small"
@@ -167,21 +189,12 @@ export function UserNotificationRow({
               onClick={(e) => void handleContact(e)}
               startIcon={
                 contacting ? (
-                  <CircularProgress size={12} color="inherit" />
+                  <CircularProgress size={compact ? 10 : 12} color="inherit" />
                 ) : (
-                  <ChatIcon size={14} weight="bold" />
+                  <ChatIcon size={compact ? 12 : 14} weight="bold" />
                 )
               }
-              sx={{
-                ...productButtonSx,
-                textTransform: 'none',
-                fontWeight: 800,
-                borderRadius: 1.5,
-                minHeight: 28,
-                px: 1.1,
-                py: 0.25,
-                fontSize: '0.72rem',
-              }}
+              sx={{ ...productButtonSx, ...actionBtnSx }}
             >
               {t.notifications.contactSaver}
             </Button>
@@ -191,15 +204,9 @@ export function UserNotificationRow({
               size="small"
               variant="outlined"
               onClick={(e) => void handleViewListing(e)}
-              startIcon={<EyeIcon size={14} weight="bold" />}
+              startIcon={<EyeIcon size={compact ? 12 : 14} weight="bold" />}
               sx={{
-                textTransform: 'none',
-                fontWeight: 800,
-                borderRadius: 1.5,
-                minHeight: 28,
-                px: 1.1,
-                py: 0.25,
-                fontSize: '0.72rem',
+                ...actionBtnSx,
                 borderColor: 'divider',
               }}
             >
@@ -208,7 +215,6 @@ export function UserNotificationRow({
           ) : null}
         </Stack>
       ) : null}
-      {showTag}
     </Stack>
   );
 
@@ -216,20 +222,17 @@ export function UserNotificationRow({
     textDecoration: 'none',
     color: 'inherit',
     display: 'block',
-    px: compact ? 1.25 : { xs: 1.5, sm: 2 },
-    py: compact ? 1 : 1.25,
-    borderRadius: compact ? 1.5 : 0,
+    px: compact ? 1.5 : { xs: 1.5, sm: 2 },
+    py: compact ? 0.85 : 1.25,
+    borderRadius: 0,
     bgcolor: unread
       ? (theme: { palette: { mode: string } }) =>
-          theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'action.hover'
-      : compact
-        ? (theme: { palette: { mode: string } }) =>
-            theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)'
+          theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.035)' : 'action.hover'
       : 'transparent',
     transition: 'background-color 0.15s ease',
     '&:hover': {
       bgcolor: (theme: { palette: { mode: string } }) =>
-        theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'action.selected',
+        theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.055)' : 'action.selected',
     },
   } as const;
 

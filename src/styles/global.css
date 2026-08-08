@@ -12,8 +12,8 @@
 html {
   height: 100%;
   background-color: var(--mui-palette-background-default, #f7faf4);
-  /* Keep horizontal swipe strips local — never let the document pan left/right. */
-  overflow-x: hidden;
+  /* `clip` (not `hidden`) so overflow-y stays visible and the header can't lag behind scroll. */
+  overflow-x: clip;
   overscroll-behavior-x: none;
 }
 
@@ -22,7 +22,7 @@ body {
   margin: 0;
   background-color: var(--mui-palette-background-default, #f7faf4);
   color: var(--mui-palette-text-primary, #1a2118);
-  overflow-x: hidden;
+  overflow-x: clip;
   overscroll-behavior-x: none;
 }
 

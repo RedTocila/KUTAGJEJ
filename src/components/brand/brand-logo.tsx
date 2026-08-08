@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Box, Typography, type BoxProps, type SxProps, type Theme } from '@mui/material';
 
 import { brandLogoSrc, config } from '@/config';
+import { brandWordmarkFontFamily } from '@/styles/brand-font';
 
 export type BrandWordmarkPresentation = 'brand' | 'plain';
 export type BrandWordmarkLayout = 'inline' | 'stacked';
@@ -54,6 +55,44 @@ export function BrandLogo({
   const useBrandSplit = Boolean(showWordmark && wordmarkPresentation === 'brand' && segments);
   const stacked = wordmarkLayout === 'stacked' && useBrandSplit;
 
+  const topRef = React.useRef<HTMLSpanElement | null>(null);
+  const bottomRef = React.useRef<HTMLSpanElement | null>(null);
+  const [gjejScale, setGjejScale] = React.useState(1);
+
+  React.useLayoutEffect(() => {
+    if (!stacked) {
+      setGjejScale(1);
+      return;
+    }
+
+    const matchWidths = () => {
+      const top = topRef.current;
+      const bottom = bottomRef.current;
+      if (!top || !bottom) return;
+
+      // Measure natural glyph width (ignore current scale).
+      const prevTransform = bottom.style.transform;
+      bottom.style.transform = 'none';
+      const topW = top.getBoundingClientRect().width;
+      const bottomW = bottom.getBoundingClientRect().width;
+      bottom.style.transform = prevTransform;
+
+      if (topW <= 0 || bottomW <= 0) return;
+      const next = topW / bottomW;
+      setGjejScale((prev) => (Math.abs(prev - next) < 0.01 ? prev : next));
+    };
+
+    matchWidths();
+    void document.fonts?.ready.then(matchWidths);
+
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(matchWidths) : null;
+    if (ro && topRef.current) ro.observe(topRef.current);
+
+    return () => {
+      ro?.disconnect();
+    };
+  }, [stacked, segments, wordmarkSx]);
+
   const img = (
     <Box
       alt={config.site.name}
@@ -93,8 +132,9 @@ export function BrandLogo({
           <Typography
             component="span"
             sx={{
+              fontFamily: brandWordmarkFontFamily,
               fontWeight: 700,
-              letterSpacing: '-0.04em',
+              letterSpacing: '-0.03em',
               display: 'inline-flex',
               WebkitFontSmoothing: 'antialiased',
               MozOsxFontSmoothing: 'grayscale',
@@ -114,10 +154,29 @@ export function BrandLogo({
               ...wordmarkSx,
             }}
           >
-            <Box component="span" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+            <Box
+              ref={topRef}
+              component="span"
+              sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', width: 'max-content' }}
+            >
               {segments[0]}
             </Box>
-            <Box component="span" sx={{ color: 'primary.main', fontWeight: 800 }}>
+            <Box
+              ref={bottomRef}
+              component="span"
+              sx={{
+                color: 'primary.main',
+                fontWeight: 800,
+                display: 'block',
+                width: 'max-content',
+                ...(stacked
+                  ? {
+                      transform: `scale(${gjejScale})`,
+                      transformOrigin: 'left center',
+                    }
+                  : null),
+              }}
+            >
               {segments[1]}
             </Box>
           </Typography>
@@ -125,6 +184,7 @@ export function BrandLogo({
           <Typography
             component="span"
             sx={{
+              fontFamily: brandWordmarkFontFamily,
               fontWeight: 700,
               lineHeight: 1.2,
               letterSpacing: '-0.02em',

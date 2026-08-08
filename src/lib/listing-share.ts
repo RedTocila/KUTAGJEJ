@@ -65,38 +65,78 @@ export function resolveListingShareUrl(payload: ListingSharePayload): string {
   return '';
 }
 
+function isAlreadyProxied(url: string): boolean {
+  return /\/api\/public\/image-proxy(?:\?|$)/i.test(url);
+}
+
+/**
+ * Same-origin story photo URL. Remote CDNs often block canvas/CORS and Instagram
+ * hotlinking; the API proxy returns the bytes from kutagjej so `<img>` + capture work.
+ */
+export function resolveStoryImageSrc(url: string | null | undefined): string | null {
+  const raw = String(url || '').trim();
+  if (!raw) return null;
+  if (raw.startsWith('data:') || raw.startsWith('blob:') || isAlreadyProxied(raw)) return raw;
+  if (raw.startsWith('/')) return raw;
+
+  const absolute = /^https?:\/\//i.test(raw)
+    ? raw
+    : typeof window !== 'undefined'
+      ? new URL(raw, window.location.origin).toString()
+      : null;
+  if (!absolute) return raw;
+
+  try {
+    const parsed = new URL(absolute);
+    if (typeof window !== 'undefined' && parsed.origin === window.location.origin) return absolute;
+  } catch {
+    return raw;
+  }
+
+  return `/api/public/image-proxy?url=${encodeURIComponent(absolute)}`;
+}
+
 /**
  * Inline a remote image as a JPEG data URL for html-to-image / canvas export.
- * Safari often drops cross-origin `<img>` pixels in story captures unless embedded first.
+ * Prefers the same-origin proxy so Safari / Instagram CDNs don't blank the photo.
  */
-export async function embedImageAsDataUrl(
-  url: string,
-  maxEdge = 1400,
-): Promise<string | null> {
+export async function embedImageAsDataUrl(url: string, maxEdge = 1400): Promise<string | null> {
   const raw = String(url || '').trim();
   if (!raw) return null;
   if (raw.startsWith('data:image/')) return raw;
-
   if (typeof window === 'undefined') return null;
 
-  const absolute =
-    raw.startsWith('blob:') || /^https?:\/\//i.test(raw)
-      ? raw
-      : new URL(raw, window.location.origin).toString();
+  const candidates: string[] = [];
+  const proxied = resolveStoryImageSrc(raw);
+  if (proxied) candidates.push(proxied);
+  if (raw.startsWith('blob:') || /^https?:\/\//i.test(raw) || raw.startsWith('/')) {
+    const absolute =
+      raw.startsWith('blob:') || /^https?:\/\//i.test(raw)
+        ? raw
+        : new URL(raw, window.location.origin).toString();
+    if (!candidates.includes(absolute)) candidates.push(absolute);
+  }
 
-  // Cache-bust so iOS doesn’t reuse a non-CORS cached response.
-  const fetchUrl = absolute.startsWith('blob:')
-    ? absolute
-    : `${absolute}${absolute.includes('?') ? '&' : '?'}_story=${Date.now()}`;
+  for (const candidate of candidates) {
+    const embedded = await tryEmbedImage(candidate, maxEdge);
+    if (embedded) return embedded;
+  }
+  return null;
+}
 
+async function tryEmbedImage(src: string, maxEdge: number): Promise<string | null> {
   try {
-    const res = await fetch(fetchUrl, {
+    const res = await fetch(src, {
       mode: 'cors',
       credentials: 'omit',
       cache: 'no-store',
     });
     if (!res.ok) return null;
     const blob = await res.blob();
+    const type = (blob.type || '').toLowerCase();
+    if (type && !type.startsWith('image/') && type !== 'application/octet-stream') {
+      return null;
+    }
     const objectUrl = URL.createObjectURL(blob);
     try {
       return await decodeBlobToJpegDataUrl(objectUrl, maxEdge);
@@ -104,9 +144,8 @@ export async function embedImageAsDataUrl(
       URL.revokeObjectURL(objectUrl);
     }
   } catch {
-    // Fallback: element decode (still needs CORS on the storage host).
     try {
-      return await decodeBlobToJpegDataUrl(fetchUrl, maxEdge);
+      return await decodeBlobToJpegDataUrl(src, maxEdge);
     } catch {
       return null;
     }
@@ -117,8 +156,12 @@ function decodeBlobToJpegDataUrl(src: string, maxEdge: number): Promise<string |
   return new Promise((resolve) => {
     const img = new Image();
     img.decoding = 'async';
-    // Same-origin / blob / data URLs don’t need CORS; remote ones do for canvas export.
-    if (/^https?:\/\//i.test(src)) {
+    const sameOrigin =
+      src.startsWith('blob:') ||
+      src.startsWith('data:') ||
+      src.startsWith('/') ||
+      (typeof window !== 'undefined' && src.startsWith(`${window.location.origin}/`));
+    if (!sameOrigin && /^https?:\/\//i.test(src)) {
       img.crossOrigin = 'anonymous';
     }
     const done = (value: string | null) => resolve(value);

@@ -6,6 +6,8 @@ const { MAX_IMAGE_BYTES, MAX_IMAGES } = require('./image-upload');
 
 const UPLOADS_BUCKET = 'uploads';
 const FETCH_TIMEOUT_MS = 25_000;
+const BROWSER_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
 let bucketReady = false;
 
@@ -82,6 +84,74 @@ function extFromUrl(url) {
   return 'jpg';
 }
 
+function imageFetchHeaders(url) {
+  let host = '';
+  try {
+    host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+  } catch {
+    host = '';
+  }
+  const isInstagramCdn =
+    host.includes('cdninstagram.com') ||
+    host.includes('fbcdn.net') ||
+    host.includes('instagram.com');
+  return {
+    Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+    // Instagram CDN often blocks generic bots; use a browser UA + referer.
+    'User-Agent': BROWSER_UA,
+    ...(isInstagramCdn
+      ? {
+          Referer: 'https://www.instagram.com/',
+          Origin: 'https://www.instagram.com',
+        }
+      : {}),
+  };
+}
+
+/**
+ * Download a remote listing photo. Used by storage mirroring and the public
+ * story-image proxy (browser CORS / hotlink protection otherwise blanks Stories).
+ */
+async function fetchRemoteImageBuffer(
+  url,
+  { timeoutMs = FETCH_TIMEOUT_MS, maxBytes = MAX_IMAGE_BYTES } = {},
+) {
+  const raw = String(url || '').trim();
+  if (!/^https?:\/\//i.test(raw)) return null;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(raw, {
+      signal: controller.signal,
+      redirect: 'follow',
+      headers: imageFetchHeaders(raw),
+    });
+    if (!res.ok) return null;
+
+    const contentType = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (contentType && !contentType.startsWith('image/') && contentType !== 'application/octet-stream') {
+      return null;
+    }
+
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (!buf.length || buf.length > maxBytes) return null;
+
+    const ext = extFromContentType(contentType) || extFromUrl(raw);
+    const mime =
+      contentType && contentType.startsWith('image/')
+        ? contentType
+        : `image/${ext === 'jpg' ? 'jpeg' : ext || 'jpeg'}`;
+
+    return { buffer: buf, mime, ext: ext || 'jpg' };
+  } catch (err) {
+    console.warn('fetchRemoteImageBuffer failed:', raw.slice(0, 120), err?.message || err);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * Fetch a remote image and store it in our uploads bucket.
  * Returns the public URL, or null if the fetch/upload fails.
@@ -91,60 +161,18 @@ async function mirrorRemoteImageUrl(url, folder = 'listings') {
   if (!/^https?:\/\//i.test(raw)) return null;
   if (isOurStorageUrl(raw)) return raw;
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    let host = '';
-    try {
-      host = new URL(raw).hostname.replace(/^www\./, '').toLowerCase();
-    } catch {
-      host = '';
-    }
-    const isInstagramCdn =
-      host.includes('cdninstagram.com') ||
-      host.includes('fbcdn.net') ||
-      host.includes('instagram.com');
-
-    const res = await fetch(raw, {
-      signal: controller.signal,
-      redirect: 'follow',
-      headers: {
-        Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-        // Instagram CDN often blocks generic bots; use a browser UA + referer.
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        ...(isInstagramCdn
-          ? {
-              Referer: 'https://www.instagram.com/',
-              Origin: 'https://www.instagram.com',
-            }
-          : {}),
-      },
-    });
-    if (!res.ok) return null;
-
-    const contentType = res.headers.get('content-type') || '';
-    const ext = extFromContentType(contentType) || extFromUrl(raw);
-    if (!ext) return null;
-
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (!buf.length || buf.length > MAX_IMAGE_BYTES) return null;
-
-    const mime =
-      extFromContentType(contentType) != null
-        ? contentType.split(';')[0].trim().toLowerCase()
-        : `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+    const fetched = await fetchRemoteImageBuffer(raw);
+    if (!fetched) return null;
 
     const [publicUrl] = await uploadBuffersToSupabase(
-      [{ buffer: buf, originalname: `remote.${ext}`, mimetype: mime }],
+      [{ buffer: fetched.buffer, originalname: `remote.${fetched.ext}`, mimetype: fetched.mime }],
       folder,
     );
     return publicUrl || null;
   } catch (err) {
     console.warn('mirrorRemoteImageUrl failed:', raw.slice(0, 120), err?.message || err);
     return null;
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -172,6 +200,7 @@ module.exports = {
   isOurStorageUrl,
   ensureUploadsBucket,
   uploadBuffersToSupabase,
+  fetchRemoteImageBuffer,
   mirrorRemoteImageUrl,
   mirrorRemoteImageUrls,
 };

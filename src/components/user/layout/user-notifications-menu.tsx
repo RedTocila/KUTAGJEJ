@@ -96,39 +96,34 @@ export function UserNotificationsMenu() {
             sx: (theme) => ({
               ...productPopoverPaperSx(theme),
               width: 340,
+              maxWidth: 'calc(100vw - 24px)',
+              maxHeight: 'min(70dvh, 520px)',
+              display: 'flex',
+              flexDirection: 'column',
             }),
           },
         }}
       >
-        <Box sx={{ px: 2, pt: 1.5, pb: 1 }}>
+        <Box sx={{ px: 2, pt: 1.5, pb: 1, flexShrink: 0 }}>
           <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: '0.98rem' }}>
               {t.notifications.title}
             </Typography>
-            <Link
-              component={RouterLink}
-              href={paths.user.notifications}
-              underline="hover"
-              variant="body2"
-              onClick={() => setAnchorEl(null)}
-              sx={{ fontWeight: 600, color: 'primary.main', flexShrink: 0, fontSize: '0.8rem' }}
-            >
-              {t.notifications.viewAll}
-            </Link>
+            {unread > 0 ? (
+              <Typography
+                color="primary"
+                variant="body2"
+                sx={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', flexShrink: 0 }}
+                onClick={() => {
+                  void markAllUserNotificationsRead().then(() => refresh());
+                }}
+              >
+                {t.notifications.markAllRead}
+              </Typography>
+            ) : null}
           </Stack>
-          {unread > 0 ? (
-            <Typography
-              color="primary"
-              variant="body2"
-              sx={{ mt: 0.35, cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
-              onClick={() => {
-                void markAllUserNotificationsRead().then(() => refresh());
-              }}
-            >
-              {t.notifications.markAllRead}
-            </Typography>
-          ) : groups.length === 0 ? (
-            <Typography color="text.secondary" variant="body2" sx={{ mt: 0.25, fontSize: '0.8rem' }}>
+          {groups.length === 0 ? (
+            <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5, fontSize: '0.8rem' }}>
               {loading ? t.common.loading : t.notifications.empty}
             </Typography>
           ) : null}
@@ -138,26 +133,64 @@ export function UserNotificationsMenu() {
             <Divider
               sx={(theme) => ({
                 borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
+                flexShrink: 0,
               })}
             />
-            <Stack spacing={0.75} sx={{ p: 1 }}>
-              {groups.map((group) => (
-                <UserNotificationRow
-                  key={group.ids.join('-')}
-                  group={group}
-                  compact
-                  onOpened={() => {
-                    setAnchorEl(null);
-                    void refresh();
-                  }}
-                  onViewListing={(target) => {
-                    setListingPreview(target);
-                    setAnchorEl(null);
-                    void refresh();
-                  }}
-                />
+            <Box
+              sx={{
+                flex: '1 1 auto',
+                minHeight: 0,
+                overflowY: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'contain',
+                touchAction: 'pan-y',
+                pb: 0.5,
+              }}
+            >
+              {groups.map((group, index) => (
+                <React.Fragment key={group.ids.join('-')}>
+                  {index > 0 ? (
+                    <Divider
+                      sx={(theme) => ({
+                        borderColor:
+                          theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
+                      })}
+                    />
+                  ) : null}
+                  <UserNotificationRow
+                    group={group}
+                    compact
+                    onOpened={() => {
+                      setAnchorEl(null);
+                      void refresh();
+                    }}
+                    onViewListing={(target) => {
+                      setListingPreview(target);
+                      setAnchorEl(null);
+                      void refresh();
+                    }}
+                  />
+                </React.Fragment>
               ))}
-            </Stack>
+            </Box>
+            <Divider
+              sx={(theme) => ({
+                borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
+                flexShrink: 0,
+              })}
+            />
+            <Box sx={{ px: 1.5, py: 1, flexShrink: 0, textAlign: 'center' }}>
+              <Link
+                component={RouterLink}
+                href={paths.user.notifications}
+                underline="hover"
+                variant="body2"
+                onClick={() => setAnchorEl(null)}
+                sx={{ fontWeight: 700, color: 'primary.main', fontSize: '0.8rem' }}
+              >
+                {t.notifications.viewAll}
+              </Link>
+            </Box>
           </>
         ) : null}
       </Popover>

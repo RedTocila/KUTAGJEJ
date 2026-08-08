@@ -32,7 +32,12 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { relativeAlbanianDate } from '@/components/public/listing-cards/format-helpers';
 import { brandLogoSrc, config } from '@/config';
-import type { ListingSharePayload, ListingShareSpecIcon } from '@/lib/listing-share';
+import { brandWordmarkFontFamily } from '@/styles/brand-font';
+import {
+  resolveStoryImageSrc,
+  type ListingSharePayload,
+  type ListingShareSpecIcon,
+} from '@/lib/listing-share';
 
 export const STORY_WIDTH = 1080;
 export const STORY_HEIGHT = 1920;
@@ -106,7 +111,6 @@ export function StoryBackground() {
             height: pin.size,
             opacity: pin.opacity,
             color: GREEN,
-            filter: 'drop-shadow(0 0 12px rgba(118,186,27,0.35))',
           }}
         >
           <MapPinIcon size={pin.size} weight="fill" />
@@ -238,6 +242,38 @@ function SpecChip({ icon, label }: { icon: ListingShareSpecIcon; label: string }
   );
 }
 
+function StoryListingImage({
+  src,
+  fallbackSrc,
+}: {
+  src: string;
+  fallbackSrc?: string | null;
+}) {
+  const [currentSrc, setCurrentSrc] = React.useState(src);
+
+  React.useEffect(() => {
+    setCurrentSrc(src);
+  }, [src]);
+
+  return (
+    <Box
+      component="img"
+      data-story-listing-image=""
+      src={currentSrc}
+      alt=""
+      referrerPolicy="no-referrer"
+      decoding="async"
+      onError={() => {
+        const fallback = String(fallbackSrc || '').trim();
+        if (fallback && fallback !== currentSrc && fallback !== src) {
+          setCurrentSrc(fallback);
+        }
+      }}
+      sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+    />
+  );
+}
+
 /**
  * Listing card — height follows content so sparse listings stay tight (no empty black gap).
  */
@@ -246,6 +282,7 @@ function TemplateListingCard({ payload }: { payload: ListingSharePayload }) {
   const saveCount = payload.saveCount ?? 0;
   const viewCount = payload.viewCount ?? 0;
   const posted = payload.createdAt ? relativeAlbanianDate(payload.createdAt) : null;
+  const imageSrc = resolveStoryImageSrc(payload.imageUrl);
 
   return (
     <Box
@@ -272,20 +309,8 @@ function TemplateListingCard({ payload }: { payload: ListingSharePayload }) {
           flexShrink: 0,
         }}
       >
-        {payload.imageUrl ? (
-          <Box
-            component="img"
-            data-story-listing-image=""
-            src={payload.imageUrl}
-            alt=""
-            // Remote URLs need CORS for canvas export; data:/blob: URLs must omit it.
-            crossOrigin={
-              payload.imageUrl.startsWith('data:') || payload.imageUrl.startsWith('blob:')
-                ? undefined
-                : 'anonymous'
-            }
-            sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-          />
+        {imageSrc ? (
+          <StoryListingImage src={imageSrc} fallbackSrc={payload.imageUrl} />
         ) : (
           <Stack
             sx={{
@@ -458,7 +483,16 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
               alt={config.site.name}
               sx={{ width: 88, height: 88, objectFit: 'contain' }}
             />
-            <Typography sx={{ fontWeight: 800, fontSize: 48, letterSpacing: '-0.03em', lineHeight: 1, color: '#fff' }}>
+            <Typography
+              sx={{
+                fontFamily: brandWordmarkFontFamily,
+                fontWeight: 700,
+                fontSize: 48,
+                letterSpacing: '-0.03em',
+                lineHeight: 1,
+                color: '#fff',
+              }}
+            >
               {config.site.name}
             </Typography>
             <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>

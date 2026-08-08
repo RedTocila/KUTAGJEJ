@@ -62,7 +62,7 @@ export function LanguageSwitchRow({ grouped = false }: { grouped?: boolean }) {
           }}
         >
           <ToggleButton value="sq" aria-label="Shqip">
-            SQ
+            AL
           </ToggleButton>
           <ToggleButton value="en" aria-label="English">
             EN

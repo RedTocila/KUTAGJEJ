@@ -24,8 +24,7 @@ export function HeroSection({ banners, stats }: HeroSectionProps) {
       <Box
         sx={{
           display: { xs: 'block', md: 'none' },
-          mt: { xs: -8, md: 0 },
-          pt: { xs: 10, md: 6 },
+          pt: { xs: 1.5, md: 6 },
           pb: { xs: 3, md: 4 },
           bgcolor: 'background.default',
         }}

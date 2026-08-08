@@ -3,7 +3,6 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import {
-  AppBar,
   Box,
   Button,
   Container,
@@ -11,7 +10,6 @@ import {
   Stack,
   Toolbar,
   Tooltip,
-  useScrollTrigger,
 } from '@mui/material';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { SignIn as SignInIcon } from '@phosphor-icons/react/dist/ssr/SignIn';
@@ -29,54 +27,10 @@ import { HeaderMobileSearch } from './header-mobile-search';
 
 const TOOLBAR_MIN_HEIGHT = { xs: 72, md: 88 } as const;
 
-/**
- * Hides the header while scrolling down, shows it when scrolling up (or when
- * near the top of the page). Uses a small delta threshold to ignore tiny jitters.
- */
-function useHeaderScrollHidden() {
-  const [hidden, setHidden] = React.useState(false);
-  const lastY = React.useRef(0);
-
-  React.useEffect(() => {
-    const deltaThreshold = 6;
-    const alwaysShowBelowY = 56;
-
-    const onScroll = () => {
-      const y = window.scrollY;
-      const prev = lastY.current;
-      const delta = y - prev;
-      lastY.current = y;
-
-      if (y <= alwaysShowBelowY) {
-        setHidden(false);
-        return;
-      }
-      if (delta > deltaThreshold) {
-        setHidden(true);
-      } else if (delta < -deltaThreshold) {
-        setHidden(false);
-      }
-    };
-
-    lastY.current = window.scrollY;
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  return hidden;
-}
-
 export function PublicHeader() {
   const { user } = useUser();
   const t = useCopy();
-  const elevated = useScrollTrigger({ disableHysteresis: true, threshold: 8 });
-  const headerHidden = useHeaderScrollHidden();
-  const [mounted, setMounted] = React.useState(false);
   const [addListingOpen, setAddListingOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const accountHref =
     user?.accountType === 'admin' ? paths.dashboard.overview : paths.user.dashboard;
@@ -90,55 +44,24 @@ export function PublicHeader() {
 
   return (
     <>
-      <AppBar
-        position="fixed"
-        elevation={0}
+      <Box
         component="header"
         suppressHydrationWarning
-        sx={(theme) => {
-          const paperAlpha = theme.palette.mode === 'dark' ? 0.92 : 0.96;
-          const paperAlphaRest = theme.palette.mode === 'dark' ? 0.7 : 0.85;
-          const frosted = `rgb(var(--mui-palette-background-paperChannel) / ${paperAlpha})`;
-          const frostedRest = `rgb(var(--mui-palette-background-paperChannel) / ${paperAlphaRest})`;
-          const blur = 'saturate(180%) blur(14px)';
-          const isLight = theme.palette.mode === 'light';
-
-          const backgroundColor = !mounted
-            ? 'transparent'
-            : {
-                xs: elevated ? frosted : 'transparent',
-                md: elevated ? frosted : isLight ? 'transparent' : frostedRest,
-              };
-
-          const backdrop = !mounted
-            ? 'none'
-            : {
-                xs: elevated ? blur : 'none',
-                md: elevated ? blur : isLight ? 'none' : blur,
-              };
-
-          return {
-            top: 0,
-            left: 0,
-            right: 0,
-            color: 'text.primary',
-            backgroundColor,
-            backdropFilter: backdrop,
-            WebkitBackdropFilter: backdrop,
-            borderBottom: 'none',
-            boxShadow: 'none',
-            backgroundImage: 'none',
-            transform: headerHidden ? 'translateY(-100%)' : 'translateY(0)',
-            transition: theme.transitions.create(['transform', 'background-color'], {
-              duration: 220,
-              easing: theme.transitions.easing.easeInOut,
-            }),
-            zIndex: theme.zIndex.appBar,
-            willChange: 'transform',
-            '@media (prefers-reduced-motion: reduce)': {
-              transition: 'background-color 0.2s ease',
-            },
-          };
+        sx={{
+          // Must scroll with the page — never stick/fixed over categories.
+          position: 'static !important',
+          top: 'auto',
+          left: 'auto',
+          right: 'auto',
+          transform: 'none',
+          color: 'text.primary',
+          bgcolor: 'transparent',
+          backgroundImage: 'none',
+          borderBottom: 0,
+          boxShadow: 'none',
+          outline: 'none',
+          transition: 'none',
+          zIndex: 'auto',
         }}
       >
         <Container
@@ -282,17 +205,7 @@ export function PublicHeader() {
             </Stack>
           </Toolbar>
         </Container>
-      </AppBar>
-      {/* Keeps document flow under `position: fixed` so content is not covered */}
-      <Toolbar
-        disableGutters
-        aria-hidden
-        sx={{
-          minHeight: TOOLBAR_MIN_HEIGHT,
-          visibility: 'hidden',
-          pointerEvents: 'none',
-        }}
-      />
+      </Box>
       <AddListingPickerDialog open={addListingOpen} onClose={() => setAddListingOpen(false)} />
     </>
   );

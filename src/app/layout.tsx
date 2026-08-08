@@ -1,10 +1,17 @@
 import type { Metadata, Viewport } from 'next';
+import { Space_Grotesk } from 'next/font/google';
 import Script from 'next/script';
 
 import { brandLogoSrc, config } from '@/config';
 import { DEFAULT_COLOR_SCHEME } from '@/lib/color-scheme';
 
 import { AppProviders } from './app-providers';
+
+const brandWordmarkFont = Space_Grotesk({
+  subsets: ['latin', 'latin-ext'],
+  display: 'swap',
+  variable: '--font-kutagjej-wordmark',
+});
 
 /**
  * Do not set `themeColor` here: Next injects `<meta name="theme-color">` nodes that React owns.
@@ -43,7 +50,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="sq-AL" className={DEFAULT_COLOR_SCHEME} suppressHydrationWarning>
+    <html lang="sq-AL" className={`${DEFAULT_COLOR_SCHEME} ${brandWordmarkFont.variable}`} suppressHydrationWarning>
       <body suppressHydrationWarning>
         <Script src="/theme-color-boot.js" strategy="beforeInteractive" />
         <AppProviders initialColorScheme={DEFAULT_COLOR_SCHEME}>{children}</AppProviders>

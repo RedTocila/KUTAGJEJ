@@ -7,13 +7,13 @@ import {
   Box,
   Button,
   Chip,
+  Divider,
   Stack,
   Typography,
 } from '@mui/material';
 import { Bell as BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
 
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
-import { portalCardSx } from '@/components/user/portal-cards';
 import { UserNotificationRow } from '@/components/user/user-notification-row';
 import {
   SavedListingPreviewDialog,
@@ -131,94 +131,97 @@ export default function UserNotificationsPage() {
         </Stack>
       </Stack>
 
-      <Box sx={{ ...portalCardSx, p: { xs: 1.5, sm: 2 } }}>
-        <Stack direction="row" useFlexGap spacing={1} sx={{ flexWrap: 'wrap', mb: 1.5 }}>
-          {(
-            [
-              { key: 'all' as const, label: t.notifications.tags.all },
-              ...NOTIFICATION_TAGS.map((tag) => ({ key: tag, label: tagLabel(tag, t) })),
-            ] as { key: FilterTag; label: string }[]
-          ).map(({ key, label }) => {
-            const selected = filter === key;
-            const count = counts[key];
+      <Stack direction="row" useFlexGap spacing={1} sx={{ flexWrap: 'wrap' }}>
+        {(
+          [
+            { key: 'all' as const, label: t.notifications.tags.all },
+            ...NOTIFICATION_TAGS.map((tag) => ({ key: tag, label: tagLabel(tag, t) })),
+          ] as { key: FilterTag; label: string }[]
+        ).map(({ key, label }) => {
+          const selected = filter === key;
+          const count = counts[key];
+          return (
+            <Chip
+              key={key}
+              label={count > 0 ? `${label} (${count})` : label}
+              clickable
+              color={selected ? 'primary' : 'default'}
+              variant={selected ? 'filled' : 'outlined'}
+              onClick={() => setFilter(key)}
+              sx={{
+                fontWeight: 700,
+                borderRadius: 2,
+                ...(selected
+                  ? null
+                  : {
+                      borderColor: 'divider',
+                      bgcolor: (theme) =>
+                        theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                    }),
+              }}
+            />
+          );
+        })}
+      </Stack>
+
+      {error ? <Alert severity="error">{error}</Alert> : null}
+
+      {loading && items.length === 0 ? (
+        <Typography color="text.secondary" variant="body2" sx={{ py: 1 }}>
+          {t.common.loading}
+        </Typography>
+      ) : groups.length === 0 ? (
+        <Typography color="text.secondary" variant="body2" sx={{ py: 1 }}>
+          {t.notifications.empty}
+        </Typography>
+      ) : (
+        <Box
+          sx={(theme) => ({
+            borderTop: '1px solid',
+            borderBottom: '1px solid',
+            borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
+          })}
+        >
+          {groups.map((group, index) => {
+            const tag = notificationTagForType(group.primary.type);
             return (
-              <Chip
-                key={key}
-                label={count > 0 ? `${label} (${count})` : label}
-                clickable
-                color={selected ? 'primary' : 'default'}
-                variant={selected ? 'filled' : 'outlined'}
-                onClick={() => setFilter(key)}
-                sx={{
-                  fontWeight: 700,
-                  borderRadius: 2,
-                  ...(selected
-                    ? null
-                    : {
-                        borderColor: 'divider',
-                        bgcolor: (theme) =>
-                          theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                      }),
-                }}
-              />
+              <React.Fragment key={group.ids.join('-')}>
+                {index > 0 ? (
+                  <Divider
+                    sx={(theme) => ({
+                      borderColor:
+                        theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
+                    })}
+                  />
+                ) : null}
+                <UserNotificationRow
+                  group={group}
+                  onOpened={() => void refresh()}
+                  onViewListing={(target) => {
+                    setListingPreview(target);
+                    void refresh();
+                  }}
+                  showTag={
+                    tag ? (
+                      <Chip
+                        size="small"
+                        label={tagLabel(tag, t)}
+                        sx={{
+                          height: 20,
+                          fontWeight: 700,
+                          fontSize: '0.65rem',
+                          borderRadius: 1.25,
+                        }}
+                      />
+                    ) : null
+                  }
+                />
+              </React.Fragment>
             );
           })}
-        </Stack>
+        </Box>
+      )}
 
-        {error ? <Alert severity="error">{error}</Alert> : null}
-
-        {loading && items.length === 0 ? (
-          <Typography color="text.secondary" variant="body2" sx={{ px: 0.5, py: 2 }}>
-            {t.common.loading}
-          </Typography>
-        ) : groups.length === 0 ? (
-          <Typography color="text.secondary" variant="body2" sx={{ px: 0.5, py: 2 }}>
-            {t.notifications.empty}
-          </Typography>
-        ) : (
-          <Stack spacing={1}>
-            {groups.map((group) => {
-              const tag = notificationTagForType(group.primary.type);
-              return (
-                <Box
-                  key={group.ids.join('-')}
-                  sx={{
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <UserNotificationRow
-                    group={group}
-                    onOpened={() => void refresh()}
-                    onViewListing={(target) => {
-                      setListingPreview(target);
-                      void refresh();
-                    }}
-                    showTag={
-                      tag ? (
-                        <Chip
-                          size="small"
-                          label={tagLabel(tag, t)}
-                          sx={{
-                            alignSelf: 'flex-start',
-                            height: 22,
-                            fontWeight: 700,
-                            fontSize: '0.7rem',
-                            borderRadius: 1.5,
-                            mt: 0.25,
-                          }}
-                        />
-                      ) : null
-                    }
-                  />
-                </Box>
-              );
-            })}
-          </Stack>
-        )}
-      </Box>
       <SavedListingPreviewDialog
         open={Boolean(listingPreview)}
         target={listingPreview}

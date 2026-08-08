@@ -27,6 +27,7 @@ import {
   DAILY_SHARE_BOOST_CREDITS,
   embedImageAsDataUrl,
   resolveListingShareUrl,
+  resolveStoryImageSrc,
   type ListingSharePayload,
 } from '@/lib/listing-share';
 import { recordListingMetricEvent, type ListingMetrics } from '@/lib/listing-metrics';
@@ -145,7 +146,22 @@ async function ensureListingImageEmbedded(root: HTMLElement, imageUrl: string | 
   if (!img) return;
   if (img.src.startsWith('data:image/') && img.complete && img.naturalWidth > 0) return;
 
-  const embedded = await embedImageAsDataUrl(imageUrl);
+  const source = resolveStoryImageSrc(imageUrl) || imageUrl;
+  if (img.src !== source && !img.src.startsWith('data:image/')) {
+    await new Promise<void>((resolve) => {
+      const done = () => resolve();
+      img.addEventListener('load', done, { once: true });
+      img.addEventListener('error', done, { once: true });
+      img.removeAttribute('crossorigin');
+      img.referrerPolicy = 'no-referrer';
+      img.src = source;
+      if (img.complete && img.naturalWidth > 0) done();
+      else window.setTimeout(done, 2500);
+    });
+    if (img.complete && img.naturalWidth > 0) return;
+  }
+
+  const embedded = await embedImageAsDataUrl(source);
   if (!embedded) return;
 
   await new Promise<void>((resolve) => {
@@ -231,7 +247,7 @@ export function ListingSharePage({
     let cancelled = false;
     embeddedImageRef.current = null;
     void (async () => {
-      const embedded = await embedImageAsDataUrl(remote);
+      const embedded = await embedImageAsDataUrl(resolveStoryImageSrc(remote) || remote);
       if (!cancelled && embedded) embeddedImageRef.current = embedded;
     })();
 
@@ -346,23 +362,32 @@ export function ListingSharePage({
       await new Promise((r) => window.setTimeout(r, 120));
 
       const jpegOpts = {
-        cacheBust: true,
+        cacheBust: false,
+        skipFonts: true,
         pixelRatio: 1,
-        quality: 0.95,
+        quality: 0.92,
         width: STORY_WIDTH,
         height: STORY_HEIGHT,
         backgroundColor: '#0a0a0a',
+        imagePlaceholder:
+          'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
+        onImageErrorHandler: () => undefined,
         fetchRequestInit: { mode: 'cors' as RequestMode, credentials: 'omit' as RequestCredentials },
         style: { transform: 'none', transformOrigin: 'top left' },
       };
 
+      const capture = () => toJpeg(storyRef.current!, jpegOpts);
+
       // Safari/iOS often needs a warm-up pass before images stick in the export.
       if (needsStoryCaptureWarmup()) {
-        await toJpeg(storyRef.current, jpegOpts);
-        await new Promise((r) => window.setTimeout(r, 60));
+        await capture().catch(() => null);
+        await new Promise((r) => window.setTimeout(r, 80));
       }
 
-      const dataUrl = await toJpeg(storyRef.current, jpegOpts);
+      const dataUrl = await capture();
+      if (!dataUrl.startsWith('data:image/')) {
+        throw new Error('story capture empty');
+      }
       const file = dataUrlToFile(dataUrl, `kutagjej-story-${payload.listingId.slice(0, 8)}.jpg`);
       const result = await shareStoryImage(file);
 
@@ -502,7 +527,7 @@ export function ListingSharePage({
         </Box>
       </Box>
 
-      {/* Offscreen export canvas — keep painted (no opacity/visibility hide) so Safari embeds images */}
+      {/* Full-size export canvas (unscaled). Off-screen but still painted so Safari can snapshot it. */}
       <Box
         aria-hidden
         sx={{

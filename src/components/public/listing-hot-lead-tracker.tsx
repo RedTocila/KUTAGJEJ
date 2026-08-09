@@ -8,11 +8,11 @@ import {
   emitHotLeadContactAction,
   hasFiredHotLeadRecently,
   hasHotLeadContactAction,
+  hotLeadPhotosNeeded,
   HOT_LEAD_ACTIVE_IDLE_MS,
   HOT_LEAD_CONTACT_ACTION_EVENT,
   HOT_LEAD_DETAILS_EVENT,
   HOT_LEAD_DWELL_MS,
-  HOT_LEAD_MIN_PHOTOS,
   HOT_LEAD_PHOTO_EVENT,
   HOT_LEAD_SAVE_EVENT,
   HOT_LEAD_SCROLL_RATIO,
@@ -41,11 +41,14 @@ export function ListingHotLeadTracker({
   listingKind,
   listingId,
   ownerId,
+  photoCount,
 }: {
   listingKind: ListingMetricKind;
   listingId: string;
   /** Seller / business id — used for multi-listing engagement. */
   ownerId?: string | null;
+  /** Distinct photos available on this listing (cover + gallery/portfolio). */
+  photoCount?: number | null;
 }) {
   const signalsRef = React.useRef<HotLeadSignals>(emptyHotLeadSignals());
   const photoIndexesRef = React.useRef<Set<number>>(new Set());
@@ -55,6 +58,7 @@ export function ListingHotLeadTracker({
   const lastInteractionAtRef = React.useRef(0);
   const firedRef = React.useRef(false);
   const abortedRef = React.useRef(false);
+  const photosNeeded = hotLeadPhotosNeeded(photoCount);
 
   const abortForContact = React.useCallback(() => {
     abortedRef.current = true;
@@ -193,7 +197,7 @@ export function ListingHotLeadTracker({
       const index = Number(detail.index);
       if (!Number.isFinite(index) || index < 0) return;
       photoIndexesRef.current.add(index);
-      if (photoIndexesRef.current.size >= HOT_LEAD_MIN_PHOTOS) {
+      if (photoIndexesRef.current.size >= photosNeeded) {
         setSignal('photos', true);
       }
     };
@@ -251,7 +255,7 @@ export function ListingHotLeadTracker({
       window.removeEventListener(HOT_LEAD_CONTACT_ACTION_EVENT, onContactAction);
       document.removeEventListener('click', onDocumentClick, true);
     };
-  }, [abortForContact, listingId, listingKind, ownerId, setSignal]);
+  }, [abortForContact, listingId, listingKind, ownerId, photosNeeded, setSignal]);
 
   return null;
 }

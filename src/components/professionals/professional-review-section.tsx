@@ -43,20 +43,29 @@ const surfaceSx = {
   borderColor: 'divider',
 } as const;
 
+export type ProfessionalReviewStats = {
+  ratingAverage: number | null;
+  reviewCount: number;
+};
+
 export function ProfessionalReviewSection({
   listingId,
   ratingAverage,
   reviewCount,
   onReviewSubmitted,
+  onStatsChange,
 }: {
   listingId: string;
   ratingAverage: number | null | undefined;
   reviewCount: number | undefined;
   onReviewSubmitted?: () => void;
+  /** Fired when the live review list is loaded/updated (keeps header stars in sync). */
+  onStatsChange?: (stats: ProfessionalReviewStats) => void;
 }) {
   const router = useRouter();
   const { user } = useUser();
   const [reviews, setReviews] = React.useState<ProfessionalReview[]>([]);
+  const [reviewsLoaded, setReviewsLoaded] = React.useState(false);
   const [viewerHasReviewed, setViewerHasReviewed] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [rating, setRating] = React.useState<number | null>(5);
@@ -69,12 +78,21 @@ export function ProfessionalReviewSection({
     if (!res.error) {
       setReviews(res.reviews ?? []);
       setViewerHasReviewed(Boolean(res.viewerHasReviewed));
+      setReviewsLoaded(true);
     }
   }, [listingId]);
 
   React.useEffect(() => {
     void load();
   }, [load, user?.id]);
+
+  React.useEffect(() => {
+    if (!reviewsLoaded || !onStatsChange) return;
+    const nextCount = reviews.length;
+    const nextAvg =
+      nextCount > 0 ? reviews.reduce((sum, row) => sum + row.rating, 0) / nextCount : null;
+    onStatsChange({ ratingAverage: nextAvg, reviewCount: nextCount });
+  }, [onStatsChange, reviews, reviewsLoaded]);
 
   const openDialog = () => {
     if (!user) {
@@ -105,12 +123,16 @@ export function ProfessionalReviewSection({
     onReviewSubmitted?.();
   };
 
-  const count = reviewCount ?? reviews.length;
+  const liveAvg =
+    reviewsLoaded && reviews.length > 0
+      ? reviews.reduce((sum, row) => sum + row.rating, 0) / reviews.length
+      : null;
+  const count = reviewsLoaded ? reviews.length : (reviewCount ?? 0);
   const avg =
-    ratingAverage != null
-      ? formatRatingDisplay(Number(ratingAverage))
-      : reviews.length > 0
-        ? formatRatingDisplay(reviews.reduce((s, r) => s + r.rating, 0) / reviews.length)
+    liveAvg != null
+      ? formatRatingDisplay(liveAvg)
+      : ratingAverage != null
+        ? formatRatingDisplay(Number(ratingAverage))
         : null;
 
   const views = reviews.map(mapApiReviewToView);

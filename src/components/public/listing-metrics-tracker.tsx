@@ -13,6 +13,7 @@ export function ListingMetricsTracker({
   city,
   category,
   ownerId,
+  photoCount,
 }: {
   listingKind: ListingMetricKind;
   listingId: string;
@@ -21,6 +22,8 @@ export function ListingMetricsTracker({
   category?: string | null;
   /** Seller id — enables multi-listing High Interest signals. */
   ownerId?: string | null;
+  /** Distinct photos available (cover + gallery/portfolio) for the photos signal. */
+  photoCount?: number | null;
 }) {
   React.useEffect(() => {
     recordListingView({ kind: listingKind, listingId, city, category });
@@ -28,6 +31,11 @@ export function ListingMetricsTracker({
   }, [listingKind, listingId, city, category]);
 
   return (
-    <ListingHotLeadTracker listingKind={listingKind} listingId={listingId} ownerId={ownerId} />
+    <ListingHotLeadTracker
+      listingKind={listingKind}
+      listingId={listingId}
+      ownerId={ownerId}
+      photoCount={photoCount}
+    />
   );
 }

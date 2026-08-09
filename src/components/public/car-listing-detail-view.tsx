@@ -382,6 +382,7 @@ export function CarListingDetailView({
           city={listing.cityName}
           category={listing.make}
           ownerId={listing.seller?.id}
+          photoCount={listing.imageUrls?.filter(Boolean).length ?? 0}
         />
       )}
       <Box component="article" sx={{ bgcolor: 'background.default' }}>

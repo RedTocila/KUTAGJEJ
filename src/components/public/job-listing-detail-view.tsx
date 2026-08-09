@@ -195,6 +195,7 @@ export function JobListingDetailView({
           city={listing.cityName}
           category={listing.industry}
           ownerId={listing.seller?.id}
+          photoCount={coverImageUrls.filter(Boolean).length}
         />
       )}
       <JobListingDetailDesktop

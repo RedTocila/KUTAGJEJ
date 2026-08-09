@@ -615,6 +615,7 @@ export async function fetchPublicProfessionalListingById(id: string): Promise<Pu
   if (!isListingId(raw)) return null;
   const data = await safeJson<{ listing?: PublicDirectoryListingDetail }>(
     `/public/listings/professionals/${encodeURIComponent(raw)}`,
+    { cache: 'no-store' },
   );
   return data?.listing ?? null;
 }

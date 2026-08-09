@@ -4,15 +4,15 @@ import { authHeaders } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
 import { getVisitorId, type ListingMetricKind } from '@/lib/listing-metrics';
 
-/** Midpoint of the 45–60s “active engagement” window. */
-export const HOT_LEAD_DWELL_MS = 50_000;
-export const HOT_LEAD_MIN_PHOTOS = 4;
+/** Midpoint of the 40–60s engagement window. */
+export const HOT_LEAD_DWELL_MS = 40_000;
+export const HOT_LEAD_MIN_PHOTOS = 3;
 /** Significant scroll depth through the listing page. */
 export const HOT_LEAD_SCROLL_RATIO = 0.55;
 /** Return / repeat-view / multi-listing / cooldown window. */
 export const HOT_LEAD_RETURN_WINDOW_MS = 48 * 60 * 60 * 1000;
 /** Idle longer than this pauses active dwell accumulation. */
-export const HOT_LEAD_ACTIVE_IDLE_MS = 5_000;
+export const HOT_LEAD_ACTIVE_IDLE_MS = 15_000;
 
 export const HOT_LEAD_PHOTO_EVENT = 'kutagjej:listing-photo';
 export const HOT_LEAD_SAVE_EVENT = 'kutagjej:hot-lead-save';
@@ -95,9 +95,18 @@ export function countHotLeadHighIntentSignals(signals: HotLeadSignals): number {
   return n;
 }
 
-/** ≥3 meaningful signals including ≥1 high-intent behavior. */
+/** ≥3 meaningful signals (explore / details / return / save / share). */
 export function qualifiesAsHotLead(signals: HotLeadSignals): boolean {
-  return countHotLeadSignals(signals) >= 3 && countHotLeadHighIntentSignals(signals) >= 1;
+  return countHotLeadSignals(signals) >= 3;
+}
+
+/** How many distinct photo indexes are needed for the photos signal. */
+export function hotLeadPhotosNeeded(availablePhotoCount?: number | null): number {
+  const available = Number(availablePhotoCount);
+  if (Number.isFinite(available) && available > 0) {
+    return Math.max(1, Math.min(HOT_LEAD_MIN_PHOTOS, Math.floor(available)));
+  }
+  return HOT_LEAD_MIN_PHOTOS;
 }
 
 function visitsStorageKey(kind: ListingMetricKind, listingId: string): string {
@@ -229,10 +238,21 @@ export function markHotLeadFired(kind: ListingMetricKind, listingId: string, now
 export function hasHotLeadContactAction(
   kind: ListingMetricKind,
   listingId: string,
+  now = Date.now(),
 ): boolean {
   if (typeof window === 'undefined') return false;
   try {
-    return localStorage.getItem(contactedStorageKey(kind, listingId)) === '1';
+    const raw = localStorage.getItem(contactedStorageKey(kind, listingId));
+    if (!raw) return false;
+    // Legacy permanent flag ("1") — treat as contacted within the return window from "now"
+    // by clearing it so a mere Kontakto click no longer blocks forever.
+    if (raw === '1') {
+      localStorage.removeItem(contactedStorageKey(kind, listingId));
+      return false;
+    }
+    const ms = Number(raw);
+    if (!Number.isFinite(ms)) return false;
+    return now - ms <= HOT_LEAD_RETURN_WINDOW_MS;
   } catch {
     return false;
   }
@@ -241,10 +261,11 @@ export function hasHotLeadContactAction(
 export function markHotLeadContactAction(
   kind: ListingMetricKind,
   listingId: string,
+  now = Date.now(),
 ): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(contactedStorageKey(kind, listingId), '1');
+    localStorage.setItem(contactedStorageKey(kind, listingId), String(now));
   } catch {
     /* ignore */
   }

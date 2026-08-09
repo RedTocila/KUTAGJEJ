@@ -10,7 +10,7 @@ import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listin
 import { fetchLatestProfessionals, fetchPublicProfessionalListingById } from '@/lib/public-listings-client';
 import { paths, pathsPublicVerticalListingDetail } from '@/paths';
 
-export const revalidate = 60;
+export const revalidate = 0;
 
 type PageProps = { params: Promise<{ permalink: string }> };
 

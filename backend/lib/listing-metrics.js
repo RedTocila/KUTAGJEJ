@@ -77,7 +77,7 @@ function countHotLeadHighIntentSignals(signals) {
 }
 
 function qualifiesAsHotLead(signals) {
-  return countHotLeadSignals(signals) >= 3 && countHotLeadHighIntentSignals(signals) >= 1;
+  return countHotLeadSignals(signals) >= 3;
 }
 
 function metricsKey(kind, listingId) {

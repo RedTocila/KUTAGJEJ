@@ -135,6 +135,17 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     }
 
     const name = await reviewerDisplayName(reviewerId);
+    try {
+      const { notifyListingReview } = require('../lib/user-notifications');
+      await notifyListingReview({
+        metricsKind: 'businesses',
+        listingId,
+        reviewerId,
+        rating: v.rating,
+      });
+    } catch (notifyErr) {
+      console.warn('notifyListingReview (businesses):', notifyErr?.message || notifyErr);
+    }
     res.status(201).json({ review: formatReview(doc, name) });
   } catch (err) {
     console.error('POST /business-reviews:', err?.message || err);

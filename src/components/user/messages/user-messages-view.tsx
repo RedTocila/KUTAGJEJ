@@ -159,6 +159,10 @@ function formatConversationListTime(iso: string, locale: string, yesterday: stri
 
 type InboxFilter = 'all' | 'unread' | 'read';
 
+function conversationHasMessages(item: Pick<ConversationSummary, 'lastMessageAt' | 'lastMessageText'>): boolean {
+  return Boolean(item.lastMessageAt) || Boolean(String(item.lastMessageText || '').trim());
+}
+
 function conversationActivityAt(item: ConversationSummary): number {
   const raw = item.lastMessageAt || item.updatedAt;
   const t = new Date(raw).getTime();
@@ -172,10 +176,31 @@ function sortConversationsByRecent(items: ConversationSummary[]): ConversationSu
   });
 }
 
+/** Inbox only lists threads that actually have a message. */
+function inboxConversations(items: ConversationSummary[]): ConversationSummary[] {
+  return items.filter(conversationHasMessages);
+}
+
 function filterConversations(items: ConversationSummary[], filter: InboxFilter): ConversationSummary[] {
   if (filter === 'unread') return items.filter((c) => c.unreadCount > 0);
   if (filter === 'read') return items.filter((c) => c.unreadCount <= 0);
   return items;
+}
+
+function patchConversationInList(
+  prev: ConversationSummary[],
+  conversationId: string,
+  patch: Partial<ConversationSummary>,
+  fallback: ConversationSummary | null,
+): ConversationSummary[] {
+  const idx = prev.findIndex((c) => c.id === conversationId);
+  if (idx >= 0) {
+    return prev.map((c) => (c.id === conversationId ? { ...c, ...patch } : c));
+  }
+  if (fallback) {
+    return [{ ...fallback, ...patch, unreadCount: 0 }, ...prev];
+  }
+  return prev;
 }
 
 /** Last N of my messages are still unread by the other party → delivered; older → read. */
@@ -1149,7 +1174,7 @@ export function UserMessagesView() {
   };
 
   const [conversations, setConversations] = React.useState<ConversationSummary[]>(
-    () => getCachedConversations() ?? [],
+    () => inboxConversations(getCachedConversations() ?? []),
   );
   const [messages, setMessages] = React.useState<ConversationMessage[]>(() =>
     urlSelectedId ? (getCachedThread(urlSelectedId)?.messages ?? []) : [],
@@ -1251,7 +1276,7 @@ export function UserMessagesView() {
     // Show cached inbox immediately on remount while refreshing in the background.
     const cached = getCachedConversations();
     if (cached) {
-      setConversations(sortConversationsByRecent(cached));
+      setConversations(sortConversationsByRecent(inboxConversations(cached)));
       setListLoading(false);
     } else {
       setListLoading(true);
@@ -1261,7 +1286,7 @@ export function UserMessagesView() {
       setError(res.error);
       if (!getCachedConversations()) setConversations([]);
     } else {
-      const next = sortConversationsByRecent(res.conversations ?? []);
+      const next = sortConversationsByRecent(inboxConversations(res.conversations ?? []));
       setCachedConversations(next);
       setConversations(next);
     }
@@ -1405,7 +1430,17 @@ export function UserMessagesView() {
     return () => ro.disconnect();
   }, [threadLoading, selectedId, activeConversation, pinThreadToBottom, messages.length]);
 
+  const discardEmptyConversation = (id: string | null | undefined, conv: ConversationSummary | null) => {
+    if (!id || !conv || conversationHasMessages(conv)) return;
+    removeCachedThreads([id]);
+    void hideConversations([id]);
+  };
+
   const selectConversation = (id: string) => {
+    const leavingId = selectedIdRef.current;
+    if (leavingId && leavingId !== id) {
+      discardEmptyConversation(leavingId, activeConversationRef.current);
+    }
     setMobileThreadDismissed(false);
     if (id === selectedId) return;
     // Paint the thread immediately; URL sync can take a tick on mobile.
@@ -1417,6 +1452,11 @@ export function UserMessagesView() {
   };
 
   const handleBackToInbox = () => {
+    const leavingId = selectedIdRef.current;
+    const leaving =
+      (leavingId && conversationsRef.current.find((c) => c.id === leavingId)) ||
+      activeConversationRef.current;
+    discardEmptyConversation(leavingId, leaving);
     // Show inbox + bottom nav immediately; URL sync can take a tick on mobile.
     setMobileThreadDismissed(true);
     setInstantSelectedId(null);
@@ -1546,6 +1586,11 @@ export function UserMessagesView() {
     const createdAt = new Date().toISOString();
     const localPreviewUrl = file ? URL.createObjectURL(file) : null;
     const preview = body.trim() || (file ? t.messages.photoPreview : body);
+    const wasInInbox = conversationsRef.current.some((c) => c.id === conversationId);
+    const baseOtherUnread =
+      conversationsRef.current.find((c) => c.id === conversationId)?.otherUnreadCount ??
+      activeConversationRef.current?.otherUnreadCount ??
+      0;
 
     const optimistic: ConversationMessage = {
       id: tempId,
@@ -1565,26 +1610,26 @@ export function UserMessagesView() {
       if (conv) {
         setCachedThread(conversationId, next, {
           ...conv,
-          otherUnreadCount: (conv.otherUnreadCount ?? 0) + 1,
+          otherUnreadCount: baseOtherUnread + 1,
         });
       }
       return next;
     });
     setActiveConversation((prev) =>
-      prev ? { ...prev, otherUnreadCount: (prev.otherUnreadCount ?? 0) + 1 } : prev,
+      prev ? { ...prev, otherUnreadCount: baseOtherUnread + 1 } : prev,
     );
     setConversations((prev) => {
       const next = sortConversationsByRecent(
-        prev.map((c) =>
-          c.id === conversationId
-            ? {
-                ...c,
-                lastMessageText: preview,
-                lastMessageAt: createdAt,
-                lastMessageIsMine: true,
-                otherUnreadCount: (c.otherUnreadCount ?? 0) + 1,
-              }
-            : c,
+        patchConversationInList(
+          prev,
+          conversationId,
+          {
+            lastMessageText: preview,
+            lastMessageAt: createdAt,
+            lastMessageIsMine: true,
+            otherUnreadCount: baseOtherUnread + 1,
+          },
+          activeConversationRef.current,
         ),
       );
       setCachedConversations(next);
@@ -1594,20 +1639,20 @@ export function UserMessagesView() {
     const rollback = () => {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       setActiveConversation((prev) =>
-        prev
-          ? { ...prev, otherUnreadCount: Math.max(0, (prev.otherUnreadCount ?? 0) - 1) }
-          : prev,
+        prev ? { ...prev, otherUnreadCount: baseOtherUnread } : prev,
       );
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === conversationId
-            ? {
-                ...c,
-                otherUnreadCount: Math.max(0, (c.otherUnreadCount ?? 0) - 1),
-              }
-            : c,
-        ),
-      );
+      setConversations((prev) => {
+        if (!wasInInbox) {
+          const next = prev.filter((c) => c.id !== conversationId);
+          setCachedConversations(next);
+          return next;
+        }
+        const next = prev.map((c) =>
+          c.id === conversationId ? { ...c, otherUnreadCount: baseOtherUnread } : c,
+        );
+        setCachedConversations(next);
+        return next;
+      });
       if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
     };
 
@@ -1639,16 +1684,16 @@ export function UserMessagesView() {
     if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
     setConversations((prev) => {
       const next = sortConversationsByRecent(
-        prev.map((c) =>
-          c.id === conversationId
-            ? {
-                ...c,
-                lastMessageText:
-                  sent.body?.trim() || (sent.imageUrl ? t.messages.photoPreview : sent.body),
-                lastMessageAt: sent.createdAt,
-                lastMessageIsMine: true,
-              }
-            : c,
+        patchConversationInList(
+          prev,
+          conversationId,
+          {
+            lastMessageText:
+              sent.body?.trim() || (sent.imageUrl ? t.messages.photoPreview : sent.body),
+            lastMessageAt: sent.createdAt,
+            lastMessageIsMine: true,
+          },
+          activeConversationRef.current,
         ),
       );
       setCachedConversations(next);

@@ -551,7 +551,7 @@ const sq = {
       },
       reviews: {
         title: 'Vlerësime',
-        description: 'Kur dikush lë një vlerësim te profili juaj.',
+        description: 'Kur dikush lë një vlerësim te profili ose njoftimi juaj.',
       },
       reservations: {
         title: 'Rezervime',
@@ -1053,7 +1053,7 @@ const en: AppMessages = {
       },
       reviews: {
         title: 'Reviews',
-        description: 'When someone leaves a review on your profile.',
+        description: 'When someone leaves a review on your profile or listing.',
       },
       reservations: {
         title: 'Reservations',

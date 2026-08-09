@@ -219,6 +219,7 @@ export function BusinessListingDetailView({
           city={listing.cityName}
           category={listing.category}
           ownerId={listing.seller?.id}
+          photoCount={listing.imageUrls?.filter(Boolean).length ?? 0}
         />
       )}
       <BusinessListingDetailDesktop

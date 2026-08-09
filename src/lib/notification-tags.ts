@@ -26,6 +26,7 @@ const TYPE_TO_TAG: Record<string, NotificationTag> = {
   listing_approved: 'listing_status',
   listing_rejected: 'listing_status',
   member_review: 'reviews',
+  listing_review: 'reviews',
   business_reservation: 'reservations',
   verification_approved: 'verification',
   verification_rejected: 'verification',

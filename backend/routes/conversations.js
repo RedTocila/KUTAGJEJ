@@ -628,10 +628,12 @@ router.get('/', auth, requirePortalUser, async (req, res) => {
     const to = from + limit - 1;
 
     const hiddenIds = await loadHiddenConversationIds(userRef.id);
+    // Empty contact shells (no messages yet) stay out of the inbox until someone sends.
     let q = getSupabaseAdmin()
       .from('conversations')
       .select('*')
       .or(`poster_id.eq.${userRef.id},inquirer_id.eq.${userRef.id}`)
+      .not('last_message_at', 'is', null)
       .order('last_message_at', { ascending: false, nullsFirst: false });
     if (hiddenIds.length) {
       q = q.not('id', 'in', `(${hiddenIds.join(',')})`);
@@ -681,6 +683,16 @@ router.post('/hide', auth, requirePortalUser, async (req, res) => {
     for (const id of ids) {
       const conv = await findConversationForUser(id, userRef);
       if (!conv) continue;
+      if (!conv.lastMessageAt) {
+        const { error: delErr } = await getSupabaseAdmin()
+          .from('conversations')
+          .delete()
+          .eq('id', conv.id)
+          .is('last_message_at', null);
+        if (delErr) throw delErr;
+        hidden.push(String(conv.id));
+        continue;
+      }
       await upsertConversationUserState(conv.id, userRef.id, { hidden_at: hiddenAt });
       hidden.push(String(conv.id));
     }
@@ -770,12 +782,23 @@ router.patch('/:id/pin', auth, requirePortalUser, async (req, res) => {
   }
 });
 
-/** DELETE /api/conversations/:id — hide chat for current user */
+/** DELETE /api/conversations/:id — hide chat for current user (hard-delete if never messaged) */
 router.delete('/:id', auth, requirePortalUser, async (req, res) => {
   try {
     const userRef = portalUserRef(req.user);
     const conv = await findConversationForUser(req.params.id, userRef);
     if (!conv) return res.status(404).json({ message: 'Biseda nuk u gjet.' });
+
+    // Contact opened the composer but nobody sent — remove the empty shell entirely.
+    if (!conv.lastMessageAt) {
+      const { error: delErr } = await getSupabaseAdmin()
+        .from('conversations')
+        .delete()
+        .eq('id', conv.id)
+        .is('last_message_at', null);
+      if (delErr) throw delErr;
+      return res.json({ ok: true, id: String(conv.id), discarded: true });
+    }
 
     await upsertConversationUserState(conv.id, userRef.id, {
       hidden_at: new Date().toISOString(),

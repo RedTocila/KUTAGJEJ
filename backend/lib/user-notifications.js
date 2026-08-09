@@ -22,6 +22,7 @@ const TYPE_TO_PREF = {
   listing_approved: 'listing_status',
   listing_rejected: 'listing_status',
   member_review: 'reviews',
+  listing_review: 'reviews',
   business_reservation: 'reservations',
   verification_approved: 'verification',
   verification_rejected: 'verification',
@@ -352,7 +353,7 @@ async function notifyListingShared({ metricsKind, listingId, sharerId }) {
 }
 
 /**
- * Hot-interest lead: engagement combo (dwell / photos / contact scroll / return visit).
+ * Hot-interest lead: engagement combo (dwell / photos / scroll / details / return / save / share).
  * Actor identity only when the visitor is signed in (contactable).
  */
 async function notifyListingHotLead({ metricsKind, listingId, viewerId = null }) {
@@ -414,6 +415,28 @@ async function notifyMemberReview({ memberId, reviewerId, rating }) {
   });
 }
 
+/** Review left on a business or professional listing. */
+async function notifyListingReview({ metricsKind, listingId, reviewerId, rating }) {
+  const brief = await loadListingOwnerBrief(metricsKind, listingId);
+  if (!brief) return null;
+  if (String(brief.posterId) === String(reviewerId)) return null;
+
+  const reviewerName = (await displayNameForUserId(reviewerId)) || 'Dikush';
+  const listingHref = listingPublicHrefFromMetrics(metricsKind, listingId);
+  const stars = `${rating} ${rating === 1 ? 'yll' : 'yje'}`;
+  return createUserNotification({
+    userId: brief.posterId,
+    type: 'listing_review',
+    title: `${reviewerName} la një vlerësim`,
+    message: `${reviewerName} vlerësoi «${brief.title}» me ${stars}.`,
+    refKind: metricsKind,
+    refId: listingId,
+    actorId: reviewerId,
+    actorName: reviewerName,
+    href: listingHref,
+  });
+}
+
 async function notifyBusinessReservation({ posterId, listingId, listingTitle, guestName, reservationDate, timeSlot }) {
   const guest = guestName || 'Dikush';
   const when = [reservationDate, timeSlot].filter(Boolean).join(' · ');
@@ -461,6 +484,7 @@ module.exports = {
   notifyListingHotLead,
   notifyListingStatus,
   notifyMemberReview,
+  notifyListingReview,
   notifyBusinessReservation,
   notifyVerificationResult,
 };

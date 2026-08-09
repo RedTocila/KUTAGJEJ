@@ -67,8 +67,6 @@ export function StickyListingContact({
     setError(null);
     if (isLoading) return;
 
-    emitHotLeadContactAction({ listingKind, listingId });
-
     if (!user && !hasStoredSession()) {
       setPendingListingChat({ listingKind, listingId });
       router.push(paths.user.auth);
@@ -92,6 +90,7 @@ export function StickyListingContact({
         setError(message);
         return;
       }
+      emitHotLeadContactAction({ listingKind, listingId });
       router.push(`${paths.user.messages}?c=${encodeURIComponent(res.conversation.id)}`);
     } finally {
       setLoading(false);

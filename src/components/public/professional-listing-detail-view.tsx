@@ -43,7 +43,10 @@ import {
   professionalSubtitle,
 } from '@/lib/professional-listing-detail-content';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
-import { ProfessionalReviewSection } from '@/components/professionals/professional-review-section';
+import {
+  ProfessionalReviewSection,
+  type ProfessionalReviewStats,
+} from '@/components/professionals/professional-review-section';
 import { paths } from '@/paths';
 import { useRouter } from 'next/navigation';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
@@ -85,7 +88,19 @@ export function ProfessionalListingDetailView({
 
   const displayName = React.useMemo(() => professionalDisplayName(listing), [listing]);
   const subtitle = React.useMemo(() => professionalSubtitle(listing), [listing]);
-  const rating = React.useMemo(() => professionalRatingDisplay(listing), [listing]);
+  const [liveReviewStats, setLiveReviewStats] = React.useState<ProfessionalReviewStats | null>(null);
+  const rating = React.useMemo(
+    () =>
+      professionalRatingDisplay(
+        liveReviewStats
+          ? { ...listing, ratingAverage: liveReviewStats.ratingAverage, reviewCount: liveReviewStats.reviewCount }
+          : listing,
+      ),
+    [listing, liveReviewStats],
+  );
+  const onReviewStatsChange = React.useCallback((stats: ProfessionalReviewStats) => {
+    setLiveReviewStats(stats);
+  }, []);
   const serviceTags = React.useMemo(() => professionalServiceTags(listing), [listing]);
   const portfolio = React.useMemo(() => professionalPortfolioItems(listing), [listing]);
   const coverImageUrls = React.useMemo(() => professionalCoverImageUrls(listing), [listing]);
@@ -111,6 +126,7 @@ export function ProfessionalListingDetailView({
           city={listing.cityName}
           category={listing.category}
           ownerId={listing.seller?.id}
+          photoCount={1 + portfolio.length}
         />
       )}
       <ProfessionalListingDetailDesktop
@@ -323,6 +339,8 @@ export function ProfessionalListingDetailView({
                 {portfolio.length > 0 ? (
                   <ProfessionalPortfolioSection
                     items={portfolio}
+                    listingId={listing.id}
+                    listingKind="professionals"
                     headerAction={
                       ownerEdit?.onEditPortfolio ? (
                         <OwnerEditPencil label="Ndrysho portofolin" onClick={ownerEdit.onEditPortfolio} />
@@ -345,6 +363,7 @@ export function ProfessionalListingDetailView({
                 listingId={listing.id}
                 ratingAverage={listing.ratingAverage}
                 reviewCount={listing.reviewCount}
+                onStatsChange={onReviewStatsChange}
                 onReviewSubmitted={() => router.refresh()}
               />
             )}

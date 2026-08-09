@@ -366,6 +366,7 @@ export function RealEstateListingDetailView({
           city={listing.cityName}
           category={listing.propertyCategory}
           ownerId={listing.seller?.id}
+          photoCount={listing.imageUrls?.filter(Boolean).length ?? 0}
         />
       )}
       {/* JSON-LD is emitted from the route; keep article semantics for headings + listing body. */}

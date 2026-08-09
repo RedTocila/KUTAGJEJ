@@ -7,6 +7,8 @@ import type { ProfessionalPortfolioItem } from '@/lib/professional-listing-detai
 import { ProductDialog } from '@/components/core/product-dialog';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { emitListingPhotoView } from '@/lib/listing-hot-lead';
+import type { ListingMetricKind } from '@/lib/listing-metrics';
 import { productPanelSx } from '@/styles/product-sx';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
@@ -463,15 +465,30 @@ function ProfessionalPortfolioCard({
 export function ProfessionalPortfolioSection({
   items,
   headerAction,
+  listingId,
+  listingKind = 'professionals',
 }: {
   items: ProfessionalPortfolioItem[];
   headerAction?: React.ReactNode;
+  listingId?: string;
+  listingKind?: ListingMetricKind;
 }) {
   const [showAll, setShowAll] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState<number | null>(null);
   const visible = showAll ? items : items.slice(0, PORTFOLIO_INITIAL_VISIBLE);
   const hasMore = items.length > PORTFOLIO_INITIAL_VISIBLE;
   const active = activeIndex != null ? items[activeIndex] : null;
+
+  const openItem = React.useCallback(
+    (index: number) => {
+      setActiveIndex(index);
+      if (listingId) {
+        // Cover gallery uses index 0; portfolio photos continue from 1.
+        emitListingPhotoView(listingKind, listingId, index + 1);
+      }
+    },
+    [listingId, listingKind],
+  );
 
   if (items.length === 0 && !headerAction) return null;
 
@@ -487,7 +504,7 @@ export function ProfessionalPortfolioSection({
             <Grid key={item.id} size={{ xs: 6, sm: 4 }}>
               <ProfessionalPortfolioCard
                 item={item}
-                onOpen={() => setActiveIndex(index)}
+                onOpen={() => openItem(index)}
               />
             </Grid>
           ))}

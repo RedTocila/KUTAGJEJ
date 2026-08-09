@@ -39,8 +39,6 @@ export function ListingMessageButton({
     setError(null);
     if (isLoading) return;
 
-    emitHotLeadContactAction({ listingKind, listingId });
-
     const hasToken = typeof window !== 'undefined' && Boolean(localStorage.getItem('custom-auth-token'));
     if (!user && !hasToken) {
       setPendingListingChat({ listingKind, listingId });
@@ -65,6 +63,7 @@ export function ListingMessageButton({
         setError(message);
         return;
       }
+      emitHotLeadContactAction({ listingKind, listingId });
       router.push(`${paths.user.messages}?c=${encodeURIComponent(res.conversation.id)}`);
     } finally {
       setLoading(false);

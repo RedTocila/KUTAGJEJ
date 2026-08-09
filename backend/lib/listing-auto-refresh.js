@@ -290,16 +290,26 @@ async function purchaseAutoRefreshWithBoostCoins({ userId, packageId }) {
  * Process enrolled Auto-Refresh listings that are due.
  * Each successful bump uses the same path as manual refresh (1 BC + created_at bump).
  */
-async function processDueAutoRefreshes({ limit = AUTO_REFRESH_BATCH_LIMIT } = {}) {
+async function processDueAutoRefreshes({
+  limit = AUTO_REFRESH_BATCH_LIMIT,
+  userId: onlyUserId = null,
+} = {}) {
   const sb = getSupabaseAdmin();
   const batchLimit = Math.max(1, Math.min(500, Math.floor(Number(limit) || AUTO_REFRESH_BATCH_LIMIT)));
+  const scopedUserId =
+    onlyUserId && isUuid(String(onlyUserId)) ? String(onlyUserId) : null;
 
-  const { data: rows, error } = await sb
+  let dueQuery = sb
     .from('listing_auto_refresh')
     .select('user_id, listing_kind, listing_id, last_refreshed_at')
     .eq('enabled', true)
-    .order('last_refreshed_at', { ascending: true })
+    .order('last_refreshed_at', { ascending: true, nullsFirst: true })
     .limit(batchLimit);
+  if (scopedUserId) {
+    dueQuery = dueQuery.eq('user_id', scopedUserId);
+  }
+
+  const { data: rows, error } = await dueQuery;
 
   if (error) {
     if (String(error.message || '').includes('listing_auto_refresh')) {

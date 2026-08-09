@@ -17,6 +17,12 @@
       "framework": "express"
     }
   },
+  "crons": [
+    {
+      "path": "/api/listings/refresh/auto/run",
+      "schedule": "*/5 * * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",

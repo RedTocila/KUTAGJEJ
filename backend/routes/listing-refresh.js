@@ -47,6 +47,13 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
 
 router.get('/auto', authMiddleware, requirePortalUser, async (req, res) => {
   try {
+    // Opportunistic tick: Vercel serverless never runs the in-process scheduler.
+    // Processing this user's due enrollments keeps Auto-Refresh alive while they browse.
+    try {
+      await processDueAutoRefreshes({ userId: req.user.id, limit: 50 });
+    } catch (tickErr) {
+      console.error('GET /listings/refresh/auto tick:', tickErr?.message || tickErr);
+    }
     const snapshot = await getAutoRefreshSnapshot(req.user.id);
     res.json(snapshot);
   } catch (err) {
@@ -86,7 +93,7 @@ router.post('/auto', authMiddleware, requirePortalUser, async (req, res) => {
 });
 
 /** Internal/cron: process due Auto-Refresh enrollments (1 BC each). */
-router.post('/auto/run', async (req, res) => {
+async function runAutoRefreshCron(req, res) {
   try {
     if (!authorizeCron(req)) {
       return res.status(401).json({ message: 'Unauthorized' });
@@ -95,9 +102,13 @@ router.post('/auto/run', async (req, res) => {
     const result = await processDueAutoRefreshes({ limit });
     res.json(result);
   } catch (err) {
-    console.error('POST /listings/refresh/auto/run:', err?.message || err);
+    console.error('listings/refresh/auto/run:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
-});
+}
+
+// Vercel Cron uses GET; keep POST for manual/ops triggers.
+router.get('/auto/run', runAutoRefreshCron);
+router.post('/auto/run', runAutoRefreshCron);
 
 module.exports = router;

@@ -429,6 +429,42 @@ export function ListingOwnerMetrics({
       setBusy(false);
     }
   };
+  const handleRefreshRef = React.useRef(handleRefresh);
+  handleRefreshRef.current = handleRefresh;
+
+  /**
+   * Auto-Refresh: when enrolled and the Rifresko cooldown ends, fire the same
+   * bump as a manual click (1 BC). Needed on Vercel where the API has no
+   * long-lived setInterval scheduler.
+   */
+  const autoRefreshAttemptKeyRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!autoRefreshEnabled) {
+      autoRefreshAttemptKeyRef.current = null;
+      return;
+    }
+    if (!canRefresh || !listingId || !kind) return;
+    if (refreshLocked || busy || autoBusy) return;
+
+    const attemptKey = `${listingId}:${lastRefreshAtLocal ?? 'none'}`;
+    if (autoRefreshAttemptKeyRef.current === attemptKey) return;
+
+    const timer = window.setTimeout(() => {
+      if (autoRefreshAttemptKeyRef.current === attemptKey) return;
+      autoRefreshAttemptKeyRef.current = attemptKey;
+      void handleRefreshRef.current();
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [
+    autoRefreshEnabled,
+    canRefresh,
+    listingId,
+    kind,
+    refreshLocked,
+    busy,
+    autoBusy,
+    lastRefreshAtLocal,
+  ]);
 
   const handleToggleAuto = async () => {
     if (!listingId || !kind || autoBusy) return;
@@ -573,7 +609,7 @@ export function ListingOwnerMetrics({
               title={
                 autoRefreshEnabled
                   ? 'Hiq nga Auto-Refresh'
-                  : 'Shto në Auto-Refresh · rifreshim automatik sipas planit · 1 BC për çdo rifreskim'
+                  : 'Shto në Auto-Refresh · rifreskon automatikisht sa herë që Rifresko bëhet i disponueshëm · 1 BC për çdo rifreskim'
               }
             >
               <span>

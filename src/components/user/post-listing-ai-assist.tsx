@@ -116,13 +116,26 @@ export function PostListingAiAssist({
       setInputExpanded(false);
       return;
     }
+
     const measure = () => {
-      const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight) || 20;
-      setInputExpanded(el.scrollHeight > lineHeight + 4);
+      const styles = getComputedStyle(el);
+      const lineHeight = Number.parseFloat(styles.lineHeight) || 20;
+      const paddingY =
+        (Number.parseFloat(styles.paddingTop) || 0) + (Number.parseFloat(styles.paddingBottom) || 0);
+      const singleLineHeight = lineHeight + paddingY;
+      // Always wrap for measurement (never nowrap — that blocked expansion).
+      const multiline = text.includes('\n') || el.scrollHeight > singleLineHeight + 2;
+      setInputExpanded(multiline);
     };
+
     measure();
     const raf = requestAnimationFrame(measure);
-    return () => cancelAnimationFrame(raf);
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    ro?.observe(el);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro?.disconnect();
+    };
   }, [text]);
 
   const isEdit = mode === 'edit';
@@ -408,9 +421,10 @@ export function PostListingAiAssist({
             '& textarea': {
               resize: 'none',
               lineHeight: 1.35,
-              whiteSpace: inputExpanded ? 'pre-wrap' : 'nowrap',
-              textOverflow: inputExpanded ? 'clip' : 'ellipsis',
-              overflow: inputExpanded ? 'auto' : 'hidden !important',
+              whiteSpace: 'pre-wrap',
+              overflowWrap: 'anywhere',
+              wordBreak: 'break-word',
+              overflow: inputExpanded ? 'auto' : 'hidden',
             },
           }}
         />

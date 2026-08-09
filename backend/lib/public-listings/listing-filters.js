@@ -69,6 +69,13 @@ function applyTextSearch(spec, query, fields) {
   if (or) spec.or = or;
 }
 
+/** Keyword search → relevance only (no OKAZION / Premium pin to the top). */
+function featuredBoostForQuery(query) {
+  const searching = String(query?.q ?? '').trim().length >= 2;
+  if (!searching) return {};
+  return { includeOkazion: false, includePremium: false };
+}
+
 /** Finish keyword search: accent-tolerant text match + city/zone name resolution. */
 async function finalizeTextSearch(filter, query) {
   const q = String(query?.q ?? '').trim();
@@ -112,7 +119,7 @@ function parseRealEstateFilters(query) {
   applyTextSearch(filter, query, ['title', 'description']);
 
   const sort = parseSort(query.sort);
-  return { filter, sort: buildSort(sort) };
+  return { filter, sort: buildSort(sort, 'price', featuredBoostForQuery(query)) };
 }
 
 function parseCarFilters(query) {
@@ -154,7 +161,7 @@ function parseCarFilters(query) {
   applyTextSearch(filter, query, ['description', 'make', 'model', 'variant']);
 
   const sort = parseSort(query.sort);
-  return { filter, sort: buildSort(sort) };
+  return { filter, sort: buildSort(sort, 'price', featuredBoostForQuery(query)) };
 }
 
 function parseJobFilters(query) {
@@ -181,7 +188,7 @@ function parseJobFilters(query) {
   applyTextSearch(filter, query, ['title', 'description']);
 
   const sort = parseSort(query.sort);
-  return { filter, sort: buildSort(sort, 'salary') };
+  return { filter, sort: buildSort(sort, 'salary', featuredBoostForQuery(query)) };
 }
 
 function parseMarketplaceFilters(query) {
@@ -200,7 +207,7 @@ function parseMarketplaceFilters(query) {
   applyTextSearch(filter, query, ['title', 'description']);
 
   const sort = parseSort(query.sort);
-  return { filter, sort: buildSort(sort) };
+  return { filter, sort: buildSort(sort, 'price', featuredBoostForQuery(query)) };
 }
 
 function parseDirectoryFilters(query, vertical) {
@@ -219,7 +226,7 @@ function parseDirectoryFilters(query, vertical) {
   applyTextSearch(filter, query, ['title', 'description']);
 
   const sort = parseSort(query.sort);
-  return { filter, sort: buildDirectorySort(sort) };
+  return { filter, sort: buildDirectorySort(sort, featuredBoostForQuery(query)) };
 }
 
 module.exports = {

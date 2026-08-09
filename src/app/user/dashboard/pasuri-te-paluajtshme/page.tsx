@@ -36,9 +36,15 @@ import {
 } from '@/lib/ai-listing-draft';
 import { listCategoriesPublic } from '@/lib/listings-client';
 import type { CarMineListing, JobMineListing, MarketplaceMineListing } from '@/lib/listings-client';
+import {
+  fetchCategoryQuotas,
+  isCategoryQuotaAvailable,
+  type CategoryQuotaSnapshot,
+} from '@/lib/listing-category-quota-client';
 import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';
+import { useCopy } from '@/hooks/use-copy';
 import type { ListingCategory, ListingCategoryKey } from '@/types/listing-category';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
 
@@ -50,6 +56,7 @@ type Phase =
   | 'marketplace-form'
   | 'businesses-form'
   | 'professionals-form'
+  | 'quota-blocked'
   | 'unsupported';
 
 const KNOWN_CATEGORY_KEYS: ListingCategoryKey[] = [
@@ -118,11 +125,14 @@ export default function UserPostListingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
+  const t = useCopy();
 
   const [phase, setPhase] = React.useState<Phase>('choose');
   const [picked, setPicked] = React.useState<ListingCategory | null>(null);
   const [categories, setCategories] = React.useState<ListingCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = React.useState(true);
+  const [categoryQuotas, setCategoryQuotas] = React.useState<CategoryQuotaSnapshot | null>(null);
+  const [quotasReady, setQuotasReady] = React.useState(false);
   const wantsAi = searchParams.get('ai') === '1';
   const wantsOkazion = searchParams.get('okazion') === '1';
   const wantsPremium = searchParams.get('premium') === '1';
@@ -151,11 +161,14 @@ export default function UserPostListingPage() {
     if (!user || !canPublish) return;
     let cancelled = false;
     setLoadingCategories(true);
+    setQuotasReady(false);
     void (async () => {
-      const res = await listCategoriesPublic();
+      const [catRes, quotaRes] = await Promise.all([listCategoriesPublic(), fetchCategoryQuotas()]);
       if (cancelled) return;
-      setCategories(res.categories ?? []);
+      setCategories(catRes.categories ?? []);
+      setCategoryQuotas(quotaRes.snapshot ?? null);
       setLoadingCategories(false);
+      setQuotasReady(true);
     })();
     return () => {
       cancelled = true;
@@ -164,6 +177,10 @@ export default function UserPostListingPage() {
 
   const handlePickCategory = (cat: ListingCategory) => {
     setPicked(cat);
+    if (!isCategoryQuotaAvailable(categoryQuotas, cat.key)) {
+      setPhase('quota-blocked');
+      return;
+    }
     if (cat.key === 'real-estate') {
       setPhase('real-estate-form');
     } else if (cat.key === 'cars') {
@@ -194,15 +211,17 @@ export default function UserPostListingPage() {
         handlePickCategory(fallbackCategory(raw as ListingCategoryKey));
       }
     },
-    [categories],
+    // categoryQuotas is read by handlePickCategory via closure — include it
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handlePickCategory is intentionally inline
+    [categories, categoryQuotas],
   );
 
   React.useEffect(() => {
     const raw = searchParams.get('category');
-    if (!raw || loadingCategories) return;
+    if (!raw || loadingCategories || !quotasReady) return;
     if (appliedCategoryRef.current === raw) return;
     applyCategoryKey(raw);
-  }, [searchParams, loadingCategories, applyCategoryKey]);
+  }, [searchParams, loadingCategories, quotasReady, applyCategoryKey]);
 
   React.useEffect(() => {
     if (!wantsAi) {
@@ -223,6 +242,12 @@ export default function UserPostListingPage() {
   }, [wantsAi, searchParams]);
 
   const handleSheetPick = (key: ListingCategoryKey, opts?: { okazion?: boolean; premium?: boolean }) => {
+    if (!isCategoryQuotaAvailable(categoryQuotas, key)) {
+      const fromApi = categories.find((c) => c.key === key);
+      setPicked(fromApi ?? fallbackCategory(key));
+      setPhase('quota-blocked');
+      return;
+    }
     const q = new URLSearchParams({ category: key });
     if (opts?.okazion || searchParams.get('okazion') === '1') q.set('okazion', '1');
     if (opts?.premium || searchParams.get('premium') === '1') q.set('premium', '1');
@@ -376,6 +401,34 @@ export default function UserPostListingPage() {
           </PostListingFormSurface>
           </>
         </OkazionTheme>
+      ) : null}
+
+      {phase === 'quota-blocked' && picked ? (
+        <Stack spacing={2.5}>
+          <PostListingHeader
+            icon={phaseIcon(
+              picked.key === 'cars'
+                ? 'cars-form'
+                : picked.key === 'job-listings'
+                  ? 'jobs-form'
+                  : picked.key === 'marketplace'
+                    ? 'marketplace-form'
+                    : picked.key === 'businesses'
+                      ? 'businesses-form'
+                      : picked.key === 'professionals'
+                        ? 'professionals-form'
+                        : 'real-estate-form',
+            )}
+            title={picked.title}
+            description={t.picker.quotaUnavailable}
+          />
+          <Alert severity="warning" sx={{ borderRadius: 2.5 }}>
+            {t.picker.quotaExhausted}
+          </Alert>
+          <Button variant="contained" onClick={() => hardNavigate(paths.user.dashboard)}>
+            {t.common.myPanel}
+          </Button>
+        </Stack>
       ) : null}
 
       {phase === 'unsupported' && picked ? (

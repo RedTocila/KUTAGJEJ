@@ -9,6 +9,7 @@ const { sanitizeImageUrls } = require('../lib/image-upload');
 const { isUuid } = require('../lib/public-listings/query-helpers');
 const { parseComparePrice } = require('../lib/listing-compare-price');
 const { formatMineMarketplace, formatMineMarketplaceFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
+const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
 
 const router = express.Router();
 
@@ -94,6 +95,9 @@ router.get('/mine/:id', authMiddleware, requirePortalUser, async (req, res) => {
 
 router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
   try {
+    const quota = await assertCanCreateCategoryListing(req.user.id, 'product');
+    if (!quota.ok) return res.status(quota.status || 403).json({ message: quota.message });
+
     const body = req.body;
     const v = validate(body);
     if (!v.ok) return res.status(400).json({ message: v.message });

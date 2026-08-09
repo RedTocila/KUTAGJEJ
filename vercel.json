@@ -20,7 +20,7 @@
   "crons": [
     {
       "path": "/api/listings/refresh/auto/run",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 4 * * *"
     }
   ],
   "rewrites": [

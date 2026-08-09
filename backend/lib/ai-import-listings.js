@@ -1272,6 +1272,7 @@ cars: vehicleType (car|suv|van|truck|motorcycle|boat), make, model, variant, des
   - make/model MUST match common catalog spellings when visible or named (Yamaha, Honda, BMW, Mercedes-Benz, Volkswagen, …). Example: Yamaha Ténéré / TMAX → vehicleType motorcycle, make "Yamaha", model "Ténéré" or "TMAX".
   - Scooter / maxi-scooter / TMAX → motorcycle.
 job-listings: title, description, industry, education, experience, jobType (full-time|part-time|remote|internship|freelance), workLocation (onsite|hybrid|remote), salary, currency, contactPhone, responsibilities (string[]), requirements (string[])
+  - Job flyers/posters: OCR employer name, ALL open roles (e.g. Kamarier + Banakier → title like "Kamarier / Banakier"), street address + landmark → description "• Adresa: …", phone → contactPhone, shifts/hours → description + jobType/workLocation (night/evening shift → usually part-time or full-time + workLocation onsite). Infer cityName from street/neighborhood when obvious (Rruga e Kavajës → Tiranë).
 marketplace: transactionType (always "shes"), title, description, category (elektronike|mobilje-shtepi|veshje-aksesore|libra-shkolla|sport-hobi|lodra|automjete-pjese|ushqime-bujqesi|sherbime|te-tjera), condition (i-ri|si-i-ri|shume-mire|mire|me-defekte), price, currency, contactPhone
 businesses: title, description, category (restorant|bar|kafe|brunch|piceri-fast-food|pasticeri), contactPhone, servicesHighlight
 professionals: title, description, category (konsulent|freelance|sherbim|kurse|dizajn-it|marketing|mjekesi|arsim), servicesHighlight, price, currency, contactPhone, responseTimeHours
@@ -1280,40 +1281,50 @@ professionals: title, description, category (konsulent|freelance|sherbim|kurse|d
 
 DESCRIPTION STYLE for form.description (CRITICAL — never one big paragraph):
 Write a clean, scannable, SEO-friendly description with real newlines in the JSON string. Structure:
-1) Opening line — one short sentence with what is offered + searchable keywords (brand/model/product, key attribute, city when known).
-2) Blank line, then a bullet list using "• " for every known structured fact. Skip unknown fields. Typical bullets (pick what applies): Marka, Modeli, Varianti, Tipi, Viti, Kilometrazhi, Karburanti, Transmisioni, Çmimi, Gjendja, Ngjyra, Sipërfaqja, Dhoma, Banjo, Produkti, Kategoria, Qyteti, Orari, Shërbimi.
-3) Buyer-critical extras from the caption/prompt (REQUIRED when present — not optional). Add more "• " bullets for EVERY useful offer detail buyers care about, including:
+1) Opening line — one short sentence with what is offered + searchable keywords (brand/model/product/job, key attribute, city when known).
+2) Blank line, then a bullet list using "• " for every known structured fact. Skip unknown fields. Typical bullets (pick what applies): Marka, Modeli, Varianti, Tipi, Viti, Kilometrazhi, Karburanti, Transmisioni, Çmimi, Gjendja, Ngjyra, Sipërfaqja, Dhoma, Banjo, Produkti, Kategoria, Qyteti, Adresa, Orari, Shërbimi, Kompania, Pozicioni, Turni, Paga.
+3) Buyer-critical extras from the caption/prompt/PHOTOS (REQUIRED when present — not optional). Add more "• " bullets for EVERY useful offer detail buyers care about, including:
    - Transport / shipping / RoRo / delivery time (e.g. "Përfshirë transport me RoRo, 35 ditë")
    - What the price includes or excludes (doganë, TVSH, registration, accessories)
    - Warranty, financing / këste, negotiable price, trade-in
    - Condition notes, accident/service history, ownership history
    - Important equipment / extras named in the caption
-   - Offer cities / pickup locations when part of the deal (city names are enough; skip full street addresses)
+   - Location facts: city AND full street / landmark addresses when readable (e.g. "Rruga e Kavajës, pranë Raiffeisen Bank") — NEVER drop a real address just to shorten
+   - Business / employer name, opening hours, shifts, schedule, salary range when visible
 4) Closing CTA — one short line, e.g. "Kontaktoni për më shumë detaje."
 CAPTION COMPLETENESS (CRITICAL): Read the FULL caption line by line, including text inside parentheses. Never drop a buyer-relevant clause just to shorten the description. Parenthetical price notes like "(Përfshirë transport me RoRo 35 ditë)" MUST become their own bullet(s).
-Strip only: hashtag dumps, @mentions, emoji spam, URLs, English brand-disclaimer boilerplate, and empty trust fluff. Keep real offer facts. Do NOT paste the raw caption. Do NOT write a single wall of text. Prefer under ~1100 characters (hard max ~1600) — completeness beats brevity when a fact helps the buyer.
+Strip only: hashtag dumps, @mentions, emoji spam, URLs, English brand-disclaimer boilerplate, and empty trust fluff. Keep real offer facts (including addresses). Do NOT paste the raw caption. Do NOT write a single wall of text. Prefer under ~1100 characters (hard max ~1600) — completeness beats brevity when a fact helps the buyer.
 Example:
 Ofrohet Mercedes-Benz S-Class S350L, 2015, në Tiranë.\\n\\n• Marka: Mercedes-Benz\\n• Modeli: S-Class\\n• Varianti: S350L d 4MATIC\\n• Viti: 2015\\n• Kilometrazhi: 270000 km\\n• Çmimi: 17900 EUR\\n• Transport: Përfshirë transport me RoRo, 35 ditë\\n• Qyteti: Tiranë / Prishtinë\\n\\nKontaktoni për interes.
 
-Vision + text fusion (CRITICAL when attached images are present):
-1. LOOK carefully at every attached photo. Identify what is shown: product type, brand/model if readable on the item or packaging, color, material, size cues, condition, quantity, accessories, room/context.
-2. Write form.title that a buyer would search for (brand + product name + key attribute when visible).
-3. Write form.description in DESCRIPTION STYLE above. COMBINE:
-   a) What you see in the photos (concrete visual facts — do not invent specs you cannot see), AND
-   b) EVERY useful detail from the user's prompt / caption (price notes, condition, city, "used once", transport/shipping, what's included, warranty, delivery days, etc.).
-   Merge into one listed description — never paste two separate blocks or the raw caption.
-4. Fill marketplace.category / cars.vehicleType / other enum fields from what the photos show (e.g. Instant Pot / multicooker → elektronike; sofa → mobilje-shtepi).
-5. Infer condition from photos + user text when possible (i-ri|si-i-ri|shume-mire|mire|me-defekte). If the user says "used once" / "si i ri", prefer si-i-ri or shume-mire.
-6. If the user mentions price/currency/city/phone in text, put those in the matching form fields.
-7. Photos alone are enough to build a solid draft — never leave title/description empty when images clearly show a product.
-8. Do NOT invent brands, model numbers, or technical specs that are not visible in photos and not stated in text. If unsure, describe generically ("multicooker elektrik inox", not a fake SKU).
+Vision + text fusion (CRITICAL when attached images are present — applies to ALL categories):
+1. OCR / READ every readable word on flyers, posters, screenshots, menus, labels, and product packaging. Treat on-image text as primary source data — do not wait for the user to retype it.
+2. Extract ALL valuable facts visible in photos into the draft, including when applicable:
+   - What is offered (product, job role(s), property, service, vehicle)
+   - Business / employer / brand name
+   - Title / positions (e.g. "Kamarier", "Banakier" → job title; product name → marketplace title)
+   - Location: cityName AND street / landmark / neighborhood (put street in description as "• Adresa: …"; map city to cityName)
+   - Phone numbers → contactPhone (and mention in description only if useful)
+   - Price / salary / currency
+   - Hours, shifts, schedule ("turni i 3", "darkë", "full-time")
+   - Requirements, responsibilities, benefits (jobs)
+   - Specs readable on the item or poster (year, km, rooms, size, condition, etc.)
+3. Write form.title that a buyer/applicant would search for from the strongest visible cue (job role, product+brand, property type, vehicle make/model).
+4. Write form.description in DESCRIPTION STYLE above. COMBINE:
+   a) EVERY useful readable fact from the photos (addresses, phones already mapped to contactPhone, hours, roles, prices, landmarks), AND
+   b) EVERY useful detail from the user's prompt / caption (price notes, condition, city, "used once", transport/shipping, what's included, warranty, delivery days, shift notes, etc.).
+   Merge into one listed description — never paste two separate blocks or the raw caption. Never omit a visible street address or landmark.
+5. AUTO-COMPLETE form fields whenever photos or text make them clear — do not leave title/description/city/phone/enums empty if the image already shows them. Fill marketplace.category / cars.vehicleType / jobType / workLocation / propertyCategory / other enums from evidence.
+6. Infer condition from photos + user text when possible (i-ri|si-i-ri|shume-mire|mire|me-defekte). If the user says "used once" / "si i ri", prefer si-i-ri or shume-mire.
+7. Photos alone are enough to build a solid draft — never leave title/description empty when images clearly show an offer. The user should NOT need to tell you what to extract.
+8. Do NOT invent brands, model numbers, addresses, phones, or technical specs that are not visible in photos and not stated in text. If unsure, describe generically ("multicooker elektrik inox", not a fake SKU).
 
 Link / caption rules (when a URL snapshot is present and few/no attached photos):
 - Prefer caption, page description, og:description, and the user's prompt for what is offered.
 - Keep snapshotImageUrls as listing photos — only the post's own photos (carousel frames). Never invent extra images.
 - Do NOT invent a profession from the username alone.
 - Instagram / social posts: each post needs its OWN listing title derived from THAT post's caption (and photos). NEVER use authorName, Instagram @handle, profile display name, or profile.businessName / fullName as the listing title when the caption describes a product, vehicle, service, job, or offer. Example: caption about a Yamaha T-MAX → title about the scooter, not "Geshtenja Light".
-- Description: ANALYZE the FULL caption — do NOT paste it verbatim. Rewrite in DESCRIPTION STYLE (listed bullets + keywords). Extract price, city, make/model, phone into form fields. Preserve transport/shipping, inclusions, warranty, delivery time, and other buyer facts from the caption (including parenthetical notes on the price line).
+- Description: ANALYZE the FULL caption — do NOT paste it verbatim. Rewrite in DESCRIPTION STYLE (listed bullets + keywords). Extract price, city, street address, make/model, phone into form fields / description. Preserve transport/shipping, inclusions, warranty, delivery time, and other buyer facts from the caption (including parenthetical notes on the price line).
 - payload.title is only a caption hint (or null) — never treat authorName as the title.
 
 General rules:
@@ -1553,6 +1564,9 @@ function buildSeoDescriptionBullets(meta = {}) {
   push('Banjo', meta.bathrooms);
   push('Kategoria', meta.category);
   push('Qyteti', meta.cityName);
+  push('Adresa', meta.address);
+  push('Orari', meta.hours);
+  push('Kompania', meta.businessName);
   return bullets;
 }
 
@@ -1575,7 +1589,7 @@ const SEO_DESCRIPTION_MAX_CHARS = 1600;
 
 /** Buyer-critical caption facts that must not be dropped during SEO rewrite. */
 const BUYER_DETAIL_RE =
-  /\b(roro|ro[\s-]?ro|transport|shipping|delivery|d[eë]rges|dogan|customs|p[eë]rfshir|included|include|garanci|warranty|financ|k[eë]ste|pages[eë]|negoci|aksident|accident|servis|service history|k[eë]mbim|trade[\s-]?in|tvsh|vat|regjistrim|registration|import|eksport|export|porosit)\b/i;
+  /\b(roro|ro[\s-]?ro|transport|shipping|delivery|d[eë]rges|dogan|customs|p[eë]rfshir|included|include|garanci|warranty|financ|k[eë]ste|pages[eë]|negoci|aksident|accident|servis|service history|k[eë]mbim|trade[\s-]?in|tvsh|vat|regjistrim|registration|import|eksport|export|porosit|adresa|rruga|sheshi|pran[eë]|landmark|orari|turni|dark[eë]|shift|lokacion|vendndodhja)\b/i;
 
 const CAPTION_NOISE_LINE_RE =
   /\b(not affiliated|all items (are )?pre[- ]?owned|disclaimer|kontrollo i sigurt|vetem me stafin|vetëm me stafin|na gjeni cdo dite|na gjeni çdo ditë|for entertainment|trademark)\b/i;
@@ -1594,7 +1608,11 @@ function isCaptionNoiseLine(line) {
   const t = String(line || '').trim();
   if (!t) return true;
   if (CAPTION_NOISE_LINE_RE.test(t)) return true;
-  if (/^(adresa|kontakt|tel|phone)\s*:/i.test(t)) return true;
+  // Keep address lines — they are buyer-critical. Strip bare phone-only lines (phones → contactPhone).
+  if (/^(kontakt|tel|phone|telefon)\s*:/i.test(t) && !/\b(rruga|adresa|sheshi|pran[eë])\b/i.test(t)) {
+    // If the line is only a phone label + digits, treat as noise.
+    if (/^(kontakt|tel|phone|telefon)\s*:?\s*\+?\d[\d\s().-]{6,}$/i.test(t)) return true;
+  }
   if (/^\+?\d[\d\s().-]{6,}$/.test(t)) return true;
   if (/^(ofrohet|shit(et|e)|kontaktoni)\b/i.test(t)) return true;
   return false;
@@ -1609,7 +1627,7 @@ function formatBuyerDetailBullet(raw) {
     .trim();
   if (!text) return null;
 
-  // Normalize common transport / inclusion phrasing into a labeled bullet.
+  // Normalize common transport / inclusion / address phrasing into a labeled bullet.
   if (/\b(roro|ro[\s-]?ro|transport|shipping|delivery|d[eë]rges)/i.test(text)) {
     text = text.replace(/^p[eë]rfshir[eë]\s+/i, 'Përfshirë ');
     if (!/^transport\s*:/i.test(text)) text = `Transport: ${text}`;
@@ -1617,9 +1635,15 @@ function formatBuyerDetailBullet(raw) {
     text = `Garanci: ${text}`;
   } else if (/\b(financ|k[eë]ste)\b/i.test(text) && !/^financ/i.test(text)) {
     text = `Financim: ${text}`;
+  } else if (
+    /\b(adresa|rruga|sheshi|pran[eë]|street|avenue|blvd)\b/i.test(text) &&
+    !/^adresa\s*:/i.test(text)
+  ) {
+    text = text.replace(/^(info|informacion)\s*:?\s*/i, '');
+    text = `Adresa: ${text}`;
   }
 
-  if (text.length < 8 || text.length > 180) return null;
+  if (text.length < 8 || text.length > 220) return null;
   return text;
 }
 
@@ -1635,16 +1659,12 @@ function extractBuyerDetailFacts(caption, { max = 8 } = {}) {
   const pushCandidate = (value, priority) => {
     const formatted = formatBuyerDetailBullet(value);
     if (!formatted || isCaptionNoiseLine(formatted)) return;
-    // Drop street addresses / office directions — phones go to contactPhone.
-    if (/\b(adresa|rruga|sheshi|pejton|street|avenue|blvd)\b/i.test(formatted)) {
-      return;
-    }
     const key = normalizeFactKey(formatted);
     if (!key || key.length < 8) return;
     if (candidates.some((c) => c.key === key || c.key.includes(key) || key.includes(c.key))) {
       return;
     }
-    // Prefer one transport / one warranty / one financing bullet.
+    // Prefer one transport / one warranty / one financing / one address bullet.
     const topic =
       /\b(roro|transport|shipping|delivery|d[eë]rges)\b/i.test(formatted)
         ? 'transport'
@@ -1652,7 +1672,9 @@ function extractBuyerDetailFacts(caption, { max = 8 } = {}) {
           ? 'garanci'
           : /\b(financ|k[eë]ste)\b/i.test(formatted)
             ? 'financim'
-            : null;
+            : /\b(adresa|rruga|sheshi|pran[eë]|street|avenue|blvd)\b/i.test(formatted)
+              ? 'adresa'
+              : null;
     if (topic && candidates.some((c) => c.topic === topic)) return;
     candidates.push({ text: formatted, key, priority, topic });
   };
@@ -1975,9 +1997,11 @@ function buildVisionUserContent({ payload, attachedImages }) {
       type: 'text',
       text: hasImages
         ? [
-            'Task: Identify the product/subject in the photos below, then build a complete listing draft.',
-            'Merge visual facts from the photos with the user prompt/caption in payload.prompt (and caption/description if present).',
-            'Output JSON only. Title + description must be specific and buyer-ready.',
+            'Task: OCR/read every attached photo carefully (flyers, posters, labels, products), then build a COMPLETE listing draft.',
+            'Extract valuable on-image text: titles/roles, business names, street addresses & landmarks, phones, prices, hours/shifts, requirements — and map them into form fields + description bullets.',
+            'Merge visual facts + OCR with the user prompt/caption in payload.prompt (and caption/description if present).',
+            'The user should not need to restate what is already visible in the photo.',
+            'Output JSON only. Title + description must be specific and buyer-ready; include • Adresa when a street/landmark is readable.',
             '',
             JSON.stringify(payload),
           ].join('\n')
@@ -1989,7 +2013,7 @@ function buildVisionUserContent({ payload, attachedImages }) {
     const hint = img.hint ? ` Hint: ${img.hint}` : '';
     parts.push({
       type: 'text',
-      text: `Attached listing photo #${i + 1}.${hint} Describe what you see and use it for title/description/category.`,
+      text: `Attached listing photo #${i + 1}.${hint} Read all visible text and visuals; use them for title, description bullets (including Adresa/Orari/Kompania when present), cityName, contactPhone, and other form fields.`,
     });
     parts.push({
       type: 'image_url',
@@ -2406,8 +2430,8 @@ async function interpretListing({
         hint: img.hint || null,
       })),
       instruction: visionImages.length
-        ? 'Photos are primary: identify the product/vehicle from images (motorcycle vs car!), write a concrete title and a listed SEO-friendly form.description (short opener + • keyword bullets + CTA — never one paragraph or raw hashtags), then weave in EVERY useful detail from prompt/caption — especially transport/shipping/RoRo, delivery days, what price includes, warranty, financing, condition notes, and parenthetical price notes. Do not invent unseen specs. Never use authorName / Instagram profile name as title. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.'
-        : 'Build the listing from caption/description/text/prompt. Title must come from the post caption (what is offered), never from authorName or profile.businessName when caption exists. Rewrite caption into a listed SEO-friendly form.description (short opener + • keyword bullets + CTA — do not paste raw caption or write one wall of text). Extract structured fields AND preserve buyer-critical caption facts (transport/RoRo/shipping days, inclusions, warranty, financing, condition). Do not invent professions or offers missing from the text. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.',
+        ? 'Photos are primary: OCR every readable word on flyers/posters/labels (roles, business name, street address, landmark, phone, price, hours/shifts) AND identify the product/vehicle/property/job from images. Write a concrete title and a listed SEO-friendly form.description (short opener + • keyword bullets including Adresa/Orari/Kompania when visible + CTA — never one paragraph or raw hashtags). Auto-fill every form field you can (title, cityName, contactPhone, enums, salary/price). Weave in EVERY useful detail from prompt/caption — especially transport/shipping/RoRo, delivery days, what price includes, warranty, financing, condition notes, parenthetical price notes, and shift/schedule notes. Do not invent unseen specs. Never use authorName / Instagram profile name as title. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.'
+        : 'Build the listing from caption/description/text/prompt. Title must come from the post caption (what is offered), never from authorName or profile.businessName when caption exists. Rewrite caption into a listed SEO-friendly form.description (short opener + • keyword bullets + CTA — do not paste raw caption or write one wall of text). Extract structured fields AND preserve buyer-critical caption facts (transport/RoRo/shipping days, inclusions, warranty, financing, condition, street address when present). Do not invent professions or offers missing from the text. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.',
     },
   });
 }

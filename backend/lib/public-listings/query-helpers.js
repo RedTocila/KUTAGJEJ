@@ -99,20 +99,20 @@ function parseSort(value) {
 }
 
 /** Active OKAZION, then Premium, float above the rest (sellable ads). */
-function premiumSortPrefix({ includeOkazion = true } = {}) {
+function premiumSortPrefix({ includeOkazion = true, includePremium = true } = {}) {
   const prefix = [];
   if (includeOkazion) {
     prefix.push({ column: 'okazion_until', ascending: false, nullsFirst: false });
   }
   // null = not probed yet → include and let runListingQuery fall back on error
-  if (hasPremiumUntilColumn() !== false) {
+  if (includePremium && hasPremiumUntilColumn() !== false) {
     prefix.push({ column: 'premium_until', ascending: false, nullsFirst: false });
   }
   return prefix;
 }
 
-function buildSort(sort, field = 'price', { includeOkazion = true } = {}) {
-  const premiumFirst = premiumSortPrefix({ includeOkazion });
+function buildSort(sort, field = 'price', { includeOkazion = true, includePremium = true } = {}) {
+  const premiumFirst = premiumSortPrefix({ includeOkazion, includePremium });
   if (sort === 'price-asc') {
     return [...premiumFirst, { column: field, ascending: true }, { column: 'created_at', ascending: false }];
   }
@@ -123,8 +123,8 @@ function buildSort(sort, field = 'price', { includeOkazion = true } = {}) {
 }
 
 /** Directory profiles (businesses / professionals) — Premium only, no OKAZION. */
-function buildDirectorySort(sort) {
-  return buildSort(sort, 'price', { includeOkazion: false });
+function buildDirectorySort(sort, { includePremium = true } = {}) {
+  return buildSort(sort, 'price', { includeOkazion: false, includePremium });
 }
 
 /** Strip featured-until columns from a sort spec (fallback when not migrated yet). */
@@ -178,16 +178,32 @@ function escapeOrValue(value) {
   return needsQuotes ? `"${escaped}"` : escaped;
 }
 
+/**
+ * Short queries like "for" match too many descriptions (`%for%` → "for sale").
+ * Keep description matching for longer, intentional keyword searches only.
+ */
+const DESCRIPTION_SEARCH_MIN_LENGTH = 4;
+
+function fieldsForTextSearch(fields, q) {
+  const list = Array.isArray(fields) ? fields.filter(Boolean) : [];
+  if (!list.length) return list;
+  const needle = String(q ?? '').trim();
+  if (needle.length >= DESCRIPTION_SEARCH_MIN_LENGTH) return list;
+  const withoutDescription = list.filter((f) => f !== 'description');
+  return withoutDescription.length ? withoutDescription : list;
+}
+
 /** Builds a `.or()` filter string matching any of `fields` against `q` (case-insensitive substring). */
 function buildIlikeOrFilter(fields, q) {
   const terms = expandSearchTerms(q);
-  if (!terms.length || !fields?.length) return null;
+  const searchFields = fieldsForTextSearch(fields, q);
+  if (!terms.length || !searchFields.length) return null;
 
   const parts = [];
   for (const term of terms) {
     const likeValue = `%${escapeIlikeValue(term)}%`;
     const value = escapeOrValue(likeValue);
-    for (const field of fields) {
+    for (const field of searchFields) {
       parts.push(`${field}.ilike.${value}`);
     }
   }
@@ -266,6 +282,7 @@ module.exports = {
   isOkazionActive,
   prioritizeActivePremium,
   buildIlikeOrFilter,
+  fieldsForTextSearch,
   enrichTextSearchWithLocations,
   buildCityIndex,
 };

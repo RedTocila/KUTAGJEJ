@@ -12,6 +12,7 @@ const { sanitizeImageUrls } = require('../lib/image-upload');
 const { uploadBuffersToSupabase } = require('../lib/storage-uploads');
 const { parseComparePrice } = require('../lib/listing-compare-price');
 const { formatMineCar, formatMineCarFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
+const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
 
 
 const router = express.Router();
@@ -91,6 +92,9 @@ router.post(
   upload.array('images', MAX_CAR_IMAGES),
   async (req, res) => {
     try {
+      const quota = await assertCanCreateCategoryListing(req.user.id, 'car');
+      if (!quota.ok) return res.status(quota.status || 403).json({ message: quota.message });
+
       const fields = req.body;
 
       const v = validateCarPayload(fields);

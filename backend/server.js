@@ -182,6 +182,7 @@ app.use('/api/listings/owner', require('./routes/listing-owner-delete'));
 app.use('/api/listings/refresh', require('./routes/listing-refresh'));
 app.use('/api/listings/announcement', require('./routes/listing-announcement'));
 app.use('/api/listings/convert-quota', require('./routes/listing-quota-convert'));
+app.use('/api/listings/category-quota', require('./routes/listing-category-quota'));
 app.use('/api/listings/cars', require('./routes/car-listings'));
 app.use('/api/listings/jobs', require('./routes/job-listings'));
 app.use('/api/listings/marketplace', require('./routes/marketplace-listings'));

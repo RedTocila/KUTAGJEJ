@@ -398,6 +398,8 @@ const sq = {
     businessesHint: 'Restorante, bar, kafene dhe lokale',
     professionals: 'Profesionistë',
     professionalsHint: 'Freelance, konsulence dhe shërbime',
+    quotaUnavailable: 'Jo e disponueshme',
+    quotaExhausted: 'Kuota e kësaj kategorie është e konsumuar. Përmirësoni paketën ose fshini një njoftim ekzistues.',
   },
   aiImport: {
     title: 'AI Build',
@@ -898,6 +900,9 @@ const en: AppMessages = {
     businessesHint: 'Restaurants, bars, cafés and venues',
     professionals: 'Professionals',
     professionalsHint: 'Freelance, consulting and services',
+    quotaUnavailable: 'Unavailable',
+    quotaExhausted:
+      'This category quota is used up. Upgrade your plan or delete an existing listing.',
   },
   aiImport: {
     title: 'AI Build',

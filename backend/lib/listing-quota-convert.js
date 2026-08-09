@@ -207,6 +207,8 @@ async function convertListingQuotas(userId, countsInput) {
 module.exports = {
   CONVERT_RATES,
   creditsFromCounts,
+  countPosterListings,
+  loadActivePaidSubscription,
   getConvertibleQuotas,
   convertListingQuotas,
 };

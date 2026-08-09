@@ -193,7 +193,10 @@ async function runListingQuery(table, filterSpec, sortSpec, limit, skip = 0) {
     ({ data, error } = await run(withoutPremiumSort(effectiveSort)));
   }
   if (error) throw error;
-  return prioritizeActivePremium(camelizeRows(data));
+  const rows = camelizeRows(data);
+  // Only re-pin featured ads when the sort intentionally boosts them (browse/home).
+  // Keyword search uses chronological/price sort — keep that order.
+  return sortLooksPremium(effectiveSort) ? prioritizeActivePremium(rows) : rows;
 }
 
 async function countListingQuery(table, filterSpec) {

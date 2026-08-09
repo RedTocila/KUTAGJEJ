@@ -24,6 +24,7 @@ const {
   loadMineListingById,
   loadMineListingsForPoster,
 } = require('../lib/mine-listings');
+const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
 
 const router = express.Router();
 
@@ -109,6 +110,9 @@ router.get('/real-estate/mine/:id', authMiddleware, requirePortalUser, async (re
 
 router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) => {
   try {
+    const quota = await assertCanCreateCategoryListing(req.user.id, 'apartment');
+    if (!quota.ok) return res.status(quota.status || 403).json({ message: quota.message });
+
     const v = validateRealEstatePayload(req.body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 

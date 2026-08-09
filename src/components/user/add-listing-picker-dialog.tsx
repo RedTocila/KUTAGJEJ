@@ -27,6 +27,11 @@ import {
   listMyBusinessListings,
   listMyProfessionalListings,
 } from '@/lib/directory-listings-client';
+import {
+  fetchCategoryQuotas,
+  isCategoryQuotaAvailable,
+  type CategoryQuotaSnapshot,
+} from '@/lib/listing-category-quota-client';
 import { listCategoriesPublic } from '@/lib/listings-client';
 import { hardNavigate } from '@/lib/hard-navigate';
 import { AI_SEARCH_BLUE, OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
@@ -119,6 +124,7 @@ export function AddListingPickerDialog({
   const [categories, setCategories] = React.useState<ListingCategory[]>([]);
   const [hasBusinessListing, setHasBusinessListing] = React.useState(false);
   const [hasProfessionalListing, setHasProfessionalListing] = React.useState(false);
+  const [categoryQuotas, setCategoryQuotas] = React.useState<CategoryQuotaSnapshot | null>(null);
   const [pickingOkazion, setPickingOkazion] = React.useState(initialOkazion);
   const [pickingPremium, setPickingPremium] = React.useState(false);
   const [pickingAllListings, setPickingAllListings] = React.useState(false);
@@ -138,10 +144,11 @@ export function AddListingPickerDialog({
     setLoading(true);
     setError(null);
     void (async () => {
-      const [catRes, bizRes, proRes] = await Promise.all([
+      const [catRes, bizRes, proRes, quotaRes] = await Promise.all([
         listCategoriesPublic(),
         listMyBusinessListings(),
         listMyProfessionalListings(),
+        fetchCategoryQuotas(),
       ]);
       if (cancelled) return;
       if (catRes.error) setError(catRes.error);
@@ -149,6 +156,7 @@ export function AddListingPickerDialog({
       // Directory profiles: one per account — hide add options when one already exists.
       setHasBusinessListing((bizRes.listings?.length ?? 0) > 0);
       setHasProfessionalListing((proRes.listings?.length ?? 0) > 0);
+      setCategoryQuotas(quotaRes.snapshot ?? null);
       setLoading(false);
     })();
     return () => {
@@ -199,6 +207,7 @@ export function AddListingPickerDialog({
   const handlePick = (key: ListingCategoryKey) => {
     if (pickingOkazion && !OKAZION_CATEGORY_KEYS.has(key)) return;
     if (pickingPremium && !PREMIUM_CATEGORY_KEYS.has(key)) return;
+    if (!isCategoryQuotaAvailable(categoryQuotas, key)) return;
     if (onPick) {
       onPick(key, pickingOkazion ? { okazion: true } : pickingPremium ? { premium: true } : undefined);
       return;
@@ -576,6 +585,7 @@ export function AddListingPickerDialog({
 
             {options.map((opt, index) => {
               const Icon = categoryIcon(opt.key);
+              const quotaAvailable = isCategoryQuotaAvailable(categoryQuotas, opt.key);
               return (
                 <Box key={opt.key}>
                   {index > 0 ? (
@@ -592,6 +602,7 @@ export function AddListingPickerDialog({
                   <Box
                     component="button"
                     type="button"
+                    disabled={!quotaAvailable}
                     onClick={() => handlePick(opt.key)}
                     sx={{
                       display: 'flex',
@@ -604,11 +615,12 @@ export function AddListingPickerDialog({
                       borderRadius: 1.5,
                       bgcolor: 'transparent',
                       color: 'text.primary',
-                      cursor: 'pointer',
+                      cursor: quotaAvailable ? 'pointer' : 'not-allowed',
+                      opacity: quotaAvailable ? 1 : 0.5,
                       font: 'inherit',
                       textAlign: 'left',
-                      '&:hover': { bgcolor: 'action.hover' },
-                      '&:active': { bgcolor: 'action.selected' },
+                      '&:hover': quotaAvailable ? { bgcolor: 'action.hover' } : undefined,
+                      '&:active': quotaAvailable ? { bgcolor: 'action.selected' } : undefined,
                     }}
                   >
                     <Box
@@ -634,18 +646,16 @@ export function AddListingPickerDialog({
                       <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', lineHeight: 1.25 }}>
                         {opt.title}
                       </Typography>
-                      {opt.hint ? (
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            display: 'block',
-                            lineHeight: 1.3,
-                            color: '#9CA3AF',
-                          }}
-                        >
-                          {opt.hint}
-                        </Typography>
-                      ) : null}
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: 'block',
+                          lineHeight: 1.3,
+                          color: '#9CA3AF',
+                        }}
+                      >
+                        {quotaAvailable ? opt.hint : t.picker.quotaUnavailable}
+                      </Typography>
                     </Box>
                   </Box>
                 </Box>

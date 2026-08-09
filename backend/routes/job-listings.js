@@ -9,6 +9,7 @@ const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls } = require('../lib/image-upload');
 const { isUuid } = require('../lib/public-listings/query-helpers');
 const { formatMineJob, formatMineJobFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
+const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
 
 const router = express.Router();
 
@@ -58,6 +59,9 @@ router.get('/mine/:id', authMiddleware, requirePortalUser, async (req, res) => {
 /** POST /api/listings/jobs */
 router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
   try {
+    const quota = await assertCanCreateCategoryListing(req.user.id, 'job');
+    if (!quota.ok) return res.status(quota.status || 403).json({ message: quota.message });
+
     const body = req.body;
 
     const v = validateJobPayload(body);

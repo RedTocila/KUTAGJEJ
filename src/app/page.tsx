@@ -23,7 +23,7 @@ import {
 } from '@/lib/public-listings-client';
 import { paths } from '@/paths';
 
-export const revalidate = 60;
+export const revalidate = 15;
 
 export const metadata: Metadata = {
   title: `${config.site.name} — Njoftime falas: prona, makina, punë dhe tregu në Shqipëri`,

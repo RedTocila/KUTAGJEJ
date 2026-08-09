@@ -15,8 +15,10 @@ function normalizeAnnouncementFields(body) {
   return { title, subtitle, bannerUrl };
 }
 
+const ANNOUNCE_VERTICALS = new Set(['businesses', 'professionals']);
+
 /**
- * Create or update a business listing announcement.
+ * Create or update a directory listing announcement (businesses / professionals).
  * - First publish or reAnnounce=true: charge 3 BC and bump listing to top (created_at).
  * - Edit existing without reAnnounce: free content update, no bump.
  */
@@ -41,11 +43,14 @@ async function upsertBusinessAnnouncement({ userId, listingId, title, subtitle, 
       'id, poster_id, status, vertical, announcement_title, announcement_subtitle, announcement_banner_url, announcement_at',
     )
     .eq('id', listingId)
-    .eq('vertical', 'businesses')
     .maybeSingle();
   if (listingErr) throw listingErr;
   if (!listing) {
     return { ok: false, status: 404, message: 'Njoftimi nuk u gjet.' };
+  }
+  const vertical = String(listing.vertical || '');
+  if (!ANNOUNCE_VERTICALS.has(vertical)) {
+    return { ok: false, status: 400, message: 'Shpalljet janë vetëm për biznese dhe profesionistë.' };
   }
   if (String(listing.poster_id) !== String(userId)) {
     return { ok: false, status: 403, message: 'Nuk mund të ndryshoni këtë njoftim.' };
@@ -151,7 +156,7 @@ async function upsertBusinessAnnouncement({ userId, listingId, title, subtitle, 
       await sb.from('listing_auto_refresh').upsert(
         {
           user_id: userId,
-          listing_kind: 'businesses',
+          listing_kind: vertical,
           listing_id: listingId,
           last_refreshed_at: now,
           updated_at: now,
@@ -194,11 +199,13 @@ async function clearBusinessAnnouncement({ userId, listingId }) {
     .from('directory_listings')
     .select('id, poster_id, vertical')
     .eq('id', listingId)
-    .eq('vertical', 'businesses')
     .maybeSingle();
   if (listingErr) throw listingErr;
   if (!listing) {
     return { ok: false, status: 404, message: 'Njoftimi nuk u gjet.' };
+  }
+  if (!ANNOUNCE_VERTICALS.has(String(listing.vertical || ''))) {
+    return { ok: false, status: 400, message: 'Shpalljet janë vetëm për biznese dhe profesionistë.' };
   }
   if (String(listing.poster_id) !== String(userId)) {
     return { ok: false, status: 403, message: 'Nuk mund të ndryshoni këtë njoftim.' };

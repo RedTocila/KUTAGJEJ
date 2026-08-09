@@ -29,6 +29,7 @@ import {
   ProfessionalVerifiedBadge,
 } from '@/components/public/professional-listing-detail-ui';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
+import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
@@ -308,6 +309,15 @@ export function ProfessionalListingDetailView({
                   <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>Shtoni përshkrimin</Typography>
                 )}
               </Box>
+            ) : null}
+
+            {listing.announcementTitle?.trim() && !ownerPreview ? (
+              <BusinessPromoBanner
+                title={listing.announcementTitle}
+                subtitle={listing.announcementSubtitle}
+                bannerUrl={listing.announcementBannerUrl}
+                variant="detail"
+              />
             ) : null}
 
             {serviceTags.length > 0 || ownerEdit?.onStartInlineEdit || ownerEdit?.onEditInfo ? (

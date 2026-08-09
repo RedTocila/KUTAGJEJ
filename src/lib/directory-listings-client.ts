@@ -238,6 +238,10 @@ export interface ProfessionalMineListing extends ListingMetrics {
   responseTimeHours?: number | null;
   portfolioItems?: ProfessionalPortfolioItem[];
   servicesHighlight: string | null;
+  announcementTitle?: string | null;
+  announcementSubtitle?: string | null;
+  announcementBannerUrl?: string | null;
+  announcementAt?: string | null;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
   updatedAt?: string;

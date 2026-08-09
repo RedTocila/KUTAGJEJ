@@ -285,9 +285,9 @@ function formatDirectory(doc, cityById, reviewStats) {
       openingHours: null,
       reservationsEnabled: false,
       reservationUrl: null,
-      announcementTitle: null,
-      announcementSubtitle: null,
-      announcementBannerUrl: null,
+      announcementTitle: doc.announcementTitle?.replace(/\s+/g, ' ').trim() || null,
+      announcementSubtitle: doc.announcementSubtitle?.replace(/\s+/g, ' ').trim() || null,
+      announcementBannerUrl: doc.announcementBannerUrl?.trim() || null,
     };
   }
   return {

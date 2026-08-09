@@ -24,6 +24,7 @@ import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
+import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
@@ -254,6 +255,15 @@ export function ProfessionalListingDetailDesktop({
                   </Stack>
 
                   <Divider />
+
+                  {listing.announcementTitle?.trim() ? (
+                    <BusinessPromoBanner
+                      title={listing.announcementTitle}
+                      subtitle={listing.announcementSubtitle}
+                      bannerUrl={listing.announcementBannerUrl}
+                      variant="detail"
+                    />
+                  ) : null}
 
                   <Stack spacing={1.25} sx={{ alignItems: 'stretch', width: '100%' }}>
                     <Stack direction="row" spacing={1} sx={{ alignItems: 'center', width: '100%' }}>

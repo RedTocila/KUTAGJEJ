@@ -11,7 +11,7 @@ import {
 } from '@/lib/public-member-client';
 import { pathsPublicMemberProfile } from '@/paths';
 
-export const revalidate = 60;
+export const revalidate = 15;
 
 type PageProps = { params: Promise<{ id: string }> };
 

@@ -190,7 +190,7 @@ function formatCountdown(ms: number): string {
 
 /**
  * Top-right card actions: Menu · Shpall · Ndrysho · trash (rightmost = Delete).
- * Edit + Delete are always shown; Menu + Shpall only for businesses.
+ * Edit + Delete are always shown; Menu only for businesses; Shpall for businesses + professionals.
  */
 export function ListingOwnerTopActions({
   listingId,
@@ -213,7 +213,8 @@ export function ListingOwnerTopActions({
 }) {
   const { checkSession } = useUser();
   const [announceOpen, setAnnounceOpen] = React.useState(false);
-  const isBusiness = kind === 'businesses';
+  const showMenu = kind === 'businesses';
+  const showAnnounce = kind === 'businesses' || kind === 'professionals';
 
   return (
     <>
@@ -231,45 +232,45 @@ export function ListingOwnerTopActions({
           boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
         }}
       >
-        {isBusiness ? (
-          <>
-            <Tooltip title="Ndrysho menunë">
+        {showMenu ? (
+          <Tooltip title="Ndrysho menunë">
+            <Button
+              size="small"
+              variant="contained"
+              color="primary"
+              aria-label="Menu"
+              component={RouterLink}
+              href={`${paths.user.businessMenu}?id=${encodeURIComponent(listingId)}`}
+              startIcon={<ForkKnifeIcon size={12} weight="bold" />}
+              sx={{ ...labeledBtnSx, ...fadedPrimarySx }}
+            >
+              Menu
+            </Button>
+          </Tooltip>
+        ) : null}
+        {showAnnounce ? (
+          <Tooltip
+            title={
+              announcement?.title
+                ? 'Ndrysho shpalljen'
+                : 'Shto shpallje · 3 Boost Coins · njoftimi shkon në krye'
+            }
+          >
+            <span>
               <Button
                 size="small"
                 variant="contained"
-                color="primary"
-                aria-label="Menu"
-                component={RouterLink}
-                href={`${paths.user.businessMenu}?id=${encodeURIComponent(listingId)}`}
-                startIcon={<ForkKnifeIcon size={12} weight="bold" />}
-                sx={{ ...labeledBtnSx, ...fadedPrimarySx }}
+                color="warning"
+                aria-label="Shpall"
+                disabled={!canAnnounce}
+                onClick={() => setAnnounceOpen(true)}
+                startIcon={<MegaphoneIcon size={12} weight="fill" />}
+                sx={{ ...labeledBtnSx, ...fadedWarningSx }}
               >
-                Menu
+                Shpall
               </Button>
-            </Tooltip>
-            <Tooltip
-              title={
-                announcement?.title
-                  ? 'Ndrysho shpalljen'
-                  : 'Shto shpallje · 3 Boost Coins · njoftimi shkon në krye'
-              }
-            >
-              <span>
-                <Button
-                  size="small"
-                  variant="contained"
-                  color="warning"
-                  aria-label="Shpall"
-                  disabled={!canAnnounce}
-                  onClick={() => setAnnounceOpen(true)}
-                  startIcon={<MegaphoneIcon size={12} weight="fill" />}
-                  sx={{ ...labeledBtnSx, ...fadedWarningSx }}
-                >
-                  Shpall
-                </Button>
-              </span>
-            </Tooltip>
-          </>
+            </span>
+          </Tooltip>
         ) : null}
         <Tooltip title="Ndrysho njoftimin">
           <Button
@@ -306,7 +307,7 @@ export function ListingOwnerTopActions({
           </Tooltip>
         ) : null}
       </Stack>
-      {isBusiness ? (
+      {showAnnounce ? (
         <BusinessAnnouncementDialog
           open={announceOpen}
           listingId={listingId}

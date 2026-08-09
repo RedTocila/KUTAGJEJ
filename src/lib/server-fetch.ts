@@ -5,7 +5,7 @@ const DEFAULT_TIMEOUT_MS = 8000;
 /**
  * Resilient JSON fetch for Server Components.
  * - Short timeout so a stalled API never blocks SSR forever (8s).
- * - ISR-aligned cache (60s) to reduce DB load.
+ * - Short ISR-aligned cache (15s) so announcements / review stats refresh quickly.
  * - Never throws; returns null on failure.
  */
 export async function safeServerJson<T>(path: string, init?: RequestInit): Promise<T | null> {
@@ -14,7 +14,7 @@ export async function safeServerJson<T>(path: string, init?: RequestInit): Promi
   try {
     const skipCache = init?.cache === 'no-store';
     const res = await fetch(getApiUrl(path), {
-      ...(skipCache ? {} : { next: { revalidate: 60 } }),
+      ...(skipCache ? {} : { next: { revalidate: 15 } }),
       ...init,
       signal: controller?.signal ?? init?.signal,
     });

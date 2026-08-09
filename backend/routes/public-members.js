@@ -182,7 +182,7 @@ async function loadMemberListings(posterId) {
 }
 
 /** GET /api/public/members/:id — public seller / member profile + active listings. */
-router.get('/:id', publicCache(), async (req, res) => {
+router.get('/:id', publicCache(15), async (req, res) => {
   try {
     const id = String(req.params.id || '').trim();
     if (!id || !isUuid(id)) {

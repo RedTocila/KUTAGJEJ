@@ -33,10 +33,15 @@ import { ProductTag } from '@/components/public/product-browse-chrome';
 const REVIEWS_PAGE_SIZE = 10;
 const STAR_FILTERS = [5, 4, 3, 2, 1] as const;
 
-function useBusinessReviews(listingId: string, onReviewSubmitted?: () => void) {
+function useBusinessReviews(
+  listingId: string,
+  onReviewSubmitted?: () => void,
+  onStatsChange?: (stats: { ratingAverage: number | null; reviewCount: number }) => void,
+) {
   const router = useRouter();
   const { user } = useUser();
   const [reviews, setReviews] = React.useState<BusinessReview[]>([]);
+  const [reviewsLoaded, setReviewsLoaded] = React.useState(false);
   const [viewerHasReviewed, setViewerHasReviewed] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [rating, setRating] = React.useState<number | null>(5);
@@ -49,12 +54,21 @@ function useBusinessReviews(listingId: string, onReviewSubmitted?: () => void) {
     if (!res.error) {
       setReviews(res.reviews ?? []);
       setViewerHasReviewed(Boolean(res.viewerHasReviewed));
+      setReviewsLoaded(true);
     }
   }, [listingId]);
 
   React.useEffect(() => {
     void load();
   }, [load, user?.id]);
+
+  React.useEffect(() => {
+    if (!reviewsLoaded || !onStatsChange) return;
+    const nextCount = reviews.length;
+    const nextAvg =
+      nextCount > 0 ? reviews.reduce((sum, row) => sum + row.rating, 0) / nextCount : null;
+    onStatsChange({ ratingAverage: nextAvg, reviewCount: nextCount });
+  }, [onStatsChange, reviews, reviewsLoaded]);
 
   const openDialog = () => {
     if (!user) {
@@ -90,6 +104,7 @@ function useBusinessReviews(listingId: string, onReviewSubmitted?: () => void) {
 
   return {
     reviews,
+    reviewsLoaded,
     viewerHasReviewed,
     open,
     setOpen,
@@ -345,17 +360,21 @@ export function BusinessReviewSection({
   ratingAverage,
   reviewCount,
   onReviewSubmitted,
+  onStatsChange,
   variant = 'full',
 }: {
   listingId: string;
   ratingAverage: number | null | undefined;
   reviewCount: number | undefined;
   onReviewSubmitted?: () => void;
+  /** Fired when the live review list is loaded/updated (keeps header stars in sync). */
+  onStatsChange?: (stats: { ratingAverage: number | null; reviewCount: number }) => void;
   /** `summary` = stars + leave button; `list` = review cards; `full` = both. */
   variant?: 'summary' | 'list' | 'full';
 }) {
   const {
     reviews,
+    reviewsLoaded,
     viewerHasReviewed,
     open,
     setOpen,
@@ -367,7 +386,7 @@ export function BusinessReviewSection({
     submitting,
     openDialog,
     submit,
-  } = useBusinessReviews(listingId, onReviewSubmitted);
+  } = useBusinessReviews(listingId, onReviewSubmitted, onStatsChange);
 
   const [visibleCount, setVisibleCount] = React.useState(REVIEWS_PAGE_SIZE);
   const [starFilter, setStarFilter] = React.useState<number | 'all'>('all');
@@ -391,8 +410,17 @@ export function BusinessReviewSection({
     [reviews, starFilter],
   );
 
-  const count = reviewCount ?? 0;
-  const avgValue = ratingAverage != null && Number.isFinite(Number(ratingAverage)) ? Number(ratingAverage) : 0;
+  const liveCount = reviews.length;
+  const liveAvg =
+    liveCount > 0 ? reviews.reduce((sum, row) => sum + row.rating, 0) / liveCount : null;
+  const count = reviewsLoaded ? liveCount : (reviewCount ?? 0);
+  const avgValue = reviewsLoaded
+    ? liveAvg != null && Number.isFinite(liveAvg)
+      ? liveAvg
+      : 0
+    : ratingAverage != null && Number.isFinite(Number(ratingAverage))
+      ? Number(ratingAverage)
+      : 0;
   const avgLabel = count > 0 ? formatRatingDisplay(avgValue) : null;
   const showSummary = variant === 'summary' || variant === 'full';
   const showList = variant === 'list' || variant === 'full';

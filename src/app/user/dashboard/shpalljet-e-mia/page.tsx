@@ -536,12 +536,18 @@ function markListingOkazion<T extends { id: string; isOkazion?: boolean; okazion
 }
 
 
-function applyBusinessAnnouncement(
-  items: BusinessMineListing[],
+function applyDirectoryAnnouncement<T extends {
+  id: string;
+  announcementTitle?: string | null;
+  announcementSubtitle?: string | null;
+  announcementBannerUrl?: string | null;
+  announcementAt?: string | null;
+}>(
+  items: T[],
   listingId: string,
   announcement: BusinessAnnouncement | null,
   _refreshedAt?: string | null,
-): BusinessMineListing[] {
+): T[] {
   return items.map((item) => {
     if (item.id !== listingId) return item;
     return {
@@ -552,6 +558,15 @@ function applyBusinessAnnouncement(
       announcementAt: announcement?.announcedAt ?? null,
     };
   });
+}
+
+function applyBusinessAnnouncement(
+  items: BusinessMineListing[],
+  listingId: string,
+  announcement: BusinessAnnouncement | null,
+  refreshedAt?: string | null,
+): BusinessMineListing[] {
+  return applyDirectoryAnnouncement(items, listingId, announcement, refreshedAt);
 }
 
 function RealEstateCard({
@@ -855,16 +870,31 @@ function ProfessionalCard({
   l,
   onPremiumApplied,
   onRefreshed,
+  onAnnouncementSaved,
   refreshEveryHours,
   lastRefreshedAt,
 }: {
   l: ProfessionalMineListing;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
+  onAnnouncementSaved?: (result: {
+    announcement: BusinessAnnouncement | null;
+    refreshedAt?: string | null;
+    boostCredits?: number;
+  }) => void;
   refreshEveryHours?: number;
   lastRefreshedAt?: string | null;
 }) {
   const categoryLabel = findLabel(PROFESSIONAL_CATEGORY_OPTIONS, l.category);
+  const announcement: BusinessAnnouncement | null = l.announcementTitle?.trim()
+    ? {
+        title: l.announcementTitle,
+        subtitle: l.announcementSubtitle,
+        bannerUrl: l.announcementBannerUrl,
+        announcedAt: l.announcementAt ?? null,
+      }
+    : null;
+
   return (
     <BaseCard
       title={l.title}
@@ -881,6 +911,19 @@ function ProfessionalCard({
       onRefreshed={onRefreshed}
       lastRefreshedAt={lastRefreshedAt}
       refreshEveryHours={refreshEveryHours}
+      announcement={announcement}
+      onAnnouncementSaved={onAnnouncementSaved}
+      mediaBottomOverlay={
+        announcement?.title ? (
+          <BusinessPromoBanner
+            title={announcement.title}
+            subtitle={announcement.subtitle}
+            bannerUrl={announcement.bannerUrl}
+            variant="card"
+            overlay
+          />
+        ) : undefined
+      }
       chips={
         <>
           <Chip size="small" label="Profesionist" color="secondary" variant="outlined" sx={chipSx} />
@@ -1580,6 +1623,17 @@ export default function UserMyListingsPage() {
                 [refreshCooldownKey('professionals', item.listing.id)]: refreshedAt,
               }));
             }}
+            onAnnouncementSaved={({ announcement, refreshedAt }) => {
+              if (refreshedAt) {
+                setRefreshCooldownByKey((prev) => ({
+                  ...prev,
+                  [refreshCooldownKey('professionals', item.listing.id)]: refreshedAt,
+                }));
+              }
+              setProListings((prev) =>
+                applyDirectoryAnnouncement(prev, item.listing.id, announcement, refreshedAt),
+              );
+            }}
           />
         );
       default:
@@ -2024,6 +2078,15 @@ export default function UserMyListingsPage() {
                     ...prev,
                     [refreshCooldownKey('professionals', l.id)]: refreshedAt,
                   }));
+                }}
+                onAnnouncementSaved={({ announcement, refreshedAt }) => {
+                  if (refreshedAt) {
+                    setRefreshCooldownByKey((prev) => ({
+                      ...prev,
+                      [refreshCooldownKey('professionals', l.id)]: refreshedAt,
+                    }));
+                  }
+                  setProListings((prev) => applyDirectoryAnnouncement(prev, l.id, announcement, refreshedAt));
                 }}
               />
             )}

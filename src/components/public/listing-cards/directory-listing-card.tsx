@@ -293,6 +293,17 @@ function ProfessionalListingCardBody({
             saveCount: listing.saveCount,
             url: listingProfessionalPublicHref(listing),
           }}
+          bottomOverlay={
+            listing.announcementTitle?.trim() ? (
+              <BusinessPromoBanner
+                title={listing.announcementTitle}
+                subtitle={listing.announcementSubtitle}
+                bannerUrl={listing.announcementBannerUrl}
+                variant="card"
+                overlay
+              />
+            ) : undefined
+          }
         />
         <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
           <Typography

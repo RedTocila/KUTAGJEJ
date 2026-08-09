@@ -5,6 +5,7 @@ const { getSupabaseAdmin } = require('../../lib/supabase');
 const { camelizeRow } = require('../../lib/profiles');
 const optionalAuth = require('../../middleware/optional-auth');
 const publicCache = require('../../middleware/public-cache');
+const { publicNoStore } = publicCache;
 const { loadPosterBrief } = require('../../lib/public-listings/load-poster-brief');
 const {
   clampLimit,
@@ -79,7 +80,8 @@ async function loadApprovedById(table, id, extraEq = {}) {
   return data ? camelizeRow(data) : null;
 }
 
-router.use(publicCache(60));
+// Short CDN TTL so new announcements / review stats show quickly on browse/home.
+router.use(publicCache(15));
 
 /** GET /api/public/listings/top-viewed?vertical=cars&limit=10 — most-viewed (or highest-rated for businesses/professionals). */
 router.get('/top-viewed', optionalAuth, async (req, res) => {
@@ -228,8 +230,8 @@ router.get('/latest/:vertical', optionalAuth, async (req, res) => {
   }
 });
 
-/** GET /api/public/listings/real-estate/:id — detail + seller summary (SSR / SEO page). */
-router.get('/real-estate/:id', optionalAuth, async (req, res) => {
+/** Detail pages must never be CDN-stale (announcements, reviews, contact). */
+router.get('/real-estate/:id', publicNoStore(), optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
     const doc = await loadApprovedById('real_estate_listings', rawId);
@@ -247,7 +249,7 @@ router.get('/real-estate/:id', optionalAuth, async (req, res) => {
   }
 });
 
-router.get('/cars/:id', optionalAuth, async (req, res) => {
+router.get('/cars/:id', publicNoStore(), optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
     const doc = await loadApprovedById('car_listings', rawId);
@@ -265,7 +267,7 @@ router.get('/cars/:id', optionalAuth, async (req, res) => {
   }
 });
 
-router.get('/jobs/:id', optionalAuth, async (req, res) => {
+router.get('/jobs/:id', publicNoStore(), optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
     const doc = await loadApprovedById('job_listings', rawId);
@@ -283,7 +285,7 @@ router.get('/jobs/:id', optionalAuth, async (req, res) => {
   }
 });
 
-router.get('/marketplace/:id', optionalAuth, async (req, res) => {
+router.get('/marketplace/:id', publicNoStore(), optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
     const doc = await loadApprovedById('marketplace_listings', rawId);
@@ -301,7 +303,7 @@ router.get('/marketplace/:id', optionalAuth, async (req, res) => {
   }
 });
 
-router.get('/businesses/:id', optionalAuth, async (req, res) => {
+router.get('/businesses/:id', publicNoStore(), optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
     const doc = await loadApprovedById('directory_listings', rawId, {
@@ -323,7 +325,7 @@ router.get('/businesses/:id', optionalAuth, async (req, res) => {
   }
 });
 
-router.get('/professionals/:id', optionalAuth, async (req, res) => {
+router.get('/professionals/:id', publicNoStore(), optionalAuth, async (req, res) => {
   try {
     const rawId = String(req.params.id ?? '').trim();
     const doc = await loadApprovedById('directory_listings', rawId, {

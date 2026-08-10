@@ -370,13 +370,13 @@ export function JobListingDetailView({
                 </Typography>
               </OwnerEditableSpot>
 
-              <OwnerEditableSpot
-                field="price"
-                ownerEdit={ownerEdit}
-                label="Ndrysho pagën"
-                legacyOnClick={onEditPrice}
-              >
-                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
+                <OwnerEditableSpot
+                  field="price"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho pagën"
+                  legacyOnClick={onEditPrice}
+                >
                   <Box
                     sx={{
                       display: 'inline-flex',
@@ -394,7 +394,9 @@ export function JobListingDetailView({
                       {salary}
                     </Typography>
                   </Box>
-                  {jobTypeLabel ? (
+                </OwnerEditableSpot>
+                {jobTypeLabel || canInline || onEditSpecs ? (
+                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
                     <Box
                       sx={{
                         display: 'inline-flex',
@@ -408,12 +410,22 @@ export function JobListingDetailView({
                       }}
                     >
                       <Typography sx={{ fontWeight: 700, fontSize: FONT_CAPTION, lineHeight: 1 }}>
-                        {jobTypeLabel}
+                        {jobTypeLabel || 'Lloji i punës'}
                       </Typography>
                     </Box>
-                  ) : null}
-                </Stack>
-              </OwnerEditableSpot>
+                    {canInline || onEditSpecs ? (
+                      <OwnerEditPencil
+                        label="Ndrysho llojin e punës"
+                        onClick={() =>
+                          ownerEdit?.onStartInlineEdit
+                            ? ownerEdit.onStartInlineEdit('specs')
+                            : onEditSpecs?.()
+                        }
+                      />
+                    ) : null}
+                  </Stack>
+                ) : null}
+              </Stack>
 
               <Stack
                 direction="row"
@@ -477,9 +489,26 @@ export function JobListingDetailView({
               {metaRows.map((row, index) => {
                 const Icon = metaIcons[index];
                 const isLocation = index === 0;
+                const isJobType = index === 1;
+                const isExperience = index === 3;
                 const locationClick = ownerEdit?.onStartInlineEdit
                   ? () => ownerEdit.onStartInlineEdit!('location')
                   : onEditInfo;
+                const specsClick = ownerEdit?.onStartInlineEdit
+                  ? () => ownerEdit.onStartInlineEdit!('specs')
+                  : onEditSpecs;
+                const rowClick = isLocation
+                  ? locationClick
+                  : isJobType || isExperience
+                    ? specsClick
+                    : undefined;
+                const pencilLabel = isLocation
+                  ? 'Ndrysho lokacionin'
+                  : isJobType
+                    ? 'Ndrysho llojin e punës'
+                    : isExperience
+                      ? 'Ndrysho eksperiencën'
+                      : '';
                 return (
                   <Box
                     key={row.label}
@@ -534,8 +563,8 @@ export function JobListingDetailView({
                         {row.label}
                       </Typography>
                     </Box>
-                    {isLocation && locationClick ? (
-                      <OwnerEditPencil label="Ndrysho lokacionin" onClick={locationClick} />
+                    {rowClick ? (
+                      <OwnerEditPencil label={pencilLabel} onClick={rowClick} />
                     ) : null}
                   </Box>
                 );
@@ -597,7 +626,7 @@ export function JobListingDetailView({
               ) : null}
             </Box>
 
-            {sections.responsibilities.length > 0 ? (
+            {sections.responsibilities.length > 0 || canInline || onEditSpecs ? (
               <Box>
                 <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
                   <Box
@@ -613,10 +642,21 @@ export function JobListingDetailView({
                   >
                     <GroupsOutlined sx={{ fontSize: 16 }} />
                   </Box>
-                  <Typography sx={{ fontWeight: 800, fontSize: FONT_SECTION, lineHeight: 1.2 }}>
+                  <Typography sx={{ fontWeight: 800, fontSize: FONT_SECTION, lineHeight: 1.2, flex: 1 }}>
                     Përgjegjësitë
                   </Typography>
+                  {canInline || onEditSpecs ? (
+                    <OwnerEditPencil
+                      label="Ndrysho përgjegjësitë"
+                      onClick={() =>
+                        ownerEdit?.onStartInlineEdit
+                          ? ownerEdit.onStartInlineEdit('specs')
+                          : onEditSpecs?.()
+                      }
+                    />
+                  ) : null}
                 </Stack>
+                {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : sections.responsibilities.length > 0 ? (
                 <Stack spacing={0} sx={{ position: 'relative', pl: 0.5 }}>
                   {sections.responsibilities.map((item, index) => {
                     const isLast = index === sections.responsibilities.length - 1;
@@ -684,10 +724,15 @@ export function JobListingDetailView({
                     );
                   })}
                 </Stack>
+                ) : (
+                  <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>
+                    Shtoni përgjegjësitë
+                  </Typography>
+                )}
               </Box>
             ) : null}
 
-            {sections.requirements.length > 0 ? (
+            {sections.requirements.length > 0 || canInline || onEditSpecs ? (
               <Box
                 sx={{
                   p: 1.75,
@@ -699,10 +744,21 @@ export function JobListingDetailView({
               >
                 <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.35 }}>
                   <SchoolOutlined sx={{ fontSize: 18, color: 'primary.main' }} />
-                  <Typography sx={{ fontWeight: 800, fontSize: FONT_SECTION, lineHeight: 1.2 }}>
+                  <Typography sx={{ fontWeight: 800, fontSize: FONT_SECTION, lineHeight: 1.2, flex: 1 }}>
                     Kërkesat
                   </Typography>
+                  {canInline || onEditSpecs ? (
+                    <OwnerEditPencil
+                      label="Ndrysho kërkesat"
+                      onClick={() =>
+                        ownerEdit?.onStartInlineEdit
+                          ? ownerEdit.onStartInlineEdit('specs')
+                          : onEditSpecs?.()
+                      }
+                    />
+                  ) : null}
                 </Stack>
+                {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : sections.requirements.length > 0 ? (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.85 }}>
                   {sections.requirements.map((item, index) => (
                     <Box
@@ -743,12 +799,31 @@ export function JobListingDetailView({
                     </Box>
                   ))}
                 </Box>
+                ) : (
+                  <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>
+                    Shtoni kërkesat
+                  </Typography>
+                )}
               </Box>
             ) : null}
 
-            {sections.benefits.length > 0 ? (
+            {sections.benefits.length > 0 || canInline || onEditSpecs ? (
               <Box>
-                <SoftSectionLabel title="Çfarë ofrojmë" />
+                <SoftSectionLabel
+                  title="Çfarë ofrojmë"
+                  edit={
+                    canInline || onEditSpecs
+                      ? {
+                          label: 'Ndrysho përfitimet',
+                          onClick: () =>
+                            ownerEdit?.onStartInlineEdit
+                              ? ownerEdit.onStartInlineEdit('specs')
+                              : onEditSpecs?.(),
+                        }
+                      : undefined
+                  }
+                />
+                {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : sections.benefits.length > 0 ? (
                 <Box
                   sx={{
                     display: 'flex',
@@ -794,6 +869,11 @@ export function JobListingDetailView({
                     </Box>
                   ))}
                 </Box>
+                ) : (
+                  <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>
+                    Shtoni përfitimet
+                  </Typography>
+                )}
               </Box>
             ) : null}
 

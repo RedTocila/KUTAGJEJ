@@ -637,12 +637,26 @@ export function RealEstateListingDetailView({
             </Stack>
 
             <Stack spacing={0} component="section" aria-labelledby="re-detail-heading">
-              {sectionTitle('Detajet', 're-detail-heading')}
+              {sectionTitle(
+                'Detajet',
+                're-detail-heading',
+                canInline || onEditSpecs
+                  ? {
+                      label: 'Ndrysho detajet',
+                      onClick: () =>
+                        ownerEdit?.onStartInlineEdit
+                          ? ownerEdit.onStartInlineEdit('specs')
+                          : onEditSpecs?.(),
+                    }
+                  : undefined,
+              )}
+              {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : (
               <Stack divider={<Divider flexItem />} spacing={0}>
                 {detailRows.filter(Boolean).map((row) => (
                   <DetailRow key={row!.label} label={row!.label} value={row!.value} />
                 ))}
               </Stack>
+              )}
             </Stack>
 
             {featureChips.length ? (

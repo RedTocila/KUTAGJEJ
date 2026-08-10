@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Stack, TextField } from '@mui/material';
+import { Checkbox, FormControlLabel, FormGroup, Stack, TextField, Typography } from '@mui/material';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
@@ -11,7 +11,14 @@ import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
 import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
 import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dialog';
 import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
-import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS, WORK_LOCATION_OPTIONS } from '@/lib/job-constants';
+import {
+  JOB_BENEFIT_PRESETS,
+  JOB_EDUCATION_OPTIONS,
+  JOB_EXPERIENCE_OPTIONS,
+  JOB_INDUSTRY_OPTIONS,
+  JOB_TYPE_OPTIONS,
+  WORK_LOCATION_OPTIONS,
+} from '@/lib/job-constants';
 import { jobMineToPublic } from '@/lib/listing-mine-to-public';
 import { updateJobListing, type JobMineListing } from '@/lib/listings-client';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
@@ -20,6 +27,8 @@ import { uploadListingImages } from '@/lib/uploads-client';
 import { paths } from '@/paths';
 
 const MAX_IMAGES = 5;
+
+type JobBenefit = { id: string; label: string };
 
 type Snapshot = {
   title: string;
@@ -36,6 +45,7 @@ type Snapshot = {
   contactPhone: string | null;
   responsibilities: string[];
   requirements: string[];
+  benefits: JobBenefit[];
 };
 
 function snapFrom(d: JobMineListing): Snapshot {
@@ -54,7 +64,29 @@ function snapFrom(d: JobMineListing): Snapshot {
     contactPhone: d.contactPhone ?? null,
     responsibilities: d.responsibilities ?? [],
     requirements: d.requirements ?? [],
+    benefits: d.benefits ?? [],
   };
+}
+
+function benefitIdsFrom(benefits: JobBenefit[] | undefined): string[] {
+  return (benefits ?? [])
+    .filter((b) => b.id !== 'custom' && JOB_BENEFIT_PRESETS.some((p) => p.id === b.id))
+    .map((b) => b.id);
+}
+
+function customBenefitFrom(benefits: JobBenefit[] | undefined): string {
+  return (benefits ?? []).find((b) => b.id === 'custom')?.label ?? '';
+}
+
+function buildBenefits(benefitIds: string[], customBenefit: string): JobBenefit[] {
+  const items: JobBenefit[] = [];
+  for (const id of benefitIds) {
+    const preset = JOB_BENEFIT_PRESETS.find((p) => p.id === id);
+    if (preset) items.push({ id: preset.id, label: preset.label });
+  }
+  const custom = customBenefit.replace(/\s+/g, ' ').trim();
+  if (custom.length >= 3) items.push({ id: 'custom', label: custom });
+  return items;
 }
 
 function linesToList(text: string): string[] {
@@ -82,6 +114,8 @@ export function JobOwnerEdit({
   const [newFiles, setNewFiles] = React.useState<File[]>([]);
   const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
+  const [benefitIds, setBenefitIds] = React.useState(() => benefitIdsFrom(initial.benefits));
+  const [customBenefit, setCustomBenefit] = React.useState(() => customBenefitFrom(initial.benefits));
 
   React.useEffect(() => {
     void listRealEstateLocationsPublic().then((res) => {
@@ -92,14 +126,22 @@ export function JobOwnerEdit({
   const dirty = JSON.stringify(draft) !== baseline || newFiles.length > 0;
   const preview = React.useMemo(() => jobMineToPublic(draft), [draft]);
 
+  const syncBenefitsToDraft = (nextIds: string[], nextCustom: string) => {
+    setDraft((d) => ({ ...d, benefits: buildBenefits(nextIds, nextCustom) }));
+  };
+
   const startInline = (field: OwnerInlineField) => {
     setSnapshot(snapFrom(draft));
+    setBenefitIds(benefitIdsFrom(draft.benefits));
+    setCustomBenefit(customBenefitFrom(draft.benefits));
     setEditingField(field);
   };
 
   const cancelInline = () => {
     if (snapshot) {
       setDraft((d) => ({ ...d, ...snapshot }));
+      setBenefitIds(benefitIdsFrom(snapshot.benefits));
+      setCustomBenefit(customBenefitFrom(snapshot.benefits));
     }
     setSnapshot(null);
     setEditingField(null);
@@ -261,19 +303,19 @@ export function JobOwnerEdit({
           options={WORK_LOCATION_OPTIONS}
           emptyLabel="—"
         />
-        <TextField
+        <SearchableSelect
           label="Arsimi"
           value={draft.education}
-          onChange={(e) => setDraft((d) => ({ ...d, education: e.target.value }))}
-          fullWidth
-          sx={fieldSx}
+          onChange={(v) => setDraft((d) => ({ ...d, education: v }))}
+          options={JOB_EDUCATION_OPTIONS}
+          emptyLabel="Zgjidhni nivelin…"
         />
-        <TextField
+        <SearchableSelect
           label="Eksperienca"
           value={draft.experience}
-          onChange={(e) => setDraft((d) => ({ ...d, experience: e.target.value }))}
-          fullWidth
-          sx={fieldSx}
+          onChange={(v) => setDraft((d) => ({ ...d, experience: v }))}
+          options={JOB_EXPERIENCE_OPTIONS}
+          emptyLabel="Zgjidhni eksperiencën…"
         />
         <TextField
           label="Përgjegjësitë (një për rresht)"
@@ -293,6 +335,41 @@ export function JobOwnerEdit({
           minRows={3}
           sx={fieldSx}
         />
+        <Stack spacing={0.75}>
+          <Typography sx={{ fontWeight: 700, fontSize: '0.875rem' }}>Përfitimet</Typography>
+          <FormGroup>
+            {JOB_BENEFIT_PRESETS.map((preset) => (
+              <FormControlLabel
+                key={preset.id}
+                control={
+                  <Checkbox
+                    checked={benefitIds.includes(preset.id)}
+                    onChange={(e) => {
+                      const nextIds = e.target.checked
+                        ? [...benefitIds, preset.id]
+                        : benefitIds.filter((id) => id !== preset.id);
+                      setBenefitIds(nextIds);
+                      syncBenefitsToDraft(nextIds, customBenefit);
+                    }}
+                  />
+                }
+                label={preset.label}
+              />
+            ))}
+          </FormGroup>
+          <TextField
+            label="Përfitim tjetër (opsional)"
+            value={customBenefit}
+            onChange={(e) => {
+              const next = e.target.value;
+              setCustomBenefit(next);
+              syncBenefitsToDraft(benefitIds, next);
+            }}
+            fullWidth
+            placeholder="p.sh. Ditë pushimi shtesë"
+            sx={fieldSx}
+          />
+        </Stack>
         <TextField
           label="Telefoni"
           value={draft.contactPhone ?? ''}

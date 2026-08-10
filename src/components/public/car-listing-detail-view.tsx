@@ -623,7 +623,22 @@ export function CarListingDetailView({
               </Stack>
 
               <Stack spacing={1.25} component="section" aria-labelledby="car-details-heading">
-                {sectionTitle('Detajet', 'car-details-heading')}
+                {sectionTitle(
+                  'Detajet',
+                  'car-details-heading',
+                  canInline || onEditSpecs
+                    ? {
+                        label: 'Ndrysho detajet',
+                        onClick: () =>
+                          ownerEdit?.onStartInlineEdit
+                            ? ownerEdit.onStartInlineEdit('specs')
+                            : onEditSpecs?.(),
+                      }
+                    : undefined,
+                )}
+                {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs
+                  ? null
+                  : (
                 <Paper
                   variant="outlined"
                   sx={{ borderRadius: 2.5, borderColor: 'divider', bgcolor: 'background.paper', px: 2, py: 0.5 }}
@@ -634,11 +649,27 @@ export function CarListingDetailView({
                     ))}
                   </Stack>
                 </Paper>
+                  )}
               </Stack>
 
-              {hasExtras ? (
+              {hasExtras || canInline || onEditSpecs ? (
                 <Stack spacing={1.25} component="section" aria-labelledby="car-extras-heading">
-                  {sectionTitle('Ekstra', 'car-extras-heading')}
+                  {sectionTitle(
+                    'Ekstra',
+                    'car-extras-heading',
+                    canInline || onEditSpecs
+                      ? {
+                          label: 'Ndrysho ekstrat',
+                          onClick: () =>
+                            ownerEdit?.onStartInlineEdit
+                              ? ownerEdit.onStartInlineEdit('specs')
+                              : onEditSpecs?.(),
+                        }
+                      : undefined,
+                  )}
+                  {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs
+                    ? null
+                    : hasExtras ? (
                   <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
                     {listing.finish?.map((f) => (
                       <Chip
@@ -652,6 +683,9 @@ export function CarListingDetailView({
                       <Chip key={e} size="small" label={String(e)} variant="outlined" sx={{ fontWeight: 600 }} />
                     ))}
                   </Stack>
+                    ) : (
+                      <Typography sx={{ color: 'text.secondary' }}>Shtoni finish ose ekstra</Typography>
+                    )}
                 </Stack>
               ) : null}
 

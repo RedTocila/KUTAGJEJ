@@ -27,6 +27,7 @@ type Snapshot = {
   category: string;
   condition: string | null;
   price: number | null;
+  originalPrice: number | null;
   currency: 'EUR' | 'LEK' | null;
   cityId: string | null;
   cityName: string | null;
@@ -40,6 +41,7 @@ function snapFrom(d: MarketplaceMineListing): Snapshot {
     category: d.category,
     condition: d.condition ?? null,
     price: d.price,
+    originalPrice: d.originalPrice ?? null,
     currency: d.currency === 'EUR' || d.currency === 'LEK' ? d.currency : null,
     cityId: d.cityId ?? null,
     cityName: d.cityName ?? null,
@@ -129,6 +131,7 @@ export function MarketplaceOwnerEdit({
         category: draft.category,
         condition: draft.condition,
         price: draft.price,
+        originalPrice: draft.originalPrice ?? null,
         currency: draft.currency,
         cityId,
         contactPhone: draft.contactPhone ?? '',
@@ -197,6 +200,16 @@ export function MarketplaceOwnerEdit({
             sx={{ minWidth: 120 }}
           />
         </Stack>
+        <TextField
+          label="Çmimi i mëparshëm (opsional)"
+          value={draft.originalPrice != null ? String(draft.originalPrice) : ''}
+          onChange={(e) => {
+            const raw = e.target.value.trim();
+            setDraft((d) => ({ ...d, originalPrice: raw ? Number(raw) : null }));
+          }}
+          fullWidth
+          sx={fieldSx}
+        />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
     ),

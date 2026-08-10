@@ -13,7 +13,20 @@ import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dia
 import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
 import { realEstateMineToPublic } from '@/lib/listing-mine-to-public';
 import { updateRealEstateListing } from '@/lib/listings-client';
-import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
+import {
+  CONDITION_OPTIONS,
+  CURRENCY_OPTIONS,
+  FURNISHING_OPTIONS,
+  REAL_ESTATE_PROPERTY_CATEGORIES,
+  TRANSACTION_OPTIONS,
+  needsBedroomsBathFurnishing,
+  needsCondition,
+  needsFloor,
+  needsParkingFloor,
+  needsTotalFloors,
+  needsYearBuilt,
+  type RealEstatePropertySlug,
+} from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { uploadListingImages } from '@/lib/uploads-client';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
@@ -21,10 +34,18 @@ import { paths } from '@/paths';
 
 const MAX_IMAGES = 8;
 
+const PROPERTY_OPTIONS = REAL_ESTATE_PROPERTY_CATEGORIES.map((c) => ({
+  value: c.slug,
+  label: c.label,
+}));
+
 type Snapshot = {
   title: string;
   description: string;
+  propertyCategory: string;
+  transactionType: 'rent' | 'sale';
   price: number;
+  originalPrice: number | null;
   currency: 'EUR' | 'LEK';
   surfaceM2: number;
   cityId: string | null;
@@ -32,15 +53,24 @@ type Snapshot = {
   cityName: string | null;
   zoneName: string | null;
   contactPhone: string | null;
+  condition: string | null;
+  floor: number | null;
+  totalFloors: number | null;
+  parkingFloor: number | null;
   bedrooms: number | null;
   bathrooms: number | null;
+  furnishing: string | null;
+  yearBuilt: number | null;
 };
 
 function snapFrom(d: RealEstateMineListing): Snapshot {
   return {
     title: d.title,
     description: d.description ?? '',
+    propertyCategory: d.propertyCategory,
+    transactionType: d.transactionType,
     price: d.price,
+    originalPrice: d.originalPrice ?? null,
     currency: d.currency,
     surfaceM2: d.surfaceM2,
     cityId: d.cityId ?? null,
@@ -48,9 +78,22 @@ function snapFrom(d: RealEstateMineListing): Snapshot {
     cityName: d.cityName ?? null,
     zoneName: d.zoneName ?? null,
     contactPhone: d.contactPhone ?? null,
+    condition: d.condition ?? null,
+    floor: d.floor ?? null,
+    totalFloors: d.totalFloors ?? null,
+    parkingFloor: d.parkingFloor ?? null,
     bedrooms: d.bedrooms ?? null,
     bathrooms: d.bathrooms ?? null,
+    furnishing: d.furnishing ?? null,
+    yearBuilt: d.yearBuilt ?? null,
   };
+}
+
+function numOrNull(raw: string): number | null {
+  const t = raw.trim();
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
 }
 
 export function RealEstateOwnerEdit({
@@ -81,6 +124,7 @@ export function RealEstateOwnerEdit({
   const zones = cities.find((c) => c.id === draft.cityId)?.zones ?? [];
   const dirty = JSON.stringify(draft) !== baseline || newFiles.length > 0;
   const preview = React.useMemo(() => realEstateMineToPublic(draft), [draft]);
+  const cat = (draft.propertyCategory || '') as RealEstatePropertySlug | '';
 
   const startInline = (field: OwnerInlineField) => {
     setSnapshot(snapFrom(draft));
@@ -136,6 +180,7 @@ export function RealEstateOwnerEdit({
         description: (draft.description ?? '').trim(),
         transactionType: draft.transactionType,
         price: draft.price,
+        originalPrice: draft.originalPrice ?? null,
         currency: draft.currency,
         surfaceM2: draft.surfaceM2,
         cityId,
@@ -188,6 +233,18 @@ export function RealEstateOwnerEdit({
     ),
     price: (
       <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
+        <SearchableSelect
+          label="Lloji i transakcionit"
+          value={draft.transactionType}
+          onChange={(v) =>
+            setDraft((d) => ({
+              ...d,
+              transactionType: v === 'rent' || v === 'sale' ? v : d.transactionType,
+            }))
+          }
+          options={TRANSACTION_OPTIONS}
+          emptyLabel="—"
+        />
         <Stack direction="row" spacing={1.25}>
           <TextField
             label="Çmimi"
@@ -209,6 +266,13 @@ export function RealEstateOwnerEdit({
             sx={{ minWidth: 120 }}
           />
         </Stack>
+        <TextField
+          label="Çmimi i mëparshëm (opsional)"
+          value={draft.originalPrice != null ? String(draft.originalPrice) : ''}
+          onChange={(e) => setDraft((d) => ({ ...d, originalPrice: numOrNull(e.target.value) }))}
+          fullWidth
+          sx={fieldSx}
+        />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
     ),
@@ -247,6 +311,14 @@ export function RealEstateOwnerEdit({
     ),
     specs: (
       <Stack spacing={1.25} sx={{ width: '100%', maxWidth: 480 }}>
+        <SearchableSelect
+          label="Lloji i pronës"
+          value={draft.propertyCategory}
+          onChange={(v) => setDraft((d) => ({ ...d, propertyCategory: v }))}
+          options={PROPERTY_OPTIONS}
+          emptyLabel="Zgjidhni…"
+          required
+        />
         <TextField
           label="Sipërfaqja (m²)"
           value={String(draft.surfaceM2)}
@@ -257,28 +329,80 @@ export function RealEstateOwnerEdit({
           autoFocus
           sx={fieldSx}
         />
-        <Stack direction="row" spacing={1.25}>
+        {needsCondition(cat) ? (
+          <SearchableSelect
+            label="Gjendja"
+            value={draft.condition ?? ''}
+            onChange={(v) => setDraft((d) => ({ ...d, condition: v || null }))}
+            options={CONDITION_OPTIONS}
+            emptyLabel="—"
+            clearable
+          />
+        ) : null}
+        {needsFloor(cat) ? (
           <TextField
-            label="Dhoma"
-            value={draft.bedrooms != null ? String(draft.bedrooms) : ''}
-            onChange={(e) => {
-              const raw = e.target.value.trim();
-              setDraft((d) => ({ ...d, bedrooms: raw ? Number(raw) : null }));
-            }}
+            label="Kati"
+            value={draft.floor != null ? String(draft.floor) : ''}
+            onChange={(e) => setDraft((d) => ({ ...d, floor: numOrNull(e.target.value) }))}
             fullWidth
             sx={fieldSx}
           />
+        ) : null}
+        {needsTotalFloors(cat) ? (
           <TextField
-            label="Banjo"
-            value={draft.bathrooms != null ? String(draft.bathrooms) : ''}
-            onChange={(e) => {
-              const raw = e.target.value.trim();
-              setDraft((d) => ({ ...d, bathrooms: raw ? Number(raw) : null }));
-            }}
+            label="Numri i kateve"
+            value={draft.totalFloors != null ? String(draft.totalFloors) : ''}
+            onChange={(e) => setDraft((d) => ({ ...d, totalFloors: numOrNull(e.target.value) }))}
             fullWidth
             sx={fieldSx}
           />
-        </Stack>
+        ) : null}
+        {needsParkingFloor(cat) ? (
+          <TextField
+            label="Niveli i parkimit"
+            value={draft.parkingFloor != null ? String(draft.parkingFloor) : ''}
+            onChange={(e) => setDraft((d) => ({ ...d, parkingFloor: numOrNull(e.target.value) }))}
+            fullWidth
+            sx={fieldSx}
+          />
+        ) : null}
+        {needsBedroomsBathFurnishing(cat) ? (
+          <>
+            <Stack direction="row" spacing={1.25}>
+              <TextField
+                label="Dhoma"
+                value={draft.bedrooms != null ? String(draft.bedrooms) : ''}
+                onChange={(e) => setDraft((d) => ({ ...d, bedrooms: numOrNull(e.target.value) }))}
+                fullWidth
+                sx={fieldSx}
+              />
+              <TextField
+                label="Banjo"
+                value={draft.bathrooms != null ? String(draft.bathrooms) : ''}
+                onChange={(e) => setDraft((d) => ({ ...d, bathrooms: numOrNull(e.target.value) }))}
+                fullWidth
+                sx={fieldSx}
+              />
+            </Stack>
+            <SearchableSelect
+              label="Mobilimi"
+              value={draft.furnishing ?? ''}
+              onChange={(v) => setDraft((d) => ({ ...d, furnishing: v || null }))}
+              options={FURNISHING_OPTIONS}
+              emptyLabel="—"
+              clearable
+            />
+          </>
+        ) : null}
+        {needsYearBuilt(cat) ? (
+          <TextField
+            label="Viti i ndërtimit"
+            value={draft.yearBuilt != null ? String(draft.yearBuilt) : ''}
+            onChange={(e) => setDraft((d) => ({ ...d, yearBuilt: numOrNull(e.target.value) }))}
+            fullWidth
+            sx={fieldSx}
+          />
+        ) : null}
         <TextField
           label="Telefoni"
           value={draft.contactPhone ?? ''}

@@ -818,8 +818,8 @@ function BusinessCard({
   const announcement: BusinessAnnouncement | null = l.announcementTitle?.trim()
     ? {
         title: l.announcementTitle,
-        subtitle: l.announcementSubtitle,
-        bannerUrl: l.announcementBannerUrl,
+        subtitle: l.announcementSubtitle ?? null,
+        bannerUrl: l.announcementBannerUrl ?? null,
         announcedAt: l.announcementAt ?? null,
       }
     : null;
@@ -889,8 +889,8 @@ function ProfessionalCard({
   const announcement: BusinessAnnouncement | null = l.announcementTitle?.trim()
     ? {
         title: l.announcementTitle,
-        subtitle: l.announcementSubtitle,
-        bannerUrl: l.announcementBannerUrl,
+        subtitle: l.announcementSubtitle ?? null,
+        bannerUrl: l.announcementBannerUrl ?? null,
         announcedAt: l.announcementAt ?? null,
       }
     : null;

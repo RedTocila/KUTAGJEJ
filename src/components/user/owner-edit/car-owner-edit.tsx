@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Stack, TextField } from '@mui/material';
+import { Box, Checkbox, FormControlLabel, FormGroup, Stack, TextField, Typography } from '@mui/material';
 import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
 import { SteeringWheel as SteeringWheelIcon } from '@phosphor-icons/react/dist/ssr/SteeringWheel';
 
@@ -17,6 +17,8 @@ import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
 import { ListingToggle } from '@/components/user/listing-form-ui';
 import {
   CAR_COLOUR_OPTIONS,
+  CAR_EXTRAS,
+  CAR_FINISH_OPTIONS,
   FUEL_TYPE_OPTIONS,
   makesForVehicleType,
   modelsForMake,
@@ -50,8 +52,11 @@ type Snapshot = {
   transmission: string;
   fuelType: string;
   price: number;
+  originalPrice: number | null;
   currency: string;
   color: string;
+  finish: string[];
+  extras: string[];
   cityId: string | null;
   cityName: string | null;
   contactPhone: string | null;
@@ -69,8 +74,11 @@ function snapFrom(d: CarMineListing): Snapshot {
     transmission: d.transmission,
     fuelType: d.fuelType,
     price: d.price,
+    originalPrice: d.originalPrice ?? null,
     currency: d.currency,
     color: d.color,
+    finish: d.finish ?? [],
+    extras: d.extras ?? [],
     cityId: d.cityId ?? null,
     cityName: d.cityName ?? null,
     contactPhone: d.contactPhone ?? null,
@@ -163,6 +171,7 @@ export function CarOwnerEdit({
         transmission: draft.transmission,
         fuelType: draft.fuelType,
         price: draft.price,
+        originalPrice: draft.originalPrice ?? null,
         currency: draft.currency,
         color: draft.color,
         finish: draft.finish ?? [],
@@ -276,6 +285,17 @@ export function CarOwnerEdit({
             fullWidth={false}
           />
         </Stack>
+        <TextField
+          label="Çmimi i mëparshëm (opsional)"
+          value={draft.originalPrice != null ? String(draft.originalPrice) : ''}
+          onChange={(e) => {
+            const raw = e.target.value.trim();
+            setDraft((d) => ({ ...d, originalPrice: raw ? Number(raw) : null }));
+          }}
+          fullWidth
+          helperText="Shfaqet si çmim i vjetër i çuar"
+          sx={fieldSx}
+        />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
     ),
@@ -297,6 +317,55 @@ export function CarOwnerEdit({
     ),
     specs: (
       <Stack spacing={1.25} sx={{ width: '100%', maxWidth: 480 }}>
+        <Box
+          sx={{
+            p: 1.5,
+            borderRadius: 2.5,
+            border: '1px solid',
+            borderColor: 'primary.main',
+            bgcolor: primaryMainAlpha(0.06),
+            boxShadow: `inset 0 0 0 1px ${primaryMainAlpha(0.12)}`,
+          }}
+        >
+          <VehicleTypePicker
+            value={vehicleType}
+            label="Kategoria"
+            onChange={(v) =>
+              setDraft((d) => ({
+                ...d,
+                vehicleType: v || 'car',
+                make: '',
+                model: '',
+              }))
+            }
+          />
+        </Box>
+        <Stack direction="row" spacing={1.25}>
+          <SearchableSelect
+            label="Marka"
+            value={draft.make}
+            onChange={(v) => setDraft((d) => ({ ...d, make: v, model: '' }))}
+            options={makeOptions.map((m) => ({ value: m, label: m }))}
+            emptyLabel="Zgjidhni…"
+            required
+          />
+          <SearchableSelect
+            label="Modeli"
+            value={draft.model}
+            onChange={(v) => setDraft((d) => ({ ...d, model: v }))}
+            options={modelOptions.map((m) => ({ value: m, label: m }))}
+            emptyLabel={draft.make ? 'Zgjidhni…' : 'Zgjidhni markën…'}
+            required
+            disabled={!draft.make}
+          />
+        </Stack>
+        <TextField
+          label="Varianti"
+          value={draft.variant}
+          onChange={(e) => setDraft((d) => ({ ...d, variant: e.target.value }))}
+          fullWidth
+          sx={fieldSx}
+        />
         <Stack direction="row" spacing={1.25}>
           <TextField
             label="Viti"
@@ -336,6 +405,69 @@ export function CarOwnerEdit({
           options={CAR_COLOUR_OPTIONS}
           emptyLabel="—"
         />
+        <Stack spacing={0.5}>
+          <Typography sx={{ fontWeight: 700, fontSize: '0.875rem' }}>Finish</Typography>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+            {CAR_FINISH_OPTIONS.map((opt) => (
+              <FormControlLabel
+                key={opt.value}
+                control={
+                  <Checkbox
+                    checked={(draft.finish ?? []).includes(opt.value)}
+                    onChange={(e) => {
+                      setDraft((d) => {
+                        const current = d.finish ?? [];
+                        const finish = e.target.checked
+                          ? [...current.filter((f) => f !== opt.value), opt.value]
+                          : current.filter((f) => f !== opt.value);
+                        return { ...d, finish };
+                      });
+                    }}
+                  />
+                }
+                label={opt.label}
+              />
+            ))}
+          </Stack>
+        </Stack>
+        <Stack spacing={0.5}>
+          <Typography sx={{ fontWeight: 700, fontSize: '0.875rem' }}>
+            Ekstra{(draft.extras ?? []).length ? ` (${(draft.extras ?? []).length})` : ''}
+          </Typography>
+          <FormGroup
+            sx={{
+              maxHeight: 220,
+              overflowY: 'auto',
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 2,
+              px: 1,
+              py: 0.5,
+            }}
+          >
+            {CAR_EXTRAS.map((extra) => (
+              <FormControlLabel
+                key={extra}
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={(draft.extras ?? []).includes(extra)}
+                    onChange={(e) => {
+                      setDraft((d) => {
+                        const current = d.extras ?? [];
+                        const extras = e.target.checked
+                          ? [...current, extra]
+                          : current.filter((x) => x !== extra);
+                        return { ...d, extras };
+                      });
+                    }}
+                  />
+                }
+                label={extra}
+              />
+            ))}
+          </FormGroup>
+        </Stack>
         <TextField
           label="Telefoni"
           value={draft.contactPhone ?? ''}

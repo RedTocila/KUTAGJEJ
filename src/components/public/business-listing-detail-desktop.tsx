@@ -307,7 +307,7 @@ export function BusinessListingDetailDesktop({
                             type="number"
                             value={reservePeople}
                             onChange={(e) => onReservePeople(e.target.value)}
-                            inputProps={{ min: 1, max: 50, inputMode: 'numeric' }}
+                            slotProps={{ htmlInput: { min: 1, max: 50, inputMode: 'numeric' } }}
                             fullWidth
                             sx={reserveFieldSx}
                           />

@@ -467,7 +467,7 @@ export function BusinessListingDetailView({
                         type="number"
                         value={reservePeople}
                         onChange={(e) => setReservePeople(e.target.value)}
-                        inputProps={{ min: 1, max: 50, inputMode: 'numeric' }}
+                        slotProps={{ htmlInput: { min: 1, max: 50, inputMode: 'numeric' } }}
                         fullWidth
                         sx={reserveFieldSx}
                       />

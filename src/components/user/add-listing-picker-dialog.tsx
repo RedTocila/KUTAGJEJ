@@ -70,6 +70,12 @@ const ALL_LISTINGS_ORDER: ListingCategoryKey[] = [
   'marketplace',
 ];
 
+const pickerHintSx = {
+  display: 'block',
+  lineHeight: 1.3,
+  color: '#9CA3AF',
+} as const;
+
 function fallbackOptions(t: AppMessages): { key: ListingCategoryKey; title: string; hint: string }[] {
   return [
     { key: 'real-estate', title: t.picker.realEstate, hint: t.picker.realEstateHint },
@@ -382,14 +388,7 @@ export function AddListingPickerDialog({
                     <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.25, color: AI_SEARCH_BLUE }}>
                       {t.picker.aiImport}
                     </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: 'block',
-                        lineHeight: 1.3,
-                        color: '#9CA3AF',
-                      }}
-                    >
+                    <Typography variant="caption" sx={pickerHintSx}>
                       {t.picker.aiImportHint}
                     </Typography>
                   </Box>
@@ -445,14 +444,7 @@ export function AddListingPickerDialog({
                     <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.25, color: OKAZION_ACCENT }}>
                       {t.picker.postAsOkazion}
                     </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: 'block',
-                        lineHeight: 1.3,
-                        color: '#9CA3AF',
-                      }}
-                    >
+                    <Typography variant="caption" sx={pickerHintSx}>
                       {t.picker.okazionHint}
                     </Typography>
                   </Box>
@@ -508,14 +500,7 @@ export function AddListingPickerDialog({
                     <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.25, color: 'warning.main' }}>
                       {t.picker.postAsPremium}
                     </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: 'block',
-                        lineHeight: 1.3,
-                        color: '#9CA3AF',
-                      }}
-                    >
+                    <Typography variant="caption" sx={pickerHintSx}>
                       {t.picker.premiumHint}
                     </Typography>
                   </Box>
@@ -571,14 +556,7 @@ export function AddListingPickerDialog({
                     <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', lineHeight: 1.25 }}>
                       {t.picker.allListings}
                     </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: 'block',
-                        lineHeight: 1.3,
-                        color: '#9CA3AF',
-                      }}
-                    >
+                    <Typography variant="caption" sx={pickerHintSx}>
                       {t.picker.allListingsHint}
                     </Typography>
                   </Box>
@@ -649,14 +627,7 @@ export function AddListingPickerDialog({
                       <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', lineHeight: 1.25 }}>
                         {opt.title}
                       </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          display: 'block',
-                          lineHeight: 1.3,
-                          color: '#9CA3AF',
-                        }}
-                      >
+                      <Typography variant="caption" sx={pickerHintSx}>
                         {quotaAvailable ? opt.hint : t.picker.quotaUnavailable}
                       </Typography>
                     </Box>

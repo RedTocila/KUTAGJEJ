@@ -4,8 +4,6 @@ import * as React from 'react';
 import {
   Alert,
   Box,
-  Card,
-  CardContent,
   Chip,
   Grid,
   Skeleton,
@@ -29,6 +27,7 @@ import {
   fetchAdminReferralUsers,
 } from '@/lib/referrals-client';
 import type { AdminReferralOverview, AdminReferralSignupRow, AdminReferralUserRow } from '@/types/referrals';
+import { productPanelSx } from '@/styles/product-sx';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -38,16 +37,14 @@ function formatDate(iso: string): string {
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
-    <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, height: '100%' }}>
-      <CardContent>
-        <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700 }}>
-          {label}
-        </Typography>
-        <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5 }}>
-          {value}
-        </Typography>
-      </CardContent>
-    </Card>
+    <Box sx={{ ...productPanelSx, p: 2.5, height: '100%' }}>
+      <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700 }}>
+        {label}
+      </Typography>
+      <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5 }}>
+        {value}
+      </Typography>
+    </Box>
   );
 }
 
@@ -129,7 +126,7 @@ export function ReferralTrackingAdminPage() {
       {loading ? (
         <Skeleton variant="rounded" height={320} />
       ) : tab === 0 ? (
-        <Box sx={{ overflowX: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+        <Box sx={{ ...productPanelSx, overflowX: 'auto' }}>
           <Table size="small">
             <TableHead>
               <TableRow>
@@ -168,7 +165,7 @@ export function ReferralTrackingAdminPage() {
           </Table>
         </Box>
       ) : (
-        <Box sx={{ overflowX: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+        <Box sx={{ ...productPanelSx, overflowX: 'auto' }}>
           <Table size="small">
             <TableHead>
               <TableRow>

@@ -6,8 +6,6 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
   Divider,
   Grid,
@@ -32,6 +30,9 @@ import {
 } from '@/lib/admin-job-employer-verification-client';
 import type { JobEmployerVerificationRequest } from '@/lib/job-employer-verification-client';
 import { useUser } from '@/hooks/use-user';
+import { MOTION } from '@/styles/motion';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
 function statusChip(status: JobEmployerVerificationRequest['status']) {
   if (status === 'approved') return <Chip size="small" label="Aprovuar" color="success" />;
@@ -96,10 +97,10 @@ export default function JobEmployerVerificationAdminPage() {
         description="Shqyrtoni kërkesat e punëdhënësve për shenjën e verifikuar në njoftimet e punës."
         actions={
           <>
-            <Button variant={filter === 'pending' ? 'contained' : 'outlined'} onClick={() => setFilter('pending')}>
+            <Button variant={filter === 'pending' ? 'contained' : 'outlined'} onClick={() => setFilter('pending')} sx={productButtonSx}>
               Në pritje
             </Button>
-            <Button variant={filter === 'all' ? 'contained' : 'outlined'} onClick={() => setFilter('all')}>
+            <Button variant={filter === 'all' ? 'contained' : 'outlined'} onClick={() => setFilter('all')} sx={productButtonSx}>
               Të gjitha
             </Button>
           </>
@@ -116,31 +117,45 @@ export default function JobEmployerVerificationAdminPage() {
         <Grid container spacing={2}>
           {requests.map((req) => (
             <Grid size={{ xs: 12, md: 6, lg: 4 }} key={req.id}>
-              <Card
-                variant="outlined"
-                sx={{
-                  height: '100%',
-                  cursor: 'pointer',
-                  '&:hover': { borderColor: 'primary.main' },
-                }}
+              <Box
+                role="button"
+                tabIndex={0}
                 onClick={() => {
                   setSelected(req);
                   setAdminNote(req.adminNote ?? '');
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setSelected(req);
+                    setAdminNote(req.adminNote ?? '');
+                  }
+                }}
+                sx={{
+                  ...productPanelSx,
+                  height: '100%',
+                  cursor: 'pointer',
+                  p: 2,
+                  transition: `border-color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.fast} ${MOTION.ease}, box-shadow ${MOTION.fast} ${MOTION.ease}`,
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    transform: 'translateY(-2px)',
+                    boxShadow: (t) => `0 8px 24px ${primaryMainAlpha(t.palette.mode === 'dark' ? 0.18 : 0.1)}`,
+                  },
+                  '&:active': { transform: 'scale(0.99)' },
+                }}
               >
-                <CardContent>
-                  <Stack spacing={1}>
-                    {statusChip(req.status)}
-                    <Typography sx={{ fontWeight: 700 }}>{req.applicantSnapshot.displayName}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {req.applicantSnapshot.email}
-                    </Typography>
-                    <Typography variant="caption" color="text.disabled">
-                      {new Date(req.createdAt).toLocaleString('sq-AL')}
-                    </Typography>
-                  </Stack>
-                </CardContent>
-              </Card>
+                <Stack spacing={1}>
+                  {statusChip(req.status)}
+                  <Typography sx={{ fontWeight: 700 }}>{req.applicantSnapshot.displayName}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {req.applicantSnapshot.email}
+                  </Typography>
+                  <Typography variant="caption" color="text.disabled">
+                    {new Date(req.createdAt).toLocaleString('sq-AL')}
+                  </Typography>
+                </Stack>
+              </Box>
             </Grid>
           ))}
         </Grid>
@@ -174,21 +189,21 @@ export default function JobEmployerVerificationAdminPage() {
                 fullWidth
                 multiline
                 minRows={2}
-                sx={{ mt: 1 }}
+                sx={{ mt: 1, ...productFieldSx }}
               />
             </Stack>
           ) : null}
         </ProductDialogContent>
         <ProductDialogActions>
-          <Button onClick={() => setSelected(null)} color="inherit">
+          <Button onClick={() => setSelected(null)} color="inherit" sx={productButtonSx}>
             Mbyll
           </Button>
           {selected?.status === 'pending' ? (
             <>
-              <Button color="error" variant="outlined" disabled={acting} onClick={() => void review('reject')}>
+              <Button color="error" variant="outlined" disabled={acting} onClick={() => void review('reject')} sx={productButtonSx}>
                 Refuzo
               </Button>
-              <Button variant="contained" disabled={acting} onClick={() => void review('approve')}>
+              <Button variant="contained" disabled={acting} onClick={() => void review('approve')} sx={productButtonSx}>
                 Aprovo
               </Button>
             </>

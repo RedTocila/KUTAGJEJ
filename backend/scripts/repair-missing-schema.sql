@@ -368,3 +368,30 @@ alter table public.user_notification_preferences
 
 alter table public.user_notifications enable row level security;
 alter table public.user_notification_preferences enable row level security;
+
+-- Addon package catalogs (Premium / OKAZION / Auto-Refresh)
+create table if not exists public.addon_packages (
+  id text primary key,
+  kind text not null check (kind in ('premium', 'okazion', 'auto-refresh')),
+  days integer,
+  slots integer,
+  price_eur numeric not null,
+  price_bc integer not null,
+  label_sq text not null default '',
+  label_en text not null default '',
+  active boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists addon_packages_kind_active_sort_idx
+  on public.addon_packages (kind, active, sort_order);
+
+alter table public.addon_packages enable row level security;
+
+drop policy if exists "public read active addon_packages" on public.addon_packages;
+create policy "public read active addon_packages"
+  on public.addon_packages
+  for select
+  using (active = true);

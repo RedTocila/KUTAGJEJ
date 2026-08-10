@@ -1,108 +1,62 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Stack, Typography } from '@mui/material';
+import { Chip } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { Timer as TimerIcon } from '@phosphor-icons/react/dist/ssr/Timer';
 
-import { getJobCountdownParts } from '@/lib/job-listing-expiry';
+import { formatJobListingCountdown } from '@/lib/job-listing-expiry';
 
 /** OKAZION packs always last this many days. */
 export const OKAZION_COUNTDOWN_DAYS = 5;
 
-const PLACEHOLDER_PARTS = { days: OKAZION_COUNTDOWN_DAYS, hours: 0, minutes: 0, seconds: 0 };
+const PLACEHOLDER_LABEL = `${OKAZION_COUNTDOWN_DAYS}d 0h 00m 00s`;
 
-function pad2(value: number): string {
-  return String(value).padStart(2, '0');
-}
+const overlayChipSx = {
+  height: 26,
+  borderRadius: '8px',
+  fontFamily: 'monospace',
+  fontVariantNumeric: 'tabular-nums',
+  fontWeight: 700,
+  fontSize: '0.72rem',
+  letterSpacing: '0.02em',
+  border: '1px solid',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
+  boxShadow: '0 2px 12px rgba(0,0,0,0.28)',
+  color: '#fff',
+  bgcolor: alpha('#dc2626', 0.52),
+  borderColor: alpha('#fff', 0.18),
+  '& .MuiChip-icon': {
+    color: '#fff',
+    ml: 0.75,
+    mr: -0.25,
+  },
+  '& .MuiChip-label': { px: 1.15 },
+} as const;
 
-function Unit({ value, suffix }: { value: string; suffix: string }) {
-  return (
-    <Box sx={{ display: 'inline-flex', alignItems: 'baseline', gap: 0.15 }}>
-      <Typography
-        component="span"
-        sx={{
-          fontWeight: 900,
-          fontSize: '0.82rem',
-          lineHeight: 1,
-          letterSpacing: '-0.02em',
-          fontVariantNumeric: 'tabular-nums',
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-          color: '#fff',
-        }}
-      >
-        {value}
-      </Typography>
-      <Typography
-        component="span"
-        sx={{
-          fontWeight: 800,
-          fontSize: '0.62rem',
-          lineHeight: 1,
-          color: 'rgba(255,255,255,0.78)',
-          textTransform: 'lowercase',
-        }}
-      >
-        {suffix}
-      </Typography>
-    </Box>
-  );
-}
-
-function OkazionCountdownShell({
-  days,
-  hours,
-  minutes,
-  seconds,
+function OkazionCountdownChip({
+  label,
   live = false,
 }: {
-  days: number;
-  hours: number;
-  minutes: number;
-  seconds: number;
+  label: string;
   live?: boolean;
 }) {
   return (
-    <Stack
-      direction="row"
-      spacing={0.65}
+    <Chip
+      icon={<TimerIcon size={14} weight="bold" />}
+      label={label}
+      size="small"
       aria-live={live ? 'polite' : undefined}
       aria-hidden={!live}
       suppressHydrationWarning
-      sx={{
-        alignItems: 'center',
-        height: 28,
-        px: 1,
-        borderRadius: 1.5,
-        color: '#fff',
-        flexShrink: 0,
-        bgcolor: 'rgba(247, 47, 53, 0.38)',
-        border: '1px solid',
-        borderColor: 'rgba(247, 47, 53, 0.55)',
-        backdropFilter: 'blur(12px) saturate(1.4)',
-        WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
-        boxShadow: `0 4px 14px rgba(247, 47, 53, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.16)`,
-      }}
-    >
-      <TimerIcon size={14} weight="bold" color="#fff" style={{ flexShrink: 0 }} />
-      <Stack direction="row" spacing={0.55} sx={{ alignItems: 'baseline' }}>
-        <Unit value={String(days)} suffix="d" />
-        <Unit value={pad2(hours)} suffix="h" />
-        <Unit value={pad2(minutes)} suffix="m" />
-        <Unit value={pad2(seconds)} suffix="s" />
-      </Stack>
-    </Stack>
+      sx={overlayChipSx}
+    />
   );
 }
 
 export function OkazionCountdownPlaceholder() {
-  return (
-    <OkazionCountdownShell
-      days={PLACEHOLDER_PARTS.days}
-      hours={PLACEHOLDER_PARTS.hours}
-      minutes={PLACEHOLDER_PARTS.minutes}
-      seconds={PLACEHOLDER_PARTS.seconds}
-    />
-  );
+  return <OkazionCountdownChip label={PLACEHOLDER_LABEL} />;
 }
 
 /**
@@ -111,7 +65,7 @@ export function OkazionCountdownPlaceholder() {
  */
 export function OkazionCountdown({ expiresAt }: { expiresAt?: string | null }) {
   const [mounted, setMounted] = React.useState(false);
-  const [parts, setParts] = React.useState(PLACEHOLDER_PARTS);
+  const [label, setLabel] = React.useState(PLACEHOLDER_LABEL);
   const fallbackUntilRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
@@ -131,15 +85,7 @@ export function OkazionCountdown({ expiresAt }: { expiresAt?: string | null }) {
       return fallbackUntilRef.current;
     };
 
-    const update = () => {
-      const next = getJobCountdownParts(resolveUntil());
-      setParts({
-        days: next.days,
-        hours: next.hours,
-        minutes: next.minutes,
-        seconds: next.seconds,
-      });
-    };
+    const update = () => setLabel(formatJobListingCountdown(resolveUntil()));
     update();
     const id = window.setInterval(update, 1000);
     return () => window.clearInterval(id);
@@ -149,13 +95,5 @@ export function OkazionCountdown({ expiresAt }: { expiresAt?: string | null }) {
     return <OkazionCountdownPlaceholder />;
   }
 
-  return (
-    <OkazionCountdownShell
-      days={parts.days}
-      hours={parts.hours}
-      minutes={parts.minutes}
-      seconds={parts.seconds}
-      live
-    />
-  );
+  return <OkazionCountdownChip label={label} live />;
 }

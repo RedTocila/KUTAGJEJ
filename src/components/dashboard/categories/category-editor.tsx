@@ -6,12 +6,9 @@ import {
   alpha,
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
   Divider,
   IconButton,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -29,6 +26,7 @@ import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { CATEGORY_VISUAL } from '@/components/dashboard/categories/category-config';
 import type { ListingCategory } from '@/types/listing-category';
 import { updateCategory } from '@/lib/admin-categories-client';
+import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
 export function CategoryEditor(props: {
   category: ListingCategory;
@@ -152,16 +150,10 @@ export function CategoryEditor(props: {
   };
 
   return (
-    <Card
+    <Box
       component="form"
       onSubmit={(ev) => void save(ev)}
-      elevation={0}
-      sx={{
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 2,
-        overflow: 'hidden',
-      }}
+      sx={productPanelSx}
     >
       <Box
         sx={{
@@ -206,12 +198,11 @@ export function CategoryEditor(props: {
         />
       </Box>
 
-      <CardContent sx={{ p: { xs: 2, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <Paper
-          elevation={0}
+      <Box sx={{ p: { xs: 2, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Box
           sx={{
             p: 2,
-            borderRadius: 1.5,
+            borderRadius: 2.5,
             bgcolor: 'action.hover',
             border: '1px dashed',
             borderColor: 'divider',
@@ -220,9 +211,9 @@ export function CategoryEditor(props: {
           <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
             {helpText}
           </Typography>
-        </Paper>
+        </Box>
 
-        <Box>
+        <Box sx={productFieldSx}>
           <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>
             Titulli & slug
           </Typography>
@@ -262,7 +253,7 @@ export function CategoryEditor(props: {
           </Alert>
         ) : null}
 
-        <Box>
+        <Box sx={productFieldSx}>
           <Box
             sx={{
               display: 'flex',
@@ -282,21 +273,13 @@ export function CategoryEditor(props: {
               onClick={addRow}
               variant="outlined"
               size="small"
+              sx={productButtonSx}
             >
               Shto rresht
             </Button>
           </Box>
 
-          <TableContainer
-            component={Paper}
-            elevation={0}
-            sx={{
-              borderRadius: 1.5,
-              border: '1px solid',
-              borderColor: 'divider',
-              overflow: 'hidden',
-            }}
-          >
+          <TableContainer sx={productPanelSx}>
             <Table size="small">
               <TableHead>
                 <TableRow
@@ -368,7 +351,7 @@ export function CategoryEditor(props: {
         </Box>
 
         {category.key === 'real-estate' ? (
-          <Box>
+          <Box sx={productFieldSx}>
             <Box
               sx={{
                 display: 'flex',
@@ -380,7 +363,7 @@ export function CategoryEditor(props: {
               }}
             >
               <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                Apartment types (listing form)
+                Llojet e apartamenteve (formulari)
               </Typography>
               <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
                 <Button
@@ -389,6 +372,7 @@ export function CategoryEditor(props: {
                   size="small"
                   onClick={copyListingTypesToApartmentTypes}
                   disabled={rows.length === 0}
+                  sx={productButtonSx}
                 >
                   Kopjo nga llojet e listimit
                 </Button>
@@ -398,8 +382,9 @@ export function CategoryEditor(props: {
                   onClick={addApartmentRow}
                   variant="outlined"
                   size="small"
+                  sx={productButtonSx}
                 >
-                  Add row
+                  Shto rresht
                 </Button>
               </Stack>
             </Box>
@@ -409,16 +394,7 @@ export function CategoryEditor(props: {
               llojet e listimit. Për Studio / Two-bedroom etj., shtoni rreshta këtu ose përdorni «Kopjo nga llojet e
               listimit» pastaj Ruaj.
             </Typography>
-            <TableContainer
-              component={Paper}
-              elevation={0}
-              sx={{
-                borderRadius: 1.5,
-                border: '1px solid',
-                borderColor: 'divider',
-                overflow: 'hidden',
-              }}
-            >
+            <TableContainer sx={productPanelSx}>
               <Table size="small">
                 <TableHead>
                   <TableRow
@@ -427,7 +403,7 @@ export function CategoryEditor(props: {
                       '& th': { fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em' },
                     }}
                   >
-                    <TableCell>Label</TableCell>
+                    <TableCell>Etiketa</TableCell>
                     <TableCell width={220}>Slug</TableCell>
                     <TableCell align="right" width={56} />
                   </TableRow>
@@ -437,7 +413,7 @@ export function CategoryEditor(props: {
                     <TableRow>
                       <TableCell colSpan={3} sx={{ py: 3 }}>
                         <Typography variant="body2" color="text.secondary" align="center">
-                          Add at least one apartment type (e.g. Studio, Two-bedroom).
+                          Shtoni të paktën një lloj apartamenti (p.sh. Studio, Dy-dhomësh).
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -454,10 +430,10 @@ export function CategoryEditor(props: {
                           <TextField
                             size="small"
                             fullWidth
-                            label="Label"
+                            label="Etiketa"
                             value={row.label}
                             onChange={(ev) => updateApartmentRow(index, 'label', ev.target.value)}
-                            placeholder="e.g. Two-bedroom"
+                            placeholder="p.sh. Dy-dhomësh"
                           />
                         </TableCell>
                         <TableCell sx={{ py: 1.5 }}>
@@ -467,13 +443,13 @@ export function CategoryEditor(props: {
                             label="Slug"
                             value={row.slug}
                             onChange={(ev) => updateApartmentRow(index, 'slug', ev.target.value)}
-                            placeholder="from label"
+                            placeholder="auto nga etiketa"
                           />
                         </TableCell>
                         <TableCell align="right" sx={{ py: 1.5 }}>
                           <IconButton
                             type="button"
-                            aria-label="Remove row"
+                            aria-label="Hiq rreshtin"
                             size="small"
                             color="error"
                             onClick={() => removeApartmentRow(index)}
@@ -493,11 +469,11 @@ export function CategoryEditor(props: {
         <Divider />
 
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button type="submit" variant="contained" size="large" disabled={pending} sx={{ minWidth: 200 }}>
+          <Button type="submit" variant="contained" size="large" disabled={pending} sx={{ ...productButtonSx, minWidth: 200 }}>
             {pending ? 'Duke u ruajtur…' : 'Ruaj ndryshimet'}
           </Button>
         </Box>
-      </CardContent>
-    </Card>
+      </Box>
+    </Box>
   );
 }

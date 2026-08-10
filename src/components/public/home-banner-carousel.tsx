@@ -39,6 +39,9 @@ function BannerSlidePanel({
         position: 'relative',
         width: '100%',
         minHeight: { xs: 240, sm: 260 },
+        aspectRatio: { md: '4 / 3' },
+        maxHeight: { md: 'min(58vh, 560px)' },
+        height: { md: 'auto' },
         backgroundColor: 'background.paper',
         backgroundImage: imageBg ? `url(${imageBg})` : visual.bg,
         backgroundSize: 'cover',
@@ -102,22 +105,27 @@ function BannerSlidePanel({
         direction="row"
         spacing={1.5}
         sx={{
-          position: 'relative',
+          position: 'absolute',
+          inset: 0,
           zIndex: 1,
           color: 'common.white',
-          p: { xs: 2.4, sm: 3 },
-          minHeight: { xs: 240, sm: 260 },
+          p: { xs: 2.4, sm: 3, md: 3.5 },
           alignItems: 'flex-end',
           justifyContent: 'space-between',
+          // Soft bottom scrim so CTA stays readable over busy banner art.
+          background: imageBg
+            ? 'linear-gradient(to top, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.12) 42%, transparent 70%)'
+            : undefined,
         }}
       >
         <Stack spacing={0} sx={{ maxWidth: '88%', flex: 1, minWidth: 0, alignItems: 'flex-start' }}>
-          {slide.title ? (
+          {/* Custom banner images already carry their message in the artwork — skip duplicate title. */}
+          {!imageBg && slide.title ? (
             <Typography
               component="h2"
               sx={{
                 fontWeight: 800,
-                fontSize: { xs: '1.2rem', sm: '1.35rem' },
+                fontSize: { xs: '1.2rem', sm: '1.35rem', md: '1.6rem' },
                 lineHeight: 1.15,
                 letterSpacing: '-0.02em',
                 textAlign: 'left',
@@ -261,8 +269,8 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
           onTouchCancel={handleTouchCancel}
           sx={{
             position: 'relative',
-            // Full-bleed clip so cards enter/leave at the screen edge.
-            mx: -2,
+            // Cancel container padding on mobile so slides edge-bleed; desktop stays inset.
+            mx: { xs: -2, md: 0 },
             overflow: 'hidden',
             touchAction: 'pan-y',
             cursor: slides.length > 1 ? 'grab' : undefined,
@@ -290,13 +298,13 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
                 sx={{
                   flex: `0 0 ${slideBasis}%`,
                   minWidth: 0,
-                  px: 2,
+                  px: { xs: 2, md: 0 },
                   boxSizing: 'border-box',
                 }}
               >
                 <Box
                   sx={{
-                    borderRadius: 3,
+                    borderRadius: { xs: 3, md: 4 },
                     overflow: 'hidden',
                     border: '1px solid',
                     borderColor: 'divider',

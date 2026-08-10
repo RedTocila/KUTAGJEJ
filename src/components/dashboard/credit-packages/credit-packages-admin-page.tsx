@@ -39,6 +39,7 @@ import {
   updateCreditPackage,
 } from '@/lib/admin-credit-packages-client';
 import type { AdminCreditPackage, CreditPackageInput } from '@/types/payment';
+import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
 const EMPTY_FORM: CreditPackageInput = {
   credits: 100,
@@ -102,17 +103,17 @@ function PackageDialog({
   return (
     <ProductDialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
       <ProductDialogTitle onClose={saving ? undefined : onClose}>
-        {initial ? 'Ndrysho paketën' : 'Paketë e re krediti'}
+        {initial ? 'Ndrysho paketën' : 'Paketë e re Boost Coins'}
       </ProductDialogTitle>
       <ProductDialogContent>
-        <Stack spacing={2} sx={{ mt: 0.5 }}>
+        <Stack spacing={2} sx={{ mt: 0.5, ...productFieldSx }}>
           {error ? (
             <Alert severity="error" sx={{ borderRadius: 1.5 }}>
               {error}
             </Alert>
           ) : null}
           <TextField
-            label="Kredite (bazë BC)"
+            label="Boost Coins (bazë BC)"
             type="number"
             value={form.credits}
             onChange={(e) => setForm((f) => ({ ...f, credits: Number(e.target.value) }))}
@@ -165,10 +166,10 @@ function PackageDialog({
         </Stack>
       </ProductDialogContent>
       <ProductDialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button onClick={onClose} disabled={saving} sx={productButtonSx}>
           Anulo
         </Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving}>
+        <Button variant="contained" onClick={handleSave} disabled={saving} sx={productButtonSx}>
           {saving ? 'Po ruhet...' : 'Ruaj'}
         </Button>
       </ProductDialogActions>
@@ -207,8 +208,8 @@ export function CreditPackagesAdminPage() {
       <AdminPageHeader
         icon={<BoostCoinIcon size={22} />}
         eyebrow="Financa"
-        title="Paketat e krediteve"
-        description="Paketat që përdoruesit blejnë te “Bli kredite”."
+        title="Boost Coins"
+        description="Paketat Boost Coins që shfaqen te dyqani i përdoruesit — blihen për Premium, OKAZION dhe fuqizim njoftimesh."
         actions={
           <Button
             variant="contained"
@@ -217,6 +218,7 @@ export function CreditPackagesAdminPage() {
               setEditing(null);
               setDialogOpen(true);
             }}
+            sx={productButtonSx}
           >
             Shto paketë
           </Button>
@@ -229,7 +231,7 @@ export function CreditPackagesAdminPage() {
         </Alert>
       ) : null}
 
-      <Box sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', overflowX: 'auto' }}>
+      <Box sx={{ ...productPanelSx, overflowX: 'auto' }}>
         {loading ? (
           <Box sx={{ py: 5, display: 'flex', justifyContent: 'center' }}>
             <CircularProgress size={28} />
@@ -311,13 +313,14 @@ export function CreditPackagesAdminPage() {
           </Typography>
         </ProductDialogContent>
         <ProductDialogActions>
-          <Button onClick={() => setDeleting(null)} disabled={deleteBusy}>
+          <Button onClick={() => setDeleting(null)} disabled={deleteBusy} sx={productButtonSx}>
             Anulo
           </Button>
           <Button
             variant="contained"
             color="error"
             disabled={deleteBusy}
+            sx={productButtonSx}
             onClick={async () => {
               if (!deleting) return;
               setDeleteBusy(true);

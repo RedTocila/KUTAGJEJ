@@ -62,7 +62,7 @@ router.get('/', async (req, res) => {
     if (['pending', 'paid', 'failed', 'canceled'].includes(String(status))) {
       query = query.eq('status', String(status));
     }
-    if (['subscription', 'credits'].includes(String(type))) {
+    if (['subscription', 'credits', 'auto-refresh', 'premium', 'okazion'].includes(String(type))) {
       query = query.eq('type', String(type));
     }
 

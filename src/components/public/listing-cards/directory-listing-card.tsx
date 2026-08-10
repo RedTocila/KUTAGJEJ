@@ -13,7 +13,6 @@ import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Sto
 import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 
-import { formatRatingDisplay } from '@/lib/format-rating';
 import { MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import type { PublicDirectoryListing } from '@/lib/public-listings-client';
 import { listingBusinessPublicHref, listingProfessionalPublicHref } from '@/paths';
@@ -21,12 +20,12 @@ import { listingBusinessPublicHref, listingProfessionalPublicHref } from '@/path
 import { BusinessPromoBanner } from './business-promo-banner';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
-import { ProfessionalRatingBadge } from '@/components/public/professional-listing-detail-ui';
 
 import {
   findOptionLabel,
   formatBusinessOpeningHoursForCard,
   listingCardRelativeDate,
+  listingPriceAccentColor,
 } from './format-helpers';
 import { ListingCardRating,
   resolveListingCardRating,
@@ -64,7 +63,7 @@ function BusinessVenueCardBody({
       href={listingBusinessPublicHref(listing)}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell premium={Boolean(listing.isPremium)}>
+      <CardShell premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
         <CardMedia
           listingKind="businesses"
           listingId={listing.id}
@@ -76,6 +75,8 @@ function BusinessVenueCardBody({
           saveCount={listing.saveCount}
           saved={listing.saved}
           premium={Boolean(listing.isPremium)}
+          okazion={Boolean(listing.isOkazion)}
+          okazionUntil={listing.okazionUntil}
           sharePayload={{
             title: listing.title,
             category: listing.categoryLabel,
@@ -104,7 +105,7 @@ function BusinessVenueCardBody({
             ) : undefined
           }
         />
-        <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
+        <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
           <Typography
             variant="caption"
             color="text.secondary"
@@ -116,6 +117,11 @@ function BusinessVenueCardBody({
             title={listing.title}
             verified={Boolean(listing.sellerVerified)}
             trustBadge={Boolean(listing.sellerTrustBadge)}
+            typographySx={
+              listing.isPremium || listing.isOkazion
+                ? { color: listingPriceAccentColor({ isPremium: listing.isPremium, isOkazion: listing.isOkazion }) }
+                : undefined
+            }
           />
 
           {cardRating ? (
@@ -126,7 +132,11 @@ function BusinessVenueCardBody({
           ) : null}
 
           {listing.servicesHighlight ? (
-            <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600, lineHeight: 1.35 }}>
+            <Typography
+              variant="body2"
+              noWrap
+              sx={{ color: 'primary.main', fontWeight: 600, lineHeight: 1.35, minWidth: 0 }}
+            >
               {listing.servicesHighlight}
             </Typography>
           ) : null}
@@ -161,9 +171,13 @@ function BusinessVenueCardBody({
           ) : null}
 
           {listing.cityName ? (
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
               <MapPinIcon size={14} weight="regular" />
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+              <Typography
+                variant="caption"
+                noWrap
+                sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
+              >
                 {listing.cityName}
               </Typography>
             </Stack>
@@ -199,13 +213,6 @@ function ProfessionalListingCardBody({
   const viewCount = listing.viewCount ?? 0;
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
   const cardRating = resolveListingCardRating(listing, sellerRating);
-  const reviewCount = cardRating?.reviewCount ?? 0;
-  const ratingLabel =
-    reviewCount > 0 &&
-    cardRating?.ratingAverage != null &&
-    Number.isFinite(cardRating.ratingAverage)
-      ? formatRatingDisplay(cardRating.ratingAverage)
-      : formatRatingDisplay(0);
 
   const serviceTags = React.useMemo(() => {
     const raw = String(listing.servicesHighlight ?? '').trim();
@@ -242,20 +249,19 @@ function ProfessionalListingCardBody({
       href={listingProfessionalPublicHref(listing)}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell premium={Boolean(listing.isPremium)}>
+      <CardShell premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
         <CardMedia
           listingKind="professionals"
           listingId={listing.id}
           imageUrl={listing.imageUrl}
           FallbackIcon={BriefcaseIcon}
           alt={listing.title}
-          topLeftOverlay={
-            <ProfessionalRatingBadge rating={ratingLabel} reviewCount={reviewCount} compact />
-          }
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
           premium={Boolean(listing.isPremium)}
+          okazion={Boolean(listing.isOkazion)}
+          okazionUntil={listing.okazionUntil}
           sharePayload={{
             title: listing.title,
             category: listing.categoryLabel,
@@ -305,7 +311,7 @@ function ProfessionalListingCardBody({
             ) : undefined
           }
         />
-        <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
+        <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
           <Typography
             variant="caption"
             color="text.secondary"
@@ -317,13 +323,28 @@ function ProfessionalListingCardBody({
             title={listing.title}
             verified={Boolean(listing.sellerVerified)}
             trustBadge={Boolean(listing.sellerTrustBadge)}
+            typographySx={
+              listing.isPremium || listing.isOkazion
+                ? { color: listingPriceAccentColor({ isPremium: listing.isPremium, isOkazion: listing.isOkazion }) }
+                : undefined
+            }
           />
+          {cardRating ? (
+            <ListingCardRating
+              ratingAverage={cardRating.ratingAverage}
+              reviewCount={cardRating.reviewCount}
+            />
+          ) : null}
           <SpecRow specs={specs} />
 
           {listing.cityName ? (
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
               <MapPinIcon size={14} weight="regular" />
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+              <Typography
+                variant="caption"
+                noWrap
+                sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
+              >
                 {listing.cityName}
               </Typography>
             </Stack>

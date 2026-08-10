@@ -4,8 +4,6 @@ import * as React from 'react';
 import {
   Alert,
   Box,
-  Card,
-  CardContent,
   Skeleton,
 } from '@mui/material';
 
@@ -17,6 +15,7 @@ import type { ListingCategory } from '@/types/listing-category';
 import { listCategoriesAdmin } from '@/lib/admin-categories-client';
 import { usePlatformAdminGuard } from '@/hooks/use-platform-admin';
 import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
+import { productPanelSx } from '@/styles/product-sx';
 
 export function CategoriesAdminPage() {
   const { user, isPlatformAdmin } = usePlatformAdminGuard();
@@ -88,12 +87,10 @@ export function CategoriesAdminPage() {
       />
 
       {loading ? (
-        <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-          <CardContent sx={{ p: 3 }}>
-            <Skeleton variant="rounded" height={48} sx={{ mb: 2 }} />
-            <Skeleton variant="rounded" height={120} />
-          </CardContent>
-        </Card>
+        <Box sx={{ ...productPanelSx, p: 3 }}>
+          <Skeleton variant="rounded" height={48} sx={{ mb: 2 }} />
+          <Skeleton variant="rounded" height={120} />
+        </Box>
       ) : current ? (
         <CategoryEditor
           key={current.key}

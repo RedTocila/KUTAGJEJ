@@ -46,8 +46,11 @@ export interface CardMediaProps {
   /** Custom overlay on the image (e.g. rating chip) — rendered at top-left. */
   topLeftOverlay?: React.ReactNode;
   topRightBadge?: string;
-  height?: number;
+  /** Media height — number or breakpoint map so desktop cards can match mobile proportions. */
+  height?: number | { xs?: number; sm?: number; md?: number; lg?: number };
   bottomOverlay?: React.ReactNode;
+  /** Bottom-right chip (e.g. job expiry) — same slot as OKAZION countdown. */
+  bottomRightOverlay?: React.ReactNode;
   shareCount?: number;
   saveCount?: number;
   saved?: boolean;
@@ -74,8 +77,9 @@ export function CardMedia({
   topLeftBadge,
   topLeftOverlay,
   topRightBadge,
-  height = 170,
+  height = { xs: 170, md: 186 },
   bottomOverlay,
+  bottomRightOverlay,
   shareCount: initialShareCount = 0,
   saveCount: initialSaveCount = 0,
   saved: initialSaved,
@@ -171,6 +175,7 @@ export function CardMedia({
 
   // OKAZION badge wins when both are active (same priority as before for chrome).
   const showPremiumCrown = premium && !okazion;
+  const showBottomRight = Boolean(okazion || bottomRightOverlay);
 
   return (
     <Box
@@ -301,7 +306,7 @@ export function CardMedia({
             position: 'absolute',
             left: 0,
             right: 0,
-            bottom: okazion ? 44 : 0,
+            bottom: showBottomRight ? 44 : 0,
             zIndex: 2,
             pointerEvents: 'none',
             '& > *': { pointerEvents: 'auto' },
@@ -311,7 +316,7 @@ export function CardMedia({
         </Box>
       ) : null}
 
-      {okazion ? (
+      {showBottomRight ? (
         <Box
           sx={{
             position: 'absolute',
@@ -319,9 +324,10 @@ export function CardMedia({
             right: 8,
             zIndex: 3,
             maxWidth: 'calc(100% - 16px)',
+            lineHeight: 0,
           }}
         >
-          <OkazionCountdown expiresAt={okazionUntil} />
+          {okazion ? <OkazionCountdown expiresAt={okazionUntil} /> : bottomRightOverlay}
         </Box>
       ) : null}
 

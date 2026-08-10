@@ -1,28 +1,15 @@
 'use strict';
 
 /**
- * OKAZION listing packs — buy with card or Boost Coins, stack unused vouchers, assign later.
- * Each activation lasts 5 days on any approved listing category.
+ * OKAZION listing packs — backed by `addon_packages` (DB) with in-memory cache.
  */
-const OKAZION_PACKAGES = [
-  {
-    id: 'okazion-5',
-    days: 5,
-    priceBc: 200,
-    priceEur: 12,
-    labelSq: '5 ditë OKAZION',
-    labelEn: '5 Days OKAZION Listing',
-  },
-];
+const {
+  listOkazionPackages,
+  getOkazionPackage,
+  DEFAULT_ADDON_PACKAGES,
+} = require('./addon-packages');
 
-function listOkazionPackages() {
-  return OKAZION_PACKAGES.map((p) => ({ ...p }));
-}
-
-function getOkazionPackage(packageId) {
-  const id = String(packageId || '').trim();
-  return OKAZION_PACKAGES.find((p) => p.id === id) || null;
-}
+const OKAZION_PACKAGES = DEFAULT_ADDON_PACKAGES.filter((p) => p.kind === 'okazion');
 
 module.exports = {
   OKAZION_PACKAGES,

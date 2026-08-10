@@ -22,6 +22,7 @@ const baseChipSx: SxProps<Theme> = {
   '& .MuiChip-label': { px: 1 },
 };
 
+/** Shared with OKAZION countdown chip — identical size/radius on mobile + desktop. */
 const overlayChipSx: SxProps<Theme> = {
   height: 26,
   borderRadius: '8px',

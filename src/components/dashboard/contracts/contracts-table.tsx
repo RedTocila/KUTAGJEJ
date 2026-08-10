@@ -5,7 +5,6 @@ import {
   alpha,
   Box,
   Button,
-  Card,
   Chip,
   IconButton,
   Skeleton,
@@ -20,12 +19,14 @@ import {
   useTheme,
 } from '@mui/material';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
+import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 import { PencilSimple as PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
-import { Scroll as ScrollIcon } from '@phosphor-icons/react/dist/ssr/Scroll';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import type { Contract } from '@/types/contract';
 import { getActiveContractPriceOptions } from '@/lib/contract-pricing';
+import { productButtonSx, productPanelSx } from '@/styles/product-sx';
+import { MOTION } from '@/styles/motion';
 
 export interface ContractsTableProps {
   contracts: Contract[];
@@ -40,14 +41,9 @@ export function ContractsTable({ contracts, loading, onCreate, onEdit, onDelete 
   const infoMain = theme.palette.info.main;
 
   return (
-    <Card
-      elevation={0}
+    <Box
       sx={{
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 2,
-        overflow: 'hidden',
-        boxShadow: theme.palette.mode === 'dark' ? 'none' : `0 1px 3px ${alpha(theme.palette.common.black, 0.06)}`,
+        ...productPanelSx,
       }}
     >
       <Box
@@ -61,17 +57,17 @@ export function ContractsTable({ contracts, loading, onCreate, onEdit, onDelete 
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: 1,
-          bgcolor: alpha(theme.palette.primary.main, 0.02),
+          bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'action.hover'),
         }}
       >
         <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-          Lista e kontratave
+          Lista e paketave
         </Typography>
         {!loading ? (
           <Chip
             size="small"
-            label={`${contracts.length} ${contracts.length === 1 ? 'kontratë' : 'kontrata'}`}
-            sx={{ fontWeight: 700, bgcolor: alpha(infoMain, 0.12), color: 'info.dark' }}
+            label={`${contracts.length} ${contracts.length === 1 ? 'paketë' : 'paketa'}`}
+            sx={{ fontWeight: 700 }}
           />
         ) : null}
       </Box>
@@ -93,7 +89,7 @@ export function ContractsTable({ contracts, loading, onCreate, onEdit, onDelete 
                 },
               }}
             >
-              <TableCell>Kontrata</TableCell>
+              <TableCell>Paketa</TableCell>
               <TableCell>Lloji</TableCell>
               <TableCell>Kuotat</TableCell>
               <TableCell>Rifreskimi</TableCell>
@@ -134,21 +130,22 @@ export function ContractsTable({ contracts, loading, onCreate, onEdit, onDelete 
                         color: 'info.main',
                       }}
                     >
-                      {React.createElement(ScrollIcon, { size: 36, weight: 'duotone' })}
+                      {React.createElement(PackageIcon, { size: 36, weight: 'duotone' })}
                     </Box>
                     <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                      Nuk ka ende kontrata
+                      Nuk ka ende paketa
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 2.5 }}>
-                      Krijoni kontratën e parë dhe zgjidhni cilët role nga katalogu e lidhin me të.
+                      Krijoni paketën e parë dhe zgjidhni cilët role nga katalogu e lidhin me të.
                     </Typography>
                     <Button
                       variant="contained"
                       size="large"
                       startIcon={React.createElement(PlusIcon, { size: 20 })}
                       onClick={onCreate}
+                      sx={productButtonSx}
                     >
-                      Shto kontratë
+                      Shto paketë
                     </Button>
                   </Box>
                 </TableCell>
@@ -161,7 +158,7 @@ export function ContractsTable({ contracts, loading, onCreate, onEdit, onDelete 
                   sx={{
                     '&:nth-of-type(even)': { bgcolor: alpha(theme.palette.primary.main, 0.015) },
                     '&:hover': { bgcolor: alpha(infoMain, 0.04) },
-                    transition: 'background-color 0.15s ease',
+                    transition: `background-color ${MOTION.fast} ${MOTION.ease}`,
                   }}
                 >
                   <TableCell sx={{ py: 2, maxWidth: { xs: 160, md: 220 } }}>
@@ -217,7 +214,8 @@ export function ContractsTable({ contracts, loading, onCreate, onEdit, onDelete 
                       All {row.maxListAllCategories} · Jobs {row.maxJobListings} · Cars {row.maxCarListings}
                     </Typography>
                     <Typography variant="caption" sx={{ display: 'block', lineHeight: 1.4 }} color="text.secondary">
-                      Apt {row.maxApartmentListings} · Prod {row.maxProductListings} · Prem {row.maxPremiumListings}
+                      Apt {row.maxApartmentListings} · Prod {row.maxProductListings} · Prem {row.maxPremiumListings} ·
+                      OKZ {row.maxOkazionListings}
                     </Typography>
                   </TableCell>
                   <TableCell sx={{ py: 2, verticalAlign: 'top' }}>
@@ -301,6 +299,6 @@ export function ContractsTable({ contracts, loading, onCreate, onEdit, onDelete 
           </TableBody>
         </Table>
       </TableContainer>
-    </Card>
+    </Box>
   );
 }

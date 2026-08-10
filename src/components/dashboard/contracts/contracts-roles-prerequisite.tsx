@@ -2,21 +2,21 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { alpha, Box, Paper, Typography, useTheme } from '@mui/material';
+import { alpha, Box, Typography, useTheme } from '@mui/material';
 import { Shield as ShieldIcon } from '@phosphor-icons/react/dist/ssr/Shield';
 
 import { paths } from '@/paths';
+import { productPanelSx } from '@/styles/product-sx';
 
 export function ContractsRolesPrerequisite() {
   const theme = useTheme();
   const infoMain = theme.palette.info.main;
 
   return (
-    <Paper
-      elevation={0}
+    <Box
       sx={{
+        ...productPanelSx,
         p: 2.5,
-        borderRadius: 2,
         border: '1px dashed',
         borderColor: 'divider',
         bgcolor: 'action.hover',
@@ -53,9 +53,9 @@ export function ContractsRolesPrerequisite() {
           >
             Kaloni te Rolet
           </Box>{' '}
-          përpara se të lidhni kontrata me përdorues.
+          përpara se të lidhni paketa me përdorues.
         </Typography>
       </Box>
-    </Paper>
+    </Box>
   );
 }

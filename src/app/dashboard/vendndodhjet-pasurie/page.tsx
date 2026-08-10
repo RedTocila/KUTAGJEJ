@@ -6,8 +6,6 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   IconButton,
   Stack,
   Table,
@@ -40,6 +38,7 @@ import {
   type RealEstateCityDto,
 } from '@/lib/real-estate-locations-client';
 import { useUser } from '@/hooks/use-user';
+import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
 function zonesFromLines(text: string): { name: string; slug?: string }[] {
   return text
@@ -126,7 +125,7 @@ export default function RealEstateLocationsAdminPage() {
     }
     const zones = zonesFromLines(zonesText);
     if (zones.length === 0) {
-      setFormError('Add at least one zone (one per line).');
+      setFormError('Shtoni të paktën një zonë (një për rresht).');
       return;
     }
     setPending(true);
@@ -160,7 +159,7 @@ export default function RealEstateLocationsAdminPage() {
   };
 
   const onDelete = async (c: RealEstateCityDto) => {
-    if (!window.confirm(`Delete city «${c.name}» and all its zones?`)) return;
+    if (!window.confirm(`Fshini qytetin «${c.name}» dhe të gjitha zonat e tij?`)) return;
     const { error } = await deleteRealEstateCity(c.id);
     if (error) {
       setLoadError(error);
@@ -180,7 +179,7 @@ export default function RealEstateLocationsAdminPage() {
         title="Vendndodhjet"
         description="Qytetet dhe zonat për dropdown-et e formës së pronave. Një zonë për rresht kur redaktoni."
         actions={
-          <Button variant="contained" startIcon={React.createElement(PlusIcon, { size: 20 })} onClick={openCreate}>
+          <Button variant="contained" startIcon={React.createElement(PlusIcon, { size: 20 })} onClick={openCreate} sx={productButtonSx}>
             Shto qytet
           </Button>
         }
@@ -192,9 +191,8 @@ export default function RealEstateLocationsAdminPage() {
         </Alert>
       ) : null}
 
-      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-        <CardContent sx={{ p: 0 }}>
-          <TableContainer>
+      <Box sx={productPanelSx}>
+        <TableContainer>
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ bgcolor: 'action.hover' }}>
@@ -230,10 +228,10 @@ export default function RealEstateLocationsAdminPage() {
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
-                        <IconButton aria-label="Edit" size="small" onClick={() => openEdit(c)} color="primary">
+                        <IconButton aria-label="Ndrysho" size="small" onClick={() => openEdit(c)} color="primary">
                           {React.createElement(PencilSimpleIcon, { size: 20 })}
                         </IconButton>
-                        <IconButton aria-label="Delete" size="small" onClick={() => void onDelete(c)} color="error">
+                        <IconButton aria-label="Fshi" size="small" onClick={() => void onDelete(c)} color="error">
                           {React.createElement(TrashIcon, { size: 20 })}
                         </IconButton>
                       </TableCell>
@@ -243,13 +241,12 @@ export default function RealEstateLocationsAdminPage() {
               </TableBody>
             </Table>
           </TableContainer>
-        </CardContent>
-      </Card>
+      </Box>
 
       <ProductDialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
         <ProductDialogTitle onClose={closeDialog}>{editing ? 'Ndrysho qytetin' : 'Shto qytet'}</ProductDialogTitle>
         <ProductDialogContent>
-          <Stack spacing={2} sx={{ pt: 1, minWidth: { sm: 420 } }}>
+          <Stack spacing={2} sx={{ pt: 1, minWidth: { sm: 420 }, ...productFieldSx }}>
             {formError ? <Alert severity="error">{formError}</Alert> : null}
             <TextField label="Emri i qytetit" value={cityName} onChange={(e) => setCityName(e.target.value)} required fullWidth />
             <TextField
@@ -271,10 +268,10 @@ export default function RealEstateLocationsAdminPage() {
           </Stack>
         </ProductDialogContent>
         <ProductDialogActions>
-          <Button onClick={closeDialog} disabled={pending}>
+          <Button onClick={closeDialog} disabled={pending} sx={productButtonSx}>
             Anulo
           </Button>
-          <Button variant="contained" onClick={() => void saveCity()} disabled={pending}>
+          <Button variant="contained" onClick={() => void saveCity()} disabled={pending} sx={productButtonSx}>
             {pending ? 'Duke ruajtur…' : 'Ruaj'}
           </Button>
         </ProductDialogActions>

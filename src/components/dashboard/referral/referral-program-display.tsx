@@ -16,6 +16,7 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import type { ReferralBadge, ReferralProgram, ReferralTrustedBadge } from '@/types/referral-program';
+import { productPanelSx } from '@/styles/product-sx';
 
 type Accent = 'primary' | 'warning';
 
@@ -204,15 +205,7 @@ function GroupCard({
   const done = total > 0 && achieved >= total;
 
   return (
-    <Box
-      sx={{
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 2.5,
-        bgcolor: 'background.paper',
-        overflow: 'hidden',
-      }}
-    >
+    <Box sx={productPanelSx}>
       <Stack
         spacing={1}
         sx={{
@@ -412,15 +405,7 @@ export function ProgramDisplay({
         ))}
       </GroupCard>
 
-      <Box
-        sx={{
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 2.5,
-          bgcolor: 'background.paper',
-          overflow: 'hidden',
-        }}
-      >
+      <Box sx={productPanelSx}>
         <Stack
           direction="row"
           spacing={1}
@@ -472,15 +457,7 @@ export function ProgramDisplay({
         </Box>
       </Box>
 
-      <Box
-        sx={{
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 2.5,
-          bgcolor: 'background.paper',
-          overflow: 'hidden',
-        }}
-      >
+      <Box sx={productPanelSx}>
         <Stack
           direction="row"
           spacing={1}

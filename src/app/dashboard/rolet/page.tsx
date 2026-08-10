@@ -33,6 +33,7 @@ import { paths } from '@/paths';
 import type { Role } from '@/types/role';
 import { createRole, deleteRole, listRoles, updateRole } from '@/lib/admin-roles-client';
 import { useUser } from '@/hooks/use-user';
+import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
 export default function RolesPage() {
   const router = useRouter();
@@ -81,7 +82,7 @@ export default function RolesPage() {
         title="Rolet"
         description="Individual dhe Biznes janë role kryesore. Shtoni role shtesë, pastaj zgjidhini kur krijoni staf."
         actions={
-          <Button variant="contained" onClick={() => setCreateOpen(true)}>
+          <Button variant="contained" onClick={() => setCreateOpen(true)} sx={productButtonSx}>
             Shto rol
           </Button>
         }
@@ -89,7 +90,7 @@ export default function RolesPage() {
 
       {loadError ? <Alert severity="error">{loadError}</Alert> : null}
 
-      <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2.5, overflow: 'auto', bgcolor: 'background.paper' }}>
+      <Box sx={{ ...productPanelSx, overflow: 'auto' }}>
         <Table size="small">
           <TableHead>
             <TableRow sx={{ bgcolor: 'action.hover' }}>
@@ -217,7 +218,7 @@ function RoleCreateDialog(props: {
       <Box component="form" onSubmit={submit}>
         <ProductDialogTitle onClose={onClose}>Shto rol</ProductDialogTitle>
         <ProductDialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
+          <Stack spacing={2} sx={{ mt: 1, ...productFieldSx }}>
             {error ? <Alert severity="error">{error}</Alert> : null}
             <TextField label="Emri i rolit" value={name} onChange={(ev) => setName(ev.target.value)} required fullWidth />
             <TextField
@@ -231,8 +232,8 @@ function RoleCreateDialog(props: {
           </Stack>
         </ProductDialogContent>
         <ProductDialogActions>
-          <Button onClick={onClose}>Anulo</Button>
-          <Button type="submit" variant="contained" disabled={pending}>
+          <Button onClick={onClose} sx={productButtonSx}>Anulo</Button>
+          <Button type="submit" variant="contained" disabled={pending} sx={productButtonSx}>
             {pending ? 'Duke u ruajtur…' : 'Ruaj'}
           </Button>
         </ProductDialogActions>
@@ -287,7 +288,7 @@ function RoleEditDialog(props: {
       <Box component="form" onSubmit={submit}>
         <ProductDialogTitle onClose={onClose}>Ndrysho rolin</ProductDialogTitle>
         <ProductDialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
+          <Stack spacing={2} sx={{ mt: 1, ...productFieldSx }}>
             {error ? <Alert severity="error">{error}</Alert> : null}
             {role?.isCore ? (
               <Alert severity="info">
@@ -314,8 +315,8 @@ function RoleEditDialog(props: {
           </Stack>
         </ProductDialogContent>
         <ProductDialogActions>
-          <Button onClick={onClose}>Anulo</Button>
-          <Button type="submit" variant="contained" disabled={pending}>
+          <Button onClick={onClose} sx={productButtonSx}>Anulo</Button>
+          <Button type="submit" variant="contained" disabled={pending} sx={productButtonSx}>
             {pending ? 'Duke u ruajtur…' : 'Ruaj'}
           </Button>
         </ProductDialogActions>
@@ -368,8 +369,8 @@ function RoleDeleteDialog(props: {
         </Typography>
       </ProductDialogContent>
       <ProductDialogActions>
-        <Button onClick={onClose}>Anulo</Button>
-        <Button color="error" variant="contained" onClick={() => void confirm()} disabled={pending}>
+        <Button onClick={onClose} sx={productButtonSx}>Anulo</Button>
+        <Button color="error" variant="contained" onClick={() => void confirm()} disabled={pending} sx={productButtonSx}>
           {pending ? 'Duke u fshirë…' : 'Fshi'}
         </Button>
       </ProductDialogActions>

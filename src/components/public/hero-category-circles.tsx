@@ -91,19 +91,23 @@ export function HeroCategoryCircles({
     const soft = accentSoft(mode);
     return {
       flexShrink: 0,
-      scrollSnapAlign: { xs: 'start', sm: 'none' } as const,
+      scrollSnapAlign: { xs: 'start', md: 'none' } as const,
       alignItems: 'center',
+      flex: { md: '1 1 0' },
+      width: { md: '100%' },
+      minWidth: { xs: 'auto', md: 0 },
+      maxWidth: { md: '100%' },
       cursor: 'pointer',
       userSelect: 'none',
       WebkitTapHighlightColor: 'transparent',
-      '&:hover .hero-cat-circle': {
+      '&:hover .hero-cat-tile': {
         borderColor: accent,
         bgcolor: soft,
       },
       '&:hover .hero-cat-label': {
         color: accent,
       },
-      '&:active .hero-cat-circle': {
+      '&:active .hero-cat-tile': {
         borderColor: accent,
         bgcolor: soft,
       },
@@ -121,16 +125,16 @@ export function HeroCategoryCircles({
         display: 'flex',
         flexDirection: 'row',
         flexWrap: 'nowrap',
-        gap: { xs: 1.25, sm: 2 },
-        justifyContent: 'flex-start',
-        overflowX: 'auto',
+        gap: { xs: 1.25, sm: 2, md: 1.5 },
+        justifyContent: { xs: 'flex-start', md: 'stretch' },
+        overflowX: { xs: 'auto', md: 'visible' },
         overflowY: 'hidden',
         overscrollBehaviorX: 'contain',
         WebkitOverflowScrolling: 'touch',
-        scrollSnapType: { xs: 'x proximity', sm: 'none' },
+        scrollSnapType: { xs: 'x proximity', md: 'none' },
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
-        pb: { xs: 0, sm: 0.75 },
+        pb: { xs: 0, md: 0 },
         width: '100%',
         maxWidth: '100%',
         minWidth: 0,
@@ -144,14 +148,22 @@ export function HeroCategoryCircles({
         const soft = accentSoft(mode);
         const body = (
           <>
+            {/* Mobile: circle. Desktop: 4:3 tile matching the banner, filled with larger icon. */}
             <Box
-              className="hero-cat-circle"
+              className="hero-cat-tile"
               sx={{
-                width: { xs: 60, sm: 58 },
-                height: { xs: 60, sm: 58 },
-                borderRadius: '50%',
-                display: 'grid',
-                placeItems: 'center',
+                width: { xs: 60, sm: 58, md: '100%' },
+                height: { xs: 60, sm: 58, md: 'auto' },
+                aspectRatio: { md: '4 / 3' },
+                borderRadius: { xs: '50%', md: 3 },
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: { md: 1.25 },
+                px: { md: 1.25 },
+                py: { md: 1.5 },
+                boxSizing: 'border-box',
                 bgcolor: selected ? soft : 'action.hover',
                 border: '1.5px solid',
                 borderColor: selected ? accent : 'divider',
@@ -159,15 +171,48 @@ export function HeroCategoryCircles({
                   'border-color 160ms cubic-bezier(0.22, 1, 0.36, 1), background-color 160ms cubic-bezier(0.22, 1, 0.36, 1)',
               }}
             >
-              <HomeVerticalIcon verticalId={v.id} size={34} color={accent} />
+              <Box
+                sx={{
+                  display: { xs: 'contents', md: 'grid' },
+                  placeItems: 'center',
+                  flex: { md: '1 1 auto' },
+                  minHeight: 0,
+                  width: '100%',
+                  '& svg': {
+                    width: { md: 48 },
+                    height: { md: 48 },
+                  },
+                }}
+              >
+                <HomeVerticalIcon verticalId={v.id} size={34} color={accent} />
+              </Box>
+              <Typography
+                className="hero-cat-label"
+                variant="caption"
+                sx={{
+                  display: { xs: 'none', md: 'block' },
+                  fontWeight: selected ? 800 : 700,
+                  fontSize: { md: '0.88rem', lg: '0.95rem' },
+                  color: selected ? accent : 'text.primary',
+                  whiteSpace: 'nowrap',
+                  textAlign: 'center',
+                  lineHeight: 1.2,
+                  flexShrink: 0,
+                  transition: 'color 140ms ease',
+                }}
+              >
+                {v.label}
+              </Typography>
             </Box>
             <Typography
               className="hero-cat-label"
               variant="caption"
               sx={{
+                display: { xs: 'block', md: 'none' },
                 fontWeight: selected ? 700 : 600,
                 color: selected ? accent : 'text.primary',
                 whiteSpace: 'nowrap',
+                textAlign: 'center',
                 transition: 'color 140ms ease',
               }}
             >
@@ -180,7 +225,7 @@ export function HeroCategoryCircles({
           return (
             <Stack
               key={v.id}
-              spacing={0.4}
+              spacing={{ xs: 0.4, md: 0 }}
               onClick={() => onSelect?.(i)}
               sx={itemSx(mode)}
             >
@@ -194,7 +239,7 @@ export function HeroCategoryCircles({
             key={v.id}
             component={RouterLink}
             href={v.href}
-            spacing={0.4}
+            spacing={{ xs: 0.4, md: 0 }}
             onClick={(event) => {
               if (!selected) return;
               const base = v.href.split('?')[0];

@@ -96,7 +96,7 @@ export function CarCard({
           url: listingCarPublicHref(listing),
         }}
       />
-      <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
+      <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
         <Typography
           variant="caption"
           color="text.secondary"
@@ -128,9 +128,13 @@ export function CarCard({
         <SpecRow specs={specs} />
 
         {listing.cityName ? (
-          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
             <MapPinIcon size={14} weight="regular" />
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+            <Typography
+              variant="caption"
+              noWrap
+              sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
+            >
               {listing.cityName}
             </Typography>
           </Stack>

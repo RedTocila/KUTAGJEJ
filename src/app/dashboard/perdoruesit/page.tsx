@@ -44,6 +44,7 @@ import {
   updateManagedUser,
 } from '@/lib/admin-users-client';
 import { useUser } from '@/hooks/use-user';
+import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
 function directoryRowToManagedUser(row: DirectoryUser): ManagedUser {
   return {
@@ -115,7 +116,7 @@ export default function StaffUsersPage() {
         title="Përdoruesit"
         description="Lista e portalit dhe stafit. Ndryshoni ose fshini vetëm stafin; rolet përcaktohen te Rolet."
         actions={
-          <Button variant="contained" onClick={() => setCreateOpen(true)} disabled={roles.length === 0}>
+          <Button variant="contained" onClick={() => setCreateOpen(true)} disabled={roles.length === 0} sx={productButtonSx}>
             Shto përdorues
           </Button>
         }
@@ -124,7 +125,7 @@ export default function StaffUsersPage() {
       {roles.length === 0 && !loading ? (
         <Alert severity="info">
           Nuk ka ende role.{' '}
-          <Button component={RouterLink} href={paths.dashboard.roles} size="small" variant="contained" sx={{ ml: 1 }}>
+          <Button component={RouterLink} href={paths.dashboard.roles} size="small" variant="contained" sx={{ ml: 1, ...productButtonSx }}>
             Shko te Rolet
           </Button>{' '}
           për të shtuar të paktën një rol para se të krijoni përdorues.
@@ -135,7 +136,7 @@ export default function StaffUsersPage() {
         <Alert severity="error">{loadError}</Alert>
       ) : null}
 
-      <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2.5, overflow: 'auto', bgcolor: 'background.paper' }}>
+      <Box sx={{ ...productPanelSx, overflow: 'auto' }}>
         <Table size="small">
           <TableHead>
             <TableRow sx={{ bgcolor: 'action.hover' }}>
@@ -323,12 +324,12 @@ function CreateUserDialog(props: {
       <Box component="form" onSubmit={submit}>
         <ProductDialogTitle onClose={onClose}>Shto përdorues</ProductDialogTitle>
         <ProductDialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
+          <Stack spacing={2} sx={{ mt: 1, ...productFieldSx }}>
             {error ? <Alert severity="error">{error}</Alert> : null}
             {roles.length === 0 ? (
               <Alert severity="warning">
                 Nuk ka role. Shtoni rolet në menunë{' '}
-                <Button component={RouterLink} href={paths.dashboard.roles} size="small" variant="outlined">
+                <Button component={RouterLink} href={paths.dashboard.roles} size="small" variant="outlined" sx={productButtonSx}>
                   Rolet
                 </Button>
                 .
@@ -359,8 +360,8 @@ function CreateUserDialog(props: {
           </Stack>
         </ProductDialogContent>
         <ProductDialogActions>
-          <Button onClick={onClose}>Anulo</Button>
-          <Button type="submit" variant="contained" disabled={pending || roles.length === 0}>
+          <Button onClick={onClose} sx={productButtonSx}>Anulo</Button>
+          <Button type="submit" variant="contained" disabled={pending || roles.length === 0} sx={productButtonSx}>
             {pending ? 'Duke u ruajtur…' : 'Ruaj'}
           </Button>
         </ProductDialogActions>
@@ -440,7 +441,7 @@ function EditUserDialog(props: {
       <Box component="form" onSubmit={submit}>
         <ProductDialogTitle onClose={onClose}>Ndrysho përdoruesin</ProductDialogTitle>
         <ProductDialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
+          <Stack spacing={2} sx={{ mt: 1, ...productFieldSx }}>
             {error ? <Alert severity="error">{error}</Alert> : null}
             <TextField label="Email" type="email" value={email} onChange={(ev) => setEmail(ev.target.value)} required fullWidth />
             <SearchableSelect
@@ -470,8 +471,8 @@ function EditUserDialog(props: {
           </Stack>
         </ProductDialogContent>
         <ProductDialogActions>
-          <Button onClick={onClose}>Anulo</Button>
-          <Button type="submit" variant="contained" disabled={pending || roles.length === 0}>
+          <Button onClick={onClose} sx={productButtonSx}>Anulo</Button>
+          <Button type="submit" variant="contained" disabled={pending || roles.length === 0} sx={productButtonSx}>
             {pending ? 'Duke u ruajtur…' : 'Ruaj'}
           </Button>
         </ProductDialogActions>
@@ -524,8 +525,8 @@ function DeleteUserDialog(props: {
         </Typography>
       </ProductDialogContent>
       <ProductDialogActions>
-        <Button onClick={onClose}>Anulo</Button>
-        <Button color="error" variant="contained" onClick={() => void confirm()} disabled={pending}>
+        <Button onClick={onClose} sx={productButtonSx}>Anulo</Button>
+        <Button color="error" variant="contained" onClick={() => void confirm()} disabled={pending} sx={productButtonSx}>
           {pending ? 'Duke u fshirë…' : 'Fshi'}
         </Button>
       </ProductDialogActions>

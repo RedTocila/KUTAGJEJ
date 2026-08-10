@@ -96,9 +96,9 @@ export const navSections = [
     items: [
       {
         key: 'contracts',
-        title: 'Kontratat',
+        title: 'Paketat',
         href: paths.dashboard.kontratat,
-        icon: 'scroll',
+        icon: 'package',
         platformAdminOnly: true,
       },
       {
@@ -110,7 +110,7 @@ export const navSections = [
       },
       {
         key: 'credit-packages',
-        title: 'Paketat e krediteve',
+        title: 'Boost Coins',
         href: paths.dashboard.creditPackages,
         icon: 'coins',
         platformAdminOnly: true,

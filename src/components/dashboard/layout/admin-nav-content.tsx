@@ -18,6 +18,8 @@ import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/di
 import type { NavItemConfig, NavSectionConfig } from '@/types/nav';
 import { isNavItemActive } from '@/lib/is-nav-item-active';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { MOTION } from '@/styles/motion';
+import { productFieldSx } from '@/styles/product-sx';
 
 import { getDashboardNavSectionsForAccount } from './config';
 import { navIcons } from './nav-icons';
@@ -79,13 +81,14 @@ export function AdminNavContent({
             },
           }}
           sx={{
+            ...productFieldSx,
             '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
+              ...productFieldSx['& .MuiOutlinedInput-root'],
+              borderRadius: 2.25,
               bgcolor: 'action.hover',
               fontSize: '0.8125rem',
               '& fieldset': { borderColor: 'transparent' },
               '&:hover fieldset': { borderColor: 'divider' },
-              '&.Mui-focused fieldset': { borderColor: 'primary.main' },
             },
           }}
         />
@@ -206,15 +209,16 @@ function NavItem({
           position: 'relative',
           textDecoration: 'none',
           whiteSpace: 'nowrap',
-          transition: 'background-color 0.15s ease, color 0.15s ease',
+          transition: `background-color ${MOTION.fast} ${MOTION.ease}, color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.fast} ${MOTION.ease}`,
           bgcolor: leafActive ? primaryMainAlpha(0.12) : 'transparent',
-          fontWeight: leafActive || hasChildren ? 600 : 500,
+          fontWeight: leafActive || hasChildren ? 700 : 500,
           ...(disabled && { opacity: 0.45 }),
           ...(active && hasChildren && { color: 'primary.main' }),
           '&:hover': {
             bgcolor: leafActive ? primaryMainAlpha(0.16) : 'action.hover',
             color: leafActive ? 'primary.main' : 'text.primary',
           },
+          '&:active': { transform: disabled ? undefined : 'scale(0.99)' },
         }}
       >
         <Box

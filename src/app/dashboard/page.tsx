@@ -27,6 +27,8 @@ import { fetchAdminStats } from '@/lib/admin-stats-client';
 import { listManagedUsers } from '@/lib/admin-users-client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { paths } from '@/paths';
+import { MOTION } from '@/styles/motion';
+import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 
 type StatCard = {
   title: string;
@@ -113,6 +115,7 @@ export default function Page() {
         value: loadingVal(activeListings),
         icon: MegaphoneIcon,
         color: 'primary.main',
+        href: isPlatformAdmin ? paths.dashboard.listingModeration : undefined,
       },
       {
         title: 'Hequr / në shqyrtim',
@@ -132,7 +135,6 @@ export default function Page() {
         value: loadingVal(unreadNotifications),
         icon: BellIcon,
         color: 'error.main',
-        href: isPlatformAdmin ? paths.dashboard.listingModeration : undefined,
       },
       {
         title: 'Përdorues (staff)',
@@ -160,7 +162,7 @@ export default function Page() {
         icon={React.createElement(ChartPieIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Paneli"
         title="Përmbledhje"
-        description={`Mirë se erdhe, ${user?.firstName || user?.email}. Shiko statusin e njoftimeve, moderimin dhe stafin.`}
+        description={`Mirë se erdhe, ${user?.firstName || user?.email}. Shiko njoftimet aktive, heqjet dhe stafin.`}
       />
 
       <Grid container spacing={2}>
@@ -168,17 +170,15 @@ export default function Page() {
           const card = (
             <Box
               sx={{
+                ...productPanelSx,
                 height: '100%',
                 p: 2.25,
-                borderRadius: 2.5,
-                border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-                transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+                transition: `border-color ${MOTION.fast} ${MOTION.ease}, box-shadow ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.fast} ${MOTION.ease}`,
                 ...(stat.href
                   ? {
                       '&:hover': {
                         borderColor: 'primary.main',
+                        transform: 'translateY(-2px)',
                         boxShadow: (t) => `0 8px 24px ${primaryMainAlpha(t.palette.mode === 'dark' ? 0.18 : 0.1)}`,
                       },
                     }
@@ -190,7 +190,7 @@ export default function Page() {
                   sx={{
                     width: 44,
                     height: 44,
-                    borderRadius: 2,
+                    borderRadius: 2.25,
                     bgcolor: stat.color,
                     display: 'flex',
                     alignItems: 'center',
@@ -230,15 +230,7 @@ export default function Page() {
       </Grid>
 
       {isPlatformAdmin && statsFetched && Object.keys(byKind).length > 0 ? (
-        <Box
-          sx={{
-            borderRadius: 2.5,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            overflow: 'hidden',
-          }}
-        >
+        <Box sx={{ ...productPanelSx }}>
           <Box sx={{ px: 2.5, pt: 2.25, pb: 1.5 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
               Njoftime sipas kategorive
@@ -255,7 +247,7 @@ export default function Page() {
                   Aktive
                 </TableCell>
                 <TableCell align="right" sx={{ fontWeight: 700 }}>
-                  Në pritje
+                  Hequr / pritje
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -278,20 +270,34 @@ export default function Page() {
       {isPlatformAdmin ? (
         <Box
           sx={{
-            borderRadius: 2.5,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: primaryMainAlpha(0.06),
+            ...productPanelSx,
+            bgcolor: (t) => primaryMainAlpha(t.palette.mode === 'dark' ? 0.1 : 0.06),
             px: 2.5,
             py: 2.25,
           }}
         >
           <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-            Radha e moderimit
+            Moderimi i njoftimeve
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Njoftimet e reja shkojnë në radhë para publikimit.{' '}
-            <Box component={RouterLink} href={paths.dashboard.listingModeration} sx={{ color: 'primary.main', fontWeight: 700 }}>
+            Njoftimet publikohen menjëherë. Këtu mund t&apos;i heqësh ose t&apos;i rivendosësh nëse shkelin rregullat.{' '}
+            <Box
+              component={RouterLink}
+              href={paths.dashboard.listingModeration}
+              sx={{
+                ...productButtonSx,
+                color: 'primary.main',
+                fontWeight: 700,
+                display: 'inline',
+                p: 0,
+                border: 'none',
+                bgcolor: 'transparent',
+                textDecoration: 'underline',
+                textUnderlineOffset: 3,
+                '&:hover': { bgcolor: 'transparent', boxShadow: 'none' },
+                '&:active': { transform: 'none' },
+              }}
+            >
               Hap njoftimet
             </Box>
           </Typography>

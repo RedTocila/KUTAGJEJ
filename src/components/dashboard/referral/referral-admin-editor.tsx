@@ -7,12 +7,9 @@ import {
   AccordionSummary,
   Box,
   Button,
-  Card,
-  CardContent,
   Divider,
   Grid,
   IconButton,
-  Paper,
   Stack,
   TextField,
   Typography,
@@ -29,6 +26,7 @@ import {
   emptyReviewMilestone,
   emptyTrustedBadge,
 } from '@/components/dashboard/referral/referral-empty-defaults';
+import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
 export function AdminEditor({
   draft,
@@ -44,8 +42,7 @@ export function AdminEditor({
   const set = (patch: Partial<ReferralProgram>) => onChange({ ...draft, ...patch });
 
   return (
-    <Card elevation={0} sx={{ border: '1px dashed', borderColor: 'warning.main', borderRadius: 2 }}>
-      <CardContent sx={{ p: 3 }}>
+    <Box sx={{ ...productPanelSx, border: '1px dashed', borderColor: 'warning.main', p: 3 }}>
         <Stack
           direction="row"
           spacing={2}
@@ -65,12 +62,14 @@ export function AdminEditor({
             startIcon={<FloppyDiskIcon size={20} weight="bold" />}
             onClick={onSave}
             disabled={saving}
+            sx={productButtonSx}
           >
             {saving ? 'Duke ruajtur…' : 'Ruaj ndryshimet'}
           </Button>
         </Stack>
 
-        <Accordion defaultExpanded sx={{ mt: 2 }}>
+        <Box sx={{ mt: 2, ...productFieldSx }}>
+        <Accordion defaultExpanded>
           <AccordionSummary expandIcon={<CaretDownIcon weight="bold" />}>
             <Typography sx={{ fontWeight: 700 }}>Faqja kryesore</Typography>
           </AccordionSummary>
@@ -126,7 +125,7 @@ export function AdminEditor({
               </Grid>
               <Stack spacing={1}>
                 {draft.freeTiers.map((row, idx) => (
-                  <Paper key={idx} variant="outlined" sx={{ p: 2 }}>
+                  <Box key={idx} sx={{ ...productPanelSx, p: 2 }}>
                     <Stack
                       spacing={1}
                       sx={{
@@ -188,12 +187,13 @@ export function AdminEditor({
                         <TrashIcon weight="bold" />
                       </IconButton>
                     </Stack>
-                  </Paper>
+                  </Box>
                 ))}
               </Stack>
               <Button
                 startIcon={<PlusIcon weight="bold" />}
                 onClick={() => set({ freeTiers: [...draft.freeTiers, emptyFreeTier()] })}
+                sx={productButtonSx}
               >
                 Shto nivel
               </Button>
@@ -271,7 +271,7 @@ export function AdminEditor({
                 </Grid>
               </Grid>
               {draft.paidTiers.map((row, idx) => (
-                <Paper key={idx} variant="outlined" sx={{ p: 2 }}>
+                <Box key={idx} sx={{ ...productPanelSx, p: 2 }}>
                   <Stack
                     spacing={1}
                     sx={{
@@ -354,11 +354,12 @@ export function AdminEditor({
                       <TrashIcon weight="bold" />
                     </IconButton>
                   </Stack>
-                </Paper>
+                </Box>
               ))}
               <Button
                 startIcon={<PlusIcon weight="bold" />}
                 onClick={() => set({ paidTiers: [...draft.paidTiers, emptyPaidTier()] })}
+                sx={productButtonSx}
               >
                 Shto tier
               </Button>
@@ -436,7 +437,7 @@ export function AdminEditor({
                 </Grid>
               </Grid>
               {draft.reviewMilestones.map((row, idx) => (
-                <Paper key={idx} variant="outlined" sx={{ p: 2 }}>
+                <Box key={idx} sx={{ ...productPanelSx, p: 2 }}>
                   <Stack
                     spacing={1}
                     sx={{
@@ -477,11 +478,12 @@ export function AdminEditor({
                       <TrashIcon weight="bold" />
                     </IconButton>
                   </Stack>
-                </Paper>
+                </Box>
               ))}
               <Button
                 startIcon={<PlusIcon weight="bold" />}
                 onClick={() => set({ reviewMilestones: [...draft.reviewMilestones, emptyReviewMilestone()] })}
+                sx={productButtonSx}
               >
                 Shto milestone
               </Button>
@@ -667,7 +669,7 @@ export function AdminEditor({
             </Stack>
           </AccordionDetails>
         </Accordion>
-      </CardContent>
-    </Card>
+        </Box>
+    </Box>
   );
 }

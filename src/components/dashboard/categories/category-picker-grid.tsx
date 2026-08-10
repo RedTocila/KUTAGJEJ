@@ -4,9 +4,7 @@ import * as React from 'react';
 import {
   alpha,
   Box,
-  Card,
   CardActionArea,
-  CardContent,
   Chip,
   Grid,
   Skeleton,
@@ -16,6 +14,8 @@ import {
 
 import { CATEGORY_VISUAL, TAB_ORDER } from '@/components/dashboard/categories/category-config';
 import type { ListingCategory } from '@/types/listing-category';
+import { MOTION } from '@/styles/motion';
+import { productPanelSx } from '@/styles/product-sx';
 
 export interface CategoryPickerGridProps {
   categories: ListingCategory[];
@@ -44,15 +44,14 @@ export function CategoryPickerGrid({ categories, loading, selectedTab, onSelectT
 
           return (
             <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={key}>
-              <Card
-                elevation={0}
+              <Box
                 sx={{
+                  ...productPanelSx,
                   height: '100%',
                   border: '2px solid',
                   borderColor: selected ? accentColor : 'divider',
-                  borderRadius: 2,
                   bgcolor: selected ? alpha(accentColor, theme.palette.mode === 'dark' ? 0.12 : 0.06) : 'background.paper',
-                  transition: 'border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease',
+                  transition: `border-color ${MOTION.fast} ${MOTION.ease}, box-shadow ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.fast} ${MOTION.ease}`,
                   boxShadow: selected ? `0 8px 24px ${alpha(accentColor, 0.2)}` : 'none',
                   '&:hover': {
                     borderColor: selected ? accentColor : alpha(accentColor, 0.45),
@@ -61,10 +60,9 @@ export function CategoryPickerGrid({ categories, loading, selectedTab, onSelectT
               >
                 <CardActionArea
                   onClick={() => onSelectTab(i)}
-                  sx={{ height: '100%', alignItems: 'stretch', display: 'block', p: 0 }}
+                  sx={{ height: '100%', alignItems: 'stretch', display: 'block', p: 2.5 }}
                 >
-                  <CardContent sx={{ p: 2.5 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
                       <Box
                         sx={{
                           width: 48,
@@ -105,9 +103,8 @@ export function CategoryPickerGrid({ categories, loading, selectedTab, onSelectT
                         />
                       </Box>
                     </Box>
-                  </CardContent>
                 </CardActionArea>
-              </Card>
+              </Box>
             </Grid>
           );
         })}

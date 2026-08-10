@@ -6,6 +6,7 @@ import { alpha, Box, Chip, Divider, Stack, Typography } from '@mui/material';
 
 import { paths } from '@/paths';
 import { BrandLogo } from '@/components/brand/brand-logo';
+import { MOTION } from '@/styles/motion';
 
 import { AdminNavContent } from './admin-nav-content';
 
@@ -42,7 +43,7 @@ export function SideNav() {
             color: 'inherit',
             borderRadius: 2,
             outline: 'none',
-            transition: 'opacity 0.15s ease',
+            transition: `opacity ${MOTION.fast} ${MOTION.ease}`,
             '&:visited': { color: 'inherit' },
             '&:hover': { opacity: 0.9 },
             '&:focus-visible': {

@@ -6,7 +6,6 @@ import {
   alpha,
   Box,
   Button,
-  Paper,
   Typography,
   useTheme,
 } from '@mui/material';
@@ -19,6 +18,7 @@ import {
 } from '@/components/core/product-dialog';
 import type { Contract } from '@/types/contract';
 import { deleteContract } from '@/lib/admin-contracts-client';
+import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 
 export function ContractDeleteDialog(props: {
   contract: Contract | null;
@@ -53,34 +53,32 @@ export function ContractDeleteDialog(props: {
 
   return (
     <ProductDialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <ProductDialogTitle onClose={onClose}>Fshi kontratën?</ProductDialogTitle>
+      <ProductDialogTitle onClose={onClose}>Fshi paketën?</ProductDialogTitle>
       <ProductDialogContent>
         {error ? (
           <Alert severity="error" sx={{ mb: 1.5, borderRadius: 1.5 }}>
             {error}
           </Alert>
         ) : null}
-        <Paper
-          elevation={0}
+        <Box
           sx={{
+            ...productPanelSx,
             p: 2,
-            borderRadius: 1.5,
             bgcolor: alpha(theme.palette.error.main, 0.06),
-            border: '1px solid',
             borderColor: alpha(theme.palette.error.main, 0.2),
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            Kontrata{' '}
+            Paketa{' '}
             <Box component="span" sx={{ fontWeight: 800, color: 'text.primary' }}>
               {contract?.title}
             </Box>{' '}
             do të hiqet përgjithmonë. Ky veprim nuk kthehet mbrapsht.
           </Typography>
-        </Paper>
+        </Box>
       </ProductDialogContent>
       <ProductDialogActions>
-        <Button onClick={onClose} size="large" sx={{ borderRadius: 2 }}>
+        <Button onClick={onClose} size="large" sx={productButtonSx}>
           Anulo
         </Button>
         <Button
@@ -89,7 +87,7 @@ export function ContractDeleteDialog(props: {
           size="large"
           onClick={() => void confirm()}
           disabled={pending}
-          sx={{ borderRadius: 2, minWidth: 100 }}
+          sx={{ ...productButtonSx, minWidth: 100 }}
         >
           {pending ? 'Duke u fshirë…' : 'Fshi'}
         </Button>

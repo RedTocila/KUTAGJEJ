@@ -12,6 +12,7 @@ import { useIsPlatformAdmin } from '@/hooks/use-platform-admin';
 import { useUser } from '@/hooks/use-user';
 import { fetchReferralProgramPublic, putReferralProgram } from '@/lib/referral-program-client';
 import type { ReferralProgram } from '@/types/referral-program';
+import { productButtonSx } from '@/styles/product-sx';
 
 export function ReferralAdminPage() {
   const { user } = useUser();
@@ -86,6 +87,7 @@ export function ReferralAdminPage() {
                   setEditing(true);
                 }
               }}
+              sx={productButtonSx}
             >
               {editing ? 'Anulo redaktimin' : 'Redakto si admin'}
             </Button>

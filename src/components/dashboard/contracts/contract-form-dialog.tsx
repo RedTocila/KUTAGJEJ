@@ -30,7 +30,7 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import { ProductDialog } from '@/components/core/product-dialog';
 import type { Contract } from '@/types/contract';
 import type { Role } from '@/types/role';
-import { productDialogCloseButtonSx } from '@/styles/product-sx';
+import { productButtonSx, productDialogCloseButtonSx, productFieldSx } from '@/styles/product-sx';
 import { createContract, updateContract } from '@/lib/admin-contracts-client';
 
 function QuotaField(props: {
@@ -47,7 +47,7 @@ function QuotaField(props: {
       fullWidth
       size="small"
       slotProps={{ input: { inputProps: { min: 0, step: 1 } } }}
-      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+      sx={productFieldSx}
     />
   );
 }
@@ -75,6 +75,7 @@ export function ContractFormDialog(props: {
   const [maxApartmentListings, setMaxApartmentListings] = React.useState('0');
   const [maxProductListings, setMaxProductListings] = React.useState('0');
   const [maxPremiumListings, setMaxPremiumListings] = React.useState('0');
+  const [maxOkazionListings, setMaxOkazionListings] = React.useState('0');
   const [price1Month, setPrice1Month] = React.useState('');
   const [price3Months, setPrice3Months] = React.useState('');
   const [price6Months, setPrice6Months] = React.useState('');
@@ -99,6 +100,7 @@ export function ContractFormDialog(props: {
       setMaxApartmentListings(String(props.contract.maxApartmentListings ?? 0));
       setMaxProductListings(String(props.contract.maxProductListings ?? 0));
       setMaxPremiumListings(String(props.contract.maxPremiumListings ?? 0));
+      setMaxOkazionListings(String(props.contract.maxOkazionListings ?? 0));
       setPrice1Month(String(props.contract.price1Month ?? ''));
       setPrice3Months(String(props.contract.price3Months ?? ''));
       setPrice6Months(String(props.contract.price6Months ?? ''));
@@ -118,6 +120,7 @@ export function ContractFormDialog(props: {
       setMaxApartmentListings('10');
       setMaxProductListings('5');
       setMaxPremiumListings('0');
+      setMaxOkazionListings('0');
       setPrice1Month('0');
       setPrice3Months('');
       setPrice6Months('');
@@ -169,6 +172,8 @@ export function ContractFormDialog(props: {
     if (qProducts === '__bad__') return;
     const qPremium = readQuota(maxPremiumListings, 'Premium');
     if (qPremium === '__bad__') return;
+    const qOkazion = readQuota(maxOkazionListings, 'OKAZION');
+    if (qOkazion === '__bad__') return;
 
     const readOptionalPrice = (raw: string, labelSq: string): number | null | '__bad__' => {
       const s = String(raw).trim();
@@ -218,6 +223,7 @@ export function ContractFormDialog(props: {
       maxApartmentListings: qApts,
       maxProductListings: qProducts,
       maxPremiumListings: qPremium,
+      maxOkazionListings: qOkazion,
       price1Month: p1,
       price3Months: p3,
       price6Months: p6,
@@ -286,7 +292,7 @@ export function ContractFormDialog(props: {
             {isEdit ? 'Përditësim' : 'Paketë e re'}
           </Typography>
           <DialogTitle sx={{ p: 0, pt: 0.25, fontSize: '1.2rem', fontWeight: 800 }}>
-            {isEdit ? 'Kontrata / plani' : 'Detajet e planit'}
+            {isEdit ? 'Paketa / plani' : 'Detajet e planit'}
           </DialogTitle>
           <IconButton
             aria-label="Mbyll"
@@ -322,7 +328,7 @@ export function ContractFormDialog(props: {
               fullWidth
               size="small"
               placeholder="FREE · STARTER · GROW · ELITE"
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+              sx={productFieldSx}
             />
 
             <Box>
@@ -335,8 +341,12 @@ export function ContractFormDialog(props: {
                 value={subscriberKind}
                 onChange={(_, v) => v && setSubscriberKind(v)}
               >
-                <ToggleButton value="agent">Agjent</ToggleButton>
-                <ToggleButton value="company">Kompani</ToggleButton>
+                <ToggleButton value="agent" sx={{ ...productButtonSx, px: 1.5 }}>
+                  Agjent
+                </ToggleButton>
+                <ToggleButton value="company" sx={{ ...productButtonSx, px: 1.5 }}>
+                  Kompani
+                </ToggleButton>
               </ToggleButtonGroup>
             </Box>
 
@@ -363,6 +373,9 @@ export function ContractFormDialog(props: {
                 <Grid size={{ xs: 6, sm: 4 }}>
                   <QuotaField label="Premium" value={maxPremiumListings} onChange={setMaxPremiumListings} />
                 </Grid>
+                <Grid size={{ xs: 6, sm: 4 }}>
+                  <QuotaField label="OKAZION" value={maxOkazionListings} onChange={setMaxOkazionListings} />
+                </Grid>
               </Grid>
             </Box>
 
@@ -380,7 +393,7 @@ export function ContractFormDialog(props: {
                   endAdornment: <InputAdornment position="end">orë</InputAdornment>,
                 },
               }}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+              sx={productFieldSx}
             />
 
             <TextField
@@ -391,7 +404,7 @@ export function ContractFormDialog(props: {
               required
               fullWidth
               slotProps={{ input: { inputProps: { min: 0 } } }}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+              sx={productFieldSx}
             />
 
             <FormControlLabel
@@ -402,7 +415,7 @@ export function ContractFormDialog(props: {
                   color="primary"
                 />
               }
-              label="Premium Badge (Grow / Elite titles)"
+              label="Badge Premium (titulli amber në katalog)"
             />
 
             <FormControlLabel
@@ -438,7 +451,7 @@ export function ContractFormDialog(props: {
                         endAdornment: <InputAdornment position="end">€</InputAdornment>,
                       },
                     }}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                    sx={productFieldSx}
                   />
                 </Grid>
                 <Grid size={{ xs: 6, sm: 3 }}>
@@ -455,7 +468,7 @@ export function ContractFormDialog(props: {
                         endAdornment: <InputAdornment position="end">€</InputAdornment>,
                       },
                     }}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                    sx={productFieldSx}
                   />
                 </Grid>
                 <Grid size={{ xs: 6, sm: 3 }}>
@@ -472,7 +485,7 @@ export function ContractFormDialog(props: {
                         endAdornment: <InputAdornment position="end">€</InputAdornment>,
                       },
                     }}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                    sx={productFieldSx}
                   />
                 </Grid>
                 <Grid size={{ xs: 6, sm: 3 }}>
@@ -489,7 +502,7 @@ export function ContractFormDialog(props: {
                         endAdornment: <InputAdornment position="end">€</InputAdornment>,
                       },
                     }}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                    sx={productFieldSx}
                   />
                 </Grid>
               </Grid>
@@ -504,7 +517,7 @@ export function ContractFormDialog(props: {
               minRows={2}
               placeholder="Opsionale"
               size="small"
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+              sx={productFieldSx}
             />
 
             <Box>
@@ -562,7 +575,7 @@ export function ContractFormDialog(props: {
         </DialogContent>
         <Divider sx={{ flexShrink: 0 }} />
         <DialogActions sx={{ px: 3, py: 2, gap: 1, flexShrink: 0 }}>
-          <Button onClick={props.onClose} size="large" sx={{ borderRadius: 2 }}>
+          <Button onClick={props.onClose} size="large" sx={productButtonSx}>
             Anulo
           </Button>
           <Button
@@ -570,7 +583,7 @@ export function ContractFormDialog(props: {
             variant="contained"
             size="large"
             disabled={pending || roleIds.length === 0 || !title.trim()}
-            sx={{ minWidth: 140, borderRadius: 2, px: 3 }}
+            sx={{ ...productButtonSx, minWidth: 140, px: 3 }}
           >
             {pending ? 'Duke u ruajtur…' : 'Ruaj'}
           </Button>

@@ -5,8 +5,6 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   Grid,
   Stack,
   TextField,
@@ -18,6 +16,7 @@ import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGea
 import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { authClient } from '@/lib/auth/client';
 import { useUser } from '@/hooks/use-user';
+import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
 export default function AdminProfilePage() {
   const { user, checkSession } = useUser();
@@ -115,9 +114,8 @@ export default function AdminProfilePage() {
         <Alert severity="info">
           Përditësimet e emailit, fjalëkalimit dhe të dhënave të tjera bëhen vetëm nga një administrator KuTaGjej.
         </Alert>
-        <Card>
-          <CardContent sx={{ p: 3 }}>
-            <Stack spacing={1}>
+        <Box sx={{ ...productPanelSx, p: 3 }}>
+          <Stack spacing={1}>
               <Typography variant="subtitle2" color="text.secondary">
                 Email
               </Typography>
@@ -137,8 +135,7 @@ export default function AdminProfilePage() {
                 </>
               ) : null}
             </Stack>
-          </CardContent>
-        </Card>
+        </Box>
       </Stack>
     );
   }
@@ -154,8 +151,7 @@ export default function AdminProfilePage() {
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Card component="form" onSubmit={onSaveProfile}>
-            <CardContent sx={{ p: 3 }}>
+          <Box component="form" onSubmit={onSaveProfile} sx={{ ...productPanelSx, p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
                 Të dhënat
               </Typography>
@@ -164,7 +160,7 @@ export default function AdminProfilePage() {
                   {profileMsg.text}
                 </Alert>
               ) : null}
-              <Stack spacing={2}>
+              <Stack spacing={2} sx={productFieldSx}>
                 <TextField
                   label="Emri"
                   value={firstName}
@@ -194,17 +190,15 @@ export default function AdminProfilePage() {
                   required
                   autoComplete="email"
                 />
-                <Button type="submit" variant="contained" disabled={savingProfile} sx={{ alignSelf: 'flex-start' }}>
+                <Button type="submit" variant="contained" disabled={savingProfile} sx={{ ...productButtonSx, alignSelf: 'flex-start' }}>
                   {savingProfile ? 'Duke u ruajtur…' : 'Ruaj ndryshimet'}
                 </Button>
               </Stack>
-            </CardContent>
-          </Card>
+          </Box>
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <Card component="form" onSubmit={onChangePassword}>
-            <CardContent sx={{ p: 3 }}>
+          <Box component="form" onSubmit={onChangePassword} sx={{ ...productPanelSx, p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
                 Fjalëkalimi
               </Typography>
@@ -213,7 +207,7 @@ export default function AdminProfilePage() {
                   {passwordMsg.text}
                 </Alert>
               ) : null}
-              <Stack spacing={2}>
+              <Stack spacing={2} sx={productFieldSx}>
                 <TextField
                   label="Fjalëkalimi aktual"
                   type="password"
@@ -244,12 +238,11 @@ export default function AdminProfilePage() {
                   fullWidth
                   autoComplete="new-password"
                 />
-                <Button type="submit" variant="contained" color="secondary" disabled={savingPassword} sx={{ alignSelf: 'flex-start' }}>
+                <Button type="submit" variant="contained" color="secondary" disabled={savingPassword} sx={{ ...productButtonSx, alignSelf: 'flex-start' }}>
                   {savingPassword ? 'Duke u përditësuar…' : 'Ndrysho fjalëkalimin'}
                 </Button>
               </Stack>
-            </CardContent>
-          </Card>
+          </Box>
         </Grid>
       </Grid>
     </Stack>

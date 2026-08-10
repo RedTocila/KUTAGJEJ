@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { config } from '@/config';
 
 export const metadata: Metadata = {
-  title: `Kontratat | Panel admin | ${config.site.name}`,
+  title: `Paketat | Panel admin | ${config.site.name}`,
 };
 
 export default function KontratatLayout({ children }: { children: ReactNode }) {

@@ -135,15 +135,13 @@ export function JobCard({
           saveCount: listing.saveCount,
           url: listingJobPublicHref(listing),
         }}
-        bottomOverlay={
+        bottomRightOverlay={
           listing.isOkazion ? undefined : (
-            <Box sx={{ display: 'flex', justifyContent: 'flex-start', p: 1 }}>
-              <JobListingCountdown expiresAt={expiresAt} variant="overlay" />
-            </Box>
+            <JobListingCountdown expiresAt={expiresAt} variant="overlay" />
           )
         }
       />
-      <Stack className="listing-card-body" spacing={1} sx={{ p: { xs: 1.75, sm: 2 } }}>
+      <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
         <Typography
           variant="caption"
           color="text.secondary"
@@ -197,12 +195,12 @@ export function JobCard({
             <MapPinIcon size={14} weight="regular" />
             <Typography
               variant="caption"
+              noWrap
               sx={{
                 color: 'text.secondary',
                 fontWeight: 500,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                minWidth: 0,
+                flex: 1,
               }}
             >
               {listing.cityName}

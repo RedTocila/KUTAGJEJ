@@ -20,6 +20,7 @@ export type ContractInput = {
   maxApartmentListings: number;
   maxProductListings: number;
   maxPremiumListings: number;
+  maxOkazionListings: number;
   price1Month: number | null;
   price3Months: number | null;
   price6Months: number | null;

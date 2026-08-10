@@ -7,6 +7,7 @@ import { primaryMainAlpha } from '@/lib/css-var-alpha';
 
 /**
  * Shared admin page title: icon + title + subtitle, optional actions on the right.
+ * Matches user portal header chrome (product green tile, weight 800 title).
  */
 export function AdminPageHeader({
   icon,
@@ -47,7 +48,7 @@ export function AdminPageHeader({
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
-            bgcolor: primaryMainAlpha(0.12),
+            bgcolor: (t) => primaryMainAlpha(t.palette.mode === 'dark' ? 0.16 : 0.12),
             color: 'primary.main',
           }}
         >

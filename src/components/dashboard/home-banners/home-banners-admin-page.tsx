@@ -41,6 +41,7 @@ import {
   type HomeBannerInput,
 } from '@/lib/admin-home-banners-client';
 import { uploadListingImages } from '@/lib/uploads-client';
+import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
 const EMPTY_FORM: HomeBannerInput = {
   title: '',
@@ -135,7 +136,7 @@ function BannerDialog({
         {initial ? 'Ndrysho banner-in' : 'Banner i ri'}
       </ProductDialogTitle>
       <ProductDialogContent>
-        <Stack spacing={2} sx={{ mt: 0.5 }}>
+        <Stack spacing={2} sx={{ mt: 0.5, ...productFieldSx }}>
           {error ? (
             <Alert severity="error" sx={{ borderRadius: 1.5 }}>
               {error}
@@ -194,7 +195,7 @@ function BannerDialog({
                 startIcon={<ImageIcon />}
                 disabled={uploading}
                 onClick={() => fileInputRef.current?.click()}
-                sx={{ textTransform: 'none' }}
+                sx={productButtonSx}
               >
                 {uploading ? 'Duke ngarkuar…' : 'Ngarko imazh'}
               </Button>
@@ -203,7 +204,7 @@ function BannerDialog({
                   color="inherit"
                   disabled={uploading}
                   onClick={() => setForm((f) => ({ ...f, imageUrl: '' }))}
-                  sx={{ textTransform: 'none' }}
+                  sx={productButtonSx}
                 >
                   Hiq
                 </Button>
@@ -240,10 +241,10 @@ function BannerDialog({
         </Stack>
       </ProductDialogContent>
       <ProductDialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button onClick={onClose} disabled={saving} sx={productButtonSx}>
           Anulo
         </Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving || uploading}>
+        <Button variant="contained" onClick={handleSave} disabled={saving || uploading} sx={productButtonSx}>
           {saving ? 'Po ruhet...' : 'Ruaj'}
         </Button>
       </ProductDialogActions>
@@ -295,6 +296,7 @@ export function HomeBannersAdminPage() {
               setEditing(null);
               setDialogOpen(true);
             }}
+            sx={productButtonSx}
           >
             Shto banner
           </Button>
@@ -307,15 +309,7 @@ export function HomeBannersAdminPage() {
         </Alert>
       ) : null}
 
-      <Box
-        sx={{
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
-          overflowX: 'auto',
-        }}
-      >
+      <Box sx={{ ...productPanelSx, overflowX: 'auto' }}>
         {loading ? (
           <Box sx={{ py: 5, display: 'flex', justifyContent: 'center' }}>
             <CircularProgress size={28} />
@@ -427,13 +421,14 @@ export function HomeBannersAdminPage() {
           </Typography>
         </ProductDialogContent>
         <ProductDialogActions>
-          <Button onClick={() => setDeleting(null)} disabled={deleteBusy}>
+          <Button onClick={() => setDeleting(null)} disabled={deleteBusy} sx={productButtonSx}>
             Anulo
           </Button>
           <Button
             variant="contained"
             color="error"
             disabled={deleteBusy}
+            sx={productButtonSx}
             onClick={async () => {
               if (!deleting) return;
               setDeleteBusy(true);

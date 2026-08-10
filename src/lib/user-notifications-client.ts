@@ -96,7 +96,16 @@ export async function fetchNotificationPreferences(): Promise<{
       cache: 'no-store',
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Gabim.' };
+    if (!res.ok) {
+      return {
+        error:
+          typeof data.message === 'string' && data.message.trim()
+            ? data.message
+            : res.status >= 500
+              ? 'Nuk u arrit lidhja me serverin.'
+              : 'Gabim.',
+      };
+    }
     return { preferences: data.preferences as NotificationPreferences };
   } catch {
     return { error: 'Nuk u arrit lidhja me serverin.' };

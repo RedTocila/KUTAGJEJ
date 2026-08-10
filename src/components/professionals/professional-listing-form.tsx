@@ -16,12 +16,15 @@ import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/Use
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import {
+  ListingFormActionError,
   ListingFormActions,
   ListingFormSection,
   ListingTextField,
 } from '@/components/user/listing-form-ui';
+import { ListingBoostChoiceBar } from '@/components/user/listing-boost-choice-bar';
 import {
   activatePremiumAfterCreate,
+  PREMIUM_PACKAGE_ID,
   PremiumPostActions,
   type PremiumPayMode,
 } from '@/components/user/premium-boost-upsell';
@@ -69,7 +72,11 @@ async function resolveSingleImage(args: {
     if (up.error) return { url: null, error: up.error };
     return { url: up.urls[0] ?? null };
   }
-  return { url: args.existingUrl };
+  const existing = args.existingUrl;
+  if (existing && (/^blob:/i.test(existing) || /^data:/i.test(existing))) {
+    return { url: null, error: 'Fotoja nuk u ngarkua. Zgjidhni foton përsëri.' };
+  }
+  return { url: existing };
 }
 
 export function ProfessionalListingForm({
@@ -88,6 +95,8 @@ export function ProfessionalListingForm({
   const searchParams = useSearchParams();
   const wantsPremium = searchParams.get('premium') === '1';
   const premiumPayRef = React.useRef<PremiumPayMode>('buy-card');
+  const premiumPackageIdRef = React.useRef(PREMIUM_PACKAGE_ID);
+  const boostKindRef = React.useRef<'premium' | null>(null);
   const formRef = React.useRef<HTMLFormElement | null>(null);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [error, setError] = React.useState<string | null>(null);
@@ -354,11 +363,12 @@ export function ProfessionalListingForm({
       return;
     }
     rememberLocation({ cityId });
-    if (res.id && wantsPremium) {
+    if (res.id && (wantsPremium || boostKindRef.current === 'premium')) {
       const boost = await activatePremiumAfterCreate({
         mode: premiumPayRef.current,
         kind: 'professionals',
         listingId: res.id,
+        packageId: premiumPackageIdRef.current,
       });
       if (boost.redirectToCheckout) {
         router.push(boost.redirectToCheckout);
@@ -395,11 +405,6 @@ export function ProfessionalListingForm({
   return (
     <Box component="form" ref={formRef} onSubmit={(e) => void handleSubmit(e)}>
       <Stack spacing={2.25}>
-        {error ? (
-          <Alert severity="error" sx={{ borderRadius: 2 }}>
-            {error}
-          </Alert>
-        ) : null}
         {saveNotice ? (
           <Alert severity="success" sx={{ borderRadius: 2 }}>
             {saveNotice}
@@ -593,22 +598,45 @@ export function ProfessionalListingForm({
           ))}
         </ListingFormSection>
 
-        {wantsPremium && !existingId ? (
-          <PremiumPostActions
-            submitting={submitting}
-            onPost={(mode) => {
-              premiumPayRef.current = mode;
-              formRef.current?.requestSubmit();
-            }}
-          />
-        ) : (
-          <ListingFormActions
-            submitLabel={existingId ? 'Ruaj ndryshimet' : 'Publiko profilin'}
-            submitting={submitting}
-            backHref={backHref}
-            backLabel={backLabel}
-          />
-        )}
+        <Stack spacing={1.25}>
+          <ListingFormActionError error={error} />
+          {wantsPremium && !existingId ? (
+            <PremiumPostActions
+              submitting={submitting}
+              onPost={(mode) => {
+                premiumPayRef.current = mode;
+                boostKindRef.current = 'premium';
+                formRef.current?.requestSubmit();
+              }}
+            />
+          ) : (
+            <>
+              {!existingId ? (
+                <ListingBoostChoiceBar
+                  submitting={submitting}
+                  hideOkazion
+                  onPostPremium={(mode, packageId) => {
+                    premiumPayRef.current = mode;
+                    premiumPackageIdRef.current = packageId;
+                    boostKindRef.current = 'premium';
+                    formRef.current?.requestSubmit();
+                  }}
+                />
+              ) : null}
+              <ListingFormActions
+                submitLabel={existingId ? 'Ruaj ndryshimet' : 'Publiko profilin'}
+                submitting={submitting}
+                backHref={backHref}
+                backLabel={backLabel}
+                submitProps={{
+                  onClick: () => {
+                    boostKindRef.current = null;
+                  },
+                }}
+              />
+            </>
+          )}
+        </Stack>
       </Stack>
     </Box>
   );

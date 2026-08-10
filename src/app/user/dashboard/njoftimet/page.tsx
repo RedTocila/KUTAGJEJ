@@ -37,7 +37,7 @@ import {
 } from '@/lib/user-notifications-client';
 import { paths } from '@/paths';
 
-type InboxFilterTag = 'all' | 'messages' | 'listing_status' | 'reviews' | 'reservations' | 'verification';
+type InboxFilterTag = 'all' | 'messages' | 'listing_status' | 'reviews' | 'reservations';
 
 function tagLabel(tag: NotificationTag, t: ReturnType<typeof useCopy>): string {
   return t.notifications.tags[tag];
@@ -90,13 +90,12 @@ export default function UserNotificationsPage() {
       listing_status: 0,
       reviews: 0,
       reservations: 0,
-      verification: 0,
     };
     const allGroups = groupUserNotifications(inboxItems);
     map.all = allGroups.length;
     for (const group of allGroups) {
       const tag = notificationTagForType(group.primary.type);
-      if (tag === 'messages' || tag === 'listing_status' || tag === 'reviews' || tag === 'reservations' || tag === 'verification') {
+      if (tag === 'messages' || tag === 'listing_status' || tag === 'reviews' || tag === 'reservations') {
         map[tag] += 1;
       }
     }

@@ -24,6 +24,7 @@ import { MagnifyingGlass as SearchIcon } from '@phosphor-icons/react/dist/ssr/Ma
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { productFieldSx, productSurfacePaperSx } from '@/styles/product-sx';
 
 export interface SearchableSelectOption {
   value: string;
@@ -186,25 +187,23 @@ export function SearchableSelect({
           modifiers={[{ name: 'preventOverflow', options: { padding: 8 } }]}
         >
           <Paper
-            elevation={8}
-            sx={{
+            elevation={0}
+            sx={(theme) => ({
+              ...productSurfacePaperSx(theme),
               mt: 0.5,
               display: 'flex',
               flexDirection: 'column',
               maxHeight: { xs: 'min(50vh, 280px)', sm: 'min(50vh, 320px)' },
-              overflow: 'hidden',
               borderRadius: 2.5,
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
+            })}
           >
             {showSearch ? (
               <Box
                 sx={{
-                  p: 1,
+                  p: 1.25,
                   borderBottom: '1px solid',
                   borderColor: 'divider',
-                  bgcolor: 'background.paper',
+                  bgcolor: 'inherit',
                   flexShrink: 0,
                 }}
               >
@@ -222,7 +221,13 @@ export function SearchableSelect({
                           <SearchIcon size={14} />
                         </InputAdornment>
                       ),
-                      sx: { fontSize: '0.875rem' },
+                    },
+                  }}
+                  sx={{
+                    ...productFieldSx,
+                    '& .MuiOutlinedInput-root': {
+                      ...productFieldSx['& .MuiOutlinedInput-root'],
+                      fontSize: '0.875rem',
                     },
                   }}
                 />

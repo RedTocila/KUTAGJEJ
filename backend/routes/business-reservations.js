@@ -17,7 +17,7 @@ router.post('/', optionalAuth, async (req, res) => {
     const { data: listing, error: listingErr } = await sb
       .from('directory_listings')
       .select(
-        'id, poster_id, title, reservations_enabled, reservation_time_slots, reservation_party_sizes',
+        'id, poster_id, title, reservations_enabled',
       )
       .eq('id', v.listingId)
       .eq('vertical', 'businesses')
@@ -26,16 +26,6 @@ router.post('/', optionalAuth, async (req, res) => {
     if (!listing) return res.status(404).json({ message: 'Njoftimi nuk u gjet.' });
     if (!listing.reservations_enabled) {
       return res.status(400).json({ message: 'Ky biznes nuk pranon rezervime në platformë.' });
-    }
-
-    const slots = listing.reservation_time_slots ?? [];
-    if (slots.length > 0 && !slots.includes(v.timeSlot)) {
-      return res.status(400).json({ message: 'Ora e zgjedhur nuk është e disponueshme.' });
-    }
-
-    const sizes = listing.reservation_party_sizes ?? [];
-    if (sizes.length > 0 && !sizes.includes(v.partySize)) {
-      return res.status(400).json({ message: 'Numri i mysafirëve nuk është i lejuar.' });
     }
 
     const today = new Date();

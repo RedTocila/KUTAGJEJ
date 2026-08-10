@@ -31,7 +31,6 @@ const FILTER_ICONS: Record<string, PhosphorIcon> = {
   listing_status: SealCheckIcon,
   reviews: StarIcon,
   reservations: CalendarBlankIcon,
-  verification: SealCheckIcon,
 };
 
 export function notificationFilterIcon(key: 'all' | NotificationTag): PhosphorIcon {

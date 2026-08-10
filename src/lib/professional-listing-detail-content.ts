@@ -76,6 +76,7 @@ export function professionalPortfolioItems(listing: PublicDirectoryListingDetail
   if (items.length > 0) {
     return [...items]
       .sort((a, b) => a.sortOrder - b.sortOrder)
+      .filter((item) => Boolean(String(item.imageUrl || '').trim()))
       .map((item) => ({
         id: item.id,
         title: item.title?.trim() || 'Punë',
@@ -85,7 +86,7 @@ export function professionalPortfolioItems(listing: PublicDirectoryListingDetail
   }
 
   // Legacy: gallery photos beyond cover + avatar used to act as works.
-  const extras = listing.imageUrls.filter(Boolean).slice(2);
+  const extras = listing.imageUrls.filter((u) => Boolean(String(u || '').trim())).slice(2);
   return extras.map((imageUrl, index) => ({
     id: `gallery-work-${index}`,
     title: `Punë ${index + 1}`,

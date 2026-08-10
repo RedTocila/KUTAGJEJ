@@ -463,7 +463,7 @@ function formatMineProfessionalFull(doc, cityById) {
 
 async function queryMineRows(table, posterId, { limit, extraEq } = {}) {
   const cap = Number.isFinite(limit) && limit > 0 ? limit : DEFAULT_LIMIT_PER_KIND;
-  // Prefer updated_at so refresh/premium bumps (which only touch created_at) do not
+  // Prefer updated_at so refresh/premium bumps (which only touch bumped_at) do not
   // reshuffle the owner's dashboard. Fall back to created_at if the column is missing.
   let q = getSupabaseAdmin()
     .from(table)

@@ -3,6 +3,7 @@ const { camelizeRows } = require('../profiles');
 const { DEFAULT_LIMIT, MAX_LIMIT, JOB_LISTING_VISIBLE_DAYS, MS_PER_DAY } = require('./constants');
 const { expandSearchTerms, namesMatch, normalizeSearchText } = require('../search-normalize');
 const { hasPremiumUntilColumn } = require('../ensure-premium-listing-schema');
+const { hasBumpedAtColumn } = require('../ensure-bumped-at-schema');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -111,15 +112,22 @@ function premiumSortPrefix({ includeOkazion = true, includePremium = true } = {}
   return prefix;
 }
 
+function newestTimestampColumn() {
+  // null = not probed yet → prefer bumped_at; runListingQuery falls back on error
+  if (hasBumpedAtColumn() === false) return 'created_at';
+  return 'bumped_at';
+}
+
 function buildSort(sort, field = 'price', { includeOkazion = true, includePremium = true } = {}) {
   const premiumFirst = premiumSortPrefix({ includeOkazion, includePremium });
+  const newestCol = newestTimestampColumn();
   if (sort === 'price-asc') {
-    return [...premiumFirst, { column: field, ascending: true }, { column: 'created_at', ascending: false }];
+    return [...premiumFirst, { column: field, ascending: true }, { column: newestCol, ascending: false }];
   }
   if (sort === 'price-desc') {
-    return [...premiumFirst, { column: field, ascending: false }, { column: 'created_at', ascending: false }];
+    return [...premiumFirst, { column: field, ascending: false }, { column: newestCol, ascending: false }];
   }
-  return [...premiumFirst, { column: 'created_at', ascending: false }];
+  return [...premiumFirst, { column: newestCol, ascending: false }];
 }
 
 /** Directory profiles (businesses / professionals) — Premium only, no OKAZION. */
@@ -131,6 +139,13 @@ function buildDirectorySort(sort, { includePremium = true } = {}) {
 function withoutPremiumSort(sortSpec = []) {
   return (sortSpec || []).filter(
     (s) => s.column !== 'premium_until' && s.column !== 'okazion_until',
+  );
+}
+
+/** Replace bumped_at sort keys with created_at when the column is missing. */
+function withoutBumpedAtSort(sortSpec = []) {
+  return (sortSpec || []).map((s) =>
+    s.column === 'bumped_at' ? { ...s, column: 'created_at' } : s,
   );
 }
 
@@ -278,6 +293,8 @@ module.exports = {
   buildSort,
   buildDirectorySort,
   withoutPremiumSort,
+  withoutBumpedAtSort,
+  newestTimestampColumn,
   isPremiumActive,
   isOkazionActive,
   prioritizeActivePremium,

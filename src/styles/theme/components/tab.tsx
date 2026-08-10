@@ -1,5 +1,7 @@
 import type { Components } from '@mui/material/styles';
 
+import { MOTION } from '@/styles/motion';
+
 import type { Theme } from '../types';
 
 export const MuiTab = {
@@ -12,7 +14,11 @@ export const MuiTab = {
       paddingLeft: 0,
       paddingRight: 0,
       textTransform: 'none',
+      transition: `color ${MOTION.fast} ${MOTION.ease}, opacity ${MOTION.fast} ${MOTION.ease}`,
       '& + &': { marginLeft: '24px' },
+      '@media (prefers-reduced-motion: reduce)': {
+        transition: 'none',
+      },
     },
   },
 } satisfies Components<Theme>['MuiTab'];

@@ -266,7 +266,10 @@ export function MobileBottomNav() {
                       borderRadius: 999,
                       color: active ? 'primary.main' : 'text.secondary',
                       textDecoration: 'none',
-                      transition: 'color 200ms ease',
+                      transition: 'color 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1)',
+                      '&:active': {
+                        transform: 'scale(0.94)',
+                      },
                     }}
                   >
                     <Badge

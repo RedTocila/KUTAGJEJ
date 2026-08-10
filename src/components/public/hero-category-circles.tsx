@@ -155,7 +155,8 @@ export function HeroCategoryCircles({
                 bgcolor: selected ? soft : 'action.hover',
                 border: '1.5px solid',
                 borderColor: selected ? accent : 'divider',
-                transition: 'border-color 0.15s ease, background-color 0.15s ease',
+                transition:
+                  'border-color 160ms cubic-bezier(0.22, 1, 0.36, 1), background-color 160ms cubic-bezier(0.22, 1, 0.36, 1)',
               }}
             >
               <HomeVerticalIcon verticalId={v.id} size={34} color={accent} />
@@ -167,7 +168,7 @@ export function HeroCategoryCircles({
                 fontWeight: selected ? 700 : 600,
                 color: selected ? accent : 'text.primary',
                 whiteSpace: 'nowrap',
-                transition: 'color 0.15s ease',
+                transition: 'color 140ms ease',
               }}
             >
               {v.label}

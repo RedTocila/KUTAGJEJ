@@ -797,6 +797,8 @@ function MarketplaceCard({
 
 function BusinessCard({
   l,
+  autoRefreshEnabled,
+  onAutoRefreshChange,
   onPremiumApplied,
   onRefreshed,
   onAnnouncementSaved,
@@ -804,6 +806,8 @@ function BusinessCard({
   lastRefreshedAt,
 }: {
   l: BusinessMineListing;
+  autoRefreshEnabled?: boolean;
+  onAutoRefreshChange?: (enabled: boolean) => void;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
   onAnnouncementSaved?: (result: {
@@ -834,6 +838,8 @@ function BusinessCard({
       fallbackIcon={BuildingOfficeIcon}
       listingId={l.id}
       kind="businesses"
+      autoRefreshEnabled={autoRefreshEnabled}
+      onAutoRefreshChange={onAutoRefreshChange}
       isPremium={Boolean(l.isPremium)}
       premiumUntil={l.premiumUntil ?? null}
       onPremiumApplied={onPremiumApplied}
@@ -868,6 +874,8 @@ function BusinessCard({
 
 function ProfessionalCard({
   l,
+  autoRefreshEnabled,
+  onAutoRefreshChange,
   onPremiumApplied,
   onRefreshed,
   onAnnouncementSaved,
@@ -875,6 +883,8 @@ function ProfessionalCard({
   lastRefreshedAt,
 }: {
   l: ProfessionalMineListing;
+  autoRefreshEnabled?: boolean;
+  onAutoRefreshChange?: (enabled: boolean) => void;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
   onAnnouncementSaved?: (result: {
@@ -905,6 +915,8 @@ function ProfessionalCard({
       fallbackIcon={UsersIcon}
       listingId={l.id}
       kind="professionals"
+      autoRefreshEnabled={autoRefreshEnabled}
+      onAutoRefreshChange={onAutoRefreshChange}
       isPremium={Boolean(l.isPremium)}
       premiumUntil={l.premiumUntil ?? null}
       onPremiumApplied={onPremiumApplied}
@@ -1395,7 +1407,7 @@ export default function UserMyListingsPage() {
   );
 
   const handleAddListingPick = React.useCallback(
-    (key: ListingCategoryKey, opts?: { okazion?: boolean }) => {
+    (key: ListingCategoryKey, opts?: { okazion?: boolean; premium?: boolean }) => {
       if (key === 'businesses' && bizListings.length > 0) {
         setAddListingOpen(false);
         hardNavigate(paths.user.businessesListing);
@@ -1409,6 +1421,7 @@ export default function UserMyListingsPage() {
       setAddListingOpen(false);
       const q = new URLSearchParams({ category: key });
       if (opts?.okazion) q.set('okazion', '1');
+      if (opts?.premium) q.set('premium', '1');
       hardNavigate(`${paths.user.realEstateListing}?${q.toString()}`);
     },
     [bizListings.length, proListings.length],
@@ -1584,6 +1597,8 @@ export default function UserMyListingsPage() {
         return (
           <BusinessCard
             l={item.listing}
+            autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('businesses', item.listing.id))}
+            onAutoRefreshChange={(enabled) => setAutoForListing('businesses', item.listing.id, enabled)}
             onPremiumApplied={({ premiumUntil }) => {
               setBizListings((prev) => markListingPremium(prev, item.listing.id, premiumUntil));
             }}
@@ -1612,6 +1627,8 @@ export default function UserMyListingsPage() {
         return (
           <ProfessionalCard
             l={item.listing}
+            autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('professionals', item.listing.id))}
+            onAutoRefreshChange={(enabled) => setAutoForListing('professionals', item.listing.id, enabled)}
             onPremiumApplied={({ premiumUntil }) => {
               setProListings((prev) => markListingPremium(prev, item.listing.id, premiumUntil));
             }}
@@ -2032,6 +2049,8 @@ export default function UserMyListingsPage() {
             renderCard={(l) => (
               <BusinessCard
                 l={l}
+                autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('businesses', l.id))}
+                onAutoRefreshChange={(enabled) => setAutoForListing('businesses', l.id, enabled)}
                 onPremiumApplied={({ premiumUntil }) => {
                   setBizListings((prev) => markListingPremium(prev, l.id, premiumUntil));
                 }}
@@ -2068,6 +2087,8 @@ export default function UserMyListingsPage() {
             renderCard={(l) => (
               <ProfessionalCard
                 l={l}
+                autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('professionals', l.id))}
+                onAutoRefreshChange={(enabled) => setAutoForListing('professionals', l.id, enabled)}
                 onPremiumApplied={({ premiumUntil }) => {
                   setProListings((prev) => markListingPremium(prev, l.id, premiumUntil));
                 }}

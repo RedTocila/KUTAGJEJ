@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import {
-  Alert,
   Checkbox,
   FormControl,
   FormControlLabel,
@@ -25,6 +24,7 @@ import {
 } from '@/lib/job-constants';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import {
+  ListingFormActionError,
   ListingFormActions,
   ListingFormSection,
   ListingTextField,
@@ -379,12 +379,6 @@ export function JobListingForm({
       spacing={2.25}
       onSubmit={(e) => void handleSubmit(e)}
     >
-      {submitError ? (
-        <Alert severity="error" sx={{ borderRadius: 2 }}>
-          {submitError}
-        </Alert>
-      ) : null}
-
       <ListingFormSection title="Detajet e punës" description="Titulli dhe prezantimi i pozicionit.">
         <ListingTextField
           label="Titulli i punës"
@@ -582,55 +576,58 @@ export function JobListingForm({
         />
       </ListingFormSection>
 
-      {wantsPremium && !isEdit ? (
-        <PremiumPostActions
-          submitting={submitting}
-          onPost={(mode) => {
-            premiumPayRef.current = mode;
-            boostKindRef.current = 'premium';
-            formRef.current?.requestSubmit();
-          }}
-        />
-      ) : wantsOkazion && !isEdit ? (
-        <OkazionPostActions
-          submitting={submitting}
-          onPost={(mode: OkazionPayMode) => {
-            okazionPayRef.current = mode;
-            boostKindRef.current = 'okazion';
-            formRef.current?.requestSubmit();
-          }}
-        />
-      ) : (
-        <Stack spacing={1.25}>
-          {!isEdit ? (
-            <ListingBoostChoiceBar
-              submitting={submitting}
-              onPostPremium={(mode, packageId) => {
-                premiumPayRef.current = mode;
-                premiumPackageIdRef.current = packageId;
-                boostKindRef.current = 'premium';
-                formRef.current?.requestSubmit();
-              }}
-              onPostOkazion={(mode) => {
-                okazionPayRef.current = mode;
-                boostKindRef.current = 'okazion';
-                formRef.current?.requestSubmit();
-              }}
-            />
-          ) : null}
-          <ListingFormActions
-            submitLabel={isEdit ? 'Përditëso njoftimin' : 'Posto falas'}
+      <Stack spacing={1.25}>
+        <ListingFormActionError error={submitError} />
+        {wantsPremium && !isEdit ? (
+          <PremiumPostActions
             submitting={submitting}
-            backHref={backHref}
-            backLabel={backLabel}
-            submitProps={{
-              onClick: () => {
-                boostKindRef.current = null;
-              },
+            onPost={(mode) => {
+              premiumPayRef.current = mode;
+              boostKindRef.current = 'premium';
+              formRef.current?.requestSubmit();
             }}
           />
-        </Stack>
-      )}
+        ) : wantsOkazion && !isEdit ? (
+          <OkazionPostActions
+            submitting={submitting}
+            onPost={(mode: OkazionPayMode) => {
+              okazionPayRef.current = mode;
+              boostKindRef.current = 'okazion';
+              formRef.current?.requestSubmit();
+            }}
+          />
+        ) : (
+          <>
+            {!isEdit ? (
+              <ListingBoostChoiceBar
+                submitting={submitting}
+                onPostPremium={(mode, packageId) => {
+                  premiumPayRef.current = mode;
+                  premiumPackageIdRef.current = packageId;
+                  boostKindRef.current = 'premium';
+                  formRef.current?.requestSubmit();
+                }}
+                onPostOkazion={(mode) => {
+                  okazionPayRef.current = mode;
+                  boostKindRef.current = 'okazion';
+                  formRef.current?.requestSubmit();
+                }}
+              />
+            ) : null}
+            <ListingFormActions
+              submitLabel={isEdit ? 'Përditëso njoftimin' : 'Posto falas'}
+              submitting={submitting}
+              backHref={backHref}
+              backLabel={backLabel}
+              submitProps={{
+                onClick: () => {
+                  boostKindRef.current = null;
+                },
+              }}
+            />
+          </>
+        )}
+      </Stack>
     </Stack>
   );
 }

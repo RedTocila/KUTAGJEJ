@@ -10,7 +10,7 @@ export type BusinessReservationDraft = {
   guestPhone: string;
   partySize: number;
   reservationDate: string;
-  timeSlot: string;
+  timeSlot?: string;
   note?: string;
 };
 
@@ -34,9 +34,11 @@ export function formatBusinessReservationMessage(draft: BusinessReservationDraft
     `Emri: ${draft.guestName.trim()}`,
     `Telefoni: ${draft.guestPhone.trim()}`,
     `Data: ${dateLabel}`,
-    `Ora: ${draft.timeSlot}`,
-    `Mysafirë: ${draft.partySize}`,
   ];
+  if (draft.timeSlot?.trim()) {
+    lines.push(`Ora: ${draft.timeSlot.trim()}`);
+  }
+  lines.push(`Mysafirë: ${draft.partySize}`);
   const note = draft.note?.trim();
   if (note) {
     lines.push(`Shënim: ${note}`);
@@ -61,7 +63,6 @@ export function consumePendingBusinessReservation(): BusinessReservationDraft | 
       !parsed.guestName ||
       !parsed.guestPhone ||
       !parsed.reservationDate ||
-      !parsed.timeSlot ||
       !parsed.partySize
     ) {
       return null;
@@ -72,7 +73,7 @@ export function consumePendingBusinessReservation(): BusinessReservationDraft | 
       guestPhone: String(parsed.guestPhone),
       partySize: Number(parsed.partySize) || 1,
       reservationDate: String(parsed.reservationDate),
-      timeSlot: String(parsed.timeSlot),
+      timeSlot: typeof parsed.timeSlot === 'string' ? parsed.timeSlot : '',
       note: typeof parsed.note === 'string' ? parsed.note : undefined,
     };
   } catch {
@@ -94,7 +95,7 @@ export async function submitBusinessReservationToMessages(
     guestPhone: draft.guestPhone.trim(),
     partySize: draft.partySize,
     reservationDate: draft.reservationDate,
-    timeSlot: draft.timeSlot,
+    timeSlot: draft.timeSlot?.trim() || '',
   });
 
   const started = await startConversation('businesses', draft.listingId);

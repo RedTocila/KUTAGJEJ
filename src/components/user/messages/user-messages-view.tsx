@@ -723,24 +723,47 @@ function MessageBubble({
               m: `${CHAT_IMAGE_INSET}px`,
               borderRadius: imageRadius,
               overflow: 'hidden',
-              bgcolor: 'action.hover',
+              // Neutral slot so green bubbles don’t look “empty” while the photo loads.
+              bgcolor: mine ? 'rgba(0,0,0,0.28)' : 'rgba(0,0,0,0.12)',
               minHeight: 160,
+              aspectRatio: '4 / 3',
             }}
           >
-            {!imageLoaded ? (
+            {!imageLoaded && !imageFailed ? (
               <Box
-                aria-hidden
+                aria-busy
+                aria-label={t.messages.imageLoadingAria}
                 sx={{
                   position: 'absolute',
                   inset: 0,
                   zIndex: 1,
                   display: 'grid',
                   placeItems: 'center',
-                  bgcolor: (theme) =>
-                    theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                  pointerEvents: 'none',
                 }}
               >
-                <CircularProgress size={28} thickness={4} />
+                <Box
+                  sx={{
+                    display: 'grid',
+                    placeItems: 'center',
+                    width: 56,
+                    height: 56,
+                    borderRadius: '50%',
+                    bgcolor: 'rgba(0,0,0,0.55)',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
+                  }}
+                >
+                  <CircularProgress
+                    size={32}
+                    thickness={5}
+                    sx={{
+                      color: '#fff',
+                      '& .MuiCircularProgress-circle': {
+                        strokeLinecap: 'round',
+                      },
+                    }}
+                  />
+                </Box>
               </Box>
             ) : null}
             {imageFailed ? (
@@ -765,6 +788,7 @@ function MessageBubble({
                 src={imageUrl}
                 alt=""
                 loading="eager"
+                decoding="async"
                 role="button"
                 tabIndex={0}
                 aria-label={t.messages.imagePreviewAria}
@@ -784,13 +808,14 @@ function MessageBubble({
                 sx={{
                   display: 'block',
                   width: '100%',
+                  height: '100%',
                   minHeight: 160,
                   maxHeight: 360,
                   aspectRatio: '4 / 3',
                   objectFit: 'cover',
                   cursor: imageLoaded ? 'pointer' : 'default',
                   opacity: imageLoaded ? 1 : 0,
-                  transition: 'opacity 0.15s ease',
+                  transition: 'opacity 0.2s ease',
                 }}
               />
             )}
@@ -887,7 +912,27 @@ function MessageBubble({
           }}
         >
           {!imageLoaded && !imageFailed ? (
-            <CircularProgress size={36} thickness={4} sx={{ color: '#fff', position: 'absolute' }} />
+            <Box
+              sx={{
+                position: 'absolute',
+                display: 'grid',
+                placeItems: 'center',
+                width: 64,
+                height: 64,
+                borderRadius: '50%',
+                bgcolor: 'rgba(0,0,0,0.55)',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
+              }}
+            >
+              <CircularProgress
+                size={36}
+                thickness={5}
+                sx={{
+                  color: '#fff',
+                  '& .MuiCircularProgress-circle': { strokeLinecap: 'round' },
+                }}
+              />
+            </Box>
           ) : null}
           {!imageFailed ? (
             <Box

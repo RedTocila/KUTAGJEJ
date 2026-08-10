@@ -131,6 +131,7 @@ function UserDashboardFrameInner({
   isMessages: boolean;
   showFrameClose: boolean;
 }) {
+  const pathname = usePathname();
   const addListingPicker = useOptionalAddListingPicker();
   const hideChromeForPicker = Boolean(addListingPicker?.addListingPickerOpen);
 
@@ -208,7 +209,18 @@ function UserDashboardFrameInner({
                     backLabel={backLabel}
                     isMessages={isMessages}
                   />
-                  {children}
+                  <Box
+                    key={pathname}
+                    className="kutagjej-fade"
+                    sx={{
+                      flex: isMessages ? { xs: '1 1 auto', md: '0 1 auto' } : undefined,
+                      minHeight: 0,
+                      display: isMessages ? 'flex' : undefined,
+                      flexDirection: 'column',
+                    }}
+                  >
+                    {children}
+                  </Box>
                 </Container>
               </main>
             </Box>

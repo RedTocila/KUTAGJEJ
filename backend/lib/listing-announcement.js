@@ -2,6 +2,7 @@
 
 const { getSupabaseAdmin } = require('./supabase');
 const { isUuid } = require('./public-listings/query-helpers');
+const { bumpTimestampPatch } = require('./listing-bump');
 
 const ANNOUNCE_COST = 3;
 const TITLE_MAX = 80;
@@ -19,7 +20,7 @@ const ANNOUNCE_VERTICALS = new Set(['businesses', 'professionals']);
 
 /**
  * Create or update a directory listing announcement (businesses / professionals).
- * - First publish or reAnnounce=true: charge 3 BC and bump listing to top (created_at).
+ * - First publish or reAnnounce=true: charge 3 BC and bump listing to top (bumped_at).
  * - Edit existing without reAnnounce: free content update, no bump.
  */
 async function upsertBusinessAnnouncement({ userId, listingId, title, subtitle, bannerUrl, reAnnounce }) {
@@ -119,11 +120,11 @@ async function upsertBusinessAnnouncement({ userId, listingId, title, subtitle, 
   };
   if (shouldCharge) {
     patch.announcement_at = now;
-    // Public feed bump only — updated_at already reflects the announcement edit.
-    patch.created_at = now;
+    // Public feed bump only — keep created_at; updated_at already set above.
+    Object.assign(patch, bumpTimestampPatch(now));
   }
 
-  const { data: updated, error: updateErr } = await sb
+  let { data: updated, error: updateErr } = await sb
     .from('directory_listings')
     .update(patch)
     .eq('id', listingId)
@@ -131,6 +132,24 @@ async function upsertBusinessAnnouncement({ userId, listingId, title, subtitle, 
       'id, announcement_title, announcement_subtitle, announcement_banner_url, announcement_at, created_at',
     )
     .maybeSingle();
+
+  if (
+    updateErr &&
+    shouldCharge &&
+    patch.bumped_at != null &&
+    /bumped_at/i.test(String(updateErr.message || ''))
+  ) {
+    delete patch.bumped_at;
+    patch.created_at = now;
+    ({ data: updated, error: updateErr } = await sb
+      .from('directory_listings')
+      .update(patch)
+      .eq('id', listingId)
+      .select(
+        'id, announcement_title, announcement_subtitle, announcement_banner_url, announcement_at, created_at',
+      )
+      .maybeSingle());
+  }
 
   if (updateErr) {
     if (shouldCharge && previousBalance != null) {
@@ -153,11 +172,24 @@ async function upsertBusinessAnnouncement({ userId, listingId, title, subtitle, 
 
   if (shouldCharge) {
     try {
+      // Preserve enrollment; announce refresh must not default-enable Auto
+      // (schema default enabled=true would consume Auto-Refresh slots).
+      const { data: existing, error: existingErr } = await sb
+        .from('listing_auto_refresh')
+        .select('enabled')
+        .eq('user_id', userId)
+        .eq('listing_kind', vertical)
+        .eq('listing_id', listingId)
+        .maybeSingle();
+      if (existingErr && !String(existingErr.message || '').includes('listing_auto_refresh')) {
+        throw existingErr;
+      }
       await sb.from('listing_auto_refresh').upsert(
         {
           user_id: userId,
           listing_kind: vertical,
           listing_id: listingId,
+          enabled: Boolean(existing?.enabled),
           last_refreshed_at: now,
           updated_at: now,
         },

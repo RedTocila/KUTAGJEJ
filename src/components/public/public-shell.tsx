@@ -64,7 +64,7 @@ export function PublicShell({
         }}
       >
         {header}
-        {children}
+        <Box className="kutagjej-fade">{children}</Box>
       </Box>
       {hideFooter ? null : <PublicFooter />}
       <MobileBottomNav />

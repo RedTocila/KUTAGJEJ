@@ -3,8 +3,15 @@ const { listingPermalinkFromSlugSource } = require('../listing-permalink');
 const { computeOpenStatus, formatWeeklyHoursLine } = require('../business-hours');
 const { BUSINESS_CATEGORY_LABELS, PROFESSIONAL_CATEGORY_LABELS } = require('./constants');
 const { jobListingExpiresAt, isPremiumActive, isOkazionActive } = require('./query-helpers');
-const { pickImage, snippet, carSlugSource, carDisplayTitle } = require('./text-helpers');
+const { pickImage, isPersistableImageUrl, snippet, carSlugSource, carDisplayTitle } = require('./text-helpers');
 const { comparePriceFromDoc } = require('../listing-compare-price');
+
+function durableImageUrls(doc, { max = null } = {}) {
+  const urls = Array.isArray(doc.imageUrls)
+    ? doc.imageUrls.map((u) => String(u || '').trim()).filter(isPersistableImageUrl)
+    : [];
+  return max == null ? urls : urls.slice(0, max);
+}
 
 function premiumCardFields(doc) {
   const until = doc.premiumUntil ?? doc.premium_until ?? null;
@@ -29,6 +36,14 @@ function featuredCardFields(doc) {
     ...premiumCardFields(doc),
     ...okazionCardFields(doc),
   };
+}
+
+/** Publish time stays on createdAt; bump time drives feed order + card footer. */
+function bumpTimeFields(doc) {
+  const createdAt = doc.createdAt ?? doc.created_at ?? null;
+  const bumpedRaw = doc.bumpedAt ?? doc.bumped_at ?? null;
+  const bumpedAt = bumpedRaw ? new Date(bumpedRaw).toISOString() : createdAt;
+  return { createdAt, bumpedAt };
 }
 
 /** List cards only need the cover — never ship full galleries. */
@@ -62,7 +77,7 @@ function formatRealEstate(doc, cityById) {
     contactPhone: doc.contactPhone ?? null,
     imageUrl: pickImage(doc),
     imageUrls: coverImageUrls(doc),
-    createdAt: doc.createdAt,
+    ...bumpTimeFields(doc),
     permalinkPath: realEstatePermalink(doc),
     ...featuredCardFields(doc),
   };
@@ -96,8 +111,8 @@ function formatRealEstateDetail(doc, cityById, seller) {
     condition: doc.condition ?? null,
     contactPhone: doc.contactPhone?.trim() || null,
     imageUrl: pickImage(doc),
-    imageUrls: Array.isArray(doc.imageUrls) ? doc.imageUrls.filter(Boolean) : [],
-    createdAt: doc.createdAt,
+    imageUrls: durableImageUrls(doc),
+    ...bumpTimeFields(doc),
     updatedAt: doc.updatedAt ?? doc.createdAt,
     seller,
     permalinkPath: realEstatePermalink(doc),
@@ -125,9 +140,9 @@ function formatCar(doc, cityById) {
     color: doc.color,
     cityName: city?.name ?? null,
     contactPhone: doc.contactPhone ?? null,
-    imageUrl: Array.isArray(doc.imageUrls) && doc.imageUrls.length > 0 ? doc.imageUrls[0] : null,
+    imageUrl: pickImage(doc),
     imageUrls: coverImageUrls(doc),
-    createdAt: doc.createdAt,
+    ...bumpTimeFields(doc),
     permalinkPath: listingPermalinkFromSlugSource(carSlugSource(doc), doc.id),
     ...featuredCardFields(doc),
   };
@@ -135,6 +150,7 @@ function formatCar(doc, cityById) {
 
 function formatJob(doc, cityById) {
   const city = cityById.get(doc.cityId);
+  const times = bumpTimeFields(doc);
   return {
     id: doc.id,
     kind: 'job',
@@ -151,8 +167,8 @@ function formatJob(doc, cityById) {
     contactPhone: doc.contactPhone ?? null,
     imageUrl: pickImage(doc),
     imageUrls: coverImageUrls(doc),
-    createdAt: doc.createdAt,
-    expiresAt: jobListingExpiresAt(doc.createdAt),
+    ...times,
+    expiresAt: jobListingExpiresAt(times.createdAt),
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
     responsibilities: Array.isArray(doc.responsibilities) ? doc.responsibilities.filter(Boolean) : [],
     requirements: Array.isArray(doc.requirements) ? doc.requirements.filter(Boolean) : [],
@@ -180,7 +196,7 @@ function formatMarketplace(doc, cityById) {
     contactPhone: doc.contactPhone ?? null,
     imageUrl: pickImage(doc),
     imageUrls: coverImageUrls(doc),
-    createdAt: doc.createdAt,
+    ...bumpTimeFields(doc),
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
     ...featuredCardFields(doc),
   };
@@ -201,14 +217,16 @@ function directoryReviewFields(doc, reviewStats) {
 
 function formatProfessionalPortfolioPayload(doc) {
   return {
-    portfolioItems: (doc.portfolioItems ?? []).map((item) => ({
-      id: String(item.id),
-      title: String(item.title),
-      description: String(item.description || ''),
-      imageUrl: String(item.imageUrl),
-      location: item.location?.trim() || null,
-      sortOrder: item.sortOrder ?? 0,
-    })),
+    portfolioItems: (doc.portfolioItems ?? [])
+      .filter((item) => isPersistableImageUrl(item.imageUrl))
+      .map((item) => ({
+        id: String(item.id),
+        title: String(item.title),
+        description: String(item.description || ''),
+        imageUrl: String(item.imageUrl).trim(),
+        location: item.location?.trim() || null,
+        sortOrder: item.sortOrder ?? 0,
+      })),
   };
 }
 
@@ -219,16 +237,19 @@ function formatBusinessMenuPayload(doc) {
       name: String(c.name),
       sortOrder: c.sortOrder ?? 0,
     })),
-    menuItems: (doc.menuItems ?? []).map((item) => ({
-      id: String(item.id),
-      categoryId: String(item.categoryId),
-      name: String(item.name),
-      description: String(item.description || ''),
-      price: item.price,
-      currency: item.currency === 'LEK' ? 'LEK' : 'EUR',
-      imageUrl: item.imageUrl?.trim() || null,
-      sortOrder: item.sortOrder ?? 0,
-    })),
+    menuItems: (doc.menuItems ?? []).map((item) => {
+      const raw = item.imageUrl?.trim() || null;
+      return {
+        id: String(item.id),
+        categoryId: String(item.categoryId),
+        name: String(item.name),
+        description: String(item.description || ''),
+        price: item.price,
+        currency: item.currency === 'LEK' ? 'LEK' : 'EUR',
+        imageUrl: isPersistableImageUrl(raw) ? raw : null,
+        sortOrder: item.sortOrder ?? 0,
+      };
+    }),
   };
 }
 
@@ -247,7 +268,7 @@ function formatDirectory(doc, cityById, reviewStats) {
     contactPhone: doc.contactPhone ?? null,
     imageUrl: pickImage(doc),
     imageUrls: coverImageUrls(doc),
-    createdAt: doc.createdAt,
+    ...bumpTimeFields(doc),
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
     // Directory profiles support Premium only — OKAZION is for sellable ads.
     ...premiumCardFields(doc),
@@ -311,6 +332,8 @@ function formatCarDetail(doc, cityById, seller) {
     ...card,
     title: carDisplayTitle(doc) || `${doc.make || ''} ${doc.model || ''}`.trim(),
     description: String(doc.description || '').trim(),
+    imageUrl: pickImage(doc),
+    imageUrls: durableImageUrls(doc),
     extras: Array.isArray(doc.extras) ? doc.extras.map(String).filter(Boolean) : [],
     finish: Array.isArray(doc.finish) ? doc.finish.map(String) : [],
     seller,
@@ -324,6 +347,8 @@ function formatJobDetail(doc, cityById, seller) {
   return {
     ...card,
     description: String(doc.description || '').trim(),
+    imageUrl: pickImage(doc),
+    imageUrls: durableImageUrls(doc),
     seller,
     updatedAt: doc.updatedAt ?? doc.createdAt,
     permalinkPath: card.permalinkPath,
@@ -335,6 +360,8 @@ function formatMarketplaceDetail(doc, cityById, seller) {
   return {
     ...card,
     description: String(doc.description || '').trim(),
+    imageUrl: pickImage(doc),
+    imageUrls: durableImageUrls(doc),
     seller,
     updatedAt: doc.updatedAt ?? doc.createdAt,
     permalinkPath: card.permalinkPath,
@@ -346,6 +373,9 @@ function formatDirectoryDetail(doc, cityById, seller, reviewStats) {
   const base = {
     ...card,
     description: String(doc.description || '').trim(),
+    imageUrl: pickImage(doc),
+    // Professionals: [0]=cover [1]=avatar; businesses may have multiple photos.
+    imageUrls: durableImageUrls(doc),
     seller,
     updatedAt: doc.updatedAt ?? doc.createdAt,
     permalinkPath: card.permalinkPath,

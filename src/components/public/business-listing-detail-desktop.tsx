@@ -24,7 +24,6 @@ import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 
 import { ReservationDateField } from '@/components/core/reservation-date-field';
-import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
@@ -61,14 +60,6 @@ const reserveFieldSx = {
   '& .MuiInputLabel-root': { fontSize: '0.8rem', fontWeight: 600 },
 } as const;
 
-function selectFieldSx(flex = 1) {
-  return {
-    flex,
-    minWidth: 0,
-    ...reserveFieldSx,
-  } as const;
-}
-
 export function BusinessListingDetailDesktop({
   listing,
   similar,
@@ -76,15 +67,10 @@ export function BusinessListingDetailDesktop({
   saveCount,
   onToggleSave,
   showReservation,
-  reserveHref,
   reserveDate,
-  reserveTime,
   reservePeople,
   onReserveDate,
-  onReserveTime,
   onReservePeople,
-  timeOptions,
-  peopleOptions,
   onReserve,
   reserveGuestName,
   reserveGuestPhone,
@@ -105,15 +91,10 @@ export function BusinessListingDetailDesktop({
   saveCount: number;
   onToggleSave: () => void;
   showReservation: boolean;
-  reserveHref: string | null;
   reserveDate: string;
-  reserveTime: string;
   reservePeople: string;
   onReserveDate: (v: string) => void;
-  onReserveTime: (v: string) => void;
   onReservePeople: (v: string) => void;
-  timeOptions: string[];
-  peopleOptions: number[];
   onReserve: () => void;
   reserveGuestName: string;
   reserveGuestPhone: string;
@@ -318,32 +299,18 @@ export function BusinessListingDetailDesktop({
                             value={reserveDate}
                             onChange={onReserveDate}
                             emptyLabel="Zgjidhni datën…"
-                            sx={selectFieldSx()}
+                            sx={reserveFieldSx}
                           />
-                          <Stack direction="row" spacing={1.25}>
-                            <SearchableSelect
-                              size="small"
-                              label="Ora"
-                              value={reserveTime}
-                              onChange={onReserveTime}
-                              options={timeOptions.map((t) => ({ value: t, label: t }))}
-                              emptyLabel="Ora…"
-                              clearable={false}
-                              menuMinWidth={140}
-                              sx={selectFieldSx(1.2)}
-                            />
-                            <SearchableSelect
-                              size="small"
-                              label="Persona"
-                              value={reservePeople}
-                              onChange={onReservePeople}
-                              options={peopleOptions.map((n) => ({ value: String(n), label: String(n) }))}
-                              emptyLabel="—"
-                              clearable={false}
-                              menuMinWidth={120}
-                              sx={selectFieldSx(0.85)}
-                            />
-                          </Stack>
+                          <TextField
+                            size="small"
+                            label="Numri i mysafirëve"
+                            type="number"
+                            value={reservePeople}
+                            onChange={(e) => onReservePeople(e.target.value)}
+                            inputProps={{ min: 1, max: 50, inputMode: 'numeric' }}
+                            fullWidth
+                            sx={reserveFieldSx}
+                          />
                           {usePlatformReservation ? (
                             <Stack spacing={1.25}>
                               <TextField
@@ -394,7 +361,7 @@ export function BusinessListingDetailDesktop({
                               )
                             }
                             onClick={onReserve}
-                            disabled={usePlatformReservation ? reserveSubmitting : !reserveHref}
+                            disabled={usePlatformReservation ? reserveSubmitting : false}
                             sx={{
                               ...productButtonSx,
                               py: 1.25,
@@ -452,7 +419,7 @@ export function BusinessListingDetailDesktop({
 
           <Box>
             <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', mb: 1.5 }}>Menu</Typography>
-            <BusinessMenuPreview listing={listing} maxPerCategory={3} />
+            <BusinessMenuPreview listing={listing} maxPerCategory={4} />
           </Box>
 
           <BusinessReviewSection

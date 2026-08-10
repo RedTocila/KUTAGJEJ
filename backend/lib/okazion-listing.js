@@ -4,6 +4,7 @@ const { getSupabaseAdmin } = require('./supabase');
 const { isUuid, isPremiumActive } = require('./public-listings/query-helpers');
 const { isValidKind, TABLE_BY_KIND } = require('./listing-refresh');
 const { getOkazionPackage } = require('./okazion-packages');
+const { applyListingBump } = require('./listing-bump');
 
 /** OKAZION slots included with Grow / Elite stay featured for 5 days. */
 const PLAN_OKAZION_PACKAGE_ID = 'plan-okazion';
@@ -279,24 +280,35 @@ function computeOkazionUntil(listing, days) {
 }
 
 async function bumpListingOkazion(sb, table, listingId, until, now) {
-  const { error: bumpErr } = await sb
-    .from(table)
-    .update({
-      okazion_until: until.toISOString(),
-      // Public feed bump only — keep updated_at so My listings order stays put.
-      created_at: now.toISOString(),
-    })
-    .eq('id', listingId);
-  if (bumpErr) throw bumpErr;
+  await applyListingBump(
+    sb,
+    table,
+    listingId,
+    { okazion_until: until.toISOString() },
+    now.toISOString(),
+  );
 }
 
 async function markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt }) {
   try {
+    // Preserve enrollment; new cooldown anchors must not default-enable Auto
+    // (schema default enabled=true would consume Auto-Refresh slots).
+    const { data: existing, error: existingErr } = await sb
+      .from('listing_auto_refresh')
+      .select('enabled')
+      .eq('user_id', userId)
+      .eq('listing_kind', kind)
+      .eq('listing_id', listingId)
+      .maybeSingle();
+    if (existingErr && !String(existingErr.message || '').includes('listing_auto_refresh')) {
+      throw existingErr;
+    }
     await sb.from('listing_auto_refresh').upsert(
       {
         user_id: userId,
         listing_kind: kind,
         listing_id: listingId,
+        enabled: Boolean(existing?.enabled),
         last_refreshed_at: refreshedAt,
         updated_at: refreshedAt,
       },

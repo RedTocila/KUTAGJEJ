@@ -31,7 +31,9 @@ export const productBackButtonSx = {
   borderColor: 'divider',
   bgcolor: 'background.paper',
   borderRadius: '50%',
-  '&:hover': { bgcolor: 'action.hover' },
+  transition: 'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
+  '&:hover': { bgcolor: 'action.hover', borderColor: 'primary.main' },
+  '&:active': { transform: 'scale(0.94)' },
 } as const;
 
 export function ProductBackButton({
@@ -98,11 +100,15 @@ export function productTagSx(active = false, accent?: ProductTagAccent): SxProps
     lineHeight: 1.2,
     fontFamily: 'inherit',
     cursor: 'pointer',
-    transition: 'border-color 0.15s, background-color 0.15s, color 0.15s',
+    transition:
+      'border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
     '&:hover': {
       borderColor: accentColor,
       color: accentColor,
       bgcolor: hoverSoft,
+    },
+    '&:active': {
+      transform: 'scale(0.97)',
     },
   };
 }
@@ -229,7 +235,8 @@ export function productSearchBarSx(
     boxSizing: 'border-box',
     textDecoration: 'none',
     color: 'inherit',
-    transition: 'border-color 0.15s, background-color 0.15s',
+    transition:
+      'border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1)',
   };
 }
 
@@ -267,9 +274,14 @@ export function productFilterButtonSx(active = false): SxProps<Theme> {
     color: active ? 'primary.contrastText' : 'text.primary',
     bgcolor: active ? 'primary.main' : 'background.paper',
     boxShadow: active ? `0 2px 10px ${primaryMainAlpha(0.4)}` : 'none',
+    transition:
+      'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), color 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
     '&:hover': {
       bgcolor: active ? 'primary.dark' : primaryMainAlpha(0.1),
       borderColor: 'primary.main',
+    },
+    '&:active': {
+      transform: 'scale(0.94)',
     },
   };
 }

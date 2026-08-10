@@ -203,13 +203,25 @@ async function setListingAutoRefresh({ userId, kind, listingId, enabled }) {
     );
     if (upsertErr) throw upsertErr;
   } else {
-    const { error: delErr } = await sb
+    // Keep last_refreshed_at cooldown anchor; only clear enrollment.
+    const now = new Date().toISOString();
+    const { data: existing, error: existingErr } = await sb
       .from('listing_auto_refresh')
-      .delete()
+      .select('id')
       .eq('user_id', userId)
       .eq('listing_kind', kind)
-      .eq('listing_id', listingId);
-    if (delErr) throw delErr;
+      .eq('listing_id', listingId)
+      .maybeSingle();
+    if (existingErr) throw existingErr;
+    if (existing) {
+      const { error: offErr } = await sb
+        .from('listing_auto_refresh')
+        .update({ enabled: false, updated_at: now })
+        .eq('user_id', userId)
+        .eq('listing_kind', kind)
+        .eq('listing_id', listingId);
+      if (offErr) throw offErr;
+    }
   }
 
   const next = await getAutoRefreshSnapshot(userId);

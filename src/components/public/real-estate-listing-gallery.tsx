@@ -103,7 +103,10 @@ export function RealEstateListingGallery(props: {
     sharePayload,
     onEditPhotos,
   } = props;
-  const urls = urlsRaw.filter(Boolean);
+  const urls = urlsRaw.filter((u) => {
+    const s = String(u || '').trim();
+    return s && !/^blob:/i.test(s) && !/^data:/i.test(s);
+  });
   const [shareCount, setShareCount] = React.useState(initialShareCount);
   const [saveCount, setSaveCount] = React.useState(initialSaveCount);
   const [shareOpen, setShareOpen] = React.useState(false);

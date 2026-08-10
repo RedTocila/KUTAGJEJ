@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import {
-  Alert,
   Box,
   Button,
   Checkbox,
@@ -36,6 +35,7 @@ import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { VehicleTypePicker } from '@/components/cars/vehicle-type-picker';
 import {
+  ListingFormActionError,
   ListingFormActions,
   ListingTextField,
   ListingToggle,
@@ -361,7 +361,6 @@ export function CarListingForm({
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const cityFieldRef = React.useRef<HTMLDivElement>(null);
 
   // Load cities once on mount.
   React.useEffect(() => {
@@ -402,6 +401,7 @@ export function CarListingForm({
       delete next[key];
       return next;
     });
+    setSubmitError(null);
   };
 
   const onField =
@@ -494,9 +494,7 @@ export function CarListingForm({
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       const first = firstFieldError(errors);
-      if (first === 'cityId') {
-        cityFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      setSubmitError(first ? errors[first]! : 'Plotësoni fushat e detyrueshme.');
       return;
     }
     setFieldErrors({});
@@ -540,12 +538,8 @@ export function CarListingForm({
           const field = mapServerErrorToField(result.error);
           if (field) {
             setFieldErrors({ [field]: result.error });
-            if (field === 'cityId') {
-              cityFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-          } else {
-            setSubmitError(result.error);
           }
+          setSubmitError(result.error);
           return;
         }
       } else {
@@ -600,12 +594,8 @@ export function CarListingForm({
           const field = mapServerErrorToField(error);
           if (field) {
             setFieldErrors({ [field]: error });
-            if (field === 'cityId') {
-              cityFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-          } else {
-            setSubmitError(error);
           }
+          setSubmitError(error);
           return;
         }
         if (id && (wantsPremium || boostKindRef.current === 'premium')) {
@@ -659,12 +649,6 @@ export function CarListingForm({
       spacing={3}
       onSubmit={(e) => void handleSubmit(e)}
     >
-      {submitError ? (
-        <Alert severity="error" sx={{ borderRadius: 1.5 }}>
-          {submitError}
-        </Alert>
-      ) : null}
-
       {/* ── Car identity ─────────────────────────────────────────────────── */}
       <Stack spacing={2}>
         <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
@@ -835,7 +819,7 @@ export function CarListingForm({
           placeholder="e.g. Sportback, Competition, S-Line…"
         />
 
-        <Box ref={cityFieldRef}>
+        <Box>
           <SearchableSelect
             label="City"
             value={form.cityId}
@@ -1112,55 +1096,58 @@ export function CarListingForm({
         </FormGroup>
       </Stack>
 
-      {wantsPremium && !isEdit ? (
-        <PremiumPostActions
-          submitting={submitting}
-          onPost={(mode) => {
-            premiumPayRef.current = mode;
-            boostKindRef.current = 'premium';
-            formRef.current?.requestSubmit();
-          }}
-        />
-      ) : wantsOkazion && !isEdit ? (
-        <OkazionPostActions
-          submitting={submitting}
-          onPost={(mode: OkazionPayMode) => {
-            okazionPayRef.current = mode;
-            boostKindRef.current = 'okazion';
-            formRef.current?.requestSubmit();
-          }}
-        />
-      ) : (
-        <Stack spacing={1.25}>
-          {!isEdit ? (
-            <ListingBoostChoiceBar
-              submitting={submitting}
-              onPostPremium={(mode, packageId) => {
-                premiumPayRef.current = mode;
-                premiumPackageIdRef.current = packageId;
-                boostKindRef.current = 'premium';
-                formRef.current?.requestSubmit();
-              }}
-              onPostOkazion={(mode) => {
-                okazionPayRef.current = mode;
-                boostKindRef.current = 'okazion';
-                formRef.current?.requestSubmit();
-              }}
-            />
-          ) : null}
-          <ListingFormActions
-            submitLabel={isEdit ? 'Përditëso njoftimin' : 'Posto falas'}
+      <Stack spacing={1.25}>
+        <ListingFormActionError error={submitError} />
+        {wantsPremium && !isEdit ? (
+          <PremiumPostActions
             submitting={submitting}
-            backHref={backHref}
-            backLabel={backLabel}
-            submitProps={{
-              onClick: () => {
-                boostKindRef.current = null;
-              },
+            onPost={(mode) => {
+              premiumPayRef.current = mode;
+              boostKindRef.current = 'premium';
+              formRef.current?.requestSubmit();
             }}
           />
-        </Stack>
-      )}
+        ) : wantsOkazion && !isEdit ? (
+          <OkazionPostActions
+            submitting={submitting}
+            onPost={(mode: OkazionPayMode) => {
+              okazionPayRef.current = mode;
+              boostKindRef.current = 'okazion';
+              formRef.current?.requestSubmit();
+            }}
+          />
+        ) : (
+          <>
+            {!isEdit ? (
+              <ListingBoostChoiceBar
+                submitting={submitting}
+                onPostPremium={(mode, packageId) => {
+                  premiumPayRef.current = mode;
+                  premiumPackageIdRef.current = packageId;
+                  boostKindRef.current = 'premium';
+                  formRef.current?.requestSubmit();
+                }}
+                onPostOkazion={(mode) => {
+                  okazionPayRef.current = mode;
+                  boostKindRef.current = 'okazion';
+                  formRef.current?.requestSubmit();
+                }}
+              />
+            ) : null}
+            <ListingFormActions
+              submitLabel={isEdit ? 'Përditëso njoftimin' : 'Posto falas'}
+              submitting={submitting}
+              backHref={backHref}
+              backLabel={backLabel}
+              submitProps={{
+                onClick: () => {
+                  boostKindRef.current = null;
+                },
+              }}
+            />
+          </>
+        )}
+      </Stack>
     </Stack>
   );
 }

@@ -126,7 +126,7 @@ export function BusinessOwnerReservations() {
                   {rows.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell>{r.reservationDate}</TableCell>
-                      <TableCell>{r.timeSlot}</TableCell>
+                      <TableCell>{r.timeSlot || '—'}</TableCell>
                       <TableCell>{r.partySize}</TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>

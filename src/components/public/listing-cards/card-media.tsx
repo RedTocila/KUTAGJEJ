@@ -93,6 +93,13 @@ export function CardMedia({
   const [saveCount, setSaveCount] = React.useState(initialSaveCount);
   const [metricsReady, setMetricsReady] = React.useState(false);
   const [shareOpen, setShareOpen] = React.useState(false);
+  const [imageFailed, setImageFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    setImageFailed(false);
+  }, [imageUrl]);
+
+  const showImage = Boolean(imageUrl) && !imageFailed;
 
   React.useEffect(() => {
     let cancelled = false;
@@ -177,14 +184,16 @@ export function CardMedia({
         overflow: 'hidden',
       }}
     >
-      {imageUrl ? (
+      {showImage ? (
         <Image
-          src={imageUrl}
+          src={imageUrl!}
           alt={alt}
           fill
           sizes="(max-width: 600px) 100vw, 320px"
           priority={priority}
+          className="listing-card-media-image"
           style={{ objectFit: 'cover' }}
+          onError={() => setImageFailed(true)}
         />
       ) : (
         <Stack

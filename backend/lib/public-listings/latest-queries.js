@@ -17,8 +17,11 @@ const {
   isUuid,
   prioritizeActivePremium,
   withoutPremiumSort,
+  withoutBumpedAtSort,
+  newestTimestampColumn,
 } = require('./query-helpers');
 const { mergePublicFilter } = require('../listing-moderation');
+const { hasBumpedAtColumn } = require('../ensure-bumped-at-schema');
 const {
   formatRealEstate,
   formatCar,
@@ -63,6 +66,7 @@ const LIST_SELECT_BY_TABLE = {
     'okazion_until',
     'status',
     'created_at',
+    'bumped_at',
     'poster_id',
   ].join(','),
   car_listings: [
@@ -87,6 +91,7 @@ const LIST_SELECT_BY_TABLE = {
     'okazion_until',
     'status',
     'created_at',
+    'bumped_at',
     'poster_id',
   ].join(','),
   job_listings: [
@@ -107,6 +112,7 @@ const LIST_SELECT_BY_TABLE = {
     'okazion_until',
     'status',
     'created_at',
+    'bumped_at',
     'poster_id',
   ].join(','),
   marketplace_listings: [
@@ -126,6 +132,7 @@ const LIST_SELECT_BY_TABLE = {
     'okazion_until',
     'status',
     'created_at',
+    'bumped_at',
     'poster_id',
   ].join(','),
   directory_listings: [
@@ -152,12 +159,21 @@ const LIST_SELECT_BY_TABLE = {
     'announcement_banner_url',
     'status',
     'created_at',
+    'bumped_at',
     'poster_id',
   ].join(','),
 };
 
 function listSelectForTable(table) {
-  return LIST_SELECT_BY_TABLE[table] || '*';
+  const base = LIST_SELECT_BY_TABLE[table] || '*';
+  if (hasBumpedAtColumn() === false && typeof base === 'string') {
+    return base
+      .split(',')
+      .map((c) => c.trim())
+      .filter((c) => c && c !== 'bumped_at')
+      .join(',');
+  }
+  return base;
 }
 
 function baseFilterForKind(kind) {
@@ -177,8 +193,11 @@ async function runListingQuery(table, filterSpec, sortSpec, limit, skip = 0) {
   const sb = getSupabaseAdmin();
   const effectiveSort = sortSpec && sortSpec.length ? sortSpec : buildSort('newest');
 
-  const run = async (spec) => {
-    let q = applyFilterSpec(sb.from(table).select(listSelectForTable(table)), filterSpec);
+  const run = async (spec, selectOverride) => {
+    let q = applyFilterSpec(
+      sb.from(table).select(selectOverride || listSelectForTable(table)),
+      filterSpec,
+    );
     q = applySort(q, spec);
     if (limit > 0) q = q.range(skip, skip + limit - 1);
     return q;
@@ -191,6 +210,17 @@ async function runListingQuery(table, filterSpec, sortSpec, limit, skip = 0) {
     /(premium_until|okazion_until)/i.test(String(error.message || ''))
   ) {
     ({ data, error } = await run(withoutPremiumSort(effectiveSort)));
+  }
+  if (error && /bumped_at/i.test(String(error.message || ''))) {
+    const selectWithoutBump = (LIST_SELECT_BY_TABLE[table] || '*')
+      .split(',')
+      .map((c) => c.trim())
+      .filter((c) => c && c !== 'bumped_at')
+      .join(',');
+    ({ data, error } = await run(
+      withoutBumpedAtSort(withoutPremiumSort(effectiveSort)),
+      selectWithoutBump,
+    ));
   }
   if (error) throw error;
   const rows = camelizeRows(data);
@@ -505,7 +535,7 @@ async function queryOkazionListings(limit = 48, skip = 0, query = {}) {
   const okazionFilter = { gt: { okazion_until: nowIso } };
   const sortSpec = [
     { column: 'okazion_until', ascending: false, nullsFirst: false },
-    { column: 'created_at', ascending: false },
+    { column: newestTimestampColumn(), ascending: false },
   ];
 
   const VERTICAL_TO_KIND = {
@@ -565,9 +595,13 @@ async function queryOkazionListings(limit = 48, skip = 0, query = {}) {
       const aUntil = new Date(a.doc.okazionUntil || a.doc.okazion_until || 0).getTime();
       const bUntil = new Date(b.doc.okazionUntil || b.doc.okazion_until || 0).getTime();
       if (bUntil !== aUntil) return bUntil - aUntil;
-      const aCreated = new Date(a.doc.createdAt || a.doc.created_at || 0).getTime();
-      const bCreated = new Date(b.doc.createdAt || b.doc.created_at || 0).getTime();
-      return bCreated - aCreated;
+      const aBump = new Date(
+        a.doc.bumpedAt || a.doc.bumped_at || a.doc.createdAt || a.doc.created_at || 0,
+      ).getTime();
+      const bBump = new Date(
+        b.doc.bumpedAt || b.doc.bumped_at || b.doc.createdAt || b.doc.created_at || 0,
+      ).getTime();
+      return bBump - aBump;
     });
 
   const total = merged.length;

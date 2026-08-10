@@ -177,11 +177,14 @@ function UserNavRow({
           position: 'relative',
           textDecoration: 'none',
           whiteSpace: 'nowrap',
+          transition:
+            'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
           ...(active && {
             bgcolor: 'var(--NavItem-active-background)',
             color: 'var(--NavItem-active-color)',
           }),
           '&:hover': { bgcolor: active ? undefined : 'var(--NavItem-hover-background)' },
+          '&:active': { transform: 'scale(0.985)' },
         }}
       >
         <Box sx={{ alignItems: 'center', display: 'flex', justifyContent: 'center', flex: '0 0 auto' }}>

@@ -67,10 +67,17 @@ export function HomeCategoriesStrip() {
                     theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
                   border: '1px solid',
                   borderColor: 'divider',
-                  transition: 'transform 0.15s ease, border-color 0.15s ease',
+                  transition: 'transform 160ms cubic-bezier(0.22, 1, 0.36, 1), border-color 160ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1), background-color 160ms ease',
                   '&:hover': {
                     borderColor: accent,
-                    transform: 'translateY(-2px)',
+                    transform: 'translateY(-3px)',
+                    boxShadow: (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? '0 10px 24px rgba(0,0,0,0.28)'
+                        : '0 10px 24px rgba(15, 23, 10, 0.08)',
+                  },
+                  '&:active': {
+                    transform: 'translateY(-1px)',
                   },
                 }}
               >

@@ -11,6 +11,7 @@ const { ensureHomeBanners } = require('./lib/ensure-home-banners');
 const { ensureAutoRefreshSchema } = require('./lib/ensure-auto-refresh-schema');
 const { ensurePremiumListingSchema } = require('./lib/ensure-premium-listing-schema');
 const { ensureOkazionListingSchema } = require('./lib/ensure-okazion-listing-schema');
+const { ensureBumpedAtSchema } = require('./lib/ensure-bumped-at-schema');
 const { ensureMemberReviewsSchema } = require('./lib/ensure-member-reviews-schema');
 const { backfillMissingReferralCodes } = require('./lib/referrals');
 const { backfillOrphanProfiles } = require('./lib/profiles');
@@ -88,6 +89,7 @@ async function bootstrap() {
   await ensureAutoRefreshSchema();
   await ensurePremiumListingSchema();
   await ensureOkazionListingSchema();
+  await ensureBumpedAtSchema();
   await ensureMemberReviewsSchema();
   const restored = await backfillOrphanProfiles();
   if (restored > 0) console.log(`✓ Restored ${restored} orphan profile(s) from auth`);

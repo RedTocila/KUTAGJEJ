@@ -12,6 +12,8 @@ export type ListingMetricsFields = ListingMetrics & {
   /** Active OKAZION window — red-themed short deal (5 days). */
   isOkazion?: boolean;
   okazionUntil?: string | null;
+  /** Last refresh / premium / okazion / announce bump — drives “newest” + card footer time. */
+  bumpedAt?: string | null;
   /** Poster has an approved account verification badge. */
   sellerVerified?: boolean;
   /** Poster has an active Grow or Elite package (Premium Badge stamp on titles). */

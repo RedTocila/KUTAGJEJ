@@ -7,6 +7,12 @@ const PROFESSIONAL_CATEGORIES = new Set([
 
 const CURRENCY_VALUES = new Set(['EUR', 'LEK']);
 
+function isPersistableImageUrl(url) {
+  const u = String(url || '').trim();
+  if (!u || /^blob:/i.test(u) || /^data:/i.test(u)) return false;
+  return /^https?:\/\//i.test(u) || u.startsWith('/');
+}
+
 function normalizePortfolioItems(input) {
   if (!Array.isArray(input)) return [];
   const out = [];
@@ -15,7 +21,7 @@ function normalizePortfolioItems(input) {
     const row = input[i];
     const title = String(row?.title || '').trim();
     const imageUrl = String(row?.imageUrl || '').trim();
-    if (!title || title.length > 120 || !imageUrl) continue;
+    if (!title || title.length > 120 || !isPersistableImageUrl(imageUrl)) continue;
     let id = String(row?.id || '').trim();
     if (!id) id = randomUUID();
     if (seen.has(id)) id = randomUUID();
@@ -66,7 +72,7 @@ function validateProfessionalPayload(body, { partial = false } = {}) {
 
   const portfolioItems = normalizePortfolioItems(body?.portfolioItems);
   const imageUrls = Array.isArray(body?.imageUrls)
-    ? body.imageUrls.map((u) => String(u || '').trim()).filter(Boolean).slice(0, 2)
+    ? body.imageUrls.map((u) => String(u || '').trim()).filter(isPersistableImageUrl).slice(0, 2)
     : undefined;
 
   return {

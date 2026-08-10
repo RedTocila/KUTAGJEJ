@@ -3,6 +3,13 @@
   --icon-fontSize-sm: 1rem;
   --icon-fontSize-md: 1.25rem;
   --icon-fontSize-lg: 1.5rem;
+
+  /* Motion — short + snappy so the product feels premium, not laggy */
+  --motion-fast: 140ms;
+  --motion-base: 200ms;
+  --motion-enter: 320ms;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 *:focus-visible {
@@ -99,6 +106,55 @@ html.dark .kutagjej-splash {
   }
 }
 
+/* Soft page / section enter (transform + opacity only) */
+@keyframes kutagjejEnter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes kutagjejCardIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes kutagjejFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.kutagjej-enter {
+  animation: kutagjejEnter var(--motion-enter) var(--motion-ease) both;
+}
+
+.kutagjej-fade {
+  animation: kutagjejFadeIn var(--motion-base) var(--motion-ease) both;
+}
+
+.kutagjej-card-enter {
+  animation: kutagjejCardIn var(--motion-enter) var(--motion-ease) both;
+}
+
+/* Listing card media zoom — paired with `.listing-card-media-image` */
+.listing-card-media-image {
+  transition: transform var(--motion-enter) var(--motion-ease);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kutagjej-splash {
     transition: none;
@@ -107,6 +163,16 @@ html.dark .kutagjej-splash {
   .kutagjej-splash__logo,
   .kutagjej-splash__bar {
     animation: none;
+  }
+
+  .kutagjej-enter,
+  .kutagjej-fade,
+  .kutagjej-card-enter {
+    animation: none;
+  }
+
+  .listing-card-media-image {
+    transition: none;
   }
 }
 

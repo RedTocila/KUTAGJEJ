@@ -23,6 +23,8 @@ import { jobMineToPublic } from '@/lib/listing-mine-to-public';
 import { updateJobListing, type JobMineListing } from '@/lib/listings-client';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { isPersistableImageUrl } from '@/lib/image-url';
+import { commitListingPhotos } from '@/lib/owner-edit-photos';
 import { uploadListingImages } from '@/lib/uploads-client';
 import { paths } from '@/paths';
 
@@ -153,7 +155,7 @@ export function JobOwnerEdit({
   };
 
   const openPhotos = () => {
-    setExistingUrls(draft.imageUrls ?? []);
+    setExistingUrls((draft.imageUrls ?? []).filter(isPersistableImageUrl));
     setNewFiles([]);
     setPhotosOpen(true);
   };
@@ -164,9 +166,10 @@ export function JobOwnerEdit({
     setSaving(true);
     try {
       let uploaded: string[] = [];
+      const kept = existingUrls.filter(isPersistableImageUrl);
       if (newFiles.length) {
         const up = await uploadListingImages(
-          newFiles.slice(0, Math.max(0, MAX_IMAGES - existingUrls.length)),
+          newFiles.slice(0, Math.max(0, MAX_IMAGES - kept.length)),
           'jobs',
         );
         if (up.error) {
@@ -175,7 +178,7 @@ export function JobOwnerEdit({
         }
         uploaded = up.urls;
       }
-      const imageUrls = [...existingUrls, ...uploaded].slice(0, MAX_IMAGES);
+      const imageUrls = [...kept, ...uploaded].slice(0, MAX_IMAGES);
       const cityId = draft.cityId;
       if (!cityId) {
         setError('Zgjidhni qytetin.');
@@ -443,12 +446,20 @@ export function JobOwnerEdit({
         open={photosOpen}
         title="Fotot"
         onClose={() => setPhotosOpen(false)}
-        onApply={() => {
-          const pendingPreviews = newFiles.map((f) => URL.createObjectURL(f));
-          setDraft((d) => ({
-            ...d,
-            imageUrls: [...existingUrls, ...pendingPreviews].slice(0, MAX_IMAGES),
-          }));
+        onApply={async () => {
+          const res = await commitListingPhotos({
+            existingUrls,
+            newFiles,
+            folder: 'jobs',
+            max: MAX_IMAGES,
+          });
+          if (res.error) {
+            setError(res.error);
+            return;
+          }
+          setDraft((d) => ({ ...d, imageUrls: res.urls }));
+          setExistingUrls(res.urls);
+          setNewFiles([]);
           setPhotosOpen(false);
         }}
       >

@@ -26,7 +26,7 @@ import { ProfessionalRatingBadge } from '@/components/public/professional-listin
 import {
   findOptionLabel,
   formatBusinessOpeningHoursForCard,
-  relativeAlbanianDate,
+  listingCardRelativeDate,
 } from './format-helpers';
 import { ListingCardRating,
   resolveListingCardRating,
@@ -173,7 +173,7 @@ function BusinessVenueCardBody({
 
           <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="caption" color="text.disabled">
-              {relativeAlbanianDate(listing.createdAt)}
+              {listingCardRelativeDate(listing)}
             </Typography>
             <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
               <EyeIcon size={14} weight="regular" />
@@ -333,7 +333,7 @@ function ProfessionalListingCardBody({
 
           <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="caption" color="text.disabled">
-              {relativeAlbanianDate(listing.createdAt)}
+              {listingCardRelativeDate(listing)}
             </Typography>
             <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
               <EyeIcon size={14} weight="regular" />

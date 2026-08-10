@@ -61,8 +61,8 @@ function sanitizeImageUrls(input, max = MAX_IMAGES) {
   if (!Array.isArray(list)) return [];
   return list
     .map((u) => String(u || '').trim())
-    .filter(Boolean)
-    .filter((u) => /^https?:\/\//i.test(u))
+    // Never persist browser-only blob:/data: previews (blob:https://… looks similar but is not http).
+    .filter((u) => /^https?:\/\//i.test(u) && !/^blob:/i.test(u) && !/^data:/i.test(u))
     .slice(0, max);
 }
 

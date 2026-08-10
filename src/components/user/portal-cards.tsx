@@ -69,8 +69,8 @@ export function PortalLinkCard({
         p: { xs: 2.25, sm: 2.75 },
         ...(grouped ? null : portalCardSx),
         transition: grouped
-          ? 'background-color 0.15s ease'
-          : 'border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease',
+          ? 'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1)'
+          : 'border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1)',
         '&:hover': {
           ...(grouped
             ? {
@@ -81,10 +81,19 @@ export function PortalLinkCard({
                 borderColor: (t: Theme) => alpha(t.palette.primary.main, 0.45),
                 bgcolor: (t: Theme) =>
                   t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'action.hover',
-                transform: 'translateY(-1px)',
+                transform: 'translateY(-2px)',
+                boxShadow: (t: Theme) =>
+                  t.palette.mode === 'dark'
+                    ? '0 10px 24px rgba(0,0,0,0.28)'
+                    : '0 10px 24px rgba(15, 23, 10, 0.08)',
               }),
+          '& .portal-link-caret': {
+            transform: 'translateX(3px)',
+            color: 'primary.main',
+            opacity: 1,
+          },
         },
-        '&:active': grouped ? undefined : { transform: 'translateY(0)' },
+        '&:active': grouped ? undefined : { transform: 'translateY(0)', boxShadow: 'none' },
       }}
     >
       <Stack direction="row" spacing={1.75} sx={{ alignItems: 'center' }}>
@@ -123,7 +132,16 @@ export function PortalLinkCard({
             />
           ) : null}
         </Box>
-        <Box sx={{ color: 'text.secondary', display: 'flex', flexShrink: 0, opacity: 0.7 }}>
+        <Box
+          className="portal-link-caret"
+          sx={{
+            color: 'text.secondary',
+            display: 'flex',
+            flexShrink: 0,
+            opacity: 0.7,
+            transition: 'transform 160ms cubic-bezier(0.22, 1, 0.36, 1), color 160ms ease, opacity 160ms ease',
+          }}
+        >
           <CaretRightIcon size={20} weight="bold" />
         </Box>
       </Stack>

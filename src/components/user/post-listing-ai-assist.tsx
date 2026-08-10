@@ -421,10 +421,18 @@ export function PostListingAiAssist({
             '& textarea': {
               resize: 'none',
               lineHeight: 1.35,
-              whiteSpace: 'pre-wrap',
-              overflowWrap: 'anywhere',
-              wordBreak: 'break-word',
-              overflow: inputExpanded ? 'auto' : 'hidden',
+              ...(!text
+                ? {
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden !important',
+                  }
+                : {
+                    whiteSpace: 'pre-wrap',
+                    overflowWrap: 'anywhere',
+                    wordBreak: 'break-word',
+                    overflow: inputExpanded ? 'auto' : 'hidden',
+                  }),
             },
           }}
         />

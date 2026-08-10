@@ -30,6 +30,25 @@ function persistAccessToken(token: string | null | undefined, refreshToken?: str
   persistTokens(token, refreshToken === undefined ? undefined : refreshToken);
 }
 
+/** Hydrate the browser Supabase client without a second password round-trip.
+ * Never block redirect on a hung auth network call (same class of bug as sign-out). */
+async function syncBrowserSession(accessToken: string, refreshToken: string | null | undefined): Promise<void> {
+  try {
+    const sb = getSupabaseBrowserClient();
+    await Promise.race([
+      sb.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken ?? '',
+      }),
+      new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 800);
+      }),
+    ]);
+  } catch {
+    /* browser session optional; API token is source of truth for /api */
+  }
+}
+
 const loginErrorSq = (message: string | undefined): string => {
   const key = (message || '').trim();
   const map: Record<string, string> = {
@@ -88,12 +107,7 @@ class AuthClient {
       if (!res.ok) return { error: loginErrorSq(data.message) };
       persistAccessToken(data.token, data.refreshToken ?? null);
       persistUserProfile(data.admin);
-      try {
-        const sb = getSupabaseBrowserClient();
-        await sb.auth.signInWithPassword({ email: params.email, password: params.password });
-      } catch {
-        /* browser session optional; API token is source of truth for /api */
-      }
+      await syncBrowserSession(data.token, data.refreshToken ?? null);
       return { user: data.admin as User };
     } catch (_error) {
       return { error: 'Nuk u arrit lidhja me serverin. Kontrollo rrjetin ose adresën e API-së.' };
@@ -111,14 +125,7 @@ class AuthClient {
       if (!res.ok) return { error: registerErrorSq(data.message) };
       if (data.token) persistAccessToken(data.token, data.refreshToken ?? null);
       persistUserProfile(data.admin);
-      try {
-        if (data.token) {
-          const sb = getSupabaseBrowserClient();
-          await sb.auth.signInWithPassword({ email: params.email, password: params.password });
-        }
-      } catch {
-        /* optional */
-      }
+      if (data.token) await syncBrowserSession(data.token, data.refreshToken ?? null);
       return { user: data.admin as User };
     } catch (_error) {
       return { error: 'Nuk u arrit lidhja me serverin. Kontrollo rrjetin ose adresën e API-së.' };

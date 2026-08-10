@@ -21,7 +21,6 @@ import { ListingDetailTitleBadges } from '@/components/public/listing-detail-tit
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
 import { ReservationDateField } from '@/components/core/reservation-date-field';
-import { SearchableSelect } from '@/components/core/searchable-select';
 import { BusinessMenuPreview } from '@/components/public/business-menu-section';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
@@ -38,10 +37,6 @@ import {
   submitBusinessReservationToMessages,
 } from '@/lib/business-reservation-message';
 import { BusinessReviewSection } from '@/components/businesses/business-review-section';
-import {
-  DEFAULT_RESERVATION_PARTY_SIZES,
-  DEFAULT_RESERVATION_TIME_SLOTS,
-} from '@/lib/business-constants';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { BusinessListingDetailDesktop } from '@/components/public/business-listing-detail-desktop';
@@ -76,14 +71,6 @@ const reserveFieldSx = {
   '& .MuiInputLabel-root': { fontSize: FONT_CAPTION, fontWeight: 600 },
 } as const;
 
-function selectFieldSx(flex = 1) {
-  return {
-    flex,
-    minWidth: 0,
-    ...reserveFieldSx,
-  } as const;
-}
-
 export function BusinessListingDetailView({
   listing,
   similar = [],
@@ -106,7 +93,6 @@ export function BusinessListingDetailView({
     saveCount: listing.saveCount,
   });
   const [reserveDate, setReserveDate] = React.useState('');
-  const [reserveTime, setReserveTime] = React.useState('');
   const [reservePeople, setReservePeople] = React.useState('2');
   const [reserveGuestName, setReserveGuestName] = React.useState('');
   const [reserveGuestPhone, setReserveGuestPhone] = React.useState('');
@@ -120,36 +106,25 @@ export function BusinessListingDetailView({
   const categoryLine = React.useMemo(() => businessCategorySubtitle(listing), [listing]);
   const statusLine = React.useMemo(() => businessOpenStatusLine(listing), [listing]);
   const dateBounds = React.useMemo(() => reservationDateBounds(), []);
-  const timeOptions =
-    listing.reservationTimeSlots?.length ? listing.reservationTimeSlots : DEFAULT_RESERVATION_TIME_SLOTS;
-  const peopleOptions =
-    listing.reservationPartySizes?.length ? listing.reservationPartySizes : DEFAULT_RESERVATION_PARTY_SIZES;
 
   const showReservation = listing.reservationsEnabled;
-  const usePlatformReservation = showReservation && !listing.reservationUrl?.trim();
-  const reserveHref = listing.reservationUrl?.trim() || telHref;
+  const usePlatformReservation = showReservation;
 
   React.useEffect(() => {
     if (!reserveDate) setReserveDate(dateBounds.min);
-    if (!reserveTime && timeOptions[0]) setReserveTime(timeOptions[0]);
-    if (!reservePeople && peopleOptions[0]) setReservePeople(String(peopleOptions[0]));
-  }, [dateBounds.min, reserveDate, reserveTime, reservePeople, timeOptions, peopleOptions]);
+  }, [dateBounds.min, reserveDate]);
 
   const handleReserve = async () => {
-    if (listing.reservationUrl?.trim()) {
-      emitHotLeadContactAction({ listingKind: 'businesses', listingId: listing.id });
-      const url = new URL(listing.reservationUrl.trim());
-      if (reserveDate) url.searchParams.set('date', reserveDate);
-      if (reserveTime) url.searchParams.set('time', reserveTime);
-      if (reservePeople) url.searchParams.set('guests', reservePeople);
-      window.open(url.toString(), '_blank', 'noopener,noreferrer');
-      return;
-    }
     if (usePlatformReservation) {
       const name = reserveGuestName.trim();
       const phone = reserveGuestPhone.trim();
-      if (!reserveDate || !reserveTime) {
-        setReserveFeedback('Zgjidhni datën dhe orën.');
+      const partySize = Number.parseInt(reservePeople, 10);
+      if (!reserveDate) {
+        setReserveFeedback('Zgjidhni datën.');
+        return;
+      }
+      if (!Number.isInteger(partySize) || partySize < 1 || partySize > 50) {
+        setReserveFeedback('Shkruani numrin e mysafirëve (1–50).');
         return;
       }
       if (name.length < 2) {
@@ -167,9 +142,9 @@ export function BusinessListingDetailView({
         listingId: listing.id,
         guestName: name,
         guestPhone: phone,
-        partySize: Number.parseInt(reservePeople, 10) || 1,
+        partySize,
         reservationDate: reserveDate,
-        timeSlot: reserveTime,
+        timeSlot: '',
         note: reserveNote.trim() || undefined,
       };
 
@@ -229,15 +204,10 @@ export function BusinessListingDetailView({
         saveCount={saveCount}
         onToggleSave={() => void toggleSave()}
         showReservation={showReservation}
-        reserveHref={reserveHref}
         reserveDate={reserveDate}
-        reserveTime={reserveTime}
         reservePeople={reservePeople}
         onReserveDate={setReserveDate}
-        onReserveTime={setReserveTime}
         onReservePeople={setReservePeople}
-        timeOptions={timeOptions}
-        peopleOptions={peopleOptions}
         reserveGuestName={reserveGuestName}
         reserveGuestPhone={reserveGuestPhone}
         reserveNote={reserveNote}
@@ -489,32 +459,18 @@ export function BusinessListingDetailView({
                         value={reserveDate}
                         onChange={setReserveDate}
                         emptyLabel="Zgjidhni datën…"
-                        sx={selectFieldSx()}
+                        sx={reserveFieldSx}
                       />
-                      <Stack direction="row" spacing={1.25}>
-                        <SearchableSelect
-                          size="small"
-                          label="Ora"
-                          value={reserveTime}
-                          onChange={setReserveTime}
-                          options={timeOptions.map((t) => ({ value: t, label: t }))}
-                          emptyLabel="Ora…"
-                          clearable={false}
-                          menuMinWidth={140}
-                          sx={selectFieldSx(1.2)}
-                        />
-                        <SearchableSelect
-                          size="small"
-                          label="Persona"
-                          value={reservePeople}
-                          onChange={setReservePeople}
-                          options={peopleOptions.map((n) => ({ value: String(n), label: String(n) }))}
-                          emptyLabel="—"
-                          clearable={false}
-                          menuMinWidth={120}
-                          sx={selectFieldSx(0.85)}
-                        />
-                      </Stack>
+                      <TextField
+                        size="small"
+                        label="Numri i mysafirëve"
+                        type="number"
+                        value={reservePeople}
+                        onChange={(e) => setReservePeople(e.target.value)}
+                        inputProps={{ min: 1, max: 50, inputMode: 'numeric' }}
+                        fullWidth
+                        sx={reserveFieldSx}
+                      />
                       {usePlatformReservation ? (
                         <Stack spacing={1.25}>
                           <TextField
@@ -558,7 +514,7 @@ export function BusinessListingDetailView({
                         variant="contained"
                         fullWidth
                         onClick={() => void handleReserve()}
-                        disabled={usePlatformReservation ? reserveSubmitting || authLoading : !reserveHref}
+                        disabled={usePlatformReservation ? reserveSubmitting || authLoading : !telHref}
                         startIcon={usePlatformReservation ? <ChatsCircleIcon size={18} weight="bold" /> : undefined}
                         sx={{
                           ...productButtonSx,
@@ -579,7 +535,7 @@ export function BusinessListingDetailView({
               </Box>
             ) : null}
 
-            {/* Menu preview — 3 per category, full menu on separate page */}
+            {/* Menu preview — 4 visible rows, scroll for more; full menu on separate page */}
             <Box>
               <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                 <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Menu</Typography>
@@ -587,7 +543,7 @@ export function BusinessListingDetailView({
                   <OwnerEditPencil label="Ndrysho menunë" onClick={ownerEdit.onEditMenu} />
                 ) : null}
               </Stack>
-              <BusinessMenuPreview listing={listing} maxPerCategory={3} />
+              <BusinessMenuPreview listing={listing} maxPerCategory={4} />
             </Box>
 
             {/* Reviews list */}

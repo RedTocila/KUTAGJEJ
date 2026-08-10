@@ -3,6 +3,7 @@
 const { getSupabaseAdmin } = require('./supabase');
 const { isUuid } = require('./public-listings/query-helpers');
 const { refreshHoursForPlanCode } = require('./auto-refresh-packages');
+const { applyListingBump } = require('./listing-bump');
 
 const REFRESH_COST = 1;
 
@@ -57,7 +58,8 @@ async function getRefreshWindowHours(sb, userId) {
 
 /**
  * Spend 1 boost credit to bump a listing to the top of its category
- * by setting created_at (and updated_at) to now — public "newest" sort uses created_at.
+ * by setting bumped_at to now — public "newest" sort uses bumped_at.
+ * Does not rewrite created_at (publish date / job expiry) or engagement metrics.
  */
 async function refreshListingWithBoost({ userId, kind, listingId }) {
   if (!userId || !isUuid(String(userId))) {
@@ -160,13 +162,12 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
     };
   }
 
-  // Bump public “newest” sort only. Leave updated_at alone so “My listings”
-  // (ordered by updated_at) does not jump the card to the top.
-  const { error: bumpErr } = await sb
-    .from(table)
-    .update({ created_at: now })
-    .eq('id', listingId);
-  if (bumpErr) {
+  // Bump public “newest” sort only via bumped_at. Leave created_at (publish /
+  // job expiry) and updated_at (My listings order) alone. Never touch
+  // listing_engagements, saved_listings, or reviews.
+  try {
+    await applyListingBump(sb, table, listingId, {}, now);
+  } catch (bumpErr) {
     // Best-effort refund if bump fails after debit.
     await sb
       .from('profiles')

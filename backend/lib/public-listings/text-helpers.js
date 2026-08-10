@@ -1,5 +1,16 @@
+function isPersistableImageUrl(url) {
+  const u = String(url || '').trim();
+  if (!u || /^blob:/i.test(u) || /^data:/i.test(u)) return false;
+  return /^https?:\/\//i.test(u) || u.startsWith('/');
+}
+
+/** First durable gallery URL — skips temporary blob:/data: previews. */
 function pickImage(doc) {
-  return Array.isArray(doc.imageUrls) && doc.imageUrls.length > 0 ? doc.imageUrls[0] : null;
+  const urls = Array.isArray(doc.imageUrls) ? doc.imageUrls : [];
+  for (const raw of urls) {
+    if (isPersistableImageUrl(raw)) return String(raw).trim();
+  }
+  return null;
 }
 
 /** Trim a long description to a card-friendly snippet (no mid-word cuts). */
@@ -24,6 +35,7 @@ function carDisplayTitle(doc) {
 
 module.exports = {
   pickImage,
+  isPersistableImageUrl,
   snippet,
   carSlugSource,
   carDisplayTitle,

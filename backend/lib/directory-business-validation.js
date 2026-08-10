@@ -5,9 +5,6 @@ const BUSINESS_CATEGORIES = new Set([
   'restorant', 'bar', 'kafe', 'brunch', 'piceri-fast-food', 'pasticeri',
 ]);
 
-const DEFAULT_TIME_SLOTS = ['12:00', '13:00', '14:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
-const DEFAULT_PARTY_SIZES = [1, 2, 3, 4, 5, 6, 8, 10];
-
 function normalizeMenuCategories(input) {
   if (!Array.isArray(input)) return [];
   const out = [];
@@ -44,7 +41,11 @@ function normalizeMenuItems(input, categories) {
     if (seen.has(id)) id = randomUUID();
     seen.add(id);
     const description = String(row?.description || '').trim().slice(0, 500);
-    const imageUrl = String(row?.imageUrl || '').trim().slice(0, 2000) || null;
+    const rawImage = String(row?.imageUrl || '').trim().slice(0, 2000);
+    const imageUrl =
+      rawImage && /^https?:\/\//i.test(rawImage) && !/^blob:/i.test(rawImage) && !/^data:/i.test(rawImage)
+        ? rawImage
+        : null;
     out.push({
       id,
       categoryId,
@@ -60,18 +61,18 @@ function normalizeMenuItems(input, categories) {
 }
 
 function normalizeTimeSlots(input) {
-  if (!Array.isArray(input) || input.length === 0) return [...DEFAULT_TIME_SLOTS];
+  if (!Array.isArray(input)) return [];
   const out = [];
   for (const t of input) {
     const s = String(t || '').trim();
     if (TIME_RE.test(s) && !out.includes(s)) out.push(s);
     if (out.length >= 24) break;
   }
-  return out.length > 0 ? out : [...DEFAULT_TIME_SLOTS];
+  return out;
 }
 
 function normalizePartySizes(input) {
-  if (!Array.isArray(input) || input.length === 0) return [...DEFAULT_PARTY_SIZES];
+  if (!Array.isArray(input)) return [];
   const out = [];
   for (const n of input) {
     const v = Number(n);
@@ -79,7 +80,7 @@ function normalizePartySizes(input) {
     if (out.length >= 16) break;
   }
   out.sort((a, b) => a - b);
-  return out.length > 0 ? out : [...DEFAULT_PARTY_SIZES];
+  return out;
 }
 
 function validateBusinessPayload(body, { partial = false } = {}) {
@@ -107,7 +108,10 @@ function validateBusinessPayload(body, { partial = false } = {}) {
   const reservationUrl = String(body?.reservationUrl || '').trim() || null;
 
   const imageUrls = Array.isArray(body?.imageUrls)
-    ? body.imageUrls.map((u) => String(u || '').trim()).filter(Boolean).slice(0, 20)
+    ? body.imageUrls
+        .map((u) => String(u || '').trim())
+        .filter((u) => /^https?:\/\//i.test(u) && !/^blob:/i.test(u) && !/^data:/i.test(u))
+        .slice(0, 20)
     : undefined;
 
   return {
@@ -150,8 +154,8 @@ function validateReservationPayload(body) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(reservationDate)) {
     return { ok: false, message: 'Data e rezervimit nuk është e vlefshme.' };
   }
-  const timeSlot = String(body?.timeSlot || '').trim();
-  if (!TIME_RE.test(timeSlot)) return { ok: false, message: 'Ora e rezervimit nuk është e vlefshme.' };
+  const timeSlotRaw = String(body?.timeSlot || '').trim();
+  const timeSlot = timeSlotRaw && TIME_RE.test(timeSlotRaw) ? timeSlotRaw : '';
   const listingId = String(body?.listingId || '').trim();
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(listingId)) {
     return { ok: false, message: 'Njoftimi nuk u gjet.' };
@@ -161,8 +165,6 @@ function validateReservationPayload(body) {
 
 module.exports = {
   BUSINESS_CATEGORIES,
-  DEFAULT_TIME_SLOTS,
-  DEFAULT_PARTY_SIZES,
   validateBusinessPayload,
   validateReviewPayload,
   validateReservationPayload,

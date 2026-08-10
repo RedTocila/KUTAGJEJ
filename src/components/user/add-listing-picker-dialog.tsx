@@ -50,11 +50,14 @@ const OKAZION_CATEGORY_KEYS = new Set<ListingCategoryKey>([
   'job-listings',
   'marketplace',
 ]);
+/** Premium promotes the same post (including businesses / professionals). */
 const PREMIUM_CATEGORY_KEYS = new Set<ListingCategoryKey>([
   'real-estate',
   'cars',
   'job-listings',
   'marketplace',
+  'businesses',
+  'professionals',
 ]);
 
 /** Preferred order when browsing all listing types. */

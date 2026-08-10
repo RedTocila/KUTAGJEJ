@@ -1,6 +1,7 @@
 import type { Theme } from '@mui/material/styles';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { MOTION } from '@/styles/motion';
 
 /** Bordered paper panel — portal cards, listing detail sections, dialogs. */
 export const productPanelSx = {
@@ -16,7 +17,7 @@ export const productFieldSx = {
   '& .MuiOutlinedInput-root': {
     borderRadius: 2.5,
     bgcolor: 'background.paper',
-    transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
+    transition: `box-shadow ${MOTION.fast} ${MOTION.ease}, border-color ${MOTION.fast} ${MOTION.ease}`,
     '&.Mui-focused': {
       boxShadow: `0 0 0 3px ${primaryMainAlpha(0.12)}`,
     },
@@ -32,7 +33,9 @@ export const productButtonSx = {
   fontWeight: 800,
   borderRadius: 2.25,
   boxShadow: 'none',
+  transition: `background-color ${MOTION.fast} ${MOTION.ease}, color ${MOTION.fast} ${MOTION.ease}, border-color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.fast} ${MOTION.ease}, box-shadow ${MOTION.fast} ${MOTION.ease}`,
   '&:hover': { boxShadow: 'none' },
+  '&:active': { transform: 'scale(0.98)' },
 };
 
 /** Shared black paper surface for dark-mode menus / dialogs. */
@@ -94,7 +97,9 @@ export const productDialogCloseButtonSx = {
   top: 12,
   color: 'text.secondary',
   borderRadius: 2,
+  transition: `color ${MOTION.fast} ${MOTION.ease}, background-color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.fast} ${MOTION.ease}`,
   '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
+  '&:active': { transform: 'scale(0.94)' },
 } as const;
 
 export const productDialogContentSx = {

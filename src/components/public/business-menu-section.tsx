@@ -104,11 +104,15 @@ function CategoryTags({
   onSelect: (id: string) => void;
 }) {
   return (
-    <Stack
-      direction="row"
-      spacing={0.75}
+    <Box
       sx={{
+        width: '100%',
+        maxWidth: '100%',
+        minWidth: 0,
         overflowX: 'auto',
+        overflowY: 'hidden',
+        overscrollBehaviorX: 'contain',
+        WebkitOverflowScrolling: 'touch',
         mx: -0.25,
         px: 0.25,
         pb: 0.25,
@@ -116,18 +120,25 @@ function CategoryTags({
         '&::-webkit-scrollbar': { display: 'none' },
       }}
     >
-      {sections.map((section) => {
-        const active = section.id === activeId;
-        return (
-          <ProductTag
-            key={section.id}
-            label={section.name}
-            active={active}
-            onClick={() => onSelect(section.id)}
-          />
-        );
-      })}
-    </Stack>
+      <Stack
+        direction="row"
+        spacing={0.75}
+        sx={{ width: 'max-content', maxWidth: 'none', flexWrap: 'nowrap', pr: 2 }}
+      >
+        {sections.map((section) => {
+          const active = section.id === activeId;
+          return (
+            <ProductTag
+              key={section.id}
+              label={section.name}
+              active={active}
+              onClick={() => onSelect(section.id)}
+              sx={{ flexShrink: 0 }}
+            />
+          );
+        })}
+      </Stack>
+    </Box>
   );
 }
 
@@ -142,41 +153,52 @@ function useActiveMenuSection(sections: BusinessMenuSectionView[]) {
   return { activeId: active?.id ?? '', setActiveId, active };
 }
 
-/** Preview on business detail: category tags + up to 3 items of the selected category. */
+/** Approx. dense row height (64px thumb + padding) — used for the scroll viewport. */
+const MENU_PREVIEW_ROW_PX = 92;
+
+/** Preview on business detail: category tags + scrollable items (4 visible). */
 export function BusinessMenuPreview({
   listing,
-  maxPerCategory = 3,
+  maxPerCategory = 4,
 }: {
   listing: PublicDirectoryListingDetail;
   savedHearts?: Set<string>;
   onToggleHeart?: (id: string) => void;
+  /** How many product rows are visible before scrolling. */
   maxPerCategory?: number;
 }) {
   const allSections = React.useMemo(() => businessMenuSections(listing), [listing]);
   const { activeId, setActiveId, active } = useActiveMenuSection(allSections);
-  const previewItems = React.useMemo(
-    () => (active?.items ?? []).slice(0, maxPerCategory),
-    [active, maxPerCategory],
-  );
+  const previewItems = active?.items ?? [];
   const totalItems = listing.menuItems?.length ?? 0;
   if (allSections.length === 0 && totalItems === 0) return null;
 
   const menuHref = listingBusinessMenuHref(listing);
-  const categoryTotal = active?.items.length ?? 0;
-  const hasMore = totalItems > previewItems.length || categoryTotal > maxPerCategory;
+  const categoryTotal = previewItems.length;
+  const hasMore = totalItems > categoryTotal || categoryTotal > maxPerCategory;
 
   return (
     <Stack spacing={1.5}>
       <CategoryTags sections={allSections} activeId={activeId} onSelect={setActiveId} />
       <Stack spacing={0}>
         {previewItems.length > 0 ? (
-          <Stack spacing={0} divider={<Divider sx={{ borderColor: 'divider', opacity: 0.6 }} />}>
-            {previewItems.map((item) => (
-              <Box key={item.id} sx={{ py: 1.25 }}>
-                <MenuItemRow item={item} dense />
-              </Box>
-            ))}
-          </Stack>
+          <Box
+            sx={{
+              maxHeight: MENU_PREVIEW_ROW_PX * maxPerCategory,
+              overflowY: 'auto',
+              overscrollBehaviorY: 'contain',
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'thin',
+            }}
+          >
+            <Stack spacing={0} divider={<Divider sx={{ borderColor: 'divider', opacity: 0.6 }} />}>
+              {previewItems.map((item) => (
+                <Box key={item.id} sx={{ py: 1.25 }}>
+                  <MenuItemRow item={item} dense />
+                </Box>
+              ))}
+            </Stack>
+          </Box>
         ) : (
           <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
             Nuk ka artikuj në këtë kategori.

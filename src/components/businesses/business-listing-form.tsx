@@ -18,8 +18,6 @@ import { SearchableSelect } from '@/components/core/searchable-select';
 import {
   BUSINESS_CATEGORY_OPTIONS,
   BUSINESS_DAY_LABELS,
-  DEFAULT_RESERVATION_PARTY_SIZES,
-  DEFAULT_RESERVATION_TIME_SLOTS,
   defaultWeeklyHours,
   type WeeklyHourRow,
 } from '@/lib/business-constants';
@@ -33,12 +31,15 @@ import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/rea
 import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import {
+  ListingFormActionError,
   ListingFormActions,
   ListingFormSection,
   ListingTextField,
 } from '@/components/user/listing-form-ui';
+import { ListingBoostChoiceBar } from '@/components/user/listing-boost-choice-bar';
 import {
   activatePremiumAfterCreate,
+  PREMIUM_PACKAGE_ID,
   PremiumPostActions,
   type PremiumPayMode,
 } from '@/components/user/premium-boost-upsell';
@@ -77,6 +78,8 @@ export function BusinessListingForm({
   const searchParams = useSearchParams();
   const wantsPremium = searchParams.get('premium') === '1';
   const premiumPayRef = React.useRef<PremiumPayMode>('buy-card');
+  const premiumPackageIdRef = React.useRef(PREMIUM_PACKAGE_ID);
+  const boostKindRef = React.useRef<'premium' | null>(null);
   const formRef = React.useRef<HTMLFormElement | null>(null);
   const canPostBusiness = isBusinessPortalAccount(user);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
@@ -124,9 +127,6 @@ export function BusinessListingForm({
   const [images, setImages] = React.useState<File[]>([]);
   const [weeklyHours, setWeeklyHours] = React.useState<WeeklyHourRow[]>(defaultWeeklyHours);
   const [reservationsEnabled, setReservationsEnabled] = React.useState(false);
-  const [reservationUrl, setReservationUrl] = React.useState('');
-  const [timeSlotsText, setTimeSlotsText] = React.useState(DEFAULT_RESERVATION_TIME_SLOTS.join(', '));
-  const [partySizesText, setPartySizesText] = React.useState(DEFAULT_RESERVATION_PARTY_SIZES.join(', '));
 
   const applyExistingListing = React.useCallback((listing: BusinessMineListing) => {
     setExistingId(listing.id);
@@ -148,17 +148,6 @@ export function BusinessListingForm({
       : defaultWeeklyHours();
     setWeeklyHours(hours);
     setReservationsEnabled(Boolean(listing.reservationsEnabled));
-    setReservationUrl(listing.reservationUrl ?? '');
-    setTimeSlotsText(
-      (listing.reservationTimeSlots?.length ? listing.reservationTimeSlots : DEFAULT_RESERVATION_TIME_SLOTS).join(
-        ', ',
-      ),
-    );
-    setPartySizesText(
-      (listing.reservationPartySizes?.length ? listing.reservationPartySizes : DEFAULT_RESERVATION_PARTY_SIZES).join(
-        ', ',
-      ),
-    );
   }, []);
 
   React.useEffect(() => {
@@ -207,16 +196,6 @@ export function BusinessListingForm({
       return;
     }
 
-    const reservationTimeSlots = timeSlotsText
-      .split(/[,;\s]+/)
-      .map((s) => s.trim())
-      .filter((s) => /^\d{1,2}:\d{2}$/.test(s));
-
-    const reservationPartySizes = partySizesText
-      .split(/[,;\s]+/)
-      .map((s) => Number.parseInt(s.trim(), 10))
-      .filter((n) => Number.isInteger(n) && n >= 1);
-
     setSubmitting(true);
     let uploadedUrls: string[] = [];
     if (images.length) {
@@ -239,9 +218,9 @@ export function BusinessListingForm({
       imageUrls,
       weeklyHours,
       reservationsEnabled,
-      reservationUrl: reservationUrl.trim() || null,
-      reservationTimeSlots,
-      reservationPartySizes,
+      reservationUrl: null,
+      reservationTimeSlots: [] as string[],
+      reservationPartySizes: [] as number[],
       servicesHighlight: servicesHighlight.trim() || null,
       ...(existingId
         ? {}
@@ -273,11 +252,12 @@ export function BusinessListingForm({
       return;
     }
     rememberLocation({ cityId });
-    if (res.id && wantsPremium) {
+    if (res.id && (wantsPremium || boostKindRef.current === 'premium')) {
       const boost = await activatePremiumAfterCreate({
         mode: premiumPayRef.current,
         kind: 'businesses',
         listingId: res.id,
+        packageId: premiumPackageIdRef.current,
       });
       if (boost.redirectToCheckout) {
         router.push(boost.redirectToCheckout);
@@ -311,11 +291,6 @@ export function BusinessListingForm({
   return (
     <Box component="form" ref={formRef} onSubmit={(e) => void handleSubmit(e)}>
       <Stack spacing={2.25}>
-        {error ? (
-          <Alert severity="error" sx={{ borderRadius: 2 }}>
-            {error}
-          </Alert>
-        ) : null}
         {saveNotice ? (
           <Alert severity="success" sx={{ borderRadius: 2 }} onClose={() => setSaveNotice(null)}>
             {saveNotice}
@@ -470,7 +445,7 @@ export function BusinessListingForm({
         <ListingFormSection
           icon={<CalendarCheckIcon size={20} weight="duotone" />}
           title="Rezervime"
-          description="Klientët plotësojnë fushat e rezervimit dhe kërkesa ju vjen si mesazh në bisedë."
+          description="Klientët zgjedhin datën në kalendar dhe kërkesa ju vjen si mesazh në bisedë."
         >
           <FormGroup>
             <FormControlLabel
@@ -484,53 +459,54 @@ export function BusinessListingForm({
             />
           </FormGroup>
           {reservationsEnabled ? (
-            <>
-              <Typography variant="body2" color="text.secondary">
-                Kur dikush rezervon, hapet një bisedë me të dhënat: emri, telefoni, data, ora dhe numri i mysafirëve.
-              </Typography>
-              <ListingTextField
-                label="Ora e disponueshme (ndarë me presje)"
-                value={timeSlotsText}
-                onChange={(e) => setTimeSlotsText(e.target.value)}
-                fullWidth
-                helperText="p.sh. 18:00, 19:00, 20:00, 21:00"
-              />
-              <ListingTextField
-                label="Numri i mysafirëve (ndarë me presje)"
-                value={partySizesText}
-                onChange={(e) => setPartySizesText(e.target.value)}
-                fullWidth
-                helperText="p.sh. 2, 4, 6, 8"
-              />
-            </>
+            <Typography variant="body2" color="text.secondary">
+              Kur dikush rezervon, hapet një bisedë me të dhënat: emri, telefoni, data dhe numri i mysafirëve.
+            </Typography>
           ) : null}
-          <ListingTextField
-            label="Link rezervimi i jashtëm (opsionale)"
-            value={reservationUrl}
-            onChange={(e) => setReservationUrl(e.target.value)}
-            fullWidth
-            helperText="Nëse e plotësoni, klientët dërgohen te ky link në vend të mesazheve."
-          />
         </ListingFormSection>
 
-        {wantsPremium && !existingId ? (
-          <PremiumPostActions
-            submitting={submitting}
-            disabled={!user}
-            onPost={(mode) => {
-              premiumPayRef.current = mode;
-              formRef.current?.requestSubmit();
-            }}
-          />
-        ) : (
-          <ListingFormActions
-            submitLabel={existingId ? 'Ruaj ndryshimet' : 'Publiko biznesin'}
-            submitting={submitting}
-            disabled={!user}
-            backHref={backHref}
-            backLabel={backLabel}
-          />
-        )}
+        <Stack spacing={1.25}>
+          <ListingFormActionError error={error} />
+          {wantsPremium && !existingId ? (
+            <PremiumPostActions
+              submitting={submitting}
+              disabled={!user}
+              onPost={(mode) => {
+                premiumPayRef.current = mode;
+                boostKindRef.current = 'premium';
+                formRef.current?.requestSubmit();
+              }}
+            />
+          ) : (
+            <>
+              {!existingId ? (
+                <ListingBoostChoiceBar
+                  submitting={submitting}
+                  disabled={!user}
+                  hideOkazion
+                  onPostPremium={(mode, packageId) => {
+                    premiumPayRef.current = mode;
+                    premiumPackageIdRef.current = packageId;
+                    boostKindRef.current = 'premium';
+                    formRef.current?.requestSubmit();
+                  }}
+                />
+              ) : null}
+              <ListingFormActions
+                submitLabel={existingId ? 'Ruaj ndryshimet' : 'Publiko biznesin'}
+                submitting={submitting}
+                disabled={!user}
+                backHref={backHref}
+                backLabel={backLabel}
+                submitProps={{
+                  onClick: () => {
+                    boostKindRef.current = null;
+                  },
+                }}
+              />
+            </>
+          )}
+        </Stack>
       </Stack>
     </Box>
   );

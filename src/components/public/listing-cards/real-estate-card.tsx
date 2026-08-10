@@ -22,7 +22,7 @@ import { listingRealEstatePublicHref } from '@/paths';
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
-import { formatPrice, relativeAlbanianDate } from './format-helpers';
+import { formatPrice, listingCardRelativeDate } from './format-helpers';
 import { ListingTitleWithVerified } from './listing-title-with-verified';
 import { ListingPrice } from './listing-price';
 import {
@@ -175,7 +175,7 @@ export function RealEstateCard({
 
         <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="caption" color="text.disabled">
-            {relativeAlbanianDate(listing.createdAt)}
+            {listingCardRelativeDate(listing)}
           </Typography>
           <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
             <EyeIcon size={14} weight="regular" />

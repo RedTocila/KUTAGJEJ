@@ -88,6 +88,9 @@ export function ListingMediaActionButton({
         px: 1,
         py: 0.5,
         borderRadius: 999,
+        transition:
+          'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
+        '&:active': { transform: 'scale(0.94)' },
         ...surfaceStyles,
       }}
     >

@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { Box } from '@mui/material';
 
+import { MOTION } from '@/styles/motion';
+
 /**
  * Shared chrome for the public listing cards: a quiet bordered card that
  * lifts subtly and tints its border on hover. Premium / OKAZION are marked
@@ -21,6 +23,7 @@ export function CardShell({
 }) {
   return (
     <Box
+      className="kutagjej-card-enter"
       sx={{
         position: 'relative',
         display: 'flex',
@@ -32,10 +35,30 @@ export function CardShell({
         border: '2px solid',
         borderColor: 'divider',
         boxShadow: 'none',
-        transition: 'border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
-        '&:hover': {
-          borderColor: 'primary.main',
-          transform: 'translateY(-2px)',
+        transition: `border-color ${MOTION.base} ${MOTION.ease}, transform ${MOTION.base} ${MOTION.ease}, box-shadow ${MOTION.base} ${MOTION.ease}`,
+        '@media (hover: hover) and (pointer: fine)': {
+          '&:hover': {
+            borderColor: 'primary.main',
+            transform: 'translateY(-3px)',
+            boxShadow: (theme) =>
+              theme.palette.mode === 'dark'
+                ? '0 12px 28px rgba(0, 0, 0, 0.35)'
+                : '0 12px 28px rgba(15, 23, 10, 0.1)',
+            '& .listing-card-media-image': {
+              transform: 'scale(1.045)',
+            },
+          },
+        },
+        '&:active': {
+          transform: 'translateY(-1px)',
+          boxShadow: 'none',
+        },
+        '@media (prefers-reduced-motion: reduce)': {
+          transition: 'none',
+          animation: 'none',
+          '&:hover': { transform: 'none', boxShadow: 'none' },
+          '&:active': { transform: 'none' },
+          '&:hover .listing-card-media-image': { transform: 'none' },
         },
         '& > .listing-card-body': { flex: 1, minHeight: 0 },
       }}

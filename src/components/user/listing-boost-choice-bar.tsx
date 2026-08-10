@@ -73,17 +73,21 @@ const choiceBtnSx = {
 /**
  * Premium + OKAZION shortcuts above the normal Posto button.
  * Uses a plan/voucher slot immediately when available; otherwise opens a pay popup.
+ * Directory profiles (businesses / professionals) pass hideOkazion — OKAZION is sellable-only.
  */
 export function ListingBoostChoiceBar({
   submitting = false,
   disabled = false,
+  hideOkazion = false,
   onPostPremium,
   onPostOkazion,
 }: {
   submitting?: boolean;
   disabled?: boolean;
+  /** When true, only Premium is shown (directory create flow). */
+  hideOkazion?: boolean;
   onPostPremium: (mode: PremiumPayMode, packageId: string) => void;
-  onPostOkazion: (mode: Exclude<OkazionBoostMode, 'off'>) => void;
+  onPostOkazion?: (mode: Exclude<OkazionBoostMode, 'off'>) => void;
 }) {
   const t = useCopy();
   const { user } = useUser();
@@ -123,7 +127,7 @@ export function ListingBoostChoiceBar({
   };
 
   const handleOkazion = async () => {
-    if (disabled || submitting || busy) return;
+    if (hideOkazion || !onPostOkazion || disabled || submitting || busy) return;
     setBusy('okazion');
     try {
       const [quota, vouchers] = await Promise.all([
@@ -170,28 +174,30 @@ export function ListingBoostChoiceBar({
         >
           Premium
         </Button>
-        <Button
-          type="button"
-          variant="contained"
-          disabled={disabled || submitting || busy !== null}
-          onClick={() => void handleOkazion()}
-          startIcon={
-            busy === 'okazion' ? (
-              <CircularProgress size={16} color="inherit" />
-            ) : (
-              <SealPercentIcon size={18} weight="regular" />
-            )
-          }
-          sx={{
-            ...choiceBtnSx,
-            bgcolor: OKAZION_RED,
-            color: OKAZION_RED_ON,
-            '&:hover': { bgcolor: OKAZION_RED_DARK, boxShadow: 'none' },
-            '&.Mui-disabled': { bgcolor: OKAZION_RED, color: OKAZION_RED_ON, opacity: 0.55 },
-          }}
-        >
-          OKAZION
-        </Button>
+        {hideOkazion ? null : (
+          <Button
+            type="button"
+            variant="contained"
+            disabled={disabled || submitting || busy !== null}
+            onClick={() => void handleOkazion()}
+            startIcon={
+              busy === 'okazion' ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <SealPercentIcon size={18} weight="regular" />
+              )
+            }
+            sx={{
+              ...choiceBtnSx,
+              bgcolor: OKAZION_RED,
+              color: OKAZION_RED_ON,
+              '&:hover': { bgcolor: OKAZION_RED_DARK, boxShadow: 'none' },
+              '&.Mui-disabled': { bgcolor: OKAZION_RED, color: OKAZION_RED_ON, opacity: 0.55 },
+            }}
+          >
+            OKAZION
+          </Button>
+        )}
       </Stack>
 
       <ProductDialog open={dialog === 'premium'} onClose={closeDialog} fullWidth maxWidth="xs">
@@ -277,83 +283,85 @@ export function ListingBoostChoiceBar({
         </ProductDialogContent>
       </ProductDialog>
 
-      <ProductDialog open={dialog === 'okazion'} onClose={closeDialog} fullWidth maxWidth="xs">
-        <ProductDialogTitle
-          onClose={closeDialog}
-          subtitle={t.packages.okazionPaySubtitle}
-        >
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            <SealPercentIcon size={20} weight="regular" color={OKAZION_ACCENT} />
-            <Box component="span" sx={{ color: OKAZION_ACCENT }}>
-              {t.packages.postOkazion}
-            </Box>
-          </Stack>
-        </ProductDialogTitle>
-        <ProductDialogContent>
-          <Box
-            sx={{
-              p: 1.5,
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: OKAZION_ACCENT,
-              bgcolor: OKAZION_ACCENT_SOFT,
-              mb: 1.5,
-            }}
+      {hideOkazion || !onPostOkazion ? null : (
+        <ProductDialog open={dialog === 'okazion'} onClose={closeDialog} fullWidth maxWidth="xs">
+          <ProductDialogTitle
+            onClose={closeDialog}
+            subtitle={t.packages.okazionPaySubtitle}
           >
-            <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT }}>
-              {t.packages.daysPrice(5, OKAZION_PRICE_EUR, OKAZION_PRICE_BC)}
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={1}>
-            <Button
-              type="button"
-              variant="contained"
-              disabled={disabled || submitting}
-              onClick={() => {
-                closeDialog();
-                onPostOkazion('buy-card');
-              }}
-              startIcon={<CreditCardIcon size={16} weight="bold" />}
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              <SealPercentIcon size={20} weight="regular" color={OKAZION_ACCENT} />
+              <Box component="span" sx={{ color: OKAZION_ACCENT }}>
+                {t.packages.postOkazion}
+              </Box>
+            </Stack>
+          </ProductDialogTitle>
+          <ProductDialogContent>
+            <Box
               sx={{
-                ...productButtonSx,
-                flex: 1,
-                minHeight: 44,
-                bgcolor: OKAZION_RED,
-                color: OKAZION_RED_ON,
-                '&:hover': { bgcolor: OKAZION_RED_DARK, boxShadow: 'none' },
+                p: 1.5,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: OKAZION_ACCENT,
+                bgcolor: OKAZION_ACCENT_SOFT,
+                mb: 1.5,
               }}
             >
-              {OKAZION_PRICE_EUR}€
-            </Button>
-            <Button
-              type="button"
-              variant="outlined"
-              disabled={disabled || submitting || balance < OKAZION_PRICE_BC}
-              onClick={() => {
-                closeDialog();
-                onPostOkazion('buy-bc');
-              }}
-              startIcon={<BoostCoinIcon size={16} />}
-              sx={{
-                ...productButtonSx,
-                flex: 1,
-                minHeight: 44,
-                borderColor: OKAZION_RED,
-                color: OKAZION_RED,
-                '&:hover': {
-                  borderColor: OKAZION_RED_DARK,
-                  bgcolor: OKAZION_RED_SOFT,
-                  boxShadow: 'none',
-                },
-              }}
-            >
-              {balance >= OKAZION_PRICE_BC
-                ? `${OKAZION_PRICE_BC} BC`
-                : `${OKAZION_PRICE_BC} BC ${t.packages.insufficientBc}`}
-            </Button>
-          </Stack>
-        </ProductDialogContent>
-      </ProductDialog>
+              <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT }}>
+                {t.packages.daysPrice(5, OKAZION_PRICE_EUR, OKAZION_PRICE_BC)}
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={1}>
+              <Button
+                type="button"
+                variant="contained"
+                disabled={disabled || submitting}
+                onClick={() => {
+                  closeDialog();
+                  onPostOkazion('buy-card');
+                }}
+                startIcon={<CreditCardIcon size={16} weight="bold" />}
+                sx={{
+                  ...productButtonSx,
+                  flex: 1,
+                  minHeight: 44,
+                  bgcolor: OKAZION_RED,
+                  color: OKAZION_RED_ON,
+                  '&:hover': { bgcolor: OKAZION_RED_DARK, boxShadow: 'none' },
+                }}
+              >
+                {OKAZION_PRICE_EUR}€
+              </Button>
+              <Button
+                type="button"
+                variant="outlined"
+                disabled={disabled || submitting || balance < OKAZION_PRICE_BC}
+                onClick={() => {
+                  closeDialog();
+                  onPostOkazion('buy-bc');
+                }}
+                startIcon={<BoostCoinIcon size={16} />}
+                sx={{
+                  ...productButtonSx,
+                  flex: 1,
+                  minHeight: 44,
+                  borderColor: OKAZION_RED,
+                  color: OKAZION_RED,
+                  '&:hover': {
+                    borderColor: OKAZION_RED_DARK,
+                    bgcolor: OKAZION_RED_SOFT,
+                    boxShadow: 'none',
+                  },
+                }}
+              >
+                {balance >= OKAZION_PRICE_BC
+                  ? `${OKAZION_PRICE_BC} BC`
+                  : `${OKAZION_PRICE_BC} BC ${t.packages.insufficientBc}`}
+              </Button>
+            </Stack>
+          </ProductDialogContent>
+        </ProductDialog>
+      )}
     </>
   );
 }

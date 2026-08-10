@@ -6,6 +6,10 @@ import { MuiButton } from './button';
 import { MuiCard } from './card';
 import { MuiCardContent } from './card-content';
 import { MuiCardHeader } from './card-header';
+import { MuiChip } from './chip';
+import { MuiCssBaseline } from './css-baseline';
+import { MuiDialog } from './dialog';
+import { MuiIconButton } from './icon-button';
 import { MuiLink } from './link';
 import { MuiRating } from './rating';
 import { MuiStack } from './stack';
@@ -20,6 +24,10 @@ export const components = {
   MuiCard,
   MuiCardContent,
   MuiCardHeader,
+  MuiChip,
+  MuiCssBaseline,
+  MuiDialog,
+  MuiIconButton,
   MuiLink,
   MuiRating,
   MuiStack,

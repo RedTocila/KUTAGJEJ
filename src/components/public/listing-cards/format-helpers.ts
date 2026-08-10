@@ -39,6 +39,14 @@ export function relativeAlbanianDate(iso: string): string {
   return date.toLocaleDateString('sq-AL', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+/** Card footer time: prefer last bump/reorder, else publish date. */
+export function listingCardRelativeDate(listing: {
+  bumpedAt?: string | null;
+  createdAt: string;
+}): string {
+  return relativeAlbanianDate(listing.bumpedAt || listing.createdAt);
+}
+
 function calendarDayKey(date: Date): string {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }

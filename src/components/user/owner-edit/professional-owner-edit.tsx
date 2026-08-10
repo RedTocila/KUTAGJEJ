@@ -21,6 +21,7 @@ import {
 import { professionalMineToPublic } from '@/lib/listing-mine-to-public';
 import { PROFESSIONAL_CATEGORY_OPTIONS } from '@/lib/professional-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { isEphemeralImageUrl, isPersistableImageUrl } from '@/lib/image-url';
 import { uploadListingImages } from '@/lib/uploads-client';
 import { paths } from '@/paths';
 
@@ -61,6 +62,12 @@ async function resolveUrl(existing: string | null, file: File | null): Promise<{
     const up = await uploadListingImages([file], 'professionals');
     if (up.error) return { url: null, error: up.error };
     return { url: up.urls[0] ?? null };
+  }
+  if (existing && isEphemeralImageUrl(existing)) {
+    return { url: null, error: 'Fotoja nuk u ngarkua. Zgjidhni foton përsëri.' };
+  }
+  if (existing && !isPersistableImageUrl(existing)) {
+    return { url: null, error: 'Fotoja nuk është e vlefshme. Zgjidhni foton përsëri.' };
   }
   return { url: existing };
 }
@@ -122,30 +129,49 @@ export function ProfessionalOwnerEdit({
     setEditingField(null);
   };
 
-  const applyPhotos = () => {
-    const nextCover = coverFile[0] ? URL.createObjectURL(coverFile[0]) : coverUrl;
-    const nextAvatar = avatarFile[0] ? URL.createObjectURL(avatarFile[0]) : avatarUrl;
-    setDraft((d) => ({
-      ...d,
-      imageUrls: [nextCover, nextAvatar].filter(Boolean),
-    }));
+  const applyPhotos = async () => {
+    setError(null);
+    const cover = await resolveUrl(coverUrl || null, coverFile[0] ?? null);
+    if (cover.error) {
+      setError(cover.error);
+      return;
+    }
+    const avatar = await resolveUrl(avatarUrl || null, avatarFile[0] ?? null);
+    if (avatar.error) {
+      setError(avatar.error);
+      return;
+    }
+    const imageUrls = [cover.url, avatar.url].filter((u): u is string => Boolean(u));
+    setDraft((d) => ({ ...d, imageUrls }));
+    setCoverUrl(cover.url ?? '');
+    setAvatarUrl(avatar.url ?? '');
+    setCoverFile([]);
+    setAvatarFile([]);
     setDialog(null);
   };
 
-  const applyPortfolio = () => {
-    setDraft((d) => ({
-      ...d,
-      portfolioItems: portfolio
-        .filter((p) => p.title.trim() && (p.imageUrl || p.imageFile))
-        .map((p, i) => ({
-          id: p.id,
-          title: p.title.trim(),
-          description: p.description?.trim() || '',
-          imageUrl: p.imageFile ? URL.createObjectURL(p.imageFile) : p.imageUrl,
-          location: p.location?.trim() || null,
-          sortOrder: i,
-        })),
-    }));
+  const applyPortfolio = async () => {
+    setError(null);
+    const portfolioItems: ProfessionalPortfolioItem[] = [];
+    for (const item of portfolio) {
+      if (!item.title.trim()) continue;
+      const resolved = await resolveUrl(item.imageUrl || null, item.imageFile);
+      if (resolved.error) {
+        setError(resolved.error);
+        return;
+      }
+      if (!resolved.url) continue;
+      portfolioItems.push({
+        id: item.id,
+        title: item.title.trim(),
+        description: item.description?.trim() || '',
+        imageUrl: resolved.url,
+        location: item.location?.trim() || null,
+        sortOrder: portfolioItems.length,
+      });
+    }
+    setDraft((d) => ({ ...d, portfolioItems }));
+    setPortfolio(portfolioItems.map((p) => ({ ...p, imageFile: null })));
     setDialog(null);
   };
 
@@ -371,14 +397,33 @@ export function ProfessionalOwnerEdit({
         ownerPreview
         ownerEdit={{
           onEditPhotos: () => {
-            setCoverUrl(draft.imageUrls[0] ?? '');
-            setAvatarUrl(draft.imageUrls[1] ?? '');
-            setCoverFile([]);
-            setAvatarFile([]);
+            // Keep pending File picks; draft may only hold temporary blob: preview URLs.
+            setCoverFile((files) => {
+              if (!files.length) {
+                const fromDraft = draft.imageUrls[0] ?? '';
+                setCoverUrl(isEphemeralImageUrl(fromDraft) ? '' : fromDraft);
+              }
+              return files;
+            });
+            setAvatarFile((files) => {
+              if (!files.length) {
+                const fromDraft = draft.imageUrls[1] ?? '';
+                setAvatarUrl(isEphemeralImageUrl(fromDraft) ? '' : fromDraft);
+              }
+              return files;
+            });
             setDialog('photos');
           },
           onEditPortfolio: () => {
-            setPortfolio((draft.portfolioItems ?? []).map((p) => ({ ...p, imageFile: null })));
+            setPortfolio((prev) => {
+              const filesById = new Map(prev.map((p) => [p.id, p.imageFile] as const));
+              return (draft.portfolioItems ?? []).map((p) => {
+                const imageFile = filesById.get(p.id) ?? null;
+                const imageUrl =
+                  isEphemeralImageUrl(p.imageUrl) && !imageFile ? '' : p.imageUrl;
+                return { ...p, imageUrl, imageFile };
+              });
+            });
             setDialog('portfolio');
           },
           editingField,

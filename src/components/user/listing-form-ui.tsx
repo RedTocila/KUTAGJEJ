@@ -3,6 +3,7 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import {
+  Alert,
   Box,
   Button,
   Stack,
@@ -21,6 +22,25 @@ import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 
 /** Shared outlined field chrome — matches `SearchableSelect`. */
 export const listingOutlinedFieldSx = productFieldSx;
+
+/** Validation / submit error shown next to the form action buttons (not at the top). */
+export function ListingFormActionError({ error }: { error?: string | null }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (error) {
+      ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [error]);
+
+  if (!error) return null;
+
+  return (
+    <Alert ref={ref} severity="error" sx={{ borderRadius: 1.5 }} role="alert">
+      {error}
+    </Alert>
+  );
+}
 
 /**
  * Text field with always-floating label + shared radius/focus so it matches
@@ -126,6 +146,7 @@ export function ListingFormActions({
   backHref,
   backLabel = 'Kthehu',
   submitProps,
+  error,
   sx,
 }: {
   submitLabel: string;
@@ -134,43 +155,51 @@ export function ListingFormActions({
   backHref?: string;
   backLabel?: string;
   submitProps?: Omit<ButtonProps, 'type' | 'variant' | 'disabled' | 'children' | 'sx'>;
+  /** Shown above the buttons so missing-field errors stay visible at the footer. */
+  error?: string | null;
   sx?: SxProps<Theme>;
 }) {
   return (
     <Stack
-      direction={{ xs: 'column-reverse', sm: 'row' }}
-      spacing={1.5}
+      spacing={1.25}
       sx={[
-        { justifyContent: 'flex-end', pt: 0.5 },
+        { pt: 0.5 },
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
       ]}
     >
-      {backHref ? (
-        <Button
-          component={RouterLink}
-          href={backHref}
-          color="inherit"
-          variant="outlined"
-          sx={{
-            textTransform: 'none',
-            fontWeight: 700,
-            borderRadius: 2.25,
-            minHeight: 48,
-            borderColor: 'divider',
-          }}
-        >
-          {backLabel}
-        </Button>
-      ) : null}
-      <Button
-        type="submit"
-        variant="contained"
-        disabled={disabled || submitting}
-        {...submitProps}
-        sx={submitButtonSx}
+      <ListingFormActionError error={error} />
+      <Stack
+        direction={{ xs: 'column-reverse', sm: 'row' }}
+        spacing={1.5}
+        sx={{ justifyContent: 'flex-end' }}
       >
-        {submitting ? 'Duke ruajtur…' : submitLabel}
-      </Button>
+        {backHref ? (
+          <Button
+            component={RouterLink}
+            href={backHref}
+            color="inherit"
+            variant="outlined"
+            sx={{
+              textTransform: 'none',
+              fontWeight: 700,
+              borderRadius: 2.25,
+              minHeight: 48,
+              borderColor: 'divider',
+            }}
+          >
+            {backLabel}
+          </Button>
+        ) : null}
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={disabled || submitting}
+          {...submitProps}
+          sx={submitButtonSx}
+        >
+          {submitting ? 'Duke ruajtur…' : submitLabel}
+        </Button>
+      </Stack>
     </Stack>
   );
 }

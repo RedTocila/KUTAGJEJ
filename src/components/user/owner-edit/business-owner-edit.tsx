@@ -14,8 +14,6 @@ import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
 import {
   BUSINESS_CATEGORY_OPTIONS,
   BUSINESS_DAY_LABELS,
-  DEFAULT_RESERVATION_PARTY_SIZES,
-  DEFAULT_RESERVATION_TIME_SLOTS,
   defaultWeeklyHours,
   type WeeklyHourRow,
 } from '@/lib/business-constants';
@@ -26,6 +24,8 @@ import {
 import { hardNavigate } from '@/lib/hard-navigate';
 import { businessMineToPublic } from '@/lib/listing-mine-to-public';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { isPersistableImageUrl } from '@/lib/image-url';
+import { commitListingPhotos } from '@/lib/owner-edit-photos';
 import { uploadListingImages } from '@/lib/uploads-client';
 import { paths } from '@/paths';
 
@@ -107,7 +107,7 @@ export function BusinessOwnerEdit({
   };
 
   const openPhotos = () => {
-    setExistingUrls(draft.imageUrls ?? []);
+    setExistingUrls((draft.imageUrls ?? []).filter(isPersistableImageUrl));
     setNewFiles([]);
     setDialog('photos');
   };
@@ -123,8 +123,9 @@ export function BusinessOwnerEdit({
     setSaving(true);
     try {
       let uploaded: string[] = [];
+      const kept = existingUrls.filter(isPersistableImageUrl);
       if (newFiles.length) {
-        const slots = Math.max(0, MAX_IMAGES - existingUrls.length);
+        const slots = Math.max(0, MAX_IMAGES - kept.length);
         const up = await uploadListingImages(newFiles.slice(0, slots), 'businesses');
         if (up.error) {
           setError(up.error);
@@ -132,7 +133,7 @@ export function BusinessOwnerEdit({
         }
         uploaded = up.urls;
       }
-      const imageUrls = [...existingUrls, ...uploaded].slice(0, MAX_IMAGES);
+      const imageUrls = [...kept, ...uploaded].slice(0, MAX_IMAGES);
       if (!draft.cityId) {
         setError('Zgjidhni qytetin.');
         return;
@@ -146,13 +147,9 @@ export function BusinessOwnerEdit({
         imageUrls,
         weeklyHours: draft.weeklyHours?.length ? draft.weeklyHours : weeklyHours,
         reservationsEnabled: draft.reservationsEnabled,
-        reservationUrl: draft.reservationUrl,
-        reservationTimeSlots: draft.reservationTimeSlots?.length
-          ? draft.reservationTimeSlots
-          : DEFAULT_RESERVATION_TIME_SLOTS,
-        reservationPartySizes: draft.reservationPartySizes?.length
-          ? draft.reservationPartySizes
-          : DEFAULT_RESERVATION_PARTY_SIZES,
+        reservationUrl: null,
+        reservationTimeSlots: [],
+        reservationPartySizes: [],
         servicesHighlight: draft.servicesHighlight,
       };
       const res = await updateBusinessListing(draft.id, payload);
@@ -222,13 +219,6 @@ export function BusinessOwnerEdit({
             />
           }
           label="Aktivizo rezervimet"
-        />
-        <TextField
-          label="URL rezervimi (opsionale)"
-          value={draft.reservationUrl ?? ''}
-          onChange={(e) => setDraft((d) => ({ ...d, reservationUrl: e.target.value || null }))}
-          fullWidth
-          sx={fieldSx}
         />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
@@ -313,12 +303,20 @@ export function BusinessOwnerEdit({
         open={dialog === 'photos'}
         title="Fotot e biznesit"
         onClose={() => setDialog(null)}
-        onApply={() => {
-          const pendingPreviews = newFiles.map((f) => URL.createObjectURL(f));
-          setDraft((d) => ({
-            ...d,
-            imageUrls: [...existingUrls, ...pendingPreviews].slice(0, MAX_IMAGES),
-          }));
+        onApply={async () => {
+          const res = await commitListingPhotos({
+            existingUrls,
+            newFiles,
+            folder: 'businesses',
+            max: MAX_IMAGES,
+          });
+          if (res.error) {
+            setError(res.error);
+            return;
+          }
+          setDraft((d) => ({ ...d, imageUrls: res.urls }));
+          setExistingUrls(res.urls);
+          setNewFiles([]);
           setDialog(null);
         }}
       >

@@ -4,6 +4,7 @@ import type {
   BusinessMineListing,
   ProfessionalMineListing,
 } from '@/lib/directory-listings-client';
+import { isPersistableImageUrl } from '@/lib/image-url';
 import type {
   CarMineListing,
   JobMineListing,
@@ -18,6 +19,10 @@ import type {
   PublicRealEstateListingDetail,
 } from '@/lib/public-listings-client';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
+
+function durableUrls(urls: string[] | null | undefined): string[] {
+  return (urls ?? []).filter(isPersistableImageUrl);
+}
 
 function metricsFrom(mine: {
   viewCount?: number;
@@ -35,6 +40,13 @@ function metricsFrom(mine: {
   };
 }
 
+function bumpFrom(mine: { createdAt: string; bumpedAt?: string | null }) {
+  return {
+    createdAt: mine.createdAt,
+    bumpedAt: mine.bumpedAt ?? mine.createdAt,
+  };
+}
+
 export function professionalMineToPublic(mine: ProfessionalMineListing): PublicDirectoryListingDetail {
   return {
     id: mine.id,
@@ -48,9 +60,9 @@ export function professionalMineToPublic(mine: ProfessionalMineListing): PublicD
     currency: mine.currency === 'EUR' || mine.currency === 'LEK' ? mine.currency : null,
     cityName: mine.cityName,
     contactPhone: mine.contactPhone ?? null,
-    imageUrl: mine.imageUrls[0] ?? null,
-    imageUrls: mine.imageUrls ?? [],
-    createdAt: mine.createdAt,
+    imageUrl: durableUrls(mine.imageUrls)[0] ?? null,
+    imageUrls: durableUrls(mine.imageUrls),
+    ...bumpFrom(mine),
     updatedAt: mine.updatedAt ?? mine.createdAt,
     openingHours: null,
     openStatusLine: null,
@@ -60,7 +72,7 @@ export function professionalMineToPublic(mine: ProfessionalMineListing): PublicD
     reservationUrl: null,
     servicesHighlight: mine.servicesHighlight,
     responseTimeHours: mine.responseTimeHours ?? null,
-    portfolioItems: mine.portfolioItems ?? [],
+    portfolioItems: (mine.portfolioItems ?? []).filter((p) => isPersistableImageUrl(p.imageUrl)),
     seller: null,
     ...metricsFrom(mine),
   };
@@ -79,9 +91,9 @@ export function businessMineToPublic(mine: BusinessMineListing): PublicDirectory
     currency: null,
     cityName: mine.cityName,
     contactPhone: mine.contactPhone ?? null,
-    imageUrl: mine.imageUrls[0] ?? null,
-    imageUrls: mine.imageUrls ?? [],
-    createdAt: mine.createdAt,
+    imageUrl: durableUrls(mine.imageUrls)[0] ?? null,
+    imageUrls: durableUrls(mine.imageUrls),
+    ...bumpFrom(mine),
     updatedAt: mine.updatedAt ?? mine.createdAt,
     openingHours: mine.openingHours ?? null,
     openStatusLine: null,
@@ -123,9 +135,9 @@ export function realEstateMineToPublic(mine: RealEstateMineListing): PublicRealE
     yearBuilt: mine.yearBuilt,
     condition: mine.condition,
     contactPhone: mine.contactPhone ?? null,
-    imageUrl: mine.imageUrls[0] ?? null,
-    imageUrls: mine.imageUrls ?? [],
-    createdAt: mine.createdAt,
+    imageUrl: durableUrls(mine.imageUrls)[0] ?? null,
+    imageUrls: durableUrls(mine.imageUrls),
+    ...bumpFrom(mine),
     updatedAt: mine.updatedAt ?? mine.createdAt,
     seller: null,
     ...metricsFrom(mine),
@@ -156,9 +168,9 @@ export function carMineToPublic(mine: CarMineListing): PublicCarListingDetail {
     extras: mine.extras ?? [],
     cityName: mine.cityName,
     contactPhone: mine.contactPhone ?? null,
-    imageUrl: mine.imageUrls[0] ?? null,
-    imageUrls: mine.imageUrls ?? [],
-    createdAt: mine.createdAt,
+    imageUrl: durableUrls(mine.imageUrls)[0] ?? null,
+    imageUrls: durableUrls(mine.imageUrls),
+    ...bumpFrom(mine),
     updatedAt: mine.createdAt,
     seller: null,
     ...metricsFrom(mine),
@@ -186,9 +198,9 @@ export function jobMineToPublic(mine: JobMineListing): PublicJobListingDetail {
     salary: mine.salary,
     currency: mine.currency === 'EUR' || mine.currency === 'LEK' ? mine.currency : null,
     contactPhone: mine.contactPhone ?? null,
-    imageUrl: mine.imageUrls[0] ?? null,
-    imageUrls: mine.imageUrls ?? [],
-    createdAt: mine.createdAt,
+    imageUrl: durableUrls(mine.imageUrls)[0] ?? null,
+    imageUrls: durableUrls(mine.imageUrls),
+    ...bumpFrom(mine),
     updatedAt: mine.createdAt,
     expiresAt: expires.toISOString(),
     responsibilities: mine.responsibilities ?? [],
@@ -212,9 +224,9 @@ export function marketplaceMineToPublic(mine: MarketplaceMineListing): PublicMar
     currency: mine.currency === 'EUR' || mine.currency === 'LEK' ? mine.currency : null,
     cityName: mine.cityName,
     contactPhone: mine.contactPhone ?? null,
-    imageUrl: mine.imageUrls[0] ?? null,
-    imageUrls: mine.imageUrls ?? [],
-    createdAt: mine.createdAt,
+    imageUrl: durableUrls(mine.imageUrls)[0] ?? null,
+    imageUrls: durableUrls(mine.imageUrls),
+    ...bumpFrom(mine),
     updatedAt: mine.createdAt,
     seller: null,
     ...metricsFrom(mine),

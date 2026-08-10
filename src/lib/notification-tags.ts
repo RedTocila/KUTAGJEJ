@@ -8,7 +8,6 @@ export const NOTIFICATION_TAGS = [
   'listing_status',
   'reviews',
   'reservations',
-  'verification',
 ] as const satisfies readonly NotificationTag[];
 
 /** Grow/Elite leads inbox: saves + shares + hot interest. */
@@ -28,8 +27,9 @@ const TYPE_TO_TAG: Record<string, NotificationTag> = {
   member_review: 'reviews',
   listing_review: 'reviews',
   business_reservation: 'reservations',
-  verification_approved: 'verification',
-  verification_rejected: 'verification',
+  // Account verification shares the Status inbox chip with listing approve/reject.
+  verification_approved: 'listing_status',
+  verification_rejected: 'listing_status',
 };
 
 export function notificationTagForType(type: string): NotificationTag | null {

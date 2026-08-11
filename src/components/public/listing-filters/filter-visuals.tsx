@@ -107,7 +107,7 @@ export function FilterChoiceCards({
   value: string;
   onChange: (value: string) => void;
   options: readonly Option[];
-  columns?: 2 | 3;
+  columns?: 1 | 2 | 3;
 }) {
   return (
     <Grid size={{ xs: 12 }}>
@@ -442,11 +442,11 @@ export const FAST_RESPONSE_FILTER_VISUAL = [
   { value: '1', label: 'Përgjigje e shpejtë', Icon: ClockIcon, hint: 'Brenda 24 orëve' },
 ] as const;
 
-export const DIRECTORY_SORT_VISUAL = [
+export const DIRECTORY_SORT_VISUAL: readonly Option[] = [
   { value: 'newest', label: 'Më të rejat' },
   { value: 'rating-desc', label: 'Më të vlerësuarat', Icon: StarIcon },
   { value: 'rating-asc', label: 'Më pak të vlerësuara' },
-] as const;
+];
 
 export const MARKETPLACE_PRICE_PRESETS = [
   { value: '50', label: '≤ 50' },

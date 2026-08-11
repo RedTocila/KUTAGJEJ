@@ -176,6 +176,7 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
     useBannerSlider({
       slideCount: slides.length,
       slideMs: SLIDE_MS,
+      flushFirstSlide: true,
     });
 
   if (slides.length === 0) return null;
@@ -190,6 +191,7 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
           trackRef={trackRef}
           trackSx={trackSx}
           touchHandlers={touchHandlers}
+          flushFirstSlide
         >
           {slides.map((slide, i) => {
             const dist = Math.abs(i - idx);

@@ -30,6 +30,11 @@ export interface UseBannerSliderOptions {
   slideMs?: number;
   autoplayMs?: number;
   swipeThreshold?: number;
+  /**
+   * Pull the first slide flush to the left edge (mobile). Later slides keep
+   * the usual side peek. Offset is read from the track parent’s padding.
+   */
+  flushFirstSlide?: boolean;
 }
 
 /**
@@ -44,6 +49,7 @@ export function useBannerSlider({
   slideMs = DEFAULT_SLIDE_MS,
   autoplayMs = DEFAULT_AUTOPLAY_MS,
   swipeThreshold = DEFAULT_SWIPE_THRESHOLD,
+  flushFirstSlide = false,
 }: UseBannerSliderOptions) {
   const [idx, setIdx] = React.useState(0);
   const trackRef = React.useRef<HTMLDivElement | null>(null);
@@ -62,12 +68,17 @@ export function useBannerSlider({
   slideBasisRef.current = slideCount > 0 ? 100 / slideCount : 100;
   transitionCssRef.current = `transform ${slideMs}ms ${MOTION.ease}`;
 
+  const flushFirstSlideRef = React.useRef(flushFirstSlide);
+  flushFirstSlideRef.current = flushFirstSlide;
+
   const applyTransform = React.useCallback((index: number, offsetPx: number, withTransition: boolean) => {
     const el = trackRef.current;
     if (!el) return;
     const useTransition = withTransition && !reduceMotionRef.current;
+    const flushTerm =
+      flushFirstSlideRef.current && index === 0 ? 'var(--banner-first-flush, 0px)' : '0px';
     el.style.transition = useTransition ? transitionCssRef.current : 'none';
-    el.style.transform = `translate3d(calc(-${index * slideBasisRef.current}% + ${offsetPx}px), 0, 0)`;
+    el.style.transform = `translate3d(calc(-${index * slideBasisRef.current}% + ${offsetPx}px + ${flushTerm}), 0, 0)`;
   }, []);
 
   const clearAutoPlay = React.useCallback(() => {
@@ -197,7 +208,9 @@ export function useBannerSlider({
       display: 'flex' as const,
       width: `${Math.max(slideCount, 1) * 100}%`,
       // Initial position; drag/autoplay write inline transform for 60fps.
-      transform: `translate3d(-${safeIdx * slideBasis}%, 0, 0)`,
+      transform: `translate3d(calc(-${safeIdx * slideBasis}% + ${
+        flushFirstSlide && safeIdx === 0 ? 'var(--banner-first-flush, 0px)' : '0px'
+      }), 0, 0)`,
       willChange: 'transform' as const,
       '@media (prefers-reduced-motion: reduce)': {
         transition: 'none',

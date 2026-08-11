@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button, CircularProgress, Typography, type ButtonProps } from '@mui/material';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 
+import { GuestListingContactDialog } from '@/components/public/guest-listing-contact-dialog';
 import { useUser } from '@/hooks/use-user';
 import {
   type ConversationListingKind,
@@ -19,6 +20,15 @@ export interface ListingMessageButtonProps extends Omit<ButtonProps, 'onClick'> 
   listingId: string;
   label?: string;
   children?: React.ReactNode;
+  /** Seller phone — used in the guest contact popup (call / WhatsApp). */
+  contactPhone?: string | null;
+  listingTitle?: string | null;
+  listingUrl?: string | null;
+}
+
+function hasStoredSession(): boolean {
+  if (typeof window === 'undefined') return false;
+  return Boolean(localStorage.getItem('custom-auth-token'));
 }
 
 export function ListingMessageButton({
@@ -28,25 +38,33 @@ export function ListingMessageButton({
   disabled,
   startIcon,
   children,
+  contactPhone,
+  listingTitle,
+  listingUrl,
   ...buttonProps
 }: ListingMessageButtonProps) {
   const router = useRouter();
   const { user, isLoading, checkSession } = useUser();
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [guestOpen, setGuestOpen] = React.useState(false);
+
+  const goToAuth = React.useCallback(() => {
+    setPendingListingChat({ listingKind, listingId });
+    setGuestOpen(false);
+    router.push(paths.user.auth);
+  }, [listingId, listingKind, router]);
 
   const handleClick = async () => {
     setError(null);
     if (isLoading) return;
 
-    const hasToken = typeof window !== 'undefined' && Boolean(localStorage.getItem('custom-auth-token'));
-    if (!user && !hasToken) {
-      setPendingListingChat({ listingKind, listingId });
-      router.push(paths.user.auth);
+    if (!user && !hasStoredSession()) {
+      setGuestOpen(true);
       return;
     }
 
-    if (!user && hasToken) {
+    if (!user && hasStoredSession()) {
       await checkSession();
     }
 
@@ -56,8 +74,7 @@ export function ListingMessageButton({
       if (res.error || !res.conversation) {
         const message = res.error ?? 'Nuk u krijua biseda.';
         if (/auth required|invalid token|çaktivizuar/i.test(message)) {
-          setPendingListingChat({ listingKind, listingId });
-          router.push(paths.user.auth);
+          goToAuth();
           return;
         }
         setError(message);
@@ -73,25 +90,37 @@ export function ListingMessageButton({
   return (
     <>
       <Button
-      type="button"
-      onClick={() => void handleClick()}
-      disabled={disabled || loading || isLoading}
-      title={error && !buttonProps.fullWidth ? error : buttonProps.title}
-      startIcon={
-        loading || isLoading
-          ? <CircularProgress size={18} color="inherit" />
-          : startIcon ?? (children ? undefined : <ChatsCircleIcon weight="regular" size={20} />)
-      }
-      {...buttonProps}
-      data-listing-contact=""
-    >
-      {children ?? label}
-    </Button>
-    {error && buttonProps.fullWidth ? (
-      <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5, fontWeight: 600 }}>
-        {error}
-      </Typography>
-    ) : null}
+        type="button"
+        {...buttonProps}
+        onClick={() => void handleClick()}
+        disabled={disabled || loading || isLoading}
+        title={error && !buttonProps.fullWidth ? error : buttonProps.title}
+        startIcon={
+          loading || isLoading ? (
+            <CircularProgress size={18} color="inherit" />
+          ) : (
+            startIcon ?? (children ? undefined : <ChatsCircleIcon weight="regular" size={20} />)
+          )
+        }
+        data-listing-contact=""
+      >
+        {children ?? label}
+      </Button>
+      {error && buttonProps.fullWidth ? (
+        <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5, fontWeight: 600 }}>
+          {error}
+        </Typography>
+      ) : null}
+      <GuestListingContactDialog
+        open={guestOpen}
+        onClose={() => setGuestOpen(false)}
+        onOpenAccount={goToAuth}
+        contactPhone={contactPhone}
+        listingTitle={listingTitle}
+        listingUrl={listingUrl}
+        listingKind={listingKind}
+        listingId={listingId}
+      />
     </>
   );
 }

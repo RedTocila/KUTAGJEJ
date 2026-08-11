@@ -83,6 +83,7 @@ export function BusinessListingDetailDesktop({
   reserveSubmitting,
   reserveOpen,
   onReserveOpen,
+  canonicalUrl,
   ownerPreview = false,
 }: {
   listing: PublicDirectoryListingDetail;
@@ -107,6 +108,7 @@ export function BusinessListingDetailDesktop({
   reserveSubmitting: boolean;
   reserveOpen: boolean;
   onReserveOpen: (open: boolean) => void;
+  canonicalUrl?: string;
   ownerPreview?: boolean;
 }) {
   const categoryLine = React.useMemo(() => businessCategorySubtitle(listing), [listing]);
@@ -395,6 +397,9 @@ export function BusinessListingDetailDesktop({
                 <ListingMessageButton
                   listingKind="businesses"
                   listingId={listing.id}
+                  contactPhone={telHref}
+                  listingTitle={listing.title}
+                  listingUrl={canonicalUrl}
                   fullWidth
                   variant="outlined"
                   sx={{ ...productButtonSx, py: 1.1 }}

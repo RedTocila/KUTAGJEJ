@@ -185,8 +185,9 @@ function ListingContactAside(props: {
   listing: AnyPublicListingDetail;
   displayPhone: string;
   whatsappInquireHref?: string | null | undefined;
+  canonicalUrl?: string;
 }) {
-  const { listing, displayPhone, whatsappInquireHref } = props;
+  const { listing, displayPhone, whatsappInquireHref, canonicalUrl } = props;
   const asideLoc = asideLocationFullLine(listing);
   return (
     <Stack spacing={2}>
@@ -246,6 +247,9 @@ function ListingContactAside(props: {
         <ListingMessageButton
           listingKind={metricKindToConversationKind(listing.kind as ListingMetricKind)}
           listingId={listing.id}
+          contactPhone={displayPhone}
+          listingTitle={listingTitle(listing)}
+          listingUrl={canonicalUrl}
           variant="outlined"
           fullWidth
           size="large"
@@ -365,6 +369,7 @@ export function VerticalListingDetailView(props: {
                     listing={listing}
                     displayPhone={displayPhone}
                     whatsappInquireHref={whatsappInquireHref}
+                    canonicalUrl={canonicalUrl}
                   />
                   <Divider flexItem />
                   <SellerProfileInner
@@ -587,6 +592,9 @@ export function VerticalListingDetailView(props: {
         <StickyListingContact
           listingKind={metricKindToConversationKind(metricKind)}
           listingId={listing.id}
+          contactPhone={displayPhone}
+          listingTitle={listingTitle(listing)}
+          listingUrl={canonicalUrl}
         />
       )}
     </>

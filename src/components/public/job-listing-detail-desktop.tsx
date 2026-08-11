@@ -79,6 +79,7 @@ export function JobListingDetailDesktop({
   shareCount,
   onToggleSave,
   onShare,
+  canonicalUrl,
   ownerPreview = false,
 }: {
   listing: PublicJobListingDetail;
@@ -88,6 +89,7 @@ export function JobListingDetailDesktop({
   shareCount: number;
   onToggleSave: () => void;
   onShare: () => void;
+  canonicalUrl?: string;
   ownerPreview?: boolean;
 }) {
   const sections = React.useMemo(() => buildJobDetailSections(listing), [listing]);
@@ -662,6 +664,9 @@ export function JobListingDetailDesktop({
                 <ListingMessageButton
                   listingKind="jobs"
                   listingId={listing.id}
+                  contactPhone={listing.contactPhone ?? listing.seller?.phone}
+                  listingTitle={listing.title}
+                  listingUrl={canonicalUrl}
                   label="Kontakto"
                   variant="contained"
                   size="large"

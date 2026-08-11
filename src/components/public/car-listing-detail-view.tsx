@@ -210,8 +210,9 @@ function CarPriceContactAside(props: {
   locationFull: string;
   displayPhone: string;
   whatsappInquireHref?: string | null;
+  canonicalUrl?: string;
 }) {
-  const { listing, locationFull, displayPhone, whatsappInquireHref } = props;
+  const { listing, locationFull, displayPhone, whatsappInquireHref, canonicalUrl } = props;
 
   return (
     <Stack spacing={2}>
@@ -277,6 +278,9 @@ function CarPriceContactAside(props: {
             <ListingMessageButton
               listingKind="cars"
               listingId={listing.id}
+              contactPhone={displayPhone}
+              listingTitle={listing.title}
+              listingUrl={canonicalUrl}
               variant="outlined"
               fullWidth
               size="large"
@@ -458,6 +462,7 @@ export function CarListingDetailView({
                       locationFull={locationFull}
                       displayPhone={displayPhone}
                       whatsappInquireHref={whatsappInquireHref}
+                      canonicalUrl={canonicalUrl}
                     />
                     <Divider flexItem sx={{ borderColor: 'rgba(var(--mui-palette-dividerChannel) / 0.35)' }} />
                     <ListingSellerProfileCard
@@ -725,7 +730,15 @@ export function CarListingDetailView({
         </Container>
       </Box>
 
-      {ownerPreview ? null : <StickyListingContact listingKind="cars" listingId={listing.id} />}
+      {ownerPreview ? null : (
+        <StickyListingContact
+          listingKind="cars"
+          listingId={listing.id}
+          contactPhone={displayPhone}
+          listingTitle={listing.title}
+          listingUrl={canonicalUrl}
+        />
+      )}
     </>
   );
 }

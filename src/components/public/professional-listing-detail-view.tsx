@@ -406,7 +406,15 @@ export function ProfessionalListingDetailView({
           </Stack>
         </Box>
 
-        {ownerPreview ? null : <StickyListingContact listingKind="professionals" listingId={listing.id} />}
+        {ownerPreview ? null : (
+          <StickyListingContact
+            listingKind="professionals"
+            listingId={listing.id}
+            contactPhone={listing.contactPhone ?? listing.seller?.phone}
+            listingTitle={displayName || listing.title}
+            listingUrl={canonicalUrl}
+          />
+        )}
       </Box>
     </>
   );

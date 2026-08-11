@@ -148,8 +148,9 @@ function RealEstatePriceContactAside(props: {
   locationFull: string;
   displayPhone: string;
   whatsappInquireHref?: string | null;
+  canonicalUrl?: string;
 }) {
-  const { listing, transactionLabel, locationFull, displayPhone, whatsappInquireHref } = props;
+  const { listing, transactionLabel, locationFull, displayPhone, whatsappInquireHref, canonicalUrl } = props;
 
   return (
     <Stack spacing={2}>
@@ -234,6 +235,9 @@ function RealEstatePriceContactAside(props: {
             <ListingMessageButton
               listingKind="real-estate"
               listingId={listing.id}
+              contactPhone={displayPhone}
+              listingTitle={listing.title}
+              listingUrl={canonicalUrl}
               variant="outlined"
               fullWidth
               size="large"
@@ -276,8 +280,21 @@ function RealEstateSellerCardContents({
   );
 }
 
-function StickyContactBar(props: { listingId: string }) {
-  return <StickyListingContact listingKind="real-estate" listingId={props.listingId} />;
+function StickyContactBar(props: {
+  listingId: string;
+  contactPhone: string;
+  listingTitle: string;
+  listingUrl: string;
+}) {
+  return (
+    <StickyListingContact
+      listingKind="real-estate"
+      listingId={props.listingId}
+      contactPhone={props.contactPhone}
+      listingTitle={props.listingTitle}
+      listingUrl={props.listingUrl}
+    />
+  );
 }
 
 export function RealEstateListingDetailView({
@@ -449,6 +466,7 @@ export function RealEstateListingDetailView({
                     locationFull={locationFull}
                     displayPhone={displayPhone}
                     whatsappInquireHref={whatsappInquireHref}
+                    canonicalUrl={canonicalUrl}
                   />
                   <Divider flexItem sx={{ borderColor: 'rgba(var(--mui-palette-dividerChannel) / 0.35)' }} />
                   <RealEstateSellerCardContents
@@ -740,7 +758,14 @@ export function RealEstateListingDetailView({
         </Container>
       </Box>
 
-      {ownerPreview ? null : <StickyContactBar listingId={listing.id} />}
+      {ownerPreview ? null : (
+        <StickyContactBar
+          listingId={listing.id}
+          contactPhone={displayPhone}
+          listingTitle={listing.title}
+          listingUrl={canonicalUrl}
+        />
+      )}
     </>
   );
 }

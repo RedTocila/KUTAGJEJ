@@ -40,7 +40,8 @@ import { BusinessReviewSection } from '@/components/businesses/business-review-s
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { BusinessListingDetailDesktop } from '@/components/public/business-listing-detail-desktop';
-import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
+import { StickyListingContact } from '@/components/public/sticky-listing-contact';
+import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { paths } from '@/paths';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
@@ -73,6 +74,7 @@ const reserveFieldSx = {
 
 export function BusinessListingDetailView({
   listing,
+  canonicalUrl,
   similar = [],
   ownerPreview = false,
   ownerEdit,
@@ -220,6 +222,7 @@ export function BusinessListingDetailView({
         reserveOpen={reserveOpen}
         onReserveOpen={setReserveOpen}
         onReserve={() => void handleReserve()}
+        canonicalUrl={canonicalUrl}
         ownerPreview={ownerPreview}
       />
 
@@ -228,7 +231,9 @@ export function BusinessListingDetailView({
           display: ownerPreview ? 'block' : { xs: 'block', md: 'none' },
           bgcolor: 'background.default',
           minHeight: ownerPreview ? 'auto' : '100vh',
-          pb: ownerPreview ? 3 : MOBILE_CONTENT_BOTTOM_PADDING,
+          pb: ownerPreview
+            ? 3
+            : `calc(80px + ${MOBILE_BOTTOM_NAV_OFFSET})`,
         }}
       >
       <Box sx={{ maxWidth: { md: CONTENT_MAX + 32 }, mx: 'auto', width: '100%' }}>
@@ -585,6 +590,15 @@ export function BusinessListingDetailView({
         </Box>
       </Box>
     </Box>
+      {ownerPreview ? null : (
+        <StickyListingContact
+          listingKind="businesses"
+          listingId={listing.id}
+          contactPhone={phone}
+          listingTitle={listing.title}
+          listingUrl={canonicalUrl}
+        />
+      )}
     </>
   );
 }

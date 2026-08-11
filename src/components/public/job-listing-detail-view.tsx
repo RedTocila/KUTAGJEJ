@@ -206,6 +206,7 @@ export function JobListingDetailView({
         shareCount={shareCount}
         onToggleSave={() => void toggleSave()}
         onShare={() => setShareOpen(true)}
+        canonicalUrl={canonicalUrl}
         ownerPreview={ownerPreview}
       />
 
@@ -919,7 +920,15 @@ export function JobListingDetailView({
           </Stack>
         </Box>
 
-        {ownerPreview ? null : <StickyListingContact listingKind="jobs" listingId={listing.id} />}
+        {ownerPreview ? null : (
+          <StickyListingContact
+            listingKind="jobs"
+            listingId={listing.id}
+            contactPhone={listing.contactPhone ?? listing.seller?.phone}
+            listingTitle={listing.title}
+            listingUrl={canonicalUrl}
+          />
+        )}
       </Box>
     </>
   );

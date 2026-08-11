@@ -242,7 +242,7 @@ export function AdminAiPage() {
                 Shkruani në shqip, p.sh. “shto 200 BC te ana@email.com” ose “fshi përdoruesin …”. Asistenti nuk
                 ekzekuton SQL dhe nuk prek llogari admin.
               </Typography>
-              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+              <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
                 {SUGGESTIONS.map((hint) => (
                   <Chip
                     key={hint}
@@ -283,7 +283,7 @@ export function AdminAiPage() {
                     </Typography>
                   </Box>
                   {msg.toolsUsed && msg.toolsUsed.length > 0 ? (
-                    <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap" sx={{ mt: 0.75 }}>
+                    <Stack direction="row" spacing={0.75} useFlexGap sx={{ mt: 0.75, flexWrap: 'wrap' }}>
                       {msg.toolsUsed.map((tool, toolIdx) => (
                         <Chip
                           key={`${tool.name}-${toolIdx}`}

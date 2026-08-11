@@ -73,6 +73,7 @@ export function ProfessionalListingDetailDesktop({
   saved,
   saveCount,
   onToggleSave,
+  canonicalUrl,
   ownerPreview = false,
 }: {
   listing: PublicDirectoryListingDetail;
@@ -271,6 +272,9 @@ export function ProfessionalListingDetailDesktop({
                         <ListingMessageButton
                           listingKind="professionals"
                           listingId={listing.id}
+                          contactPhone={listing.contactPhone ?? listing.seller?.phone}
+                          listingTitle={displayName || listing.title}
+                          listingUrl={canonicalUrl}
                           label="Kontakto"
                           variant="contained"
                           disableElevation

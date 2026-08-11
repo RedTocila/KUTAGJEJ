@@ -1,19 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
-import { Box, Button, CircularProgress, Typography, type SxProps, type Theme } from '@mui/material';
-import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
+import { Box, type SxProps, type Theme } from '@mui/material';
 
-import { useUser } from '@/hooks/use-user';
-import {
-  type ConversationListingKind,
-  setPendingListingChat,
-  startConversation,
-} from '@/lib/conversations-client';
-import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
+import { ListingMessageButton } from '@/components/public/listing-message-button';
+import { type ConversationListingKind } from '@/lib/conversations-client';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
-import { paths } from '@/paths';
 
 /** Shared “Kontakto” CTA — full width across listing detail surfaces. */
 export const listingContactCtaSx: SxProps<Theme> = {
@@ -50,11 +42,9 @@ export interface StickyListingContactProps {
    * Default: mobile only.
    */
   showOnDesktop?: boolean;
-}
-
-function hasStoredSession(): boolean {
-  if (typeof window === 'undefined') return false;
-  return Boolean(localStorage.getItem('custom-auth-token'));
+  contactPhone?: string | null;
+  listingTitle?: string | null;
+  listingUrl?: string | null;
 }
 
 /** Shared sticky CTA — full-width bar with chat icon (all listing categories). */
@@ -63,46 +53,10 @@ export function StickyListingContact({
   listingId,
   label = 'Kontakto',
   showOnDesktop = false,
+  contactPhone,
+  listingTitle,
+  listingUrl,
 }: StickyListingContactProps) {
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const router = useRouter();
-  const { user, isLoading, checkSession } = useUser();
-
-  const openChat = async () => {
-    setError(null);
-    if (isLoading || loading) return;
-
-    if (!user && !hasStoredSession()) {
-      setPendingListingChat({ listingKind, listingId });
-      router.push(paths.user.auth);
-      return;
-    }
-
-    // Show spinner immediately — don't wait on session refresh before feedback.
-    setLoading(true);
-    try {
-      if (!user && hasStoredSession()) {
-        await checkSession();
-      }
-      const res = await startConversation(listingKind, listingId);
-      if (res.error || !res.conversation) {
-        const message = res.error ?? 'Nuk u krijua biseda.';
-        if (/auth required|invalid token|çaktivizuar/i.test(message)) {
-          setPendingListingChat({ listingKind, listingId });
-          router.push(paths.user.auth);
-          return;
-        }
-        setError(message);
-        return;
-      }
-      emitHotLeadContactAction({ listingKind, listingId });
-      router.push(`${paths.user.messages}?c=${encodeURIComponent(res.conversation.id)}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <Box
       sx={{
@@ -129,30 +83,19 @@ export function StickyListingContact({
           maxWidth: '100%',
         }}
       >
-        <Button
-          type="button"
+        <ListingMessageButton
+          listingKind={listingKind}
+          listingId={listingId}
+          contactPhone={contactPhone}
+          listingTitle={listingTitle}
+          listingUrl={listingUrl}
+          label={label}
           variant="contained"
           disableElevation
           size="large"
           fullWidth
-          disabled={loading || isLoading}
-          onClick={() => void openChat()}
-          startIcon={
-            loading || isLoading ? (
-              <CircularProgress size={18} color="inherit" />
-            ) : (
-              <ChatsCircleIcon weight="regular" size={22} />
-            )
-          }
           sx={listingContactCtaSx}
-        >
-          {label}
-        </Button>
-        {error ? (
-          <Typography variant="caption" color="error" sx={{ fontWeight: 600, textAlign: 'center' }}>
-            {error}
-          </Typography>
-        ) : null}
+        />
       </Box>
     </Box>
   );

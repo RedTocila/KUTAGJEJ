@@ -572,6 +572,14 @@ const sq = {
     call: 'Telefono',
     whatsapp: 'WhatsApp',
   },
+  listingContact: {
+    dialogTitle: 'Si doni të kontaktoni?',
+    dialogDescription:
+      'Telefononi, shkruani në WhatsApp, ose hapni llogari për të kontaktuar nga platforma.',
+    call: 'Telefono',
+    whatsapp: 'WhatsApp',
+    openAccount: 'Hap llogari dhe kontakto nga platforma',
+  },
   notifications: {
     title: 'Njoftimet',
     empty: 'Nuk keni njoftime ende.',
@@ -1179,6 +1187,13 @@ const en: AppMessages = {
       'Describe the issue you are facing and we will get back to you as soon as possible.',
     call: 'Call',
     whatsapp: 'WhatsApp',
+  },
+  listingContact: {
+    dialogTitle: 'How would you like to get in touch?',
+    dialogDescription: 'Call, message on WhatsApp, or open an account to chat on the platform.',
+    call: 'Call',
+    whatsapp: 'WhatsApp',
+    openAccount: 'Open an account and contact on the platform',
   },
   notifications: {
     title: 'Notifications',

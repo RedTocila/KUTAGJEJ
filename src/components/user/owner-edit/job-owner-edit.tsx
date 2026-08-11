@@ -291,6 +291,7 @@ export function JobOwnerEdit({
           onChange={(v) => setDraft((d) => ({ ...d, industry: v }))}
           options={JOB_INDUSTRY_OPTIONS}
           emptyLabel="—"
+          allowCustom
         />
         <SearchableSelect
           label="Lloji i punës"

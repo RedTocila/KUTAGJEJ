@@ -435,14 +435,8 @@ export function CarListingForm({
     clearFieldError('model');
   };
 
-  const catalogMakes = makesForVehicleType(form.vehicleType);
-  const makeOptions =
-    form.make && !catalogMakes.includes(form.make) ? [form.make, ...catalogMakes] : catalogMakes;
-  const catalogModels = modelsForMake(form.vehicleType, form.make);
-  const modelOptions =
-    form.model && !catalogModels.includes(form.model)
-      ? [form.model, ...catalogModels]
-      : catalogModels;
+  const makeOptions = makesForVehicleType(form.vehicleType);
+  const modelOptions = modelsForMake(form.vehicleType, form.make);
 
   const toggleExtra = (extra: string) => {
     setForm((prev) => {
@@ -684,6 +678,7 @@ export function CarListingForm({
             options={makeOptions.map((m) => ({ value: m, label: m }))}
             emptyLabel={form.vehicleType ? 'Select make…' : 'Select category first…'}
             required
+            allowCustom
             disabled={!form.vehicleType}
             error={Boolean(fieldErrors.make)}
             helperText={fieldErrors.make}
@@ -696,6 +691,7 @@ export function CarListingForm({
             options={modelOptions.map((m) => ({ value: m, label: m }))}
             emptyLabel={form.make ? 'Select model…' : 'Select make first…'}
             required
+            allowCustom
             disabled={!form.make}
             error={Boolean(fieldErrors.model)}
             helperText={fieldErrors.model}

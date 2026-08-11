@@ -331,6 +331,7 @@ export function BusinessListingForm({
             options={BUSINESS_CATEGORY_OPTIONS}
             emptyLabel="Zgjidhni kategorinë…"
             required
+            allowCustom
           />
           <SearchableSelect
             label="Qyteti"

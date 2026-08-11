@@ -5,10 +5,7 @@ const authMiddleware = require('../../middleware/auth');
 const requirePortalUser = require('../../middleware/require-portal-user');
 const { getSupabaseAdmin } = require('../../lib/supabase');
 const { camelizeRow } = require('../../lib/profiles');
-const {
-  validateProfessionalPayload,
-  PROFESSIONAL_CATEGORIES,
-} = require('../../lib/directory-professional-validation');
+const { validateProfessionalPayload } = require('../../lib/directory-professional-validation');
 const { notifyAdminsListingSubmitted } = require('../../lib/listing-moderation');
 const { isUuid } = require('../../lib/public-listings/query-helpers');
 const { formatMineProfessional, formatMineProfessionalFull, loadMineKind, loadMineListingById } = require('../../lib/mine-listings');
@@ -144,10 +141,11 @@ router.put('/professionals/:id', authMiddleware, requirePortalUser, async (req, 
     if (body.title != null) patch.title = String(body.title).trim();
     if (body.description != null) patch.description = String(body.description).trim();
     if (body.category != null) {
-      if (!PROFESSIONAL_CATEGORIES.has(body.category)) {
+      const category = String(body.category).trim();
+      if (!category || category.length > 80) {
         return res.status(400).json({ message: 'Kategoria nuk është e vlefshme.' });
       }
-      patch.category = body.category;
+      patch.category = category;
     }
     if (body.cityId != null) {
       const cityId = String(body.cityId).trim();

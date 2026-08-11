@@ -338,6 +338,7 @@ export function MarketplaceListingForm({
             options={MARKETPLACE_CATEGORY_OPTIONS}
             emptyLabel="Zgjidhni kategorinë…"
             required
+            allowCustom
           />
           <SearchableSelect
             label="Gjendja"

@@ -284,6 +284,7 @@ export function ProfessionalOwnerEdit({
           options={PROFESSIONAL_CATEGORY_OPTIONS}
           emptyLabel="Zgjidhni…"
           required
+          allowCustom
         />
         <TextField
           label="Telefoni"

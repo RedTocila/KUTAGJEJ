@@ -21,14 +21,22 @@ import {
 } from '@mui/material';
 import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
 import { MagnifyingGlass as SearchIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
+import { PencilSimple as PencilIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
+import { useCopy } from '@/hooks/use-copy';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { productFieldSx, productSurfacePaperSx } from '@/styles/product-sx';
 
 export interface SearchableSelectOption {
   value: string;
   label: string;
+}
+
+function isOtherOption(option: SearchableSelectOption): boolean {
+  const v = option.value.trim().toLowerCase();
+  const l = option.label.trim().toLowerCase();
+  return v === 'other' || l === 'other' || l === 'tjetër';
 }
 
 export function SearchableSelect({
@@ -44,12 +52,13 @@ export function SearchableSelect({
   disabled = false,
   clearable = false,
   id,
-  searchPlaceholder = 'Kërko…',
+  searchPlaceholder,
   minOptionsForSearch = 5,
   helperText,
   error = false,
   sx,
   menuMinWidth,
+  allowCustom = false,
 }: {
   label: string;
   value: string;
@@ -71,21 +80,57 @@ export function SearchableSelect({
   sx?: FormControlProps['sx'];
   /** Minimum width for the dropdown panel (useful for compact fields). */
   menuMinWidth?: number;
+  /**
+   * Adds “Other…” so the user can type a value that is not in the list.
+   * Stored value is the custom text (never a sentinel).
+   */
+  allowCustom?: boolean;
 }) {
+  const t = useCopy();
   const fieldId = id ?? `searchable-select-${label.replace(/\s+/g, '-').toLowerCase()}`;
   const anchorRef = React.useRef<HTMLDivElement>(null);
   const searchRef = React.useRef<HTMLInputElement>(null);
+  const customRef = React.useRef<HTMLInputElement>(null);
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
+  const [customEditing, setCustomEditing] = React.useState(false);
 
-  const selectedLabel = options.find((o) => o.value === value)?.label ?? '';
-  const showSearch = options.length >= minOptionsForSearch;
+  const catalogOptions = React.useMemo(() => {
+    if (!allowCustom) return options;
+    return options.filter((o) => !isOtherOption(o));
+  }, [allowCustom, options]);
+
+  const isKnownValue = catalogOptions.some((o) => o.value === value);
+  const isCustomValue = allowCustom && Boolean(value) && value !== emptyValue && !isKnownValue;
+
+  React.useEffect(() => {
+    if (!allowCustom) {
+      setCustomEditing(false);
+      return;
+    }
+    if (!value || value === emptyValue) return;
+    setCustomEditing(!isKnownValue);
+  }, [allowCustom, emptyValue, isKnownValue, value]);
+
+  const selectedLabel = isKnownValue
+    ? (catalogOptions.find((o) => o.value === value)?.label ?? '')
+    : allowCustom
+      ? value
+      : '';
+  const showSearch = allowCustom || catalogOptions.length >= minOptionsForSearch;
+  const searchPh = searchPlaceholder ?? t.common.search;
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return options;
-    return options.filter((o) => o.label.toLowerCase().includes(q));
-  }, [options, query]);
+    if (!q) return catalogOptions;
+    return catalogOptions.filter((o) => o.label.toLowerCase().includes(q));
+  }, [catalogOptions, query]);
+
+  const typedQuery = query.trim();
+  const showUseQuery =
+    allowCustom &&
+    typedQuery.length > 0 &&
+    !catalogOptions.some((o) => o.label.toLowerCase() === typedQuery.toLowerCase());
 
   const close = () => {
     setOpen(false);
@@ -104,9 +149,19 @@ export function SearchableSelect({
   };
 
   const handleSelect = (next: string) => {
+    setCustomEditing(false);
     onChange(next);
     close();
   };
+
+  const handlePickCustom = (next = '') => {
+    setCustomEditing(true);
+    onChange(next);
+    close();
+    window.setTimeout(() => customRef.current?.focus(), 0);
+  };
+
+  const displayValue = customEditing || isCustomValue ? value : selectedLabel;
 
   return (
     <ClickAwayListener onClickAway={close}>
@@ -118,12 +173,20 @@ export function SearchableSelect({
           id={fieldId}
           ref={anchorRef}
           label={label}
-          readOnly
+          readOnly={!customEditing && !isCustomValue}
           notched
           error={error}
-          value={selectedLabel}
-          placeholder={emptyLabel}
-          onClick={handleToggle}
+          inputRef={customEditing || isCustomValue ? customRef : undefined}
+          value={displayValue}
+          placeholder={customEditing || isCustomValue ? t.common.typeYourOwn : emptyLabel}
+          onClick={() => {
+            if (disabled) return;
+            if (customEditing || isCustomValue) return;
+            handleToggle();
+          }}
+          onChange={(e) => {
+            if (customEditing || isCustomValue) onChange(e.target.value);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
               if (open) {
@@ -132,6 +195,7 @@ export function SearchableSelect({
               }
               return;
             }
+            if (customEditing || isCustomValue) return;
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
               handleToggle();
@@ -147,10 +211,11 @@ export function SearchableSelect({
               {clearable && value ? (
                 <IconButton
                   size="small"
-                  aria-label="Pastro zgjedhjen"
+                  aria-label={t.common.close}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={(e) => {
                     e.stopPropagation();
+                    setCustomEditing(false);
                     handleSelect(emptyValue);
                   }}
                   sx={{ p: 0.25 }}
@@ -158,16 +223,28 @@ export function SearchableSelect({
                   <XIcon size={12} />
                 </IconButton>
               ) : null}
-              <CaretDownIcon size={14} />
+              <IconButton
+                size="small"
+                aria-label={open ? t.common.close : t.common.search}
+                disabled={disabled}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggle();
+                }}
+                sx={{ p: 0.25 }}
+              >
+                <CaretDownIcon size={14} />
+              </IconButton>
             </InputAdornment>
           }
           sx={{
             borderRadius: 2.5,
-            cursor: disabled ? 'not-allowed' : 'pointer',
+            cursor: disabled ? 'not-allowed' : customEditing || isCustomValue ? 'text' : 'pointer',
             bgcolor: 'background.paper',
             transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
             '& input': {
-              cursor: disabled ? 'not-allowed' : 'pointer',
+              cursor: disabled ? 'not-allowed' : customEditing || isCustomValue ? 'text' : 'pointer',
               textOverflow: 'ellipsis',
             },
             '&.Mui-focused': {
@@ -216,9 +293,15 @@ export function SearchableSelect({
                   inputRef={searchRef}
                   size="small"
                   fullWidth
-                  placeholder={searchPlaceholder}
+                  placeholder={searchPh}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && showUseQuery) {
+                      e.preventDefault();
+                      handlePickCustom(typedQuery);
+                    }
+                  }}
                   slotProps={{
                     input: {
                       startAdornment: (
@@ -255,7 +338,7 @@ export function SearchableSelect({
               }}
             >
               <ListItemButton
-                selected={value === emptyValue}
+                selected={value === emptyValue && !customEditing}
                 disableTouchRipple
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSelect(emptyValue)}
@@ -269,7 +352,7 @@ export function SearchableSelect({
               {filtered.map((option) => (
                 <ListItemButton
                   key={option.value}
-                  selected={value === option.value}
+                  selected={!customEditing && value === option.value}
                   disableTouchRipple
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleSelect(option.value)}
@@ -278,14 +361,50 @@ export function SearchableSelect({
                   <ListItemText
                     primary={option.label}
                     slotProps={{
-                      primary: { sx: { fontSize: '0.875rem', fontWeight: value === option.value ? 600 : 500 } },
+                      primary: {
+                        sx: {
+                          fontSize: '0.875rem',
+                          fontWeight: !customEditing && value === option.value ? 600 : 500,
+                        },
+                      },
                     }}
                   />
                 </ListItemButton>
               ))}
-              {filtered.length === 0 ? (
+              {showUseQuery ? (
+                <ListItemButton
+                  selected={false}
+                  disableTouchRipple
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handlePickCustom(typedQuery)}
+                  sx={{ py: 0.6, px: 1.5, touchAction: 'pan-y' }}
+                >
+                  <ListItemText
+                    primary={t.common.useCustomValue(typedQuery)}
+                    slotProps={{
+                      primary: { sx: { fontSize: '0.875rem', fontWeight: 600, color: 'primary.main' } },
+                    }}
+                  />
+                </ListItemButton>
+              ) : null}
+              {allowCustom ? (
+                <ListItemButton
+                  selected={customEditing || isCustomValue}
+                  disableTouchRipple
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handlePickCustom(isCustomValue ? value : '')}
+                  sx={{ py: 0.6, px: 1.5, touchAction: 'pan-y', alignItems: 'center', gap: 1 }}
+                >
+                  <PencilIcon size={14} />
+                  <ListItemText
+                    primary={t.common.otherSpecify}
+                    slotProps={{ primary: { sx: { fontSize: '0.875rem', fontWeight: 600 } } }}
+                  />
+                </ListItemButton>
+              ) : null}
+              {filtered.length === 0 && !showUseQuery && !allowCustom ? (
                 <Typography sx={{ px: 1.5, py: 1.25, fontSize: '0.84rem', color: 'text.secondary' }}>
-                  Nuk u gjet asnjë rezultat
+                  {t.common.noResults}
                 </Typography>
               ) : null}
             </List>

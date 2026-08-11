@@ -241,6 +241,7 @@ export function CarOwnerEdit({
             options={makeOptions.map((m) => ({ value: m, label: m }))}
             emptyLabel="Zgjidhni…"
             required
+            allowCustom
           />
           <SearchableSelect
             label="Modeli"
@@ -249,6 +250,7 @@ export function CarOwnerEdit({
             options={modelOptions.map((m) => ({ value: m, label: m }))}
             emptyLabel={draft.make ? 'Zgjidhni…' : 'Zgjidhni markën…'}
             required
+            allowCustom
             disabled={!draft.make}
           />
         </Stack>
@@ -351,6 +353,7 @@ export function CarOwnerEdit({
             options={makeOptions.map((m) => ({ value: m, label: m }))}
             emptyLabel="Zgjidhni…"
             required
+            allowCustom
           />
           <SearchableSelect
             label="Modeli"
@@ -359,6 +362,7 @@ export function CarOwnerEdit({
             options={modelOptions.map((m) => ({ value: m, label: m }))}
             emptyLabel={draft.make ? 'Zgjidhni…' : 'Zgjidhni markën…'}
             required
+            allowCustom
             disabled={!draft.make}
           />
         </Stack>

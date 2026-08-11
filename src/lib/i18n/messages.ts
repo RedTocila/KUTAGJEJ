@@ -118,6 +118,11 @@ const sq = {
     markAllRead: 'Shëno të lexuara',
     markingRead: 'Duke shënuar…',
     showAll: 'Shfaq të gjitha',
+    other: 'Tjetër',
+    otherSpecify: 'Tjetër…',
+    typeYourOwn: 'Shkruaj vetë…',
+    useCustomValue: (q: string) => `Përdor “${q}”`,
+    noResults: 'Nuk u gjet asnjë rezultat',
   },
   verticals: verticalsSq,
   chrome: {
@@ -746,6 +751,11 @@ const en: AppMessages = {
     markAllRead: 'Mark all as read',
     markingRead: 'Marking…',
     showAll: 'Show all',
+    other: 'Other',
+    otherSpecify: 'Other…',
+    typeYourOwn: 'Type your own…',
+    useCustomValue: (q: string) => `Use “${q}”`,
+    noResults: 'No results found',
   },
   verticals: verticalsEn,
   chrome: {

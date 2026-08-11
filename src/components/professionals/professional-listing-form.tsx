@@ -463,6 +463,7 @@ export function ProfessionalListingForm({
             options={PROFESSIONAL_CATEGORY_OPTIONS}
             emptyLabel="Zgjidhni kategorinë…"
             required
+            allowCustom
           />
           <SearchableSelect
             label="Qyteti"

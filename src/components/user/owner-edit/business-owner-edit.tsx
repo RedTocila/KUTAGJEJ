@@ -196,6 +196,7 @@ export function BusinessOwnerEdit({
           options={BUSINESS_CATEGORY_OPTIONS}
           emptyLabel="Zgjidhni…"
           required
+          allowCustom
         />
         <TextField
           label="Çfarë ofroni"

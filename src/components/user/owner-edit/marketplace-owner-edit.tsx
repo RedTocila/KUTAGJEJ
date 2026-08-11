@@ -241,6 +241,7 @@ export function MarketplaceOwnerEdit({
           options={MARKETPLACE_CATEGORY_OPTIONS}
           emptyLabel="Zgjidhni…"
           required
+          allowCustom
         />
         <SearchableSelect
           label="Gjendja"

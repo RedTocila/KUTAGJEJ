@@ -41,9 +41,11 @@ function validateJobPayload(body) {
   const description = String(body?.description || '').trim();
   if (!description) return { ok: false, message: 'Përshkrimi është i detyrueshëm.' };
 
-  if (!INDUSTRY_VALUES.includes(body?.industry)) {
+  const industry = String(body?.industry || '').trim();
+  if (!industry || industry.length > 80) {
     return { ok: false, message: 'Industria e zgjedhur nuk është e vlefshme.' };
   }
+  body.industry = industry;
 
   const cityId = String(body?.cityId || '').trim();
   if (!cityId || !isUuid(cityId)) {

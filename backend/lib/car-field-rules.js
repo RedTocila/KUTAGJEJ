@@ -2,7 +2,6 @@
 
 const {
   VEHICLE_TYPE_VALUES,
-  isValidVehicleMake,
   allVehicleMakes,
   makesForVehicleType,
 } = require('./vehicle-catalog');
@@ -41,18 +40,11 @@ function validateCarPayload(fields) {
   fields.vehicleType = vehicleType;
 
   const make = String(fields.make || '').trim();
-  if (!isValidVehicleMake(vehicleType, make)) {
-    // Case-insensitive / fuzzy make match against catalog for this vehicle type.
-    const catalogMakes = makesForVehicleType(vehicleType);
-    const matched = catalogMakes.find((m) => m.toLowerCase() === make.toLowerCase());
-    if (matched) {
-      fields.make = matched;
-    } else if (catalogMakes.includes('Other')) {
-      fields.make = 'Other';
-    } else {
-      return { ok: false, message: 'Invalid or missing make for this vehicle category.' };
-    }
-  }
+  if (!make) return { ok: false, message: 'Make is required.' };
+  if (make.length > 80) return { ok: false, message: 'Make is too long.' };
+  const catalogMakes = makesForVehicleType(vehicleType);
+  const matchedMake = catalogMakes.find((m) => m.toLowerCase() === make.toLowerCase());
+  fields.make = matchedMake || make;
 
   const model = String(fields.model || '').trim();
   if (!model) return { ok: false, message: 'Model is required.' };

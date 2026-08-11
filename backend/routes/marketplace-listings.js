@@ -30,7 +30,9 @@ function validate(body) {
   }
   if (!String(body?.title || '').trim()) return { ok: false, message: 'Titulli është i detyrueshëm.' };
   if (!String(body?.description || '').trim()) return { ok: false, message: 'Përshkrimi është i detyrueshëm.' };
-  if (!CATEGORY_VALUES.includes(body?.category)) return { ok: false, message: 'Kategoria nuk është e vlefshme.' };
+  const category = String(body?.category || '').trim();
+  if (!category || category.length > 80) return { ok: false, message: 'Kategoria nuk është e vlefshme.' };
+  body.category = category;
 
   if (SELLING.has(body.transactionType)) {
     if (body?.condition && !CONDITION_VALUES.includes(body.condition)) {

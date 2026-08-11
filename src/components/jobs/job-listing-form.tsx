@@ -464,6 +464,7 @@ export function JobListingForm({
           options={JOB_INDUSTRY_OPTIONS}
           emptyLabel="Zgjidhni industrinë…"
           required
+          allowCustom
         />
         <SearchableSelect
           label="Qyteti"

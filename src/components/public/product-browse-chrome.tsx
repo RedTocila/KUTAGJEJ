@@ -48,10 +48,10 @@ export function ProductBackButton({
   ...rest
 }: {
   href?: string;
-  onClick?: IconButtonProps['onClick'];
+  onClick?: (event: React.MouseEvent<HTMLElement>) => void;
   'aria-label'?: string;
   sx?: SxProps<Theme>;
-} & Omit<IconButtonProps, 'children' | 'sx' | 'href'>) {
+} & Omit<IconButtonProps, 'children' | 'sx' | 'href' | 'onClick'>) {
   const fallbackHref = href ?? paths.home;
   const historyBack = useHistoryBackProps(fallbackHref);
   const buttonSx = [productBackButtonSx, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])];

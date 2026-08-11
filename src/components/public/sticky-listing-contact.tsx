@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { Box, type SxProps, type Theme } from '@mui/material';
 
 import { ListingMessageButton } from '@/components/public/listing-message-button';
@@ -17,17 +18,20 @@ export const listingContactCtaSx: SxProps<Theme> = {
   textTransform: 'none',
   fontSize: '0.95rem',
   color: 'primary.contrastText',
-  boxShadow: '0 10px 28px rgba(0,0,0,0.28)',
+  bgcolor: 'primary.main',
+  backgroundImage: 'none',
+  boxShadow: 'none',
   px: 3.25,
-  transition: `background-color 120ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 120ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1), filter 120ms ease`,
+  transition: 'none',
   '&:hover': {
+    bgcolor: 'primary.main',
     color: 'primary.contrastText',
-    boxShadow: '0 12px 32px rgba(0,0,0,0.34)',
+    boxShadow: 'none',
+    filter: 'none',
   },
   '&:active': {
-    transform: 'scale(0.98)',
-    filter: 'brightness(0.94)',
-    transitionDuration: '0ms',
+    transform: 'none',
+    filter: 'none',
   },
   '& .MuiButton-startIcon': { color: 'inherit', mr: 0.85 },
 };
@@ -57,21 +61,28 @@ export function StickyListingContact({
   listingTitle,
   listingUrl,
 }: StickyListingContactProps) {
-  return (
+  const [host, setHost] = React.useState<HTMLElement | null>(null);
+  React.useEffect(() => {
+    setHost(document.body);
+  }, []);
+
+  const bar = (
     <Box
-      sx={{
+      sx={(theme) => ({
         display: showOnDesktop ? 'flex' : { xs: 'flex', md: 'none' },
         position: 'fixed',
         left: 0,
         right: 0,
-        zIndex: 1200,
+        zIndex: theme.zIndex.modal - 10,
         bottom: MOBILE_BOTTOM_NAV_OFFSET,
         px: 2,
         py: 1.25,
         justifyContent: 'stretch',
         pointerEvents: 'none',
+        bgcolor: 'transparent',
+        backgroundImage: 'none',
         '& > *': { pointerEvents: 'auto' },
-      }}
+      })}
     >
       <Box
         sx={{
@@ -99,4 +110,7 @@ export function StickyListingContact({
       </Box>
     </Box>
   );
+
+  if (!host) return null;
+  return createPortal(bar, host);
 }

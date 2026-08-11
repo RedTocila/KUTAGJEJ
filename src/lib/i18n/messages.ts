@@ -578,7 +578,8 @@ const sq = {
       'Telefononi, shkruani në WhatsApp, ose hapni llogari për të kontaktuar nga platforma.',
     call: 'Telefono',
     whatsapp: 'WhatsApp',
-    openAccount: 'Hap llogari dhe kontakto nga platforma',
+    openAccount: 'Hap llogari',
+    openAccountHint: 'Kontakto nga platforma',
   },
   notifications: {
     title: 'Njoftimet',
@@ -1193,7 +1194,8 @@ const en: AppMessages = {
     dialogDescription: 'Call, message on WhatsApp, or open an account to chat on the platform.',
     call: 'Call',
     whatsapp: 'WhatsApp',
-    openAccount: 'Open an account and contact on the platform',
+    openAccount: 'Open an account',
+    openAccountHint: 'Contact on the platform',
   },
   notifications: {
     title: 'Notifications',

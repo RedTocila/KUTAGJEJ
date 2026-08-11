@@ -805,29 +805,29 @@ export function UserAuthView() {
       }}
     >
       <Container maxWidth={false} disableGutters sx={{ width: '100%', maxWidth: 480 }}>
+        <Button
+          type="button"
+          onClick={handleBack}
+          aria-label={t.auth.backAria}
+          startIcon={<ArrowLeftIcon size={18} weight="bold" />}
+          sx={{
+            display: 'inline-flex',
+            textTransform: 'none',
+            fontWeight: 700,
+            color: 'text.secondary',
+            px: 0.75,
+            ml: -0.75,
+            mb: 1.5,
+            minHeight: 36,
+            '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
+          }}
+        >
+          {t.auth.back}
+        </Button>
         <Card elevation={0} sx={(theme) => ({ ...productSurfacePaperSx(theme) })}>
           <CardContent sx={{ p: { xs: 3, sm: 3.5 } }}>
             <Stack spacing={2.5}>
               <Box>
-                <Button
-                  type="button"
-                  onClick={handleBack}
-                  aria-label={t.auth.backAria}
-                  startIcon={<ArrowLeftIcon size={18} weight="bold" />}
-                  sx={{
-                    alignSelf: 'flex-start',
-                    textTransform: 'none',
-                    fontWeight: 700,
-                    color: 'text.secondary',
-                    px: 0.75,
-                    ml: -0.75,
-                    mb: 1.5,
-                    minHeight: 36,
-                    '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
-                  }}
-                >
-                  {t.auth.back}
-                </Button>
                 <BrandLogo
                   height={36}
                   showWordmark

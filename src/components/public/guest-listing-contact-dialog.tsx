@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Box, Button, Stack, Typography } from '@mui/material';
+import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 import { UserPlus as UserPlusIcon } from '@phosphor-icons/react/dist/ssr/UserPlus';
 import { WhatsappLogo as WhatsappIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
@@ -12,6 +13,7 @@ import {
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
 import { useCopy } from '@/hooks/use-copy';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { telHref, whatsappInquireHref } from '@/lib/listing-contact';
 import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
 
@@ -25,6 +27,14 @@ export interface GuestListingContactDialogProps {
   listingKind?: string;
   listingId?: string;
 }
+
+const actionBtnSx = {
+  fontWeight: 800,
+  borderRadius: 2.5,
+  py: 1.35,
+  textTransform: 'none' as const,
+  minHeight: 52,
+};
 
 export function GuestListingContactDialog({
   open,
@@ -71,7 +81,7 @@ export function GuestListingContactDialog({
                 markContact();
                 onClose();
               }}
-              sx={{ fontWeight: 800, borderRadius: 2.5, py: 1.25, textTransform: 'none' }}
+              sx={actionBtnSx}
             >
               {t.listingContact.call}
             </Button>
@@ -91,10 +101,7 @@ export function GuestListingContactDialog({
                 onClose();
               }}
               sx={{
-                fontWeight: 800,
-                borderRadius: 2.5,
-                py: 1.25,
-                textTransform: 'none',
+                ...actionBtnSx,
                 color: '#25D366',
                 borderColor: '#25D366',
                 '&:hover': {
@@ -111,24 +118,71 @@ export function GuestListingContactDialog({
             fullWidth
             variant={hasDirectContact ? 'outlined' : 'contained'}
             size="large"
-            startIcon={<UserPlusIcon size={20} weight="bold" />}
             onClick={onOpenAccount}
             sx={{
-              fontWeight: 800,
-              borderRadius: 2.5,
-              py: 1.25,
-              textTransform: 'none',
+              ...actionBtnSx,
+              py: 1.2,
+              px: 1.5,
+              justifyContent: 'flex-start',
+              textAlign: 'left',
               ...(hasDirectContact
                 ? {
-                    borderWidth: 2,
+                    borderWidth: 1.5,
                     borderColor: 'divider',
+                    bgcolor: (theme) =>
+                      theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'action.hover',
                     color: 'text.primary',
-                    '&:hover': { borderWidth: 2, borderColor: 'primary.light', bgcolor: 'action.hover' },
+                    '&:hover': {
+                      borderWidth: 1.5,
+                      borderColor: 'primary.light',
+                      bgcolor: (theme) =>
+                        theme.palette.mode === 'dark'
+                          ? 'rgba(255,255,255,0.07)'
+                          : primaryMainAlpha(0.08),
+                    },
                   }
                 : null),
             }}
           >
-            {t.listingContact.openAccount}
+            <Stack direction="row" spacing={1.35} sx={{ alignItems: 'center', width: '100%', minWidth: 0 }}>
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  flexShrink: 0,
+                  borderRadius: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: hasDirectContact ? primaryMainAlpha(0.16) : 'primary.contrastText',
+                  color: hasDirectContact ? 'primary.main' : 'primary.main',
+                }}
+              >
+                <UserPlusIcon size={20} weight="bold" />
+              </Box>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', lineHeight: 1.2 }}>
+                  {t.listingContact.openAccount}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color={hasDirectContact ? 'text.secondary' : 'primary.contrastText'}
+                  sx={{ display: 'block', mt: 0.2, lineHeight: 1.3, fontWeight: 600, opacity: 0.82 }}
+                >
+                  {t.listingContact.openAccountHint}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  color: hasDirectContact ? 'text.secondary' : 'primary.contrastText',
+                  display: 'flex',
+                  flexShrink: 0,
+                  opacity: 0.7,
+                }}
+              >
+                <CaretRightIcon size={18} weight="bold" />
+              </Box>
+            </Stack>
           </Button>
         </Stack>
       </ProductDialogContent>

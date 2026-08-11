@@ -8,6 +8,11 @@ import { CategoryBrowseSkeleton } from '@/components/public/category-browse-skel
 import { ListingDetailSkeleton } from '@/components/public/listing-detail-skeleton';
 import { useNavigationPendingPath } from '@/hooks/use-navigation-pending';
 import {
+  HISTORY_BACK_ATTR,
+  canNavigateBack,
+  isModifiedClick,
+} from '@/lib/navigate-back';
+import {
   beginPendingNavigation,
   clearPendingNavigation,
   clearPendingNavigationIfMatches,
@@ -17,10 +22,6 @@ import { isPublicBrowsePath, isPublicListingDetailPath } from '@/lib/public-brow
 import { paths } from '@/paths';
 
 const PENDING_TIMEOUT_MS = 10_000;
-
-function isModifiedClick(event: MouseEvent): boolean {
-  return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
-}
 
 function shouldSkipOverlay(path: string): boolean {
   // These routes paint from cache / their own cards — a full-page loader flashes.
@@ -141,6 +142,7 @@ export function NavigationPendingOverlay(): React.JSX.Element | null {
       if (nestedInteractive && nestedInteractive !== anchor) return;
       const nextPath = isInternalAnchorNavigation(anchor);
       if (!nextPath) return;
+      if (anchor.hasAttribute(HISTORY_BACK_ATTR) && canNavigateBack()) return;
 
       beginPendingNavigation(nextPath);
     };

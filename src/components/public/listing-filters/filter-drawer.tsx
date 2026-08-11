@@ -500,7 +500,6 @@ function FilterScrollArea({
               border: '1px solid',
               borderColor: 'divider',
               color: 'primary.main',
-              boxShadow: `0 4px 14px ${primaryMainAlpha(0.25)}`,
             }}
           >
             <CaretDownIcon size={14} weight="bold" />
@@ -564,7 +563,7 @@ export function FilterDrawerPanel({
         sx={{
           position: 'fixed',
           inset: 0,
-          zIndex: 1299,
+          zIndex: (theme) => theme.zIndex.modal + 1,
           bgcolor: 'rgba(0,0,0,0.55)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
@@ -585,7 +584,7 @@ export function FilterDrawerPanel({
           top: 0,
           left: 0,
           bottom: 0,
-          zIndex: 1300,
+          zIndex: (theme) => theme.zIndex.modal + 2,
           width: { xs: '80vw', sm: 440, md: 460 },
           maxWidth: '100vw',
           height: '100%',
@@ -627,7 +626,6 @@ export function FilterDrawerPanel({
                   bgcolor: 'primary.main',
                   color: 'primary.contrastText',
                   flexShrink: 0,
-                  boxShadow: `0 4px 16px ${primaryMainAlpha(0.45)}`,
                 }}
               >
                 <FunnelIcon size={20} weight="bold" />
@@ -680,6 +678,7 @@ export function FilterDrawerPanel({
             borderTop: '1px solid',
             borderColor: 'divider',
             bgcolor: 'background.default',
+            backgroundImage: 'none',
           }}
         >
           {hasPendingChanges ? (
@@ -697,20 +696,25 @@ export function FilterDrawerPanel({
                 py: 1.5,
                 borderRadius: 999,
                 border: 'none',
+                appearance: 'none',
+                WebkitAppearance: 'none',
                 bgcolor: 'primary.main',
+                backgroundImage: 'none',
+                background: (theme) => theme.palette.primary.main,
                 color: 'primary.contrastText',
                 fontWeight: 800,
                 fontSize: '0.95rem',
                 letterSpacing: '-0.01em',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                boxShadow: `0 4px 20px ${primaryMainAlpha(0.45)}`,
-                transition: 'transform 0.15s, box-shadow 0.15s',
+                boxShadow: 'none',
+                filter: 'none',
                 '&:hover': {
-                  transform: 'translateY(-1px)',
-                  boxShadow: `0 6px 28px ${primaryMainAlpha(0.55)}`,
+                  bgcolor: 'primary.main',
+                  backgroundImage: 'none',
+                  boxShadow: 'none',
                 },
-                '&:active': { transform: 'translateY(0)' },
+                '&:active': { transform: 'scale(0.98)' },
               }}
             >
               {t.browse.showResults}

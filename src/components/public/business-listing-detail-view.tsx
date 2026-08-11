@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Alert,
@@ -21,6 +20,7 @@ import { ListingDetailTitleBadges } from '@/components/public/listing-detail-tit
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
 import { ReservationDateField } from '@/components/core/reservation-date-field';
+import { HistoryBackButton } from '@/components/public/product-browse-chrome';
 import { BusinessMenuPreview } from '@/components/public/business-menu-section';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
@@ -576,14 +576,9 @@ export function BusinessListingDetailView({
 
             {ownerPreview ? null : (
               <Box sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'center', pt: 1 }}>
-                <Button
-                  component={Link}
-                  href={paths.public.businesses}
-                  variant="text"
-                  sx={{ fontWeight: 700, textTransform: 'none', fontSize: FONT_BODY }}
-                >
+                <HistoryBackButton href={paths.public.businesses} sx={{ fontSize: FONT_BODY }}>
                   Kthehu te lista e bizneseve
-                </Button>
+                </HistoryBackButton>
               </Box>
             )}
           </Stack>

@@ -21,6 +21,7 @@ import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/Use
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
 import { OwnerEditPencil } from '@/components/user/owner-edit-pencil';
+import { useHistoryBackProps } from '@/hooks/use-navigate-back';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { ListingSharePayload } from '@/lib/listing-share';
 import { type ListingMetricKind } from '@/lib/listing-metrics';
@@ -111,6 +112,7 @@ export function RealEstateListingGallery(props: {
   const [saveCount, setSaveCount] = React.useState(initialSaveCount);
   const [shareOpen, setShareOpen] = React.useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const historyBack = useHistoryBackProps(browseListHref);
 
   React.useEffect(() => {
     setShareCount(initialShareCount);
@@ -477,11 +479,11 @@ export function RealEstateListingGallery(props: {
           >
             <IconButton
               component={Link}
-              href={browseListHref}
               aria-label={browseListAriaLabel}
               size="medium"
               data-gallery-control
               onPointerDown={stopGalleryControlEvent}
+              {...historyBack}
               sx={{
                 bgcolor: alpha('#000', 0.45),
                 color: '#fff',

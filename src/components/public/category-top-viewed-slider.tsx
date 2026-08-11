@@ -1,15 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
 import { Box, Container, Stack, Typography } from '@mui/material';
-import { ArrowUpRight as ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 
+import { BannerSlideCard, BANNER_SLIDE_VISUALS } from '@/components/public/banner-slide-card';
+import { BannerSliderPager } from '@/components/public/banner-slider-pager';
 import { BannerSliderViewport } from '@/components/public/banner-slider-viewport';
 import { formatPrice } from '@/components/public/listing-cards/format-helpers';
 import { useBannerSlider } from '@/hooks/use-banner-slider';
 import { useCopy } from '@/hooks/use-copy';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import type { HomeVerticalId } from '@/lib/home-categories';
 import type {
@@ -28,7 +27,6 @@ import {
   listingProfessionalPublicHref,
   listingRealEstatePublicHref,
 } from '@/paths';
-import { MOTION } from '@/styles/motion';
 
 const SLIDE_MS = 320;
 
@@ -127,180 +125,9 @@ function toSlide(verticalId: HomeVerticalId, listing: TopViewedListing): SlideMo
   }
 }
 
-function ListingSlidePanel({
-  slide,
-  suppressNavRef,
-}: {
-  slide: SlideModel;
-  suppressNavRef: React.MutableRefObject<boolean>;
-}) {
-  const imageBg = slide.imageUrl && /^https?:\/\//i.test(slide.imageUrl) ? slide.imageUrl : null;
-
-  const content = (
-    <Box
-      sx={{
-        position: 'relative',
-        width: '100%',
-        minHeight: { xs: 240, sm: 260 },
-        overflow: 'hidden',
-        bgcolor: imageBg ? 'grey.900' : primaryMainAlpha(0.14),
-        backgroundImage: imageBg ? `url(${imageBg})` : undefined,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        transition: `transform ${MOTION.fast} ${MOTION.ease}, filter ${MOTION.fast} ${MOTION.ease}`,
-        '&:hover': { filter: 'brightness(1.03)' },
-        '&:active': { transform: 'scale(0.992)' },
-      }}
-    >
-      {/* Light top dim + bottom fade so the title stays readable */}
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          background: imageBg
-            ? 'linear-gradient(180deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.06) 45%, rgba(0,0,0,0) 62%)'
-            : 'linear-gradient(180deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0) 55%)',
-        }}
-      />
-      <Box
-        aria-hidden
-        sx={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: '55%',
-          pointerEvents: 'none',
-          zIndex: 0,
-          background:
-            'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.38) 42%, rgba(0,0,0,0) 100%)',
-        }}
-      />
-
-      <Box
-        sx={{
-          position: 'relative',
-          zIndex: 1,
-          p: { xs: 2.25, sm: 2.75 },
-          minHeight: { xs: 240, sm: 260 },
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-        }}
-      >
-        {slide.subtitle ? (
-          <Box
-            sx={{
-              alignSelf: 'flex-end',
-              px: 1.25,
-              py: 0.55,
-              borderRadius: 1.5,
-              bgcolor: 'rgba(0,0,0,0.42)',
-              border: '1px solid rgba(255,255,255,0.16)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              boxShadow: '0 2px 12px rgba(0,0,0,0.22)',
-              maxWidth: '72%',
-            }}
-          >
-            <Typography
-              sx={{
-                fontWeight: 800,
-                fontSize: { xs: '0.9rem', sm: '1rem' },
-                color: 'primary.main',
-                textAlign: 'right',
-                lineHeight: 1.25,
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {slide.subtitle}
-            </Typography>
-          </Box>
-        ) : (
-          <Box />
-        )}
-
-        <Stack
-          direction="row"
-          spacing={1.5}
-          sx={{
-            alignItems: 'flex-end',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Typography
-            component="h3"
-            sx={{
-              fontWeight: 800,
-              fontSize: { xs: '1.1rem', sm: '1.25rem' },
-              lineHeight: 1.2,
-              letterSpacing: '-0.02em',
-              textAlign: 'left',
-              color: '#fff',
-              textShadow: '0 1px 2px rgba(0,0,0,0.45), 0 2px 16px rgba(0,0,0,0.35)',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-              maxWidth: '88%',
-              flex: 1,
-              minWidth: 0,
-            }}
-          >
-            {slide.title}
-          </Typography>
-
-          <Box
-            aria-hidden
-            sx={{
-              width: 36,
-              height: 36,
-              borderRadius: '50%',
-              flexShrink: 0,
-              display: 'grid',
-              placeItems: 'center',
-              bgcolor: 'rgba(0,0,0,0.42)',
-              border: '1px solid rgba(255,255,255,0.16)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              boxShadow: '0 2px 12px rgba(0,0,0,0.22)',
-              color: '#fff',
-              mb: 0.25,
-            }}
-          >
-            <ArrowUpRightIcon size={18} weight="bold" />
-          </Box>
-        </Stack>
-      </Box>
-    </Box>
-  );
-
-  return (
-    <Box
-      component={RouterLink}
-      href={slide.href}
-      onClick={(event: React.MouseEvent) => {
-        if (suppressNavRef.current) {
-          event.preventDefault();
-          suppressNavRef.current = false;
-        }
-      }}
-      sx={{
-        display: 'block',
-        textDecoration: 'none',
-        color: 'inherit',
-        WebkitTapHighlightColor: 'transparent',
-      }}
-    >
-      {content}
-    </Box>
-  );
-}
-
 /**
- * Homepage-style banner slider for the most-viewed listings on a category page —
- * image + title/price only (no full listing card chrome).
+ * Contained banner slider for the most-viewed listings on a category page —
+ * same chrome as the home promo banners.
  */
 export function CategoryTopViewedSlider({
   verticalId,
@@ -316,11 +143,20 @@ export function CategoryTopViewedSlider({
     [listings, verticalId],
   );
 
-  const { idx, slideBasis, trackRef, suppressNavRef, goToSlide, touchHandlers, trackSx } =
-    useBannerSlider({
-      slideCount: slides.length,
-      slideMs: SLIDE_MS,
-    });
+  const {
+    idx,
+    slideBasis,
+    trackRef,
+    suppressNavRef,
+    goToSlide,
+    autoplay,
+    toggleAutoplay,
+    touchHandlers,
+    trackSx,
+  } = useBannerSlider({
+    slideCount: slides.length,
+    slideMs: SLIDE_MS,
+  });
 
   if (slides.length === 0) return null;
 
@@ -336,7 +172,7 @@ export function CategoryTopViewedSlider({
         overflowX: 'hidden',
       }}
     >
-      <Container maxWidth="xl" sx={{ minWidth: 0 }}>
+      <Container maxWidth="xl" sx={{ minWidth: 0, px: { xs: 2, md: 3, lg: 4 } }}>
         <Typography
           component="h2"
           sx={{
@@ -357,60 +193,38 @@ export function CategoryTopViewedSlider({
             trackRef={trackRef}
             trackSx={trackSx}
             touchHandlers={touchHandlers}
+            variant="contained"
           >
-            {slides.map((slide) => (
-              <Box
-                key={slide.id}
-                sx={{
-                  borderRadius: { xs: 3, md: 4 },
-                  overflow: 'hidden',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  boxShadow: (theme) =>
-                    theme.palette.mode === 'light'
-                      ? '0 8px 24px rgba(0,0,0,0.1)'
-                      : '0 10px 28px rgba(0,0,0,0.18)',
-                }}
-              >
-                <ListingSlidePanel slide={slide} suppressNavRef={suppressNavRef} />
-              </Box>
-            ))}
+            {slides.map((slide, i) => {
+              const dist = Math.abs(i - idx);
+              const wrapDist = Math.min(dist, slides.length - dist);
+              const eager = wrapDist <= 1;
+              return (
+                <BannerSlideCard
+                  key={slide.id}
+                  href={slide.href}
+                  suppressNavRef={suppressNavRef}
+                  imageUrl={slide.imageUrl}
+                  fallbackBg={BANNER_SLIDE_VISUALS[i % BANNER_SLIDE_VISUALS.length].bg}
+                  eager={eager}
+                  title={slide.title}
+                  subtitle={slide.subtitle}
+                />
+              );
+            })}
           </BannerSliderViewport>
 
-          {slides.length > 1 ? (
-            <Stack
-              direction="row"
-              spacing={0.8}
-              role="tablist"
-              aria-label={t.browse.listingSlidesAria}
-              sx={{ justifyContent: 'center', pt: 0.15 }}
-            >
-              {slides.map((slide, i) => (
-                <Box
-                  key={slide.id}
-                  component="button"
-                  type="button"
-                  role="tab"
-                  aria-selected={i === idx}
-                  aria-label={`Njoftimi ${i + 1}`}
-                  onClick={() => goToSlide(i)}
-                  sx={{
-                    width: i === idx ? 22 : 8,
-                    height: 8,
-                    borderRadius: 99,
-                    border: 0,
-                    p: 0,
-                    cursor: 'pointer',
-                    transition: `width ${MOTION.fast} ${MOTION.ease}, background-color ${MOTION.fast} ${MOTION.ease}`,
-                    bgcolor: i === idx ? 'primary.main' : 'action.selected',
-                    '&:hover': {
-                      bgcolor: i === idx ? 'primary.dark' : 'action.active',
-                    },
-                  }}
-                />
-              ))}
-            </Stack>
-          ) : null}
+          <BannerSliderPager
+            slideCount={slides.length}
+            idx={idx}
+            autoplay={autoplay}
+            goToSlide={goToSlide}
+            toggleAutoplay={toggleAutoplay}
+            tablistLabel={t.browse.listingSlidesAria}
+            pauseLabel={t.browse.slidesPause}
+            playLabel={t.browse.slidesPlay}
+            slideLabel={(i) => t.browse.slideN(i + 1)}
+          />
         </Stack>
       </Container>
     </Box>

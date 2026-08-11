@@ -1,11 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import {
   Avatar,
   Box,
-  Button,
   Chip,
   Stack,
   Typography,
@@ -23,6 +21,7 @@ import CalendarTodayOutlined from '@mui/icons-material/CalendarTodayOutlined';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
 
+import { HistoryBackButton } from '@/components/public/product-browse-chrome';
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
@@ -907,14 +906,9 @@ export function JobListingDetailView({
 
             {ownerPreview ? null : (
               <Box sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'center' }}>
-                <Button
-                  component={Link}
-                  href={paths.public.jobs}
-                  variant="text"
-                  sx={{ fontWeight: 700, textTransform: 'none', fontSize: FONT_BODY }}
-                >
+                <HistoryBackButton href={paths.public.jobs} sx={{ fontSize: FONT_BODY }}>
                   Kthehu te lista e punëve
-                </Button>
+                </HistoryBackButton>
               </Box>
             )}
           </Stack>

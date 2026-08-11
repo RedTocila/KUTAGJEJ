@@ -8,10 +8,11 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { productBackButtonSx } from '@/components/public/product-browse-chrome';
 import { useCopy } from '@/hooks/use-copy';
+import { useHistoryBackProps } from '@/hooks/use-navigate-back';
 import { paths } from '@/paths';
 
 /**
- * Returns to the mobile profile tab (portal hub at `/user/dashboard`), or a custom parent.
+ * Returns to the previous page. Falls back to the portal hub when this tab has no in-app history.
  */
 export function UserDashboardBackLink({
   href = paths.user.dashboard,
@@ -23,12 +24,13 @@ export function UserDashboardBackLink({
   sx?: SxProps<Theme>;
 }) {
   const t = useCopy();
+  const historyBack = useHistoryBackProps(href);
   return (
     <Button
       component={RouterLink}
-      href={href}
       size="small"
       startIcon={React.createElement(ArrowLeftIcon, { size: 18, weight: 'bold' })}
+      {...historyBack}
       sx={[
         {
           alignSelf: 'flex-start',
@@ -42,12 +44,12 @@ export function UserDashboardBackLink({
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
       ]}
     >
-      {label ?? t.chrome.backToProfile}
+      {label ?? t.chrome.back}
     </Button>
   );
 }
 
-/** Dismisses the post-listing flow and returns to the dashboard hub. */
+/** Dismisses the current flow and returns to the previous page (fallback `href`). */
 export function UserDashboardCloseButton({
   href = paths.user.dashboard,
   sx,
@@ -56,12 +58,13 @@ export function UserDashboardCloseButton({
   sx?: SxProps<Theme>;
 }) {
   const t = useCopy();
+  const historyBack = useHistoryBackProps(href);
   return (
     <IconButton
       component={RouterLink}
-      href={href}
       aria-label={t.common.close}
       size="small"
+      {...historyBack}
       sx={[
         productBackButtonSx,
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),

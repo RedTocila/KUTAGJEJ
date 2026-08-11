@@ -80,7 +80,7 @@ export function FilterSegmented({
                 cursor: 'pointer',
                 fontFamily: 'inherit',
                 transition: 'background-color 0.15s, color 0.15s, transform 0.15s',
-                boxShadow: active ? `0 4px 14px ${primaryMainAlpha(0.35)}` : 'none',
+                boxShadow: 'none',
                 '&:hover': {
                   bgcolor: active ? 'primary.main' : primaryMainAlpha(0.1),
                   color: active ? 'primary.contrastText' : 'text.primary',
@@ -344,8 +344,8 @@ export function FilterBedroomPicker({
                 color: active ? 'primary.contrastText' : 'text.primary',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                boxShadow: active ? `0 4px 14px ${primaryMainAlpha(0.35)}` : 'none',
-                transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s',
+                boxShadow: 'none',
+                transition: 'background-color 0.15s, border-color 0.15s, color 0.15s',
                 '&:hover': {
                   borderColor: 'primary.main',
                   bgcolor: active ? 'primary.main' : primaryMainAlpha(0.1),

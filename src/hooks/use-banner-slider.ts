@@ -52,6 +52,7 @@ export function useBannerSlider({
   flushFirstSlide = false,
 }: UseBannerSliderOptions) {
   const [idx, setIdx] = React.useState(0);
+  const [autoplay, setAutoplay] = React.useState(true);
   const trackRef = React.useRef<HTMLDivElement | null>(null);
   const idxRef = React.useRef(0);
   const touchStartX = React.useRef<number | null>(null);
@@ -70,6 +71,8 @@ export function useBannerSlider({
 
   const flushFirstSlideRef = React.useRef(flushFirstSlide);
   flushFirstSlideRef.current = flushFirstSlide;
+  const autoplayRef = React.useRef(true);
+  autoplayRef.current = autoplay;
 
   const applyTransform = React.useCallback((index: number, offsetPx: number, withTransition: boolean) => {
     const el = trackRef.current;
@@ -90,7 +93,7 @@ export function useBannerSlider({
 
   const startAutoPlay = React.useCallback(() => {
     clearAutoPlay();
-    if (slideCountRef.current < 2 || reduceMotionRef.current) return;
+    if (!autoplayRef.current || slideCountRef.current < 2 || reduceMotionRef.current) return;
     timerRef.current = window.setInterval(() => {
       const count = slideCountRef.current;
       if (count < 2) return;
@@ -102,7 +105,12 @@ export function useBannerSlider({
   }, [applyTransform, autoplayMs, clearAutoPlay]);
 
   React.useEffect(() => {
-    reduceMotionRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    reduceMotionRef.current = reduce;
+    if (reduce) {
+      autoplayRef.current = false;
+      setAutoplay(false);
+    }
   }, []);
 
   React.useEffect(() => {
@@ -130,6 +138,14 @@ export function useBannerSlider({
     },
     [applyTransform, startAutoPlay],
   );
+
+  const toggleAutoplay = React.useCallback(() => {
+    const next = !autoplayRef.current;
+    autoplayRef.current = next;
+    setAutoplay(next);
+    if (next) startAutoPlay();
+    else clearAutoPlay();
+  }, [clearAutoPlay, startAutoPlay]);
 
   const handleTouchStart = React.useCallback(
     (event: React.TouchEvent) => {
@@ -198,6 +214,8 @@ export function useBannerSlider({
     trackRef,
     suppressNavRef,
     goToSlide,
+    autoplay,
+    toggleAutoplay,
     touchHandlers: {
       onTouchStart: handleTouchStart,
       onTouchMove: handleTouchMove,

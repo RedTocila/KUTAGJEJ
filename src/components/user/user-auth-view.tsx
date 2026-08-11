@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Box,
@@ -37,6 +37,7 @@ import { z as zod } from 'zod';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { useCopy } from '@/hooks/use-copy';
+import { useNavigateBack } from '@/hooks/use-navigate-back';
 import { authClient } from '@/lib/auth/client';
 import { getDefaultAuthenticatedPath } from '@/lib/auth/post-login-path';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -612,7 +613,6 @@ function RegisterFieldsBusiness({
 }
 
 export function UserAuthView() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const t = useCopy();
   const refFromUrl = (searchParams.get('ref') ?? '').trim().toUpperCase();
@@ -779,13 +779,7 @@ export function UserAuthView() {
   const indRoot = individualForm.formState.errors.root;
   const busRoot = businessForm.formState.errors.root;
 
-  const handleBack = () => {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      router.back();
-      return;
-    }
-    router.push(paths.home);
-  };
+  const handleBack = useNavigateBack(paths.home);
 
   return (
     <Box

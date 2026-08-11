@@ -33,6 +33,7 @@ import {
 } from '@/components/public/product-browse-chrome';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
+import { useHistoryBackProps } from '@/hooks/use-navigate-back';
 import { fetchAiSearch, type AiSearchResult } from '@/lib/ai-search-client';
 import { hardRefreshToTop } from '@/lib/hard-navigate';
 import {
@@ -191,6 +192,7 @@ export function SearchPageView() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const historyBack = useHistoryBackProps(paths.home);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const { language } = useLanguage();
   const t = useCopy();
@@ -396,7 +398,7 @@ export function SearchPageView() {
           <Typography sx={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.01em' }}>
             {t.search.title}
           </Typography>
-          <IconButton component={RouterLink} href={paths.home} aria-label={t.common.close} edge="end" size="small">
+          <IconButton component={RouterLink} {...historyBack} aria-label={t.common.close} edge="end" size="small">
             <XIcon size={22} weight="bold" />
           </IconButton>
         </Stack>

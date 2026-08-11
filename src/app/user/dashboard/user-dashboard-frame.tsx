@@ -28,12 +28,10 @@ function pathMatches(pathname: string | null, base: string): boolean {
 function DashboardHeaderRow({
   showBackLink,
   backHref,
-  backLabel,
   isMessages,
 }: {
   showBackLink: boolean;
   backHref: string;
-  backLabel: string;
   isMessages: boolean;
 }) {
   const headerActions = useOwnerEditHeaderActionsSlot();
@@ -57,7 +55,6 @@ function DashboardHeaderRow({
       {showBackLink ? (
         <UserDashboardBackLink
           href={backHref}
-          label={backLabel}
           sx={{ mb: 0, alignSelf: 'center' }}
         />
       ) : (
@@ -90,7 +87,6 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
   const showMobileBottomNav = !messageThreadOpen;
   const showBackLink = !isDashboardHome && !isMessages && !isSavedListings && !isPostListing;
   const backHref = paths.user.dashboard;
-  const backLabel = 'Kthehu te profili';
 
   return (
     <AuthGuard>
@@ -101,7 +97,6 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
               showMobileBottomNav={showMobileBottomNav}
               showBackLink={showBackLink}
               backHref={backHref}
-              backLabel={backLabel}
               isMessages={isMessages}
               showFrameClose={showFrameClose}
             >
@@ -119,7 +114,6 @@ function UserDashboardFrameInner({
   showMobileBottomNav,
   showBackLink,
   backHref,
-  backLabel,
   isMessages,
   showFrameClose,
 }: {
@@ -127,7 +121,6 @@ function UserDashboardFrameInner({
   showMobileBottomNav: boolean;
   showBackLink: boolean;
   backHref: string;
-  backLabel: string;
   isMessages: boolean;
   showFrameClose: boolean;
 }) {
@@ -206,7 +199,6 @@ function UserDashboardFrameInner({
                   <DashboardHeaderRow
                     showBackLink={showBackLink}
                     backHref={backHref}
-                    backLabel={backLabel}
                     isMessages={isMessages}
                   />
                   <Box

@@ -63,15 +63,6 @@ export function FilterSection({
           from: { opacity: 0, transform: 'translateY(8px)' },
           to: { opacity: 1, transform: 'translateY(0)' },
         },
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 2,
-          background: `linear-gradient(90deg, ${primaryMainAlpha(0.75)}, transparent 70%)`,
-        },
       }}
     >
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.75 }}>
@@ -81,7 +72,6 @@ export function FilterSection({
             height: 6,
             borderRadius: '50%',
             bgcolor: 'primary.main',
-            boxShadow: `0 0 10px ${primaryMainAlpha(0.6)}`,
           }}
         />
         <Typography

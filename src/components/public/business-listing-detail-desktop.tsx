@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import {
   Alert,
   Box,
@@ -23,6 +22,7 @@ import { ListingDetailTitleBadges } from '@/components/public/listing-detail-tit
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 
+import { HistoryBackButton } from '@/components/public/product-browse-chrome';
 import { ReservationDateField } from '@/components/core/reservation-date-field';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
@@ -446,9 +446,7 @@ export function BusinessListingDetailDesktop({
           ) : null}
 
           <Box sx={{ textAlign: 'center' }}>
-            <Button component={Link} href={paths.public.businesses} variant="text" sx={{ fontWeight: 700, textTransform: 'none' }}>
-              Kthehu te lista e bizneseve
-            </Button>
+            <HistoryBackButton href={paths.public.businesses}>Kthehu te lista e bizneseve</HistoryBackButton>
           </Box>
           </Stack>
         </Stack>

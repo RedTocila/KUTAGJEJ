@@ -17,7 +17,9 @@ import {
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { PortalIconBox } from '@/components/user/portal-cards';
+import { useHistoryBackProps } from '@/hooks/use-navigate-back';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { paths } from '@/paths';
 import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 
 /** Shared outlined field chrome — matches `SearchableSelect`. */
@@ -159,6 +161,7 @@ export function ListingFormActions({
   error?: string | null;
   sx?: SxProps<Theme>;
 }) {
+  const historyBack = useHistoryBackProps(backHref ?? paths.user.dashboard);
   return (
     <Stack
       spacing={1.25}
@@ -176,9 +179,9 @@ export function ListingFormActions({
         {backHref ? (
           <Button
             component={RouterLink}
-            href={backHref}
             color="inherit"
             variant="outlined"
+            {...historyBack}
             sx={{
               textTransform: 'none',
               fontWeight: 700,

@@ -4,8 +4,10 @@ import * as React from 'react';
 import RouterLink from 'next/link';
 import {
   Box,
+  Button,
   IconButton,
   Typography,
+  type ButtonProps,
   type IconButtonProps,
   type SxProps,
   type Theme,
@@ -16,7 +18,9 @@ import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/di
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
+import { useHistoryBackProps } from '@/hooks/use-navigate-back';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { paths } from '@/paths';
 
 /** Shared height for browse search bars, filter buttons, and back buttons. */
 export const PRODUCT_BROWSE_CONTROL_HEIGHT = 36;
@@ -44,31 +48,62 @@ export function ProductBackButton({
   ...rest
 }: {
   href?: string;
-  onClick?: () => void;
+  onClick?: IconButtonProps['onClick'];
   'aria-label'?: string;
   sx?: SxProps<Theme>;
-} & Omit<IconButtonProps, 'children' | 'sx'>) {
+} & Omit<IconButtonProps, 'children' | 'sx' | 'href'>) {
+  const fallbackHref = href ?? paths.home;
+  const historyBack = useHistoryBackProps(fallbackHref);
   const buttonSx = [productBackButtonSx, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])];
 
-  if (href) {
+  /** Explicit handler without href (in-page UI: messages thread, share overlay). */
+  if (onClick && href == null) {
     return (
-      <IconButton
-        component={RouterLink}
-        href={href}
-        aria-label={ariaLabel}
-        size="small"
-        sx={buttonSx}
-        {...rest}
-      >
+      <IconButton aria-label={ariaLabel} onClick={onClick} size="small" sx={buttonSx} {...rest}>
         <ArrowLeftIcon size={18} weight="bold" />
       </IconButton>
     );
   }
 
   return (
-    <IconButton aria-label={ariaLabel} onClick={onClick} size="small" sx={buttonSx} {...rest}>
+    <IconButton
+      component={RouterLink}
+      aria-label={ariaLabel}
+      size="small"
+      sx={buttonSx}
+      {...rest}
+      {...historyBack}
+      onClick={(event) => {
+        onClick?.(event);
+        historyBack.onClick(event);
+      }}
+    >
       <ArrowLeftIcon size={18} weight="bold" />
     </IconButton>
+  );
+}
+
+/** Text control that returns to the previous page, with `href` as a cold-landing fallback. */
+export function HistoryBackButton({
+  href,
+  children,
+  sx,
+  ...rest
+}: {
+  href: string;
+  children: React.ReactNode;
+} & Omit<ButtonProps, 'href' | 'component' | 'onClick'>) {
+  const historyBack = useHistoryBackProps(href);
+  return (
+    <Button
+      component={RouterLink}
+      variant="text"
+      {...rest}
+      {...historyBack}
+      sx={[{ fontWeight: 700, textTransform: 'none' }, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])]}
+    >
+      {children}
+    </Button>
   );
 }
 

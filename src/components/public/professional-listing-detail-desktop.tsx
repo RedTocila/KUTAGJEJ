@@ -1,11 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import {
   Avatar,
   Box,
-  Button,
   Chip,
   Container,
   Divider,
@@ -23,6 +21,7 @@ import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 
+import { HistoryBackButton } from '@/components/public/product-browse-chrome';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
@@ -372,9 +371,9 @@ export function ProfessionalListingDetailDesktop({
           ) : null}
 
           <Box sx={{ textAlign: 'center' }}>
-            <Button component={Link} href={paths.public.professionals} variant="text" sx={{ fontWeight: 700, textTransform: 'none' }}>
+            <HistoryBackButton href={paths.public.professionals}>
               Kthehu te lista e profesionistëve
-            </Button>
+            </HistoryBackButton>
           </Box>
         </Stack>
       </Container>

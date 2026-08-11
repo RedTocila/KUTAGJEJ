@@ -210,14 +210,6 @@ export function MemberProfileView({
     member.businessOwner?.trim() &&
     member.businessOwner.trim().toLowerCase() !== name.toLowerCase();
 
-  const handleBack = () => {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      router.back();
-      return;
-    }
-    router.push('/');
-  };
-
   return (
     <Box
       sx={{
@@ -255,7 +247,7 @@ export function MemberProfileView({
           }}
         >
           <ProductBackButton
-            onClick={handleBack}
+            href={paths.home}
             aria-label="Kthehu"
             sx={{
               position: 'absolute',

@@ -8,6 +8,7 @@ import {
   registerAppRouterNavigation,
   unregisterAppRouterNavigation,
 } from '@/lib/hard-navigate';
+import { rememberFirstPageIfNeeded } from '@/lib/navigate-back';
 import { beginPendingNavigation, clearPendingNavigationIfMatches } from '@/lib/navigation-pending';
 
 function scrollWindowToTop() {
@@ -47,6 +48,7 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
   }, [router]);
 
   React.useLayoutEffect(() => {
+    rememberFirstPageIfNeeded();
     scrollWindowToTop();
     clearPendingNavigationIfMatches(pathname);
   }, [pathname]);

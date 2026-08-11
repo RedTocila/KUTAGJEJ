@@ -1,11 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import {
   Avatar,
   Box,
-  Button,
   Chip,
   Container,
   Grid,
@@ -24,7 +22,7 @@ import SchoolOutlined from '@mui/icons-material/SchoolOutlined';
 import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import TrendingUpOutlined from '@mui/icons-material/TrendingUpOutlined';
 import WorkOutlineOutlined from '@mui/icons-material/WorkOutlineOutlined';
-import { ProductBackButton } from '@/components/public/product-browse-chrome';
+import { HistoryBackButton, ProductBackButton } from '@/components/public/product-browse-chrome';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
@@ -650,9 +648,7 @@ export function JobListingDetailDesktop({
               ) : null}
 
               <Box sx={{ textAlign: 'center', pt: 1 }}>
-                <Button component={Link} href={paths.public.jobs} variant="text" sx={{ fontWeight: 700, textTransform: 'none' }}>
-                  Kthehu te lista e punëve
-                </Button>
+                <HistoryBackButton href={paths.public.jobs}>Kthehu te lista e punëve</HistoryBackButton>
               </Box>
             </Stack>
           </Grid>

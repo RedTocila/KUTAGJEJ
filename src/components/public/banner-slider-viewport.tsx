@@ -21,11 +21,13 @@ type BannerSliderViewportProps = {
   children: React.ReactNode;
   /** First slide sits flush to the left on mobile; later slides keep side peeks. */
   flushFirstSlide?: boolean;
+  /** `contained` hides neighbor peeks; `peek` shows adjacent cards in the gutter. */
+  variant?: 'peek' | 'contained';
 };
 
 /**
- * Full-bleed (mobile) banner track: adjacent cards peek in the side gutter,
- * with the same edge fade used by homepage category listing carousels.
+ * Banner track: `contained` clips to the current slide (home banners + category
+ * sliders). `peek` shows adjacent cards in the side gutter.
  */
 export function BannerSliderViewport({
   idx,
@@ -36,9 +38,11 @@ export function BannerSliderViewport({
   touchHandlers,
   children,
   flushFirstSlide = false,
+  variant = 'peek',
 }: BannerSliderViewportProps) {
   const slides = React.Children.toArray(children);
-  const maskImage = bannerSliderSideMask(idx, slideCount);
+  const contained = variant === 'contained';
+  const maskImage = contained ? undefined : bannerSliderSideMask(idx, slideCount);
 
   return (
     <Box
@@ -46,23 +50,27 @@ export function BannerSliderViewport({
       sx={{
         position: 'relative',
         minWidth: 0,
-        mx: { xs: -2, md: 0 },
+        mx: contained ? 0 : { xs: -2, md: 0 },
         overflow: 'hidden',
         touchAction: 'pan-y',
         overscrollBehaviorX: 'none',
         cursor: slideCount > 1 ? 'grab' : undefined,
         userSelect: 'none',
         WebkitUserSelect: 'none',
-        maskImage: { xs: maskImage, md: 'none' },
-        WebkitMaskImage: { xs: maskImage, md: 'none' },
-        transition: `mask-image ${MOTION.fast} linear`,
+        ...(maskImage
+          ? {
+              maskImage: { xs: maskImage, md: 'none' },
+              WebkitMaskImage: { xs: maskImage, md: 'none' },
+              transition: `mask-image ${MOTION.fast} linear`,
+            }
+          : null),
       }}
     >
       <Box
         sx={(theme) => ({
-          px: { xs: 3.5, md: 0 },
+          px: contained ? 0 : { xs: 3.5, md: 0 },
           minWidth: 0,
-          '--banner-first-flush': flushFirstSlide ? `-${theme.spacing(3.5)}` : '0px',
+          '--banner-first-flush': flushFirstSlide && !contained ? `-${theme.spacing(3.5)}` : '0px',
           [theme.breakpoints.up('md')]: {
             '--banner-first-flush': '0px',
           },
@@ -75,8 +83,8 @@ export function BannerSliderViewport({
               sx={{
                 flex: `0 0 ${slideBasis}%`,
                 minWidth: 0,
-                px: { xs: 0.75, md: 0 },
-                ...(flushFirstSlide && i === 0 ? { pl: { xs: 0, md: 0 } } : null),
+                px: contained ? 0 : { xs: 0.75, md: 0 },
+                ...(flushFirstSlide && !contained && i === 0 ? { pl: { xs: 0, md: 0 } } : null),
                 boxSizing: 'border-box',
               }}
             >

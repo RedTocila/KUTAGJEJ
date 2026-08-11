@@ -1,11 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import {
   Avatar,
   Box,
-  Button,
   Stack,
   Typography,
 } from '@mui/material';
@@ -17,6 +15,7 @@ import { PaintBrush as PaintBrushIcon } from '@phosphor-icons/react/dist/ssr/Pai
 import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 
+import { HistoryBackButton } from '@/components/public/product-browse-chrome';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
@@ -393,14 +392,9 @@ export function ProfessionalListingDetailView({
 
             {ownerPreview ? null : (
               <Box sx={{ textAlign: 'center', pt: 0.5 }}>
-                <Button
-                  component={Link}
-                  href={paths.public.professionals}
-                  variant="text"
-                  sx={{ fontWeight: 700, textTransform: 'none', fontSize: FONT_BODY }}
-                >
+                <HistoryBackButton href={paths.public.professionals} sx={{ fontSize: FONT_BODY }}>
                   Kthehu te lista e profesionistëve
-                </Button>
+                </HistoryBackButton>
               </Box>
             )}
           </Stack>

@@ -45,12 +45,13 @@ export function CategoryBrowseLayout({
   children,
 }: CategoryBrowseLayoutProps) {
   const isOkazion = verticalId === 'okazion';
+  const showTopViewed = isHomeVerticalId(verticalId) && topViewed.length > 0;
 
   return (
     <PublicShell hideHeaderBelowMd>
       <OkazionTheme enabled={isOkazion}>
         <PublicCategoryHero verticalId={verticalId} total={total} cities={cities} />
-        {isHomeVerticalId(verticalId) ? (
+        {showTopViewed ? (
           <CategoryTopViewedSlider verticalId={verticalId} listings={topViewed} />
         ) : null}
         {shownCount === 0 ? (
@@ -59,7 +60,7 @@ export function CategoryBrowseLayout({
           <Container
             maxWidth="xl"
             sx={{
-              pt: isOkazion ? { xs: 1.5, md: 3 } : { xs: 4, md: 6 },
+              pt: showTopViewed ? { xs: 1, md: 1.5 } : isOkazion ? { xs: 1.5, md: 3 } : { xs: 4, md: 6 },
               pb: { xs: 4, md: 6 },
               position: 'relative',
             }}

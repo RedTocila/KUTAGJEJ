@@ -165,7 +165,8 @@ export function CategoryTopViewedSlider({
       component="section"
       aria-label={byRating ? t.browse.highestRatedAria : t.browse.mostViewedAria}
       sx={{
-        py: { xs: 2, md: 2.5 },
+        pt: { xs: 2, md: 2.5 },
+        pb: { xs: 0.25, md: 0.5 },
         width: '100%',
         maxWidth: '100%',
         minWidth: 0,

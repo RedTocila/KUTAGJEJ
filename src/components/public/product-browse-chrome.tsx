@@ -73,7 +73,7 @@ export function ProductBackButton({
       sx={buttonSx}
       {...rest}
       {...historyBack}
-      onClick={(event) => {
+      onClick={(event: React.MouseEvent<HTMLElement>) => {
         onClick?.(event);
         historyBack.onClick(event);
       }}

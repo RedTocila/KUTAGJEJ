@@ -7,7 +7,6 @@ import {
   Button,
   IconButton,
   Typography,
-  type ButtonProps,
   type IconButtonProps,
   type SxProps,
   type Theme,
@@ -45,21 +44,35 @@ export function ProductBackButton({
   onClick,
   'aria-label': ariaLabel = 'Kthehu',
   sx,
-  ...rest
+  disabled,
+  type = 'button',
+  'data-hero-control': dataHeroControl,
 }: {
   href?: string;
   onClick?: (event: React.MouseEvent<HTMLElement>) => void;
   'aria-label'?: string;
   sx?: SxProps<Theme>;
-} & Omit<IconButtonProps, 'children' | 'sx' | 'href' | 'onClick'>) {
+  disabled?: boolean;
+  type?: IconButtonProps['type'];
+  'data-hero-control'?: string | boolean;
+}) {
   const fallbackHref = href ?? paths.home;
   const historyBack = useHistoryBackProps(fallbackHref);
   const buttonSx = [productBackButtonSx, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])];
+  const heroControl = dataHeroControl ? { 'data-hero-control': dataHeroControl } : null;
 
   /** Explicit handler without href (in-page UI: messages thread, share overlay). */
   if (onClick && href == null) {
     return (
-      <IconButton aria-label={ariaLabel} onClick={onClick} size="small" sx={buttonSx} {...rest}>
+      <IconButton
+        aria-label={ariaLabel}
+        onClick={onClick}
+        size="small"
+        sx={buttonSx}
+        disabled={disabled}
+        type={type}
+        {...heroControl}
+      >
         <ArrowLeftIcon size={18} weight="bold" />
       </IconButton>
     );
@@ -68,15 +81,17 @@ export function ProductBackButton({
   return (
     <IconButton
       component={RouterLink}
+      href={historyBack.href}
       aria-label={ariaLabel}
       size="small"
       sx={buttonSx}
-      {...rest}
-      {...historyBack}
-      onClick={(event: React.MouseEvent<HTMLElement>) => {
+      disabled={disabled}
+      data-history-back=""
+      onClick={(event: React.MouseEvent<HTMLAnchorElement>) => {
         onClick?.(event);
         historyBack.onClick(event);
       }}
+      {...heroControl}
     >
       <ArrowLeftIcon size={18} weight="bold" />
     </IconButton>
@@ -88,18 +103,19 @@ export function HistoryBackButton({
   href,
   children,
   sx,
-  ...rest
 }: {
   href: string;
   children: React.ReactNode;
-} & Omit<ButtonProps, 'href' | 'component' | 'onClick'>) {
+  sx?: SxProps<Theme>;
+}) {
   const historyBack = useHistoryBackProps(href);
   return (
     <Button
       component={RouterLink}
       variant="text"
-      {...rest}
-      {...historyBack}
+      href={historyBack.href}
+      onClick={historyBack.onClick}
+      data-history-back=""
       sx={[{ fontWeight: 700, textTransform: 'none' }, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])]}
     >
       {children}

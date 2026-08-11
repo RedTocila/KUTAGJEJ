@@ -4,7 +4,9 @@ import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Box, Stack } from '@mui/material';
 
-import { HOME_SUBCATEGORIES } from '@/lib/home-subcategories';
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
+import { localizeSubcategories } from '@/lib/home-subcategories';
 import type { HomeVerticalId } from '@/lib/home-categories';
 import { ProductTag } from '@/components/public/product-browse-chrome';
 
@@ -49,13 +51,15 @@ function SubcategoryPillsList({
   verticalId: HomeVerticalId;
   isPillActive: (href: string) => boolean;
 }) {
-  const items = HOME_SUBCATEGORIES[verticalId];
+  const { language } = useLanguage();
+  const t = useCopy();
+  const items = localizeSubcategories(verticalId, language);
   if (!items || items.length === 0) return null;
 
   return (
     <Box
       role="navigation"
-      aria-label="Nënkategoritë"
+      aria-label={t.browse.subcategoriesAria}
       sx={{
         mt: { xs: 1.5, md: 2 },
         mb: 1.5,

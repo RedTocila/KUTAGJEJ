@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
+import { useCopy } from '@/hooks/use-copy';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 
 const fieldSx = {
@@ -108,7 +109,7 @@ export function FilterSelect({
   value,
   onChange,
   options,
-  emptyLabel = 'Të gjitha',
+  emptyLabel,
   gridSize = { xs: 12 },
   disabled = false,
 }: {
@@ -120,6 +121,7 @@ export function FilterSelect({
   gridSize?: { xs?: number; sm?: number; md?: number; lg?: number };
   disabled?: boolean;
 }) {
+  const t = useCopy();
   return (
     <Grid size={gridSize}>
       <SearchableSelect
@@ -127,7 +129,7 @@ export function FilterSelect({
         value={value}
         onChange={onChange}
         options={options}
-        emptyLabel={emptyLabel}
+        emptyLabel={emptyLabel ?? t.browse.all}
         disabled={disabled}
         sx={selectFieldSx}
       />
@@ -201,13 +203,14 @@ export function PriceRangeFields({
   onMinChange: (value: string) => void;
   onMaxChange: (value: string) => void;
 }) {
+  const t = useCopy();
   return (
     <Grid size={{ xs: 12 }}>
       <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
         <TextField
           size="small"
           fullWidth
-          label="Çmimi min"
+          label={t.browse.minPrice}
           type="number"
           slotProps={{ htmlInput: { min: 0 } }}
           value={minValue}
@@ -226,7 +229,7 @@ export function PriceRangeFields({
         <TextField
           size="small"
           fullWidth
-          label="Çmimi max"
+          label={t.browse.maxPrice}
           type="number"
           slotProps={{ htmlInput: { min: 0 } }}
           value={maxValue}

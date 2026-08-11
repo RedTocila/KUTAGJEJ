@@ -35,13 +35,16 @@ import { Pizza as PizzaIcon } from '@phosphor-icons/react/dist/ssr/Pizza';
 import { Warehouse as WarehouseIcon } from '@phosphor-icons/react/dist/ssr/Warehouse';
 import { Wrench as WrenchIcon } from '@phosphor-icons/react/dist/ssr/Wrench';
 
+import { localizedLabel, type AppLanguage } from '@/lib/language';
 import { paths } from '@/paths';
 
 import type { HomeVerticalId } from './home-categories';
 
 export interface SubcategoryItem {
-  /** Albanian label rendered on the pill. */
+  /** Default (sq) label — prefer localized copy in client UI. */
   label: string;
+  /** English label when language is `en`. */
+  labelEn: string;
   /** Pre-bound Phosphor icon component. */
   Icon: PhosphorIcon;
   /** Where the pill links — public browse page with a query filter. */
@@ -55,64 +58,74 @@ export interface SubcategoryItem {
  */
 export const HOME_SUBCATEGORIES: Record<HomeVerticalId, readonly SubcategoryItem[]> = {
   'real-estate': [
-    { label: 'Apartament', Icon: BuildingApartmentIcon, href: `${paths.public.realEstate}?cat=apartment` },
-    { label: 'Vilë', Icon: HouseIcon, href: `${paths.public.realEstate}?cat=villa` },
-    { label: 'Penthouse', Icon: BuildingsIcon, href: `${paths.public.realEstate}?cat=penthouse-duplex` },
-    { label: 'Zyrë', Icon: BuildingOfficeIcon, href: `${paths.public.realEstate}?cat=office` },
-    { label: 'Dyqan', Icon: StorefrontIcon, href: `${paths.public.realEstate}?cat=shop` },
-    { label: 'Tokë', Icon: TreeIcon, href: `${paths.public.realEstate}?cat=building-plot` },
-    { label: 'Parking', Icon: CarSimpleIcon, href: `${paths.public.realEstate}?cat=parking` },
-    { label: 'Magazinë', Icon: WarehouseIcon, href: `${paths.public.realEstate}?cat=warehouse` },
+    { label: 'Apartament', labelEn: 'Apartment', Icon: BuildingApartmentIcon, href: `${paths.public.realEstate}?cat=apartment` },
+    { label: 'Vilë', labelEn: 'Villa', Icon: HouseIcon, href: `${paths.public.realEstate}?cat=villa` },
+    { label: 'Penthouse', labelEn: 'Penthouse', Icon: BuildingsIcon, href: `${paths.public.realEstate}?cat=penthouse-duplex` },
+    { label: 'Zyrë', labelEn: 'Office', Icon: BuildingOfficeIcon, href: `${paths.public.realEstate}?cat=office` },
+    { label: 'Dyqan', labelEn: 'Shop', Icon: StorefrontIcon, href: `${paths.public.realEstate}?cat=shop` },
+    { label: 'Tokë', labelEn: 'Land', Icon: TreeIcon, href: `${paths.public.realEstate}?cat=building-plot` },
+    { label: 'Parking', labelEn: 'Parking', Icon: CarSimpleIcon, href: `${paths.public.realEstate}?cat=parking` },
+    { label: 'Magazinë', labelEn: 'Warehouse', Icon: WarehouseIcon, href: `${paths.public.realEstate}?cat=warehouse` },
   ],
   cars: [
-    { label: 'Vetura', Icon: CarIcon, href: `${paths.public.cars}?type=car` },
-    { label: 'SUV', Icon: CarProfileIcon, href: `${paths.public.cars}?type=suv` },
-    { label: 'Furgon', Icon: VanIcon, href: `${paths.public.cars}?type=van` },
-    { label: 'Kamion', Icon: TruckIcon, href: `${paths.public.cars}?type=truck` },
-    { label: 'Motor', Icon: MotorcycleIcon, href: `${paths.public.cars}?type=motorcycle` },
-    { label: 'Varkë', Icon: BoatIcon, href: `${paths.public.cars}?type=boat` },
+    { label: 'Vetura', labelEn: 'Cars', Icon: CarIcon, href: `${paths.public.cars}?type=car` },
+    { label: 'SUV', labelEn: 'SUV', Icon: CarProfileIcon, href: `${paths.public.cars}?type=suv` },
+    { label: 'Furgon', labelEn: 'Van', Icon: VanIcon, href: `${paths.public.cars}?type=van` },
+    { label: 'Kamion', labelEn: 'Truck', Icon: TruckIcon, href: `${paths.public.cars}?type=truck` },
+    { label: 'Motor', labelEn: 'Motorcycle', Icon: MotorcycleIcon, href: `${paths.public.cars}?type=motorcycle` },
+    { label: 'Varkë', labelEn: 'Boat', Icon: BoatIcon, href: `${paths.public.cars}?type=boat` },
   ],
   jobs: [
-    { label: 'IT', Icon: CodeIcon, href: `${paths.public.jobs}?industry=teknologji-informacioni` },
-    { label: 'Shitje', Icon: MegaphoneIcon, href: `${paths.public.jobs}?industry=shitje-zhvillim` },
-    { label: 'HoReCa', Icon: ForkKnifeIcon, href: `${paths.public.jobs}?industry=horeka` },
-    { label: 'Ndërtim', Icon: HammerIcon, href: `${paths.public.jobs}?industry=ndertim-industri` },
-    { label: 'Mjekësi', Icon: HospitalIcon, href: `${paths.public.jobs}?industry=mjekesore-shendetesore` },
-    { label: 'Marketing', Icon: MegaphoneIcon, href: `${paths.public.jobs}?industry=marketing-produkte` },
-    { label: 'Financë', Icon: MoneyIcon, href: `${paths.public.jobs}?industry=finance` },
-    { label: 'Klient', Icon: HeadphonesIcon, href: `${paths.public.jobs}?industry=sherbim-klienti` },
-    { label: 'Të tjera', Icon: BriefcaseIcon, href: paths.public.jobs },
+    { label: 'IT', labelEn: 'IT', Icon: CodeIcon, href: `${paths.public.jobs}?industry=teknologji-informacioni` },
+    { label: 'Shitje', labelEn: 'Sales', Icon: MegaphoneIcon, href: `${paths.public.jobs}?industry=shitje-zhvillim` },
+    { label: 'HoReCa', labelEn: 'HoReCa', Icon: ForkKnifeIcon, href: `${paths.public.jobs}?industry=horeka` },
+    { label: 'Ndërtim', labelEn: 'Construction', Icon: HammerIcon, href: `${paths.public.jobs}?industry=ndertim-industri` },
+    { label: 'Mjekësi', labelEn: 'Healthcare', Icon: HospitalIcon, href: `${paths.public.jobs}?industry=mjekesore-shendetesore` },
+    { label: 'Marketing', labelEn: 'Marketing', Icon: MegaphoneIcon, href: `${paths.public.jobs}?industry=marketing-produkte` },
+    { label: 'Financë', labelEn: 'Finance', Icon: MoneyIcon, href: `${paths.public.jobs}?industry=finance` },
+    { label: 'Klient', labelEn: 'Customer service', Icon: HeadphonesIcon, href: `${paths.public.jobs}?industry=sherbim-klienti` },
+    { label: 'Të tjera', labelEn: 'Other', Icon: BriefcaseIcon, href: paths.public.jobs },
   ],
   marketplace: [
-    { label: 'Elektronikë', Icon: DeviceMobileIcon, href: `${paths.public.marketplace}?cat=elektronike` },
-    { label: 'Mobilje', Icon: CouchIcon, href: `${paths.public.marketplace}?cat=mobilje-shtepi` },
-    { label: 'Veshje', Icon: TShirtIcon, href: `${paths.public.marketplace}?cat=veshje-aksesore` },
-    { label: 'Libra', Icon: BookOpenIcon, href: `${paths.public.marketplace}?cat=libra-shkolla` },
-    { label: 'Sport', Icon: SoccerBallIcon, href: `${paths.public.marketplace}?cat=sport-hobi` },
-    { label: 'Lodra', Icon: PuzzlePieceIcon, href: `${paths.public.marketplace}?cat=lodra` },
-    { label: 'Pjesë auto', Icon: WrenchIcon, href: `${paths.public.marketplace}?cat=automjete-pjese` },
-    { label: 'Ushqim', Icon: ForkKnifeIcon, href: `${paths.public.marketplace}?cat=ushqime-bujqesi` },
-    { label: 'Shërbime', Icon: ToolboxIcon, href: `${paths.public.marketplace}?cat=sherbime` },
-    { label: 'Të tjera', Icon: ShoppingBagIcon, href: `${paths.public.marketplace}?cat=te-tjera` },
+    { label: 'Elektronikë', labelEn: 'Electronics', Icon: DeviceMobileIcon, href: `${paths.public.marketplace}?cat=elektronike` },
+    { label: 'Mobilje', labelEn: 'Furniture', Icon: CouchIcon, href: `${paths.public.marketplace}?cat=mobilje-shtepi` },
+    { label: 'Veshje', labelEn: 'Clothing', Icon: TShirtIcon, href: `${paths.public.marketplace}?cat=veshje-aksesore` },
+    { label: 'Libra', labelEn: 'Books', Icon: BookOpenIcon, href: `${paths.public.marketplace}?cat=libra-shkolla` },
+    { label: 'Sport', labelEn: 'Sports', Icon: SoccerBallIcon, href: `${paths.public.marketplace}?cat=sport-hobi` },
+    { label: 'Lodra', labelEn: 'Toys', Icon: PuzzlePieceIcon, href: `${paths.public.marketplace}?cat=lodra` },
+    { label: 'Pjesë auto', labelEn: 'Auto parts', Icon: WrenchIcon, href: `${paths.public.marketplace}?cat=automjete-pjese` },
+    { label: 'Ushqim', labelEn: 'Food', Icon: ForkKnifeIcon, href: `${paths.public.marketplace}?cat=ushqime-bujqesi` },
+    { label: 'Shërbime', labelEn: 'Services', Icon: ToolboxIcon, href: `${paths.public.marketplace}?cat=sherbime` },
+    { label: 'Të tjera', labelEn: 'Other', Icon: ShoppingBagIcon, href: `${paths.public.marketplace}?cat=te-tjera` },
   ],
   businesses: [
-    { label: 'Restorant', Icon: ForkKnifeIcon, href: `${paths.public.businesses}?type=restorant` },
-    { label: 'Bar & pub', Icon: BeerBottleIcon, href: `${paths.public.businesses}?type=bar` },
-    { label: 'Kafene', Icon: CoffeeIcon, href: `${paths.public.businesses}?type=kafe` },
-    { label: 'Brunch', Icon: ForkKnifeIcon, href: `${paths.public.businesses}?type=brunch` },
-    { label: 'Piceri', Icon: PizzaIcon, href: `${paths.public.businesses}?type=piceri-fast-food` },
-    { label: 'Pastiçeri', Icon: StorefrontIcon, href: `${paths.public.businesses}?type=pasticeri` },
+    { label: 'Restorant', labelEn: 'Restaurant', Icon: ForkKnifeIcon, href: `${paths.public.businesses}?type=restorant` },
+    { label: 'Bar & pub', labelEn: 'Bar & pub', Icon: BeerBottleIcon, href: `${paths.public.businesses}?type=bar` },
+    { label: 'Kafene', labelEn: 'Café', Icon: CoffeeIcon, href: `${paths.public.businesses}?type=kafe` },
+    { label: 'Brunch', labelEn: 'Brunch', Icon: ForkKnifeIcon, href: `${paths.public.businesses}?type=brunch` },
+    { label: 'Piceri', labelEn: 'Pizzeria', Icon: PizzaIcon, href: `${paths.public.businesses}?type=piceri-fast-food` },
+    { label: 'Pastiçeri', labelEn: 'Pastry shop', Icon: StorefrontIcon, href: `${paths.public.businesses}?type=pasticeri` },
   ],
   professionals: [
-    { label: 'Freelance', Icon: UserCircleIcon, href: `${paths.public.professionals}?type=freelance` },
-    { label: 'Konsulence', Icon: BriefcaseIcon, href: `${paths.public.professionals}?type=konsulent` },
-    { label: 'Dizajn & IT', Icon: CodeIcon, href: `${paths.public.professionals}?type=dizajn-it` },
-    { label: 'Marketing', Icon: MegaphoneIcon, href: `${paths.public.professionals}?type=marketing` },
-    { label: 'Mjekësi', Icon: HospitalIcon, href: `${paths.public.professionals}?type=mjekesi` },
-    { label: 'Arsim', Icon: BookOpenIcon, href: `${paths.public.professionals}?type=arsim` },
-    { label: 'Të tjera', Icon: HeadphonesIcon, href: paths.public.professionals },
+    { label: 'Freelance', labelEn: 'Freelance', Icon: UserCircleIcon, href: `${paths.public.professionals}?type=freelance` },
+    { label: 'Konsulence', labelEn: 'Consulting', Icon: BriefcaseIcon, href: `${paths.public.professionals}?type=konsulent` },
+    { label: 'Dizajn & IT', labelEn: 'Design & IT', Icon: CodeIcon, href: `${paths.public.professionals}?type=dizajn-it` },
+    { label: 'Marketing', labelEn: 'Marketing', Icon: MegaphoneIcon, href: `${paths.public.professionals}?type=marketing` },
+    { label: 'Mjekësi', labelEn: 'Healthcare', Icon: HospitalIcon, href: `${paths.public.professionals}?type=mjekesi` },
+    { label: 'Arsim', labelEn: 'Education', Icon: BookOpenIcon, href: `${paths.public.professionals}?type=arsim` },
+    { label: 'Të tjera', labelEn: 'Other', Icon: HeadphonesIcon, href: paths.public.professionals },
   ],
 } as const;
+
+export function localizeSubcategories(
+  verticalId: HomeVerticalId,
+  language: AppLanguage,
+): SubcategoryItem[] {
+  return HOME_SUBCATEGORIES[verticalId].map((item) => ({
+    ...item,
+    label: localizedLabel(language, item.label, item.labelEn),
+  }));
+}
 
 /**
  * The top-level vertical icons live in `public/` as PNG assets and are

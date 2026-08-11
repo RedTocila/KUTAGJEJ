@@ -171,6 +171,7 @@ export function ReservationDateField({
           open={open}
           anchorEl={anchorRef.current}
           placement="bottom-start"
+          data-scroll-lock-allow=""
           sx={{
             zIndex: 1600,
             width: Math.max(anchorRef.current?.offsetWidth ?? 280, 280),

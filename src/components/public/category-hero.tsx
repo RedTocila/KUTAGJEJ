@@ -6,9 +6,10 @@ import RouterLink from 'next/link';
 import { Box, Button, Container, Grid, Stack, Typography, useScrollTrigger } from '@mui/material';
 
 import {
-  findSearchCategory,
   findVertical,
   isHomeVerticalId,
+  localizeSearchCategory,
+  localizeVertical,
   OKAZION_ACCENT,
   OKAZION_ACCENT_SOFT,
   type HomeVerticalId,
@@ -17,6 +18,8 @@ import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { paths } from '@/paths';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
 import { PortalIconBox } from '@/components/user/portal-cards';
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
 import { useScrollRevealHidden } from '@/hooks/use-scroll-reveal-hidden';
 
 import { CategoryBrowseControls } from './listing-filters/category-browse-controls';
@@ -45,9 +48,11 @@ export function PublicCategoryHero({
   total: number;
   cities: RealEstateCityDto[];
 }) {
+  const { language } = useLanguage();
+  const t = useCopy();
   const label = isHomeVerticalId(verticalId)
-    ? findVertical(verticalId).label
-    : findSearchCategory(verticalId).label;
+    ? localizeVertical(verticalId, language).label
+    : localizeSearchCategory(verticalId, language).label;
   const elevated = useScrollTrigger({ disableHysteresis: true, threshold: 8 });
   const chromeHidden = useScrollRevealHidden({ alwaysShowBelowY: 24 });
   const [mounted, setMounted] = React.useState(false);
@@ -116,7 +121,7 @@ export function PublicCategoryHero({
           <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start', minWidth: 0 }}>
             <ProductBackButton
               href={paths.home}
-              aria-label="Kthehu në faqen kryesore"
+              aria-label={t.browse.backHomeAria}
               sx={{ display: { xs: 'inline-flex', md: 'none' }, mt: 0.5 }}
             />
             {verticalId === 'okazion' ? (
@@ -153,7 +158,7 @@ export function PublicCategoryHero({
                 {label}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.45 }}>
-                {total > 0 ? `${total.toLocaleString('en-GB')} njoftime` : 'Asnjë njoftim ende'}
+                {total > 0 ? t.browse.listingsCount(total) : t.browse.noListingsYet}
               </Typography>
             </Stack>
           </Stack>
@@ -185,18 +190,52 @@ export function PublicCategoryHero({
   );
 }
 
+/** Listing-count caption on browse grids — client so it can follow the active language. */
+export function BrowseListingsCountCaption({
+  total,
+  shownCount,
+  page,
+  totalPages,
+  pageSize,
+  hasFilters,
+  enableInfiniteScroll,
+}: {
+  total: number;
+  shownCount: number;
+  page: number;
+  totalPages: number;
+  pageSize: number;
+  hasFilters: boolean;
+  enableInfiniteScroll: boolean;
+}) {
+  const t = useCopy();
+  const rangeStart = shownCount === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = shownCount === 0 ? 0 : (page - 1) * pageSize + shownCount;
+  const text =
+    totalPages > 1 && !enableInfiniteScroll
+      ? t.browse.showingRange(rangeStart, rangeEnd, total)
+      : hasFilters
+        ? t.browse.filteredCount(shownCount, total)
+        : t.browse.listingsCount(total);
+
+  return (
+    <Typography variant="body2" color="text.secondary">
+      {text}
+    </Typography>
+  );
+}
+
 /**
  * Quiet "no listings yet" state for browse pages.
  */
 export function PublicCategoryEmptyState({ verticalId }: { verticalId: BrowseCategoryId }) {
+  const t = useCopy();
   const isOkazion = verticalId === 'okazion';
   const ctaHref = isOkazion
     ? `${paths.user.realEstateListing}?okazion=1`
     : findVertical(verticalId).postHref;
-  const ctaLabel = isOkazion ? 'Shto OKAZION' : 'Posto njoftim falas';
-  const emptyCopy = isOkazion
-    ? 'Nuk ka OKAZION aktive për momentin. Kontrollo përsëri së shpejti.'
-    : 'Nuk ka njoftime ende — bëhu i pari.';
+  const ctaLabel = isOkazion ? t.browse.addOkazion : t.chrome.footerPostFree;
+  const emptyCopy = isOkazion ? t.browse.emptyOkazion : t.browse.emptyState;
 
   return (
     <Container maxWidth="xl" sx={{ py: { xs: 4, md: 6 } }}>
@@ -220,7 +259,7 @@ export function PublicCategoryEmptyState({ verticalId }: { verticalId: BrowseCat
               <Box sx={{ height: 12, width: '60%', borderRadius: 0.5, bgcolor: 'divider' }} />
               <Box sx={{ height: 10, width: '40%', borderRadius: 0.5, bgcolor: 'divider' }} />
               <Typography variant="caption" color="text.disabled" sx={{ mt: 'auto' }}>
-                Hapësirë për njoftim
+                {t.browse.listingPlaceholder}
               </Typography>
             </Box>
           </Grid>

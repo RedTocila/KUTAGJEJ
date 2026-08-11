@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { Box, Container, Grid, Stack, Typography } from '@mui/material';
+import { Box, Container, Grid, Stack } from '@mui/material';
 
 import { BrowsePagination } from '@/components/public/listing-filters/browse-pagination';
 import {
+  BrowseListingsCountCaption,
   PublicCategoryEmptyState,
   PublicCategoryHero,
   type BrowseCategoryId,
@@ -43,8 +44,6 @@ export function CategoryBrowseLayout({
   enableInfiniteScroll = false,
   children,
 }: CategoryBrowseLayoutProps) {
-  const rangeStart = shownCount === 0 ? 0 : (page - 1) * pageSize + 1;
-  const rangeEnd = shownCount === 0 ? 0 : (page - 1) * pageSize + shownCount;
   const isOkazion = verticalId === 'okazion';
 
   return (
@@ -66,13 +65,15 @@ export function CategoryBrowseLayout({
             }}
           >
             <Stack spacing={3}>
-              <Typography variant="body2" color="text.secondary">
-                {totalPages > 1 && !enableInfiniteScroll
-                  ? `Shfaqen ${rangeStart.toLocaleString('en-GB')}–${rangeEnd.toLocaleString('en-GB')} nga ${total.toLocaleString('en-GB')} njoftime`
-                  : hasFilters
-                    ? `${shownCount} nga ${total.toLocaleString('en-GB')} njoftime`
-                    : `${total.toLocaleString('en-GB')} njoftime`}
-              </Typography>
+              <BrowseListingsCountCaption
+                total={total}
+                shownCount={shownCount}
+                page={page}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                hasFilters={hasFilters}
+                enableInfiniteScroll={enableInfiniteScroll}
+              />
               {children}
               {enableInfiniteScroll ? (
                 totalPages > 1 ? (

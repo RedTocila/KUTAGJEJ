@@ -21,3 +21,9 @@ export function isPublicBrowsePath(pathname: string | null): boolean {
   if (!pathname) return false;
   return PUBLIC_BROWSE_ROOTS.some((base) => pathname === base);
 }
+
+/** Listing detail URLs under a browse root (`/prona/slug-id.html`). */
+export function isPublicListingDetailPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return PUBLIC_BROWSE_ROOTS.some((base) => pathname.startsWith(`${base}/`));
+}

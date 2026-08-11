@@ -180,6 +180,7 @@ export function SearchableSelect({
           open={open}
           anchorEl={anchorRef.current}
           placement="bottom-start"
+          data-scroll-lock-allow=""
           sx={{
             zIndex: 1600,
             width: Math.max(anchorRef.current?.offsetWidth ?? 240, menuMinWidth ?? 0),
@@ -188,12 +189,16 @@ export function SearchableSelect({
         >
           <Paper
             elevation={0}
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
             sx={(theme) => ({
               ...productSurfacePaperSx(theme),
               mt: 0.5,
               display: 'flex',
               flexDirection: 'column',
-              maxHeight: { xs: 'min(50vh, 280px)', sm: 'min(50vh, 320px)' },
+              maxHeight: { xs: 'min(70dvh, 480px)', sm: 'min(60vh, 420px)' },
+              minHeight: 0,
+              overflow: 'hidden',
               borderRadius: 2.5,
             })}
           >
@@ -237,20 +242,24 @@ export function SearchableSelect({
             <List
               dense
               disablePadding
+              role="listbox"
               sx={{
-                flex: 1,
+                flex: '1 1 auto',
                 minHeight: 0,
                 overflowY: 'auto',
+                overflowX: 'hidden',
                 WebkitOverflowScrolling: 'touch',
                 overscrollBehavior: 'contain',
+                touchAction: 'pan-y',
                 py: 0.5,
               }}
             >
               <ListItemButton
                 selected={value === emptyValue}
+                disableTouchRipple
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSelect(emptyValue)}
-                sx={{ py: 0.6, px: 1.5 }}
+                sx={{ py: 0.6, px: 1.5, touchAction: 'pan-y' }}
               >
                 <ListItemText
                   primary={emptyLabel}
@@ -261,9 +270,10 @@ export function SearchableSelect({
                 <ListItemButton
                   key={option.value}
                   selected={value === option.value}
+                  disableTouchRipple
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleSelect(option.value)}
-                  sx={{ py: 0.6, px: 1.5 }}
+                  sx={{ py: 0.6, px: 1.5, touchAction: 'pan-y' }}
                 >
                   <ListItemText
                     primary={option.label}

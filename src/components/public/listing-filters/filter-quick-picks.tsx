@@ -3,8 +3,10 @@
 import * as React from 'react';
 import { Box, Typography } from '@mui/material';
 
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
 import type { HomeVerticalId } from '@/lib/home-categories';
-import { HOME_SUBCATEGORIES } from '@/lib/home-subcategories';
+import { localizeSubcategories } from '@/lib/home-subcategories';
 import { ProductTag } from '@/components/public/product-browse-chrome';
 
 const PRIMARY_FILTER_KEY: Record<HomeVerticalId, string> = {
@@ -16,13 +18,13 @@ const PRIMARY_FILTER_KEY: Record<HomeVerticalId, string> = {
   professionals: 'type',
 };
 
-const SECTION_TITLE: Record<HomeVerticalId, string> = {
-  'real-estate': 'Lloji i pronës',
-  cars: 'Lloji i mjetit',
-  jobs: 'Industria',
-  marketplace: 'Kategoria',
-  businesses: 'Lloji i biznesit',
-  professionals: 'Lloji i shërbimit',
+const SECTION_TITLE_KEY: Record<HomeVerticalId, 'propertyType' | 'vehicleType' | 'industry' | 'category' | 'businessType' | 'serviceType'> = {
+  'real-estate': 'propertyType',
+  cars: 'vehicleType',
+  jobs: 'industry',
+  marketplace: 'category',
+  businesses: 'businessType',
+  professionals: 'serviceType',
 };
 
 function valueFromHref(href: string): string {
@@ -41,7 +43,9 @@ export function FilterQuickPicks({
   selectedValue: string;
   onSelect: (value: string) => void;
 }) {
-  const items = HOME_SUBCATEGORIES[verticalId];
+  const t = useCopy();
+  const { language } = useLanguage();
+  const items = localizeSubcategories(verticalId, language);
   if (!items?.length) return null;
 
   return (
@@ -58,7 +62,7 @@ export function FilterQuickPicks({
           fontSize: '0.68rem',
         }}
       >
-        {SECTION_TITLE[verticalId]}
+        {t.browse[SECTION_TITLE_KEY[verticalId]]}
       </Typography>
       <Box
         sx={{

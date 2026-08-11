@@ -42,8 +42,9 @@ export function VehicleTypePicker({
   allowClear?: boolean;
   size?: 'default' | 'compact';
 }) {
-  const tile = size === 'compact' ? 76 : 84;
-  const iconSize = size === 'compact' ? 24 : 28;
+  const compact = size === 'compact';
+  const tile = compact ? 64 : 84;
+  const iconSize = compact ? 20 : 28;
 
   return (
     <Stack spacing={0.75}>
@@ -66,22 +67,30 @@ export function VehicleTypePicker({
       <Box
         role="listbox"
         aria-label={label || 'Vehicle category'}
-        sx={{
-          display: 'flex',
-          flexDirection: 'row',
-          flexWrap: 'nowrap',
-          gap: 1,
-          overflowX: 'auto',
-          overflowY: 'hidden',
-          WebkitOverflowScrolling: 'touch',
-          scrollSnapType: 'x proximity',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-          mx: -0.25,
-          px: 0.25,
-          py: 0.35,
-          '&::-webkit-scrollbar': { display: 'none' },
-        }}
+        sx={
+          compact
+            ? {
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                gap: 0.75,
+              }
+            : {
+                display: 'flex',
+                flexDirection: 'row',
+                flexWrap: 'nowrap',
+                gap: 1,
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                WebkitOverflowScrolling: 'touch',
+                scrollSnapType: 'x proximity',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                mx: -0.25,
+                px: 0.25,
+                py: 0.35,
+                '&::-webkit-scrollbar': { display: 'none' },
+              }
+        }
       >
         {VEHICLE_TYPES.map((opt) => {
           const active = value === opt.value;
@@ -98,16 +107,17 @@ export function VehicleTypePicker({
                 else onChange(opt.value);
               }}
               sx={{
-                flex: '0 0 auto',
-                width: tile,
+                flex: compact ? undefined : '0 0 auto',
+                width: compact ? 'auto' : tile,
                 height: tile,
-                scrollSnapAlign: 'start',
+                minWidth: 0,
+                scrollSnapAlign: compact ? undefined : 'start',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 0.65,
-                p: 1,
+                gap: compact ? 0.4 : 0.65,
+                p: compact ? 0.75 : 1,
                 borderRadius: 2.25,
                 border: '1.5px solid',
                 borderColor: active ? 'primary.main' : error ? 'error.main' : 'divider',
@@ -126,8 +136,8 @@ export function VehicleTypePicker({
             >
               <Box
                 sx={{
-                  width: 34,
-                  height: 34,
+                  width: compact ? 28 : 34,
+                  height: compact ? 28 : 34,
                   borderRadius: 1.5,
                   display: 'grid',
                   placeItems: 'center',

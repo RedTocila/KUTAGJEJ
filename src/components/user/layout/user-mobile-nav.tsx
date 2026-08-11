@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { usePathname } from 'next/navigation';
 import { Badge, alpha, Box, Divider, Drawer, Stack, Typography } from '@mui/material';
 
 import type { NavItemConfig } from '@/types/nav';
@@ -13,6 +12,7 @@ import { BrandLogo } from '@/components/brand/brand-logo';
 import { getLocalizedUserPortalNavItems } from './user-nav-config';
 import { userPortalNavIcons } from './user-portal-nav-icons';
 import { useCopy } from '@/hooks/use-copy';
+import { useDisplayPathname } from '@/hooks/use-navigation-pending';
 import { useUnreadMessagesCount } from '@/hooks/use-unread-messages-count';
 import { useUser } from '@/hooks/use-user';
 import { useOptionalAddListingPicker } from '@/components/user/add-listing-picker-context';
@@ -23,7 +23,7 @@ export interface UserMobileNavProps {
 }
 
 export function UserMobileNav({ open, onClose }: UserMobileNavProps) {
-  const pathname = usePathname();
+  const pathname = useDisplayPathname();
   const { user } = useUser();
   const unreadMessages = useUnreadMessagesCount();
   const t = useCopy();

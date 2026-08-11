@@ -15,6 +15,8 @@ const {
   buildIlikeOrFilter,
   mergeSpecs,
   isUuid,
+  isRatingSortSpec,
+  rankListingIdsByReviews,
   prioritizeActivePremium,
   withoutPremiumSort,
   withoutBumpedAtSort,
@@ -277,32 +279,6 @@ async function formatDocsForKind(kind, docs) {
 }
 
 /**
- * Aggregate review rows into ranking entries sorted by average rating, then review count.
- */
-function rankListingIdsByReviews(rows) {
-  const sums = new Map();
-  for (const row of rows || []) {
-    const id = String(row.listing_id || '');
-    if (!id) continue;
-    const entry = sums.get(id) || { count: 0, total: 0 };
-    entry.count += 1;
-    entry.total += Number(row.rating) || 0;
-    sums.set(id, entry);
-  }
-
-  return [...sums.entries()]
-    .map(([id, entry]) => ({
-      id,
-      reviewCount: entry.count,
-      ratingAverage: entry.count > 0 ? entry.total / entry.count : 0,
-    }))
-    .sort((a, b) => {
-      if (b.ratingAverage !== a.ratingAverage) return b.ratingAverage - a.ratingAverage;
-      return b.reviewCount - a.reviewCount;
-    });
-}
-
-/**
  * Top businesses/professionals by star rating (avg, then review count).
  * Falls back to newest approved listings when review data is sparse.
  */
@@ -490,11 +466,59 @@ async function countMarketplace(filter = {}) {
   return countListingQuery('marketplace_listings', mergePublicFilter(filter));
 }
 
+async function queryDirectoryOrderedByRating(vertical, limit, filter, ascending, skip) {
+  const table = 'directory_listings';
+  const reviewTable =
+    vertical === 'businesses' ? 'business_listing_reviews' : 'professional_listing_reviews';
+  const spec = mergePublicFilter(filter);
+  const sb = getSupabaseAdmin();
+
+  let idQuery = applyFilterSpec(sb.from(table).select('id'), spec);
+  const { data: idRows, error: idErr } = await idQuery;
+  if (idErr) throw idErr;
+
+  const matchingIds = (idRows || []).map((row) => String(row.id));
+  const matchingSet = new Set(matchingIds);
+  if (!matchingIds.length) return [];
+
+  const { data: reviews, error: revErr } = await sb.from(reviewTable).select('listing_id, rating');
+  if (revErr) throw revErr;
+
+  const ranked = rankListingIdsByReviews(reviews).filter((row) => matchingSet.has(row.id));
+  ranked.sort((a, b) => {
+    const diff = a.ratingAverage - b.ratingAverage;
+    if (diff !== 0) return ascending ? diff : -diff;
+    return b.reviewCount - a.reviewCount;
+  });
+
+  const rankedIds = new Set(ranked.map((row) => row.id));
+  const unranked = matchingIds.filter((id) => !rankedIds.has(id));
+  const orderedIds = [...ranked.map((row) => row.id), ...unranked];
+  const pageIds = orderedIds.slice(skip, skip + limit).filter(isUuid);
+  if (!pageIds.length) return [];
+
+  const docs = await runListingQuery(
+    table,
+    mergePublicFilter(mergeSpecs(filter, { in: { id: pageIds } })),
+    [{ column: 'id', ascending: true }],
+    pageIds.length,
+    0,
+  );
+  const byId = new Map(docs.map((doc) => [String(doc.id), doc]));
+  const orderedDocs = pageIds.map((id) => byId.get(id)).filter(Boolean);
+  return formatDocsForKind(vertical, orderedDocs);
+}
+
 async function queryDirectory(vertical, limit, filter = { eq: { vertical } }, sort = null, skip = 0) {
+  const sortSpec = sort && sort.length ? sort : buildDirectorySort('newest');
+  if (isRatingSortSpec(sortSpec)) {
+    const ascending = Boolean(sortSpec.find((s) => s.column === 'rating_average')?.ascending);
+    return queryDirectoryOrderedByRating(vertical, limit, filter, ascending, skip);
+  }
   const docs = await runListingQuery(
     'directory_listings',
     mergePublicFilter(filter),
-    sort && sort.length ? sort : buildDirectorySort('newest'),
+    sortSpec,
     limit,
     skip,
   );

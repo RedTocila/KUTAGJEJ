@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Box, Stack, Typography } from '@mui/material';
 
 import { useCopy } from '@/hooks/use-copy';
+import { useDisplayPathname } from '@/hooks/use-navigation-pending';
 import { useLanguage } from '@/hooks/use-language';
 import {
   AI_SEARCH_BLUE,
@@ -62,6 +63,7 @@ export function HeroCategoryCircles({
   includeAi = true,
 }: HeroCategoryCirclesProps) {
   const pathname = usePathname();
+  const displayPathname = useDisplayPathname();
   const { language } = useLanguage();
   const t = useCopy();
   const heroVerticals = React.useMemo(
@@ -70,18 +72,18 @@ export function HeroCategoryCircles({
   );
 
   const selectedFromPath = React.useMemo(() => {
-    if (!pathname || pathname === '/') return -1;
+    if (!displayPathname || displayPathname === '/') return -1;
     // /kerko manages selection via props when used as tabs; as links, never force AI.
-    if (pathname === paths.public.search || pathname?.startsWith(`${paths.public.search}/`)) {
+    if (displayPathname === paths.public.search || displayPathname.startsWith(`${paths.public.search}/`)) {
       return -1;
     }
     const idx = heroVerticals.findIndex((v) => {
       if (v.id === 'ai') return false;
       const base = v.href.split('?')[0];
-      return pathname === base || pathname?.startsWith(`${base}/`);
+      return displayPathname === base || displayPathname.startsWith(`${base}/`);
     });
     return idx >= 0 ? idx : -1;
-  }, [heroVerticals, pathname]);
+  }, [heroVerticals, displayPathname]);
 
   const selectedIndex =
     variant === 'tabs' && selectedIndexProp != null ? selectedIndexProp : selectedFromPath;

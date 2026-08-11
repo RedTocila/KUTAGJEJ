@@ -1,32 +1,35 @@
-/** Albanian labels for the real-estate listing form. */
+import { DEFAULT_LANGUAGE, localizedLabel, type AppLanguage } from '@/lib/language';
+
+/** Albanian labels for the real-estate listing form. English via `labelEn`. */
 
 export const REAL_ESTATE_PROPERTY_CATEGORIES = [
-  { slug: 'apartment', label: 'Apartament' },
-  { slug: 'villa', label: 'Vilë' },
-  { slug: 'penthouse-duplex', label: 'Penthouse / dupleks' },
-  { slug: 'part-of-villa', label: 'Pjesë vile' },
-  { slug: 'room-studio-attic', label: 'Dhomë / studio / papafingo' },
-  { slug: 'parking', label: 'Parking' },
-  { slug: 'shop', label: 'Dyqan' },
-  { slug: 'office', label: 'Zyrë' },
-  { slug: 'industrial-shed', label: 'Kapanon industrial' },
-  { slug: 'commercial-local', label: 'Lokal (bar / restorant)' },
-  { slug: 'warehouse', label: 'Magazinë' },
-  { slug: 'business-space', label: 'Hapësirë / strukturë biznesi' },
-  { slug: 'building-plot', label: 'Truall ndërtimi' },
-  { slug: 'agricultural-land', label: 'Tokë bujqësore' },
+  { slug: 'apartment', label: 'Apartament', labelEn: 'Apartment' },
+  { slug: 'villa', label: 'Vilë', labelEn: 'Villa' },
+  { slug: 'penthouse-duplex', label: 'Penthouse / dupleks', labelEn: 'Penthouse / duplex' },
+  { slug: 'part-of-villa', label: 'Pjesë vile', labelEn: 'Part of villa' },
+  { slug: 'room-studio-attic', label: 'Dhomë / studio / papafingo', labelEn: 'Room / studio / attic' },
+  { slug: 'parking', label: 'Parking', labelEn: 'Parking' },
+  { slug: 'shop', label: 'Dyqan', labelEn: 'Shop' },
+  { slug: 'office', label: 'Zyrë', labelEn: 'Office' },
+  { slug: 'industrial-shed', label: 'Kapanon industrial', labelEn: 'Industrial shed' },
+  { slug: 'commercial-local', label: 'Lokal (bar / restorant)', labelEn: 'Commercial space (bar / restaurant)' },
+  { slug: 'warehouse', label: 'Magazinë', labelEn: 'Warehouse' },
+  { slug: 'business-space', label: 'Hapësirë / strukturë biznesi', labelEn: 'Business space / structure' },
+  { slug: 'building-plot', label: 'Truall ndërtimi', labelEn: 'Building plot' },
+  { slug: 'agricultural-land', label: 'Tokë bujqësore', labelEn: 'Agricultural land' },
 ] as const;
 
 export type RealEstatePropertySlug = (typeof REAL_ESTATE_PROPERTY_CATEGORIES)[number]['slug'];
 
-export function propertyCategoryLabel(slug: string): string {
+export function propertyCategoryLabel(slug: string, language: AppLanguage = DEFAULT_LANGUAGE): string {
   const row = REAL_ESTATE_PROPERTY_CATEGORIES.find((c) => c.slug === slug);
-  return row?.label ?? slug;
+  if (!row) return slug;
+  return localizedLabel(language, row.label, row.labelEn);
 }
 
 export const TRANSACTION_OPTIONS = [
-  { value: 'rent', label: 'Qera' },
-  { value: 'sale', label: 'Shitje' },
+  { value: 'rent', label: 'Qera', labelEn: 'For rent' },
+  { value: 'sale', label: 'Shitje', labelEn: 'For sale' },
 ] as const;
 
 export const CURRENCY_OPTIONS = [

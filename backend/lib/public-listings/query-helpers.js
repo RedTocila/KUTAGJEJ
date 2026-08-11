@@ -60,6 +60,8 @@ function buildPaginatedResponse(listings, total, limit, page) {
  * `eq`/`neq`/`gte`/`lte`/`gt`/`lt`/`in` being `{ column: value }` maps, and
  * `or` a raw PostgREST `.or()` filter string.
  */
+const EMPTY_IN_UUID = '00000000-0000-0000-0000-000000000000';
+
 function applyFilterSpec(query, spec = {}) {
   let q = query;
   if (spec.eq) for (const [col, val] of Object.entries(spec.eq)) q = q.eq(col, val);
@@ -68,7 +70,15 @@ function applyFilterSpec(query, spec = {}) {
   if (spec.lte) for (const [col, val] of Object.entries(spec.lte)) q = q.lte(col, val);
   if (spec.gt) for (const [col, val] of Object.entries(spec.gt)) q = q.gt(col, val);
   if (spec.lt) for (const [col, val] of Object.entries(spec.lt)) q = q.lt(col, val);
-  if (spec.in) for (const [col, val] of Object.entries(spec.in)) q = q.in(col, val);
+  if (spec.in) {
+    for (const [col, val] of Object.entries(spec.in)) {
+      const arr = Array.isArray(val) ? val : [val];
+      q = q.in(col, arr.length ? arr : [EMPTY_IN_UUID]);
+    }
+  }
+  if (spec.notNull) {
+    for (const col of spec.notNull) q = q.not(col, 'is', null);
+  }
   if (spec.or) q = q.or(spec.or);
   return q;
 }
@@ -80,6 +90,9 @@ function mergeSpecs(...specs) {
     if (!spec) continue;
     for (const key of ['eq', 'neq', 'gte', 'lte', 'gt', 'lt', 'in']) {
       if (spec[key]) out[key] = { ...(out[key] || {}), ...spec[key] };
+    }
+    if (spec.notNull) {
+      out.notNull = [...new Set([...(out.notNull || []), ...spec.notNull])];
     }
     if (spec.or) out.or = out.or ? `${out.or},${spec.or}` : spec.or;
   }
@@ -93,6 +106,34 @@ function applySort(query, sortSpec = []) {
 }
 
 const SORT_VALUES = new Set(['newest', 'price-asc', 'price-desc']);
+
+function isRatingSortSpec(sortSpec = []) {
+  return Array.isArray(sortSpec) && sortSpec.some((s) => s.column === 'rating_average');
+}
+
+/** Aggregate review rows into ranking entries (avg rating, then review count). */
+function rankListingIdsByReviews(rows) {
+  const sums = new Map();
+  for (const row of rows || []) {
+    const id = String(row.listing_id || '');
+    if (!id) continue;
+    const entry = sums.get(id) || { count: 0, total: 0 };
+    entry.count += 1;
+    entry.total += Number(row.rating) || 0;
+    sums.set(id, entry);
+  }
+
+  return [...sums.entries()]
+    .map(([id, entry]) => ({
+      id,
+      reviewCount: entry.count,
+      ratingAverage: entry.count > 0 ? entry.total / entry.count : 0,
+    }))
+    .sort((a, b) => {
+      if (b.ratingAverage !== a.ratingAverage) return b.ratingAverage - a.ratingAverage;
+      return b.reviewCount - a.reviewCount;
+    });
+}
 
 function parseSort(value) {
   const raw = String(value ?? '').trim().toLowerCase();
@@ -132,6 +173,8 @@ function buildSort(sort, field = 'price', { includeOkazion = true, includePremiu
 
 /** Directory profiles (businesses / professionals) — Premium only, no OKAZION. */
 function buildDirectorySort(sort, { includePremium = true } = {}) {
+  if (sort === 'rating-desc') return [{ column: 'rating_average', ascending: false }];
+  if (sort === 'rating-asc') return [{ column: 'rating_average', ascending: true }];
   return buildSort(sort, 'price', { includeOkazion: false, includePremium });
 }
 
@@ -290,6 +333,9 @@ module.exports = {
   mergeSpecs,
   applySort,
   parseSort,
+  isRatingSortSpec,
+  rankListingIdsByReviews,
+  EMPTY_IN_UUID,
   buildSort,
   buildDirectorySort,
   withoutPremiumSort,

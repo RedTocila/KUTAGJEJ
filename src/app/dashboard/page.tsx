@@ -19,6 +19,7 @@ import { ChartPie as ChartPieIcon } from '@phosphor-icons/react/dist/ssr/ChartPi
 import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
 import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
+import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 
 import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
@@ -110,6 +111,13 @@ export default function Page() {
           ? String(userCount)
           : '—';
     return [
+      {
+        title: 'Asistent AI',
+        value: 'Hap',
+        icon: SparkleIcon,
+        color: 'primary.main',
+        href: isPlatformAdmin ? paths.dashboard.ai : undefined,
+      },
       {
         title: 'Njoftime aktive',
         value: loadingVal(activeListings),

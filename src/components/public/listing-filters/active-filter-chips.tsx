@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Box } from '@mui/material';
 
+import { useCopy } from '@/hooks/use-copy';
 import type { ActiveFilterChip } from '@/lib/listing-filters';
 import { ProductTag } from '@/components/public/product-browse-chrome';
 
@@ -15,6 +16,7 @@ export function ActiveFilterChips({
   onRemove: (key: string) => void;
   onClearAll: () => void;
 }) {
+  const t = useCopy();
   if (chips.length === 0) return null;
 
   return (
@@ -39,7 +41,7 @@ export function ActiveFilterChips({
         />
       ))}
       {chips.length > 1 ? (
-        <ProductTag label="Pastro të gjitha" onClick={onClearAll} />
+        <ProductTag label={t.browse.clearAll} onClick={onClearAll} />
       ) : null}
     </Box>
   );

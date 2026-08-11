@@ -11,6 +11,7 @@ import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/di
 import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle';
 
 import { useCopy } from '@/hooks/use-copy';
+import { useDisplayPathname } from '@/hooks/use-navigation-pending';
 import { useUnreadMessagesCount } from '@/hooks/use-unread-messages-count';
 import { useUser } from '@/hooks/use-user';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -42,12 +43,13 @@ interface NavItem {
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  const displayPathname = useDisplayPathname();
   const { user } = useUser();
   const unreadMessages = useUnreadMessagesCount();
   const t = useCopy();
   const isAuthed = Boolean(user);
   const searchActive =
-    Boolean(pathname?.startsWith(paths.public.search)) || isPublicBrowsePath(pathname);
+    Boolean(displayPathname.startsWith(paths.public.search)) || isPublicBrowsePath(displayPathname);
   const [indicatorIndex, setIndicatorIndex] = React.useState(persistedFromIndex);
   const [transitionReady, setTransitionReady] = React.useState(false);
 
@@ -90,7 +92,7 @@ export function MobileBottomNav() {
     [isAuthed, t],
   );
 
-  const activeIndex = items.findIndex((item) => item.activeWhen(pathname));
+  const activeIndex = items.findIndex((item) => item.activeWhen(displayPathname));
   const hasActiveTab = activeIndex >= 0;
   const slotCount = items.length;
 
@@ -246,7 +248,7 @@ export function MobileBottomNav() {
             >
               {items.map((item, index) => {
                 const Icon = item.icon;
-                const active = item.activeWhen(pathname);
+                const active = item.activeWhen(displayPathname);
                 const isMessages = item.id === 'messages';
 
                 return (

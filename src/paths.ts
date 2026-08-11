@@ -67,6 +67,8 @@ export const paths = {
   },
   dashboard: {
     overview: '/dashboard',
+    /** Natural-language admin copilot (platform admin only). */
+    ai: '/dashboard/ai',
     profile: '/dashboard/profili',
     /** Staff / managed users (platform admin only). */
     staffUsers: '/dashboard/perdoruesit',

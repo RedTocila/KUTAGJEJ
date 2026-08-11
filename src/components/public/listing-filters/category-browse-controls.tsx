@@ -8,6 +8,7 @@ import {
   IconButton,
 } from '@mui/material';
 import { Funnel as FunnelIcon } from '@phosphor-icons/react/dist/ssr/Funnel';
+import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import { localizeVertical, type HomeVerticalId } from '@/lib/home-categories';
 import {
@@ -72,6 +73,7 @@ export function CategoryBrowseControls({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { language } = useLanguage();
+  const t = useCopy();
   const vertical = React.useMemo(
     () => localizeVertical(verticalId, language),
     [verticalId, language],
@@ -157,7 +159,7 @@ export function CategoryBrowseControls({
   );
 
   const activeCount = countActiveBrowseFilters(applied);
-  const activeChips = getActiveFilterChips(verticalId, applied, cities);
+  const activeChips = getActiveFilterChips(verticalId, applied, cities, language);
   const hasPendingChanges = !filtersEqual(draft, applied);
   const qValue = (applied as { q?: string }).q ?? '';
   const cityValue = (draft as { city?: string }).city ?? '';
@@ -177,7 +179,7 @@ export function CategoryBrowseControls({
         city={(applied as { city?: string }).city}
         category={interestCategory}
       />
-      <Box component="section" aria-label="Kontrollet e kërkimit" sx={{ mt: { xs: 1.25, md: 2 } }}>
+      <Box component="section" aria-label={t.browse.searchControlsAria} sx={{ mt: { xs: 1.25, md: 2 } }}>
         <Box sx={toolbarRowSx}>
           <Box sx={{ flex: 1, minWidth: 0, display: 'flex' }}>
             <ListingKeywordSearchInput
@@ -209,7 +211,7 @@ export function CategoryBrowseControls({
           >
             <IconButton
               onClick={() => setOpen(true)}
-              aria-label="Hap filtrat"
+              aria-label={t.browse.openFiltersAria}
               sx={productFilterButtonSx(activeCount > 0)}
             >
               <FunnelIcon size={16} weight="bold" />

@@ -15,6 +15,7 @@ import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Stairs as StairsIcon } from '@phosphor-icons/react/dist/ssr/Stairs';
 
 import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
 import type { PublicRealEstateListing } from '@/lib/public-listings-client';
 import { propertyCategoryLabel } from '@/lib/real-estate-constants';
 import { listingRealEstatePublicHref } from '@/paths';
@@ -32,13 +33,6 @@ import {
 } from './listing-card-rating';
 import { SpecRow, type Spec } from './spec-row';
 
-const FURNISHING_LABEL: Record<string, string> = {
-  furnished: 'I mobiluar',
-  unfurnished: 'Pa mobilim',
-  'partially-furnished': 'Pjesërisht i mobiluar',
-  'kitchen-only': 'Vetëm kuzhinë',
-};
-
 export function RealEstateCard({
   listing,
   sellerRating = null,
@@ -49,35 +43,47 @@ export function RealEstateCard({
   imagePriority?: boolean;
 }) {
   const t = useCopy();
+  const { language } = useLanguage();
   const location = [listing.zoneName, listing.cityName].filter(Boolean).join(', ');
   const transactionLabel = listing.transactionType === 'rent' ? t.common.forRent : t.common.forSale;
   const viewCount = listing.viewCount ?? 0;
   const cardRating = resolveListingCardRating(null, sellerRating);
+  const categoryLabel = propertyCategoryLabel(listing.propertyCategory, language);
+  const furnishingLabel =
+    listing.furnishing === 'furnished'
+      ? t.browse.furnished
+      : listing.furnishing === 'unfurnished'
+        ? t.browse.unfurnished
+        : listing.furnishing === 'partially-furnished'
+          ? t.browse.partiallyFurnished
+          : listing.furnishing === 'kitchen-only'
+            ? t.browse.kitchenOnly
+            : listing.furnishing;
 
   const specs: Spec[] = [
-    ...(listing.bedrooms != null ? [{ Icon: BedIcon, label: `${listing.bedrooms}`, title: 'Dhoma gjumi' }] : []),
-    ...(listing.bathrooms != null ? [{ Icon: BathtubIcon, label: `${listing.bathrooms}`, title: 'Banjo' }] : []),
-    { Icon: RulerIcon, label: `${listing.surfaceM2} m²`, title: 'Sipërfaqe' },
-    ...(listing.floor != null ? [{ Icon: StairsIcon, label: `Kati ${listing.floor}`, title: 'Kati' }] : []),
+    ...(listing.bedrooms != null ? [{ Icon: BedIcon, label: `${listing.bedrooms}`, title: t.browse.bedrooms }] : []),
+    ...(listing.bathrooms != null ? [{ Icon: BathtubIcon, label: `${listing.bathrooms}`, title: t.browse.bathrooms }] : []),
+    { Icon: RulerIcon, label: `${listing.surfaceM2} m²`, title: t.browse.surface },
+    ...(listing.floor != null ? [{ Icon: StairsIcon, label: t.browse.floorN(listing.floor), title: t.browse.floorN(listing.floor) }] : []),
     ...(listing.yearBuilt != null
-      ? [{ Icon: CalendarIcon, label: String(listing.yearBuilt), title: 'Viti i ndërtimit' }]
+      ? [{ Icon: CalendarIcon, label: String(listing.yearBuilt), title: t.browse.yearBuilt }]
       : []),
     ...(listing.furnishing
-      ? [{ Icon: CouchIcon, label: FURNISHING_LABEL[listing.furnishing] ?? listing.furnishing, title: 'Mobilim' }]
+      ? [{ Icon: CouchIcon, label: furnishingLabel ?? listing.furnishing, title: t.browse.furnishing }]
       : []),
   ];
 
   const priceLabel =
-    formatPrice(listing.price, listing.currency) + (listing.transactionType === 'rent' ? ' / muaj' : '');
+    formatPrice(listing.price, listing.currency) + (listing.transactionType === 'rent' ? ` ${t.browse.perMonth}` : '');
 
   const shareSpecs = [
     ...(listing.bedrooms != null ? [{ icon: 'bed' as const, label: `${listing.bedrooms}` }] : []),
     ...(listing.bathrooms != null ? [{ icon: 'bath' as const, label: `${listing.bathrooms}` }] : []),
     { icon: 'ruler' as const, label: `${listing.surfaceM2} m²` },
-    ...(listing.floor != null ? [{ icon: 'stairs' as const, label: `Kati ${listing.floor}` }] : []),
+    ...(listing.floor != null ? [{ icon: 'stairs' as const, label: t.browse.floorN(listing.floor) }] : []),
     ...(listing.yearBuilt != null ? [{ icon: 'calendar' as const, label: String(listing.yearBuilt) }] : []),
     ...(listing.furnishing
-      ? [{ icon: 'couch' as const, label: FURNISHING_LABEL[listing.furnishing] ?? listing.furnishing }]
+      ? [{ icon: 'couch' as const, label: furnishingLabel ?? listing.furnishing }]
       : []),
   ];
 
@@ -111,7 +117,7 @@ export function RealEstateCard({
           priority={imagePriority}
           sharePayload={{
             title: listing.title,
-            category: propertyCategoryLabel(listing.propertyCategory),
+            category: categoryLabel,
             priceLabel,
             badge: transactionLabel,
             imageUrl: listing.imageUrl,
@@ -129,7 +135,7 @@ export function RealEstateCard({
           color="text.secondary"
           sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
         >
-          {propertyCategoryLabel(listing.propertyCategory)}
+          {categoryLabel}
         </Typography>
         <ListingTitleWithVerified
           id={`listing-card-title-${listing.id}`}
@@ -152,7 +158,7 @@ export function RealEstateCard({
           suffix={
             listing.transactionType === 'rent' ? (
               <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 500 }}>
-                / muaj
+                {t.browse.perMonth}
               </Typography>
             ) : null
           }

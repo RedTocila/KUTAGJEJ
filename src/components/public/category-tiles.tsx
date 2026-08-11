@@ -4,6 +4,7 @@ import * as React from 'react';
 import RouterLink from 'next/link';
 import { Box, Grid, Stack, Typography } from '@mui/material';
 
+import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { localizeHomeVerticals, type HomeVerticalId } from '@/lib/home-categories';
@@ -16,6 +17,7 @@ export interface CategoryTilesProps {
 
 export function CategoryTiles({ totals }: CategoryTilesProps) {
   const { language } = useLanguage();
+  const t = useCopy();
   const verticals = React.useMemo(() => localizeHomeVerticals(language), [language]);
 
   return (
@@ -55,7 +57,7 @@ export function CategoryTiles({ totals }: CategoryTilesProps) {
                   {vertical.label}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" noWrap>
-                  {total > 0 ? `${total.toLocaleString('en-GB')} njoftime` : 'Asnjë njoftim ende'}
+                  {total > 0 ? t.browse.listingsCount(total) : t.browse.noListingsYet}
                 </Typography>
               </Stack>
             </Box>

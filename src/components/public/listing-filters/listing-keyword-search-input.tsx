@@ -11,6 +11,7 @@ import {
   productSearchFieldSx,
   type ProductSearchAccent,
 } from '@/components/public/product-browse-chrome';
+import { useCopy } from '@/hooks/use-copy';
 
 /** @deprecated Import `PRODUCT_BROWSE_CONTROL_HEIGHT` from product-browse-chrome. */
 export const BROWSE_CONTROL_HEIGHT = PRODUCT_BROWSE_CONTROL_HEIGHT;
@@ -29,6 +30,7 @@ export function ListingKeywordSearchInput({
   /** Optional accent (e.g. OKAZION red) for icon + active/focus chrome. */
   accent?: ProductSearchAccent;
 }) {
+  const t = useCopy();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [query, setQuery] = React.useState(value);
   const [focused, setFocused] = React.useState(false);
@@ -96,7 +98,7 @@ export function ListingKeywordSearchInput({
       {hasQuery ? (
         <IconButton
           size="small"
-          aria-label="Pastro kërkimin"
+          aria-label={t.browse.clearSearchAria}
           onClick={clear}
           sx={{
             p: 0.25,

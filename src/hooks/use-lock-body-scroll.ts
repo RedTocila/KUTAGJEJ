@@ -60,13 +60,27 @@ function releaseLock() {
   window.scrollTo(0, savedScrollY);
 }
 
-function isInsideOverlay(target: EventTarget | null): boolean {
-  if (!(target instanceof Element)) return false;
-  return Boolean(
-    target.closest(
-      '.MuiModal-root, .MuiDrawer-root, [role="dialog"][aria-modal="true"], [data-scroll-lock-allow]',
-    ),
-  );
+const SCROLL_LOCK_ALLOW_SELECTOR = [
+  '.MuiModal-root',
+  '.MuiDrawer-root',
+  '.MuiPopover-root',
+  '.MuiPopper-root',
+  '.MuiMenu-root',
+  '.MuiAutocomplete-popper',
+  '[role="dialog"][aria-modal="true"]',
+  '[role="listbox"]',
+  '[data-scroll-lock-allow]',
+].join(', ');
+
+function isAllowedScrollTarget(event: Event): boolean {
+  const path = typeof event.composedPath === 'function' ? event.composedPath() : [event.target];
+  for (const node of path) {
+    if (!(node instanceof Element)) continue;
+    if (node.matches(SCROLL_LOCK_ALLOW_SELECTOR) || node.closest(SCROLL_LOCK_ALLOW_SELECTOR)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function useLockBodyScroll(locked: boolean): void {
@@ -75,7 +89,7 @@ export function useLockBodyScroll(locked: boolean): void {
     applyLock();
 
     const blockIfOutside = (event: Event) => {
-      if (!isInsideOverlay(event.target)) {
+      if (!isAllowedScrollTarget(event)) {
         event.preventDefault();
       }
     };

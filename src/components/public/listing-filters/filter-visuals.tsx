@@ -1,17 +1,23 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Grid, Stack, Typography } from '@mui/material';
+import { Box, Grid, Typography } from '@mui/material';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { Bed as BedIcon } from '@phosphor-icons/react/dist/ssr/Bed';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
+import { CalendarCheck as CalendarCheckIcon } from '@phosphor-icons/react/dist/ssr/CalendarCheck';
+import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
 import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import { Key as KeyIcon } from '@phosphor-icons/react/dist/ssr/Key';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
+import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
 import { HouseLine as HouseLineIcon } from '@phosphor-icons/react/dist/ssr/HouseLine';
 import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
+import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
+import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import { SteeringWheel as SteeringWheelIcon } from '@phosphor-icons/react/dist/ssr/SteeringWheel';
 
+import { useCopy } from '@/hooks/use-copy';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 
 type Option = { value: string; label: string; Icon?: PhosphorIcon; hint?: string };
@@ -286,14 +292,14 @@ export function FilterPresetChips({
 }
 
 const BEDROOM_OPTIONS = [
-  { value: '1', rooms: 1 },
-  { value: '2', rooms: 2 },
-  { value: '3', rooms: 3 },
-  { value: '4', rooms: 4 },
-  { value: '5', rooms: 5 },
+  { value: '1', label: '1' },
+  { value: '2', label: '2' },
+  { value: '3', label: '3' },
+  { value: '4', label: '4' },
+  { value: '5', label: '5+' },
 ] as const;
 
-/** Visual bedroom diagram picker — room blocks instead of a number input. */
+/** Equal-width bedroom chips — icon + count, no cramped diagrams. */
 export function FilterBedroomPicker({
   value,
   onChange,
@@ -301,74 +307,63 @@ export function FilterBedroomPicker({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const t = useCopy();
   return (
     <Grid size={{ xs: 12 }}>
-      <Typography sx={{ mb: 1, fontSize: '0.75rem', fontWeight: 600, color: 'text.secondary' }}>
-        Dhoma gjumi (min)
-      </Typography>
       <Box
+        role="radiogroup"
+        aria-label={t.browse.bedroomsMinAria}
         sx={{
           display: 'grid',
           gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-          gap: 0.65,
+          gap: 0.75,
         }}
       >
         {BEDROOM_OPTIONS.map((opt) => {
           const active = value === opt.value;
-          const showPlus = opt.rooms === 5;
           return (
             <Box
               key={opt.value}
               component="button"
               type="button"
-              aria-pressed={active}
+              role="radio"
+              aria-checked={active}
               onClick={() => onChange(toggleValue(value, opt.value))}
               sx={{
                 display: 'flex',
-                flexDirection: 'column',
+                flexDirection: 'row',
                 alignItems: 'center',
-                gap: 0.55,
-                py: 1,
-                px: 0.35,
-                borderRadius: 2.25,
+                justifyContent: 'center',
+                gap: 0.5,
+                minHeight: 44,
+                px: 0.5,
+                borderRadius: 999,
                 border: '1px solid',
                 borderColor: active ? 'primary.main' : 'divider',
-                bgcolor: active ? primaryMainAlpha(0.14) : 'transparent',
-                color: active ? 'primary.main' : 'text.secondary',
+                bgcolor: active ? 'primary.main' : 'transparent',
+                color: active ? 'primary.contrastText' : 'text.primary',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                transition: 'all 0.15s ease',
+                boxShadow: active ? `0 4px 14px ${primaryMainAlpha(0.35)}` : 'none',
+                transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s',
                 '&:hover': {
                   borderColor: 'primary.main',
-                  bgcolor: primaryMainAlpha(0.08),
+                  bgcolor: active ? 'primary.main' : primaryMainAlpha(0.1),
                 },
               }}
             >
-              <Stack direction="row" spacing={0.25} sx={{ alignItems: 'flex-end', minHeight: 22 }}>
-                {Array.from({ length: Math.min(opt.rooms, 4) }, (_, i) => (
-                  <Box
-                    key={i}
-                    sx={{
-                      width: opt.rooms >= 4 ? 7 : 9,
-                      height: 10 + i * 2,
-                      borderRadius: 0.6,
-                      bgcolor: active ? 'primary.main' : primaryMainAlpha(0.35),
-                      opacity: 0.55 + i * 0.12,
-                    }}
-                  />
-                ))}
-                {showPlus ? (
-                  <Typography sx={{ fontSize: '0.65rem', fontWeight: 800, lineHeight: 1, ml: 0.15 }}>
-                    +
-                  </Typography>
-                ) : null}
-              </Stack>
-              <Stack direction="row" spacing={0.25} sx={{ alignItems: 'center' }}>
-                <BedIcon size={11} weight={active ? 'fill' : 'regular'} />
-                <Typography sx={{ fontWeight: 800, fontSize: '0.78rem', lineHeight: 1 }}>
-                  {showPlus ? '5+' : opt.rooms}
-                </Typography>
-              </Stack>
+              <BedIcon size={16} weight={active ? 'fill' : 'duotone'} />
+              <Typography
+                component="span"
+                sx={{
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
+                  lineHeight: 1,
+                  color: 'inherit',
+                }}
+              >
+                {opt.label}
+              </Typography>
             </Box>
           );
         })}
@@ -429,6 +424,28 @@ export const CAR_YEAR_MIN_PRESETS = [
   { value: '2018', label: '2018+' },
   { value: '2020', label: '2020+' },
   { value: '2022', label: '2022+' },
+] as const;
+
+export const VERIFIED_FILTER_VISUAL = [
+  { value: '1', label: 'Të verifikuara', Icon: ShieldCheckIcon, hint: 'Vetëm llogari të verifikuara' },
+] as const;
+
+export const ANNOUNCEMENT_FILTER_VISUAL = [
+  { value: '1', label: 'Me njoftim aktiv', Icon: MegaphoneIcon, hint: 'Kanë publikuar një njoftim' },
+] as const;
+
+export const RESERVATIONS_FILTER_VISUAL = [
+  { value: '1', label: 'Me rezervim', Icon: CalendarCheckIcon, hint: 'Pranojnë rezervim online' },
+] as const;
+
+export const FAST_RESPONSE_FILTER_VISUAL = [
+  { value: '1', label: 'Përgjigje e shpejtë', Icon: ClockIcon, hint: 'Brenda 24 orëve' },
+] as const;
+
+export const DIRECTORY_SORT_VISUAL = [
+  { value: 'newest', label: 'Më të rejat' },
+  { value: 'rating-desc', label: 'Më të vlerësuarat', Icon: StarIcon },
+  { value: 'rating-asc', label: 'Më pak të vlerësuara' },
 ] as const;
 
 export const MARKETPLACE_PRICE_PRESETS = [

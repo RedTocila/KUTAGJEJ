@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { usePathname } from 'next/navigation';
 import {
   Box,
   Collapse,
@@ -23,6 +22,7 @@ import { productFieldSx } from '@/styles/product-sx';
 
 import { getDashboardNavSectionsForAccount } from './config';
 import { navIcons } from './nav-icons';
+import { useDisplayPathname } from '@/hooks/use-navigation-pending';
 import { useUser } from '@/hooks/use-user';
 
 export function useAdminNavSections(): NavSectionConfig[] {
@@ -55,7 +55,7 @@ export function AdminNavContent({
   onNavigate?: () => void;
   sections?: NavSectionConfig[];
 }) {
-  const pathname = usePathname();
+  const pathname = useDisplayPathname();
   const defaultSections = useAdminNavSections();
   const sections = sectionsProp ?? defaultSections;
   const [query, setQuery] = React.useState('');

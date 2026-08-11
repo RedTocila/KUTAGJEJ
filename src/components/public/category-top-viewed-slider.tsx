@@ -5,8 +5,10 @@ import RouterLink from 'next/link';
 import { Box, Container, Stack, Typography } from '@mui/material';
 import { ArrowUpRight as ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 
+import { BannerSliderViewport } from '@/components/public/banner-slider-viewport';
 import { formatPrice } from '@/components/public/listing-cards/format-helpers';
 import { useBannerSlider } from '@/hooks/use-banner-slider';
+import { useCopy } from '@/hooks/use-copy';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import type { HomeVerticalId } from '@/lib/home-categories';
@@ -307,6 +309,7 @@ export function CategoryTopViewedSlider({
   verticalId: HomeVerticalId;
   listings: TopViewedListing[];
 }) {
+  const t = useCopy();
   const byRating = isRatingFeaturedVertical(verticalId);
   const slides = React.useMemo(
     () => listings.map((listing) => toSlide(verticalId, listing)),
@@ -324,7 +327,7 @@ export function CategoryTopViewedSlider({
   return (
     <Box
       component="section"
-      aria-label={byRating ? 'Njoftimet më të vlerësuara' : 'Njoftimet më të shikuara'}
+      aria-label={byRating ? t.browse.highestRatedAria : t.browse.mostViewedAria}
       sx={{
         py: { xs: 2, md: 2.5 },
         width: '100%',
@@ -343,55 +346,43 @@ export function CategoryTopViewedSlider({
             mb: { xs: 1, md: 1.25 },
           }}
         >
-          {byRating ? 'Më të vlerësuarat' : 'Më të shikuarat'}
+          {byRating ? t.browse.highestRated : t.browse.mostViewed}
         </Typography>
 
         <Stack spacing={1.35} sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
-          <Box
-            {...touchHandlers}
-            sx={{
-              position: 'relative',
-              width: '100%',
-              maxWidth: '100%',
-              // Flex min-content would otherwise expand to the full N× track width
-              // and push the document into horizontal page scroll.
-              minWidth: 0,
-              borderRadius: 3,
-              overflow: 'hidden',
-              border: '1px solid',
-              borderColor: 'divider',
-              boxShadow: (theme) =>
-                theme.palette.mode === 'light'
-                  ? '0 8px 24px rgba(0,0,0,0.1)'
-                  : '0 10px 28px rgba(0,0,0,0.18)',
-              touchAction: 'pan-y',
-              overscrollBehaviorX: 'none',
-              cursor: slides.length > 1 ? 'grab' : undefined,
-              userSelect: 'none',
-              WebkitUserSelect: 'none',
-            }}
+          <BannerSliderViewport
+            idx={idx}
+            slideCount={slides.length}
+            slideBasis={slideBasis}
+            trackRef={trackRef}
+            trackSx={trackSx}
+            touchHandlers={touchHandlers}
           >
-            <Box
-              ref={trackRef}
-              sx={{
-                ...trackSx,
-                maxWidth: 'none',
-              }}
-            >
-              {slides.map((slide) => (
-                <Box key={slide.id} sx={{ flex: `0 0 ${slideBasis}%`, minWidth: 0, maxWidth: `${slideBasis}%` }}>
-                  <ListingSlidePanel slide={slide} suppressNavRef={suppressNavRef} />
-                </Box>
-              ))}
-            </Box>
-          </Box>
+            {slides.map((slide) => (
+              <Box
+                key={slide.id}
+                sx={{
+                  borderRadius: { xs: 3, md: 4 },
+                  overflow: 'hidden',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  boxShadow: (theme) =>
+                    theme.palette.mode === 'light'
+                      ? '0 8px 24px rgba(0,0,0,0.1)'
+                      : '0 10px 28px rgba(0,0,0,0.18)',
+                }}
+              >
+                <ListingSlidePanel slide={slide} suppressNavRef={suppressNavRef} />
+              </Box>
+            ))}
+          </BannerSliderViewport>
 
           {slides.length > 1 ? (
             <Stack
               direction="row"
               spacing={0.8}
               role="tablist"
-              aria-label="Slidet e njoftimeve"
+              aria-label={t.browse.listingSlidesAria}
               sx={{ justifyContent: 'center', pt: 0.15 }}
             >
               {slides.map((slide, i) => (

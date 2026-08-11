@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { usePathname } from 'next/navigation';
 import { Badge, alpha, Box, Divider, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import { SignOut as SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
 
@@ -18,12 +17,13 @@ import { authClient } from '@/lib/auth/client';
 import { getLocalizedUserPortalNavItems } from './user-nav-config';
 import { userPortalNavIcons } from './user-portal-nav-icons';
 import { useCopy } from '@/hooks/use-copy';
+import { useDisplayPathname } from '@/hooks/use-navigation-pending';
 import { useUnreadMessagesCount } from '@/hooks/use-unread-messages-count';
 import { useUser } from '@/hooks/use-user';
 import { useOptionalAddListingPicker } from '@/components/user/add-listing-picker-context';
 
 export function UserSideNav() {
-  const pathname = usePathname();
+  const pathname = useDisplayPathname();
   const { user } = useUser();
   const t = useCopy();
   const unreadMessages = useUnreadMessagesCount();

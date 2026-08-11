@@ -7,6 +7,22 @@ import { MOTION } from '@/styles/motion';
 const DEFAULT_SLIDE_MS = 320;
 const DEFAULT_SWIPE_THRESHOLD = 48;
 const DEFAULT_AUTOPLAY_MS = 5000;
+const EDGE_FADE_PX = 24;
+
+/**
+ * Soft edge fade matching homepage category listing carousels.
+ * First slide fades only the right (upcoming), last only the left, middle both.
+ */
+export function bannerSliderSideMask(idx: number, slideCount: number): string | undefined {
+  if (slideCount < 2) return undefined;
+  if (idx <= 0) {
+    return `linear-gradient(to right, black 0, black calc(100% - ${EDGE_FADE_PX}px), transparent 100%)`;
+  }
+  if (idx >= slideCount - 1) {
+    return `linear-gradient(to right, transparent 0, black ${EDGE_FADE_PX}px, black 100%)`;
+  }
+  return `linear-gradient(to right, transparent 0, black ${EDGE_FADE_PX}px, black calc(100% - ${EDGE_FADE_PX}px), transparent 100%)`;
+}
 
 export interface UseBannerSliderOptions {
   slideCount: number;

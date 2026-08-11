@@ -1,14 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Grid, IconButton, Stack, Typography } from '@mui/material';
+import { Box, Grid, IconButton, Portal, Stack, Typography } from '@mui/material';
+import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
 import { Funnel as FunnelIcon } from '@phosphor-icons/react/dist/ssr/Funnel';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import type { HomeVerticalId } from '@/lib/home-categories';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { getFilterFieldConfig, type BrowseFilters } from '@/lib/listing-filters';
+import { DIRECTORY_RATING_PRESETS, getFilterFieldConfig, type BrowseFilters } from '@/lib/listing-filters';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 
 import {
@@ -22,10 +25,13 @@ import { LocationSearchInput } from './location-search-input';
 import { VehicleTypePicker } from '@/components/cars/vehicle-type-picker';
 import type { VehicleType } from '@/lib/car-constants';
 import {
+  ANNOUNCEMENT_FILTER_VISUAL,
   CAR_KM_PRESETS,
   CAR_PRICE_PRESETS,
   CAR_TRANSMISSION_VISUAL,
   CAR_YEAR_MIN_PRESETS,
+  DIRECTORY_SORT_VISUAL,
+  FAST_RESPONSE_FILTER_VISUAL,
   FilterBedroomPicker,
   FilterChoiceCards,
   FilterOptionTiles,
@@ -36,6 +42,8 @@ import {
   REAL_ESTATE_PRICE_PRESETS,
   REAL_ESTATE_SURFACE_PRESETS,
   REAL_ESTATE_TX_VISUAL,
+  RESERVATIONS_FILTER_VISUAL,
+  VERIFIED_FILTER_VISUAL,
 } from './filter-visuals';
 
 export function VerticalFilterSections({
@@ -55,21 +63,23 @@ export function VerticalFilterSections({
   zoneIds?: string[];
   onLocationChange: (nextCityId?: string, nextZoneIds?: string[]) => void;
 }) {
+  const t = useCopy();
+  const { language } = useLanguage();
   const locationSection = (
-    <FilterSection title="Vendndodhja" index={99}>
+    <FilterSection title={t.browse.location} index={0}>
       <Grid size={{ xs: 12 }}>
         <LocationSearchInput
           cities={cities}
           cityId={cityId}
           zoneIds={zoneIds}
           enableZones={verticalId === 'real-estate'}
-          placeholder={verticalId === 'real-estate' ? 'Qyteti ose zona' : 'Qyteti'}
+          placeholder={verticalId === 'real-estate' ? t.browse.cityOrZone : t.browse.city}
           onChange={onLocationChange}
         />
       </Grid>
     </FilterSection>
   );
-  const config = getFilterFieldConfig(verticalId);
+  const config = getFilterFieldConfig(verticalId, language);
   const primaryKey = getPrimaryFilterKey(verticalId);
   const primaryValue = getPrimaryFilterValue(verticalId, draft as Record<string, string | undefined>);
 
@@ -92,37 +102,44 @@ export function VerticalFilterSections({
     </Box>
   );
 
+  const verifiedSection = (
+    <FilterSection title={t.browse.account} index={10}>
+      <FilterChoiceCards
+        value={(draft as { verified?: string }).verified ?? ''}
+        onChange={(v) => setField('verified', v)}
+        options={VERIFIED_FILTER_VISUAL.map((o) => ({
+          ...o,
+          label: t.browse.verifiedOnly,
+          hint: t.browse.verifiedOnlyHint,
+        }))}
+        columns={1}
+      />
+    </FilterSection>
+  );
+
   switch (verticalId) {
     case 'real-estate': {
       const f = draft as import('@/lib/listing-filters').BrowseRealEstateFilters;
-      const cfg = config as ReturnType<typeof getFilterFieldConfig> & {
-        categories: { value: string; label: string }[];
-      };
       return (
         <Stack spacing={2}>
           {quickPicks}
           {locationSection}
-          <FilterSection title="Më shumë lloje" index={0}>
-            <FilterSelect
-              label="Të gjitha llojet e pronës"
-              value={f.cat ?? ''}
-              onChange={(v) => setField('cat', v)}
-              options={cfg.categories}
-              gridSize={{ xs: 12 }}
-            />
-          </FilterSection>
-          <FilterSection title="Transaksioni" index={1}>
+          <FilterSection title={t.browse.transaction} index={1}>
             <FilterChoiceCards
               value={f.tx ?? ''}
               onChange={(v) => setField('tx', v)}
-              options={REAL_ESTATE_TX_VISUAL}
+              options={REAL_ESTATE_TX_VISUAL.map((o) => ({
+                ...o,
+                label: o.value === 'rent' ? t.common.forRent : t.common.forSale,
+                hint: o.value === 'rent' ? t.browse.monthlyRent : t.browse.purchase,
+              }))}
               columns={2}
             />
           </FilterSection>
-          <FilterSection title="Dhoma gjumi" index={2}>
+          <FilterSection title={t.browse.bedrooms} index={2}>
             <FilterBedroomPicker value={f.bedrooms ?? ''} onChange={(v) => setField('bedrooms', v)} />
           </FilterSection>
-          <FilterSection title="Çmimi & sipërfaqja" index={3}>
+          <FilterSection title={t.browse.price} index={3}>
             <FilterPresetChips
               value={f.maxPrice ?? ''}
               onChange={(v) => setField('maxPrice', v)}
@@ -135,14 +152,17 @@ export function VerticalFilterSections({
               onMinChange={(v) => setField('minPrice', v)}
               onMaxChange={(v) => setField('maxPrice', v)}
             />
+          </FilterSection>
+          <FilterSection title={t.browse.surface} index={4}>
             <FilterPresetChips
               value={f.minSurface ?? ''}
               onChange={(v) => setField('minSurface', v)}
               presets={REAL_ESTATE_SURFACE_PRESETS}
               suffix=" m²"
             />
-            <FilterNumberField label="Sipërfaqe min (m²)" value={f.minSurface ?? ''} onChange={(v) => setField('minSurface', v)} />
+            <FilterNumberField label={t.browse.minSurface} value={f.minSurface ?? ''} onChange={(v) => setField('minSurface', v)} />
           </FilterSection>
+          {verifiedSection}
         </Stack>
       );
     }
@@ -169,7 +189,7 @@ export function VerticalFilterSections({
             }}
           >
             <VehicleTypePicker
-              label="Lloji i mjetit"
+              label={t.browse.vehicleType}
               value={(f.type as VehicleType) || ''}
               allowClear
               size="compact"
@@ -177,44 +197,44 @@ export function VerticalFilterSections({
             />
           </Box>
           {locationSection}
-          <FilterSection title="Transmisioni" index={0}>
+          <FilterSection title={t.browse.transmission} index={0}>
             <FilterSegmented
               value={f.transmission ?? ''}
               onChange={(v) => setField('transmission', v)}
               options={CAR_TRANSMISSION_VISUAL}
             />
           </FilterSection>
-          <FilterSection title="Marka & modeli" index={1}>
+          <FilterSection title={t.browse.makeAndModel} index={1}>
             <FilterSelect
-              label="Marka"
+              label={t.browse.make}
               value={f.make ?? ''}
               onChange={(v) => {
                 setField('make', v);
                 setField('model', '');
               }}
               options={makeOptions}
-              emptyLabel={f.type ? 'Të gjitha' : 'Zgjidh kategorinë fillimisht'}
+              emptyLabel={f.type ? t.browse.all : t.browse.pickCategoryFirst}
               disabled={!f.type}
             />
             <FilterSelect
-              label="Modeli"
+              label={t.browse.model}
               value={f.model ?? ''}
               onChange={(v) => setField('model', v)}
               options={modelOptions}
-              emptyLabel={f.make ? 'Të gjitha' : 'Zgjidh markën fillimisht'}
+              emptyLabel={f.make ? t.browse.all : t.browse.pickMakeFirst}
               disabled={!f.make}
             />
           </FilterSection>
-          <FilterSection title="Karburanti" index={2}>
+          <FilterSection title={t.browse.fuel} index={2}>
             <FilterSelect
-              label="Karburanti"
+              label={t.browse.fuel}
               value={f.fuel ?? ''}
               onChange={(v) => setField('fuel', v)}
               options={[...cfg.fuelTypes]}
               gridSize={{ xs: 12 }}
             />
           </FilterSection>
-          <FilterSection title="Çmimi" index={3}>
+          <FilterSection title={t.browse.price} index={3}>
             <FilterPresetChips
               value={f.maxPrice ?? ''}
               onChange={(v) => setField('maxPrice', v)}
@@ -228,7 +248,7 @@ export function VerticalFilterSections({
               onMaxChange={(v) => setField('maxPrice', v)}
             />
           </FilterSection>
-          <FilterSection title="Viti & kilometrazhi" index={4}>
+          <FilterSection title={t.browse.yearAndMileage} index={4}>
             <FilterPresetChips
               value={f.minYear ?? ''}
               onChange={(v) => setField('minYear', v)}
@@ -240,10 +260,11 @@ export function VerticalFilterSections({
               presets={CAR_KM_PRESETS}
               suffix=" km"
             />
-            <FilterNumberField label="Viti min" value={f.minYear ?? ''} onChange={(v) => setField('minYear', v)} />
-            <FilterNumberField label="Viti max" value={f.maxYear ?? ''} onChange={(v) => setField('maxYear', v)} />
-            <FilterNumberField label="Km max" value={f.maxKm ?? ''} onChange={(v) => setField('maxKm', v)} />
+            <FilterNumberField label={t.browse.minYear} value={f.minYear ?? ''} onChange={(v) => setField('minYear', v)} />
+            <FilterNumberField label={t.browse.maxYear} value={f.maxYear ?? ''} onChange={(v) => setField('maxYear', v)} />
+            <FilterNumberField label={t.browse.maxKm} value={f.maxKm ?? ''} onChange={(v) => setField('maxKm', v)} />
           </FilterSection>
+          {verifiedSection}
         </Stack>
       );
     }
@@ -259,10 +280,10 @@ export function VerticalFilterSections({
         <Stack spacing={2}>
           {quickPicks}
           {locationSection}
-          <FilterSection title="Më shumë industri" index={0}>
-            <FilterSelect label="Të gjitha industritë" value={f.industry ?? ''} onChange={(v) => setField('industry', v)} options={cfg.industries} gridSize={{ xs: 12 }} />
+          <FilterSection title={t.browse.moreIndustries} index={0}>
+            <FilterSelect label={t.browse.allIndustries} value={f.industry ?? ''} onChange={(v) => setField('industry', v)} options={cfg.industries} gridSize={{ xs: 12 }} />
           </FilterSection>
-          <FilterSection title="Lokacioni i punës" index={1}>
+          <FilterSection title={t.browse.workLocation} index={1}>
             <FilterChoiceCards
               value={f.workLocation ?? ''}
               onChange={(v) => setField('workLocation', v)}
@@ -270,38 +291,35 @@ export function VerticalFilterSections({
               columns={3}
             />
           </FilterSection>
-          <FilterSection title="Lloji i punës" index={2}>
+          <FilterSection title={t.browse.jobType} index={2}>
             <FilterOptionTiles
               value={f.jobType ?? ''}
               onChange={(v) => setField('jobType', v)}
               options={cfg.jobTypes}
             />
           </FilterSection>
-          <FilterSection title="Kualifikimet" index={3}>
+          <FilterSection title={t.browse.qualifications} index={3}>
             <FilterOptionTiles
               value={f.experience ?? ''}
               onChange={(v) => setField('experience', v)}
               options={cfg.experienceLevels}
             />
-            <FilterSelect label="Arsimi" value={f.education ?? ''} onChange={(v) => setField('education', v)} options={cfg.educationLevels} />
+            <FilterSelect label={t.browse.education} value={f.education ?? ''} onChange={(v) => setField('education', v)} options={cfg.educationLevels} />
           </FilterSection>
+          {verifiedSection}
         </Stack>
       );
     }
     case 'marketplace': {
       const f = draft as import('@/lib/listing-filters').BrowseMarketplaceFilters;
       const cfg = config as ReturnType<typeof getFilterFieldConfig> & {
-        categories: readonly { value: string; label: string }[];
         conditions: readonly { value: string; label: string }[];
       };
       return (
         <Stack spacing={2}>
           {quickPicks}
           {locationSection}
-          <FilterSection title="Më shumë kategori" index={0}>
-            <FilterSelect label="Të gjitha kategoritë" value={f.cat ?? ''} onChange={(v) => setField('cat', v)} options={cfg.categories} gridSize={{ xs: 12 }} />
-          </FilterSection>
-          <FilterSection title="Gjendja" index={1}>
+          <FilterSection title={t.browse.condition} index={1}>
             <FilterOptionTiles
               value={f.condition ?? ''}
               onChange={(v) => setField('condition', v)}
@@ -311,7 +329,7 @@ export function VerticalFilterSections({
               }))}
             />
           </FilterSection>
-          <FilterSection title="Çmimi" index={2}>
+          <FilterSection title={t.browse.price} index={2}>
             <FilterPresetChips
               value={f.maxPrice ?? ''}
               onChange={(v) => setField('maxPrice', v)}
@@ -325,6 +343,7 @@ export function VerticalFilterSections({
               onMaxChange={(v) => setField('maxPrice', v)}
             />
           </FilterSection>
+          {verifiedSection}
         </Stack>
       );
     }
@@ -332,25 +351,164 @@ export function VerticalFilterSections({
     case 'professionals': {
       const f = draft as import('@/lib/listing-filters').BrowseDirectoryFilters;
       const cfg = config as ReturnType<typeof getFilterFieldConfig> & {
-        types: readonly { value: string; label: string }[];
+        sortOptions: readonly { value: string; label: string }[];
       };
       return (
         <Stack spacing={2}>
           {quickPicks}
           {locationSection}
-          <FilterSection title="Kategoria" index={0}>
+          <FilterSection title={t.browse.sort} index={1}>
             <FilterOptionTiles
-              value={f.type ?? ''}
-              onChange={(v) => setField('type', v)}
-              options={cfg.types}
+              value={f.sort && f.sort !== 'newest' ? f.sort : 'newest'}
+              onChange={(v) => setField('sort', v === 'newest' ? '' : v)}
+              options={cfg.sortOptions.map((o) => {
+                const visual = DIRECTORY_SORT_VISUAL.find((item) => item.value === o.value);
+                return { value: o.value, label: o.label, Icon: visual?.Icon };
+              })}
             />
           </FilterSection>
+          <FilterSection title={t.browse.minRating} index={2}>
+            <FilterPresetChips
+              value={f.minRating ?? ''}
+              onChange={(v) => setField('minRating', v)}
+              presets={DIRECTORY_RATING_PRESETS}
+            />
+          </FilterSection>
+          <FilterSection title={t.browse.hasAnnouncement} index={3}>
+            <FilterChoiceCards
+              value={f.announcement ?? ''}
+              onChange={(v) => setField('announcement', v)}
+              options={ANNOUNCEMENT_FILTER_VISUAL.map((o) => ({
+                ...o,
+                label: t.browse.hasAnnouncement,
+                hint: t.browse.hasAnnouncementHint,
+              }))}
+              columns={1}
+            />
+          </FilterSection>
+          {verticalId === 'businesses' ? (
+            <FilterSection title={t.browse.hasReservations} index={4}>
+              <FilterChoiceCards
+                value={f.reservations ?? ''}
+                onChange={(v) => setField('reservations', v)}
+                options={RESERVATIONS_FILTER_VISUAL.map((o) => ({
+                  ...o,
+                  label: t.browse.hasReservations,
+                  hint: t.browse.hasReservationsHint,
+                }))}
+                columns={1}
+              />
+            </FilterSection>
+          ) : (
+            <FilterSection title={t.browse.fastResponse} index={4}>
+              <FilterChoiceCards
+                value={f.fastResponse ?? ''}
+                onChange={(v) => setField('fastResponse', v)}
+                options={FAST_RESPONSE_FILTER_VISUAL.map((o) => ({
+                  ...o,
+                  label: t.browse.fastResponse,
+                  hint: t.browse.fastResponseHint,
+                }))}
+                columns={1}
+              />
+            </FilterSection>
+          )}
+          {verifiedSection}
         </Stack>
       );
     }
     default:
       return null;
   }
+}
+
+function FilterScrollArea({
+  children,
+  resetKey,
+}: {
+  children: React.ReactNode;
+  resetKey: string | number | boolean;
+}) {
+  const scrollerRef = React.useRef<HTMLDivElement>(null);
+  const [canScrollDown, setCanScrollDown] = React.useState(false);
+
+  const sync = React.useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    setCanScrollDown(el.scrollHeight - el.clientHeight - el.scrollTop > 12);
+  }, []);
+
+  React.useLayoutEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return undefined;
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    el.addEventListener('scroll', sync, { passive: true });
+    return () => {
+      ro.disconnect();
+      el.removeEventListener('scroll', sync);
+    };
+  }, [sync, resetKey]);
+
+  return (
+    <Box sx={{ flex: 1, minHeight: 0, position: 'relative' }}>
+      <Box
+        ref={scrollerRef}
+        sx={{
+          height: '100%',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain',
+          touchAction: 'pan-y',
+          px: 2.5,
+          pt: 2,
+          pb: 3,
+          scrollbarWidth: 'thin',
+        }}
+      >
+        {children}
+      </Box>
+      {canScrollDown ? (
+        <Box
+          aria-hidden
+          sx={{
+            pointerEvents: 'none',
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 64,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            pb: 0.75,
+            background:
+              'linear-gradient(to top, rgb(var(--mui-palette-background-defaultChannel) / 1) 28%, rgb(var(--mui-palette-background-defaultChannel) / 0) 100%)',
+          }}
+        >
+          <Box
+            sx={{
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              color: 'primary.main',
+              boxShadow: `0 4px 14px ${primaryMainAlpha(0.25)}`,
+            }}
+          >
+            <CaretDownIcon size={14} weight="bold" />
+          </Box>
+        </Box>
+      ) : null}
+    </Box>
+  );
 }
 
 export function FilterDrawerPanel({
@@ -382,6 +540,7 @@ export function FilterDrawerPanel({
   onApply: () => void;
   onClear: () => void;
 }) {
+  const t = useCopy();
   React.useEffect(() => {
     if (!open) return undefined;
     const onKey = (e: KeyboardEvent) => {
@@ -395,8 +554,10 @@ export function FilterDrawerPanel({
 
   useLockBodyScroll(open);
 
+  // Portal to <body>: the browse hero uses transform/will-change on mobile, which
+  // would otherwise trap `position:fixed` inside the short header bar.
   return (
-    <>
+    <Portal>
       <Box
         aria-hidden
         onClick={onClose}
@@ -417,7 +578,7 @@ export function FilterDrawerPanel({
       <Box
         role="dialog"
         aria-modal="true"
-        aria-label="Paneli i filtrave"
+        aria-label={t.browse.filtersPanelAria}
         data-scroll-lock-allow=""
         sx={{
           position: 'fixed',
@@ -425,8 +586,9 @@ export function FilterDrawerPanel({
           left: 0,
           bottom: 0,
           zIndex: 1300,
-          width: { xs: 'min(100vw, 420px)', sm: 440, md: 460 },
+          width: { xs: '80vw', sm: 440, md: 460 },
           maxWidth: '100vw',
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
           bgcolor: 'background.default',
@@ -438,6 +600,8 @@ export function FilterDrawerPanel({
           transition: 'transform 0.42s cubic-bezier(0.22, 1, 0.36, 1)',
           overflow: 'hidden',
           overscrollBehavior: 'contain',
+          pt: 'env(safe-area-inset-top, 0px)',
+          pb: 'env(safe-area-inset-bottom, 0px)',
         }}
       >
         <Box
@@ -445,6 +609,7 @@ export function FilterDrawerPanel({
             px: 2.5,
             pt: 2.5,
             pb: 2,
+            flexShrink: 0,
             borderBottom: '1px solid',
             borderColor: 'divider',
           }}
@@ -469,16 +634,16 @@ export function FilterDrawerPanel({
               </Box>
               <Box sx={{ minWidth: 0 }}>
                 <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                  Refino kërkimin
+                  {t.browse.refineTitle}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', mt: 0.25 }}>
-                  Përshtat kriteret për rezultate më të sakta
+                  {t.browse.refineSubtitle}
                 </Typography>
               </Box>
             </Stack>
             <IconButton
               onClick={onClose}
-              aria-label="Mbyll filtrat"
+              aria-label={t.browse.closeFiltersAria}
               sx={{
                 width: 36,
                 height: 36,
@@ -495,7 +660,7 @@ export function FilterDrawerPanel({
           </Stack>
         </Box>
 
-        <Box sx={{ flex: 1, overflowY: 'auto', px: 2.5, py: 2.5, scrollbarWidth: 'thin' }}>
+        <FilterScrollArea resetKey={`${verticalId}-${open}`}>
           <VerticalFilterSections
             verticalId={verticalId}
             draft={draft}
@@ -505,12 +670,13 @@ export function FilterDrawerPanel({
             zoneIds={zoneIds}
             onLocationChange={onLocationChange}
           />
-        </Box>
+        </FilterScrollArea>
 
         <Box
           sx={{
             px: 2.5,
             py: 2,
+            flexShrink: 0,
             borderTop: '1px solid',
             borderColor: 'divider',
             bgcolor: 'background.default',
@@ -518,7 +684,7 @@ export function FilterDrawerPanel({
         >
           {hasPendingChanges ? (
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.25, fontSize: '0.75rem' }}>
-              Ke ndryshime të paaplikuara
+              {t.browse.pendingChanges}
             </Typography>
           ) : null}
           <Stack spacing={1}>
@@ -547,7 +713,7 @@ export function FilterDrawerPanel({
                 '&:active': { transform: 'translateY(0)' },
               }}
             >
-              Shfaq rezultatet
+              {t.browse.showResults}
             </Box>
             {hasAppliedFilters ? (
               <Box
@@ -569,12 +735,12 @@ export function FilterDrawerPanel({
                   '&:hover': { color: 'text.primary' },
                 }}
               >
-                Pastro filtrat
+                {t.browse.clearFilters}
               </Box>
             ) : null}
           </Stack>
         </Box>
       </Box>
-    </>
+    </Portal>
   );
 }

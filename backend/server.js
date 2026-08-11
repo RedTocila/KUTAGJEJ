@@ -14,6 +14,7 @@ const { ensurePremiumListingSchema } = require('./lib/ensure-premium-listing-sch
 const { ensureOkazionListingSchema } = require('./lib/ensure-okazion-listing-schema');
 const { ensureBumpedAtSchema } = require('./lib/ensure-bumped-at-schema');
 const { ensureMemberReviewsSchema } = require('./lib/ensure-member-reviews-schema');
+const { ensureAdminAiSchema } = require('./lib/ensure-admin-ai-schema');
 const { backfillMissingReferralCodes } = require('./lib/referrals');
 const { backfillOrphanProfiles } = require('./lib/profiles');
 const { processDueAutoRefreshes } = require('./lib/listing-auto-refresh');
@@ -93,6 +94,7 @@ async function bootstrap() {
   await ensureOkazionListingSchema();
   await ensureBumpedAtSchema();
   await ensureMemberReviewsSchema();
+  await ensureAdminAiSchema();
   const restored = await backfillOrphanProfiles();
   if (restored > 0) console.log(`✓ Restored ${restored} orphan profile(s) from auth`);
   await backfillMissingReferralCodes();
@@ -166,6 +168,7 @@ app.use('/api/admin/notifications', require('./routes/admin-notifications'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin/roles', require('./routes/admin-roles'));
 app.use('/api/admin/users', require('./routes/admin-users'));
+app.use('/api/admin/ai', require('./routes/admin-ai'));
 app.use('/api/admin/categories', require('./routes/admin-categories'));
 app.use('/api/admin/contracts', require('./routes/admin-contracts'));
 app.use('/api/contracts', require('./routes/contracts'));

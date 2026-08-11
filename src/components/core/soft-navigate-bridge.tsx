@@ -3,10 +3,12 @@
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
+import { NavigationPendingOverlay } from '@/components/core/navigation-pending-overlay';
 import {
   registerAppRouterNavigation,
   unregisterAppRouterNavigation,
 } from '@/lib/hard-navigate';
+import { beginPendingNavigation, clearPendingNavigationIfMatches } from '@/lib/navigation-pending';
 
 function scrollWindowToTop() {
   if (typeof window === 'undefined') return;
@@ -28,6 +30,7 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
   React.useEffect(() => {
     registerAppRouterNavigation(
       (href) => {
+        beginPendingNavigation(href);
         React.startTransition(() => {
           router.push(href);
         });
@@ -45,7 +48,13 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
 
   React.useLayoutEffect(() => {
     scrollWindowToTop();
+    clearPendingNavigationIfMatches(pathname);
   }, [pathname]);
 
-  return children;
+  return (
+    <>
+      {children}
+      <NavigationPendingOverlay />
+    </>
+  );
 }

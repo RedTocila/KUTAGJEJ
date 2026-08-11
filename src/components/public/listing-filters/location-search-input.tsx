@@ -19,6 +19,7 @@ import { MapPinArea as MapPinAreaIcon } from '@phosphor-icons/react/dist/ssr/Map
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { ProductSearchIcon, productSearchBarSx, productTagSx } from '@/components/public/product-browse-chrome';
+import { useCopy } from '@/hooks/use-copy';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { cleanLocationPart } from '@/lib/location-display';
 import { normalizeZoneIds } from '@/lib/listing-filters';
@@ -123,7 +124,7 @@ export function LocationSearchInput({
   cityId,
   zoneIds = [],
   enableZones = false,
-  placeholder = 'Qyteti ose zona',
+  placeholder,
   onChange,
 }: {
   cities: RealEstateCityDto[];
@@ -133,6 +134,7 @@ export function LocationSearchInput({
   placeholder?: string;
   onChange: (nextCityId?: string, nextZoneIds?: string[]) => void;
 }) {
+  const t = useCopy();
   const rootRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [open, setOpen] = React.useState(false);
@@ -242,7 +244,7 @@ export function LocationSearchInput({
   };
 
   const hasSelectedZones = selectedZoneChips.length > 0;
-  const inputPlaceholder = zoneMode ? (hasSelectedZones ? '' : 'Zonat') : placeholder;
+  const inputPlaceholder = zoneMode ? (hasSelectedZones ? '' : t.browse.zones) : (placeholder ?? t.browse.cityOrZone);
   const showZoneScroller = zoneMode && hasSelectedZones;
   const showInput = !cityId || zoneMode;
   const zoneInputCollapsed = zoneMode && hasSelectedZones && !query;
@@ -355,8 +357,9 @@ export function LocationSearchInput({
           open={open && Boolean(anchorEl)}
           anchorEl={anchorEl}
           placement="bottom-start"
+          data-scroll-lock-allow=""
           modifiers={[{ name: 'preventOverflow', options: { padding: 8 } }]}
-          sx={{ zIndex: 1400, width: Math.max(anchorEl?.offsetWidth ?? 220, 220) }}
+          sx={{ zIndex: 1600, width: Math.max(anchorEl?.offsetWidth ?? 220, 220) }}
         >
           <Paper
             elevation={8}
@@ -366,8 +369,8 @@ export function LocationSearchInput({
               mt: 0.75,
               display: 'flex',
               flexDirection: 'column',
-              // Header + "Qytete" label + ~4 dense city rows
-              maxHeight: 240,
+              maxHeight: { xs: 'min(70dvh, 480px)', sm: 360 },
+              minHeight: 0,
               overflow: 'hidden',
               borderRadius: 2.5,
               border: '1px solid',
@@ -376,11 +379,13 @@ export function LocationSearchInput({
           >
             <Box
               sx={{
-                flex: 1,
+                flex: '1 1 auto',
                 minHeight: 0,
                 overflowY: 'auto',
+                overflowX: 'hidden',
                 WebkitOverflowScrolling: 'touch',
                 overscrollBehavior: 'contain',
+                touchAction: 'pan-y',
                 scrollbarWidth: 'thin',
               }}
             >
@@ -399,7 +404,8 @@ export function LocationSearchInput({
                         selected={safeZoneIds.includes(option.zoneId)}
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleToggleZone(option.zoneId)}
-                        sx={{ py: 0.45, px: 1.25 }}
+                        disableTouchRipple
+                        sx={{ py: 0.45, px: 1.25, touchAction: 'pan-y' }}
                       >
                         <Checkbox
                           size="small"
@@ -418,7 +424,7 @@ export function LocationSearchInput({
                   </List>
                   {zoneOptions.length === 0 ? (
                     <Typography sx={{ px: 1.5, py: 1.5, fontSize: '0.84rem', color: 'text.secondary' }}>
-                      Nuk u gjet asnjë zonë
+                      {t.browse.noZoneFound}
                     </Typography>
                   ) : null}
                 </>
@@ -429,7 +435,7 @@ export function LocationSearchInput({
                       variant="caption"
                       sx={{ display: 'block', px: 1.5, pt: 1.25, pb: 0.5, color: 'text.secondary', fontWeight: 600 }}
                     >
-                      Shkruaj qytetin{enableZones ? ' ose zonën' : ''}
+                      {enableZones ? t.browse.typeCityOrZone : t.browse.typeCity}
                     </Typography>
                   ) : null}
                   <List dense disablePadding>
@@ -448,14 +454,15 @@ export function LocationSearchInput({
                             fontSize: '0.62rem',
                           }}
                         >
-                          Zona
+                          {t.browse.zone}
                         </Typography>
                         {globalZoneOptions.map((option) => (
                           <ListItemButton
                             key={`${option.cityId}-${option.zoneId}`}
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => handleSelectZoneWithCity(option.cityId, option.zoneId)}
-                            sx={{ py: 0.45, px: 1.25 }}
+                            disableTouchRipple
+                            sx={{ py: 0.45, px: 1.25, touchAction: 'pan-y' }}
                           >
                             <MapPinAreaIcon size={14} style={{ marginRight: 8, flexShrink: 0 }} />
                             <ListItemText
@@ -483,7 +490,7 @@ export function LocationSearchInput({
                         fontSize: '0.62rem',
                       }}
                     >
-                      Qytete
+                      {t.browse.cities}
                     </Typography>
                     {cityOptions.map((option) => (
                       <ListItemButton
@@ -491,7 +498,8 @@ export function LocationSearchInput({
                         selected={cityId === option.cityId}
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleSelectCity(option.cityId)}
-                        sx={{ py: 0.45, px: 1.25 }}
+                        disableTouchRipple
+                        sx={{ py: 0.45, px: 1.25, touchAction: 'pan-y' }}
                       >
                         <MapPinIcon size={14} style={{ marginRight: 8, flexShrink: 0 }} />
                         <ListItemText
@@ -503,7 +511,7 @@ export function LocationSearchInput({
                   </List>
                   {query && cityOptions.length === 0 && !showGlobalZones ? (
                     <Typography sx={{ px: 1.5, py: 1.5, fontSize: '0.84rem', color: 'text.secondary' }}>
-                      Nuk u gjet asnjë qytet{enableZones ? ' apo zonë' : ''}
+                      {enableZones ? t.browse.noCityOrZoneFound : t.browse.noCityFound}
                     </Typography>
                   ) : null}
                 </>

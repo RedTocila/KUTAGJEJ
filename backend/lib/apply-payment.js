@@ -274,4 +274,4 @@ async function addBoostCredits(userId, amount) {
   if (updErr) throw updErr;
 }
 
-module.exports = { confirmAndApplyPayment, mapPayment };
+module.exports = { confirmAndApplyPayment, mapPayment, addBoostCredits };

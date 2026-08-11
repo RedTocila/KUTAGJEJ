@@ -5,6 +5,7 @@ import RouterLink from 'next/link';
 import { Box, Stack, Typography } from '@mui/material';
 import { ArrowUpRight as ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 
+import { BannerSliderViewport } from '@/components/public/banner-slider-viewport';
 import { useBannerSlider } from '@/hooks/use-banner-slider';
 import type { HomeBannerDto } from '@/lib/home-banners-client';
 import { MOTION } from '@/styles/motion';
@@ -182,55 +183,39 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
   return (
     <Box component="section" aria-label="Banner kryesor" sx={{ width: '100%' }}>
       <Stack spacing={1.35} sx={{ width: '100%' }}>
-        <Box
-          {...touchHandlers}
-          sx={{
-            position: 'relative',
-            // Cancel container padding on mobile so slides edge-bleed; desktop stays inset.
-            mx: { xs: -2, md: 0 },
-            overflow: 'hidden',
-            touchAction: 'pan-y',
-            cursor: slides.length > 1 ? 'grab' : undefined,
-            userSelect: 'none',
-            WebkitUserSelect: 'none',
-          }}
+        <BannerSliderViewport
+          idx={idx}
+          slideCount={slides.length}
+          slideBasis={slideBasis}
+          trackRef={trackRef}
+          trackSx={trackSx}
+          touchHandlers={touchHandlers}
         >
-          <Box ref={trackRef} sx={trackSx}>
-            {slides.map((slide, i) => {
-              const dist = Math.abs(i - idx);
-              const wrapDist = Math.min(dist, slides.length - dist);
-              const eager = wrapDist <= 1;
-              return (
-                <Box
-                  key={slide.id}
-                  sx={{
-                    flex: `0 0 ${slideBasis}%`,
-                    minWidth: 0,
-                    px: { xs: 2, md: 0 },
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      borderRadius: { xs: 3, md: 4 },
-                      overflow: 'hidden',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      boxShadow: '0 10px 28px rgba(0,0,0,0.18)',
-                    }}
-                  >
-                    <BannerSlidePanel
-                      slide={slide}
-                      visualIndex={i}
-                      suppressNavRef={suppressNavRef}
-                      eager={eager}
-                    />
-                  </Box>
-                </Box>
-              );
-            })}
-          </Box>
-        </Box>
+          {slides.map((slide, i) => {
+            const dist = Math.abs(i - idx);
+            const wrapDist = Math.min(dist, slides.length - dist);
+            const eager = wrapDist <= 1;
+            return (
+              <Box
+                key={slide.id}
+                sx={{
+                  borderRadius: { xs: 3, md: 4 },
+                  overflow: 'hidden',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  boxShadow: '0 10px 28px rgba(0,0,0,0.18)',
+                }}
+              >
+                <BannerSlidePanel
+                  slide={slide}
+                  visualIndex={i}
+                  suppressNavRef={suppressNavRef}
+                  eager={eager}
+                />
+              </Box>
+            );
+          })}
+        </BannerSliderViewport>
 
         {slides.length > 1 ? (
           <Stack

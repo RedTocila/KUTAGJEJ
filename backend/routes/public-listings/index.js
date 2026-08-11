@@ -49,7 +49,7 @@ const {
   parseJobFilters,
   parseMarketplaceFilters,
   parseDirectoryFilters,
-  finalizeTextSearch,
+  finalizeBrowseFilter,
 } = require('../../lib/public-listings/listing-filters');
 const { reviewStatsByListingIds } = require('../../lib/business-review-stats');
 const { professionalReviewStatsByListingIds } = require('../../lib/professional-review-stats');
@@ -351,7 +351,7 @@ router.get('/real-estate', optionalAuth, async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
     const parsed = parseRealEstateFilters(req.query);
-    const filter = await finalizeTextSearch(parsed.filter, req.query);
+    const filter = await finalizeBrowseFilter(parsed.filter, req.query);
     const sort = parsed.sort;
     let [total, listings] = await Promise.all([
       countRealEstate(filter),
@@ -370,7 +370,7 @@ router.get('/cars', optionalAuth, async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
     const parsed = parseCarFilters(req.query);
-    const filter = await finalizeTextSearch(parsed.filter, req.query);
+    const filter = await finalizeBrowseFilter(parsed.filter, req.query);
     const sort = parsed.sort;
     let [total, listings] = await Promise.all([
       countCars(filter),
@@ -389,7 +389,7 @@ router.get('/jobs', optionalAuth, async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
     const parsed = parseJobFilters(req.query);
-    const filter = await finalizeTextSearch(parsed.filter, req.query);
+    const filter = await finalizeBrowseFilter(parsed.filter, req.query);
     const sort = parsed.sort;
     let [total, listings] = await Promise.all([
       countJobs(filter),
@@ -408,7 +408,7 @@ router.get('/marketplace', optionalAuth, async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
     const parsed = parseMarketplaceFilters(req.query);
-    const filter = await finalizeTextSearch(parsed.filter, req.query);
+    const filter = await finalizeBrowseFilter(parsed.filter, req.query);
     const sort = parsed.sort;
     let [total, listings] = await Promise.all([
       countMarketplace(filter),
@@ -427,7 +427,7 @@ router.get('/businesses', optionalAuth, async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
     const parsed = parseDirectoryFilters(req.query, 'businesses');
-    const filter = await finalizeTextSearch(parsed.filter, req.query);
+    const filter = await finalizeBrowseFilter(parsed.filter, req.query, { vertical: 'businesses' });
     const sort = parsed.sort;
     let [total, listings] = await Promise.all([
       countDirectory(filter),
@@ -446,7 +446,7 @@ router.get('/professionals', optionalAuth, async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
     const parsed = parseDirectoryFilters(req.query, 'professionals');
-    const filter = await finalizeTextSearch(parsed.filter, req.query);
+    const filter = await finalizeBrowseFilter(parsed.filter, req.query, { vertical: 'professionals' });
     const sort = parsed.sort;
     let [total, listings] = await Promise.all([
       countDirectory(filter),

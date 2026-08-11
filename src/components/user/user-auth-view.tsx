@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Box,
@@ -26,6 +26,7 @@ import {
   ToggleButtonGroup,
   Typography,
 } from '@mui/material';
+import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
@@ -611,6 +612,7 @@ function RegisterFieldsBusiness({
 }
 
 export function UserAuthView() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const t = useCopy();
   const refFromUrl = (searchParams.get('ref') ?? '').trim().toUpperCase();
@@ -777,6 +779,14 @@ export function UserAuthView() {
   const indRoot = individualForm.formState.errors.root;
   const busRoot = businessForm.formState.errors.root;
 
+  const handleBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push(paths.home);
+  };
+
   return (
     <Box
       sx={{
@@ -799,6 +809,25 @@ export function UserAuthView() {
           <CardContent sx={{ p: { xs: 3, sm: 3.5 } }}>
             <Stack spacing={2.5}>
               <Box>
+                <Button
+                  type="button"
+                  onClick={handleBack}
+                  aria-label={t.auth.backAria}
+                  startIcon={<ArrowLeftIcon size={18} weight="bold" />}
+                  sx={{
+                    alignSelf: 'flex-start',
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    color: 'text.secondary',
+                    px: 0.75,
+                    ml: -0.75,
+                    mb: 1.5,
+                    minHeight: 36,
+                    '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
+                  }}
+                >
+                  {t.auth.back}
+                </Button>
                 <BrandLogo
                   height={36}
                   showWordmark

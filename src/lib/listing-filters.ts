@@ -1,4 +1,6 @@
 import type { HomeVerticalId } from '@/lib/home-categories';
+import { getMessages } from '@/lib/i18n/messages';
+import { DEFAULT_LANGUAGE, localizedLabel, type AppLanguage } from '@/lib/language';
 import {
   CAR_MAKES,
   FUEL_TYPE_OPTIONS,
@@ -18,7 +20,7 @@ import {
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import { REAL_ESTATE_PROPERTY_CATEGORIES, TRANSACTION_OPTIONS } from '@/lib/real-estate-constants';
 
-export type BrowseSort = 'newest' | 'price-asc' | 'price-desc';
+export type BrowseSort = 'newest' | 'price-asc' | 'price-desc' | 'rating-desc' | 'rating-asc';
 
 export interface BrowseRealEstateFilters {
   cat?: string;
@@ -31,6 +33,8 @@ export interface BrowseRealEstateFilters {
   bedrooms?: string;
   q?: string;
   sort?: BrowseSort;
+  /** `1` = only listings from verified accounts. */
+  verified?: string;
 }
 
 export interface BrowseCarFilters {
@@ -47,6 +51,7 @@ export interface BrowseCarFilters {
   maxKm?: string;
   q?: string;
   sort?: BrowseSort;
+  verified?: string;
 }
 
 export interface BrowseJobFilters {
@@ -58,6 +63,7 @@ export interface BrowseJobFilters {
   city?: string;
   q?: string;
   sort?: BrowseSort;
+  verified?: string;
 }
 
 export interface BrowseMarketplaceFilters {
@@ -68,6 +74,7 @@ export interface BrowseMarketplaceFilters {
   maxPrice?: string;
   q?: string;
   sort?: BrowseSort;
+  verified?: string;
 }
 
 export interface BrowseDirectoryFilters {
@@ -75,6 +82,11 @@ export interface BrowseDirectoryFilters {
   city?: string;
   q?: string;
   sort?: BrowseSort;
+  verified?: string;
+  minRating?: string;
+  announcement?: string;
+  reservations?: string;
+  fastResponse?: string;
 }
 
 export interface BrowseOkazionFilters {
@@ -96,9 +108,21 @@ export type BrowseFilters = BrowseVerticalFilters | BrowseOkazionFilters;
 export const BROWSE_PAGE_SIZE = 24;
 
 export const BROWSE_SORT_OPTIONS = [
-  { value: 'newest', label: 'Më të rejat' },
-  { value: 'price-asc', label: 'Çmimi ↑' },
-  { value: 'price-desc', label: 'Çmimi ↓' },
+  { value: 'newest', label: 'Më të rejat', labelEn: 'Newest' },
+  { value: 'price-asc', label: 'Çmimi ↑', labelEn: 'Price ↑' },
+  { value: 'price-desc', label: 'Çmimi ↓', labelEn: 'Price ↓' },
+] as const;
+
+export const DIRECTORY_SORT_OPTIONS = [
+  { value: 'newest', label: 'Më të rejat', labelEn: 'Newest' },
+  { value: 'rating-desc', label: 'Më të vlerësuarat', labelEn: 'Highest rated' },
+  { value: 'rating-asc', label: 'Më pak të vlerësuara', labelEn: 'Lowest rated' },
+] as const;
+
+export const DIRECTORY_RATING_PRESETS = [
+  { value: '3', label: '3+' },
+  { value: '4', label: '4+' },
+  { value: '4.5', label: '4.5+' },
 ] as const;
 
 export const BUSINESS_FILTER_OPTIONS = [
@@ -165,8 +189,26 @@ function appendQueryValues(qs: URLSearchParams, key: string, value: string | str
 }
 
 function parseSort(value: string): BrowseSort | undefined {
-  if (value === 'newest' || value === 'price-asc' || value === 'price-desc') return value;
+  if (
+    value === 'newest' ||
+    value === 'price-asc' ||
+    value === 'price-desc' ||
+    value === 'rating-desc' ||
+    value === 'rating-asc'
+  ) {
+    return value;
+  }
   return undefined;
+}
+
+function parseOnFlag(value: string): string | undefined {
+  const raw = value.trim().toLowerCase();
+  return raw === '1' || raw === 'true' || raw === 'yes' ? '1' : undefined;
+}
+
+function parseMinRating(value: string): string | undefined {
+  const raw = value.trim();
+  return DIRECTORY_RATING_PRESETS.some((p) => p.value === raw) ? raw : undefined;
 }
 
 export function parseBrowsePage(searchParams: SearchParamsInput): number {
@@ -192,9 +234,17 @@ export function parseBrowseSearchParams(
   verticalId: HomeVerticalId,
   searchParams: SearchParamsInput,
 ): BrowseFilters {
-  const sort = parseSort(firstParam(searchParams.sort));
+  let sort = parseSort(firstParam(searchParams.sort));
+  if (
+    (sort === 'rating-desc' || sort === 'rating-asc') &&
+    verticalId !== 'businesses' &&
+    verticalId !== 'professionals'
+  ) {
+    sort = undefined;
+  }
   const city = firstParam(searchParams.city).trim() || undefined;
   const q = firstParam(searchParams.q).trim() || undefined;
+  const verified = parseOnFlag(firstParam(searchParams.verified));
 
   switch (verticalId) {
     case 'real-estate': {
@@ -210,6 +260,7 @@ export function parseBrowseSearchParams(
         bedrooms: firstParam(searchParams.bedrooms).trim() || undefined,
         q,
         sort,
+        verified,
       };
     }
     case 'cars':
@@ -227,6 +278,7 @@ export function parseBrowseSearchParams(
         maxKm: firstParam(searchParams.maxKm).trim() || undefined,
         q,
         sort,
+        verified,
       };
     case 'jobs':
       return {
@@ -238,6 +290,7 @@ export function parseBrowseSearchParams(
         city,
         q,
         sort,
+        verified,
       };
     case 'marketplace':
       return {
@@ -248,6 +301,7 @@ export function parseBrowseSearchParams(
         maxPrice: firstParam(searchParams.maxPrice).trim() || undefined,
         q,
         sort,
+        verified,
       };
     case 'businesses':
     case 'professionals':
@@ -256,6 +310,13 @@ export function parseBrowseSearchParams(
         city,
         q,
         sort,
+        verified,
+        minRating: parseMinRating(firstParam(searchParams.minRating)),
+        announcement: parseOnFlag(firstParam(searchParams.announcement)),
+        reservations:
+          verticalId === 'businesses' ? parseOnFlag(firstParam(searchParams.reservations)) : undefined,
+        fastResponse:
+          verticalId === 'professionals' ? parseOnFlag(firstParam(searchParams.fastResponse)) : undefined,
       };
     default:
       return {};
@@ -313,22 +374,35 @@ export function getActiveFilterChips(
   verticalId: HomeVerticalId,
   filters: BrowseVerticalFilters,
   cities?: ReadonlyArray<{ id: string; name: string; zones?: ReadonlyArray<{ id: string; name: string }> }>,
+  language: AppLanguage = DEFAULT_LANGUAGE,
 ): ActiveFilterChip[] {
   const chips: ActiveFilterChip[] = [];
+  const t = getMessages(language).browse;
 
   const push = (key: string, label: string) => {
     chips.push({ key, label });
   };
 
-  const sortLabel = findLabel(BROWSE_SORT_OPTIONS, filters.sort);
+  const sortOptions = [
+    ...BROWSE_SORT_OPTIONS,
+    ...DIRECTORY_SORT_OPTIONS.filter((o) => o.value !== 'newest'),
+  ];
+  const sortLabel = findLabel(
+    sortOptions.map((o) => ({ value: o.value, label: localizedLabel(language, o.label, o.labelEn) })),
+    filters.sort,
+  );
   if (sortLabel && filters.sort && filters.sort !== 'newest') {
     push('sort', sortLabel);
+  }
+
+  if ((filters as { verified?: string }).verified === '1') {
+    push('verified', t.verifiedOnly);
   }
 
   const cityId = filters.city;
   if (cityId) {
     const cityName = cities?.find((c) => c.id === cityId)?.name;
-    push('city', cityName || 'Qyteti');
+    push('city', cityName || t.cityFallback);
   }
 
   if (verticalId === 'real-estate') {
@@ -336,7 +410,7 @@ export function getActiveFilterChips(
     const city = cities?.find((c) => c.id === cityId);
     for (const zoneId of zones) {
       const zoneName = city?.zones?.find((z) => z.id === zoneId)?.name;
-      push(`zone:${zoneId}`, zoneName || 'Zona');
+      push(`zone:${zoneId}`, zoneName || t.zoneFallback);
     }
   }
 
@@ -344,16 +418,25 @@ export function getActiveFilterChips(
     case 'real-estate': {
       const f = filters as BrowseRealEstateFilters;
       const cat = findLabel(
-        REAL_ESTATE_PROPERTY_CATEGORIES.map((c) => ({ value: c.slug, label: c.label })),
+        REAL_ESTATE_PROPERTY_CATEGORIES.map((c) => ({
+          value: c.slug,
+          label: localizedLabel(language, c.label, c.labelEn),
+        })),
         f.cat,
       );
       if (cat) push('cat', cat);
-      const tx = findLabel(TRANSACTION_OPTIONS, f.tx);
+      const tx = findLabel(
+        TRANSACTION_OPTIONS.map((o) => ({
+          value: o.value,
+          label: localizedLabel(language, o.label, o.labelEn),
+        })),
+        f.tx,
+      );
       if (tx) push('tx', tx);
       if (f.minPrice) push('minPrice', `Min ${f.minPrice}`);
       if (f.maxPrice) push('maxPrice', `Max ${f.maxPrice}`);
       if (f.minSurface) push('minSurface', `≥ ${f.minSurface} m²`);
-      if (f.bedrooms) push('bedrooms', `≥ ${f.bedrooms} dhoma`);
+      if (f.bedrooms) push('bedrooms', t.minBedroomsChip(f.bedrooms));
       // Keyword `q` is shown in the main search input — omit from chips.
       break;
     }
@@ -372,8 +455,8 @@ export function getActiveFilterChips(
       if (transmission) push('transmission', transmission);
       if (f.minPrice) push('minPrice', `Min ${f.minPrice}`);
       if (f.maxPrice) push('maxPrice', `Max ${f.maxPrice}`);
-      if (f.minYear) push('minYear', `Nga ${f.minYear}`);
-      if (f.maxYear) push('maxYear', `Deri ${f.maxYear}`);
+      if (f.minYear) push('minYear', t.fromYearChip(f.minYear));
+      if (f.maxYear) push('maxYear', t.untilYearChip(f.maxYear));
       if (f.maxKm) push('maxKm', `≤ ${f.maxKm} km`);
       break;
     }
@@ -401,16 +484,18 @@ export function getActiveFilterChips(
       if (f.maxPrice) push('maxPrice', `Max ${f.maxPrice}`);
       break;
     }
-    case 'businesses': {
-      const f = filters as BrowseDirectoryFilters;
-      const type = findLabel(BUSINESS_FILTER_OPTIONS, f.type);
-      if (type) push('type', type);
-      break;
-    }
+    case 'businesses':
     case 'professionals': {
       const f = filters as BrowseDirectoryFilters;
-      const type = findLabel(PROFESSIONAL_FILTER_OPTIONS, f.type);
+      const type = findLabel(
+        verticalId === 'businesses' ? BUSINESS_FILTER_OPTIONS : PROFESSIONAL_FILTER_OPTIONS,
+        f.type,
+      );
       if (type) push('type', type);
+      if (f.minRating) push('minRating', t.minRatingChip(f.minRating));
+      if (f.announcement === '1') push('announcement', t.hasAnnouncement);
+      if (f.reservations === '1') push('reservations', t.hasReservations);
+      if (f.fastResponse === '1') push('fastResponse', t.fastResponse);
       break;
     }
     default:
@@ -440,13 +525,23 @@ export function removeBrowseFilterKey(filters: BrowseFilters, key: string): Brow
   return next as BrowseFilters;
 }
 
-export function getFilterFieldConfig(verticalId: HomeVerticalId) {
+export function getFilterFieldConfig(verticalId: HomeVerticalId, language: AppLanguage = DEFAULT_LANGUAGE) {
+  const sortOptions = BROWSE_SORT_OPTIONS.map((o) => ({
+    value: o.value,
+    label: localizedLabel(language, o.label, o.labelEn),
+  }));
   switch (verticalId) {
     case 'real-estate':
       return {
-        categories: REAL_ESTATE_PROPERTY_CATEGORIES.map((c) => ({ value: c.slug, label: c.label })),
-        transactions: TRANSACTION_OPTIONS,
-        sortOptions: BROWSE_SORT_OPTIONS,
+        categories: REAL_ESTATE_PROPERTY_CATEGORIES.map((c) => ({
+          value: c.slug,
+          label: localizedLabel(language, c.label, c.labelEn),
+        })),
+        transactions: TRANSACTION_OPTIONS.map((o) => ({
+          value: o.value,
+          label: localizedLabel(language, o.label, o.labelEn),
+        })),
+        sortOptions,
       };
     case 'cars':
       return {
@@ -458,7 +553,7 @@ export function getFilterFieldConfig(verticalId: HomeVerticalId) {
         modelsForTypeMake: (vehicleType: string, make: string) =>
           modelsForMake(vehicleType as VehicleType | '', make).map((m) => ({ value: m, label: m })),
         transmissions: TRANSMISSION_OPTIONS,
-        sortOptions: BROWSE_SORT_OPTIONS,
+        sortOptions,
       };
     case 'jobs':
       return {
@@ -467,25 +562,31 @@ export function getFilterFieldConfig(verticalId: HomeVerticalId) {
         workLocations: WORK_LOCATION_OPTIONS,
         educationLevels: JOB_EDUCATION_OPTIONS,
         experienceLevels: JOB_EXPERIENCE_OPTIONS,
-        sortOptions: BROWSE_SORT_OPTIONS,
+        sortOptions,
       };
     case 'marketplace':
       return {
         categories: MARKETPLACE_CATEGORY_OPTIONS,
         conditions: MARKETPLACE_CONDITION_OPTIONS,
-        sortOptions: BROWSE_SORT_OPTIONS,
+        sortOptions,
       };
     case 'businesses':
       return {
         types: BUSINESS_FILTER_OPTIONS,
-        sortOptions: BROWSE_SORT_OPTIONS,
+        sortOptions: DIRECTORY_SORT_OPTIONS.map((o) => ({
+          value: o.value,
+          label: localizedLabel(language, o.label, o.labelEn),
+        })),
       };
     case 'professionals':
       return {
         types: PROFESSIONAL_FILTER_OPTIONS,
-        sortOptions: BROWSE_SORT_OPTIONS,
+        sortOptions: DIRECTORY_SORT_OPTIONS.map((o) => ({
+          value: o.value,
+          label: localizedLabel(language, o.label, o.labelEn),
+        })),
       };
     default:
-      return { sortOptions: BROWSE_SORT_OPTIONS };
+      return { sortOptions };
   }
 }

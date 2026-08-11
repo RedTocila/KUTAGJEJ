@@ -8,7 +8,7 @@ const {
   parseJobFilters,
   parseMarketplaceFilters,
   parseDirectoryFilters,
-  finalizeTextSearch,
+  finalizeBrowseFilter,
 } = require('./public-listings/listing-filters');
 const {
   queryRealEstate,
@@ -279,7 +279,7 @@ async function searchVertical(vertical, params, perVertical) {
   switch (vertical) {
     case 'real-estate': {
       const parsed = parseRealEstateFilters(params);
-      const filter = await finalizeTextSearch(parsed.filter, params);
+      const filter = await finalizeBrowseFilter(parsed.filter, params);
       const sort = parsed.sort;
       const [listings, total] = await Promise.all([
         queryRealEstate(perVertical, filter, sort, 0),
@@ -292,7 +292,7 @@ async function searchVertical(vertical, params, perVertical) {
     }
     case 'cars': {
       const parsed = parseCarFilters(params);
-      const filter = await finalizeTextSearch(parsed.filter, params);
+      const filter = await finalizeBrowseFilter(parsed.filter, params);
       const sort = parsed.sort;
       const [listings, total] = await Promise.all([
         queryCars(perVertical, filter, sort, 0),
@@ -305,7 +305,7 @@ async function searchVertical(vertical, params, perVertical) {
     }
     case 'jobs': {
       const parsed = parseJobFilters(params);
-      const filter = await finalizeTextSearch(parsed.filter, params);
+      const filter = await finalizeBrowseFilter(parsed.filter, params);
       const sort = parsed.sort;
       const [listings, total] = await Promise.all([
         queryJobs(perVertical, filter, sort, 0),
@@ -318,7 +318,7 @@ async function searchVertical(vertical, params, perVertical) {
     }
     case 'marketplace': {
       const parsed = parseMarketplaceFilters(params);
-      const filter = await finalizeTextSearch(parsed.filter, params);
+      const filter = await finalizeBrowseFilter(parsed.filter, params);
       const sort = parsed.sort;
       const [listings, total] = await Promise.all([
         queryMarketplace(perVertical, filter, sort, 0),
@@ -331,7 +331,7 @@ async function searchVertical(vertical, params, perVertical) {
     }
     case 'businesses': {
       const parsed = parseDirectoryFilters(params, 'businesses');
-      const filter = await finalizeTextSearch(parsed.filter, params);
+      const filter = await finalizeBrowseFilter(parsed.filter, params, { vertical: 'businesses' });
       const sort = parsed.sort;
       const [listings, total] = await Promise.all([
         queryDirectory('businesses', perVertical, filter, sort, 0),
@@ -344,7 +344,7 @@ async function searchVertical(vertical, params, perVertical) {
     }
     case 'professionals': {
       const parsed = parseDirectoryFilters(params, 'professionals');
-      const filter = await finalizeTextSearch(parsed.filter, params);
+      const filter = await finalizeBrowseFilter(parsed.filter, params, { vertical: 'professionals' });
       const sort = parsed.sort;
       const [listings, total] = await Promise.all([
         queryDirectory('professionals', perVertical, filter, sort, 0),

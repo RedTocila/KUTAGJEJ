@@ -25,6 +25,7 @@ import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megap
 import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
 import { Image as ImageIcon } from '@phosphor-icons/react/dist/ssr/Image';
 import { UserCheck as UserCheckIcon } from '@phosphor-icons/react/dist/ssr/UserCheck';
+import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 
@@ -65,4 +66,5 @@ export const navIcons = {
   coins: BoostCoinIcon,
   image: ImageIcon,
   'user-check': UserCheckIcon,
+  sparkle: SparkleIcon,
 } as Record<string, NavIconComponent>;

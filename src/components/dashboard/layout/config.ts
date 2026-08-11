@@ -14,6 +14,13 @@ export const navSections = [
         icon: 'chart-pie',
         matcher: { type: 'equals', href: paths.dashboard.overview },
       },
+      {
+        key: 'admin-ai',
+        title: 'Asistent AI',
+        href: paths.dashboard.ai,
+        icon: 'sparkle',
+        platformAdminOnly: true,
+      },
     ],
   },
   {

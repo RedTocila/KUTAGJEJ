@@ -12,6 +12,7 @@ const {
 } = require('../job-field-rules');
 const { BUSINESS_CATEGORIES } = require('../directory-business-validation');
 const { PROFESSIONAL_CATEGORIES } = require('../directory-professional-validation');
+const { getSupabaseAdmin } = require('../supabase');
 const {
   activeJobCreatedAtFilter,
   isUuid,
@@ -21,6 +22,8 @@ const {
   buildIlikeOrFilter,
   enrichTextSearchWithLocations,
   mergeSpecs,
+  rankListingIdsByReviews,
+  EMPTY_IN_UUID,
 } = require('./query-helpers');
 
 const MARKETPLACE_CATEGORY_VALUES = [
@@ -210,6 +213,80 @@ function parseMarketplaceFilters(query) {
   return { filter, sort: buildSort(sort, 'price', featuredBoostForQuery(query)) };
 }
 
+function parseOnFlag(value) {
+  const raw = String(value ?? '').trim().toLowerCase();
+  return raw === '1' || raw === 'true' || raw === 'yes';
+}
+
+function parseMinRating(value) {
+  const n = Number.parseFloat(String(value ?? '').trim());
+  if (!Number.isFinite(n) || n < 1 || n > 5) return null;
+  return n;
+}
+
+function parseDirectorySort(value) {
+  const raw = String(value ?? '').trim().toLowerCase();
+  if (raw === 'rating-desc' || raw === 'rating-asc') return raw;
+  return parseSort(value);
+}
+
+async function loadVerifiedPosterIds() {
+  const { data, error } = await getSupabaseAdmin()
+    .from('profiles')
+    .select('id')
+    .or('jobs_employer_verified_at.not.is.null,professionals_verified_at.not.is.null');
+  if (error) throw error;
+  return (data || []).map((row) => row.id).filter(Boolean);
+}
+
+async function applyVerifiedPosterFilter(filter, query) {
+  if (!parseOnFlag(query.verified)) return filter;
+  const ids = await loadVerifiedPosterIds();
+  return mergeSpecs(filter, { in: { poster_id: ids.length ? ids : [EMPTY_IN_UUID] } });
+}
+
+async function listingIdsMeetingMinRating(reviewTable, minRating) {
+  const { data, error } = await getSupabaseAdmin().from(reviewTable).select('listing_id, rating');
+  if (error) throw error;
+  return rankListingIdsByReviews(data)
+    .filter((row) => row.ratingAverage + 1e-9 >= minRating)
+    .map((row) => row.id);
+}
+
+async function applyDirectoryExtras(filter, query, vertical) {
+  let next = filter;
+  if (parseOnFlag(query.announcement)) {
+    next = mergeSpecs(next, {
+      notNull: ['announcement_title'],
+      neq: { announcement_title: '' },
+    });
+  }
+  if (vertical === 'businesses' && parseOnFlag(query.reservations)) {
+    next = mergeSpecs(next, { eq: { reservations_enabled: true } });
+  }
+  if (vertical === 'professionals' && parseOnFlag(query.fastResponse)) {
+    next = mergeSpecs(next, { lte: { response_time_hours: 24 } });
+  }
+  const minRating = parseMinRating(query.minRating);
+  if (minRating != null) {
+    const reviewTable =
+      vertical === 'businesses' ? 'business_listing_reviews' : 'professional_listing_reviews';
+    const ids = await listingIdsMeetingMinRating(reviewTable, minRating);
+    next = mergeSpecs(next, { in: { id: ids.length ? ids : [EMPTY_IN_UUID] } });
+  }
+  return next;
+}
+
+/** Keyword locations + verified / directory extras. */
+async function finalizeBrowseFilter(filter, query, { vertical } = {}) {
+  let next = await finalizeTextSearch(filter, query);
+  next = await applyVerifiedPosterFilter(next, query);
+  if (vertical === 'businesses' || vertical === 'professionals') {
+    next = await applyDirectoryExtras(next, query, vertical);
+  }
+  return next;
+}
+
 function parseDirectoryFilters(query, vertical) {
   const filter = { eq: { vertical } };
   const allowed =
@@ -225,7 +302,7 @@ function parseDirectoryFilters(query, vertical) {
 
   applyTextSearch(filter, query, ['title', 'description']);
 
-  const sort = parseSort(query.sort);
+  const sort = parseDirectorySort(query.sort);
   return { filter, sort: buildDirectorySort(sort, featuredBoostForQuery(query)) };
 }
 
@@ -238,4 +315,5 @@ module.exports = {
   parseMarketplaceFilters,
   parseDirectoryFilters,
   finalizeTextSearch,
+  finalizeBrowseFilter,
 };

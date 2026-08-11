@@ -7,11 +7,19 @@ import {
   Button,
   Chip,
   CircularProgress,
+  FormControl,
   FormControlLabel,
-  Grid,
   IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
   Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from '@mui/material';
@@ -36,26 +44,26 @@ import {
   updateAddonPackage,
 } from '@/lib/admin-addon-packages-client';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { AddonKind, AddonPackage, AddonPackageInput } from '@/types/addon-package';
-import { MOTION } from '@/styles/motion';
 import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
+
+const KIND_ORDER: AddonKind[] = ['premium', 'auto-refresh', 'okazion'];
 
 const KIND_META: Record<
   AddonKind,
   { title: string; blurb: string; accent: string; Icon: React.ElementType }
 > = {
+  premium: {
+    title: 'Premium',
+    blurb: 'Voucherë Premium që blihen dhe aplikohen te njoftimet.',
+    accent: '#fb9c0c',
+    Icon: SparkleIcon,
+  },
   'auto-refresh': {
     title: 'Auto-Refresh',
     blurb: 'Slotet për rifreskim automatik të njoftimeve.',
     accent: '#3b82f6',
     Icon: ArrowClockwiseIcon,
-  },
-  premium: {
-    title: 'Premium',
-    blurb: 'Voucherë Premium që përdoruesit i blejnë dhe i aplikojnë te njoftimet.',
-    accent: '#fb9c0c',
-    Icon: SparkleIcon,
   },
   okazion: {
     title: 'OKAZION',
@@ -107,20 +115,21 @@ function emptyForm(kind: AddonKind): AddonPackageInput {
 
 function AddonDialog({
   open,
-  kind,
   initial,
+  defaultKind,
   onClose,
   onSaved,
 }: {
   open: boolean;
-  kind: AddonKind;
   initial: AddonPackage | null;
+  defaultKind: AddonKind;
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [form, setForm] = React.useState<AddonPackageInput>(emptyForm(kind));
+  const [form, setForm] = React.useState<AddonPackageInput>(emptyForm(defaultKind));
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const kind = initial?.kind ?? form.kind;
 
   React.useEffect(() => {
     if (!open) return;
@@ -138,9 +147,9 @@ function AddonDialog({
         sortOrder: initial.sortOrder,
       });
     } else {
-      setForm(emptyForm(kind));
+      setForm(emptyForm(defaultKind));
     }
-  }, [open, initial, kind]);
+  }, [open, initial, defaultKind]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -161,7 +170,7 @@ function AddonDialog({
   return (
     <ProductDialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
       <ProductDialogTitle onClose={saving ? undefined : onClose}>
-        {initial ? `Ndrysho · ${KIND_META[kind].title}` : `Paketë e re · ${KIND_META[kind].title}`}
+        {initial ? `Ndrysho · ${KIND_META[kind].title}` : 'Paketë shtesë e re'}
       </ProductDialogTitle>
       <ProductDialogContent>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
@@ -170,11 +179,41 @@ function AddonDialog({
               {error}
             </Alert>
           ) : null}
+
+          {!initial ? (
+            <FormControl fullWidth size="small" sx={productFieldSx}>
+              <InputLabel id="addon-kind-label">Lloji</InputLabel>
+              <Select
+                labelId="addon-kind-label"
+                label="Lloji"
+                value={form.kind}
+                onChange={(e) => {
+                  const next = e.target.value as AddonKind;
+                  setForm(emptyForm(next));
+                }}
+              >
+                {KIND_ORDER.map((k) => (
+                  <MenuItem key={k} value={k}>
+                    {KIND_META[k].title}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          ) : null}
+
           <TextField
             label="Etiketa (SQ)"
             value={form.labelSq}
             onChange={(e) => setForm((f) => ({ ...f, labelSq: e.target.value }))}
             fullWidth
+            size="small"
+            placeholder={
+              kind === 'auto-refresh'
+                ? 'p.sh. 10 njoftime Auto-Refresh'
+                : kind === 'okazion'
+                  ? 'p.sh. 5 ditë OKAZION'
+                  : 'p.sh. 15 ditë Premium'
+            }
             sx={productFieldSx}
           />
           <TextField
@@ -182,6 +221,7 @@ function AddonDialog({
             value={form.labelEn || ''}
             onChange={(e) => setForm((f) => ({ ...f, labelEn: e.target.value }))}
             fullWidth
+            size="small"
             sx={productFieldSx}
           />
           {kind === 'auto-refresh' ? (
@@ -191,6 +231,7 @@ function AddonDialog({
               value={form.slots ?? ''}
               onChange={(e) => setForm((f) => ({ ...f, slots: Number(e.target.value) }))}
               fullWidth
+              size="small"
               sx={productFieldSx}
             />
           ) : (
@@ -200,6 +241,7 @@ function AddonDialog({
               value={form.days ?? ''}
               onChange={(e) => setForm((f) => ({ ...f, days: Number(e.target.value) }))}
               fullWidth
+              size="small"
               sx={productFieldSx}
             />
           )}
@@ -210,6 +252,7 @@ function AddonDialog({
               value={form.priceEur}
               onChange={(e) => setForm((f) => ({ ...f, priceEur: Number(e.target.value) }))}
               fullWidth
+              size="small"
               sx={productFieldSx}
             />
             <TextField
@@ -218,6 +261,7 @@ function AddonDialog({
               value={form.priceBc}
               onChange={(e) => setForm((f) => ({ ...f, priceBc: Number(e.target.value) }))}
               fullWidth
+              size="small"
               sx={productFieldSx}
             />
           </Stack>
@@ -227,6 +271,7 @@ function AddonDialog({
             value={form.sortOrder ?? 0}
             onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))}
             fullWidth
+            size="small"
             sx={productFieldSx}
           />
           <FormControlLabel
@@ -252,119 +297,36 @@ function AddonDialog({
   );
 }
 
-function PackageCard({
-  pkg,
-  accent,
+function KindSection({
+  kind,
+  packages,
+  onAdd,
   onEdit,
   onDeactivate,
 }: {
-  pkg: AddonPackage;
-  accent: string;
-  onEdit: () => void;
-  onDeactivate: () => void;
+  kind: AddonKind;
+  packages: AddonPackage[];
+  onAdd: () => void;
+  onEdit: (pkg: AddonPackage) => void;
+  onDeactivate: (pkg: AddonPackage) => void;
 }) {
-  return (
-    <Box
-      sx={{
-        ...productPanelSx,
-        p: 2.25,
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1.5,
-        opacity: pkg.active ? 1 : 0.55,
-        transition: `border-color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.fast} ${MOTION.ease}`,
-        '&:hover': {
-          borderColor: accent,
-          transform: 'translateY(-2px)',
-        },
-      }}
-    >
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography sx={{ fontWeight: 800, lineHeight: 1.3 }} noWrap>
-            {pkg.labelSq}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-            {pkg.id}
-          </Typography>
-        </Box>
-        <Chip
-          size="small"
-          label={pkg.active ? 'Aktive' : 'Fshehur'}
-          color={pkg.active ? 'success' : 'default'}
-          sx={{ fontWeight: 700 }}
-        />
-      </Stack>
-
-      <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.75 }}>
-        {pkg.kind === 'auto-refresh' ? (
-          <Chip size="small" label={`${pkg.slots} slot`} sx={{ fontWeight: 700, borderRadius: '8px' }} />
-        ) : (
-          <Chip size="small" label={`${pkg.days} ditë`} sx={{ fontWeight: 700, borderRadius: '8px' }} />
-        )}
-        <Chip
-          size="small"
-          label={`${pkg.priceEur} €`}
-          sx={{ fontWeight: 800, borderRadius: '8px', bgcolor: primaryMainAlpha(0.12), color: 'primary.main' }}
-        />
-        <Chip
-          size="small"
-          icon={<BoostCoinIcon size={14} />}
-          label={`${pkg.priceBc} BC`}
-          sx={{ fontWeight: 700, borderRadius: '8px' }}
-        />
-      </Stack>
-
-      <Stack direction="row" spacing={0.75} sx={{ mt: 'auto', pt: 0.5 }}>
-        <Button size="small" startIcon={<PencilIcon size={16} />} onClick={onEdit} sx={productButtonSx}>
-          Ndrysho
-        </Button>
-        {pkg.active ? (
-          <IconButton
-            size="small"
-            color="error"
-            aria-label="Çaktivizo"
-            onClick={onDeactivate}
-            sx={{ borderRadius: 2 }}
-          >
-            <TrashIcon size={18} />
-          </IconButton>
-        ) : null}
-      </Stack>
-    </Box>
-  );
-}
-
-export function AddonPackagesAdminSection({ kind }: { kind: AddonKind }) {
   const meta = KIND_META[kind];
-  const [packages, setPackages] = React.useState<AddonPackage[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [editing, setEditing] = React.useState<AddonPackage | null>(null);
-
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    const res = await listAdminAddonPackages(kind);
-    if (res.error) setError(res.error);
-    else setPackages(res.packages ?? []);
-    setLoading(false);
-  }, [kind]);
-
-  React.useEffect(() => {
-    void load();
-  }, [load]);
-
   const Icon = meta.Icon;
 
   return (
-    <Stack spacing={2.5}>
+    <Box sx={{ ...productPanelSx, overflow: 'hidden' }}>
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         spacing={1.5}
-        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
+        sx={{
+          px: 2.5,
+          py: 2,
+          alignItems: { sm: 'center' },
+          justifyContent: 'space-between',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'action.hover'),
+        }}
       >
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start', minWidth: 0 }}>
           <Box
@@ -382,23 +344,183 @@ export function AddonPackagesAdminSection({ kind }: { kind: AddonKind }) {
             {React.createElement(Icon, { size: 22, weight: 'duotone' })}
           </Box>
           <Box sx={{ minWidth: 0 }}>
-            <Typography sx={{ fontWeight: 800 }}>{meta.title}</Typography>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+              <Typography sx={{ fontWeight: 800 }}>{meta.title}</Typography>
+              <Chip size="small" label={`${packages.length}`} sx={{ fontWeight: 700, height: 22 }} />
+            </Stack>
             <Typography variant="body2" color="text.secondary">
               {meta.blurb}
             </Typography>
           </Box>
         </Stack>
         <Button
-          variant="contained"
-          startIcon={<PlusIcon size={18} />}
-          onClick={() => {
-            setEditing(null);
-            setDialogOpen(true);
-          }}
+          size="small"
+          variant="outlined"
+          startIcon={<PlusIcon size={16} />}
+          onClick={onAdd}
           sx={productButtonSx}
         >
-          Shto paketë
+          Shto
         </Button>
+      </Stack>
+
+      {packages.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ p: 3 }}>
+          Nuk ka paketa në këtë kategori.
+        </Typography>
+      ) : (
+        <Box sx={{ overflowX: 'auto' }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow
+                sx={{
+                  '& th': {
+                    fontWeight: 800,
+                    fontSize: '0.7rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    color: 'text.secondary',
+                  },
+                }}
+              >
+                <TableCell>Etiketa</TableCell>
+                <TableCell>{kind === 'auto-refresh' ? 'Slotet' : 'Ditët'}</TableCell>
+                <TableCell align="right">EUR</TableCell>
+                <TableCell align="right">BC</TableCell>
+                <TableCell align="center">Statusi</TableCell>
+                <TableCell align="right" width={110}>
+                  Veprime
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {packages.map((pkg) => (
+                <TableRow key={pkg.id} hover sx={{ opacity: pkg.active ? 1 : 0.55 }}>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                      {pkg.labelSq}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                      {pkg.id}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    {kind === 'auto-refresh' ? `${pkg.slots ?? '—'} slot` : `${pkg.days ?? '—'} ditë`}
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700 }}>
+                    {pkg.priceEur} €
+                  </TableCell>
+                  <TableCell align="right">
+                    <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end', alignItems: 'center' }}>
+                      <BoostCoinIcon size={14} />
+                      <span>{pkg.priceBc}</span>
+                    </Stack>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Chip
+                      size="small"
+                      color={pkg.active ? 'success' : 'default'}
+                      label={pkg.active ? 'Aktive' : 'Fshehur'}
+                      sx={{ fontWeight: 700 }}
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton
+                      size="small"
+                      aria-label="Ndrysho"
+                      onClick={() => onEdit(pkg)}
+                    >
+                      <PencilIcon size={18} />
+                    </IconButton>
+                    {pkg.active ? (
+                      <IconButton
+                        size="small"
+                        color="error"
+                        aria-label="Çaktivizo"
+                        onClick={() => onDeactivate(pkg)}
+                      >
+                        <TrashIcon size={18} />
+                      </IconButton>
+                    ) : null}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+type AddonPackagesAdminSectionProps = { kind?: AddonKind };
+
+export function AddonPackagesAdminSection({ kind }: AddonPackagesAdminSectionProps = {}) {
+  const [packages, setPackages] = React.useState<AddonPackage[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<AddonPackage | null>(null);
+  const [defaultKind, setDefaultKind] = React.useState<AddonKind>(kind ?? 'premium');
+  const [deactivating, setDeactivating] = React.useState<AddonPackage | null>(null);
+  const [deleteBusy, setDeleteBusy] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const res = await listAdminAddonPackages(kind);
+    if (res.error) setError(res.error);
+    else setPackages(res.packages ?? []);
+    setLoading(false);
+  }, [kind]);
+
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+
+  const byKind = React.useMemo(() => {
+    const map: Record<AddonKind, AddonPackage[]> = {
+      premium: [],
+      'auto-refresh': [],
+      okazion: [],
+    };
+    for (const pkg of packages) {
+      if (map[pkg.kind]) map[pkg.kind].push(pkg);
+    }
+    return map;
+  }, [packages]);
+
+  const kindsToShow = kind ? [kind] : KIND_ORDER;
+
+  const openCreate = (k: AddonKind) => {
+    setEditing(null);
+    setDefaultKind(k);
+    setDialogOpen(true);
+  };
+
+  return (
+    <Stack spacing={2.5}>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1.5}
+        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
+      >
+        <Box>
+          <Typography sx={{ fontWeight: 800 }}>Paketat shtesë</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Të njëjtat paketa që shfaqen te dyqani i përdoruesit (Premium, Auto-Refresh, OKAZION).
+          </Typography>
+        </Box>
+        {!kind ? (
+          <Button
+            variant="contained"
+            startIcon={<PlusIcon size={18} />}
+            onClick={() => openCreate('premium')}
+            sx={productButtonSx}
+          >
+            Shto paketë
+          </Button>
+        ) : null}
       </Stack>
 
       {error ? (
@@ -411,38 +533,27 @@ export function AddonPackagesAdminSection({ kind }: { kind: AddonKind }) {
         <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
           <CircularProgress size={28} />
         </Box>
-      ) : packages.length === 0 ? (
-        <Box sx={{ ...productPanelSx, p: 3, textAlign: 'center' }}>
-          <Typography color="text.secondary">Nuk ka ende paketa për këtë kategori.</Typography>
-        </Box>
       ) : (
-        <Grid container spacing={2}>
-          {packages.map((pkg) => (
-            <Grid key={pkg.id} size={{ xs: 12, sm: 6, md: 4 }}>
-              <PackageCard
-                pkg={pkg}
-                accent={meta.accent}
-                onEdit={() => {
-                  setEditing(pkg);
-                  setDialogOpen(true);
-                }}
-                onDeactivate={() => {
-                  void (async () => {
-                    const res = await deactivateAddonPackage(pkg.id);
-                    if (res.error) setError(res.error);
-                    else await load();
-                  })();
-                }}
-              />
-            </Grid>
-          ))}
-        </Grid>
+        kindsToShow.map((k) => (
+          <KindSection
+            key={k}
+            kind={k}
+            packages={byKind[k]}
+            onAdd={() => openCreate(k)}
+            onEdit={(pkg) => {
+              setEditing(pkg);
+              setDefaultKind(pkg.kind);
+              setDialogOpen(true);
+            }}
+            onDeactivate={setDeactivating}
+          />
+        ))
       )}
 
       <AddonDialog
         open={dialogOpen}
-        kind={kind}
         initial={editing}
+        defaultKind={defaultKind}
         onClose={() => setDialogOpen(false)}
         onSaved={async () => {
           setDialogOpen(false);
@@ -450,6 +561,54 @@ export function AddonPackagesAdminSection({ kind }: { kind: AddonKind }) {
           await load();
         }}
       />
+
+      <ProductDialog
+        open={Boolean(deactivating)}
+        onClose={deleteBusy ? undefined : () => setDeactivating(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <ProductDialogTitle onClose={deleteBusy ? undefined : () => setDeactivating(null)}>
+          Çaktivizo paketën?
+        </ProductDialogTitle>
+        <ProductDialogContent>
+          <Typography variant="body2" color="text.secondary">
+            Paketa{' '}
+            <Box component="span" sx={{ fontWeight: 800, color: 'text.primary' }}>
+              {deactivating?.labelSq}
+            </Box>{' '}
+            do të fshihet nga dyqani. Voucherët ekzistues nuk preken — mund ta riaktivizosh duke e
+            ndryshuar.
+          </Typography>
+        </ProductDialogContent>
+        <ProductDialogActions>
+          <Button onClick={() => setDeactivating(null)} disabled={deleteBusy} sx={productButtonSx}>
+            Anulo
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={deleteBusy}
+            sx={productButtonSx}
+            onClick={() => {
+              void (async () => {
+                if (!deactivating) return;
+                setDeleteBusy(true);
+                const res = await deactivateAddonPackage(deactivating.id);
+                setDeleteBusy(false);
+                if (res.error) {
+                  setError(res.error);
+                  return;
+                }
+                setDeactivating(null);
+                await load();
+              })();
+            }}
+          >
+            {deleteBusy ? 'Po çaktivizohet…' : 'Çaktivizo'}
+          </Button>
+        </ProductDialogActions>
+      </ProductDialog>
     </Stack>
   );
 }

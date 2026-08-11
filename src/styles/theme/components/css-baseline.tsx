@@ -8,8 +8,19 @@ import type { Theme } from '../types';
  */
 export const MuiCssBaseline = {
   styleOverrides: {
-    'button, [role="button"], a, summary': {
+    'button, [role="button"], a, summary, label[for]': {
       WebkitTapHighlightColor: 'transparent',
+      touchAction: 'manipulation',
+    },
+    // Instant press for native / unstyled controls that aren't MUI ButtonBase.
+    'button:not(.MuiButtonBase-root):active, [role="button"]:not(.MuiButtonBase-root):active': {
+      transform: 'scale(0.98)',
+      transitionDuration: '0ms',
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      'button:not(.MuiButtonBase-root):active, [role="button"]:not(.MuiButtonBase-root):active': {
+        transform: 'none',
+      },
     },
   },
 } satisfies Components<Theme>['MuiCssBaseline'];

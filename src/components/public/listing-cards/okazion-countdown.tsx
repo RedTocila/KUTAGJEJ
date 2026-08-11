@@ -5,6 +5,7 @@ import { Chip } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { Timer as TimerIcon } from '@phosphor-icons/react/dist/ssr/Timer';
 
+import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
 import { formatJobListingCountdown } from '@/lib/job-listing-expiry';
 
 /** OKAZION packs always last this many days. */
@@ -62,38 +63,31 @@ export function OkazionCountdownPlaceholder() {
 /**
  * Live countdown until OKAZION expires. Packs are always 5 days —
  * when `expiresAt` is missing, falls back to a fresh 5-day window.
+ * Uses a shared 1Hz clock so many cards on the home feed don't each open a timer.
  */
 export function OkazionCountdown({ expiresAt }: { expiresAt?: string | null }) {
   const [mounted, setMounted] = React.useState(false);
-  const [label, setLabel] = React.useState(PLACEHOLDER_LABEL);
+  const nowMs = useSharedSecondTick();
   const fallbackUntilRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
-  React.useEffect(() => {
-    if (!mounted) return undefined;
+  const until = React.useMemo(() => {
+    if (expiresAt) return expiresAt;
+    if (!fallbackUntilRef.current) {
+      fallbackUntilRef.current = new Date(
+        Date.now() + OKAZION_COUNTDOWN_DAYS * 24 * 60 * 60 * 1000,
+      ).toISOString();
+    }
+    return fallbackUntilRef.current;
+  }, [expiresAt]);
 
-    const resolveUntil = () => {
-      if (expiresAt) return expiresAt;
-      if (!fallbackUntilRef.current) {
-        fallbackUntilRef.current = new Date(
-          Date.now() + OKAZION_COUNTDOWN_DAYS * 24 * 60 * 60 * 1000,
-        ).toISOString();
-      }
-      return fallbackUntilRef.current;
-    };
-
-    const update = () => setLabel(formatJobListingCountdown(resolveUntil()));
-    update();
-    const id = window.setInterval(update, 1000);
-    return () => window.clearInterval(id);
-  }, [expiresAt, mounted]);
-
-  if (!mounted) {
+  if (!mounted || !nowMs) {
     return <OkazionCountdownPlaceholder />;
   }
 
+  const label = formatJobListingCountdown(until, new Date(nowMs));
   return <OkazionCountdownChip label={label} live />;
 }

@@ -6,6 +6,7 @@ import { Box, Container, Stack, Typography } from '@mui/material';
 import { ArrowUpRight as ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 
 import { formatPrice } from '@/components/public/listing-cards/format-helpers';
+import { useBannerSlider } from '@/hooks/use-banner-slider';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import type { HomeVerticalId } from '@/lib/home-categories';
@@ -25,10 +26,9 @@ import {
   listingProfessionalPublicHref,
   listingRealEstatePublicHref,
 } from '@/paths';
+import { MOTION } from '@/styles/motion';
 
-const SLIDE_MS = 480;
-const SWIPE_THRESHOLD = 48;
-const AUTOPLAY_MS = 5000;
+const SLIDE_MS = 320;
 
 type SlideModel = {
   id: string;
@@ -145,7 +145,7 @@ function ListingSlidePanel({
         backgroundImage: imageBg ? `url(${imageBg})` : undefined,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        transition: 'transform 0.25s ease, filter 0.25s ease',
+        transition: `transform ${MOTION.fast} ${MOTION.ease}, filter ${MOTION.fast} ${MOTION.ease}`,
         '&:hover': { filter: 'brightness(1.03)' },
         '&:active': { transform: 'scale(0.992)' },
       }}
@@ -313,82 +313,13 @@ export function CategoryTopViewedSlider({
     [listings, verticalId],
   );
 
-  const [idx, setIdx] = React.useState(0);
-  const [dragOffset, setDragOffset] = React.useState(0);
-  const [isDragging, setIsDragging] = React.useState(false);
-  const touchStartX = React.useRef<number | null>(null);
-  const timerRef = React.useRef<number | null>(null);
-  const suppressNavRef = React.useRef(false);
-
-  const startAutoPlay = React.useCallback(() => {
-    if (timerRef.current) window.clearInterval(timerRef.current);
-    if (slides.length < 2) return;
-    timerRef.current = window.setInterval(() => {
-      setIdx((prev) => (prev + 1) % slides.length);
-    }, AUTOPLAY_MS);
-  }, [slides.length]);
-
-  React.useEffect(() => {
-    startAutoPlay();
-    return () => {
-      if (timerRef.current) window.clearInterval(timerRef.current);
-    };
-  }, [startAutoPlay]);
-
-  React.useEffect(() => {
-    setIdx(0);
-  }, [slides.length]);
-
-  const goToSlide = React.useCallback(
-    (next: number) => {
-      if (slides.length === 0) return;
-      setIdx(((next % slides.length) + slides.length) % slides.length);
-      startAutoPlay();
-    },
-    [slides.length, startAutoPlay],
-  );
-
-  const handleTouchStart = (event: React.TouchEvent) => {
-    touchStartX.current = event.touches[0]?.clientX ?? null;
-    setIsDragging(true);
-  };
-
-  const handleTouchMove = (event: React.TouchEvent) => {
-    if (touchStartX.current == null || slides.length < 2) return;
-    const currentX = event.touches[0]?.clientX;
-    if (currentX == null) return;
-    setDragOffset(currentX - touchStartX.current);
-  };
-
-  const handleTouchEnd = (event: React.TouchEvent) => {
-    if (touchStartX.current == null) return;
-    const endX = event.changedTouches[0]?.clientX;
-    if (endX != null) {
-      const delta = endX - touchStartX.current;
-      if (Math.abs(delta) >= SWIPE_THRESHOLD) {
-        suppressNavRef.current = true;
-        if (delta <= -SWIPE_THRESHOLD) {
-          goToSlide(idx + 1);
-        } else {
-          goToSlide(idx - 1);
-        }
-      }
-    }
-    touchStartX.current = null;
-    setDragOffset(0);
-    setIsDragging(false);
-  };
-
-  const handleTouchCancel = () => {
-    touchStartX.current = null;
-    setDragOffset(0);
-    setIsDragging(false);
-  };
+  const { idx, slideBasis, trackRef, suppressNavRef, goToSlide, touchHandlers, trackSx } =
+    useBannerSlider({
+      slideCount: slides.length,
+      slideMs: SLIDE_MS,
+    });
 
   if (slides.length === 0) return null;
-
-  const safeIdx = idx % slides.length;
-  const slideBasis = 100 / slides.length;
 
   return (
     <Box
@@ -417,10 +348,7 @@ export function CategoryTopViewedSlider({
 
         <Stack spacing={1.35} sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
           <Box
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onTouchCancel={handleTouchCancel}
+            {...touchHandlers}
             sx={{
               position: 'relative',
               width: '100%',
@@ -444,18 +372,10 @@ export function CategoryTopViewedSlider({
             }}
           >
             <Box
+              ref={trackRef}
               sx={{
-                display: 'flex',
-                width: `${slides.length * 100}%`,
+                ...trackSx,
                 maxWidth: 'none',
-                transform: `translate3d(calc(-${safeIdx * slideBasis}% + ${dragOffset}px), 0, 0)`,
-                transition: isDragging
-                  ? 'none'
-                  : `transform ${SLIDE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
-                willChange: 'transform',
-                '@media (prefers-reduced-motion: reduce)': {
-                  transition: 'none',
-                },
               }}
             >
               {slides.map((slide) => (
@@ -480,20 +400,20 @@ export function CategoryTopViewedSlider({
                   component="button"
                   type="button"
                   role="tab"
-                  aria-selected={i === safeIdx}
+                  aria-selected={i === idx}
                   aria-label={`Njoftimi ${i + 1}`}
                   onClick={() => goToSlide(i)}
                   sx={{
-                    width: i === safeIdx ? 22 : 8,
+                    width: i === idx ? 22 : 8,
                     height: 8,
                     borderRadius: 99,
                     border: 0,
                     p: 0,
                     cursor: 'pointer',
-                    transition: 'all .25s cubic-bezier(0.22, 1, 0.36, 1)',
-                    bgcolor: i === safeIdx ? 'primary.main' : 'action.selected',
+                    transition: `width ${MOTION.fast} ${MOTION.ease}, background-color ${MOTION.fast} ${MOTION.ease}`,
+                    bgcolor: i === idx ? 'primary.main' : 'action.selected',
                     '&:hover': {
-                      bgcolor: i === safeIdx ? 'primary.dark' : 'action.active',
+                      bgcolor: i === idx ? 'primary.dark' : 'action.active',
                     },
                   }}
                 />

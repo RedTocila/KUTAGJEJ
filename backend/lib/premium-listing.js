@@ -190,11 +190,13 @@ async function purchasePremiumWithBoostCoins({ userId, packageId }) {
 
 async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
   const table = TABLE_BY_KIND[kind];
-  let listingQ = sb
-    .from(table)
-    .select('id, poster_id, status, premium_until, okazion_until')
-    .eq('id', listingId);
-  if (kind === 'businesses' || kind === 'professionals') {
+  // directory_listings no longer has okazion_until (OKAZION is sellable-only).
+  const isDirectory = kind === 'businesses' || kind === 'professionals';
+  const selectCols = isDirectory
+    ? 'id, poster_id, status, premium_until'
+    : 'id, poster_id, status, premium_until, okazion_until';
+  let listingQ = sb.from(table).select(selectCols).eq('id', listingId);
+  if (isDirectory) {
     listingQ = listingQ.eq('vertical', kind);
   }
   const { data: listing, error: listingErr } = await listingQ.maybeSingle();
@@ -221,7 +223,11 @@ async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
       message: 'Vetëm njoftimet e aprovuara mund të bëhen Premium.',
     };
   }
-  if (listing.okazion_until && new Date(listing.okazion_until) > new Date()) {
+  if (
+    !isDirectory &&
+    listing.okazion_until &&
+    new Date(listing.okazion_until) > new Date()
+  ) {
     return {
       ok: false,
       status: 400,

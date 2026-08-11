@@ -12,6 +12,7 @@ import {
   localizeHomeBrowseCategories,
 } from '@/lib/home-categories';
 import { paths } from '@/paths';
+import { MOTION } from '@/styles/motion';
 
 import { HomeVerticalIcon } from './home-vertical-icon';
 
@@ -67,7 +68,9 @@ export function HomeCategoriesStrip() {
                     theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
                   border: '1px solid',
                   borderColor: 'divider',
-                  transition: 'transform 160ms cubic-bezier(0.22, 1, 0.36, 1), border-color 160ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1), background-color 160ms ease',
+                  transition: `transform ${MOTION.release} ${MOTION.ease}, border-color ${MOTION.fast} ${MOTION.ease}, box-shadow ${MOTION.fast} ${MOTION.ease}, background-color ${MOTION.fast} ease`,
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation',
                   '&:hover': {
                     borderColor: accent,
                     transform: 'translateY(-3px)',
@@ -77,7 +80,8 @@ export function HomeCategoriesStrip() {
                         : '0 10px 24px rgba(15, 23, 10, 0.08)',
                   },
                   '&:active': {
-                    transform: 'translateY(-1px)',
+                    transform: 'scale(0.985)',
+                    transitionDuration: MOTION.press,
                   },
                 }}
               >

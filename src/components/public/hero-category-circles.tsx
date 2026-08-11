@@ -17,6 +17,7 @@ import {
 } from '@/lib/home-categories';
 import { hardNavigate, hardRefreshToTop } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
+import { MOTION } from '@/styles/motion';
 
 import { HomeVerticalIcon } from './home-vertical-icon';
 
@@ -100,6 +101,7 @@ export function HeroCategoryCircles({
       cursor: 'pointer',
       userSelect: 'none',
       WebkitTapHighlightColor: 'transparent',
+      touchAction: 'manipulation',
       '&:hover .hero-cat-tile': {
         borderColor: accent,
         bgcolor: soft,
@@ -107,13 +109,19 @@ export function HeroCategoryCircles({
       '&:hover .hero-cat-label': {
         color: accent,
       },
+      '&:active': {
+        transform: 'scale(0.96)',
+        transitionDuration: MOTION.press,
+      },
       '&:active .hero-cat-tile': {
         borderColor: accent,
         bgcolor: soft,
+        transitionDuration: MOTION.press,
       },
       '&:active .hero-cat-label': {
         color: accent,
       },
+      transition: `transform ${MOTION.release} ${MOTION.ease}`,
     };
   };
 
@@ -167,8 +175,7 @@ export function HeroCategoryCircles({
                 bgcolor: selected ? soft : 'action.hover',
                 border: '1.5px solid',
                 borderColor: selected ? accent : 'divider',
-                transition:
-                  'border-color 160ms cubic-bezier(0.22, 1, 0.36, 1), background-color 160ms cubic-bezier(0.22, 1, 0.36, 1)',
+                transition: `border-color ${MOTION.fast} ${MOTION.ease}, background-color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}`,
               }}
             >
               <Box

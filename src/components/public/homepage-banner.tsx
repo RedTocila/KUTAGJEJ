@@ -214,11 +214,16 @@ export function HomepageBanner({
               '0%, 100%': { transform: 'scale(1)', opacity: 0.55 },
               '50%': { transform: 'scale(1.04)', opacity: 0.85 },
             },
-            animation: 'bannerGradientShift 22s ease-in-out infinite',
+            animation: 'bannerGradientShift 28s ease-in-out infinite',
             '@media (prefers-reduced-motion: reduce)': {
               animation: 'none',
               backgroundPosition: '50% 50%',
               '& .banner-orb, & .banner-ring': { animation: 'none' },
+            },
+            '@media (max-width: 599px)': {
+              // Skip continuous paint work on phones — static gradient still reads fine.
+              animation: 'none',
+              '& .banner-orb, & .banner-ring': { animation: 'none', filter: 'none' },
             },
           })}
         >
@@ -234,10 +239,11 @@ export function HomepageBanner({
               height: { xs: 320, md: 460 },
               borderRadius: '50%',
               background: 'radial-gradient(circle at center, var(--banner-orb-a) 0%, transparent 65%)',
-              filter: 'blur(20px)',
+              // Soft falloff without live blur filters (blur was a major paint cost).
+              opacity: 0.9,
               zIndex: 0,
-              animation: 'bannerOrbA 18s ease-in-out infinite',
-              willChange: 'transform',
+              animation: 'bannerOrbA 22s ease-in-out infinite',
+              display: { xs: 'none', md: 'block' },
             }}
           />
           <Box
@@ -251,10 +257,10 @@ export function HomepageBanner({
               height: { xs: 360, md: 520 },
               borderRadius: '50%',
               background: 'radial-gradient(circle at center, var(--banner-orb-b) 0%, transparent 70%)',
-              filter: 'blur(28px)',
+              opacity: 0.85,
               zIndex: 0,
-              animation: 'bannerOrbB 24s ease-in-out infinite',
-              willChange: 'transform',
+              animation: 'bannerOrbB 28s ease-in-out infinite',
+              display: { xs: 'none', md: 'block' },
             }}
           />
 
@@ -274,9 +280,8 @@ export function HomepageBanner({
               boxShadow:
                 '0 0 0 8px var(--banner-ring-shadow-1), 0 0 0 30px var(--banner-ring-shadow-2)',
               zIndex: 0,
-              animation: 'bannerRingPulse 8s ease-in-out infinite',
-              willChange: 'transform, opacity',
-              display: { xs: 'none', sm: 'block' },
+              animation: 'bannerRingPulse 10s ease-in-out infinite',
+              display: { xs: 'none', md: 'block' },
             }}
           />
 

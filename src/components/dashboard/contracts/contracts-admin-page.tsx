@@ -2,10 +2,8 @@
 
 import * as React from 'react';
 import { Alert, Box, Tab, Tabs } from '@mui/material';
-import { ArrowClockwise as ArrowClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowClockwise';
 import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
-import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
-import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
+import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 
 import { AddonPackagesAdminSection } from '@/components/dashboard/addon-packages/addon-packages-admin-section';
 import { ContractDeleteDialog } from '@/components/dashboard/contracts/contract-delete-dialog';
@@ -17,8 +15,15 @@ import { useContractsAdmin } from '@/components/dashboard/contracts/use-contract
 import { usePlatformAdminGuard } from '@/hooks/use-platform-admin';
 import { MOTION } from '@/styles/motion';
 import { productPanelSx } from '@/styles/product-sx';
+import type { ContractPlanCode } from '@/types/contract';
 
-type PackagesTab = 'main' | 'auto-refresh' | 'premium' | 'okazion';
+type PackagesTab = 'main' | 'extra';
+
+const PLATFORM_PLAN_CODES = new Set<ContractPlanCode>(['free', 'starter', 'grow', 'elite']);
+
+function isPlatformMainPackage(c: { planCode: ContractPlanCode | null }): boolean {
+  return Boolean(c.planCode && PLATFORM_PLAN_CODES.has(c.planCode));
+}
 
 export function ContractsAdminPage() {
   const { user, isPlatformAdmin } = usePlatformAdminGuard();
@@ -37,6 +42,11 @@ export function ContractsAdminPage() {
     refresh,
   } = useContractsAdmin();
 
+  const platformContracts = React.useMemo(
+    () => contracts.filter(isPlatformMainPackage),
+    [contracts],
+  );
+
   React.useEffect(() => {
     if (!user || !isPlatformAdmin) return;
     void refresh();
@@ -48,8 +58,8 @@ export function ContractsAdminPage() {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <ContractsPageHeader
         loading={loading}
-        contractCount={contracts.length}
-        onCreate={tab === 'main' ? () => setCreateOpen(true) : undefined}
+        contractCount={platformContracts.length}
+        onCreate={() => setCreateOpen(true)}
         showCreate={tab === 'main'}
       />
 
@@ -73,25 +83,13 @@ export function ContractsAdminPage() {
             value="main"
             icon={React.createElement(PackageIcon, { size: 18 })}
             iconPosition="start"
-            label="Kryesore"
+            label="Paketat kryesore"
           />
           <Tab
-            value="auto-refresh"
-            icon={React.createElement(ArrowClockwiseIcon, { size: 18 })}
+            value="extra"
+            icon={React.createElement(SquaresFourIcon, { size: 18 })}
             iconPosition="start"
-            label="Auto-Refresh"
-          />
-          <Tab
-            value="premium"
-            icon={React.createElement(SparkleIcon, { size: 18 })}
-            iconPosition="start"
-            label="Premium"
-          />
-          <Tab
-            value="okazion"
-            icon={React.createElement(SealPercentIcon, { size: 18 })}
-            iconPosition="start"
-            label="OKAZION"
+            label="Paketat shtesë"
           />
         </Tabs>
       </Box>
@@ -107,7 +105,7 @@ export function ContractsAdminPage() {
           ) : null}
 
           <ContractsTable
-            contracts={contracts}
+            contracts={platformContracts}
             loading={loading}
             onCreate={() => setCreateOpen(true)}
             onEdit={setEditContract}
@@ -144,7 +142,7 @@ export function ContractsAdminPage() {
           />
         </>
       ) : (
-        <AddonPackagesAdminSection kind={tab} />
+        <AddonPackagesAdminSection />
       )}
     </Box>
   );

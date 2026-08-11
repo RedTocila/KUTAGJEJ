@@ -3,6 +3,7 @@ import type { Components } from '@mui/material/styles';
 import type { Theme } from '../types';
 import { MuiAvatar } from './avatar';
 import { MuiButton } from './button';
+import { MuiButtonBase, MuiFab } from './button-base';
 import { MuiCard } from './card';
 import { MuiCardContent } from './card-content';
 import { MuiCardHeader } from './card-header';
@@ -21,12 +22,14 @@ import { MuiTableHead } from './table-head';
 export const components = {
   MuiAvatar,
   MuiButton,
+  MuiButtonBase,
   MuiCard,
   MuiCardContent,
   MuiCardHeader,
   MuiChip,
   MuiCssBaseline,
   MuiDialog,
+  MuiFab,
   MuiIconButton,
   MuiLink,
   MuiRating,

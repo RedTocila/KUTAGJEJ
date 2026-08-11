@@ -34,7 +34,7 @@ export type { ListingGalleryPlaceholderKey };
 export type ListingGalleryPlaceholderIcon = Extract<ListingGalleryPlaceholderKey, 'house' | 'buildings'>;
 
 const SLIDE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
-const SLIDE_DURATION_MS = 620;
+const SLIDE_DURATION_MS = 320;
 const SWIPE_COMMIT_RATIO = 0.18;
 const SWIPE_COMMIT_MIN_PX = 56;
 
@@ -122,20 +122,45 @@ export function RealEstateListingGallery(props: {
   const showPlaceholder = urls.length === 0;
 
   const [active, setActive] = React.useState(0);
-  const [dragOffset, setDragOffset] = React.useState(0);
   const [isDragging, setIsDragging] = React.useState(false);
   const [viewportWidth, setViewportWidth] = React.useState(0);
 
   const viewportRef = React.useRef<HTMLDivElement>(null);
+  const trackRef = React.useRef<HTMLDivElement>(null);
   const dragStartRef = React.useRef<{ x: number; pointerId: number } | null>(null);
+  const dragOffsetRef = React.useRef(0);
+  const activeRef = React.useRef(0);
   const thumbnailRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
+
+  activeRef.current = active;
+
+  const applyTrackTransform = React.useCallback(
+    (index: number, offsetPx: number, withTransition: boolean) => {
+      const el = trackRef.current;
+      if (!el) return;
+      const width = viewportRef.current?.clientWidth ?? viewportWidth;
+      el.style.transition =
+        withTransition && !prefersReducedMotion
+          ? `transform ${SLIDE_DURATION_MS}ms ${SLIDE_EASING}`
+          : withTransition
+            ? `transform ${Math.round(SLIDE_DURATION_MS * 0.25)}ms ease`
+            : 'none';
+      if (width > 0) {
+        el.style.transform = `translate3d(${-index * width + offsetPx}px, 0, 0)`;
+      } else {
+        el.style.transform = `translate3d(calc((-${index} * 100% / ${Math.max(urls.length, 1)}) + ${offsetPx}px), 0, 0)`;
+      }
+    },
+    [prefersReducedMotion, urls.length, viewportWidth],
+  );
 
   React.useEffect(() => {
     setActive(0);
-    setDragOffset(0);
     setIsDragging(false);
     dragStartRef.current = null;
-  }, [urls.join('|')]);
+    dragOffsetRef.current = 0;
+    applyTrackTransform(0, 0, false);
+  }, [urls.join('|'), applyTrackTransform]);
 
   React.useLayoutEffect(() => {
     const node = viewportRef.current;
@@ -148,6 +173,11 @@ export function RealEstateListingGallery(props: {
     observer.observe(node);
     return () => observer.disconnect();
   }, [urls.length, showPlaceholder]);
+
+  React.useEffect(() => {
+    if (isDragging) return;
+    applyTrackTransform(active, 0, true);
+  }, [active, applyTrackTransform, isDragging]);
 
   React.useEffect(() => {
     const thumb = thumbnailRefs.current[active];
@@ -189,15 +219,7 @@ export function RealEstateListingGallery(props: {
     setActive((index) => (index + 1) % urls.length);
   }, [urls.length]);
 
-  const slideTransition = prefersReducedMotion
-    ? `transform ${Math.round(SLIDE_DURATION_MS * 0.25)}ms ease`
-    : `transform ${SLIDE_DURATION_MS}ms ${SLIDE_EASING}`;
-
   const slideWidthPx = viewportWidth > 0 ? viewportWidth : null;
-  const trackTransform =
-    slideWidthPx != null
-      ? `translate3d(${-active * slideWidthPx + dragOffset}px, 0, 0)`
-      : `translate3d(calc((-${active} * 100% / ${Math.max(urls.length, 1)}) + ${dragOffset}px), 0, 0)`;
 
   const finishDrag = React.useCallback(
     (clientX: number, pointerId: number, target: HTMLElement) => {
@@ -207,18 +229,19 @@ export function RealEstateListingGallery(props: {
       const delta = clientX - start.x;
       const threshold = Math.max(SWIPE_COMMIT_MIN_PX, viewportWidth * SWIPE_COMMIT_RATIO);
 
+      dragStartRef.current = null;
+      dragOffsetRef.current = 0;
+      setIsDragging(false);
+
       if (delta <= -threshold) goToNext();
       else if (delta >= threshold) goToPrevious();
-
-      dragStartRef.current = null;
-      setIsDragging(false);
-      setDragOffset(0);
+      else applyTrackTransform(activeRef.current, 0, true);
 
       if (target.hasPointerCapture(pointerId)) {
         target.releasePointerCapture(pointerId);
       }
     },
-    [goToNext, goToPrevious, viewportWidth],
+    [applyTrackTransform, goToNext, goToPrevious, viewportWidth],
   );
 
   const isGalleryControlTarget = (target: EventTarget | null) =>
@@ -228,7 +251,9 @@ export function RealEstateListingGallery(props: {
     if (!hasMultipleImages || event.button !== 0 || isGalleryControlTarget(event.target)) return;
 
     dragStartRef.current = { x: event.clientX, pointerId: event.pointerId };
+    dragOffsetRef.current = 0;
     setIsDragging(true);
+    applyTrackTransform(activeRef.current, 0, false);
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
@@ -236,7 +261,9 @@ export function RealEstateListingGallery(props: {
     const start = dragStartRef.current;
     if (!start || start.pointerId !== event.pointerId) return;
 
-    setDragOffset(event.clientX - start.x);
+    const delta = event.clientX - start.x;
+    dragOffsetRef.current = delta;
+    applyTrackTransform(activeRef.current, delta, false);
   };
 
   const handleViewportPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -379,12 +406,15 @@ export function RealEstateListingGallery(props: {
           </Stack>
         ) : hasMultipleImages ? (
           <Box
+            ref={trackRef}
             sx={{
               display: 'flex',
               height: '100%',
               width: slideWidthPx != null ? slideWidthPx * urls.length : `${urls.length * 100}%`,
-              transform: trackTransform,
-              transition: isDragging ? 'none' : slideTransition,
+              transform:
+                slideWidthPx != null
+                  ? `translate3d(${-active * slideWidthPx}px, 0, 0)`
+                  : `translate3d(calc(-${active} * 100% / ${Math.max(urls.length, 1)}), 0, 0)`,
               willChange: 'transform',
             }}
           >
@@ -595,7 +625,7 @@ export function RealEstateListingGallery(props: {
                 transform: idx === active ? 'scale(1)' : 'scale(0.98)',
                 transition: prefersReducedMotion
                   ? 'none'
-                  : `opacity 280ms ease, transform 280ms ${SLIDE_EASING}, outline-color 280ms ease`,
+                  : `opacity 180ms ease, transform 180ms ${SLIDE_EASING}, outline-color 180ms ease`,
               }}
             >
               <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -606,7 +636,7 @@ export function RealEstateListingGallery(props: {
         </Stack>
       ) : null}
 
-      {resolvedSharePayload ? (
+      {resolvedSharePayload && shareOpen ? (
         <ListingSharePage
           open={shareOpen}
           onClose={() => setShareOpen(false)}

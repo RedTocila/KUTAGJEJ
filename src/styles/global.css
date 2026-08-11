@@ -5,9 +5,11 @@
   --icon-fontSize-lg: 1.5rem;
 
   /* Motion — short + snappy so the product feels premium, not laggy */
-  --motion-fast: 140ms;
-  --motion-base: 200ms;
-  --motion-enter: 320ms;
+  --motion-press: 0ms;
+  --motion-release: 140ms;
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-enter: 240ms;
   --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --motion-ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -45,7 +47,7 @@ body {
     radial-gradient(ellipse 70% 55% at 50% 42%, rgba(118, 186, 27, 0.14), transparent 70%),
     #f7faf4;
   opacity: 1;
-  transition: opacity 0.42s ease;
+  transition: opacity 0.28s ease;
   pointer-events: auto;
 }
 
@@ -110,7 +112,7 @@ html.dark .kutagjej-splash {
 @keyframes kutagjejEnter {
   from {
     opacity: 0;
-    transform: translate3d(0, 8px, 0);
+    transform: translate3d(0, 6px, 0);
   }
   to {
     opacity: 1;
@@ -121,7 +123,7 @@ html.dark .kutagjej-splash {
 @keyframes kutagjejCardIn {
   from {
     opacity: 0;
-    transform: translate3d(0, 10px, 0);
+    transform: translate3d(0, 6px, 0);
   }
   to {
     opacity: 1;
@@ -155,6 +157,20 @@ html.dark .kutagjej-splash {
   transition: transform var(--motion-enter) var(--motion-ease);
 }
 
+/* Snappier MUI ripples — default ~550ms feels late on tap */
+.MuiTouchRipple-rippleVisible {
+  animation-duration: 220ms !important;
+  opacity: 0.28;
+}
+
+.MuiTouchRipple-child {
+  animation-duration: 220ms !important;
+}
+
+.MuiTouchRipple-childLeaving {
+  animation-duration: 150ms !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kutagjej-splash {
     transition: none;
@@ -173,6 +189,12 @@ html.dark .kutagjej-splash {
 
   .listing-card-media-image {
     transition: none;
+  }
+
+  .MuiTouchRipple-rippleVisible,
+  .MuiTouchRipple-child,
+  .MuiTouchRipple-childLeaving {
+    animation-duration: 1ms !important;
   }
 }
 

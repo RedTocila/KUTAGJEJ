@@ -35,7 +35,7 @@ export function CardShell({
         border: '2px solid',
         borderColor: 'divider',
         boxShadow: 'none',
-        transition: `border-color ${MOTION.base} ${MOTION.ease}, transform ${MOTION.base} ${MOTION.ease}, box-shadow ${MOTION.base} ${MOTION.ease}`,
+        transition: `border-color ${MOTION.base} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}, box-shadow ${MOTION.base} ${MOTION.ease}`,
         '@media (hover: hover) and (pointer: fine)': {
           '&:hover': {
             borderColor: 'primary.main',
@@ -50,8 +50,9 @@ export function CardShell({
           },
         },
         '&:active': {
-          transform: 'translateY(-1px)',
+          transform: 'scale(0.985)',
           boxShadow: 'none',
+          transitionDuration: MOTION.press,
         },
         '@media (prefers-reduced-motion: reduce)': {
           transition: 'none',

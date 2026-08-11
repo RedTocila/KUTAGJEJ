@@ -5,14 +5,16 @@ import RouterLink from 'next/link';
 import { Box, Stack, Typography } from '@mui/material';
 import { ArrowUpRight as ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 
+import { useBannerSlider } from '@/hooks/use-banner-slider';
 import type { HomeBannerDto } from '@/lib/home-banners-client';
+import { MOTION } from '@/styles/motion';
 
 export interface HomeBannerCarouselProps {
   banners?: HomeBannerDto[];
 }
 
-const SLIDE_MS = 480;
-const SWIPE_THRESHOLD = 48;
+const SLIDE_MS = 320;
+const DOT_MS = MOTION.fast;
 
 function slideHref(slide: HomeBannerDto): string | null {
   const href = slide.ctaHref?.trim();
@@ -23,10 +25,13 @@ function BannerSlidePanel({
   slide,
   visualIndex,
   suppressNavRef,
+  eager,
 }: {
   slide: HomeBannerDto;
   visualIndex: number;
   suppressNavRef: React.MutableRefObject<boolean>;
+  /** Decode image only for active / adjacent slides. */
+  eager: boolean;
 }) {
   const visual = VISUALS[visualIndex % VISUALS.length];
   const href = slideHref(slide);
@@ -46,16 +51,14 @@ function BannerSlidePanel({
         backgroundImage: imageBg ? `url(${imageBg})` : visual.bg,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        '@keyframes particleFloat': {
-          '0%': { transform: 'translate3d(0, 0, 0) scale(1)', opacity: 0.2 },
-          '50%': { transform: 'translate3d(10px, -22px, 0) scale(1.2)', opacity: 0.75 },
-          '100%': { transform: 'translate3d(-8px, -45px, 0) scale(0.95)', opacity: 0.1 },
-        },
+        // Skip paint work for far-off slides while keeping adjacent ones ready.
+        contentVisibility: eager ? 'visible' : 'auto',
+        containIntrinsicSize: '240px',
         '@keyframes pulseGlow': {
           '0%,100%': { opacity: 0.36 },
           '50%': { opacity: 0.66 },
         },
-        transition: 'transform 0.25s ease, filter 0.25s ease',
+        transition: `transform ${MOTION.fast} ${MOTION.ease}, filter ${MOTION.fast} ${MOTION.ease}`,
         ...(href
           ? {
               '&:hover': {
@@ -69,36 +72,17 @@ function BannerSlidePanel({
       }}
     >
       {!imageBg ? (
-        <>
-          <Box
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              background:
-                'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 85% 70%, rgba(255,255,255,0.14), transparent 32%)',
-              animation: 'pulseGlow 4.8s ease-in-out infinite',
-              pointerEvents: 'none',
-            }}
-          />
-          {PARTICLES.map((p, i) => (
-            <Box
-              key={i}
-              sx={{
-                position: 'absolute',
-                left: `${p.left}%`,
-                top: `${p.top}%`,
-                width: p.size,
-                height: p.size,
-                borderRadius: '50%',
-                bgcolor: p.color,
-                filter: 'blur(0.4px)',
-                animation: `particleFloat ${p.duration}s ease-in-out ${p.delay}s infinite`,
-                zIndex: 0,
-                pointerEvents: 'none',
-              }}
-            />
-          ))}
-        </>
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            background:
+              'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 85% 70%, rgba(255,255,255,0.14), transparent 32%)',
+            animation: eager ? 'pulseGlow 4.8s ease-in-out infinite' : 'none',
+            pointerEvents: 'none',
+            '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+          }}
+        />
       ) : null}
 
       <Stack
@@ -187,75 +171,11 @@ function BannerSlidePanel({
 
 export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
   const slides = banners;
-  const [idx, setIdx] = React.useState(0);
-  const [dragOffset, setDragOffset] = React.useState(0);
-  const [isDragging, setIsDragging] = React.useState(false);
-  const touchStartX = React.useRef<number | null>(null);
-  const timerRef = React.useRef<number | null>(null);
-  const suppressNavRef = React.useRef(false);
-
-  const startAutoPlay = React.useCallback(() => {
-    if (timerRef.current) window.clearInterval(timerRef.current);
-    if (slides.length < 2) return;
-    timerRef.current = window.setInterval(() => {
-      setIdx((prev) => (prev + 1) % slides.length);
-    }, 5000);
-  }, [slides.length]);
-
-  React.useEffect(() => {
-    startAutoPlay();
-    return () => {
-      if (timerRef.current) window.clearInterval(timerRef.current);
-    };
-  }, [startAutoPlay]);
-
-  const goToSlide = React.useCallback(
-    (next: number) => {
-      setIdx(((next % slides.length) + slides.length) % slides.length);
-      startAutoPlay();
-    },
-    [slides.length, startAutoPlay],
-  );
-
-  const handleTouchStart = (event: React.TouchEvent) => {
-    touchStartX.current = event.touches[0]?.clientX ?? null;
-    setIsDragging(true);
-  };
-
-  const handleTouchMove = (event: React.TouchEvent) => {
-    if (touchStartX.current == null || slides.length < 2) return;
-    const currentX = event.touches[0]?.clientX;
-    if (currentX == null) return;
-    setDragOffset(currentX - touchStartX.current);
-  };
-
-  const handleTouchEnd = (event: React.TouchEvent) => {
-    if (touchStartX.current == null) return;
-    const endX = event.changedTouches[0]?.clientX;
-    if (endX != null) {
-      const delta = endX - touchStartX.current;
-      if (Math.abs(delta) >= SWIPE_THRESHOLD) {
-        suppressNavRef.current = true;
-        if (delta <= -SWIPE_THRESHOLD) {
-          goToSlide(idx + 1);
-        } else {
-          goToSlide(idx - 1);
-        }
-      }
-    }
-    touchStartX.current = null;
-    setDragOffset(0);
-    setIsDragging(false);
-  };
-
-  const handleTouchCancel = () => {
-    touchStartX.current = null;
-    setDragOffset(0);
-    setIsDragging(false);
-  };
-
-  const safeIdx = slides.length > 0 ? idx % slides.length : 0;
-  const slideBasis = slides.length > 0 ? 100 / slides.length : 100;
+  const { idx, slideBasis, trackRef, suppressNavRef, goToSlide, touchHandlers, trackSx } =
+    useBannerSlider({
+      slideCount: slides.length,
+      slideMs: SLIDE_MS,
+    });
 
   if (slides.length === 0) return null;
 
@@ -263,10 +183,7 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
     <Box component="section" aria-label="Banner kryesor" sx={{ width: '100%' }}>
       <Stack spacing={1.35} sx={{ width: '100%' }}>
         <Box
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onTouchCancel={handleTouchCancel}
+          {...touchHandlers}
           sx={{
             position: 'relative',
             // Cancel container padding on mobile so slides edge-bleed; desktop stays inset.
@@ -278,43 +195,40 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
             WebkitUserSelect: 'none',
           }}
         >
-          <Box
-            sx={{
-              display: 'flex',
-              width: `${slides.length * 100}%`,
-              transform: `translate3d(calc(-${safeIdx * slideBasis}% + ${dragOffset}px), 0, 0)`,
-              transition: isDragging
-                ? 'none'
-                : `transform ${SLIDE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
-              willChange: 'transform',
-              '@media (prefers-reduced-motion: reduce)': {
-                transition: 'none',
-              },
-            }}
-          >
-            {slides.map((slide, i) => (
-              <Box
-                key={slide.id}
-                sx={{
-                  flex: `0 0 ${slideBasis}%`,
-                  minWidth: 0,
-                  px: { xs: 2, md: 0 },
-                  boxSizing: 'border-box',
-                }}
-              >
+          <Box ref={trackRef} sx={trackSx}>
+            {slides.map((slide, i) => {
+              const dist = Math.abs(i - idx);
+              const wrapDist = Math.min(dist, slides.length - dist);
+              const eager = wrapDist <= 1;
+              return (
                 <Box
+                  key={slide.id}
                   sx={{
-                    borderRadius: { xs: 3, md: 4 },
-                    overflow: 'hidden',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    boxShadow: '0 10px 28px rgba(0,0,0,0.18)',
+                    flex: `0 0 ${slideBasis}%`,
+                    minWidth: 0,
+                    px: { xs: 2, md: 0 },
+                    boxSizing: 'border-box',
                   }}
                 >
-                  <BannerSlidePanel slide={slide} visualIndex={i} suppressNavRef={suppressNavRef} />
+                  <Box
+                    sx={{
+                      borderRadius: { xs: 3, md: 4 },
+                      overflow: 'hidden',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      boxShadow: '0 10px 28px rgba(0,0,0,0.18)',
+                    }}
+                  >
+                    <BannerSlidePanel
+                      slide={slide}
+                      visualIndex={i}
+                      suppressNavRef={suppressNavRef}
+                      eager={eager}
+                    />
+                  </Box>
                 </Box>
-              </Box>
-            ))}
+              );
+            })}
           </Box>
         </Box>
 
@@ -332,20 +246,20 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
                 component="button"
                 type="button"
                 role="tab"
-                aria-selected={i === safeIdx}
+                aria-selected={i === idx}
                 aria-label={`Banner ${i + 1}`}
                 onClick={() => goToSlide(i)}
                 sx={{
-                  width: i === safeIdx ? 22 : 8,
+                  width: i === idx ? 22 : 8,
                   height: 8,
                   borderRadius: 99,
                   border: 0,
                   p: 0,
                   cursor: 'pointer',
-                  transition: 'all .25s cubic-bezier(0.22, 1, 0.36, 1)',
-                  bgcolor: i === safeIdx ? 'primary.main' : 'action.disabled',
+                  transition: `width ${DOT_MS} ${MOTION.ease}, background-color ${DOT_MS} ${MOTION.ease}`,
+                  bgcolor: i === idx ? 'primary.main' : 'action.disabled',
                   '&:hover': {
-                    bgcolor: i === safeIdx ? 'primary.dark' : 'action.active',
+                    bgcolor: i === idx ? 'primary.dark' : 'action.active',
                   },
                 }}
               />
@@ -379,16 +293,4 @@ const VISUALS = [
   {
     bg: 'radial-gradient(900px 320px at 20% 15%, #a3e635 0%, transparent 42%), linear-gradient(135deg, #365314 0%, #4d7c0f 48%, #84cc16 100%)',
   },
-] as const;
-
-const PARTICLES = [
-  { left: 8, top: 72, size: 4, duration: 6.2, delay: 0, color: 'rgba(255,255,255,0.56)' },
-  { left: 14, top: 40, size: 6, duration: 8, delay: 0.5, color: 'rgba(255,255,255,0.4)' },
-  { left: 27, top: 80, size: 5, duration: 7.4, delay: 1.1, color: 'rgba(255,255,255,0.52)' },
-  { left: 35, top: 34, size: 4, duration: 6.8, delay: 0.3, color: 'rgba(255,255,255,0.46)' },
-  { left: 52, top: 75, size: 6, duration: 8.2, delay: 1.4, color: 'rgba(255,255,255,0.38)' },
-  { left: 64, top: 32, size: 5, duration: 6.5, delay: 0.8, color: 'rgba(255,255,255,0.5)' },
-  { left: 74, top: 78, size: 4, duration: 7.8, delay: 1.7, color: 'rgba(255,255,255,0.44)' },
-  { left: 85, top: 45, size: 5, duration: 8.4, delay: 0.2, color: 'rgba(255,255,255,0.42)' },
-  { left: 92, top: 70, size: 4, duration: 7.1, delay: 1, color: 'rgba(255,255,255,0.48)' },
 ] as const;

@@ -5,6 +5,8 @@ import { Box, IconButton } from '@mui/material';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 
+import { MOTION } from '@/styles/motion';
+
 /**
  * Horizontal one-line carousel for the homepage listings.
  *
@@ -32,6 +34,9 @@ export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps)
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const [canScrollPrev, setCanScrollPrev] = React.useState(false);
   const [canScrollNext, setCanScrollNext] = React.useState(false);
+  const rafRef = React.useRef(0);
+  const canPrevRef = React.useRef(false);
+  const canNextRef = React.useRef(false);
 
   const widths = { ...DEFAULT_SLOT_WIDTH, ...slotWidth };
 
@@ -40,22 +45,36 @@ export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps)
     if (!el) return;
     const max = el.scrollWidth - el.clientWidth;
     // 1px tolerance to avoid float-rounding edge cases.
-    setCanScrollPrev(el.scrollLeft > 1);
-    setCanScrollNext(el.scrollLeft < max - 1);
+    const nextPrev = el.scrollLeft > 1;
+    const nextNext = el.scrollLeft < max - 1;
+    if (nextPrev === canPrevRef.current && nextNext === canNextRef.current) return;
+    canPrevRef.current = nextPrev;
+    canNextRef.current = nextNext;
+    setCanScrollPrev(nextPrev);
+    setCanScrollNext(nextNext);
   }, []);
+
+  const scheduleRefresh = React.useCallback(() => {
+    if (rafRef.current) return;
+    rafRef.current = window.requestAnimationFrame(() => {
+      rafRef.current = 0;
+      refresh();
+    });
+  }, [refresh]);
 
   React.useEffect(() => {
     refresh();
     const el = scrollRef.current;
     if (!el) return;
-    el.addEventListener('scroll', refresh, { passive: true });
-    const ro = new ResizeObserver(refresh);
+    el.addEventListener('scroll', scheduleRefresh, { passive: true });
+    const ro = new ResizeObserver(scheduleRefresh);
     ro.observe(el);
     return () => {
-      el.removeEventListener('scroll', refresh);
+      el.removeEventListener('scroll', scheduleRefresh);
       ro.disconnect();
+      if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
     };
-  }, [refresh]);
+  }, [refresh, scheduleRefresh]);
 
   const scrollBy = (direction: 1 | -1) => {
     const el = scrollRef.current;
@@ -67,6 +86,19 @@ export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps)
   };
 
   const childArray = React.Children.toArray(children);
+
+  const maskImage = (() => {
+    if (canScrollPrev && canScrollNext) {
+      return 'linear-gradient(to right, transparent 0, black 24px, black calc(100% - 24px), transparent 100%)';
+    }
+    if (canScrollPrev) {
+      return 'linear-gradient(to right, transparent 0, black 24px, black 100%)';
+    }
+    if (canScrollNext) {
+      return 'linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)';
+    }
+    return undefined;
+  })();
 
   return (
     <Box sx={{ position: 'relative', width: '100%', maxWidth: '100%', minWidth: 0 }}>
@@ -91,18 +123,8 @@ export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps)
           py: 1,
           px: { xs: 0.25, md: 0 },
           // Soft fade on the edge that has more content to discover.
-          maskImage: (() => {
-            if (canScrollPrev && canScrollNext) {
-              return 'linear-gradient(to right, transparent 0, black 24px, black calc(100% - 24px), transparent 100%)';
-            }
-            if (canScrollPrev) {
-              return 'linear-gradient(to right, transparent 0, black 24px, black 100%)';
-            }
-            if (canScrollNext) {
-              return 'linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)';
-            }
-            return undefined;
-          })(),
+          maskImage,
+          transition: `mask-image ${MOTION.fast} linear`,
         }}
       >
         {childArray.map((child, index) => (
@@ -138,6 +160,7 @@ export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps)
             boxShadow: '0 4px 14px rgba(0, 0, 0, 0.12)',
             width: 36,
             height: 36,
+            transition: `border-color ${MOTION.fast} ${MOTION.ease}, color ${MOTION.fast} ${MOTION.ease}`,
             '&:hover': { bgcolor: 'background.paper', borderColor: 'primary.main', color: 'primary.main' },
           }}
         >
@@ -163,6 +186,7 @@ export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps)
             boxShadow: '0 4px 14px rgba(0, 0, 0, 0.12)',
             width: 36,
             height: 36,
+            transition: `border-color ${MOTION.fast} ${MOTION.ease}, color ${MOTION.fast} ${MOTION.ease}`,
             '&:hover': { bgcolor: 'background.paper', borderColor: 'primary.main', color: 'primary.main' },
           }}
         >

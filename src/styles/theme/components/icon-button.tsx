@@ -1,15 +1,16 @@
 import type { Components } from '@mui/material/styles';
 
-import { MOTION } from '@/styles/motion';
+import { PRESS_FEEDBACK } from '@/styles/motion';
 
 import type { Theme } from '../types';
 
 export const MuiIconButton = {
   styleOverrides: {
     root: {
-      transition: `background-color ${MOTION.fast} ${MOTION.ease}, color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.fast} ${MOTION.ease}, border-color ${MOTION.fast} ${MOTION.ease}`,
+      ...PRESS_FEEDBACK,
       '&:active': {
-        transform: 'scale(0.94)',
+        ...PRESS_FEEDBACK['&:active'],
+        transform: 'scale(0.92)',
       },
       '@media (prefers-reduced-motion: reduce)': {
         transition: 'none',

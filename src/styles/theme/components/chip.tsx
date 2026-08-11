@@ -1,19 +1,26 @@
 import type { Components } from '@mui/material/styles';
 
-import { MOTION } from '@/styles/motion';
+import { MOTION, PRESS_FEEDBACK } from '@/styles/motion';
 
 import type { Theme } from '../types';
 
 export const MuiChip = {
   styleOverrides: {
     root: {
-      transition: `background-color ${MOTION.fast} ${MOTION.ease}, color ${MOTION.fast} ${MOTION.ease}, border-color ${MOTION.fast} ${MOTION.ease}, box-shadow ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.fast} ${MOTION.ease}`,
+      ...PRESS_FEEDBACK,
       '&:active': {
-        transform: 'scale(0.97)',
+        ...PRESS_FEEDBACK['&:active'],
+        transform: 'scale(0.96)',
       },
       '@media (prefers-reduced-motion: reduce)': {
         transition: 'none',
         '&:active': { transform: 'none' },
+      },
+    },
+    clickable: {
+      '&:active': {
+        transform: 'scale(0.96)',
+        transitionDuration: MOTION.press,
       },
     },
   },

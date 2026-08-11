@@ -2,7 +2,8 @@ const { getSupabaseAdmin } = require('./supabase');
 
 /**
  * Canonical subscription packages (platform-wide, all categories).
- * Seeded / upserted for both agent and company audiences.
+ * Inserts missing FREE/STARTER/GROW/ELITE × agent/company rows only —
+ * does not overwrite admin edits on existing rows.
  */
 const PACKAGE_TIERS = [
   {
@@ -144,40 +145,30 @@ async function ensureContractPackages() {
         .maybeSingle();
       if (findErr) throw findErr;
 
-      if (existing) {
-        let { error } = await sb.from('contracts').update(fields).eq('id', existing.id);
-        if (error && /max_okazion_listings/i.test(String(error.message || ''))) {
-          console.warn(
-            '[okazion] contracts.max_okazion_listings missing — apply 20260805140000_okazion_listings.sql',
-          );
-          const { max_okazion_listings: _omit, ...rest } = fields;
-          ({ error } = await sb.from('contracts').update(rest).eq('id', existing.id));
-        }
-        if (error) throw error;
-        upserted += 1;
-      } else {
-        let { error } = await sb.from('contracts').insert({
-          ...fields,
+      // Insert-only: never overwrite admin price/quota/label edits on restart.
+      if (existing) continue;
+
+      let { error } = await sb.from('contracts').insert({
+        ...fields,
+        created_at: now,
+      });
+      if (error && /max_okazion_listings/i.test(String(error.message || ''))) {
+        console.warn(
+          '[okazion] contracts.max_okazion_listings missing — apply 20260805140000_okazion_listings.sql',
+        );
+        const { max_okazion_listings: _omit, ...rest } = fields;
+        ({ error } = await sb.from('contracts').insert({
+          ...rest,
           created_at: now,
-        });
-        if (error && /max_okazion_listings/i.test(String(error.message || ''))) {
-          console.warn(
-            '[okazion] contracts.max_okazion_listings missing — apply 20260805140000_okazion_listings.sql',
-          );
-          const { max_okazion_listings: _omit, ...rest } = fields;
-          ({ error } = await sb.from('contracts').insert({
-            ...rest,
-            created_at: now,
-          }));
-        }
-        if (error) throw error;
-        upserted += 1;
+        }));
       }
+      if (error) throw error;
+      upserted += 1;
     }
   }
 
   if (upserted > 0) {
-    console.log(`✓ Ensured contract packages (${PACKAGE_TIERS.length} tiers × ${SUBSCRIBER_KINDS.length} audiences)`);
+    console.log(`✓ Seeded missing contract packages (${upserted} inserted)`);
   }
 }
 

@@ -26,7 +26,7 @@ export function ContractsPageHeader({
       icon={React.createElement(PackageIcon, { size: 22, weight: 'duotone' })}
       eyebrow="Financa"
       title="Paketat"
-      description="Planet kryesore të abonimit dhe paketat shtesë (Auto-Refresh, Premium, OKAZION) — çmime, kuota dhe dukshmëria në dyqan."
+      description="Planet kryesore (FREE–ELITE) dhe paketat shtesë (Premium, Auto-Refresh, OKAZION) — të njëjtat që shfaqen te dyqani i përdoruesit."
       actions={
         <>
           <Chip

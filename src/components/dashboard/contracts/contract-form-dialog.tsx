@@ -11,12 +11,16 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  FormControl,
   FormControlLabel,
   FormGroup,
   Grid,
   IconButton,
   InputAdornment,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
   Stack,
   Switch,
   TextField,
@@ -28,10 +32,22 @@ import {
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { ProductDialog } from '@/components/core/product-dialog';
-import type { Contract } from '@/types/contract';
+import type { Contract, ContractPlanCode } from '@/types/contract';
 import type { Role } from '@/types/role';
 import { productButtonSx, productDialogCloseButtonSx, productFieldSx } from '@/styles/product-sx';
 import { createContract, updateContract } from '@/lib/admin-contracts-client';
+
+const PLAN_OPTIONS: { value: ContractPlanCode; label: string }[] = [
+  { value: 'free', label: 'FREE' },
+  { value: 'starter', label: 'STARTER' },
+  { value: 'grow', label: 'GROW' },
+  { value: 'elite', label: 'ELITE' },
+];
+
+const ROLE_BY_AUDIENCE: Record<'agent' | 'company', string> = {
+  agent: 'Individual',
+  company: 'Biznes',
+};
 
 function QuotaField(props: {
   label: string;
@@ -52,6 +68,13 @@ function QuotaField(props: {
   );
 }
 
+function resolveRoleIds(roles: Role[], kind: 'agent' | 'company', current: string[]): string[] {
+  const wanted = ROLE_BY_AUDIENCE[kind].toLowerCase();
+  const match = roles.find((r) => r.name.trim().toLowerCase() === wanted);
+  if (match) return [match.id];
+  return current;
+}
+
 export function ContractFormDialog(props: {
   open?: boolean;
   contract?: Contract | null;
@@ -65,6 +88,7 @@ export function ContractFormDialog(props: {
   const infoMain = theme.palette.info.main;
 
   const [subscriberKind, setSubscriberKind] = React.useState<'agent' | 'company'>('agent');
+  const [planCode, setPlanCode] = React.useState<ContractPlanCode>('starter');
   const [refreshEveryHours, setRefreshEveryHours] = React.useState('48');
   const [glowBadgeEnabled, setGlowBadgeEnabled] = React.useState(false);
   const [boostCredits, setBoostCredits] = React.useState('0');
@@ -89,7 +113,9 @@ export function ContractFormDialog(props: {
   React.useEffect(() => {
     if (!open) return;
     if (props.contract) {
-      setSubscriberKind(props.contract.subscriberKind === 'company' ? 'company' : 'agent');
+      const kind = props.contract.subscriberKind === 'company' ? 'company' : 'agent';
+      setSubscriberKind(kind);
+      setPlanCode((props.contract.planCode as ContractPlanCode) || 'starter');
       setRefreshEveryHours(String(props.contract.refreshEveryHours ?? 48));
       setGlowBadgeEnabled(Boolean(props.contract.glowBadgeEnabled));
       setBoostCredits(String(props.contract.boostCredits ?? 0));
@@ -107,9 +133,14 @@ export function ContractFormDialog(props: {
       setPrice12Months(String(props.contract.price12Months ?? ''));
       setTitle(props.contract.title);
       setContent(props.contract.content ?? '');
-      setRoleIds(props.contract.roles.map((r) => r.id));
+      setRoleIds(
+        props.contract.roles.length > 0
+          ? props.contract.roles.map((r) => r.id)
+          : resolveRoleIds(props.roles, kind, []),
+      );
     } else {
       setSubscriberKind('agent');
+      setPlanCode('starter');
       setRefreshEveryHours('48');
       setGlowBadgeEnabled(false);
       setBoostCredits('0');
@@ -121,16 +152,26 @@ export function ContractFormDialog(props: {
       setMaxProductListings('5');
       setMaxPremiumListings('0');
       setMaxOkazionListings('0');
-      setPrice1Month('0');
+      setPrice1Month('14');
       setPrice3Months('');
       setPrice6Months('');
       setPrice12Months('');
-      setTitle('');
+      setTitle('STARTER');
       setContent('');
-      setRoleIds([]);
+      setRoleIds(resolveRoleIds(props.roles, 'agent', []));
     }
     setError(null);
-  }, [open, props.contract]);
+  }, [open, props.contract, props.roles]);
+
+  const setAudience = (kind: 'agent' | 'company') => {
+    setSubscriberKind(kind);
+    setRoleIds(resolveRoleIds(props.roles, kind, roleIds));
+  };
+
+  const setPlan = (code: ContractPlanCode) => {
+    setPlanCode(code);
+    setTitle(code.toUpperCase());
+  };
 
   const toggleRole = (id: string) => {
     setRoleIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -213,6 +254,8 @@ export function ContractFormDialog(props: {
       roleIds,
       listingCategoryKey: null as string | null,
       subscriberKind,
+      planCode,
+      sortOrder: PLAN_OPTIONS.findIndex((p) => p.value === planCode),
       refreshEveryHours: refreshH,
       glowBadgeEnabled,
       boostCredits: boost,
@@ -289,10 +332,10 @@ export function ContractFormDialog(props: {
           }}
         >
           <Typography variant="caption" sx={{ color: 'info.main', fontWeight: 800, letterSpacing: '0.08em' }}>
-            {isEdit ? 'Përditësim' : 'Paketë e re'}
+            {isEdit ? 'Përditësim' : 'Plan i ri'}
           </Typography>
           <DialogTitle sx={{ p: 0, pt: 0.25, fontSize: '1.2rem', fontWeight: 800 }}>
-            {isEdit ? 'Paketa / plani' : 'Detajet e planit'}
+            {isEdit ? `Ndrysho · ${props.contract?.title || 'plani'}` : 'Paketa kryesore'}
           </DialogTitle>
           <IconButton
             aria-label="Mbyll"
@@ -320,32 +363,52 @@ export function ContractFormDialog(props: {
               </Alert>
             ) : null}
 
-            <TextField
-              label="Titulli"
-              value={title}
-              onChange={(ev) => setTitle(ev.target.value)}
-              required
-              fullWidth
-              size="small"
-              placeholder="FREE · STARTER · GROW · ELITE"
-              sx={productFieldSx}
-            />
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControl fullWidth size="small" sx={productFieldSx}>
+                  <InputLabel id="plan-code-label">Kodi i planit</InputLabel>
+                  <Select
+                    labelId="plan-code-label"
+                    label="Kodi i planit"
+                    value={planCode}
+                    onChange={(e) => setPlan(e.target.value as ContractPlanCode)}
+                  >
+                    {PLAN_OPTIONS.map((p) => (
+                      <MenuItem key={p.value} value={p.value}>
+                        {p.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Titulli"
+                  value={title}
+                  onChange={(ev) => setTitle(ev.target.value)}
+                  required
+                  fullWidth
+                  size="small"
+                  sx={productFieldSx}
+                />
+              </Grid>
+            </Grid>
 
             <Box>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 700 }}>
-                Lloji i abonentit
+                Audienca
               </Typography>
               <ToggleButtonGroup
                 exclusive
                 size="small"
                 value={subscriberKind}
-                onChange={(_, v) => v && setSubscriberKind(v)}
+                onChange={(_, v) => v && setAudience(v)}
               >
                 <ToggleButton value="agent" sx={{ ...productButtonSx, px: 1.5 }}>
-                  Agjent
+                  Agjent (Individual)
                 </ToggleButton>
                 <ToggleButton value="company" sx={{ ...productButtonSx, px: 1.5 }}>
-                  Kompani
+                  Kompani (Biznes)
                 </ToggleButton>
               </ToggleButtonGroup>
             </Box>
@@ -379,62 +442,70 @@ export function ContractFormDialog(props: {
               </Grid>
             </Box>
 
-            <TextField
-              label="Pritja midis rifreskimeve"
-              type="number"
-              value={refreshEveryHours}
-              onChange={(ev) => setRefreshEveryHours(ev.target.value)}
-              required
-              fullWidth
-              helperText="Sa orë duhet të presë përdoruesi para se të rifreskojë të njëjtin njoftim përsëri."
-              slotProps={{
-                input: {
-                  inputProps: { min: 1 },
-                  endAdornment: <InputAdornment position="end">orë</InputAdornment>,
-                },
-              }}
-              sx={productFieldSx}
-            />
-
-            <TextField
-              label="Boost Coins"
-              type="number"
-              value={boostCredits}
-              onChange={(ev) => setBoostCredits(ev.target.value)}
-              required
-              fullWidth
-              slotProps={{ input: { inputProps: { min: 0 } } }}
-              sx={productFieldSx}
-            />
-
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={glowBadgeEnabled}
-                  onChange={(ev) => setGlowBadgeEnabled(ev.target.checked)}
-                  color="primary"
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Rifreskim (orë)"
+                  type="number"
+                  value={refreshEveryHours}
+                  onChange={(ev) => setRefreshEveryHours(ev.target.value)}
+                  required
+                  fullWidth
+                  size="small"
+                  helperText="Sa orë para se të rifreskojë të njëjtin njoftim."
+                  slotProps={{
+                    input: {
+                      inputProps: { min: 1 },
+                      endAdornment: <InputAdornment position="end">orë</InputAdornment>,
+                    },
+                  }}
+                  sx={productFieldSx}
                 />
-              }
-              label="Badge Premium (titulli amber në katalog)"
-            />
-
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={dailyBoostAccess}
-                  onChange={(ev) => setDailyBoostAccess(ev.target.checked)}
-                  color="primary"
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Boost Coins"
+                  type="number"
+                  value={boostCredits}
+                  onChange={(ev) => setBoostCredits(ev.target.value)}
+                  required
+                  fullWidth
+                  size="small"
+                  slotProps={{ input: { inputProps: { min: 0 } } }}
+                  sx={productFieldSx}
                 />
-              }
-              label="Qasje në boost ditor"
-            />
+              </Grid>
+            </Grid>
+
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={glowBadgeEnabled}
+                    onChange={(ev) => setGlowBadgeEnabled(ev.target.checked)}
+                    color="primary"
+                  />
+                }
+                label="Badge Premium"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={dailyBoostAccess}
+                    onChange={(ev) => setDailyBoostAccess(ev.target.checked)}
+                    color="primary"
+                  />
+                }
+                label="Boost ditor"
+              />
+            </Stack>
 
             <Box>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 700 }}>
-                Çmimet e abonimit (€)
+                Çmimet (€)
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-                FREE = 0. Plotësoni vetëm afatet që ofroni. Të paktën një çmim.
+                FREE = 0. Plotësoni vetëm afatet që ofroni.
               </Typography>
               <Grid container spacing={2}>
                 <Grid size={{ xs: 6, sm: 3 }}>
@@ -509,13 +580,12 @@ export function ContractFormDialog(props: {
             </Box>
 
             <TextField
-              label="Shënime"
+              label="Shënime (opsionale)"
               value={content}
               onChange={(ev) => setContent(ev.target.value)}
               fullWidth
               multiline
               minRows={2}
-              placeholder="Opsionale"
               size="small"
               sx={productFieldSx}
             />
@@ -524,6 +594,9 @@ export function ContractFormDialog(props: {
               <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>
                 Rolet
               </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                Zgjidhet automatikisht sipas audiencës (Individual / Biznes).
+              </Typography>
               <Paper
                 elevation={0}
                 sx={{
@@ -531,7 +604,7 @@ export function ContractFormDialog(props: {
                   borderRadius: 1.5,
                   border: '1px dashed',
                   borderColor: 'divider',
-                  maxHeight: 220,
+                  maxHeight: 180,
                   overflow: 'auto',
                   bgcolor: alpha(theme.palette.primary.main, 0.02),
                 }}

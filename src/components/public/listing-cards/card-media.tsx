@@ -352,12 +352,14 @@ export function CardMedia({
         />
       </Stack>
 
-      <ListingSharePage
-        open={shareOpen}
-        onClose={() => setShareOpen(false)}
-        payload={resolvedSharePayload}
-        onShared={(metrics) => setShareCount(metrics.shareCount)}
-      />
+      {shareOpen ? (
+        <ListingSharePage
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          payload={resolvedSharePayload}
+          onShared={(metrics) => setShareCount(metrics.shareCount)}
+        />
+      ) : null}
     </Box>
   );
 }

@@ -4,6 +4,8 @@ import * as React from 'react';
 import { Box, IconButton, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 
+import { MOTION } from '@/styles/motion';
+
 export function pseudoRandomListingActionCount(seed: string): number {
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) {
@@ -88,9 +90,8 @@ export function ListingMediaActionButton({
         px: 1,
         py: 0.5,
         borderRadius: 999,
-        transition:
-          'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
-        '&:active': { transform: 'scale(0.94)' },
+        transition: `background-color ${MOTION.fast} ${MOTION.ease}, border-color ${MOTION.fast} ${MOTION.ease}, color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}`,
+        '&:active': { transform: 'scale(0.92)', transitionDuration: MOTION.press },
         ...surfaceStyles,
       }}
     >

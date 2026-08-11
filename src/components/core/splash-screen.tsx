@@ -4,9 +4,9 @@ import * as React from 'react';
 
 import { brandLogoSrc, config } from '@/config';
 
-const MIN_VISIBLE_MS = 850;
-const MAX_WAIT_MS = 2800;
-const FADE_MS = 420;
+const MIN_VISIBLE_MS = 420;
+const MAX_WAIT_MS = 1800;
+const FADE_MS = 280;
 
 /**
  * Cold-start branded overlay. Fully React-owned (do not inject/remove

@@ -27,9 +27,15 @@ export const listingContactCtaSx: SxProps<Theme> = {
   color: 'primary.contrastText',
   boxShadow: '0 10px 28px rgba(0,0,0,0.28)',
   px: 3.25,
+  transition: `background-color 120ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 120ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1), filter 120ms ease`,
   '&:hover': {
     color: 'primary.contrastText',
     boxShadow: '0 12px 32px rgba(0,0,0,0.34)',
+  },
+  '&:active': {
+    transform: 'scale(0.98)',
+    filter: 'brightness(0.94)',
+    transitionDuration: '0ms',
   },
   '& .MuiButton-startIcon': { color: 'inherit', mr: 0.85 },
 };
@@ -65,7 +71,7 @@ export function StickyListingContact({
 
   const openChat = async () => {
     setError(null);
-    if (isLoading) return;
+    if (isLoading || loading) return;
 
     if (!user && !hasStoredSession()) {
       setPendingListingChat({ listingKind, listingId });
@@ -73,12 +79,12 @@ export function StickyListingContact({
       return;
     }
 
-    if (!user && hasStoredSession()) {
-      await checkSession();
-    }
-
+    // Show spinner immediately — don't wait on session refresh before feedback.
     setLoading(true);
     try {
+      if (!user && hasStoredSession()) {
+        await checkSession();
+      }
       const res = await startConversation(listingKind, listingId);
       if (res.error || !res.conversation) {
         const message = res.error ?? 'Nuk u krijua biseda.';

@@ -30,7 +30,6 @@ function badgeCta(kind: string): { href: string; label: string } {
 }
 
 function badgeWhatItIs(badge: PublicMemberReferralBadge): string {
-  if (badge.description) return badge.description;
   const need = Number(badge.threshold) || 0;
   switch (badge.kind) {
     case 'free-tier':
@@ -40,16 +39,22 @@ function badgeWhatItIs(badge: PublicMemberReferralBadge): string {
     case 'review-tier':
       return `${need} vlerësime`;
     case 'network-builder':
-      return 'Të gjitha referimet falas';
+      return need > 0 ? `${need} referime` : 'Referime falas';
     case 'revenue-driver':
-      return 'Të gjitha referimet e paguara';
+      return need > 0 ? `${need} të paguara` : 'Referime të paguara';
     case 'trusted-reviewer':
-      return 'Trusted · vlerësime';
+      return need > 0 ? `${need} vlerësime` : 'Vlerësime';
     case 'platform-dominator':
-      return 'Të gjitha nivelet e referimit';
+      return 'Të 3 badge-et';
     default:
       return '';
   }
+}
+
+function badgeTileLabel(badge: PublicMemberReferralBadge): string {
+  return String(badge.label || '')
+    .replace(/\s+badge$/i, '')
+    .trim();
 }
 
 function badgePackagePercent(badge: PublicMemberReferralBadge): number {
@@ -150,14 +155,24 @@ function BadgeTile({
 }) {
   const earned = Boolean(badge.earned);
   const tile = dense ? 42 : 48;
+  const label = badgeTileLabel(badge);
   const what = badgeWhatItIs(badge);
   const packagePct = badgePackagePercent(badge);
+  const status = earned ? 'Kompletuar' : 'Në progres';
   const titleParts = [
-    badge.label,
+    label,
     what,
-    earned ? 'Kompletuar' : 'Ende e pafituar',
+    status,
     packagePct > 0 ? `−${packagePct}% në paketa` : null,
   ].filter(Boolean);
+  const lineSx = {
+    display: 'block',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    width: '100%',
+    lineHeight: 1.15,
+  } as const;
 
   return (
     <Box
@@ -197,25 +212,20 @@ function BadgeTile({
         <Typography
           variant="caption"
           sx={{
+            ...lineSx,
             fontWeight: earned ? 750 : 600,
-            lineHeight: 1.15,
             color: earned ? 'text.primary' : 'text.disabled',
             fontSize: dense ? '0.58rem' : '0.6rem',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
           }}
         >
-          {badge.label}
+          {label}
         </Typography>
         {what ? (
           <Typography
             variant="caption"
             sx={{
-              display: 'block',
+              ...lineSx,
               fontWeight: 600,
-              lineHeight: 1.15,
               color: 'text.secondary',
               fontSize: dense ? '0.52rem' : '0.55rem',
               mt: 0.15,
@@ -227,16 +237,14 @@ function BadgeTile({
         <Typography
           variant="caption"
           sx={{
-            display: 'block',
+            ...lineSx,
             fontWeight: 800,
-            lineHeight: 1.15,
             mt: 0.15,
             fontSize: dense ? '0.52rem' : '0.55rem',
             color: earned ? 'primary.main' : 'text.disabled',
           }}
         >
-          {earned ? 'Kompletuar' : 'Në progres'}
-          {packagePct > 0 ? ` · −${packagePct}% paketa` : ''}
+          {status}
         </Typography>
       </Box>
     </Box>

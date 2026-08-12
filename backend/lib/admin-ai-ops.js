@@ -3,6 +3,14 @@
 const { getSupabaseAdmin } = require('./supabase');
 const { getProfileById, getProfileByEmail, mapProfile } = require('./profiles');
 const { LISTING_KINDS, listAdminListings, reviewListing, countListingsByStatus } = require('./listing-moderation');
+const {
+  diagnoseSchema,
+  listDbTables,
+  inspectTable,
+  countRows,
+  repairMissingSchema,
+  ensureReferralProgramTool,
+} = require('./admin-ai-db');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PLAN_CODES = new Set(['free', 'starter', 'grow', 'elite']);
@@ -582,43 +590,6 @@ async function cancelSubscription(args, admin) {
   return { ok: true, email: profile.email, canceled: data || [] };
 }
 
-const SCHEMA_PROBES = [
-  { table: 'profiles', select: 'id, boost_credits, auto_refresh_slots, avatar_url' },
-  { table: 'user_subscriptions', select: 'id, plan_code, status, max_okazion_listings' },
-  { table: 'payments', select: 'id, status, granted' },
-  { table: 'premium_listing_vouchers', select: 'id, status' },
-  { table: 'okazion_listing_vouchers', select: 'id, status' },
-  { table: 'addon_packages', select: 'id, kind, active' },
-  { table: 'listing_auto_refresh', select: 'listing_id' },
-  { table: 'admin_ai_actions', select: 'id, tool' },
-  { table: 'real_estate_listings', select: 'id, premium_until, bumped_at' },
-  { table: 'user_notifications', select: 'id' },
-];
-
-async function diagnoseSchema() {
-  const sb = getSupabaseAdmin();
-  const checks = [];
-  for (const probe of SCHEMA_PROBES) {
-    const { error } = await sb.from(probe.table).select(probe.select).limit(1);
-    if (!error) {
-      checks.push({ table: probe.table, ok: true });
-    } else {
-      checks.push({ table: probe.table, ok: false, error: error.message });
-    }
-  }
-  const missing = checks.filter((c) => !c.ok);
-  return {
-    ok: true,
-    healthy: missing.length === 0,
-    checks,
-    missingTablesOrColumns: missing.map((c) => c.table),
-    advice:
-      missing.length === 0
-        ? 'Skema duket e plotë për kolonat e kontrolluara. AI nuk ekzekuton SQL ndreqës.'
-        : 'Disa tabela/kolona mungojnë. Aplikoni migrimin përkatës ose backend/scripts/repair-missing-schema.sql në SQL Editor (vetëm ALTER/CREATE IF NOT EXISTS). MOS ekzekutoni init.sql.',
-  };
-}
-
 async function listRecentAiActions(args, admin) {
   const limit = Math.min(30, Math.max(1, Number(args?.limit) || 12));
   const { data, error } = await getSupabaseAdmin()
@@ -644,6 +615,8 @@ const MUTATING_TOOLS = new Set([
   'review_listing',
   'grant_subscription',
   'cancel_subscription',
+  'repair_missing_schema',
+  'ensure_referral_program',
 ]);
 
 const TOOL_HANDLERS = {
@@ -661,6 +634,11 @@ const TOOL_HANDLERS = {
   grant_subscription: (args, ctx) => grantSubscription(args, ctx.admin),
   cancel_subscription: (args, ctx) => cancelSubscription(args, ctx.admin),
   diagnose_schema: () => diagnoseSchema(),
+  list_db_tables: () => listDbTables(),
+  inspect_table: (args) => inspectTable(args),
+  count_rows: (args) => countRows(args),
+  repair_missing_schema: (args) => repairMissingSchema(args),
+  ensure_referral_program: (args) => ensureReferralProgramTool(args),
   list_recent_ai_actions: (args, ctx) => listRecentAiActions(args, ctx.admin),
 };
 

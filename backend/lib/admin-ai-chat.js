@@ -190,8 +190,84 @@ const OPENAI_TOOLS = [
     function: {
       name: 'diagnose_schema',
       description:
-        'Read-only probe of key Supabase tables/columns. Never runs SQL, DROP, TRUNCATE, or repairs.',
+        'Read-only probe of allowlisted public tables/columns (includes referrals). Never runs SQL, DROP, TRUNCATE, or free-form queries.',
       parameters: { type: 'object', additionalProperties: false, properties: {} },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_db_tables',
+      description: 'List allowlisted tables the admin AI can inspect, with health flags.',
+      parameters: { type: 'object', additionalProperties: false, properties: {} },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'inspect_table',
+      description:
+        'Read sample rows from an allowlisted table. Optional eq filter on allowlisted columns (id, email, user ids). Max 20 rows. No SQL.',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          table: { type: 'string', description: 'Table name, e.g. referral_signups, profiles, payments' },
+          limit: { type: 'number' },
+          eqColumn: { type: 'string' },
+          eqValue: { type: 'string' },
+          id: { type: 'string', description: 'Shorthand UUID filter on id' },
+          email: { type: 'string', description: 'Shorthand email filter for profiles' },
+        },
+        required: ['table'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'count_rows',
+      description: 'Count rows in an allowlisted table, optionally filtered. No SQL.',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          table: { type: 'string' },
+          eqColumn: { type: 'string' },
+          eqValue: { type: 'string' },
+          id: { type: 'string' },
+          email: { type: 'string' },
+        },
+        required: ['table'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'repair_missing_schema',
+      description:
+        'Apply allowlisted ADD COLUMN / CREATE TABLE IF NOT EXISTS (referrals, login streak, premium columns). Requires confirm. Never DROP, TRUNCATE, DELETE, or free SQL.',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          table: { type: 'string', description: 'Optional: limit repair to one table' },
+          confirm: { type: 'boolean' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'ensure_referral_program',
+      description: 'Insert or refresh the default referral_programs row. Requires confirm. Use after repair if the referral page 500s.',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        properties: { confirm: { type: 'boolean' } },
+      },
     },
   },
   {
@@ -214,13 +290,14 @@ Përgjigju shkurt në shqip, përveç nëse admini shkruan anglisht.
 
 Rregulla:
 - Për çdo ndryshim, gjej fillimisht përdoruesin me lookup_user / get_user_overview (email është identifikuesi kryesor).
-- Veprimet mutuese (BC, fjalëkalim, fshirje, paketë, moderim) thirren SË PARI pa confirm. Nëse mjeti kthen needsConfirmation, trego përmbledhjen dhe thuaj që admini duhet të konfirmojë nga butoni ose duke shkruar "po". MOS e vë confirm=true vetë në të njëjtin hap.
-- MOS prek llogari admin. MOS ekzekuto SQL. MOS sugjero init.sql, DROP, TRUNCATE, ose supabase db reset.
-- Për probleme skeme: përdor diagnose_schema (vetëm lexim). Nëse mungon diçka, këshillo migrimin additive ose repair-missing-schema.sql.
+- Veprimet mutuese (BC, fjalëkalim, fshirje, paketë, moderim, ndreqje skeme, program referimi) thirren SË PARI pa confirm. Nëse mjeti kthen needsConfirmation, trego përmbledhjen dhe thuaj që admini duhet të konfirmojë nga butoni ose duke shkruar "po". MOS e vë confirm=true vetë në të njëjtin hap.
+- MOS prek llogari admin. MOS ekzekuto SQL të lirë. MOS sugjero init.sql, DROP, TRUNCATE, ose supabase db reset.
+- Për të dhëna: list_db_tables, inspect_table, count_rows (vetëm tabela të lejuara).
+- Për probleme skeme: diagnose_schema. Nëse mungon diçka, përdor repair_missing_schema (konfirmim). Pastaj ensure_referral_program nëse faqja e referimit jep gabim serveri.
 - Mos përsërit fjalëkalime në përgjigje.
 - Nëse kërkesa është e paqartë, pyet për emailin.
 
-Mjete: lookup_user, get_user_overview, adjust_boost_credits, set_auto_refresh_slots, set_user_password, set_user_active, delete_user, list_pending_listings, review_listing, get_platform_stats, list_user_payments, grant_subscription, cancel_subscription, diagnose_schema, list_recent_ai_actions.`;
+Mjete: lookup_user, get_user_overview, adjust_boost_credits, set_auto_refresh_slots, set_user_password, set_user_active, delete_user, list_pending_listings, review_listing, get_platform_stats, list_user_payments, grant_subscription, cancel_subscription, diagnose_schema, list_db_tables, inspect_table, count_rows, repair_missing_schema, ensure_referral_program, list_recent_ai_actions.`;
 }
 
 function sanitizeHistory(raw) {
@@ -298,6 +375,25 @@ function summarizeTool(name, args, result) {
   if (name === 'delete_user') {
     return { name, status: 'ok', summary: `U fshi ${result.email}` };
   }
+  if (name === 'diagnose_schema') {
+    return {
+      name,
+      status: 'ok',
+      summary: result.healthy ? 'Skema OK' : `Mungojnë: ${(result.missingTablesOrColumns || []).join(', ') || 'tabela'}`,
+    };
+  }
+  if (name === 'inspect_table') {
+    return { name, status: 'ok', summary: `${result.table || args.table} · ${result.count ?? 0} rreshta` };
+  }
+  if (name === 'count_rows') {
+    return { name, status: 'ok', summary: `${result.table || args.table}: ${result.count ?? 0}` };
+  }
+  if (name === 'repair_missing_schema') {
+    return { name, status: 'ok', summary: result.message || 'Skema u ndreq' };
+  }
+  if (name === 'ensure_referral_program') {
+    return { name, status: 'ok', summary: result.message || 'Programi i referimit' };
+  }
   return { name, status: 'ok', summary: result?.email || result?.message || name };
 }
 
@@ -354,7 +450,7 @@ async function runToolLoop(history, admin) {
 async function runAdminAiChat({ messages, admin }) {
   const history = sanitizeHistory(messages);
   if (!history.length) {
-    return { reply: 'Si mund t’ju ndihmoj? P.sh. shto BC, ndrysho fjalëkalim, ose diagnostiko skemën.', toolsUsed: [] };
+    return { reply: 'Si mund t’ju ndihmoj? P.sh. shto BC, kontrollo skemën, ose shiko referral_signups.', toolsUsed: [] };
   }
   const last = history[history.length - 1];
   if (last.role !== 'user') {

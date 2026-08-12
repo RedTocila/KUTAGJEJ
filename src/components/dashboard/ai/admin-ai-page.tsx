@@ -40,8 +40,9 @@ const SUGGESTIONS = [
   'Sa njoftime pending ka platforma?',
   'Gjej përdoruesin me email …',
   'Shto 100 BC te user@email.com',
-  'Ndrysho fjalëkalimin e user@email.com',
   'A ka probleme me skemën e Supabase?',
+  'Sa rreshta ka referral_signups?',
+  'Ndreq kolonat që mungojnë',
 ];
 
 const CONFIRM_RE = /^(po|yes|ok|okay|confirm|konfirmo)\.?!?$/i;
@@ -176,7 +177,7 @@ export function AdminAiPage() {
         icon={React.createElement(SparkleIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Panel"
         title="Asistent AI"
-        description="Kontrolloni përdoruesit, Boost Coins, fjalëkalime, njoftime dhe diagnostikim të skemës me gjuhë natyrale. Veprimet e rrezikshme kërkojnë konfirmim."
+        description="Kontrolloni përdoruesit, Boost Coins, njoftime dhe tabela të lejuara me gjuhë natyrale. Nuk ekzekutohet SQL i lirë. Veprimet e rrezikshme kërkojnë konfirmim."
         actions={
           <Stack direction="row" spacing={1}>
             <Button variant="outlined" onClick={() => void loadAudit()} sx={productButtonSx}>
@@ -239,8 +240,8 @@ export function AdminAiPage() {
           {messages.length === 0 && !sending ? (
             <Stack spacing={2} sx={{ py: 4, alignItems: 'flex-start' }}>
               <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 560 }}>
-                Shkruani në shqip, p.sh. “shto 200 BC te ana@email.com” ose “fshi përdoruesin …”. Asistenti nuk
-                ekzekuton SQL dhe nuk prek llogari admin.
+                Shkruani në shqip, p.sh. “shto 200 BC te ana@email.com”, “sa rreshta ka referral_signups”, ose “ndreq skemën”. Asistenti nuk
+                ekzekuton SQL të lirë dhe nuk prek llogari admin.
               </Typography>
               <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
                 {SUGGESTIONS.map((hint) => (

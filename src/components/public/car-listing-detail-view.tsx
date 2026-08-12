@@ -480,7 +480,7 @@ export function CarListingDetailView({
               </Stack>
             </Box>
 
-            <Stack spacing={{ xs: 3, md: 3.5 }} sx={{ px: { xs: 2, sm: 3, md: 0 }, pb: ownerPreview ? 3 : { xs: 18, md: 6 }, width: '100%' }}>
+            <Stack spacing={{ xs: 3, md: 3.5 }} sx={{ px: { xs: 2, sm: 3, md: 0 }, pb: ownerPreview ? 3 : { xs: 14, md: 6 }, width: '100%' }}>
               <Stack spacing={1.75}>
                 <OwnerEditableSpot
                   field="title"
@@ -555,6 +555,16 @@ export function CarListingDetailView({
                   </Stack>
                 </Stack>
               </Stack>
+
+              {ownerPreview ? null : (
+                <StickyListingContact
+                  listingKind="cars"
+                  listingId={listing.id}
+                  contactPhone={displayPhone}
+                  listingTitle={listing.title}
+                  listingUrl={canonicalUrl}
+                />
+              )}
 
               <Stack spacing={1.25}>
                 <OwnerEditableSpot
@@ -730,15 +740,6 @@ export function CarListingDetailView({
         </Container>
       </Box>
 
-      {ownerPreview ? null : (
-        <StickyListingContact
-          listingKind="cars"
-          listingId={listing.id}
-          contactPhone={displayPhone}
-          listingTitle={listing.title}
-          listingUrl={canonicalUrl}
-        />
-      )}
     </>
   );
 }

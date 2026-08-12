@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
+import { PublicLoadErrorView } from '@/components/public/public-load-error-view';
 import { PublicShell } from '@/components/public/public-shell';
 import { RealEstateListingDetailView } from '@/components/public/real-estate-listing-detail-view';
 import { config } from '@/config';
@@ -12,7 +13,7 @@ import {
 } from '@/lib/real-estate-listing-seo';
 import {
   fetchLatestRealEstate,
-  fetchPublicRealEstateListingById,
+  loadPublicRealEstateListingById,
 } from '@/lib/public-listings-client';
 import { pathsPublicRealEstateListingDetail } from '@/paths';
 
@@ -33,7 +34,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const listing = await fetchPublicRealEstateListingById(id);
+  const { data: listing, unavailable } = await loadPublicRealEstateListingById(id);
+  if (unavailable) {
+    return {
+      title: 'Duke ngarkuar njoftimin',
+      robots: { index: false, follow: true },
+    };
+  }
   if (!listing) {
     return {
       title: 'Njoftim i padisponueshëm',
@@ -51,11 +58,20 @@ export default async function RealEstateListingPage({ params }: PageProps): Prom
   const id = mongoIdFromPronaDynamicSegment(permalink);
   if (!id) notFound();
 
-  const [listing, similarPool] = await Promise.all([
-    fetchPublicRealEstateListingById(id),
+  const [loaded, similarPool] = await Promise.all([
+    loadPublicRealEstateListingById(id),
     fetchLatestRealEstate(28),
   ]);
 
+  if (loaded.unavailable) {
+    return (
+      <PublicShell hideHeaderBelowMd>
+        <PublicLoadErrorView title="Njoftimi nuk u ngarkua" />
+      </PublicShell>
+    );
+  }
+
+  const listing = loaded.data;
   if (!listing) notFound();
 
   const requestedNorm = normalizeListingPermalinkSegment(permalink);

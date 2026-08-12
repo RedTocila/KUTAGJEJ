@@ -6,7 +6,7 @@ import type {
   PublicRealEstateListing,
   PublicRealEstateListingSeller,
 } from '@/lib/public-listings-client';
-import { safeServerJson } from '@/lib/server-fetch';
+import { loadPublicEntity, type PublicEntityLoadResult } from '@/lib/server-fetch';
 import type { HomepageMixedListing } from '@/lib/homepage-latest-listings';
 
 export interface PublicMemberListingsBundle {
@@ -298,13 +298,14 @@ const EMPTY_LISTINGS: PublicMemberListingsBundle = {
   },
 };
 
-export async function fetchPublicMemberProfile(id: string): Promise<PublicMemberProfile | null> {
-  const data = await safeServerJson<{
-    member: PublicRealEstateListingSeller;
+function mapMemberProfilePayload(payload: unknown): PublicMemberProfile | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const data = payload as {
+    member?: PublicRealEstateListingSeller;
     listings?: PublicMemberListingsBundle;
     badges?: PublicMemberReferralBadge[];
-  }>(`/public/members/${encodeURIComponent(id)}`);
-  if (!data?.member) return null;
+  };
+  if (!data.member) return null;
   return {
     member: data.member,
     badges: mergeMemberReferralBadges(data.badges),
@@ -331,6 +332,16 @@ export async function fetchPublicMemberProfile(id: string): Promise<PublicMember
         }
       : EMPTY_LISTINGS,
   };
+}
+
+export async function loadPublicMemberProfile(
+  id: string,
+): Promise<PublicEntityLoadResult<PublicMemberProfile>> {
+  return loadPublicEntity(`/public/members/${encodeURIComponent(id)}`, mapMemberProfilePayload);
+}
+
+export async function fetchPublicMemberProfile(id: string): Promise<PublicMemberProfile | null> {
+  return (await loadPublicMemberProfile(id)).data;
 }
 
 /** Newest listings across all member verticals, merged and sorted by `createdAt`. */

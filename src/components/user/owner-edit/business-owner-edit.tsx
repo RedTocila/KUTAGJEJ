@@ -5,6 +5,7 @@ import { Checkbox, FormControlLabel, Stack, TextField } from '@mui/material';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import { BusinessMobileCtaInlineEditor } from '@/components/businesses/business-mobile-cta-inline-editor';
 import { BusinessListingDetailView } from '@/components/public/business-listing-detail-view';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
 import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
@@ -28,6 +29,7 @@ import { isPersistableImageUrl } from '@/lib/image-url';
 import { commitListingPhotos } from '@/lib/owner-edit-photos';
 import { uploadListingImages } from '@/lib/uploads-client';
 import { paths } from '@/paths';
+import type { BusinessMobileCtaMode } from '@/lib/business-mobile-cta';
 
 const MAX_IMAGES = 8;
 
@@ -41,6 +43,7 @@ type Snapshot = {
   servicesHighlight: string | null;
   reservationsEnabled: boolean;
   reservationUrl: string | null;
+  mobileCtaMode?: BusinessMobileCtaMode;
 };
 
 function snapFrom(d: BusinessMineListing): Snapshot {
@@ -54,6 +57,7 @@ function snapFrom(d: BusinessMineListing): Snapshot {
     servicesHighlight: d.servicesHighlight ?? null,
     reservationsEnabled: Boolean(d.reservationsEnabled),
     reservationUrl: d.reservationUrl ?? null,
+    mobileCtaMode: d.mobileCtaMode ?? 'contact',
   };
 }
 
@@ -146,7 +150,8 @@ export function BusinessOwnerEdit({
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
         weeklyHours: draft.weeklyHours?.length ? draft.weeklyHours : weeklyHours,
-        reservationsEnabled: draft.reservationsEnabled,
+        reservationsEnabled: (draft.mobileCtaMode ?? 'contact') === 'reserve' ? true : Boolean(draft.reservationsEnabled),
+        mobileCtaMode: draft.mobileCtaMode ?? 'contact',
         reservationUrl: null,
         reservationTimeSlots: [],
         reservationPartySizes: [],
@@ -212,17 +217,19 @@ export function BusinessOwnerEdit({
           fullWidth
           sx={fieldSx}
         />
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={draft.reservationsEnabled}
-              onChange={(e) => setDraft((d) => ({ ...d, reservationsEnabled: e.target.checked }))}
-            />
-          }
-          label="Aktivizo rezervimet"
-        />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
+    ),
+    mobileCta: (
+      <BusinessMobileCtaInlineEditor
+        compact
+        mobileCtaMode={draft.mobileCtaMode ?? 'contact'}
+        reservationsEnabled={Boolean(draft.reservationsEnabled)}
+        onMobileCtaModeChange={(mode) => setDraft((d) => ({ ...d, mobileCtaMode: mode }))}
+        onReservationsEnabledChange={(enabled) => setDraft((d) => ({ ...d, reservationsEnabled: enabled }))}
+        onDone={doneInline}
+        onCancel={cancelInline}
+      />
     ),
     location: (
       <Stack spacing={1} sx={{ width: '100%', maxWidth: 360 }}>

@@ -467,6 +467,16 @@ export function VerticalListingDetailView(props: {
               </Stack>
             </Stack>
 
+            {ownerPreview ? null : (
+              <StickyListingContact
+                listingKind={metricKindToConversationKind(metricKind)}
+                listingId={listing.id}
+                contactPhone={displayPhone}
+                listingTitle={listingTitle(listing)}
+                listingUrl={canonicalUrl}
+              />
+            )}
+
             <Stack spacing={1.5} component="section" aria-labelledby="vertical-summary-heading">
               <OwnerEditableSpot
                 field="specs"
@@ -588,15 +598,6 @@ export function VerticalListingDetailView(props: {
         </Container>
       </Box>
 
-      {ownerPreview ? null : (
-        <StickyListingContact
-          listingKind={metricKindToConversationKind(metricKind)}
-          listingId={listing.id}
-          contactPhone={displayPhone}
-          listingTitle={listingTitle(listing)}
-          listingUrl={canonicalUrl}
-        />
-      )}
     </>
   );
 }

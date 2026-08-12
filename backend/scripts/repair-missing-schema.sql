@@ -429,3 +429,7 @@ create index if not exists ai_import_daily_usage_day_idx
   on public.ai_import_daily_usage (used_on desc);
 
 alter table public.ai_import_daily_usage enable row level security;
+
+alter table public.directory_listings
+  add column if not exists mobile_cta_mode text not null default 'contact'
+  check (mobile_cta_mode in ('contact', 'reserve', 'none'));

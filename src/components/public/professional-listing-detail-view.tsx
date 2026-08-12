@@ -286,6 +286,16 @@ export function ProfessionalListingDetailView({
               </Stack>
             </Stack>
 
+            {ownerPreview ? null : (
+              <StickyListingContact
+                listingKind="professionals"
+                listingId={listing.id}
+                contactPhone={listing.contactPhone ?? listing.seller?.phone}
+                listingTitle={displayName || listing.title}
+                listingUrl={canonicalUrl}
+              />
+            )}
+
             {listing.description || ownerEdit?.onStartInlineEdit || ownerEdit?.onEditInfo ? (
               <Box sx={surfaceSx}>
                 <OwnerEditableSpot
@@ -399,16 +409,6 @@ export function ProfessionalListingDetailView({
             )}
           </Stack>
         </Box>
-
-        {ownerPreview ? null : (
-          <StickyListingContact
-            listingKind="professionals"
-            listingId={listing.id}
-            contactPhone={listing.contactPhone ?? listing.seller?.phone}
-            listingTitle={displayName || listing.title}
-            listingUrl={canonicalUrl}
-          />
-        )}
       </Box>
     </>
   );

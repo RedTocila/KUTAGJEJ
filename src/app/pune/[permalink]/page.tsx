@@ -2,12 +2,13 @@ import * as React from 'react';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
+import { PublicLoadErrorView } from '@/components/public/public-load-error-view';
 import { PublicShell } from '@/components/public/public-shell';
 import { JobListingDetailView } from '@/components/public/job-listing-detail-view';
 import { config } from '@/config';
 import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
-import { fetchLatestJobs, fetchPublicJobListingById } from '@/lib/public-listings-client';
+import { fetchLatestJobs, loadPublicJobListingById } from '@/lib/public-listings-client';
 import { paths, pathsPublicVerticalListingDetail } from '@/paths';
 
 export const revalidate = 60;
@@ -28,7 +29,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       robots: { index: false, follow: true },
     };
   }
-  const listing = await fetchPublicJobListingById(id);
+  const { data: listing, unavailable } = await loadPublicJobListingById(id);
+  if (unavailable) {
+    return { title: 'Duke ngarkuar njoftimin', robots: { index: false, follow: true } };
+  }
   if (!listing) {
     return {
       title: 'Njoftim i padisponueshëm',
@@ -53,10 +57,15 @@ export default async function JobListingPage({ params }: PageProps): Promise<Rea
   const id = mongoIdFromPublicListingSegment(permalink);
   if (!id) notFound();
 
-  const [listing, jobsPool] = await Promise.all([
-    fetchPublicJobListingById(id),
-    fetchLatestJobs(28),
-  ]);
+  const [loaded, jobsPool] = await Promise.all([loadPublicJobListingById(id), fetchLatestJobs(28)]);
+  if (loaded.unavailable) {
+    return (
+      <PublicShell hideHeaderBelowMd>
+        <PublicLoadErrorView title="Njoftimi nuk u ngarkua" />
+      </PublicShell>
+    );
+  }
+  const listing = loaded.data;
   if (!listing) notFound();
 
   const similar = jobsPool.filter((l) => l.id !== listing.id).slice(0, 10);

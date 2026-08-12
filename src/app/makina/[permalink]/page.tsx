@@ -3,14 +3,12 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
 import { CarListingDetailView } from '@/components/public/car-listing-detail-view';
+import { PublicLoadErrorView } from '@/components/public/public-load-error-view';
 import { PublicShell } from '@/components/public/public-shell';
 import { config } from '@/config';
 import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
-import {
-  fetchLatestCars,
-  fetchPublicCarListingById,
-} from '@/lib/public-listings-client';
+import { fetchLatestCars, loadPublicCarListingById } from '@/lib/public-listings-client';
 import { paths, pathsPublicVerticalListingDetail } from '@/paths';
 
 export const revalidate = 60;
@@ -31,7 +29,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       robots: { index: false, follow: true },
     };
   }
-  const listing = await fetchPublicCarListingById(id);
+  const { data: listing, unavailable } = await loadPublicCarListingById(id);
+  if (unavailable) {
+    return { title: 'Duke ngarkuar njoftimin', robots: { index: false, follow: true } };
+  }
   if (!listing) {
     return {
       title: 'Njoftim i padisponueshëm',
@@ -56,7 +57,15 @@ export default async function CarListingPage({ params }: PageProps): Promise<Rea
   const id = mongoIdFromPublicListingSegment(permalink);
   if (!id) notFound();
 
-  const [listing, pool] = await Promise.all([fetchPublicCarListingById(id), fetchLatestCars(28)]);
+  const [loaded, pool] = await Promise.all([loadPublicCarListingById(id), fetchLatestCars(28)]);
+  if (loaded.unavailable) {
+    return (
+      <PublicShell hideHeaderBelowMd>
+        <PublicLoadErrorView title="Njoftimi nuk u ngarkua" />
+      </PublicShell>
+    );
+  }
+  const listing = loaded.data;
   if (!listing) notFound();
 
   const requestedNorm = normalizeListingPermalinkSegment(permalink);

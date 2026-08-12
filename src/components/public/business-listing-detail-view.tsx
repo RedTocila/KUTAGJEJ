@@ -3,23 +3,15 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Alert,
   Box,
-  Button,
   ButtonBase,
-  Collapse,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
-import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
-import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
 import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
-import { ReservationDateField } from '@/components/core/reservation-date-field';
 import { HistoryBackButton } from '@/components/public/product-browse-chrome';
 import { BusinessMenuPreview } from '@/components/public/business-menu-section';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
@@ -37,10 +29,11 @@ import {
   submitBusinessReservationToMessages,
 } from '@/lib/business-reservation-message';
 import { BusinessReviewSection } from '@/components/businesses/business-review-section';
+import { BusinessReservationPanel } from '@/components/public/business-reservation-panel';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { BusinessListingDetailDesktop } from '@/components/public/business-listing-detail-desktop';
-import { StickyListingContact } from '@/components/public/sticky-listing-contact';
+import { BusinessStickyMobileCta } from '@/components/public/business-sticky-mobile-cta';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { paths } from '@/paths';
 import { hasStoredAccessToken } from '@/lib/auth/storage';
@@ -50,7 +43,8 @@ import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { useUser } from '@/hooks/use-user';
 import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
-import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
+import { businessMobileCtaLabel, businessMobileCtaModeFromListing } from '@/lib/business-mobile-cta';
+import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 
 const FONT_BODY = '0.875rem';
 const FONT_CAPTION = '0.75rem';
@@ -61,16 +55,6 @@ const CONTENT_MAX = 480;
 const surfaceSx = {
   ...productPanelSx,
   p: 2,
-} as const;
-
-const reserveFieldSx = {
-  ...productFieldSx,
-  '& .MuiOutlinedInput-root': {
-    ...productFieldSx['& .MuiOutlinedInput-root'],
-    fontSize: FONT_BODY,
-    fontWeight: 600,
-  },
-  '& .MuiInputLabel-root': { fontSize: FONT_CAPTION, fontWeight: 600 },
 } as const;
 
 export function BusinessListingDetailView({
@@ -112,6 +96,8 @@ export function BusinessListingDetailView({
 
   const showReservation = listing.reservationsEnabled;
   const usePlatformReservation = showReservation;
+  const mobileCtaMode = businessMobileCtaModeFromListing(listing);
+  const reservePrimaryCta = mobileCtaMode === 'reserve';
 
   React.useEffect(() => {
     if (!reserveDate) setReserveDate(dateBounds.min);
@@ -186,6 +172,26 @@ export function BusinessListingDetailView({
       window.location.href = telHref;
     }
   };
+
+  const reservationPanelProps = {
+    open: reserveOpen,
+    onOpenChange: setReserveOpen,
+    reserveDate,
+    onReserveDate: setReserveDate,
+    reservePeople,
+    onReservePeople: setReservePeople,
+    reserveGuestName,
+    onReserveGuestName: setReserveGuestName,
+    reserveGuestPhone,
+    onReserveGuestPhone: setReserveGuestPhone,
+    reserveNote,
+    onReserveNote: setReserveNote,
+    usePlatformReservation,
+    reserveFeedback,
+    reserveSubmitting: reserveSubmitting || authLoading,
+    onReserve: () => void handleReserve(),
+    telHref,
+  } as const;
 
   return (
     <>
@@ -329,6 +335,58 @@ export function BusinessListingDetailView({
                   ) : null}
                 </Stack>
               ) : null}
+            </Stack>
+
+              {ownerEdit ? (
+                <OwnerEditableSpot
+                  field="mobileCta"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho butonin kryesor"
+                  align="flex-start"
+                  sx={{ width: '100%', flexDirection: 'column', alignItems: 'stretch' }}
+                >
+                  {mobileCtaMode === 'none' ? (
+                    <Box
+                      sx={{
+                        width: '100%',
+                        py: 1.5,
+                        px: 2,
+                        borderRadius: 999,
+                        border: '1.5px dashed',
+                        borderColor: 'divider',
+                        bgcolor: 'action.hover',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography sx={{ fontSize: FONT_CAPTION, fontWeight: 700, color: 'text.secondary' }}>
+                        {businessMobileCtaLabel(mobileCtaMode)} — pa buton në mobile
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Box sx={{ width: '100%', pointerEvents: 'none' }}>
+                      <BusinessStickyMobileCta
+                        listingId={listing.id}
+                        listingTitle={listing.title}
+                        contactPhone={phone}
+                        listingUrl={canonicalUrl}
+                        mobileCtaMode={listing.mobileCtaMode}
+                        reservationsEnabled={listing.reservationsEnabled}
+                        reservationPanel={reservePrimaryCta ? reservationPanelProps : undefined}
+                      />
+                    </Box>
+                  )}
+                </OwnerEditableSpot>
+              ) : (
+                <BusinessStickyMobileCta
+                  listingId={listing.id}
+                  listingTitle={listing.title}
+                  contactPhone={phone}
+                  listingUrl={canonicalUrl}
+                  mobileCtaMode={listing.mobileCtaMode}
+                  reservationsEnabled={listing.reservationsEnabled}
+                  reservationPanel={reservePrimaryCta ? reservationPanelProps : undefined}
+                />
+              )}
 
               {listing.description || ownerEdit?.onStartInlineEdit || ownerEdit?.onEditInfo ? (
                 <Stack spacing={0.75}>
@@ -364,7 +422,6 @@ export function BusinessListingDetailView({
                   )}
                 </Stack>
               ) : null}
-            </Stack>
 
             {/* Promo announcement */}
             {listing.announcementTitle?.trim() && !ownerPreview ? (
@@ -390,154 +447,9 @@ export function BusinessListingDetailView({
               )
             ) : null}
 
-            {/* Reservation widget */}
-            {showReservation && !ownerPreview ? (
-              <Box
-                sx={{
-                  ...surfaceSx,
-                  p: 0,
-                  overflow: 'hidden',
-                }}
-              >
-                <ButtonBase
-                  onClick={() => setReserveOpen((open) => !open)}
-                  aria-expanded={reserveOpen}
-                  sx={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 1.5,
-                    px: 2,
-                    py: 1.5,
-                    textAlign: 'left',
-                    bgcolor: reserveOpen ? 'transparent' : 'primary.main',
-                    color: reserveOpen ? 'text.primary' : 'primary.contrastText',
-                    transition: 'background-color 0.15s ease, color 0.15s ease',
-                  }}
-                >
-                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
-                    <CalendarBlankIcon
-                      size={22}
-                      weight={reserveOpen ? 'regular' : 'fill'}
-                      color={reserveOpen ? 'var(--mui-palette-primary-main)' : 'currentColor'}
-                    />
-                    <Stack spacing={0.15} sx={{ minWidth: 0 }}>
-                      <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY, lineHeight: 1.25 }}>
-                        Rezervo tavolinën
-                      </Typography>
-                      {!reserveOpen && usePlatformReservation ? (
-                        <Typography sx={{ fontSize: FONT_CAPTION, opacity: 0.75, lineHeight: 1.3 }}>
-                          Hap formularin e rezervimit
-                        </Typography>
-                      ) : null}
-                    </Stack>
-                  </Stack>
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      placeItems: 'center',
-                      flexShrink: 0,
-                      transition: 'transform 0.2s ease',
-                      transform: reserveOpen ? 'rotate(180deg)' : 'none',
-                    }}
-                  >
-                    <CaretDownIcon size={18} weight="bold" />
-                  </Box>
-                </ButtonBase>
-
-                <Collapse in={reserveOpen} unmountOnExit>
-                  <Box sx={{ px: 2, pb: 2, pt: 0.5 }}>
-                    {usePlatformReservation ? (
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ fontSize: FONT_CAPTION, mb: 1.5, lineHeight: 1.45 }}
-                      >
-                        Plotësoni fushat — kërkesa dërgohet si mesazh te biznesi.
-                      </Typography>
-                    ) : null}
-                    <Stack spacing={1.5}>
-                      <ReservationDateField
-                        size="small"
-                        label="Data"
-                        value={reserveDate}
-                        onChange={setReserveDate}
-                        emptyLabel="Zgjidhni datën…"
-                        sx={reserveFieldSx}
-                      />
-                      <TextField
-                        size="small"
-                        label="Numri i mysafirëve"
-                        type="number"
-                        value={reservePeople}
-                        onChange={(e) => setReservePeople(e.target.value)}
-                        slotProps={{ htmlInput: { min: 1, max: 50, inputMode: 'numeric' } }}
-                        fullWidth
-                        sx={reserveFieldSx}
-                      />
-                      {usePlatformReservation ? (
-                        <Stack spacing={1.25}>
-                          <TextField
-                            size="small"
-                            label="Emri i plotë"
-                            value={reserveGuestName}
-                            onChange={(e) => setReserveGuestName(e.target.value)}
-                            fullWidth
-                            sx={reserveFieldSx}
-                          />
-                          <TextField
-                            size="small"
-                            label="Telefoni"
-                            value={reserveGuestPhone}
-                            onChange={(e) => setReserveGuestPhone(e.target.value)}
-                            fullWidth
-                            sx={reserveFieldSx}
-                          />
-                          <TextField
-                            size="small"
-                            label="Shënim (opsionale)"
-                            value={reserveNote}
-                            onChange={(e) => setReserveNote(e.target.value)}
-                            fullWidth
-                            multiline
-                            minRows={2}
-                            placeholder="p.sh. Tavolinë pranë dritares…"
-                            sx={reserveFieldSx}
-                          />
-                        </Stack>
-                      ) : null}
-                      {reserveFeedback ? (
-                        <Alert
-                          severity={reserveFeedback.includes('dërgua') ? 'success' : 'warning'}
-                          sx={{ py: 0.5, borderRadius: 2, alignItems: 'center' }}
-                        >
-                          {reserveFeedback}
-                        </Alert>
-                      ) : null}
-                      <Button
-                        variant="contained"
-                        fullWidth
-                        onClick={() => void handleReserve()}
-                        disabled={usePlatformReservation ? reserveSubmitting || authLoading : !telHref}
-                        startIcon={usePlatformReservation ? <ChatsCircleIcon size={18} weight="bold" /> : undefined}
-                        sx={{
-                          ...productButtonSx,
-                          py: 1.35,
-                          fontSize: FONT_BODY,
-                          mt: 0.25,
-                        }}
-                      >
-                        {reserveSubmitting
-                          ? 'Duke dërguar…'
-                          : usePlatformReservation
-                            ? 'Dërgo rezervimin'
-                            : 'Rezervo tani'}
-                      </Button>
-                    </Stack>
-                  </Box>
-                </Collapse>
-              </Box>
+            {/* Reservation widget — only when reserve is not the primary mobile CTA */}
+            {showReservation && !ownerPreview && !reservePrimaryCta ? (
+              <BusinessReservationPanel {...reservationPanelProps} />
             ) : null}
 
             {/* Menu preview — 4 visible rows, scroll for more; full menu on separate page */}
@@ -585,15 +497,6 @@ export function BusinessListingDetailView({
         </Box>
       </Box>
     </Box>
-      {ownerPreview ? null : (
-        <StickyListingContact
-          listingKind="businesses"
-          listingId={listing.id}
-          contactPhone={phone}
-          listingTitle={listing.title}
-          listingUrl={canonicalUrl}
-        />
-      )}
     </>
   );
 }

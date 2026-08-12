@@ -3,7 +3,9 @@ import type { BrowseFilters, BrowseOkazionFilters } from '@/lib/listing-filters'
 import { BROWSE_PAGE_SIZE, buildBrowseApiQuery } from '@/lib/listing-filters';
 import type { HomeVerticalId } from '@/lib/home-categories';
 import { isListingId } from '@/lib/real-estate-permalink';
-import { safeServerJson } from '@/lib/server-fetch';
+import { loadPublicEntity, safeServerJson, type PublicEntityLoadResult } from '@/lib/server-fetch';
+
+export type { PublicEntityLoadResult };
 
 export type ListingMetricsFields = ListingMetrics & {
   /** Active Premium boost window — listing floats to the top of public feeds. */
@@ -236,6 +238,8 @@ export interface PublicDirectoryListing extends ListingMetricsFields {
   reviewCount?: number;
   reservationsEnabled: boolean;
   reservationUrl: string | null;
+  /** Biznese — primary mobile CTA above summary. */
+  mobileCtaMode?: 'contact' | 'reserve' | 'none';
   /** Short “what we offer” line for venues. */
   servicesHighlight: string | null;
   /** Business / professional announcement promo (title required when active). */
@@ -566,58 +570,80 @@ export async function fetchTopViewedListings(
   return data?.listings ?? [];
 }
 
-export async function fetchPublicRealEstateListingById(id: string): Promise<PublicRealEstateListingDetail | null> {
+function pickListing<T>(payload: unknown): T | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const listing = (payload as { listing?: T }).listing;
+  return listing ?? null;
+}
+
+export async function loadPublicRealEstateListingById(
+  id: string,
+): Promise<PublicEntityLoadResult<PublicRealEstateListingDetail>> {
   const raw = typeof id === 'string' ? id.trim() : '';
-  if (!isListingId(raw)) return null;
-  const data = await safeJson<{ listing?: PublicRealEstateListingDetail }>(
-    `/public/listings/real-estate/${encodeURIComponent(raw)}`,
-  );
-  return data?.listing ?? null;
+  if (!isListingId(raw)) return { data: null, unavailable: false };
+  return loadPublicEntity(`/public/listings/real-estate/${encodeURIComponent(raw)}`, pickListing);
+}
+
+export async function fetchPublicRealEstateListingById(id: string): Promise<PublicRealEstateListingDetail | null> {
+  return (await loadPublicRealEstateListingById(id)).data;
+}
+
+export async function loadPublicCarListingById(id: string): Promise<PublicEntityLoadResult<PublicCarListingDetail>> {
+  const raw = typeof id === 'string' ? id.trim() : '';
+  if (!isListingId(raw)) return { data: null, unavailable: false };
+  return loadPublicEntity(`/public/listings/cars/${encodeURIComponent(raw)}`, pickListing);
 }
 
 export async function fetchPublicCarListingById(id: string): Promise<PublicCarListingDetail | null> {
+  return (await loadPublicCarListingById(id)).data;
+}
+
+export async function loadPublicJobListingById(id: string): Promise<PublicEntityLoadResult<PublicJobListingDetail>> {
   const raw = typeof id === 'string' ? id.trim() : '';
-  if (!isListingId(raw)) return null;
-  const data = await safeJson<{ listing?: PublicCarListingDetail }>(
-    `/public/listings/cars/${encodeURIComponent(raw)}`,
-  );
-  return data?.listing ?? null;
+  if (!isListingId(raw)) return { data: null, unavailable: false };
+  return loadPublicEntity(`/public/listings/jobs/${encodeURIComponent(raw)}`, pickListing);
 }
 
 export async function fetchPublicJobListingById(id: string): Promise<PublicJobListingDetail | null> {
+  return (await loadPublicJobListingById(id)).data;
+}
+
+export async function loadPublicMarketplaceListingById(
+  id: string,
+): Promise<PublicEntityLoadResult<PublicMarketplaceListingDetail>> {
   const raw = typeof id === 'string' ? id.trim() : '';
-  if (!isListingId(raw)) return null;
-  const data = await safeJson<{ listing?: PublicJobListingDetail }>(
-    `/public/listings/jobs/${encodeURIComponent(raw)}`,
-  );
-  return data?.listing ?? null;
+  if (!isListingId(raw)) return { data: null, unavailable: false };
+  return loadPublicEntity(`/public/listings/marketplace/${encodeURIComponent(raw)}`, pickListing);
 }
 
 export async function fetchPublicMarketplaceListingById(id: string): Promise<PublicMarketplaceListingDetail | null> {
+  return (await loadPublicMarketplaceListingById(id)).data;
+}
+
+export async function loadPublicBusinessListingById(
+  id: string,
+): Promise<PublicEntityLoadResult<PublicDirectoryListingDetail>> {
   const raw = typeof id === 'string' ? id.trim() : '';
-  if (!isListingId(raw)) return null;
-  const data = await safeJson<{ listing?: PublicMarketplaceListingDetail }>(
-    `/public/listings/marketplace/${encodeURIComponent(raw)}`,
-  );
-  return data?.listing ?? null;
+  if (!isListingId(raw)) return { data: null, unavailable: false };
+  return loadPublicEntity(`/public/listings/businesses/${encodeURIComponent(raw)}`, pickListing, {
+    cache: 'no-store',
+  });
 }
 
 export async function fetchPublicBusinessListingById(id: string): Promise<PublicDirectoryListingDetail | null> {
+  return (await loadPublicBusinessListingById(id)).data;
+}
+
+export async function loadPublicProfessionalListingById(
+  id: string,
+): Promise<PublicEntityLoadResult<PublicDirectoryListingDetail>> {
   const raw = typeof id === 'string' ? id.trim() : '';
-  if (!isListingId(raw)) return null;
-  const data = await safeJson<{ listing?: PublicDirectoryListingDetail }>(
-    `/public/listings/businesses/${encodeURIComponent(raw)}`,
-    { cache: 'no-store' },
-  );
-  return data?.listing ?? null;
+  if (!isListingId(raw)) return { data: null, unavailable: false };
+  return loadPublicEntity(`/public/listings/professionals/${encodeURIComponent(raw)}`, pickListing, {
+    cache: 'no-store',
+  });
 }
 
 export async function fetchPublicProfessionalListingById(id: string): Promise<PublicDirectoryListingDetail | null> {
-  const raw = typeof id === 'string' ? id.trim() : '';
-  if (!isListingId(raw)) return null;
-  const data = await safeJson<{ listing?: PublicDirectoryListingDetail }>(
-    `/public/listings/professionals/${encodeURIComponent(raw)}`,
-    { cache: 'no-store' },
-  );
-  return data?.listing ?? null;
+  return (await loadPublicProfessionalListingById(id)).data;
 }

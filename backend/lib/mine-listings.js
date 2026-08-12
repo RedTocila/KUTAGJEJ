@@ -418,6 +418,7 @@ function formatMineBusinessFull(doc, cityById) {
     menuItems: doc.menuItems ?? [],
     reservationsEnabled: Boolean(doc.reservationsEnabled),
     reservationUrl: doc.reservationUrl ?? null,
+    mobileCtaMode: doc.mobileCtaMode === 'reserve' || doc.mobileCtaMode === 'none' ? doc.mobileCtaMode : 'contact',
     reservationTimeSlots: doc.reservationTimeSlots ?? [],
     reservationPartySizes: doc.reservationPartySizes ?? [],
     servicesHighlight: doc.servicesHighlight ?? null,

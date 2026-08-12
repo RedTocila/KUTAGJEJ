@@ -103,6 +103,7 @@ router.post('/businesses', authMiddleware, requirePortalUser, async (req, res) =
       reservation_url: v.reservationUrl,
       reservation_time_slots: v.reservationTimeSlots,
       reservation_party_sizes: v.reservationPartySizes,
+      mobile_cta_mode: v.mobileCtaMode,
       services_highlight: v.servicesHighlight,
       status: 'approved',
     };
@@ -189,12 +190,14 @@ router.put('/businesses/:id', authMiddleware, requirePortalUser, async (req, res
       body.reservationsEnabled != null ||
       body.reservationUrl != null ||
       body.reservationTimeSlots != null ||
-      body.reservationPartySizes != null
+      body.reservationPartySizes != null ||
+      body.mobileCtaMode != null
     ) {
-      patch.reservations_enabled = v.reservationsEnabled;
-      patch.reservation_url = v.reservationUrl;
-      patch.reservation_time_slots = v.reservationTimeSlots;
-      patch.reservation_party_sizes = v.reservationPartySizes;
+      if (v.reservationsEnabled != null) patch.reservations_enabled = v.reservationsEnabled;
+      if (body.reservationUrl != null) patch.reservation_url = v.reservationUrl;
+      if (body.reservationTimeSlots != null) patch.reservation_time_slots = v.reservationTimeSlots;
+      if (body.reservationPartySizes != null) patch.reservation_party_sizes = v.reservationPartySizes;
+      if (v.mobileCtaMode != null) patch.mobile_cta_mode = v.mobileCtaMode;
     }
     if (body.servicesHighlight != null) patch.services_highlight = v.servicesHighlight;
     if (v.imageUrls != null) patch.image_urls = v.imageUrls;

@@ -101,6 +101,7 @@ export function businessMineToPublic(mine: BusinessMineListing): PublicDirectory
     reviewCount: 0,
     reservationsEnabled: Boolean(mine.reservationsEnabled),
     reservationUrl: mine.reservationUrl ?? null,
+    mobileCtaMode: mine.mobileCtaMode ?? 'contact',
     servicesHighlight: mine.servicesHighlight,
     weeklyHours: mine.weeklyHours,
     menuCategories: mine.menuCategories,

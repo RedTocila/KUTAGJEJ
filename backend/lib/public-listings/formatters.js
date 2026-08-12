@@ -288,6 +288,7 @@ function formatDirectory(doc, cityById, reviewStats) {
       ...directoryReviewFields(doc, reviewStats),
       reservationsEnabled: Boolean(doc.reservationsEnabled),
       reservationUrl: doc.reservationUrl?.trim() || null,
+      mobileCtaMode: doc.mobileCtaMode === 'reserve' || doc.mobileCtaMode === 'none' ? doc.mobileCtaMode : 'contact',
       servicesHighlight: doc.servicesHighlight?.replace(/\s+/g, ' ').trim() || null,
       announcementTitle: doc.announcementTitle?.replace(/\s+/g, ' ').trim() || null,
       announcementSubtitle: doc.announcementSubtitle?.replace(/\s+/g, ' ').trim() || null,

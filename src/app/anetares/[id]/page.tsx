@@ -3,11 +3,12 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { MemberProfileView } from '@/components/public/member-profile-view';
+import { PublicLoadErrorView } from '@/components/public/public-load-error-view';
 import { PublicShell } from '@/components/public/public-shell';
 import { config } from '@/config';
 import {
   buildMemberMixedListings,
-  fetchPublicMemberProfile,
+  loadPublicMemberProfile,
 } from '@/lib/public-member-client';
 import { pathsPublicMemberProfile } from '@/paths';
 
@@ -17,7 +18,10 @@ type PageProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const profile = await fetchPublicMemberProfile(id);
+  const { data: profile, unavailable } = await loadPublicMemberProfile(id);
+  if (unavailable) {
+    return { title: 'Duke ngarkuar profilin', robots: { index: false, follow: true } };
+  }
   if (!profile) {
     return { title: 'Profil i padisponueshëm', robots: { index: false, follow: true } };
   }
@@ -36,7 +40,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function MemberProfilePage({ params }: PageProps): Promise<React.ReactNode> {
   const { id } = await params;
-  const profile = await fetchPublicMemberProfile(id);
+  const loaded = await loadPublicMemberProfile(id);
+  if (loaded.unavailable) {
+    return (
+      <PublicShell hideHeader>
+        <PublicLoadErrorView title="Profili nuk u ngarkua" />
+      </PublicShell>
+    );
+  }
+  const profile = loaded.data;
   if (!profile) notFound();
 
   const mixed = buildMemberMixedListings(profile.listings);

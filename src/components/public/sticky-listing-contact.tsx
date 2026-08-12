@@ -36,6 +36,106 @@ export const listingContactCtaSx: SxProps<Theme> = {
   '& .MuiButton-startIcon': { color: 'inherit', mr: 0.85 },
 };
 
+/** In-flow slot height (button) so layout does not jump when the CTA pins. */
+export const LISTING_CTA_SLOT_HEIGHT_PX = 52;
+
+export interface StickyListingCtaSlotProps {
+  children: React.ReactNode;
+  /** When true, also show on `md+`. Default: mobile only. */
+  showOnDesktop?: boolean;
+  /** Min height for the in-flow slot while unpinned. Default: pill button height. */
+  slotMinHeight?: number | string;
+}
+
+/** Shared sticky slot — pins children above the mobile nav after scroll. */
+export function StickyListingCtaSlot({
+  children,
+  showOnDesktop = false,
+  slotMinHeight = LISTING_CTA_SLOT_HEIGHT_PX,
+}: StickyListingCtaSlotProps) {
+  const slotRef = React.useRef<HTMLDivElement>(null);
+  const [stuck, setStuck] = React.useState(false);
+  const [host, setHost] = React.useState<HTMLElement | null>(null);
+
+  React.useEffect(() => {
+    setHost(document.body);
+  }, []);
+
+  React.useEffect(() => {
+    const el = slotRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry) return;
+        setStuck(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      },
+      { threshold: 0, rootMargin: '0px' },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const displaySx = showOnDesktop ? 'flex' : { xs: 'flex', md: 'none' };
+
+  const fixedBar =
+    stuck && host
+      ? createPortal(
+          <Box
+            sx={(theme) => ({
+              display: displaySx,
+              position: 'fixed',
+              left: 0,
+              right: 0,
+              zIndex: theme.zIndex.modal - 10,
+              bottom: MOBILE_BOTTOM_NAV_OFFSET,
+              px: 2,
+              py: 1.25,
+              justifyContent: 'stretch',
+              pointerEvents: 'none',
+              bgcolor: 'transparent',
+              backgroundImage: 'none',
+              '& > *': { pointerEvents: 'auto' },
+            })}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'stretch',
+                gap: 0.5,
+                width: '100%',
+                maxWidth: '100%',
+                maxHeight: 'min(70vh, calc(100dvh - 120px))',
+                overflowY: 'auto',
+              }}
+            >
+              {children}
+            </Box>
+          </Box>,
+          host,
+        )
+      : null;
+
+  return (
+    <>
+      <Box
+        ref={slotRef}
+        sx={{
+          display: displaySx,
+          width: '100%',
+          minHeight: slotMinHeight,
+          alignItems: 'stretch',
+        }}
+      >
+        {stuck ? null : children}
+      </Box>
+      {fixedBar}
+    </>
+  );
+}
+
 export interface StickyListingContactProps {
   listingKind: ConversationListingKind;
   listingId: string;
@@ -51,7 +151,10 @@ export interface StickyListingContactProps {
   listingUrl?: string | null;
 }
 
-/** Shared sticky CTA — full-width bar with chat icon (all listing categories). */
+/**
+ * In-flow “Kontakto” CTA that pins to the bottom of the screen (above the mobile
+ * nav) once its natural position scrolls past the top of the viewport.
+ */
 export function StickyListingContact({
   listingKind,
   listingId,
@@ -61,56 +164,21 @@ export function StickyListingContact({
   listingTitle,
   listingUrl,
 }: StickyListingContactProps) {
-  const [host, setHost] = React.useState<HTMLElement | null>(null);
-  React.useEffect(() => {
-    setHost(document.body);
-  }, []);
-
-  const bar = (
-    <Box
-      sx={(theme) => ({
-        display: showOnDesktop ? 'flex' : { xs: 'flex', md: 'none' },
-        position: 'fixed',
-        left: 0,
-        right: 0,
-        zIndex: theme.zIndex.modal - 10,
-        bottom: MOBILE_BOTTOM_NAV_OFFSET,
-        px: 2,
-        py: 1.25,
-        justifyContent: 'stretch',
-        pointerEvents: 'none',
-        bgcolor: 'transparent',
-        backgroundImage: 'none',
-        '& > *': { pointerEvents: 'auto' },
-      })}
-    >
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'stretch',
-          gap: 0.5,
-          width: '100%',
-          maxWidth: '100%',
-        }}
-      >
-        <ListingMessageButton
-          listingKind={listingKind}
-          listingId={listingId}
-          contactPhone={contactPhone}
-          listingTitle={listingTitle}
-          listingUrl={listingUrl}
-          label={label}
-          variant="contained"
-          disableElevation
-          size="large"
-          fullWidth
-          sx={listingContactCtaSx}
-        />
-      </Box>
-    </Box>
+  const renderButton = () => (
+    <ListingMessageButton
+      listingKind={listingKind}
+      listingId={listingId}
+      contactPhone={contactPhone}
+      listingTitle={listingTitle}
+      listingUrl={listingUrl}
+      label={label}
+      variant="contained"
+      disableElevation
+      size="large"
+      fullWidth
+      sx={listingContactCtaSx}
+    />
   );
 
-  if (!host) return null;
-  return createPortal(bar, host);
+  return <StickyListingCtaSlot showOnDesktop={showOnDesktop}>{renderButton()}</StickyListingCtaSlot>;
 }

@@ -32,6 +32,7 @@ export interface BusinessListingPayload {
   menuItems?: BusinessMenuItem[];
   reservationsEnabled: boolean;
   reservationUrl: string | null;
+  mobileCtaMode?: 'contact' | 'reserve' | 'none';
   reservationTimeSlots: string[];
   reservationPartySizes: number[];
   servicesHighlight: string | null;
@@ -57,6 +58,7 @@ export interface BusinessMineListing extends ListingMetrics {
   menuItems?: BusinessMenuItem[];
   reservationsEnabled?: boolean;
   reservationUrl?: string | null;
+  mobileCtaMode?: 'contact' | 'reserve' | 'none';
   reservationTimeSlots?: string[];
   reservationPartySizes?: number[];
   servicesHighlight: string | null;

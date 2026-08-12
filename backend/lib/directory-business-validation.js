@@ -106,7 +106,24 @@ function validateBusinessPayload(body, { partial = false } = {}) {
   const reservationTimeSlots = normalizeTimeSlots(body?.reservationTimeSlots);
   const reservationPartySizes = normalizePartySizes(body?.reservationPartySizes);
 
-  const reservationsEnabled = Boolean(body?.reservationsEnabled);
+  const mobileCtaModeProvided = body?.mobileCtaMode != null;
+  const mobileCtaModeRaw = mobileCtaModeProvided ? String(body.mobileCtaMode).trim() : null;
+  let mobileCtaMode;
+  if (mobileCtaModeProvided) {
+    mobileCtaMode = mobileCtaModeRaw === 'reserve' || mobileCtaModeRaw === 'none' ? mobileCtaModeRaw : 'contact';
+  } else if (!partial) {
+    mobileCtaMode = 'contact';
+  }
+
+  let reservationsEnabled;
+  if (mobileCtaMode === 'reserve') {
+    reservationsEnabled = true;
+  } else if (body?.reservationsEnabled != null) {
+    reservationsEnabled = Boolean(body.reservationsEnabled);
+  } else if (!partial) {
+    reservationsEnabled = false;
+  }
+
   const reservationUrl = String(body?.reservationUrl || '').trim() || null;
 
   const imageUrls = Array.isArray(body?.imageUrls)
@@ -126,6 +143,7 @@ function validateBusinessPayload(body, { partial = false } = {}) {
     reservationPartySizes,
     reservationsEnabled,
     reservationUrl,
+    mobileCtaMode,
     servicesHighlight: String(body?.servicesHighlight || '').trim().slice(0, 240) || null,
     imageUrls,
   };

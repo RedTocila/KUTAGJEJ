@@ -67,7 +67,7 @@ export function ListingDetailSkeleton(): React.JSX.Element {
 
           <Stack
             spacing={2.5}
-            sx={{ px: { xs: 2, sm: 3, md: 0 }, pb: { xs: 18, md: 6 }, width: '100%' }}
+            sx={{ px: { xs: 2, sm: 3, md: 0 }, pb: { xs: 14, md: 6 }, width: '100%' }}
           >
             <Stack spacing={1} sx={{ display: { md: 'none' } }}>
               <Skeleton variant="rounded" animation="wave" height={32} width="40%" />

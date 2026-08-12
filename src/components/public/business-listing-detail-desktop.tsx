@@ -2,32 +2,25 @@
 
 import * as React from 'react';
 import {
-  Alert,
   Box,
   Button,
   ButtonBase,
-  Collapse,
   Container,
   Divider,
-  Paper,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
-import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
-import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 
 import { HistoryBackButton } from '@/components/public/product-browse-chrome';
-import { ReservationDateField } from '@/components/core/reservation-date-field';
-import { ListingMessageButton } from '@/components/public/listing-message-button';
+import { BusinessReservationPanel } from '@/components/public/business-reservation-panel';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
 import { BusinessMenuPreview } from '@/components/public/business-menu-section';
+import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
@@ -43,21 +36,11 @@ import {
 } from '@/lib/listing-detail-layout';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { paths } from '@/paths';
-import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
+import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 
 const surfaceSx = {
   ...productPanelSx,
   p: 2.5,
-} as const;
-
-const reserveFieldSx = {
-  ...productFieldSx,
-  '& .MuiOutlinedInput-root': {
-    ...productFieldSx['& .MuiOutlinedInput-root'],
-    fontSize: '0.875rem',
-    fontWeight: 600,
-  },
-  '& .MuiInputLabel-root': { fontSize: '0.8rem', fontWeight: 600 },
 } as const;
 
 export function BusinessListingDetailDesktop({
@@ -115,6 +98,28 @@ export function BusinessListingDetailDesktop({
   const statusLine = React.useMemo(() => businessOpenStatusLine(listing), [listing]);
   const telHref = listing.contactPhone ?? listing.seller?.phone ?? null;
   const phoneHref = telHref ? `tel:${telHref.replace(/\s/g, '')}` : null;
+
+  const reservationPanelProps = {
+    open: reserveOpen,
+    onOpenChange: onReserveOpen,
+    reserveDate,
+    onReserveDate,
+    reservePeople,
+    onReservePeople,
+    reserveGuestName,
+    onReserveGuestName,
+    reserveGuestPhone,
+    onReserveGuestPhone,
+    reserveNote,
+    onReserveNote,
+    usePlatformReservation,
+    reserveFeedback,
+    reserveSubmitting,
+    onReserve,
+    telHref: phoneHref,
+    bodyFontSize: '0.875rem',
+    captionFontSize: '0.78rem',
+  } as const;
 
   if (ownerPreview) return null;
 
@@ -235,150 +240,7 @@ export function BusinessListingDetailDesktop({
                 ) : null}
 
                 {showReservation ? (
-                  <Box sx={{ ...surfaceSx, p: 0, overflow: 'hidden' }}>
-                    <ButtonBase
-                      onClick={() => onReserveOpen(!reserveOpen)}
-                      aria-expanded={reserveOpen}
-                      sx={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 1.5,
-                        px: 2,
-                        py: 1.5,
-                        textAlign: 'left',
-                        bgcolor: reserveOpen ? 'transparent' : 'primary.main',
-                        color: reserveOpen ? 'text.primary' : 'primary.contrastText',
-                        transition: 'background-color 0.15s ease, color 0.15s ease',
-                      }}
-                    >
-                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
-                        <CalendarBlankIcon
-                          size={22}
-                          weight={reserveOpen ? 'regular' : 'fill'}
-                          color={reserveOpen ? 'var(--mui-palette-primary-main)' : 'currentColor'}
-                        />
-                        <Stack spacing={0.15} sx={{ minWidth: 0 }}>
-                          <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', lineHeight: 1.25 }}>
-                            Rezervo tavolinën
-                          </Typography>
-                          {!reserveOpen && usePlatformReservation ? (
-                            <Typography sx={{ fontSize: '0.75rem', opacity: 0.75, lineHeight: 1.3 }}>
-                              Hap formularin e rezervimit
-                            </Typography>
-                          ) : null}
-                        </Stack>
-                      </Stack>
-                      <Box
-                        sx={{
-                          display: 'grid',
-                          placeItems: 'center',
-                          flexShrink: 0,
-                          transition: 'transform 0.2s ease',
-                          transform: reserveOpen ? 'rotate(180deg)' : 'none',
-                        }}
-                      >
-                        <CaretDownIcon size={18} weight="bold" />
-                      </Box>
-                    </ButtonBase>
-
-                    <Collapse in={reserveOpen} unmountOnExit>
-                      <Box sx={{ px: 2, pb: 2, pt: 0.5 }}>
-                        {usePlatformReservation ? (
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ fontSize: '0.78rem', mb: 1.5, lineHeight: 1.45 }}
-                          >
-                            Plotësoni fushat — kërkesa dërgohet si mesazh te biznesi.
-                          </Typography>
-                        ) : null}
-                        <Stack spacing={1.5}>
-                          <ReservationDateField
-                            size="small"
-                            label="Data"
-                            value={reserveDate}
-                            onChange={onReserveDate}
-                            emptyLabel="Zgjidhni datën…"
-                            sx={reserveFieldSx}
-                          />
-                          <TextField
-                            size="small"
-                            label="Numri i mysafirëve"
-                            type="number"
-                            value={reservePeople}
-                            onChange={(e) => onReservePeople(e.target.value)}
-                            slotProps={{ htmlInput: { min: 1, max: 50, inputMode: 'numeric' } }}
-                            fullWidth
-                            sx={reserveFieldSx}
-                          />
-                          {usePlatformReservation ? (
-                            <Stack spacing={1.25}>
-                              <TextField
-                                size="small"
-                                label="Emri i plotë"
-                                value={reserveGuestName}
-                                onChange={(e) => onReserveGuestName(e.target.value)}
-                                fullWidth
-                                sx={reserveFieldSx}
-                              />
-                              <TextField
-                                size="small"
-                                label="Telefoni"
-                                value={reserveGuestPhone}
-                                onChange={(e) => onReserveGuestPhone(e.target.value)}
-                                fullWidth
-                                sx={reserveFieldSx}
-                              />
-                              <TextField
-                                size="small"
-                                label="Shënim (opsionale)"
-                                value={reserveNote}
-                                onChange={(e) => onReserveNote(e.target.value)}
-                                fullWidth
-                                multiline
-                                minRows={2}
-                                placeholder="p.sh. Tavolinë pranë dritares…"
-                                sx={reserveFieldSx}
-                              />
-                            </Stack>
-                          ) : null}
-                          {reserveFeedback ? (
-                            <Alert
-                              severity={reserveFeedback.includes('dërgua') ? 'success' : 'warning'}
-                              sx={{ py: 0.5, borderRadius: 2, alignItems: 'center' }}
-                            >
-                              {reserveFeedback}
-                            </Alert>
-                          ) : null}
-                          <Button
-                            variant="contained"
-                            fullWidth
-                            startIcon={
-                              usePlatformReservation ? (
-                                <ChatsCircleIcon size={18} weight="bold" />
-                              ) : (
-                                <CalendarBlankIcon size={18} weight="fill" />
-                              )
-                            }
-                            onClick={onReserve}
-                            disabled={usePlatformReservation ? reserveSubmitting : false}
-                            sx={{
-                              ...productButtonSx,
-                              py: 1.25,
-                            }}
-                          >
-                            {reserveSubmitting
-                              ? 'Duke dërguar…'
-                              : usePlatformReservation
-                                ? 'Dërgo rezervimin'
-                                : 'Rezervo tani'}
-                          </Button>
-                        </Stack>
-                      </Box>
-                    </Collapse>
-                  </Box>
+                  <BusinessReservationPanel {...reservationPanelProps} />
                 ) : null}
 
                 <Stack direction="row" spacing={1} data-listing-contact="">

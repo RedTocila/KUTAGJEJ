@@ -2,12 +2,13 @@ import * as React from 'react';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
+import { PublicLoadErrorView } from '@/components/public/public-load-error-view';
 import { PublicShell } from '@/components/public/public-shell';
 import { BusinessListingDetailView } from '@/components/public/business-listing-detail-view';
 import { config } from '@/config';
 import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
-import { fetchLatestBusinesses, fetchPublicBusinessListingById } from '@/lib/public-listings-client';
+import { fetchLatestBusinesses, loadPublicBusinessListingById } from '@/lib/public-listings-client';
 import { paths, pathsPublicVerticalListingDetail } from '@/paths';
 
 export const revalidate = 0;
@@ -28,7 +29,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       robots: { index: false, follow: true },
     };
   }
-  const listing = await fetchPublicBusinessListingById(id);
+  const { data: listing, unavailable } = await loadPublicBusinessListingById(id);
+  if (unavailable) {
+    return { title: 'Duke ngarkuar njoftimin', robots: { index: false, follow: true } };
+  }
   if (!listing) {
     return {
       title: 'Njoftim i padisponueshëm',
@@ -53,10 +57,18 @@ export default async function BusinessListingPage({ params }: PageProps): Promis
   const id = mongoIdFromPublicListingSegment(permalink);
   if (!id) notFound();
 
-  const [listing, pool] = await Promise.all([
-    fetchPublicBusinessListingById(id),
+  const [loaded, pool] = await Promise.all([
+    loadPublicBusinessListingById(id),
     fetchLatestBusinesses(28),
   ]);
+  if (loaded.unavailable) {
+    return (
+      <PublicShell hideHeaderBelowMd>
+        <PublicLoadErrorView title="Njoftimi nuk u ngarkua" />
+      </PublicShell>
+    );
+  }
+  const listing = loaded.data;
   if (!listing) notFound();
 
   const requestedNorm = normalizeListingPermalinkSegment(permalink);

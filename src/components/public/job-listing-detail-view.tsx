@@ -455,6 +455,16 @@ export function JobListingDetailView({
               ) : null}
             </Stack>
 
+            {ownerPreview ? null : (
+              <StickyListingContact
+                listingKind="jobs"
+                listingId={listing.id}
+                contactPhone={listing.contactPhone ?? listing.seller?.phone}
+                listingTitle={listing.title}
+                listingUrl={canonicalUrl}
+              />
+            )}
+
             <Stack spacing={1}>
               <OwnerEditableSpot
                 field="specs"
@@ -913,16 +923,6 @@ export function JobListingDetailView({
             )}
           </Stack>
         </Box>
-
-        {ownerPreview ? null : (
-          <StickyListingContact
-            listingKind="jobs"
-            listingId={listing.id}
-            contactPhone={listing.contactPhone ?? listing.seller?.phone}
-            listingTitle={listing.title}
-            listingUrl={canonicalUrl}
-          />
-        )}
       </Box>
     </>
   );

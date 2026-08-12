@@ -30,6 +30,7 @@ import {
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import { BusinessMobileCtaPicker, reservationsEnabledForMobileCta } from '@/components/businesses/business-mobile-cta-picker';
 import {
   ListingFormActionError,
   ListingFormActions,
@@ -126,6 +127,7 @@ export function BusinessListingForm({
   );
   const [images, setImages] = React.useState<File[]>([]);
   const [weeklyHours, setWeeklyHours] = React.useState<WeeklyHourRow[]>(defaultWeeklyHours);
+  const [mobileCtaMode, setMobileCtaMode] = React.useState<'contact' | 'reserve' | 'none'>('contact');
   const [reservationsEnabled, setReservationsEnabled] = React.useState(false);
 
   const applyExistingListing = React.useCallback((listing: BusinessMineListing) => {
@@ -147,6 +149,7 @@ export function BusinessListingForm({
         }))
       : defaultWeeklyHours();
     setWeeklyHours(hours);
+    setMobileCtaMode(listing.mobileCtaMode ?? (listing.reservationsEnabled ? 'contact' : 'contact'));
     setReservationsEnabled(Boolean(listing.reservationsEnabled));
   }, []);
 
@@ -217,7 +220,8 @@ export function BusinessListingForm({
       contactPhone: contactPhone.trim(),
       imageUrls,
       weeklyHours,
-      reservationsEnabled,
+      reservationsEnabled: mobileCtaMode === 'reserve' ? true : reservationsEnabled,
+      mobileCtaMode,
       reservationUrl: null,
       reservationTimeSlots: [] as string[],
       reservationPartySizes: [] as number[],
@@ -445,24 +449,28 @@ export function BusinessListingForm({
 
         <ListingFormSection
           icon={<CalendarCheckIcon size={20} weight="duotone" />}
-          title="Rezervime"
-          description="Klientët zgjedhin datën në kalendar dhe kërkesa ju vjen si mesazh në bisedë."
+          title="Butoni kryesor & rezervime"
+          description="Zgjidhni çfarë shfaqet mbi përmbledhje në mobile. Rezervimet mund të mbeten aktive edhe me “Kontakto”."
         >
-          <FormGroup>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={reservationsEnabled}
-                  onChange={(e) => setReservationsEnabled(e.target.checked)}
-                />
-              }
-              label="Aktivizo rezervimet (përmes mesazheve)"
-            />
-          </FormGroup>
-          {reservationsEnabled ? (
-            <Typography variant="body2" color="text.secondary">
-              Kur dikush rezervon, hapet një bisedë me të dhënat: emri, telefoni, data dhe numri i mysafirëve.
-            </Typography>
+          <BusinessMobileCtaPicker
+            value={mobileCtaMode}
+            onChange={(mode) => {
+              setMobileCtaMode(mode);
+              setReservationsEnabled((prev) => reservationsEnabledForMobileCta(mode, prev));
+            }}
+          />
+          {mobileCtaMode !== 'reserve' ? (
+            <FormGroup sx={{ mt: 1.5 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={reservationsEnabled}
+                    onChange={(e) => setReservationsEnabled(e.target.checked)}
+                  />
+                }
+                label="Aktivizo formularin e rezervimit në faqe"
+              />
+            </FormGroup>
           ) : null}
         </ListingFormSection>
 

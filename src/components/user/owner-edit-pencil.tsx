@@ -58,7 +58,8 @@ export type OwnerInlineField =
   | 'specs'
   | 'category'
   | 'hours'
-  | 'services';
+  | 'services'
+  | 'mobileCta';
 
 /** Handlers passed into public detail views while editing as owner. */
 export type OwnerEditHandlers = {

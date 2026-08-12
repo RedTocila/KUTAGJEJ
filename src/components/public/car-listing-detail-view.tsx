@@ -51,7 +51,7 @@ import {
   LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
   LISTING_DETAIL_HERO_IMAGE_SIZES,
 } from '@/lib/listing-detail-layout';
-import { whatsappHref } from '@/lib/listing-contact';
+import { whatsappInquireHref as buildWhatsappInquireHref, whatsappInquireText } from '@/lib/listing-contact';
 import type { PublicCarListing, PublicCarListingDetail } from '@/lib/public-listings-client';
 import { paths } from '@/paths';
 import { productButtonSx, productPanelSx } from '@/styles/product-sx';
@@ -334,10 +334,10 @@ export function CarListingDetailView({
   const transmission = transmissionLabel(listing.transmission);
   const colour = colourLabel(listing.color);
 
-  const wa = whatsappHref(displayPhone);
-  const whatsappInquireHref = wa
-    ? `${wa}?text=${encodeURIComponent(`Përshëndetje, jam i interesuari për: «${listing.title}» (${canonicalUrl}).`)}`
-    : undefined;
+  const whatsappInquireHref = buildWhatsappInquireHref(
+    displayPhone,
+    whatsappInquireText(listing.title, canonicalUrl),
+  );
 
   const sharePayload = {
     title: listing.title,

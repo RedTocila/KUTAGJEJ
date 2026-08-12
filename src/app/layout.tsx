@@ -43,8 +43,12 @@ export const metadata = {
   },
   description: config.site.description,
   icons: {
-    icon: brandLogoSrc,
-    apple: brandLogoSrc,
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: brandLogoSrc, type: 'image/png', sizes: '1024x1024' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: brandLogoSrc,
   },
 } satisfies Metadata;
 

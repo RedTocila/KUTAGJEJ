@@ -365,7 +365,11 @@ const sq = {
     backAria: 'Kthehu te lista',
     userFallback: 'Përdorues',
     phoneAria: 'Telefono',
-    whatsappIntro: (title: string) => `Përshëndetje, jam i interesuari për: «${title}».`,
+    whatsappIntro: (title: string, listingUrl?: string | null) => {
+      const intro = `Përshëndetje, jam i interesuari për: «${title}».`;
+      const url = listingUrl?.trim();
+      return url ? `${intro}\n\n${url}` : intro;
+    },
     yesterday: 'Dje',
     pin: 'Fikso',
     unpin: 'Hiq fiksimin',
@@ -1015,7 +1019,11 @@ const en: AppMessages = {
     backAria: 'Back to list',
     userFallback: 'User',
     phoneAria: 'Call',
-    whatsappIntro: (title: string) => `Hi, I’m interested in: «${title}».`,
+    whatsappIntro: (title: string, listingUrl?: string | null) => {
+      const intro = `Hi, I’m interested in: «${title}».`;
+      const url = listingUrl?.trim();
+      return url ? `${intro}\n\n${url}` : intro;
+    },
     yesterday: 'Yesterday',
     pin: 'Pin',
     unpin: 'Unpin',

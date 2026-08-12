@@ -2,38 +2,54 @@ import type { Metadata } from 'next';
 
 import { brandLogoSrc, config } from '@/config';
 
-type SocialOgImage = { url: string; alt: string };
+type SocialOgImage = { url: string; alt: string; type?: string; width?: number; height?: number };
+
+function siteOrigin(): string {
+  return config.site.url.replace(/\/$/, '');
+}
+
+export function toAbsoluteAssetUrl(raw: string | null | undefined): string | null {
+  const url = String(raw || '').trim();
+  if (!url) return null;
+  if (/^https?:\/\//i.test(url)) return url;
+  const base = siteOrigin();
+  return url.startsWith('/') ? `${base}${url}` : `${base}/${url}`;
+}
 
 /** Absolute brand logo URL for OG / Twitter (favicon + site identity in link previews). */
 export function brandOgImageUrl(): string {
-  return `${config.site.url.replace(/\/$/, '')}${brandLogoSrc}`;
+  return `${siteOrigin()}${brandLogoSrc}`;
+}
+
+/** Favicon / apple-touch links so WhatsApp shows the KuTaGjej icon next to the domain. */
+export function brandIconMetadata(): NonNullable<Metadata['icons']> {
+  const logo = brandOgImageUrl();
+  return {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: logo, type: 'image/png', sizes: '1024x1024' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: logo,
+  };
 }
 
 /**
- * Primary listing photo(s) for social previews, with KuTaGjej logo always included
- * so chats/crawlers show the listing image and brand favicon/logo together.
+ * Social preview images: first gallery photo as og:image (WhatsApp card),
+ * falling back to the KuTaGjej logo when the listing has no photos.
  */
 export function listingSocialImages(
   imageUrls: readonly string[] | null | undefined,
   imageUrl?: string | null,
   alt = config.site.name,
 ): SocialOgImage[] {
-  const seen = new Set<string>();
-  const out: SocialOgImage[] = [];
-
-  const push = (raw: string | null | undefined, imageAlt: string) => {
-    const url = String(raw || '').trim();
-    if (!url || seen.has(url)) return;
-    seen.add(url);
-    out.push({ url, alt: imageAlt });
-  };
-
-  for (const u of imageUrls ?? []) push(u, alt);
-  push(imageUrl, alt);
-  // Brand logo / favicon — second image so WhatsApp/iMessage keep the listing photo primary.
-  push(brandOgImageUrl(), config.site.name);
-
-  return out;
+  const firstListing =
+    (imageUrls ?? []).map((u) => String(u || '').trim()).find(Boolean) ||
+    String(imageUrl || '').trim() ||
+    '';
+  const abs = toAbsoluteAssetUrl(firstListing);
+  if (abs) return [{ url: abs, alt }];
+  return [{ url: brandOgImageUrl(), alt: config.site.name, type: 'image/png', width: 1024, height: 1024 }];
 }
 
 /** Shared SEO helpers for makina/pune/tregu/biznese/profesioniste detail routes. */
@@ -47,7 +63,7 @@ export function buildVerticalListingDetailMetadata(opts: {
 }): Metadata {
   const canon = opts.pathHref.startsWith('/') ? opts.pathHref : `/${opts.pathHref}`;
   const desc = opts.descriptionSnippet.replace(/\s+/g, ' ').trim().slice(0, 160);
-  const url = `${config.site.url.replace(/\/$/, '')}${canon}`;
+  const url = `${siteOrigin()}${canon}`;
   const images = listingSocialImages(opts.imageUrls, opts.imageUrl, opts.title);
   const primaryImage = images[0]?.url;
 
@@ -55,11 +71,13 @@ export function buildVerticalListingDetailMetadata(opts: {
     title: opts.title,
     description: desc || opts.title,
     alternates: { canonical: canon },
+    icons: brandIconMetadata(),
     openGraph: {
       title: `${opts.title} | ${config.site.name}`,
       description: desc || opts.title,
       url,
       type: 'website',
+      locale: 'sq_AL',
       siteName: config.site.name,
       images,
     },

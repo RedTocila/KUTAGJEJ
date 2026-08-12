@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { formatPrice } from '@/components/public/listing-cards/format-helpers';
 import { config } from '@/config';
 import type { PublicRealEstateListingDetail } from '@/lib/public-listings-client';
-import { listingSocialImages } from '@/lib/public-vertical-listing-metadata';
+import { brandIconMetadata, listingSocialImages } from '@/lib/public-vertical-listing-metadata';
 import { pathsPublicRealEstateListingDetail } from '@/paths';
 
 function metaSnippet(text: string, max = 158): string {
@@ -49,6 +49,7 @@ export function buildRealEstateListingMetadata(listing: PublicRealEstateListingD
     description: desc,
     robots: { index: true, follow: true },
     alternates: { canonical: path },
+    icons: brandIconMetadata(),
     openGraph: {
       type: 'article',
       locale: 'sq_AL',

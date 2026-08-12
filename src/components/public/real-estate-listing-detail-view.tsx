@@ -40,7 +40,7 @@ import { StickyListingContact } from '@/components/public/sticky-listing-contact
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
 import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
-import { whatsappHref } from '@/lib/listing-contact';
+import { whatsappInquireHref as buildWhatsappInquireHref, whatsappInquireText } from '@/lib/listing-contact';
 import type { PublicRealEstateListing, PublicRealEstateListingDetail } from '@/lib/public-listings-client';
 import { paths } from '@/paths';
 import { productButtonSx, productPanelSx } from '@/styles/product-sx';
@@ -326,11 +326,10 @@ export function RealEstateListingDetailView({
   });
 
   const transactionLabel = listing.transactionType === 'rent' ? 'Qera' : 'Shitje';
-  const wa = whatsappHref(displayPhone);
-
-  const whatsappInquireHref = wa
-    ? `${wa}?text=${encodeURIComponent(`Përshëndetje, jam i interesuari për: «${listing.title}» (${canonicalUrl}).`)}`
-    : undefined;
+  const whatsappInquireHref = buildWhatsappInquireHref(
+    displayPhone,
+    whatsappInquireText(listing.title, canonicalUrl),
+  );
 
   const priceLabel =
     formatPrice(listing.price, listing.currency) + (listing.transactionType === 'rent' ? ' / muaj' : '');

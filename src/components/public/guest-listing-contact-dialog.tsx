@@ -49,11 +49,7 @@ export function GuestListingContactDialog({
   const t = useCopy();
   const callHref = telHref(contactPhone);
   const title = listingTitle?.trim();
-  const intro = title
-    ? listingUrl
-      ? t.messages.whatsappIntro(title).replace(/\.\s*$/, ` (${listingUrl}).`)
-      : t.messages.whatsappIntro(title)
-    : null;
+  const intro = title ? t.messages.whatsappIntro(title, listingUrl) : null;
   const waHref = whatsappInquireHref(contactPhone, intro);
   const hasDirectContact = Boolean(callHref || waHref);
 

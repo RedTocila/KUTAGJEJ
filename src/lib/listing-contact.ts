@@ -1,3 +1,5 @@
+import { config } from '@/config';
+
 /** Public listing phone: contact field, then seller profile. */
 export function listingDisplayPhone(listing: {
   contactPhone?: string | null;
@@ -38,6 +40,14 @@ export function phoneDigitsForHref(phone: string | null | undefined): string | n
   return digits;
 }
 
+export function toAbsoluteSiteUrl(pathOrUrl: string | null | undefined): string | null {
+  const raw = pathOrUrl?.trim();
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const base = config.site.url.replace(/\/$/, '');
+  return raw.startsWith('/') ? `${base}${raw}` : `${base}/${raw}`;
+}
+
 export function telHref(phone: string | null | undefined): string | null {
   if (!phone) return null;
   const compact = phone.replace(/\s/g, '');
@@ -47,6 +57,19 @@ export function telHref(phone: string | null | undefined): string | null {
 export function whatsappHref(phone: string | null | undefined): string | null {
   const d = phoneDigitsForHref(phone);
   return d ? `https://wa.me/${d}` : null;
+}
+
+/**
+ * Prefill text for wa.me. The listing URL sits on its own line so WhatsApp
+ * unfurls the page (first gallery photo + KuTaGjej favicon).
+ */
+export function whatsappInquireText(title: string, listingUrl?: string | null): string {
+  const name = title.trim();
+  const intro = name
+    ? `Përshëndetje, jam i interesuari për: «${name}».`
+    : 'Përshëndetje, jam i interesuar.';
+  const url = listingUrl?.trim();
+  return url ? `${intro}\n\n${url}` : intro;
 }
 
 export function whatsappInquireHref(

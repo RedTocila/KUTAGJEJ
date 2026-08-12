@@ -41,7 +41,7 @@ import {
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
-import { whatsappHref } from '@/lib/listing-contact';
+import { whatsappInquireHref as buildWhatsappInquireHref, whatsappInquireText } from '@/lib/listing-contact';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import {
   LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
@@ -278,10 +278,10 @@ export function VerticalListingDetailView(props: {
 
   const displayPhone =
     listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
-  const wa = whatsappHref(displayPhone);
-  const whatsappInquireHref = wa
-    ? `${wa}?text=${encodeURIComponent(`Përshëndetje, jam i interesuari për: «${listingTitle(listing)}» (${canonicalUrl}).`)}`
-    : undefined;
+  const whatsappInquireHref = buildWhatsappInquireHref(
+    displayPhone,
+    whatsappInquireText(listingTitle(listing), canonicalUrl),
+  );
 
   const viewCount = listing.viewCount ?? 0;
   const metricKind = listing.kind as ListingMetricKind;

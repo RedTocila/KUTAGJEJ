@@ -74,7 +74,7 @@ import {
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { isBusinessPortalAccount } from '@/lib/user-portal-account-label';
 import { languageHtmlLang } from '@/lib/language';
-import { whatsappHref } from '@/lib/listing-contact';
+import { toAbsoluteSiteUrl, whatsappInquireHref } from '@/lib/listing-contact';
 import { uploadListingImages } from '@/lib/uploads-client';
 import {
   listingBusinessPublicHref,
@@ -1774,7 +1774,6 @@ export function UserMessagesView() {
 
   const showThreadOnMobile = Boolean(selectedId);
   const contactPhone = activeConversation ? conversationContactPhone(activeConversation) : null;
-  const contactWhatsapp = whatsappHref(contactPhone);
   const showListingInHeader = Boolean(
     activeConversation &&
       !isPersonFocusedConversation(activeConversation) &&
@@ -1786,6 +1785,13 @@ export function UserMessagesView() {
       : null;
   const threadHeaderName =
     activeConversation?.otherParticipantName?.trim() || t.messages.userFallback;
+  const contactWhatsapp = whatsappInquireHref(
+    contactPhone,
+    t.messages.whatsappIntro(
+      showListingInHeader && activeConversation ? activeConversation.listingTitle : threadHeaderName,
+      toAbsoluteSiteUrl(activeListingHref),
+    ),
+  );
   const threadHeaderAvatar = showListingInHeader
     ? activeConversation?.listingImageUrl
     : activeConversation?.otherParticipantAvatarUrl;
@@ -2250,7 +2256,7 @@ export function UserMessagesView() {
                     {contactWhatsapp ? (
                       <IconButton
                         component="a"
-                        href={`${contactWhatsapp}?text=${encodeURIComponent(t.messages.whatsappIntro(showListingInHeader ? activeConversation.listingTitle : threadHeaderName))}`}
+                        href={contactWhatsapp}
                         rel="noopener noreferrer"
                         target="_blank"
                         aria-label="WhatsApp"

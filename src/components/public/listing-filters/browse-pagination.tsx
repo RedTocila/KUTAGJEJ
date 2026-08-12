@@ -1,8 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Box, Pagination, PaginationItem } from '@mui/material';
 
 export function BrowsePagination({
@@ -13,6 +12,7 @@ export function BrowsePagination({
   totalPages: number;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const hrefForPage = React.useCallback(
@@ -26,6 +26,15 @@ export function BrowsePagination({
     [pathname, searchParams],
   );
 
+  const goToPage = React.useCallback(
+    (targetPage: number) => {
+      React.startTransition(() => {
+        router.replace(hrefForPage(targetPage), { scroll: false });
+      });
+    },
+    [hrefForPage, router],
+  );
+
   if (totalPages <= 1) return null;
 
   return (
@@ -33,23 +42,44 @@ export function BrowsePagination({
       <Pagination
         page={page}
         count={totalPages}
-        color="primary"
         shape="rounded"
         size="medium"
         siblingCount={0}
         boundaryCount={1}
         showFirstButton
         showLastButton
+        onChange={(_event, value) => {
+          if (value !== page) goToPage(value);
+        }}
         renderItem={(item) => {
           if (item.type === 'page' && item.page != null) {
             return (
               <PaginationItem
-                component={Link}
-                href={hrefForPage(item.page)}
                 page={item.page}
                 type="page"
                 selected={item.selected}
                 disabled={item.disabled}
+                onClick={(event) => {
+                  event.preventDefault();
+                  if (item.page != null && item.page !== page) goToPage(item.page);
+                }}
+              />
+            );
+          }
+          if (
+            (item.type === 'first' ||
+              item.type === 'last' ||
+              item.type === 'previous' ||
+              item.type === 'next') &&
+            item.page != null
+          ) {
+            return (
+              <PaginationItem
+                {...item}
+                onClick={(event) => {
+                  event.preventDefault();
+                  if (item.page != null && item.page !== page) goToPage(item.page);
+                }}
               />
             );
           }

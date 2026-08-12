@@ -5,20 +5,17 @@ import { useRouter } from 'next/navigation';
 
 import {
   HISTORY_BACK_ATTR,
-  canNavigateBack,
+  canPageNavigateBack,
   isModifiedClick,
+  navigatePageBack,
 } from '@/lib/navigate-back';
 import { paths } from '@/paths';
 
-/** Imperative back: pop in-app history, otherwise go to `fallbackHref`. */
+/** Imperative back: skip in-page filter/tag history, otherwise go to `fallbackHref`. */
 export function useNavigateBack(fallbackHref = paths.home) {
   const router = useRouter();
   return React.useCallback(() => {
-    if (canNavigateBack()) {
-      router.back();
-      return;
-    }
-    router.push(fallbackHref);
+    navigatePageBack(router, fallbackHref);
   }, [router, fallbackHref]);
 }
 
@@ -32,11 +29,11 @@ export function useHistoryBackProps(fallbackHref: string) {
     (event: React.MouseEvent<HTMLElement>) => {
       if (event.defaultPrevented) return;
       if (isModifiedClick(event)) return;
-      if (!canNavigateBack()) return;
+      if (!canPageNavigateBack()) return;
       event.preventDefault();
-      router.back();
+      navigatePageBack(router, fallbackHref);
     },
-    [router],
+    [router, fallbackHref],
   );
 
   return {

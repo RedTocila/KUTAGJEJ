@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Box, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { Translate as TranslateIcon } from '@phosphor-icons/react/dist/ssr/Translate';
 
-import { PortalIconBox, portalCardSx } from '@/components/user/portal-cards';
+import { PortalIconBox, portalCardSx, portalToggleGroupSx } from '@/components/user/portal-cards';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import type { AppLanguage } from '@/lib/language';
@@ -38,28 +38,7 @@ export function LanguageSwitchRow({ grouped = false }: { grouped?: boolean }) {
             if (value) setLanguage(value);
           }}
           aria-label={t.language.title}
-          sx={{
-            flexShrink: 0,
-            bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'),
-            borderRadius: 2,
-            '& .MuiToggleButtonGroup-grouped': {
-              border: 0,
-              mx: 0,
-              px: 1.35,
-              py: 0.65,
-              fontWeight: 800,
-              fontSize: '0.78rem',
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              color: 'text.secondary',
-              borderRadius: '8px !important',
-              '&.Mui-selected': {
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-                '&:hover': { bgcolor: 'primary.main' },
-              },
-            },
-          }}
+          sx={portalToggleGroupSx}
         >
           <ToggleButton value="sq" aria-label="Shqip">
             AL

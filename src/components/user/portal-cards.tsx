@@ -13,6 +13,36 @@ import { productPanelSx } from '@/styles/product-sx';
 /** Shared surface used by portal link rows and content sections. */
 export const portalCardSx = productPanelSx;
 
+/** Two-option toggle used in dashboard settings rows (language, theme, …). */
+export const portalToggleGroupSx: SxProps<Theme> = {
+  flexShrink: 0,
+  bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'),
+  borderRadius: 2,
+  '& .MuiToggleButtonGroup-grouped': {
+    border: 0,
+    mx: 0,
+    minWidth: 44,
+    minHeight: 32,
+    px: 1.35,
+    py: 0.65,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: 800,
+    fontSize: '0.78rem',
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+    color: 'text.secondary',
+    borderRadius: '8px !important',
+    lineHeight: 1,
+    '&.Mui-selected': {
+      bgcolor: 'primary.main',
+      color: 'primary.contrastText',
+      '&:hover': { bgcolor: 'primary.main' },
+    },
+  },
+};
+
 export function PortalIconBox({
   children,
   size = 44,

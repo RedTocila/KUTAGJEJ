@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Box, Stack } from '@mui/material';
 
 import { useCopy } from '@/hooks/use-copy';
@@ -51,10 +51,21 @@ function SubcategoryPillsList({
   verticalId: HomeVerticalId;
   isPillActive: (href: string) => boolean;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const { language } = useLanguage();
   const t = useCopy();
   const items = localizeSubcategories(verticalId, language);
   if (!items || items.length === 0) return null;
+
+  const onPillClick = (href: string) => (event: React.MouseEvent<HTMLElement>) => {
+    const [hrefPath] = href.split('?');
+    if (hrefPath !== pathname) return;
+    event.preventDefault();
+    React.startTransition(() => {
+      router.replace(href, { scroll: false });
+    });
+  };
 
   return (
     <Box
@@ -84,6 +95,7 @@ function SubcategoryPillsList({
             label={item.label}
             icon={item.Icon}
             active={isPillActive(item.href)}
+            onClick={onPillClick(item.href)}
           />
         ))}
       </Stack>

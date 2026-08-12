@@ -114,8 +114,8 @@ export function UserSideNav() {
       <Divider />
       <Box sx={{ px: 1.5, py: 1.25, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0.75 }}>
         <UserNotificationsMenu />
-        <HeaderLanguageToggle />
         <ThemeModeToggle />
+        <HeaderLanguageToggle />
         <Tooltip title={t.nav.signOut}>
           <IconButton
             size="large"

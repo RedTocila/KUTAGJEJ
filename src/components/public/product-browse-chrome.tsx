@@ -200,7 +200,7 @@ export function ProductTag({
   active?: boolean;
   accent?: ProductTagAccent;
   href?: string;
-  onClick?: () => void;
+  onClick?: (event: React.MouseEvent<HTMLElement>) => void;
   onDelete?: () => void;
   component?: React.ElementType;
   sx?: SxProps<Theme>;

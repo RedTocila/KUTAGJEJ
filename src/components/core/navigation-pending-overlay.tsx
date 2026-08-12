@@ -9,7 +9,7 @@ import { ListingDetailSkeleton } from '@/components/public/listing-detail-skelet
 import { useNavigationPendingPath } from '@/hooks/use-navigation-pending';
 import {
   HISTORY_BACK_ATTR,
-  canNavigateBack,
+  canPageNavigateBack,
   isModifiedClick,
 } from '@/lib/navigate-back';
 import {
@@ -142,7 +142,7 @@ export function NavigationPendingOverlay(): React.JSX.Element | null {
       if (nestedInteractive && nestedInteractive !== anchor) return;
       const nextPath = isInternalAnchorNavigation(anchor);
       if (!nextPath) return;
-      if (anchor.hasAttribute(HISTORY_BACK_ATTR) && canNavigateBack()) return;
+      if (anchor.hasAttribute(HISTORY_BACK_ATTR) && canPageNavigateBack()) return;
 
       beginPendingNavigation(nextPath);
     };

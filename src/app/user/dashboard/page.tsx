@@ -50,7 +50,6 @@ import type { ContractQuotas, PublicContract } from '@/types/contract';
 import { FREE_PLAN_QUOTAS } from '@/types/contract';
 import type { UserSubscriptionSummary } from '@/types/payment';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
-import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { DailyStreakCard } from '@/components/user/daily-streak-card';
 import { LanguageSwitchRow } from '@/components/user/language-switch-row';
@@ -58,6 +57,7 @@ import { UserNotificationsMenu } from '@/components/user/layout/user-notificatio
 import { PortalLinkCard, PortalLinkGroup, portalCardSx } from '@/components/user/portal-cards';
 import { ReferralSummaryCard } from '@/components/user/referral-summary-card';
 import { SupportContactRow } from '@/components/user/support-contact-row';
+import { ThemeSwitchRow } from '@/components/user/theme-switch-row';
 import { planAccentForCode } from '@/components/user/packages/package-ui';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
@@ -408,7 +408,17 @@ export default function UserDashboardPage() {
             sx={{ display: { xs: 'flex', lg: 'none' }, alignItems: 'center', mr: -0.5 }}
           >
             <UserNotificationsMenu />
-            <ThemeModeToggle />
+            <Tooltip title={t.profileTitle}>
+              <IconButton
+                component={RouterLink}
+                href={paths.user.profile}
+                size="large"
+                aria-label={t.profileTitle}
+                sx={{ color: 'text.secondary' }}
+              >
+                <UserGearIcon size={22} />
+              </IconButton>
+            </Tooltip>
             <Tooltip title={t.signOut}>
               <IconButton
                 size="large"
@@ -648,6 +658,7 @@ export default function UserDashboardPage() {
           description={t.notificationsDescription}
           icon={BellIcon}
         />
+        <ThemeSwitchRow grouped />
         <LanguageSwitchRow grouped />
         <SupportContactRow grouped />
         <PortalLinkCard

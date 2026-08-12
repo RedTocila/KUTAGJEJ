@@ -1,7 +1,7 @@
 import { phoneDigitsForHref, whatsappHref } from '@/lib/listing-contact';
 
 /** Support phone shown in the dashboard contact popup. */
-export const SUPPORT_PHONE_DISPLAY = '+355 69 994 4675';
+export const SUPPORT_PHONE_DISPLAY = '+355 69 839 3520';
 
 export const SUPPORT_PHONE = SUPPORT_PHONE_DISPLAY;
 

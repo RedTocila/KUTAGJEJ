@@ -124,7 +124,7 @@ export function CategoryBrowseControls({
 
   const applyDraft = (next: BrowseFilters, closePanel = false) => {
     React.startTransition(() => {
-      router.push(`${pathname}${buildBrowseUrlQuery(next)}`);
+      router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
     });
     if (closePanel) setOpen(false);
   };
@@ -132,7 +132,7 @@ export function CategoryBrowseControls({
   const apply = () => applyDraft(draft, true);
   const clear = () => {
     React.startTransition(() => {
-      router.push(pathname);
+      router.replace(pathname, { scroll: false });
     });
     setOpen(false);
   };
@@ -140,7 +140,7 @@ export function CategoryBrowseControls({
   const removeChip = (key: string) => {
     const next = removeBrowseFilterKey(applied, key);
     React.startTransition(() => {
-      router.push(`${pathname}${buildBrowseUrlQuery(next)}`);
+      router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
     });
   };
 
@@ -152,7 +152,7 @@ export function CategoryBrowseControls({
       } as BrowseFilters;
       setDraft(next);
       React.startTransition(() => {
-        router.push(`${pathname}${buildBrowseUrlQuery(next)}`);
+        router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
       });
     },
     [applied, pathname, router],

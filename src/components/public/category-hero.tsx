@@ -2,11 +2,9 @@
 
 import * as React from 'react';
 import { Suspense } from 'react';
-import RouterLink from 'next/link';
-import { Box, Button, Container, Grid, Stack, Typography, useScrollTrigger } from '@mui/material';
+import { Box, Button, Container, Stack, Typography, useScrollTrigger } from '@mui/material';
 
 import {
-  findVertical,
   isHomeVerticalId,
   localizeSearchCategory,
   localizeVertical,
@@ -17,10 +15,13 @@ import {
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { paths } from '@/paths';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
+import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { PortalIconBox } from '@/components/user/portal-cards';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import { useScrollRevealHidden } from '@/hooks/use-scroll-reveal-hidden';
+import { useUser } from '@/hooks/use-user';
+import { hardNavigate } from '@/lib/hard-navigate';
 
 import { CategoryBrowseControls } from './listing-filters/category-browse-controls';
 import {
@@ -228,68 +229,78 @@ export function BrowseListingsCountCaption({
 /**
  * Quiet "no listings yet" state for browse pages.
  */
-export function PublicCategoryEmptyState({ verticalId }: { verticalId: BrowseCategoryId }) {
+export function PublicCategoryEmptyState({
+  verticalId,
+}: {
+  verticalId: BrowseCategoryId;
+  hasFilters?: boolean;
+}) {
   const t = useCopy();
+  const { user } = useUser();
   const isOkazion = verticalId === 'okazion';
-  const ctaHref = isOkazion
-    ? `${paths.user.realEstateListing}?okazion=1`
-    : findVertical(verticalId).postHref;
-  const ctaLabel = isOkazion ? t.browse.addOkazion : t.chrome.footerPostFree;
-  const emptyCopy = isOkazion ? t.browse.emptyOkazion : t.browse.emptyState;
+  const [pickerOpen, setPickerOpen] = React.useState(false);
+
+  const openPicker = () => {
+    if (user) {
+      setPickerOpen(true);
+      return;
+    }
+    hardNavigate(paths.user.auth);
+  };
 
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 4, md: 6 } }}>
-      <Grid container spacing={2}>
-        {[0, 1, 2, 3].map((idx) => (
-          <Grid key={idx} size={{ xs: 12, sm: 6, md: 3 }}>
+    <>
+      <Container maxWidth="xl" sx={{ py: { xs: 4, md: 6 }, px: { xs: 2, md: 3 } }}>
+        <Box
+          sx={{
+            py: { xs: 5, md: 6 },
+            px: 3,
+            textAlign: 'center',
+            borderRadius: 2,
+            border: '1px dashed',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+          }}
+        >
+          <Stack spacing={1.5} sx={{ alignItems: 'center', maxWidth: 420, mx: 'auto' }}>
             <Box
               sx={{
-                height: '100%',
-                minHeight: 200,
-                borderRadius: 2,
-                border: '1px dashed',
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-                p: 2.25,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 1,
+                width: 56,
+                height: 56,
+                borderRadius: 2.5,
+                display: 'grid',
+                placeItems: 'center',
+                color: isOkazion ? OKAZION_ACCENT : 'primary.main',
+                bgcolor: isOkazion
+                  ? OKAZION_ACCENT_SOFT
+                  : (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
+                        : 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
               }}
             >
-              <Box sx={{ height: 12, width: '60%', borderRadius: 0.5, bgcolor: 'divider' }} />
-              <Box sx={{ height: 10, width: '40%', borderRadius: 0.5, bgcolor: 'divider' }} />
-              <Typography variant="caption" color="text.disabled" sx={{ mt: 'auto' }}>
-                {t.browse.listingPlaceholder}
-              </Typography>
+              <HomeVerticalIcon verticalId={verticalId} size={32} />
             </Box>
-          </Grid>
-        ))}
-      </Grid>
-      <Box
-        sx={{
-          mt: 3,
-          py: 4,
-          textAlign: 'center',
-          borderRadius: 2,
-          border: '1px dashed',
-          borderColor: 'divider',
-        }}
-      >
-        <Stack spacing={1.5} sx={{ alignItems: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            {emptyCopy}
-          </Typography>
-          <Button
-            component={RouterLink}
-            href={ctaHref}
-            variant="outlined"
-            size="small"
-            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
-          >
-            {ctaLabel}
-          </Button>
-        </Stack>
-      </Box>
-    </Container>
+            <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+              {t.browse.emptyBeFirst}
+            </Typography>
+            <Button
+              onClick={openPicker}
+              variant="outlined"
+              size="small"
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: 2,
+                ...(isOkazion ? { borderColor: OKAZION_ACCENT, color: OKAZION_ACCENT } : null),
+              }}
+            >
+              {t.picker.title}
+            </Button>
+          </Stack>
+        </Box>
+      </Container>
+      <AddListingPickerDialog open={pickerOpen} onClose={() => setPickerOpen(false)} />
+    </>
   );
 }

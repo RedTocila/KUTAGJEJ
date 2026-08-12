@@ -48,8 +48,16 @@ function planSubtitle(t: AppMessages, plan: PublicContract, duration?: string): 
   if (plan.maxPremiumListings > 0) bits.push(`${plan.maxPremiumListings} Premium`);
   if (plan.maxOkazionListings > 0) bits.push(`${plan.maxOkazionListings} OKAZION`);
   if ((plan.boostCredits ?? 0) > 0) bits.push(`${plan.boostCredits} BC`);
+  bits.push(aiBuildFeatureLine(t, plan.planCode));
   const base = bits.join(' · ');
   return duration ? `${duration} · ${base}` : base;
+}
+
+function aiBuildFeatureLine(t: AppMessages, planCode: string | null | undefined): string {
+  const code = (planCode || 'free').toLowerCase();
+  if (code === 'grow' || code === 'elite') return t.packages.aiBuildUnlimited;
+  if (code === 'starter') return t.packages.aiBuildPerDay(10);
+  return t.packages.aiBuildPerDay(1);
 }
 
 function planFeatureLines(t: AppMessages, plan: PublicContract): FeatureListItem[] {
@@ -72,6 +80,7 @@ function planFeatureLines(t: AppMessages, plan: PublicContract): FeatureListItem
   if (plan.refreshEveryHours != null) {
     lines.push(t.packages.refreshAfterHours(plan.refreshEveryHours));
   }
+  lines.push(aiBuildFeatureLine(t, plan.planCode));
   if (plan.glowBadgeEnabled) {
     lines.push(t.packages.premiumBadge);
     lines.push({ id: 'save-leads', label: <PackageLeadsFeatureLabel /> });

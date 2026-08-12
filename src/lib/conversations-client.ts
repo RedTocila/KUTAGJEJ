@@ -62,6 +62,8 @@ export interface ConversationSummary {
   listingContactPhone?: string | null;
   /** Pinned to the top of the inbox for the current user. */
   pinned?: boolean;
+  /** Thread includes at least one platform reservation request message. */
+  hasReservationMessage?: boolean;
   createdAt: string;
   updatedAt: string;
 }

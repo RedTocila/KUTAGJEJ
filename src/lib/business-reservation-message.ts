@@ -16,6 +16,20 @@ export type BusinessReservationDraft = {
 
 const PENDING_RESERVATION_KEY = 'kutagjej-pending-business-reservation';
 
+/** Must stay in sync with `backend/lib/business-reservation-message.js`. */
+export const BUSINESS_RESERVATION_MESSAGE_PREFIX = 'Kërkesë rezervimi';
+
+export function isReservationMessageBody(body: string | null | undefined): boolean {
+  return String(body || '').trimStart().startsWith(BUSINESS_RESERVATION_MESSAGE_PREFIX);
+}
+
+export function isReservationConversation(
+  item: { lastMessageText?: string | null; hasReservationMessage?: boolean },
+): boolean {
+  if (item.hasReservationMessage) return true;
+  return isReservationMessageBody(item.lastMessageText);
+}
+
 export function formatBusinessReservationMessage(draft: BusinessReservationDraft): string {
   const dateLabel = (() => {
     const d = new Date(`${draft.reservationDate}T12:00:00`);
@@ -29,7 +43,7 @@ export function formatBusinessReservationMessage(draft: BusinessReservationDraft
   })();
 
   const lines = [
-    'Kërkesë rezervimi',
+    BUSINESS_RESERVATION_MESSAGE_PREFIX,
     '',
     `Emri: ${draft.guestName.trim()}`,
     `Telefoni: ${draft.guestPhone.trim()}`,

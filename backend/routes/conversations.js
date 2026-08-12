@@ -18,6 +18,7 @@ const {
 } = require('../lib/listing-conversations');
 const { sanitizeImageUrls } = require('../lib/image-upload');
 const { isOurStorageUrl } = require('../lib/storage-uploads');
+const { isReservationMessageBody } = require('../lib/business-reservation-message');
 
 const router = express.Router();
 
@@ -79,7 +80,7 @@ async function attachParticipantModels(rows) {
   });
 }
 
-function formatConversation(conv, userRef, state = null) {
+function formatConversation(conv, userRef, state = null, reservationIds = null) {
   const role = userRoleInConversation(conv, userRef);
   const unreadCount =
     role === 'poster'
@@ -116,6 +117,9 @@ function formatConversation(conv, userRef, state = null) {
     otherParticipantAvatarUrl: null,
     listingContactPhone: null,
     pinned: Boolean(state?.pinned),
+    hasReservationMessage: reservationIds
+      ? reservationIds.has(String(conv.id || conv._id))
+      : isReservationMessageBody(conv.lastMessageText),
     createdAt: conv.createdAt,
     updatedAt: conv.updatedAt,
   };
@@ -141,18 +145,40 @@ async function loadLastMessageSenderIds(conversationIds) {
   return map;
 }
 
+async function loadReservationConversationIds(conversationIds) {
+  const set = new Set();
+  const ids = [...new Set((conversationIds || []).map((id) => String(id || '').trim()).filter(Boolean))];
+  if (!ids.length) return set;
+  const { data, error } = await getSupabaseAdmin()
+    .from('messages')
+    .select('conversation_id, body')
+    .in('conversation_id', ids)
+    .limit(Math.min(Math.max(ids.length * 8, 40), 800));
+  if (error) throw error;
+  for (const row of data || []) {
+    if (isReservationMessageBody(row.body)) {
+      set.add(String(row.conversation_id));
+    }
+  }
+  return set;
+}
+
 async function formatConversationsForUser(convs, userRef, stateMap = new Map()) {
   const missingSenderIds = convs
     .filter((c) => !c.lastMessageSenderId && (c.lastMessageAt || c.lastMessageText))
     .map((c) => String(c.id));
-  const senderMap = await loadLastMessageSenderIds(missingSenderIds);
+  const conversationIds = convs.map((c) => String(c.id));
+  const [senderMap, reservationIds] = await Promise.all([
+    loadLastMessageSenderIds(missingSenderIds),
+    loadReservationConversationIds(conversationIds),
+  ]);
   return convs.map((c) => {
     const id = String(c.id);
     const enriched =
       !c.lastMessageSenderId && senderMap.has(id)
         ? { ...c, lastMessageSenderId: senderMap.get(id) }
         : c;
-    return formatConversation(enriched, userRef, stateMap.get(id));
+    return formatConversation(enriched, userRef, stateMap.get(id), reservationIds);
   });
 }
 

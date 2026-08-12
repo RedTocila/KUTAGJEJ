@@ -55,7 +55,7 @@ export function CategoryBrowseLayout({
           <CategoryTopViewedSlider verticalId={verticalId} listings={topViewed} />
         ) : null}
         {shownCount === 0 ? (
-          <PublicCategoryEmptyState verticalId={verticalId} />
+          <PublicCategoryEmptyState verticalId={verticalId} hasFilters={hasFilters} />
         ) : (
           <Container
             maxWidth="xl"

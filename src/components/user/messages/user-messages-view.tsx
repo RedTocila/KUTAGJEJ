@@ -47,6 +47,7 @@ import { ChatCallIcon, ChatWhatsappIcon } from '@/components/user/messages/chat-
 import { useMessagesThreadChrome } from '@/contexts/messages-thread-chrome-context';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
+import { useUser } from '@/hooks/use-user';
 import {
   consumePendingListingChat,
   fetchConversationMessages,
@@ -67,9 +68,11 @@ import {
 import { setCachedUnreadMessagesCount } from '@/hooks/use-unread-messages-count';
 import {
   consumePendingBusinessReservation,
+  isReservationConversation,
   submitBusinessReservationToMessages,
 } from '@/lib/business-reservation-message';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { isBusinessPortalAccount } from '@/lib/user-portal-account-label';
 import { languageHtmlLang } from '@/lib/language';
 import { whatsappHref } from '@/lib/listing-contact';
 import { uploadListingImages } from '@/lib/uploads-client';
@@ -157,7 +160,7 @@ function formatConversationListTime(iso: string, locale: string, yesterday: stri
   return d.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
 }
 
-type InboxFilter = 'all' | 'unread' | 'read';
+type InboxFilter = 'all' | 'unread' | 'reservations';
 
 function conversationHasMessages(item: Pick<ConversationSummary, 'lastMessageAt' | 'lastMessageText'>): boolean {
   return Boolean(item.lastMessageAt) || Boolean(String(item.lastMessageText || '').trim());
@@ -183,7 +186,7 @@ function inboxConversations(items: ConversationSummary[]): ConversationSummary[]
 
 function filterConversations(items: ConversationSummary[], filter: InboxFilter): ConversationSummary[] {
   if (filter === 'unread') return items.filter((c) => c.unreadCount > 0);
-  if (filter === 'read') return items.filter((c) => c.unreadCount <= 0);
+  if (filter === 'reservations') return items.filter(isReservationConversation);
   return items;
 }
 
@@ -1207,15 +1210,17 @@ function MessageComposer({
 
 export function UserMessagesView() {
   const t = useCopy();
+  const { user } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const threadChrome = useMessagesThreadChrome();
   const urlSelectedId = searchParams.get('c');
+  const isBusinessAccount = isBusinessPortalAccount(user);
 
   const inboxFilterLabels: Record<InboxFilter, string> = {
     all: t.messages.all,
     unread: t.messages.unread,
-    read: t.messages.read,
+    reservations: t.messages.reservations,
   };
 
   const [conversations, setConversations] = React.useState<ConversationSummary[]>(
@@ -1279,11 +1284,31 @@ export function UserMessagesView() {
     [conversations],
   );
   const unreadTotal = unreadConversations.length;
-  const readTotal = conversations.length - unreadTotal;
+  const reservationConversations = React.useMemo(
+    () => conversations.filter(isReservationConversation),
+    [conversations],
+  );
+  const reservationsTotal = reservationConversations.length;
   const filteredConversations = React.useMemo(
     () => filterConversations(conversations, inboxFilter),
     [conversations, inboxFilter],
   );
+  React.useEffect(() => {
+    if (!isBusinessAccount && inboxFilter === 'reservations') {
+      setInboxFilter('all');
+    }
+  }, [isBusinessAccount, inboxFilter]);
+
+  const inboxTabs = React.useMemo(() => {
+    const tabs: { id: InboxFilter; count: number }[] = [
+      { id: 'all', count: conversations.length },
+      { id: 'unread', count: unreadTotal },
+    ];
+    if (isBusinessAccount) {
+      tabs.push({ id: 'reservations', count: reservationsTotal });
+    }
+    return tabs;
+  }, [conversations.length, isBusinessAccount, reservationsTotal, unreadTotal]);
   const actionConversation = React.useMemo(
     () => conversations.find((c) => c.id === actionConversationId) ?? null,
     [conversations, actionConversationId],
@@ -1932,13 +1957,7 @@ export function UserMessagesView() {
                 aria-label={t.messages.filterAria}
                 sx={{ overflowX: 'auto', pb: 0.25, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}
               >
-                {(
-                  [
-                    { id: 'all' as const, count: conversations.length },
-                    { id: 'unread' as const, count: unreadTotal },
-                    { id: 'read' as const, count: readTotal },
-                  ] as const
-                ).map((tab) => {
+                {inboxTabs.map((tab) => {
                   const selected = inboxFilter === tab.id;
                   return (
                     <Box
@@ -2057,7 +2076,11 @@ export function UserMessagesView() {
               }}
             >
               <Typography sx={{ fontWeight: 700, color: 'text.primary' }}>
-                {inboxFilter === 'unread' ? t.messages.emptyUnread : t.messages.emptyRead}
+                {inboxFilter === 'unread'
+                  ? t.messages.emptyUnread
+                  : inboxFilter === 'reservations'
+                    ? t.messages.emptyReservations
+                    : t.messages.emptyTitle}
               </Typography>
               <Button
                 type="button"

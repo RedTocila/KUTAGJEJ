@@ -87,7 +87,7 @@ export function OkazionBrowseControls() {
         q: nextQ.trim() || undefined,
       };
       React.startTransition(() => {
-        router.push(`${pathname}${buildBrowseUrlQuery(next)}`);
+        router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
       });
     },
     [applied, pathname, router],

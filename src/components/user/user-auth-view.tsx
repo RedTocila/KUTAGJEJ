@@ -39,7 +39,9 @@ import { BrandLogo } from '@/components/brand/brand-logo';
 import { useCopy } from '@/hooks/use-copy';
 import { useNavigateBack } from '@/hooks/use-navigate-back';
 import { authClient } from '@/lib/auth/client';
+import { passwordInputDisableSuggestions } from '@/lib/auth/password-input';
 import { getDefaultAuthenticatedPath } from '@/lib/auth/post-login-path';
+import { isRememberLoginEnabled, readRememberedEmail } from '@/lib/auth/storage';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { rememberListingLocation } from '@/lib/listing-form-defaults';
 import {
@@ -249,11 +251,15 @@ function SignInFields({
   errors,
   showPassword,
   setShowPassword,
+  rememberLogin,
+  setRememberLogin,
 }: {
   control: ReturnType<typeof useForm<SignInValues>>['control'];
   errors: ReturnType<typeof useForm<SignInValues>>['formState']['errors'];
   showPassword: boolean;
   setShowPassword: (v: boolean) => void;
+  rememberLogin: boolean;
+  setRememberLogin: (v: boolean) => void;
 }) {
   const t = useCopy();
   return (
@@ -266,7 +272,14 @@ function SignInFields({
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.email))}>
               {t.auth.email}
             </Typography>
-            <OutlinedInput {...field} id="signin-email" placeholder="ju@shembull.com" type="email" sx={outlinedFieldSx} />
+            <OutlinedInput
+              {...field}
+              id="signin-email"
+              placeholder="ju@shembull.com"
+              type="email"
+              autoComplete="off"
+              sx={outlinedFieldSx}
+            />
             {errors.email ? <FormHelperText>{errors.email.message}</FormHelperText> : null}
           </FormControl>
         )}
@@ -285,6 +298,7 @@ function SignInFields({
               placeholder="••••••••"
               type={showPassword ? 'text' : 'password'}
               sx={outlinedFieldSx}
+              {...passwordInputDisableSuggestions}
               endAdornment={
                 <InputAdornment position="end">
                   <IconButton
@@ -301,6 +315,25 @@ function SignInFields({
             {errors.password ? <FormHelperText>{errors.password.message}</FormHelperText> : null}
           </FormControl>
         )}
+      />
+      <FormControlLabel
+        sx={{
+          mx: 0,
+          alignItems: 'center',
+          '& .MuiFormControlLabel-label': {
+            color: 'text.secondary',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+          },
+        }}
+        control={
+          <Checkbox
+            checked={rememberLogin}
+            onChange={(event) => setRememberLogin(event.target.checked)}
+            sx={{ mt: -0.25 }}
+          />
+        }
+        label={t.auth.rememberLogin}
       />
     </Stack>
   );
@@ -394,7 +427,7 @@ function RegisterFieldsIndividual({
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.email))}>
               {t.auth.email}
             </Typography>
-            <OutlinedInput {...field} autoComplete="email" placeholder="ju@shembull.com" type="email" sx={outlinedFieldSx} />
+            <OutlinedInput {...field} autoComplete="off" placeholder="ju@shembull.com" type="email" sx={outlinedFieldSx} />
             {errors.email ? <FormHelperText>{errors.email.message}</FormHelperText> : null}
           </FormControl>
         )}
@@ -409,7 +442,7 @@ function RegisterFieldsIndividual({
             </Typography>
             <OutlinedInput
               {...field}
-              autoComplete="new-password"
+              {...passwordInputDisableSuggestions}
               placeholder="Të paktën 6 karaktere"
               type={showPassword ? 'text' : 'password'}
               sx={outlinedFieldSx}
@@ -440,7 +473,7 @@ function RegisterFieldsIndividual({
             </Typography>
             <OutlinedInput
               {...field}
-              autoComplete="new-password"
+              {...passwordInputDisableSuggestions}
               placeholder={t.auth.confirmPassword}
               type={showPassword ? 'text' : 'password'}
               sx={outlinedFieldSx}
@@ -553,7 +586,7 @@ function RegisterFieldsBusiness({
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.email))}>
               {t.auth.email}
             </Typography>
-            <OutlinedInput {...field} autoComplete="email" placeholder="ju@biznesi.com" type="email" sx={outlinedFieldSx} />
+            <OutlinedInput {...field} autoComplete="off" placeholder="ju@biznesi.com" type="email" sx={outlinedFieldSx} />
             {errors.email ? <FormHelperText>{errors.email.message}</FormHelperText> : null}
           </FormControl>
         )}
@@ -568,7 +601,7 @@ function RegisterFieldsBusiness({
             </Typography>
             <OutlinedInput
               {...field}
-              autoComplete="new-password"
+              {...passwordInputDisableSuggestions}
               placeholder="Të paktën 6 karaktere"
               type={showPassword ? 'text' : 'password'}
               sx={outlinedFieldSx}
@@ -599,7 +632,7 @@ function RegisterFieldsBusiness({
             </Typography>
             <OutlinedInput
               {...field}
-              autoComplete="new-password"
+              {...passwordInputDisableSuggestions}
               placeholder={t.auth.confirmPassword}
               type={showPassword ? 'text' : 'password'}
               sx={outlinedFieldSx}
@@ -623,6 +656,7 @@ export function UserAuthView() {
   );
   const [showPwSignIn, setShowPwSignIn] = React.useState(false);
   const [showPwReg, setShowPwReg] = React.useState(false);
+  const [rememberLogin, setRememberLogin] = React.useState(true);
   const [referralCode, setReferralCode] = React.useState(refFromUrl);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [citiesLoading, setCitiesLoading] = React.useState(false);
@@ -659,6 +693,12 @@ export function UserAuthView() {
     defaultValues: { email: '', password: '' },
   });
 
+  React.useEffect(() => {
+    setRememberLogin(isRememberLoginEnabled());
+    const savedEmail = readRememberedEmail();
+    if (savedEmail) signInForm.setValue('email', savedEmail);
+  }, [signInForm]);
+
   const individualForm = useForm<IndividualRegisterValues>({
     resolver: zodResolver(individualRegisterSchema),
     defaultValues: {
@@ -691,7 +731,7 @@ export function UserAuthView() {
 
   const onSignIn = signInForm.handleSubmit(async (values) => {
     signInForm.clearErrors('root');
-    const { error, user } = await authClient.signIn(values);
+    const { error, user } = await authClient.signIn({ ...values, remember: rememberLogin });
     if (error) {
       signInForm.setError('root', { type: 'server', message: error });
       return;
@@ -863,13 +903,15 @@ export function UserAuthView() {
               </Tabs>
 
               {tab === 0 ? (
-                <Box component="form" onSubmit={onSignIn} noValidate>
+                <Box component="form" onSubmit={onSignIn} noValidate autoComplete="off">
                   <Stack spacing={2.5}>
                     <SignInFields
                       control={signInForm.control}
                       errors={signInForm.formState.errors}
                       showPassword={showPwSignIn}
                       setShowPassword={setShowPwSignIn}
+                      rememberLogin={rememberLogin}
+                      setRememberLogin={setRememberLogin}
                     />
                     <Button
                       type="submit"
@@ -943,7 +985,7 @@ export function UserAuthView() {
                   </FormControl>
 
                   {registerKind === 'individual' ? (
-                    <Box component="form" onSubmit={onRegisterIndividual} noValidate>
+                    <Box component="form" onSubmit={onRegisterIndividual} noValidate autoComplete="off">
                       <Stack spacing={2.5}>
                         <RegisterFieldsIndividual
                           control={individualForm.control}
@@ -970,7 +1012,7 @@ export function UserAuthView() {
                       </Stack>
                     </Box>
                   ) : (
-                    <Box component="form" onSubmit={onRegisterBusiness} noValidate>
+                    <Box component="form" onSubmit={onRegisterBusiness} noValidate autoComplete="off">
                       <Stack spacing={2.5}>
                         <RegisterFieldsBusiness
                           control={businessForm.control}

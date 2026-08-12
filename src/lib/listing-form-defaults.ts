@@ -1,4 +1,5 @@
 import type { User } from '@/types/user';
+import { AUTH_USER_KEY, readAuthItem } from '@/lib/auth/storage';
 import { BUSINESS_CATEGORY_OPTIONS } from '@/lib/business-constants';
 
 const LOCATION_STORAGE_KEY = 'listing-location-defaults';
@@ -7,7 +8,7 @@ const LOCATION_STORAGE_KEY = 'listing-location-defaults';
 export function contactPhoneFromStorage(): string {
   if (typeof window === 'undefined') return '';
   try {
-    const raw = localStorage.getItem('user-data');
+    const raw = readAuthItem(AUTH_USER_KEY);
     if (!raw) return '';
     const u = JSON.parse(raw) as { phone?: string };
     return typeof u.phone === 'string' ? u.phone.trim() : '';
@@ -37,7 +38,7 @@ export function basedCityFromUser(
 export function basedCityFromStorage(): { cityId: string; cityName: string } {
   if (typeof window === 'undefined') return { cityId: '', cityName: '' };
   try {
-    const raw = localStorage.getItem('user-data');
+    const raw = readAuthItem(AUTH_USER_KEY);
     if (!raw) return { cityId: '', cityName: '' };
     return basedCityFromUser(JSON.parse(raw) as User);
   } catch {
@@ -104,7 +105,7 @@ export function profileDefaultsFromStorage(): {
     return { phone: '', title: '', businessName: '', businessCategory: '', firstName: '', lastName: '' };
   }
   try {
-    const raw = localStorage.getItem('user-data');
+    const raw = readAuthItem(AUTH_USER_KEY);
     if (!raw) {
       return { phone: '', title: '', businessName: '', businessCategory: '', firstName: '', lastName: '' };
     }

@@ -43,6 +43,7 @@ import { BusinessListingDetailDesktop } from '@/components/public/business-listi
 import { StickyListingContact } from '@/components/public/sticky-listing-contact';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { paths } from '@/paths';
+import { hasStoredAccessToken } from '@/lib/auth/storage';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
 import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
@@ -150,8 +151,7 @@ export function BusinessListingDetailView({
         note: reserveNote.trim() || undefined,
       };
 
-      const hasToken =
-        typeof window !== 'undefined' && Boolean(localStorage.getItem('custom-auth-token'));
+      const hasToken = typeof window !== 'undefined' && hasStoredAccessToken();
       if (!user && !hasToken) {
         setPendingBusinessReservation(draft);
         router.push(paths.user.auth);

@@ -1,5 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+import { supabaseAuthStorage } from '@/lib/auth/storage';
+
 let browserClient: SupabaseClient | null = null;
 
 export function getSupabaseBrowserClient(): SupabaseClient {
@@ -15,6 +17,7 @@ export function getSupabaseBrowserClient(): SupabaseClient {
       autoRefreshToken: true,
       detectSessionInUrl: true,
       storageKey: 'kutagjej-auth',
+      storage: supabaseAuthStorage as Storage,
     },
   });
   return browserClient;

@@ -5,7 +5,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Box,
   Button,
+  Checkbox,
   FormControl,
+  FormControlLabel,
   FormHelperText,
   IconButton,
   InputAdornment,
@@ -20,7 +22,9 @@ import { Controller, useForm } from 'react-hook-form';
 import { z as zod } from 'zod';
 
 import { authClient } from '@/lib/auth/client';
+import { passwordInputDisableSuggestions } from '@/lib/auth/password-input';
 import { getDefaultAuthenticatedPath } from '@/lib/auth/post-login-path';
+import { isRememberLoginEnabled, readRememberedEmail } from '@/lib/auth/storage';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { productButtonSx } from '@/styles/product-sx';
 
@@ -60,21 +64,29 @@ const outlinedFieldSx = {
 export function SignInForm() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [isPending, setIsPending] = React.useState(false);
+  const [rememberLogin, setRememberLogin] = React.useState(true);
   const {
     control,
     handleSubmit,
     setError,
+    setValue,
     formState: { errors },
   } = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: { email: '', password: '' },
   });
 
+  React.useEffect(() => {
+    setRememberLogin(isRememberLoginEnabled());
+    const savedEmail = readRememberedEmail();
+    if (savedEmail) setValue('email', savedEmail);
+  }, [setValue]);
+
   const onSubmit = React.useCallback(
     async (values: Values) => {
       try {
         setIsPending(true);
-        const { error, user } = await authClient.signIn(values);
+        const { error, user } = await authClient.signIn({ ...values, remember: rememberLogin });
         if (error) {
           setError('root', { type: 'server', message: error });
           return;
@@ -93,12 +105,12 @@ export function SignInForm() {
         setIsPending(false);
       }
     },
-    [setError],
+    [setError, rememberLogin],
   );
 
   return (
     <>
-      <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate autoComplete="off">
         <Stack spacing={2.5}>
           <Controller
             control={control}
@@ -108,7 +120,13 @@ export function SignInForm() {
                 <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.email))}>
                   Adresa e emailit
                 </Typography>
-                <OutlinedInput {...props.field} placeholder="Email" type="email" sx={outlinedFieldSx} />
+                <OutlinedInput
+                  {...props.field}
+                  placeholder="Email"
+                  type="email"
+                  autoComplete="off"
+                  sx={outlinedFieldSx}
+                />
                 {errors.email ? <FormHelperText>{errors.email.message}</FormHelperText> : null}
               </FormControl>
             )}
@@ -126,6 +144,7 @@ export function SignInForm() {
                   placeholder="••••••••"
                   type={showPassword ? 'text' : 'password'}
                   sx={outlinedFieldSx}
+                  {...passwordInputDisableSuggestions}
                   endAdornment={
                     <InputAdornment position="end">
                       <IconButton
@@ -142,6 +161,25 @@ export function SignInForm() {
                 {errors.password ? <FormHelperText>{errors.password.message}</FormHelperText> : null}
               </FormControl>
             )}
+          />
+          <FormControlLabel
+            sx={{
+              mx: 0,
+              alignItems: 'center',
+              '& .MuiFormControlLabel-label': {
+                color: 'text.secondary',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+              },
+            }}
+            control={
+              <Checkbox
+                checked={rememberLogin}
+                onChange={(event) => setRememberLogin(event.target.checked)}
+                sx={{ mt: -0.25 }}
+              />
+            }
+            label="Ruaj hyrjen"
           />
           <Button
             disabled={isPending}

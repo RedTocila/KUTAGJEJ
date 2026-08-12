@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Alert, Box, CircularProgress } from '@mui/material';
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';
+import { hasStoredAccessToken } from '@/lib/auth/storage';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -16,7 +17,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const sessionRetryDone = React.useRef(false);
 
   React.useLayoutEffect(() => {
-    setHasCachedAuth(Boolean(localStorage.getItem('custom-auth-token')));
+    setHasCachedAuth(hasStoredAccessToken());
   }, []);
 
   React.useEffect(() => {
@@ -26,8 +27,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
     if (!user) {
-      const hasToken =
-        typeof window !== 'undefined' && Boolean(localStorage.getItem('custom-auth-token'));
+      const hasToken = typeof window !== 'undefined' && hasStoredAccessToken();
       if (hasToken) {
         setHasCachedAuth(true);
       }

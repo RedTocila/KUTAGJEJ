@@ -5,6 +5,14 @@ import Cookies from 'js-cookie';
 import { authHeaders, persistTokens, getAccessToken, AUTH_TOKEN_KEY, AUTH_REFRESH_KEY } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
 import { getPostSignOutPath } from '@/lib/auth/post-login-path';
+import {
+  AUTH_USER_KEY,
+  clearAuthSession,
+  readAuthItem,
+  setRememberLoginEnabled,
+  writeAuthItem,
+  writeRememberedEmail,
+} from '@/lib/auth/storage';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@/types/user';
 
@@ -12,13 +20,13 @@ export { AUTH_TOKEN_KEY, AUTH_REFRESH_KEY };
 
 function persistUserProfile(profile: unknown): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem('user-data', JSON.stringify(profile));
+  writeAuthItem(AUTH_USER_KEY, JSON.stringify(profile));
 }
 
 function readCachedUser(): User | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem('user-data');
+    const raw = readAuthItem(AUTH_USER_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as User;
   } catch {
@@ -69,6 +77,8 @@ const registerErrorSq = (message: string | undefined): string => {
 export interface SignInParams {
   email: string;
   password: string;
+  /** Persist the session across browser restarts. Defaults to true. */
+  remember?: boolean;
 }
 
 export type RegisterParams =
@@ -98,13 +108,16 @@ export type RegisterParams =
 class AuthClient {
   async signIn(params: SignInParams): Promise<{ error?: string; user?: User }> {
     try {
+      const remember = params.remember !== false;
       const res = await fetch(getApiUrl('/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
+        body: JSON.stringify({ email: params.email, password: params.password }),
       });
       const data = await res.json();
       if (!res.ok) return { error: loginErrorSq(data.message) };
+      setRememberLoginEnabled(remember);
+      writeRememberedEmail(remember ? params.email : null);
       persistAccessToken(data.token, data.refreshToken ?? null);
       persistUserProfile(data.admin);
       await syncBrowserSession(data.token, data.refreshToken ?? null);
@@ -123,6 +136,8 @@ class AuthClient {
       });
       const data = await res.json();
       if (!res.ok) return { error: registerErrorSq(data.message) };
+      setRememberLoginEnabled(true);
+      writeRememberedEmail(params.email);
       if (data.token) persistAccessToken(data.token, data.refreshToken ?? null);
       persistUserProfile(data.admin);
       if (data.token) await syncBrowserSession(data.token, data.refreshToken ?? null);
@@ -143,7 +158,7 @@ class AuthClient {
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
           persistAccessToken(null, null);
-          localStorage.removeItem('user-data');
+          writeAuthItem(AUTH_USER_KEY, null);
           return { data: null };
         }
         return { data: readCachedUser(), error: res.status >= 500 ? 'Gabim serveri.' : undefined };
@@ -163,7 +178,7 @@ class AuthClient {
     if (!target) {
       let u: User | null = null;
       try {
-        const raw = localStorage.getItem('user-data');
+        const raw = readAuthItem(AUTH_USER_KEY);
         u = raw ? (JSON.parse(raw) as User) : null;
       } catch {
         u = null;
@@ -172,8 +187,7 @@ class AuthClient {
     }
 
     persistAccessToken(null, null);
-    localStorage.removeItem('user-data');
-    localStorage.removeItem('user');
+    clearAuthSession();
     Cookies.remove(AUTH_TOKEN_KEY);
     Cookies.remove(AUTH_REFRESH_KEY);
     Cookies.remove('user-data');
@@ -188,11 +202,6 @@ class AuthClient {
           window.setTimeout(resolve, 500);
         }),
       ]);
-    } catch {
-      /* ignore */
-    }
-    try {
-      localStorage.removeItem('kutagjej-auth');
     } catch {
       /* ignore */
     }

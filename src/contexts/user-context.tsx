@@ -4,6 +4,7 @@ import * as React from 'react';
 
 import type { User } from '@/types/user';
 import { authClient } from '@/lib/auth/client';
+import { hasStoredAccessToken, readAuthItem, AUTH_USER_KEY } from '@/lib/auth/storage';
 
 export interface UserContextValue {
   user: User | null;
@@ -35,10 +36,9 @@ export function UserProvider({ children }: UserProviderProps) {
   const checkSession = React.useCallback(async (): Promise<void> => {
     try {
       const { data, error } = await authClient.getUser();
-      const token =
-        typeof window !== 'undefined' ? localStorage.getItem('custom-auth-token') : null;
+      const hasToken = typeof window !== 'undefined' && hasStoredAccessToken();
 
-      if (error && token) {
+      if (error && hasToken) {
         // Keep the existing session on transient API failures.
         setState((prev) => ({
           ...prev,
@@ -65,9 +65,8 @@ export function UserProvider({ children }: UserProviderProps) {
   React.useEffect(() => {
     // After mount, restore cached profile immediately, then refresh from API.
     try {
-      const raw = localStorage.getItem('user-data');
-      const token = localStorage.getItem('custom-auth-token');
-      if (token && raw) {
+      const raw = readAuthItem(AUTH_USER_KEY);
+      if (hasStoredAccessToken() && raw) {
         const cached = JSON.parse(raw) as User;
         setState((prev) => ({ ...prev, user: cached, error: null, isLoading: true }));
       }

@@ -14,6 +14,7 @@ import {
 } from '@/lib/conversations-client';
 import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
 import { paths } from '@/paths';
+import { hasStoredAccessToken } from '@/lib/auth/storage';
 
 export interface ListingMessageButtonProps extends Omit<ButtonProps, 'onClick'> {
   listingKind: ConversationListingKind;
@@ -28,7 +29,7 @@ export interface ListingMessageButtonProps extends Omit<ButtonProps, 'onClick'> 
 
 function hasStoredSession(): boolean {
   if (typeof window === 'undefined') return false;
-  return Boolean(localStorage.getItem('custom-auth-token'));
+  return hasStoredAccessToken();
 }
 
 export function ListingMessageButton({

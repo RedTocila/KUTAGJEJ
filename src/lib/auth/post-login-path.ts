@@ -1,18 +1,6 @@
 import { paths } from '@/paths';
 import type { User } from '@/types/user';
 
-function hasPendingMessagesIntent(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    return Boolean(
-      sessionStorage.getItem('kutagjej-pending-business-reservation') ||
-        sessionStorage.getItem('kutagjej-pending-listing-chat'),
-    );
-  } catch {
-    return false;
-  }
-}
-
 /** Where to send someone after sign-in or when they hit a guest-only page while logged in. */
 export function getDefaultAuthenticatedPath(user: Pick<User, 'accountType' | 'role'>): string {
   const at = user.accountType;
@@ -22,14 +10,9 @@ export function getDefaultAuthenticatedPath(user: Pick<User, 'accountType' | 'ro
     user.role === 'business-user' ||
     user.role === 'individual-user';
 
-  if (isPortal && hasPendingMessagesIntent()) {
-    return paths.user.messages;
-  }
-
+  if (isPortal) return paths.user.dashboard;
   if (at === 'admin' || at === 'managed') return paths.dashboard.overview;
-  if (at === 'individual' || at === 'business') return paths.user.dashboard;
   if (user.role === 'admin') return paths.dashboard.overview;
-  if (user.role === 'business-user' || user.role === 'individual-user') return paths.user.dashboard;
   return paths.dashboard.overview;
 }
 

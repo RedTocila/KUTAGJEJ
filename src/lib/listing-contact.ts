@@ -6,12 +6,36 @@ export function listingDisplayPhone(listing: {
   return (listing.contactPhone ?? listing.seller?.phone ?? '').trim();
 }
 
-/** E.164-like digits only for WhatsApp `wa.me` links. */
+const ALBANIA_COUNTRY_CODE = '355';
 
+/**
+ * Digits for WhatsApp `wa.me` / `tel:+` — international, no `+`, no trunk `0`.
+ * Local Albanian numbers (`069 280 8455`, `692808455`) get `355` prepended.
+ */
 export function phoneDigitsForHref(phone: string | null | undefined): string | null {
   if (!phone) return null;
-  const digits = phone.replace(/\D/g, '');
-  return digits.length >= 8 ? digits : null;
+  let digits = phone.replace(/\D/g, '');
+  if (digits.length < 8) return null;
+
+  if (digits.startsWith('00')) {
+    digits = digits.slice(2);
+  }
+
+  if (digits.startsWith(ALBANIA_COUNTRY_CODE)) {
+    return digits;
+  }
+
+  // National format: 0692808455 → 355692808455
+  if (digits.startsWith('0')) {
+    return `${ALBANIA_COUNTRY_CODE}${digits.slice(1)}`;
+  }
+
+  // Mobile without trunk 0: 692808455 → 355692808455
+  if (digits.length === 9 && digits.startsWith('6')) {
+    return `${ALBANIA_COUNTRY_CODE}${digits}`;
+  }
+
+  return digits;
 }
 
 export function telHref(phone: string | null | undefined): string | null {

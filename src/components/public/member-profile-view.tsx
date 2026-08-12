@@ -39,6 +39,7 @@ import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import type { HomepageMixedListing } from '@/lib/homepage-latest-listings';
 import { startConversationWithMember } from '@/lib/conversations-client';
+import { hasStoredAccessToken } from '@/lib/auth/storage';
 import { listMemberReviews } from '@/lib/member-reviews-client';
 import {
   memberInitials,
@@ -87,7 +88,7 @@ function MemberContactButton({
     setError(null);
     if (isLoading) return;
 
-    const hasToken = typeof window !== 'undefined' && Boolean(localStorage.getItem('custom-auth-token'));
+    const hasToken = typeof window !== 'undefined' && hasStoredAccessToken();
     if (!user && !hasToken) {
       router.push(paths.user.auth);
       return;

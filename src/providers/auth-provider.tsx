@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { paths } from '@/paths';
+import { hasStoredAccessToken, readAuthItem, AUTH_USER_KEY } from '@/lib/auth/storage';
 
 /**
  * Auth provider - handles route protection
@@ -22,8 +23,8 @@ export function AuthProvider({
     }
 
     if (pathname.startsWith('/dashboard')) {
-      const token = localStorage.getItem('custom-auth-token');
-      const userData = localStorage.getItem('user-data');
+      const token = hasStoredAccessToken();
+      const userData = readAuthItem(AUTH_USER_KEY);
 
       if (!token || !userData) {
         router.replace(paths.auth.signIn);
@@ -31,8 +32,8 @@ export function AuthProvider({
     }
 
     if (pathname.startsWith('/user/dashboard')) {
-      const token = localStorage.getItem('custom-auth-token');
-      const userData = localStorage.getItem('user-data');
+      const token = hasStoredAccessToken();
+      const userData = readAuthItem(AUTH_USER_KEY);
 
       if (!token || !userData) {
         router.replace(paths.user.auth);

@@ -1,25 +1,25 @@
 'use client';
 
 import { getApiUrl } from '@/lib/api-config';
+import {
+  AUTH_REFRESH_KEY,
+  AUTH_TOKEN_KEY,
+  readAuthItem,
+  writeAuthItem,
+} from '@/lib/auth/storage';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
-/** Access token storage key (Supabase access_token from /api/auth). */
-export const AUTH_TOKEN_KEY = 'custom-auth-token';
-/** Refresh token for renewing expired access tokens. */
-export const AUTH_REFRESH_KEY = 'custom-auth-refresh';
+export { AUTH_REFRESH_KEY, AUTH_TOKEN_KEY };
 
 function readStoredToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(AUTH_TOKEN_KEY);
+  return readAuthItem(AUTH_TOKEN_KEY);
 }
 
 export function persistTokens(access: string | null | undefined, refresh?: string | null): void {
   if (typeof window === 'undefined') return;
-  if (access) localStorage.setItem(AUTH_TOKEN_KEY, access);
-  else localStorage.removeItem(AUTH_TOKEN_KEY);
+  writeAuthItem(AUTH_TOKEN_KEY, access || null);
   if (refresh !== undefined) {
-    if (refresh) localStorage.setItem(AUTH_REFRESH_KEY, refresh);
-    else localStorage.removeItem(AUTH_REFRESH_KEY);
+    writeAuthItem(AUTH_REFRESH_KEY, refresh || null);
   }
 }
 
@@ -45,7 +45,7 @@ export async function getAccessToken(): Promise<string | null> {
   const stored = readStoredToken();
   if (stored) return stored;
 
-  const refresh = localStorage.getItem(AUTH_REFRESH_KEY);
+  const refresh = readAuthItem(AUTH_REFRESH_KEY);
   if (!refresh) return null;
 
   try {

@@ -581,7 +581,10 @@ export async function loadPublicRealEstateListingById(
 ): Promise<PublicEntityLoadResult<PublicRealEstateListingDetail>> {
   const raw = typeof id === 'string' ? id.trim() : '';
   if (!isListingId(raw)) return { data: null, unavailable: false };
-  return loadPublicEntity(`/public/listings/real-estate/${encodeURIComponent(raw)}`, pickListing);
+  return loadPublicEntity<PublicRealEstateListingDetail>(
+    `/public/listings/real-estate/${encodeURIComponent(raw)}`,
+    pickListing<PublicRealEstateListingDetail>,
+  );
 }
 
 export async function fetchPublicRealEstateListingById(id: string): Promise<PublicRealEstateListingDetail | null> {
@@ -591,7 +594,10 @@ export async function fetchPublicRealEstateListingById(id: string): Promise<Publ
 export async function loadPublicCarListingById(id: string): Promise<PublicEntityLoadResult<PublicCarListingDetail>> {
   const raw = typeof id === 'string' ? id.trim() : '';
   if (!isListingId(raw)) return { data: null, unavailable: false };
-  return loadPublicEntity(`/public/listings/cars/${encodeURIComponent(raw)}`, pickListing);
+  return loadPublicEntity<PublicCarListingDetail>(
+    `/public/listings/cars/${encodeURIComponent(raw)}`,
+    pickListing<PublicCarListingDetail>,
+  );
 }
 
 export async function fetchPublicCarListingById(id: string): Promise<PublicCarListingDetail | null> {
@@ -601,7 +607,10 @@ export async function fetchPublicCarListingById(id: string): Promise<PublicCarLi
 export async function loadPublicJobListingById(id: string): Promise<PublicEntityLoadResult<PublicJobListingDetail>> {
   const raw = typeof id === 'string' ? id.trim() : '';
   if (!isListingId(raw)) return { data: null, unavailable: false };
-  return loadPublicEntity(`/public/listings/jobs/${encodeURIComponent(raw)}`, pickListing);
+  return loadPublicEntity<PublicJobListingDetail>(
+    `/public/listings/jobs/${encodeURIComponent(raw)}`,
+    pickListing<PublicJobListingDetail>,
+  );
 }
 
 export async function fetchPublicJobListingById(id: string): Promise<PublicJobListingDetail | null> {
@@ -613,7 +622,10 @@ export async function loadPublicMarketplaceListingById(
 ): Promise<PublicEntityLoadResult<PublicMarketplaceListingDetail>> {
   const raw = typeof id === 'string' ? id.trim() : '';
   if (!isListingId(raw)) return { data: null, unavailable: false };
-  return loadPublicEntity(`/public/listings/marketplace/${encodeURIComponent(raw)}`, pickListing);
+  return loadPublicEntity<PublicMarketplaceListingDetail>(
+    `/public/listings/marketplace/${encodeURIComponent(raw)}`,
+    pickListing<PublicMarketplaceListingDetail>,
+  );
 }
 
 export async function fetchPublicMarketplaceListingById(id: string): Promise<PublicMarketplaceListingDetail | null> {
@@ -625,9 +637,13 @@ export async function loadPublicBusinessListingById(
 ): Promise<PublicEntityLoadResult<PublicDirectoryListingDetail>> {
   const raw = typeof id === 'string' ? id.trim() : '';
   if (!isListingId(raw)) return { data: null, unavailable: false };
-  return loadPublicEntity(`/public/listings/businesses/${encodeURIComponent(raw)}`, pickListing, {
-    cache: 'no-store',
-  });
+  return loadPublicEntity<PublicDirectoryListingDetail>(
+    `/public/listings/businesses/${encodeURIComponent(raw)}`,
+    pickListing<PublicDirectoryListingDetail>,
+    {
+      cache: 'no-store',
+    },
+  );
 }
 
 export async function fetchPublicBusinessListingById(id: string): Promise<PublicDirectoryListingDetail | null> {
@@ -639,9 +655,13 @@ export async function loadPublicProfessionalListingById(
 ): Promise<PublicEntityLoadResult<PublicDirectoryListingDetail>> {
   const raw = typeof id === 'string' ? id.trim() : '';
   if (!isListingId(raw)) return { data: null, unavailable: false };
-  return loadPublicEntity(`/public/listings/professionals/${encodeURIComponent(raw)}`, pickListing, {
-    cache: 'no-store',
-  });
+  return loadPublicEntity<PublicDirectoryListingDetail>(
+    `/public/listings/professionals/${encodeURIComponent(raw)}`,
+    pickListing<PublicDirectoryListingDetail>,
+    {
+      cache: 'no-store',
+    },
+  );
 }
 
 export async function fetchPublicProfessionalListingById(id: string): Promise<PublicDirectoryListingDetail | null> {

@@ -50,6 +50,8 @@ export const paths = {
     notificationSettings: '/user/dashboard/njoftimet/cilesimet',
     /** Referral program — invite link and stats. */
     referral: '/user/dashboard/referral',
+    /** Full list of users referred by the portal user. */
+    referredUsers: '/user/dashboard/referral/te-referuarit',
     /** Buy boost credits with POK Payments. */
     credits: '/user/dashboard/kredite',
     /** Full-page POK checkout (credits or subscription). */

@@ -35,6 +35,7 @@ import {
 } from '@/components/core/product-dialog';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
+import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
 import {
   listMyCarListings,
@@ -59,7 +60,7 @@ import {
   SoftChip,
   accentButtonSx,
   formatBc,
-  formatEur,
+  formatEurWithLifetime,
 } from './package-ui';
 
 const FALLBACK_OKAZION_PACKAGES: OkazionPackage[] = [
@@ -175,6 +176,7 @@ export function OkazionPackagesSection() {
   const t = useCopy();
   const { language } = useLanguage();
   const { user, checkSession } = useUser();
+  const lifetimePercent = useLifetimePackageDiscount();
   const balance = Number(user?.boostCredits) || 0;
 
   const [packages, setPackages] = React.useState<OkazionPackage[]>(FALLBACK_OKAZION_PACKAGES);
@@ -428,7 +430,7 @@ export function OkazionPackagesSection() {
                 fontWeight: 850,
               }}
             >
-              {formatEur(totalEur)}
+              {formatEurWithLifetime(totalEur, lifetimePercent)}
             </Button>
             <Button
               size="small"

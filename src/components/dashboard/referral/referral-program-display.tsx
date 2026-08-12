@@ -5,16 +5,14 @@ import { alpha } from '@mui/material/styles';
 import { Box, Chip, LinearProgress, Stack, Typography, useTheme } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { Circle as CircleIcon } from '@phosphor-icons/react/dist/ssr/Circle';
-import { CirclesThreePlus as CirclesThreePlusIcon } from '@phosphor-icons/react/dist/ssr/CirclesThreePlus';
 import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
-import { CurrencyCircleDollar as CurrencyCircleDollarIcon } from '@phosphor-icons/react/dist/ssr/CurrencyCircleDollar';
-import { SealCheck as SealCheckIcon } from '@phosphor-icons/react/dist/ssr/SealCheck';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import { UserPlus as UserPlusIcon } from '@phosphor-icons/react/dist/ssr/UserPlus';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
+import { MemberBadgeEmblem } from '@/components/public/member-badge-emblem';
 import type { ReferralBadge, ReferralProgram, ReferralTrustedBadge } from '@/types/referral-program';
 import { productPanelSx } from '@/styles/product-sx';
 
@@ -106,18 +104,17 @@ function TierLine({
 
 function MiniBadge({
   badge,
-  Icon,
-  tone,
+  kind,
+  level,
+  earned,
 }: {
   badge: ReferralBadge | ReferralTrustedBadge;
-  Icon: PhosphorIcon;
-  tone: 'green' | 'gold';
+  kind: string;
+  level?: number;
+  earned: boolean;
 }) {
   const isTrusted = 'reviewsRequired' in badge && typeof badge.reviewsRequired === 'number';
-  const bg =
-    tone === 'gold'
-      ? 'linear-gradient(135deg, #ffd35c 0%, #d98f00 100%)'
-      : 'linear-gradient(135deg, #3fd266 0%, #1a7f37 100%)';
+  const pct = Number(badge.lifetimePercent) || 0;
   return (
     <Stack
       direction="row"
@@ -127,50 +124,35 @@ function MiniBadge({
         mt: 0.85,
         p: 1,
         borderRadius: 1.5,
-        border: '1px dashed',
-        borderColor: 'divider',
+        border: '1px solid',
+        borderColor: earned ? 'primary.main' : 'divider',
         bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.015)'),
       }}
     >
-      <Box
-        sx={{
-          width: 34,
-          height: 34,
-          borderRadius: 1.25,
-          background: bg,
-          display: 'grid',
-          placeItems: 'center',
-          flexShrink: 0,
-          position: 'relative',
-        }}
-      >
-        <Icon size={17} weight="fill" color={tone === 'gold' ? '#1a1a1a' : '#fff'} />
-        <Box
-          sx={{
-            position: 'absolute',
-            bottom: -3,
-            right: -3,
-            width: 14,
-            height: 14,
-            borderRadius: '50%',
-            bgcolor: '#d98f00',
-            display: 'grid',
-            placeItems: 'center',
-            border: '1.5px solid',
-            borderColor: 'background.paper',
-          }}
-        >
-          <SealCheckIcon size={8} weight="fill" color="#fff" />
-        </Box>
-      </Box>
+      <MemberBadgeEmblem kind={kind} level={level} earned={earned} size={40} />
       <Box sx={{ minWidth: 0, flex: 1 }}>
         <Typography variant="caption" sx={{ fontWeight: 800, display: 'block', lineHeight: 1.2 }}>
-          Badge: {badge.label} · {badge.lifetimePercent}% lifetime
-          {isTrusted ? ` · ${(badge as ReferralTrustedBadge).reviewsRequired} reviews` : ''}
+          {badge.label}
+        </Typography>
+        <Typography
+          variant="caption"
+          sx={{
+            display: 'block',
+            fontWeight: 800,
+            fontSize: '0.68rem',
+            color: earned ? 'primary.main' : 'text.disabled',
+          }}
+        >
+          {earned ? 'Kompletuar' : 'Në progres'}
+          {pct > 0 ? ` · −${pct}% në paketa` : ''}
         </Typography>
         {badge.description ? (
           <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
             {badge.description}
+          </Typography>
+        ) : isTrusted ? (
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
+            {(badge as ReferralTrustedBadge).reviewsRequired} vlerësime
           </Typography>
         ) : null}
       </Box>
@@ -306,10 +288,14 @@ export function ProgramDisplay({
   compact?: boolean;
   loginStreakDays?: number;
 }) {
-  const freeThresholds = program.freeTiers.map((t) => t.referralsRequired);
-  const paidThresholds = program.paidTiers.map((t) => t.paidReferralsRequired);
-  const reviewThresholds = program.reviewMilestones.map((m) => m.reviewsRequired);
-  const streakRequired = Math.max(1, program.loginStreak.daysRequired);
+  const freeTiers = program.freeTiers || [];
+  const paidTiers = program.paidTiers || [];
+  const reviewMilestones = program.reviewMilestones || [];
+  const loginStreak = program.loginStreak || { daysRequired: 7, boostCredits: 5 };
+  const freeThresholds = freeTiers.map((t) => t.referralsRequired);
+  const paidThresholds = paidTiers.map((t) => t.paidReferralsRequired);
+  const reviewThresholds = reviewMilestones.map((m) => m.reviewsRequired);
+  const streakRequired = Math.max(1, loginStreak.daysRequired);
   const streakCurrent = Math.max(0, Math.min(loginStreakDays, streakRequired));
   const streakProgress = Math.round((streakCurrent / streakRequired) * 100);
 
@@ -341,9 +327,18 @@ export function ProgramDisplay({
         unit="referime"
         thresholds={freeThresholds}
         accent="primary"
-        badge={<MiniBadge badge={program.networkBuilderBadge} Icon={CirclesThreePlusIcon} tone="green" />}
+        badge={
+          <MiniBadge
+            badge={program.networkBuilderBadge}
+            kind="network-builder"
+            earned={
+              freeThresholds.length > 0 &&
+              referralCount >= freeThresholds[freeThresholds.length - 1]
+            }
+          />
+        }
       >
-        {program.freeTiers.map((t) => (
+        {freeTiers.map((t) => (
           <TierLine
             key={`${t.level}-${t.title}`}
             title={t.title}
@@ -364,9 +359,18 @@ export function ProgramDisplay({
         unit="të paguara"
         thresholds={paidThresholds}
         accent="primary"
-        badge={<MiniBadge badge={program.revenueDriverBadge} Icon={CurrencyCircleDollarIcon} tone="green" />}
+        badge={
+          <MiniBadge
+            badge={program.revenueDriverBadge}
+            kind="revenue-driver"
+            earned={
+              paidThresholds.length > 0 &&
+              paidReferralCount >= paidThresholds[paidThresholds.length - 1]
+            }
+          />
+        }
       >
-        {program.paidTiers.map((t) => (
+        {paidTiers.map((t) => (
           <TierLine
             key={`${t.tier}-${t.title}`}
             title={t.title}
@@ -391,9 +395,18 @@ export function ProgramDisplay({
         unit="vlerësime"
         thresholds={reviewThresholds}
         accent="warning"
-        badge={<MiniBadge badge={program.trustedReviewerBadge} Icon={SealCheckIcon} tone="gold" />}
+        badge={
+          <MiniBadge
+            badge={program.trustedReviewerBadge}
+            kind="trusted-reviewer"
+            earned={
+              Number(program.trustedReviewerBadge?.reviewsRequired) > 0 &&
+              reviewCount >= Number(program.trustedReviewerBadge.reviewsRequired)
+            }
+          />
+        }
       >
-        {program.reviewMilestones.map((m, i) => (
+        {reviewMilestones.map((m, i) => (
           <TierLine
             key={`${m.reviewsRequired}-${i}`}
             title={`${m.reviewsRequired} vlerësime`}
@@ -453,7 +466,18 @@ export function ProgramDisplay({
           </Box>
         </Stack>
         <Box sx={{ px: 1.15, py: 1 }}>
-          <MiniBadge badge={program.platformDominatorBadge} Icon={CrownIcon} tone="gold" />
+          <MiniBadge
+            badge={program.platformDominatorBadge}
+            kind="platform-dominator"
+            earned={
+              freeThresholds.length > 0 &&
+              referralCount >= freeThresholds[freeThresholds.length - 1] &&
+              paidThresholds.length > 0 &&
+              paidReferralCount >= paidThresholds[paidThresholds.length - 1] &&
+              Number(program.trustedReviewerBadge?.reviewsRequired) > 0 &&
+              reviewCount >= Number(program.trustedReviewerBadge.reviewsRequired)
+            }
+          />
         </Box>
       </Box>
 
@@ -512,7 +536,7 @@ export function ProgramDisplay({
                 ? `${streakCurrent}/${streakRequired} ditë`
                 : 'Hyr çdo ditë në platformë'
             }
-            reward={`+${program.loginStreak.boostCredits} BC`}
+            reward={`+${loginStreak.boostCredits} BC`}
             done={streakCurrent >= streakRequired}
             accent="primary"
             progressPercent={streakProgress}

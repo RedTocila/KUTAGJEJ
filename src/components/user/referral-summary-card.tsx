@@ -40,7 +40,8 @@ const copy = {
     copied: 'U kopjua',
     streakTitle: 'Aktivitet ditor',
     streakDays: (n: number) => `${n} ditë radhazi`,
-    lifetimeHint: 'Përfundo të gjitha referimet dhe merr 20% zbritje përgjithmonë.',
+    lifetimeHint: 'Përfundo të gjitha referimet dhe merr zbritje përgjithmonë në paketa.',
+    lifetimeActive: (pct: number) => `Ke −${pct}% në paketat e platformës nga badge-et e kompletuara.`,
   },
   en: {
     title: 'Referral',
@@ -49,7 +50,8 @@ const copy = {
     copied: 'Copied',
     streakTitle: 'Daily activity',
     streakDays: (n: number) => `${n}-day streak`,
-    lifetimeHint: 'Completing all referrals gives you 20% off forever.',
+    lifetimeHint: 'Completing all referrals gives you a lifetime discount on packages.',
+    lifetimeActive: (pct: number) => `You have −${pct}% off platform packages from completed badges.`,
   },
 } as const;
 
@@ -63,7 +65,8 @@ export function ReferralSummaryCard() {
   const [copied, setCopied] = React.useState(false);
   const [streakDays, setStreakDays] = React.useState(0);
   const [daysRequired, setDaysRequired] = React.useState(7);
-  const [streakReward, setStreakReward] = React.useState(5);
+  const [streakReward, setStreakReward] = React.useState(10);
+  const [lifetimePercent, setLifetimePercent] = React.useState(0);
 
   const canView =
     Boolean(user) &&
@@ -81,8 +84,9 @@ export function ReferralSummaryCard() {
         res.referral.loginStreakDaysRequired ?? res.program?.loginStreak.daysRequired ?? 7,
       );
       setStreakReward(
-        res.referral.loginStreakBoostCredits ?? res.program?.loginStreak.boostCredits ?? 5,
+        res.referral.loginStreakBoostCredits ?? res.program?.loginStreak.boostCredits ?? 10,
       );
+      setLifetimePercent(Number(res.referral.lifetimePercent) || 0);
       if (res.referral.loginStreakAwarded) {
         void checkSession();
       }
@@ -352,7 +356,7 @@ export function ReferralSummaryCard() {
                 fontSize: '0.72rem',
               }}
             >
-              {t.lifetimeHint}
+              {lifetimePercent > 0 ? t.lifetimeActive(lifetimePercent) : t.lifetimeHint}
             </Typography>
             <Box sx={{ color: AMBER, display: 'inline-flex', flexShrink: 0, opacity: 0.9 }}>
               <CaretRightIcon size={16} weight="bold" />

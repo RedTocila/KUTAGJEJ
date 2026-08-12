@@ -372,6 +372,29 @@ async function findExistingInquirerThread(listingKind, listingId, inquirerId) {
   return data;
 }
 
+/** Any thread between two people — prefer the one that already has messages. */
+async function findExistingConversationBetween(userIdA, userIdB) {
+  if (!isUuid(userIdA) || !isUuid(userIdB)) return null;
+  const { data, error } = await getSupabaseAdmin()
+    .from('conversations')
+    .select('*')
+    .or(
+      `and(poster_id.eq.${userIdA},inquirer_id.eq.${userIdB}),and(poster_id.eq.${userIdB},inquirer_id.eq.${userIdA})`,
+    )
+    .order('last_message_at', { ascending: false, nullsFirst: false })
+    .order('updated_at', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
+function isSameListingThread(row, listingKind, listingId) {
+  return (
+    String(row?.listing_kind || '') === String(listingKind || '') &&
+    String(row?.listing_id || '') === String(listingId || '')
+  );
+}
+
 /** POST /api/conversations — start or return existing thread for a listing */
 router.post('/', auth, requirePortalUser, async (req, res) => {
   try {
@@ -393,8 +416,8 @@ router.post('/', auth, requirePortalUser, async (req, res) => {
     }
 
     const sb = getSupabaseAdmin();
-    let row = await findExistingInquirerThread(listingKind, listingId, userRef.id);
-    let raceHit = false;
+    let row = await findExistingConversationBetween(userRef.id, listing.posterId);
+    let created = false;
 
     if (!row) {
       const { data, error } = await sb
@@ -412,15 +435,20 @@ router.post('/', auth, requirePortalUser, async (req, res) => {
         .single();
       if (error) {
         if (isUniqueViolation(error)) {
-          row = await findExistingInquirerThread(listingKind, listingId, userRef.id);
-          raceHit = true;
+          row =
+            (await findExistingInquirerThread(listingKind, listingId, userRef.id)) ||
+            (await findExistingConversationBetween(userRef.id, listing.posterId));
         } else {
           throw error;
         }
       } else {
         row = data;
+        created = true;
       }
-    } else if (row.listing_title !== listing.title || row.listing_image_url !== (listing.imageUrl || '')) {
+    } else if (
+      isSameListingThread(row, listingKind, listingId) &&
+      (row.listing_title !== listing.title || row.listing_image_url !== (listing.imageUrl || ''))
+    ) {
       const { data, error } = await sb
         .from('conversations')
         .update({
@@ -444,7 +472,7 @@ router.post('/', auth, requirePortalUser, async (req, res) => {
     const stateMap = await loadUserStatesByConversationIds(userRef.id, [conv.id]);
     const formatted = await formatConversationForUser(conv, userRef, stateMap.get(String(conv.id)));
     const [withName] = await attachOtherParticipantDetails([formatted]);
-    res.status(raceHit ? 200 : 201).json({ conversation: withName });
+    res.status(created ? 201 : 200).json({ conversation: withName });
   } catch (err) {
     console.error('POST /conversations:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
@@ -527,7 +555,7 @@ router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) 
         return res.status(403).json({ message: 'Nuk mund të nisni bisedën për këtë njoftim.' });
       }
 
-      let row = await findExistingInquirerThread(listingKind, listingId, memberId);
+      let row = await findExistingConversationBetween(userRef.id, memberId);
       let created = false;
       if (!row) {
         const { data, error } = await getSupabaseAdmin()
@@ -545,8 +573,12 @@ router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) 
           .single();
         if (error) {
           if (isUniqueViolation(error)) {
-            row = await findExistingInquirerThread(listingKind, listingId, memberId);
-            if (row) row = await markConversationStartedByPoster(row);
+            row =
+              (await findExistingInquirerThread(listingKind, listingId, memberId)) ||
+              (await findExistingConversationBetween(userRef.id, memberId));
+            if (row && isSameListingThread(row, listingKind, listingId)) {
+              row = await markConversationStartedByPoster(row);
+            }
           } else {
             throw error;
           }
@@ -554,25 +586,16 @@ router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) 
           row = data;
           created = true;
         }
-      } else {
+      } else if (isSameListingThread(row, listingKind, listingId)) {
         row = await markConversationStartedByPoster(row);
       }
       if (!row) return res.status(500).json({ message: 'Server error' });
       return respondWithConversation(res, row, userRef, created ? 201 : 200);
     }
 
-    const { data: existingRows, error: existingErr } = await getSupabaseAdmin()
-      .from('conversations')
-      .select('*')
-      .or(
-        `and(poster_id.eq.${memberId},inquirer_id.eq.${userRef.id}),and(poster_id.eq.${userRef.id},inquirer_id.eq.${memberId})`,
-      )
-      .order('last_message_at', { ascending: false, nullsFirst: false })
-      .limit(1);
-    if (existingErr) throw existingErr;
-
-    if (existingRows?.length) {
-      return respondWithConversation(res, existingRows[0], userRef, 200);
+    const existingPair = await findExistingConversationBetween(userRef.id, memberId);
+    if (existingPair) {
+      return respondWithConversation(res, existingPair, userRef, 200);
     }
 
     // Profile / member contact — always a person thread (not tied to their listing).

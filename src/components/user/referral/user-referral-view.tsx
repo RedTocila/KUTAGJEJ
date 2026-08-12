@@ -1,38 +1,47 @@
 'use client';
 
 import * as React from 'react';
+import RouterLink from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Alert,
   Box,
   Button,
   Chip,
+  Divider,
   IconButton,
   LinearProgress,
   Skeleton,
   Stack,
   Typography,
 } from '@mui/material';
+import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
+import { Check as CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { Copy as CopyIcon } from '@phosphor-icons/react/dist/ssr/Copy';
 import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
 import { LinkSimple as LinkSimpleIcon } from '@phosphor-icons/react/dist/ssr/LinkSimple';
+import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 import { UsersThree as UsersThreeIcon } from '@phosphor-icons/react/dist/ssr/UsersThree';
 
 import { ProgramDisplay } from '@/components/dashboard/referral/referral-program-display';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { PortalSurface } from '@/components/user/portal-cards';
+import { ReferredUsersList } from '@/components/user/referral/referred-users-list';
 import { useUser } from '@/hooks/use-user';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { formatRatingDisplay } from '@/lib/format-rating';
+import { CANONICAL_SITE_ORIGIN, getPublicSiteOrigin } from '@/lib/get-site-url';
+import { resolveNextReferralStep } from '@/lib/referral-next-step';
 import { fetchMyReferralStats } from '@/lib/referrals-client';
+import { productButtonSx } from '@/styles/product-sx';
 import type { ReferralProgram } from '@/types/referral-program';
 import type { MyReferralStats } from '@/types/referrals';
 import { paths } from '@/paths';
 
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('sq-AL', { day: '2-digit', month: 'short', year: 'numeric' });
+const RECENT_REFERRALS_LIMIT = 5;
+
+function formatCount(value: number): string {
+  return value.toLocaleString('sq-AL');
 }
 
 async function copyText(text: string): Promise<boolean> {
@@ -44,25 +53,21 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-function StatPill({ label, value }: { label: string; value: string | number }) {
+function StatCell({ label, value }: { label: string; value: string | number }) {
   return (
     <Box
       sx={{
-        flex: 1,
-        minWidth: 0,
-        px: 1.25,
-        py: 1.15,
-        borderRadius: 2.5,
-        border: '1px solid',
-        borderColor: 'divider',
+        px: 1.5,
+        py: 1.35,
+        borderRadius: 2.25,
         bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
-        textAlign: 'center',
+        minWidth: 0,
       }}
     >
-      <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', lineHeight: 1.15, letterSpacing: '-0.02em' }}>
+      <Typography sx={{ fontWeight: 900, fontSize: '1.2rem', lineHeight: 1.15, letterSpacing: '-0.03em' }}>
         {value}
       </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 650, fontSize: '0.68rem' }}>
+      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 650, fontSize: '0.72rem' }}>
         {label}
       </Typography>
     </Box>
@@ -75,7 +80,9 @@ export function UserReferralView() {
   const [stats, setStats] = React.useState<MyReferralStats | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [copyMsg, setCopyMsg] = React.useState<string | null>(null);
+  const [copied, setCopied] = React.useState<'link' | 'code' | null>(null);
+  const [canShare, setCanShare] = React.useState(false);
+  const [publicOrigin, setPublicOrigin] = React.useState(CANONICAL_SITE_ORIGIN);
   const [program, setProgram] = React.useState<ReferralProgram | undefined>(undefined);
 
   const canView =
@@ -107,156 +114,210 @@ export function UserReferralView() {
     void load();
   }, [user, canView, router, load]);
 
+  React.useEffect(() => {
+    setCanShare(typeof navigator !== 'undefined' && typeof navigator.share === 'function');
+    setPublicOrigin(getPublicSiteOrigin());
+  }, []);
+
   if (!user || !canView) return null;
 
-  const handleCopy = async (text: string, label: string) => {
+  const inviteLink = stats
+    ? `${publicOrigin}/user/auth?ref=${encodeURIComponent(stats.code)}`
+    : '';
+  const inviteHost = publicOrigin.replace(/^https?:\/\//, '').replace(/^www\./, '');
+
+  const handleCopy = async (text: string, kind: 'link' | 'code') => {
     const ok = await copyText(text);
-    setCopyMsg(ok ? `${label} u kopjua.` : 'Kopjimi dështoi.');
-    setTimeout(() => setCopyMsg(null), 2500);
+    if (!ok) return;
+    setCopied(kind);
+    window.setTimeout(() => setCopied(null), 2200);
   };
 
-  const next = stats?.nextTier ?? null;
-  const nextProgress =
-    next && next.referralsRequired > 0
-      ? Math.min(100, Math.round((stats!.referralCount / next.referralsRequired) * 100))
-      : 100;
+  const handleShare = async () => {
+    if (!inviteLink) return;
+    try {
+      await navigator.share({
+        title: 'KuTaGjej',
+        text: 'Regjistrohu në KuTaGjej me kodin tim të ftesës.',
+        url: inviteLink,
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      await handleCopy(inviteLink, 'link');
+    }
+  };
+
+  const next = stats ? resolveNextReferralStep(program, stats) : null;
 
   return (
     <Stack spacing={1.75} sx={{ maxWidth: 720, mx: 'auto', width: '100%' }}>
       <UserPageHeader
         icon={<HandshakeIcon size={20} weight="duotone" />}
         title="Referimi"
-        description="Ndani linkun → miqtë regjistrohen → ju fitoni Boost Coins."
+        description="Ndani linkun — miqtë regjistrohen, ju fitoni Boost Coins."
       />
 
-      {error ? <Alert severity="error">{error}</Alert> : null}
-      {copyMsg ? <Alert severity="success" onClose={() => setCopyMsg(null)}>{copyMsg}</Alert> : null}
+      {error ? (
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={() => void load()} disabled={loading} sx={{ fontWeight: 800 }}>
+              Provo përsëri
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      ) : null}
 
       {loading ? (
         <Stack spacing={1.5}>
-          <Skeleton variant="rounded" height={160} sx={{ borderRadius: 3.5 }} />
+          <Skeleton variant="rounded" height={220} sx={{ borderRadius: 3.5 }} />
           <Skeleton variant="rounded" height={88} sx={{ borderRadius: 2.5 }} />
         </Stack>
       ) : stats ? (
         <>
-          {/* Invite hub */}
           <PortalSurface>
-            <Box
-              sx={{
-                px: { xs: 2.25, sm: 2.75 },
-                py: 1.85,
-                background: (t) =>
-                  `linear-gradient(135deg, ${primaryMainAlpha(0.22)} 0%, ${
-                    t.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'
-                  } 100%)`,
-              }}
-            >
-              <Typography variant="overline" sx={{ fontWeight: 800, letterSpacing: 0.6, color: 'text.secondary' }}>
-                Linku i ftesës
-              </Typography>
-              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5, flexWrap: 'wrap' }}>
-                <Typography sx={{ fontWeight: 900, fontSize: '1.35rem', letterSpacing: '0.06em' }}>
-                  {stats.code}
-                </Typography>
-                <IconButton
-                  size="small"
-                  aria-label="Kopjo kodin"
-                  onClick={() => void handleCopy(stats.code, 'Kodi')}
-                  sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}
+            <Stack spacing={1.75} sx={{ px: { xs: 2.25, sm: 2.75 }, py: 2.15 }}>
+              <Box>
+                <Typography
+                  variant="overline"
+                  sx={{ fontWeight: 800, letterSpacing: 0.7, color: 'text.secondary' }}
                 >
-                  <CopyIcon size={16} />
-                </IconButton>
-              </Stack>
-            </Box>
+                  Kodi juaj
+                </Typography>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: 'center',
+                    mt: 0.75,
+                    px: 1.5,
+                    py: 1,
+                    borderRadius: 2.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: (t) =>
+                      t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      flex: 1,
+                      minWidth: 0,
+                      fontWeight: 900,
+                      fontSize: '1.15rem',
+                      letterSpacing: '0.08em',
+                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                    }}
+                  >
+                    {stats.code}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    aria-label="Kopjo kodin"
+                    onClick={() => void handleCopy(stats.code, 'code')}
+                    sx={{
+                      flexShrink: 0,
+                      color: copied === 'code' ? 'primary.main' : 'text.secondary',
+                      bgcolor: (t) => primaryMainAlpha(t.palette.mode === 'dark' ? 0.14 : 0.1),
+                    }}
+                  >
+                    {copied === 'code' ? <CheckIcon size={16} weight="bold" /> : <CopyIcon size={16} />}
+                  </IconButton>
+                </Stack>
+              </Box>
 
-            <Stack spacing={1.5} sx={{ px: { xs: 2.25, sm: 2.75 }, py: 2 }}>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Stack direction="row" spacing={1}>
                 <Button
                   fullWidth
                   variant="contained"
-                  startIcon={<LinkSimpleIcon size={18} weight="bold" />}
-                  onClick={() => void handleCopy(stats.link, 'Linku')}
-                  sx={{ fontWeight: 800, borderRadius: 2.5, py: 1.15, textTransform: 'none' }}
+                  startIcon={
+                    copied === 'link' ? (
+                      <CheckIcon size={18} weight="bold" />
+                    ) : (
+                      <LinkSimpleIcon size={18} weight="bold" />
+                    )
+                  }
+                  onClick={() => void handleCopy(inviteLink, 'link')}
+                  sx={{ ...productButtonSx, py: 1.2, borderRadius: 2.5 }}
                 >
-                  Kopjo linkun
+                  {copied === 'link' ? 'U kopjua' : 'Kopjo linkun'}
                 </Button>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  startIcon={<CopyIcon size={16} />}
-                  onClick={() => void handleCopy(stats.code, 'Kodi')}
-                  sx={{ fontWeight: 750, borderRadius: 2.5, py: 1.15, textTransform: 'none' }}
-                >
-                  Kopjo kodin
-                </Button>
+                {canShare ? (
+                  <Button
+                    variant="outlined"
+                    aria-label="Ndaj"
+                    onClick={() => void handleShare()}
+                    sx={{ ...productButtonSx, minWidth: 52, px: 1.5, borderRadius: 2.5 }}
+                  >
+                    <ShareNetworkIcon size={18} weight="bold" />
+                  </Button>
+                ) : null}
               </Stack>
 
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{
-                  display: 'block',
-                  wordBreak: 'break-all',
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                  fontSize: '0.68rem',
-                }}
-              >
-                {stats.link}
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, px: 0.15 }}>
+                {inviteHost}
               </Typography>
 
-              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
-                <StatPill label="Referime" value={stats.referralCount} />
-                <StatPill label="Të paguara" value={stats.paidReferralCount} />
-                <StatPill
-                  label="Vlerësimi"
-                  value={stats.ratingAverage != null ? formatRatingDisplay(stats.ratingAverage) : '—'}
-                />
-                <StatPill label="Boost Coins" value={stats.boostCredits} />
-              </Stack>
-
               {next ? (
-                <Box
-                  sx={{
-                    p: 1.5,
-                    borderRadius: 2.5,
-                    border: '1px solid',
-                    borderColor: 'primary.light',
-                    bgcolor: (t) => primaryMainAlpha(t.palette.mode === 'dark' ? 0.12 : 0.08),
-                  }}
-                >
-                  <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'baseline', mb: 0.75 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                <Box>
+                  <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'baseline', mb: 0.7, gap: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 750 }}>
                       Hapi tjetër: {next.title}
                     </Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main' }}>
-                      +{next.boostCredits} BC
-                    </Typography>
+                    {next.reward ? (
+                      <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', flexShrink: 0 }}>
+                        {next.reward}
+                      </Typography>
+                    ) : null}
                   </Stack>
                   <LinearProgress
                     variant="determinate"
-                    value={nextProgress}
-                    sx={{ height: 6, borderRadius: 3, mb: 0.5 }}
+                    value={next.progressPercent}
+                    sx={{ height: 6, borderRadius: 3, mb: 0.55 }}
                   />
                   <Typography variant="caption" color="text.secondary">
-                    Edhe <strong>{next.remaining}</strong> referim{next.remaining === 1 ? '' : 'e'} deri te niveli
-                    ({stats.referralCount}/{next.referralsRequired})
+                    {next.hint}
                   </Typography>
                 </Box>
               ) : (
-                <Alert severity="success" sx={{ py: 0.5 }}>
-                  Keni arritur të gjitha nivelet aktuale të referimit falas.
-                </Alert>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: 'success.main' }}>
+                  Keni arritur të gjitha nivelet aktuale.
+                </Typography>
               )}
+            </Stack>
 
-              {stats.referredBy ? (
-                <Typography variant="caption" color="text.secondary">
+            <Divider />
+
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 1,
+                px: { xs: 2.25, sm: 2.75 },
+                py: 1.75,
+              }}
+            >
+              <StatCell label="Referime" value={formatCount(stats.referralCount)} />
+              <StatCell label="Boost Coins" value={formatCount(stats.boostCredits)} />
+              <StatCell label="Të paguara" value={formatCount(stats.paidReferralCount)} />
+              <StatCell
+                label="Vlerësimi"
+                value={stats.ratingAverage != null ? formatRatingDisplay(stats.ratingAverage) : '—'}
+              />
+            </Box>
+
+            {stats.referredBy ? (
+              <>
+                <Divider />
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 2.5, py: 1.25 }}>
                   Ju u referuat nga <strong>{stats.referredBy.displayName}</strong>
                 </Typography>
-              ) : null}
-            </Stack>
+              </>
+            ) : null}
           </PortalSurface>
 
-          {/* Referred people — compact */}
           <PortalSurface>
             <Stack
               direction="row"
@@ -275,49 +336,43 @@ export function UserReferralView() {
             </Stack>
 
             {stats.referredUsers.length === 0 ? (
-              <Box sx={{ px: 2.5, py: 3, textAlign: 'center' }}>
+              <Box sx={{ px: 2.5, py: 2.5, textAlign: 'center' }}>
                 <Typography variant="body2" color="text.secondary">
                   Ende askush. Kopjoni linkun dhe ftoni miqtë.
                 </Typography>
               </Box>
             ) : (
-              <Stack divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}>
-                {stats.referredUsers.map((row) => (
-                  <Stack
-                    key={row.id}
-                    direction="row"
-                    spacing={1.25}
-                    sx={{
-                      alignItems: 'center',
-                      px: { xs: 2.25, sm: 2.75 },
-                      py: 1.2,
-                    }}
-                  >
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 750, lineHeight: 1.25 }} noWrap>
-                        {row.referredUser?.displayName ?? '—'}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                        {row.referredUser?.email ?? '—'} · {formatDate(row.createdAt)}
-                      </Typography>
-                    </Box>
-                    <Typography
-                      variant="caption"
+              <>
+                <ReferredUsersList users={stats.referredUsers.slice(0, RECENT_REFERRALS_LIMIT)} />
+                {stats.referredUsers.length > RECENT_REFERRALS_LIMIT ? (
+                  <Box sx={{ borderTop: '1px solid', borderColor: 'divider', px: { xs: 1.5, sm: 2 }, py: 0.75 }}>
+                    <Button
+                      component={RouterLink}
+                      href={paths.user.referredUsers}
+                      fullWidth
+                      endIcon={<CaretRightIcon size={16} weight="bold" />}
                       sx={{
-                        fontWeight: 800,
-                        color: row.creditsAwarded > 0 ? 'success.main' : 'text.disabled',
-                        flexShrink: 0,
+                        ...productButtonSx,
+                        py: 1,
+                        borderRadius: 2,
+                        color: 'text.secondary',
+                        fontWeight: 750,
+                        fontSize: '0.82rem',
+                        '&:hover': {
+                          color: 'primary.main',
+                          bgcolor: (t) =>
+                            t.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'action.hover',
+                        },
                       }}
                     >
-                      {row.creditsAwarded > 0 ? `+${row.creditsAwarded} BC` : '—'}
-                    </Typography>
-                  </Stack>
-                ))}
-              </Stack>
+                      Shiko të gjitha
+                    </Button>
+                  </Box>
+                ) : null}
+              </>
             )}
           </PortalSurface>
 
-          {/* All reward groups — always visible */}
           {program ? (
             <Stack spacing={1}>
               <Box sx={{ px: 0.25 }}>

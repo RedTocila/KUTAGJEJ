@@ -15,7 +15,7 @@ export function DailyStreakCard() {
   const [loading, setLoading] = React.useState(true);
   const [streakDays, setStreakDays] = React.useState(0);
   const [daysRequired, setDaysRequired] = React.useState(7);
-  const [streakReward, setStreakReward] = React.useState(5);
+  const [streakReward, setStreakReward] = React.useState(10);
 
   const refreshStats = React.useCallback(async () => {
     if (!user?.id) return;
@@ -23,7 +23,7 @@ export function DailyStreakCard() {
     if (res.referral) {
       setStreakDays(res.referral.loginStreakDays ?? 0);
       setDaysRequired(res.referral.loginStreakDaysRequired ?? res.program?.loginStreak.daysRequired ?? 7);
-      setStreakReward(res.referral.loginStreakBoostCredits ?? res.program?.loginStreak.boostCredits ?? 5);
+      setStreakReward(res.referral.loginStreakBoostCredits ?? res.program?.loginStreak.boostCredits ?? 10);
       if (res.referral.loginStreakAwarded) {
         void checkSession();
       }

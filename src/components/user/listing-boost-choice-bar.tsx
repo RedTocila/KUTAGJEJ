@@ -25,7 +25,9 @@ import {
   PREMIUM_PACKAGE_ID,
   type PremiumPayMode,
 } from '@/components/user/premium-boost-upsell';
+import { formatEurWithLifetime } from '@/components/user/packages/package-ui';
 import { useCopy } from '@/hooks/use-copy';
+import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
 import {
   OKAZION_ACCENT,
@@ -91,6 +93,7 @@ export function ListingBoostChoiceBar({
 }) {
   const t = useCopy();
   const { user } = useUser();
+  const lifetimePercent = useLifetimePackageDiscount();
   const balance = Number(user?.boostCredits) || 0;
 
   const [busy, setBusy] = React.useState<'premium' | 'okazion' | null>(null);
@@ -249,7 +252,7 @@ export function ListingBoostChoiceBar({
                         '&:hover': { bgcolor: PREMIUM_AMBER_DARK, boxShadow: 'none' },
                       }}
                     >
-                      {pkg.priceEur}€
+                      {formatEurWithLifetime(pkg.priceEur, lifetimePercent)}
                     </Button>
                     <Button
                       type="button"
@@ -330,7 +333,7 @@ export function ListingBoostChoiceBar({
                   '&:hover': { bgcolor: OKAZION_RED_DARK, boxShadow: 'none' },
                 }}
               >
-                {OKAZION_PRICE_EUR}€
+                {formatEurWithLifetime(OKAZION_PRICE_EUR, lifetimePercent)}
               </Button>
               <Button
                 type="button"

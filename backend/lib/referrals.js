@@ -50,11 +50,8 @@ async function findPortalUserByReferralCode(code) {
   return mapProfile(data);
 }
 
-async function loadPortalUserBrief(userId, userModel) {
-  if (!userId) return null;
-  const u = await getProfileById(userId);
+function briefFromMappedProfile(u, userModel) {
   if (!u) return null;
-
   const model = u.constructor?.modelName || userModel;
   const displayName =
     model === 'BusinessUser'
@@ -74,14 +71,81 @@ async function loadPortalUserBrief(userId, userModel) {
   };
 }
 
-function getFrontendBaseUrl() {
-  const raw =
-    process.env.FRONTEND_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.PUBLIC_SITE_URL ||
-    'http://localhost:3000';
+async function loadPortalUserBrief(userId, userModel) {
+  if (!userId) return null;
+  const u = await getProfileById(userId);
+  return briefFromMappedProfile(u, userModel);
+}
+
+/** Batch-load public briefs. Returns a Map keyed by profile id. */
+async function loadPortalUserBriefsByIds(userIds, userModel) {
+  const ids = [...new Set((userIds || []).map((id) => String(id || '').trim()).filter(Boolean))];
+  const out = new Map();
+  if (!ids.length) return out;
+
+  const sb = getSupabaseAdmin();
+  const { data, error } = await sb.from('profiles').select('*').in('id', ids);
+  if (error) throw error;
+
+  for (const row of data || []) {
+    const brief = briefFromMappedProfile(mapProfile(row), userModel);
+    if (brief) out.set(String(brief.id), brief);
+  }
+  return out;
+}
+
+const CANONICAL_FRONTEND_URL = 'https://kutagjej.al';
+
+const KNOWN_PUBLIC_HOSTS = new Set([
+  'kutagjej.al',
+  'www.kutagjej.al',
+  'kutagjej.vercel.app',
+  'ku-ta-gjej.vercel.app',
+  'ku-ta-gjej-front.vercel.app',
+]);
+
+function isLocalHostname(hostname) {
+  const host = String(hostname || '').toLowerCase();
+  return (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '0.0.0.0' ||
+    host === '[::1]' ||
+    host.endsWith('.local')
+  );
+}
+
+function normalizeBaseUrl(raw) {
+  if (!raw) return null;
   const url = String(raw).trim().replace(/\/$/, '');
+  if (!url) return null;
   return url.includes('http') ? url : `https://${url}`;
+}
+
+function isShareablePublicUrl(url) {
+  try {
+    const parsed = new URL(url);
+    if (isLocalHostname(parsed.hostname)) return false;
+    if (parsed.hostname.endsWith('.vercel.app') && !KNOWN_PUBLIC_HOSTS.has(parsed.hostname)) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getFrontendBaseUrl() {
+  const candidates = [
+    process.env.FRONTEND_URL,
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.PUBLIC_SITE_URL,
+  ];
+  for (const raw of candidates) {
+    const url = normalizeBaseUrl(raw);
+    if (url && isShareablePublicUrl(url)) return url;
+  }
+  return CANONICAL_FRONTEND_URL;
 }
 
 function buildReferralLink(code) {
@@ -447,6 +511,7 @@ module.exports = {
   allocateUniqueReferralCode,
   findPortalUserByReferralCode,
   loadPortalUserBrief,
+  loadPortalUserBriefsByIds,
   buildReferralLink,
   countFreeReferrals,
   countPaidReferrals,

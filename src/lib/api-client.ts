@@ -104,25 +104,36 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function requestMethod(init?: RequestInit): string {
+  return String(init?.method || 'GET').toUpperCase();
+}
+
+function shouldRetryStatus(status: number, method: string): boolean {
+  if (RETRYABLE_STATUSES.has(status)) return true;
+  // Next proxy returns 500 when Express is restarting (ECONNREFUSED).
+  return status === 500 && (method === 'GET' || method === 'HEAD');
+}
+
 /**
  * Browser fetch with short retries for cold starts / flaky mobile networks.
  * Does not retry typical 4xx (except timeout/rate-limit).
  */
 export async function apiFetch(input: string, init?: RequestInit, retries = 2): Promise<Response> {
   let lastError: unknown;
+  const method = requestMethod(init);
   const attempts = Math.max(1, retries + 1);
   for (let attempt = 0; attempt < attempts; attempt++) {
     try {
       const res = await fetch(input, init);
-      if (RETRYABLE_STATUSES.has(res.status) && attempt < attempts - 1) {
-        await sleep(250 * 2 ** attempt);
+      if (shouldRetryStatus(res.status, method) && attempt < attempts - 1) {
+        await sleep(400 * 2 ** attempt);
         continue;
       }
       return res;
     } catch (error) {
       lastError = error;
       if (attempt < attempts - 1) {
-        await sleep(250 * 2 ** attempt);
+        await sleep(400 * 2 ** attempt);
         continue;
       }
     }

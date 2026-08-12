@@ -86,7 +86,10 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
   const messageThreadOpen = threadUiOpen ?? urlThreadOpen;
   const showMobileBottomNav = !messageThreadOpen;
   const showBackLink = !isDashboardHome && !isMessages && !isSavedListings && !isPostListing;
-  const backHref = paths.user.dashboard;
+  const backHref =
+    pathMatches(pathname, paths.user.referral) && pathname !== paths.user.referral
+      ? paths.user.referral
+      : paths.user.dashboard;
 
   return (
     <AuthGuard>

@@ -1407,6 +1407,9 @@ export function UserMessagesView() {
     if (pendingHandled.current) return;
     pendingHandled.current = true;
 
+    // Notification / deep-link already picked a thread — don't replace it.
+    if (urlSelectedId) return;
+
     const pendingReservation = consumePendingBusinessReservation();
     if (pendingReservation) {
       void (async () => {
@@ -1428,7 +1431,7 @@ export function UserMessagesView() {
         await loadInbox();
       }
     })();
-  }, [router, loadInbox]);
+  }, [router, loadInbox, urlSelectedId]);
 
   React.useEffect(() => {
     if (!selectedId) {

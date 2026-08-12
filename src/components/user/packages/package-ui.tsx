@@ -9,6 +9,7 @@ import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/C
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { OKAZION_RED } from '@/lib/home-categories';
+import { applyLifetimeDiscount } from '@/hooks/use-lifetime-package-discount';
 
 /** Theme palette key or raw CSS color (hex / rgb). */
 export type PlanAccent = 'primary' | 'warning' | 'error' | 'success' | 'info' | (string & {});
@@ -39,6 +40,52 @@ export function planAccentForCode(planCode: string | null | undefined): PlanAcce
 export function formatEur(n: number) {
   const v = Number(n) || 0;
   return `€${v.toFixed(2).replace(/\.00$/, '')}`;
+}
+
+export function formatEurWithLifetime(listPrice: number, percent: number) {
+  return formatEur(applyLifetimeDiscount(listPrice, percent));
+}
+
+/** List price with referral lifetime % struck through when a discount applies. */
+export function PackageEurPrice({
+  listPrice,
+  percent = 0,
+}: {
+  listPrice: number;
+  percent?: number;
+}) {
+  const p = Number(percent) || 0;
+  const discounted = applyLifetimeDiscount(listPrice, p);
+  if (p <= 0 || discounted >= listPrice) return <>{formatEur(listPrice)}</>;
+  return (
+    <Box
+      component="span"
+      sx={{ display: 'inline-flex', alignItems: 'baseline', columnGap: 0.65, flexWrap: 'wrap' }}
+    >
+      <Box
+        component="span"
+        sx={{
+          textDecoration: 'line-through',
+          color: 'text.disabled',
+          fontWeight: 700,
+          fontSize: '0.72em',
+        }}
+      >
+        {formatEur(listPrice)}
+      </Box>
+      <Box component="span">{formatEur(discounted)}</Box>
+    </Box>
+  );
+}
+
+export function ReferralDiscountNote({ percent }: { percent: number }) {
+  const p = Number(percent) || 0;
+  if (p <= 0) return null;
+  return (
+    <Typography variant="caption" color="primary.main" sx={{ fontWeight: 750, display: 'block' }}>
+      −{p}% nga badge-et e referimit, e zbatuar në çmimet e paketave.
+    </Typography>
+  );
 }
 
 export function formatBc(n: number) {

@@ -39,6 +39,7 @@ import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import type { HomepageMixedListing } from '@/lib/homepage-latest-listings';
 import { startConversationWithMember } from '@/lib/conversations-client';
+import { clientFetch } from '@/lib/api-client';
 import { hasStoredAccessToken } from '@/lib/auth/storage';
 import { listMemberReviews } from '@/lib/member-reviews-client';
 import {
@@ -171,6 +172,7 @@ export function MemberProfileView({
   const [filter, setFilter] = React.useState<FilterKey>('all');
   const [reviewsOpen, setReviewsOpen] = React.useState(false);
   const [viewerHasReviewed, setViewerHasReviewed] = React.useState(false);
+  const [liveBadges, setLiveBadges] = React.useState<PublicMemberReferralBadge[] | null>(null);
 
   const name = member.displayName?.trim() || 'Përdorues KuTaGjej';
   const initials = memberInitials(name);
@@ -181,7 +183,24 @@ export function MemberProfileView({
   const reviewCount = member.reviewCount ?? 0;
   const isOwnProfile = Boolean(user?.id && memberId && String(user.id) === String(memberId));
   const showLeaveReview = Boolean(memberId) && !isOwnProfile && !viewerHasReviewed;
-  const displayBadges = React.useMemo(() => mergeMemberReferralBadges(badges), [badges]);
+  const displayBadges = React.useMemo(
+    () => mergeMemberReferralBadges(liveBadges ?? badges),
+    [liveBadges, badges],
+  );
+
+  React.useEffect(() => {
+    if (!memberId) return;
+    let cancelled = false;
+    void clientFetch<{ badges?: PublicMemberReferralBadge[] }>(
+      `/public/members/${encodeURIComponent(memberId)}`,
+    ).then((res) => {
+      if (cancelled || !res.ok) return;
+      setLiveBadges(Array.isArray(res.data?.badges) ? res.data.badges : []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [memberId]);
 
   React.useEffect(() => {
     if (!memberId || isOwnProfile) {
@@ -390,13 +409,24 @@ export function MemberProfileView({
                   </ButtonBase>
                 </Stack>
 
-                <MemberReferralBadgesRow
-                  badges={displayBadges}
-                  selfView={isOwnProfile}
-                  layout="grid"
-                  columns={5}
-                  collapsible
-                />
+                {displayBadges.length > 0 ? (
+                  <Box sx={{ width: '100%', pt: 0.25 }}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: 'block', fontWeight: 700, mb: 1, textAlign: 'center' }}
+                    >
+                      Badges
+                    </Typography>
+                    <MemberReferralBadgesRow
+                      badges={displayBadges}
+                      selfView={isOwnProfile}
+                      layout="grid"
+                      columns={5}
+                      collapsible
+                    />
+                  </Box>
+                ) : null}
               </Stack>
             </Stack>
 

@@ -34,6 +34,7 @@ const {
   clampQuantity,
 } = require('../lib/okazion-listing');
 const { isUuid } = require('../lib/public-listings/query-helpers');
+const { priceWithLifetimeDiscount } = require('../lib/lifetime-discount');
 
 const router = express.Router();
 
@@ -49,6 +50,14 @@ function payerLabel(user) {
   if (name) return name;
   if (user.businessName) return String(user.businessName);
   return user.email || '';
+}
+
+function discountMeta(priced) {
+  if (!priced.lifetimePercent) return {};
+  return {
+    listPriceEur: priced.listPriceEur,
+    lifetimePercent: priced.lifetimePercent,
+  };
 }
 
 function formatPayment(doc) {
@@ -340,8 +349,9 @@ router.post('/subscription/order', async (req, res) => {
       return res.status(400).json({ message: 'Kjo kohëzgjatje nuk ka çmim për këtë plan.' });
     }
 
-    const amount = Number(priceEur);
-    const amountMinor = Math.round(amount * 100);
+    const priced = await priceWithLifetimeDiscount(req.user, priceEur);
+    const amount = priced.amount;
+    const amountMinor = priced.amountMinor;
     const description = `Abonim: ${contract.title} · ${m} muaj`;
 
     const { data: paymentRow, error: pErr } = await sb
@@ -362,6 +372,7 @@ router.post('/subscription/order', async (req, res) => {
           contractTitle: contract.title,
           months: m,
           payerModel: req.user.constructor.modelName,
+          ...discountMeta(priced),
         },
       })
       .select('*')
@@ -392,6 +403,8 @@ router.post('/subscription/order', async (req, res) => {
       amount,
       currency: 'EUR',
       pokEnv: saved.pokEnv,
+      lifetimePercent: priced.lifetimePercent,
+      listPriceEur: priced.listPriceEur,
     });
   } catch (error) {
     console.error('POST /payments/subscription/order:', error?.message || error);
@@ -409,8 +422,9 @@ router.post('/credits/order', async (req, res) => {
     const pkg = await getActiveCreditPackage(packageId);
     if (!pkg) return res.status(400).json({ message: 'Paketa e krediteve është e pavlefshme.' });
 
-    const amount = Number(pkg.priceEur);
-    const amountMinor = Math.round(amount * 100);
+    const priced = await priceWithLifetimeDiscount(req.user, pkg.priceEur);
+    const amount = priced.amount;
+    const amountMinor = priced.amountMinor;
     const grantedCredits = totalCredits(pkg);
     const description = `Blerje kreditesh: ${pkg.labelSq} (${grantedCredits} BC)`;
 
@@ -432,6 +446,7 @@ router.post('/credits/order', async (req, res) => {
           creditPackageId: String(pkg.id),
           credits: grantedCredits,
           payerModel: req.user.constructor.modelName,
+          ...discountMeta(priced),
         },
       })
       .select('*')
@@ -463,6 +478,8 @@ router.post('/credits/order', async (req, res) => {
       currency: 'EUR',
       credits: grantedCredits,
       pokEnv: saved.pokEnv,
+      lifetimePercent: priced.lifetimePercent,
+      listPriceEur: priced.listPriceEur,
     });
   } catch (error) {
     console.error('POST /payments/credits/order:', error?.message || error);
@@ -480,8 +497,9 @@ router.post('/auto-refresh/order', async (req, res) => {
     const pkg = getAutoRefreshPackage(packageId);
     if (!pkg) return res.status(400).json({ message: 'Paketa Auto-Refresh është e pavlefshme.' });
 
-    const amount = Number(pkg.priceEur);
-    const amountMinor = Math.round(amount * 100);
+    const priced = await priceWithLifetimeDiscount(req.user, pkg.priceEur);
+    const amount = priced.amount;
+    const amountMinor = priced.amountMinor;
     const description = `Auto-Refresh: ${pkg.labelSq}`;
 
     const sb = getSupabaseAdmin();
@@ -502,6 +520,7 @@ router.post('/auto-refresh/order', async (req, res) => {
           autoRefreshPackageId: String(pkg.id),
           autoRefreshSlots: pkg.slots,
           payerModel: req.user.constructor.modelName,
+          ...discountMeta(priced),
         },
       })
       .select('*')
@@ -533,6 +552,8 @@ router.post('/auto-refresh/order', async (req, res) => {
       currency: 'EUR',
       slots: pkg.slots,
       pokEnv: saved.pokEnv,
+      lifetimePercent: priced.lifetimePercent,
+      listPriceEur: priced.listPriceEur,
     });
   } catch (error) {
     console.error('POST /payments/auto-refresh/order:', error?.message || error);
@@ -577,8 +598,9 @@ router.post('/premium/order', async (req, res) => {
     const pkg = getPremiumPackage(packageId);
     if (!pkg) return res.status(400).json({ message: 'Paketa Premium është e pavlefshme.' });
 
-    const amount = Number(pkg.priceEur);
-    const amountMinor = Math.round(amount * 100);
+    const priced = await priceWithLifetimeDiscount(req.user, pkg.priceEur);
+    const amount = priced.amount;
+    const amountMinor = priced.amountMinor;
     const description = `Premium listing: ${pkg.labelSq}`;
 
     const sb = getSupabaseAdmin();
@@ -600,6 +622,7 @@ router.post('/premium/order', async (req, res) => {
           premiumDays: pkg.days,
           premiumPriceBc: pkg.priceBc,
           payerModel: req.user.constructor.modelName,
+          ...discountMeta(priced),
         },
       })
       .select('*')
@@ -631,6 +654,8 @@ router.post('/premium/order', async (req, res) => {
       currency: 'EUR',
       days: pkg.days,
       pokEnv: saved.pokEnv,
+      lifetimePercent: priced.lifetimePercent,
+      listPriceEur: priced.listPriceEur,
     });
   } catch (error) {
     console.error('POST /payments/premium/order:', error?.message || error);
@@ -754,8 +779,9 @@ router.post('/okazion/order', async (req, res) => {
     if (!pkg) return res.status(400).json({ message: 'Paketa OKAZION është e pavlefshme.' });
     const qty = clampQuantity(quantity);
 
-    const amount = Number(pkg.priceEur) * qty;
-    const amountMinor = Math.round(amount * 100);
+    const priced = await priceWithLifetimeDiscount(req.user, Number(pkg.priceEur) * qty);
+    const amount = priced.amount;
+    const amountMinor = priced.amountMinor;
     const description =
       qty > 1 ? `OKAZION ×${qty}: ${pkg.labelSq}` : `OKAZION listing: ${pkg.labelSq}`;
 
@@ -780,6 +806,7 @@ router.post('/okazion/order', async (req, res) => {
           okazionUnitPriceEur: pkg.priceEur,
           okazionQuantity: qty,
           payerModel: req.user.constructor.modelName,
+          ...discountMeta(priced),
         },
       })
       .select('*')
@@ -812,6 +839,8 @@ router.post('/okazion/order', async (req, res) => {
       days: pkg.days,
       quantity: qty,
       pokEnv: saved.pokEnv,
+      lifetimePercent: priced.lifetimePercent,
+      listPriceEur: priced.listPriceEur,
     });
   } catch (error) {
     console.error('POST /payments/okazion/order:', error?.message || error);

@@ -73,7 +73,7 @@ const DEFAULT_DOC = {
   },
   login_streak_title: 'Log In streak',
   login_streak_subtitle: 'Angazhim i qëndrueshëm në platformë.',
-  login_streak: { daysRequired: 7, boostCredits: 5 },
+  login_streak: { daysRequired: 7, boostCredits: 10 },
 };
 
 /** @deprecated camelCase alias kept for callers that import the seed doc. */
@@ -184,7 +184,7 @@ async function ensureReferralProgram() {
   const sb = getSupabaseAdmin();
   const { data: existing, error: findErr } = await sb
     .from('referral_programs')
-    .select('id, trusted_reviewer_badge, platform_dominator_badge')
+    .select('id, trusted_reviewer_badge, platform_dominator_badge, login_streak')
     .eq('id', 'default')
     .maybeSingle();
   if (findErr) throw findErr;
@@ -221,6 +221,10 @@ async function ensureReferralProgram() {
           ? DEFAULT_DOC.platform_dominator_badge.description
           : dominator.description,
     };
+  }
+  const streak = existing.login_streak || {};
+  if (Number(streak.boostCredits) === 5) {
+    patch.login_streak = { ...streak, boostCredits: 10 };
   }
   if (Object.keys(patch).length === 0) return;
 

@@ -40,6 +40,7 @@ import {
 
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
+import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
 import {
   convertListingQuotas,
@@ -72,7 +73,7 @@ import {
   SoftChip,
   accentButtonSx,
   formatBc,
-  formatEur,
+  formatEurWithLifetime,
 } from './package-ui';
 import { OkazionPackagesSection } from './okazion-packages-section';
 
@@ -270,6 +271,7 @@ function AutoRefreshSection() {
   const t = useCopy();
   const { language } = useLanguage();
   const { user, checkSession } = useUser();
+  const lifetimePercent = useLifetimePackageDiscount();
   const balance = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -384,7 +386,7 @@ function AutoRefreshSection() {
                         fontWeight: 850,
                       }}
                     >
-                      {formatEur(pkg.priceEur)}
+                      {formatEurWithLifetime(pkg.priceEur, lifetimePercent)}
                     </Button>
                     <Button
                       size="small"
@@ -422,6 +424,7 @@ function PremiumListingSection() {
   const t = useCopy();
   const { language } = useLanguage();
   const { user, checkSession } = useUser();
+  const lifetimePercent = useLifetimePackageDiscount();
   const balance = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
 
   const [packages, setPackages] = React.useState<PremiumPackage[]>(FALLBACK_PREMIUM_PACKAGES);
@@ -632,7 +635,7 @@ function PremiumListingSection() {
                       fontWeight: 850,
                     }}
                   >
-                    {formatEur(pkg.priceEur)}
+                    {formatEurWithLifetime(pkg.priceEur, lifetimePercent)}
                   </Button>
                   <Button
                     size="small"

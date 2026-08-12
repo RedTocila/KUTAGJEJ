@@ -12,8 +12,10 @@ const {
   countPaidReferrals,
   getReceivedReviewStats,
   loadPortalUserBrief,
+  loadPortalUserBriefsByIds,
 } = require('../lib/referrals');
 const { recordLoginStreak } = require('../lib/login-streak');
+const { resolveEarnedLifetimePercent } = require('../lib/lifetime-discount');
 
 const router = express.Router();
 
@@ -22,13 +24,27 @@ router.get('/me', auth, requirePortalUser, async (req, res) => {
   try {
     const user = req.user;
     await ensureUserReferralCode(user);
-    const loginStreak = await recordLoginStreak(user);
+    let loginStreak;
+    try {
+      loginStreak = await recordLoginStreak(user);
+    } catch (streakErr) {
+      console.error('GET /referrals/me login streak:', streakErr?.message || streakErr);
+      loginStreak = {
+        days: Number(user.loginStreakDays) || 0,
+        daysRequired: 7,
+        boostCredits: 0,
+        checkedInToday: false,
+        awarded: false,
+        boostCreditsBalance: user.boostCredits ?? 0,
+      };
+    }
     const code = user.referralCode;
     const posterModel = user.constructor.modelName;
-    const [referralCount, paidReferralCount, reviewStats] = await Promise.all([
+    const [referralCount, paidReferralCount, reviewStats, lifetimePercent] = await Promise.all([
       countFreeReferrals(user.id, posterModel),
       countPaidReferrals(user.id, posterModel),
       getReceivedReviewStats(user.id, posterModel),
+      resolveEarnedLifetimePercent(user.id, posterModel),
     ]);
     const reviewCount = reviewStats.reviewCount;
     const ratingAverage = reviewStats.ratingAverage;
@@ -45,18 +61,14 @@ router.get('/me', auth, requirePortalUser, async (req, res) => {
       .limit(50);
     if (signupErr) throw signupErr;
 
-    const referredUsers = await Promise.all(
-      (signups || []).map(async (s) => {
-        const brief = await loadPortalUserBrief(s.referred_user_id, null);
-        return {
-          id: String(s.id),
-          referredUser: brief,
-          creditsAwarded: s.credits_awarded ?? 0,
-          referralCodeUsed: s.referral_code_used || code,
-          createdAt: s.created_at,
-        };
-      }),
-    );
+    const briefs = await loadPortalUserBriefsByIds((signups || []).map((s) => s.referred_user_id));
+    const referredUsers = (signups || []).map((s) => ({
+      id: String(s.id),
+      referredUser: briefs.get(String(s.referred_user_id)) || null,
+      creditsAwarded: s.credits_awarded ?? 0,
+      referralCodeUsed: s.referral_code_used || code,
+      createdAt: s.created_at,
+    }));
 
     await ensureReferralProgram();
     const { data: programDoc, error: progErr } = await getSupabaseAdmin()
@@ -67,7 +79,8 @@ router.get('/me', auth, requirePortalUser, async (req, res) => {
     if (progErr) throw progErr;
     const program = programDoc ? formatReferralProgram(programDoc) : null;
 
-    const claimed = new Set((user.referralTiersClaimed || []).map(Number));
+    const claimedList = Array.isArray(user.referralTiersClaimed) ? user.referralTiersClaimed : [];
+    const claimed = new Set(claimedList.map(Number));
     const nextTier = (program?.freeTiers || [])
       .slice()
       .sort((a, b) => a.referralsRequired - b.referralsRequired)
@@ -82,7 +95,7 @@ router.get('/me', auth, requirePortalUser, async (req, res) => {
         reviewCount,
         ratingAverage,
         boostCredits: loginStreak.boostCreditsBalance ?? user.boostCredits ?? 0,
-        tiersClaimed: user.referralTiersClaimed || [],
+        tiersClaimed: claimedList,
         nextTier: nextTier
           ? {
               level: nextTier.level,
@@ -99,6 +112,7 @@ router.get('/me', auth, requirePortalUser, async (req, res) => {
         loginStreakBoostCredits: loginStreak.boostCredits,
         loginStreakCheckedInToday: loginStreak.checkedInToday,
         loginStreakAwarded: Boolean(loginStreak.awarded),
+        lifetimePercent,
       },
       program,
     });

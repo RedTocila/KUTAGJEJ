@@ -20,6 +20,7 @@ import {
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { PackageLeadsFeatureLabel } from '@/components/user/leads-how-it-works';
 import { useCopy } from '@/hooks/use-copy';
+import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
 import type { AppMessages } from '@/lib/i18n/messages';
 import { cancelMySubscription, listMySubscriptions } from '@/lib/payments-client';
@@ -30,7 +31,8 @@ import type { PublicContract } from '@/types/contract';
 import type { UserSubscriptionSummary } from '@/types/payment';
 import {
   PackageCheckoutCard,
-  formatEur,
+  PackageEurPrice,
+  ReferralDiscountNote,
   type FeatureListItem,
   type PlanAccent,
 } from './package-ui';
@@ -146,6 +148,7 @@ export function MainPackagesPanel() {
   const [canceling, setCanceling] = React.useState(false);
   const [cancelError, setCancelError] = React.useState<string | null>(null);
   const [cancelSuccess, setCancelSuccess] = React.useState<string | null>(null);
+  const lifetimePercent = useLifetimePackageDiscount();
 
   const activeContractId = activeSubscription?.contractId ?? null;
   const activePlanCode = activeSubscription?.planCode
@@ -265,6 +268,7 @@ export function MainPackagesPanel() {
 
       {!loading && !error && plans.length > 0 ? (
         <Stack spacing={1.25}>
+          <ReferralDiscountNote percent={lifetimePercent} />
           {plans.flatMap((plan) => {
             const paidOptions = plan.priceOptions.filter((o) => o.price > 0);
             const isFree = plan.planCode === 'free' || plan.priceOptions.every((o) => o.price === 0);
@@ -327,7 +331,7 @@ export function MainPackagesPanel() {
                   subtitle={planSubtitle(t, plan, durationLabel(t, opt.months))}
                   badge={badge}
                   titleAdornment={titleAdornment}
-                  price={formatEur(opt.price)}
+                  price={<PackageEurPrice listPrice={opt.price} percent={lifetimePercent} />}
                   priceSuffix={priceSuffixForMonths(t, opt.months)}
                   accent={accent}
                   selected={isCurrent}

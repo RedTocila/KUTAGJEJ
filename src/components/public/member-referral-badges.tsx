@@ -3,22 +3,6 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import { Box, Button, Typography } from '@mui/material';
-import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
-import { ChartLineUp as ChartLineUpIcon } from '@phosphor-icons/react/dist/ssr/ChartLineUp';
-import { CirclesThreePlus as CirclesThreePlusIcon } from '@phosphor-icons/react/dist/ssr/CirclesThreePlus';
-import { Coins as CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins';
-import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
-import { CurrencyCircleDollar as CurrencyCircleDollarIcon } from '@phosphor-icons/react/dist/ssr/CurrencyCircleDollar';
-import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
-import { Lightning as LightningIcon } from '@phosphor-icons/react/dist/ssr/Lightning';
-import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
-import { Plant as PlantIcon } from '@phosphor-icons/react/dist/ssr/Plant';
-import { RocketLaunch as RocketLaunchIcon } from '@phosphor-icons/react/dist/ssr/RocketLaunch';
-import { SealCheck as SealCheckIcon } from '@phosphor-icons/react/dist/ssr/SealCheck';
-import { SealQuestion as SealQuestionIcon } from '@phosphor-icons/react/dist/ssr/SealQuestion';
-import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
-import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
-import { Trophy as TrophyIcon } from '@phosphor-icons/react/dist/ssr/Trophy';
 
 import {
   ProductDialog,
@@ -26,41 +10,9 @@ import {
   ProductDialogContent,
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
+import { MemberBadgeEmblem } from '@/components/public/member-badge-emblem';
 import type { PublicMemberReferralBadge } from '@/lib/public-member-client';
 import { paths } from '@/paths';
-
-function badgeVisual(
-  kind: string,
-  level?: number,
-): { Icon: PhosphorIcon; accent: string } {
-  const lvl = Number(level) || 0;
-  switch (kind) {
-    case 'platform-dominator':
-      return { Icon: CrownIcon, accent: '#f0a020' };
-    case 'trusted-reviewer':
-      return { Icon: SealCheckIcon, accent: '#f0a020' };
-    case 'review-tier':
-      if (lvl >= 100) return { Icon: TrophyIcon, accent: '#f0a020' };
-      if (lvl >= 35) return { Icon: SparkleIcon, accent: '#f0a020' };
-      return { Icon: StarIcon, accent: '#f0a020' };
-    case 'network-builder':
-      return { Icon: CirclesThreePlusIcon, accent: 'var(--mui-palette-primary-main)' };
-    case 'revenue-driver':
-      return { Icon: CurrencyCircleDollarIcon, accent: 'var(--mui-palette-primary-main)' };
-    case 'paid-tier':
-      if (lvl >= 3) return { Icon: TrophyIcon, accent: '#f0a020' };
-      if (lvl === 2) return { Icon: ChartLineUpIcon, accent: '#f0a020' };
-      return { Icon: CoinsIcon, accent: '#f0a020' };
-    case 'free-tier':
-      if (lvl >= 5) return { Icon: LightningIcon, accent: 'var(--mui-palette-primary-main)' };
-      if (lvl === 4) return { Icon: SparkleIcon, accent: 'var(--mui-palette-primary-main)' };
-      if (lvl === 3) return { Icon: MegaphoneIcon, accent: 'var(--mui-palette-primary-main)' };
-      if (lvl === 2) return { Icon: RocketLaunchIcon, accent: 'var(--mui-palette-primary-main)' };
-      return { Icon: PlantIcon, accent: 'var(--mui-palette-primary-main)' };
-    default:
-      return { Icon: HandshakeIcon, accent: 'var(--mui-palette-primary-main)' };
-  }
-}
 
 function badgeCta(kind: string): { href: string; label: string } {
   switch (kind) {
@@ -75,6 +27,34 @@ function badgeCta(kind: string): { href: string; label: string } {
     default:
       return { href: paths.user.referral, label: 'Shko te referimi' };
   }
+}
+
+function badgeWhatItIs(badge: PublicMemberReferralBadge): string {
+  if (badge.description) return badge.description;
+  const need = Number(badge.threshold) || 0;
+  switch (badge.kind) {
+    case 'free-tier':
+      return need === 1 ? '1 referim' : `${need} referime`;
+    case 'paid-tier':
+      return need === 1 ? '1 referim i paguar' : `${need} referime të paguara`;
+    case 'review-tier':
+      return `${need} vlerësime`;
+    case 'network-builder':
+      return 'Të gjitha referimet falas';
+    case 'revenue-driver':
+      return 'Të gjitha referimet e paguara';
+    case 'trusted-reviewer':
+      return 'Trusted · vlerësime';
+    case 'platform-dominator':
+      return 'Të gjitha nivelet e referimit';
+    default:
+      return '';
+  }
+}
+
+function badgePackagePercent(badge: PublicMemberReferralBadge): number {
+  const n = Number(badge.lifetimePercent);
+  return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
 function badgeHowTo(badge: PublicMemberReferralBadge): string {
@@ -168,15 +148,15 @@ function BadgeTile({
   isGrid: boolean;
   onOpen: (badge: PublicMemberReferralBadge) => void;
 }) {
-  const { Icon, accent } = badgeVisual(badge.kind, badge.level);
   const earned = Boolean(badge.earned);
-  const tile = dense ? 36 : 40;
-  const iconSize = dense ? 16 : 18;
+  const tile = dense ? 42 : 48;
+  const what = badgeWhatItIs(badge);
+  const packagePct = badgePackagePercent(badge);
   const titleParts = [
     badge.label,
-    earned ? 'E fituar' : 'Ende e pafituar',
-    badge.description,
-    typeof badge.lifetimePercent === 'number' ? `${badge.lifetimePercent}% Lifetime` : null,
+    what,
+    earned ? 'Kompletuar' : 'Ende e pafituar',
+    packagePct > 0 ? `−${packagePct}% në paketa` : null,
   ].filter(Boolean);
 
   return (
@@ -198,13 +178,12 @@ function BadgeTile({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 0.45,
-        width: isGrid ? '100%' : dense ? 52 : 56,
+        gap: 0.55,
+        width: isGrid ? '100%' : dense ? 56 : 62,
         minWidth: 0,
-        opacity: earned ? 1 : 0.42,
-        filter: earned ? 'none' : 'grayscale(0.65)',
+        opacity: earned ? 1 : 0.78,
         WebkitTapHighlightColor: 'transparent',
-        '&:hover': { opacity: earned ? 1 : 0.7 },
+        '&:hover': { opacity: 1 },
         '&:focus-visible': {
           outline: '2px solid',
           outlineColor: 'primary.main',
@@ -213,82 +192,53 @@ function BadgeTile({
         },
       }}
     >
-      <Box
-        sx={{
-          position: 'relative',
-          width: tile,
-          height: tile,
-          borderRadius: '40%',
-          display: 'grid',
-          placeItems: 'center',
-          bgcolor: earned
-            ? accent
-            : (theme) =>
-                theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
-          color: earned ? '#0a0a0a' : 'text.disabled',
-          border: '1px solid',
-          borderColor: earned ? 'transparent' : 'divider',
-          boxShadow: earned ? `0 0 0 1px ${accent}55, 0 4px 10px rgba(0,0,0,0.2)` : 'none',
-        }}
-      >
-        <Icon size={iconSize} weight={earned ? 'fill' : 'regular'} />
-        {earned ? (
-          <Box
+      <MemberBadgeEmblem kind={badge.kind} level={badge.level} earned={earned} size={tile} />
+      <Box sx={{ width: '100%', minWidth: 0, textAlign: 'center' }}>
+        <Typography
+          variant="caption"
+          sx={{
+            fontWeight: earned ? 750 : 600,
+            lineHeight: 1.15,
+            color: earned ? 'text.primary' : 'text.disabled',
+            fontSize: dense ? '0.58rem' : '0.6rem',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {badge.label}
+        </Typography>
+        {what ? (
+          <Typography
+            variant="caption"
             sx={{
-              position: 'absolute',
-              bottom: -3,
-              right: -3,
-              width: 14,
-              height: 14,
-              borderRadius: '50%',
-              bgcolor: '#d98f00',
-              display: 'grid',
-              placeItems: 'center',
-              border: '1.5px solid',
-              borderColor: 'background.paper',
+              display: 'block',
+              fontWeight: 600,
+              lineHeight: 1.15,
+              color: 'text.secondary',
+              fontSize: dense ? '0.52rem' : '0.55rem',
+              mt: 0.15,
             }}
           >
-            <SealCheckIcon size={8} weight="fill" color="#fff" />
-          </Box>
-        ) : (
-          <Box
-            sx={{
-              position: 'absolute',
-              bottom: -3,
-              right: -3,
-              width: 14,
-              height: 14,
-              borderRadius: '50%',
-              bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? 'rgba(40,40,40,0.95)' : 'rgba(245,245,245,0.98)',
-              display: 'grid',
-              placeItems: 'center',
-              border: '1.5px solid',
-              borderColor: 'divider',
-              color: 'text.disabled',
-            }}
-          >
-            <SealQuestionIcon size={8} weight="fill" />
-          </Box>
-        )}
+            {what}
+          </Typography>
+        ) : null}
+        <Typography
+          variant="caption"
+          sx={{
+            display: 'block',
+            fontWeight: 800,
+            lineHeight: 1.15,
+            mt: 0.15,
+            fontSize: dense ? '0.52rem' : '0.55rem',
+            color: earned ? 'primary.main' : 'text.disabled',
+          }}
+        >
+          {earned ? 'Kompletuar' : 'Në progres'}
+          {packagePct > 0 ? ` · −${packagePct}% paketa` : ''}
+        </Typography>
       </Box>
-      <Typography
-        variant="caption"
-        sx={{
-          fontWeight: earned ? 750 : 600,
-          textAlign: 'center',
-          lineHeight: 1.15,
-          color: earned ? 'text.primary' : 'text.disabled',
-          fontSize: dense ? '0.58rem' : '0.6rem',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          width: '100%',
-        }}
-      >
-        {badge.label}
-      </Typography>
     </Box>
   );
 }
@@ -307,31 +257,18 @@ function BadgeInfoDialog({
   if (!badge) return null;
 
   const earned = Boolean(badge.earned);
-  const { Icon, accent } = badgeVisual(badge.kind, badge.level);
   const cta = badgeCta(badge.kind);
   const threshold = Number(badge.threshold) || 0;
   const progress = Math.max(0, Number(badge.progress) || 0);
+  const what = badgeWhatItIs(badge);
+  const packagePct = badgePackagePercent(badge);
 
   return (
     <ProductDialog open={open} onClose={onClose} fullWidth maxWidth="xs">
       <ProductDialogTitle onClose={onClose}>{badge.label}</ProductDialogTitle>
       <ProductDialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5, pt: 0.5 }}>
-          <Box
-            sx={{
-              width: 64,
-              height: 64,
-              borderRadius: '40%',
-              display: 'grid',
-              placeItems: 'center',
-              bgcolor: earned ? accent : 'action.hover',
-              color: earned ? '#0a0a0a' : 'text.secondary',
-              border: '1px solid',
-              borderColor: earned ? 'transparent' : 'divider',
-            }}
-          >
-            <Icon size={30} weight="fill" />
-          </Box>
+          <MemberBadgeEmblem kind={badge.kind} level={badge.level} earned={earned} size={88} />
           <Typography
             sx={{
               fontWeight: 800,
@@ -341,8 +278,13 @@ function BadgeInfoDialog({
               letterSpacing: '0.04em',
             }}
           >
-            {earned ? 'E fituar' : 'Ende e pafituar'}
+            {earned ? 'Kompletuar' : 'Në progres'}
           </Typography>
+          {what ? (
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textAlign: 'center' }}>
+              {what}
+            </Typography>
+          ) : null}
           <Typography
             variant="body2"
             color="text.secondary"
@@ -355,9 +297,14 @@ function BadgeInfoDialog({
               Progresi: {Math.min(progress, threshold)}/{threshold}
             </Typography>
           ) : null}
-          {typeof badge.lifetimePercent === 'number' ? (
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-              +{badge.lifetimePercent}% Lifetime
+          {packagePct > 0 ? (
+            <Typography
+              variant="caption"
+              sx={{ fontWeight: 800, color: earned ? 'primary.main' : 'text.secondary', textAlign: 'center' }}
+            >
+              {earned
+                ? `−${packagePct}% në paketat e platformës`
+                : `−${packagePct}% në paketa kur kompletohet`}
             </Typography>
           ) : null}
         </Box>
@@ -410,17 +357,30 @@ export function MemberReferralBadgesRow({
 
   const orderedBadges = React.useMemo(() => {
     if (!badges.length) return badges;
-    // Earned first so completed badges appear in the collapsed preview row.
     return [...badges].sort((a, b) => Number(Boolean(b.earned)) - Number(Boolean(a.earned)));
   }, [badges]);
+
+  const earnedBadges = React.useMemo(
+    () => orderedBadges.filter((badge) => Boolean(badge.earned)),
+    [orderedBadges],
+  );
 
   if (!orderedBadges.length) return null;
 
   const isGrid = layout === 'grid';
   const previewCount = Math.max(1, columns);
-  const canCollapse = isGrid && collapsible && orderedBadges.length > previewCount;
-  const visibleBadges =
-    canCollapse && !expanded ? orderedBadges.slice(0, previewCount) : orderedBadges;
+  /** Visitors always see completed badges; collapse only hides locked slots. */
+  const publicCompletedFirst = isGrid && collapsible && !selfView;
+  const canCollapse = isGrid && collapsible && (
+    publicCompletedFirst
+      ? orderedBadges.length > Math.max(earnedBadges.length, previewCount)
+      : orderedBadges.length > previewCount
+  );
+  const visibleBadges = (() => {
+    if (!(canCollapse && !expanded)) return orderedBadges;
+    if (publicCompletedFirst && earnedBadges.length > 0) return earnedBadges;
+    return orderedBadges.slice(0, previewCount);
+  })();
 
   return (
     <>
@@ -432,7 +392,7 @@ export function MemberReferralBadgesRow({
                   display: 'grid',
                   gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
                   columnGap: dense ? 0.75 : 1,
-                  rowGap: dense ? 1.25 : 1.5,
+                  rowGap: dense ? 1.5 : 1.75,
                   width: '100%',
                 }
               : {
@@ -479,7 +439,11 @@ export function MemberReferralBadgesRow({
               '&:hover': { color: 'primary.main', bgcolor: 'transparent' },
             }}
           >
-            {expanded ? 'Shfaq më pak' : 'Shiko të gjitha badge-et'}
+            {expanded
+              ? 'Shfaq më pak'
+              : publicCompletedFirst && earnedBadges.length > 0
+                ? 'Shiko badge-et e tjera'
+                : 'Shiko të gjitha badge-et'}
           </Button>
         ) : null}
       </Box>

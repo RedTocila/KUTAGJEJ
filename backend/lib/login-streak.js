@@ -20,7 +20,7 @@ async function loadLoginStreakConfig() {
   if (error) throw error;
   const program = data ? formatReferralProgram({ login_streak: data.login_streak }) : null;
   const daysRequired = Math.max(1, Number(program?.loginStreak?.daysRequired) || 7);
-  const boostCredits = Math.max(0, Number(program?.loginStreak?.boostCredits) || 5);
+  const boostCredits = Math.max(0, Number(program?.loginStreak?.boostCredits) || 10);
   return { daysRequired, boostCredits };
 }
 

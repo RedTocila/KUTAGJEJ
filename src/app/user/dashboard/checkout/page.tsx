@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Alert, Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
 
 import { PokCheckoutView } from '@/components/payments/pok-checkout-view';
+import { PackageEurPrice } from '@/components/user/packages/package-ui';
+import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
 import {
   createAutoRefreshOrder,
@@ -71,6 +73,7 @@ export default function UserCheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { checkSession } = useUser();
+  const lifetimePercent = useLifetimePackageDiscount();
 
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -318,7 +321,7 @@ export default function UserCheckoutPage() {
                   </Typography>
                 </Box>
                 <Typography sx={{ fontWeight: 800, fontSize: '1.5rem', whiteSpace: 'nowrap', color: 'primary.main' }}>
-                  €{checkout.pkg.priceEur}
+                  <PackageEurPrice listPrice={checkout.pkg.priceEur} percent={lifetimePercent} />
                 </Typography>
               </Stack>
             ) : checkout.kind === 'auto-refresh' ? (
@@ -338,7 +341,7 @@ export default function UserCheckoutPage() {
                   </Typography>
                 </Box>
                 <Typography sx={{ fontWeight: 800, fontSize: '1.5rem', whiteSpace: 'nowrap', color: 'primary.main' }}>
-                  €{checkout.pkg.priceEur.toFixed(2).replace(/\.00$/, '')}
+                  <PackageEurPrice listPrice={checkout.pkg.priceEur} percent={lifetimePercent} />
                   <Typography component="span" variant="body2" sx={{ fontWeight: 700, ml: 0.25 }}>
                     /muaj
                   </Typography>
@@ -361,7 +364,7 @@ export default function UserCheckoutPage() {
                   </Typography>
                 </Box>
                 <Typography sx={{ fontWeight: 800, fontSize: '1.5rem', whiteSpace: 'nowrap', color: 'primary.main' }}>
-                  €{checkout.pkg.priceEur}
+                  <PackageEurPrice listPrice={checkout.pkg.priceEur} percent={lifetimePercent} />
                 </Typography>
               </Stack>
             ) : checkout.kind === 'okazion' ? (
@@ -383,7 +386,10 @@ export default function UserCheckoutPage() {
                   </Typography>
                 </Box>
                 <Typography sx={{ fontWeight: 800, fontSize: '1.5rem', whiteSpace: 'nowrap', color: 'error.main' }}>
-                  €{checkout.pkg.priceEur * checkout.quantity}
+                  <PackageEurPrice
+                    listPrice={checkout.pkg.priceEur * checkout.quantity}
+                    percent={lifetimePercent}
+                  />
                 </Typography>
               </Stack>
             ) : (
@@ -403,7 +409,7 @@ export default function UserCheckoutPage() {
                   </Typography>
                 </Box>
                 <Typography sx={{ fontWeight: 800, fontSize: '1.5rem', whiteSpace: 'nowrap', color: 'primary.main' }}>
-                  {checkout.price} €
+                  <PackageEurPrice listPrice={checkout.price} percent={lifetimePercent} />
                 </Typography>
               </Stack>
             )

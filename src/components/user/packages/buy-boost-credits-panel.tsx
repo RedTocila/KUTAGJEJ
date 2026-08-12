@@ -11,11 +11,12 @@ import {
 } from '@mui/material';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { useCopy } from '@/hooks/use-copy';
+import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
 import { listCreditPackages } from '@/lib/payments-client';
 import type { CreditPackage } from '@/types/payment';
 import { paths } from '@/paths';
-import { PackageCheckoutCard, formatBc, formatEur } from './package-ui';
+import { PackageCheckoutCard, PackageEurPrice, ReferralDiscountNote, formatBc } from './package-ui';
 
 /** Always-visible catalog when the API has no active rows yet. */
 const FALLBACK_CREDIT_PACKAGES: CreditPackage[] = [
@@ -55,6 +56,7 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
   const router = useRouter();
   const t = useCopy();
   const { user } = useUser();
+  const lifetimePercent = useLifetimePackageDiscount();
   const [packages, setPackages] = React.useState<CreditPackage[]>(FALLBACK_CREDIT_PACKAGES);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -125,6 +127,7 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
         </Box>
       ) : (
         <Stack spacing={1.25}>
+          <ReferralDiscountNote percent={lifetimePercent} />
           {packages.map((pkg) => {
             const bonus = Number(pkg.bonusCredits) || 0;
             const badge = pkg.badgeSq || (bonus > 0 ? `+${formatBc(bonus)} BC` : null);
@@ -134,7 +137,7 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
                 title={pkg.labelSq}
                 subtitle={packageSubtitle(pkg)}
                 badge={badge}
-                price={formatEur(pkg.priceEur)}
+                price={<PackageEurPrice listPrice={pkg.priceEur} percent={lifetimePercent} />}
                 onClick={() => router.push(checkoutCreditsHref(pkg.id))}
               />
             );

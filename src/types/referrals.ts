@@ -41,6 +41,8 @@ export interface MyReferralStats {
   loginStreakBoostCredits?: number;
   loginStreakCheckedInToday?: boolean;
   loginStreakAwarded?: boolean;
+  /** Earned referral-badge lifetime discount applied to EUR packages. */
+  lifetimePercent?: number;
 }
 
 export interface AdminReferralOverview {

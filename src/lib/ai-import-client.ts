@@ -25,6 +25,55 @@ export interface AiImportDraftResult {
 
 export const AI_CATEGORY_MISMATCH_CODE = 'category_mismatch';
 export const AI_CONTENT_RESTRICTED_CODE = 'content_restricted';
+export const AI_DAILY_LIMIT_CODE = 'ai_daily_limit';
+
+export interface AiImportQuota {
+  planCode: string;
+  unlimited: boolean;
+  limit: number | null;
+  used: number;
+  remaining: number | null;
+  usedOn: string;
+}
+
+export function isAiDailyLimitError(input: {
+  code?: string | null;
+  error?: string | null;
+  status?: number;
+}): boolean {
+  if (input.code === AI_DAILY_LIMIT_CODE) return true;
+  if (input.status === 403 && /AI Build/i.test(String(input.error || ''))) return true;
+  return false;
+}
+
+export function aiDailyLimitMessage(
+  t: {
+    aiImport: {
+      dailyLimitReached: string;
+      dailyLimitFree: string;
+      dailyLimitStarter: string;
+    };
+  },
+  planCode?: string | null,
+): string {
+  const code = String(planCode || '').toLowerCase();
+  if (code === 'starter') return t.aiImport.dailyLimitStarter;
+  if (code === 'free' || !code) return t.aiImport.dailyLimitFree;
+  return t.aiImport.dailyLimitReached;
+}
+
+export async function fetchAiImportQuota(): Promise<{
+  quota: AiImportQuota | null;
+  error?: string;
+}> {
+  const res = await clientFetch<{ quota?: AiImportQuota }>('/ai/import-quota', {
+    method: 'GET',
+  });
+  if (!res.ok) {
+    return { quota: null, error: res.error || 'Failed to load AI quota' };
+  }
+  return { quota: res.data?.quota ?? null };
+}
 
 export function isAiCategoryMismatch(
   draft: Pick<AiImportDraftResult, 'error' | 'errorCode'>,
@@ -91,29 +140,50 @@ export async function importListingsFromLinks(input: {
   images?: Array<string | { url: string; hint?: string }>;
   mode?: 'create' | 'edit';
   currentListing?: Record<string, unknown> | null;
-}): Promise<{ drafts: AiImportDraftResult[]; error?: string }> {
-  const res = await clientFetch<{ drafts?: AiImportDraftResult[]; message?: string }>(
-    '/ai/import-listings',
-    {
-      method: 'POST',
-      body: JSON.stringify({
-        text: input.text ?? '',
-        urls: input.urls ?? [],
-        ...(input.category ? { category: input.category } : {}),
-        ...(input.profile ? { profile: input.profile } : {}),
-        ...(input.images?.length ? { images: input.images } : {}),
-        ...(input.mode ? { mode: input.mode } : {}),
-        ...(input.currentListing ? { currentListing: input.currentListing } : {}),
-      }),
-    },
-  );
+}): Promise<{
+  drafts: AiImportDraftResult[];
+  error?: string;
+  code?: string;
+  quota?: AiImportQuota | null;
+  status?: number;
+}> {
+  const res = await clientFetch<{
+    drafts?: AiImportDraftResult[];
+    message?: string;
+    code?: string;
+    quota?: AiImportQuota;
+  }>('/ai/import-listings', {
+    method: 'POST',
+    body: JSON.stringify({
+      text: input.text ?? '',
+      urls: input.urls ?? [],
+      ...(input.category ? { category: input.category } : {}),
+      ...(input.profile ? { profile: input.profile } : {}),
+      ...(input.images?.length ? { images: input.images } : {}),
+      ...(input.mode ? { mode: input.mode } : {}),
+      ...(input.currentListing ? { currentListing: input.currentListing } : {}),
+    }),
+  });
 
   if (!res.ok) {
-    return { drafts: [], error: res.error || 'AI import failed' };
+    const code =
+      typeof res.data?.code === 'string'
+        ? res.data.code
+        : isAiDailyLimitError({ error: res.error, status: res.status })
+          ? AI_DAILY_LIMIT_CODE
+          : undefined;
+    return {
+      drafts: [],
+      error: res.error || 'AI import failed',
+      code,
+      quota: res.data?.quota ?? null,
+      status: res.status,
+    };
   }
 
   return {
     drafts: Array.isArray(res.data?.drafts) ? res.data.drafts : [],
+    quota: res.data?.quota ?? null,
   };
 }
 

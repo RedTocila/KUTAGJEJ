@@ -15,6 +15,7 @@ const { ensureOkazionListingSchema } = require('./lib/ensure-okazion-listing-sch
 const { ensureBumpedAtSchema } = require('./lib/ensure-bumped-at-schema');
 const { ensureMemberReviewsSchema } = require('./lib/ensure-member-reviews-schema');
 const { ensureAdminAiSchema } = require('./lib/ensure-admin-ai-schema');
+const { ensureAiImportUsageSchema } = require('./lib/ensure-ai-import-usage-schema');
 const { backfillMissingReferralCodes } = require('./lib/referrals');
 const { backfillOrphanProfiles } = require('./lib/profiles');
 const { processDueAutoRefreshes } = require('./lib/listing-auto-refresh');
@@ -95,6 +96,7 @@ async function bootstrap() {
   await ensureBumpedAtSchema();
   await ensureMemberReviewsSchema();
   await ensureAdminAiSchema();
+  await ensureAiImportUsageSchema();
   const restored = await backfillOrphanProfiles();
   if (restored > 0) console.log(`✓ Restored ${restored} orphan profile(s) from auth`);
   await backfillMissingReferralCodes();

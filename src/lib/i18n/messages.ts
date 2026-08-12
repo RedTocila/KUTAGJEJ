@@ -572,6 +572,13 @@ const sq = {
     attachImages: 'Bashkëngjit foto',
     attachHint: 'AI lexon fotot për të njohur produktin; shkruaj në tekst detaje shtesë',
     removeImage: 'Hiq',
+    dailyLimitReached: 'Ke arritur limitin ditor të AI Build. Provo nesër ose përmirëso paketën.',
+    dailyLimitFree: 'Paketa falas: 1 AI Build në ditë. Provo nesër ose zgjidh Starter / Grow / Elite.',
+    dailyLimitStarter: 'Starter: 10 AI Build në ditë. Provo nesër ose përmirëso në Grow / Elite për pa limit.',
+    quotaRemaining: (remaining: number, limit: number) =>
+      `${remaining} nga ${limit} AI Build sot`,
+    quotaUnlimited: 'AI Build pa limit',
+    upgradeForMore: 'Shiko paketat',
   },
   language: {
     title: 'Gjuha',
@@ -1203,6 +1210,13 @@ const en: AppMessages = {
     attachImages: 'Attach photos',
     attachHint: 'AI reads photos to identify the product; add extra details in the text',
     removeImage: 'Remove',
+    dailyLimitReached: 'You’ve reached today’s AI Build limit. Try again tomorrow or upgrade your plan.',
+    dailyLimitFree: 'Free plan: 1 AI Build per day. Try again tomorrow or choose Starter / Grow / Elite.',
+    dailyLimitStarter: 'Starter: 10 AI Builds per day. Try again tomorrow or upgrade to Grow / Elite for unlimited.',
+    quotaRemaining: (remaining: number, limit: number) =>
+      `${remaining} of ${limit} AI Builds left today`,
+    quotaUnlimited: 'Unlimited AI Build',
+    upgradeForMore: 'View packages',
   },
   language: {
     title: 'Language',

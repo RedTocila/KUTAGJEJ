@@ -48,7 +48,7 @@ export function UserReferredUsersView() {
     void load();
   }, [user, canView, router, load]);
 
-  if (!user || !canView) return null;
+  if (user && !canView) return null;
 
   return (
     <Stack spacing={1.75} sx={{ maxWidth: 720, mx: 'auto', width: '100%' }}>

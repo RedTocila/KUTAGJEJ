@@ -127,7 +127,6 @@ export function PublicHeader() {
                 showWordmark
                 wordmarkPresentation="brand"
                 wordmarkLayout="stacked"
-                sx={{ gap: '0.5px' }}
                 imgSx={{ height: { xs: 52, md: 62 }, width: 'auto' }}
                 wordmarkSx={{
                   fontSize: { xs: '1.05rem', md: '1.22rem' },

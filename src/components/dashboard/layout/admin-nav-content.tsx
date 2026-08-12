@@ -4,14 +4,12 @@ import * as React from 'react';
 import RouterLink from 'next/link';
 import {
   Box,
-  Collapse,
   InputAdornment,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
-import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 
 import type { NavItemConfig, NavSectionConfig } from '@/types/nav';
@@ -33,17 +31,20 @@ export function useAdminNavSections(): NavSectionConfig[] {
   );
 }
 
+function itemMatchesQuery(item: NavItemConfig, sectionTitle: string | null | undefined, q: string): boolean {
+  const title = (item.title ?? '').toLowerCase();
+  const section = (sectionTitle ?? '').toLowerCase();
+  if (title.includes(q) || section.includes(q)) return true;
+  return Boolean(item.subItems?.some((child) => itemMatchesQuery(child, sectionTitle, q)));
+}
+
 function filterSections(sections: NavSectionConfig[], query: string): NavSectionConfig[] {
   const q = query.trim().toLowerCase();
   if (!q) return sections;
   return sections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => {
-        const title = (item.title ?? '').toLowerCase();
-        const sectionTitle = (section.title ?? '').toLowerCase();
-        return title.includes(q) || sectionTitle.includes(q);
-      }),
+      items: section.items.filter((item) => itemMatchesQuery(item, section.title, q)),
     }))
     .filter((section) => section.items.length > 0);
 }
@@ -157,7 +158,6 @@ function NavItem({
   subItems,
   onNavigate,
 }: NavItemProps) {
-  const [open, setOpen] = React.useState(false);
   const hasChildren = Boolean(subItems && subItems.length > 0);
 
   const isChildActive =
@@ -172,18 +172,15 @@ function NavItem({
       }),
     );
 
-  React.useEffect(() => {
-    if (isChildActive) setOpen(true);
-  }, [isChildActive]);
-
   const active = isNavItemActive({ disabled, external, href, matcher, pathname }) || isChildActive;
   const IconComponent: React.ElementType | null = icon ? navIcons[icon] : null;
   const leafActive = active && !hasChildren;
+  const isLink = Boolean(href) && !disabled;
 
   return (
     <Box component="li" sx={{ display: 'block', listStyle: 'none' }}>
       <Box
-        {...(!hasChildren && href
+        {...(isLink
           ? {
               component: external ? 'a' : RouterLink,
               href,
@@ -193,15 +190,12 @@ function NavItem({
             }
           : {
               role: 'button',
-              onClick: () => {
-                if (hasChildren) setOpen((v) => !v);
-              },
             })}
         sx={{
           alignItems: 'center',
           borderRadius: 1.5,
-          color: leafActive ? 'primary.main' : 'text.secondary',
-          cursor: disabled ? 'not-allowed' : 'pointer',
+          color: leafActive || (active && hasChildren) ? 'primary.main' : 'text.secondary',
+          cursor: disabled ? 'not-allowed' : isLink ? 'pointer' : 'default',
           display: 'flex',
           gap: 1.25,
           px: 1.25,
@@ -213,12 +207,11 @@ function NavItem({
           bgcolor: leafActive ? primaryMainAlpha(0.12) : 'transparent',
           fontWeight: leafActive || hasChildren ? 700 : 500,
           ...(disabled && { opacity: 0.45 }),
-          ...(active && hasChildren && { color: 'primary.main' }),
           '&:hover': {
             bgcolor: leafActive ? primaryMainAlpha(0.16) : 'action.hover',
-            color: leafActive ? 'primary.main' : 'text.primary',
+            color: leafActive || isLink ? 'primary.main' : 'text.primary',
           },
-          '&:active': { transform: disabled ? undefined : 'scale(0.99)' },
+          '&:active': { transform: disabled || !isLink ? undefined : 'scale(0.99)' },
         }}
       >
         <Box
@@ -254,37 +247,35 @@ function NavItem({
             {title}
           </Typography>
         </Box>
-        {hasChildren
-          ? open
-            ? React.createElement(CaretDownIcon, { fontSize: 'var(--icon-fontSize-sm)' })
-            : React.createElement(CaretRightIcon, { fontSize: 'var(--icon-fontSize-sm)' })
-          : null}
+        {hasChildren ? (
+          <Box sx={{ display: 'inline-flex', opacity: 0.45, color: 'inherit' }}>
+            {React.createElement(CaretDownIcon, { fontSize: 'var(--icon-fontSize-sm)' })}
+          </Box>
+        ) : null}
       </Box>
 
       {hasChildren ? (
-        <Collapse in={open} timeout="auto" unmountOnExit>
-          <Stack
-            component="ul"
-            spacing={0.25}
-            sx={{ listStyle: 'none', m: 0, p: 0, pl: 2.5, mt: 0.25, mb: 0.25 }}
-          >
-            {subItems!.map((child) => (
-              <NavItem
-                key={child.key}
-                itemKey={child.key}
-                pathname={pathname}
-                onNavigate={onNavigate}
-                disabled={child.disabled}
-                external={child.external}
-                href={child.href}
-                icon={child.icon}
-                matcher={child.matcher}
-                title={child.title}
-                subItems={child.subItems}
-              />
-            ))}
-          </Stack>
-        </Collapse>
+        <Stack
+          component="ul"
+          spacing={0.25}
+          sx={{ listStyle: 'none', m: 0, p: 0, pl: 2.5, mt: 0.25, mb: 0.25 }}
+        >
+          {subItems!.map((child) => (
+            <NavItem
+              key={child.key}
+              itemKey={child.key}
+              pathname={pathname}
+              onNavigate={onNavigate}
+              disabled={child.disabled}
+              external={child.external}
+              href={child.href}
+              icon={child.icon}
+              matcher={child.matcher}
+              title={child.title}
+              subItems={child.subItems}
+            />
+          ))}
+        </Stack>
       ) : null}
     </Box>
   );

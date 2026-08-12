@@ -20,6 +20,7 @@ import {
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
 
+import type { NavItemConfig } from '@/types/nav';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 
 import { useAdminNavSections } from './admin-nav-content';
@@ -47,21 +48,22 @@ export function AdminNavSearch({
 
   const flat = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    return sections.flatMap((section) =>
-      section.items
-        .filter((item) => {
-          if (!item.href || !item.title) return false;
-          if (!q) return true;
-          return (
+    const rows: Array<NavItemConfig & { sectionTitle: string }> = [];
+    for (const section of sections) {
+      const sectionTitle = section.title ?? 'Paneli';
+      const visit = (item: NavItemConfig) => {
+        if (item.href && item.title) {
+          const matches =
+            !q ||
             item.title.toLowerCase().includes(q) ||
-            (section.title ?? '').toLowerCase().includes(q)
-          );
-        })
-        .map((item) => ({
-          ...item,
-          sectionTitle: section.title ?? 'Paneli',
-        })),
-    );
+            sectionTitle.toLowerCase().includes(q);
+          if (matches) rows.push({ ...item, sectionTitle });
+        }
+        (item.subItems ?? []).forEach(visit);
+      };
+      section.items.forEach(visit);
+    }
+    return rows;
   }, [sections, query]);
 
   return (

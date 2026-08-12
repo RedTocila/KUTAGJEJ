@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Suspense, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { config } from '@/config';
 
@@ -10,9 +10,5 @@ export const metadata = {
 } satisfies Metadata;
 
 export default function UserDashboardLayout({ children }: { children: ReactNode }) {
-  return (
-    <Suspense fallback={null}>
-      <UserDashboardFrame>{children}</UserDashboardFrame>
-    </Suspense>
-  );
+  return <UserDashboardFrame>{children}</UserDashboardFrame>;
 }

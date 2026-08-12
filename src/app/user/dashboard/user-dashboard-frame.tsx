@@ -65,9 +65,23 @@ function DashboardHeaderRow({
   );
 }
 
+function MessageThreadSearchParams({
+  isMessages,
+  onUrlThreadOpen,
+}: {
+  isMessages: boolean;
+  onUrlThreadOpen: (open: boolean) => void;
+}) {
+  const searchParams = useSearchParams();
+  const open = isMessages && Boolean(searchParams.get('c'));
+  React.useLayoutEffect(() => {
+    onUrlThreadOpen(open);
+  }, [open, onUrlThreadOpen]);
+  return null;
+}
+
 export function UserDashboardFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const isDashboardHome = pathname === paths.user.dashboard;
   const isMessages = pathMatches(pathname, paths.user.messages);
   const isSavedListings = pathMatches(pathname, paths.user.savedListings);
@@ -75,9 +89,12 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
   const showFrameClose =
     pathname === paths.user.businessesListing ||
     pathname === paths.user.professionalsListing;
-  const urlThreadOpen = isMessages && Boolean(searchParams.get('c'));
+  const [urlThreadOpen, setUrlThreadOpen] = React.useState(false);
   /** Optimistic override from the messages view (back / open) before URL catches up. */
   const [threadUiOpen, setThreadUiOpen] = React.useState<boolean | null>(null);
+  const onUrlThreadOpen = React.useCallback((open: boolean) => {
+    setUrlThreadOpen(open);
+  }, []);
 
   React.useEffect(() => {
     setThreadUiOpen(null);
@@ -96,6 +113,9 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
       <AddListingPickerProvider>
         <OwnerEditHeaderActionsProvider>
           <MessagesThreadChromeProvider setThreadUiOpen={setThreadUiOpen}>
+            <React.Suspense fallback={null}>
+              <MessageThreadSearchParams isMessages={isMessages} onUrlThreadOpen={onUrlThreadOpen} />
+            </React.Suspense>
             <UserDashboardFrameInner
               showMobileBottomNav={showMobileBottomNav}
               showBackLink={showBackLink}
@@ -127,7 +147,6 @@ function UserDashboardFrameInner({
   isMessages: boolean;
   showFrameClose: boolean;
 }) {
-  const pathname = usePathname();
   const addListingPicker = useOptionalAddListingPicker();
   const hideChromeForPicker = Boolean(addListingPicker?.addListingPickerOpen);
 
@@ -205,8 +224,6 @@ function UserDashboardFrameInner({
                     isMessages={isMessages}
                   />
                   <Box
-                    key={pathname}
-                    className="kutagjej-fade"
                     sx={{
                       flex: isMessages ? { xs: '1 1 auto', md: '0 1 auto' } : undefined,
                       minHeight: 0,

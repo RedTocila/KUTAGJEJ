@@ -105,6 +105,10 @@ export function BrandLogo({
         objectFit: 'contain',
         display: 'block',
         flexShrink: 0,
+        // Square mark PNG has ~12% transparent padding; pull the wordmark in.
+        ...(showWordmark && !markSx
+          ? { mr: stacked ? { xs: -0.75, md: -1.25 } : -0.75 }
+          : null),
         ...imgSx,
       }}
     />
@@ -115,7 +119,7 @@ export function BrandLogo({
       sx={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 1.5,
+        gap: showWordmark ? (stacked ? 0 : 0.75) : 1.5,
         textDecoration: 'none',
         color: 'inherit',
         '&, & *': { textDecoration: 'none' },

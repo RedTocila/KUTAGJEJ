@@ -55,6 +55,13 @@ export const navSections = [
         icon: 'map-pin',
         platformAdminOnly: true,
       },
+      {
+        key: 'account-verification',
+        title: 'Verifikimi',
+        href: paths.dashboard.accountVerification,
+        icon: 'shield-check',
+        platformAdminOnly: true,
+      },
     ],
   },
   {
@@ -73,26 +80,6 @@ export const navSections = [
         title: 'Rolet',
         href: paths.dashboard.roles,
         icon: 'shield',
-        platformAdminOnly: true,
-      },
-    ],
-  },
-  {
-    key: 'verifications',
-    title: 'Verifikimet',
-    items: [
-      {
-        key: 'job-employer-verification',
-        title: 'Punëdhënësit',
-        href: paths.dashboard.jobEmployerVerification,
-        icon: 'shield-check',
-        platformAdminOnly: true,
-      },
-      {
-        key: 'professional-verification',
-        title: 'Profesionistët',
-        href: paths.dashboard.professionalVerification,
-        icon: 'user-check',
         platformAdminOnly: true,
       },
     ],
@@ -157,9 +144,13 @@ export const navSections = [
   },
 ] as const satisfies readonly NavSectionConfig[];
 
+function flattenNavItems(items: NavItemConfig[]): NavItemConfig[] {
+  return items.flatMap((item) => [item, ...(item.subItems ? flattenNavItems(item.subItems) : [])]);
+}
+
 /** Flat list (legacy / search). */
-export const navItems: NavItemConfig[] = (navSections as readonly NavSectionConfig[]).flatMap(
-  (section) => section.items,
+export const navItems: NavItemConfig[] = flattenNavItems(
+  (navSections as readonly NavSectionConfig[]).flatMap((section) => section.items),
 );
 
 function isPlatformAdminAccount(accountType?: AccountType, legacyAdminRole?: boolean): boolean {
@@ -167,10 +158,15 @@ function isPlatformAdminAccount(accountType?: AccountType, legacyAdminRole?: boo
 }
 
 function filterItems(items: NavItemConfig[], isPlatformAdmin: boolean): NavItemConfig[] {
-  return items.filter((item) => {
-    if (item.platformAdminOnly && !isPlatformAdmin) return false;
-    return true;
-  });
+  return items
+    .map((item) => ({
+      ...item,
+      subItems: item.subItems ? filterItems(item.subItems, isPlatformAdmin) : undefined,
+    }))
+    .filter((item) => {
+      if (item.platformAdminOnly && !isPlatformAdmin) return false;
+      return true;
+    });
 }
 
 /** Platform admin = Admin collection (`accountType`) or legacy JWT without `accountType` but `role === 'admin'`. */

@@ -119,7 +119,7 @@ export function UserReferralView() {
     setPublicOrigin(getPublicSiteOrigin());
   }, []);
 
-  if (!user || !canView) return null;
+  if (user && !canView) return null;
 
   const inviteLink = stats
     ? `${publicOrigin}/user/auth?ref=${encodeURIComponent(stats.code)}`

@@ -78,6 +78,12 @@ export const paths = {
     roles: '/dashboard/rolet',
     /** Category slugs + listing types per vertical (platform admin only). */
     kategorite: '/dashboard/kategorite',
+    /** One account-verification queue (jobs + professionals). */
+    accountVerification: '/dashboard/kategorite/verifikimi',
+    /** @deprecated Use accountVerification. */
+    jobEmployerVerification: '/dashboard/kategorite/verifikimi',
+    /** @deprecated Use accountVerification. */
+    professionalVerification: '/dashboard/kategorite/verifikimi',
     /** Cities & zones for real-estate listings (platform admin only). */
     realEstateLocations: '/dashboard/vendndodhjet-pasurie',
     /** Contracts linked to catalog roles (platform admin only). */
@@ -90,9 +96,6 @@ export const paths = {
     referral: '/dashboard/referral',
     /** Admin view: who referred whom, credits awarded. */
     referralTracking: '/dashboard/referral-tracking',
-    /** Punë — employer verification requests (platform admin). */
-    jobEmployerVerification: '/dashboard/verifikimet-pune',
-    professionalVerification: '/dashboard/verifikimet-profesioniste',
     /** Listing moderation queue (platform admin). */
     listingModeration: '/dashboard/njoftimet',
     /** Homepage hero carousel banners (platform admin). */

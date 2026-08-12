@@ -124,9 +124,11 @@ export function StickyListingCtaSlot({
         ref={slotRef}
         sx={{
           display: displaySx,
+          flexDirection: 'column',
           width: '100%',
           minHeight: slotMinHeight,
           alignItems: 'stretch',
+          '& > *': { width: '100%', maxWidth: '100%' },
         }}
       >
         {stuck ? null : children}

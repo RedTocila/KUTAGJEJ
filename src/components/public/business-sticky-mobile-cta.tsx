@@ -56,6 +56,7 @@ export function BusinessStickyMobileCta({
   const reserveAccordion = (
     <BusinessReservationPanel
       {...reservationPanel}
+      primaryCta
       onOpenChange={(next) => {
         if (next) emitHotLeadContactAction({ listingKind: 'businesses', listingId });
         reservationPanel.onOpenChange(next);

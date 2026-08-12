@@ -54,6 +54,8 @@ export type BusinessReservationPanelProps = {
   reserveSubmitting: boolean;
   onReserve: () => void;
   telHref: string | null;
+  /** Pill-style header matching the Kontakto sticky CTA (mobile primary reserve). */
+  primaryCta?: boolean;
   panelRef?: React.Ref<HTMLDivElement>;
   bodyFontSize?: string;
   captionFontSize?: string;
@@ -175,15 +177,27 @@ export function BusinessReservationPanel({
   panelRef,
   bodyFontSize,
   captionFontSize,
+  primaryCta = false,
   ...formProps
 }: BusinessReservationPanelProps) {
   return (
     <Box
       ref={panelRef}
       sx={{
-        ...surfaceSx,
-        p: 0,
-        overflow: 'hidden',
+        ...(primaryCta && !open
+          ? {
+              width: '100%',
+              maxWidth: '100%',
+              borderRadius: 999,
+              overflow: 'hidden',
+            }
+          : {
+              ...surfaceSx,
+              width: '100%',
+              maxWidth: '100%',
+              p: 0,
+              overflow: 'hidden',
+            }),
       }}
     >
       <ButtonBase
@@ -195,9 +209,11 @@ export function BusinessReservationPanel({
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 1.5,
-          px: 2,
-          py: 1.5,
+          px: primaryCta && !open ? 3.25 : 2,
+          py: primaryCta && !open ? 0 : 1.5,
+          minHeight: primaryCta && !open ? 52 : undefined,
           textAlign: 'left',
+          borderRadius: primaryCta && !open ? 999 : 0,
           bgcolor: open ? 'transparent' : 'primary.main',
           color: open ? 'text.primary' : 'primary.contrastText',
           transition: 'background-color 0.15s ease, color 0.15s ease',

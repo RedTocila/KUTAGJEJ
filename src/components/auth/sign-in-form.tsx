@@ -131,56 +131,58 @@ export function SignInForm() {
               </FormControl>
             )}
           />
-          <Controller
-            control={control}
-            name="password"
-            render={(props: ControllerRenderArgs<'password'>) => (
-              <FormControl error={Boolean(errors.password)} fullWidth>
-                <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.password))}>
-                  Fjalëkalimi
-                </Typography>
-                <OutlinedInput
-                  {...props.field}
-                  placeholder="••••••••"
-                  type={showPassword ? 'text' : 'password'}
-                  sx={outlinedFieldSx}
-                  {...passwordInputDisableSuggestions}
-                  endAdornment={
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label={showPassword ? 'Fshih fjalëkalimin' : 'Shfaq fjalëkalimin'}
-                        edge="end"
-                        onClick={() => setShowPassword(!showPassword)}
-                        sx={{ color: 'text.secondary' }}
-                      >
-                        {showPassword ? <EyeIcon size={20} /> : <EyeSlashIcon size={20} />}
-                      </IconButton>
-                    </InputAdornment>
-                  }
+          <Stack spacing={0.75}>
+            <Controller
+              control={control}
+              name="password"
+              render={(props: ControllerRenderArgs<'password'>) => (
+                <FormControl error={Boolean(errors.password)} fullWidth>
+                  <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.password))}>
+                    Fjalëkalimi
+                  </Typography>
+                  <OutlinedInput
+                    {...props.field}
+                    placeholder="••••••••"
+                    type={showPassword ? 'text' : 'password'}
+                    sx={outlinedFieldSx}
+                    {...passwordInputDisableSuggestions}
+                    endAdornment={
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label={showPassword ? 'Fshih fjalëkalimin' : 'Shfaq fjalëkalimin'}
+                          edge="end"
+                          onClick={() => setShowPassword(!showPassword)}
+                          sx={{ color: 'text.secondary' }}
+                        >
+                          {showPassword ? <EyeIcon size={20} /> : <EyeSlashIcon size={20} />}
+                        </IconButton>
+                      </InputAdornment>
+                    }
+                  />
+                  {errors.password ? <FormHelperText>{errors.password.message}</FormHelperText> : null}
+                </FormControl>
+              )}
+            />
+            <FormControlLabel
+              sx={{
+                mx: 0,
+                alignItems: 'center',
+                '& .MuiFormControlLabel-label': {
+                  color: 'text.secondary',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                },
+              }}
+              control={
+                <Checkbox
+                  checked={rememberLogin}
+                  onChange={(event) => setRememberLogin(event.target.checked)}
+                  sx={{ py: 0.25, mt: -0.25 }}
                 />
-                {errors.password ? <FormHelperText>{errors.password.message}</FormHelperText> : null}
-              </FormControl>
-            )}
-          />
-          <FormControlLabel
-            sx={{
-              mx: 0,
-              alignItems: 'center',
-              '& .MuiFormControlLabel-label': {
-                color: 'text.secondary',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-              },
-            }}
-            control={
-              <Checkbox
-                checked={rememberLogin}
-                onChange={(event) => setRememberLogin(event.target.checked)}
-                sx={{ mt: -0.25 }}
-              />
-            }
-            label="Ruaj hyrjen"
-          />
+              }
+              label="Ruaj hyrjen"
+            />
+          </Stack>
           <Button
             disabled={isPending}
             type="submit"

@@ -173,6 +173,7 @@ export function MemberProfileView({
   const [reviewsOpen, setReviewsOpen] = React.useState(false);
   const [viewerHasReviewed, setViewerHasReviewed] = React.useState(false);
   const [liveBadges, setLiveBadges] = React.useState<PublicMemberReferralBadge[] | null>(null);
+  const [badgesLoading, setBadgesLoading] = React.useState(true);
 
   const name = member.displayName?.trim() || 'Përdorues KuTaGjej';
   const initials = memberInitials(name);
@@ -189,13 +190,20 @@ export function MemberProfileView({
   );
 
   React.useEffect(() => {
-    if (!memberId) return;
+    if (!memberId) {
+      setBadgesLoading(false);
+      return;
+    }
     let cancelled = false;
+    setBadgesLoading(true);
     void clientFetch<{ badges?: PublicMemberReferralBadge[] }>(
       `/public/members/${encodeURIComponent(memberId)}`,
     ).then((res) => {
-      if (cancelled || !res.ok) return;
-      setLiveBadges(Array.isArray(res.data?.badges) ? res.data.badges : []);
+      if (cancelled) return;
+      if (res.ok) {
+        setLiveBadges(Array.isArray(res.data?.badges) ? res.data.badges : []);
+      }
+      setBadgesLoading(false);
     });
     return () => {
       cancelled = true;
@@ -409,7 +417,21 @@ export function MemberProfileView({
                   </ButtonBase>
                 </Stack>
 
-                {displayBadges.length > 0 ? (
+                {badgesLoading ? (
+                  <Box
+                    sx={{
+                      width: '100%',
+                      pt: 0.25,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      py: 1.5,
+                    }}
+                    aria-busy
+                    aria-label="Duke ngarkuar badges"
+                  >
+                    <CircularProgress size={28} />
+                  </Box>
+                ) : displayBadges.length > 0 ? (
                   <Box sx={{ width: '100%', pt: 0.25 }}>
                     <Typography
                       variant="caption"

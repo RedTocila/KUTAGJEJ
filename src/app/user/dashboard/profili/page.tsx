@@ -105,6 +105,7 @@ export default function UserProfilePage() {
   /** Grow / Elite Premium Badge — same gate as public profile & listing titles. */
   const [showPremiumBadge, setShowPremiumBadge] = React.useState(false);
   const [referralBadges, setReferralBadges] = React.useState<PublicMemberReferralBadge[]>([]);
+  const [referralBadgesLoading, setReferralBadgesLoading] = React.useState(true);
 
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
@@ -178,14 +179,17 @@ export default function UserProfilePage() {
   React.useEffect(() => {
     if (!user?.id) {
       setReferralBadges([]);
+      setReferralBadgesLoading(false);
       return;
     }
     let cancelled = false;
+    setReferralBadgesLoading(true);
     void clientFetch<{ badges?: PublicMemberReferralBadge[] }>(
       `/public/members/${encodeURIComponent(user.id)}`,
     ).then((res) => {
       if (cancelled) return;
       setReferralBadges(mergeMemberReferralBadges(res.ok ? res.data?.badges : null));
+      setReferralBadgesLoading(false);
     });
     return () => {
       cancelled = true;
@@ -510,7 +514,21 @@ export default function UserProfilePage() {
               ) : null}
             </Stack>
 
-            {referralBadges.length > 0 ? (
+            {referralBadgesLoading ? (
+              <Box
+                sx={{
+                  width: '100%',
+                  pt: 0.5,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  py: 1.5,
+                }}
+                aria-busy
+                aria-label="Duke ngarkuar badges"
+              >
+                <CircularProgress size={28} />
+              </Box>
+            ) : referralBadges.length > 0 ? (
               <Box sx={{ width: '100%', pt: 0.5 }}>
                 <Typography
                   variant="caption"

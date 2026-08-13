@@ -284,57 +284,59 @@ function SignInFields({
           </FormControl>
         )}
       />
-      <Controller
-        control={control}
-        name="password"
-        render={({ field }) => (
-          <FormControl error={Boolean(errors.password)} fullWidth>
-            <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.password))}>
-              {t.auth.password}
-            </Typography>
-            <OutlinedInput
-              {...field}
-              id="signin-password"
-              placeholder="••••••••"
-              type={showPassword ? 'text' : 'password'}
-              sx={outlinedFieldSx}
-              {...passwordInputDisableSuggestions}
-              endAdornment={
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
-                    edge="end"
-                    onClick={() => setShowPassword(!showPassword)}
-                    sx={{ color: 'text.secondary' }}
-                  >
-                    {showPassword ? <EyeIcon size={20} /> : <EyeSlashIcon size={20} />}
-                  </IconButton>
-                </InputAdornment>
-              }
+      <Stack spacing={0.75}>
+        <Controller
+          control={control}
+          name="password"
+          render={({ field }) => (
+            <FormControl error={Boolean(errors.password)} fullWidth>
+              <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.password))}>
+                {t.auth.password}
+              </Typography>
+              <OutlinedInput
+                {...field}
+                id="signin-password"
+                placeholder="••••••••"
+                type={showPassword ? 'text' : 'password'}
+                sx={outlinedFieldSx}
+                {...passwordInputDisableSuggestions}
+                endAdornment={
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
+                      edge="end"
+                      onClick={() => setShowPassword(!showPassword)}
+                      sx={{ color: 'text.secondary' }}
+                    >
+                      {showPassword ? <EyeIcon size={20} /> : <EyeSlashIcon size={20} />}
+                    </IconButton>
+                  </InputAdornment>
+                }
+              />
+              {errors.password ? <FormHelperText>{errors.password.message}</FormHelperText> : null}
+            </FormControl>
+          )}
+        />
+        <FormControlLabel
+          sx={{
+            mx: 0,
+            alignItems: 'center',
+            '& .MuiFormControlLabel-label': {
+              color: 'text.secondary',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+            },
+          }}
+          control={
+            <Checkbox
+              checked={rememberLogin}
+              onChange={(event) => setRememberLogin(event.target.checked)}
+              sx={{ py: 0.25, mt: -0.25 }}
             />
-            {errors.password ? <FormHelperText>{errors.password.message}</FormHelperText> : null}
-          </FormControl>
-        )}
-      />
-      <FormControlLabel
-        sx={{
-          mx: 0,
-          alignItems: 'center',
-          '& .MuiFormControlLabel-label': {
-            color: 'text.secondary',
-            fontSize: '0.875rem',
-            fontWeight: 600,
-          },
-        }}
-        control={
-          <Checkbox
-            checked={rememberLogin}
-            onChange={(event) => setRememberLogin(event.target.checked)}
-            sx={{ mt: -0.25 }}
-          />
-        }
-        label={t.auth.rememberLogin}
-      />
+          }
+          label={t.auth.rememberLogin}
+        />
+      </Stack>
     </Stack>
   );
 }

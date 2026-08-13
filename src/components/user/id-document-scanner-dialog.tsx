@@ -3,24 +3,27 @@
 import * as React from 'react';
 import {
   Box,
+  Button,
   CircularProgress,
   Dialog,
   IconButton,
   LinearProgress,
+  Stack,
   Typography,
 } from '@mui/material';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import {
   computeCardGuide,
-  evaluateScanQuality,
+  evaluateFrameReady,
   ID_CARD_ASPECT,
   mapGuideToVideoCrop,
   type CardGuideRect,
 } from '@/lib/id-document-scan-quality';
 
-const ANALYSIS_INTERVAL_MS = 160;
-const STABLE_READABLE_FRAMES = 9;
+const ANALYSIS_INTERVAL_MS = 180;
+/** Short hold — card in frame is enough; hand movement is OK. */
+const READY_FRAMES = 3;
 
 export interface IdDocumentScannerDialogProps {
   open: boolean;
@@ -30,15 +33,38 @@ export interface IdDocumentScannerDialogProps {
 
 type ScanPhase = 'starting' | 'scanning' | 'capturing' | 'error';
 
-function statusMessage(quality: ReturnType<typeof evaluateScanQuality> | null, stableCount: number): string {
-  if (!quality) return 'Duke hapur kamerën…';
-  if (quality.brightness < 72) return 'Shtoni më shumë dritë mbi ID-në';
-  if (quality.brightness > 228) return 'Shumë dritë — shmangni shkëlqimin';
-  if (quality.contrast < 28) return 'Afrojeni ID-në brenda kornizës';
-  if (quality.sharpness < 95) return 'Mbajeni telefonin të qetë — fokusoni detajet';
-  if (quality.motion > 11) return 'Mbajeni të palëvizshme për skanim automatik';
-  if (stableCount >= STABLE_READABLE_FRAMES - 2) return 'Detajet janë të lexueshme — skanim…';
-  return 'Detajet duken mirë — mbajeni të qetë';
+function statusMessage(ready: boolean, stableCount: number): string {
+  if (!ready) return 'Vendoseni ID-në brenda kornizës';
+  if (stableCount >= READY_FRAMES - 1) return 'Duke skanuar…';
+  return 'Mbajeni kartën brenda kornizës';
+}
+
+async function openCameraStream(): Promise<MediaStream> {
+  const attempts: MediaStreamConstraints[] = [
+    {
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
+      audio: false,
+    },
+    {
+      video: { facingMode: { ideal: 'environment' } },
+      audio: false,
+    },
+    { video: true, audio: false },
+  ];
+
+  let lastErr: unknown;
+  for (const constraints of attempts) {
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr;
 }
 
 export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocumentScannerDialogProps) {
@@ -47,7 +73,6 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
   const streamRef = React.useRef<MediaStream | null>(null);
   const analysisCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const captureCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
-  const prevFrameRef = React.useRef<ImageData | null>(null);
   const stableCountRef = React.useRef(0);
   const capturingRef = React.useRef(false);
   const guideRef = React.useRef<CardGuideRect | null>(null);
@@ -75,7 +100,6 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
     }
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
-    prevFrameRef.current = null;
     stableCountRef.current = 0;
     capturingRef.current = false;
   }, [stopAnalysis]);
@@ -148,7 +172,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
     guideRef.current = cardGuide;
     setGuide(cardGuide);
 
-    const sampleW = 240;
+    const sampleW = 200;
     const sampleH = Math.max(40, Math.round(sampleW / ID_CARD_ASPECT));
     const canvas = analysisCanvasRef.current ?? document.createElement('canvas');
     analysisCanvasRef.current = canvas;
@@ -167,21 +191,19 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
     if (!ctx) return;
 
     ctx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, sampleW, sampleH);
-    const imageData = ctx.getImageData(0, 0, sampleW, sampleH);
-    const quality = evaluateScanQuality(imageData, prevFrameRef.current);
-    prevFrameRef.current = imageData;
+    const sample = evaluateFrameReady(ctx.getImageData(0, 0, sampleW, sampleH));
 
-    if (quality.readable) {
+    if (sample.inFrame) {
       stableCountRef.current += 1;
     } else {
-      stableCountRef.current = 0;
+      stableCountRef.current = Math.max(0, stableCountRef.current - 1);
     }
 
-    setProgress(Math.min(100, Math.round((stableCountRef.current / STABLE_READABLE_FRAMES) * 100)));
-    setQualityHint(statusMessage(quality, stableCountRef.current));
+    setProgress(Math.min(100, Math.round((stableCountRef.current / READY_FRAMES) * 100)));
+    setQualityHint(statusMessage(sample.inFrame, stableCountRef.current));
     setPhase('scanning');
 
-    if (stableCountRef.current >= STABLE_READABLE_FRAMES) {
+    if (stableCountRef.current >= READY_FRAMES) {
       void captureFromGuide();
     }
   }, [captureFromGuide]);
@@ -213,14 +235,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
       }
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-          },
-          audio: false,
-        });
+        const stream = await openCameraStream();
         if (cancelled) {
           for (const track of stream.getTracks()) track.stop();
           return;
@@ -270,26 +285,6 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
         },
       }}
     >
-      <IconButton
-        type="button"
-        onClick={handleClose}
-        disabled={phase === 'capturing'}
-        aria-label="Mbyll skanerin"
-        sx={{
-          position: 'fixed',
-          top: 'max(12px, env(safe-area-inset-top))',
-          right: 'max(12px, env(safe-area-inset-right))',
-          zIndex: 4,
-          width: 44,
-          height: 44,
-          color: '#fff',
-          bgcolor: 'rgba(255,255,255,0.12)',
-          '&:hover': { bgcolor: 'rgba(255,255,255,0.22)', color: '#fff' },
-        }}
-      >
-        <XIcon size={22} weight="bold" />
-      </IconButton>
-
       <Box
         ref={containerRef}
         sx={{
@@ -312,6 +307,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
             width: '100%',
             height: '100%',
             objectFit: 'cover',
+            pointerEvents: 'none',
           }}
         />
 
@@ -329,7 +325,8 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
               borderColor,
               boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)',
               transition: 'border-color 0.25s ease',
-              zIndex: 3,
+              zIndex: 1,
+              pointerEvents: 'none',
             }}
           />
         ) : null}
@@ -340,17 +337,19 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
             left: 0,
             right: 0,
             top: 'max(16px, env(safe-area-inset-top))',
-            zIndex: 4,
+            zIndex: 2,
             px: 2,
-            pt: 6,
+            pt: 7,
+            pr: 8,
             textAlign: 'center',
+            pointerEvents: 'none',
           }}
         >
           <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 800 }}>
             Skano pjesën e përparme të ID-së
           </Typography>
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.82)', mt: 0.75, fontWeight: 600 }}>
-            Vendoseni kartën brenda kornizës. Skanimi bëhet vetë kur detajet janë të lexueshme.
+            Vendoseni kartën brenda kornizës. Skanimi bëhet automatikisht.
           </Typography>
         </Box>
 
@@ -360,9 +359,10 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
             left: 0,
             right: 0,
             bottom: 'max(20px, env(safe-area-inset-bottom))',
-            zIndex: 4,
+            zIndex: 2,
             px: 2.5,
             pb: 1,
+            pointerEvents: 'none',
           }}
         >
           {phase === 'capturing' ? (
@@ -370,9 +370,14 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
               <CircularProgress size={36} sx={{ color: 'primary.main' }} />
             </Box>
           ) : error ? (
-            <Typography variant="body2" sx={{ color: '#ffb4ab', textAlign: 'center', fontWeight: 700 }}>
-              {error}
-            </Typography>
+            <Stack spacing={1.5} sx={{ alignItems: 'center', pointerEvents: 'auto' }}>
+              <Typography variant="body2" sx={{ color: '#ffb4ab', textAlign: 'center', fontWeight: 700 }}>
+                {error}
+              </Typography>
+              <Button variant="contained" onClick={handleClose} sx={{ fontWeight: 700 }}>
+                Mbyll
+              </Button>
+            </Stack>
           ) : (
             <>
               <Typography variant="body2" sx={{ color: '#fff', textAlign: 'center', fontWeight: 700, mb: 1.25 }}>
@@ -392,6 +397,33 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
           )}
         </Box>
       </Box>
+
+      <IconButton
+        type="button"
+        onClick={handleClose}
+        disabled={phase === 'capturing'}
+        aria-label="Mbyll skanerin"
+        sx={{
+          position: 'fixed',
+          top: 'max(10px, env(safe-area-inset-top))',
+          right: 'max(10px, env(safe-area-inset-right))',
+          zIndex: 9999,
+          width: 48,
+          height: 48,
+          minWidth: 48,
+          minHeight: 48,
+          color: '#fff',
+          bgcolor: 'rgba(0,0,0,0.55)',
+          border: '1px solid rgba(255,255,255,0.28)',
+          touchAction: 'manipulation',
+          WebkitTapHighlightColor: 'transparent',
+          pointerEvents: 'auto',
+          '&:hover': { bgcolor: 'rgba(0,0,0,0.72)', color: '#fff' },
+          '&:active': { bgcolor: 'rgba(0,0,0,0.85)' },
+        }}
+      >
+        <XIcon size={24} weight="bold" />
+      </IconButton>
     </Dialog>
   );
 }

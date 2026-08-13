@@ -13,8 +13,8 @@ import {
 import { IdentificationCard as IdCardIcon } from '@phosphor-icons/react/dist/ssr/IdentificationCard';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 
-import { useUser } from '@/hooks/use-user';
 import { IdDocumentScannerDialog } from '@/components/user/id-document-scanner-dialog';
+import { useUser } from '@/hooks/use-user';
 import {
   fetchProfessionalVerificationStatus,
   submitProfessionalVerificationRequest,
@@ -23,17 +23,23 @@ import {
 } from '@/lib/professional-verification-client';
 import { uploadListingImages } from '@/lib/uploads-client';
 
+const EMPTY_STATUS: ProfessionalVerificationStatus = {
+  verified: false,
+  canRequest: true,
+  latestRequest: null,
+};
+
 export function AccountVerificationCard() {
   const { user } = useUser();
   const isBusiness = Boolean(user && (user.accountType === 'business' || user.role === 'business-user'));
 
-  const [status, setStatus] = React.useState<ProfessionalVerificationStatus | null>(null);
+  const [status, setStatus] = React.useState<ProfessionalVerificationStatus>(EMPTY_STATUS);
+  const [statusReady, setStatusReady] = React.useState(false);
   const [idNumber, setIdNumber] = React.useState('');
   const [nipt, setNipt] = React.useState('');
   const [idFrontPreview, setIdFrontPreview] = React.useState<string | null>(null);
   const [idFrontFile, setIdFrontFile] = React.useState<File | null>(null);
   const [message, setMessage] = React.useState('');
-  const [loading, setLoading] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
@@ -46,12 +52,14 @@ export function AccountVerificationCard() {
   }, [isBusiness, user?.nipt]);
 
   const refresh = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
     const res = await fetchProfessionalVerificationStatus();
-    if (res.error) setError(res.error);
-    else setStatus(res.status ?? null);
-    setLoading(false);
+    if (res.error) {
+      setError(res.error);
+    } else if (res.status) {
+      setStatus(res.status);
+      setError(null);
+    }
+    setStatusReady(true);
   }, []);
 
   React.useEffect(() => {
@@ -69,6 +77,11 @@ export function AccountVerificationCard() {
     if (idFrontPreview?.startsWith('blob:')) URL.revokeObjectURL(idFrontPreview);
     setIdFrontFile(file);
     setIdFrontPreview(previewUrl);
+    setScannerOpen(false);
+  };
+
+  const handleScannerClose = () => {
+    setScannerOpen(false);
   };
 
   const resetForm = () => {
@@ -127,7 +140,8 @@ export function AccountVerificationCard() {
     setSubmitting(false);
   };
 
-  const latest: ProfessionalVerificationRequest | null = status?.latestRequest ?? null;
+  const latest: ProfessionalVerificationRequest | null = status.latestRequest ?? null;
+  const showForm = !status.verified && status.canRequest;
 
   return (
     <Stack spacing={2}>
@@ -136,23 +150,19 @@ export function AccountVerificationCard() {
         pjesën e përparme{isBusiness ? ', si dhe NIPT për llogaritë e biznesit' : ''}.
       </Typography>
 
-      {loading ? (
-        <Typography variant="body2" color="text.secondary">
-          Duke ngarkuar…
-        </Typography>
-      ) : null}
-
       {error ? <Alert severity="error">{error}</Alert> : null}
       {success ? <Alert severity="success">{success}</Alert> : null}
 
-      {status?.verified ? (
+      {status.verified ? (
         <Chip
           icon={<ShieldCheckIcon size={16} weight="fill" />}
           label="Llogaria e verifikuar"
           color="success"
           sx={{ alignSelf: 'flex-start', fontWeight: 700 }}
         />
-      ) : latest?.status === 'pending' ? (
+      ) : null}
+
+      {statusReady && latest?.status === 'pending' ? (
         <Alert severity="info">
           Kërkesa juaj është në pritje
           {latest.createdAt
@@ -160,14 +170,16 @@ export function AccountVerificationCard() {
             : ''}
           . Administratori do ta shqyrtojë së shpejti.
         </Alert>
-      ) : latest?.status === 'rejected' ? (
+      ) : null}
+
+      {statusReady && latest?.status === 'rejected' ? (
         <Alert severity="warning">
           Kërkesa e fundit u refuzua
           {latest.adminNote ? `: ${latest.adminNote}` : '.'} Mund të dërgoni një kërkesë të re.
         </Alert>
       ) : null}
 
-      {status && !status.verified && status.canRequest ? (
+      {showForm ? (
         <>
           <TextField
             label="Numri i ID-së"
@@ -241,12 +253,6 @@ export function AccountVerificationCard() {
             )}
           </Box>
 
-          <IdDocumentScannerDialog
-            open={scannerOpen}
-            onClose={() => setScannerOpen(false)}
-            onCapture={handleScanCapture}
-          />
-
           <TextField
             label="Mesazh për administratorin (opsional)"
             value={message}
@@ -267,6 +273,12 @@ export function AccountVerificationCard() {
           </Button>
         </>
       ) : null}
+
+      <IdDocumentScannerDialog
+        open={scannerOpen}
+        onClose={handleScannerClose}
+        onCapture={handleScanCapture}
+      />
     </Stack>
   );
 }

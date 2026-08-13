@@ -230,7 +230,7 @@ const TABLE_CATALOG = {
   },
   listing_engagements: {
     label: 'Angazhime njoftimesh',
-    select: 'listing_kind, listing_id, view_count, click_count, share_count',
+    select: 'listing_kind, listing_id, view_count, share_count',
     filterColumns: ['listing_kind', 'listing_id'],
     probe: 'listing_id',
   },

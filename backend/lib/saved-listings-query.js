@@ -168,7 +168,6 @@ async function listSavedListingsForSaver(saver, { page = 1, limit = 24 } = {}) {
         sellerVerified: Boolean(posterId && verifiedIds.has(posterId)),
         sellerTrustBadge: Boolean(posterId && trustIds.has(posterId)),
         viewCount: m.viewCount ?? 0,
-        clickCount: m.clickCount ?? 0,
         shareCount: m.shareCount ?? 0,
         saveCount: m.saveCount ?? 0,
         saved: true,

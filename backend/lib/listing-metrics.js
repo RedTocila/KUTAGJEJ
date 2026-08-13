@@ -23,7 +23,6 @@ const TABLE_BY_KIND = {
 
 const DEDUP_MS = {
   view: 30 * 60 * 1000,
-  click: 10 * 60 * 1000,
   hot_lead: 48 * 60 * 60 * 1000,
 };
 
@@ -85,7 +84,7 @@ function metricsKey(kind, listingId) {
 }
 
 function emptyMetrics() {
-  return { viewCount: 0, clickCount: 0, shareCount: 0, saveCount: 0 };
+  return { viewCount: 0, shareCount: 0, saveCount: 0 };
 }
 
 function isValidKind(kind) {
@@ -135,7 +134,6 @@ async function ensureEngagement(kind, listingId) {
   if (existing) {
     return {
       viewCount: existing.view_count ?? 0,
-      clickCount: existing.click_count ?? 0,
       shareCount: existing.share_count ?? 0,
     };
   }
@@ -163,7 +161,6 @@ async function ensureEngagement(kind, listingId) {
       if (error) throw error;
       return {
         viewCount: again?.view_count ?? 0,
-        clickCount: again?.click_count ?? 0,
         shareCount: again?.share_count ?? 0,
       };
     }
@@ -171,7 +168,6 @@ async function ensureEngagement(kind, listingId) {
   }
   return {
     viewCount: created.view_count ?? 0,
-    clickCount: created.click_count ?? 0,
     shareCount: created.share_count ?? 0,
   };
 }
@@ -238,7 +234,6 @@ async function fetchMetricsMap(refs, saver = null) {
       metricsKey(e.listing_kind, e.listing_id),
       {
         viewCount: e.view_count ?? 0,
-        clickCount: e.click_count ?? 0,
         shareCount: e.share_count ?? 0,
       },
     ]),
@@ -253,10 +248,9 @@ async function fetchMetricsMap(refs, saver = null) {
   const map = new Map();
   for (const r of valid) {
     const key = metricsKey(r.kind, r.listingId);
-    const base = engagementByKey.get(key) ?? { viewCount: 0, clickCount: 0, shareCount: 0 };
+    const base = engagementByKey.get(key) ?? { viewCount: 0, shareCount: 0 };
     const payload = {
       viewCount: base.viewCount,
-      clickCount: base.clickCount,
       shareCount: base.shareCount,
       saveCount: savesByKey.get(key) ?? 0,
     };
@@ -272,7 +266,6 @@ function attachMetricsToListing(listing, metricsMap, saver = null) {
   const out = {
     ...listing,
     viewCount: m.viewCount,
-    clickCount: m.clickCount,
     shareCount: m.shareCount,
     saveCount: m.saveCount,
   };
@@ -299,7 +292,7 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null 
   if (!isValidKind(kind) || !isUuid(listingId)) {
     return { ok: false, status: 400, message: 'Invalid listing.' };
   }
-  if (!['view', 'click', 'share', 'hot_lead'].includes(event)) {
+  if (!['view', 'share', 'hot_lead'].includes(event)) {
     return { ok: false, status: 400, message: 'Invalid event.' };
   }
 
@@ -318,7 +311,7 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null 
   const visitorKey = visitorKeyFromRequest(req);
   let incremented = true;
 
-  if (event === 'view' || event === 'click' || event === 'hot_lead') {
+  if (event === 'view' || event === 'hot_lead') {
     if (!visitorKey) {
       return { ok: false, status: 400, message: 'Visitor id required.' };
     }
@@ -390,7 +383,6 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null 
     ok: true,
     metrics: {
       viewCount: engagement.viewCount ?? 0,
-      clickCount: engagement.clickCount ?? 0,
       shareCount: engagement.shareCount ?? 0,
       saveCount,
       saved,
@@ -449,7 +441,6 @@ async function toggleSavedListing(req, { kind, listingId }) {
     saved,
     metrics: {
       viewCount: engagement.viewCount ?? 0,
-      clickCount: engagement.clickCount ?? 0,
       shareCount: engagement.shareCount ?? 0,
       saveCount,
       saved,

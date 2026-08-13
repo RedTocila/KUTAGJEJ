@@ -16,7 +16,6 @@ import {
 } from '@mui/material';
 import { BookmarkSimple as BookmarkIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { ChartLineUp as ChartLineUpIcon } from '@phosphor-icons/react/dist/ssr/ChartLineUp';
-import { CursorClick as ClickIcon } from '@phosphor-icons/react/dist/ssr/CursorClick';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { Image as ImageIcon } from '@phosphor-icons/react/dist/ssr/Image';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
@@ -47,7 +46,6 @@ type StatRow = {
   status: string;
   imageUrl: string | null;
   viewCount: number;
-  clickCount: number;
   shareCount: number;
   saveCount: number;
 };
@@ -85,7 +83,7 @@ function TotalCard({
   return (
     <Box
       sx={{
-        p: 2,
+        p: { xs: 1.25, sm: 2 },
         height: '100%',
         borderRadius: 2.5,
         border: '1px solid',
@@ -93,11 +91,15 @@ function TotalCard({
         bgcolor: 'background.paper',
       }}
     >
-      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+      <Stack
+        direction="column"
+        spacing={0.75}
+        sx={{ alignItems: 'center', textAlign: 'center' }}
+      >
         <Box
           sx={{
-            width: 40,
-            height: 40,
+            width: { xs: 32, sm: 40 },
+            height: { xs: 32, sm: 40 },
             borderRadius: 2,
             display: 'grid',
             placeItems: 'center',
@@ -108,11 +110,22 @@ function TotalCard({
         >
           {icon}
         </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+        <Box sx={{ minWidth: 0, width: '100%' }}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ fontWeight: 700, display: 'block', lineHeight: 1.2 }}
+          >
             {label}
           </Typography>
-          <Typography sx={{ fontWeight: 900, fontSize: '1.45rem', lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+          <Typography
+            sx={{
+              fontWeight: 900,
+              fontSize: { xs: '1.15rem', sm: '1.45rem' },
+              lineHeight: 1.1,
+              letterSpacing: '-0.02em',
+            }}
+          >
             {formatNum(value)}
           </Typography>
         </Box>
@@ -176,7 +189,6 @@ export default function UserStatisticsPage() {
           status: l.status,
           imageUrl: firstImageUrl(l.imageUrls),
           viewCount: l.viewCount ?? 0,
-          clickCount: l.clickCount ?? 0,
           shareCount: l.shareCount ?? 0,
           saveCount: l.saveCount ?? 0,
         });
@@ -191,7 +203,6 @@ export default function UserStatisticsPage() {
           status: l.status,
           imageUrl: firstImageUrl(l.imageUrls),
           viewCount: l.viewCount ?? 0,
-          clickCount: l.clickCount ?? 0,
           shareCount: l.shareCount ?? 0,
           saveCount: l.saveCount ?? 0,
         });
@@ -206,7 +217,6 @@ export default function UserStatisticsPage() {
           status: l.status,
           imageUrl: firstImageUrl(l.imageUrls),
           viewCount: l.viewCount ?? 0,
-          clickCount: l.clickCount ?? 0,
           shareCount: l.shareCount ?? 0,
           saveCount: l.saveCount ?? 0,
         });
@@ -221,7 +231,6 @@ export default function UserStatisticsPage() {
           status: l.status,
           imageUrl: firstImageUrl(l.imageUrls),
           viewCount: l.viewCount ?? 0,
-          clickCount: l.clickCount ?? 0,
           shareCount: l.shareCount ?? 0,
           saveCount: l.saveCount ?? 0,
         });
@@ -236,7 +245,6 @@ export default function UserStatisticsPage() {
           status: l.status,
           imageUrl: firstImageUrl(l.imageUrls),
           viewCount: l.viewCount ?? 0,
-          clickCount: l.clickCount ?? 0,
           shareCount: l.shareCount ?? 0,
           saveCount: l.saveCount ?? 0,
         });
@@ -251,13 +259,12 @@ export default function UserStatisticsPage() {
           status: l.status,
           imageUrl: firstImageUrl(l.imageUrls),
           viewCount: l.viewCount ?? 0,
-          clickCount: l.clickCount ?? 0,
           shareCount: l.shareCount ?? 0,
           saveCount: l.saveCount ?? 0,
         });
       }
 
-      next.sort((a, b) => b.viewCount - a.viewCount || b.clickCount - a.clickCount);
+      next.sort((a, b) => b.viewCount - a.viewCount || b.saveCount - a.saveCount);
       setRows(next);
       setLoading(false);
     })();
@@ -284,12 +291,11 @@ export default function UserStatisticsPage() {
   const totals = rows.reduce(
     (acc, r) => {
       acc.views += r.viewCount;
-      acc.leads += r.clickCount;
       acc.shares += r.shareCount;
       acc.saves += r.saveCount;
       return acc;
     },
-    { views: 0, leads: 0, shares: 0, saves: 0 },
+    { views: 0, shares: 0, saves: 0 },
   );
 
   return (
@@ -298,7 +304,7 @@ export default function UserStatisticsPage() {
       <UserPageHeader
         icon={<ChartLineUpIcon size={20} weight="duotone" />}
         title={t.nav.statistics}
-        description="Si kanë shkuar njoftimet tuaja — shikime, kontakte (leads), ndarje dhe ruajtje."
+        description="Si kanë shkuar njoftimet tuaja — shikime, ndarje dhe ruajtje."
       />
 
       {error ? (
@@ -313,24 +319,16 @@ export default function UserStatisticsPage() {
         </Box>
       ) : (
         <>
-          <Grid container spacing={1.5}>
-            <Grid size={{ xs: 6, md: 3 }}>
+          <Grid container spacing={{ xs: 1, sm: 1.5 }}>
+            <Grid size={4}>
               <TotalCard
                 icon={<EyeIcon size={20} weight="duotone" />}
-                label="Shikime gjithsej"
+                label="Shikime"
                 value={totals.views}
                 tone="#8b5cf6"
               />
             </Grid>
-            <Grid size={{ xs: 6, md: 3 }}>
-              <TotalCard
-                icon={<ClickIcon size={20} weight="duotone" />}
-                label="Leads / kontakte"
-                value={totals.leads}
-                tone="#3ec6e0"
-              />
-            </Grid>
-            <Grid size={{ xs: 6, md: 3 }}>
+            <Grid size={4}>
               <TotalCard
                 icon={<ShareIcon size={20} weight="duotone" />}
                 label="Ndarje"
@@ -338,7 +336,7 @@ export default function UserStatisticsPage() {
                 tone="#7ac943"
               />
             </Grid>
-            <Grid size={{ xs: 6, md: 3 }}>
+            <Grid size={4}>
               <TotalCard
                 icon={<BookmarkIcon size={20} weight="duotone" />}
                 label="Ruajtje"
@@ -484,12 +482,6 @@ export default function UserStatisticsPage() {
                         <EyeIcon size={15} />
                         <Typography variant="caption" sx={{ fontWeight: 800 }}>
                           {formatNum(row.viewCount)}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" spacing={0.4} sx={{ alignItems: 'center' }} title="Leads">
-                        <ClickIcon size={15} />
-                        <Typography variant="caption" sx={{ fontWeight: 800 }}>
-                          {formatNum(row.clickCount)}
                         </Typography>
                       </Stack>
                       <Stack direction="row" spacing={0.4} sx={{ alignItems: 'center' }} title="Ndarje">

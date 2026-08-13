@@ -69,11 +69,12 @@ import type { AutoRefreshPackage, PremiumPackage, PremiumVoucher } from '@/types
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import {
   PackageCheckoutCard,
+  PackageEurPrice,
+  ReferralDiscountNote,
   SectionBlock,
   SoftChip,
   accentButtonSx,
   formatBc,
-  formatEurWithLifetime,
 } from './package-ui';
 import { OkazionPackagesSection } from './okazion-packages-section';
 
@@ -386,7 +387,7 @@ function AutoRefreshSection() {
                         fontWeight: 850,
                       }}
                     >
-                      {formatEurWithLifetime(pkg.priceEur, lifetimePercent)}
+                      <PackageEurPrice listPrice={pkg.priceEur} percent={lifetimePercent} onAccent />
                     </Button>
                     <Button
                       size="small"
@@ -635,7 +636,7 @@ function PremiumListingSection() {
                       fontWeight: 850,
                     }}
                   >
-                    {formatEurWithLifetime(pkg.priceEur, lifetimePercent)}
+                    <PackageEurPrice listPrice={pkg.priceEur} percent={lifetimePercent} onAccent />
                   </Button>
                   <Button
                     size="small"
@@ -826,6 +827,18 @@ function ConvertListingSection() {
   const totalSelected = Object.values(selected).reduce((a, b) => a + b, 0);
   const canSubmit = hasPaidPlan && totalSelected > 0 && awardTotal >= 1 && !submitting;
 
+  // One spacer for every row so slider tracks share the same length (apartments
+  // used to stretch when its max label was shorter than cars/products).
+  const valueColumnSpacer = React.useMemo(() => {
+    let widest = '0 → BC 0';
+    for (const { kind } of CONVERT_ROWS) {
+      const max = available[kind] || 0;
+      const label = `${max} → BC ${formatBc(max * (rates[kind] || 0))}`;
+      if (label.length > widest.length) widest = label;
+    }
+    return widest;
+  }, [available, rates]);
+
   const onConvert = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
@@ -939,7 +952,7 @@ function ConvertListingSection() {
                     valueLabelDisplay="auto"
                     sx={{ flex: 1, minWidth: 0, color: 'warning.main' }}
                   />
-                  {/* Fixed width from max label so digit growth never shrinks the slider */}
+                  {/* Shared width across rows so every slider track matches */}
                   <Box sx={{ position: 'relative', flexShrink: 0 }}>
                     <Typography
                       aria-hidden
@@ -951,7 +964,7 @@ function ConvertListingSection() {
                         fontVariantNumeric: 'tabular-nums',
                       }}
                     >
-                      {max} → BC {formatBc(max * rate)}
+                      {valueColumnSpacer}
                     </Typography>
                     <Typography
                       sx={{
@@ -1008,6 +1021,8 @@ function ConvertListingSection() {
 }
 
 export function ExtraPackagesPanel() {
+  const lifetimePercent = useLifetimePackageDiscount();
+
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     if (window.location.hash !== '#convert') return;
@@ -1052,6 +1067,7 @@ export function ExtraPackagesPanel() {
 
   return (
     <Stack spacing={2.5}>
+      <ReferralDiscountNote percent={lifetimePercent} />
       <AutoRefreshSection />
       <OkazionPackagesSection />
       <PremiumListingSection />

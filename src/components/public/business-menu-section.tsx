@@ -15,6 +15,7 @@ import {
 import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 import type { PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { listingBusinessMenuHref, listingBusinessPublicHref } from '@/paths';
+import { MOTION } from '@/styles/motion';
 
 function MenuItemRow({
   item,
@@ -142,6 +143,72 @@ function useCategorySwipe(goRelative: (delta: number) => void) {
   };
 }
 
+/** Directional enter animation when the active category changes (swipe or tag tap). */
+function useCategorySlide(activeId: string, activeIndex: number) {
+  const prevIndexRef = React.useRef(activeIndex);
+  const [slide, setSlide] = React.useState<{ key: string; dir: -1 | 0 | 1 }>({
+    key: activeId,
+    dir: 0,
+  });
+
+  React.useEffect(() => {
+    const prev = prevIndexRef.current;
+    if (activeIndex === prev && activeId === slide.key) return;
+    const dir: -1 | 0 | 1 = activeIndex > prev ? 1 : activeIndex < prev ? -1 : 0;
+    prevIndexRef.current = activeIndex;
+    setSlide({ key: activeId, dir });
+  }, [activeId, activeIndex, slide.key]);
+
+  return slide;
+}
+
+function CategoryItemsPane({
+  slideKey,
+  dir,
+  children,
+  sx,
+  ...touchProps
+}: {
+  slideKey: string;
+  dir: -1 | 0 | 1;
+  children: React.ReactNode;
+  sx?: React.ComponentProps<typeof Box>['sx'];
+  onTouchStart?: (e: React.TouchEvent) => void;
+  onTouchEnd?: (e: React.TouchEvent) => void;
+}) {
+  const anim =
+    dir > 0 ? 'menuCatInNext' : dir < 0 ? 'menuCatInPrev' : undefined;
+
+  return (
+    <Box
+      key={slideKey}
+      onTouchStart={touchProps.onTouchStart}
+      onTouchEnd={touchProps.onTouchEnd}
+      sx={[
+        {
+          '@keyframes menuCatInNext': {
+            from: { opacity: 0, transform: 'translateX(18px)' },
+            to: { opacity: 1, transform: 'translateX(0)' },
+          },
+          '@keyframes menuCatInPrev': {
+            from: { opacity: 0, transform: 'translateX(-18px)' },
+            to: { opacity: 1, transform: 'translateX(0)' },
+          },
+          ...(anim
+            ? {
+                animation: `${anim} ${MOTION.enter} ${MOTION.ease}`,
+                '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+              }
+            : null),
+        },
+        ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+      ]}
+    >
+      {children}
+    </Box>
+  );
+}
+
 function CategoryTags({
   sections,
   activeId,
@@ -151,14 +218,33 @@ function CategoryTags({
   activeId: string;
   onSelect: (id: string) => void;
 }) {
+  const scrollerRef = React.useRef<HTMLDivElement | null>(null);
   const activeRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
-    activeRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    const scroller = scrollerRef.current;
+    const activeEl = activeRef.current;
+    if (!scroller || !activeEl) return;
+
+    const target =
+      activeEl.offsetLeft - (scroller.clientWidth - activeEl.offsetWidth) / 2;
+    const nextLeft = Math.max(0, Math.min(target, scroller.scrollWidth - scroller.clientWidth));
+    if (Math.abs(scroller.scrollLeft - nextLeft) < 1) return;
+
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (reduceMotion || typeof scroller.scrollTo !== 'function') {
+      scroller.scrollLeft = nextLeft;
+      return;
+    }
+    scroller.scrollTo({ left: nextLeft, behavior: 'smooth' });
   }, [activeId]);
 
   return (
     <Box
+      ref={scrollerRef}
       sx={{
         width: '100%',
         maxWidth: '100%',
@@ -167,11 +253,15 @@ function CategoryTags({
         overflowY: 'hidden',
         overscrollBehaviorX: 'contain',
         WebkitOverflowScrolling: 'touch',
+        scrollBehavior: 'smooth',
         mx: -0.25,
         px: 0.25,
         pb: 0.25,
         scrollbarWidth: 'none',
         '&::-webkit-scrollbar': { display: 'none' },
+        '@media (prefers-reduced-motion: reduce)': {
+          scrollBehavior: 'auto',
+        },
       }}
     >
       <Stack
@@ -216,8 +306,9 @@ export function BusinessMenuPreview({
   maxPerCategory?: number;
 }) {
   const allSections = React.useMemo(() => businessMenuSections(listing), [listing]);
-  const { activeId, setActiveId, active, goRelative } = useActiveMenuSection(allSections);
+  const { activeId, setActiveId, active, activeIndex, goRelative } = useActiveMenuSection(allSections);
   const swipe = useCategorySwipe(goRelative);
+  const slide = useCategorySlide(activeId, activeIndex);
   const previewItems = active?.items ?? [];
   const totalItems = listing.menuItems?.length ?? 0;
   if (allSections.length === 0 && totalItems === 0) return null;
@@ -231,7 +322,9 @@ export function BusinessMenuPreview({
       <CategoryTags sections={allSections} activeId={activeId} onSelect={setActiveId} />
       <Stack spacing={0}>
         {previewItems.length > 0 ? (
-          <Box
+          <CategoryItemsPane
+            slideKey={slide.key}
+            dir={slide.dir}
             onTouchStart={swipe.onTouchStart}
             onTouchEnd={swipe.onTouchEnd}
             sx={{
@@ -250,13 +343,19 @@ export function BusinessMenuPreview({
                 </Box>
               ))}
             </Stack>
-          </Box>
+          </CategoryItemsPane>
         ) : (
-          <Box onTouchStart={swipe.onTouchStart} onTouchEnd={swipe.onTouchEnd} sx={{ touchAction: 'pan-y' }}>
+          <CategoryItemsPane
+            slideKey={slide.key}
+            dir={slide.dir}
+            onTouchStart={swipe.onTouchStart}
+            onTouchEnd={swipe.onTouchEnd}
+            sx={{ touchAction: 'pan-y' }}
+          >
             <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
               Nuk ka artikuj në këtë kategori.
             </Typography>
-          </Box>
+          </CategoryItemsPane>
         )}
         <Button
           component={Link}
@@ -287,8 +386,9 @@ export function BusinessMenuPreview({
 /** Full-page menu — flat layout, no card wrapper. */
 export function BusinessMenuFullPage({ listing }: { listing: PublicDirectoryListingDetail }) {
   const sections = React.useMemo(() => businessMenuSections(listing), [listing]);
-  const { activeId, setActiveId, active, goRelative } = useActiveMenuSection(sections);
+  const { activeId, setActiveId, active, activeIndex, goRelative } = useActiveMenuSection(sections);
   const swipe = useCategorySwipe(goRelative);
+  const slide = useCategorySlide(activeId, activeIndex);
   const backHref = listingBusinessPublicHref(listing);
 
   return (
@@ -340,7 +440,9 @@ export function BusinessMenuFullPage({ listing }: { listing: PublicDirectoryList
           </Stack>
         </Box>
 
-        <Box
+        <CategoryItemsPane
+          slideKey={slide.key}
+          dir={slide.dir}
           onTouchStart={swipe.onTouchStart}
           onTouchEnd={swipe.onTouchEnd}
           sx={{ px: 2, pt: 1, pb: 2, touchAction: 'pan-y' }}
@@ -362,7 +464,7 @@ export function BusinessMenuFullPage({ listing }: { listing: PublicDirectoryList
               Nuk ka artikuj në këtë kategori.
             </Typography>
           )}
-        </Box>
+        </CategoryItemsPane>
       </Box>
     </Box>
   );

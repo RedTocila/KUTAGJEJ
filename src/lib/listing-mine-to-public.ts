@@ -27,14 +27,12 @@ function durableUrls(urls: string[] | null | undefined): string[] {
 
 function metricsFrom(mine: {
   viewCount?: number;
-  clickCount?: number;
   shareCount?: number;
   saveCount?: number;
   saved?: boolean;
 }) {
   return {
     viewCount: mine.viewCount ?? 0,
-    clickCount: mine.clickCount ?? 0,
     shareCount: mine.shareCount ?? 0,
     saveCount: mine.saveCount ?? 0,
     saved: mine.saved,

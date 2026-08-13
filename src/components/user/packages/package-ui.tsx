@@ -50,9 +50,12 @@ export function formatEurWithLifetime(listPrice: number, percent: number) {
 export function PackageEurPrice({
   listPrice,
   percent = 0,
+  onAccent = false,
 }: {
   listPrice: number;
   percent?: number;
+  /** Solid accent CTAs (lime / amber / red) — dark sale price, light strikethrough. */
+  onAccent?: boolean;
 }) {
   const p = Number(percent) || 0;
   const discounted = applyLifetimeDiscount(listPrice, p);
@@ -66,14 +69,19 @@ export function PackageEurPrice({
         component="span"
         sx={{
           textDecoration: 'line-through',
-          color: 'text.disabled',
+          color: onAccent ? 'rgba(0, 0, 0, 0.45)' : 'text.disabled',
           fontWeight: 700,
           fontSize: '0.72em',
         }}
       >
         {formatEur(listPrice)}
       </Box>
-      <Box component="span">{formatEur(discounted)}</Box>
+      <Box
+        component="span"
+        sx={onAccent ? { color: 'common.black', fontWeight: 900 } : undefined}
+      >
+        {formatEur(discounted)}
+      </Box>
     </Box>
   );
 }

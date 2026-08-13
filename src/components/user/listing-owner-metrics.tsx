@@ -12,7 +12,6 @@ import {
 } from '@mui/material';
 import { ArrowsClockwise as RefreshIcon } from '@phosphor-icons/react/dist/ssr/ArrowsClockwise';
 import { BookmarkSimple as BookmarkIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
-import { CursorClick as ClickIcon } from '@phosphor-icons/react/dist/ssr/CursorClick';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
 import { PencilSimple as EditIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
@@ -103,7 +102,6 @@ export function ListingOwnerStats({
   onSavesClick?: () => void;
 }) {
   const viewCount = metrics.viewCount ?? 0;
-  const clickCount = metrics.clickCount ?? 0;
   const shareCount = metrics.shareCount ?? 0;
   const saveCount = metrics.saveCount ?? 0;
 
@@ -120,7 +118,6 @@ export function ListingOwnerStats({
       }}
     >
       <Stat icon={<EyeIcon size={13} />} label="shikime" value={viewCount} />
-      <Stat icon={<ClickIcon size={13} />} label="klikime" value={clickCount} />
       <Stat icon={<ShareIcon size={13} />} label="ndarje" value={shareCount} />
       <Stat
         icon={<BookmarkIcon size={13} />}

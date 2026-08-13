@@ -22,7 +22,7 @@ function requirePortalUser(req, res, next) {
   next();
 }
 
-/** POST /api/listing-metrics/event — view | click | share | hot_lead (anonymous or signed-in). */
+/** POST /api/listing-metrics/event — view | share | hot_lead (anonymous or signed-in). */
 router.post('/event', metricsRateLimit, optionalAuth, async (req, res) => {
   try {
     const kind = String(req.body?.listingKind ?? '').trim();

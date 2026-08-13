@@ -56,11 +56,11 @@ import { paths } from '@/paths';
 import type { OkazionPackage, OkazionVoucher } from '@/types/payment';
 import {
   PackageCheckoutCard,
+  PackageEurPrice,
   SectionBlock,
   SoftChip,
   accentButtonSx,
   formatBc,
-  formatEurWithLifetime,
 } from './package-ui';
 
 const FALLBACK_OKAZION_PACKAGES: OkazionPackage[] = [
@@ -430,7 +430,7 @@ export function OkazionPackagesSection() {
                 fontWeight: 850,
               }}
             >
-              {formatEurWithLifetime(totalEur, lifetimePercent)}
+              <PackageEurPrice listPrice={totalEur} percent={lifetimePercent} onAccent />
             </Button>
             <Button
               size="small"

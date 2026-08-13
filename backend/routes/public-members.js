@@ -34,14 +34,13 @@ async function attachPublicMetrics(listings) {
   if (ids.length && kinds.length) {
     const { data, error } = await getSupabaseAdmin()
       .from('listing_engagements')
-      .select('listing_kind, listing_id, view_count, click_count, share_count')
+      .select('listing_kind, listing_id, view_count, share_count')
       .in('listing_id', ids)
       .in('listing_kind', kinds);
     if (error) throw error;
     for (const row of data || []) {
       metricsByKey.set(`${row.listing_kind}:${row.listing_id}`, {
         viewCount: row.view_count || 0,
-        clickCount: row.click_count || 0,
         shareCount: row.share_count || 0,
       });
     }
@@ -49,7 +48,6 @@ async function attachPublicMetrics(listings) {
   return listings.map((l) => {
     const m = metricsByKey.get(`${l.kind}:${l.id}`) || {
       viewCount: 0,
-      clickCount: 0,
       shareCount: 0,
     };
     return { ...l, ...m, saveCount: 0 };

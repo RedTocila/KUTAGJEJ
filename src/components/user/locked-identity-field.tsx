@@ -1,12 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Link, TextField, Typography } from '@mui/material';
+import { TextField } from '@mui/material';
 
-import {
-  supportIdentityChangeWhatsappHref,
-  type IdentityFieldKind,
-} from '@/lib/support-contact';
+import { IdentityFieldHelpAdornment } from '@/components/user/identity-field-help';
+import type { IdentityFieldKind } from '@/lib/support-contact';
 
 export function LockedIdentityField(props: {
   label: string;
@@ -15,25 +13,30 @@ export function LockedIdentityField(props: {
   userEmail?: string;
 }) {
   const { label, value, fieldKind, userEmail } = props;
-  const whatsappHref = supportIdentityChangeWhatsappHref(fieldKind, {
-    currentValue: value,
-    email: userEmail,
-  });
 
   return (
-    <Box>
-      <TextField label={label} value={value} fullWidth disabled />
-      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, display: 'block', lineHeight: 1.45 }}>
-        Ky fushë nuk mund të ndryshohet vetë.{' '}
-        {whatsappHref ? (
-          <Link href={whatsappHref} target="_blank" rel="noopener noreferrer" underline="hover">
-            Kontaktoni mbështetjen
-          </Link>
-        ) : (
-          'Kontaktoni mbështetjen'
-        )}{' '}
-        për ta përditësuar.
-      </Typography>
-    </Box>
+    <TextField
+      label={label}
+      value={value}
+      fullWidth
+      disabled
+      sx={{
+        '& .MuiInputAdornment-root': {
+          pointerEvents: 'auto',
+        },
+      }}
+      slotProps={{
+        input: {
+          endAdornment: (
+            <IdentityFieldHelpAdornment
+              fieldKind={fieldKind}
+              locked
+              currentValue={value}
+              userEmail={userEmail}
+            />
+          ),
+        },
+      }}
+    />
   );
 }

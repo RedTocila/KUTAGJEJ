@@ -21,18 +21,25 @@ import {
   scanQualityHintMessage,
   type CardGuideRect,
 } from '@/lib/id-document-scan-quality';
+import { scanIdDocumentWithAi } from '@/lib/id-document-scan-client';
 
 const ANALYSIS_INTERVAL_MS = 180;
 /** Require several stable, readable frames before auto-capture. */
 const READY_FRAMES = 5;
 
+export interface IdDocumentScanCapture {
+  file: File;
+  previewUrl: string;
+  idNumber?: string | null;
+}
+
 export interface IdDocumentScannerDialogProps {
   open: boolean;
   onClose: () => void;
-  onCapture: (file: File, previewUrl: string) => void;
+  onCapture: (capture: IdDocumentScanCapture) => void;
 }
 
-type ScanPhase = 'starting' | 'scanning' | 'capturing' | 'error';
+type ScanPhase = 'starting' | 'scanning' | 'capturing' | 'validating' | 'error';
 
 async function openCameraStream(): Promise<MediaStream> {
   const attempts: MediaStreamConstraints[] = [
@@ -79,6 +86,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
   const [qualityHint, setQualityHint] = React.useState('Duke hapur kamerën…');
   const [progress, setProgress] = React.useState(0);
   const [frameReady, setFrameReady] = React.useState(false);
+  const restartScanRef = React.useRef<(() => void) | null>(null);
 
   const stopAnalysis = React.useCallback(() => {
     if (intervalRef.current != null) {
@@ -151,7 +159,34 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
 
     const file = new File([blob], `id-front-${Date.now()}.jpg`, { type: 'image/jpeg' });
     const previewUrl = URL.createObjectURL(blob);
-    onCapture(file, previewUrl);
+
+    setPhase('validating');
+    setQualityHint('Duke verifikuar me AI që është ID e vërtetë…');
+
+    const ai = await scanIdDocumentWithAi(file);
+    if (ai.error) {
+      setError(ai.error);
+      setPhase('error');
+      capturingRef.current = false;
+      return;
+    }
+
+    if (!ai.result?.isIdCard) {
+      URL.revokeObjectURL(previewUrl);
+      setError(
+        ai.result?.message ||
+          'Nuk u njoh si kartë ID e vërtetë. Skanoni pjesën e përparme të ID-së tuaj fizike.',
+      );
+      setPhase('error');
+      capturingRef.current = false;
+      return;
+    }
+
+    onCapture({
+      file,
+      previewUrl,
+      idNumber: ai.result.idNumber ?? null,
+    });
     capturingRef.current = false;
     onClose();
   }, [onCapture, onClose, stopAnalysis, stopCamera]);
@@ -257,6 +292,11 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
       }
     };
 
+    restartScanRef.current = () => {
+      stopCamera();
+      void start();
+    };
+
     void start();
 
     return () => {
@@ -271,7 +311,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
   return (
     <Dialog
       open={open}
-      onClose={phase === 'capturing' ? undefined : handleClose}
+      onClose={phase === 'capturing' || phase === 'validating' ? undefined : handleClose}
       fullScreen
       slotProps={{
         paper: {
@@ -347,7 +387,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
             Skano pjesën e përparme të ID-së
           </Typography>
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.82)', mt: 0.75, fontWeight: 600 }}>
-            Vendoseni të gjithë kartën brenda kornizës. Skanimi bëhet vetëm kur detajet lexohen qartë.
+            Vendoseni të gjithë kartën brenda kornizës. AI verifikon që është ID e vërtetë para skanimit.
           </Typography>
         </Box>
 
@@ -363,18 +403,39 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
             pointerEvents: 'none',
           }}
         >
-          {phase === 'capturing' ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+          {phase === 'capturing' || phase === 'validating' ? (
+            <Stack spacing={1} sx={{ alignItems: 'center' }}>
               <CircularProgress size={36} sx={{ color: 'primary.main' }} />
-            </Box>
+              {phase === 'validating' ? (
+                <Typography variant="body2" sx={{ color: '#fff', textAlign: 'center', fontWeight: 700 }}>
+                  {qualityHint}
+                </Typography>
+              ) : null}
+            </Stack>
           ) : error ? (
             <Stack spacing={1.5} sx={{ alignItems: 'center', pointerEvents: 'auto' }}>
               <Typography variant="body2" sx={{ color: '#ffb4ab', textAlign: 'center', fontWeight: 700 }}>
                 {error}
               </Typography>
-              <Button variant="contained" onClick={handleClose} sx={{ fontWeight: 700 }}>
-                Mbyll
-              </Button>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    setError(null);
+                    setPhase('starting');
+                    setQualityHint('Duke hapur kamerën…');
+                    setProgress(0);
+                    capturingRef.current = false;
+                    restartScanRef.current?.();
+                  }}
+                  sx={{ fontWeight: 700 }}
+                >
+                  Provo përsëri
+                </Button>
+                <Button variant="outlined" onClick={handleClose} sx={{ fontWeight: 700, color: '#fff', borderColor: 'rgba(255,255,255,0.4)' }}>
+                  Mbyll
+                </Button>
+              </Stack>
             </Stack>
           ) : (
             <>
@@ -399,7 +460,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
       <IconButton
         type="button"
         onClick={handleClose}
-        disabled={phase === 'capturing'}
+        disabled={phase === 'capturing' || phase === 'validating'}
         aria-label="Mbyll skanerin"
         sx={{
           position: 'fixed',

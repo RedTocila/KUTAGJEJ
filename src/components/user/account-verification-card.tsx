@@ -14,6 +14,7 @@ import { IdentificationCard as IdCardIcon } from '@phosphor-icons/react/dist/ssr
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 
 import { IdDocumentScannerDialog } from '@/components/user/id-document-scanner-dialog';
+import { IdentityFieldHelpAdornment } from '@/components/user/identity-field-help';
 import { LockedIdentityField } from '@/components/user/locked-identity-field';
 import { useUser } from '@/hooks/use-user';
 import {
@@ -73,11 +74,14 @@ export function AccountVerificationCard() {
     };
   }, [idFrontPreview]);
 
-  const handleScanCapture = (file: File, previewUrl: string) => {
+  const handleScanCapture = (capture: { file: File; previewUrl: string; idNumber?: string | null }) => {
     setError(null);
     if (idFrontPreview?.startsWith('blob:')) URL.revokeObjectURL(idFrontPreview);
-    setIdFrontFile(file);
-    setIdFrontPreview(previewUrl);
+    setIdFrontFile(capture.file);
+    setIdFrontPreview(capture.previewUrl);
+    if (capture.idNumber?.trim()) {
+      setIdNumber(capture.idNumber.trim());
+    }
     setScannerOpen(false);
   };
 
@@ -202,7 +206,18 @@ export function AccountVerificationCard() {
             required
             disabled={submitting}
             placeholder="p.sh. J12345678A"
-            slotProps={{ htmlInput: { maxLength: 40 } }}
+            slotProps={{
+              htmlInput: { maxLength: 40 },
+              input: {
+                endAdornment: (
+                  <IdentityFieldHelpAdornment
+                    fieldKind="id"
+                    currentValue={idNumber}
+                    userEmail={user?.email}
+                  />
+                ),
+              },
+            }}
           />
 
           {isBusiness ? (
@@ -222,7 +237,18 @@ export function AccountVerificationCard() {
                 required
                 disabled={submitting}
                 placeholder="Numri i NIPT-it të biznesit"
-                slotProps={{ htmlInput: { maxLength: 40 } }}
+                slotProps={{
+                  htmlInput: { maxLength: 40 },
+                  input: {
+                    endAdornment: (
+                      <IdentityFieldHelpAdornment
+                        fieldKind="nipt"
+                        currentValue={nipt}
+                        userEmail={user?.email}
+                      />
+                    ),
+                  },
+                }}
               />
             )
           ) : null}

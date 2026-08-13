@@ -6,6 +6,7 @@ const {
   buildApplicantSnapshot,
   formatVerificationRequest,
   normalizeVerificationDocuments,
+  persistApplicantPhone,
 } = require('./job-employer-verification');
 const { createAdminNotification } = require('./listing-moderation');
 const { isUuid } = require('./public-listings/query-helpers');
@@ -52,6 +53,9 @@ async function submitVerificationRequest(user, payload = {}) {
   const imageCheck = await validateIdFrontImageUrl(docs.idFrontImageUrl);
   if (!imageCheck.ok) return imageCheck;
 
+  await persistApplicantPhone(portal.id, docs.phone);
+  portal.phone = docs.phone;
+
   const { data: pending, error: pendingErr } = await getSupabaseAdmin()
     .from('professional_verification_requests')
     .select('id')
@@ -68,6 +72,7 @@ async function submitVerificationRequest(user, payload = {}) {
   const note = String(payload?.message ?? '').replace(/\s+/g, ' ').trim().slice(0, 2000);
   const snap = buildApplicantSnapshot(portal, portal.constructor.modelName);
   if (docs.isBusiness && docs.nipt) snap.nipt = docs.nipt;
+  snap.phone = docs.phone;
   const { data: doc, error } = await getSupabaseAdmin()
     .from('professional_verification_requests')
     .insert({
@@ -112,6 +117,11 @@ async function reviewVerificationRequest(admin, requestId, decision, adminNote) 
   }
 
   const status = decision === 'approve' ? 'approved' : 'rejected';
+  const trimmedNote = String(adminNote ?? '').replace(/\s+/g, ' ').trim().slice(0, 2000);
+  if (status === 'rejected' && !trimmedNote) {
+    return { ok: false, status: 400, message: 'Shkruani arsyen e refuzimit për ta njoftuar përdoruesin.' };
+  }
+
   const now = new Date().toISOString();
   const { data: updated, error: updateErr } = await sb
     .from('professional_verification_requests')
@@ -119,7 +129,7 @@ async function reviewVerificationRequest(admin, requestId, decision, adminNote) 
       status,
       reviewed_by: admin.id || admin._id,
       reviewed_at: now,
-      admin_note: String(adminNote ?? '').trim().slice(0, 2000),
+      admin_note: trimmedNote,
       updated_at: now,
     })
     .eq('id', requestId)
@@ -145,6 +155,7 @@ async function reviewVerificationRequest(admin, requestId, decision, adminNote) 
     await notifyVerificationResult({
       userId: doc.applicant_id,
       approved: status === 'approved',
+      adminNote: trimmedNote,
     });
   } catch (notifyErr) {
     console.warn('notifyVerificationResult:', notifyErr?.message || notifyErr);

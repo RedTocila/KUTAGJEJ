@@ -28,6 +28,7 @@ router.post('/request', authMiddleware, requirePortalUser, async (req, res) => {
       message: req.body?.message,
       idNumber: req.body?.idNumber,
       idFrontImageUrl: req.body?.idFrontImageUrl,
+      phone: req.body?.phone,
       nipt: req.body?.nipt,
     });
     if (!result.ok) return res.status(result.status).json({ message: result.message });

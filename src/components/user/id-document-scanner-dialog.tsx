@@ -3,7 +3,6 @@
 import * as React from 'react';
 import {
   Box,
-  Button,
   CircularProgress,
   Dialog,
   IconButton,
@@ -333,15 +332,16 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
               <CircularProgress size={36} sx={{ color: 'primary.main' }} />
             </Stack>
           ) : (
-            <Stack spacing={1.5} sx={{ alignItems: 'center', pointerEvents: 'auto' }}>
+            <Stack spacing={2} sx={{ alignItems: 'center', pointerEvents: 'auto' }}>
               {error ? (
                 <Typography variant="body2" sx={{ color: '#ffb4ab', textAlign: 'center', fontWeight: 700, px: 1 }}>
                   {error}
                 </Typography>
               ) : null}
-              <Button
-                variant="contained"
-                size="large"
+              <Box
+                component="button"
+                type="button"
+                aria-label="Kap foton"
                 onClick={() => {
                   if (phase === 'error') {
                     setError(null);
@@ -352,10 +352,37 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
                   void captureFromGuide();
                 }}
                 disabled={phase === 'starting' || (phase === 'scanning' && !cameraReady)}
-                sx={{ fontWeight: 700, minWidth: 200, py: 1.25 }}
+                sx={{
+                  width: 78,
+                  height: 78,
+                  borderRadius: '50%',
+                  border: '4px solid #fff',
+                  bgcolor: 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  p: 0,
+                  cursor: 'pointer',
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
+                  transition: 'opacity 0.2s ease',
+                  '&:disabled': { opacity: 0.4, cursor: 'not-allowed' },
+                  '&:active:not(:disabled) .id-shutter-inner': {
+                    transform: 'scale(0.9)',
+                  },
+                }}
               >
-                Kap foton
-              </Button>
+                <Box
+                  className="id-shutter-inner"
+                  sx={{
+                    width: 62,
+                    height: 62,
+                    borderRadius: '50%',
+                    bgcolor: '#fff',
+                    transition: 'transform 0.1s ease',
+                  }}
+                />
+              </Box>
             </Stack>
           )}
         </Box>

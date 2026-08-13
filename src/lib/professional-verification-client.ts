@@ -40,6 +40,7 @@ export async function fetchProfessionalVerificationStatus(): Promise<{
 export async function submitProfessionalVerificationRequest(payload: {
   message?: string;
   idNumber: string;
+  phone: string;
   idFrontImageUrl: string;
   nipt?: string;
 }): Promise<{ request?: JobEmployerVerificationRequest; error?: string }> {
@@ -50,6 +51,7 @@ export async function submitProfessionalVerificationRequest(payload: {
       body: JSON.stringify({
         message: payload.message?.trim() || '',
         idNumber: payload.idNumber.trim(),
+        phone: payload.phone.trim(),
         idFrontImageUrl: payload.idFrontImageUrl.trim(),
         nipt: payload.nipt?.trim() || '',
       }),

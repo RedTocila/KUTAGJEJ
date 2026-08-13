@@ -454,14 +454,19 @@ async function notifyBusinessReservation({ posterId, listingId, listingTitle, gu
   });
 }
 
-async function notifyVerificationResult({ userId, approved }) {
+async function notifyVerificationResult({ userId, approved, adminNote }) {
+  const note = String(adminNote ?? '').replace(/\s+/g, ' ').trim();
+  const message = approved
+    ? 'Llogaria juaj është e verifikuar. Shenja e besimit do të shfaqet te profili dhe njoftimet.'
+    : note
+      ? `Kërkesa për verifikim u refuzua. Arsyeja: ${note}`
+      : 'Kërkesa për verifikim nuk u aprovua. Mund të provoni përsëri nga profili.';
+
   return createUserNotification({
     userId,
     type: approved ? 'verification_approved' : 'verification_rejected',
     title: approved ? 'Verifikimi u aprovua' : 'Verifikimi u refuzua',
-    message: approved
-      ? 'Llogaria juaj është e verifikuar. Shenja e besimit do të shfaqet te profili dhe njoftimet.'
-      : 'Kërkesa për verifikim nuk u aprovua. Mund të provoni përsëri nga profili.',
+    message,
     refKind: 'verification',
     refId: userId,
     href: '/user/dashboard/profili',

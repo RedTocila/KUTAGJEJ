@@ -69,9 +69,20 @@ function formatVerificationRequest(doc) {
 }
 
 /**
- * Validate ID number + front image (all accounts) and NIPT (business).
- * @returns {{ ok: true, idNumber: string, idFrontImageUrl: string, nipt: string, isBusiness: boolean } | { ok: false, status: number, message: string }}
+ * Validate ID number + front image (all accounts), phone (all accounts), and NIPT (business).
+ * @returns {{ ok: true, idNumber: string, idFrontImageUrl: string, phone: string, nipt: string, isBusiness: boolean } | { ok: false, status: number, message: string }}
  */
+function normalizePhone(raw) {
+  return String(raw ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 40);
+}
+
+function isValidPhone(phone) {
+  return phone.length >= 6 && phone.length <= 40 && /^[\d+\s().-]{6,40}$/.test(phone);
+}
+
 function normalizeVerificationDocuments(payload, portal) {
   const idNumber = String(payload?.idNumber ?? '')
     .replace(/\s+/g, ' ')
@@ -80,6 +91,7 @@ function normalizeVerificationDocuments(payload, portal) {
   const idFrontImageUrl = String(payload?.idFrontImageUrl ?? '')
     .trim()
     .slice(0, 2000);
+  const phone = normalizePhone(payload?.phone ?? portal?.phone ?? '');
   const isBusiness =
     portal?.accountType === 'business' || portal?.constructor?.modelName === 'BusinessUser';
   const nipt = String(payload?.nipt ?? (isBusiness ? portal?.nipt : '') ?? '')
@@ -96,6 +108,12 @@ function normalizeVerificationDocuments(payload, portal) {
   if (!/^https?:\/\//i.test(idFrontImageUrl)) {
     return { ok: false, status: 400, message: 'Fotoja e ID-së nuk është e vlefshme.' };
   }
+  if (!phone) {
+    return { ok: false, status: 400, message: 'Numri i telefonit është i detyrueshëm.' };
+  }
+  if (!isValidPhone(phone)) {
+    return { ok: false, status: 400, message: 'Numri i telefonit nuk është i vlefshëm.' };
+  }
   if (isBusiness && !nipt) {
     return { ok: false, status: 400, message: 'NIPT është i detyrueshëm për llogaritë e biznesit.' };
   }
@@ -104,9 +122,21 @@ function normalizeVerificationDocuments(payload, portal) {
     ok: true,
     idNumber,
     idFrontImageUrl,
+    phone,
     nipt: isBusiness ? nipt : '',
     isBusiness,
   };
+}
+
+async function persistApplicantPhone(applicantId, phone) {
+  const normalized = normalizePhone(phone);
+  if (!normalized) return;
+  const now = new Date().toISOString();
+  const { error } = await getSupabaseAdmin()
+    .from('profiles')
+    .update({ phone: normalized, updated_at: now })
+    .eq('id', applicantId);
+  if (error) throw error;
 }
 
 async function getApplicantVerificationStatus(user) {
@@ -145,6 +175,9 @@ async function submitVerificationRequest(user, payload = {}) {
   const imageCheck = await validateIdFrontImageUrl(docs.idFrontImageUrl);
   if (!imageCheck.ok) return imageCheck;
 
+  await persistApplicantPhone(portal.id, docs.phone);
+  portal.phone = docs.phone;
+
   const { data: pending, error: pendingErr } = await getSupabaseAdmin()
     .from('job_employer_verification_requests')
     .select('id')
@@ -161,6 +194,7 @@ async function submitVerificationRequest(user, payload = {}) {
   const note = String(payload?.message ?? '').replace(/\s+/g, ' ').trim().slice(0, 2000);
   const snap = buildApplicantSnapshot(portal, portal.constructor.modelName);
   if (docs.isBusiness && docs.nipt) snap.nipt = docs.nipt;
+  snap.phone = docs.phone;
   const { data: doc, error } = await getSupabaseAdmin()
     .from('job_employer_verification_requests')
     .insert({
@@ -205,6 +239,11 @@ async function reviewVerificationRequest(admin, requestId, decision, adminNote) 
   }
 
   const status = decision === 'approve' ? 'approved' : 'rejected';
+  const trimmedNote = String(adminNote ?? '').replace(/\s+/g, ' ').trim().slice(0, 2000);
+  if (status === 'rejected' && !trimmedNote) {
+    return { ok: false, status: 400, message: 'Shkruani arsyen e refuzimit për ta njoftuar përdoruesin.' };
+  }
+
   const now = new Date().toISOString();
   const { data: updated, error: updateErr } = await sb
     .from('job_employer_verification_requests')
@@ -212,7 +251,7 @@ async function reviewVerificationRequest(admin, requestId, decision, adminNote) 
       status,
       reviewed_by: admin.id || admin._id,
       reviewed_at: now,
-      admin_note: String(adminNote ?? '').trim().slice(0, 2000),
+      admin_note: trimmedNote,
       updated_at: now,
     })
     .eq('id', requestId)
@@ -238,6 +277,7 @@ async function reviewVerificationRequest(admin, requestId, decision, adminNote) 
     await notifyVerificationResult({
       userId: doc.applicant_id,
       approved: status === 'approved',
+      adminNote: trimmedNote,
     });
   } catch (notifyErr) {
     console.warn('notifyVerificationResult:', notifyErr?.message || notifyErr);
@@ -251,6 +291,9 @@ module.exports = {
   buildApplicantSnapshot,
   formatVerificationRequest,
   normalizeVerificationDocuments,
+  normalizePhone,
+  isValidPhone,
+  persistApplicantPhone,
   getApplicantVerificationStatus,
   submitVerificationRequest,
   reviewVerificationRequest,

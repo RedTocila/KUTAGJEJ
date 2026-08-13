@@ -104,8 +104,14 @@ export function AccountVerificationAdminPage() {
 
   const review = async (decision: 'approve' | 'reject') => {
     if (!selected) return;
+    const trimmedNote = adminNote.replace(/\s+/g, ' ').trim();
+    if (decision === 'reject' && !trimmedNote) {
+      setError('Shkruani arsyen e refuzimit — ajo i dërgohet përdoruesit.');
+      return;
+    }
     setActing(true);
-    const res = await reviewBySource(selected.source, selected.id, decision, adminNote);
+    setError(null);
+    const res = await reviewBySource(selected.source, selected.id, decision, trimmedNote);
     if (res.error) {
       setError(res.error);
       setActing(false);
@@ -121,7 +127,7 @@ export function AccountVerificationAdminPage() {
         row.applicantSnapshot.email?.toLowerCase() === email,
     );
     if (twin) {
-      await reviewBySource(twin.source, twin.id, decision, adminNote);
+      await reviewBySource(twin.source, twin.id, decision, trimmedNote);
     }
 
     setSelected(null);
@@ -270,12 +276,13 @@ export function AccountVerificationAdminPage() {
                 {selected?.message?.trim() || '—'}
               </Typography>
               <TextField
-                label="Shënim administratori"
+                label="Shënim për përdoruesin (i detyrueshëm për refuzim)"
                 value={adminNote}
                 onChange={(e) => setAdminNote(e.target.value)}
                 fullWidth
                 multiline
                 minRows={2}
+                placeholder="p.sh. Fotoja e ID-së ishte e turbullt — provoni përsëri me më shumë dritë."
                 sx={{ mt: 1, ...productFieldSx }}
               />
             </Stack>
@@ -287,7 +294,13 @@ export function AccountVerificationAdminPage() {
           </Button>
           {selected?.status === 'pending' ? (
             <>
-              <Button color="error" variant="outlined" disabled={acting} onClick={() => void review('reject')} sx={productButtonSx}>
+              <Button
+                color="error"
+                variant="outlined"
+                disabled={acting || !adminNote.trim()}
+                onClick={() => void review('reject')}
+                sx={productButtonSx}
+              >
                 Refuzo
               </Button>
               <Button variant="contained" disabled={acting} onClick={() => void review('approve')} sx={productButtonSx}>

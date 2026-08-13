@@ -57,6 +57,7 @@ export async function fetchJobEmployerVerificationStatus(): Promise<{
 export async function submitJobEmployerVerificationRequest(payload: {
   message?: string;
   idNumber: string;
+  phone: string;
   idFrontImageUrl: string;
   nipt?: string;
 }): Promise<{ request?: JobEmployerVerificationRequest; error?: string }> {
@@ -67,6 +68,7 @@ export async function submitJobEmployerVerificationRequest(payload: {
       body: JSON.stringify({
         message: payload.message?.trim() || '',
         idNumber: payload.idNumber.trim(),
+        phone: payload.phone.trim(),
         idFrontImageUrl: payload.idFrontImageUrl.trim(),
         nipt: payload.nipt?.trim() || '',
       }),

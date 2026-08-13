@@ -38,6 +38,7 @@ export function AccountVerificationCard() {
   const [status, setStatus] = React.useState<ProfessionalVerificationStatus>(EMPTY_STATUS);
   const [statusReady, setStatusReady] = React.useState(false);
   const [idNumber, setIdNumber] = React.useState('');
+  const [phone, setPhone] = React.useState('');
   const [nipt, setNipt] = React.useState('');
   const [idFrontPreview, setIdFrontPreview] = React.useState<string | null>(null);
   const [idFrontFile, setIdFrontFile] = React.useState<File | null>(null);
@@ -52,6 +53,12 @@ export function AccountVerificationCard() {
       setNipt(user.nipt.trim());
     }
   }, [isBusiness, user?.nipt]);
+
+  React.useEffect(() => {
+    if (typeof user?.phone === 'string' && user.phone.trim()) {
+      setPhone(user.phone.trim());
+    }
+  }, [user?.phone]);
 
   const refresh = React.useCallback(async () => {
     const res = await fetchProfessionalVerificationStatus();
@@ -95,6 +102,11 @@ export function AccountVerificationCard() {
     setIdFrontFile(null);
     if (idFrontPreview?.startsWith('blob:')) URL.revokeObjectURL(idFrontPreview);
     setIdFrontPreview(null);
+    if (typeof user?.phone === 'string' && user.phone.trim()) {
+      setPhone(user.phone.trim());
+    } else {
+      setPhone('');
+    }
     if (isBusiness && typeof user?.nipt === 'string' && user.nipt.trim()) {
       setNipt(user.nipt.trim());
     } else if (!isBusiness) {
@@ -104,9 +116,18 @@ export function AccountVerificationCard() {
 
   const handleSubmit = async () => {
     const trimmedId = idNumber.trim();
+    const trimmedPhone = phone.trim();
     const trimmedNipt = nipt.trim();
     if (!trimmedId) {
       setError('Numri i ID-së është i detyrueshëm.');
+      return;
+    }
+    if (!trimmedPhone) {
+      setError('Numri i telefonit është i detyrueshëm.');
+      return;
+    }
+    if (trimmedPhone.length < 6 || trimmedPhone.length > 40 || !/^[\d+\s().-]{6,40}$/.test(trimmedPhone)) {
+      setError('Numri i telefonit nuk është i vlefshëm.');
       return;
     }
     if (!idFrontFile) {
@@ -132,6 +153,7 @@ export function AccountVerificationCard() {
     const res = await submitProfessionalVerificationRequest({
       message,
       idNumber: trimmedId,
+      phone: trimmedPhone,
       idFrontImageUrl: up.urls[0],
       nipt: isBusiness ? trimmedNipt : undefined,
     });
@@ -154,8 +176,8 @@ export function AccountVerificationCard() {
   return (
     <Stack spacing={2}>
       <Typography variant="body2" color="text.secondary">
-        Pas aprovimit, shenja e verifikuar shfaqet në profilin tuaj publik. Dërgoni numrin e ID-së dhe skanoni
-        pjesën e përparme — kartën e plotë, të qartë, pa objekte pranë
+        Pas aprovimit, shenja e verifikuar shfaqet në profilin tuaj publik. Dërgoni numrin e ID-së, numrin
+        e telefonit dhe skanoni pjesën e përparme të kartës
         {isBusiness ? ', si dhe NIPT për llogaritë e biznesit' : ''}.
       </Typography>
 
@@ -219,6 +241,19 @@ export function AccountVerificationCard() {
                 ),
               },
             }}
+          />
+
+          <TextField
+            label="Numri i telefonit"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            fullWidth
+            required
+            disabled={submitting}
+            placeholder="p.sh. +355 69 123 4567"
+            autoComplete="tel"
+            slotProps={{ htmlInput: { maxLength: 40 } }}
           />
 
           {isBusiness ? (

@@ -27,7 +27,8 @@ type BannerSliderViewportProps = {
 
 /**
  * Banner track: `contained` clips to the current slide (home banners + category
- * sliders). `peek` shows adjacent cards in the side gutter.
+ * sliders) at full width, with a gutter only mid-swipe. `peek` shows adjacent
+ * cards in the side gutter.
  */
 export function BannerSliderViewport({
   idx,
@@ -43,6 +44,9 @@ export function BannerSliderViewport({
   const slides = React.Children.toArray(children);
   const contained = variant === 'contained';
   const maskImage = contained ? undefined : bannerSliderSideMask(idx, slideCount);
+  // Contained: slide padding creates a mid-swipe gutter; matching negative margin
+  // bleeds that padding outside the clip so the settled banner stays full-width.
+  const containedGutter = { xs: 1.25, md: 1.5 };
 
   return (
     <Box
@@ -69,6 +73,7 @@ export function BannerSliderViewport({
       <Box
         sx={(theme) => ({
           px: contained ? 0 : { xs: 3.5, md: 0 },
+          mx: contained ? { xs: -containedGutter.xs, md: -containedGutter.md } : 0,
           minWidth: 0,
           '--banner-first-flush': flushFirstSlide && !contained ? `-${theme.spacing(3.5)}` : '0px',
           [theme.breakpoints.up('md')]: {
@@ -84,8 +89,7 @@ export function BannerSliderViewport({
                 flex: `0 0 ${slideBasis}%`,
                 minWidth: 0,
                 // Gap between cards while sliding (border-box keeps % transforms correct).
-                // Contained banners fill the parent gutter (same as category row padding).
-                px: contained ? 0 : { xs: 0.75, md: 0 },
+                px: contained ? containedGutter : { xs: 0.75, md: 0 },
                 ...(flushFirstSlide && !contained && i === 0 ? { pl: { xs: 0, md: 0 } } : null),
                 boxSizing: 'border-box',
               }}

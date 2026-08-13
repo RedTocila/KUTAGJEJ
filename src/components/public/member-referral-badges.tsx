@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, Skeleton, Typography } from '@mui/material';
 
 import {
   ProductDialog,
@@ -335,6 +335,56 @@ function BadgeInfoDialog({
         ) : null}
       </ProductDialogActions>
     </ProductDialog>
+  );
+}
+
+/** Placeholder grid while referral badges load. */
+export function MemberReferralBadgesSkeleton({
+  count = 5,
+  dense = false,
+  columns = 5,
+}: {
+  count?: number;
+  dense?: boolean;
+  columns?: number;
+}): React.JSX.Element {
+  const tile = dense ? 42 : 48;
+  return (
+    <Box sx={{ width: '100%', pt: 0.5 }} aria-busy aria-label="Duke ngarkuar badges">
+      <Skeleton
+        variant="text"
+        animation="wave"
+        width={64}
+        height={16}
+        sx={{ mx: 'auto', mb: 1 }}
+      />
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+          columnGap: dense ? 0.75 : 1,
+          rowGap: dense ? 1.5 : 1.75,
+          width: '100%',
+        }}
+      >
+        {Array.from({ length: count }, (_, i) => (
+          <Box
+            key={i}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 0.55,
+              minWidth: 0,
+            }}
+          >
+            <Skeleton variant="circular" animation="wave" width={tile} height={tile} />
+            <Skeleton variant="text" animation="wave" width="80%" height={12} />
+            <Skeleton variant="text" animation="wave" width="70%" height={10} />
+          </Box>
+        ))}
+      </Box>
+    </Box>
   );
 }
 

@@ -4,9 +4,9 @@ import * as React from 'react';
 import {
   Alert,
   Box,
-  CircularProgress,
   Drawer,
   IconButton,
+  Skeleton,
   Stack,
   Typography,
 } from '@mui/material';
@@ -346,9 +346,22 @@ export function AddListingPickerDialog({
         ) : null}
 
         {loading ? (
-          <Box sx={{ py: 3, display: 'flex', justifyContent: 'center' }}>
-            <CircularProgress size={22} />
-          </Box>
+          <Stack spacing={0} aria-busy aria-label="Duke ngarkuar kategoritë">
+            {Array.from({ length: 6 }, (_, i) => (
+              <Stack
+                key={i}
+                direction="row"
+                spacing={1.25}
+                sx={{ alignItems: 'center', px: 0.5, py: 1.2 }}
+              >
+                <Skeleton variant="rounded" animation="wave" width={34} height={34} sx={{ borderRadius: 1.5, flexShrink: 0 }} />
+                <Stack spacing={0.4} sx={{ flex: 1, minWidth: 0 }}>
+                  <Skeleton variant="text" animation="wave" width={i % 2 === 0 ? '48%' : '56%'} height={18} />
+                  <Skeleton variant="text" animation="wave" width={i % 3 === 0 ? '72%' : '64%'} height={14} />
+                </Stack>
+              </Stack>
+            ))}
+          </Stack>
         ) : (
           <Stack spacing={0}>
             {!showRootActions ? null : (

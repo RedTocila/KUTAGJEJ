@@ -14,6 +14,7 @@ import {
 import { Bell as BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
 
 import { ProductTag } from '@/components/public/product-browse-chrome';
+import { FilterChipSkeletonRow, NotificationRowsSkeleton } from '@/components/user/inbox-skeletons';
 import { LeadsTopHeaderButton } from '@/components/user/leads-top-header-button';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { UserNotificationRow } from '@/components/user/user-notification-row';
@@ -102,6 +103,8 @@ export default function UserNotificationsPage() {
     return map;
   }, [inboxItems]);
 
+  const showInitialSkeleton = loading && items.length === 0;
+
   return (
     <Stack spacing={2.5} sx={{ maxWidth: 720, mx: 'auto', width: '100%' }}>
       <LeadsTopHeaderButton />
@@ -145,83 +148,89 @@ export default function UserNotificationsPage() {
         </Stack>
       </Stack>
 
-      <Stack direction="row" useFlexGap spacing={1} sx={{ flexWrap: 'wrap' }}>
-        {(
-          [
-            { key: 'all' as const, label: t.notifications.tags.all },
-            ...NOTIFICATION_TAGS.map((tag) => ({ key: tag, label: tagLabel(tag, t) })),
-          ] as { key: InboxFilterTag; label: string }[]
-        ).map(({ key, label }) => {
-          const selected = filter === key;
-          const count = counts[key];
-          return (
-            <ProductTag
-              key={key}
-              icon={notificationFilterIcon(key)}
-              label={count > 0 ? `${label} (${count})` : label}
-              active={selected}
-              onClick={() => setFilter(key)}
-            />
-          );
-        })}
-      </Stack>
-
-      {error ? <Alert severity="error">{error}</Alert> : null}
-
-      {loading && items.length === 0 ? (
-        <Typography color="text.secondary" variant="body2" sx={{ py: 1 }}>
-          {t.common.loading}
-        </Typography>
-      ) : groups.length === 0 ? (
-        <Typography color="text.secondary" variant="body2" sx={{ py: 1 }}>
-          {t.notifications.empty}
-        </Typography>
+      {showInitialSkeleton ? (
+        <>
+          <FilterChipSkeletonRow count={5} />
+          {error ? <Alert severity="error">{error}</Alert> : null}
+          <NotificationRowsSkeleton count={6} />
+        </>
       ) : (
-        <Box
-          sx={(theme) => ({
-            borderTop: '1px solid',
-            borderBottom: '1px solid',
-            borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
-          })}
-        >
-          {groups.map((group, index) => {
-            const tag = notificationTagForType(group.primary.type);
-            return (
-              <React.Fragment key={group.ids.join('-')}>
-                {index > 0 ? (
-                  <Divider
-                    sx={(theme) => ({
-                      borderColor:
-                        theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
-                    })}
-                  />
-                ) : null}
-                <UserNotificationRow
-                  group={group}
-                  onOpened={() => void refresh()}
-                  onViewListing={(target) => {
-                    setListingPreview(target);
-                    void refresh();
-                  }}
-                  showTag={
-                    tag ? (
-                      <Chip
-                        size="small"
-                        label={tagLabel(tag, t)}
-                        sx={{
-                          height: 20,
-                          fontWeight: 700,
-                          fontSize: '0.65rem',
-                          borderRadius: 1.25,
-                        }}
-                      />
-                    ) : null
-                  }
+        <>
+          <Stack direction="row" useFlexGap spacing={1} sx={{ flexWrap: 'wrap' }}>
+            {(
+              [
+                { key: 'all' as const, label: t.notifications.tags.all },
+                ...NOTIFICATION_TAGS.map((tag) => ({ key: tag, label: tagLabel(tag, t) })),
+              ] as { key: InboxFilterTag; label: string }[]
+            ).map(({ key, label }) => {
+              const selected = filter === key;
+              const count = counts[key];
+              return (
+                <ProductTag
+                  key={key}
+                  icon={notificationFilterIcon(key)}
+                  label={count > 0 ? `${label} (${count})` : label}
+                  active={selected}
+                  onClick={() => setFilter(key)}
                 />
-              </React.Fragment>
-            );
-          })}
-        </Box>
+              );
+            })}
+          </Stack>
+
+          {error ? <Alert severity="error">{error}</Alert> : null}
+
+          {groups.length === 0 ? (
+            <Typography color="text.secondary" variant="body2" sx={{ py: 1 }}>
+              {t.notifications.empty}
+            </Typography>
+          ) : (
+            <Box
+              sx={(theme) => ({
+                borderTop: '1px solid',
+                borderBottom: '1px solid',
+                borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
+              })}
+            >
+              {groups.map((group, index) => {
+                const tag = notificationTagForType(group.primary.type);
+                return (
+                  <React.Fragment key={group.ids.join('-')}>
+                    {index > 0 ? (
+                      <Divider
+                        sx={(theme) => ({
+                          borderColor:
+                            theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
+                        })}
+                      />
+                    ) : null}
+                    <UserNotificationRow
+                      group={group}
+                      onOpened={() => void refresh()}
+                      onViewListing={(target) => {
+                        setListingPreview(target);
+                        void refresh();
+                      }}
+                      showTag={
+                        tag ? (
+                          <Chip
+                            size="small"
+                            label={tagLabel(tag, t)}
+                            sx={{
+                              height: 20,
+                              fontWeight: 700,
+                              fontSize: '0.65rem',
+                              borderRadius: 1.25,
+                            }}
+                          />
+                        ) : null
+                      }
+                    />
+                  </React.Fragment>
+                );
+              })}
+            </Box>
+          )}
+        </>
       )}
 
       <SavedListingPreviewDialog

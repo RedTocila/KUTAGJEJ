@@ -10,11 +10,11 @@ import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
-import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
+import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { useSavedListingsOptional } from '@/contexts/saved-listings-context';
 import { useListingSavedState } from '@/hooks/use-listing-saved-state';
 import { useUser } from '@/hooks/use-user';
@@ -174,7 +174,7 @@ export function CardMedia({
   );
 
   // OKAZION badge wins when both are active (same priority as before for chrome).
-  const showPremiumCrown = premium && !okazion;
+  const showPremiumBadge = premium && !okazion;
   const showBottomRight = Boolean(okazion || bottomRightOverlay);
 
   return (
@@ -216,7 +216,7 @@ export function CardMedia({
         </Stack>
       )}
 
-      {(okazion || showPremiumCrown || topLeftOverlay || topLeftBadge) ? (
+      {(okazion || showPremiumBadge || topLeftOverlay || topLeftBadge) ? (
         <Stack
           spacing={0.6}
           sx={{
@@ -244,23 +244,14 @@ export function CardMedia({
                 '& .MuiChip-label': { px: 1.1 },
               }}
             />
-          ) : showPremiumCrown ? (
-            <Box
+          ) : showPremiumBadge ? (
+            <ListingTrustBadge
+              size={28}
               aria-label="Premium"
               sx={{
-                width: 28,
-                height: 28,
-                borderRadius: '999px',
-                display: 'grid',
-                placeItems: 'center',
-                flexShrink: 0,
-                bgcolor: 'warning.main',
-                color: '#fff',
-                boxShadow: '0 2px 10px rgba(245, 166, 35, 0.55)',
+                filter: 'drop-shadow(0 2px 10px rgba(245, 166, 35, 0.55))',
               }}
-            >
-              <CrownIcon size={15} weight="fill" />
-            </Box>
+            />
           ) : topLeftOverlay ? (
             <Box sx={{ lineHeight: 0 }}>{topLeftOverlay}</Box>
           ) : topLeftBadge ? (

@@ -17,6 +17,7 @@ import { Bell as BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
 import { ArrowRight as ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 
 import { UserNotificationRow } from '@/components/user/user-notification-row';
+import { NotificationRowsSkeleton } from '@/components/user/inbox-skeletons';
 import {
   SavedListingPreviewDialog,
   type SavedListingPreviewTarget,
@@ -146,9 +147,15 @@ export function UserNotificationsMenu() {
             </Stack>
           </Stack>
           {groups.length === 0 ? (
-            <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5, fontSize: '0.8rem' }}>
-              {loading ? t.common.loading : t.notifications.empty}
-            </Typography>
+            loading ? (
+              <Box sx={{ mt: 0.5 }}>
+                <NotificationRowsSkeleton count={4} compact />
+              </Box>
+            ) : (
+              <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5, fontSize: '0.8rem' }}>
+                {t.notifications.empty}
+              </Typography>
+            )
           ) : null}
         </Box>
         {groups.length > 0 ? (

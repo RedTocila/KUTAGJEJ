@@ -29,6 +29,10 @@ function shouldSkipOverlay(path: string): boolean {
   if (path === paths.user.myRealEstateListings || path.startsWith(`${paths.user.myRealEstateListings}/`)) {
     return true;
   }
+  if (path === paths.user.notifications || path.startsWith(`${paths.user.notifications}/`)) {
+    return true;
+  }
+  if (path === paths.user.leads || path.startsWith(`${paths.user.leads}/`)) return true;
   return false;
 }
 

@@ -19,7 +19,7 @@ import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Build
 import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
-import { MemberReferralBadgesRow } from '@/components/public/member-referral-badges';
+import { MemberReferralBadgesRow, MemberReferralBadgesSkeleton } from '@/components/public/member-referral-badges';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 
@@ -418,19 +418,7 @@ export function MemberProfileView({
                 </Stack>
 
                 {badgesLoading ? (
-                  <Box
-                    sx={{
-                      width: '100%',
-                      pt: 0.25,
-                      display: 'flex',
-                      justifyContent: 'center',
-                      py: 1.5,
-                    }}
-                    aria-busy
-                    aria-label="Duke ngarkuar badges"
-                  >
-                    <CircularProgress size={28} />
-                  </Box>
+                  <MemberReferralBadgesSkeleton columns={5} count={5} />
                 ) : displayBadges.length > 0 ? (
                   <Box sx={{ width: '100%', pt: 0.25 }}>
                     <Typography

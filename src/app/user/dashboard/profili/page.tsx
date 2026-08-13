@@ -26,7 +26,7 @@ import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
-import { MemberReferralBadgesRow } from '@/components/public/member-referral-badges';
+import { MemberReferralBadgesRow, MemberReferralBadgesSkeleton } from '@/components/public/member-referral-badges';
 import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { AccountVerificationCard } from '@/components/user/account-verification-card';
 import { LockedIdentityField } from '@/components/user/locked-identity-field';
@@ -516,19 +516,7 @@ export default function UserProfilePage() {
             </Stack>
 
             {referralBadgesLoading ? (
-              <Box
-                sx={{
-                  width: '100%',
-                  pt: 0.5,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  py: 1.5,
-                }}
-                aria-busy
-                aria-label="Duke ngarkuar badges"
-              >
-                <CircularProgress size={28} />
-              </Box>
+              <MemberReferralBadgesSkeleton dense columns={5} count={5} />
             ) : referralBadges.length > 0 ? (
               <Box sx={{ width: '100%', pt: 0.5 }}>
                 <Typography

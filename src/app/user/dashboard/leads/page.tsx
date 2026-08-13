@@ -15,6 +15,7 @@ import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
 import { UsersThree as UsersThreeIcon } from '@phosphor-icons/react/dist/ssr/UsersThree';
 
 import { ProductTag } from '@/components/public/product-browse-chrome';
+import { FilterChipSkeletonRow, NotificationRowsSkeleton } from '@/components/user/inbox-skeletons';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { LeadsHelpButton } from '@/components/user/leads-how-it-works';
 import { useOwnerEditHeaderActions } from '@/components/user/owner-edit-header-actions';
@@ -102,6 +103,8 @@ export default function UserLeadsPage() {
     [items],
   );
 
+  const showInitialSkeleton = entitled === null || (entitled && loading && items.length === 0);
+
   return (
     <Stack spacing={2.5} sx={{ maxWidth: 720, mx: 'auto', width: '100%' }}>
       <Stack
@@ -149,85 +152,91 @@ export default function UserLeadsPage() {
         </Alert>
       ) : null}
 
-      {entitled ? (
-        <Stack direction="row" useFlexGap spacing={1} sx={{ flexWrap: 'wrap' }}>
-          {(
-            [
-              { key: 'all' as const, label: t.notifications.tags.all },
-              ...LEAD_NOTIFICATION_TAGS.map((tag) => ({ key: tag, label: tagLabel(tag, t) })),
-            ] as { key: LeadFilterTag; label: string }[]
-          ).map(({ key, label }) => {
-            const selected = filter === key;
-            const count = counts[key];
-            return (
-              <ProductTag
-                key={key}
-                icon={notificationFilterIcon(key)}
-                label={count > 0 ? `${label} (${count})` : label}
-                active={selected}
-                onClick={() => setFilter(key)}
-              />
-            );
-          })}
-        </Stack>
-      ) : null}
-
-      {error ? <Alert severity="error">{error}</Alert> : null}
-
-      {entitled === null || (loading && items.length === 0) ? (
-        <Typography color="text.secondary" variant="body2" sx={{ py: 1 }}>
-          {t.common.loading}
-        </Typography>
-      ) : entitled === false ? null : groups.length === 0 ? (
-        <Typography color="text.secondary" variant="body2" sx={{ py: 1 }}>
-          {t.notifications.leadsEmpty}
-        </Typography>
+      {showInitialSkeleton ? (
+        <>
+          <FilterChipSkeletonRow count={4} />
+          {error ? <Alert severity="error">{error}</Alert> : null}
+          <NotificationRowsSkeleton count={5} />
+        </>
       ) : (
-        <Box
-          sx={(theme) => ({
-            borderTop: '1px solid',
-            borderBottom: '1px solid',
-            borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
-          })}
-        >
-          {groups.map((group, index) => {
-            const tag = notificationTagForType(group.primary.type);
-            return (
-              <React.Fragment key={group.ids.join('-')}>
-                {index > 0 ? (
-                  <Divider
-                    sx={(theme) => ({
-                      borderColor:
-                        theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
-                    })}
+        <>
+          {entitled ? (
+            <Stack direction="row" useFlexGap spacing={1} sx={{ flexWrap: 'wrap' }}>
+              {(
+                [
+                  { key: 'all' as const, label: t.notifications.tags.all },
+                  ...LEAD_NOTIFICATION_TAGS.map((tag) => ({ key: tag, label: tagLabel(tag, t) })),
+                ] as { key: LeadFilterTag; label: string }[]
+              ).map(({ key, label }) => {
+                const selected = filter === key;
+                const count = counts[key];
+                return (
+                  <ProductTag
+                    key={key}
+                    icon={notificationFilterIcon(key)}
+                    label={count > 0 ? `${label} (${count})` : label}
+                    active={selected}
+                    onClick={() => setFilter(key)}
                   />
-                ) : null}
-                <UserNotificationRow
-                  group={group}
-                  onOpened={() => void refresh()}
-                  onViewListing={(target) => {
-                    setListingPreview(target);
-                    void refresh();
-                  }}
-                  showTag={
-                    tag ? (
-                      <Chip
-                        size="small"
-                        label={tagLabel(tag, t)}
-                        sx={{
-                          height: 20,
-                          fontWeight: 700,
-                          fontSize: '0.65rem',
-                          borderRadius: 1.25,
-                        }}
+                );
+              })}
+            </Stack>
+          ) : null}
+
+          {error ? <Alert severity="error">{error}</Alert> : null}
+
+          {entitled === false ? null : groups.length === 0 ? (
+            <Typography color="text.secondary" variant="body2" sx={{ py: 1 }}>
+              {t.notifications.leadsEmpty}
+            </Typography>
+          ) : (
+            <Box
+              sx={(theme) => ({
+                borderTop: '1px solid',
+                borderBottom: '1px solid',
+                borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
+              })}
+            >
+              {groups.map((group, index) => {
+                const tag = notificationTagForType(group.primary.type);
+                return (
+                  <React.Fragment key={group.ids.join('-')}>
+                    {index > 0 ? (
+                      <Divider
+                        sx={(theme) => ({
+                          borderColor:
+                            theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
+                        })}
                       />
-                    ) : null
-                  }
-                />
-              </React.Fragment>
-            );
-          })}
-        </Box>
+                    ) : null}
+                    <UserNotificationRow
+                      group={group}
+                      onOpened={() => void refresh()}
+                      onViewListing={(target) => {
+                        setListingPreview(target);
+                        void refresh();
+                      }}
+                      showTag={
+                        tag ? (
+                          <Chip
+                            size="small"
+                            label={tagLabel(tag, t)}
+                            sx={{
+                              height: 20,
+                              fontWeight: 700,
+                              fontSize: '0.65rem',
+                              borderRadius: 1.25,
+                            }}
+                          />
+                        ) : null
+                      }
+                    />
+                  </React.Fragment>
+                );
+              })}
+            </Box>
+          )}
+        </>
       )}
 
       <SavedListingPreviewDialog

@@ -8,7 +8,7 @@ import { MOTION } from '@/styles/motion';
 /**
  * Shared chrome for the public listing cards: a quiet bordered card that
  * lifts subtly and tints its border on hover. Premium / OKAZION are marked
- * on media (crown / badge / countdown), not via card frame.
+ * on media (premium badge / OKAZION chip / countdown), not via card frame.
  */
 export function CardShell({
   children,
@@ -16,7 +16,7 @@ export function CardShell({
 }: {
   children: React.ReactNode;
   mediaSlot?: React.ReactNode;
-  /** @deprecated Ignored — premium is shown via crown on media. */
+  /** @deprecated Ignored — premium is shown via Premium Badge on media. */
   premium?: boolean;
   /** @deprecated Ignored — OKAZION is shown via badge / countdown on media. */
   okazion?: boolean;

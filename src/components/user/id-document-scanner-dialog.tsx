@@ -17,15 +17,16 @@ import {
   computeCardGuide,
   evaluateFrameReady,
   ID_CARD_ASPECT,
+  isCaptureUsable,
   mapGuideToVideoCrop,
   scanQualityHintMessage,
   type CardGuideRect,
 } from '@/lib/id-document-scan-quality';
 import { scanIdDocumentWithAi } from '@/lib/id-document-scan-client';
 
-const ANALYSIS_INTERVAL_MS = 180;
-/** Require several stable, readable frames before auto-capture. */
-const READY_FRAMES = 7;
+const ANALYSIS_INTERVAL_MS = 160;
+/** Stable frames before auto-capture. */
+const READY_FRAMES = 4;
 
 export interface IdDocumentScanCapture {
   file: File;
@@ -157,17 +158,16 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
     ctx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, crop.sw, crop.sh);
     stopCamera();
 
-    const captureQuality = evaluateFrameReady(ctx.getImageData(0, 0, crop.sw, crop.sh), { forCapture: true });
-    if (!captureQuality.readable) {
+    const imageData = ctx.getImageData(0, 0, crop.sw, crop.sh);
+    if (!isCaptureUsable(imageData)) {
       capturingRef.current = false;
+      const sample = evaluateFrameReady(imageData);
       setError(
-        captureQuality.hint === 'cluttered'
-          ? 'Hiqni objektet pranë kartës. Vetëm ID-ja duhet të jetë në kornizë.'
-          : captureQuality.hint === 'partial_card' || captureQuality.hint === 'no_card'
-            ? 'Vendoseni të gjithë kartën brenda kornizës — asnjë skaj i prerë.'
-            : captureQuality.hint === 'blurry' || captureQuality.hint === 'low_detail'
-              ? 'Foto e turbullt ose e pa lexueshme. Mbajeni telefonin fiks dhe afrojeni kamerën.'
-              : 'Fotoja nuk kaloi kontrollin e cilësisë. Vendoseni kartën e plotë, të pastër, brenda kornizës.',
+        sample.hint === 'too_dark'
+          ? 'Foto shumë e errët. Provoni me më shumë dritë.'
+          : sample.hint === 'blurry' || sample.hint === 'low_detail'
+            ? 'Foto e turbullt. Mbajeni telefonin fiks dhe afrojeni kamerën.'
+            : 'Vendoseni ID-në brenda kornizës dhe provoni përsëri.',
       );
       setPhase('error');
       return;
@@ -228,7 +228,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
     guideRef.current = cardGuide;
     setGuide(cardGuide);
 
-    const sampleW = 200;
+    const sampleW = 320;
     const sampleH = Math.max(40, Math.round(sampleW / ID_CARD_ASPECT));
     const canvas = analysisCanvasRef.current ?? document.createElement('canvas');
     analysisCanvasRef.current = canvas;
@@ -413,7 +413,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
             Skano pjesën e përparme të ID-së
           </Typography>
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.82)', mt: 0.75, fontWeight: 600 }}>
-            Vendoseni të gjithë kartën brenda kornizës, pa objekte pranë. Fotoja duhet të jetë e qartë dhe e lexueshme.
+            Vendoseni të gjithë kartën brenda kornizës. Fotoja duhet të jetë e qartë dhe e lexueshme.
           </Typography>
         </Box>
 
@@ -464,21 +464,30 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
               </Stack>
             </Stack>
           ) : (
-            <>
-              <Typography variant="body2" sx={{ color: '#fff', textAlign: 'center', fontWeight: 700, mb: 1.25 }}>
+            <Stack spacing={1.25} sx={{ alignItems: 'center', pointerEvents: 'auto' }}>
+              <Typography variant="body2" sx={{ color: '#fff', textAlign: 'center', fontWeight: 700 }}>
                 {qualityHint}
               </Typography>
               <LinearProgress
                 variant={frameReady ? 'determinate' : 'indeterminate'}
                 value={progress}
                 sx={{
+                  width: '100%',
                   height: 6,
                   borderRadius: 999,
                   bgcolor: 'rgba(255,255,255,0.15)',
                   '& .MuiLinearProgress-bar': { borderRadius: 999 },
                 }}
               />
-            </>
+              <Button
+                variant="contained"
+                onClick={() => void captureFromGuide()}
+                disabled={!frameReady || phase !== 'scanning'}
+                sx={{ fontWeight: 700, mt: 0.5, minWidth: 160 }}
+              >
+                Kap foton
+              </Button>
+            </Stack>
           )}
         </Box>
       </Box>

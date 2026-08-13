@@ -15,7 +15,6 @@ export type ScanQualityHint =
   | 'too_bright'
   | 'blurry'
   | 'low_detail'
-  | 'cluttered'
   | 'hold_steady'
   | 'almost'
   | 'ready';
@@ -26,9 +25,6 @@ export interface ScanQualitySample {
   sharpness: number;
   coverage: number;
   detailScore: number;
-  borderScore: number;
-  edgeCompleteness: number;
-  clutterScore: number;
   inFrame: boolean;
   readable: boolean;
   hint: ScanQualityHint;
@@ -107,7 +103,7 @@ function sobelMagnitude(data: Uint8ClampedArray, width: number, height: number, 
   return Math.sqrt(gx * gx + gy * gy);
 }
 
-/** Share of 3×3 grid cells that contain enough edge energy (card fills the guide). */
+/** Share of 3×3 grid cells that contain enough edge energy (something document-like is present). */
 function measureGridCoverage(imageData: ImageData): number {
   const { data, width, height } = imageData;
   const cols = 3;
@@ -133,18 +129,18 @@ function measureGridCoverage(imageData: ImageData): number {
       }
 
       const avgEdge = count ? edgeSum / count : 0;
-      if (avgEdge >= 14) activeCells += 1;
+      if (avgEdge >= 10) activeCells += 1;
     }
   }
 
   return activeCells / (cols * rows);
 }
 
-/** Text / fine-detail score from local contrast transitions in the inner card area. */
+/** Text / fine-detail score from local contrast transitions in the inner area. */
 function measureDetailScore(imageData: ImageData): number {
   const { data, width, height } = imageData;
-  const marginX = Math.floor(width * 0.12);
-  const marginY = Math.floor(height * 0.12);
+  const marginX = Math.floor(width * 0.1);
+  const marginY = Math.floor(height * 0.1);
   const x0 = marginX;
   const y0 = marginY;
   const x1 = width - marginX;
@@ -157,7 +153,7 @@ function measureDetailScore(imageData: ImageData): number {
     let prev = grayAt(data, width, x0, y);
     for (let x = x0 + 1; x < x1; x += 1) {
       const g = grayAt(data, width, x, y);
-      if (Math.abs(g - prev) >= 18) transitions += 1;
+      if (Math.abs(g - prev) >= 14) transitions += 1;
       prev = g;
       samples += 1;
     }
@@ -167,7 +163,7 @@ function measureDetailScore(imageData: ImageData): number {
     let prev = grayAt(data, width, x, y0);
     for (let y = y0 + 1; y < y1; y += 1) {
       const g = grayAt(data, width, x, y);
-      if (Math.abs(g - prev) >= 18) transitions += 1;
+      if (Math.abs(g - prev) >= 14) transitions += 1;
       prev = g;
       samples += 1;
     }
@@ -176,217 +172,50 @@ function measureDetailScore(imageData: ImageData): number {
   return samples ? transitions / samples : 0;
 }
 
-/** Strong edges along guide borders suggest a rectangular document boundary. */
-function measureBorderStructure(imageData: ImageData): number {
-  const { data, width, height } = imageData;
-  const bandX = Math.max(2, Math.floor(width * 0.08));
-  const bandY = Math.max(2, Math.floor(height * 0.08));
-
-  const sampleBand = (xStart: number, xEnd: number, yStart: number, yEnd: number): number => {
-    let sum = 0;
-    let count = 0;
-    for (let y = yStart; y < yEnd; y += 2) {
-      for (let x = xStart; x < xEnd; x += 2) {
-        if (x <= 0 || y <= 0 || x >= width - 1 || y >= height - 1) continue;
-        sum += sobelMagnitude(data, width, height, x, y);
-        count += 1;
-      }
-    }
-    return count ? sum / count : 0;
-  };
-
-  const top = sampleBand(0, width, 0, bandY);
-  const bottom = sampleBand(0, width, height - bandY, height);
-  const left = sampleBand(0, bandX, 0, height);
-  const right = sampleBand(width - bandX, width, 0, height);
-  const center = sampleBand(bandX, width - bandX, bandY, height - bandY);
-
-  const borderAvg = (top + bottom + left + right) / 4;
-  const borderStrong = [top, bottom, left, right].filter((v) => v >= 16).length;
-  const centerOk = center >= 10;
-
-  if (borderStrong >= 3 && centerOk && borderAvg >= 14) return 1;
-  if (borderStrong >= 2 && centerOk) return 0.6;
-  return borderStrong / 4;
-}
-
-/** All four card edges must be visible — rejects cropped captures. */
-function measureEdgeCompleteness(imageData: ImageData): number {
-  const { data, width, height } = imageData;
-  const bandX = Math.max(2, Math.floor(width * 0.08));
-  const bandY = Math.max(2, Math.floor(height * 0.08));
-
-  const sampleBand = (xStart: number, xEnd: number, yStart: number, yEnd: number): number => {
-    let sum = 0;
-    let count = 0;
-    for (let y = yStart; y < yEnd; y += 2) {
-      for (let x = xStart; x < xEnd; x += 2) {
-        if (x <= 0 || y <= 0 || x >= width - 1 || y >= height - 1) continue;
-        sum += sobelMagnitude(data, width, height, x, y);
-        count += 1;
-      }
-    }
-    return count ? sum / count : 0;
-  };
-
-  const edges = [
-    sampleBand(0, width, 0, bandY),
-    sampleBand(0, width, height - bandY, height),
-    sampleBand(0, bandX, 0, height),
-    sampleBand(width - bandX, width, 0, height),
-  ];
-
-  return edges.filter((v) => v >= 18).length / 4;
-}
-
-interface BandStats {
-  mean: number;
-  variance: number;
-  saturation: number;
-}
-
-function sampleBandStats(
-  data: Uint8ClampedArray,
-  width: number,
-  xStart: number,
-  xEnd: number,
-  yStart: number,
-  yEnd: number,
-): BandStats {
-  let sum = 0;
-  let sumSq = 0;
-  let satSum = 0;
-  let count = 0;
-
-  for (let y = yStart; y < yEnd; y += 2) {
-    for (let x = xStart; x < xEnd; x += 2) {
-      const i = (y * width + x) * 4;
-      const r = data[i];
-      const g = data[i + 1];
-      const b = data[i + 2];
-      const gVal = grayAt(data, width, x, y);
-      sum += gVal;
-      sumSq += gVal * gVal;
-      const max = Math.max(r, g, b);
-      const min = Math.min(r, g, b);
-      satSum += max > 0 ? (max - min) / max : 0;
-      count += 1;
-    }
-  }
-
-  if (!count) return { mean: 0, variance: 0, saturation: 0 };
-  const mean = sum / count;
-  return {
-    mean,
-    variance: Math.max(0, sumSq / count - mean * mean),
-    saturation: satSum / count,
-  };
-}
-
-/** Penalize foreign objects (lighters, boxes, hands) visible beside the card. */
-function measureBackgroundClutter(imageData: ImageData): number {
-  const { data, width, height } = imageData;
-  const margin = Math.max(3, Math.floor(Math.min(width, height) * 0.1));
-  const innerMargin = Math.max(margin + 2, Math.floor(Math.min(width, height) * 0.18));
-
-  const center = sampleBandStats(data, width, innerMargin, width - innerMargin, innerMargin, height - innerMargin);
-  const bands = [
-    sampleBandStats(data, width, 0, width, 0, margin),
-    sampleBandStats(data, width, 0, width, height - margin, height),
-    sampleBandStats(data, width, 0, margin, 0, height),
-    sampleBandStats(data, width, width - margin, width, 0, height),
-  ];
-
-  let penalty = 0;
-  for (const band of bands) {
-    const colorDiff = Math.abs(band.mean - center.mean);
-    if (colorDiff >= 35 && band.variance >= 700) penalty += 1;
-    if (band.saturation >= 0.28 && colorDiff >= 22) penalty += 0.75;
-  }
-
-  return Math.max(0, 1 - penalty / 2.5);
-}
-
 function pickHint(params: {
   brightness: number;
   contrast: number;
   sharpness: number;
   coverage: number;
   detailScore: number;
-  borderScore: number;
-  edgeCompleteness: number;
-  clutterScore: number;
   inFrame: boolean;
   readable: boolean;
 }): ScanQualityHint {
-  const {
-    brightness,
-    contrast,
-    sharpness,
-    coverage,
-    detailScore,
-    borderScore,
-    edgeCompleteness,
-    clutterScore,
-    inFrame,
-    readable,
-  } = params;
+  const { brightness, contrast, sharpness, coverage, detailScore, inFrame, readable } = params;
 
-  if (brightness < 24) return 'too_dark';
-  if (brightness > 245) return 'too_bright';
-  if (contrast < 10) return 'no_card';
-
-  if (coverage < 0.5 || borderScore < 0.5 || edgeCompleteness < 0.5) {
-    return coverage < 0.38 ? 'no_card' : 'partial_card';
-  }
-
-  if (clutterScore < 0.55) return 'cluttered';
+  if (brightness < 20) return 'too_dark';
+  if (brightness > 250) return 'too_bright';
+  if (contrast < 8) return 'no_card';
+  if (coverage < 0.34) return 'no_card';
+  if (coverage < 0.45) return 'partial_card';
   if (!inFrame) return 'partial_card';
-  if (sharpness < 60) return 'blurry';
-  if (detailScore < 0.05) return 'low_detail';
+  if (sharpness < 35) return 'blurry';
+  if (detailScore < 0.035) return 'low_detail';
   if (!readable) return 'hold_steady';
   return 'ready';
 }
 
-export interface EvaluateFrameOptions {
-  /** Stricter thresholds for the final full-resolution capture sent to AI. */
-  forCapture?: boolean;
-}
-
 /**
- * Decide whether an ID card fully fills the guide and details look readable enough to capture.
- * Uses grid coverage, border structure, sharpness, and fine-detail heuristics — no OCR.
+ * Lightweight pre-check before capture. Only blocks empty/dark/blurry frames.
+ * Document validation (clutter, screen photos, OCR) is handled by the server AI.
  */
-export function evaluateFrameReady(imageData: ImageData, options?: EvaluateFrameOptions): ScanQualitySample {
-  const forCapture = options?.forCapture === true;
+export function evaluateFrameReady(imageData: ImageData): ScanQualitySample {
   const { brightness, contrast } = measureBrightnessAndContrast(imageData);
   const sharpness = measureSharpness(imageData);
   const coverage = measureGridCoverage(imageData);
   const detailScore = measureDetailScore(imageData);
-  const borderScore = measureBorderStructure(imageData);
-  const edgeCompleteness = measureEdgeCompleteness(imageData);
-  const clutterScore = measureBackgroundClutter(imageData);
-
-  const minCoverage = forCapture ? 0.72 : 0.67;
-  const minBorder = forCapture ? 0.8 : 0.75;
-  const minEdge = forCapture ? 0.8 : 0.75;
-  const minSharpness = forCapture ? 95 : 85;
-  const minDetail = forCapture ? 0.072 : 0.065;
 
   const inFrame =
-    contrast >= 16 &&
-    brightness >= 28 &&
-    brightness <= 240 &&
-    coverage >= minCoverage &&
-    borderScore >= minBorder &&
-    edgeCompleteness >= minEdge &&
-    clutterScore >= 0.65;
+    contrast >= 10 &&
+    brightness >= 22 &&
+    brightness <= 248 &&
+    coverage >= 0.45;
 
   const readable =
     inFrame &&
-    sharpness >= minSharpness &&
-    detailScore >= minDetail &&
-    contrast >= 18;
+    sharpness >= 45 &&
+    detailScore >= 0.038 &&
+    contrast >= 12;
 
   const hint = pickHint({
     brightness,
@@ -394,9 +223,6 @@ export function evaluateFrameReady(imageData: ImageData, options?: EvaluateFrame
     sharpness,
     coverage,
     detailScore,
-    borderScore,
-    edgeCompleteness,
-    clutterScore,
     inFrame,
     readable,
   });
@@ -407,13 +233,18 @@ export function evaluateFrameReady(imageData: ImageData, options?: EvaluateFrame
     sharpness,
     coverage,
     detailScore,
-    borderScore,
-    edgeCompleteness,
-    clutterScore,
     inFrame,
     readable,
     hint,
   };
+}
+
+/** Minimal sanity check — only reject completely unusable captures before AI. */
+export function isCaptureUsable(imageData: ImageData): boolean {
+  const { brightness, contrast } = measureBrightnessAndContrast(imageData);
+  const sharpness = measureSharpness(imageData);
+  const coverage = measureGridCoverage(imageData);
+  return brightness >= 18 && brightness <= 252 && contrast >= 6 && coverage >= 0.28 && sharpness >= 20;
 }
 
 /** Map on-screen guide box to video pixel coordinates when video uses object-fit: cover. */
@@ -439,8 +270,8 @@ export function mapGuideToVideoCrop(
 }
 
 export function computeCardGuide(containerW: number, containerH: number): CardGuideRect {
-  const maxW = containerW * 0.82;
-  const maxH = containerH * 0.46;
+  const maxW = containerW * 0.88;
+  const maxH = containerH * 0.5;
   let width = maxW;
   let height = width / ID_CARD_ASPECT;
   if (height > maxH) {
@@ -460,7 +291,7 @@ export function scanQualityHintMessage(hint: ScanQualityHint, stableCount: numbe
     case 'no_card':
       return 'Vendoseni ID-në brenda kornizës';
     case 'partial_card':
-      return 'Afrojeni kamerën — karta duhet të mbushë kornizën';
+      return 'Vendoseni të gjithë kartën brenda kornizës';
     case 'too_dark':
       return 'Më shumë dritë e nevojshme';
     case 'too_bright':
@@ -469,8 +300,6 @@ export function scanQualityHintMessage(hint: ScanQualityHint, stableCount: numbe
       return 'Mbajeni telefonin fiks — foto e turbullt';
     case 'low_detail':
       return 'Afrojeni kamerën — detajet nuk lexohen';
-    case 'cluttered':
-      return 'Hiqni objektet pranë kartës — vetëm ID-ja në kornizë';
     case 'hold_steady':
       return 'Mbajeni kartën brenda kornizës';
     case 'almost':

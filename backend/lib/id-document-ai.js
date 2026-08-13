@@ -32,13 +32,17 @@ function buildSystemPrompt() {
     '- The image shows the FRONT of a real, physical government-issued identity document',
     '  (Albanian ID card "Kartë Identiteti", Kosovo ID, passport biodata page/card, or valid driving licence).',
     '- The ENTIRE physical card is visible — no edge is cut off by the photo frame.',
-    '- The card fills most of the frame and is photographed straight-on (not heavily angled).',
-    '- The background is clean: no other objects (lighters, phones, hands, boxes, tables with items) visible beside or overlapping the card.',
     '- Text on the card (name and ID number) is clearly readable — not blurry, dark, or out of focus.',
+    '',
+    'Do NOT reject just because of the background:',
+    '- Skin, hands, tattoos, clothing, or a plain surface behind/around the card are fine.',
+    '- Only reject as "cluttered" when a distinct foreign object (phone, lighter, keys, another document)',
+    '  overlaps the card or clearly obstructs reading the ID number.',
+    '- The card does not need to fill 100% of the image — margins and dark scanner padding are normal.',
     '',
     'REJECT (isIdCard=false) when you see:',
     '- Any edge of the physical ID card cut off or cropped (rejectReason: "cropped")',
-    '- Other objects visible in the frame besides the ID card (rejectReason: "cluttered")',
+    '- A distinct foreign object overlapping the card or blocking the ID number (rejectReason: "cluttered")',
     '- Blurry, motion-blurred, or out-of-focus image where text is hard to read (rejectReason: "blurry")',
     '- A photo of a screen, monitor, laptop, phone display, or printed screenshot (rejectReason: "screen_photo")',
     '- A web page, app UI, form, or browser window (including localhost URLs) (rejectReason: "screen_photo")',
@@ -173,20 +177,24 @@ async function scanIdDocumentFront(imageInput) {
 
   const userText =
     'This photo was taken live from a mobile phone camera inside our ID scanner. ' +
-    'Is it a clean, fully-in-frame, readable photo of the front of a real physical ID card? ' +
-    'If yes, extract the ID number. Reject if any edge is cropped, if other objects are visible, or if text is blurry.';
+    'Is it a readable photo of the front of a real physical ID card? ' +
+    'Background skin, hands, or tattoos are OK. If yes, extract the ID number.';
 
   let parsed = await callVisionScan(imageUrl, userText);
   let result = formatScanResult(parsed);
 
-  // One retry when the model mislabels a live camera capture as a screen photo.
-  if (!result.isIdCard && result.rejectReason === 'screen_photo') {
+  if (!result.isIdCard && (result.rejectReason === 'screen_photo' || result.rejectReason === 'cluttered')) {
+    const retryHint =
+      result.rejectReason === 'screen_photo'
+        ? 'Second review: this is a direct mobile-camera capture (not a screenshot). ' +
+          'Dark margins around the card are from our scanner frame, not a screen bezel. '
+        : 'Second review: skin, hands, tattoos, or a plain background around the card are NOT clutter. ' +
+          'Only reject cluttered if an object overlaps the card. ';
     parsed = await callVisionScan(
       imageUrl,
-      'Second review: this is a direct mobile-camera capture (not a screenshot). ' +
-        'Dark margins around the card are from our scanner frame, not a screen bezel. ' +
-        'If you can see a physical Albanian/Kosovo ID card layout, accept it when the ID number is readable; ' +
-        'otherwise use blurry or unreadable — not screen_photo.',
+      retryHint +
+        'If you can see a physical Albanian/Kosovo ID card layout with a readable ID number, accept it. ' +
+        'Otherwise use blurry or unreadable — not screen_photo or cluttered.',
     );
     result = formatScanResult(parsed);
   }

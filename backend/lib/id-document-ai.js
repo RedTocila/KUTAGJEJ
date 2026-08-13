@@ -23,24 +23,33 @@ function buildSystemPrompt() {
     'Return ONLY valid JSON with this exact shape:',
     '{',
     '  "isIdCard": boolean,',
-    '  "rejectReason": "screen_photo" | "not_document" | "wrong_document" | "back_side" | "unreadable" | null,',
+    '  "rejectReason": "screen_photo" | "not_document" | "wrong_document" | "back_side" | "cropped" | "cluttered" | "blurry" | "unreadable" | null,',
     '  "idNumber": string | null,',
     '  "documentType": "national_id" | "passport" | "drivers_license" | "residence_permit" | "other" | null',
     '}',
     '',
-    'Accept ONLY when the image shows the FRONT of a real, physical government-issued identity document',
-    '(Albanian ID card "Kartë Identiteti", Kosovo ID, passport biodata page/card, or valid driving licence).',
+    'Accept ONLY when ALL of these are true:',
+    '- The image shows the FRONT of a real, physical government-issued identity document',
+    '  (Albanian ID card "Kartë Identiteti", Kosovo ID, passport biodata page/card, or valid driving licence).',
+    '- The ENTIRE physical card is visible — no edge is cut off by the photo frame.',
+    '- The card fills most of the frame and is photographed straight-on (not heavily angled).',
+    '- The background is clean: no other objects (lighters, phones, hands, boxes, tables with items) visible beside or overlapping the card.',
+    '- Text on the card (name and ID number) is clearly readable — not blurry, dark, or out of focus.',
     '',
     'REJECT (isIdCard=false) when you see:',
-    '- A photo of a screen, monitor, laptop, phone display, or printed screenshot',
-    '- A web page, app UI, form, or browser window (including localhost URLs)',
-    '- Random objects, faces without ID layout, business cards, invoices, or NIPT paperwork alone',
-    '- The back side only, or a document that is mostly covered / unreadable',
-    '- Obvious fake, template, or digitally edited ID without a physical card present',
+    '- Any edge of the physical ID card cut off or cropped (rejectReason: "cropped")',
+    '- Other objects visible in the frame besides the ID card (rejectReason: "cluttered")',
+    '- Blurry, motion-blurred, or out-of-focus image where text is hard to read (rejectReason: "blurry")',
+    '- A photo of a screen, monitor, laptop, phone display, or printed screenshot (rejectReason: "screen_photo")',
+    '- A web page, app UI, form, or browser window (including localhost URLs) (rejectReason: "screen_photo")',
+    '- Random objects, faces without ID layout, business cards, invoices, or NIPT paperwork alone (rejectReason: "not_document")',
+    '- The back side only, or a document that is mostly covered (rejectReason: "back_side" or "unreadable")',
+    '- Obvious fake, template, or digitally edited ID without a physical card present (rejectReason: "not_document")',
+    '- Key text (name or ID number) cannot be read clearly (rejectReason: "unreadable")',
     '',
     'When isIdCard=true, read the personal ID number from the document (Albanian format is often',
     'one letter + 8 digits + one letter, e.g. I12345678A). Return idNumber without spaces.',
-    'If the number is not clearly readable, set idNumber to null but still accept if the card is real.',
+    'If the number is not clearly readable, reject with rejectReason "unreadable" — do NOT accept.',
     'Set rejectReason to null when accepted.',
   ].join('\n');
 }
@@ -60,18 +69,24 @@ function userMessageForReject(rejectReason) {
       return 'Skanoni pjesën e përparme të ID-së, jo pjesën e pasme.';
     case 'wrong_document':
       return 'Dokumenti nuk është një kartë identiteti e vlefshme. Skanoni ID-në tuaj.';
+    case 'cropped':
+      return 'Karta nuk është e plotë në kornizë. Vendoseni të gjithë kartën ID brenda kornizës.';
+    case 'cluttered':
+      return 'Hiqni objektet pranë kartës. Vetëm ID-ja duhet të jetë në foto.';
+    case 'blurry':
+      return 'Foto e turbullt. Mbajeni telefonin fiks dhe sigurohuni që ka dritë të mjaftueshme.';
     case 'unreadable':
       return 'ID-ja nuk lexohet qartë. Afrojeni kamerën dhe sigurohuni që ka dritë të mjaftueshme.';
     case 'not_document':
     default:
-      return 'Nuk u njoh si kartë ID e vërtetë. Vendoseni ID-në fizike brenda kornizës.';
+      return 'Nuk u njoh si kartë ID e vërtetë. Vendoseni ID-në fizike, të plotë, brenda kornizës.';
   }
 }
 
 async function scanIdDocumentFront(imageInput) {
   const apiKey = String(process.env.OPENAI_API_KEY || '').trim();
   if (!apiKey) {
-    const err = new Error('Skanimi me AI nuk është i disponueshëm për momentin.');
+    const err = new Error('Verifikimi i fotos nuk është i disponueshëm për momentin.');
     err.status = 503;
     throw err;
   }
@@ -100,7 +115,7 @@ async function scanIdDocumentFront(imageInput) {
           content: [
             {
               type: 'text',
-              text: 'Is this the front of a real physical ID card? If yes, extract the ID number.',
+              text: 'Is this a clean, fully-in-frame, readable photo of the front of a real physical ID card? If yes, extract the ID number. Reject if any edge is cropped, if other objects are visible, or if text is blurry.',
             },
             {
               type: 'image_url',
@@ -148,7 +163,47 @@ async function scanIdDocumentFront(imageInput) {
   };
 }
 
+/**
+ * Validate an uploaded ID front image URL before accepting a verification request.
+ * @returns {{ ok: true } | { ok: false, status: number, message: string }}
+ */
+async function validateIdFrontImageUrl(imageUrl) {
+  const url = String(imageUrl || '').trim();
+  if (!url) {
+    return { ok: false, status: 400, message: 'Fotoja e përparme e ID-së është e detyrueshme.' };
+  }
+
+  const { isOurStorageUrl } = require('./storage-uploads');
+  if (!isOurStorageUrl(url)) {
+    return { ok: false, status: 400, message: 'Fotoja e ID-së nuk është e vlefshme.' };
+  }
+
+  if (!isOpenAiConfigured()) {
+    return { ok: true };
+  }
+
+  try {
+    const scan = await scanIdDocumentFront(url);
+    if (!scan.isIdCard) {
+      return {
+        ok: false,
+        status: 400,
+        message: scan.message || 'Fotoja e ID-së nuk kaloi verifikimin. Skanoni përsëri.',
+      };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error('validateIdFrontImageUrl:', err?.message || err);
+    return {
+      ok: false,
+      status: 503,
+      message: 'Verifikimi i fotos së ID-së dështoi. Provoni përsëri.',
+    };
+  }
+}
+
 module.exports = {
   isOpenAiConfigured,
   scanIdDocumentFront,
+  validateIdFrontImageUrl,
 };

@@ -15,6 +15,7 @@ export type ScanQualityHint =
   | 'too_bright'
   | 'blurry'
   | 'low_detail'
+  | 'cluttered'
   | 'hold_steady'
   | 'almost'
   | 'ready';
@@ -25,6 +26,9 @@ export interface ScanQualitySample {
   sharpness: number;
   coverage: number;
   detailScore: number;
+  borderScore: number;
+  edgeCompleteness: number;
+  clutterScore: number;
   inFrame: boolean;
   readable: boolean;
   hint: ScanQualityHint;
@@ -206,6 +210,103 @@ function measureBorderStructure(imageData: ImageData): number {
   return borderStrong / 4;
 }
 
+/** All four card edges must be visible — rejects cropped captures. */
+function measureEdgeCompleteness(imageData: ImageData): number {
+  const { data, width, height } = imageData;
+  const bandX = Math.max(2, Math.floor(width * 0.08));
+  const bandY = Math.max(2, Math.floor(height * 0.08));
+
+  const sampleBand = (xStart: number, xEnd: number, yStart: number, yEnd: number): number => {
+    let sum = 0;
+    let count = 0;
+    for (let y = yStart; y < yEnd; y += 2) {
+      for (let x = xStart; x < xEnd; x += 2) {
+        if (x <= 0 || y <= 0 || x >= width - 1 || y >= height - 1) continue;
+        sum += sobelMagnitude(data, width, height, x, y);
+        count += 1;
+      }
+    }
+    return count ? sum / count : 0;
+  };
+
+  const edges = [
+    sampleBand(0, width, 0, bandY),
+    sampleBand(0, width, height - bandY, height),
+    sampleBand(0, bandX, 0, height),
+    sampleBand(width - bandX, width, 0, height),
+  ];
+
+  return edges.filter((v) => v >= 18).length / 4;
+}
+
+interface BandStats {
+  mean: number;
+  variance: number;
+  saturation: number;
+}
+
+function sampleBandStats(
+  data: Uint8ClampedArray,
+  width: number,
+  xStart: number,
+  xEnd: number,
+  yStart: number,
+  yEnd: number,
+): BandStats {
+  let sum = 0;
+  let sumSq = 0;
+  let satSum = 0;
+  let count = 0;
+
+  for (let y = yStart; y < yEnd; y += 2) {
+    for (let x = xStart; x < xEnd; x += 2) {
+      const i = (y * width + x) * 4;
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const gVal = grayAt(data, width, x, y);
+      sum += gVal;
+      sumSq += gVal * gVal;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      satSum += max > 0 ? (max - min) / max : 0;
+      count += 1;
+    }
+  }
+
+  if (!count) return { mean: 0, variance: 0, saturation: 0 };
+  const mean = sum / count;
+  return {
+    mean,
+    variance: Math.max(0, sumSq / count - mean * mean),
+    saturation: satSum / count,
+  };
+}
+
+/** Penalize foreign objects (lighters, boxes, hands) visible beside the card. */
+function measureBackgroundClutter(imageData: ImageData): number {
+  const { data, width, height } = imageData;
+  const margin = Math.max(3, Math.floor(Math.min(width, height) * 0.1));
+  const innerMargin = Math.max(margin + 2, Math.floor(Math.min(width, height) * 0.18));
+
+  const center = sampleBandStats(data, width, innerMargin, width - innerMargin, innerMargin, height - innerMargin);
+  const bands = [
+    sampleBandStats(data, width, 0, width, 0, margin),
+    sampleBandStats(data, width, 0, width, height - margin, height),
+    sampleBandStats(data, width, 0, margin, 0, height),
+    sampleBandStats(data, width, width - margin, width, 0, height),
+  ];
+
+  let penalty = 0;
+  for (const band of bands) {
+    const colorDiff = Math.abs(band.mean - center.mean);
+    if (colorDiff >= 35 && band.variance >= 700) penalty += 1;
+    if (band.saturation >= 0.28 && colorDiff >= 22) penalty += 0.75;
+  }
+
+  return Math.max(0, 1 - penalty / 2.5);
+}
+
 function pickHint(params: {
   brightness: number;
   contrast: number;
@@ -213,22 +314,36 @@ function pickHint(params: {
   coverage: number;
   detailScore: number;
   borderScore: number;
+  edgeCompleteness: number;
+  clutterScore: number;
   inFrame: boolean;
   readable: boolean;
 }): ScanQualityHint {
-  const { brightness, contrast, sharpness, coverage, detailScore, borderScore, inFrame, readable } = params;
+  const {
+    brightness,
+    contrast,
+    sharpness,
+    coverage,
+    detailScore,
+    borderScore,
+    edgeCompleteness,
+    clutterScore,
+    inFrame,
+    readable,
+  } = params;
 
   if (brightness < 24) return 'too_dark';
   if (brightness > 245) return 'too_bright';
   if (contrast < 10) return 'no_card';
 
-  if (coverage < 0.45 || borderScore < 0.45) {
-    return coverage < 0.34 ? 'no_card' : 'partial_card';
+  if (coverage < 0.5 || borderScore < 0.5 || edgeCompleteness < 0.5) {
+    return coverage < 0.38 ? 'no_card' : 'partial_card';
   }
 
+  if (clutterScore < 0.55) return 'cluttered';
   if (!inFrame) return 'partial_card';
-  if (sharpness < 55) return 'blurry';
-  if (detailScore < 0.045) return 'low_detail';
+  if (sharpness < 60) return 'blurry';
+  if (detailScore < 0.05) return 'low_detail';
   if (!readable) return 'hold_steady';
   return 'ready';
 }
@@ -243,19 +358,23 @@ export function evaluateFrameReady(imageData: ImageData): ScanQualitySample {
   const coverage = measureGridCoverage(imageData);
   const detailScore = measureDetailScore(imageData);
   const borderScore = measureBorderStructure(imageData);
+  const edgeCompleteness = measureEdgeCompleteness(imageData);
+  const clutterScore = measureBackgroundClutter(imageData);
 
   const inFrame =
-    contrast >= 15 &&
-    brightness >= 24 &&
-    brightness <= 245 &&
-    coverage >= 0.56 &&
-    borderScore >= 0.5;
+    contrast >= 16 &&
+    brightness >= 28 &&
+    brightness <= 240 &&
+    coverage >= 0.67 &&
+    borderScore >= 0.75 &&
+    edgeCompleteness >= 0.75 &&
+    clutterScore >= 0.65;
 
   const readable =
     inFrame &&
-    sharpness >= 70 &&
-    detailScore >= 0.055 &&
-    contrast >= 16;
+    sharpness >= 85 &&
+    detailScore >= 0.065 &&
+    contrast >= 18;
 
   const hint = pickHint({
     brightness,
@@ -264,6 +383,8 @@ export function evaluateFrameReady(imageData: ImageData): ScanQualitySample {
     coverage,
     detailScore,
     borderScore,
+    edgeCompleteness,
+    clutterScore,
     inFrame,
     readable,
   });
@@ -274,6 +395,9 @@ export function evaluateFrameReady(imageData: ImageData): ScanQualitySample {
     sharpness,
     coverage,
     detailScore,
+    borderScore,
+    edgeCompleteness,
+    clutterScore,
     inFrame,
     readable,
     hint,
@@ -333,6 +457,8 @@ export function scanQualityHintMessage(hint: ScanQualityHint, stableCount: numbe
       return 'Mbajeni telefonin fiks — foto e turbullt';
     case 'low_detail':
       return 'Afrojeni kamerën — detajet nuk lexohen';
+    case 'cluttered':
+      return 'Hiqni objektet pranë kartës — vetëm ID-ja në kornizë';
     case 'hold_steady':
       return 'Mbajeni kartën brenda kornizës';
     case 'almost':

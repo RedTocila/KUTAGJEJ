@@ -25,7 +25,7 @@ import { scanIdDocumentWithAi } from '@/lib/id-document-scan-client';
 
 const ANALYSIS_INTERVAL_MS = 180;
 /** Require several stable, readable frames before auto-capture. */
-const READY_FRAMES = 5;
+const READY_FRAMES = 7;
 
 export interface IdDocumentScanCapture {
   file: File;
@@ -147,6 +147,22 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
     ctx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, crop.sw, crop.sh);
     stopCamera();
 
+    const captureQuality = evaluateFrameReady(ctx.getImageData(0, 0, crop.sw, crop.sh));
+    if (!captureQuality.readable) {
+      capturingRef.current = false;
+      setError(
+        captureQuality.hint === 'cluttered'
+          ? 'Hiqni objektet pranë kartës. Vetëm ID-ja duhet të jetë në kornizë.'
+          : captureQuality.hint === 'partial_card' || captureQuality.hint === 'no_card'
+            ? 'Vendoseni të gjithë kartën brenda kornizës — asnjë skaj i prerë.'
+            : captureQuality.hint === 'blurry' || captureQuality.hint === 'low_detail'
+              ? 'Foto e turbullt ose e pa lexueshme. Mbajeni telefonin fiks dhe afrojeni kamerën.'
+              : 'Fotoja nuk kaloi kontrollin e cilësisë. Vendoseni kartën e plotë, të pastër, brenda kornizës.',
+      );
+      setPhase('error');
+      return;
+    }
+
     const blob = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob(resolve, 'image/jpeg', 0.92);
     });
@@ -161,7 +177,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
     const previewUrl = URL.createObjectURL(blob);
 
     setPhase('validating');
-    setQualityHint('Duke verifikuar me AI që është ID e vërtetë…');
+    setQualityHint('Duke verifikuar fotografinë…');
 
     const ai = await scanIdDocumentWithAi(file);
     if (ai.error) {
@@ -387,7 +403,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
             Skano pjesën e përparme të ID-së
           </Typography>
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.82)', mt: 0.75, fontWeight: 600 }}>
-            Vendoseni të gjithë kartën brenda kornizës. AI verifikon që është ID e vërtetë para skanimit.
+            Vendoseni të gjithë kartën brenda kornizës, pa objekte pranë. Fotoja duhet të jetë e qartë dhe e lexueshme.
           </Typography>
         </Box>
 

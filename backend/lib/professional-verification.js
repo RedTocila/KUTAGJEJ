@@ -9,6 +9,7 @@ const {
 } = require('./job-employer-verification');
 const { createAdminNotification } = require('./listing-moderation');
 const { isUuid } = require('./public-listings/query-helpers');
+const { validateIdFrontImageUrl } = require('./id-document-ai');
 
 function isProfessionalVerified(userDoc) {
   // Account verification is shared across professionals + jobs listing badges.
@@ -47,6 +48,9 @@ async function submitVerificationRequest(user, payload = {}) {
 
   const docs = normalizeVerificationDocuments(payload, portal);
   if (!docs.ok) return docs;
+
+  const imageCheck = await validateIdFrontImageUrl(docs.idFrontImageUrl);
+  if (!imageCheck.ok) return imageCheck;
 
   const { data: pending, error: pendingErr } = await getSupabaseAdmin()
     .from('professional_verification_requests')

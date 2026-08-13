@@ -155,7 +155,8 @@ export function AccountVerificationCard() {
     <Stack spacing={2}>
       <Typography variant="body2" color="text.secondary">
         Pas aprovimit, shenja e verifikuar shfaqet në profilin tuaj publik. Dërgoni numrin e ID-së dhe skanoni
-        pjesën e përparme{isBusiness ? ', si dhe NIPT për llogaritë e biznesit' : ''}.
+        pjesën e përparme — kartën e plotë, të qartë, pa objekte pranë
+        {isBusiness ? ', si dhe NIPT për llogaritë e biznesit' : ''}.
       </Typography>
 
       {error ? <Alert severity="error">{error}</Alert> : null}

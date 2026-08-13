@@ -4,6 +4,7 @@ const { getSupabaseAdmin } = require('./supabase');
 const { getProfileById, camelizeRow } = require('./profiles');
 const { createAdminNotification } = require('./listing-moderation');
 const { isUuid } = require('./public-listings/query-helpers');
+const { validateIdFrontImageUrl } = require('./id-document-ai');
 
 function isJobsEmployerVerified(userDoc) {
   // Account verification is shared across listing contexts.
@@ -140,6 +141,9 @@ async function submitVerificationRequest(user, payload = {}) {
 
   const docs = normalizeVerificationDocuments(payload, portal);
   if (!docs.ok) return docs;
+
+  const imageCheck = await validateIdFrontImageUrl(docs.idFrontImageUrl);
+  if (!imageCheck.ok) return imageCheck;
 
   const { data: pending, error: pendingErr } = await getSupabaseAdmin()
     .from('job_employer_verification_requests')

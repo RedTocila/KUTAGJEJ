@@ -21,11 +21,11 @@ router.get('/status', authMiddleware, requirePortalUser, async (req, res) => {
   }
 });
 
-/** POST /api/professional-verification/scan-id-front — AI validate ID photo + OCR number. */
+/** POST /api/professional-verification/scan-id-front — validate ID photo + OCR number. */
 router.post('/scan-id-front', authMiddleware, requirePortalUser, async (req, res) => {
   try {
     if (!isOpenAiConfigured()) {
-      res.status(503).json({ message: 'Skanimi me AI nuk është i disponueshëm për momentin.' });
+      res.status(503).json({ message: 'Verifikimi i fotos nuk është i disponueshëm për momentin.' });
       return;
     }
 
@@ -34,7 +34,14 @@ router.post('/scan-id-front', authMiddleware, requirePortalUser, async (req, res
     res.json(result);
   } catch (err) {
     console.error('POST /professional-verification/scan-id-front:', err?.message || err);
-    res.status(err?.status || 500).json({ message: err?.message || 'Server error' });
+    const status = err?.status >= 400 && err?.status < 600 ? err.status : 502;
+    const message =
+      status === 400 && typeof err?.message === 'string' && err.message.trim()
+        ? err.message
+        : status === 503
+          ? 'Verifikimi i fotos nuk është i disponueshëm për momentin.'
+          : 'Verifikimi i fotos dështoi. Provoni përsëri.';
+    res.status(status).json({ message });
   }
 });
 

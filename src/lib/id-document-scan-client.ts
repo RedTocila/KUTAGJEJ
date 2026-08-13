@@ -60,7 +60,7 @@ async function parseScanError(res: Response): Promise<string> {
   const data = await res.json().catch(() => ({}));
   if (typeof data?.message === 'string' && data.message.trim()) return data.message;
   if (res.status === 401) return 'Duhet të identifikoheni përsëri.';
-  if (res.status === 503) return 'Skanimi me AI nuk është i disponueshëm për momentin.';
+  if (res.status === 503) return 'Verifikimi i fotos nuk është i disponueshëm për momentin.';
   if (res.status >= 500) return 'Serveri nuk u përgjigj. Provoni përsëri.';
   return 'Skanimi i ID-së dështoi. Provoni përsëri.';
 }

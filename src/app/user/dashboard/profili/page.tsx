@@ -29,6 +29,7 @@ import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { MemberReferralBadgesRow } from '@/components/public/member-referral-badges';
 import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { AccountVerificationCard } from '@/components/user/account-verification-card';
+import { LockedIdentityField } from '@/components/user/locked-identity-field';
 import { PortalSectionCard, PortalSurface } from '@/components/user/portal-cards';
 import { useUser } from '@/hooks/use-user';
 import { clientFetch } from '@/lib/api-client';
@@ -628,7 +629,12 @@ export default function UserProfilePage() {
                     placeholder="p.sh. Restorant, Shërbime…"
                   />
                   {String(user.nipt ?? '').trim() ? (
-                    <TextField label="NIPT" value={String(user.nipt)} fullWidth disabled />
+                    <LockedIdentityField
+                      label="NIPT"
+                      value={String(user.nipt)}
+                      fieldKind="nipt"
+                      userEmail={user.email}
+                    />
                   ) : null}
                 </>
               ) : (

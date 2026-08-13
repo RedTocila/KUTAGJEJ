@@ -76,3 +76,27 @@ export async function deleteManagedUser(id: string): Promise<{ error?: string; o
     return { error: 'Nuk u arrit lidhja me serverin.' };
   }
 }
+
+export async function updatePortalUserIdentity(
+  id: string,
+  body: { nipt?: string; idNumber?: string },
+): Promise<{
+  ok?: boolean;
+  email?: string;
+  changes?: { nipt?: { before: string | null; after: string }; idNumber?: { before: string | null; after: string } };
+  message?: string;
+  error?: string;
+}> {
+  try {
+    const res = await fetch(getApiUrl(`/admin/users/${encodeURIComponent(id)}/portal-identity`), {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Përditësimi dështoi.' };
+    return data;
+  } catch {
+    return { error: 'Nuk u arrit lidhja me serverin.' };
+  }
+}

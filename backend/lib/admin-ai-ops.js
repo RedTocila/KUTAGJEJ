@@ -568,6 +568,42 @@ async function grantSubscription(args, admin) {
   };
 }
 
+async function updateUserIdentity(args, admin) {
+  const profile = await resolveUser(args);
+  const gate = assertMutable(profile, admin);
+  if (!gate.ok) return gate;
+
+  const hasNipt = args?.nipt !== undefined;
+  const hasId = args?.idNumber !== undefined;
+  if (!hasNipt && !hasId) {
+    return { ok: false, message: 'Jepni nipt dhe/ose idNumber për të përditësuar.' };
+  }
+
+  const parts = [];
+  if (hasNipt) parts.push(`NIPT → "${String(args.nipt).trim()}"`);
+  if (hasId) parts.push(`ID → "${String(args.idNumber).trim()}"`);
+
+  const preview = needsConfirm(
+    args,
+    `Përditëso identitetin e ${profile.email}: ${parts.join(', ')}.`,
+    {
+      email: profile.email,
+      userId: profile.id,
+      nipt: hasNipt ? String(args.nipt).trim() : undefined,
+      idNumber: hasId ? String(args.idNumber).trim() : undefined,
+    },
+  );
+  if (preview) return preview;
+
+  const { updatePortalUserIdentity } = require('./portal-identity');
+  const result = await updatePortalUserIdentity(profile.id, {
+    nipt: hasNipt ? args.nipt : undefined,
+    idNumber: hasId ? args.idNumber : undefined,
+  });
+  if (!result.ok) return result;
+  return result;
+}
+
 async function cancelSubscription(args, admin) {
   const profile = await resolveUser(args);
   const gate = assertMutable(profile, admin);
@@ -615,6 +651,7 @@ const MUTATING_TOOLS = new Set([
   'review_listing',
   'grant_subscription',
   'cancel_subscription',
+  'update_user_identity',
   'repair_missing_schema',
   'ensure_referral_program',
 ]);
@@ -633,6 +670,7 @@ const TOOL_HANDLERS = {
   list_user_payments: (args) => listUserPayments(args),
   grant_subscription: (args, ctx) => grantSubscription(args, ctx.admin),
   cancel_subscription: (args, ctx) => cancelSubscription(args, ctx.admin),
+  update_user_identity: (args, ctx) => updateUserIdentity(args, ctx.admin),
   diagnose_schema: () => diagnoseSchema(),
   list_db_tables: () => listDbTables(),
   inspect_table: (args) => inspectTable(args),

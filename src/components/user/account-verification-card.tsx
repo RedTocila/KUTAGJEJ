@@ -14,6 +14,7 @@ import { IdentificationCard as IdCardIcon } from '@phosphor-icons/react/dist/ssr
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 
 import { IdDocumentScannerDialog } from '@/components/user/id-document-scanner-dialog';
+import { LockedIdentityField } from '@/components/user/locked-identity-field';
 import { useUser } from '@/hooks/use-user';
 import {
   fetchProfessionalVerificationStatus,
@@ -142,6 +143,9 @@ export function AccountVerificationCard() {
 
   const latest: ProfessionalVerificationRequest | null = status.latestRequest ?? null;
   const showForm = !status.verified && status.canRequest;
+  const profileNiptLocked = isBusiness && typeof user?.nipt === 'string' && user.nipt.trim().length > 0;
+  const submittedIdNumber = latest?.idNumber?.trim() || '';
+  const showSubmittedId = Boolean(submittedIdNumber && (status.verified || latest?.status === 'pending'));
 
   return (
     <Stack spacing={2}>
@@ -179,6 +183,15 @@ export function AccountVerificationCard() {
         </Alert>
       ) : null}
 
+      {showSubmittedId ? (
+        <LockedIdentityField
+          label="Numri i ID-së"
+          value={submittedIdNumber}
+          fieldKind="id"
+          userEmail={user?.email}
+        />
+      ) : null}
+
       {showForm ? (
         <>
           <TextField
@@ -193,16 +206,25 @@ export function AccountVerificationCard() {
           />
 
           {isBusiness ? (
-            <TextField
-              label="NIPT"
-              value={nipt}
-              onChange={(e) => setNipt(e.target.value)}
-              fullWidth
-              required
-              disabled={submitting}
-              placeholder="Numri i NIPT-it të biznesit"
-              slotProps={{ htmlInput: { maxLength: 40 } }}
-            />
+            profileNiptLocked ? (
+              <LockedIdentityField
+                label="NIPT"
+                value={nipt}
+                fieldKind="nipt"
+                userEmail={user?.email}
+              />
+            ) : (
+              <TextField
+                label="NIPT"
+                value={nipt}
+                onChange={(e) => setNipt(e.target.value)}
+                fullWidth
+                required
+                disabled={submitting}
+                placeholder="Numri i NIPT-it të biznesit"
+                slotProps={{ htmlInput: { maxLength: 40 } }}
+              />
+            )
           ) : null}
 
           <Box>

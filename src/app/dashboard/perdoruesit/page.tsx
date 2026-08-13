@@ -42,6 +42,7 @@ import {
   deleteManagedUser,
   listManagedUsers,
   updateManagedUser,
+  updatePortalUserIdentity,
 } from '@/lib/admin-users-client';
 import { useUser } from '@/hooks/use-user';
 import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
@@ -74,6 +75,7 @@ export default function StaffUsersPage() {
 
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editUser, setEditUser] = React.useState<ManagedUser | null>(null);
+  const [editPortalUser, setEditPortalUser] = React.useState<DirectoryUser | null>(null);
   const [deleteUser, setDeleteUser] = React.useState<ManagedUser | null>(null);
 
   const refresh = React.useCallback(async () => {
@@ -114,7 +116,7 @@ export default function StaffUsersPage() {
         icon={React.createElement(UsersIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Ekipi"
         title="Përdoruesit"
-        description="Lista e portalit dhe stafit. Ndryshoni ose fshini vetëm stafin; rolet përcaktohen te Rolet."
+        description="Lista e portalit dhe stafit. Ndryshoni stafin ose NIPT/ID të përdoruesve të portalit."
         actions={
           <Button variant="contained" onClick={() => setCreateOpen(true)} disabled={roles.length === 0} sx={productButtonSx}>
             Shto përdorues
@@ -192,6 +194,11 @@ export default function StaffUsersPage() {
                         <Typography variant="caption" color="text.secondary">
                           {row.businessName}
                           {row.nipt ? ` · NIPT ${row.nipt}` : ''}
+                          {row.idNumber ? ` · ID ${row.idNumber}` : ''}
+                        </Typography>
+                      ) : row.idNumber ? (
+                        <Typography variant="caption" color="text.secondary">
+                          ID {row.idNumber}
                         </Typography>
                       ) : null}
                     </Stack>
@@ -223,6 +230,14 @@ export default function StaffUsersPage() {
                           {React.createElement(TrashIcon, { size: 20 })}
                         </IconButton>
                       </>
+                    ) : row.accountKind === 'individual' || row.accountKind === 'business' ? (
+                      <IconButton
+                        aria-label="Ndrysho NIPT ose ID"
+                        size="small"
+                        onClick={() => setEditPortalUser(row)}
+                      >
+                        {React.createElement(PencilSimpleIcon, { size: 20 })}
+                      </IconButton>
                     ) : (
                       <Typography variant="caption" color="text.secondary">
                         —
@@ -252,6 +267,15 @@ export default function StaffUsersPage() {
         onClose={() => setEditUser(null)}
         onSaved={async () => {
           setEditUser(null);
+          await refresh();
+        }}
+      />
+
+      <EditPortalIdentityDialog
+        user={editPortalUser}
+        onClose={() => setEditPortalUser(null)}
+        onSaved={async () => {
+          setEditPortalUser(null);
           await refresh();
         }}
       />
@@ -473,6 +497,105 @@ function EditUserDialog(props: {
         <ProductDialogActions>
           <Button onClick={onClose} sx={productButtonSx}>Anulo</Button>
           <Button type="submit" variant="contained" disabled={pending || roles.length === 0} sx={productButtonSx}>
+            {pending ? 'Duke u ruajtur…' : 'Ruaj'}
+          </Button>
+        </ProductDialogActions>
+      </Box>
+    </ProductDialog>
+  );
+}
+
+function EditPortalIdentityDialog(props: {
+  user: DirectoryUser | null;
+  onClose: () => void;
+  onSaved: () => void | Promise<void>;
+}) {
+  const { user, onClose, onSaved } = props;
+  const open = Boolean(user);
+  const isBusiness = user?.accountKind === 'business';
+  const [nipt, setNipt] = React.useState('');
+  const [idNumber, setIdNumber] = React.useState('');
+  const [error, setError] = React.useState<string | null>(null);
+  const [pending, setPending] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!user) return;
+    setNipt(user.nipt ?? '');
+    setIdNumber(user.idNumber ?? '');
+    setError(null);
+  }, [user]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setError(null);
+
+    const body: { nipt?: string; idNumber?: string } = {};
+    if (isBusiness) {
+      const trimmedNipt = nipt.trim();
+      if (!trimmedNipt) {
+        setError('NIPT nuk mund të jetë bosh.');
+        return;
+      }
+      if (trimmedNipt !== (user.nipt ?? '').trim()) body.nipt = trimmedNipt;
+    }
+    const trimmedId = idNumber.trim();
+    if (trimmedId && trimmedId !== (user.idNumber ?? '').trim()) body.idNumber = trimmedId;
+
+    if (!body.nipt && !body.idNumber) {
+      setError('Nuk ka ndryshime për të ruajtur.');
+      return;
+    }
+
+    setPending(true);
+    try {
+      const res = await updatePortalUserIdentity(user.id, body);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      await onSaved();
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <ProductDialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <Box component="form" onSubmit={submit}>
+        <ProductDialogTitle onClose={onClose}>Ndrysho NIPT / ID</ProductDialogTitle>
+        <ProductDialogContent>
+          <Stack spacing={2} sx={{ mt: 1, ...productFieldSx }}>
+            {error ? <Alert severity="error">{error}</Alert> : null}
+            <TextField label="Email" value={user?.email ?? ''} fullWidth disabled />
+            {isBusiness ? (
+              <TextField
+                label="NIPT"
+                value={nipt}
+                onChange={(ev) => setNipt(ev.target.value)}
+                required
+                fullWidth
+                slotProps={{ htmlInput: { maxLength: 40 } }}
+              />
+            ) : null}
+            <TextField
+              label="Numri i ID-së"
+              value={idNumber}
+              onChange={(ev) => setIdNumber(ev.target.value)}
+              fullWidth
+              disabled={!user?.idNumber}
+              helperText={
+                user?.idNumber
+                  ? 'Ndryshon ID-në në kërkesën e fundit të verifikimit.'
+                  : 'Përdoruesi nuk ka ende kërkesë verifikimi — ID nuk mund të ndryshohet këtu.'
+              }
+              slotProps={{ htmlInput: { maxLength: 40 } }}
+            />
+          </Stack>
+        </ProductDialogContent>
+        <ProductDialogActions>
+          <Button onClick={onClose} sx={productButtonSx}>Anulo</Button>
+          <Button type="submit" variant="contained" disabled={pending} sx={productButtonSx}>
             {pending ? 'Duke u ruajtur…' : 'Ruaj'}
           </Button>
         </ProductDialogActions>

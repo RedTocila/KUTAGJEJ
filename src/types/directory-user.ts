@@ -13,4 +13,5 @@ export interface DirectoryUser extends ManagedUser {
   manageable: boolean;
   businessName?: string | null;
   nipt?: string | null;
+  idNumber?: string | null;
 }

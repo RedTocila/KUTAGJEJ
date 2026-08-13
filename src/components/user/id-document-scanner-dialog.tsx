@@ -18,12 +18,13 @@ import {
   evaluateFrameReady,
   ID_CARD_ASPECT,
   mapGuideToVideoCrop,
+  scanQualityHintMessage,
   type CardGuideRect,
 } from '@/lib/id-document-scan-quality';
 
 const ANALYSIS_INTERVAL_MS = 180;
-/** Short hold — card in frame is enough; hand movement is OK. */
-const READY_FRAMES = 3;
+/** Require several stable, readable frames before auto-capture. */
+const READY_FRAMES = 5;
 
 export interface IdDocumentScannerDialogProps {
   open: boolean;
@@ -32,12 +33,6 @@ export interface IdDocumentScannerDialogProps {
 }
 
 type ScanPhase = 'starting' | 'scanning' | 'capturing' | 'error';
-
-function statusMessage(ready: boolean, stableCount: number): string {
-  if (!ready) return 'Vendoseni ID-në brenda kornizës';
-  if (stableCount >= READY_FRAMES - 1) return 'Duke skanuar…';
-  return 'Mbajeni kartën brenda kornizës';
-}
 
 async function openCameraStream(): Promise<MediaStream> {
   const attempts: MediaStreamConstraints[] = [
@@ -193,17 +188,20 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
     ctx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, sampleW, sampleH);
     const sample = evaluateFrameReady(ctx.getImageData(0, 0, sampleW, sampleH));
 
-    if (sample.inFrame) {
+    if (sample.readable) {
       stableCountRef.current += 1;
     } else {
-      stableCountRef.current = Math.max(0, stableCountRef.current - 1);
+      stableCountRef.current = 0;
     }
 
+    const hint =
+      sample.readable && stableCountRef.current >= READY_FRAMES - 2 ? 'almost' : sample.hint;
+
     setProgress(Math.min(100, Math.round((stableCountRef.current / READY_FRAMES) * 100)));
-    setQualityHint(statusMessage(sample.inFrame, stableCountRef.current));
+    setQualityHint(scanQualityHintMessage(hint, stableCountRef.current, READY_FRAMES));
     setPhase('scanning');
 
-    if (stableCountRef.current >= READY_FRAMES) {
+    if (sample.readable && stableCountRef.current >= READY_FRAMES) {
       void captureFromGuide();
     }
   }, [captureFromGuide]);
@@ -349,7 +347,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
             Skano pjesën e përparme të ID-së
           </Typography>
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.82)', mt: 0.75, fontWeight: 600 }}>
-            Vendoseni kartën brenda kornizës. Skanimi bëhet automatikisht.
+            Vendoseni të gjithë kartën brenda kornizës. Skanimi bëhet vetëm kur detajet lexohen qartë.
           </Typography>
         </Box>
 

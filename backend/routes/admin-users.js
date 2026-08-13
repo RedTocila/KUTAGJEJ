@@ -1,6 +1,7 @@
 const express = require('express');
 const { getSupabaseAdmin } = require('../lib/supabase');
 const { mapProfile, getProfileByEmail, createProfileForAuthUser } = require('../lib/profiles');
+const { updatePortalUserIdentity } = require('../lib/portal-identity');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
@@ -38,7 +39,7 @@ function formatManagedUser(user, roleDescription) {
   };
 }
 
-function formatDirectoryIndividual(user) {
+function formatDirectoryIndividual(user, idNumber) {
   return {
     ...formatManagedUser({ ...user, roleId: null, role: 'individual-user', createdBy: null }, ''),
     accountKind: 'individual',
@@ -47,10 +48,11 @@ function formatDirectoryIndividual(user) {
     manageable: false,
     businessName: null,
     nipt: null,
+    idNumber: idNumber ?? null,
   };
 }
 
-function formatDirectoryBusiness(user) {
+function formatDirectoryBusiness(user, idNumber) {
   return {
     ...formatManagedUser({ ...user, roleId: null, role: 'business-user', lastLogin: undefined, createdBy: null }, ''),
     accountKind: 'business',
@@ -59,6 +61,7 @@ function formatDirectoryBusiness(user) {
     manageable: false,
     businessName: user.businessName ?? null,
     nipt: user.nipt ?? null,
+    idNumber: idNumber ?? null,
   };
 }
 
@@ -72,6 +75,7 @@ function formatDirectoryStaff(user, roleDescription) {
     manageable: true,
     businessName: null,
     nipt: null,
+    idNumber: null,
   };
 }
 
@@ -93,6 +97,25 @@ router.get('/', async (_req, res) => {
     if (error) throw error;
 
     const rows = (data || []).map(mapProfile);
+    const portalIds = rows
+      .filter((u) => u.accountType === 'individual' || u.accountType === 'business')
+      .map((u) => u.id);
+
+    const idByApplicant = new Map();
+    if (portalIds.length) {
+      const { data: verReqs, error: verErr } = await sb
+        .from('professional_verification_requests')
+        .select('applicant_id, id_number, created_at')
+        .in('applicant_id', portalIds)
+        .order('created_at', { ascending: false });
+      if (verErr) throw verErr;
+      for (const row of verReqs || []) {
+        if (!idByApplicant.has(row.applicant_id)) {
+          idByApplicant.set(row.applicant_id, row.id_number || null);
+        }
+      }
+    }
+
     const roleIds = [...new Set(rows.filter((u) => u.accountType === 'managed' && u.roleId).map((u) => u.roleId))];
     let roleById = new Map();
     if (roleIds.length) {
@@ -103,8 +126,9 @@ router.get('/', async (_req, res) => {
 
     const users = rows
       .map((u) => {
-        if (u.accountType === 'individual') return formatDirectoryIndividual(u);
-        if (u.accountType === 'business') return formatDirectoryBusiness(u);
+        const idNumber = idByApplicant.get(u.id) ?? null;
+        if (u.accountType === 'individual') return formatDirectoryIndividual(u, idNumber);
+        if (u.accountType === 'business') return formatDirectoryBusiness(u, idNumber);
         return formatDirectoryStaff(u, roleById.get(u.roleId) ?? '');
       })
       .sort((a, b) => sortKey(b) - sortKey(a));
@@ -177,6 +201,32 @@ router.post('/', async (req, res) => {
     res.status(201).json({ user: formatManagedUser(user, roleDoc.description || '') });
   } catch (error) {
     console.error('POST /admin/users:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** Update portal user NIPT and/or ID number (admin only). */
+router.patch('/:id/portal-identity', async (req, res) => {
+  try {
+    if (!UUID_RE.test(req.params.id)) {
+      return res.status(400).json({ message: 'ID e pavlefshme.' });
+    }
+
+    const { nipt, idNumber } = req.body ?? {};
+    if (nipt === undefined && idNumber === undefined) {
+      return res.status(400).json({ message: 'Jepni nipt dhe/ose idNumber për të përditësuar.' });
+    }
+
+    const result = await updatePortalUserIdentity(req.params.id, { nipt, idNumber });
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ message: result.message });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('PATCH /admin/users/:id/portal-identity:', error?.message || error);
+    if (error?.code === '23505') {
+      return res.status(400).json({ message: 'Ky NIPT është tashmë i regjistruar.' });
+    }
     res.status(500).json({ message: 'Gabim serveri.' });
   }
 });

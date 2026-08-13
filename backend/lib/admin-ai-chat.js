@@ -188,6 +188,19 @@ const OPENAI_TOOLS = [
   {
     type: 'function',
     function: {
+      name: 'update_user_identity',
+      description:
+        'Change a portal user NIPT (business profiles) and/or ID number (latest verification request). First call without confirm to preview.',
+      parameters: withUserRef({
+        nipt: { type: 'string', description: 'New NIPT for business accounts' },
+        idNumber: { type: 'string', description: 'New ID number on latest verification request' },
+        confirm: { type: 'boolean' },
+      }),
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'diagnose_schema',
       description:
         'Read-only probe of allowlisted public tables/columns (includes referrals). Never runs SQL, DROP, TRUNCATE, or free-form queries.',
@@ -290,14 +303,14 @@ Përgjigju shkurt në shqip, përveç nëse admini shkruan anglisht.
 
 Rregulla:
 - Për çdo ndryshim, gjej fillimisht përdoruesin me lookup_user / get_user_overview (email është identifikuesi kryesor).
-- Veprimet mutuese (BC, fjalëkalim, fshirje, paketë, moderim, ndreqje skeme, program referimi) thirren SË PARI pa confirm. Nëse mjeti kthen needsConfirmation, trego përmbledhjen dhe thuaj që admini duhet të konfirmojë nga butoni ose duke shkruar "po". MOS e vë confirm=true vetë në të njëjtin hap.
+- Veprimet mutuese (BC, fjalëkalim, fshirje, paketë, moderim, NIPT/ID, ndreqje skeme, program referimi) thirren SË PARI pa confirm. Nëse mjeti kthen needsConfirmation, trego përmbledhjen dhe thuaj që admini duhet të konfirmojë nga butoni ose duke shkruar "po". MOS e vë confirm=true vetë në të njëjtin hap.
 - MOS prek llogari admin. MOS ekzekuto SQL të lirë. MOS sugjero init.sql, DROP, TRUNCATE, ose supabase db reset.
 - Për të dhëna: list_db_tables, inspect_table, count_rows (vetëm tabela të lejuara).
 - Për probleme skeme: diagnose_schema. Nëse mungon diçka, përdor repair_missing_schema (konfirmim). Pastaj ensure_referral_program nëse faqja e referimit jep gabim serveri.
 - Mos përsërit fjalëkalime në përgjigje.
 - Nëse kërkesa është e paqartë, pyet për emailin.
 
-Mjete: lookup_user, get_user_overview, adjust_boost_credits, set_auto_refresh_slots, set_user_password, set_user_active, delete_user, list_pending_listings, review_listing, get_platform_stats, list_user_payments, grant_subscription, cancel_subscription, diagnose_schema, list_db_tables, inspect_table, count_rows, repair_missing_schema, ensure_referral_program, list_recent_ai_actions.`;
+Mjete: lookup_user, get_user_overview, adjust_boost_credits, set_auto_refresh_slots, set_user_password, set_user_active, delete_user, list_pending_listings, review_listing, get_platform_stats, list_user_payments, grant_subscription, cancel_subscription, update_user_identity, diagnose_schema, list_db_tables, inspect_table, count_rows, repair_missing_schema, ensure_referral_program, list_recent_ai_actions.`;
 }
 
 function sanitizeHistory(raw) {

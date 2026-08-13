@@ -6,6 +6,7 @@ const requirePortalUser = require('../../middleware/require-portal-user');
 const { getSupabaseAdmin } = require('../../lib/supabase');
 const { camelizeRow } = require('../../lib/profiles');
 const { validateProfessionalPayload } = require('../../lib/directory-professional-validation');
+const { hasUnlimitedDirectoryListings } = require('../../lib/directory-listing-limits');
 const { notifyAdminsListingSubmitted } = require('../../lib/listing-moderation');
 const { isUuid } = require('../../lib/public-listings/query-helpers');
 const { formatMineProfessional, formatMineProfessionalFull, loadMineKind, loadMineListingById } = require('../../lib/mine-listings');
@@ -60,16 +61,18 @@ router.post('/professionals', authMiddleware, requirePortalUser, async (req, res
     if (!v.ok) return res.status(400).json({ message: v.message });
 
     const sb = getSupabaseAdmin();
-    const { count: existingCount, error: countErr } = await sb
-      .from('directory_listings')
-      .select('id', { count: 'exact', head: true })
-      .eq('poster_id', req.user.id)
-      .eq('vertical', 'professionals');
-    if (countErr) throw countErr;
-    if ((existingCount ?? 0) > 0) {
-      return res.status(409).json({
-        message: 'Mund të keni vetëm një profil profesionisti. Përditësojeni atë ekzistues nga Shpalljet e mia.',
-      });
+    if (!hasUnlimitedDirectoryListings(req.user)) {
+      const { count: existingCount, error: countErr } = await sb
+        .from('directory_listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('poster_id', req.user.id)
+        .eq('vertical', 'professionals');
+      if (countErr) throw countErr;
+      if ((existingCount ?? 0) > 0) {
+        return res.status(409).json({
+          message: 'Mund të keni vetëm një profil profesionisti. Përditësojeni atë ekzistues nga Shpalljet e mia.',
+        });
+      }
     }
 
     const cityId = String(body.cityId).trim();

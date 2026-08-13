@@ -11,22 +11,31 @@ import {
   Typography,
 } from '@mui/material';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
+import { DownloadSimple as DownloadSimpleIcon } from '@phosphor-icons/react/dist/ssr/DownloadSimple';
 import { LinkSimple as LinkSimpleIcon } from '@phosphor-icons/react/dist/ssr/LinkSimple';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
+import { toJpeg } from 'html-to-image';
 
 import {
+  ListingShareCard,
   ListingStoryTemplate,
   STORY_HEIGHT,
   STORY_WIDTH,
   StoryBackground,
 } from '@/components/public/listing-share/listing-story-template';
-import { resolveListingShareUrl, type ListingSharePayload } from '@/lib/listing-share';
+import {
+  embedImageAsDataUrl,
+  resolveListingShareUrl,
+  resolveStoryImageSrc,
+  type ListingSharePayload,
+} from '@/lib/listing-share';
 import { emitHotLeadShare } from '@/lib/listing-hot-lead';
 import { recordListingMetricEvent, type ListingMetrics } from '@/lib/listing-metrics';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 
 const BRAND_GREEN = '#76ba1b';
 const SHEET_BG = 'rgba(12, 12, 12, 0.94)';
+const CARD_BG = '#141414';
 
 async function shareLink(title: string, url: string): Promise<void> {
   if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
@@ -37,6 +46,124 @@ async function shareLink(title: string, url: string): Promise<void> {
 
 async function copyLink(url: string): Promise<void> {
   await navigator.clipboard.writeText(url);
+}
+
+function isIosLike(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  if (/iP(hone|ad|od)/.test(ua)) return true;
+  return /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+}
+
+function downloadFile(file: File) {
+  const objectUrl = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = objectUrl;
+  a.download = file.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
+function dataUrlToFile(dataUrl: string, filename: string): File {
+  const [header, data] = dataUrl.split(',');
+  const mime = /data:(.*?);/.exec(header ?? '')?.[1] ?? 'image/jpeg';
+  const binary = atob(data ?? '');
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return new File([bytes], filename, { type: mime });
+}
+
+async function waitForImages(root: HTMLElement): Promise<void> {
+  const imgs = Array.from(root.querySelectorAll('img'));
+  await Promise.all(
+    imgs.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete && img.naturalWidth > 0) {
+            resolve();
+            return;
+          }
+          const done = () => resolve();
+          img.addEventListener('load', done, { once: true });
+          img.addEventListener('error', done, { once: true });
+          window.setTimeout(done, 4000);
+        }),
+    ),
+  );
+}
+
+/** Replace listing photo src with an embedded data URL on the live DOM (Safari-safe). */
+async function ensureListingImageEmbedded(root: HTMLElement, imageUrl: string | null | undefined) {
+  if (!imageUrl) return;
+  const img = root.querySelector<HTMLImageElement>('img[data-story-listing-image]');
+  if (!img) return;
+  if (img.src.startsWith('data:image/') && img.complete && img.naturalWidth > 0) return;
+
+  const source = resolveStoryImageSrc(imageUrl) || imageUrl;
+  if (img.src !== source && !img.src.startsWith('data:image/')) {
+    await new Promise<void>((resolve) => {
+      const done = () => resolve();
+      img.addEventListener('load', done, { once: true });
+      img.addEventListener('error', done, { once: true });
+      img.removeAttribute('crossorigin');
+      img.referrerPolicy = 'no-referrer';
+      img.src = source;
+      if (img.complete && img.naturalWidth > 0) done();
+      else window.setTimeout(done, 2500);
+    });
+    if (img.complete && img.naturalWidth > 0) return;
+  }
+
+  const embedded = await embedImageAsDataUrl(source);
+  if (!embedded) return;
+
+  await new Promise<void>((resolve) => {
+    const done = () => resolve();
+    img.addEventListener('load', done, { once: true });
+    img.addEventListener('error', done, { once: true });
+    img.removeAttribute('crossorigin');
+    img.src = embedded;
+    if (img.complete && img.naturalWidth > 0) done();
+    else window.setTimeout(done, 4000);
+  });
+}
+
+/**
+ * Save the card image to the device.
+ * On mobile, the share sheet usually includes “Save image” / Photos;
+ * desktop (and share failures) fall back to a file download.
+ */
+async function saveCardImage(file: File): Promise<'shared' | 'downloaded'> {
+  const fileOnly = { files: [file] };
+  const canShareFiles =
+    typeof navigator !== 'undefined' &&
+    typeof navigator.share === 'function' &&
+    typeof navigator.canShare === 'function' &&
+    navigator.canShare(fileOnly);
+  const preferShareSheet =
+    canShareFiles &&
+    (/Android|iP(hone|ad|od)/i.test(navigator.userAgent) || isIosLike());
+
+  if (preferShareSheet) {
+    try {
+      await navigator.share(fileOnly);
+      return 'shared';
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') throw err;
+    }
+  }
+
+  downloadFile(file);
+  return 'downloaded';
+}
+
+function needsCaptureWarmup(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  if (/iP(hone|ad|od)/.test(ua)) return true;
+  return /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
 }
 
 const btnSx = {
@@ -52,7 +179,7 @@ const btnSx = {
   minWidth: 0,
 };
 
-/** Full-page share experience — branded preview + share / copy link. */
+/** Full-page share experience — branded preview + share / copy / save card. */
 export function ListingSharePage({
   open,
   onClose,
@@ -65,7 +192,9 @@ export function ListingSharePage({
   onShared?: (metrics: ListingMetrics) => void;
 }) {
   const previewWrapRef = React.useRef<HTMLDivElement>(null);
-  const [busy, setBusy] = React.useState<'share' | 'copy' | null>(null);
+  const cardCaptureRef = React.useRef<HTMLDivElement>(null);
+  const embeddedImageRef = React.useRef<string | null>(null);
+  const [busy, setBusy] = React.useState<'share' | 'copy' | 'save' | null>(null);
   const [feedback, setFeedback] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [previewScale, setPreviewScale] = React.useState(0.28);
@@ -82,8 +211,27 @@ export function ListingSharePage({
       setBusy(null);
       setFeedback(null);
       setError(null);
+      embeddedImageRef.current = null;
+      return;
     }
-  }, [open]);
+
+    const remote = payload?.imageUrl?.trim();
+    if (!remote || remote.startsWith('data:')) {
+      embeddedImageRef.current = remote?.startsWith('data:') ? remote : null;
+      return;
+    }
+
+    let cancelled = false;
+    embeddedImageRef.current = null;
+    void (async () => {
+      const embedded = await embedImageAsDataUrl(resolveStoryImageSrc(remote) || remote);
+      if (!cancelled && embedded) embeddedImageRef.current = embedded;
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, payload?.listingId, payload?.imageUrl]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -170,6 +318,68 @@ export function ListingSharePage({
       setBusy(null);
     }
   }, [busy, bumpShareMetric, payload]);
+
+  const handleSaveCard = React.useCallback(async () => {
+    if (!payload || busy || !cardCaptureRef.current) return;
+    setBusy('save');
+    setError(null);
+    setFeedback(null);
+    try {
+      await ensureListingImageEmbedded(
+        cardCaptureRef.current,
+        embeddedImageRef.current ?? payload.imageUrl,
+      );
+      await waitForImages(cardCaptureRef.current);
+      await new Promise((r) => window.setTimeout(r, 120));
+
+      const width = Math.max(1, Math.round(cardCaptureRef.current.offsetWidth));
+      const height = Math.max(1, Math.round(cardCaptureRef.current.offsetHeight));
+      const jpegOpts = {
+        cacheBust: false,
+        skipFonts: true,
+        pixelRatio: 2,
+        quality: 0.92,
+        width,
+        height,
+        backgroundColor: CARD_BG,
+        imagePlaceholder:
+          'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
+        onImageErrorHandler: () => undefined,
+        fetchRequestInit: { mode: 'cors' as RequestMode, credentials: 'omit' as RequestCredentials },
+        style: {
+          transform: 'none',
+          transformOrigin: 'top left',
+          // Drop soft shadow so the saved file is just the card frame.
+          boxShadow: 'none',
+        },
+      };
+
+      const capture = () => toJpeg(cardCaptureRef.current!, jpegOpts);
+
+      if (needsCaptureWarmup()) {
+        await capture().catch(() => null);
+        await new Promise((r) => window.setTimeout(r, 80));
+      }
+
+      const dataUrl = await capture();
+      if (!dataUrl.startsWith('data:image/')) {
+        throw new Error('card capture empty');
+      }
+
+      const file = dataUrlToFile(dataUrl, `kutagjej-card-${payload.listingId.slice(0, 8)}.jpg`);
+      const result = await saveCardImage(file);
+
+      setFeedback(
+        result === 'shared' ? 'Fotoja e kartës u ruajt.' : 'Fotoja e kartës u shkarkua.',
+      );
+    } catch (err) {
+      if (!(err instanceof DOMException && err.name === 'AbortError')) {
+        setError('Nuk u ruajt fotoja. Provo përsëri.');
+      }
+    } finally {
+      setBusy(null);
+    }
+  }, [busy, payload]);
 
   if (!mounted || !open || !payload) return null;
 
@@ -277,6 +487,23 @@ export function ListingSharePage({
         </Box>
       </Box>
 
+      {/* Offscreen full-size card for gallery export (avoids scaled preview artifacts) */}
+      <Box
+        aria-hidden
+        sx={{
+          position: 'fixed',
+          left: -10_000,
+          top: 0,
+          pointerEvents: 'none',
+          opacity: 0,
+          overflow: 'visible',
+          fontFamily:
+            'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        }}
+      >
+        <ListingShareCard ref={cardCaptureRef} payload={payload} />
+      </Box>
+
       {/* Bottom actions */}
       <Box
         sx={{
@@ -354,6 +581,40 @@ export function ListingSharePage({
               Kopjo linkun
             </Button>
           </Stack>
+
+          <Button
+            type="button"
+            variant="outlined"
+            size="large"
+            disabled={Boolean(busy)}
+            onClick={() => void handleSaveCard()}
+            startIcon={
+              busy === 'save' ? (
+                <CircularProgress size={18} sx={{ color: '#fff' }} />
+              ) : (
+                <DownloadSimpleIcon size={18} weight="bold" />
+              )
+            }
+            sx={{
+              ...btnSx,
+              flex: 'none',
+              width: '100%',
+              borderColor: 'rgba(255,255,255,0.22)',
+              color: '#fff',
+              bgcolor: 'rgba(255,255,255,0.04)',
+              '&:hover': {
+                borderColor: BRAND_GREEN,
+                bgcolor: 'rgba(118,186,27,0.12)',
+                color: '#fff',
+              },
+              '&.Mui-disabled': {
+                borderColor: 'rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.35)',
+              },
+            }}
+          >
+            Ruaj foton
+          </Button>
 
           {feedback ? (
             <Typography

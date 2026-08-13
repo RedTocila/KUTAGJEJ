@@ -84,7 +84,8 @@ export function BannerSliderViewport({
                 flex: `0 0 ${slideBasis}%`,
                 minWidth: 0,
                 // Gap between cards while sliding (border-box keeps % transforms correct).
-                px: contained ? 1 : { xs: 0.75, md: 0 },
+                // Contained banners fill the parent gutter (same as category row padding).
+                px: contained ? 0 : { xs: 0.75, md: 0 },
                 ...(flushFirstSlide && !contained && i === 0 ? { pl: { xs: 0, md: 0 } } : null),
                 boxSizing: 'border-box',
               }}

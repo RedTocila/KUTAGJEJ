@@ -27,6 +27,7 @@ import {
   listMyBusinessListings,
   listMyProfessionalListings,
 } from '@/lib/directory-listings-client';
+import { hasUnlimitedDirectoryListings } from '@/lib/directory-listing-limits';
 import {
   fetchCategoryQuotas,
   isCategoryQuotaAvailable,
@@ -38,6 +39,7 @@ import { AI_SEARCH_BLUE, OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-
 import { paths } from '@/paths';
 import type { ListingCategory, ListingCategoryKey } from '@/types/listing-category';
 import { useCopy } from '@/hooks/use-copy';
+import { useUser } from '@/hooks/use-user';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 import type { AppMessages } from '@/lib/i18n/messages';
 
@@ -128,6 +130,8 @@ export function AddListingPickerDialog({
   initialPremium?: boolean;
 }) {
   const t = useCopy();
+  const { user } = useUser();
+  const unlimitedDirectory = hasUnlimitedDirectoryListings(user?.email);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [categories, setCategories] = React.useState<ListingCategory[]>([]);
@@ -162,16 +166,17 @@ export function AddListingPickerDialog({
       if (cancelled) return;
       if (catRes.error) setError(catRes.error);
       setCategories(catRes.categories ?? []);
-      // Directory profiles: one per account — hide add options when one already exists.
-      setHasBusinessListing((bizRes.listings?.length ?? 0) > 0);
-      setHasProfessionalListing((proRes.listings?.length ?? 0) > 0);
+      // Directory profiles: one per account — hide add options when one already exists
+      // (unless this account is allowlisted for unlimited directory listings).
+      setHasBusinessListing(!unlimitedDirectory && (bizRes.listings?.length ?? 0) > 0);
+      setHasProfessionalListing(!unlimitedDirectory && (proRes.listings?.length ?? 0) > 0);
       setCategoryQuotas(quotaRes.snapshot ?? null);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, unlimitedDirectory]);
 
   const localizedFallback = fallbackOptions(t);
   const fallbackByKey = Object.fromEntries(
@@ -222,7 +227,7 @@ export function AddListingPickerDialog({
       return;
     }
     void (async () => {
-      if (key === 'businesses') {
+      if (key === 'businesses' && !unlimitedDirectory) {
         const res = await listMyBusinessListings();
         if ((res.listings?.length ?? 0) > 0) {
           onClose();
@@ -230,7 +235,7 @@ export function AddListingPickerDialog({
           return;
         }
       }
-      if (key === 'professionals') {
+      if (key === 'professionals' && !unlimitedDirectory) {
         const res = await listMyProfessionalListings();
         if ((res.listings?.length ?? 0) > 0) {
           onClose();

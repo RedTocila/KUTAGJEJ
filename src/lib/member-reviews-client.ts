@@ -10,6 +10,10 @@ export interface MemberReview {
   comment: string;
   reviewerName: string;
   createdAt: string;
+  /** profile = member_reviews; business/professional = directory listing reviews */
+  source?: 'profile' | 'business' | 'professional';
+  listingId?: string | null;
+  listingTitle?: string | null;
 }
 
 export async function listMemberReviews(memberId: string): Promise<{

@@ -48,6 +48,7 @@ import {
   profileDefaultsFromStorage,
   resolveContactPhone,
 } from '@/lib/listing-form-defaults';
+import { hasUnlimitedDirectoryListings } from '@/lib/directory-listing-limits';
 import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
 import { useUser } from '@/hooks/use-user';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -216,14 +217,15 @@ export function ProfessionalListingForm({
     void listMyProfessionalListings().then((res) => {
       if (cancelled) return;
       const first = res.listings?.[0];
-      if (first) applyExistingListing(first);
+      // Allowlisted accounts can create additional professionals — stay on create form.
+      if (first && !hasUnlimitedDirectoryListings(user?.email)) applyExistingListing(first);
       else setExistingId(null);
       setCheckingExisting(false);
     });
     return () => {
       cancelled = true;
     };
-  }, [applyExistingListing]);
+  }, [applyExistingListing, user?.email]);
 
   // Prefill empty create fields from signup/profile / last listing (never overwrite AI or typed input).
   React.useEffect(() => {

@@ -85,6 +85,7 @@ import type { ListingMetrics, ListingMetricKind } from '@/lib/listing-metrics';
 import { fetchListingAutoRefresh } from '@/lib/listing-refresh-client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { hardNavigate } from '@/lib/hard-navigate';
+import { hasUnlimitedDirectoryListings } from '@/lib/directory-listing-limits';
 import type { ListingCategoryKey } from '@/types/listing-category';
 
 function autoRefreshKey(kind: string, listingId: string) {
@@ -1408,12 +1409,13 @@ export default function UserMyListingsPage() {
 
   const handleAddListingPick = React.useCallback(
     (key: ListingCategoryKey, opts?: { okazion?: boolean; premium?: boolean }) => {
-      if (key === 'businesses' && bizListings.length > 0) {
+      const unlimitedDirectory = hasUnlimitedDirectoryListings(user?.email);
+      if (key === 'businesses' && bizListings.length > 0 && !unlimitedDirectory) {
         setAddListingOpen(false);
         hardNavigate(paths.user.businessesListing);
         return;
       }
-      if (key === 'professionals' && proListings.length > 0) {
+      if (key === 'professionals' && proListings.length > 0 && !unlimitedDirectory) {
         setAddListingOpen(false);
         hardNavigate(paths.user.professionalsListing);
         return;
@@ -1424,7 +1426,7 @@ export default function UserMyListingsPage() {
       if (opts?.premium) q.set('premium', '1');
       hardNavigate(`${paths.user.realEstateListing}?${q.toString()}`);
     },
-    [bizListings.length, proListings.length],
+    [bizListings.length, proListings.length, user?.email],
   );
 
   if (!user || !canView) return null;

@@ -276,8 +276,10 @@ function StoryListingImage({
 
 /**
  * Listing card — height follows content so sparse listings stay tight (no empty black gap).
+ * Exported so the share sheet can capture only the card (no story backdrop).
  */
-function TemplateListingCard({ payload }: { payload: ListingSharePayload }) {
+export const ListingShareCard = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
+  function ListingShareCard({ payload }, ref) {
   const specs = (payload.specs ?? []).filter((s) => s.label).slice(0, 6);
   const saveCount = payload.saveCount ?? 0;
   const viewCount = payload.viewCount ?? 0;
@@ -286,6 +288,8 @@ function TemplateListingCard({ payload }: { payload: ListingSharePayload }) {
 
   return (
     <Box
+      ref={ref}
+      data-listing-share-card=""
       sx={{
         width: CARD_W,
         borderRadius: 2.25 * S,
@@ -441,7 +445,8 @@ function TemplateListingCard({ payload }: { payload: ListingSharePayload }) {
       </Stack>
     </Box>
   );
-}
+  },
+);
 
 /**
  * Full Instagram-story template: branded dark backdrop + feed-exact listing card.
@@ -517,7 +522,7 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
             </Stack>
           </Box>
 
-          <TemplateListingCard payload={payload} />
+          <ListingShareCard payload={payload} />
 
           {/* Balances the top row so the listing sits in the vertical middle */}
           <Box aria-hidden sx={{ width: '100%', height: '100%', minHeight: 0 }} />

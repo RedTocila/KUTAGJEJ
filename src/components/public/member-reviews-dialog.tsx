@@ -6,26 +6,23 @@ import {
   Box,
   Button,
   CircularProgress,
+  Drawer,
+  IconButton,
   Rating,
   Stack,
   Typography,
 } from '@mui/material';
 import { ChatCircleDots as ChatCircleDotsIcon } from '@phosphor-icons/react/dist/ssr/ChatCircleDots';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
+import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
-import {
-  ProductDialog,
-  ProductDialogActions,
-  ProductDialogContent,
-  ProductDialogTitle,
-} from '@/components/core/product-dialog';
 import { MemberLeaveReviewButton } from '@/components/public/member-leave-review-button';
+import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
+import { useUser } from '@/hooks/use-user';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import { listMemberReviews, type MemberReview } from '@/lib/member-reviews-client';
-import { useUser } from '@/hooks/use-user';
 
-const DIALOG_Z_INDEX = 1400;
 const LEAVE_REVIEW_Z_INDEX = 1500;
 
 function reviewerInitials(name: string): string {
@@ -60,6 +57,8 @@ export function MemberReviewsDialog({
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [reloadKey, setReloadKey] = React.useState(0);
+
+  useLockBodyScroll(open);
 
   const isOwnProfile = Boolean(user?.id && String(user.id) === String(memberId));
   const showLeaveReview = !isOwnProfile && !viewerHasReviewed;
@@ -96,21 +95,53 @@ export function MemberReviewsDialog({
   const title = memberName?.trim() ? `Vlerësimet · ${memberName.trim()}` : 'Vlerësimet';
 
   return (
-    <ProductDialog
+    <Drawer
+      anchor="bottom"
       open={open}
       onClose={onClose}
-      maxWidth="xs"
-      fullWidth
-      disableScrollLock={false}
+      disableScrollLock
       slotProps={{
-        backdrop: { sx: { pointerEvents: 'auto' } },
-        paper: { sx: { maxHeight: 'min(80vh, 640px)' } },
+        backdrop: {
+          sx: {
+            pointerEvents: 'auto',
+            touchAction: 'none',
+          },
+        },
+        paper: {
+          sx: {
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            maxHeight: '70dvh',
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
+            backgroundImage: 'none',
+            pb: 'env(safe-area-inset-bottom, 0px)',
+            zIndex: (theme) => theme.zIndex.modal + 1,
+          },
+        },
       }}
-      sx={{ zIndex: DIALOG_Z_INDEX }}
     >
-      <ProductDialogTitle onClose={onClose}>{title}</ProductDialogTitle>
+      <Box sx={{ px: 2, pt: 1, pb: showLeaveReview ? 1.5 : 2 }}>
+        <Box
+          sx={{
+            width: 36,
+            height: 4,
+            borderRadius: 999,
+            bgcolor: 'action.disabled',
+            mx: 'auto',
+            mb: 1.25,
+          }}
+        />
 
-      <ProductDialogContent sx={{ pb: showLeaveReview ? 1.5 : 2.5 }}>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+          <Typography sx={{ fontWeight: 800, fontSize: '1rem', pr: 1 }} noWrap>
+            {title}
+          </Typography>
+          <IconButton aria-label="Mbyll" onClick={onClose} size="small" edge="end">
+            <XIcon size={18} weight="bold" />
+          </IconButton>
+        </Stack>
+
         <Stack spacing={2}>
           <Stack
             direction="row"
@@ -146,7 +177,7 @@ export function MemberReviewsDialog({
               Ende pa vlerësime. Bëhuni i pari që lini një koment.
             </Typography>
           ) : (
-            <Stack spacing={1.25} sx={{ maxHeight: 'min(48vh, 420px)', overflowY: 'auto', pr: 0.25 }}>
+            <Stack spacing={1.25} sx={{ pb: showLeaveReview ? 0.5 : 0 }}>
               {reviews.map((review) => (
                 <Box
                   key={review.id}
@@ -187,6 +218,13 @@ export function MemberReviewsDialog({
                         </Typography>
                       </Stack>
                       <Rating value={review.rating} readOnly size="small" />
+                      {review.listingTitle ? (
+                        <Typography
+                          sx={{ fontSize: '0.6875rem', color: 'text.disabled', fontWeight: 650 }}
+                        >
+                          Në shpalljen · {review.listingTitle}
+                        </Typography>
+                      ) : null}
                       {review.comment ? (
                         <Typography
                           variant="body2"
@@ -202,28 +240,26 @@ export function MemberReviewsDialog({
               ))}
             </Stack>
           )}
-        </Stack>
-      </ProductDialogContent>
 
-      {showLeaveReview ? (
-        <ProductDialogActions>
-          <Box sx={{ width: '100%' }}>
-            <MemberLeaveReviewButton
-              memberId={memberId}
-              memberName={memberName}
-              pill
-              hasReviewed={viewerHasReviewed}
-              dialogZIndex={LEAVE_REVIEW_Z_INDEX}
-              onSubmitted={() => {
-                setViewerHasReviewed(true);
-                setReloadKey((k) => k + 1);
-                onReviewSubmitted?.();
-              }}
-            />
-          </Box>
-        </ProductDialogActions>
-      ) : null}
-    </ProductDialog>
+          {showLeaveReview ? (
+            <Box sx={{ width: '100%', pt: 0.25 }}>
+              <MemberLeaveReviewButton
+                memberId={memberId}
+                memberName={memberName}
+                pill
+                hasReviewed={viewerHasReviewed}
+                dialogZIndex={LEAVE_REVIEW_Z_INDEX}
+                onSubmitted={() => {
+                  setViewerHasReviewed(true);
+                  setReloadKey((k) => k + 1);
+                  onReviewSubmitted?.();
+                }}
+              />
+            </Box>
+          ) : null}
+        </Stack>
+      </Box>
+    </Drawer>
   );
 }
 

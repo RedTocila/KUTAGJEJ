@@ -28,6 +28,7 @@ import {
   updateBusinessListing,
   type BusinessMineListing,
 } from '@/lib/directory-listings-client';
+import { hasUnlimitedDirectoryListings } from '@/lib/directory-listing-limits';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
@@ -182,7 +183,8 @@ export function BusinessListingForm({
     void listMyBusinessListings().then(async (res) => {
       if (cancelled) return;
       const first = res.listings?.[0];
-      if (!first?.id) {
+      // Allowlisted accounts can create additional businesses — stay on create form.
+      if (!first?.id || hasUnlimitedDirectoryListings(user?.email)) {
         setExistingId(null);
         setCheckingExisting(false);
         return;
@@ -197,7 +199,7 @@ export function BusinessListingForm({
     return () => {
       cancelled = true;
     };
-  }, [canPostBusiness, applyExistingListing]);
+  }, [canPostBusiness, applyExistingListing, user?.email]);
 
   // Prefill empty create fields from signup/profile / last listing location.
   React.useEffect(() => {

@@ -67,6 +67,7 @@ export function AccountVerificationAdminPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [selected, setSelected] = React.useState<QueueItem | null>(null);
   const [adminNote, setAdminNote] = React.useState('');
+  const [dialogError, setDialogError] = React.useState<string | null>(null);
   const [acting, setActing] = React.useState(false);
 
   const isAdmin = user?.accountType === 'admin' || (!user?.accountType && user?.role === 'admin');
@@ -106,14 +107,15 @@ export function AccountVerificationAdminPage() {
     if (!selected) return;
     const trimmedNote = adminNote.replace(/\s+/g, ' ').trim();
     if (decision === 'reject' && !trimmedNote) {
-      setError('Shkruani arsyen e refuzimit — ajo i dërgohet përdoruesit.');
+      setDialogError('Shkruani arsyen e refuzimit — ajo i dërgohet përdoruesit.');
       return;
     }
     setActing(true);
+    setDialogError(null);
     setError(null);
     const res = await reviewBySource(selected.source, selected.id, decision, trimmedNote);
     if (res.error) {
-      setError(res.error);
+      setDialogError(res.error);
       setActing(false);
       return;
     }
@@ -132,6 +134,7 @@ export function AccountVerificationAdminPage() {
 
     setSelected(null);
     setAdminNote('');
+    setDialogError(null);
     await load();
     setActing(false);
   };
@@ -175,12 +178,14 @@ export function AccountVerificationAdminPage() {
                 onClick={() => {
                   setSelected(req);
                   setAdminNote(req.adminNote ?? '');
+                  setDialogError(null);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     setSelected(req);
                     setAdminNote(req.adminNote ?? '');
+                    setDialogError(null);
                   }
                 }}
                 sx={{
@@ -213,8 +218,23 @@ export function AccountVerificationAdminPage() {
         </Grid>
       )}
 
-      <ProductDialog open={Boolean(selected)} onClose={() => setSelected(null)} maxWidth="md" fullWidth>
-        <ProductDialogTitle onClose={() => setSelected(null)}>Detajet e kërkesës</ProductDialogTitle>
+      <ProductDialog
+        open={Boolean(selected)}
+        onClose={() => {
+          setSelected(null);
+          setDialogError(null);
+        }}
+        maxWidth="md"
+        fullWidth
+      >
+        <ProductDialogTitle
+          onClose={() => {
+            setSelected(null);
+            setDialogError(null);
+          }}
+        >
+          Detajet e kërkesës
+        </ProductDialogTitle>
         <ProductDialogContent>
           {snap ? (
             <Stack spacing={1.5}>
@@ -275,21 +295,40 @@ export function AccountVerificationAdminPage() {
               <Typography variant="body2" color="text.secondary">
                 {selected?.message?.trim() || '—'}
               </Typography>
-              <TextField
-                label="Shënim për përdoruesin (i detyrueshëm për refuzim)"
-                value={adminNote}
-                onChange={(e) => setAdminNote(e.target.value)}
-                fullWidth
-                multiline
-                minRows={2}
-                placeholder="p.sh. Fotoja e ID-së ishte e turbullt — provoni përsëri me më shumë dritë."
-                sx={{ mt: 1, ...productFieldSx }}
-              />
             </Stack>
           ) : null}
         </ProductDialogContent>
+        {selected?.status === 'pending' ? (
+          <Box sx={{ px: 3, pb: 1, pt: 0 }}>
+            {dialogError ? (
+              <Alert severity="error" sx={{ mb: 1.5 }}>
+                {dialogError}
+              </Alert>
+            ) : null}
+            <TextField
+              label="Arsyeja e refuzimit (e detyrueshme për refuzim)"
+              value={adminNote}
+              onChange={(e) => {
+                setAdminNote(e.target.value);
+                if (dialogError) setDialogError(null);
+              }}
+              fullWidth
+              multiline
+              minRows={2}
+              placeholder="p.sh. Fotoja e ID-së ishte e turbullt — provoni përsëri me më shumë dritë."
+              sx={productFieldSx}
+            />
+          </Box>
+        ) : null}
         <ProductDialogActions>
-          <Button onClick={() => setSelected(null)} color="inherit" sx={productButtonSx}>
+          <Button
+            onClick={() => {
+              setSelected(null);
+              setDialogError(null);
+            }}
+            color="inherit"
+            sx={productButtonSx}
+          >
             Mbyll
           </Button>
           {selected?.status === 'pending' ? (
@@ -297,7 +336,7 @@ export function AccountVerificationAdminPage() {
               <Button
                 color="error"
                 variant="outlined"
-                disabled={acting || !adminNote.trim()}
+                disabled={acting}
                 onClick={() => void review('reject')}
                 sx={productButtonSx}
               >

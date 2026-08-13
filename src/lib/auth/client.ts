@@ -14,6 +14,7 @@ import {
   writeRememberedEmail,
 } from '@/lib/auth/storage';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { prepareAvatarForUpload } from '@/lib/uploads-client';
 import type { User } from '@/types/user';
 
 export { AUTH_TOKEN_KEY, AUTH_REFRESH_KEY };
@@ -304,8 +305,9 @@ class AuthClient {
     try {
       const token = await getAccessToken();
       if (!token) return { error: 'Duhet të jeni të identifikuar.' };
+      const prepared = await prepareAvatarForUpload(file);
       const fd = new FormData();
-      fd.append('avatar', file, file.name);
+      fd.append('avatar', prepared, prepared.name);
       const res = await fetch(getApiUrl('/auth/portal/avatar'), {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },

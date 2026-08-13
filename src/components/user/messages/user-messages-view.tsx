@@ -84,8 +84,13 @@ import {
   listingProfessionalPublicHref,
   listingRealEstatePublicHref,
   paths,
+  pathsPublicMemberProfile,
 } from '@/paths';
+import { prefetchStorageImages, storageImageUrl } from '@/lib/storage-image';
 import { logoGreen } from '@/styles/theme/colors';
+
+const CHAT_AVATAR_THUMB = 96;
+const CHAT_BUBBLE_IMAGE_THUMB = 720;
 
 function conversationContactPhone(conv: ConversationSummary): string | null {
   const listingPhone = conv.listingContactPhone?.trim() || '';
@@ -231,6 +236,145 @@ function isPersonFocusedConversation(
   item: Pick<ConversationSummary, 'role' | 'listingId'>,
 ): boolean {
   return item.role !== 'inquirer' || !item.listingId;
+}
+
+function conversationAvatarSrc(url: string | null | undefined): string | undefined {
+  return storageImageUrl(url, { width: CHAT_AVATAR_THUMB, height: CHAT_AVATAR_THUMB });
+}
+
+/** Avatar that loads a storage thumb and falls back to the original URL if needed. */
+function ChatAvatar({
+  src,
+  alt,
+  variant = 'circular',
+  href,
+  size = 46,
+  borderRadius,
+  sx,
+}: {
+  src?: string | null;
+  alt: string;
+  variant?: 'circular' | 'rounded';
+  href?: string | null;
+  size?: number;
+  borderRadius?: number | string;
+  sx?: object;
+}) {
+  const original = String(src || '').trim() || undefined;
+  const thumb = conversationAvatarSrc(original) || original;
+  const [displaySrc, setDisplaySrc] = React.useState(thumb);
+  const [loaded, setLoaded] = React.useState(!thumb);
+  const originalRef = React.useRef(original);
+  originalRef.current = original;
+
+  React.useEffect(() => {
+    setDisplaySrc(thumb);
+    setLoaded(!thumb);
+  }, [thumb]);
+
+  const markLoaded = React.useCallback(() => setLoaded(true), []);
+  const handleImgError = React.useCallback(() => {
+    const fallback = originalRef.current;
+    setDisplaySrc((current) => {
+      if (fallback && current !== fallback) return fallback;
+      queueMicrotask(() => setLoaded(true));
+      return current;
+    });
+  }, []);
+
+  const imgRef = React.useCallback(
+    (node: HTMLImageElement | null) => {
+      if (!node) return;
+      if (node.complete && node.naturalWidth > 0) markLoaded();
+      else if (node.complete && node.naturalWidth === 0) handleImgError();
+    },
+    [handleImgError, markLoaded],
+  );
+
+  const radius = borderRadius ?? (variant === 'rounded' ? 1.5 : '50%');
+
+  const avatar = (
+    <Box sx={{ position: 'relative', flexShrink: 0, width: size, height: size }}>
+      <Avatar
+        src={displaySrc}
+        alt={alt}
+        variant={variant}
+        slotProps={{
+          img: {
+            ref: imgRef,
+            loading: 'eager',
+            decoding: 'async',
+            onLoad: markLoaded,
+            onError: handleImgError,
+          },
+        }}
+        sx={{
+          width: size,
+          height: size,
+          borderRadius: radius,
+          fontWeight: 800,
+          fontSize: size > 44 ? '1rem' : '0.95rem',
+          ...(displaySrc
+            ? {
+                bgcolor: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? 'rgba(255,255,255,0.08)'
+                    : 'rgba(0,0,0,0.06)',
+                color: 'text.secondary',
+              }
+            : {
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+              }),
+          ...sx,
+        }}
+      >
+        {alt.slice(0, 1).toUpperCase()}
+      </Avatar>
+      {displaySrc && !loaded ? (
+        <Box
+          aria-hidden
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: radius,
+            display: 'grid',
+            placeItems: 'center',
+            bgcolor: (theme) =>
+              theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.45)',
+            pointerEvents: 'none',
+          }}
+        >
+          <CircularProgress
+            size={Math.max(14, Math.round(size * 0.38))}
+            thickness={5}
+            sx={{ color: CHAT_ACCENT }}
+          />
+        </Box>
+      ) : null}
+    </Box>
+  );
+
+  if (!href) return avatar;
+
+  return (
+    <Box
+      component={Link}
+      href={href}
+      aria-label={alt}
+      onClick={(e: React.MouseEvent) => e.stopPropagation()}
+      sx={{
+        display: 'inline-flex',
+        borderRadius: radius,
+        textDecoration: 'none',
+        color: 'inherit',
+        WebkitTapHighlightColor: 'transparent',
+        '&:focus-visible': { outline: `2px solid ${CHAT_ACCENT}`, outlineOffset: 2 },
+      }}
+    >
+      {avatar}
+    </Box>
+  );
 }
 
 const LONG_PRESS_MS = 480;
@@ -412,31 +556,13 @@ function ConversationListItem({
       ) : null}
 
       <Box sx={{ position: 'relative', flexShrink: 0, my: 1.15 }}>
-        <Avatar
-          src={avatarUrl ?? undefined}
+        <ChatAvatar
+          src={avatarUrl}
+          alt={title}
           variant={showListing ? 'rounded' : 'circular'}
-          sx={{
-            width: 49,
-            height: 49,
-            borderRadius: showListing ? 1.5 : '50%',
-            fontWeight: 700,
-            fontSize: '1.1rem',
-            ...(avatarUrl
-              ? {
-                  bgcolor: (theme) =>
-                    theme.palette.mode === 'dark'
-                      ? 'rgba(255,255,255,0.08)'
-                      : 'rgba(0,0,0,0.06)',
-                  color: 'text.secondary',
-                }
-              : {
-                  bgcolor: 'primary.main',
-                  color: 'primary.contrastText',
-                }),
-          }}
-        >
-          {title.slice(0, 1).toUpperCase()}
-        </Avatar>
+          size={49}
+          borderRadius={showListing ? 1.5 : '50%'}
+        />
         {pinned && !selectionMode ? (
           <Box
             aria-label={t.messages.pinnedAria}
@@ -581,6 +707,13 @@ function MessageBubble({
   const mine = message.isMine;
   const isRead = deliveryStatus === 'read';
   const imageUrl = String(message.imageUrl || '').trim();
+  const bubbleImageUrl =
+    storageImageUrl(imageUrl, {
+      width: CHAT_BUBBLE_IMAGE_THUMB,
+      height: CHAT_BUBBLE_IMAGE_THUMB,
+      resize: 'contain',
+      quality: 75,
+    }) || imageUrl;
   const body = String(message.body || '').trim();
   const imageOnly = Boolean(imageUrl) && !body;
   const metaWidth = mine && deliveryStatus ? 58 : 42;
@@ -588,11 +721,21 @@ function MessageBubble({
   const [previewOpen, setPreviewOpen] = React.useState(false);
   const [imageLoaded, setImageLoaded] = React.useState(false);
   const [imageFailed, setImageFailed] = React.useState(false);
+  const [previewLoaded, setPreviewLoaded] = React.useState(false);
+  const [previewFailed, setPreviewFailed] = React.useState(false);
+  const [bubbleSrc, setBubbleSrc] = React.useState(bubbleImageUrl);
 
   React.useEffect(() => {
+    setBubbleSrc(bubbleImageUrl);
     setImageLoaded(false);
     setImageFailed(false);
-  }, [imageUrl]);
+  }, [bubbleImageUrl]);
+
+  React.useEffect(() => {
+    if (!previewOpen) return;
+    setPreviewLoaded(false);
+    setPreviewFailed(false);
+  }, [previewOpen, imageUrl]);
 
   // Concentric with bubble; caption images also round the bottom edge.
   const imageRadius = body
@@ -788,7 +931,7 @@ function MessageBubble({
               <Box
                 component="img"
                 ref={imgRef}
-                src={imageUrl}
+                src={bubbleSrc}
                 alt=""
                 loading="eager"
                 decoding="async"
@@ -807,7 +950,13 @@ function MessageBubble({
                   }
                 }}
                 onLoad={handleImageLoad}
-                onError={handleImageError}
+                onError={() => {
+                  if (imageUrl && bubbleSrc !== imageUrl) {
+                    setBubbleSrc(imageUrl);
+                    return;
+                  }
+                  handleImageError();
+                }}
                 sx={{
                   display: 'block',
                   width: '100%',
@@ -914,7 +1063,7 @@ function MessageBubble({
             position: 'relative',
           }}
         >
-          {!imageLoaded && !imageFailed ? (
+          {!previewLoaded && !previewFailed ? (
             <Box
               sx={{
                 position: 'absolute',
@@ -937,13 +1086,19 @@ function MessageBubble({
               />
             </Box>
           ) : null}
-          {!imageFailed ? (
+          {!previewFailed ? (
             <Box
               component="img"
               src={imageUrl}
               alt=""
-              onLoad={handleImageLoad}
-              onError={handleImageError}
+              onLoad={() => {
+                setPreviewLoaded(true);
+                setPreviewFailed(false);
+              }}
+              onError={() => {
+                setPreviewLoaded(true);
+                setPreviewFailed(true);
+              }}
               onClick={(e) => e.stopPropagation()}
               sx={{
                 display: 'block',
@@ -954,7 +1109,7 @@ function MessageBubble({
                 objectFit: 'contain',
                 borderRadius: 1,
                 userSelect: 'none',
-                opacity: imageLoaded ? 1 : 0,
+                opacity: previewLoaded ? 1 : 0,
                 transition: 'opacity 0.15s ease',
               }}
             />
@@ -1348,6 +1503,9 @@ export function UserMessagesView() {
     if (cached) {
       setConversations(sortConversationsByRecent(inboxConversations(cached)));
       setListLoading(false);
+      prefetchStorageImages(
+        cached.flatMap((c) => [c.otherParticipantAvatarUrl, c.listingImageUrl]),
+      );
     } else {
       setListLoading(true);
     }
@@ -1359,6 +1517,9 @@ export function UserMessagesView() {
       const next = sortConversationsByRecent(inboxConversations(res.conversations ?? []));
       setCachedConversations(next);
       setConversations(next);
+      prefetchStorageImages(
+        next.flatMap((c) => [c.otherParticipantAvatarUrl, c.listingImageUrl]),
+      );
     }
     setListLoading(false);
   }, []);
@@ -1798,6 +1959,9 @@ export function UserMessagesView() {
   const threadHeaderAvatar = showListingInHeader
     ? activeConversation?.listingImageUrl
     : activeConversation?.otherParticipantAvatarUrl;
+  const otherProfileHref = activeConversation?.otherParticipantId
+    ? pathsPublicMemberProfile(activeConversation.otherParticipantId)
+    : null;
   const deliveryStatuses = React.useMemo(
     () => deliveryStatusByMessageId(messages, activeConversation?.otherUnreadCount ?? 0),
     [messages, activeConversation?.otherUnreadCount],
@@ -2179,31 +2343,14 @@ export function UserMessagesView() {
                   }}
                   aria-label={t.messages.backAria}
                 />
-                <Avatar
-                  src={threadHeaderAvatar ?? undefined}
+                <ChatAvatar
+                  src={threadHeaderAvatar}
+                  alt={threadHeaderName}
                   variant={showListingInHeader ? 'rounded' : 'circular'}
-                  sx={{
-                    width: 46,
-                    height: 46,
-                    flexShrink: 0,
-                    borderRadius: showListingInHeader ? 1.85 : '50%',
-                    fontWeight: 800,
-                    fontSize: '1rem',
-                    ...(threadHeaderAvatar
-                      ? {
-                          bgcolor: (theme) =>
-                            theme.palette.mode === 'dark'
-                              ? 'rgba(255,255,255,0.08)'
-                              : 'rgba(0,0,0,0.06)',
-                        }
-                      : {
-                          bgcolor: 'primary.main',
-                          color: 'primary.contrastText',
-                        }),
-                  }}
-                >
-                  {threadHeaderName.slice(0, 1).toUpperCase()}
-                </Avatar>
+                  href={otherProfileHref}
+                  size={46}
+                  borderRadius={showListingInHeader ? 1.85 : '50%'}
+                />
                 <Stack
                   spacing={0.2}
                   sx={{
@@ -2214,12 +2361,21 @@ export function UserMessagesView() {
                   }}
                 >
                   <Typography
+                    component={otherProfileHref ? Link : 'span'}
+                    href={otherProfileHref || undefined}
                     sx={{
                       fontWeight: 700,
                       fontSize: '1.025rem',
                       lineHeight: 1.25,
                       letterSpacing: '-0.01em',
                       color: 'text.primary',
+                      textDecoration: 'none',
+                      ...(otherProfileHref
+                        ? {
+                            cursor: 'pointer',
+                            '&:hover': { textDecoration: 'underline' },
+                          }
+                        : null),
                     }}
                     noWrap
                   >

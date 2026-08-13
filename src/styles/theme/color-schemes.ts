@@ -82,10 +82,10 @@ export const colorSchemes = {
   },
   light: {
     palette: {
-      action: { disabledBackground: 'rgba(26, 67, 1, 0.06)' },
+      action: { disabledBackground: 'rgba(43, 84, 10, 0.08)' },
       background: {
-        default: '#f7faf4',
-        defaultChannel: '247 250 244',
+        default: '#f2f6ec',
+        defaultChannel: '242 246 236',
         paper: '#ffffff',
         paperChannel: '255 255 255',
         level1: 'var(--mui-palette-neutral-50)',
@@ -93,8 +93,9 @@ export const colorSchemes = {
         level3: 'var(--mui-palette-neutral-200)',
       },
       common: { black: '#000000', white: '#ffffff' },
-      divider: 'var(--mui-palette-neutral-200)',
-      dividerChannel: '217 228 208',
+      // Stronger sage border so cards / inputs read clearly on white.
+      divider: 'var(--mui-palette-neutral-300)',
+      dividerChannel: '163 188 143',
       error: {
         ...redOrange,
         light: redOrange[400],
@@ -112,9 +113,10 @@ export const colorSchemes = {
       neutral: { ...stormGrey },
       primary: {
         ...iAgentGold,
-        light: iAgentGold[400],
-        main: iAgentGold[600],
-        dark: iAgentGold[900],
+        // Punchier brand green on light surfaces (was 600 / washed on white).
+        light: iAgentGold[500],
+        main: iAgentGold[700],
+        dark: iAgentGold[800],
         contrastText: 'var(--mui-palette-common-white)',
       },
       secondary: {
@@ -127,15 +129,15 @@ export const colorSchemes = {
       success: {
         ...kepple,
         light: kepple[400],
-        main: kepple[500],
+        main: kepple[600],
         dark: kepple[700],
         contrastText: 'var(--mui-palette-common-white)',
       },
       text: {
         primary: 'var(--mui-palette-neutral-900)',
-        primaryChannel: '26 33 24',
-        secondary: 'var(--mui-palette-neutral-600)',
-        secondaryChannel: '77 93 70',
+        primaryChannel: '20 26 17',
+        secondary: 'var(--mui-palette-neutral-700)',
+        secondaryChannel: '50 64 41',
         disabled: 'var(--mui-palette-neutral-400)',
       },
       warning: {

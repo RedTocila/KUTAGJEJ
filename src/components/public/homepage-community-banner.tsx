@@ -3,6 +3,7 @@
 import * as React from 'react';
 
 import { HomepageBanner } from '@/components/public/homepage-banner';
+import { HowItWorksTutorial } from '@/components/public/how-it-works-tutorial';
 import { useCopy } from '@/hooks/use-copy';
 import { paths } from '@/paths';
 
@@ -36,20 +37,27 @@ export function HomepageCommunityBanner({
 
 export function HomepagePostBanner() {
   const t = useCopy();
+  const [tutorialOpen, setTutorialOpen] = React.useState(false);
 
   return (
-    <HomepageBanner
-      variant="primary"
-      eyebrow={t.home.postEyebrow}
-      title={t.home.postTitle}
-      subtitle={t.home.postSubtitle}
-      primaryAction={{ label: t.home.postCta, href: paths.user.realEstateListing }}
-      secondaryAction={{ label: t.home.howItWorks, href: paths.public.about }}
-      features={[
-        { iconKey: 'currency-eur', label: t.home.featureFree },
-        { iconKey: 'lightning', label: t.home.featureFast },
-        { iconKey: 'shield-check', label: t.home.featureNoFees },
-      ]}
-    />
+    <>
+      <HomepageBanner
+        variant="primary"
+        eyebrow={t.home.postEyebrow}
+        title={t.home.postTitle}
+        subtitle={t.home.postSubtitle}
+        primaryAction={{ label: t.home.postCta, href: paths.user.realEstateListing }}
+        secondaryAction={{
+          label: t.home.howItWorks,
+          onClick: () => setTutorialOpen(true),
+        }}
+        features={[
+          { iconKey: 'currency-eur', label: t.home.featureFree },
+          { iconKey: 'lightning', label: t.home.featureFast },
+          { iconKey: 'shield-check', label: t.home.featureNoFees },
+        ]}
+      />
+      <HowItWorksTutorial open={tutorialOpen} onClose={() => setTutorialOpen(false)} />
+    </>
   );
 }

@@ -5,6 +5,7 @@ const { getProfileById } = require('./profiles');
 const {
   buildApplicantSnapshot,
   formatVerificationRequest,
+  normalizeVerificationDocuments,
 } = require('./job-employer-verification');
 const { createAdminNotification } = require('./listing-moderation');
 const { isUuid } = require('./public-listings/query-helpers');
@@ -36,13 +37,16 @@ async function getApplicantVerificationStatus(user) {
   };
 }
 
-async function submitVerificationRequest(user, message) {
+async function submitVerificationRequest(user, payload = {}) {
   const portal = await getProfileById(user.id || user._id);
   if (!portal) return { ok: false, status: 404, message: 'User not found.' };
 
   if (isProfessionalVerified(portal)) {
     return { ok: false, status: 400, message: 'Llogaria juaj është tashmë e verifikuar.' };
   }
+
+  const docs = normalizeVerificationDocuments(payload, portal);
+  if (!docs.ok) return docs;
 
   const { data: pending, error: pendingErr } = await getSupabaseAdmin()
     .from('professional_verification_requests')
@@ -57,14 +61,18 @@ async function submitVerificationRequest(user, message) {
     return { ok: false, status: 400, message: 'Keni tashmë një kërkesë në pritje.' };
   }
 
-  const note = String(message ?? '').replace(/\s+/g, ' ').trim().slice(0, 2000);
+  const note = String(payload?.message ?? '').replace(/\s+/g, ' ').trim().slice(0, 2000);
   const snap = buildApplicantSnapshot(portal, portal.constructor.modelName);
+  if (docs.isBusiness && docs.nipt) snap.nipt = docs.nipt;
   const { data: doc, error } = await getSupabaseAdmin()
     .from('professional_verification_requests')
     .insert({
       applicant_id: portal.id,
       status: 'pending',
       message: note,
+      id_number: docs.idNumber,
+      id_front_image_url: docs.idFrontImageUrl,
+      nipt: docs.nipt,
       applicant_snapshot: snap,
     })
     .select('*')

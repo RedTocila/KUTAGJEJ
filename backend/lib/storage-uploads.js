@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const { getSupabaseAdmin } = require('./supabase');
 const { MAX_IMAGE_BYTES, MAX_IMAGES } = require('./image-upload');
+const { compressImageBuffer } = require('./compress-image');
 
 const UPLOADS_BUCKET = 'uploads';
 const FETCH_TIMEOUT_MS = 25_000;
@@ -39,18 +40,23 @@ async function ensureUploadsBucket() {
 /**
  * Upload multer-style file objects ({ buffer, originalname, mimetype }) to
  * the public `uploads` Supabase bucket. Returns public URLs in order.
+ * Always re-encodes to a compact JPEG before storing.
  */
 async function uploadBuffersToSupabase(files, folder = 'listings') {
   await ensureUploadsBucket();
   const sb = getSupabaseAdmin();
   const urls = [];
   for (const file of files || []) {
-    const ext = String(file.originalname || 'image').split('.').pop() || 'jpg';
-    const safeExt = /^[a-z0-9]{1,8}$/i.test(ext) ? ext.toLowerCase() : 'jpg';
-    const path = `${folder}/${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${safeExt}`;
-    const { error } = await sb.storage.from(UPLOADS_BUCKET).upload(path, file.buffer, {
-      contentType: file.mimetype || 'image/jpeg',
+    const compressed = await compressImageBuffer(file.buffer, {
+      folder,
+      mimetype: file.mimetype,
+      ext: String(file.originalname || 'image').split('.').pop() || 'jpg',
+    });
+    const path = `${folder}/${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${compressed.ext}`;
+    const { error } = await sb.storage.from(UPLOADS_BUCKET).upload(path, compressed.buffer, {
+      contentType: compressed.mimetype,
       upsert: false,
+      cacheControl: 'public, max-age=31536000, immutable',
     });
     if (error) throw error;
     const { data: publicUrlData } = sb.storage.from(UPLOADS_BUCKET).getPublicUrl(path);

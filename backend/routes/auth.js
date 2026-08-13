@@ -16,14 +16,13 @@ const {
   referralFieldsForUser,
 } = require('../lib/referrals');
 const { imageUpload } = require('../lib/image-upload');
+const { uploadBuffersToSupabase } = require('../lib/storage-uploads');
 const { isUuid } = require('../lib/public-listings/query-helpers');
-const crypto = require('crypto');
 
 const router = express.Router();
 const rateLimit = require('../middleware/rate-limit');
 
 const authRateLimit = rateLimit({ windowMs: 60_000, max: 15 });
-const UPLOADS_BUCKET = 'uploads';
 
 /**
  * Resolve optional based-city from request body.
@@ -52,16 +51,18 @@ function portalBasedCityFields(user) {
 }
 
 async function uploadAvatarBuffer(file) {
-  const sb = getSupabaseAdmin();
-  const ext = String(file.originalname || 'image').split('.').pop() || 'jpg';
-  const path = `avatars/${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${ext}`;
-  const { error } = await sb.storage.from(UPLOADS_BUCKET).upload(path, file.buffer, {
-    contentType: file.mimetype,
-    upsert: false,
-  });
-  if (error) throw error;
-  const { data: publicUrlData } = sb.storage.from(UPLOADS_BUCKET).getPublicUrl(path);
-  return publicUrlData.publicUrl;
+  const urls = await uploadBuffersToSupabase(
+    [
+      {
+        buffer: file.buffer,
+        originalname: file.originalname || 'avatar.jpg',
+        mimetype: file.mimetype || 'image/jpeg',
+      },
+    ],
+    'avatars',
+  );
+  if (!urls[0]) throw new Error('Avatar upload returned no URL');
+  return urls[0];
 }
 
 function requireAdminRole(req, res, next) {

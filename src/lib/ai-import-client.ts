@@ -203,8 +203,8 @@ export function toAiListingDraft(draft: AiImportDraftResult): AiListingDraft | n
   };
 }
 
-const MAX_EDGE = 1600;
-const JPEG_QUALITY = 0.78;
+const MAX_EDGE = 1280;
+const JPEG_QUALITY = 0.72;
 
 function readFileAsDataUrl(file: File): Promise<string | null> {
   return new Promise((resolve) => {
@@ -235,13 +235,16 @@ async function compressImageFile(file: File): Promise<string | null> {
     const scale = Math.min(1, MAX_EDGE / Math.max(img.width, img.height));
     const width = Math.max(1, Math.round(img.width * scale));
     const height = Math.max(1, Math.round(img.height * scale));
-    if (scale >= 1 && file.size < 900_000) return source;
+    const isJpeg = /^image\/jpe?g$/i.test(file.type);
+    if (scale >= 1 && isJpeg && file.size < 180_000) return source;
 
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return source;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
     ctx.drawImage(img, 0, 0, width, height);
     return canvas.toDataURL('image/jpeg', JPEG_QUALITY);
   } catch {

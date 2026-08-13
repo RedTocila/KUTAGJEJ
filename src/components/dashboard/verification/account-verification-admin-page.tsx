@@ -207,7 +207,7 @@ export function AccountVerificationAdminPage() {
         </Grid>
       )}
 
-      <ProductDialog open={Boolean(selected)} onClose={() => setSelected(null)} maxWidth="sm" fullWidth>
+      <ProductDialog open={Boolean(selected)} onClose={() => setSelected(null)} maxWidth="md" fullWidth>
         <ProductDialogTitle onClose={() => setSelected(null)}>Detajet e kërkesës</ProductDialogTitle>
         <ProductDialogContent>
           {snap ? (
@@ -217,10 +217,51 @@ export function AccountVerificationAdminPage() {
               <DetailRow label="Email" value={snap.email} />
               <DetailRow label="Telefon" value={snap.phone || '—'} />
               {snap.businessName ? <DetailRow label="Emri i biznesit" value={snap.businessName} /> : null}
-              {snap.nipt ? <DetailRow label="NIPT" value={snap.nipt} /> : null}
+              {(selected?.nipt || snap.nipt) ? (
+                <DetailRow label="NIPT" value={selected?.nipt || snap.nipt || '—'} />
+              ) : null}
               {snap.businessOwner ? <DetailRow label="Pronari" value={snap.businessOwner} /> : null}
               {snap.businessCategory ? <DetailRow label="Kategoria" value={snap.businessCategory} /> : null}
               {snap.firstName ? <DetailRow label="Emri" value={`${snap.firstName} ${snap.lastName ?? ''}`.trim()} /> : null}
+              <Divider sx={{ my: 1 }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Dokumentet e verifikimit
+              </Typography>
+              <DetailRow label="Numri i ID-së" value={selected?.idNumber?.trim() || '—'} />
+              {selected?.idFrontImageUrl ? (
+                <Box
+                  sx={{
+                    mt: 0.5,
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'action.hover',
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={selected.idFrontImageUrl}
+                    alt="Fotoja e përparme e ID-së"
+                    style={{ width: '100%', maxHeight: 320, objectFit: 'contain', display: 'block' }}
+                  />
+                  <Box sx={{ p: 1 }}>
+                    <Button
+                      size="small"
+                      href={selected.idFrontImageUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={productButtonSx}
+                    >
+                      Hap foton
+                    </Button>
+                  </Box>
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Nuk ka foto ID.
+                </Typography>
+              )}
               <Divider sx={{ my: 1 }} />
               <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                 Mesazhi i aplikantit

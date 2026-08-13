@@ -37,14 +37,22 @@ export async function fetchProfessionalVerificationStatus(): Promise<{
   }
 }
 
-export async function submitProfessionalVerificationRequest(
-  message?: string,
-): Promise<{ request?: JobEmployerVerificationRequest; error?: string }> {
+export async function submitProfessionalVerificationRequest(payload: {
+  message?: string;
+  idNumber: string;
+  idFrontImageUrl: string;
+  nipt?: string;
+}): Promise<{ request?: JobEmployerVerificationRequest; error?: string }> {
   try {
     const res = await fetch(getApiUrl('/professional-verification/request'), {
       method: 'POST',
       headers: await authHeadersAsync(),
-      body: JSON.stringify({ message: message?.trim() || '' }),
+      body: JSON.stringify({
+        message: payload.message?.trim() || '',
+        idNumber: payload.idNumber.trim(),
+        idFrontImageUrl: payload.idFrontImageUrl.trim(),
+        nipt: payload.nipt?.trim() || '',
+      }),
     });
     if (!res.ok) return { error: await parseVerificationError(res) };
     const data = await res.json().catch(() => ({}));

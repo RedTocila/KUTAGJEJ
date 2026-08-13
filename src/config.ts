@@ -27,7 +27,7 @@ export const config: Config = {
     wordmarkSegments: ['KuTa', 'Gjej'],
     description:
       'KuTaGjej është platforma shqiptare e njoftimeve falas: apartamente me qira dhe shitje, vetura të reja dhe të përdorura, oferta pune në Tiranë, Durrës, Vlorë e gjithë Shqipërinë, si dhe artikuj të rinj e të dorës së dytë në tregun online. Posto njoftimin tënd dhe gjej saktësisht atë që do — shpejt e thjesht.',
-    themeColor: '#76ba1b',
+    themeColor: '#5f9816',
     url: getSiteURL(),
   },
 };

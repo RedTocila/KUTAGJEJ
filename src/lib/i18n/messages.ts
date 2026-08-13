@@ -173,6 +173,35 @@ const sq = {
       'Ngarko foto, vendos çmim dhe gjej blerës ose punëdhënës në minuta. Pa abonime, pa komisione, vetëm rezultate.',
     postCta: 'Posto njoftim falas',
     howItWorks: 'Si funksionon',
+    howItWorksTutorial: {
+      title: 'Si funksionon',
+      next: 'Vazhdo',
+      back: 'Mbrapa',
+      done: 'Posto njoftim falas',
+      stepOf: (n: number, total: number) => `Hapi ${n} nga ${total}`,
+      steps: [
+        {
+          title: 'Zgjidh kategorinë',
+          description:
+            'Hap “Posto njoftim falas” dhe zgjidh çfarë po shet ose ofron — prona, makina, punë, ose artikuj të tregut.',
+        },
+        {
+          title: 'Shto foto dhe detaje',
+          description:
+            'Ngarko foto të qarta, shkruaj një përshkrim të shkurtër dhe vendos çmimin. Sa më i plotë njoftimi, aq më shpejt gjen blerës.',
+        },
+        {
+          title: 'Publiko falas',
+          description:
+            'Shtyp publiko — njoftimi yt del menjëherë. Pa abonime, pa komisione, pa kufij.',
+        },
+        {
+          title: 'Merr mesazhe dhe shit',
+          description:
+            'Blerësit ose punëdhënësit të kontaktojnë në platformë. Përgjigju shpejt dhe mbyll marrëveshjen.',
+        },
+      ],
+    },
     featureFree: '100% Falas',
     featureFast: 'Postim në 30 sekonda',
     featureNoFees: 'Pa komisione',
@@ -827,6 +856,35 @@ const en: AppMessages = {
       'Upload photos, set a price, and find buyers or employers in minutes. No subscriptions, no commissions — just results.',
     postCta: 'Post a free listing',
     howItWorks: 'How it works',
+    howItWorksTutorial: {
+      title: 'How it works',
+      next: 'Continue',
+      back: 'Back',
+      done: 'Post a free listing',
+      stepOf: (n: number, total: number) => `Step ${n} of ${total}`,
+      steps: [
+        {
+          title: 'Pick a category',
+          description:
+            'Tap “Post a free listing” and choose what you’re offering — property, cars, jobs, or marketplace items.',
+        },
+        {
+          title: 'Add photos and details',
+          description:
+            'Upload clear photos, write a short description, and set your price. Fuller listings get replies faster.',
+        },
+        {
+          title: 'Publish for free',
+          description:
+            'Hit publish — your listing goes live right away. No subscriptions, no commissions, no limits.',
+        },
+        {
+          title: 'Get messages and close the deal',
+          description:
+            'Buyers or employers contact you in the app. Reply quickly and finish the deal.',
+        },
+      ],
+    },
     featureFree: '100% Free',
     featureFast: 'Post in 30 seconds',
     featureNoFees: 'No commissions',

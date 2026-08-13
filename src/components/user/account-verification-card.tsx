@@ -1,23 +1,49 @@
 'use client';
 
 import * as React from 'react';
-import { Alert, Button, Chip, Stack, TextField, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+import { IdentificationCard as IdCardIcon } from '@phosphor-icons/react/dist/ssr/IdentificationCard';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 
+import { useUser } from '@/hooks/use-user';
+import { IdDocumentScannerDialog } from '@/components/user/id-document-scanner-dialog';
 import {
   fetchProfessionalVerificationStatus,
   submitProfessionalVerificationRequest,
   type ProfessionalVerificationRequest,
   type ProfessionalVerificationStatus,
 } from '@/lib/professional-verification-client';
+import { uploadListingImages } from '@/lib/uploads-client';
 
 export function AccountVerificationCard() {
+  const { user } = useUser();
+  const isBusiness = Boolean(user && (user.accountType === 'business' || user.role === 'business-user'));
+
   const [status, setStatus] = React.useState<ProfessionalVerificationStatus | null>(null);
+  const [idNumber, setIdNumber] = React.useState('');
+  const [nipt, setNipt] = React.useState('');
+  const [idFrontPreview, setIdFrontPreview] = React.useState<string | null>(null);
+  const [idFrontFile, setIdFrontFile] = React.useState<File | null>(null);
   const [message, setMessage] = React.useState('');
   const [loading, setLoading] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
+  const [scannerOpen, setScannerOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isBusiness && typeof user?.nipt === 'string' && user.nipt.trim()) {
+      setNipt(user.nipt.trim());
+    }
+  }, [isBusiness, user?.nipt]);
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -32,16 +58,70 @@ export function AccountVerificationCard() {
     void refresh();
   }, [refresh]);
 
+  React.useEffect(() => {
+    return () => {
+      if (idFrontPreview?.startsWith('blob:')) URL.revokeObjectURL(idFrontPreview);
+    };
+  }, [idFrontPreview]);
+
+  const handleScanCapture = (file: File, previewUrl: string) => {
+    setError(null);
+    if (idFrontPreview?.startsWith('blob:')) URL.revokeObjectURL(idFrontPreview);
+    setIdFrontFile(file);
+    setIdFrontPreview(previewUrl);
+  };
+
+  const resetForm = () => {
+    setIdNumber('');
+    setMessage('');
+    setIdFrontFile(null);
+    if (idFrontPreview?.startsWith('blob:')) URL.revokeObjectURL(idFrontPreview);
+    setIdFrontPreview(null);
+    if (isBusiness && typeof user?.nipt === 'string' && user.nipt.trim()) {
+      setNipt(user.nipt.trim());
+    } else if (!isBusiness) {
+      setNipt('');
+    }
+  };
+
   const handleSubmit = async () => {
+    const trimmedId = idNumber.trim();
+    const trimmedNipt = nipt.trim();
+    if (!trimmedId) {
+      setError('Numri i ID-së është i detyrueshëm.');
+      return;
+    }
+    if (!idFrontFile) {
+      setError('Skanoni foton e përparme të ID-së.');
+      return;
+    }
+    if (isBusiness && !trimmedNipt) {
+      setError('NIPT është i detyrueshëm për llogaritë e biznesit.');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     setSuccess(null);
-    const res = await submitProfessionalVerificationRequest(message);
+
+    const up = await uploadListingImages([idFrontFile], 'verification-id');
+    if (up.error || !up.urls[0]) {
+      setError(up.error || 'Ngarkimi i fotos së ID-së dështoi.');
+      setSubmitting(false);
+      return;
+    }
+
+    const res = await submitProfessionalVerificationRequest({
+      message,
+      idNumber: trimmedId,
+      idFrontImageUrl: up.urls[0],
+      nipt: isBusiness ? trimmedNipt : undefined,
+    });
     if (res.error) {
       setError(res.error);
     } else {
       setSuccess('Kërkesa u dërgua. Do të njoftoheni pas shqyrtimit nga administratori.');
-      setMessage('');
+      resetForm();
       await refresh();
     }
     setSubmitting(false);
@@ -52,7 +132,8 @@ export function AccountVerificationCard() {
   return (
     <Stack spacing={2}>
       <Typography variant="body2" color="text.secondary">
-        Pas aprovimit, shenja e verifikuar shfaqet në profilin tuaj publik.
+        Pas aprovimit, shenja e verifikuar shfaqet në profilin tuaj publik. Dërgoni numrin e ID-së dhe skanoni
+        pjesën e përparme{isBusiness ? ', si dhe NIPT për llogaritë e biznesit' : ''}.
       </Typography>
 
       {loading ? (
@@ -89,12 +170,91 @@ export function AccountVerificationCard() {
       {status && !status.verified && status.canRequest ? (
         <>
           <TextField
+            label="Numri i ID-së"
+            value={idNumber}
+            onChange={(e) => setIdNumber(e.target.value)}
+            fullWidth
+            required
+            disabled={submitting}
+            placeholder="p.sh. J12345678A"
+            slotProps={{ htmlInput: { maxLength: 40 } }}
+          />
+
+          {isBusiness ? (
+            <TextField
+              label="NIPT"
+              value={nipt}
+              onChange={(e) => setNipt(e.target.value)}
+              fullWidth
+              required
+              disabled={submitting}
+              placeholder="Numri i NIPT-it të biznesit"
+              slotProps={{ htmlInput: { maxLength: 40 } }}
+            />
+          ) : null}
+
+          <Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
+              Fotoja e përparme e ID-së *
+            </Typography>
+            {idFrontPreview ? (
+              <Box
+                sx={{
+                  position: 'relative',
+                  width: '100%',
+                  maxWidth: 360,
+                  aspectRatio: `${85.6} / ${53.98}`,
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: 'action.hover',
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={idFrontPreview}
+                  alt="Paraqitja e ID-së"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="inherit"
+                  disabled={submitting}
+                  onClick={() => setScannerOpen(true)}
+                  sx={{ position: 'absolute', bottom: 8, right: 8, fontWeight: 700 }}
+                >
+                  Ri-skano
+                </Button>
+              </Box>
+            ) : (
+              <Button
+                variant="outlined"
+                startIcon={<IdCardIcon size={18} />}
+                disabled={submitting}
+                onClick={() => setScannerOpen(true)}
+                sx={{ alignSelf: 'flex-start', fontWeight: 700 }}
+              >
+                Skano ID-në
+              </Button>
+            )}
+          </Box>
+
+          <IdDocumentScannerDialog
+            open={scannerOpen}
+            onClose={() => setScannerOpen(false)}
+            onCapture={handleScanCapture}
+          />
+
+          <TextField
             label="Mesazh për administratorin (opsional)"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             fullWidth
             multiline
             minRows={2}
+            disabled={submitting}
             placeholder="p.sh. Informacion shtesë për verifikimin…"
           />
           <Button

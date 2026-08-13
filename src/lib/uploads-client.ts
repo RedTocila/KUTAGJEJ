@@ -8,10 +8,20 @@ export interface UploadImagesResult {
   error?: string;
 }
 
-/** Keep each request well under Vercel / proxy body limits. */
-const MAX_EDGE = 1600;
-const JPEG_QUALITY = 0.82;
-const SKIP_COMPRESS_BYTES = 900_000;
+/**
+ * Client-side pre-compress before upload.
+ * Server also re-encodes with sharp — this keeps multipart bodies small.
+ *
+ * Listings / chat / banners: ~1280px long edge, JPEG ~0.72
+ * Avatars: ~400px, JPEG ~0.78
+ */
+const MAX_EDGE = 1280;
+const AVATAR_MAX_EDGE = 400;
+const JPEG_QUALITY = 0.72;
+const AVATAR_JPEG_QUALITY = 0.78;
+/** Already-small JPEGs under this size (and within max edge) skip re-encode. */
+const SKIP_COMPRESS_BYTES = 180_000;
+const AVATAR_SKIP_COMPRESS_BYTES = 60_000;
 
 function readFileAsDataUrl(file: File): Promise<string | null> {
   return new Promise((resolve) => {
@@ -36,12 +46,16 @@ function dataUrlToFile(dataUrl: string, filename: string): File | null {
 }
 
 /**
- * Shrink / re-encode phone photos to JPEG so multipart uploads stay under
- * platform body limits and HEIC/ odd types become server-accepted JPEG/PNG/WEBP.
+ * Shrink / re-encode phone photos to JPEG so uploads stay small and fast to load.
+ * PNGs and oversized dimensions are always re-encoded (even when under the byte skip).
  */
-async function prepareImageForUpload(file: File): Promise<File> {
-  const allowed = /^image\/(jpeg|png|webp|gif)$/i.test(file.type);
-  if (allowed && file.size <= SKIP_COMPRESS_BYTES) return file;
+async function prepareImageForUpload(
+  file: File,
+  opts?: { maxEdge?: number; quality?: number; skipBelowBytes?: number },
+): Promise<File> {
+  const maxEdge = opts?.maxEdge ?? MAX_EDGE;
+  const quality = opts?.quality ?? JPEG_QUALITY;
+  const skipBelow = opts?.skipBelowBytes ?? SKIP_COMPRESS_BYTES;
   if (typeof window === 'undefined' || typeof document === 'undefined') return file;
 
   try {
@@ -55,22 +69,45 @@ async function prepareImageForUpload(file: File): Promise<File> {
       el.src = source;
     });
 
-    const scale = Math.min(1, MAX_EDGE / Math.max(img.width || 1, img.height || 1));
-    const width = Math.max(1, Math.round((img.width || 1) * scale));
-    const height = Math.max(1, Math.round((img.height || 1) * scale));
-    if (scale >= 1 && allowed && file.size <= SKIP_COMPRESS_BYTES) return file;
+    const srcW = img.width || 1;
+    const srcH = img.height || 1;
+    const longest = Math.max(srcW, srcH);
+    const scale = Math.min(1, maxEdge / longest);
+    const width = Math.max(1, Math.round(srcW * scale));
+    const height = Math.max(1, Math.round(srcH * scale));
+
+    const isJpeg = /^image\/jpe?g$/i.test(file.type);
+    const withinBudget = file.size <= skipBelow && longest <= maxEdge && isJpeg;
+    if (withinBudget) return file;
 
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return file;
+    // Flatten transparency (PNG) onto white before JPEG encode.
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
     ctx.drawImage(img, 0, 0, width, height);
-    const dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
-    return dataUrlToFile(dataUrl, file.name) || file;
+    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+    const out = dataUrlToFile(dataUrl, file.name);
+    // Prefer compressed output even if slightly larger than a tiny original PNG icon,
+    // unless compression somehow ballooned past the original.
+    if (!out) return file;
+    if (out.size >= file.size && isJpeg && longest <= maxEdge) return file;
+    return out;
   } catch {
     return file;
   }
+}
+
+/** Profile photos — keep small so chat avatars load instantly. */
+export async function prepareAvatarForUpload(file: File): Promise<File> {
+  return prepareImageForUpload(file, {
+    maxEdge: AVATAR_MAX_EDGE,
+    quality: AVATAR_JPEG_QUALITY,
+    skipBelowBytes: AVATAR_SKIP_COMPRESS_BYTES,
+  });
 }
 
 async function uploadOneImage(file: File, folder: string, token: string | null): Promise<UploadImagesResult> {
@@ -131,11 +168,14 @@ export async function uploadListingImages(
   try {
     const token = await getAccessToken();
     const prepared: File[] = [];
+    const isAvatar = String(folder).toLowerCase() === 'avatars';
     for (const file of files) {
       if (!file.type.startsWith('image/') && file.type !== '' && file.type !== 'application/octet-stream') {
         continue;
       }
-      prepared.push(await prepareImageForUpload(file));
+      prepared.push(
+        isAvatar ? await prepareAvatarForUpload(file) : await prepareImageForUpload(file),
+      );
     }
     if (!prepared.length) {
       return { urls: [], error: 'Lejohen vetëm foto JPEG, PNG, WEBP dhe GIF.' };

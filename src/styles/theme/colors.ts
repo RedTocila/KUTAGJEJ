@@ -46,19 +46,19 @@ export const neonBlue = {
   950: '#022c22',
 } satisfies PaletteRange;
 
-/** Light UI neutrals — soft sage / warm grey (logo glow + paper). */
+/** Light UI neutrals — sage greys with enough weight for clear borders on white. */
 export const stormGrey = {
-  50: '#f7faf4',
-  100: '#ecf2e6',
-  200: '#d9e4d0',
-  300: '#b8c9ad',
-  400: '#8fa382',
-  500: '#637558',
-  600: '#4d5d46',
-  700: '#3d4a38',
-  800: '#2a3326',
-  900: '#1a2118',
-  950: '#0f140d',
+  50: '#f4f8ef',
+  100: '#e5efdc',
+  200: '#c8d9b8',
+  300: '#a3bc8f',
+  400: '#7a9868',
+  500: '#567044',
+  600: '#3f5433',
+  700: '#324029',
+  800: '#222c1c',
+  900: '#141a11',
+  950: '#0b1009',
 } satisfies PaletteRange;
 
 /** Dark UI neutrals — forest charcoal (legacy); prefer {@link neutralInk} for dark mode backgrounds. */

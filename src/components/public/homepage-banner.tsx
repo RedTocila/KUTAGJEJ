@@ -36,7 +36,9 @@ const ICON_BY_KEY: Record<BannerIconKey, React.ElementType> = {
 
 interface BannerAction {
   label: string;
-  href: string;
+  /** Navigate via link when set. Prefer `onClick` for in-page actions (e.g. tutorial). */
+  href?: string;
+  onClick?: () => void;
 }
 
 interface BannerStat {
@@ -383,8 +385,9 @@ export function HomepageBanner({
               </Button>
               {secondaryAction ? (
                 <Button
-                  component={RouterLink}
-                  href={secondaryAction.href}
+                  {...(secondaryAction.href
+                    ? { component: RouterLink, href: secondaryAction.href }
+                    : { type: 'button' as const, onClick: secondaryAction.onClick })}
                   variant="outlined"
                   size="large"
                   sx={{

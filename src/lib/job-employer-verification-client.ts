@@ -22,6 +22,9 @@ export interface JobEmployerVerificationRequest {
   status: 'pending' | 'approved' | 'rejected';
   message: string;
   adminNote?: string;
+  idNumber?: string;
+  idFrontImageUrl?: string;
+  nipt?: string;
   applicantSnapshot: JobEmployerApplicantSnapshot;
   reviewedAt: string | null;
   createdAt: string;
@@ -51,14 +54,22 @@ export async function fetchJobEmployerVerificationStatus(): Promise<{
   }
 }
 
-export async function submitJobEmployerVerificationRequest(
-  message?: string,
-): Promise<{ request?: JobEmployerVerificationRequest; error?: string }> {
+export async function submitJobEmployerVerificationRequest(payload: {
+  message?: string;
+  idNumber: string;
+  idFrontImageUrl: string;
+  nipt?: string;
+}): Promise<{ request?: JobEmployerVerificationRequest; error?: string }> {
   try {
     const res = await fetch(getApiUrl('/job-employer-verification/request'), {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ message: message?.trim() || '' }),
+      body: JSON.stringify({
+        message: payload.message?.trim() || '',
+        idNumber: payload.idNumber.trim(),
+        idFrontImageUrl: payload.idFrontImageUrl.trim(),
+        nipt: payload.nipt?.trim() || '',
+      }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Gabim.' };

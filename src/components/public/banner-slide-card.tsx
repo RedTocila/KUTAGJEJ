@@ -61,13 +61,17 @@ export function BannerSlideCard({
 
   const content = (
     <Box
-      sx={{
+      sx={(theme) => ({
         borderRadius: 4,
         overflow: 'hidden',
         border: '1px solid',
         borderColor: 'divider',
-        boxShadow: '0 10px 28px rgba(0,0,0,0.18)',
-      }}
+        // Flat in light mode; keep soft lift in dark.
+        boxShadow: 'none',
+        ...theme.applyStyles('dark', {
+          boxShadow: '0 10px 28px rgba(0,0,0,0.18)',
+        }),
+      })}
     >
       <Box
         sx={{
@@ -98,22 +102,26 @@ export function BannerSlideCard({
       >
         {!imageBg ? (
           <Box
-            sx={{
+            sx={(theme) => ({
               position: 'absolute',
               inset: 0,
-              background:
-                'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 85% 70%, rgba(255,255,255,0.14), transparent 32%)',
-              animation: eager ? 'pulseGlow 4.8s ease-in-out infinite' : 'none',
+              // Light mode: no glow overlay — flat slide art.
+              background: 'none',
               pointerEvents: 'none',
-              '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
-            }}
+              ...theme.applyStyles('dark', {
+                background:
+                  'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 85% 70%, rgba(255,255,255,0.14), transparent 32%)',
+                animation: eager ? 'pulseGlow 4.8s ease-in-out infinite' : 'none',
+                '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+              }),
+            })}
           />
         ) : null}
 
         <Stack
           direction="row"
           spacing={1.5}
-          sx={{
+          sx={(theme) => ({
             position: 'absolute',
             inset: 0,
             zIndex: 1,
@@ -121,10 +129,14 @@ export function BannerSlideCard({
             p: { xs: 2.4, sm: 3, md: 3.5 },
             alignItems: 'flex-end',
             justifyContent: 'space-between',
-            background: imageBg
-              ? 'linear-gradient(to top, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.12) 42%, transparent 70%)'
-              : undefined,
-          }}
+            // Light mode: no bottom vignette on image slides.
+            background: 'none',
+            ...theme.applyStyles('dark', {
+              background: imageBg
+                ? 'linear-gradient(to top, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.12) 42%, transparent 70%)'
+                : 'none',
+            }),
+          })}
         >
           <Stack spacing={0.35} sx={{ maxWidth: '88%', flex: 1, minWidth: 0, alignItems: 'flex-start' }}>
             {showTitle ? (

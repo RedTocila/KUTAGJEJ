@@ -7,8 +7,8 @@ export interface AiMenuImportResult {
   error?: string;
 }
 
-const MAX_EDGE = 1600;
-const JPEG_QUALITY = 0.78;
+const MAX_EDGE = 1280;
+const JPEG_QUALITY = 0.72;
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -43,6 +43,8 @@ async function compressImageFile(file: File): Promise<string> {
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) return source;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
   ctx.drawImage(img, 0, 0, width, height);
   return canvas.toDataURL('image/jpeg', JPEG_QUALITY);
 }

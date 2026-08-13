@@ -32,6 +32,7 @@ import {
 } from '@/components/core/product-dialog';
 import { BusinessAnnouncementDialog } from '@/components/user/business-announcement-dialog';
 import type { BusinessAnnouncement } from '@/lib/listing-announcement-client';
+import { ANNOUNCE_COST_BC } from '@/lib/listing-announcement-client';
 import type { ListingMetricKind, ListingMetrics } from '@/lib/listing-metrics';
 import { refreshListingBoost, setListingAutoRefresh } from '@/lib/listing-refresh-client';
 import { applyOkazionFromPlan, applyPremiumFromPlan } from '@/lib/payments-client';
@@ -250,7 +251,7 @@ export function ListingOwnerTopActions({
             title={
               announcement?.title
                 ? 'Ndrysho shpalljen'
-                : 'Shto shpallje · 3 Boost Coins · njoftimi shkon në krye'
+                : `Shto shpallje · ${ANNOUNCE_COST_BC} Boost Coins · njoftimi shkon në krye`
             }
           >
             <span>

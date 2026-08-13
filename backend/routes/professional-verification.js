@@ -22,7 +22,12 @@ router.get('/status', authMiddleware, requirePortalUser, async (req, res) => {
 
 router.post('/request', authMiddleware, requirePortalUser, async (req, res) => {
   try {
-    const result = await submitVerificationRequest(req.user, req.body?.message);
+    const result = await submitVerificationRequest(req.user, {
+      message: req.body?.message,
+      idNumber: req.body?.idNumber,
+      idFrontImageUrl: req.body?.idFrontImageUrl,
+      nipt: req.body?.nipt,
+    });
     if (!result.ok) return res.status(result.status).json({ message: result.message });
     res.status(201).json({ request: result.request });
   } catch (err) {

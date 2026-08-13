@@ -42,17 +42,17 @@ const EMPTY_POK_FORM_STATE = {
 
 const POK_LIGHT = {
   surface: '#ffffff',
-  surfaceSoft: '#f7faf4',
-  text: '#1a2118',
-  textMuted: '#4d5d46',
-  textSubtle: '#849278',
-  border: '#d9e4d0',
-  borderStrong: '#b8c9a8',
-  primary: '#76ba1b',
+  surfaceSoft: '#f2f6ec',
+  text: '#141a11',
+  textMuted: '#324029',
+  textSubtle: '#567044',
+  border: '#a3bc8f',
+  borderStrong: '#7a9868',
+  primary: '#5f9816',
   primaryHover: '#82c91e',
   primaryActive: '#2b540a',
-  primaryTint: 'rgba(118, 186, 27, 0.08)',
-  primaryRing: 'rgba(118, 186, 27, 0.22)',
+  primaryTint: 'rgba(95, 152, 22, 0.1)',
+  primaryRing: 'rgba(95, 152, 22, 0.28)',
 } as const;
 
 const POK_DARK = {

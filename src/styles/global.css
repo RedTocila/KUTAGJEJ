@@ -20,7 +20,7 @@
 
 html {
   height: 100%;
-  background-color: var(--mui-palette-background-default, #f7faf4);
+  background-color: var(--mui-palette-background-default, #f2f6ec);
   /* `clip` (not `hidden`) so overflow-y stays visible and the header can't lag behind scroll. */
   overflow-x: clip;
   overscroll-behavior-x: none;
@@ -29,8 +29,8 @@ html {
 body {
   height: 100%;
   margin: 0;
-  background-color: var(--mui-palette-background-default, #f7faf4);
-  color: var(--mui-palette-text-primary, #1a2118);
+  background-color: var(--mui-palette-background-default, #f2f6ec);
+  color: var(--mui-palette-text-primary, #141a11);
   overflow-x: clip;
   overscroll-behavior-x: none;
 }
@@ -45,7 +45,7 @@ body {
   justify-content: center;
   background:
     radial-gradient(ellipse 70% 55% at 50% 42%, rgba(118, 186, 27, 0.14), transparent 70%),
-    #f7faf4;
+    #f2f6ec;
   opacity: 1;
   transition: opacity 0.28s ease;
   pointer-events: auto;
@@ -80,7 +80,7 @@ html.dark .kutagjej-splash {
   width: 48px;
   height: 3px;
   border-radius: 999px;
-  background: #76ba1b;
+  background: #5f9816;
   transform-origin: center;
   animation: kutagjejSplashBar 1.1s ease-in-out infinite;
 }

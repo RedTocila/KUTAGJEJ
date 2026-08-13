@@ -14,4 +14,12 @@ export interface DirectoryUser extends ManagedUser {
   businessName?: string | null;
   nipt?: string | null;
   idNumber?: string | null;
+  verified?: boolean;
+  verifiedAt?: string | null;
+  phone?: string;
+  businessOwner?: string | null;
+  businessCategory?: string | null;
+  basedCityId?: string | null;
+  basedCityName?: string;
+  avatarUrl?: string;
 }

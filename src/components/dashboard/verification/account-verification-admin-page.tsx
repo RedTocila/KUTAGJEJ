@@ -68,6 +68,7 @@ export function AccountVerificationAdminPage() {
   const [selected, setSelected] = React.useState<QueueItem | null>(null);
   const [adminNote, setAdminNote] = React.useState('');
   const [dialogError, setDialogError] = React.useState<string | null>(null);
+  const [rejectDialogOpen, setRejectDialogOpen] = React.useState(false);
   const [acting, setActing] = React.useState(false);
 
   const isAdmin = user?.accountType === 'admin' || (!user?.accountType && user?.role === 'admin');
@@ -135,6 +136,7 @@ export function AccountVerificationAdminPage() {
     setSelected(null);
     setAdminNote('');
     setDialogError(null);
+    setRejectDialogOpen(false);
     await load();
     setActing(false);
   };
@@ -179,6 +181,7 @@ export function AccountVerificationAdminPage() {
                   setSelected(req);
                   setAdminNote(req.adminNote ?? '');
                   setDialogError(null);
+                  setRejectDialogOpen(false);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -186,6 +189,7 @@ export function AccountVerificationAdminPage() {
                     setSelected(req);
                     setAdminNote(req.adminNote ?? '');
                     setDialogError(null);
+                    setRejectDialogOpen(false);
                   }
                 }}
                 sx={{
@@ -223,6 +227,7 @@ export function AccountVerificationAdminPage() {
         onClose={() => {
           setSelected(null);
           setDialogError(null);
+          setRejectDialogOpen(false);
         }}
         maxWidth="md"
         fullWidth
@@ -231,6 +236,7 @@ export function AccountVerificationAdminPage() {
           onClose={() => {
             setSelected(null);
             setDialogError(null);
+            setRejectDialogOpen(false);
           }}
         >
           Detajet e kërkesës
@@ -249,6 +255,23 @@ export function AccountVerificationAdminPage() {
               {snap.businessOwner ? <DetailRow label="Pronari" value={snap.businessOwner} /> : null}
               {snap.businessCategory ? <DetailRow label="Kategoria" value={snap.businessCategory} /> : null}
               {snap.firstName ? <DetailRow label="Emri" value={`${snap.firstName} ${snap.lastName ?? ''}`.trim()} /> : null}
+              <Divider sx={{ my: 1 }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Mesazhi i aplikantit (opsional)
+              </Typography>
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: 'action.hover',
+                }}
+              >
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                  {selected?.message?.trim() || 'Aplikanti nuk la mesazh.'}
+                </Typography>
+              </Box>
               <Divider sx={{ my: 1 }} />
               <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                 Dokumentet e verifikimit
@@ -288,43 +311,26 @@ export function AccountVerificationAdminPage() {
                   Nuk ka foto ID.
                 </Typography>
               )}
-              <Divider sx={{ my: 1 }} />
-              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                Mesazhi i aplikantit
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {selected?.message?.trim() || '—'}
-              </Typography>
+              {selected?.status === 'rejected' && selected.adminNote?.trim() ? (
+                <>
+                  <Divider sx={{ my: 1 }} />
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    Arsyeja e refuzimit
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
+                    {selected.adminNote.trim()}
+                  </Typography>
+                </>
+              ) : null}
             </Stack>
           ) : null}
         </ProductDialogContent>
-        {selected?.status === 'pending' ? (
-          <Box sx={{ px: 3, pb: 1, pt: 0 }}>
-            {dialogError ? (
-              <Alert severity="error" sx={{ mb: 1.5 }}>
-                {dialogError}
-              </Alert>
-            ) : null}
-            <TextField
-              label="Arsyeja e refuzimit (e detyrueshme për refuzim)"
-              value={adminNote}
-              onChange={(e) => {
-                setAdminNote(e.target.value);
-                if (dialogError) setDialogError(null);
-              }}
-              fullWidth
-              multiline
-              minRows={2}
-              placeholder="p.sh. Fotoja e ID-së ishte e turbullt — provoni përsëri me më shumë dritë."
-              sx={productFieldSx}
-            />
-          </Box>
-        ) : null}
         <ProductDialogActions>
           <Button
             onClick={() => {
               setSelected(null);
               setDialogError(null);
+              setRejectDialogOpen(false);
             }}
             color="inherit"
             sx={productButtonSx}
@@ -337,7 +343,11 @@ export function AccountVerificationAdminPage() {
                 color="error"
                 variant="outlined"
                 disabled={acting}
-                onClick={() => void review('reject')}
+                onClick={() => {
+                  setAdminNote('');
+                  setDialogError(null);
+                  setRejectDialogOpen(true);
+                }}
                 sx={productButtonSx}
               >
                 Refuzo
@@ -347,6 +357,71 @@ export function AccountVerificationAdminPage() {
               </Button>
             </>
           ) : null}
+        </ProductDialogActions>
+      </ProductDialog>
+
+      <ProductDialog
+        open={rejectDialogOpen}
+        onClose={() => {
+          if (acting) return;
+          setRejectDialogOpen(false);
+          setDialogError(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <ProductDialogTitle
+          onClose={() => {
+            if (acting) return;
+            setRejectDialogOpen(false);
+            setDialogError(null);
+          }}
+        >
+          Refuzo kërkesën
+        </ProductDialogTitle>
+        <ProductDialogContent>
+          <Stack spacing={2}>
+            <Typography variant="body2" color="text.secondary">
+              Shkruani arsyen e refuzimit. Kjo i dërgohet përdoruesit si njoftim.
+            </Typography>
+            {dialogError ? <Alert severity="error">{dialogError}</Alert> : null}
+            <TextField
+              label="Arsyeja e refuzimit"
+              value={adminNote}
+              onChange={(e) => {
+                setAdminNote(e.target.value);
+                if (dialogError) setDialogError(null);
+              }}
+              fullWidth
+              multiline
+              minRows={3}
+              autoFocus
+              placeholder="p.sh. Fotoja e ID-së ishte e turbullt — provoni përsëri me më shumë dritë."
+              sx={productFieldSx}
+            />
+          </Stack>
+        </ProductDialogContent>
+        <ProductDialogActions>
+          <Button
+            color="inherit"
+            disabled={acting}
+            onClick={() => {
+              setRejectDialogOpen(false);
+              setDialogError(null);
+            }}
+            sx={productButtonSx}
+          >
+            Anulo
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={acting}
+            onClick={() => void review('reject')}
+            sx={productButtonSx}
+          >
+            {acting ? 'Duke refuzuar…' : 'Konfirmo refuzimin'}
+          </Button>
         </ProductDialogActions>
       </ProductDialog>
     </Stack>

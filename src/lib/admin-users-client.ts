@@ -100,3 +100,50 @@ export async function updatePortalUserIdentity(
     return { error: 'Nuk u arrit lidhja me serverin.' };
   }
 }
+
+export async function updatePortalUserProfile(
+  id: string,
+  body: Partial<{
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    isActive: boolean;
+    businessName: string;
+    businessOwner: string;
+    businessCategory: string;
+    basedCityId: string | null;
+    avatarUrl: string;
+    nipt: string;
+    idNumber: string;
+  }>,
+): Promise<{ ok?: boolean; message?: string; error?: string }> {
+  try {
+    const res = await fetch(getApiUrl(`/admin/users/${encodeURIComponent(id)}/portal-profile`), {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Përditësimi dështoi.' };
+    return { ok: true, message: typeof data.message === 'string' ? data.message : undefined };
+  } catch {
+    return { error: 'Nuk u arrit lidhja me serverin.' };
+  }
+}
+
+export async function revokePortalUserVerification(
+  id: string,
+): Promise<{ ok?: boolean; message?: string; error?: string }> {
+  try {
+    const res = await fetch(getApiUrl(`/admin/users/${encodeURIComponent(id)}/portal-verification`), {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Heqja e verifikimit dështoi.' };
+    return { ok: true, message: typeof data.message === 'string' ? data.message : undefined };
+  } catch {
+    return { error: 'Nuk u arrit lidhja me serverin.' };
+  }
+}

@@ -21,6 +21,7 @@ import {
   Typography,
 } from '@mui/material';
 import { PencilSimple as PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
+import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 
@@ -41,9 +42,14 @@ import {
   createManagedUser,
   deleteManagedUser,
   listManagedUsers,
+  revokePortalUserVerification,
   updateManagedUser,
-  updatePortalUserIdentity,
+  updatePortalUserProfile,
 } from '@/lib/admin-users-client';
+import {
+  listRealEstateLocationsPublic,
+  type RealEstateCityDto,
+} from '@/lib/real-estate-locations-client';
 import { useUser } from '@/hooks/use-user';
 import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
@@ -116,7 +122,7 @@ export default function StaffUsersPage() {
         icon={React.createElement(UsersIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Ekipi"
         title="Përdoruesit"
-        description="Lista e portalit dhe stafit. Ndryshoni stafin ose NIPT/ID të përdoruesve të portalit."
+        description="Lista e portalit dhe stafit. Shihni verifikimin dhe ndryshoni profilin e përdoruesve."
         actions={
           <Button variant="contained" onClick={() => setCreateOpen(true)} disabled={roles.length === 0} sx={productButtonSx}>
             Shto përdorues
@@ -146,6 +152,7 @@ export default function StaffUsersPage() {
               <TableCell sx={{ fontWeight: 700 }}>Lloji</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Roli (staf)</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Emri</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Verifikuar</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Statusi</TableCell>
               <TableCell align="right" sx={{ fontWeight: 700 }}>
                 Veprime
@@ -155,11 +162,11 @@ export default function StaffUsersPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6}>Duke u ngarkuar…</TableCell>
+                <TableCell colSpan={7}>Duke u ngarkuar…</TableCell>
               </TableRow>
             ) : users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6}>Nuk ka përdorues të regjistruar.</TableCell>
+                <TableCell colSpan={7}>Nuk ka përdorues të regjistruar.</TableCell>
               </TableRow>
             ) : (
               users.map((row) => (
@@ -204,6 +211,25 @@ export default function StaffUsersPage() {
                     </Stack>
                   </TableCell>
                   <TableCell>
+                    {row.accountKind === 'individual' || row.accountKind === 'business' ? (
+                      row.verified ? (
+                        <Chip
+                          size="small"
+                          icon={React.createElement(ShieldCheckIcon, { size: 14, weight: 'fill' })}
+                          label="Po"
+                          color="success"
+                          sx={{ fontWeight: 700 }}
+                        />
+                      ) : (
+                        <Chip size="small" label="Jo" variant="outlined" sx={{ fontWeight: 600 }} />
+                      )
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        —
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <Chip
                       size="small"
                       label={row.isActive ? 'Aktiv' : 'Jo aktiv'}
@@ -232,7 +258,7 @@ export default function StaffUsersPage() {
                       </>
                     ) : row.accountKind === 'individual' || row.accountKind === 'business' ? (
                       <IconButton
-                        aria-label="Ndrysho NIPT ose ID"
+                        aria-label="Ndrysho profilin"
                         size="small"
                         onClick={() => setEditPortalUser(row)}
                       >
@@ -271,7 +297,7 @@ export default function StaffUsersPage() {
         }}
       />
 
-      <EditPortalIdentityDialog
+      <EditPortalUserDialog
         user={editPortalUser}
         onClose={() => setEditPortalUser(null)}
         onSaved={async () => {
@@ -505,7 +531,7 @@ function EditUserDialog(props: {
   );
 }
 
-function EditPortalIdentityDialog(props: {
+function EditPortalUserDialog(props: {
   user: DirectoryUser | null;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
@@ -513,43 +539,90 @@ function EditPortalIdentityDialog(props: {
   const { user, onClose, onSaved } = props;
   const open = Boolean(user);
   const isBusiness = user?.accountKind === 'business';
+
+  const [email, setEmail] = React.useState('');
+  const [firstName, setFirstName] = React.useState('');
+  const [lastName, setLastName] = React.useState('');
+  const [phone, setPhone] = React.useState('');
+  const [businessName, setBusinessName] = React.useState('');
+  const [businessOwner, setBusinessOwner] = React.useState('');
+  const [businessCategory, setBusinessCategory] = React.useState('');
   const [nipt, setNipt] = React.useState('');
   const [idNumber, setIdNumber] = React.useState('');
+  const [basedCityId, setBasedCityId] = React.useState('');
+  const [avatarUrl, setAvatarUrl] = React.useState('');
+  const [isActive, setIsActive] = React.useState(true);
+  const [verified, setVerified] = React.useState(false);
+  const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [pending, setPending] = React.useState(false);
+  const [revoking, setRevoking] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) return;
+    void listRealEstateLocationsPublic().then((res) => {
+      if (res.cities) setCities(res.cities);
+    });
+  }, [open]);
 
   React.useEffect(() => {
     if (!user) return;
+    setEmail(user.email ?? '');
+    setFirstName(user.firstName ?? '');
+    setLastName(user.lastName ?? '');
+    setPhone(user.phone ?? '');
+    setBusinessName(user.businessName ?? '');
+    setBusinessOwner(user.businessOwner ?? '');
+    setBusinessCategory(user.businessCategory ?? '');
     setNipt(user.nipt ?? '');
     setIdNumber(user.idNumber ?? '');
+    setBasedCityId(user.basedCityId ?? '');
+    setAvatarUrl(user.avatarUrl ?? '');
+    setIsActive(user.isActive);
+    setVerified(Boolean(user.verified));
     setError(null);
   }, [user]);
+
+  const revokeVerification = async () => {
+    if (!user || !verified) return;
+    setRevoking(true);
+    setError(null);
+    try {
+      const res = await revokePortalUserVerification(user.id);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      setVerified(false);
+    } finally {
+      setRevoking(false);
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setError(null);
-
-    const body: { nipt?: string; idNumber?: string } = {};
-    if (isBusiness) {
-      const trimmedNipt = nipt.trim();
-      if (!trimmedNipt) {
-        setError('NIPT nuk mund të jetë bosh.');
-        return;
-      }
-      if (trimmedNipt !== (user.nipt ?? '').trim()) body.nipt = trimmedNipt;
-    }
-    const trimmedId = idNumber.trim();
-    if (trimmedId && trimmedId !== (user.idNumber ?? '').trim()) body.idNumber = trimmedId;
-
-    if (!body.nipt && !body.idNumber) {
-      setError('Nuk ka ndryshime për të ruajtur.');
-      return;
-    }
-
     setPending(true);
     try {
-      const res = await updatePortalUserIdentity(user.id, body);
+      const body: Parameters<typeof updatePortalUserProfile>[1] = {
+        email: email.trim().toLowerCase(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: phone.trim(),
+        isActive,
+        basedCityId: basedCityId || null,
+        avatarUrl: avatarUrl.trim(),
+      };
+      if (isBusiness) {
+        body.businessName = businessName.trim();
+        body.businessOwner = businessOwner.trim();
+        body.businessCategory = businessCategory.trim();
+        body.nipt = nipt.trim();
+      }
+      if (idNumber.trim()) body.idNumber = idNumber.trim();
+
+      const res = await updatePortalUserProfile(user.id, body);
       if (res.error) {
         setError(res.error);
         return;
@@ -563,33 +636,101 @@ function EditPortalIdentityDialog(props: {
   return (
     <ProductDialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <Box component="form" onSubmit={submit}>
-        <ProductDialogTitle onClose={onClose}>Ndrysho NIPT / ID</ProductDialogTitle>
+        <ProductDialogTitle onClose={onClose}>Ndrysho profilin e përdoruesit</ProductDialogTitle>
         <ProductDialogContent>
           <Stack spacing={2} sx={{ mt: 1, ...productFieldSx }}>
             {error ? <Alert severity="error">{error}</Alert> : null}
-            <TextField label="Email" value={user?.email ?? ''} fullWidth disabled />
-            {isBusiness ? (
-              <TextField
-                label="NIPT"
-                value={nipt}
-                onChange={(ev) => setNipt(ev.target.value)}
-                required
-                fullWidth
-                slotProps={{ htmlInput: { maxLength: 40 } }}
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+              <Chip
+                size="small"
+                icon={verified ? React.createElement(ShieldCheckIcon, { size: 14, weight: 'fill' }) : undefined}
+                label={verified ? 'I verifikuar' : 'Jo i verifikuar'}
+                color={verified ? 'success' : 'default'}
+                variant={verified ? 'filled' : 'outlined'}
+                sx={{ fontWeight: 700 }}
               />
+              {verified ? (
+                <Button
+                  size="small"
+                  color="error"
+                  variant="outlined"
+                  disabled={revoking || pending}
+                  onClick={() => void revokeVerification()}
+                  sx={productButtonSx}
+                >
+                  {revoking ? 'Duke hequr…' : 'Hiq verifikimin'}
+                </Button>
+              ) : null}
+            </Stack>
+            <TextField label="Email" type="email" value={email} onChange={(ev) => setEmail(ev.target.value)} required fullWidth />
+            <TextField label="Emri" value={firstName} onChange={(ev) => setFirstName(ev.target.value)} required fullWidth />
+            <TextField label="Mbiemri" value={lastName} onChange={(ev) => setLastName(ev.target.value)} required fullWidth />
+            <TextField
+              label="Telefoni"
+              type="tel"
+              value={phone}
+              onChange={(ev) => setPhone(ev.target.value)}
+              fullWidth
+              slotProps={{ htmlInput: { maxLength: 40 } }}
+            />
+            {isBusiness ? (
+              <>
+                <TextField
+                  label="Emri i biznesit"
+                  value={businessName}
+                  onChange={(ev) => setBusinessName(ev.target.value)}
+                  required
+                  fullWidth
+                />
+                <TextField
+                  label="Pronari"
+                  value={businessOwner}
+                  onChange={(ev) => setBusinessOwner(ev.target.value)}
+                  fullWidth
+                />
+                <TextField
+                  label="Kategoria"
+                  value={businessCategory}
+                  onChange={(ev) => setBusinessCategory(ev.target.value)}
+                  fullWidth
+                />
+                <TextField
+                  label="NIPT"
+                  value={nipt}
+                  onChange={(ev) => setNipt(ev.target.value)}
+                  required
+                  fullWidth
+                  slotProps={{ htmlInput: { maxLength: 40 } }}
+                />
+              </>
             ) : null}
             <TextField
               label="Numri i ID-së"
               value={idNumber}
               onChange={(ev) => setIdNumber(ev.target.value)}
               fullWidth
-              disabled={!user?.idNumber}
-              helperText={
-                user?.idNumber
-                  ? 'Ndryshon ID-në në kërkesën e fundit të verifikimit.'
-                  : 'Përdoruesi nuk ka ende kërkesë verifikimi — ID nuk mund të ndryshohet këtu.'
-              }
+              helperText="Ndryshon ID-në në kërkesën e fundit të verifikimit."
               slotProps={{ htmlInput: { maxLength: 40 } }}
+            />
+            <SearchableSelect
+              label="Ku është bazuar"
+              value={basedCityId}
+              onChange={setBasedCityId}
+              options={cities.map((c) => ({ value: c.id, label: c.name }))}
+              emptyLabel="Zgjidhni qytetin…"
+              clearable
+              disabled={cities.length === 0}
+            />
+            <TextField
+              label="URL e fotos së profilit"
+              value={avatarUrl}
+              onChange={(ev) => setAvatarUrl(ev.target.value)}
+              fullWidth
+              placeholder="https://…"
+            />
+            <FormControlLabel
+              control={<Switch checked={isActive} onChange={(ev) => setIsActive(ev.target.checked)} />}
+              label="Llogaria aktive"
             />
           </Stack>
         </ProductDialogContent>

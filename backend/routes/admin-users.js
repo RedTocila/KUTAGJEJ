@@ -2,6 +2,11 @@ const express = require('express');
 const { getSupabaseAdmin } = require('../lib/supabase');
 const { mapProfile, getProfileByEmail, createProfileForAuthUser } = require('../lib/profiles');
 const { updatePortalUserIdentity } = require('../lib/portal-identity');
+const {
+  formatPortalDirectoryUser,
+  revokePortalVerification,
+  updatePortalUserByAdmin,
+} = require('../lib/admin-portal-users');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
@@ -40,29 +45,11 @@ function formatManagedUser(user, roleDescription) {
 }
 
 function formatDirectoryIndividual(user, idNumber) {
-  return {
-    ...formatManagedUser({ ...user, roleId: null, role: 'individual-user', createdBy: null }, ''),
-    accountKind: 'individual',
-    roleLabel: 'Individ',
-    staffRoleName: null,
-    manageable: false,
-    businessName: null,
-    nipt: null,
-    idNumber: idNumber ?? null,
-  };
+  return formatPortalDirectoryUser(user, idNumber);
 }
 
 function formatDirectoryBusiness(user, idNumber) {
-  return {
-    ...formatManagedUser({ ...user, roleId: null, role: 'business-user', lastLogin: undefined, createdBy: null }, ''),
-    accountKind: 'business',
-    roleLabel: 'Biznes',
-    staffRoleName: null,
-    manageable: false,
-    businessName: user.businessName ?? null,
-    nipt: user.nipt ?? null,
-    idNumber: idNumber ?? null,
-  };
+  return formatPortalDirectoryUser(user, idNumber);
 }
 
 function formatDirectoryStaff(user, roleDescription) {
@@ -201,6 +188,42 @@ router.post('/', async (req, res) => {
     res.status(201).json({ user: formatManagedUser(user, roleDoc.description || '') });
   } catch (error) {
     console.error('POST /admin/users:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** Update portal user profile fields (admin only). */
+router.patch('/:id/portal-profile', async (req, res) => {
+  try {
+    if (!UUID_RE.test(req.params.id)) {
+      return res.status(400).json({ message: 'ID e pavlefshme.' });
+    }
+
+    const result = await updatePortalUserByAdmin(req.params.id, req.body ?? {});
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ message: result.message });
+    }
+    res.json({ ok: true, message: 'Profili u përditësua.' });
+  } catch (error) {
+    console.error('PATCH /admin/users/:id/portal-profile:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** Remove account verification badge from a portal user. */
+router.delete('/:id/portal-verification', async (req, res) => {
+  try {
+    if (!UUID_RE.test(req.params.id)) {
+      return res.status(400).json({ message: 'ID e pavlefshme.' });
+    }
+
+    const result = await revokePortalVerification(req.params.id);
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ message: result.message });
+    }
+    res.json({ ok: true, message: 'Verifikimi u hoq.' });
+  } catch (error) {
+    console.error('DELETE /admin/users/:id/portal-verification:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
 });

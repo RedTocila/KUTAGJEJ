@@ -48,6 +48,16 @@ async function openCameraStream(): Promise<MediaStream> {
         facingMode: { ideal: 'environment' },
         width: { ideal: 1920 },
         height: { ideal: 1080 },
+        // @ts-expect-error — focusMode is supported on some mobile browsers
+        focusMode: { ideal: 'continuous' },
+      },
+      audio: false,
+    },
+    {
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
       },
       audio: false,
     },
@@ -147,7 +157,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
     ctx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, crop.sw, crop.sh);
     stopCamera();
 
-    const captureQuality = evaluateFrameReady(ctx.getImageData(0, 0, crop.sw, crop.sh));
+    const captureQuality = evaluateFrameReady(ctx.getImageData(0, 0, crop.sw, crop.sh), { forCapture: true });
     if (!captureQuality.readable) {
       capturingRef.current = false;
       setError(

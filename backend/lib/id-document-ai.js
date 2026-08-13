@@ -47,6 +47,14 @@ function buildSystemPrompt() {
     '- Obvious fake, template, or digitally edited ID without a physical card present (rejectReason: "not_document")',
     '- Key text (name or ID number) cannot be read clearly (rejectReason: "unreadable")',
     '',
+    'IMPORTANT — avoid screen_photo false positives:',
+    '- Mobile in-app scanners often crop the card with dark/black margins around it. That padding is NOT evidence of a screen.',
+    '- Lamination glare, holographic overlays, and eagle watermarks on Albanian "Kartë Identiteti" cards are normal on physical cards.',
+    '- Use rejectReason "screen_photo" ONLY with clear evidence: visible pixel grid, LCD moiré, device bezels, browser/URL chrome,',
+    '  or an obvious photo of another phone/monitor showing the ID.',
+    '- If the card looks physical but text is hard to read, use "blurry" or "unreadable" — NOT "screen_photo".',
+    '- When unsure, prefer "blurry" over "screen_photo".',
+    '',
     'When isIdCard=true, read the personal ID number from the document (Albanian format is often',
     'one letter + 8 digits + one letter, e.g. I12345678A). Return idNumber without spaces.',
     'If the number is not clearly readable, reject with rejectReason "unreadable" — do NOT accept.',
@@ -83,21 +91,8 @@ function userMessageForReject(rejectReason) {
   }
 }
 
-async function scanIdDocumentFront(imageInput) {
+async function callVisionScan(imageUrl, userText) {
   const apiKey = String(process.env.OPENAI_API_KEY || '').trim();
-  if (!apiKey) {
-    const err = new Error('Verifikimi i fotos nuk është i disponueshëm për momentin.');
-    err.status = 503;
-    throw err;
-  }
-
-  const imageUrl = normalizeDataUrl(imageInput);
-  if (!imageUrl) {
-    const err = new Error('Foto e pavlefshme për skanim.');
-    err.status = 400;
-    throw err;
-  }
-
   const res = await fetch(OPENAI_URL, {
     method: 'POST',
     headers: {
@@ -113,10 +108,7 @@ async function scanIdDocumentFront(imageInput) {
         {
           role: 'user',
           content: [
-            {
-              type: 'text',
-              text: 'Is this a clean, fully-in-frame, readable photo of the front of a real physical ID card? If yes, extract the ID number. Reject if any edge is cropped, if other objects are visible, or if text is blurry.',
-            },
+            { type: 'text', text: userText },
             {
               type: 'image_url',
               image_url: { url: imageUrl, detail: 'high' },
@@ -136,13 +128,14 @@ async function scanIdDocumentFront(imageInput) {
   }
 
   const raw = payload?.choices?.[0]?.message?.content;
-  let parsed;
   try {
-    parsed = JSON.parse(typeof raw === 'string' ? raw : '{}');
+    return JSON.parse(typeof raw === 'string' ? raw : '{}');
   } catch {
-    parsed = {};
+    return {};
   }
+}
 
+function formatScanResult(parsed) {
   const isIdCard = parsed.isIdCard === true;
   const rejectReason =
     typeof parsed.rejectReason === 'string' && parsed.rejectReason.trim()
@@ -161,6 +154,44 @@ async function scanIdDocumentFront(imageInput) {
     idNumber: isIdCard ? idNumber : null,
     documentType: isIdCard ? documentType : null,
   };
+}
+
+async function scanIdDocumentFront(imageInput) {
+  const apiKey = String(process.env.OPENAI_API_KEY || '').trim();
+  if (!apiKey) {
+    const err = new Error('Verifikimi i fotos nuk është i disponueshëm për momentin.');
+    err.status = 503;
+    throw err;
+  }
+
+  const imageUrl = normalizeDataUrl(imageInput);
+  if (!imageUrl) {
+    const err = new Error('Foto e pavlefshme për skanim.');
+    err.status = 400;
+    throw err;
+  }
+
+  const userText =
+    'This photo was taken live from a mobile phone camera inside our ID scanner. ' +
+    'Is it a clean, fully-in-frame, readable photo of the front of a real physical ID card? ' +
+    'If yes, extract the ID number. Reject if any edge is cropped, if other objects are visible, or if text is blurry.';
+
+  let parsed = await callVisionScan(imageUrl, userText);
+  let result = formatScanResult(parsed);
+
+  // One retry when the model mislabels a live camera capture as a screen photo.
+  if (!result.isIdCard && result.rejectReason === 'screen_photo') {
+    parsed = await callVisionScan(
+      imageUrl,
+      'Second review: this is a direct mobile-camera capture (not a screenshot). ' +
+        'Dark margins around the card are from our scanner frame, not a screen bezel. ' +
+        'If you can see a physical Albanian/Kosovo ID card layout, accept it when the ID number is readable; ' +
+        'otherwise use blurry or unreadable — not screen_photo.',
+    );
+    result = formatScanResult(parsed);
+  }
+
+  return result;
 }
 
 /**

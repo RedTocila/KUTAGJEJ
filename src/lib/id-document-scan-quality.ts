@@ -348,11 +348,17 @@ function pickHint(params: {
   return 'ready';
 }
 
+export interface EvaluateFrameOptions {
+  /** Stricter thresholds for the final full-resolution capture sent to AI. */
+  forCapture?: boolean;
+}
+
 /**
  * Decide whether an ID card fully fills the guide and details look readable enough to capture.
  * Uses grid coverage, border structure, sharpness, and fine-detail heuristics — no OCR.
  */
-export function evaluateFrameReady(imageData: ImageData): ScanQualitySample {
+export function evaluateFrameReady(imageData: ImageData, options?: EvaluateFrameOptions): ScanQualitySample {
+  const forCapture = options?.forCapture === true;
   const { brightness, contrast } = measureBrightnessAndContrast(imageData);
   const sharpness = measureSharpness(imageData);
   const coverage = measureGridCoverage(imageData);
@@ -361,19 +367,25 @@ export function evaluateFrameReady(imageData: ImageData): ScanQualitySample {
   const edgeCompleteness = measureEdgeCompleteness(imageData);
   const clutterScore = measureBackgroundClutter(imageData);
 
+  const minCoverage = forCapture ? 0.72 : 0.67;
+  const minBorder = forCapture ? 0.8 : 0.75;
+  const minEdge = forCapture ? 0.8 : 0.75;
+  const minSharpness = forCapture ? 95 : 85;
+  const minDetail = forCapture ? 0.072 : 0.065;
+
   const inFrame =
     contrast >= 16 &&
     brightness >= 28 &&
     brightness <= 240 &&
-    coverage >= 0.67 &&
-    borderScore >= 0.75 &&
-    edgeCompleteness >= 0.75 &&
+    coverage >= minCoverage &&
+    borderScore >= minBorder &&
+    edgeCompleteness >= minEdge &&
     clutterScore >= 0.65;
 
   const readable =
     inFrame &&
-    sharpness >= 85 &&
-    detailScore >= 0.065 &&
+    sharpness >= minSharpness &&
+    detailScore >= minDetail &&
     contrast >= 18;
 
   const hint = pickHint({
@@ -427,8 +439,8 @@ export function mapGuideToVideoCrop(
 }
 
 export function computeCardGuide(containerW: number, containerH: number): CardGuideRect {
-  const maxW = containerW * 0.88;
-  const maxH = containerH * 0.52;
+  const maxW = containerW * 0.82;
+  const maxH = containerH * 0.46;
   let width = maxW;
   let height = width / ID_CARD_ASPECT;
   if (height > maxH) {
@@ -448,7 +460,7 @@ export function scanQualityHintMessage(hint: ScanQualityHint, stableCount: numbe
     case 'no_card':
       return 'Vendoseni ID-në brenda kornizës';
     case 'partial_card':
-      return 'Vendoseni të gjithë kartën brenda kornizës';
+      return 'Afrojeni kamerën — karta duhet të mbushë kornizën';
     case 'too_dark':
       return 'Më shumë dritë e nevojshme';
     case 'too_bright':

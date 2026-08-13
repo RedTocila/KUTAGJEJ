@@ -11,8 +11,8 @@ export interface IdDocumentScanAiResult {
   documentType?: string | null;
 }
 
-const MAX_EDGE = 1280;
-const JPEG_QUALITY = 0.82;
+const MAX_EDGE = 1600;
+const JPEG_QUALITY = 0.9;
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

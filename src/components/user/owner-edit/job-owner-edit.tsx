@@ -204,7 +204,7 @@ export function JobOwnerEdit({
         jobType: draft.jobType,
         workLocation: draft.workLocation,
         salary: draft.salary,
-        currency: draft.currency,
+        currency: draft.salary != null ? draft.currency || 'EUR' : 'EUR',
         contactPhone: draft.contactPhone ?? '',
         responsibilities: draft.responsibilities ?? [],
         requirements: draft.requirements ?? [],

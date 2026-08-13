@@ -74,9 +74,8 @@ export function jobDetailMetaRows(listing: PublicJobListingDetail) {
       cityName: listing.cityName,
     }) || 'Shqipëri';
   return [
-    { label: 'Lokacioni', value: location },
+    { label: 'Lokacioni', value: location, fullWidth: true as const },
     { label: 'Lloji i punës', value: findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType) },
-    { label: 'Data e postimit', value: formatJobPostedDate(listing.createdAt) },
     { label: 'Përvoja', value: findOptionLabel(JOB_EXPERIENCE_OPTIONS, listing.experience) },
   ] as const;
 }

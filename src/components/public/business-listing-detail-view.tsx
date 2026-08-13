@@ -495,7 +495,7 @@ export function BusinessListingDetailView({
                   <OwnerEditPencil label="Ndrysho menunë" onClick={ownerEdit.onEditMenu} />
                 ) : null}
               </Stack>
-              <BusinessMenuPreview listing={listing} maxPerCategory={4} />
+              <BusinessMenuPreview listing={listing} maxPerCategory={3} />
             </Box>
 
             {mapLocation || ownerEdit?.onStartInlineEdit ? (

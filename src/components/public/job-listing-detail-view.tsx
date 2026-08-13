@@ -18,7 +18,6 @@ import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import TrendingUpOutlined from '@mui/icons-material/TrendingUpOutlined';
 import WorkOutlineOutlined from '@mui/icons-material/WorkOutlineOutlined';
 import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
-import CalendarTodayOutlined from '@mui/icons-material/CalendarTodayOutlined';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
 
@@ -105,12 +104,7 @@ function SoftSectionLabel({
   );
 }
 
-const metaIcons = [
-  LocationOnOutlined,
-  WorkOutlineOutlined,
-  CalendarTodayOutlined,
-  ScheduleOutlined,
-] as const;
+const metaIcons = [LocationOnOutlined, WorkOutlineOutlined, ScheduleOutlined] as const;
 
 export function JobListingDetailView({
   listing,
@@ -518,10 +512,10 @@ export function JobListingDetailView({
               }}
             >
               {metaRows.map((row, index) => {
-                const Icon = metaIcons[index];
-                const isLocation = index === 0;
-                const isJobType = index === 1;
-                const isExperience = index === 3;
+                const Icon = metaIcons[index] ?? ScheduleOutlined;
+                const isLocation = row.label === 'Lokacioni';
+                const isJobType = row.label === 'Lloji i punës';
+                const isExperience = row.label === 'Përvoja';
                 const locationEditClick = ownerEdit?.onStartInlineEdit
                   ? () => ownerEdit.onStartInlineEdit!('location')
                   : onEditInfo;
@@ -554,6 +548,7 @@ export function JobListingDetailView({
                       borderColor: 'divider',
                       bgcolor: 'background.paper',
                       minWidth: 0,
+                      gridColumn: 'fullWidth' in row && row.fullWidth ? '1 / -1' : undefined,
                     }}
                   >
                     <Box

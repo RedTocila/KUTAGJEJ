@@ -215,7 +215,7 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
       condition: selling && body.condition ? body.condition : null,
       price,
       original_price: cmp.value,
-      currency: hasPrice ? body.currency : null,
+      currency: hasPrice ? body.currency : 'EUR',
       city_id: cityId,
       contact_phone: String(body.contactPhone || '').trim(),
       image_urls: sanitizeImageUrls(body.imageUrls, MAX_MARKETPLACE_IMAGES),

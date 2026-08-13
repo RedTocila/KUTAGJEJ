@@ -181,7 +181,8 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
       job_type: body.jobType,
       work_location: body.workLocation,
       salary: hasSalary ? Number(body.salary) : null,
-      currency: hasSalary ? body.currency : null,
+      // Column is NOT NULL DEFAULT 'EUR' — never write null on update.
+      currency: hasSalary ? body.currency : 'EUR',
       contact_phone: String(body.contactPhone || '').trim(),
       responsibilities: v.responsibilities,
       requirements: v.requirements,

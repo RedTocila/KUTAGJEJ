@@ -322,7 +322,7 @@ export function BusinessListingDetailDesktop({
 
           <Box>
             <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', mb: 1.5 }}>Menu</Typography>
-            <BusinessMenuPreview listing={listing} maxPerCategory={4} />
+            <BusinessMenuPreview listing={listing} maxPerCategory={3} />
           </Box>
 
           {mapLocation ? (

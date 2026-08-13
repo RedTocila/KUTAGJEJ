@@ -94,6 +94,54 @@ function MenuItemRow({
   );
 }
 
+function useActiveMenuSection(sections: BusinessMenuSectionView[]) {
+  const [activeId, setActiveId] = React.useState(() => sections[0]?.id ?? '');
+  React.useEffect(() => {
+    if (!sections.some((s) => s.id === activeId)) {
+      setActiveId(sections[0]?.id ?? '');
+    }
+  }, [sections, activeId]);
+  const active = sections.find((s) => s.id === activeId) ?? sections[0] ?? null;
+  const activeIndex = Math.max(
+    0,
+    sections.findIndex((s) => s.id === (active?.id ?? '')),
+  );
+
+  const goRelative = (delta: number) => {
+    if (sections.length < 2) return;
+    const next = Math.min(sections.length - 1, Math.max(0, activeIndex + delta));
+    const id = sections[next]?.id;
+    if (id) setActiveId(id);
+  };
+
+  return { activeId: active?.id ?? '', setActiveId, active, activeIndex, goRelative };
+}
+
+/** Horizontal swipe between menu categories (ignores mostly-vertical scrolls). */
+function useCategorySwipe(goRelative: (delta: number) => void) {
+  const startRef = React.useRef<{ x: number; y: number } | null>(null);
+
+  return {
+    onTouchStart: (e: React.TouchEvent) => {
+      const t = e.changedTouches[0];
+      if (!t) return;
+      startRef.current = { x: t.clientX, y: t.clientY };
+    },
+    onTouchEnd: (e: React.TouchEvent) => {
+      const start = startRef.current;
+      startRef.current = null;
+      const t = e.changedTouches[0];
+      if (!start || !t) return;
+      const dx = t.clientX - start.x;
+      const dy = t.clientY - start.y;
+      if (Math.abs(dx) < 56) return;
+      if (Math.abs(dx) < Math.abs(dy) * 1.15) return;
+      // Finger left → next tag; finger right → previous tag.
+      goRelative(dx < 0 ? 1 : -1);
+    },
+  };
+}
+
 function CategoryTags({
   sections,
   activeId,
@@ -103,6 +151,12 @@ function CategoryTags({
   activeId: string;
   onSelect: (id: string) => void;
 }) {
+  const activeRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    activeRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [activeId]);
+
   return (
     <Box
       sx={{
@@ -128,13 +182,18 @@ function CategoryTags({
         {sections.map((section) => {
           const active = section.id === activeId;
           return (
-            <ProductTag
+            <Box
               key={section.id}
-              label={section.name}
-              active={active}
-              onClick={() => onSelect(section.id)}
-              sx={{ flexShrink: 0 }}
-            />
+              ref={active ? activeRef : undefined}
+              sx={{ flexShrink: 0, display: 'inline-flex' }}
+            >
+              <ProductTag
+                label={section.name}
+                active={active}
+                onClick={() => onSelect(section.id)}
+                sx={{ flexShrink: 0 }}
+              />
+            </Box>
           );
         })}
       </Stack>
@@ -142,24 +201,13 @@ function CategoryTags({
   );
 }
 
-function useActiveMenuSection(sections: BusinessMenuSectionView[]) {
-  const [activeId, setActiveId] = React.useState(() => sections[0]?.id ?? '');
-  React.useEffect(() => {
-    if (!sections.some((s) => s.id === activeId)) {
-      setActiveId(sections[0]?.id ?? '');
-    }
-  }, [sections, activeId]);
-  const active = sections.find((s) => s.id === activeId) ?? sections[0] ?? null;
-  return { activeId: active?.id ?? '', setActiveId, active };
-}
-
 /** Approx. dense row height (64px thumb + padding) — used for the scroll viewport. */
 const MENU_PREVIEW_ROW_PX = 92;
 
-/** Preview on business detail: category tags + scrollable items (4 visible). */
+/** Preview on business detail: category tags + scrollable items (3 visible). */
 export function BusinessMenuPreview({
   listing,
-  maxPerCategory = 4,
+  maxPerCategory = 3,
 }: {
   listing: PublicDirectoryListingDetail;
   savedHearts?: Set<string>;
@@ -168,7 +216,8 @@ export function BusinessMenuPreview({
   maxPerCategory?: number;
 }) {
   const allSections = React.useMemo(() => businessMenuSections(listing), [listing]);
-  const { activeId, setActiveId, active } = useActiveMenuSection(allSections);
+  const { activeId, setActiveId, active, goRelative } = useActiveMenuSection(allSections);
+  const swipe = useCategorySwipe(goRelative);
   const previewItems = active?.items ?? [];
   const totalItems = listing.menuItems?.length ?? 0;
   if (allSections.length === 0 && totalItems === 0) return null;
@@ -183,12 +232,15 @@ export function BusinessMenuPreview({
       <Stack spacing={0}>
         {previewItems.length > 0 ? (
           <Box
+            onTouchStart={swipe.onTouchStart}
+            onTouchEnd={swipe.onTouchEnd}
             sx={{
               maxHeight: MENU_PREVIEW_ROW_PX * maxPerCategory,
               overflowY: 'auto',
               overscrollBehaviorY: 'contain',
               WebkitOverflowScrolling: 'touch',
               scrollbarWidth: 'thin',
+              touchAction: 'pan-y',
             }}
           >
             <Stack spacing={0} divider={<Divider sx={{ borderColor: 'divider', opacity: 0.6 }} />}>
@@ -200,9 +252,11 @@ export function BusinessMenuPreview({
             </Stack>
           </Box>
         ) : (
-          <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-            Nuk ka artikuj në këtë kategori.
-          </Typography>
+          <Box onTouchStart={swipe.onTouchStart} onTouchEnd={swipe.onTouchEnd} sx={{ touchAction: 'pan-y' }}>
+            <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+              Nuk ka artikuj në këtë kategori.
+            </Typography>
+          </Box>
         )}
         <Button
           component={Link}
@@ -233,7 +287,8 @@ export function BusinessMenuPreview({
 /** Full-page menu — flat layout, no card wrapper. */
 export function BusinessMenuFullPage({ listing }: { listing: PublicDirectoryListingDetail }) {
   const sections = React.useMemo(() => businessMenuSections(listing), [listing]);
-  const { activeId, setActiveId, active } = useActiveMenuSection(sections);
+  const { activeId, setActiveId, active, goRelative } = useActiveMenuSection(sections);
+  const swipe = useCategorySwipe(goRelative);
   const backHref = listingBusinessPublicHref(listing);
 
   return (
@@ -285,7 +340,11 @@ export function BusinessMenuFullPage({ listing }: { listing: PublicDirectoryList
           </Stack>
         </Box>
 
-        <Box sx={{ px: 2, pt: 1, pb: 2 }}>
+        <Box
+          onTouchStart={swipe.onTouchStart}
+          onTouchEnd={swipe.onTouchEnd}
+          sx={{ px: 2, pt: 1, pb: 2, touchAction: 'pan-y' }}
+        >
           {sections.length === 0 ? (
             <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
               Nuk ka artikuj në menu ende.

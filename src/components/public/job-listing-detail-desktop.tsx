@@ -13,7 +13,6 @@ import {
   Typography,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import CalendarTodayOutlined from '@mui/icons-material/CalendarTodayOutlined';
 import GroupsOutlined from '@mui/icons-material/GroupsOutlined';
 import LockOutlined from '@mui/icons-material/LockOutlined';
 import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
@@ -70,7 +69,7 @@ function benefitIcon(id: JobDetailBenefit['id']) {
   }
 }
 
-const metaIcons = [LocationOnOutlined, WorkOutlineOutlined, CalendarTodayOutlined, ScheduleOutlined] as const;
+const metaIcons = [LocationOnOutlined, WorkOutlineOutlined, ScheduleOutlined] as const;
 
 export function JobListingDetailDesktop({
   listing,
@@ -382,15 +381,16 @@ export function JobListingDetailDesktop({
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+              gridTemplateColumns: '1fr 1fr',
               bgcolor: 'rgba(0,0,0,0.55)',
               backdropFilter: 'blur(8px)',
               width: '100%',
             }}
           >
             {metaRows.map((row, index) => {
-              const Icon = metaIcons[index];
-              const isLocation = index === 0;
+              const Icon = metaIcons[index] ?? ScheduleOutlined;
+              const isLocation = row.label === 'Lokacioni';
+              const isFullWidth = 'fullWidth' in row && row.fullWidth;
               const content = (
                 <>
                   <Box
@@ -437,7 +437,10 @@ export function JobListingDetailDesktop({
                     py: 1.75,
                     px: 2.25,
                     minWidth: 0,
-                    borderRight: index < metaRows.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                    gridColumn: isFullWidth ? '1 / -1' : undefined,
+                    borderRight:
+                      !isFullWidth && index < metaRows.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                    borderBottom: isFullWidth ? '1px solid rgba(255,255,255,0.08)' : 'none',
                   }}
                 >
                   {isLocation && mapLocation ? (

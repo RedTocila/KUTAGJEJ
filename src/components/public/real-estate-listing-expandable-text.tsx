@@ -54,7 +54,7 @@ export function RealEstateListingExpandableText(props: {
   const showToggle = useLineClamp ? open || clamped : longByChars;
 
   return (
-    <Stack spacing={0.75}>
+    <Stack spacing={0.75} sx={{ maxWidth: '100%', minWidth: 0 }}>
       <Typography
         ref={textRef}
         component="div"
@@ -63,6 +63,10 @@ export function RealEstateListingExpandableText(props: {
           color,
           lineHeight: 1.65,
           whiteSpace: useLineClamp && !open ? 'normal' : 'pre-wrap',
+          overflowWrap: 'anywhere',
+          wordBreak: 'break-word',
+          maxWidth: '100%',
+          minWidth: 0,
           fontWeight: 400,
           opacity: 0.94,
           ...(fontSize != null ? { fontSize } : {}),

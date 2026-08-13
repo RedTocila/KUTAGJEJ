@@ -23,6 +23,7 @@ import {
 } from '@/lib/business-constants';
 import {
   createBusinessListing,
+  getMyBusinessListing,
   listMyBusinessListings,
   updateBusinessListing,
   type BusinessMineListing,
@@ -31,6 +32,7 @@ import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/rea
 import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { BusinessMobileCtaPicker, reservationsEnabledForMobileCta } from '@/components/businesses/business-mobile-cta-picker';
+import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import {
   ListingFormActionError,
   ListingFormActions,
@@ -117,6 +119,11 @@ export function BusinessListingForm({
     if (fromAi) return fromAi;
     return knownCreateDefaultsFromStorage().cityId;
   });
+  const [zoneId, setZoneId] = React.useState('');
+  const [mapsUrl, setMapsUrl] = React.useState('');
+  const [locationLat, setLocationLat] = React.useState<number | null>(null);
+  const [locationLng, setLocationLng] = React.useState<number | null>(null);
+  const [locationAddress, setLocationAddress] = React.useState<string | null>(null);
   const [contactPhone, setContactPhone] = React.useState(() => {
     const fromAi = String(aiPrefill?.contactPhone ?? '').trim();
     if (fromAi) return fromAi;
@@ -130,12 +137,22 @@ export function BusinessListingForm({
   const [mobileCtaMode, setMobileCtaMode] = React.useState<'contact' | 'reserve' | 'none'>('contact');
   const [reservationsEnabled, setReservationsEnabled] = React.useState(false);
 
+  const zones = React.useMemo(
+    () => cities.find((c) => c.id === cityId)?.zones ?? [],
+    [cities, cityId],
+  );
+
   const applyExistingListing = React.useCallback((listing: BusinessMineListing) => {
     setExistingId(listing.id);
     setTitle(listing.title ?? '');
     setDescription(listing.description ?? '');
     setCategory(listing.category ?? '');
     setCityId(listing.cityId ?? '');
+    setZoneId(listing.zoneId ?? '');
+    setMapsUrl(listing.mapsUrl ?? '');
+    setLocationLat(listing.locationLat ?? null);
+    setLocationLng(listing.locationLng ?? null);
+    setLocationAddress(listing.locationAddress ?? null);
     setContactPhone(listing.contactPhone ?? '');
     setServicesHighlight(listing.servicesHighlight ?? '');
     setExistingImageUrls((listing.imageUrls ?? []).filter(Boolean));
@@ -162,11 +179,19 @@ export function BusinessListingForm({
       if (res.cities) setCities(res.cities);
     });
     let cancelled = false;
-    void listMyBusinessListings().then((res) => {
+    void listMyBusinessListings().then(async (res) => {
       if (cancelled) return;
       const first = res.listings?.[0];
-      if (first) applyExistingListing(first);
-      else setExistingId(null);
+      if (!first?.id) {
+        setExistingId(null);
+        setCheckingExisting(false);
+        return;
+      }
+      // List cards are slim — load the full mine payload so zone / Maps URL prefill on edit.
+      const full = await getMyBusinessListing(first.id);
+      if (cancelled) return;
+      if (full.listing) applyExistingListing(full.listing);
+      else applyExistingListing(first);
       setCheckingExisting(false);
     });
     return () => {
@@ -217,6 +242,8 @@ export function BusinessListingForm({
       description: description.trim(),
       category,
       cityId,
+      zoneId: zoneId || null,
+      mapsUrl: mapsUrl.trim() || null,
       contactPhone: contactPhone.trim(),
       imageUrls,
       weeklyHours,
@@ -340,10 +367,36 @@ export function BusinessListingForm({
           <SearchableSelect
             label="Qyteti"
             value={cityId}
-            onChange={setCityId}
+            onChange={(v) => {
+              setCityId(v);
+              setZoneId('');
+            }}
             options={cities.map((c) => ({ value: c.id, label: c.name }))}
             emptyLabel="Zgjidhni qytetin…"
             required
+          />
+          {zones.length > 0 ? (
+            <SearchableSelect
+              label="Lagja / zona"
+              value={zoneId}
+              onChange={setZoneId}
+              options={zones.map((z) => ({ value: z.id, label: z.name }))}
+              emptyLabel="Zgjidhni lagjen…"
+              clearable
+            />
+          ) : null}
+          <ListingMapsLocationFields
+            value={{ mapsUrl, locationLat, locationLng, locationAddress }}
+            onChange={(next) => {
+              setMapsUrl(next.mapsUrl);
+              setLocationLat(next.locationLat);
+              setLocationLng(next.locationLng);
+              setLocationAddress(next.locationAddress);
+            }}
+            cityName={cities.find((c) => c.id === cityId)?.name}
+            zoneName={zones.find((z) => z.id === zoneId)?.name}
+            showPreview
+            disabled={submitting}
           />
           <ListingTextField
             label="Përshkrimi"

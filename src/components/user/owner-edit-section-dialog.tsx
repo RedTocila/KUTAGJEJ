@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Button, CircularProgress, Stack } from '@mui/material';
+import { Button, CircularProgress, Stack, type DialogProps } from '@mui/material';
 
 import {
   ProductDialog,
@@ -20,6 +20,7 @@ export function OwnerEditSectionDialog({
   children,
   applyLabel = 'Apliko',
   applying = false,
+  maxWidth = 'xs',
 }: {
   open: boolean;
   title: string;
@@ -28,6 +29,7 @@ export function OwnerEditSectionDialog({
   children: React.ReactNode;
   applyLabel?: string;
   applying?: boolean;
+  maxWidth?: DialogProps['maxWidth'];
 }) {
   const [pending, setPending] = React.useState(false);
   const busy = applying || pending;
@@ -43,7 +45,7 @@ export function OwnerEditSectionDialog({
   };
 
   return (
-    <ProductDialog open={open} onClose={busy ? () => undefined : onClose} fullWidth maxWidth="xs" scroll="paper">
+    <ProductDialog open={open} onClose={busy ? () => undefined : onClose} fullWidth maxWidth={maxWidth} scroll="paper">
       <ProductDialogTitle onClose={busy ? undefined : onClose}>{title}</ProductDialogTitle>
       <ProductDialogContent>
         <Stack spacing={2.25}>{children}</Stack>

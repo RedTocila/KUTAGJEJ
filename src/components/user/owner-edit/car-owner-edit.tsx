@@ -8,6 +8,7 @@ import { SteeringWheel as SteeringWheelIcon } from '@phosphor-icons/react/dist/s
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { VehicleTypePicker } from '@/components/cars/vehicle-type-picker';
+import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import { CarListingDetailView } from '@/components/public/car-listing-detail-view';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
 import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
@@ -61,6 +62,10 @@ type Snapshot = {
   extras: string[];
   cityId: string | null;
   cityName: string | null;
+  mapsUrl: string | null;
+  locationAddress: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
   contactPhone: string | null;
 };
 
@@ -83,6 +88,10 @@ function snapFrom(d: CarMineListing): Snapshot {
     extras: d.extras ?? [],
     cityId: d.cityId ?? null,
     cityName: d.cityName ?? null,
+    mapsUrl: d.mapsUrl ?? null,
+    locationAddress: d.locationAddress ?? null,
+    locationLat: d.locationLat ?? null,
+    locationLng: d.locationLng ?? null,
     contactPhone: d.contactPhone ?? null,
   };
 }
@@ -180,6 +189,7 @@ export function CarOwnerEdit({
         finish: draft.finish ?? [],
         extras: draft.extras ?? [],
         cityId,
+        mapsUrl: draft.mapsUrl?.trim() || null,
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
       });
@@ -316,6 +326,25 @@ export function CarOwnerEdit({
           options={cities.map((c) => ({ value: c.id, label: c.name }))}
           emptyLabel="Zgjidhni…"
           required
+        />
+        <ListingMapsLocationFields
+          value={{
+            mapsUrl: draft.mapsUrl ?? '',
+            locationLat: draft.locationLat ?? null,
+            locationLng: draft.locationLng ?? null,
+            locationAddress: draft.locationAddress ?? null,
+          }}
+          onChange={(next) =>
+            setDraft((d) => ({
+              ...d,
+              mapsUrl: next.mapsUrl.trim() || null,
+              locationLat: next.locationLat,
+              locationLng: next.locationLng,
+              locationAddress: next.locationAddress,
+            }))
+          }
+          cityName={draft.cityName}
+          showPreview
         />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>

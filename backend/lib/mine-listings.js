@@ -7,6 +7,8 @@ const { buildCityIndex } = require('./public-listings/query-helpers');
 const { pickImage } = require('./public-listings/text-helpers');
 const { premiumFieldsFromDoc } = require('./premium-listing');
 const { okazionFieldsFromDoc } = require('./okazion-listing');
+const { extractPlaceQueryFromMapsUrl } = require('./google-maps-location');
+const { mapsJsonFromDoc } = require('./listing-maps-fields');
 
 /** Soft cap so a pathological owner cannot dump unbounded payloads. */
 const DEFAULT_LIMIT_PER_KIND = 200;
@@ -38,6 +40,10 @@ const MINE_SELECT = {
     'updated_at',
     'premium_until',
     'okazion_until',
+    'maps_url',
+    'location_lat',
+    'location_lng',
+    'location_address',
   ].join(','),
   car_listings: [
     'id',
@@ -60,6 +66,10 @@ const MINE_SELECT = {
     'updated_at',
     'premium_until',
     'okazion_until',
+    'maps_url',
+    'location_lat',
+    'location_lng',
+    'location_address',
   ].join(','),
   job_listings: [
     'id',
@@ -78,6 +88,10 @@ const MINE_SELECT = {
     'updated_at',
     'premium_until',
     'okazion_until',
+    'maps_url',
+    'location_lat',
+    'location_lng',
+    'location_address',
   ].join(','),
   marketplace_listings: [
     'id',
@@ -95,6 +109,10 @@ const MINE_SELECT = {
     'updated_at',
     'premium_until',
     'okazion_until',
+    'maps_url',
+    'location_lat',
+    'location_lng',
+    'location_address',
   ].join(','),
   directory_listings: [
     'id',
@@ -105,6 +123,11 @@ const MINE_SELECT = {
     'price',
     'currency',
     'city_id',
+    'zone_id',
+    'maps_url',
+    'location_lat',
+    'location_lng',
+    'location_address',
     'image_urls',
     'services_highlight',
     'announcement_title',
@@ -159,6 +182,7 @@ function formatMineRealEstate(doc, cityById) {
     updatedAt: doc.updatedAt,
     ...premiumFieldsFromDoc(doc),
     ...okazionFieldsFromDoc(doc),
+    ...mapsJsonFromDoc(doc),
   };
 }
 
@@ -186,6 +210,7 @@ function formatMineCar(doc, cityById) {
     updatedAt: doc.updatedAt,
     ...premiumFieldsFromDoc(doc),
     ...okazionFieldsFromDoc(doc),
+    ...mapsJsonFromDoc(doc),
   };
 }
 
@@ -209,6 +234,7 @@ function formatMineJob(doc, cityById) {
     updatedAt: doc.updatedAt,
     ...premiumFieldsFromDoc(doc),
     ...okazionFieldsFromDoc(doc),
+    ...mapsJsonFromDoc(doc),
   };
 }
 
@@ -231,11 +257,25 @@ function formatMineMarketplace(doc, cityById) {
     updatedAt: doc.updatedAt,
     ...premiumFieldsFromDoc(doc),
     ...okazionFieldsFromDoc(doc),
+    ...mapsJsonFromDoc(doc),
   };
 }
 
 function formatMineBusiness(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
+  const lat =
+    typeof doc.locationLat === 'number'
+      ? doc.locationLat
+      : doc.locationLat != null
+        ? Number(doc.locationLat)
+        : null;
+  const lng =
+    typeof doc.locationLng === 'number'
+      ? doc.locationLng
+      : doc.locationLng != null
+        ? Number(doc.locationLng)
+        : null;
   return {
     id: listingId(doc),
     vertical: doc.vertical,
@@ -243,6 +283,13 @@ function formatMineBusiness(doc, cityById) {
     category: doc.category,
     cityId: doc.cityId ? String(doc.cityId) : null,
     cityName: city?.name ?? null,
+    zoneId: doc.zoneId ? String(doc.zoneId) : null,
+    zoneName: zone?.name ?? null,
+    mapsUrl: doc.mapsUrl?.trim() || null,
+    mapsPlaceQuery: doc.mapsUrl ? extractPlaceQueryFromMapsUrl(doc.mapsUrl) : null,
+    locationAddress: doc.locationAddress?.trim() || null,
+    locationLat: Number.isFinite(lat) ? lat : null,
+    locationLng: Number.isFinite(lng) ? lng : null,
     imageUrls: coverImageUrls(doc),
     servicesHighlight: doc.servicesHighlight ?? null,
     announcementTitle: doc.announcementTitle?.replace(/\s+/g, ' ').trim() || null,
@@ -278,6 +325,8 @@ function formatMineProfessional(doc, cityById) {
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
     ...premiumFieldsFromDoc(doc),
+    ...mapsJsonFromDoc(doc),
+    mapsPlaceQuery: doc.mapsUrl ? extractPlaceQueryFromMapsUrl(doc.mapsUrl) : null,
   };
 }
 
@@ -315,6 +364,7 @@ function formatMineRealEstateFull(doc, cityById) {
     updatedAt: doc.updatedAt,
     ...premiumFieldsFromDoc(doc),
     ...okazionFieldsFromDoc(doc),
+    ...mapsJsonFromDoc(doc),
   };
 }
 
@@ -346,6 +396,7 @@ function formatMineCarFull(doc, cityById) {
     updatedAt: doc.updatedAt,
     ...premiumFieldsFromDoc(doc),
     ...okazionFieldsFromDoc(doc),
+    ...mapsJsonFromDoc(doc),
   };
 }
 
@@ -374,6 +425,7 @@ function formatMineJobFull(doc, cityById) {
     updatedAt: doc.updatedAt,
     ...premiumFieldsFromDoc(doc),
     ...okazionFieldsFromDoc(doc),
+    ...mapsJsonFromDoc(doc),
   };
 }
 
@@ -397,11 +449,13 @@ function formatMineMarketplaceFull(doc, cityById) {
     createdAt: doc.createdAt,
     ...premiumFieldsFromDoc(doc),
     ...okazionFieldsFromDoc(doc),
+    ...mapsJsonFromDoc(doc),
   };
 }
 
 function formatMineBusinessFull(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   return {
     id: listingId(doc),
     vertical: doc.vertical,
@@ -410,6 +464,13 @@ function formatMineBusinessFull(doc, cityById) {
     category: doc.category,
     cityId: doc.cityId ? String(doc.cityId) : null,
     cityName: city?.name ?? null,
+    zoneId: doc.zoneId ? String(doc.zoneId) : null,
+    zoneName: zone?.name ?? null,
+    mapsUrl: doc.mapsUrl?.trim() || null,
+    mapsPlaceQuery: doc.mapsUrl ? extractPlaceQueryFromMapsUrl(doc.mapsUrl) : null,
+    locationAddress: doc.locationAddress?.trim() || null,
+    locationLat: typeof doc.locationLat === 'number' ? doc.locationLat : doc.locationLat != null ? Number(doc.locationLat) : null,
+    locationLng: typeof doc.locationLng === 'number' ? doc.locationLng : doc.locationLng != null ? Number(doc.locationLng) : null,
     contactPhone: doc.contactPhone ?? null,
     imageUrls: Array.isArray(doc.imageUrls) ? doc.imageUrls.filter(Boolean) : [],
     openingHours: doc.openingHours ?? null,
@@ -459,6 +520,8 @@ function formatMineProfessionalFull(doc, cityById) {
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
     ...premiumFieldsFromDoc(doc),
+    ...mapsJsonFromDoc(doc),
+    mapsPlaceQuery: doc.mapsUrl ? extractPlaceQueryFromMapsUrl(doc.mapsUrl) : null,
   };
 }
 

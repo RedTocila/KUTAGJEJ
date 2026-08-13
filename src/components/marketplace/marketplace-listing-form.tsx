@@ -9,6 +9,7 @@ import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
+import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import {
   ListingFormActionError,
   ListingFormActions,
@@ -73,6 +74,10 @@ type MarketplaceFormState = {
   originalPrice: string;
   currency: '' | 'EUR' | 'LEK';
   cityId: string;
+  mapsUrl: string;
+  locationLat: number | null;
+  locationLng: number | null;
+  locationAddress: string | null;
   contactPhone: string;
 };
 
@@ -87,6 +92,10 @@ function emptyForm(): MarketplaceFormState {
     originalPrice: '',
     currency: '',
     cityId: '',
+    mapsUrl: '',
+    locationLat: null,
+    locationLng: null,
+    locationAddress: null,
     contactPhone: '',
   };
 }
@@ -135,6 +144,10 @@ function formFromListing(l: MarketplaceMineListing): MarketplaceFormState {
     originalPrice: l.originalPrice != null ? String(l.originalPrice) : '',
     currency: l.currency === 'EUR' || l.currency === 'LEK' ? l.currency : hasPrice ? 'EUR' : '',
     cityId: l.cityId ? String(l.cityId) : '',
+    mapsUrl: l.mapsUrl ?? '',
+    locationLat: l.locationLat ?? null,
+    locationLng: l.locationLng ?? null,
+    locationAddress: l.locationAddress ?? null,
     contactPhone: l.contactPhone || '',
   };
 }
@@ -244,6 +257,7 @@ export function MarketplaceListingForm({
         originalPrice: hasPrice && form.originalPrice.trim() ? parseFloatStrict(form.originalPrice) : null,
         currency: hasPrice ? form.currency : null,
         cityId: form.cityId,
+        mapsUrl: form.mapsUrl.trim() || null,
         contactPhone: form.contactPhone.trim(),
         imageUrls: [...existingImageUrls, ...uploaded].slice(0, MAX_MARKETPLACE_IMAGES),
       };
@@ -396,6 +410,26 @@ export function MarketplaceListingForm({
           emptyLabel="Zgjidhni qytetin…"
           required
           disabled={loadingCities || cities.length === 0}
+        />
+        <ListingMapsLocationFields
+          value={{
+            mapsUrl: form.mapsUrl,
+            locationLat: form.locationLat,
+            locationLng: form.locationLng,
+            locationAddress: form.locationAddress,
+          }}
+          onChange={(next) =>
+            setForm((p) => ({
+              ...p,
+              mapsUrl: next.mapsUrl,
+              locationLat: next.locationLat,
+              locationLng: next.locationLng,
+              locationAddress: next.locationAddress,
+            }))
+          }
+          cityName={cities.find((c) => c.id === form.cityId)?.name}
+          showPreview
+          disabled={submitting}
         />
         <ListingTextField
           label="Numri i telefonit"

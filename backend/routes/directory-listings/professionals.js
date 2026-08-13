@@ -9,6 +9,11 @@ const { validateProfessionalPayload } = require('../../lib/directory-professiona
 const { notifyAdminsListingSubmitted } = require('../../lib/listing-moderation');
 const { isUuid } = require('../../lib/public-listings/query-helpers');
 const { formatMineProfessional, formatMineProfessionalFull, loadMineKind, loadMineListingById } = require('../../lib/mine-listings');
+const {
+  parseMapsFieldsFromBody,
+  mapsColumnsFromParsed,
+  mapsJsonFromDoc,
+} = require('../../lib/listing-maps-fields');
 
 const router = express.Router();
 
@@ -78,6 +83,9 @@ router.post('/professionals', authMiddleware, requirePortalUser, async (req, res
     if (cityErr) throw cityErr;
     if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
 
+    const maps = await parseMapsFieldsFromBody(body);
+    if (!maps.ok) return res.status(400).json({ message: maps.message });
+
     const imageUrls = v.imageUrls ?? [];
 
     const row = {
@@ -95,6 +103,7 @@ router.post('/professionals', authMiddleware, requirePortalUser, async (req, res
       portfolio_items: v.portfolioItems,
       services_highlight: v.servicesHighlight,
       status: 'approved',
+      ...mapsColumnsFromParsed(maps),
     };
     if (v.currency != null) row.currency = v.currency;
 
@@ -106,7 +115,13 @@ router.post('/professionals', authMiddleware, requirePortalUser, async (req, res
 
     res.status(201).json({
       message: 'Njoftimi u publikua me sukses.',
-      listing: { id: String(doc.id), title: doc.title, status: doc.status, createdAt: doc.createdAt },
+      listing: {
+        id: String(doc.id),
+        title: doc.title,
+        status: doc.status,
+        createdAt: doc.createdAt,
+        ...mapsJsonFromDoc(doc),
+      },
     });
   } catch (err) {
     console.error('POST /listings/directory/professionals:', err?.message || err);
@@ -161,6 +176,10 @@ router.put('/professionals/:id', authMiddleware, requirePortalUser, async (req, 
     }
     if (body.contactPhone != null) patch.contact_phone = String(body.contactPhone).trim();
 
+    const maps = await parseMapsFieldsFromBody(body);
+    if (!maps.ok) return res.status(400).json({ message: maps.message });
+    if (!maps.skip) Object.assign(patch, mapsColumnsFromParsed(maps));
+
     patch.response_time_hours = v.responseTimeHours;
     patch.portfolio_items = v.portfolioItems;
     patch.price = v.price;
@@ -178,7 +197,14 @@ router.put('/professionals/:id', authMiddleware, requirePortalUser, async (req, 
     if (updErr) throw updErr;
 
     const doc = camelizeRow(updated);
-    res.json({ listing: { id: String(doc.id), title: doc.title, updatedAt: doc.updatedAt } });
+    res.json({
+      listing: {
+        id: String(doc.id),
+        title: doc.title,
+        updatedAt: doc.updatedAt,
+        ...mapsJsonFromDoc(doc),
+      },
+    });
   } catch (err) {
     console.error('PUT /listings/directory/professionals/:id:', err?.message || err);
     res.status(500).json({ message: 'Server error' });

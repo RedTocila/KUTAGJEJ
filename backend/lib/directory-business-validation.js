@@ -126,6 +126,21 @@ function validateBusinessPayload(body, { partial = false } = {}) {
 
   const reservationUrl = String(body?.reservationUrl || '').trim() || null;
 
+  const zoneIdRaw = body?.zoneId != null ? String(body.zoneId).trim() : null;
+  let zoneId;
+  if (body?.zoneId !== undefined) {
+    if (!zoneIdRaw) {
+      zoneId = null;
+    } else if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(zoneIdRaw)) {
+      return { ok: false, message: 'Lagja / zona nuk është e vlefshme.' };
+    } else {
+      zoneId = zoneIdRaw;
+    }
+  }
+
+  const mapsUrlProvided = body?.mapsUrl !== undefined;
+  const mapsUrlRaw = mapsUrlProvided ? String(body.mapsUrl || '').trim() : undefined;
+
   const imageUrls = Array.isArray(body?.imageUrls)
     ? body.imageUrls
         .map((u) => String(u || '').trim())
@@ -144,6 +159,9 @@ function validateBusinessPayload(body, { partial = false } = {}) {
     reservationsEnabled,
     reservationUrl,
     mobileCtaMode,
+    zoneId,
+    mapsUrlProvided,
+    mapsUrlRaw,
     servicesHighlight: String(body?.servicesHighlight || '').trim().slice(0, 240) || null,
     imageUrls,
   };

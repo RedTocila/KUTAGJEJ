@@ -5,6 +5,8 @@ const { BUSINESS_CATEGORY_LABELS, PROFESSIONAL_CATEGORY_LABELS } = require('./co
 const { jobListingExpiresAt, isPremiumActive, isOkazionActive } = require('./query-helpers');
 const { pickImage, isPersistableImageUrl, snippet, carSlugSource, carDisplayTitle } = require('./text-helpers');
 const { comparePriceFromDoc } = require('../listing-compare-price');
+const { extractPlaceQueryFromMapsUrl } = require('../google-maps-location');
+const { mapsJsonFromDoc } = require('../listing-maps-fields');
 
 function durableImageUrls(doc, { max = null } = {}) {
   const urls = Array.isArray(doc.imageUrls)
@@ -80,6 +82,7 @@ function formatRealEstate(doc, cityById) {
     ...bumpTimeFields(doc),
     permalinkPath: realEstatePermalink(doc),
     ...featuredCardFields(doc),
+    ...mapsJsonFromDoc(doc),
   };
 }
 
@@ -117,6 +120,7 @@ function formatRealEstateDetail(doc, cityById, seller) {
     seller,
     permalinkPath: realEstatePermalink(doc),
     ...featuredCardFields(doc),
+    ...mapsJsonFromDoc(doc),
   };
 }
 
@@ -145,6 +149,7 @@ function formatCar(doc, cityById) {
     ...bumpTimeFields(doc),
     permalinkPath: listingPermalinkFromSlugSource(carSlugSource(doc), doc.id),
     ...featuredCardFields(doc),
+    ...mapsJsonFromDoc(doc),
   };
 }
 
@@ -176,6 +181,7 @@ function formatJob(doc, cityById) {
       ? doc.benefits.map((b) => ({ id: String(b.id), label: String(b.label) }))
       : [],
     ...featuredCardFields(doc),
+    ...mapsJsonFromDoc(doc),
   };
 }
 
@@ -199,6 +205,7 @@ function formatMarketplace(doc, cityById) {
     ...bumpTimeFields(doc),
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
     ...featuredCardFields(doc),
+    ...mapsJsonFromDoc(doc),
   };
 }
 
@@ -278,6 +285,20 @@ function formatDirectory(doc, cityById, reviewStats) {
     const legacyOh = doc.openingHours != null ? String(doc.openingHours).replace(/\s+/g, ' ').trim() : '';
     const oh = legacyOh || formatWeeklyHoursLine(weekly) || null;
     const { label: openStatusLine } = computeOpenStatus(weekly, legacyOh);
+    const city = cityById?.get(String(doc.cityId));
+    const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
+    const lat =
+      typeof doc.locationLat === 'number'
+        ? doc.locationLat
+        : doc.locationLat != null
+          ? Number(doc.locationLat)
+          : null;
+    const lng =
+      typeof doc.locationLng === 'number'
+        ? doc.locationLng
+        : doc.locationLng != null
+          ? Number(doc.locationLng)
+          : null;
     return {
       ...base,
       condition: null,
@@ -289,6 +310,13 @@ function formatDirectory(doc, cityById, reviewStats) {
       reservationsEnabled: Boolean(doc.reservationsEnabled),
       reservationUrl: doc.reservationUrl?.trim() || null,
       mobileCtaMode: doc.mobileCtaMode === 'reserve' || doc.mobileCtaMode === 'none' ? doc.mobileCtaMode : 'contact',
+      zoneId: doc.zoneId ? String(doc.zoneId) : null,
+      zoneName: zone?.name ?? null,
+      mapsUrl: doc.mapsUrl?.trim() || null,
+      mapsPlaceQuery: doc.mapsUrl ? extractPlaceQueryFromMapsUrl(doc.mapsUrl) : null,
+      locationAddress: doc.locationAddress?.trim() || null,
+      locationLat: Number.isFinite(lat) ? lat : null,
+      locationLng: Number.isFinite(lng) ? lng : null,
       servicesHighlight: doc.servicesHighlight?.replace(/\s+/g, ' ').trim() || null,
       announcementTitle: doc.announcementTitle?.replace(/\s+/g, ' ').trim() || null,
       announcementSubtitle: doc.announcementSubtitle?.replace(/\s+/g, ' ').trim() || null,
@@ -310,6 +338,8 @@ function formatDirectory(doc, cityById, reviewStats) {
       announcementTitle: doc.announcementTitle?.replace(/\s+/g, ' ').trim() || null,
       announcementSubtitle: doc.announcementSubtitle?.replace(/\s+/g, ' ').trim() || null,
       announcementBannerUrl: doc.announcementBannerUrl?.trim() || null,
+      ...mapsJsonFromDoc(doc),
+      mapsPlaceQuery: doc.mapsUrl ? extractPlaceQueryFromMapsUrl(doc.mapsUrl) : null,
     };
   }
   return {

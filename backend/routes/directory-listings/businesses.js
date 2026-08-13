@@ -6,11 +6,31 @@ const requirePortalUser = require('../../middleware/require-portal-user');
 const { getSupabaseAdmin } = require('../../lib/supabase');
 const { camelizeRow } = require('../../lib/profiles');
 const { validateBusinessPayload } = require('../../lib/directory-business-validation');
+const { resolveBusinessLocationFields } = require('../../lib/business-location-fields');
 const { notifyAdminsListingSubmitted } = require('../../lib/listing-moderation');
 const { isUuid } = require('../../lib/public-listings/query-helpers');
 const { formatMineBusiness, formatMineBusinessFull, loadMineKind, loadMineListingById } = require('../../lib/mine-listings');
+const { parseGoogleMapsLocation } = require('../../lib/google-maps-location');
 
 const router = express.Router();
+
+/** POST /api/listings/directory/businesses/resolve-maps-url — expand short links + extract pin. */
+router.post('/businesses/resolve-maps-url', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    const parsed = await parseGoogleMapsLocation(req.body?.mapsUrl);
+    if (!parsed.ok) return res.status(400).json({ message: parsed.message });
+    res.json({
+      mapsUrl: parsed.mapsUrl,
+      locationLat: parsed.locationLat,
+      locationLng: parsed.locationLng,
+      placeQuery: parsed.placeQuery,
+      locationAddress: parsed.locationAddress,
+    });
+  } catch (err) {
+    console.error('POST /listings/directory/businesses/resolve-maps-url:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 /** GET /api/listings/directory/businesses/mine */
 router.get('/businesses/mine', authMiddleware, requirePortalUser, async (req, res) => {
@@ -78,11 +98,21 @@ router.post('/businesses', authMiddleware, requirePortalUser, async (req, res) =
 
     const { data: city, error: cityErr } = await sb
       .from('real_estate_cities')
-      .select('id')
+      .select('id, zones')
       .eq('id', cityId)
       .maybeSingle();
     if (cityErr) throw cityErr;
     if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+
+    const loc = await resolveBusinessLocationFields(
+      {
+        zoneId: v.zoneId ?? null,
+        mapsUrlProvided: true,
+        mapsUrlRaw: v.mapsUrlRaw ?? body.mapsUrl ?? '',
+      },
+      city,
+    );
+    if (!loc.ok) return res.status(400).json({ message: loc.message });
 
     const imageUrls = v.imageUrls ?? [];
 
@@ -93,6 +123,11 @@ router.post('/businesses', authMiddleware, requirePortalUser, async (req, res) =
       description: String(body.description).trim(),
       category: body.category,
       city_id: cityId,
+      zone_id: loc.zoneId ?? null,
+      maps_url: loc.mapsUrl ?? null,
+      location_lat: loc.locationLat ?? null,
+      location_lng: loc.locationLng ?? null,
+      location_address: loc.locationAddress ?? null,
       contact_phone: String(body.contactPhone || '').trim(),
       image_urls: imageUrls,
       opening_hours: v.openingHours,
@@ -163,18 +198,51 @@ router.put('/businesses/:id', authMiddleware, requirePortalUser, async (req, res
       }
       patch.category = category;
     }
-    if (body.cityId != null) {
-      const cityId = String(body.cityId).trim();
-      if (!isUuid(cityId)) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+
+    const nextCityId =
+      body.cityId != null ? String(body.cityId).trim() : existing.city_id ? String(existing.city_id) : null;
+
+    let cityRow = null;
+    if (body.cityId != null || body.zoneId !== undefined || body.mapsUrl !== undefined) {
+      if (!nextCityId || !isUuid(nextCityId)) {
+        return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+      }
       const { data: city, error: cityErr } = await getSupabaseAdmin()
         .from('real_estate_cities')
-        .select('id')
-        .eq('id', cityId)
+        .select('id, zones')
+        .eq('id', nextCityId)
         .maybeSingle();
       if (cityErr) throw cityErr;
       if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
-      patch.city_id = cityId;
+      cityRow = city;
+      if (body.cityId != null) patch.city_id = nextCityId;
     }
+
+    if (body.cityId != null || body.zoneId !== undefined || body.mapsUrl !== undefined) {
+      const loc = await resolveBusinessLocationFields(
+        {
+          zoneId: body.zoneId !== undefined ? v.zoneId : undefined,
+          mapsUrlProvided: body.mapsUrl !== undefined,
+          mapsUrlRaw: v.mapsUrlRaw,
+        },
+        cityRow,
+      );
+      if (!loc.ok) return res.status(400).json({ message: loc.message });
+      if (body.zoneId !== undefined) patch.zone_id = loc.zoneId;
+      if (body.mapsUrl !== undefined) {
+        patch.maps_url = loc.mapsUrl;
+        patch.location_lat = loc.locationLat;
+        patch.location_lng = loc.locationLng;
+        patch.location_address = loc.locationAddress ?? null;
+      }
+      // City change without zone: clear zone if it no longer belongs (when zone not sent).
+      if (body.cityId != null && body.zoneId === undefined && existing.zone_id && cityRow) {
+        const zones = Array.isArray(cityRow.zones) ? cityRow.zones : [];
+        const stillValid = zones.some((z) => String(z.id) === String(existing.zone_id));
+        if (!stillValid) patch.zone_id = null;
+      }
+    }
+
     if (body.contactPhone != null) patch.contact_phone = String(body.contactPhone).trim();
 
     if (body.weeklyHours != null) {
@@ -211,7 +279,29 @@ router.put('/businesses/:id', authMiddleware, requirePortalUser, async (req, res
     if (updErr) throw updErr;
 
     const doc = camelizeRow(updated);
-    res.json({ listing: { id: String(doc.id), title: doc.title, updatedAt: doc.updatedAt } });
+    res.json({
+      listing: {
+        id: String(doc.id),
+        title: doc.title,
+        updatedAt: doc.updatedAt,
+        cityId: doc.cityId ? String(doc.cityId) : null,
+        zoneId: doc.zoneId ? String(doc.zoneId) : null,
+        mapsUrl: doc.mapsUrl?.trim() || null,
+        locationAddress: doc.locationAddress?.trim() || null,
+        locationLat:
+          typeof doc.locationLat === 'number'
+            ? doc.locationLat
+            : doc.locationLat != null
+              ? Number(doc.locationLat)
+              : null,
+        locationLng:
+          typeof doc.locationLng === 'number'
+            ? doc.locationLng
+            : doc.locationLng != null
+              ? Number(doc.locationLng)
+              : null,
+      },
+    });
   } catch (err) {
     console.error('PUT /listings/directory/businesses/:id:', err?.message || err);
     res.status(500).json({ message: 'Server error' });

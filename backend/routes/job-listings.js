@@ -10,6 +10,11 @@ const { sanitizeImageUrls } = require('../lib/image-upload');
 const { isUuid } = require('../lib/public-listings/query-helpers');
 const { formatMineJob, formatMineJobFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
 const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
+const {
+  parseMapsFieldsFromBody,
+  mapsColumnsFromParsed,
+  mapsJsonFromDoc,
+} = require('../lib/listing-maps-fields');
 
 const router = express.Router();
 
@@ -78,6 +83,9 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     if (cityErr) throw cityErr;
     if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
 
+    const maps = await parseMapsFieldsFromBody(body);
+    if (!maps.ok) return res.status(400).json({ message: maps.message });
+
     const hasSalary = body.salary !== null && body.salary !== undefined && String(body.salary).trim() !== '';
 
     const row = {
@@ -97,6 +105,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       benefits: v.benefits,
       image_urls: sanitizeImageUrls(body.imageUrls, MAX_JOB_IMAGES),
       status: 'approved',
+      ...mapsColumnsFromParsed(maps),
     };
     if (hasSalary) row.currency = body.currency;
 
@@ -118,6 +127,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
         industry: doc.industry,
         status: doc.status,
         createdAt: doc.createdAt,
+        ...mapsJsonFromDoc(doc),
       },
     });
   } catch (err) {
@@ -156,6 +166,9 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
     if (cityErr) throw cityErr;
     if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
 
+    const maps = await parseMapsFieldsFromBody(body);
+    if (!maps.ok) return res.status(400).json({ message: maps.message });
+
     const hasSalary = body.salary !== null && body.salary !== undefined && String(body.salary).trim() !== '';
 
     const patch = {
@@ -176,6 +189,7 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
       image_urls: sanitizeImageUrls(body.imageUrls, MAX_JOB_IMAGES),
       updated_at: new Date().toISOString(),
     };
+    if (!maps.skip) Object.assign(patch, mapsColumnsFromParsed(maps));
 
     const { data: updated, error: updErr } = await getSupabaseAdmin()
       .from('job_listings')
@@ -188,7 +202,13 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
     const doc = camelizeRow(updated);
     res.json({
       message: 'Njoftimi u përditësua.',
-      listing: { id: String(doc.id), title: doc.title, status: doc.status, updatedAt: doc.updatedAt },
+      listing: {
+        id: String(doc.id),
+        title: doc.title,
+        status: doc.status,
+        updatedAt: doc.updatedAt,
+        ...mapsJsonFromDoc(doc),
+      },
     });
   } catch (err) {
     console.error('PUT /listings/jobs/:id:', err?.message || err);

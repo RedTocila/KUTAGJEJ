@@ -433,3 +433,54 @@ alter table public.ai_import_daily_usage enable row level security;
 alter table public.directory_listings
   add column if not exists mobile_cta_mode text not null default 'contact'
   check (mobile_cta_mode in ('contact', 'reserve', 'none'));
+
+alter table public.directory_listings
+  add column if not exists zone_id uuid;
+
+alter table public.directory_listings
+  add column if not exists maps_url text;
+
+alter table public.directory_listings
+  add column if not exists location_lat double precision;
+
+alter table public.directory_listings
+  add column if not exists location_lng double precision;
+
+alter table public.directory_listings
+  add column if not exists location_address text;
+
+alter table public.real_estate_listings
+  add column if not exists maps_url text;
+alter table public.real_estate_listings
+  add column if not exists location_lat double precision;
+alter table public.real_estate_listings
+  add column if not exists location_lng double precision;
+alter table public.real_estate_listings
+  add column if not exists location_address text;
+
+alter table public.car_listings
+  add column if not exists maps_url text;
+alter table public.car_listings
+  add column if not exists location_lat double precision;
+alter table public.car_listings
+  add column if not exists location_lng double precision;
+alter table public.car_listings
+  add column if not exists location_address text;
+
+alter table public.job_listings
+  add column if not exists maps_url text;
+alter table public.job_listings
+  add column if not exists location_lat double precision;
+alter table public.job_listings
+  add column if not exists location_lng double precision;
+alter table public.job_listings
+  add column if not exists location_address text;
+
+alter table public.marketplace_listings
+  add column if not exists maps_url text;
+alter table public.marketplace_listings
+  add column if not exists location_lat double precision;
+alter table public.marketplace_listings
+  add column if not exists location_lng double precision;
+alter table public.marketplace_listings
+  add column if not exists location_address text;

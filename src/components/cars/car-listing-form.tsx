@@ -34,6 +34,7 @@ import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/rea
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { VehicleTypePicker } from '@/components/cars/vehicle-type-picker';
+import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import {
   ListingFormActionError,
   ListingFormActions,
@@ -112,6 +113,10 @@ type CarFormState = {
   extras: string[];
   contactPhone: string;
   cityId: string;
+  mapsUrl: string;
+  locationLat: number | null;
+  locationLng: number | null;
+  locationAddress: string | null;
 };
 
 function emptyForm(): CarFormState {
@@ -134,6 +139,10 @@ function emptyForm(): CarFormState {
     extras: [],
     contactPhone: '',
     cityId: '',
+    mapsUrl: '',
+    locationLat: null,
+    locationLng: null,
+    locationAddress: null,
   };
 }
 
@@ -314,6 +323,10 @@ function formFromListing(l: CarMineListing): CarFormState {
     extras: l.extras ?? [],
     contactPhone: l.contactPhone || '',
     cityId: l.cityId ? String(l.cityId) : '',
+    mapsUrl: l.mapsUrl ?? '',
+    locationLat: l.locationLat ?? null,
+    locationLng: l.locationLng ?? null,
+    locationAddress: l.locationAddress ?? null,
   };
 }
 
@@ -526,6 +539,7 @@ export function CarListingForm({
           extras: form.extras,
           contactPhone: form.contactPhone.trim(),
           cityId: form.cityId,
+          mapsUrl: form.mapsUrl.trim() || null,
           imageUrls: [...existingImageUrls, ...uploaded].slice(0, MAX_IMAGES),
         });
         if (result.error) {
@@ -579,6 +593,7 @@ export function CarListingForm({
         form.extras.forEach((e) => fd.append('extras[]', e));
         fd.append('contactPhone', form.contactPhone.trim());
         fd.append('cityId', form.cityId);
+        if (form.mapsUrl.trim()) fd.append('mapsUrl', form.mapsUrl.trim());
         if (imageUrls.length) {
           fd.append('imageUrls', JSON.stringify(imageUrls));
         }
@@ -833,6 +848,26 @@ export function CarListingForm({
             }
           />
         </Box>
+        <ListingMapsLocationFields
+          value={{
+            mapsUrl: form.mapsUrl,
+            locationLat: form.locationLat,
+            locationLng: form.locationLng,
+            locationAddress: form.locationAddress,
+          }}
+          onChange={(next) =>
+            setForm((p) => ({
+              ...p,
+              mapsUrl: next.mapsUrl,
+              locationLat: next.locationLat,
+              locationLng: next.locationLng,
+              locationAddress: next.locationAddress,
+            }))
+          }
+          cityName={cities.find((c) => c.id === form.cityId)?.name}
+          showPreview
+          disabled={submitting}
+        />
 
         <ListingTextField
           label="Description"

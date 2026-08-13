@@ -29,6 +29,7 @@ import {
   TRANSACTION_OPTIONS,
 } from '@/lib/real-estate-constants';
 import { SearchableSelect } from '@/components/core/searchable-select';
+import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import {
   ListingFormActionError,
   ListingFormActions,
@@ -86,6 +87,10 @@ type FormState = {
   surfaceM2: string;
   cityId: string;
   zoneId: string;
+  mapsUrl: string;
+  locationLat: number | null;
+  locationLng: number | null;
+  locationAddress: string | null;
   currency: '' | 'EUR' | 'LEK';
   condition: (typeof CONDITION_OPTIONS)[number]['value'] | '';
   floor: string;
@@ -109,6 +114,10 @@ function emptyForm(): FormState {
     surfaceM2: '',
     cityId: '',
     zoneId: '',
+    mapsUrl: '',
+    locationLat: null,
+    locationLng: null,
+    locationAddress: null,
     currency: '',
     condition: '',
     floor: '',
@@ -219,6 +228,7 @@ function buildPayload(f: FormState): RealEstateListingPayload {
     surfaceM2: parseFloatStrict(f.surfaceM2)!,
     cityId: f.cityId,
     zoneId: f.zoneId,
+    mapsUrl: f.mapsUrl.trim() || null,
     contactPhone: f.contactPhone.trim(),
   };
   if (needsCondition(cat) && f.condition) {
@@ -249,6 +259,10 @@ function formFromListing(l: RealEstateMineListing): FormState {
     surfaceM2: l.surfaceM2 != null ? String(l.surfaceM2) : '',
     cityId: l.cityId ? String(l.cityId) : '',
     zoneId: l.zoneId ? String(l.zoneId) : '',
+    mapsUrl: l.mapsUrl ?? '',
+    locationLat: l.locationLat ?? null,
+    locationLng: l.locationLng ?? null,
+    locationAddress: l.locationAddress ?? null,
     currency: l.currency === 'EUR' || l.currency === 'LEK' ? l.currency : '',
     condition: (l.condition as FormState['condition']) || '',
     floor: l.floor != null ? String(l.floor) : '',
@@ -527,6 +541,27 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           Ende nuk ka qytete — një administrator i platformës duhet të shtojë qytete dhe zona te Paneli → Vendndodhjet (pasuri).
         </Typography>
       ) : null}
+      <ListingMapsLocationFields
+        value={{
+          mapsUrl: form.mapsUrl,
+          locationLat: form.locationLat,
+          locationLng: form.locationLng,
+          locationAddress: form.locationAddress,
+        }}
+        onChange={(next) =>
+          setForm((p) => ({
+            ...p,
+            mapsUrl: next.mapsUrl,
+            locationLat: next.locationLat,
+            locationLng: next.locationLng,
+            locationAddress: next.locationAddress,
+          }))
+        }
+        cityName={cities.find((c) => c.id === form.cityId)?.name}
+        zoneName={zonesForCity.find((z) => z.id === form.zoneId)?.name}
+        showPreview
+        disabled={submitting}
+      />
 
       <ListingTextField
         label="Sipërfaqja"

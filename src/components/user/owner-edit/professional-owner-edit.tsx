@@ -7,6 +7,8 @@ import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
+import { ProfessionalProfilePhotosEditor } from '@/components/professionals/professional-profile-photos-editor';
 import { ProfessionalListingDetailView } from '@/components/public/professional-listing-detail-view';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
 import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
@@ -39,6 +41,10 @@ type Snapshot = {
   category: string;
   cityId: string | null;
   cityName: string | null;
+  mapsUrl: string | null;
+  locationAddress: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
   contactPhone: string | null;
   servicesHighlight: string | null;
   responseTimeHours: number | null;
@@ -51,25 +57,63 @@ function snapFrom(d: ProfessionalMineListing): Snapshot {
     category: d.category,
     cityId: d.cityId ?? null,
     cityName: d.cityName ?? null,
+    mapsUrl: d.mapsUrl ?? null,
+    locationAddress: d.locationAddress ?? null,
+    locationLat: d.locationLat ?? null,
+    locationLng: d.locationLng ?? null,
     contactPhone: d.contactPhone ?? null,
     servicesHighlight: d.servicesHighlight ?? null,
     responseTimeHours: d.responseTimeHours ?? null,
   };
 }
 
-async function resolveUrl(existing: string | null, file: File | null): Promise<{ url: string | null; error?: string }> {
+/**
+ * Resolve a cover/avatar/portfolio slot to a durable URL.
+ * - Prefer uploading a newly picked File.
+ * - Accept only persistable http(s) URLs already on the listing.
+ * - `blob:` / `data:` previews must never be saved. In soft mode (Ruaj), fall
+ *   back to the last durable URL so location/text edits are not blocked by a
+ *   stale preview. In strict mode (Apliko foto), ask the user to re-pick.
+ */
+async function resolveUrl(
+  existing: string | null,
+  file: File | null,
+  opts?: { fallback?: string | null; strict?: boolean },
+): Promise<{ url: string | null; error?: string }> {
   if (file) {
     const up = await uploadListingImages([file], 'professionals');
     if (up.error) return { url: null, error: up.error };
     return { url: up.urls[0] ?? null };
   }
-  if (existing && isEphemeralImageUrl(existing)) {
-    return { url: null, error: 'Fotoja nuk u ngarkua. Zgjidhni foton përsëri.' };
+
+  const current = String(existing || '').trim();
+  if (!current) {
+    return { url: null };
   }
-  if (existing && !isPersistableImageUrl(existing)) {
+  if (isPersistableImageUrl(current)) {
+    return { url: current };
+  }
+
+  const fallback = opts?.fallback && isPersistableImageUrl(opts.fallback) ? opts.fallback : null;
+
+  if (isEphemeralImageUrl(current)) {
+    if (fallback) return { url: fallback };
+    if (opts?.strict) {
+      return { url: null, error: 'Fotoja nuk u ngarkua. Zgjidhni foton përsëri.' };
+    }
+    return { url: null };
+  }
+
+  if (fallback) return { url: fallback };
+  if (opts?.strict) {
     return { url: null, error: 'Fotoja nuk është e vlefshme. Zgjidhni foton përsëri.' };
   }
-  return { url: existing };
+  return { url: null };
+}
+
+function durableSlot(urls: string[] | null | undefined, index: number): string | null {
+  const list = (urls ?? []).filter(isPersistableImageUrl);
+  return list[index] ?? null;
 }
 
 export function ProfessionalOwnerEdit({
@@ -86,15 +130,20 @@ export function ProfessionalOwnerEdit({
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
   const [dialog, setDialog] = React.useState<'photos' | 'portfolio' | null>(null);
+  const [photosFocus, setPhotosFocus] = React.useState<'cover' | 'avatar'>('cover');
   const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
 
   const [coverFile, setCoverFile] = React.useState<File[]>([]);
   const [avatarFile, setAvatarFile] = React.useState<File[]>([]);
-  const [coverUrl, setCoverUrl] = React.useState(initial.imageUrls[0] ?? '');
-  const [avatarUrl, setAvatarUrl] = React.useState(initial.imageUrls[1] ?? '');
+  const [coverUrl, setCoverUrl] = React.useState(() => durableSlot(initial.imageUrls, 0) ?? '');
+  const [avatarUrl, setAvatarUrl] = React.useState(() => durableSlot(initial.imageUrls, 1) ?? '');
   const [portfolio, setPortfolio] = React.useState<PortfolioDraft[]>(() =>
-    (initial.portfolioItems ?? []).map((p) => ({ ...p, imageFile: null })),
+    (initial.portfolioItems ?? []).map((p) => ({
+      ...p,
+      imageUrl: isPersistableImageUrl(p.imageUrl) ? p.imageUrl : '',
+      imageFile: null,
+    })),
   );
 
   React.useEffect(() => {
@@ -131,12 +180,19 @@ export function ProfessionalOwnerEdit({
 
   const applyPhotos = async () => {
     setError(null);
-    const cover = await resolveUrl(coverUrl || null, coverFile[0] ?? null);
+    const durable = (draft.imageUrls ?? []).filter(isPersistableImageUrl);
+    const cover = await resolveUrl(coverUrl || null, coverFile[0] ?? null, {
+      fallback: durable[0] ?? null,
+      strict: true,
+    });
     if (cover.error) {
       setError(cover.error);
       return;
     }
-    const avatar = await resolveUrl(avatarUrl || null, avatarFile[0] ?? null);
+    const avatar = await resolveUrl(avatarUrl || null, avatarFile[0] ?? null, {
+      fallback: durable[1] ?? null,
+      strict: true,
+    });
     if (avatar.error) {
       setError(avatar.error);
       return;
@@ -155,7 +211,7 @@ export function ProfessionalOwnerEdit({
     const portfolioItems: ProfessionalPortfolioItem[] = [];
     for (const item of portfolio) {
       if (!item.title.trim()) continue;
-      const resolved = await resolveUrl(item.imageUrl || null, item.imageFile);
+      const resolved = await resolveUrl(item.imageUrl || null, item.imageFile, { strict: true });
       if (resolved.error) {
         setError(resolved.error);
         return;
@@ -180,12 +236,25 @@ export function ProfessionalOwnerEdit({
     setSuccess(null);
     setSaving(true);
     try {
-      const cover = await resolveUrl(coverUrl || null, coverFile[0] ?? null);
+      const durable = (draft.imageUrls ?? []).filter(isPersistableImageUrl);
+      // If the picker cleared coverUrl while a File is pending, upload the File.
+      // If both are empty, keep the last durable draft URL (photo dialog not applied).
+      const coverExisting =
+        coverUrl.trim() || (coverFile.length ? '' : durable[0] ?? '') || null;
+      const cover = await resolveUrl(coverExisting, coverFile[0] ?? null, {
+        fallback: durable[0] ?? null,
+        strict: false,
+      });
       if (cover.error) {
         setError(cover.error);
         return;
       }
-      const avatar = await resolveUrl(avatarUrl || null, avatarFile[0] ?? null);
+      const avatarExisting =
+        avatarUrl.trim() || (avatarFile.length ? '' : durable[1] ?? '') || null;
+      const avatar = await resolveUrl(avatarExisting, avatarFile[0] ?? null, {
+        fallback: durable[1] ?? null,
+        strict: false,
+      });
       if (avatar.error) {
         setError(avatar.error);
         return;
@@ -194,7 +263,11 @@ export function ProfessionalOwnerEdit({
       const portfolioItems: ProfessionalPortfolioItem[] = [];
       for (const item of portfolio) {
         if (!item.title.trim()) continue;
-        const resolved = await resolveUrl(item.imageUrl || null, item.imageFile);
+        const prior = (draft.portfolioItems ?? []).find((p) => p.id === item.id);
+        const resolved = await resolveUrl(item.imageUrl || null, item.imageFile, {
+          fallback: prior && isPersistableImageUrl(prior.imageUrl) ? prior.imageUrl : null,
+          strict: false,
+        });
         if (resolved.error) {
           setError(resolved.error);
           return;
@@ -221,6 +294,7 @@ export function ProfessionalOwnerEdit({
         description: (draft.description ?? '').trim(),
         category: draft.category,
         cityId: draft.cityId,
+        mapsUrl: draft.mapsUrl?.trim() || null,
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
         responseTimeHours: draft.responseTimeHours,
@@ -338,6 +412,25 @@ export function ProfessionalOwnerEdit({
           emptyLabel="Zgjidhni…"
           required
         />
+        <ListingMapsLocationFields
+          value={{
+            mapsUrl: draft.mapsUrl ?? '',
+            locationLat: draft.locationLat ?? null,
+            locationLng: draft.locationLng ?? null,
+            locationAddress: draft.locationAddress ?? null,
+          }}
+          onChange={(next) =>
+            setDraft((d) => ({
+              ...d,
+              mapsUrl: next.mapsUrl.trim() || null,
+              locationLat: next.locationLat,
+              locationLng: next.locationLng,
+              locationAddress: next.locationAddress,
+            }))
+          }
+          cityName={draft.cityName}
+          showPreview
+        />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
     ),
@@ -374,17 +467,22 @@ export function ProfessionalOwnerEdit({
           currentListing={draft as unknown as Record<string, unknown>}
           onApply={(next) => {
             const merged = next as unknown as ProfessionalMineListing;
-            const urls = Array.isArray(merged.imageUrls) ? merged.imageUrls.filter(Boolean) : draft.imageUrls;
+            const rawUrls = Array.isArray(merged.imageUrls) ? merged.imageUrls : draft.imageUrls;
+            const urls = (rawUrls ?? [])
+              .map((u) => String(u || '').trim())
+              .filter(isPersistableImageUrl)
+              .slice(0, 2);
             setDraft({
               ...draft,
               ...merged,
               id: draft.id,
               status: draft.status,
-              imageUrls: urls.slice(0, 2),
+              imageUrls: urls.length ? urls : draft.imageUrls.filter(isPersistableImageUrl),
               portfolioItems: draft.portfolioItems,
             });
-            setCoverUrl(urls[0] ?? '');
-            setAvatarUrl(urls[1] ?? '');
+            const nextUrls = urls.length ? urls : (draft.imageUrls ?? []).filter(isPersistableImageUrl);
+            setCoverUrl(nextUrls[0] ?? '');
+            setAvatarUrl(nextUrls[1] ?? '');
             setCoverFile([]);
             setAvatarFile([]);
           }}
@@ -397,7 +495,8 @@ export function ProfessionalOwnerEdit({
         similar={[]}
         ownerPreview
         ownerEdit={{
-          onEditPhotos: () => {
+          onEditPhotos: (focus) => {
+            setPhotosFocus(focus === 'avatar' ? 'avatar' : 'cover');
             // Keep pending File picks; draft may only hold temporary blob: preview URLs.
             setCoverFile((files) => {
               if (!files.length) {
@@ -435,31 +534,21 @@ export function ProfessionalOwnerEdit({
 
       <OwnerEditSectionDialog
         open={dialog === 'photos'}
-        title="Foto kopertinë & profili"
+        title="Fotot e profilit"
+        maxWidth="sm"
         onClose={() => setDialog(null)}
         onApply={applyPhotos}
       >
-        <ListingImagePicker
-          value={coverFile}
-          onChange={(files) => {
-            setCoverFile(files.slice(0, 1));
-            if (files.length) setCoverUrl('');
-          }}
-          existingUrls={coverUrl && !coverFile.length ? [coverUrl] : []}
-          onExistingUrlsChange={(urls) => setCoverUrl(urls[0] ?? '')}
-          max={1}
-          label="Foto kopertinë"
-        />
-        <ListingImagePicker
-          value={avatarFile}
-          onChange={(files) => {
-            setAvatarFile(files.slice(0, 1));
-            if (files.length) setAvatarUrl('');
-          }}
-          existingUrls={avatarUrl && !avatarFile.length ? [avatarUrl] : []}
-          onExistingUrlsChange={(urls) => setAvatarUrl(urls[0] ?? '')}
-          max={1}
-          label="Foto profili (rrethi)"
+        <ProfessionalProfilePhotosEditor
+          coverFile={coverFile[0] ?? null}
+          avatarFile={avatarFile[0] ?? null}
+          coverUrl={coverUrl}
+          avatarUrl={avatarUrl}
+          focus={photosFocus}
+          onCoverFile={(file) => setCoverFile(file ? [file] : [])}
+          onAvatarFile={(file) => setAvatarFile(file ? [file] : [])}
+          onCoverUrl={(url) => setCoverUrl(isEphemeralImageUrl(url) ? '' : url)}
+          onAvatarUrl={(url) => setAvatarUrl(isEphemeralImageUrl(url) ? '' : url)}
         />
       </OwnerEditSectionDialog>
 

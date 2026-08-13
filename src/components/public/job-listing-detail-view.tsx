@@ -4,6 +4,7 @@ import * as React from 'react';
 import {
   Avatar,
   Box,
+  ButtonBase,
   Chip,
   Stack,
   Typography,
@@ -31,6 +32,7 @@ import { StickyListingContact } from '@/components/public/sticky-listing-contact
 import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
 import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
+import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import {
   buildJobDetailSections,
   isJobListingNew,
@@ -48,6 +50,7 @@ import { ListingDetailTitleBadges } from '@/components/public/listing-detail-tit
 import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
 import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
@@ -142,6 +145,24 @@ export function JobListingDetailView({
     : listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
   const sections = React.useMemo(() => buildJobDetailSections(listing), [listing]);
   const metaRows = React.useMemo(() => jobDetailMetaRows(listing), [listing]);
+  const locationLine = React.useMemo(
+    () =>
+      businessLocationLine({
+        locationAddress: listing.locationAddress,
+        cityName: listing.cityName,
+      }),
+    [listing.cityName, listing.locationAddress],
+  );
+  const mapLocation = React.useMemo(
+    () =>
+      businessMapLocation({
+        locationLat: listing.locationLat,
+        locationLng: listing.locationLng,
+        mapsUrl: listing.mapsUrl,
+        cityName: listing.cityName,
+      }),
+    [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl],
+  );
   const companyName =
     listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const coverImageUrls = React.useMemo(() => jobCoverImageUrls(listing), [listing]);
@@ -166,7 +187,7 @@ export function JobListingDetailView({
       priceLabel: salary,
       badge: jobTypeLabel,
       imageUrl: coverImageUrls[0] ?? listing.imageUrl ?? null,
-      location: listing.cityName || undefined,
+      location: locationLine || listing.cityName || undefined,
       specs: [
         { icon: 'clock', label: jobTypeLabel },
         { icon: 'briefcase', label: industryLabel },
@@ -176,7 +197,7 @@ export function JobListingDetailView({
       saveCount: listing.saveCount,
       url: canonicalUrl,
     }),
-    [canonicalUrl, coverImageUrls, industryLabel, jobTypeLabel, listing, salary],
+    [canonicalUrl, coverImageUrls, industryLabel, jobTypeLabel, listing, locationLine, salary],
   );
 
   const stickyFooterHeight = '80px';
@@ -501,14 +522,14 @@ export function JobListingDetailView({
                 const isLocation = index === 0;
                 const isJobType = index === 1;
                 const isExperience = index === 3;
-                const locationClick = ownerEdit?.onStartInlineEdit
+                const locationEditClick = ownerEdit?.onStartInlineEdit
                   ? () => ownerEdit.onStartInlineEdit!('location')
                   : onEditInfo;
                 const specsClick = ownerEdit?.onStartInlineEdit
                   ? () => ownerEdit.onStartInlineEdit!('specs')
                   : onEditSpecs;
                 const rowClick = isLocation
-                  ? locationClick
+                  ? locationEditClick
                   : isJobType || isExperience
                     ? specsClick
                     : undefined;
@@ -550,28 +571,72 @@ export function JobListingDetailView({
                       <Icon sx={{ fontSize: 17 }} />
                     </Box>
                     <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography
-                        sx={{
-                          fontWeight: 750,
-                          fontSize: '0.78rem',
-                          lineHeight: 1.2,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {row.value}
-                      </Typography>
-                      <Typography
-                        sx={{
-                          color: 'text.secondary',
-                          fontSize: '0.65rem',
-                          lineHeight: 1.2,
-                          mt: 0.2,
-                        }}
-                      >
-                        {row.label}
-                      </Typography>
+                      {isLocation && mapLocation ? (
+                        <ButtonBase
+                          component="a"
+                          href="#business-location-map"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            scrollToBusinessLocationMap();
+                          }}
+                          sx={{
+                            display: 'block',
+                            textAlign: 'left',
+                            maxWidth: '100%',
+                            borderRadius: 1,
+                            '&:hover .job-location-value': { color: 'primary.main' },
+                          }}
+                        >
+                          <Typography
+                            className="job-location-value"
+                            sx={{
+                              fontWeight: 750,
+                              fontSize: '0.78rem',
+                              lineHeight: 1.2,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {row.value}
+                          </Typography>
+                          <Typography
+                            sx={{
+                              color: 'text.secondary',
+                              fontSize: '0.65rem',
+                              lineHeight: 1.2,
+                              mt: 0.2,
+                            }}
+                          >
+                            {row.label}
+                          </Typography>
+                        </ButtonBase>
+                      ) : (
+                        <>
+                          <Typography
+                            sx={{
+                              fontWeight: 750,
+                              fontSize: '0.78rem',
+                              lineHeight: 1.2,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {row.value}
+                          </Typography>
+                          <Typography
+                            sx={{
+                              color: 'text.secondary',
+                              fontSize: '0.65rem',
+                              lineHeight: 1.2,
+                              mt: 0.2,
+                            }}
+                          >
+                            {row.label}
+                          </Typography>
+                        </>
+                      )}
                     </Box>
                     {rowClick ? (
                       <OwnerEditPencil label={pencilLabel} onClick={rowClick} />
@@ -885,6 +950,31 @@ export function JobListingDetailView({
                   </Typography>
                 )}
               </Box>
+            ) : null}
+
+            {mapLocation || canInline || onEditInfo ? (
+              <Stack
+                data-business-location-map
+                spacing={1}
+                component="section"
+                aria-labelledby="job-location-heading"
+                sx={{ scrollMarginTop: 80 }}
+              >
+                <Typography id="job-location-heading" sx={{ fontWeight: 800, fontSize: FONT_SECTION, lineHeight: 1.3 }}>
+                  Vendndodhja
+                </Typography>
+                {mapLocation ? (
+                  <LocationMapEmbed
+                    query={mapLocation.query}
+                    lat={mapLocation.lat}
+                    lng={mapLocation.lng}
+                  />
+                ) : (
+                  <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>
+                    Shtoni qytetin ose linkun e Google Maps.
+                  </Typography>
+                )}
+              </Stack>
             ) : null}
 
             {!ownerPreview && similar.length > 0 ? (

@@ -4,6 +4,7 @@ import * as React from 'react';
 import {
   Avatar,
   Box,
+  ButtonBase,
   Chip,
   Container,
   Grid,
@@ -32,6 +33,7 @@ import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
@@ -39,6 +41,7 @@ import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public
 import { listingContactCtaSx } from '@/components/public/sticky-listing-contact';
 import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
+import { businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import {
   buildJobDetailSections,
   isJobListingNew,
@@ -92,6 +95,16 @@ export function JobListingDetailDesktop({
 }) {
   const sections = React.useMemo(() => buildJobDetailSections(listing), [listing]);
   const metaRows = React.useMemo(() => jobDetailMetaRows(listing), [listing]);
+  const mapLocation = React.useMemo(
+    () =>
+      businessMapLocation({
+        locationLat: listing.locationLat,
+        locationLng: listing.locationLng,
+        mapsUrl: listing.mapsUrl,
+        cityName: listing.cityName,
+      }),
+    [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl],
+  );
   const companyName =
     listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const heroImage = listing.imageUrl ?? listing.imageUrls[0] ?? null;
@@ -377,19 +390,9 @@ export function JobListingDetailDesktop({
           >
             {metaRows.map((row, index) => {
               const Icon = metaIcons[index];
-              return (
-                <Box
-                  key={row.label}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.25,
-                    py: 1.75,
-                    px: 2.25,
-                    minWidth: 0,
-                    borderRight: index < metaRows.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
-                  }}
-                >
+              const isLocation = index === 0;
+              const content = (
+                <>
                   <Box
                     sx={{
                       width: 36,
@@ -422,6 +425,46 @@ export function JobListingDetailDesktop({
                       {row.label}
                     </Typography>
                   </Box>
+                </>
+              );
+              return (
+                <Box
+                  key={row.label}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.25,
+                    py: 1.75,
+                    px: 2.25,
+                    minWidth: 0,
+                    borderRight: index < metaRows.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                  }}
+                >
+                  {isLocation && mapLocation ? (
+                    <ButtonBase
+                      component="a"
+                      href="#business-location-map"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        scrollToBusinessLocationMap();
+                      }}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        minWidth: 0,
+                        maxWidth: '100%',
+                        textAlign: 'left',
+                        borderRadius: 1,
+                        color: 'inherit',
+                        '&:hover': { opacity: 0.9 },
+                      }}
+                    >
+                      {content}
+                    </ButtonBase>
+                  ) : (
+                    content
+                  )}
                 </Box>
               );
             })}
@@ -631,6 +674,18 @@ export function JobListingDetailDesktop({
                       </Grid>
                     ))}
                   </Grid>
+                </Box>
+              ) : null}
+
+              {mapLocation ? (
+                <Box data-business-location-map sx={{ scrollMarginTop: 96 }}>
+                  <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', mb: 1.5 }}>Vendndodhja</Typography>
+                  <LocationMapEmbed
+                    query={mapLocation.query}
+                    lat={mapLocation.lat}
+                    lng={mapLocation.lng}
+                    height={280}
+                  />
                 </Box>
               ) : null}
 

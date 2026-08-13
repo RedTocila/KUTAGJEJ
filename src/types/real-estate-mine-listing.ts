@@ -15,6 +15,10 @@ export interface RealEstateMineListing extends ListingMetrics {
   zoneName: string | null;
   cityId?: string | null;
   zoneId?: string | null;
+  mapsUrl?: string | null;
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
   contactPhone?: string | null;
   condition: string | null;
   apartmentTypeSlug: string | null;

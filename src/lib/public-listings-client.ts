@@ -119,6 +119,10 @@ export interface PublicRealEstateListingDetail extends ListingMetricsFields {
   updatedAt: string;
   seller: PublicRealEstateListingSeller | null;
   permalinkPath?: string;
+  mapsUrl?: string | null;
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
 }
 
 export interface PublicCarListing extends ListingMetricsFields {
@@ -153,6 +157,10 @@ export interface PublicCarListingDetail extends Omit<PublicCarListing, 'descript
   finish?: string[];
   seller: PublicRealEstateListingSeller | null;
   updatedAt: string;
+  mapsUrl?: string | null;
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
 }
 
 export interface PublicJobListing extends ListingMetricsFields {
@@ -185,6 +193,10 @@ export interface PublicJobListingDetail extends Omit<PublicJobListing, 'descript
   description: string;
   seller: PublicRealEstateListingSeller | null;
   updatedAt: string;
+  mapsUrl?: string | null;
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
 }
 
 export interface PublicMarketplaceListing extends ListingMetricsFields {
@@ -212,6 +224,10 @@ export interface PublicMarketplaceListingDetail extends Omit<PublicMarketplaceLi
   description: string;
   seller: PublicRealEstateListingSeller | null;
   updatedAt: string;
+  mapsUrl?: string | null;
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
 }
 
 export interface PublicDirectoryListing extends ListingMetricsFields {
@@ -240,6 +256,17 @@ export interface PublicDirectoryListing extends ListingMetricsFields {
   reservationUrl: string | null;
   /** Biznese — primary mobile CTA above summary. */
   mobileCtaMode?: 'contact' | 'reserve' | 'none';
+  /** Neighbourhood within city (reuses real-estate zones). */
+  zoneId?: string | null;
+  zoneName?: string | null;
+  /** Pasted Google Maps share URL. */
+  mapsUrl?: string | null;
+  /** Place name extracted from Maps URL for display. */
+  mapsPlaceQuery?: string | null;
+  /** Street / road / neighbourhood from the Maps pin. */
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
   /** Short “what we offer” line for venues. */
   servicesHighlight: string | null;
   /** Business / professional announcement promo (title required when active). */

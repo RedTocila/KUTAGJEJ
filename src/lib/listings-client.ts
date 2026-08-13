@@ -49,6 +49,7 @@ export interface RealEstateListingPayload {
   surfaceM2: number;
   cityId: string;
   zoneId: string;
+  mapsUrl?: string | null;
   contactPhone: string;
   condition?: string;
   apartmentTypeSlug?: string;
@@ -96,6 +97,10 @@ export interface CarMineListing extends ListingMetrics {
   extras?: string[];
   cityId?: string | null;
   cityName: string | null;
+  mapsUrl?: string | null;
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
   contactPhone?: string | null;
   imageUrls: string[];
   status: 'pending' | 'approved' | 'rejected';
@@ -114,6 +119,10 @@ export interface JobMineListing extends ListingMetrics {
   industry: string;
   cityId?: string | null;
   cityName: string | null;
+  mapsUrl?: string | null;
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
   education: string;
   experience: string;
   jobType: string;
@@ -145,6 +154,10 @@ export interface MarketplaceMineListing extends ListingMetrics {
   currency: string | null;
   cityId?: string | null;
   cityName: string | null;
+  mapsUrl?: string | null;
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
   contactPhone?: string | null;
   imageUrls: string[];
   status: 'pending' | 'approved' | 'rejected';
@@ -348,6 +361,7 @@ export interface JobListingPayload {
   description: string;
   industry: string;
   cityId: string;
+  mapsUrl?: string | null;
   education: string;
   experience: string;
   jobType: string;
@@ -397,6 +411,7 @@ export interface MarketplaceListingPayload {
   originalPrice?: number | null;
   currency: string | null;
   cityId: string;
+  mapsUrl?: string | null;
   contactPhone: string;
   imageUrls?: string[];
 }
@@ -469,6 +484,7 @@ export type CarListingJsonPayload = {
   finish: string[];
   extras: string[];
   cityId: string;
+  mapsUrl?: string | null;
   contactPhone: string;
   imageUrls?: string[];
 };

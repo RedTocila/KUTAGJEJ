@@ -20,9 +20,11 @@ import {
 } from '@/lib/business-constants';
 import {
   updateBusinessListing,
+  resolveBusinessMapsUrl,
   type BusinessMineListing,
 } from '@/lib/directory-listings-client';
 import { hardNavigate } from '@/lib/hard-navigate';
+import { extractCoordsFromMapsUrl, extractPlaceQueryFromMapsUrl } from '@/lib/google-maps-location';
 import { businessMineToPublic } from '@/lib/listing-mine-to-public';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { isPersistableImageUrl } from '@/lib/image-url';
@@ -39,6 +41,13 @@ type Snapshot = {
   category: string;
   cityId: string | null;
   cityName: string | null;
+  zoneId: string | null;
+  zoneName: string | null;
+  mapsUrl: string | null;
+  mapsPlaceQuery: string | null;
+  locationAddress: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
   contactPhone: string | null;
   servicesHighlight: string | null;
   reservationsEnabled: boolean;
@@ -53,11 +62,47 @@ function snapFrom(d: BusinessMineListing): Snapshot {
     category: d.category,
     cityId: d.cityId ?? null,
     cityName: d.cityName ?? null,
+    zoneId: d.zoneId ?? null,
+    zoneName: d.zoneName ?? null,
+    mapsUrl: d.mapsUrl ?? null,
+    mapsPlaceQuery:
+      d.mapsPlaceQuery ?? (d.mapsUrl ? extractPlaceQueryFromMapsUrl(d.mapsUrl) : null),
+    locationAddress: d.locationAddress ?? null,
+    locationLat: d.locationLat ?? null,
+    locationLng: d.locationLng ?? null,
     contactPhone: d.contactPhone ?? null,
     servicesHighlight: d.servicesHighlight ?? null,
     reservationsEnabled: Boolean(d.reservationsEnabled),
     reservationUrl: d.reservationUrl ?? null,
     mobileCtaMode: d.mobileCtaMode ?? 'contact',
+  };
+}
+
+function withMapsPreview(mapsUrl: string | null | undefined): {
+  mapsUrl: string | null;
+  mapsPlaceQuery: string | null;
+  locationAddress: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
+} {
+  const trimmed = String(mapsUrl || '').trim() || null;
+  if (!trimmed) {
+    return {
+      mapsUrl: null,
+      mapsPlaceQuery: null,
+      locationAddress: null,
+      locationLat: null,
+      locationLng: null,
+    };
+  }
+  const coords = extractCoordsFromMapsUrl(trimmed);
+  return {
+    mapsUrl: trimmed,
+    mapsPlaceQuery: extractPlaceQueryFromMapsUrl(trimmed),
+    // Street comes from server reverse-geocode on Gati / Ruaj.
+    locationAddress: null,
+    locationLat: coords?.lat ?? null,
+    locationLng: coords?.lng ?? null,
   };
 }
 
@@ -68,8 +113,20 @@ export function BusinessOwnerEdit({
   initial: BusinessMineListing;
   backHref?: string;
 }) {
-  const [draft, setDraft] = React.useState(initial);
-  const [baseline, setBaseline] = React.useState(() => JSON.stringify(initial));
+  const [draft, setDraft] = React.useState(() => {
+    const mapsPlaceQuery =
+      initial.mapsPlaceQuery ??
+      (initial.mapsUrl ? extractPlaceQueryFromMapsUrl(initial.mapsUrl) : null);
+    return { ...initial, mapsPlaceQuery };
+  });
+  const [baseline, setBaseline] = React.useState(() =>
+    JSON.stringify({
+      ...initial,
+      mapsPlaceQuery:
+        initial.mapsPlaceQuery ??
+        (initial.mapsUrl ? extractPlaceQueryFromMapsUrl(initial.mapsUrl) : null),
+    }),
+  );
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -91,6 +148,10 @@ export function BusinessOwnerEdit({
 
   const dirty = JSON.stringify(draft) !== baseline || newFiles.length > 0;
   const preview = React.useMemo(() => businessMineToPublic(draft), [draft]);
+  const zones = React.useMemo(
+    () => cities.find((c) => c.id === draft.cityId)?.zones ?? [],
+    [cities, draft.cityId],
+  );
 
   const startInline = (field: OwnerInlineField) => {
     setSnapshot(snapFrom(draft));
@@ -108,6 +169,40 @@ export function BusinessOwnerEdit({
   const doneInline = () => {
     setSnapshot(null);
     setEditingField(null);
+  };
+
+  const doneLocationInline = async () => {
+    const raw = String(draft.mapsUrl || '').trim();
+    if (!raw) {
+      setDraft((d) => ({
+        ...d,
+        mapsUrl: null,
+        mapsPlaceQuery: null,
+        locationAddress: null,
+        locationLat: null,
+        locationLng: null,
+      }));
+      doneInline();
+      return;
+    }
+    // Always resolve on server so short links expand and street name is reverse-geocoded.
+    const resolved = await resolveBusinessMapsUrl(raw);
+    if (resolved.error) {
+      setError(resolved.error);
+      return;
+    }
+    const resolvedUrl = resolved.mapsUrl ?? raw;
+    const local = withMapsPreview(resolvedUrl);
+    setDraft((d) => ({
+      ...d,
+      mapsUrl: resolvedUrl,
+      mapsPlaceQuery:
+        resolved.placeQuery ?? local.mapsPlaceQuery ?? null,
+      locationAddress: resolved.locationAddress ?? null,
+      locationLat: resolved.locationLat ?? local.locationLat ?? null,
+      locationLng: resolved.locationLng ?? local.locationLng ?? null,
+    }));
+    doneInline();
   };
 
   const openPhotos = () => {
@@ -147,6 +242,8 @@ export function BusinessOwnerEdit({
         description: (draft.description ?? '').trim(),
         category: draft.category,
         cityId: draft.cityId,
+        zoneId: draft.zoneId ?? null,
+        mapsUrl: draft.mapsUrl ?? null,
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
         weeklyHours: draft.weeklyHours?.length ? draft.weeklyHours : weeklyHours,
@@ -162,7 +259,28 @@ export function BusinessOwnerEdit({
         setError(res.error);
         return;
       }
-      const next = { ...draft, imageUrls, cityId: payload.cityId || null };
+      const saved = res.listing;
+      const mapsPreview = withMapsPreview(saved?.mapsUrl ?? payload.mapsUrl);
+      const next = {
+        ...draft,
+        imageUrls,
+        cityId: saved?.cityId ?? payload.cityId ?? null,
+        zoneId: saved?.zoneId ?? payload.zoneId ?? null,
+        mapsUrl: saved?.mapsUrl ?? mapsPreview.mapsUrl,
+        mapsPlaceQuery: mapsPreview.mapsPlaceQuery ?? draft.mapsPlaceQuery ?? null,
+        locationAddress:
+          typeof saved?.locationAddress === 'string' && saved.locationAddress.trim()
+            ? saved.locationAddress.trim()
+            : draft.locationAddress ?? null,
+        locationLat:
+          typeof saved?.locationLat === 'number' && Number.isFinite(saved.locationLat)
+            ? saved.locationLat
+            : mapsPreview.locationLat,
+        locationLng:
+          typeof saved?.locationLng === 'number' && Number.isFinite(saved.locationLng)
+            ? saved.locationLng
+            : mapsPreview.locationLng,
+      };
       setDraft(next);
       setBaseline(JSON.stringify(next));
       setExistingUrls(imageUrls);
@@ -232,19 +350,50 @@ export function BusinessOwnerEdit({
       />
     ),
     location: (
-      <Stack spacing={1} sx={{ width: '100%', maxWidth: 360 }}>
+      <Stack spacing={1.25} sx={{ width: '100%', maxWidth: 420 }}>
         <SearchableSelect
           label="Qyteti"
           value={draft.cityId ?? ''}
           onChange={(v) => {
-            const cityName = cities.find((c) => c.id === v)?.name ?? null;
-            setDraft((d) => ({ ...d, cityId: v || null, cityName }));
+            const city = cities.find((c) => c.id === v);
+            setDraft((d) => ({
+              ...d,
+              cityId: v || null,
+              cityName: city?.name ?? null,
+              zoneId: null,
+              zoneName: null,
+            }));
           }}
           options={cities.map((c) => ({ value: c.id, label: c.name }))}
           emptyLabel="Zgjidhni…"
           required
         />
-        <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
+        {zones.length > 0 ? (
+          <SearchableSelect
+            label="Lagja / zona"
+            value={draft.zoneId ?? ''}
+            onChange={(v) => {
+              const zone = zones.find((z) => z.id === v);
+              setDraft((d) => ({ ...d, zoneId: v || null, zoneName: zone?.name ?? null }));
+            }}
+            options={zones.map((z) => ({ value: z.id, label: z.name }))}
+            emptyLabel="Zgjidhni…"
+            clearable
+          />
+        ) : null}
+        <TextField
+          label="Linku i Google Maps (opsionale)"
+          value={draft.mapsUrl ?? ''}
+          onChange={(e) => {
+            const mapsPreview = withMapsPreview(e.target.value);
+            setDraft((d) => ({ ...d, ...mapsPreview }));
+          }}
+          fullWidth
+          placeholder="https://maps.app.goo.gl/…"
+          helperText="Ngjitni linkun e vendndodhjes për pin të saktë në hartë."
+          sx={fieldSx}
+        />
+        <OwnerInlineEditActions onDone={() => void doneLocationInline()} onCancel={cancelInline} />
       </Stack>
     ),
     description: (

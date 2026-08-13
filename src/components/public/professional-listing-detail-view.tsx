@@ -4,6 +4,7 @@ import * as React from 'react';
 import {
   Avatar,
   Box,
+  ButtonBase,
   Stack,
   Typography,
 } from '@mui/material';
@@ -18,6 +19,7 @@ import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { HistoryBackButton } from '@/components/public/product-browse-chrome';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
 import { StickyListingContact } from '@/components/public/sticky-listing-contact';
@@ -31,6 +33,7 @@ import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
+import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import {
   professionalAvatarUrl,
@@ -114,7 +117,34 @@ export function ProfessionalListingDetailView({
     md: 0,
   };
 
-  const locationLine = listing.cityName ? `${listing.cityName}, Shqipëri` : null;
+  const locationLine = React.useMemo(
+    () =>
+      businessLocationLine({
+        locationAddress: listing.locationAddress,
+        zoneName: listing.zoneName,
+        cityName: listing.cityName,
+      }),
+    [listing.cityName, listing.locationAddress, listing.zoneName],
+  );
+  const mapLocation = React.useMemo(
+    () =>
+      businessMapLocation({
+        locationLat: listing.locationLat,
+        locationLng: listing.locationLng,
+        mapsUrl: listing.mapsUrl,
+        mapsPlaceQuery: listing.mapsPlaceQuery,
+        zoneName: listing.zoneName,
+        cityName: listing.cityName,
+      }),
+    [
+      listing.cityName,
+      listing.locationLat,
+      listing.locationLng,
+      listing.mapsPlaceQuery,
+      listing.mapsUrl,
+      listing.zoneName,
+    ],
+  );
   const isVerified = Boolean(listing.seller?.verified);
 
   return (
@@ -161,38 +191,59 @@ export function ProfessionalListingDetailView({
             bookmark={ownerPreview ? undefined : { saved, onToggle: () => void toggleSave() }}
             hideSlideCount
             mediaActionSurface="glass"
-            onEditPhotos={ownerEdit?.onEditPhotos}
+            onEditPhotos={ownerEdit?.onEditPhotos ? () => ownerEdit.onEditPhotos!('cover') : undefined}
           />
         </Box>
 
         <Box sx={{ px: 2, maxWidth: CONTENT_MAX, mx: 'auto', width: '100%', boxSizing: 'border-box' }}>
           <Stack spacing={2.5} sx={{ pt: 0, pb: 3 }}>
             <Stack spacing={0.75} sx={{ mt: -1.5, alignItems: 'flex-start', width: '100%' }}>
-              <Box sx={{ position: 'relative', width: 'fit-content' }}>
-                <Avatar
-                  src={avatarUrl ?? undefined}
-                  alt={displayName}
-                  sx={{
-                    width: 72,
-                    height: 72,
-                    flexShrink: 0,
-                    mt: -5.5,
-                    border: '3px solid',
-                    borderColor: 'background.default',
-                    bgcolor: 'grey.900',
-                    color: 'primary.main',
-                    fontWeight: 800,
-                    fontSize: FONT_BODY,
-                  }}
-                >
-                  {initials}
-                </Avatar>
-                {ownerEdit?.onEditPhotos ? (
-                  <Box sx={{ position: 'absolute', right: -6, bottom: -2 }}>
-                    <OwnerEditPencil label="Ndrysho foton e profilit" onClick={ownerEdit.onEditPhotos} />
-                  </Box>
-                ) : null}
-              </Box>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  width: '100%',
+                  alignItems: 'flex-end',
+                  justifyContent: 'space-between',
+                  minWidth: 0,
+                }}
+              >
+                <Box sx={{ position: 'relative', width: 'fit-content', flexShrink: 0 }}>
+                  <Avatar
+                    src={avatarUrl ?? undefined}
+                    alt={displayName}
+                    sx={{
+                      width: 72,
+                      height: 72,
+                      flexShrink: 0,
+                      mt: -5.5,
+                      border: '3px solid',
+                      borderColor: 'background.default',
+                      bgcolor: 'grey.900',
+                      color: 'primary.main',
+                      fontWeight: 800,
+                      fontSize: FONT_BODY,
+                    }}
+                  >
+                    {initials}
+                  </Avatar>
+                  {ownerEdit?.onEditPhotos ? (
+                    <Box sx={{ position: 'absolute', right: -6, bottom: -2 }}>
+                      <OwnerEditPencil
+                        label="Ndrysho foton e profilit"
+                        onClick={() => ownerEdit.onEditPhotos!('avatar')}
+                      />
+                    </Box>
+                  ) : null}
+                </Box>
+                <Box sx={{ flexShrink: 0, pb: 0.35, pr: 0.25 }}>
+                  <ProfessionalRatingSummary
+                    rating={rating.rating}
+                    reviewCount={rating.reviews}
+                    starSize={14}
+                  />
+                </Box>
+              </Stack>
 
               <Stack spacing={0.5} sx={{ width: '100%', alignItems: 'flex-start' }}>
                 <OwnerEditableSpot
@@ -246,43 +297,62 @@ export function ProfessionalListingDetailView({
                     {subtitle}
                   </Typography>
                 </OwnerEditableSpot>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{ alignItems: 'center', justifyContent: 'space-between', width: '100%', minWidth: 0 }}
-                >
-                  {locationLine || ownerEdit?.onStartInlineEdit || ownerEdit?.onEditInfo ? (
-                    <OwnerEditableSpot
-                      field="location"
-                      ownerEdit={ownerEdit}
-                      label="Ndrysho lokacionin"
-                      legacyOnClick={ownerEdit?.onEditInfo}
-                      sx={{ minWidth: 0, flex: 1 }}
+                {ownerEdit?.editingField === 'location' ? null : locationLine ? (
+                  <ButtonBase
+                    component="a"
+                    href="#business-location-map"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      scrollToBusinessLocationMap();
+                    }}
+                    sx={{
+                      display: 'inline-flex',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      justifyContent: 'flex-start',
+                      alignSelf: 'flex-start',
+                      minWidth: 0,
+                      color: 'text.primary',
+                      borderRadius: 1,
+                      textAlign: 'left',
+                      maxWidth: '100%',
+                      '&:hover': { color: 'primary.main' },
+                    }}
+                  >
+                    <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
+                    <Typography
+                      sx={{
+                        fontSize: FONT_CAPTION,
+                        fontWeight: 600,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
                     >
-                      <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
-                      <Typography
-                        sx={{
-                          fontSize: FONT_CAPTION,
-                          fontWeight: 600,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {locationLine || 'Shtoni qytetin'}
-                      </Typography>
-                    </OwnerEditableSpot>
-                  ) : (
-                    <Box sx={{ flex: 1 }} />
-                  )}
-                  <Box sx={{ flexShrink: 0 }}>
-                    <ProfessionalRatingSummary
-                      rating={rating.rating}
-                      reviewCount={rating.reviews}
-                      starSize={14}
-                    />
-                  </Box>
-                </Stack>
+                      {locationLine}
+                    </Typography>
+                  </ButtonBase>
+                ) : ownerEdit?.onStartInlineEdit ? (
+                  <ButtonBase
+                    onClick={() => ownerEdit.onStartInlineEdit!('location')}
+                    sx={{
+                      display: 'inline-flex',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      justifyContent: 'flex-start',
+                      alignSelf: 'flex-start',
+                      minWidth: 0,
+                      color: 'text.secondary',
+                      borderRadius: 1,
+                      textAlign: 'left',
+                    }}
+                  >
+                    <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
+                    <Typography sx={{ fontSize: FONT_CAPTION, fontWeight: 600 }}>Shtoni qytetin</Typography>
+                  </ButtonBase>
+                ) : null}
               </Stack>
             </Stack>
 
@@ -354,7 +424,7 @@ export function ProfessionalListingDetailView({
             ) : null}
 
             {portfolio.length > 0 || ownerEdit?.onEditPortfolio ? (
-              <Box sx={surfaceSx}>
+              <Box>
                 {portfolio.length > 0 ? (
                   <ProfessionalPortfolioSection
                     items={portfolio}
@@ -372,6 +442,46 @@ export function ProfessionalListingDetailView({
                     {ownerEdit?.onEditPortfolio ? (
                       <OwnerEditPencil label="Ndrysho portofolin" onClick={ownerEdit.onEditPortfolio} />
                     ) : null}
+                  </Stack>
+                )}
+              </Box>
+            ) : null}
+
+            {mapLocation || ownerEdit?.onStartInlineEdit ? (
+              <Box
+                data-business-location-map
+                sx={{ scrollMarginTop: 80 }}
+                component="section"
+                aria-labelledby="professional-location-heading"
+              >
+                {ownerEdit?.editingField === 'location' && ownerEdit.inlineEditors?.location ? (
+                  <Box sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
+                    {ownerEdit.inlineEditors.location}
+                  </Box>
+                ) : (
+                  <Stack spacing={1.25}>
+                    <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Typography id="professional-location-heading" sx={{ fontWeight: 800, fontSize: FONT_BODY }}>
+                        Vendndodhja
+                      </Typography>
+                      {ownerEdit?.onStartInlineEdit ? (
+                        <OwnerEditPencil
+                          label="Ndrysho lokacionin"
+                          onClick={() => ownerEdit.onStartInlineEdit!('location')}
+                        />
+                      ) : null}
+                    </Stack>
+                    {mapLocation ? (
+                      <LocationMapEmbed
+                        query={mapLocation.query}
+                        lat={mapLocation.lat}
+                        lng={mapLocation.lng}
+                      />
+                    ) : (
+                      <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary' }}>
+                        Shtoni qytetin ose linkun e Google Maps.
+                      </Typography>
+                    )}
                   </Stack>
                 )}
               </Box>

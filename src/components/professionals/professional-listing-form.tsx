@@ -15,6 +15,7 @@ import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
+import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import {
   ListingFormActionError,
   ListingFormActions,
@@ -39,6 +40,7 @@ import {
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import { isEphemeralImageUrl, isPersistableImageUrl } from '@/lib/image-url';
 import { uploadListingImages } from '@/lib/uploads-client';
 import {
   knownCreateDefaultsFromStorage,
@@ -66,17 +68,23 @@ function newId(): string {
 async function resolveSingleImage(args: {
   existingUrl: string | null;
   file: File | null;
+  fallback?: string | null;
 }): Promise<{ url: string | null; error?: string }> {
   if (args.file) {
     const up = await uploadListingImages([args.file], 'professionals');
     if (up.error) return { url: null, error: up.error };
     return { url: up.urls[0] ?? null };
   }
-  const existing = args.existingUrl;
-  if (existing && (/^blob:/i.test(existing) || /^data:/i.test(existing))) {
+  const existing = String(args.existingUrl || '').trim();
+  if (!existing) return { url: null };
+  if (isPersistableImageUrl(existing)) return { url: existing };
+  const fallback = args.fallback && isPersistableImageUrl(args.fallback) ? args.fallback : null;
+  if (isEphemeralImageUrl(existing)) {
+    if (fallback) return { url: fallback };
     return { url: null, error: 'Fotoja nuk u ngarkua. Zgjidhni foton përsëri.' };
   }
-  return { url: existing };
+  if (fallback) return { url: fallback };
+  return { url: null, error: 'Fotoja nuk është e vlefshme. Zgjidhni foton përsëri.' };
 }
 
 export function ProfessionalListingForm({
@@ -121,6 +129,10 @@ export function ProfessionalListingForm({
     if (fromAi) return fromAi;
     return knownCreateDefaultsFromStorage().cityId;
   });
+  const [mapsUrl, setMapsUrl] = React.useState('');
+  const [locationLat, setLocationLat] = React.useState<number | null>(null);
+  const [locationLng, setLocationLng] = React.useState<number | null>(null);
+  const [locationAddress, setLocationAddress] = React.useState<string | null>(null);
   const [contactPhone, setContactPhone] = React.useState(() => {
     const fromAi = String(aiPrefill?.contactPhone ?? '').trim();
     if (fromAi) return fromAi;
@@ -152,6 +164,10 @@ export function ProfessionalListingForm({
     setDescription(listing.description ?? '');
     setCategory(listing.category ?? '');
     setCityId(listing.cityId ?? '');
+    setMapsUrl(listing.mapsUrl ?? '');
+    setLocationLat(listing.locationLat ?? null);
+    setLocationLng(listing.locationLng ?? null);
+    setLocationAddress(listing.locationAddress ?? null);
     setContactPhone(listing.contactPhone ?? '');
     setServicesHighlight(listing.servicesHighlight ?? '');
     setResponseTimeHours(
@@ -325,6 +341,7 @@ export function ProfessionalListingForm({
       description: description.trim(),
       category,
       cityId,
+      mapsUrl: mapsUrl.trim() || null,
       contactPhone: contactPhone.trim(),
       imageUrls,
       responseTimeHours: Number.isInteger(hours) && hours >= 1 ? hours : null,
@@ -472,6 +489,18 @@ export function ProfessionalListingForm({
             options={cities.map((c) => ({ value: c.id, label: c.name }))}
             emptyLabel="Zgjidhni qytetin…"
             required
+          />
+          <ListingMapsLocationFields
+            value={{ mapsUrl, locationLat, locationLng, locationAddress }}
+            onChange={(next) => {
+              setMapsUrl(next.mapsUrl);
+              setLocationLat(next.locationLat);
+              setLocationLng(next.locationLng);
+              setLocationAddress(next.locationAddress);
+            }}
+            cityName={cities.find((c) => c.id === cityId)?.name}
+            showPreview
+            disabled={submitting}
           />
           <ListingTextField
             label="Përshkrimi"

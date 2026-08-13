@@ -25,6 +25,11 @@ const {
   loadMineListingsForPoster,
 } = require('../lib/mine-listings');
 const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
+const {
+  parseMapsFieldsFromBody,
+  mapsColumnsFromParsed,
+  mapsJsonFromDoc,
+} = require('../lib/listing-maps-fields');
 
 const router = express.Router();
 
@@ -134,6 +139,9 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
     const zone = (city.zones || []).find((z) => String(z.id) === zoneId);
     if (!zone) return res.status(400).json({ message: 'Zone does not belong to the selected city.' });
 
+    const maps = await parseMapsFieldsFromBody(req.body);
+    if (!maps.ok) return res.status(400).json({ message: maps.message });
+
     const propertyCategory = String(req.body.propertyCategory).trim().toLowerCase();
     const contactPhone = String(req.body.contactPhone ?? '').trim();
 
@@ -157,6 +165,7 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
       ...realEstateCategoryFields(propertyCategory, req.body),
       image_urls: sanitizeImageUrls(req.body.imageUrls, MAX_REAL_ESTATE_IMAGES),
       status: 'approved',
+      ...mapsColumnsFromParsed(maps),
     };
 
     const { data: created, error: insErr } = await getSupabaseAdmin()
@@ -177,6 +186,7 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
         title: doc.title,
         status: doc.status,
         createdAt: doc.createdAt,
+        ...mapsJsonFromDoc(doc),
       },
     });
   } catch (error) {
@@ -221,6 +231,9 @@ router.put('/real-estate/:id', authMiddleware, requirePortalUser, async (req, re
     const zone = (city.zones || []).find((z) => String(z.id) === zoneId);
     if (!zone) return res.status(400).json({ message: 'Zone does not belong to the selected city.' });
 
+    const maps = await parseMapsFieldsFromBody(req.body);
+    if (!maps.ok) return res.status(400).json({ message: maps.message });
+
     const propertyCategory = String(req.body.propertyCategory).trim().toLowerCase();
     const contactPhone = String(req.body.contactPhone ?? '').trim();
 
@@ -244,6 +257,7 @@ router.put('/real-estate/:id', authMiddleware, requirePortalUser, async (req, re
       image_urls: sanitizeImageUrls(req.body.imageUrls, MAX_REAL_ESTATE_IMAGES),
       updated_at: new Date().toISOString(),
     };
+    if (!maps.skip) Object.assign(patch, mapsColumnsFromParsed(maps));
 
     const { data: updated, error: updErr } = await getSupabaseAdmin()
       .from('real_estate_listings')
@@ -261,6 +275,7 @@ router.put('/real-estate/:id', authMiddleware, requirePortalUser, async (req, re
         title: doc.title,
         status: doc.status,
         updatedAt: doc.updatedAt,
+        ...mapsJsonFromDoc(doc),
       },
     });
   } catch (error) {

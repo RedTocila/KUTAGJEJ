@@ -23,6 +23,7 @@ import {
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
 import { SearchableSelect } from '@/components/core/searchable-select';
+import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import {
   ListingFormActionError,
   ListingFormActions,
@@ -87,6 +88,10 @@ type JobFormState = {
   description: string;
   industry: string;
   cityId: string;
+  mapsUrl: string;
+  locationLat: number | null;
+  locationLng: number | null;
+  locationAddress: string | null;
   education: string;
   experience: string;
   jobType: string;
@@ -106,6 +111,10 @@ function emptyForm(): JobFormState {
     description: '',
     industry: '',
     cityId: '',
+    mapsUrl: '',
+    locationLat: null,
+    locationLng: null,
+    locationAddress: null,
     education: '',
     experience: '',
     jobType: '',
@@ -194,6 +203,10 @@ function formFromListing(l: JobMineListing): JobFormState {
     description: l.description || '',
     industry: l.industry || '',
     cityId: l.cityId ? String(l.cityId) : '',
+    mapsUrl: l.mapsUrl ?? '',
+    locationLat: l.locationLat ?? null,
+    locationLng: l.locationLng ?? null,
+    locationAddress: l.locationAddress ?? null,
     education: l.education || '',
     experience: l.experience || '',
     jobType: l.jobType || '',
@@ -308,6 +321,7 @@ export function JobListingForm({
         description: form.description.trim(),
         industry: form.industry,
         cityId: form.cityId,
+        mapsUrl: form.mapsUrl.trim() || null,
         education: form.education,
         experience: form.experience,
         jobType: form.jobType,
@@ -480,6 +494,26 @@ export function JobListingForm({
             Nuk ka qytete të disponueshme — një administrator duhet t&apos;i shtojë te Paneli → Vendndodhjet.
           </Typography>
         ) : null}
+        <ListingMapsLocationFields
+          value={{
+            mapsUrl: form.mapsUrl,
+            locationLat: form.locationLat,
+            locationLng: form.locationLng,
+            locationAddress: form.locationAddress,
+          }}
+          onChange={(next) =>
+            setForm((p) => ({
+              ...p,
+              mapsUrl: next.mapsUrl,
+              locationLat: next.locationLat,
+              locationLng: next.locationLng,
+              locationAddress: next.locationAddress,
+            }))
+          }
+          cityName={cities.find((c) => c.id === form.cityId)?.name}
+          showPreview
+          disabled={submitting}
+        />
       </ListingFormSection>
 
       <ListingFormSection title="Arsimi dhe eksperienca">

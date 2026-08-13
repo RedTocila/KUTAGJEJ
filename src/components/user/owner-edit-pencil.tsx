@@ -63,7 +63,8 @@ export type OwnerInlineField =
 
 /** Handlers passed into public detail views while editing as owner. */
 export type OwnerEditHandlers = {
-  onEditPhotos?: () => void;
+  /** Optional focus: cover (gallery) vs avatar (profile circle). Same dialog. */
+  onEditPhotos?: (focus?: 'cover' | 'avatar') => void;
   onEditHours?: () => void;
   onEditMenu?: () => void;
   onEditPortfolio?: () => void;

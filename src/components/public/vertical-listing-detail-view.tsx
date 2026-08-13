@@ -4,6 +4,7 @@ import * as React from 'react';
 import {
   Box,
   Button,
+  ButtonBase,
   Chip,
   Container,
   Divider,
@@ -41,6 +42,7 @@ import {
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
+import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import { whatsappInquireHref as buildWhatsappInquireHref, whatsappInquireText } from '@/lib/listing-contact';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import {
@@ -174,11 +176,22 @@ function SpecIconBox({ Icon, primary, secondary }: { Icon: SpecIcon; primary: st
 }
 
 function asideLocationFullLine(l: AnyPublicListingDetail): string | null {
-  const city =
-    'cityName' in l && l.cityName?.trim()
-      ? l.cityName.trim()
-      : null;
-  return city ? `${city}, Shqipëri` : null;
+  return businessLocationLine({
+    locationAddress: 'locationAddress' in l ? l.locationAddress : null,
+    zoneName: 'zoneName' in l ? l.zoneName : null,
+    cityName: 'cityName' in l ? l.cityName : null,
+  });
+}
+
+function listingMapLocation(l: AnyPublicListingDetail) {
+  return businessMapLocation({
+    locationLat: 'locationLat' in l ? l.locationLat : null,
+    locationLng: 'locationLng' in l ? l.locationLng : null,
+    mapsUrl: 'mapsUrl' in l ? l.mapsUrl : null,
+    mapsPlaceQuery: 'mapsPlaceQuery' in l ? l.mapsPlaceQuery : null,
+    zoneName: 'zoneName' in l ? l.zoneName : null,
+    cityName: 'cityName' in l ? l.cityName : null,
+  });
 }
 
 function ListingContactAside(props: {
@@ -194,14 +207,32 @@ function ListingContactAside(props: {
       <Stack spacing={0.75}>
         <Box sx={{ width: '100%' }}>{sidebarPrice(listing)}</Box>
         {asideLoc ? (
-          <Stack direction="row" spacing={0.65} sx={{ alignItems: 'flex-start', maxWidth: '100%' }}>
+          <ButtonBase
+            component="a"
+            href="#business-location-map"
+            onClick={(e) => {
+              e.preventDefault();
+              scrollToBusinessLocationMap();
+            }}
+            sx={{
+              display: 'inline-flex',
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              gap: 0.65,
+              maxWidth: '100%',
+              color: 'text.secondary',
+              borderRadius: 1,
+              textAlign: 'left',
+              '&:hover': { color: 'primary.main' },
+            }}
+          >
             <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', flexShrink: 0, lineHeight: 0, pt: 0.35 }}>
               <MapPinIcon size={17} weight="regular" color="currentColor" aria-hidden />
             </Box>
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.45 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.45 }}>
               {asideLoc}
             </Typography>
-          </Stack>
+          </ButtonBase>
         ) : null}
       </Stack>
       <Divider />
@@ -290,10 +321,8 @@ export function VerticalListingDetailView(props: {
     saveCount: listing.saveCount,
   });
 
-  let mapQuery: string | null = null;
-  if ('cityName' in listing && listing.cityName) {
-    mapQuery = `${listing.cityName}, Shqipëri`;
-  }
+  const locationLine = React.useMemo(() => asideLocationFullLine(listing), [listing]);
+  const mapLocation = React.useMemo(() => listingMapLocation(listing), [listing]);
 
   const summarySpecs = summarySpecsFor(listing);
 
@@ -433,15 +462,71 @@ export function VerticalListingDetailView(props: {
                       label="Ndrysho lokacionin"
                       legacyOnClick={onEditInfo}
                     >
+                      {locationLine ? (
+                        <ButtonBase
+                          component="a"
+                          href="#business-location-map"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            scrollToBusinessLocationMap();
+                          }}
+                          sx={{
+                            display: 'inline-flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 0.65,
+                            color: 'text.secondary',
+                            borderRadius: 1,
+                            textAlign: 'left',
+                            maxWidth: '100%',
+                            '&:hover': { color: 'primary.main' },
+                          }}
+                        >
+                          <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
+                            <MapPinIcon size={17} weight="regular" color="currentColor" />
+                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {locationLine}
+                          </Typography>
+                        </ButtonBase>
+                      ) : (
+                        <>
+                          <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
+                            <MapPinIcon size={17} weight="regular" color="currentColor" />
+                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                            Shtoni lokacionin
+                          </Typography>
+                        </>
+                      )}
+                    </OwnerEditableSpot>
+                  ) : locationLine ? (
+                    <ButtonBase
+                      component="a"
+                      href="#business-location-map"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        scrollToBusinessLocationMap();
+                      }}
+                      sx={{
+                        display: 'inline-flex',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 0.65,
+                        color: 'text.secondary',
+                        borderRadius: 1,
+                        textAlign: 'left',
+                        maxWidth: '100%',
+                        '&:hover': { color: 'primary.main' },
+                      }}
+                    >
                       <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
                         <MapPinIcon size={17} weight="regular" color="currentColor" />
                       </Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                        {'cityName' in listing && listing.cityName
-                          ? listing.cityName
-                          : 'Shtoni lokacionin'}
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {locationLine}
                       </Typography>
-                    </OwnerEditableSpot>
+                    </ButtonBase>
                   ) : (
                     subtitleLine(listing)
                   )}
@@ -554,12 +639,33 @@ export function VerticalListingDetailView(props: {
               ) : null}
             </Stack>
 
-            {mapQuery ? (
-              <Stack spacing={1.5}>
-                <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800, letterSpacing: '0.1em' }}>
+            {mapLocation || canInline || onEditInfo ? (
+              <Stack
+                data-business-location-map
+                spacing={1.5}
+                component="section"
+                aria-labelledby="vertical-location-heading"
+                sx={{ scrollMarginTop: 80 }}
+              >
+                <Typography
+                  id="vertical-location-heading"
+                  variant="overline"
+                  color="text.secondary"
+                  sx={{ fontWeight: 800, letterSpacing: '0.1em' }}
+                >
                   Vendndodhja
                 </Typography>
-                <LocationMapEmbed query={mapQuery} />
+                {mapLocation ? (
+                  <LocationMapEmbed
+                    query={mapLocation.query}
+                    lat={mapLocation.lat}
+                    lng={mapLocation.lng}
+                  />
+                ) : (
+                  <Typography sx={{ color: 'text.secondary' }}>
+                    Shtoni qytetin ose linkun e Google Maps.
+                  </Typography>
+                )}
               </Stack>
             ) : null}
 
@@ -611,13 +717,28 @@ function listingTitle(l: AnyPublicListingDetail): string {
 }
 
 function subtitleLine(l: AnyPublicListingDetail): React.ReactNode {
-  const city =
-    'cityName' in l ? l.cityName : null;
-  if (!city) return null;
+  const line = asideLocationFullLine(l);
+  if (!line) return null;
   return (
-    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary', width: '100%' }}>
-      {city}
-    </Typography>
+    <ButtonBase
+      component="a"
+      href="#business-location-map"
+      onClick={(e) => {
+        e.preventDefault();
+        scrollToBusinessLocationMap();
+      }}
+      sx={{
+        display: 'inline-flex',
+        color: 'text.secondary',
+        borderRadius: 1,
+        textAlign: 'left',
+        '&:hover': { color: 'primary.main' },
+      }}
+    >
+      <Typography variant="body2" sx={{ fontWeight: 600, width: '100%' }}>
+        {line}
+      </Typography>
+    </ButtonBase>
   );
 }
 

@@ -10,6 +10,11 @@ const { isUuid } = require('../lib/public-listings/query-helpers');
 const { parseComparePrice } = require('../lib/listing-compare-price');
 const { formatMineMarketplace, formatMineMarketplaceFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
 const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
+const {
+  parseMapsFieldsFromBody,
+  mapsColumnsFromParsed,
+  mapsJsonFromDoc,
+} = require('../lib/listing-maps-fields');
 
 const router = express.Router();
 
@@ -113,6 +118,9 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     if (cityErr) throw cityErr;
     if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
 
+    const maps = await parseMapsFieldsFromBody(body);
+    if (!maps.ok) return res.status(400).json({ message: maps.message });
+
     const selling = SELLING.has(body.transactionType);
     const hasPrice = selling && body.price !== null && body.price !== undefined && String(body.price).trim() !== '';
     const price = hasPrice ? Number(body.price) : null;
@@ -132,6 +140,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       contact_phone: String(body.contactPhone || '').trim(),
       image_urls: sanitizeImageUrls(body.imageUrls, MAX_MARKETPLACE_IMAGES),
       status: 'approved',
+      ...mapsColumnsFromParsed(maps),
     };
     if (hasPrice) row.currency = body.currency;
 
@@ -147,7 +156,13 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
 
     res.status(201).json({
       message: 'Njoftimi u publikua me sukses.',
-      listing: { id: String(doc.id), title: doc.title, status: doc.status, createdAt: doc.createdAt },
+      listing: {
+        id: String(doc.id),
+        title: doc.title,
+        status: doc.status,
+        createdAt: doc.createdAt,
+        ...mapsJsonFromDoc(doc),
+      },
     });
   } catch (err) {
     console.error('POST /listings/marketplace:', err?.message || err);
@@ -183,6 +198,9 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
     if (cityErr) throw cityErr;
     if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
 
+    const maps = await parseMapsFieldsFromBody(body);
+    if (!maps.ok) return res.status(400).json({ message: maps.message });
+
     const selling = SELLING.has(body.transactionType);
     const hasPrice = selling && body.price !== null && body.price !== undefined && String(body.price).trim() !== '';
     const price = hasPrice ? Number(body.price) : null;
@@ -203,6 +221,7 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
       image_urls: sanitizeImageUrls(body.imageUrls, MAX_MARKETPLACE_IMAGES),
       updated_at: new Date().toISOString(),
     };
+    if (!maps.skip) Object.assign(patch, mapsColumnsFromParsed(maps));
 
     const { data: updated, error: updErr } = await getSupabaseAdmin()
       .from('marketplace_listings')
@@ -215,7 +234,13 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
     const doc = camelizeRow(updated);
     res.json({
       message: 'Njoftimi u përditësua.',
-      listing: { id: String(doc.id), title: doc.title, status: doc.status, updatedAt: doc.updatedAt },
+      listing: {
+        id: String(doc.id),
+        title: doc.title,
+        status: doc.status,
+        updatedAt: doc.updatedAt,
+        ...mapsJsonFromDoc(doc),
+      },
     });
   } catch (err) {
     console.error('PUT /listings/marketplace/:id:', err?.message || err);

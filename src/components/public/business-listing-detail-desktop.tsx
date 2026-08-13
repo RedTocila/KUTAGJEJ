@@ -20,14 +20,17 @@ import { BusinessReservationPanel } from '@/components/public/business-reservati
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
 import { BusinessMenuPreview } from '@/components/public/business-menu-section';
+import { BusinessOpenStatusLine } from '@/components/public/business-open-status-line';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import {
   businessCategorySubtitle,
   businessOpenStatusLine,
 } from '@/lib/business-listing-detail-content';
+import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import { BusinessReviewSection } from '@/components/businesses/business-review-section';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import {
@@ -98,6 +101,34 @@ export function BusinessListingDetailDesktop({
   const statusLine = React.useMemo(() => businessOpenStatusLine(listing), [listing]);
   const telHref = listing.contactPhone ?? listing.seller?.phone ?? null;
   const phoneHref = telHref ? `tel:${telHref.replace(/\s/g, '')}` : null;
+  const mapLocation = React.useMemo(
+    () =>
+      businessMapLocation({
+        locationLat: listing.locationLat,
+        locationLng: listing.locationLng,
+        mapsUrl: listing.mapsUrl,
+        mapsPlaceQuery: listing.mapsPlaceQuery,
+        zoneName: listing.zoneName,
+        cityName: listing.cityName,
+      }),
+    [
+      listing.cityName,
+      listing.locationLat,
+      listing.locationLng,
+      listing.mapsPlaceQuery,
+      listing.mapsUrl,
+      listing.zoneName,
+    ],
+  );
+  const locationLine = React.useMemo(
+    () =>
+      businessLocationLine({
+        locationAddress: listing.locationAddress,
+        zoneName: listing.zoneName,
+        cityName: listing.cityName,
+      }),
+    [listing.cityName, listing.locationAddress, listing.zoneName],
+  );
 
   const reservationPanelProps = {
     open: reserveOpen,
@@ -189,11 +220,29 @@ export function BusinessListingDetailDesktop({
                     </Typography>
                   </Stack>
                   <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', lineHeight: 1.4 }}>{categoryLine}</Typography>
-                  {listing.cityName ? (
-                    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+                  {locationLine ? (
+                    <ButtonBase
+                      component="a"
+                      href="#business-location-map"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        scrollToBusinessLocationMap();
+                      }}
+                      sx={{
+                        display: 'inline-flex',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        color: 'text.secondary',
+                        borderRadius: 1,
+                        textAlign: 'left',
+                        maxWidth: '100%',
+                        '&:hover': { color: 'primary.main' },
+                      }}
+                    >
                       <MapPinIcon size={16} weight="regular" />
-                      <Typography sx={{ fontSize: '0.8rem' }}>{listing.cityName}</Typography>
-                    </Stack>
+                      <Typography sx={{ fontSize: '0.8rem' }}>{locationLine}</Typography>
+                    </ButtonBase>
                   ) : null}
                   <BusinessReviewSection
                     variant="summary"
@@ -201,20 +250,7 @@ export function BusinessListingDetailDesktop({
                     ratingAverage={listing.ratingAverage}
                     reviewCount={listing.reviewCount}
                   />
-                  {statusLine ? (
-                    <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-                      <Box
-                        sx={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          bgcolor: 'primary.main',
-                          boxShadow: (theme) => `0 0 0 3px ${alpha(theme.palette.primary.main, 0.25)}`,
-                        }}
-                      />
-                      <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'primary.main' }}>{statusLine}</Typography>
-                    </Stack>
-                  ) : null}
+                  {statusLine ? <BusinessOpenStatusLine statusLine={statusLine} /> : null}
                 </Stack>
 
                 <Divider />
@@ -288,6 +324,18 @@ export function BusinessListingDetailDesktop({
             <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', mb: 1.5 }}>Menu</Typography>
             <BusinessMenuPreview listing={listing} maxPerCategory={4} />
           </Box>
+
+          {mapLocation ? (
+            <Box data-business-location-map sx={{ scrollMarginTop: 96 }}>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', mb: 1.5 }}>Vendndodhja</Typography>
+              <LocationMapEmbed
+                query={mapLocation.query}
+                lat={mapLocation.lat}
+                lng={mapLocation.lng}
+                height={280}
+              />
+            </Box>
+          ) : null}
 
           <BusinessReviewSection
             variant="list"

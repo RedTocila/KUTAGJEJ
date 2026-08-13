@@ -5,6 +5,7 @@ import {
   JOB_TYPE_OPTIONS,
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
+import { businessLocationLine } from '@/lib/google-maps-location';
 import type { PublicJobListingDetail } from '@/lib/public-listings-client';
 
 import { findOptionLabel } from '@/components/public/listing-cards/format-helpers';
@@ -67,7 +68,11 @@ export function buildJobDetailSections(listing: PublicJobListingDetail): JobDeta
 }
 
 export function jobDetailMetaRows(listing: PublicJobListingDetail) {
-  const location = listing.cityName ? `${listing.cityName}, Shqipëri` : 'Shqipëri';
+  const location =
+    businessLocationLine({
+      locationAddress: listing.locationAddress,
+      cityName: listing.cityName,
+    }) || 'Shqipëri';
   return [
     { label: 'Lokacioni', value: location },
     { label: 'Lloji i punës', value: findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType) },

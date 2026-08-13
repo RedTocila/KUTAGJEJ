@@ -4,6 +4,7 @@ import * as React from 'react';
 import {
   Box,
   Button,
+  ButtonBase,
   Chip,
   Container,
   Divider,
@@ -47,6 +48,7 @@ import {
   TRANSMISSION_OPTIONS,
   vehicleTypeLabel,
 } from '@/lib/car-constants';
+import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import {
   LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
   LISTING_DETAIL_HERO_IMAGE_SIZES,
@@ -207,7 +209,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 function CarPriceContactAside(props: {
   listing: PublicCarListingDetail;
-  locationFull: string;
+  locationFull: string | null;
   displayPhone: string;
   whatsappInquireHref?: string | null;
   canonicalUrl?: string;
@@ -230,14 +232,32 @@ function CarPriceContactAside(props: {
           {[listing.make, listing.model, listing.variant].filter(Boolean).join(' ')}
         </Typography>
         {locationFull ? (
-          <Stack direction="row" spacing={0.65} sx={{ alignItems: 'flex-start', maxWidth: '100%' }}>
+          <ButtonBase
+            component="a"
+            href="#business-location-map"
+            onClick={(e) => {
+              e.preventDefault();
+              scrollToBusinessLocationMap();
+            }}
+            sx={{
+              display: 'inline-flex',
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              gap: 0.65,
+              maxWidth: '100%',
+              color: 'text.secondary',
+              borderRadius: 1,
+              textAlign: 'left',
+              '&:hover': { color: 'primary.main' },
+            }}
+          >
             <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', flexShrink: 0, lineHeight: 0, pt: 0.35 }}>
               <MapPinIcon size={17} weight="regular" color="currentColor" aria-hidden />
             </Box>
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.45 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.45 }}>
               {locationFull}
             </Typography>
-          </Stack>
+          </ButtonBase>
         ) : null}
       </Stack>
       <Divider flexItem />
@@ -322,7 +342,24 @@ export function CarListingDetailView({
   const onEditPrice = ownerEdit?.onEditPrice ?? onEditInfo;
   const onEditSpecs = ownerEdit?.onEditSpecs ?? onEditInfo;
   const canInline = Boolean(ownerEdit?.onStartInlineEdit);
-  const locationFull = [listing.cityName, 'Shqipëri'].filter(Boolean).join(', ');
+  const locationFull = React.useMemo(
+    () =>
+      businessLocationLine({
+        locationAddress: listing.locationAddress,
+        cityName: listing.cityName,
+      }),
+    [listing.cityName, listing.locationAddress],
+  );
+  const mapLocation = React.useMemo(
+    () =>
+      businessMapLocation({
+        locationLat: listing.locationLat,
+        locationLng: listing.locationLng,
+        mapsUrl: listing.mapsUrl,
+        cityName: listing.cityName,
+      }),
+    [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl],
+  );
   const displayPhone = listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
   const viewCount = listing.viewCount ?? 0;
   const { saved, saveCount, toggleSave } = useListingBookmark('car', listing.id, {
@@ -374,7 +411,6 @@ export function CarListingDetailView({
     ...(listing.cityName ? [{ label: 'Qyteti', value: listing.cityName }] : []),
   ];
 
-  const mapQuery = listing.cityName ? `${listing.cityName}, Shqipëri` : null;
   const hasExtras = Boolean(listing.extras?.length || listing.finish?.length);
 
   return (
@@ -535,12 +571,43 @@ export function CarListingDetailView({
                       label="Ndrysho lokacionin"
                       legacyOnClick={onEditInfo}
                     >
-                      <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
-                        <MapPinIcon size={17} weight="regular" color="currentColor" />
-                      </Box>
-                      <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.4 }}>
-                        {locationFull || 'Shtoni lokacionin'}
-                      </Typography>
+                      {locationFull ? (
+                        <ButtonBase
+                          component="a"
+                          href="#business-location-map"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            scrollToBusinessLocationMap();
+                          }}
+                          sx={{
+                            display: 'inline-flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 0.65,
+                            color: 'text.secondary',
+                            borderRadius: 1,
+                            textAlign: 'left',
+                            maxWidth: '100%',
+                            '&:hover': { color: 'primary.main' },
+                          }}
+                        >
+                          <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
+                            <MapPinIcon size={17} weight="regular" color="currentColor" />
+                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.4 }}>
+                            {locationFull}
+                          </Typography>
+                        </ButtonBase>
+                      ) : (
+                        <>
+                          <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
+                            <MapPinIcon size={17} weight="regular" color="currentColor" />
+                          </Box>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.4 }}>
+                            Shtoni lokacionin
+                          </Typography>
+                        </>
+                      )}
                     </OwnerEditableSpot>
                   ) : null}
                   <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
@@ -704,10 +771,26 @@ export function CarListingDetailView({
                 </Stack>
               ) : null}
 
-              {mapQuery ? (
-                <Stack spacing={1.25} component="section" aria-labelledby="car-location-heading">
+              {mapLocation || canInline || onEditInfo ? (
+                <Stack
+                  data-business-location-map
+                  spacing={1.25}
+                  component="section"
+                  aria-labelledby="car-location-heading"
+                  sx={{ scrollMarginTop: 80 }}
+                >
                   {sectionTitle('Vendndodhja', 'car-location-heading')}
-                  <LocationMapEmbed query={mapQuery} />
+                  {mapLocation ? (
+                    <LocationMapEmbed
+                      query={mapLocation.query}
+                      lat={mapLocation.lat}
+                      lng={mapLocation.lng}
+                    />
+                  ) : (
+                    <Typography sx={{ color: 'text.secondary' }}>
+                      Shtoni qytetin ose linkun e Google Maps.
+                    </Typography>
+                  )}
                 </Stack>
               ) : null}
 

@@ -4,6 +4,7 @@ import * as React from 'react';
 import {
   Avatar,
   Box,
+  ButtonBase,
   Chip,
   Container,
   Divider,
@@ -26,6 +27,7 @@ import { DirectoryListingCard } from '@/components/public/listing-cards/director
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
 import { listingContactCtaSx } from '@/components/public/sticky-listing-contact';
@@ -40,6 +42,7 @@ import {
   LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
   LISTING_DETAIL_HERO_IMAGE_SIZES,
 } from '@/lib/listing-detail-layout';
+import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import {
   professionalAvatarUrl,
   professionalCoverImageUrls,
@@ -106,7 +109,34 @@ export function ProfessionalListingDetailDesktop({
   const router = useRouter();
   const initials = React.useMemo(() => professionalInitials(listing), [listing]);
 
-  const locationLine = listing.cityName ? `${listing.cityName}, Shqipëri` : null;
+  const locationLine = React.useMemo(
+    () =>
+      businessLocationLine({
+        locationAddress: listing.locationAddress,
+        zoneName: listing.zoneName,
+        cityName: listing.cityName,
+      }),
+    [listing.cityName, listing.locationAddress, listing.zoneName],
+  );
+  const mapLocation = React.useMemo(
+    () =>
+      businessMapLocation({
+        locationLat: listing.locationLat,
+        locationLng: listing.locationLng,
+        mapsUrl: listing.mapsUrl,
+        mapsPlaceQuery: listing.mapsPlaceQuery,
+        zoneName: listing.zoneName,
+        cityName: listing.cityName,
+      }),
+    [
+      listing.cityName,
+      listing.locationLat,
+      listing.locationLng,
+      listing.mapsPlaceQuery,
+      listing.mapsUrl,
+      listing.zoneName,
+    ],
+  );
   const isVerified = Boolean(listing.seller?.verified);
 
   if (ownerPreview) return null;
@@ -166,65 +196,80 @@ export function ProfessionalListingDetailDesktop({
                 }}
               >
                 <Stack spacing={2.25} sx={{ width: '100%' }}>
-                  <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start' }}>
-                    <Avatar
-                      src={avatarUrl ?? undefined}
-                      alt={displayName}
-                      sx={{
-                        width: 64,
-                        height: 64,
-                        bgcolor: 'grey.900',
-                        color: 'primary.main',
-                        fontWeight: 800,
-                      }}
-                    >
-                      {initials}
-                    </Avatar>
-                    <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
-                      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, maxWidth: '100%' }}>
-                        <Typography
-                          component="h1"
-                          sx={{
-                            fontWeight: 800,
-                            fontSize: '1.35rem',
-                            lineHeight: 1.2,
-                            minWidth: 0,
-                            flex: '0 1 auto',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {displayName}
-                          {isVerified ? (
-                            <Box
-                              component="span"
-                              sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
-                            >
-                              <ProfessionalVerifiedBadge />
-                            </Box>
-                          ) : null}
-                          {listing.seller?.trustBadge ? (
-                            <Box
-                              component="span"
-                              sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
-                            >
-                              <ListingTrustBadge size={22} />
-                            </Box>
-                          ) : null}
-                        </Typography>
-                      </Stack>
-                      <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>{subtitle}</Typography>
-                      <Stack
-                        direction="row"
-                        spacing={1}
-                        sx={{ alignItems: 'center', justifyContent: 'space-between', width: '100%', minWidth: 0 }}
+                  <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                    <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start', minWidth: 0, flex: 1 }}>
+                      <Avatar
+                        src={avatarUrl ?? undefined}
+                        alt={displayName}
+                        sx={{
+                          width: 64,
+                          height: 64,
+                          bgcolor: 'grey.900',
+                          color: 'primary.main',
+                          fontWeight: 800,
+                        }}
                       >
+                        {initials}
+                      </Avatar>
+                      <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+                        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, maxWidth: '100%' }}>
+                          <Typography
+                            component="h1"
+                            sx={{
+                              fontWeight: 800,
+                              fontSize: '1.35rem',
+                              lineHeight: 1.2,
+                              minWidth: 0,
+                              flex: '0 1 auto',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {displayName}
+                            {isVerified ? (
+                              <Box
+                                component="span"
+                                sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
+                              >
+                                <ProfessionalVerifiedBadge />
+                              </Box>
+                            ) : null}
+                            {listing.seller?.trustBadge ? (
+                              <Box
+                                component="span"
+                                sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
+                              >
+                                <ListingTrustBadge size={22} />
+                              </Box>
+                            ) : null}
+                          </Typography>
+                        </Stack>
+                        <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary', textAlign: 'left' }}>
+                          {subtitle}
+                        </Typography>
                         {locationLine ? (
-                          <Stack
-                            direction="row"
-                            spacing={0.5}
-                            sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0, flex: 1 }}
+                          <ButtonBase
+                            component="a"
+                            href="#business-location-map"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              scrollToBusinessLocationMap();
+                            }}
+                            sx={{
+                              display: 'inline-flex',
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 0.5,
+                              justifyContent: 'flex-start',
+                              color: 'text.secondary',
+                              minWidth: 0,
+                              alignSelf: 'flex-start',
+                              borderRadius: 1,
+                              textAlign: 'left',
+                              maxWidth: '100%',
+                              '&:hover': { color: 'primary.main' },
+                            }}
                           >
                             <MapPinIcon size={15} weight="regular" color="var(--mui-palette-primary-main)" />
                             <Typography
@@ -238,20 +283,18 @@ export function ProfessionalListingDetailDesktop({
                             >
                               {locationLine}
                             </Typography>
-                          </Stack>
-                        ) : (
-                          <Box sx={{ flex: 1 }} />
-                        )}
-                        <Box sx={{ flexShrink: 0 }}>
-                          <ProfessionalRatingSummary
-                            rating={rating.rating}
-                            reviewCount={rating.reviews}
-                            starSize={16}
-                            showReviewLabel
-                          />
-                        </Box>
+                          </ButtonBase>
+                        ) : null}
                       </Stack>
                     </Stack>
+                    <Box sx={{ flexShrink: 0, pt: 0.25 }}>
+                      <ProfessionalRatingSummary
+                        rating={rating.rating}
+                        reviewCount={rating.reviews}
+                        starSize={16}
+                        showReviewLabel
+                      />
+                    </Box>
                   </Stack>
 
                   <Divider />
@@ -335,11 +378,23 @@ export function ProfessionalListingDetailDesktop({
                 ) : null}
 
                 {portfolio.length > 0 ? (
-                  <Box sx={surfaceSx}>
+                  <Box>
                     <ProfessionalPortfolioSection
                       items={portfolio}
                       listingId={listing.id}
                       listingKind="professionals"
+                    />
+                  </Box>
+                ) : null}
+
+                {mapLocation ? (
+                  <Box data-business-location-map sx={{ scrollMarginTop: 96 }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: '1rem', mb: 1.5 }}>Vendndodhja</Typography>
+                    <LocationMapEmbed
+                      query={mapLocation.query}
+                      lat={mapLocation.lat}
+                      lng={mapLocation.lng}
+                      height={280}
                     />
                   </Box>
                 ) : null}

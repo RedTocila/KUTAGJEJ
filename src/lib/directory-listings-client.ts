@@ -5,6 +5,7 @@ import type { ListingMetrics } from '@/lib/listing-metrics';
 import type { WeeklyHourRow } from '@/lib/business-constants';
 import { authHeaders, authHeadersAsync } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
+import { resolveListingMapsUrl } from '@/lib/listing-maps-client';
 
 
 export type BusinessMenuCategory = { id: string; name: string; sortOrder: number };
@@ -24,6 +25,8 @@ export interface BusinessListingPayload {
   description: string;
   category: string;
   cityId: string;
+  zoneId?: string | null;
+  mapsUrl?: string | null;
   contactPhone: string;
   imageUrls: string[];
   weeklyHours: WeeklyHourRow[];
@@ -50,6 +53,15 @@ export interface BusinessMineListing extends ListingMetrics {
   category: string;
   cityId: string | null;
   cityName: string | null;
+  zoneId?: string | null;
+  zoneName?: string | null;
+  mapsUrl?: string | null;
+  /** Display name from Maps place URL (derived client-side). */
+  mapsPlaceQuery?: string | null;
+  /** Street / road / area from reverse geocode of the Maps pin. */
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
   contactPhone?: string | null;
   imageUrls: string[];
   openingHours?: string | null;
@@ -151,7 +163,20 @@ export async function createBusinessListing(
 export async function updateBusinessListing(
   id: string,
   body: Partial<BusinessListingPayload>,
-): Promise<{ error?: string }> {
+): Promise<{
+  error?: string;
+  listing?: {
+    id: string;
+    title?: string;
+    updatedAt?: string;
+    cityId?: string | null;
+    zoneId?: string | null;
+    mapsUrl?: string | null;
+    locationAddress?: string | null;
+    locationLat?: number | null;
+    locationLng?: number | null;
+  };
+}> {
   try {
     const res = await fetch(getApiUrl(`/listings/directory/businesses/${encodeURIComponent(id)}`), {
       method: 'PUT',
@@ -169,10 +194,22 @@ export async function updateBusinessListing(
               : 'Nuk u përditësua njoftimi.',
       };
     }
-    return {};
+    return { listing: data.listing };
   } catch {
     return { error: 'Nuk u arrit lidhja me serverin.' };
   }
+}
+
+/** Expand a Google Maps share URL and extract lat/lng (server resolves short links). */
+export async function resolveBusinessMapsUrl(mapsUrl: string): Promise<{
+  mapsUrl?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
+  placeQuery?: string | null;
+  locationAddress?: string | null;
+  error?: string;
+}> {
+  return resolveListingMapsUrl(mapsUrl);
 }
 
 /** Save only the business menu (categories + items). */
@@ -215,6 +252,7 @@ export interface ProfessionalListingPayload {
   description: string;
   category: string;
   cityId: string;
+  mapsUrl?: string | null;
   contactPhone: string;
   imageUrls: string[];
   responseTimeHours: number | null;
@@ -235,6 +273,10 @@ export interface ProfessionalMineListing extends ListingMetrics {
   currency: string | null;
   cityId: string | null;
   cityName: string | null;
+  mapsUrl?: string | null;
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
   contactPhone?: string | null;
   imageUrls: string[];
   responseTimeHours?: number | null;

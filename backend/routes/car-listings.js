@@ -13,7 +13,11 @@ const { uploadBuffersToSupabase } = require('../lib/storage-uploads');
 const { parseComparePrice } = require('../lib/listing-compare-price');
 const { formatMineCar, formatMineCarFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
 const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
-
+const {
+  parseMapsFieldsFromBody,
+  mapsColumnsFromParsed,
+  mapsJsonFromDoc,
+} = require('../lib/listing-maps-fields');
 
 const router = express.Router();
 
@@ -122,6 +126,9 @@ router.post(
       if (cityErr) throw cityErr;
       if (!city) return res.status(400).json({ message: 'City not found.' });
 
+      const maps = await parseMapsFieldsFromBody(fields);
+      if (!maps.ok) return res.status(400).json({ message: maps.message });
+
       const price = Number(fields.price);
       const cmp = parseComparePrice(fields.originalPrice, price);
       if (!cmp.ok) return res.status(400).json({ message: cmp.message });
@@ -147,6 +154,7 @@ router.post(
         city_id: cityId,
         image_urls: imageUrls,
         status: 'approved',
+        ...mapsColumnsFromParsed(maps),
       };
 
       const { data: created, error: insErr } = await getSupabaseAdmin()
@@ -169,6 +177,7 @@ router.post(
           year: doc.year,
           status: doc.status,
           createdAt: doc.createdAt,
+          ...mapsJsonFromDoc(doc),
         },
       });
     } catch (err) {
@@ -214,6 +223,9 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
     if (cityErr) throw cityErr;
     if (!city) return res.status(400).json({ message: 'City not found.' });
 
+    const maps = await parseMapsFieldsFromBody(fields);
+    if (!maps.ok) return res.status(400).json({ message: maps.message });
+
     const finishRaw = fields.finish;
     const finish = Array.isArray(finishRaw)
       ? finishRaw.map((f) => String(f).trim()).filter((f) => FINISH_VALUES.includes(f))
@@ -248,6 +260,7 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
       image_urls: sanitizeImageUrls(fields.imageUrls, MAX_CAR_IMAGES),
       updated_at: new Date().toISOString(),
     };
+    if (!maps.skip) Object.assign(patch, mapsColumnsFromParsed(maps));
 
     const { data: updated, error: updErr } = await getSupabaseAdmin()
       .from('car_listings')
@@ -266,6 +279,7 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
         model: doc.model,
         status: doc.status,
         updatedAt: doc.updatedAt,
+        ...mapsJsonFromDoc(doc),
       },
     });
   } catch (err) {

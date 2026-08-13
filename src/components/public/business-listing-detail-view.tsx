@@ -8,7 +8,6 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
@@ -19,6 +18,7 @@ import { BusinessPromoBanner } from '@/components/public/listing-cards/business-
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import {
   businessCategorySubtitle,
   businessOpenStatusLine,
@@ -33,6 +33,7 @@ import { BusinessReservationPanel } from '@/components/public/business-reservati
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { BusinessListingDetailDesktop } from '@/components/public/business-listing-detail-desktop';
+import { BusinessOpenStatusLine } from '@/components/public/business-open-status-line';
 import { BusinessStickyMobileCta } from '@/components/public/business-sticky-mobile-cta';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { paths } from '@/paths';
@@ -44,6 +45,7 @@ import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { useUser } from '@/hooks/use-user';
 import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
 import { businessMobileCtaLabel, businessMobileCtaModeFromListing } from '@/lib/business-mobile-cta';
+import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 
 const FONT_BODY = '0.875rem';
@@ -93,6 +95,34 @@ export function BusinessListingDetailView({
   const categoryLine = React.useMemo(() => businessCategorySubtitle(listing), [listing]);
   const statusLine = React.useMemo(() => businessOpenStatusLine(listing), [listing]);
   const dateBounds = React.useMemo(() => reservationDateBounds(), []);
+  const mapLocation = React.useMemo(
+    () =>
+      businessMapLocation({
+        locationLat: listing.locationLat,
+        locationLng: listing.locationLng,
+        mapsUrl: listing.mapsUrl,
+        mapsPlaceQuery: listing.mapsPlaceQuery,
+        zoneName: listing.zoneName,
+        cityName: listing.cityName,
+      }),
+    [
+      listing.cityName,
+      listing.locationLat,
+      listing.locationLng,
+      listing.mapsPlaceQuery,
+      listing.mapsUrl,
+      listing.zoneName,
+    ],
+  );
+  const locationLine = React.useMemo(
+    () =>
+      businessLocationLine({
+        locationAddress: listing.locationAddress,
+        zoneName: listing.zoneName,
+        cityName: listing.cityName,
+      }),
+    [listing.cityName, listing.locationAddress, listing.zoneName],
+  );
 
   const showReservation = listing.reservationsEnabled;
   const usePlatformReservation = showReservation;
@@ -292,18 +322,31 @@ export function BusinessListingDetailView({
                 </Typography>
               </OwnerEditableSpot>
 
-              {listing.cityName || ownerEdit?.onStartInlineEdit || ownerEdit?.onEditInfo ? (
-                <OwnerEditableSpot
-                  field="location"
-                  ownerEdit={ownerEdit}
-                  label="Ndrysho lokacionin"
-                  legacyOnClick={ownerEdit?.onEditInfo}
+              {ownerEdit?.editingField === 'location' ? null : locationLine ? (
+                <ButtonBase
+                  component="a"
+                  href="#business-location-map"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    scrollToBusinessLocationMap();
+                  }}
+                  sx={{
+                    display: 'inline-flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 0.75,
+                    flexWrap: 'wrap',
+                    justifyContent: 'flex-start',
+                    color: 'text.primary',
+                    borderRadius: 1,
+                    textAlign: 'left',
+                    maxWidth: '100%',
+                    '&:hover': { color: 'primary.main' },
+                  }}
                 >
                   <MapPinIcon size={16} weight="regular" />
-                  <Typography sx={{ fontSize: FONT_CAPTION }}>
-                    {listing.cityName ? `${listing.cityName}, Shqipëri` : 'Shtoni lokacionin'}
-                  </Typography>
-                </OwnerEditableSpot>
+                  <Typography sx={{ fontSize: FONT_CAPTION }}>{locationLine}</Typography>
+                </ButtonBase>
               ) : null}
 
               <BusinessReviewSection
@@ -317,23 +360,15 @@ export function BusinessListingDetailView({
               />
 
               {statusLine || ownerEdit?.onEditHours ? (
-                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-                  <Box
-                    sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      bgcolor: 'primary.main',
-                      boxShadow: (theme) => `0 0 0 3px ${alpha(theme.palette.primary.main, 0.25)}`,
-                    }}
-                  />
-                  <Typography sx={{ fontSize: FONT_CAPTION, fontWeight: 600, color: 'primary.main' }}>
-                    {statusLine || 'Vendosni orarin'}
-                  </Typography>
-                  {ownerEdit?.onEditHours ? (
-                    <OwnerEditPencil label="Ndrysho orarin" onClick={ownerEdit.onEditHours} />
-                  ) : null}
-                </Stack>
+                <BusinessOpenStatusLine
+                  statusLine={statusLine || 'Vendosni orarin'}
+                  fontSize={FONT_CAPTION}
+                  endAdornment={
+                    ownerEdit?.onEditHours ? (
+                      <OwnerEditPencil label="Ndrysho orarin" onClick={ownerEdit.onEditHours} />
+                    ) : null
+                  }
+                />
               ) : null}
             </Stack>
 
@@ -389,7 +424,7 @@ export function BusinessListingDetailView({
               )}
 
               {listing.description || ownerEdit?.onStartInlineEdit || ownerEdit?.onEditInfo ? (
-                <Stack spacing={0.75}>
+                <Stack spacing={0.75} sx={{ width: '100%', maxWidth: '100%', minWidth: 0, overflow: 'hidden' }}>
                   <OwnerEditableSpot
                     field="description"
                     ownerEdit={ownerEdit}
@@ -462,6 +497,54 @@ export function BusinessListingDetailView({
               </Stack>
               <BusinessMenuPreview listing={listing} maxPerCategory={4} />
             </Box>
+
+            {mapLocation || ownerEdit?.onStartInlineEdit ? (
+              <Stack
+                data-business-location-map
+                spacing={1}
+                component="section"
+                aria-labelledby="business-location-heading"
+                sx={{ scrollMarginTop: 80 }}
+              >
+                {ownerEdit?.editingField === 'location' && ownerEdit.inlineEditors?.location ? (
+                  <Box sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
+                    {ownerEdit.inlineEditors.location}
+                  </Box>
+                ) : (
+                  <>
+                    <Stack
+                      direction="row"
+                      spacing={0.75}
+                      sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+                    >
+                      <Typography
+                        id="business-location-heading"
+                        sx={{ fontWeight: 800, fontSize: FONT_BODY }}
+                      >
+                        Vendndodhja
+                      </Typography>
+                      {ownerEdit?.onStartInlineEdit ? (
+                        <OwnerEditPencil
+                          label="Ndrysho lokacionin"
+                          onClick={() => ownerEdit.onStartInlineEdit!('location')}
+                        />
+                      ) : null}
+                    </Stack>
+                    {mapLocation ? (
+                      <LocationMapEmbed
+                        query={mapLocation.query}
+                        lat={mapLocation.lat}
+                        lng={mapLocation.lng}
+                      />
+                    ) : (
+                      <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary' }}>
+                        Shtoni qytetin, lagjen ose linkun e Google Maps.
+                      </Typography>
+                    )}
+                  </>
+                )}
+              </Stack>
+            ) : null}
 
             {/* Reviews list */}
             <BusinessReviewSection

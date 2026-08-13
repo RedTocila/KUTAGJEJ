@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   Box,
   Button,
+  ButtonBase,
   Container,
   Divider,
   Paper,
@@ -40,6 +41,7 @@ import { StickyListingContact } from '@/components/public/sticky-listing-contact
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
 import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
+import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import { whatsappInquireHref as buildWhatsappInquireHref, whatsappInquireText } from '@/lib/listing-contact';
 import type { PublicRealEstateListing, PublicRealEstateListingDetail } from '@/lib/public-listings-client';
 import { paths } from '@/paths';
@@ -145,7 +147,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 function RealEstatePriceContactAside(props: {
   listing: PublicRealEstateListingDetail;
   transactionLabel: string;
-  locationFull: string;
+  locationFull: string | null;
   displayPhone: string;
   whatsappInquireHref?: string | null;
   canonicalUrl?: string;
@@ -187,14 +189,32 @@ function RealEstatePriceContactAside(props: {
           </Typography>
         </Paper>
         {locationFull ? (
-          <Stack direction="row" spacing={0.65} sx={{ alignItems: 'flex-start', maxWidth: '100%' }}>
+          <ButtonBase
+            component="a"
+            href="#business-location-map"
+            onClick={(e) => {
+              e.preventDefault();
+              scrollToBusinessLocationMap();
+            }}
+            sx={{
+              display: 'inline-flex',
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              gap: 0.65,
+              maxWidth: '100%',
+              color: 'text.secondary',
+              borderRadius: 1,
+              textAlign: 'left',
+              '&:hover': { color: 'primary.main' },
+            }}
+          >
             <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', flexShrink: 0, lineHeight: 0, pt: 0.35 }}>
               <MapPinIcon size={17} weight="regular" color="currentColor" aria-hidden />
             </Box>
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.45 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.45 }}>
               {locationFull}
             </Typography>
-          </Stack>
+          </ButtonBase>
         ) : null}
       </Stack>
       <Divider flexItem />
@@ -315,7 +335,26 @@ export function RealEstateListingDetailView({
   const onEditPrice = ownerEdit?.onEditPrice ?? onEditInfo;
   const onEditSpecs = ownerEdit?.onEditSpecs ?? onEditInfo;
   const canInline = Boolean(ownerEdit?.onStartInlineEdit);
-  const locationFull = [listing.zoneName, listing.cityName, 'Shqipëri'].filter(Boolean).join(', ');
+  const locationFull = React.useMemo(
+    () =>
+      businessLocationLine({
+        locationAddress: listing.locationAddress,
+        zoneName: listing.zoneName,
+        cityName: listing.cityName,
+      }),
+    [listing.cityName, listing.locationAddress, listing.zoneName],
+  );
+  const mapLocation = React.useMemo(
+    () =>
+      businessMapLocation({
+        locationLat: listing.locationLat,
+        locationLng: listing.locationLng,
+        mapsUrl: listing.mapsUrl,
+        zoneName: listing.zoneName,
+        cityName: listing.cityName,
+      }),
+    [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl, listing.zoneName],
+  );
   const displayPhone =
     listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
 
@@ -561,12 +600,43 @@ export function RealEstateListingDetailView({
                     label="Ndrysho lokacionin"
                     legacyOnClick={onEditInfo}
                   >
-                    <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
-                      <MapPinIcon size={17} weight="regular" color="currentColor" />
-                    </Box>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.4 }}>
-                      {locationFull || 'Shtoni lokacionin'}
-                    </Typography>
+                    {locationFull ? (
+                      <ButtonBase
+                        component="a"
+                        href="#business-location-map"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          scrollToBusinessLocationMap();
+                        }}
+                        sx={{
+                          display: 'inline-flex',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 0.65,
+                          color: 'text.secondary',
+                          borderRadius: 1,
+                          textAlign: 'left',
+                          maxWidth: '100%',
+                          '&:hover': { color: 'primary.main' },
+                        }}
+                      >
+                        <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
+                          <MapPinIcon size={17} weight="regular" color="currentColor" />
+                        </Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.4 }}>
+                          {locationFull}
+                        </Typography>
+                      </ButtonBase>
+                    ) : (
+                      <>
+                        <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
+                          <MapPinIcon size={17} weight="regular" color="currentColor" />
+                        </Box>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.4 }}>
+                          Shtoni lokacionin
+                        </Typography>
+                      </>
+                    )}
                   </OwnerEditableSpot>
                 ) : null}
                 <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
@@ -722,20 +792,28 @@ export function RealEstateListingDetailView({
               />
             </Box>
 
-            <Stack spacing={1.5} component="section" aria-labelledby="re-loc-heading">
-              {sectionTitle('Vendndodhja', 're-loc-heading')}
-              {locationFull ? (
-                <>
-                  <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.65, fontWeight: 500 }}>
-                    {listing.zoneName && listing.cityName ? `${listing.zoneName}, ${listing.cityName}` : listing.cityName ?? listing.zoneName}
-                    {listing.cityName || listing.zoneName ? ', Shqipëri.' : '.'}
+            {mapLocation || canInline || onEditInfo ? (
+              <Stack
+                data-business-location-map
+                spacing={1.5}
+                component="section"
+                aria-labelledby="re-loc-heading"
+                sx={{ scrollMarginTop: 80 }}
+              >
+                {sectionTitle('Vendndodhja', 're-loc-heading')}
+                {mapLocation ? (
+                  <LocationMapEmbed
+                    query={mapLocation.query}
+                    lat={mapLocation.lat}
+                    lng={mapLocation.lng}
+                  />
+                ) : (
+                  <Typography sx={{ color: 'text.secondary' }}>
+                    Shtoni qytetin, lagjen ose linkun e Google Maps.
                   </Typography>
-                  <LocationMapEmbed query={locationFull} />
-                </>
-              ) : (
-                <Typography sx={{ color: 'text.secondary' }}>Vendndodhja do të përditësohet së shpejti.</Typography>
-              )}
-            </Stack>
+                )}
+              </Stack>
+            ) : null}
 
             {!ownerPreview && similar.length > 0 ? (
               <>

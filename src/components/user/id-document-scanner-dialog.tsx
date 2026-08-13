@@ -7,7 +7,6 @@ import {
   CircularProgress,
   Dialog,
   IconButton,
-  LinearProgress,
   Stack,
   Typography,
 } from '@mui/material';
@@ -15,18 +14,10 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import {
   computeCardGuide,
-  evaluateFrameReady,
-  ID_CARD_ASPECT,
-  isCaptureUsable,
   mapGuideToVideoCrop,
-  scanQualityHintMessage,
   type CardGuideRect,
 } from '@/lib/id-document-scan-quality';
 import { scanIdDocumentWithAi } from '@/lib/id-document-scan-client';
-
-const ANALYSIS_INTERVAL_MS = 160;
-/** Stable frames before auto-capture. */
-const READY_FRAMES = 4;
 
 export interface IdDocumentScanCapture {
   file: File;
@@ -84,39 +75,35 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
-  const analysisCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const captureCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
-  const stableCountRef = React.useRef(0);
   const capturingRef = React.useRef(false);
   const guideRef = React.useRef<CardGuideRect | null>(null);
-  const intervalRef = React.useRef<number | null>(null);
+  const restartScanRef = React.useRef<(() => void) | null>(null);
 
   const [phase, setPhase] = React.useState<ScanPhase>('starting');
   const [error, setError] = React.useState<string | null>(null);
   const [guide, setGuide] = React.useState<CardGuideRect | null>(null);
-  const [qualityHint, setQualityHint] = React.useState('Duke hapur kamerën…');
-  const [progress, setProgress] = React.useState(0);
-  const [frameReady, setFrameReady] = React.useState(false);
-  const restartScanRef = React.useRef<(() => void) | null>(null);
+  const [cameraReady, setCameraReady] = React.useState(false);
 
-  const stopAnalysis = React.useCallback(() => {
-    if (intervalRef.current != null) {
-      window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
+  const updateGuide = React.useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const cardGuide = computeCardGuide(rect.width, rect.height);
+    guideRef.current = cardGuide;
+    setGuide(cardGuide);
   }, []);
 
   const stopCamera = React.useCallback(() => {
-    stopAnalysis();
     const stream = streamRef.current;
     if (stream) {
       for (const track of stream.getTracks()) track.stop();
     }
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
-    stableCountRef.current = 0;
     capturingRef.current = false;
-  }, [stopAnalysis]);
+    setCameraReady(false);
+  }, []);
 
   const handleClose = React.useCallback(() => {
     stopCamera();
@@ -132,7 +119,6 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
 
     capturingRef.current = true;
     setPhase('capturing');
-    stopAnalysis();
 
     const crop = mapGuideToVideoCrop(
       activeGuide,
@@ -158,21 +144,6 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
     ctx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, crop.sw, crop.sh);
     stopCamera();
 
-    const imageData = ctx.getImageData(0, 0, crop.sw, crop.sh);
-    if (!isCaptureUsable(imageData)) {
-      capturingRef.current = false;
-      const sample = evaluateFrameReady(imageData);
-      setError(
-        sample.hint === 'too_dark'
-          ? 'Foto shumë e errët. Provoni me më shumë dritë.'
-          : sample.hint === 'blurry' || sample.hint === 'low_detail'
-            ? 'Foto e turbullt. Mbajeni telefonin fiks dhe afrojeni kamerën.'
-            : 'Vendoseni ID-në brenda kornizës dhe provoni përsëri.',
-      );
-      setPhase('error');
-      return;
-    }
-
     const blob = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob(resolve, 'image/jpeg', 0.92);
     });
@@ -187,7 +158,6 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
     const previewUrl = URL.createObjectURL(blob);
 
     setPhase('validating');
-    setQualityHint('Duke verifikuar fotografinë…');
 
     const ai = await scanIdDocumentWithAi(file);
     if (ai.error) {
@@ -215,57 +185,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
     });
     capturingRef.current = false;
     onClose();
-  }, [onCapture, onClose, stopAnalysis, stopCamera]);
-
-  const runAnalysis = React.useCallback(() => {
-    const video = videoRef.current;
-    const container = containerRef.current;
-    if (!video || !container || capturingRef.current) return;
-    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
-
-    const rect = container.getBoundingClientRect();
-    const cardGuide = computeCardGuide(rect.width, rect.height);
-    guideRef.current = cardGuide;
-    setGuide(cardGuide);
-
-    const sampleW = 320;
-    const sampleH = Math.max(40, Math.round(sampleW / ID_CARD_ASPECT));
-    const canvas = analysisCanvasRef.current ?? document.createElement('canvas');
-    analysisCanvasRef.current = canvas;
-    canvas.width = sampleW;
-    canvas.height = sampleH;
-
-    const crop = mapGuideToVideoCrop(
-      cardGuide,
-      rect.width,
-      rect.height,
-      video.videoWidth,
-      video.videoHeight,
-    );
-
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return;
-
-    ctx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, sampleW, sampleH);
-    const sample = evaluateFrameReady(ctx.getImageData(0, 0, sampleW, sampleH));
-
-    if (sample.readable) {
-      stableCountRef.current += 1;
-    } else {
-      stableCountRef.current = 0;
-    }
-
-    const hint =
-      sample.readable && stableCountRef.current >= READY_FRAMES - 2 ? 'almost' : sample.hint;
-
-    setProgress(Math.min(100, Math.round((stableCountRef.current / READY_FRAMES) * 100)));
-    setQualityHint(scanQualityHintMessage(hint, stableCountRef.current, READY_FRAMES));
-    setPhase('scanning');
-
-    if (sample.readable && stableCountRef.current >= READY_FRAMES) {
-      void captureFromGuide();
-    }
-  }, [captureFromGuide]);
+  }, [onCapture, onClose, stopCamera]);
 
   React.useEffect(() => {
     if (!open) {
@@ -274,9 +194,6 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
       setError(null);
       setGuide(null);
       guideRef.current = null;
-      setQualityHint('Duke hapur kamerën…');
-      setProgress(0);
-      setFrameReady(false);
       return;
     }
 
@@ -285,7 +202,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
     const start = async () => {
       setPhase('starting');
       setError(null);
-      setQualityHint('Duke hapur kamerën…');
+      setCameraReady(false);
 
       if (!navigator.mediaDevices?.getUserMedia) {
         setError('Kamera nuk mbështetet në këtë pajisje.');
@@ -309,9 +226,9 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
         video.muted = true;
         await video.play();
 
-        setFrameReady(true);
+        updateGuide();
+        setCameraReady(true);
         setPhase('scanning');
-        intervalRef.current = window.setInterval(runAnalysis, ANALYSIS_INTERVAL_MS);
       } catch {
         setError('Nuk u hap kamera. Lejoni aksesin te kamera dhe provoni përsëri.');
         setPhase('error');
@@ -329,10 +246,15 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
       cancelled = true;
       stopCamera();
     };
-  }, [open, runAnalysis, stopCamera]);
+  }, [open, stopCamera, updateGuide]);
 
-  const borderColor =
-    progress >= 100 ? 'success.main' : progress >= 55 ? 'primary.main' : 'rgba(255,255,255,0.85)';
+  React.useEffect(() => {
+    if (!open || !cameraReady) return;
+
+    const onResize = () => updateGuide();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [open, cameraReady, updateGuide]);
 
   return (
     <Dialog
@@ -386,36 +308,13 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
               height: guide.height,
               borderRadius: 3,
               border: '3px solid',
-              borderColor,
+              borderColor: cameraReady ? 'primary.main' : 'rgba(255,255,255,0.85)',
               boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)',
-              transition: 'border-color 0.25s ease',
               zIndex: 1,
               pointerEvents: 'none',
             }}
           />
         ) : null}
-
-        <Box
-          sx={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            top: 'max(16px, env(safe-area-inset-top))',
-            zIndex: 2,
-            px: 2,
-            pt: 7,
-            pr: 8,
-            textAlign: 'center',
-            pointerEvents: 'none',
-          }}
-        >
-          <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 800 }}>
-            Skano pjesën e përparme të ID-së
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.82)', mt: 0.75, fontWeight: 600 }}>
-            Vendoseni të gjithë kartën brenda kornizës. Fotoja duhet të jetë e qartë dhe e lexueshme.
-          </Typography>
-        </Box>
 
         <Box
           sx={{
@@ -430,60 +329,30 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
           }}
         >
           {phase === 'capturing' || phase === 'validating' ? (
-            <Stack spacing={1} sx={{ alignItems: 'center' }}>
+            <Stack sx={{ alignItems: 'center' }}>
               <CircularProgress size={36} sx={{ color: 'primary.main' }} />
-              {phase === 'validating' ? (
-                <Typography variant="body2" sx={{ color: '#fff', textAlign: 'center', fontWeight: 700 }}>
-                  {qualityHint}
-                </Typography>
-              ) : null}
-            </Stack>
-          ) : error ? (
-            <Stack spacing={1.5} sx={{ alignItems: 'center', pointerEvents: 'auto' }}>
-              <Typography variant="body2" sx={{ color: '#ffb4ab', textAlign: 'center', fontWeight: 700 }}>
-                {error}
-              </Typography>
-              <Stack direction="row" spacing={1}>
-                <Button
-                  variant="contained"
-                  onClick={() => {
-                    setError(null);
-                    setPhase('starting');
-                    setQualityHint('Duke hapur kamerën…');
-                    setProgress(0);
-                    capturingRef.current = false;
-                    restartScanRef.current?.();
-                  }}
-                  sx={{ fontWeight: 700 }}
-                >
-                  Provo përsëri
-                </Button>
-                <Button variant="outlined" onClick={handleClose} sx={{ fontWeight: 700, color: '#fff', borderColor: 'rgba(255,255,255,0.4)' }}>
-                  Mbyll
-                </Button>
-              </Stack>
             </Stack>
           ) : (
-            <Stack spacing={1.25} sx={{ alignItems: 'center', pointerEvents: 'auto' }}>
-              <Typography variant="body2" sx={{ color: '#fff', textAlign: 'center', fontWeight: 700 }}>
-                {qualityHint}
-              </Typography>
-              <LinearProgress
-                variant={frameReady ? 'determinate' : 'indeterminate'}
-                value={progress}
-                sx={{
-                  width: '100%',
-                  height: 6,
-                  borderRadius: 999,
-                  bgcolor: 'rgba(255,255,255,0.15)',
-                  '& .MuiLinearProgress-bar': { borderRadius: 999 },
-                }}
-              />
+            <Stack spacing={1.5} sx={{ alignItems: 'center', pointerEvents: 'auto' }}>
+              {error ? (
+                <Typography variant="body2" sx={{ color: '#ffb4ab', textAlign: 'center', fontWeight: 700, px: 1 }}>
+                  {error}
+                </Typography>
+              ) : null}
               <Button
                 variant="contained"
-                onClick={() => void captureFromGuide()}
-                disabled={!frameReady || phase !== 'scanning'}
-                sx={{ fontWeight: 700, mt: 0.5, minWidth: 160 }}
+                size="large"
+                onClick={() => {
+                  if (phase === 'error') {
+                    setError(null);
+                    capturingRef.current = false;
+                    restartScanRef.current?.();
+                    return;
+                  }
+                  void captureFromGuide();
+                }}
+                disabled={phase === 'starting' || (phase === 'scanning' && !cameraReady)}
+                sx={{ fontWeight: 700, minWidth: 200, py: 1.25 }}
               >
                 Kap foton
               </Button>

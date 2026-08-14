@@ -137,12 +137,17 @@ export function SearchableSelect({
     setQuery('');
   }, []);
 
-  React.useEffect(() => {
-    if (!open) return;
-    const handleScroll = () => close();
-    window.addEventListener('scroll', handleScroll, true);
-    return () => window.removeEventListener('scroll', handleScroll, true);
-  }, [close, open]);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+
+  const handleClickAway = React.useCallback(
+    (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      if (anchorRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      close();
+    },
+    [close],
+  );
 
   const handleToggle = () => {
     if (disabled) return;
@@ -171,7 +176,7 @@ export function SearchableSelect({
   const displayValue = customEditing || isCustomValue ? value : selectedLabel;
 
   return (
-    <ClickAwayListener onClickAway={close}>
+    <ClickAwayListener onClickAway={handleClickAway}>
       <FormControl
         fullWidth={fullWidth}
         size={size}
@@ -270,12 +275,11 @@ export function SearchableSelect({
         {open ? (
           <Popper
             open
-            disablePortal
             anchorEl={anchorRef.current}
             placement="bottom-start"
             data-scroll-lock-allow=""
             sx={{
-              zIndex: 10,
+              zIndex: 1600,
               width: Math.max(anchorRef.current?.offsetWidth ?? 240, menuMinWidth ?? 0),
             }}
             modifiers={[
@@ -285,7 +289,8 @@ export function SearchableSelect({
             ]}
           >
             <Paper
-            elevation={0}
+              ref={panelRef}
+              elevation={0}
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
             sx={(theme) => ({

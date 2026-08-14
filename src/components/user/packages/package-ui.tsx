@@ -579,6 +579,7 @@ export function PackageCheckoutCard({
   footer,
   accent = 'primary',
   selected = false,
+  compactPrice = false,
 }: {
   title: string;
   subtitle?: string;
@@ -598,6 +599,8 @@ export function PackageCheckoutCard({
   accent?: PlanAccent;
   /** Current / selected plan — accent border + corner checkmark. */
   selected?: boolean;
+  /** Smaller price type — Boost Coins catalog (not main subscription plans). */
+  compactPrice?: boolean;
 }) {
   const hasDetails = details.length > 0;
   const hasFooter = Boolean(footer);
@@ -683,9 +686,11 @@ export function PackageCheckoutCard({
       <Typography
         sx={{
           fontWeight: 900,
-          fontSize: { xs: '1.85rem', sm: '2.15rem' },
+          fontSize: compactPrice
+            ? { xs: '1.15rem', sm: '1.25rem' }
+            : { xs: '1.85rem', sm: '2.15rem' },
           lineHeight: 1,
-          letterSpacing: '-0.03em',
+          letterSpacing: compactPrice ? '-0.02em' : '-0.03em',
           color: 'text.primary',
           whiteSpace: 'nowrap',
           transition: 'color 0.15s ease',

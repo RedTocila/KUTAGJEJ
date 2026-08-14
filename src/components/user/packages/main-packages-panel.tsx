@@ -4,9 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Alert,
-  Box,
   Button,
-  CircularProgress,
   Stack,
   Typography,
 } from '@mui/material';
@@ -17,6 +15,7 @@ import {
   ProductDialogContent,
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
+import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { PackageLeadsFeatureLabel } from '@/components/user/leads-how-it-works';
 import { useCopy } from '@/hooks/use-copy';
@@ -224,11 +223,7 @@ export function MainPackagesPanel() {
 
   return (
     <Stack spacing={2.5}>
-      {loading ? (
-        <Box sx={{ py: 5, display: 'flex', justifyContent: 'center' }}>
-          <CircularProgress size={28} />
-        </Box>
-      ) : null}
+      {loading ? <PackageRowsSkeleton count={3} rowHeight={120} /> : null}
 
       {error ? (
         <Alert severity="warning" sx={{ borderRadius: 2 }}>

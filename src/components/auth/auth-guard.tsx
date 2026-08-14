@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Alert, Box, CircularProgress } from '@mui/material';
+import { Alert, Box } from '@mui/material';
+import { FullPageSkeleton } from '@/components/core/content-skeletons';
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';
 import { hasStoredAccessToken } from '@/lib/auth/storage';
@@ -111,7 +112,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             bgcolor: 'background.default',
           }}
         >
-          <CircularProgress />
+          <FullPageSkeleton />
         </Box>
       ) : null}
     </Box>

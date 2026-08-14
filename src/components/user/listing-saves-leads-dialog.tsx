@@ -21,6 +21,7 @@ import {
   ProductDialogContent,
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
+import { ListRowsSkeleton } from '@/components/core/content-skeletons';
 import { metricKindToConversationKind, startConversationWithMember } from '@/lib/conversations-client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import {
@@ -131,9 +132,7 @@ export function ListingSavesLeadsDialog({
         ) : null}
 
         {loading ? (
-          <Box sx={{ py: 5, display: 'flex', justifyContent: 'center' }}>
-            <CircularProgress size={28} />
-          </Box>
+          <ListRowsSkeleton count={5} rowHeight={64} />
         ) : packageRequired ? (
           <Stack spacing={2} sx={{ py: 1 }}>
             <Box

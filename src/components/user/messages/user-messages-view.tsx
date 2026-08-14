@@ -72,6 +72,7 @@ import {
   submitBusinessReservationToMessages,
 } from '@/lib/business-reservation-message';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { ListRowsSkeleton } from '@/components/core/content-skeletons';
 import { isBusinessPortalAccount } from '@/lib/user-portal-account-label';
 import { languageHtmlLang } from '@/lib/language';
 import { toAbsoluteSiteUrl, whatsappInquireHref } from '@/lib/listing-contact';
@@ -2202,9 +2203,9 @@ export function UserMessagesView() {
           </Stack>
 
           {listLoading ? (
-            <Stack sx={{ flex: 1, alignItems: 'center', justifyContent: 'center', py: 4 }}>
-              <CircularProgress size={28} />
-            </Stack>
+            <Box sx={{ px: 1.5, py: 1.5 }}>
+              <ListRowsSkeleton count={8} rowHeight={68} />
+            </Box>
           ) : conversations.length === 0 ? (
             <Stack
               spacing={1.25}
@@ -2305,9 +2306,9 @@ export function UserMessagesView() {
               <Typography color="text.secondary">{t.messages.pickConversation}</Typography>
             </Stack>
           ) : threadLoading && !activeConversation ? (
-            <Stack sx={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-              <CircularProgress size={28} />
-            </Stack>
+            <Box sx={{ flex: 1, px: 2, py: 3 }}>
+              <ListRowsSkeleton count={6} rowHeight={56} />
+            </Box>
           ) : activeConversation ? (
             <>
               {error ? (
@@ -2454,9 +2455,9 @@ export function UserMessagesView() {
                 >
                   <Box ref={messagesContentRef}>
                     {threadLoading && messages.length === 0 ? (
-                      <Stack sx={{ alignItems: 'center', justifyContent: 'center', py: 6 }}>
-                        <CircularProgress size={24} />
-                      </Stack>
+                      <Box sx={{ px: 1.5, py: 2 }}>
+                        <ListRowsSkeleton count={5} rowHeight={48} />
+                      </Box>
                     ) : messages.length === 0 ? (
                       <Box sx={{ display: 'flex', justifyContent: 'center', px: 2, py: 3 }}>
                         <Typography

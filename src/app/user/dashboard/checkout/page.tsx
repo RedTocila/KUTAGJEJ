@@ -2,8 +2,9 @@
 
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Alert, Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Stack, Typography } from '@mui/material';
 
+import { CheckoutSkeleton } from '@/components/core/content-skeletons';
 import { PokCheckoutView } from '@/components/payments/pok-checkout-view';
 import { PackageEurPrice } from '@/components/user/packages/package-ui';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
@@ -280,11 +281,7 @@ export default function UserCheckoutPage() {
 
   return (
     <Box sx={{ width: '100%' }}>
-      {loading ? (
-        <Box sx={{ py: 6, display: 'flex', justifyContent: 'center' }}>
-          <CircularProgress size={28} />
-        </Box>
-      ) : null}
+      {loading ? <CheckoutSkeleton /> : null}
 
       {error ? (
         <Stack spacing={2} sx={{ maxWidth: 560, mx: 'auto', width: '100%' }}>

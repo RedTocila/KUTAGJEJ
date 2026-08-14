@@ -26,6 +26,7 @@ import { JobCard } from '@/components/public/listing-cards/job-card';
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { HeroCategoryCircles } from '@/components/public/hero-category-circles';
+import { ListingCardsSkeleton } from '@/components/core/content-skeletons';
 import {
   ProductSearchIcon,
   productFilterButtonSx,
@@ -574,17 +575,15 @@ export function SearchPageView() {
 
         {!hasSearched || isAi ? (
           isAi && loading ? (
-            <Box sx={{ py: 5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
-              <CircularProgress size={26} />
-              <Typography variant="caption" color="text.secondary">
+            <Stack spacing={1.5}>
+              <ListingCardsSkeleton count={4} />
+              <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
                 {t.search.aiThinking}
               </Typography>
-            </Box>
+            </Stack>
           ) : null
         ) : loading && items.length === 0 ? (
-          <Box sx={{ py: 5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
-            <CircularProgress size={26} />
-          </Box>
+          <ListingCardsSkeleton count={8} />
         ) : items.length === 0 ? (
           <Box sx={{ py: 4, textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary">

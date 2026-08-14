@@ -5,7 +5,6 @@ import {
   Alert,
   Box,
   Button,
-  CircularProgress,
   GlobalStyles,
   Stack,
   Typography,
@@ -19,6 +18,7 @@ import type { PaymentErrorResponse } from '@nebula-ltd/pok-payments-js';
 
 import '@nebula-ltd/pok-payments-js/style.css';
 
+import { CheckoutSkeleton } from '@/components/core/content-skeletons';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { CreatedOrder, Payment } from '@/types/payment';
 import { verifyPayment } from '@/lib/payments-client';
@@ -412,12 +412,12 @@ export function PokCheckoutView({ title, summary, createOrder, onPaid, onDone }:
                 </Button>
               </Stack>
             ) : (
-              <>
-                <CircularProgress size={30} />
-                <Typography variant="body2" color="text.secondary">
+              <Box sx={{ width: '100%' }}>
+                <CheckoutSkeleton />
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 1.5 }}>
                   {phase === 'verifying' ? 'Po konfirmohet pagesa...' : 'Po përgatitet pagesa e sigurt...'}
                 </Typography>
-              </>
+              </Box>
             )}
           </Stack>
         ) : null}

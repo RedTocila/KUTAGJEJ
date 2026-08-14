@@ -34,6 +34,7 @@ import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
+import { ListRowsSkeleton, PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import {
   ProductDialog,
   ProductDialogActions,
@@ -342,9 +343,7 @@ function AutoRefreshSection() {
       ) : null}
 
       {loading ? (
-        <Box sx={{ py: 3, display: 'flex', justifyContent: 'center' }}>
-          <CircularProgress size={24} />
-        </Box>
+        <PackageRowsSkeleton count={3} rowHeight={88} />
       ) : (
         <Stack spacing={1.15}>
           {packages.map((pkg, index) => {
@@ -668,9 +667,7 @@ function PremiumListingSection() {
         ) : null}
         <ProductDialogContent sx={{ pt: 0, maxHeight: 360, overflowY: 'auto' }}>
           {pickerLoading ? (
-            <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
-              <CircularProgress size={28} />
-            </Box>
+            <ListRowsSkeleton count={5} rowHeight={64} />
           ) : pickerListings.length === 0 ? (
             <Alert severity="info" sx={{ borderRadius: 2 }}>
               {t.packages.noApprovedListingsPremium}
@@ -912,8 +909,8 @@ function ConvertListingSection() {
       ) : null}
 
       {loading ? (
-        <Box sx={{ py: 3, display: 'flex', justifyContent: 'center' }}>
-          <CircularProgress size={28} />
+        <Box sx={{ mt: 1.5 }}>
+          <PackageRowsSkeleton count={3} rowHeight={72} />
         </Box>
       ) : !hasPaidPlan ? (
         <Alert severity="info" sx={{ mt: 1.5, borderRadius: 1.5 }}>

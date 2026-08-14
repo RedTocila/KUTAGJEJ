@@ -3,12 +3,12 @@
 import * as React from 'react';
 import {
   Box,
-  CircularProgress,
   Stack,
   Typography,
 } from '@mui/material';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
+import { ContentBlockSkeleton } from '@/components/core/content-skeletons';
 import {
   ProductDialog,
   ProductDialogContent,
@@ -199,9 +199,7 @@ export function SavedListingPreviewDialog({
       <ProductDialogTitle onClose={onClose}>Njoftimi i ruajtur</ProductDialogTitle>
       <ProductDialogContent>
         {loading ? (
-          <Stack sx={{ alignItems: 'center', py: 4 }}>
-            <CircularProgress size={28} />
-          </Stack>
+          <ContentBlockSkeleton rows={3} rowHeight={80} />
         ) : error ? (
           <Typography color="error" variant="body2" sx={{ py: 2 }}>
             {error}

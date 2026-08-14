@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import {
   Alert,
   Box,
-  CircularProgress,
   Stack,
   Typography,
 } from '@mui/material';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
+import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import { useCopy } from '@/hooks/use-copy';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
@@ -122,9 +122,7 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
       ) : null}
 
       {loading ? (
-        <Box sx={{ py: 5, display: 'flex', justifyContent: 'center' }}>
-          <CircularProgress size={28} />
-        </Box>
+        <PackageRowsSkeleton count={6} />
       ) : (
         <Stack spacing={1.25}>
           <ReferralDiscountNote percent={lifetimePercent} />
@@ -137,6 +135,7 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
                 title={pkg.labelSq}
                 subtitle={packageSubtitle(pkg)}
                 badge={badge}
+                compactPrice
                 price={<PackageEurPrice listPrice={pkg.priceEur} percent={lifetimePercent} />}
                 onClick={() => router.push(checkoutCreditsHref(pkg.id))}
               />

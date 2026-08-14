@@ -6,7 +6,6 @@ import {
   Box,
   Button,
   Chip,
-  CircularProgress,
   FormControlLabel,
   IconButton,
   Stack,
@@ -24,6 +23,7 @@ import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
+import { ContentBlockSkeleton } from '@/components/core/content-skeletons';
 import {
   ProductDialog,
   ProductDialogActions,
@@ -233,8 +233,8 @@ export function CreditPackagesAdminPage() {
 
       <Box sx={{ ...productPanelSx, overflowX: 'auto' }}>
         {loading ? (
-          <Box sx={{ py: 5, display: 'flex', justifyContent: 'center' }}>
-            <CircularProgress size={28} />
+          <Box sx={{ p: 2 }}>
+            <ContentBlockSkeleton rows={5} rowHeight={48} />
           </Box>
         ) : packages.length === 0 ? (
           <Typography variant="body2" color="text.secondary" sx={{ p: 3 }}>

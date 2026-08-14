@@ -6,7 +6,6 @@ import {
   Alert,
   Box,
   Button,
-  CircularProgress,
   Grid,
   IconButton,
   InputAdornment,
@@ -22,6 +21,7 @@ import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/di
 import { ShareNetwork as ShareIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
+import { StatsPageSkeleton } from '@/components/core/content-skeletons';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { LeadsTopHeaderButton } from '@/components/user/leads-top-header-button';
 import { ListingSavesLeadsDialog } from '@/components/user/listing-saves-leads-dialog';
@@ -314,9 +314,7 @@ export default function UserStatisticsPage() {
       ) : null}
 
       {loading ? (
-        <Box sx={{ py: 6, display: 'flex', justifyContent: 'center' }}>
-          <CircularProgress size={28} />
-        </Box>
+        <StatsPageSkeleton />
       ) : (
         <>
           <Grid container spacing={{ xs: 1, sm: 1.5 }}>

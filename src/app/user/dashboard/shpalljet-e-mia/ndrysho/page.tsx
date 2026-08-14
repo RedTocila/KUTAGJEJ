@@ -2,8 +2,9 @@
 
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Alert, Box, CircularProgress, Stack, Typography } from '@mui/material';
+import { Alert, Box, Stack, Typography } from '@mui/material';
 
+import { ContentBlockSkeleton } from '@/components/core/content-skeletons';
 import { BusinessOwnerEdit } from '@/components/user/owner-edit/business-owner-edit';
 import { CarOwnerEdit } from '@/components/user/owner-edit/car-owner-edit';
 import { JobOwnerEdit } from '@/components/user/owner-edit/job-owner-edit';
@@ -143,9 +144,7 @@ export default function EditListingPage() {
       </Stack>
 
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-          <CircularProgress />
-        </Box>
+        <ContentBlockSkeleton rows={5} rowHeight={120} />
       ) : error ? (
         <Alert severity="error" sx={{ borderRadius: 2 }}>
           {error}

@@ -1,8 +1,9 @@
 import * as React from 'react';
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { Box, CircularProgress } from '@mui/material';
+import { Box } from '@mui/material';
 
+import { ListingCardsSkeleton } from '@/components/core/content-skeletons';
 import { PublicShell } from '@/components/public/public-shell';
 import { SearchPageView } from '@/components/public/search-page-view';
 import { config } from '@/config';
@@ -14,8 +15,8 @@ export const metadata: Metadata = {
 
 function SearchFallback() {
   return (
-    <Box sx={{ py: 8, display: 'flex', justifyContent: 'center' }}>
-      <CircularProgress size={28} />
+    <Box sx={{ px: 2, py: 3 }}>
+      <ListingCardsSkeleton count={8} />
     </Box>
   );
 }

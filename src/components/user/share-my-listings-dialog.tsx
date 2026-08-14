@@ -6,7 +6,6 @@ import {
   Alert,
   Box,
   Button,
-  CircularProgress,
   Drawer,
   IconButton,
   Stack,
@@ -22,6 +21,7 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
+import { ListRowsSkeleton } from '@/components/core/content-skeletons';
 import { useLanguage } from '@/hooks/use-language';
 import {
   listMyBusinessListings,
@@ -397,9 +397,7 @@ export function ShareMyListingsDialog({
           ) : null}
 
           {loading ? (
-            <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
-              <CircularProgress size={22} />
-            </Box>
+            <ListRowsSkeleton count={5} rowHeight={64} />
           ) : rows.length === 0 ? (
             <Stack spacing={1.5} sx={{ py: 2.5, alignItems: 'stretch' }}>
               <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', lineHeight: 1.4 }}>

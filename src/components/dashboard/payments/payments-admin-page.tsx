@@ -5,7 +5,6 @@ import {
   Alert,
   Box,
   Chip,
-  CircularProgress,
   Grid,
   MenuItem,
   Pagination,
@@ -22,6 +21,7 @@ import {
 import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
 
 import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
+import { ContentBlockSkeleton } from '@/components/core/content-skeletons';
 import { usePlatformAdminGuard } from '@/hooks/use-platform-admin';
 import { listAdminPayments } from '@/lib/admin-payments-client';
 import type { AdminPayment, AdminPaymentsResponse, PaymentType } from '@/types/payment';
@@ -162,8 +162,8 @@ export function PaymentsAdminPage() {
 
       <Box sx={{ ...productPanelSx, overflowX: 'auto' }}>
         {loading ? (
-          <Box sx={{ py: 5, display: 'flex', justifyContent: 'center' }}>
-            <CircularProgress size={28} />
+          <Box sx={{ p: 2 }}>
+            <ContentBlockSkeleton rows={6} rowHeight={48} />
           </Box>
         ) : payments.length === 0 ? (
           <Typography variant="body2" color="text.secondary" sx={{ p: 3 }}>

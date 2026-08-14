@@ -27,6 +27,7 @@ import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Sto
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
+import { ListRowsSkeleton } from '@/components/core/content-skeletons';
 import {
   ProductDialog,
   ProductDialogActions,
@@ -501,9 +502,7 @@ export function OkazionPackagesSection() {
         ) : null}
         <ProductDialogContent sx={{ pt: 0, maxHeight: 360, overflowY: 'auto' }}>
           {pickerLoading ? (
-            <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
-              <CircularProgress size={28} />
-            </Box>
+            <ListRowsSkeleton count={5} rowHeight={64} />
           ) : pickerListings.length === 0 ? (
             <Alert severity="info" sx={{ borderRadius: 2 }}>
               {t.packages.noApprovedListingsOkazion}

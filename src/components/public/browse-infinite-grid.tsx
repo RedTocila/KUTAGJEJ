@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Button, CircularProgress, Grid, Stack } from '@mui/material';
+import { Box, Button, Grid, Stack } from '@mui/material';
 
+import { ListingCardsSkeleton } from '@/components/core/content-skeletons';
 import { CarCard } from '@/components/public/listing-cards/car-card';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { JobCard } from '@/components/public/listing-cards/job-card';
@@ -201,7 +202,9 @@ export function BrowseInfiniteGrid({
           sx={{ display: 'flex', justifyContent: 'center', py: 1, minHeight: 48 }}
         >
           {loading ? (
-            <CircularProgress size={28} />
+            <Box sx={{ width: '100%' }}>
+              <ListingCardsSkeleton count={4} />
+            </Box>
           ) : error ? (
             <Button variant="outlined" onClick={() => void loadMore()} sx={{ fontWeight: 700 }}>
               Provo përsëri

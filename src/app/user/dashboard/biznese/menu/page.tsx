@@ -2,10 +2,11 @@
 
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Alert, Box, CircularProgress, Stack, Typography } from '@mui/material';
+import { Alert, Stack, Typography } from '@mui/material';
 import { ForkKnife as ForkKnifeIcon } from '@phosphor-icons/react/dist/ssr/ForkKnife';
 
 import { BusinessMenuEditor } from '@/components/businesses/business-menu-editor';
+import { ContentBlockSkeleton } from '@/components/core/content-skeletons';
 import { PostListingHeader } from '@/components/user/post-listing-header';
 import { BusinessAccountRequiredNotice } from '@/components/user/business-account-required-notice';
 import { useUser } from '@/hooks/use-user';
@@ -86,9 +87,7 @@ export default function BusinessMenuPage() {
       />
 
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-          <CircularProgress size={28} />
-        </Box>
+        <ContentBlockSkeleton rows={6} rowHeight={72} />
       ) : error && !listing ? (
         <Alert severity="warning">{error}</Alert>
       ) : listing ? (

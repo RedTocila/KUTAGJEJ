@@ -5,7 +5,6 @@ import {
   Avatar,
   Box,
   Button,
-  CircularProgress,
   Drawer,
   IconButton,
   Rating,
@@ -17,6 +16,7 @@ import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { MemberLeaveReviewButton } from '@/components/public/member-leave-review-button';
+import { ListRowsSkeleton } from '@/components/core/content-skeletons';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 import { useUser } from '@/hooks/use-user';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -165,9 +165,7 @@ export function MemberReviewsDialog({
           </Stack>
 
           {loading ? (
-            <Box sx={{ display: 'grid', placeItems: 'center', py: 4 }}>
-              <CircularProgress size={28} />
-            </Box>
+            <ListRowsSkeleton count={4} rowHeight={72} />
           ) : error ? (
             <Typography variant="body2" color="error" sx={{ fontWeight: 600 }}>
               {error}

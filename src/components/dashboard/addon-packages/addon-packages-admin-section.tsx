@@ -6,7 +6,6 @@ import {
   Box,
   Button,
   Chip,
-  CircularProgress,
   FormControl,
   FormControlLabel,
   IconButton,
@@ -31,6 +30,7 @@ import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
+import { ContentBlockSkeleton } from '@/components/core/content-skeletons';
 import {
   ProductDialog,
   ProductDialogActions,
@@ -530,9 +530,7 @@ export function AddonPackagesAdminSection({ kind }: AddonPackagesAdminSectionPro
       ) : null}
 
       {loading ? (
-        <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
-          <CircularProgress size={28} />
-        </Box>
+        <ContentBlockSkeleton rows={4} rowHeight={88} />
       ) : (
         kindsToShow.map((k) => (
           <KindSection

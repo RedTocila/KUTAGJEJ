@@ -6,7 +6,6 @@ import {
   Box,
   Button,
   Chip,
-  CircularProgress,
   Stack,
   ToggleButton,
   ToggleButtonGroup,
@@ -23,6 +22,7 @@ import {
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
+import { ContentBlockSkeleton } from '@/components/core/content-skeletons';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { PortalIconBox, PortalSectionCard } from '@/components/user/portal-cards';
 import { useCopy } from '@/hooks/use-copy';
@@ -213,9 +213,7 @@ export default function MyPaymentsPage() {
       ) : null}
 
       {loading ? (
-        <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
-          <CircularProgress size={28} />
-        </Box>
+        <ContentBlockSkeleton rows={5} rowHeight={96} />
       ) : (
         <Stack spacing={1.75}>
           {subscriptions.length > 0 ? (

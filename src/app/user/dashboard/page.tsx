@@ -8,6 +8,7 @@ import {
   Grid,
   IconButton,
   LinearProgress,
+  Skeleton,
   Stack,
   Tooltip,
   Typography,
@@ -171,6 +172,7 @@ function QuotaStat({
   convertTooltip,
   convertAria,
   unavailableLabel,
+  loading = false,
 }: {
   label: string;
   used: number;
@@ -181,6 +183,7 @@ function QuotaStat({
   convertTooltip: string;
   convertAria: string;
   unavailableLabel: string;
+  loading?: boolean;
 }) {
   const percent = max > 0 ? Math.min(100, (used / max) * 100) : 0;
   const barPercent = used > 0 && percent < 4 ? 4 : percent;
@@ -230,31 +233,35 @@ function QuotaStat({
           >
             {label}
           </Typography>
-          <Typography
-            sx={{
-              fontWeight: 750,
-              fontSize: '0.88rem',
-              lineHeight: 1.2,
-              letterSpacing: '-0.01em',
-              flexShrink: 0,
-              color: max <= 0 ? 'text.secondary' : 'text.primary',
-            }}
-          >
-            {max <= 0 ? (
-              unavailableLabel
-            ) : (
-              <>
-                {used}
-                <Box component="span" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                  {' '}
-                  / {max}
-                </Box>
-              </>
-            )}
-          </Typography>
+          {loading ? (
+            <Skeleton variant="text" width={52} height={22} sx={{ flexShrink: 0 }} />
+          ) : (
+            <Typography
+              sx={{
+                fontWeight: 750,
+                fontSize: '0.88rem',
+                lineHeight: 1.2,
+                letterSpacing: '-0.01em',
+                flexShrink: 0,
+                color: max <= 0 ? 'text.secondary' : 'text.primary',
+              }}
+            >
+              {max <= 0 ? (
+                unavailableLabel
+              ) : (
+                <>
+                  {used}
+                  <Box component="span" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                    {' '}
+                    / {max}
+                  </Box>
+                </>
+              )}
+            </Typography>
+          )}
         </Stack>
         <LinearProgress
-          variant="determinate"
+          variant={loading ? 'indeterminate' : 'determinate'}
           value={max <= 0 ? 0 : barPercent}
           sx={{
             height: 4,
@@ -262,7 +269,7 @@ function QuotaStat({
             bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'),
             '& .MuiLinearProgress-bar': {
               borderRadius: 2,
-              bgcolor: max <= 0 ? 'text.disabled' : tone,
+              bgcolor: loading || max <= 0 ? 'text.disabled' : tone,
             },
           }}
         />
@@ -313,6 +320,8 @@ export default function UserDashboardPage() {
     premium: 0,
     okazion: 0,
   });
+  const [subscriptionLoading, setSubscriptionLoading] = React.useState(true);
+  const [usageLoading, setUsageLoading] = React.useState(true);
   const [addListingOpen, setAddListingOpen] = React.useState(false);
 
   const canPublish =
@@ -322,18 +331,26 @@ export default function UserDashboardPage() {
       user?.role === 'business-user');
 
   React.useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setSubscriptionLoading(false);
+      return;
+    }
     let cancelled = false;
+    setSubscriptionLoading(true);
     void (async () => {
-      const [{ contracts }, subsRes] = await Promise.all([
-        listPublicContracts({ subscriberKind: subscriberKindFilter }),
-        listMySubscriptions(),
-      ]);
-      if (cancelled) return;
-      setPlans(contracts ?? []);
-      const active =
-        (subsRes.subscriptions ?? []).find((s) => s.status === 'active' && Number(s.priceEur) > 0) ?? null;
-      setActiveSub(active);
+      try {
+        const [{ contracts }, subsRes] = await Promise.all([
+          listPublicContracts({ subscriberKind: subscriberKindFilter }),
+          listMySubscriptions(),
+        ]);
+        if (cancelled) return;
+        setPlans(contracts ?? []);
+        const active =
+          (subsRes.subscriptions ?? []).find((s) => s.status === 'active' && Number(s.priceEur) > 0) ?? null;
+        setActiveSub(active);
+      } finally {
+        if (!cancelled) setSubscriptionLoading(false);
+      }
     })();
     return () => {
       cancelled = true;
@@ -343,9 +360,11 @@ export default function UserDashboardPage() {
   React.useEffect(() => {
     if (!user || !canPublish) {
       setUsage({ apartments: 0, cars: 0, jobs: 0, products: 0, premium: 0, okazion: 0 });
+      setUsageLoading(false);
       return;
     }
     let cancelled = false;
+    setUsageLoading(true);
     void Promise.all([
       listMyRealEstateListings(),
       listMyCarListings(),
@@ -353,17 +372,21 @@ export default function UserDashboardPage() {
       listMyMarketplaceListings(),
       fetchPremiumPlanQuota(),
       fetchOkazionPlanQuota(),
-    ]).then(([re, cars, jobs, mkt, premium, okazion]) => {
-      if (cancelled) return;
-      setUsage({
-        apartments: (re.listings ?? []).length,
-        cars: (cars.listings ?? []).length,
-        jobs: (jobs.listings ?? []).length,
-        products: (mkt.listings ?? []).length,
-        premium: premium.quota?.used ?? 0,
-        okazion: okazion.quota?.used ?? 0,
+    ])
+      .then(([re, cars, jobs, mkt, premium, okazion]) => {
+        if (cancelled) return;
+        setUsage({
+          apartments: (re.listings ?? []).length,
+          cars: (cars.listings ?? []).length,
+          jobs: (jobs.listings ?? []).length,
+          products: (mkt.listings ?? []).length,
+          premium: premium.quota?.used ?? 0,
+          okazion: okazion.quota?.used ?? 0,
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setUsageLoading(false);
       });
-    });
     return () => {
       cancelled = true;
     };
@@ -390,6 +413,7 @@ export default function UserDashboardPage() {
     }
     return FREE_PLAN_QUOTAS;
   }, [activeSub, plans]);
+  const quotasLoading = subscriptionLoading || usageLoading;
   const activePlanLabel = activeSub?.contractTitle || activeSub?.planCode?.toUpperCase() || 'FREE';
   const activePlanBadgeColor = String(planAccentForCode(activeSub?.planCode ?? 'free'));
 
@@ -522,9 +546,13 @@ export default function UserDashboardPage() {
             <Typography sx={{ fontWeight: 850, fontSize: '1.05rem', lineHeight: 1.2, letterSpacing: '-0.01em' }}>
               {t.subscriptionPackage}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35 }}>
-              {t.quotasHint(activePlanLabel, categoryLabel)}
-            </Typography>
+            {subscriptionLoading ? (
+              <Skeleton variant="text" width={160} height={20} />
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35 }}>
+                {t.quotasHint(activePlanLabel, categoryLabel)}
+              </Typography>
+            )}
           </Stack>
 
           <Stack
@@ -552,6 +580,7 @@ export default function UserDashboardPage() {
               convertTooltip={t.convertTooltip}
               convertAria={t.convertAria(t.apartments)}
               unavailableLabel={t.unavailable}
+              loading={quotasLoading}
             />
             <QuotaStat
               label={t.cars}
@@ -563,6 +592,7 @@ export default function UserDashboardPage() {
               convertTooltip={t.convertTooltip}
               convertAria={t.convertAria(t.cars)}
               unavailableLabel={t.unavailable}
+              loading={quotasLoading}
             />
             <QuotaStat
               label={t.jobs}
@@ -574,6 +604,7 @@ export default function UserDashboardPage() {
               convertTooltip={t.convertTooltip}
               convertAria={t.convertAria(t.jobs)}
               unavailableLabel={t.unavailable}
+              loading={quotasLoading}
             />
             <QuotaStat
               label={t.products}
@@ -585,6 +616,7 @@ export default function UserDashboardPage() {
               convertTooltip={t.convertTooltip}
               convertAria={t.convertAria(t.products)}
               unavailableLabel={t.unavailable}
+              loading={quotasLoading}
             />
             <QuotaStat
               label={t.premium}
@@ -595,6 +627,7 @@ export default function UserDashboardPage() {
               convertTooltip={t.convertTooltip}
               convertAria={t.convertAria(t.premium)}
               unavailableLabel={t.unavailable}
+              loading={quotasLoading}
             />
             <QuotaStat
               label={t.okazion}
@@ -605,6 +638,7 @@ export default function UserDashboardPage() {
               convertTooltip={t.convertTooltip}
               convertAria={t.convertAria(t.okazion)}
               unavailableLabel={t.unavailable}
+              loading={quotasLoading}
             />
           </Stack>
         </Box>
@@ -619,7 +653,7 @@ export default function UserDashboardPage() {
           href={paths.user.packagesMain}
           title={t.packagesTitle}
           icon={PackageIcon}
-          badge={activePlanLabel}
+          badge={subscriptionLoading ? undefined : activePlanLabel}
           badgeColor={activePlanBadgeColor}
         />
         <PortalLinkCard

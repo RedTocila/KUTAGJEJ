@@ -270,6 +270,13 @@ function deliveryStatusByMessageId(
   return map;
 }
 
+/** Listing chrome only when *you* contacted from a listing (inquirer). All other chats show the person. */
+function isPersonFocusedConversation(
+  item: Pick<ConversationSummary, 'role' | 'listingId'>,
+): boolean {
+  return item.role !== 'inquirer' || !item.listingId;
+}
+
 function conversationAvatarSrc(url: string | null | undefined): string | undefined {
   return storageImageUrl(url, { width: CHAT_AVATAR_THUMB, height: CHAT_AVATAR_THUMB });
 }
@@ -449,11 +456,16 @@ function ConversationListItem({
   const participantName = item.otherParticipantName?.trim() || t.messages.userFallback;
   const listingLabel = item.listingTitle?.trim() || '';
   const title = participantName;
-  const avatarUrl = item.otherParticipantAvatarUrl || item.listingImageUrl;
+  const showListingAvatar =
+    !isPersonFocusedConversation(item) && Boolean(item.listingImageUrl?.trim());
+  const avatarUrl = showListingAvatar ? item.listingImageUrl : item.otherParticipantAvatarUrl;
   const showListingSubtitle = Boolean(
     listingLabel && listingLabel.localeCompare(participantName, undefined, { sensitivity: 'accent' }) !== 0,
   );
-  const preview = item.lastMessageText || t.messages.noMessagesYet;
+  const preview =
+    listingInquiryPreviewText(item.lastMessageText) ||
+    item.lastMessageText ||
+    t.messages.noMessagesYet;
   const longPressTimer = React.useRef<number | null>(null);
   const suppressClick = React.useRef(false);
   const touchOrigin = React.useRef<{ x: number; y: number } | null>(null);
@@ -593,8 +605,9 @@ function ConversationListItem({
         <ChatAvatar
           src={avatarUrl}
           alt={title}
-          variant="circular"
+          variant={showListingAvatar ? 'rounded' : 'circular'}
           size={49}
+          borderRadius={showListingAvatar ? 1.5 : '50%'}
         />
         {pinned && !selectionMode ? (
           <Box
@@ -824,11 +837,11 @@ function MessageBubble({
   if (listingInquiry) {
     const inquiryMeta = (
       <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.4, pointerEvents: 'none' }}>
-        <Typography component="span" variant="caption" sx={{ fontSize: '0.68rem', lineHeight: 1, color: mine ? 'rgba(13, 34, 1, 0.55)' : 'text.secondary' }}>
+        <Typography component="span" variant="caption" sx={{ fontSize: '0.68rem', lineHeight: 1, color: 'rgba(255,255,255,0.55)' }}>
           {formatMessageTime(message.createdAt, locale)}
         </Typography>
         {mine && deliveryStatus ? (
-          <Box component="span" aria-label={isRead ? t.messages.read : t.messages.delivered} sx={{ display: 'inline-flex', lineHeight: 0, color: isRead ? '#1a6b8a' : 'rgba(13, 34, 1, 0.55)' }}>
+          <Box component="span" aria-label={isRead ? t.messages.read : t.messages.delivered} sx={{ display: 'inline-flex', lineHeight: 0, color: isRead ? '#6ec8e8' : 'rgba(255,255,255,0.55)' }}>
             <ChecksIcon size={14} weight="bold" />
           </Box>
         ) : null}
@@ -843,28 +856,13 @@ function MessageBubble({
           py: 0.35,
         }}
       >
-        <Box sx={{ maxWidth: '88%', display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start', gap: 0.75 }}>
-          <ListingInquiryCard data={listingInquiry.data} compact />
-          {body ? (
-            <Box
-              sx={(theme) => ({
-                px: 1.35,
-                py: 0.85,
-                maxWidth: 280,
-                bgcolor: mine ? CHAT_BUBBLE_MINE_LIGHT : CHAT_BUBBLE_THEIRS_LIGHT,
-                color: mine ? CHAT_BUBBLE_MINE_INK : 'text.primary',
-                borderRadius: mine ? CHAT_BUBBLE_RADIUS_MINE.map((r) => `${r}px`).join(' ') : CHAT_BUBBLE_RADIUS_THEIRS.map((r) => `${r}px`).join(' '),
-                ...theme.applyStyles('dark', {
-                  bgcolor: mine ? CHAT_BUBBLE_MINE_DARK : CHAT_BUBBLE_THEIRS_DARK,
-                }),
-              })}
-            >
-              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.9375rem', fontWeight: 500, lineHeight: 1.4 }}>
-                {body}
-              </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.35 }}>{inquiryMeta}</Box>
-            </Box>
-          ) : null}
+        <Box sx={{ maxWidth: '88%', display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start' }}>
+          <ListingInquiryCard
+            data={listingInquiry.data}
+            variant="bubble"
+            intro={body}
+            meta={inquiryMeta}
+          />
         </Box>
       </Box>
     );
@@ -1313,7 +1311,7 @@ function MessageComposer({
     >
       {listingInquiry ? (
         <Box sx={{ position: 'relative', alignSelf: 'flex-start', maxWidth: '100%' }}>
-          <ListingInquiryCard data={listingInquiry} compact />
+          <ListingInquiryCard data={listingInquiry} variant="composer" />
           <IconButton
             type="button"
             size="small"

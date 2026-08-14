@@ -164,48 +164,53 @@ function AcceptTermsField<T extends { acceptTerms: boolean }>({
       control={control}
       name={'acceptTerms' as never}
       render={({ field }) => (
-        <FormControl error={Boolean(error)} sx={{ width: '100%' }}>
+        <FormControl
+          error={Boolean(error)}
+          sx={{ width: '100%', position: 'relative', zIndex: 2, isolation: 'isolate' }}
+        >
           {/*
-            Do not nest terms/privacy links inside FormControlLabel — on mobile that
-            steals taps from the checkbox and makes acceptance impossible.
+            Use a native <label htmlFor> so iOS Safari toggles the checkbox reliably.
+            Do not use FormControlLabel with nested links — taps go to the links instead.
+            Do not resize/reposition the hidden MUI input — that moves the touch target off-screen on iOS.
           */}
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, width: '100%' }}>
+          <Box
+            component="label"
+            htmlFor={checkboxId}
+            sx={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 1,
+              width: '100%',
+              cursor: 'pointer',
+              userSelect: 'none',
+              WebkitTapHighlightColor: 'transparent',
+              touchAction: 'manipulation',
+            }}
+          >
             <Checkbox
               id={checkboxId}
               checked={Boolean(field.value)}
               onChange={(event) => field.onChange(event.target.checked)}
               onBlur={field.onBlur}
-              slotProps={{ input: { ref: field.ref } }}
+              inputRef={field.ref}
+              disableRipple
               sx={{
                 color: 'text.disabled',
-                p: 0.75,
-                mt: -0.25,
+                p: 1.25,
+                mt: -1,
+                ml: -1,
                 flexShrink: 0,
-                // Enlarge the hit target beyond the icon for touch devices.
-                '& input': {
-                  width: 44,
-                  height: 44,
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                },
                 '&.Mui-checked': { color: 'primary.main' },
               }}
             />
             <Typography
+              component="span"
               variant="body2"
               sx={{
                 color: 'text.secondary',
                 fontSize: '0.85rem',
                 lineHeight: 1.45,
-                pt: 0.75,
-                cursor: 'pointer',
-                userSelect: 'none',
-              }}
-              onClick={(event) => {
-                // Toggle when tapping the sentence; ignore taps on the legal links.
-                if ((event.target as HTMLElement).closest('a')) return;
-                field.onChange(!field.value);
+                pt: 1.35,
               }}
             >
               Pranoj{' '}
@@ -215,6 +220,7 @@ function AcceptTermsField<T extends { acceptTerms: boolean }>({
                 target="_blank"
                 rel="noopener noreferrer"
                 sx={{ color: 'primary.main', fontWeight: 700 }}
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={(event) => event.stopPropagation()}
               >
                 kushtet e përdorimit
@@ -226,6 +232,7 @@ function AcceptTermsField<T extends { acceptTerms: boolean }>({
                 target="_blank"
                 rel="noopener noreferrer"
                 sx={{ color: 'primary.main', fontWeight: 700 }}
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={(event) => event.stopPropagation()}
               >
                 politikën e privatësisë

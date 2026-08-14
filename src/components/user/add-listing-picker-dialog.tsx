@@ -72,12 +72,6 @@ const ALL_LISTINGS_ORDER: ListingCategoryKey[] = [
   'marketplace',
 ];
 
-const pickerHintSx = {
-  display: 'block',
-  lineHeight: 1.3,
-  color: '#9CA3AF',
-} as const;
-
 function fallbackOptions(t: AppMessages): { key: ListingCategoryKey; title: string; hint: string }[] {
   return [
     { key: 'real-estate', title: t.picker.realEstate, hint: t.picker.realEstateHint },
@@ -92,6 +86,53 @@ function fallbackOptions(t: AppMessages): { key: ListingCategoryKey; title: stri
 function sortAllListingsOptions<T extends { key: ListingCategoryKey }>(items: T[]): T[] {
   const rank = new Map(ALL_LISTINGS_ORDER.map((k, i) => [k, i]));
   return [...items].sort((a, b) => (rank.get(a.key) ?? 99) - (rank.get(b.key) ?? 99));
+}
+
+const pickerHintColor = '#9CA3AF';
+
+function PickerRowLabel({
+  title,
+  hint,
+  titleColor,
+  titleWeight = 700,
+}: {
+  title: string;
+  hint?: string;
+  titleColor?: string;
+  titleWeight?: number;
+}) {
+  return (
+    <Box sx={{ minWidth: 0 }}>
+      <Typography
+        sx={{
+          fontWeight: titleWeight,
+          fontSize: '0.95rem',
+          lineHeight: 1.25,
+          color: titleColor ?? 'text.primary',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {title}
+      </Typography>
+      {hint ? (
+        <Typography
+          variant="caption"
+          sx={{
+            display: 'block',
+            lineHeight: 1.3,
+            color: pickerHintColor,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {hint}
+        </Typography>
+      ) : null}
+    </Box>
+  );
 }
 
 function categoryIcon(key: ListingCategoryKey): PhosphorIcon {
@@ -402,13 +443,8 @@ export function AddListingPickerDialog({
                   >
                     <SparkleIcon size={18} weight="duotone" />
                   </Box>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.25, color: AI_SEARCH_BLUE }}>
-                      {t.picker.aiImport}
-                    </Typography>
-                    <Typography variant="caption" sx={pickerHintSx}>
-                      {t.picker.aiImportHint}
-                    </Typography>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <PickerRowLabel title={t.picker.aiImport} hint={t.picker.aiImportHint} titleColor={AI_SEARCH_BLUE} />
                   </Box>
                 </Box>
 
@@ -458,13 +494,8 @@ export function AddListingPickerDialog({
                   >
                     <SealPercentIcon size={18} weight="regular" />
                   </Box>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.25, color: OKAZION_ACCENT }}>
-                      {t.picker.postAsOkazion}
-                    </Typography>
-                    <Typography variant="caption" sx={pickerHintSx}>
-                      {t.picker.okazionHint}
-                    </Typography>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <PickerRowLabel title={t.picker.postAsOkazion} hint={t.picker.okazionHint} titleColor={OKAZION_ACCENT} />
                   </Box>
                 </Box>
 
@@ -514,13 +545,8 @@ export function AddListingPickerDialog({
                   >
                     <CrownSimpleIcon size={18} weight="regular" />
                   </Box>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.25, color: 'warning.main' }}>
-                      {t.picker.postAsPremium}
-                    </Typography>
-                    <Typography variant="caption" sx={pickerHintSx}>
-                      {t.picker.premiumHint}
-                    </Typography>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <PickerRowLabel title={t.picker.postAsPremium} hint={t.picker.premiumHint} titleColor="warning.main" />
                   </Box>
                 </Box>
 
@@ -570,13 +596,12 @@ export function AddListingPickerDialog({
                   >
                     <SquaresFourIcon size={18} weight="duotone" />
                   </Box>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', lineHeight: 1.25 }}>
-                      {t.picker.allListings}
-                    </Typography>
-                    <Typography variant="caption" sx={pickerHintSx}>
-                      {t.picker.allListingsHint}
-                    </Typography>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <PickerRowLabel
+                      title={t.picker.allListings}
+                      hint={t.picker.allListingsHint}
+                      titleWeight={600}
+                    />
                   </Box>
                 </Box>
               </>
@@ -602,6 +627,7 @@ export function AddListingPickerDialog({
                     component="button"
                     type="button"
                     disabled={!quotaAvailable}
+                    aria-label={quotaAvailable ? opt.title : `${opt.title} — ${t.picker.quotaUnavailable}`}
                     onClick={() => handlePick(opt.key)}
                     sx={{
                       display: 'flex',
@@ -641,13 +667,12 @@ export function AddListingPickerDialog({
                     >
                       <Icon size={18} weight="duotone" />
                     </Box>
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', lineHeight: 1.25 }}>
-                        {opt.title}
-                      </Typography>
-                      <Typography variant="caption" sx={pickerHintSx}>
-                        {quotaAvailable ? opt.hint : t.picker.quotaUnavailable}
-                      </Typography>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <PickerRowLabel
+                        title={opt.title}
+                        hint={quotaAvailable ? opt.hint : t.picker.quotaUnavailable}
+                        titleWeight={600}
+                      />
                     </Box>
                   </Box>
                 </Box>

@@ -261,6 +261,9 @@ export function SearchableSelect({
           sx={{
             zIndex: 1600,
             width: Math.max(anchorRef.current?.offsetWidth ?? 240, menuMinWidth ?? 0),
+            // Closed poppers must not intercept taps on fields below (e.g. terms checkbox on auth).
+            pointerEvents: open ? 'auto' : 'none',
+            visibility: open ? 'visible' : 'hidden',
           }}
           modifiers={[
             { name: 'offset', options: { offset: [0, 4] } },

@@ -52,9 +52,9 @@ import {
 import { paths } from '@/paths';
 import type { OkazionPackage, OkazionVoucher } from '@/types/payment';
 import {
-  DualPayOfferRow,
+  ExtraPackageCard,
   PackageEurPrice,
-  SectionBlock,
+  PackageGroupHeader,
   SoftChip,
   dualPayButtonSx,
   formatBc,
@@ -306,31 +306,30 @@ export function OkazionPackagesSection() {
   const busy = busyId === pkg.id;
 
   return (
-    <SectionBlock
-      icon={SealPercentIcon}
-      title="OKAZION"
-      info={t.packages.okazionInfo}
-      infoAriaLabel={t.packages.packageInfoAria}
-      accent="error"
-      chips={
-        unused.length > 0 ? (
-          <SoftChip label={`${unused.length} për t'u aplikuar`} color="error" />
-        ) : undefined
-      }
-    >
+    <Stack spacing={1.15}>
+      <PackageGroupHeader
+        title="OKAZION"
+        accent="error"
+        chips={
+          unused.length > 0 ? (
+            <SoftChip label={`${unused.length} për t'u aplikuar`} color="error" compact />
+          ) : undefined
+        }
+      />
+
       {error ? (
-        <Alert severity="warning" sx={{ mb: 1.5, borderRadius: 2 }} onClose={() => setError(null)}>
+        <Alert severity="warning" sx={{ borderRadius: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       ) : null}
       {success ? (
-        <Alert severity="success" sx={{ mb: 1.5, borderRadius: 2 }} onClose={() => setSuccess(null)}>
+        <Alert severity="success" sx={{ borderRadius: 2 }} onClose={() => setSuccess(null)}>
           {success}
         </Alert>
       ) : null}
 
       {unused.length > 0 ? (
-        <Stack spacing={1} sx={{ mb: 1.25 }}>
+        <Stack spacing={1}>
           {unused.map((v) => (
             <Stack
               key={v.id}
@@ -339,8 +338,8 @@ export function OkazionPackagesSection() {
               sx={{
                 alignItems: { sm: 'center' },
                 justifyContent: 'space-between',
-                p: 1.35,
-                borderRadius: 2,
+                p: 1.5,
+                borderRadius: 2.5,
                 border: '1px dashed',
                 borderColor: OKAZION_ACCENT,
                 bgcolor: OKAZION_ACCENT_SOFT,
@@ -363,11 +362,16 @@ export function OkazionPackagesSection() {
         </Stack>
       ) : null}
 
-      <DualPayOfferRow
+      <ExtraPackageCard
+        icon={SealPercentIcon}
+        category="OKAZION"
         title={quantity > 1 ? `${pkgTitle} ×${quantity}` : pkgTitle}
         badge={t.packages.daysShort(pkg.days)}
         accent="error"
         highlighted
+        info={t.packages.okazionInfo}
+        infoAriaLabel={t.packages.packageInfoAria}
+        footer={t.packages.okazionGrowEliteNote}
         meta={
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
@@ -458,10 +462,6 @@ export function OkazionPackagesSection() {
           </>
         }
       />
-
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5, px: 0.25 }}>
-        {t.packages.okazionGrowEliteNote}
-      </Typography>
 
       <ProductDialog open={assignOpen} onClose={closeAssign} fullWidth maxWidth="sm">
         <ProductDialogTitle
@@ -582,6 +582,6 @@ export function OkazionPackagesSection() {
           </Button>
         </ProductDialogActions>
       </ProductDialog>
-    </SectionBlock>
+    </Stack>
   );
 }

@@ -840,7 +840,226 @@ export function PackageCheckoutCard({
 }
 
 /**
- * Flat dual-pay offer inside a SectionBlock — title + € / BC CTAs without a nested card shell.
+ * Standalone dual-pay package card (no parent section shell).
+ * Category eyebrow + title + € / BC CTAs.
+ */
+export function ExtraPackageCard({
+  icon: Icon,
+  category,
+  title,
+  badge,
+  accent = 'primary',
+  highlighted = false,
+  info,
+  infoAriaLabel = 'More info',
+  meta,
+  footer,
+  actions,
+}: {
+  icon?: PhosphorIcon;
+  category?: string;
+  title: string;
+  badge?: string | null;
+  accent?: PlanAccent;
+  highlighted?: boolean;
+  info?: string;
+  infoAriaLabel?: string;
+  meta?: React.ReactNode;
+  footer?: React.ReactNode;
+  actions: React.ReactNode;
+}) {
+  return (
+    <Box
+      sx={{
+        position: 'relative',
+        borderRadius: 2.75,
+        border: '1px solid',
+        borderColor: highlighted
+          ? (t) => resolveAccent(t, accent)
+          : 'divider',
+        bgcolor: 'background.paper',
+        overflow: 'hidden',
+        boxShadow: highlighted
+          ? (t) => `0 10px 28px ${alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.22 : 0.14)}`
+          : (t) => (t.palette.mode === 'dark' ? 'none' : `0 1px 2px ${alpha(t.palette.common.black, 0.04)}`),
+      }}
+    >
+      {highlighted ? (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            background: (t) =>
+              `linear-gradient(135deg, ${alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.14 : 0.08)} 0%, transparent 55%)`,
+          }}
+        />
+      ) : null}
+
+      <Box sx={{ position: 'relative', px: { xs: 1.85, sm: 2.15 }, pt: { xs: 1.65, sm: 1.85 }, pb: 1.15 }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 0.75 }}>
+          <Stack direction="row" spacing={1.1} sx={{ alignItems: 'flex-start', minWidth: 0, flex: 1 }}>
+            {Icon ? (
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 2,
+                  display: 'grid',
+                  placeItems: 'center',
+                  flexShrink: 0,
+                  bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.2 : 0.12),
+                  color: (t) => resolveAccent(t, accent),
+                }}
+              >
+                <Icon size={22} weight="duotone" />
+              </Box>
+            ) : null}
+            <Box sx={{ minWidth: 0, flex: 1, pt: 0.1 }}>
+              {category ? (
+                <Typography
+                  sx={{
+                    fontWeight: 750,
+                    fontSize: '0.68rem',
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: (t) => resolveAccent(t, accent),
+                    mb: 0.3,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {category}
+                </Typography>
+              ) : null}
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+                <Typography
+                  sx={{
+                    fontWeight: 900,
+                    fontSize: { xs: '1.15rem', sm: '1.25rem' },
+                    lineHeight: 1.15,
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  {title}
+                </Typography>
+                {badge ? (
+                  <Box
+                    sx={{
+                      px: 0.9,
+                      py: 0.25,
+                      borderRadius: 999,
+                      bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.28 : 0.16),
+                      color: (t) => resolveAccent(t, accent),
+                      fontWeight: 850,
+                      fontSize: '0.66rem',
+                      lineHeight: 1.3,
+                      letterSpacing: '0.01em',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {badge}
+                  </Box>
+                ) : null}
+              </Stack>
+            </Box>
+          </Stack>
+
+          {info ? (
+            <Tooltip
+              arrow
+              enterTouchDelay={0}
+              leaveTouchDelay={4000}
+              title={
+                <Typography variant="body2" component="span" sx={{ display: 'block', lineHeight: 1.45 }}>
+                  {info}
+                </Typography>
+              }
+              slotProps={{
+                tooltip: {
+                  sx: { maxWidth: 300, p: 1.25 },
+                },
+              }}
+            >
+              <IconButton
+                aria-label={infoAriaLabel}
+                size="small"
+                sx={{
+                  color: 'text.secondary',
+                  p: 0.35,
+                  mt: -0.15,
+                  flexShrink: 0,
+                  '&:hover': { color: (t) => resolveAccent(t, accent), bgcolor: 'action.hover' },
+                }}
+              >
+                <QuestionIcon size={17} weight="bold" />
+              </IconButton>
+            </Tooltip>
+          ) : null}
+        </Stack>
+
+        {meta ? <Box sx={{ mt: 1.25 }}>{meta}</Box> : null}
+      </Box>
+
+      <Box
+        sx={{
+          position: 'relative',
+          px: { xs: 1.85, sm: 2.15 },
+          pb: { xs: 1.65, sm: 1.85 },
+          pt: 0.25,
+        }}
+      >
+        <Stack direction="row" spacing={0.9}>
+          {actions}
+        </Stack>
+        {footer ? (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: 'block', mt: 1.15, lineHeight: 1.4, fontWeight: 550 }}
+          >
+            {footer}
+          </Typography>
+        ) : null}
+      </Box>
+    </Box>
+  );
+}
+
+/** Lightweight label above a group of ExtraPackageCards — not a wrapping container. */
+export function PackageGroupHeader({
+  title,
+  chips,
+  accent = 'primary',
+}: {
+  title: string;
+  chips?: React.ReactNode;
+  accent?: PlanAccent;
+}) {
+  return (
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 0.75, px: 0.15, mb: 0.15 }}
+    >
+      <Typography
+        sx={{
+          fontWeight: 850,
+          fontSize: '0.82rem',
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+          color: (t) => resolveAccent(t, accent),
+        }}
+      >
+        {title}
+      </Typography>
+      {chips ? <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, justifyContent: 'flex-end' }}>{chips}</Box> : null}
+    </Stack>
+  );
+}
+
+/**
+ * @deprecated Prefer ExtraPackageCard for dual-pay offers.
+ * Kept for any remaining call sites.
  */
 export function DualPayOfferRow({
   title,
@@ -854,81 +1073,18 @@ export function DualPayOfferRow({
   badge?: string | null;
   accent?: PlanAccent;
   highlighted?: boolean;
-  /** Optional line under the title (e.g. quantity stepper). */
   meta?: React.ReactNode;
   actions: React.ReactNode;
 }) {
   return (
-    <Box
-      sx={{
-        px: { xs: 1.75, sm: 2 },
-        py: { xs: 1.5, sm: 1.65 },
-        borderRadius: 2.25,
-        bgcolor: highlighted
-          ? (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.14 : 0.07)
-          : (t) => (t.palette.mode === 'dark' ? alpha(t.palette.common.white, 0.03) : alpha(t.palette.common.black, 0.02)),
-        border: '1px solid',
-        borderColor: highlighted
-          ? (t) => alpha(resolveAccent(t, accent), 0.45)
-          : (t) => (t.palette.mode === 'dark' ? alpha(t.palette.common.white, 0.06) : 'divider'),
-      }}
-    >
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={{ xs: 1.15, sm: 1.5 }}
-        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
-      >
-        <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Stack
-            direction="row"
-            spacing={0.75}
-            sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}
-          >
-            <Typography
-              sx={{
-                fontWeight: 850,
-                fontSize: { xs: '0.98rem', sm: '1.02rem' },
-                lineHeight: 1.25,
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {title}
-            </Typography>
-            {badge ? (
-              <Box
-                sx={{
-                  px: 0.85,
-                  py: 0.2,
-                  borderRadius: 999,
-                  bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.28 : 0.16),
-                  color: (t) => resolveAccent(t, accent),
-                  fontWeight: 850,
-                  fontSize: '0.66rem',
-                  lineHeight: 1.35,
-                  letterSpacing: '0.02em',
-                  flexShrink: 0,
-                }}
-              >
-                {badge}
-              </Box>
-            ) : null}
-          </Stack>
-          {meta ? <Box sx={{ mt: 1 }}>{meta}</Box> : null}
-        </Box>
-
-        <Stack
-          direction="row"
-          spacing={0.85}
-          sx={{
-            flexShrink: 0,
-            width: { xs: '100%', sm: 'auto' },
-            minWidth: { sm: 220 },
-          }}
-        >
-          {actions}
-        </Stack>
-      </Stack>
-    </Box>
+    <ExtraPackageCard
+      title={title}
+      badge={badge}
+      accent={accent}
+      highlighted={highlighted}
+      meta={meta}
+      actions={actions}
+    />
   );
 }
 
@@ -1144,17 +1300,17 @@ export function accentButtonSx(accent: PlanAccent, variant: 'contained' | 'outli
   };
 }
 
-/** Shared sizing for dual € / BC CTAs in DualPayOfferRow. */
+/** Shared sizing for dual € / BC CTAs on ExtraPackageCard. */
 export function dualPayButtonSx(accent: PlanAccent, variant: 'contained' | 'outlined' = 'contained') {
   return {
     ...accentButtonSx(accent, variant),
     flex: 1,
     minWidth: 0,
-    borderRadius: 2,
-    minHeight: 42,
-    py: 1,
-    px: 1.25,
-    fontSize: '0.88rem',
+    borderRadius: 2.25,
+    minHeight: 46,
+    py: 1.15,
+    px: 1.35,
+    fontSize: '0.92rem',
     fontWeight: 850,
     letterSpacing: '-0.01em',
   };

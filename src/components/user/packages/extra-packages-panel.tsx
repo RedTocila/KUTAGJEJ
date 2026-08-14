@@ -67,10 +67,10 @@ import { paths } from '@/paths';
 import type { AutoRefreshPackage, PremiumPackage, PremiumVoucher } from '@/types/payment';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import {
-  DualPayOfferRow,
+  ExtraPackageCard,
   PackageEurPrice,
+  PackageGroupHeader,
   ReferralDiscountNote,
-  SectionBlock,
   SoftChip,
   dualPayButtonSx,
   formatBc,
@@ -324,20 +324,19 @@ function AutoRefreshSection() {
   };
 
   return (
-    <SectionBlock
-      icon={ArrowClockwiseIcon}
-      title="Auto-Refresh"
-      info={t.packages.autoRefreshInfo}
-      infoAriaLabel={t.packages.packageInfoAria}
-      chips={<SoftChip label={t.packages.inUse(used, slots)} />}
-    >
+    <Stack spacing={1.15}>
+      <PackageGroupHeader
+        title="Auto-Refresh"
+        chips={<SoftChip label={t.packages.inUse(used, slots)} compact />}
+      />
+
       {error ? (
-        <Alert severity="warning" sx={{ mb: 1.5, borderRadius: 2 }} onClose={() => setError(null)}>
+        <Alert severity="warning" sx={{ borderRadius: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       ) : null}
       {success ? (
-        <Alert severity="success" sx={{ mb: 1.5, borderRadius: 2 }} onClose={() => setSuccess(null)}>
+        <Alert severity="success" sx={{ borderRadius: 2 }} onClose={() => setSuccess(null)}>
           {success}
         </Alert>
       ) : null}
@@ -347,18 +346,22 @@ function AutoRefreshSection() {
           <CircularProgress size={24} />
         </Box>
       ) : (
-        <Stack spacing={1}>
+        <Stack spacing={1.15}>
           {packages.map((pkg, index) => {
             const busy = busyId === pkg.id;
             const priceBc = Number(pkg.priceBc) || 0;
             const canAfford = balance >= priceBc && priceBc > 0;
             const best = index === 1;
             return (
-              <DualPayOfferRow
+              <ExtraPackageCard
                 key={pkg.id}
+                icon={ArrowClockwiseIcon}
+                category="Auto-Refresh"
                 title={t.packages.slots(pkg.slots)}
                 badge={best ? t.packages.bestValue : null}
                 highlighted={best}
+                info={index === 0 ? t.packages.autoRefreshInfo : undefined}
+                infoAriaLabel={t.packages.packageInfoAria}
                 actions={
                   <>
                     <Button
@@ -389,7 +392,7 @@ function AutoRefreshSection() {
           })}
         </Stack>
       )}
-    </SectionBlock>
+    </Stack>
   );
 }
 
@@ -530,31 +533,30 @@ function PremiumListingSection() {
   };
 
   return (
-    <SectionBlock
-      icon={SparkleIcon}
-      title="Premium Listing"
-      info={t.packages.premiumListingInfo}
-      infoAriaLabel={t.packages.packageInfoAria}
-      accent="warning"
-      chips={
-        unused.length > 0 ? (
-          <SoftChip label={`${unused.length} për t'u aplikuar`} color="warning" />
-        ) : undefined
-      }
-    >
+    <Stack spacing={1.15}>
+      <PackageGroupHeader
+        title="Premium Listing"
+        accent="warning"
+        chips={
+          unused.length > 0 ? (
+            <SoftChip label={`${unused.length} për t'u aplikuar`} color="warning" compact />
+          ) : undefined
+        }
+      />
+
       {error ? (
-        <Alert severity="warning" sx={{ mb: 1.5, borderRadius: 2 }} onClose={() => setError(null)}>
+        <Alert severity="warning" sx={{ borderRadius: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       ) : null}
       {success ? (
-        <Alert severity="success" sx={{ mb: 1.5, borderRadius: 2 }} onClose={() => setSuccess(null)}>
+        <Alert severity="success" sx={{ borderRadius: 2 }} onClose={() => setSuccess(null)}>
           {success}
         </Alert>
       ) : null}
 
       {unused.length > 0 ? (
-        <Stack spacing={1} sx={{ mb: 1.25 }}>
+        <Stack spacing={1}>
           {unused.map((v) => (
             <Stack
               key={v.id}
@@ -563,8 +565,8 @@ function PremiumListingSection() {
               sx={{
                 alignItems: { sm: 'center' },
                 justifyContent: 'space-between',
-                p: 1.35,
-                borderRadius: 2,
+                p: 1.5,
+                borderRadius: 2.5,
                 border: '1px dashed',
                 borderColor: 'warning.main',
                 bgcolor: (t) => `${t.palette.warning.main}10`,
@@ -581,18 +583,23 @@ function PremiumListingSection() {
         </Stack>
       ) : null}
 
-      <Stack spacing={1}>
-        {packages.map((pkg) => {
+      <Stack spacing={1.15}>
+        {packages.map((pkg, index) => {
           const busy = busyId === pkg.id;
           const canAfford = balance >= pkg.priceBc;
           const highlighted = pkg.days === 15;
           return (
-            <DualPayOfferRow
+            <ExtraPackageCard
               key={pkg.id}
+              icon={SparkleIcon}
+              category="Premium"
               title={localizedLabel(language, pkg.labelSq, pkg.labelEn)}
               badge={highlighted ? t.packages.bestValue : null}
               accent="warning"
               highlighted={highlighted}
+              info={index === 0 ? t.packages.premiumListingInfo : undefined}
+              infoAriaLabel={t.packages.packageInfoAria}
+              footer={index === packages.length - 1 ? t.packages.premiumGrowEliteNote : undefined}
               actions={
                 <>
                   <Button
@@ -624,10 +631,6 @@ function PremiumListingSection() {
           );
         })}
       </Stack>
-
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5, px: 0.25 }}>
-        {t.packages.premiumGrowEliteNote}
-      </Typography>
 
       <ProductDialog open={assignOpen} onClose={closeAssign} fullWidth maxWidth="sm">
         <ProductDialogTitle
@@ -745,7 +748,7 @@ function PremiumListingSection() {
           </Button>
         </ProductDialogActions>
       </ProductDialog>
-    </SectionBlock>
+    </Stack>
   );
 }
 
@@ -1068,7 +1071,7 @@ export function ExtraPackagesPanel() {
   }, []);
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2.25}>
       <Stack
         direction="row"
         spacing={1}

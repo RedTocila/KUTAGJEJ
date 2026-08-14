@@ -33,6 +33,7 @@ import { ListingMetricsTracker } from '@/components/public/listing-metrics-track
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingSellerProfileCard } from '@/components/public/listing-seller-profile-card';
 import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
+import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
@@ -620,6 +621,7 @@ export function CarListingDetailView({
                       <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)} shikime</Typography>
                     </Stack>
                   </Stack>
+                  <ListingVerifiedNotice verified={Boolean(listing.seller?.verified)} />
                 </Stack>
               </Stack>
 

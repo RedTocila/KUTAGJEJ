@@ -11,6 +11,7 @@ import { PostListingHeader } from '@/components/user/post-listing-header';
 import { BusinessAccountRequiredNotice } from '@/components/user/business-account-required-notice';
 import { useUser } from '@/hooks/use-user';
 import {
+  getMyBusinessListing,
   listMyBusinessListings,
   type BusinessMineListing,
 } from '@/lib/directory-listings-client';
@@ -40,28 +41,38 @@ export default function BusinessMenuPage() {
     setLoading(true);
     setError(null);
 
-    void listMyBusinessListings().then((res) => {
+    void (async () => {
+      let id = listingId;
+      if (!id) {
+        const res = await listMyBusinessListings();
+        if (cancelled) return;
+        if (res.error) {
+          setError(res.error);
+          setListing(null);
+          setLoading(false);
+          return;
+        }
+        id = res.listings?.[0]?.id ?? '';
+        if (!id) {
+          setError('Nuk keni ende një profil biznesi. Krijojeni së pari, pastaj shtoni menunë.');
+          setListing(null);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // List cards are slim (no menu) — load the full mine payload so saved
+      // categories and items hydrate in the editor.
+      const full = await getMyBusinessListing(id);
       if (cancelled) return;
-      if (res.error) {
-        setError(res.error);
+      if (full.error || !full.listing) {
+        setError(full.error ?? 'Profili i biznesit nuk u gjet.');
         setListing(null);
-        setLoading(false);
-        return;
+      } else {
+        setListing(full.listing);
       }
-      const listings = res.listings ?? [];
-      const found = listingId
-        ? listings.find((l) => l.id === listingId) ?? null
-        : listings[0] ?? null;
-      if (!found) {
-        setError(
-          listings.length === 0
-            ? 'Nuk keni ende një profil biznesi. Krijojeni së pari, pastaj shtoni menunë.'
-            : 'Profili i biznesit nuk u gjet.',
-        );
-      }
-      setListing(found);
       setLoading(false);
-    });
+    })();
 
     return () => {
       cancelled = true;

@@ -36,6 +36,7 @@ import { ListingMetricsTracker } from '@/components/public/listing-metrics-track
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingSellerProfileCard } from '@/components/public/listing-seller-profile-card';
 import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
+import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { StickyListingContact } from '@/components/public/sticky-listing-contact';
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
@@ -649,6 +650,7 @@ export function RealEstateListingDetailView({
                     <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)} shikime</Typography>
                   </Stack>
                 </Stack>
+                <ListingVerifiedNotice verified={Boolean(listing.seller?.verified)} />
               </Stack>
             </Stack>
 

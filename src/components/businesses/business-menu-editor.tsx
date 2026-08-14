@@ -7,6 +7,7 @@ import {
   Button,
   CircularProgress,
   IconButton,
+  LinearProgress,
   Stack,
   TextField,
   ToggleButton,
@@ -28,6 +29,7 @@ import {
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
 import { formatPrice } from '@/components/public/listing-cards/format-helpers';
+import { ProductTag } from '@/components/public/product-browse-chrome';
 import { ListingFormActions } from '@/components/user/listing-form-ui';
 import { importMenuFromImages } from '@/lib/ai-menu-client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -129,6 +131,90 @@ function emptyProductDraft(categoryId: string): ProductDraft {
   };
 }
 
+function MenuCategoryTabs({
+  categories,
+  activeId,
+  onSelect,
+}: {
+  categories: BusinessMenuCategory[];
+  activeId: string;
+  onSelect: (id: string) => void;
+}) {
+  const scrollerRef = React.useRef<HTMLDivElement | null>(null);
+  const activeRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    const scroller = scrollerRef.current;
+    const activeEl = activeRef.current;
+    if (!scroller || !activeEl) return;
+    const target = activeEl.offsetLeft - (scroller.clientWidth - activeEl.offsetWidth) / 2;
+    const nextLeft = Math.max(0, Math.min(target, scroller.scrollWidth - scroller.clientWidth));
+    if (Math.abs(scroller.scrollLeft - nextLeft) < 1) return;
+    if (typeof scroller.scrollTo === 'function') {
+      scroller.scrollTo({ left: nextLeft, behavior: 'smooth' });
+    } else {
+      scroller.scrollLeft = nextLeft;
+    }
+  }, [activeId]);
+
+  return (
+    <Box
+      ref={scrollerRef}
+      sx={{
+        width: '100%',
+        minWidth: 0,
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        overscrollBehaviorX: 'contain',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+        '&::-webkit-scrollbar': { display: 'none' },
+      }}
+    >
+      <Stack direction="row" spacing={0.75} sx={{ width: 'max-content', flexWrap: 'nowrap', pr: 1 }}>
+        {categories.map((cat) => {
+          const active = cat.id === activeId;
+          return (
+            <Box
+              key={cat.id}
+              ref={active ? activeRef : undefined}
+              sx={{ flexShrink: 0, display: 'inline-flex' }}
+            >
+              <ProductTag
+                label={cat.name || 'Pa emër'}
+                active={active}
+                onClick={() => onSelect(cat.id)}
+                sx={{ flexShrink: 0 }}
+              />
+            </Box>
+          );
+        })}
+      </Stack>
+    </Box>
+  );
+}
+
+/** Visual wait indicator while the vision API runs — eases toward 96% until done. */
+function useSimulatedProgress(active: boolean) {
+  const [value, setValue] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!active) {
+      setValue(0);
+      return;
+    }
+    setValue(8);
+    const started = Date.now();
+    const id = window.setInterval(() => {
+      const elapsed = Date.now() - started;
+      setValue(Math.min(96, 8 + 88 * (1 - Math.exp(-elapsed / 16000))));
+    }, 200);
+    return () => window.clearInterval(id);
+  }, [active]);
+
+  return value;
+}
+
 export function BusinessMenuEditor({
   listing,
 }: {
@@ -139,12 +225,17 @@ export function BusinessMenuEditor({
   const initial = React.useMemo(() => hydrateMenu(listing), [listing]);
   const [categories, setCategories] = React.useState<BusinessMenuCategory[]>(initial.categories);
   const [items, setItems] = React.useState<BusinessMenuItem[]>(initial.items);
+  const [activeCategoryId, setActiveCategoryId] = React.useState(
+    () => initial.categories[0]?.id ?? '',
+  );
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [aiBusy, setAiBusy] = React.useState(false);
+  const [aiFileCount, setAiFileCount] = React.useState(0);
   const [aiNotice, setAiNotice] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const aiProgress = useSimulatedProgress(aiBusy);
 
   const [categoryDialogOpen, setCategoryDialogOpen] = React.useState(false);
   const [categoryNameDraft, setCategoryNameDraft] = React.useState('');
@@ -159,7 +250,26 @@ export function BusinessMenuEditor({
     const next = hydrateMenu(listing);
     setCategories(next.categories);
     setItems(next.items);
+    setActiveCategoryId((prev) =>
+      next.categories.some((c) => c.id === prev) ? prev : (next.categories[0]?.id ?? ''),
+    );
   }, [listing]);
+
+  React.useEffect(() => {
+    if (!success) return;
+    const t = window.setTimeout(() => setSuccess(null), 4000);
+    return () => window.clearTimeout(t);
+  }, [success]);
+
+  React.useEffect(() => {
+    if (!aiBusy) return;
+    const onLeave = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onLeave);
+    return () => window.removeEventListener('beforeunload', onLeave);
+  }, [aiBusy]);
 
   const openAddCategory = () => {
     setEditingCategoryId(null);
@@ -181,9 +291,20 @@ export function BusinessMenuEditor({
         prev.map((c) => (c.id === editingCategoryId ? { ...c, name } : c)),
       );
     } else {
-      setCategories((prev) => [...prev, { id: newId(), name, sortOrder: prev.length }]);
+      const id = newId();
+      setCategories((prev) => [...prev, { id, name, sortOrder: prev.length }]);
+      setActiveCategoryId(id);
     }
     setCategoryDialogOpen(false);
+  };
+
+  const deleteCategory = (catId: string) => {
+    const next = categories.filter((c) => c.id !== catId);
+    setCategories(next);
+    setItems((prev) => prev.filter((i) => i.categoryId !== catId));
+    if (activeCategoryId === catId) {
+      setActiveCategoryId(next[0]?.id ?? '');
+    }
   };
 
   const openAddProduct = (categoryId: string) => {
@@ -253,6 +374,7 @@ export function BusinessMenuEditor({
   const handleAiFiles = async (files: FileList | null) => {
     if (!files?.length) return;
     setAiBusy(true);
+    setAiFileCount(files.length);
     setError(null);
     setAiNotice(null);
     setSuccess(null);
@@ -268,6 +390,7 @@ export function BusinessMenuEditor({
       }
       setCategories(res.categories);
       setItems(res.items);
+      setActiveCategoryId(res.categories[0]?.id ?? '');
       setAiNotice(
         `U importuan ${res.categories.length} kategori · ${res.items.length} artikuj. Kontrolloni dhe ruani.`,
       );
@@ -310,12 +433,14 @@ export function BusinessMenuEditor({
   };
 
   const busy = submitting || aiBusy;
+  const activeCategory = categories.find((c) => c.id === activeCategoryId) ?? categories[0] ?? null;
+  const activeItems = activeCategory
+    ? items.filter((item) => item.categoryId === activeCategory.id)
+    : [];
 
   return (
     <Box component="form" onSubmit={(e) => void handleSubmit(e)} noValidate>
       <Stack spacing={2.25}>
-        {error ? <Alert severity="error">{error}</Alert> : null}
-        {success ? <Alert severity="success">{success}</Alert> : null}
         {aiNotice ? <Alert severity="info">{aiNotice}</Alert> : null}
 
         <input
@@ -328,70 +453,110 @@ export function BusinessMenuEditor({
         />
 
         <Stack
-          direction="row"
-          spacing={1.25}
+          spacing={1.15}
           sx={{
-            alignItems: 'center',
             px: 1.5,
             py: 1.15,
             borderRadius: 2,
             border: '1px solid',
-            borderColor: 'divider',
+            borderColor: aiBusy ? AI_SEARCH_BLUE : 'divider',
             bgcolor: 'background.paper',
           }}
         >
-          <Box
-            sx={{
-              width: 34,
-              height: 34,
-              borderRadius: 1.5,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: AI_SEARCH_BLUE_SOFT,
-              color: AI_SEARCH_BLUE,
-              flexShrink: 0,
-            }}
-          >
-            <SparkleIcon size={18} weight="fill" />
-          </Box>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{ fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.2 }}>
-              Importo nga foto
-            </Typography>
-            <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', lineHeight: 1.3 }}>
-              Deri në 20 foto · redaktoni para ruajtjes
-            </Typography>
-          </Box>
-          <Button
-            type="button"
-            size="small"
-            variant="contained"
-            disableElevation
-            disabled={busy}
-            onClick={() => fileInputRef.current?.click()}
-            startIcon={
-              aiBusy ? (
-                <CircularProgress size={14} color="inherit" />
-              ) : (
-                <UploadSimpleIcon size={15} weight="bold" />
-              )
-            }
-            sx={{
-              textTransform: 'none',
-              fontWeight: 800,
-              borderRadius: 1.75,
-              flexShrink: 0,
-              px: 1.5,
-              minHeight: 36,
-              bgcolor: AI_SEARCH_BLUE,
-              color: '#0B1220',
-              '&:hover': { bgcolor: '#8BB8DA', color: '#0B1220' },
-              '&.Mui-disabled': { bgcolor: AI_SEARCH_BLUE_SOFT, color: 'text.disabled' },
-            }}
-          >
-            {aiBusy ? '…' : 'Ngarko'}
-          </Button>
+          <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+            <Box
+              sx={{
+                width: 34,
+                height: 34,
+                borderRadius: 1.5,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: AI_SEARCH_BLUE_SOFT,
+                color: AI_SEARCH_BLUE,
+                flexShrink: 0,
+              }}
+            >
+              <SparkleIcon size={18} weight="fill" />
+            </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography sx={{ fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.2 }}>
+                Importo nga foto
+              </Typography>
+              <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', lineHeight: 1.3 }}>
+                {aiBusy
+                  ? aiFileCount === 1
+                    ? 'Duke analizuar foton me AI…'
+                    : `Duke analizuar ${aiFileCount} foto me AI…`
+                  : 'Deri në 20 foto · redaktoni para ruajtjes'}
+              </Typography>
+            </Box>
+            <Button
+              type="button"
+              size="small"
+              variant="contained"
+              disableElevation
+              disabled={busy}
+              onClick={() => fileInputRef.current?.click()}
+              startIcon={
+                aiBusy ? (
+                  <CircularProgress size={14} color="inherit" />
+                ) : (
+                  <UploadSimpleIcon size={15} weight="bold" />
+                )
+              }
+              sx={{
+                textTransform: 'none',
+                fontWeight: 800,
+                borderRadius: 1.75,
+                flexShrink: 0,
+                px: 1.5,
+                minHeight: 36,
+                bgcolor: AI_SEARCH_BLUE,
+                color: '#0B1220',
+                '&:hover': { bgcolor: '#8BB8DA', color: '#0B1220' },
+                '&.Mui-disabled': { bgcolor: AI_SEARCH_BLUE_SOFT, color: 'text.disabled' },
+              }}
+            >
+              {aiBusy ? 'Analizohet' : 'Ngarko'}
+            </Button>
+          </Stack>
+          {aiBusy ? (
+            <Box>
+              <Stack direction="row" sx={{ alignItems: 'baseline', justifyContent: 'space-between', mb: 0.6 }}>
+                <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, color: AI_SEARCH_BLUE }}>
+                  Ju lutem prisni…
+                </Typography>
+                <Typography sx={{ fontSize: '0.72rem', fontWeight: 800, color: AI_SEARCH_BLUE }}>
+                  {Math.round(aiProgress)}%
+                </Typography>
+              </Stack>
+              <LinearProgress
+                variant="determinate"
+                value={aiProgress}
+                sx={{
+                  height: 8,
+                  borderRadius: 999,
+                  bgcolor: AI_SEARCH_BLUE_MUTED,
+                  '& .MuiLinearProgress-bar': {
+                    borderRadius: 999,
+                    bgcolor: AI_SEARCH_BLUE,
+                  },
+                }}
+              />
+              <Typography
+                sx={{
+                  mt: 0.85,
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  lineHeight: 1.35,
+                  color: 'warning.main',
+                }}
+              >
+                Mos e mbyllni faqen derisa analiza të përfundojë.
+              </Typography>
+            </Box>
+          ) : null}
         </Stack>
 
         <Stack
@@ -444,174 +609,179 @@ export function BusinessMenuEditor({
             </Typography>
           </Box>
         ) : (
-          <Stack spacing={2}>
-            {categories.map((cat) => {
-              const catItems = items.filter((item) => item.categoryId === cat.id);
-              return (
-                <Box
-                  key={cat.id}
+          <Stack spacing={1.5}>
+            <MenuCategoryTabs
+              categories={categories}
+              activeId={activeCategory?.id ?? ''}
+              onSelect={setActiveCategoryId}
+            />
+
+            {activeCategory ? (
+              <Box
+                sx={{
+                  borderRadius: 2.5,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: (t) =>
+                    t.palette.mode === 'dark' ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.015)',
+                  overflow: 'hidden',
+                }}
+              >
+                <Stack
+                  direction="row"
+                  spacing={1}
                   sx={{
-                    borderRadius: 2.5,
-                    border: '1px solid',
+                    alignItems: 'center',
+                    px: 1.75,
+                    py: 1.35,
+                    borderBottom: '1px solid',
                     borderColor: 'divider',
-                    bgcolor: (t) =>
-                      t.palette.mode === 'dark' ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.015)',
-                    overflow: 'hidden',
                   }}
                 >
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{
-                      alignItems: 'center',
-                      px: 1.75,
-                      py: 1.35,
-                      borderBottom: '1px solid',
-                      borderColor: 'divider',
-                    }}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', lineHeight: 1.25 }}>
+                      {activeCategory.name || 'Pa emër'}
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                      {activeItems.length} artikuj
+                    </Typography>
+                  </Box>
+                  <IconButton
+                    size="small"
+                    aria-label="Ndrysho kategorinë"
+                    onClick={() => openEditCategory(activeCategory)}
+                    sx={{ color: 'text.secondary' }}
                   >
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', lineHeight: 1.25 }}>
-                        {cat.name || 'Pa emër'}
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
-                        {catItems.length} artikuj
-                      </Typography>
-                    </Box>
-                    <IconButton
-                      size="small"
-                      aria-label="Ndrysho kategorinë"
-                      onClick={() => openEditCategory(cat)}
-                      sx={{ color: 'text.secondary' }}
-                    >
-                      <PencilSimpleIcon size={16} />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      aria-label="Fshi kategorinë"
-                      onClick={() => {
-                        setCategories((prev) => prev.filter((c) => c.id !== cat.id));
-                        setItems((prev) => prev.filter((i) => i.categoryId !== cat.id));
-                      }}
-                      sx={{ color: 'error.main' }}
-                    >
-                      <TrashIcon size={16} />
-                    </IconButton>
-                  </Stack>
+                    <PencilSimpleIcon size={16} />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    aria-label="Fshi kategorinë"
+                    onClick={() => deleteCategory(activeCategory.id)}
+                    sx={{ color: 'error.main' }}
+                  >
+                    <TrashIcon size={16} />
+                  </IconButton>
+                </Stack>
 
-                  {catItems.length === 0 ? (
-                    <Box sx={{ px: 1.75, py: 2 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        Nuk ka artikuj në këtë kategori.
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <Stack divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}>
-                      {catItems.map((item) => (
-                        <Stack
-                          key={item.id}
-                          direction="row"
-                          spacing={1.25}
+                {activeItems.length === 0 ? (
+                  <Box sx={{ px: 1.75, py: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Nuk ka artikuj në këtë kategori.
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Stack divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}>
+                    {activeItems.map((item) => (
+                      <Stack
+                        key={item.id}
+                        direction="row"
+                        spacing={1.25}
+                        sx={{
+                          alignItems: 'center',
+                          px: 1.75,
+                          py: 1.25,
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: 'action.hover' },
+                        }}
+                        onClick={() => openEditProduct(item)}
+                      >
+                        <Box
                           sx={{
-                            alignItems: 'center',
-                            px: 1.75,
-                            py: 1.25,
-                            cursor: 'pointer',
-                            '&:hover': { bgcolor: 'action.hover' },
+                            width: 52,
+                            height: 52,
+                            borderRadius: 1.5,
+                            overflow: 'hidden',
+                            flexShrink: 0,
+                            bgcolor: primaryMainAlpha(0.12),
                           }}
-                          onClick={() => openEditProduct(item)}
                         >
-                          <Box
+                          {item.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={item.imageUrl}
+                              alt=""
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                            />
+                          ) : null}
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography
                             sx={{
-                              width: 52,
-                              height: 52,
-                              borderRadius: 1.5,
+                              fontWeight: 700,
+                              fontSize: '0.9rem',
+                              lineHeight: 1.3,
                               overflow: 'hidden',
-                              flexShrink: 0,
-                              bgcolor: primaryMainAlpha(0.12),
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
                             }}
                           >
-                            {item.imageUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={item.imageUrl}
-                                alt=""
-                                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                              />
-                            ) : null}
-                          </Box>
-                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            {item.name}
+                          </Typography>
+                          {item.description ? (
                             <Typography
                               sx={{
-                                fontWeight: 700,
-                                fontSize: '0.9rem',
-                                lineHeight: 1.3,
+                                fontSize: '0.72rem',
+                                color: 'text.secondary',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
                               }}
                             >
-                              {item.name}
+                              {item.description}
                             </Typography>
-                            {item.description ? (
-                              <Typography
-                                sx={{
-                                  fontSize: '0.72rem',
-                                  color: 'text.secondary',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                {item.description}
-                              </Typography>
-                            ) : null}
-                          </Box>
-                          <Typography
-                            sx={{
-                              fontWeight: 800,
-                              fontSize: '0.88rem',
-                              color: 'primary.main',
-                              flexShrink: 0,
-                            }}
-                          >
-                            {formatPrice(item.price, item.currency)}
-                          </Typography>
-                          <IconButton
-                            size="small"
-                            aria-label="Fshi artikullin"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setItems((prev) => prev.filter((i) => i.id !== item.id));
-                            }}
-                            sx={{ color: 'text.secondary', flexShrink: 0 }}
-                          >
-                            <TrashIcon size={15} />
-                          </IconButton>
-                        </Stack>
-                      ))}
-                    </Stack>
-                  )}
+                          ) : null}
+                        </Box>
+                        <Typography
+                          sx={{
+                            fontWeight: 800,
+                            fontSize: '0.88rem',
+                            color: 'primary.main',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {formatPrice(item.price, item.currency)}
+                        </Typography>
+                        <IconButton
+                          size="small"
+                          aria-label="Fshi artikullin"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setItems((prev) => prev.filter((i) => i.id !== item.id));
+                          }}
+                          sx={{ color: 'text.secondary', flexShrink: 0 }}
+                        >
+                          <TrashIcon size={15} />
+                        </IconButton>
+                      </Stack>
+                    ))}
+                  </Stack>
+                )}
 
-                  <Box sx={{ px: 1.5, py: 1.25, borderTop: '1px solid', borderColor: 'divider' }}>
-                    <Button
-                      type="button"
-                      size="small"
-                      startIcon={<PlusIcon size={14} weight="bold" />}
-                      onClick={() => openAddProduct(cat.id)}
-                      disabled={busy}
-                      sx={{ textTransform: 'none', fontWeight: 800 }}
-                    >
-                      Shto artikull
-                    </Button>
-                  </Box>
+                <Box sx={{ px: 1.5, py: 1.25, borderTop: '1px solid', borderColor: 'divider' }}>
+                  <Button
+                    type="button"
+                    size="small"
+                    startIcon={<PlusIcon size={14} weight="bold" />}
+                    onClick={() => openAddProduct(activeCategory.id)}
+                    disabled={busy}
+                    sx={{ textTransform: 'none', fontWeight: 800 }}
+                  >
+                    Shto artikull
+                  </Button>
                 </Box>
-              );
-            })}
+              </Box>
+            ) : null}
           </Stack>
         )}
 
-        <ListingFormActions submitLabel="Ruaj menunë" submitting={busy} />
+        <ListingFormActions
+          submitLabel="Ruaj menunë"
+          submitting={submitting}
+          disabled={aiBusy}
+          error={error}
+          success={success}
+        />
       </Stack>
 
       {/* Category dialog */}

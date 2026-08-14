@@ -25,23 +25,38 @@ import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 /** Shared outlined field chrome — matches `SearchableSelect`. */
 export const listingOutlinedFieldSx = productFieldSx;
 
-/** Validation / submit error shown next to the form action buttons (not at the top). */
-export function ListingFormActionError({ error }: { error?: string | null }) {
+function ListingFormActionAlert({
+  message,
+  severity,
+}: {
+  message?: string | null;
+  severity: 'error' | 'success';
+}) {
   const ref = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    if (error) {
+    if (message) {
       ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-  }, [error]);
+  }, [message]);
 
-  if (!error) return null;
+  if (!message) return null;
 
   return (
-    <Alert ref={ref} severity="error" sx={{ borderRadius: 1.5 }} role="alert">
-      {error}
+    <Alert
+      ref={ref}
+      severity={severity}
+      sx={{ borderRadius: 1.5 }}
+      role={severity === 'error' ? 'alert' : 'status'}
+    >
+      {message}
     </Alert>
   );
+}
+
+/** Validation / submit error shown next to the form action buttons (not at the top). */
+export function ListingFormActionError({ error }: { error?: string | null }) {
+  return <ListingFormActionAlert message={error} severity="error" />;
 }
 
 /**
@@ -149,6 +164,7 @@ export function ListingFormActions({
   backLabel = 'Kthehu',
   submitProps,
   error,
+  success,
   sx,
 }: {
   submitLabel: string;
@@ -159,6 +175,8 @@ export function ListingFormActions({
   submitProps?: Omit<ButtonProps, 'type' | 'variant' | 'disabled' | 'children' | 'sx'>;
   /** Shown above the buttons so missing-field errors stay visible at the footer. */
   error?: string | null;
+  /** Shown above the buttons after a successful save. */
+  success?: string | null;
   sx?: SxProps<Theme>;
 }) {
   const historyBack = useHistoryBackProps(backHref ?? paths.user.dashboard);
@@ -171,6 +189,7 @@ export function ListingFormActions({
       ]}
     >
       <ListingFormActionError error={error} />
+      <ListingFormActionAlert message={success} severity="success" />
       <Stack
         direction={{ xs: 'column-reverse', sm: 'row' }}
         spacing={1.5}

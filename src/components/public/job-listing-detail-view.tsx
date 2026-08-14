@@ -10,7 +10,6 @@ import {
   Typography,
 } from '@mui/material';
 import GroupsOutlined from '@mui/icons-material/GroupsOutlined';
-import LockOutlined from '@mui/icons-material/LockOutlined';
 import PaymentsOutlined from '@mui/icons-material/PaymentsOutlined';
 import ScheduleOutlined from '@mui/icons-material/ScheduleOutlined';
 import SchoolOutlined from '@mui/icons-material/SchoolOutlined';
@@ -46,6 +45,7 @@ import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-list
 import { JobListingDetailDesktop } from '@/components/public/job-listing-detail-desktop';
 import { JobVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
+import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
 import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
@@ -460,14 +460,10 @@ export function JobListingDetailView({
                 </Stack>
               </Stack>
 
-              {listing.seller ? (
-                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-                  <LockOutlined sx={{ fontSize: 14, color: 'text.disabled' }} />
-                  <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.disabled' }}>
-                    Kjo punë është e verifikuar dhe e sigurt
-                  </Typography>
-                </Stack>
-              ) : null}
+              <ListingVerifiedNotice
+                verified={Boolean(listing.seller?.verified)}
+                label="Kjo punë është e verifikuar dhe e sigurt"
+              />
             </Stack>
 
             {ownerPreview ? null : (

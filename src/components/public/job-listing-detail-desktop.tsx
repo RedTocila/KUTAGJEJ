@@ -14,7 +14,6 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import GroupsOutlined from '@mui/icons-material/GroupsOutlined';
-import LockOutlined from '@mui/icons-material/LockOutlined';
 import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
 import PaymentsOutlined from '@mui/icons-material/PaymentsOutlined';
 import ScheduleOutlined from '@mui/icons-material/ScheduleOutlined';
@@ -49,6 +48,7 @@ import {
 } from '@/lib/job-listing-detail-content';
 import { JobVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
+import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { LISTING_DETAIL_STICKY_TOP_MD } from '@/lib/listing-detail-layout';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -367,14 +367,11 @@ export function JobListingDetailDesktop({
                   </Typography>
                 </Stack>
               </Stack>
-              {listing.seller ? (
-                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-                  <LockOutlined sx={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }} />
-                  <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)' }}>
-                    Kjo punë është e verifikuar dhe e sigurt
-                  </Typography>
-                </Stack>
-              ) : null}
+              <ListingVerifiedNotice
+                verified={Boolean(listing.seller?.verified)}
+                label="Kjo punë është e verifikuar dhe e sigurt"
+                color="rgba(255,255,255,0.55)"
+              />
             </Stack>
             </Box>
 

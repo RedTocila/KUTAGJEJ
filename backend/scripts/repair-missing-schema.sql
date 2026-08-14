@@ -182,6 +182,13 @@ create unique index if not exists conversations_direct_pair_uidx
   )
   where listing_id is null;
 
+-- One thread per participant pair (run merge migration 20260814160000 first if duplicates exist).
+create unique index if not exists conversations_participant_pair_uidx
+  on public.conversations (
+    least(poster_id, inquirer_id),
+    greatest(poster_id, inquirer_id)
+  );
+
 -- Car vehicle type
 alter table public.car_listings
   add column if not exists vehicle_type text;

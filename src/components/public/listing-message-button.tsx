@@ -51,7 +51,7 @@ export function ListingMessageButton({
   const [guestOpen, setGuestOpen] = React.useState(false);
 
   const goToAuth = React.useCallback(() => {
-    setPendingListingChat({ listingKind, listingId });
+    setPendingListingChat({ listingKind, listingId, withInquiry: true });
     setGuestOpen(false);
     router.push(paths.user.auth);
   }, [listingId, listingKind, router]);
@@ -82,7 +82,8 @@ export function ListingMessageButton({
         return;
       }
       emitHotLeadContactAction({ listingKind, listingId });
-      router.push(`${paths.user.messages}?c=${encodeURIComponent(res.conversation.id)}`);
+      const inquiry = encodeURIComponent(`${listingKind}:${listingId}`);
+      router.push(`${paths.user.messages}?c=${encodeURIComponent(res.conversation.id)}&inquiry=${inquiry}`);
     } finally {
       setLoading(false);
     }

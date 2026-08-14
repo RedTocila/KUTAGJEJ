@@ -293,6 +293,34 @@ function sortInboxItems(items) {
   });
 }
 
+/** One inbox row per other participant — merges legacy duplicate threads in API responses. */
+function dedupeInboxByParticipant(items) {
+  const byOther = new Map();
+  for (const item of items) {
+    const key = String(item.otherParticipantId || '').trim();
+    if (!key) {
+      byOther.set(`orphan-${item.id}`, item);
+      continue;
+    }
+    const existing = byOther.get(key);
+    if (!existing) {
+      byOther.set(key, item);
+      continue;
+    }
+    const existingAt = new Date(existing.lastMessageAt || existing.updatedAt || 0).getTime();
+    const itemAt = new Date(item.lastMessageAt || item.updatedAt || 0).getTime();
+    const winner = itemAt >= existingAt ? item : existing;
+    const loser = winner === item ? existing : item;
+    byOther.set(key, {
+      ...winner,
+      unreadCount: Math.max(0, (winner.unreadCount || 0) + (loser.unreadCount || 0)),
+      pinned: Boolean(winner.pinned || loser.pinned),
+      hasReservationMessage: Boolean(winner.hasReservationMessage || loser.hasReservationMessage),
+    });
+  }
+  return [...byOther.values()];
+}
+
 async function attachOtherParticipantDetails(items, { includeListingPhones = true } = {}) {
   if (!items.length) return items;
 
@@ -435,9 +463,7 @@ router.post('/', auth, requirePortalUser, async (req, res) => {
         .single();
       if (error) {
         if (isUniqueViolation(error)) {
-          row =
-            (await findExistingInquirerThread(listingKind, listingId, userRef.id)) ||
-            (await findExistingConversationBetween(userRef.id, listing.posterId));
+          row = await findExistingConversationBetween(userRef.id, listing.posterId);
         } else {
           throw error;
         }
@@ -573,9 +599,7 @@ router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) 
           .single();
         if (error) {
           if (isUniqueViolation(error)) {
-            row =
-              (await findExistingInquirerThread(listingKind, listingId, memberId)) ||
-              (await findExistingConversationBetween(userRef.id, memberId));
+            row = await findExistingConversationBetween(userRef.id, memberId);
             if (row && isSameListingThread(row, listingKind, listingId)) {
               row = await markConversationStartedByPoster(row);
             }
@@ -617,7 +641,7 @@ router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) 
         .single();
       if (error) {
         if (isUniqueViolation(error)) {
-          row = await findDirectConversationBetween(userRef.id, memberId);
+          row = await findExistingConversationBetween(userRef.id, memberId);
           if (row) row = await markConversationStartedByPoster(row);
         } else {
           throw error;
@@ -700,9 +724,10 @@ router.get('/', auth, requirePortalUser, async (req, res) => {
     const withNames = await attachOtherParticipantDetails(formatted, {
       includeListingPhones: false,
     });
-    const total = withNames.length < limit && page === 1 ? withNames.length : from + withNames.length;
+    const deduped = dedupeInboxByParticipant(withNames);
+    const total = deduped.length < limit && page === 1 ? deduped.length : from + deduped.length;
     res.json({
-      conversations: sortInboxItems(withNames),
+      conversations: sortInboxItems(deduped),
       page,
       limit,
       total,

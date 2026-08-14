@@ -270,6 +270,7 @@ const PENDING_CHAT_KEY = 'kutagjej-pending-listing-chat';
 export function setPendingListingChat(payload: {
   listingKind: ConversationListingKind;
   listingId: string;
+  withInquiry?: boolean;
 }): void {
   if (typeof window === 'undefined') return;
   sessionStorage.setItem(PENDING_CHAT_KEY, JSON.stringify(payload));
@@ -278,17 +279,23 @@ export function setPendingListingChat(payload: {
 export function consumePendingListingChat(): {
   listingKind: ConversationListingKind;
   listingId: string;
+  withInquiry: boolean;
 } | null {
   if (typeof window === 'undefined') return null;
   const raw = sessionStorage.getItem(PENDING_CHAT_KEY);
   sessionStorage.removeItem(PENDING_CHAT_KEY);
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as { listingKind?: string; listingId?: string };
+    const parsed = JSON.parse(raw) as {
+      listingKind?: string;
+      listingId?: string;
+      withInquiry?: boolean;
+    };
     if (!parsed.listingKind || !parsed.listingId) return null;
     return {
       listingKind: parsed.listingKind as ConversationListingKind,
       listingId: parsed.listingId,
+      withInquiry: parsed.withInquiry !== false,
     };
   } catch {
     return null;

@@ -44,6 +44,7 @@ import {
   productSearchBarSx,
 } from '@/components/public/product-browse-chrome';
 import { ChatCallIcon, ChatWhatsappIcon } from '@/components/user/messages/chat-contact-icons';
+import { ListingInquiryCard } from '@/components/user/messages/listing-inquiry-card';
 import { useMessagesThreadChrome } from '@/contexts/messages-thread-chrome-context';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
@@ -71,6 +72,15 @@ import {
   isReservationConversation,
   submitBusinessReservationToMessages,
 } from '@/lib/business-reservation-message';
+import {
+  decodeListingInquiryParam,
+  fetchListingInquiryDraft,
+  formatListingInquiryMessage,
+  listingInquiryIntro,
+  listingInquiryPreviewText,
+  parseListingInquiryMessage,
+  type ListingInquiryCardData,
+} from '@/lib/listing-inquiry-message';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { ListRowsSkeleton } from '@/components/core/content-skeletons';
 import { isBusinessPortalAccount } from '@/lib/user-portal-account-label';
@@ -178,11 +188,39 @@ function conversationActivityAt(item: ConversationSummary): number {
   return Number.isNaN(t) ? 0 : t;
 }
 
+function dedupeConversationsByParticipant(items: ConversationSummary[]): ConversationSummary[] {
+  const byOther = new Map<string, ConversationSummary>();
+  for (const item of items) {
+    const key = String(item.otherParticipantId || '').trim();
+    if (!key) {
+      byOther.set(`orphan-${item.id}`, item);
+      continue;
+    }
+    const existing = byOther.get(key);
+    if (!existing) {
+      byOther.set(key, item);
+      continue;
+    }
+    const winner =
+      conversationActivityAt(item) >= conversationActivityAt(existing) ? item : existing;
+    const loser = winner === item ? existing : item;
+    byOther.set(key, {
+      ...winner,
+      unreadCount: Math.max(0, (winner.unreadCount || 0) + (loser.unreadCount || 0)),
+      pinned: Boolean(winner.pinned || loser.pinned),
+      hasReservationMessage: Boolean(winner.hasReservationMessage || loser.hasReservationMessage),
+    });
+  }
+  return [...byOther.values()];
+}
+
 function sortConversationsByRecent(items: ConversationSummary[]): ConversationSummary[] {
-  return [...items].sort((a, b) => {
-    if (Boolean(a.pinned) !== Boolean(b.pinned)) return a.pinned ? -1 : 1;
-    return conversationActivityAt(b) - conversationActivityAt(a);
-  });
+  return dedupeConversationsByParticipant(
+    [...items].sort((a, b) => {
+      if (Boolean(a.pinned) !== Boolean(b.pinned)) return a.pinned ? -1 : 1;
+      return conversationActivityAt(b) - conversationActivityAt(a);
+    }),
+  );
 }
 
 /** Inbox only lists threads that actually have a message. */
@@ -230,13 +268,6 @@ function deliveryStatusByMessageId(
     }
   }
   return map;
-}
-
-/** Listing chrome only when *you* contacted from a listing (inquirer). All other chats show the person. */
-function isPersonFocusedConversation(
-  item: Pick<ConversationSummary, 'role' | 'listingId'>,
-): boolean {
-  return item.role !== 'inquirer' || !item.listingId;
 }
 
 function conversationAvatarSrc(url: string | null | undefined): string | undefined {
@@ -415,11 +446,13 @@ function ConversationListItem({
     locale,
     t.messages.yesterday,
   );
-  const showListing = !isPersonFocusedConversation(item) && Boolean(item.listingTitle?.trim());
-  const title = showListing
-    ? item.listingTitle.trim()
-    : item.otherParticipantName?.trim() || t.messages.userFallback;
-  const avatarUrl = showListing ? item.listingImageUrl : item.otherParticipantAvatarUrl;
+  const participantName = item.otherParticipantName?.trim() || t.messages.userFallback;
+  const listingLabel = item.listingTitle?.trim() || '';
+  const title = participantName;
+  const avatarUrl = item.otherParticipantAvatarUrl || item.listingImageUrl;
+  const showListingSubtitle = Boolean(
+    listingLabel && listingLabel.localeCompare(participantName, undefined, { sensitivity: 'accent' }) !== 0,
+  );
   const preview = item.lastMessageText || t.messages.noMessagesYet;
   const longPressTimer = React.useRef<number | null>(null);
   const suppressClick = React.useRef(false);
@@ -560,9 +593,8 @@ function ConversationListItem({
         <ChatAvatar
           src={avatarUrl}
           alt={title}
-          variant={showListing ? 'rounded' : 'circular'}
+          variant="circular"
           size={49}
-          borderRadius={showListing ? 1.5 : '50%'}
         />
         {pinned && !selectionMode ? (
           <Box
@@ -599,17 +631,31 @@ function ConversationListItem({
         }}
       >
         <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <Typography
-            sx={{
-              fontWeight: unread ? 700 : 500,
-              fontSize: '1.05rem',
-              lineHeight: 1.3,
-              color: 'text.primary',
-            }}
-            noWrap
-          >
-            {title}
-          </Typography>
+          <Stack spacing={0.1} sx={{ flex: 1, minWidth: 0 }}>
+            <Typography
+              sx={{
+                fontWeight: unread ? 700 : 500,
+                fontSize: '1.05rem',
+                lineHeight: 1.3,
+                color: 'text.primary',
+              }}
+              noWrap
+            >
+              {title}
+            </Typography>
+            {showListingSubtitle ? (
+              <Typography
+                sx={{
+                  fontSize: '0.75rem',
+                  lineHeight: 1.2,
+                  color: 'rgba(var(--mui-palette-text-primaryChannel) / 0.45)',
+                }}
+                noWrap
+              >
+                {listingLabel}
+              </Typography>
+            ) : null}
+          </Stack>
           {timeLabel ? (
             <Typography
               sx={{
@@ -707,7 +753,8 @@ function MessageBubble({
   const locale = languageHtmlLang(language);
   const mine = message.isMine;
   const isRead = deliveryStatus === 'read';
-  const imageUrl = String(message.imageUrl || '').trim();
+  const listingInquiry = parseListingInquiryMessage(message.body);
+  const imageUrl = listingInquiry ? '' : String(message.imageUrl || '').trim();
   const bubbleImageUrl =
     storageImageUrl(imageUrl, {
       width: CHAT_BUBBLE_IMAGE_THUMB,
@@ -715,7 +762,7 @@ function MessageBubble({
       resize: 'contain',
       quality: 75,
     }) || imageUrl;
-  const body = String(message.body || '').trim();
+  const body = listingInquiry ? listingInquiry.intro : String(message.body || '').trim();
   const imageOnly = Boolean(imageUrl) && !body;
   const metaWidth = mine && deliveryStatus ? 58 : 42;
   const bubbleRadius = mine ? CHAT_BUBBLE_RADIUS_MINE : CHAT_BUBBLE_RADIUS_THEIRS;
@@ -773,6 +820,55 @@ function MessageBubble({
     },
     [handleImageError, handleImageLoad],
   );
+
+  if (listingInquiry) {
+    const inquiryMeta = (
+      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.4, pointerEvents: 'none' }}>
+        <Typography component="span" variant="caption" sx={{ fontSize: '0.68rem', lineHeight: 1, color: mine ? 'rgba(13, 34, 1, 0.55)' : 'text.secondary' }}>
+          {formatMessageTime(message.createdAt, locale)}
+        </Typography>
+        {mine && deliveryStatus ? (
+          <Box component="span" aria-label={isRead ? t.messages.read : t.messages.delivered} sx={{ display: 'inline-flex', lineHeight: 0, color: isRead ? '#1a6b8a' : 'rgba(13, 34, 1, 0.55)' }}>
+            <ChecksIcon size={14} weight="bold" />
+          </Box>
+        ) : null}
+      </Box>
+    );
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: mine ? 'flex-end' : 'flex-start',
+          px: { xs: 1.5, md: 2 },
+          py: 0.35,
+        }}
+      >
+        <Box sx={{ maxWidth: '88%', display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start', gap: 0.75 }}>
+          <ListingInquiryCard data={listingInquiry.data} compact />
+          {body ? (
+            <Box
+              sx={(theme) => ({
+                px: 1.35,
+                py: 0.85,
+                maxWidth: 280,
+                bgcolor: mine ? CHAT_BUBBLE_MINE_LIGHT : CHAT_BUBBLE_THEIRS_LIGHT,
+                color: mine ? CHAT_BUBBLE_MINE_INK : 'text.primary',
+                borderRadius: mine ? CHAT_BUBBLE_RADIUS_MINE.map((r) => `${r}px`).join(' ') : CHAT_BUBBLE_RADIUS_THEIRS.map((r) => `${r}px`).join(' '),
+                ...theme.applyStyles('dark', {
+                  bgcolor: mine ? CHAT_BUBBLE_MINE_DARK : CHAT_BUBBLE_THEIRS_DARK,
+                }),
+              })}
+            >
+              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.9375rem', fontWeight: 500, lineHeight: 1.4 }}>
+                {body}
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.35 }}>{inquiryMeta}</Box>
+            </Box>
+          ) : null}
+        </Box>
+      </Box>
+    );
+  }
 
   const meta = (
     <Box
@@ -1129,8 +1225,12 @@ function MessageBubble({
 /** Isolated composer — keeps draft keystrokes from re-rendering the thread. */
 function MessageComposer({
   onSend,
+  listingInquiry,
+  onClearListingInquiry,
 }: {
   onSend: (body: string, file?: File | null) => Promise<boolean>;
+  listingInquiry?: ListingInquiryCardData | null;
+  onClearListingInquiry?: () => void;
 }) {
   const t = useCopy();
   const [draft, setDraft] = React.useState('');
@@ -1139,7 +1239,15 @@ function MessageComposer({
   const [inputExpanded, setInputExpanded] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const inputRef = React.useRef<HTMLTextAreaElement | null>(null);
-  const canSend = draft.trim().length > 0 || Boolean(attachment);
+  const canSend = draft.trim().length > 0 || Boolean(attachment) || Boolean(listingInquiry);
+  const listingInquiryKey = listingInquiry
+    ? `${listingInquiry.listingKind}:${listingInquiry.listingId}`
+    : '';
+
+  React.useEffect(() => {
+    if (!listingInquiry) return;
+    setDraft(listingInquiryIntro(listingInquiry.title));
+  }, [listingInquiryKey, listingInquiry]);
 
   React.useLayoutEffect(() => {
     const el = inputRef.current;
@@ -1172,13 +1280,14 @@ function MessageComposer({
   };
 
   const submit = () => {
-    const body = draft.trim();
-    if (!body && !attachment) return;
+    const body = draft.trim() || (listingInquiry ? listingInquiryIntro(listingInquiry.title) : '');
+    if (!body && !attachment && !listingInquiry) return;
     const file = attachment;
     setDraft('');
     clearAttachment();
     void onSend(body, file).then((ok) => {
       if (!ok) setDraft(body);
+      else if (listingInquiry) onClearListingInquiry?.();
     });
   };
 
@@ -1202,6 +1311,31 @@ function MessageComposer({
         '& > *': { pointerEvents: 'auto' },
       }}
     >
+      {listingInquiry ? (
+        <Box sx={{ position: 'relative', alignSelf: 'flex-start', maxWidth: '100%' }}>
+          <ListingInquiryCard data={listingInquiry} compact />
+          <IconButton
+            type="button"
+            size="small"
+            aria-label={t.messages.removeAttachAria}
+            onClick={onClearListingInquiry}
+            sx={{
+              position: 'absolute',
+              top: -6,
+              right: -6,
+              width: 22,
+              height: 22,
+              bgcolor: 'rgba(0,0,0,0.65)',
+              border: '1px solid',
+              borderColor: 'rgba(255,255,255,0.25)',
+              color: '#fff',
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.8)', color: '#fff' },
+            }}
+          >
+            <XIcon size={12} weight="bold" />
+          </IconButton>
+        </Box>
+      ) : null}
       {attachmentPreview ? (
         <Box sx={{ position: 'relative', width: 72, height: 72, alignSelf: 'flex-start' }}>
           <Box
@@ -1371,6 +1505,7 @@ export function UserMessagesView() {
   const searchParams = useSearchParams();
   const threadChrome = useMessagesThreadChrome();
   const urlSelectedId = searchParams.get('c');
+  const urlInquiry = searchParams.get('inquiry');
   const isBusinessAccount = isBusinessPortalAccount(user);
 
   const inboxFilterLabels: Record<InboxFilter, string> = {
@@ -1411,6 +1546,9 @@ export function UserMessagesView() {
     el: HTMLElement;
     position?: { top: number; left: number };
   }>(null);
+  const [listingInquiryDraft, setListingInquiryDraft] = React.useState<ListingInquiryCardData | null>(null);
+  const listingInquiryDraftRef = React.useRef<ListingInquiryCardData | null>(null);
+  listingInquiryDraftRef.current = listingInquiryDraft;
   const [pendingDeleteIds, setPendingDeleteIds] = React.useState<string[] | null>(null);
   const [deletingChats, setDeletingChats] = React.useState(false);
   const [pinningChat, setPinningChat] = React.useState(false);
@@ -1419,6 +1557,25 @@ export function UserMessagesView() {
   const messagesContentRef = React.useRef<HTMLDivElement | null>(null);
   /** Keep the viewport pinned to the latest message until the user scrolls up. */
   const stickToBottomRef = React.useRef(true);
+  const clearListingInquiryDraft = React.useCallback(() => {
+    setListingInquiryDraft(null);
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('inquiry')) return;
+    params.delete('inquiry');
+    const qs = params.toString();
+    router.replace(qs ? `${paths.user.messages}?${qs}` : paths.user.messages, { scroll: false });
+  }, [router]);
+
+  const loadListingInquiryDraft = React.useCallback(async (raw: string | null | undefined) => {
+    const decoded = decodeListingInquiryParam(raw);
+    if (!decoded) {
+      setListingInquiryDraft(null);
+      return;
+    }
+    const draft = await fetchListingInquiryDraft(decoded.listingKind, decoded.listingId);
+    setListingInquiryDraft(draft);
+  }, []);
   const pendingHandled = React.useRef(false);
   const selectedIdRef = React.useRef<string | null>(null);
   const conversationsRef = React.useRef(conversations);
@@ -1589,11 +1746,28 @@ export function UserMessagesView() {
     void (async () => {
       const res = await startConversation(pending.listingKind, pending.listingId);
       if (res.conversation) {
-        router.replace(`${paths.user.messages}?c=${encodeURIComponent(res.conversation.id)}`);
+        const inquiry = pending.withInquiry
+          ? `&inquiry=${encodeURIComponent(`${pending.listingKind}:${pending.listingId}`)}`
+          : '';
+        router.replace(
+          `${paths.user.messages}?c=${encodeURIComponent(res.conversation.id)}${inquiry}`,
+        );
         await loadInbox();
       }
     })();
   }, [router, loadInbox, urlSelectedId]);
+
+  React.useEffect(() => {
+    if (!selectedId) {
+      setListingInquiryDraft(null);
+      return;
+    }
+    if (urlInquiry) {
+      void loadListingInquiryDraft(urlInquiry);
+      return;
+    }
+    setListingInquiryDraft(null);
+  }, [selectedId, urlInquiry, loadListingInquiryDraft]);
 
   React.useEffect(() => {
     if (!selectedId) {
@@ -1813,14 +1987,20 @@ export function UserMessagesView() {
   };
 
   const handleSend = async (body: string, file?: File | null): Promise<boolean> => {
-    if (!selectedId || (!body && !file)) return false;
+    if (!selectedId || (!body && !file && !listingInquiryDraftRef.current)) return false;
     setError(null);
 
+    const inquiryDraft = listingInquiryDraftRef.current;
+    const intro = body.trim() || (inquiryDraft ? listingInquiryIntro(inquiryDraft.title) : '');
+    const outboundBody = inquiryDraft ? formatListingInquiryMessage(inquiryDraft, intro) : intro;
     const conversationId = selectedId;
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const createdAt = new Date().toISOString();
     const localPreviewUrl = file ? URL.createObjectURL(file) : null;
-    const preview = body.trim() || (file ? t.messages.photoPreview : body);
+    const preview =
+      listingInquiryPreviewText(outboundBody) ||
+      intro ||
+      (file ? t.messages.photoPreview : outboundBody);
     const wasInInbox = conversationsRef.current.some((c) => c.id === conversationId);
     const baseOtherUnread =
       conversationsRef.current.find((c) => c.id === conversationId)?.otherUnreadCount ??
@@ -1832,7 +2012,7 @@ export function UserMessagesView() {
       conversationId,
       senderId: 'me',
       senderModel: 'IndividualUser',
-      body,
+      body: outboundBody,
       imageUrl: localPreviewUrl,
       createdAt,
       isMine: true,
@@ -1902,12 +2082,14 @@ export function UserMessagesView() {
       imageUrl = up.urls[0];
     }
 
-    const res = await sendConversationMessage(conversationId, body, imageUrl);
+    const res = await sendConversationMessage(conversationId, outboundBody, imageUrl);
     if (res.error || !res.message) {
       rollback();
       setError(res.error ?? t.messages.sendFailed);
       return false;
     }
+
+    if (inquiryDraft) clearListingInquiryDraft();
 
     const sent = res.message;
     setMessages((prev) => {
@@ -1939,27 +2121,25 @@ export function UserMessagesView() {
 
   const showThreadOnMobile = Boolean(selectedId);
   const contactPhone = activeConversation ? conversationContactPhone(activeConversation) : null;
-  const showListingInHeader = Boolean(
-    activeConversation &&
-      !isPersonFocusedConversation(activeConversation) &&
-      activeConversation.listingTitle?.trim(),
-  );
-  const activeListingHref =
-    showListingInHeader && activeConversation
-      ? listingPublicHref(activeConversation.listingKind, activeConversation.listingId)
-      : null;
   const threadHeaderName =
     activeConversation?.otherParticipantName?.trim() || t.messages.userFallback;
+  const threadListingLabel = activeConversation?.listingTitle?.trim() || '';
+  const showListingInThreadHeader = Boolean(
+    threadListingLabel &&
+      threadListingLabel.localeCompare(threadHeaderName, undefined, { sensitivity: 'accent' }) !== 0,
+  );
+  const activeListingHref =
+    activeConversation?.listingKind && activeConversation?.listingId
+      ? listingPublicHref(activeConversation.listingKind, activeConversation.listingId)
+      : null;
   const contactWhatsapp = whatsappInquireHref(
     contactPhone,
     t.messages.whatsappIntro(
-      showListingInHeader && activeConversation ? activeConversation.listingTitle : threadHeaderName,
+      activeConversation?.listingTitle?.trim() || threadHeaderName,
       toAbsoluteSiteUrl(activeListingHref),
     ),
   );
-  const threadHeaderAvatar = showListingInHeader
-    ? activeConversation?.listingImageUrl
-    : activeConversation?.otherParticipantAvatarUrl;
+  const threadHeaderAvatar = activeConversation?.otherParticipantAvatarUrl;
   const otherProfileHref = activeConversation?.otherParticipantId
     ? pathsPublicMemberProfile(activeConversation.otherParticipantId)
     : null;
@@ -2347,10 +2527,9 @@ export function UserMessagesView() {
                 <ChatAvatar
                   src={threadHeaderAvatar}
                   alt={threadHeaderName}
-                  variant={showListingInHeader ? 'rounded' : 'circular'}
+                  variant="circular"
                   href={otherProfileHref}
                   size={46}
-                  borderRadius={showListingInHeader ? 1.85 : '50%'}
                 />
                 <Stack
                   spacing={0.2}
@@ -2382,7 +2561,7 @@ export function UserMessagesView() {
                   >
                     {threadHeaderName}
                   </Typography>
-                  {showListingInHeader ? (
+                  {showListingInThreadHeader ? (
                     <Typography
                       component={activeListingHref ? Link : 'span'}
                       href={activeListingHref || undefined}
@@ -2492,7 +2671,11 @@ export function UserMessagesView() {
                   </Box>
                 </Box>
 
-                <MessageComposer onSend={handleSend} />
+                <MessageComposer
+                  onSend={handleSend}
+                  listingInquiry={listingInquiryDraft}
+                  onClearListingInquiry={clearListingInquiryDraft}
+                />
               </Box>            </>
           ) : null}
         </Box>

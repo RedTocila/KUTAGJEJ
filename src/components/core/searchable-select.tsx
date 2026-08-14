@@ -132,10 +132,17 @@ export function SearchableSelect({
     typedQuery.length > 0 &&
     !catalogOptions.some((o) => o.label.toLowerCase() === typedQuery.toLowerCase());
 
-  const close = () => {
+  const close = React.useCallback(() => {
     setOpen(false);
     setQuery('');
-  };
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const handleScroll = () => close();
+    window.addEventListener('scroll', handleScroll, true);
+    return () => window.removeEventListener('scroll', handleScroll, true);
+  }, [close, open]);
 
   const handleToggle = () => {
     if (disabled) return;
@@ -165,7 +172,14 @@ export function SearchableSelect({
 
   return (
     <ClickAwayListener onClickAway={close}>
-      <FormControl fullWidth={fullWidth} size={size} required={required} disabled={disabled} error={error} sx={sx}>
+      <FormControl
+        fullWidth={fullWidth}
+        size={size}
+        required={required}
+        disabled={disabled}
+        error={error}
+        sx={[{ position: 'relative' }, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])]}
+      >
         <InputLabel id={`${fieldId}-label`} shrink sx={{ fontWeight: 600 }}>
           {label}
         </InputLabel>
@@ -253,25 +267,24 @@ export function SearchableSelect({
           }}
         />
 
-        <Popper
-          open={open}
-          anchorEl={anchorRef.current}
-          placement="bottom-start"
-          data-scroll-lock-allow=""
-          sx={{
-            zIndex: 1600,
-            width: Math.max(anchorRef.current?.offsetWidth ?? 240, menuMinWidth ?? 0),
-            // Closed poppers must not intercept taps on fields below (e.g. terms checkbox on auth).
-            pointerEvents: open ? 'auto' : 'none',
-            visibility: open ? 'visible' : 'hidden',
-          }}
-          modifiers={[
-            { name: 'offset', options: { offset: [0, 4] } },
-            { name: 'flip', options: { fallbackPlacements: ['top-start'] } },
-            { name: 'preventOverflow', options: { padding: 8 } },
-          ]}
-        >
-          <Paper
+        {open ? (
+          <Popper
+            open
+            disablePortal
+            anchorEl={anchorRef.current}
+            placement="bottom-start"
+            data-scroll-lock-allow=""
+            sx={{
+              zIndex: 10,
+              width: Math.max(anchorRef.current?.offsetWidth ?? 240, menuMinWidth ?? 0),
+            }}
+            modifiers={[
+              { name: 'offset', options: { offset: [0, 4] } },
+              { name: 'flip', options: { fallbackPlacements: ['top-start'] } },
+              { name: 'preventOverflow', options: { padding: 8 } },
+            ]}
+          >
+            <Paper
             elevation={0}
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
@@ -415,7 +428,8 @@ export function SearchableSelect({
               ) : null}
             </List>
           </Paper>
-        </Popper>
+          </Popper>
+        ) : null}
 
         {helperText ? <FormHelperText error={error}>{helperText}</FormHelperText> : null}
       </FormControl>

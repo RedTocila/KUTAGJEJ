@@ -57,9 +57,7 @@ const signInSchema = zod.object({
 
 type SignInValues = zod.infer<typeof signInSchema>;
 
-const acceptTermsField = zod.boolean().refine((value) => value === true, {
-  message: 'Duhet të pranoni kushtet e përdorimit',
-});
+const acceptTermsMessage = 'Duhet të pranoni kushtet e përdorimit';
 
 const individualRegisterSchema = zod
   .object({
@@ -70,11 +68,15 @@ const individualRegisterSchema = zod
     email: zod.string().min(1, { message: 'Emaili është i detyrueshëm' }).email('Email i pavlefshëm'),
     password: zod.string().min(6, { message: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere' }),
     confirmPassword: zod.string().min(1, { message: 'Konfirmo fjalëkalimin' }),
-    acceptTerms: acceptTermsField,
+    acceptTerms: zod.boolean(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Fjalëkalimet nuk përputhen',
     path: ['confirmPassword'],
+  })
+  .refine((data) => data.acceptTerms, {
+    message: acceptTermsMessage,
+    path: ['acceptTerms'],
   });
 
 const businessRegisterSchema = zod
@@ -88,11 +90,15 @@ const businessRegisterSchema = zod
     email: zod.string().min(1, { message: 'Emaili është i detyrueshëm' }).email('Email i pavlefshëm'),
     password: zod.string().min(6, { message: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere' }),
     confirmPassword: zod.string().min(1, { message: 'Konfirmo fjalëkalimin' }),
-    acceptTerms: acceptTermsField,
+    acceptTerms: zod.boolean(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Fjalëkalimet nuk përputhen',
     path: ['confirmPassword'],
+  })
+  .refine((data) => data.acceptTerms, {
+    message: acceptTermsMessage,
+    path: ['acceptTerms'],
   });
 
 type IndividualRegisterValues = zod.infer<typeof individualRegisterSchema>;
@@ -157,89 +163,77 @@ function AcceptTermsField<T extends { acceptTerms: boolean }>({
   control: Control<T>;
   error?: string;
 }) {
-  const checkboxId = React.useId();
-
   return (
     <Controller
       control={control}
       name={'acceptTerms' as never}
-      render={({ field }) => (
-        <FormControl
-          error={Boolean(error)}
-          sx={{ width: '100%', position: 'relative', zIndex: 2, isolation: 'isolate' }}
-        >
-          {/*
-            Use a native <label htmlFor> so iOS Safari toggles the checkbox reliably.
-            Do not use FormControlLabel with nested links — taps go to the links instead.
-            Do not resize/reposition the hidden MUI input — that moves the touch target off-screen on iOS.
-          */}
-          <Box
-            component="label"
-            htmlFor={checkboxId}
+      render={({ field: { ref, onChange, onBlur, value, name } }) => (
+        <FormControl error={Boolean(error)} sx={{ width: '100%' }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                name={name}
+                checked={value === true}
+                onChange={(event) => onChange(event.target.checked)}
+                onBlur={onBlur}
+                slotProps={{ input: { ref } }}
+                disableRipple
+                sx={{
+                  color: 'text.disabled',
+                  alignSelf: 'flex-start',
+                  py: 0.75,
+                  mt: -0.25,
+                  '&.Mui-checked': { color: 'primary.main' },
+                }}
+              />
+            }
+            label={
+              <Typography
+                component="span"
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                  fontSize: '0.8125rem',
+                  lineHeight: 1.5,
+                }}
+              >
+                Pranoj{' '}
+                <MuiLink
+                  component={RouterLink}
+                  href={paths.public.terms}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: 'primary.main', fontWeight: 700 }}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onTouchStart={(event) => event.stopPropagation()}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  kushtet e përdorimit
+                </MuiLink>{' '}
+                dhe{' '}
+                <MuiLink
+                  component={RouterLink}
+                  href={paths.public.privacy}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: 'primary.main', fontWeight: 700 }}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onTouchStart={(event) => event.stopPropagation()}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  politikën e privatësisë
+                </MuiLink>
+                .
+              </Typography>
+            }
             sx={{
-              display: 'flex',
               alignItems: 'flex-start',
-              gap: 1,
+              mx: 0,
               width: '100%',
-              cursor: 'pointer',
-              userSelect: 'none',
-              WebkitTapHighlightColor: 'transparent',
-              touchAction: 'manipulation',
+              gap: 0.5,
+              '& .MuiFormControlLabel-label': { flex: 1 },
             }}
-          >
-            <Checkbox
-              id={checkboxId}
-              checked={Boolean(field.value)}
-              onChange={(event) => field.onChange(event.target.checked)}
-              onBlur={field.onBlur}
-              slotProps={{ input: { ref: field.ref } }}
-              disableRipple
-              sx={{
-                color: 'text.disabled',
-                p: 1.25,
-                mt: -1,
-                ml: -1,
-                flexShrink: 0,
-                '&.Mui-checked': { color: 'primary.main' },
-              }}
-            />
-            <Typography
-              component="span"
-              variant="body2"
-              sx={{
-                color: 'text.secondary',
-                fontSize: '0.85rem',
-                lineHeight: 1.45,
-                pt: 1.35,
-              }}
-            >
-              Pranoj{' '}
-              <MuiLink
-                component={RouterLink}
-                href={paths.public.terms}
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{ color: 'primary.main', fontWeight: 700 }}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={(event) => event.stopPropagation()}
-              >
-                kushtet e përdorimit
-              </MuiLink>{' '}
-              dhe{' '}
-              <MuiLink
-                component={RouterLink}
-                href={paths.public.privacy}
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{ color: 'primary.main', fontWeight: 700 }}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={(event) => event.stopPropagation()}
-              >
-                politikën e privatësisë
-              </MuiLink>
-              .
-            </Typography>
-          </Box>
+          />
           {error ? <FormHelperText>{error}</FormHelperText> : null}
         </FormControl>
       )}
@@ -830,7 +824,7 @@ export function UserAuthView() {
         minHeight: '100vh',
         width: '100%',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: { xs: 'flex-start', md: 'center' },
         justifyContent: 'center',
         bgcolor: 'background.default',
         backgroundImage: (theme) =>
@@ -861,7 +855,7 @@ export function UserAuthView() {
         >
           {t.auth.back}
         </Button>
-        <Card elevation={0} sx={(theme) => ({ ...productSurfacePaperSx(theme) })}>
+        <Card elevation={0} sx={(theme) => ({ ...productSurfacePaperSx(theme), overflow: 'visible' })}>
           <CardContent sx={{ p: { xs: 3, sm: 3.5 } }}>
             <Stack spacing={2.5}>
               <Box>

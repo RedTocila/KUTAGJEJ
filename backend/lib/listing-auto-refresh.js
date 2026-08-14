@@ -300,7 +300,7 @@ async function purchaseAutoRefreshWithBoostCoins({ userId, packageId }) {
 
 /**
  * Process enrolled Auto-Refresh listings that are due.
- * Each successful bump uses the same path as manual refresh (1 BC + created_at bump).
+ * Each successful bump uses the same path as manual refresh (tiered BC + bumped_at bump).
  */
 async function processDueAutoRefreshes({
   limit = AUTO_REFRESH_BATCH_LIMIT,

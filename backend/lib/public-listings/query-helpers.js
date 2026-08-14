@@ -208,11 +208,25 @@ function isOkazionActive(doc) {
   return Number.isFinite(ts) && ts > Date.now();
 }
 
+/** Feed-order timestamp: last bump, else publish time. */
+function listingBumpMs(doc) {
+  const raw = doc?.bumpedAt ?? doc?.bumped_at ?? doc?.createdAt ?? doc?.created_at ?? null;
+  const ms = raw ? new Date(raw).getTime() : 0;
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function sortDocsByBumpDesc(docs) {
+  return [...docs].sort((a, b) => listingBumpMs(b) - listingBumpMs(a));
+}
+
 /**
  * Stable partition: active OKAZION first, then Premium, then the rest.
  * Needed because DB order by *_until also floats *expired* timestamps above nulls.
+ * When `sortRestByBump` is true (category "newest" browse), each tier is
+ * re-sorted by bumped_at so refresh / new posts sit on top within OKAZION,
+ * Premium, and free listings respectively.
  */
-function prioritizeActivePremium(docs) {
+function prioritizeActivePremium(docs, { sortRestByBump = false } = {}) {
   if (!Array.isArray(docs) || docs.length === 0) return docs || [];
   const okazion = [];
   const premium = [];
@@ -221,6 +235,13 @@ function prioritizeActivePremium(docs) {
     if (isOkazionActive(doc)) okazion.push(doc);
     else if (isPremiumActive(doc)) premium.push(doc);
     else rest.push(doc);
+  }
+  if (sortRestByBump) {
+    return [
+      ...sortDocsByBumpDesc(okazion),
+      ...sortDocsByBumpDesc(premium),
+      ...sortDocsByBumpDesc(rest),
+    ];
   }
   return [...okazion, ...premium, ...rest];
 }
@@ -343,6 +364,8 @@ module.exports = {
   newestTimestampColumn,
   isPremiumActive,
   isOkazionActive,
+  listingBumpMs,
+  sortDocsByBumpDesc,
   prioritizeActivePremium,
   buildIlikeOrFilter,
   fieldsForTextSearch,

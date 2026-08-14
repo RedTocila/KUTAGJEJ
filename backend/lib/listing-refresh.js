@@ -1,11 +1,29 @@
 'use strict';
 
 const { getSupabaseAdmin } = require('./supabase');
-const { isUuid } = require('./public-listings/query-helpers');
+const {
+  isUuid,
+  isPremiumActive,
+  isOkazionActive,
+} = require('./public-listings/query-helpers');
 const { refreshHoursForPlanCode } = require('./auto-refresh-packages');
 const { applyListingBump } = require('./listing-bump');
 
-const REFRESH_COST = 1;
+const REFRESH_COST_FREE = 1;
+const REFRESH_COST_PREMIUM = 5;
+const REFRESH_COST_OKAZION = 10;
+/** @deprecated use tier helpers — kept for callers expecting a default */
+const REFRESH_COST = REFRESH_COST_FREE;
+
+function refreshCostForListing(listing) {
+  if (isOkazionActive(listing)) return REFRESH_COST_OKAZION;
+  if (isPremiumActive(listing)) return REFRESH_COST_PREMIUM;
+  return REFRESH_COST_FREE;
+}
+
+function insufficientRefreshCreditsMessage(cost) {
+  return `Nuk keni mjaftueshëm Boost Coins. Duhet ${cost} BC.`;
+}
 
 const TABLE_BY_KIND = {
   'real-estate': 'real_estate_listings',
@@ -57,8 +75,9 @@ async function getRefreshWindowHours(sb, userId) {
 }
 
 /**
- * Spend 1 boost credit to bump a listing to the top of its category
- * by setting bumped_at to now — public "newest" sort uses bumped_at.
+ * Spend boost credits to bump a listing within its tier (free / Premium / OKAZION)
+ * by setting bumped_at to now — public "newest" sort uses bumped_at per tier.
+ * Cost: 1 BC free, 5 BC active Premium, 10 BC active OKAZION.
  * Does not rewrite created_at (publish date / job expiry) or engagement metrics.
  */
 async function refreshListingWithBoost({ userId, kind, listingId }) {
@@ -72,7 +91,12 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
   const table = TABLE_BY_KIND[kind];
   const sb = getSupabaseAdmin();
 
-  let listingQ = sb.from(table).select('id, poster_id, status, created_at').eq('id', listingId);
+  const selectCols = ['id', 'poster_id', 'status', 'created_at', 'premium_until'];
+  if (kind !== 'businesses' && kind !== 'professionals') {
+    selectCols.push('okazion_until');
+  }
+
+  let listingQ = sb.from(table).select(selectCols.join(', ')).eq('id', listingId);
   if (kind === 'businesses' || kind === 'professionals') {
     listingQ = listingQ.eq('vertical', kind);
   }
@@ -82,13 +106,13 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
     return { ok: false, status: 404, message: 'Njoftimi nuk u gjet.' };
   }
   if (String(listing.poster_id) !== String(userId)) {
-    return { ok: false, status: 403, message: 'Nuk mund të rifreskoni këtë njoftim.' };
+    return { ok: false, status: 403, message: 'Nuk mund ta ngreni këtë njoftim në krye.' };
   }
   if (String(listing.status || '') !== 'approved') {
     return {
       ok: false,
       status: 400,
-      message: 'Vetëm njoftimet e aprovuara mund të rifreskohen.',
+      message: 'Vetëm njoftimet e aprovuara mund të ngrihen në krye.',
     };
   }
 
@@ -119,7 +143,7 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
       return {
         ok: false,
         status: 400,
-        message: `Mund ta rifreskoni këtë njoftim pas ${remainingHours} ore${
+        message: `Mund ta ngreni në krye pas ${remainingHours} ore${
           remainingHours === 1 ? '' : 'sh'
         }.`,
       };
@@ -136,21 +160,22 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
     return { ok: false, status: 401, message: 'Profili nuk u gjet.' };
   }
 
+  const refreshCost = refreshCostForListing(listing);
   const balance = Number(profile.boost_credits) || 0;
-  if (balance < REFRESH_COST) {
+  if (balance < refreshCost) {
     return {
       ok: false,
       status: 400,
-      message: 'Nuk keni mjaftueshëm Boost Coins. Duhet 1 BC për rifreskim.',
+      message: insufficientRefreshCreditsMessage(refreshCost),
     };
   }
 
   const now = new Date().toISOString();
   const { data: spent, error: spendErr } = await sb
     .from('profiles')
-    .update({ boost_credits: balance - REFRESH_COST, updated_at: now })
+    .update({ boost_credits: balance - refreshCost, updated_at: now })
     .eq('id', userId)
-    .gte('boost_credits', REFRESH_COST)
+    .gte('boost_credits', refreshCost)
     .select('boost_credits')
     .maybeSingle();
   if (spendErr) throw spendErr;
@@ -158,7 +183,7 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
     return {
       ok: false,
       status: 400,
-      message: 'Nuk keni mjaftueshëm Boost Coins. Duhet 1 BC për rifreskim.',
+      message: insufficientRefreshCreditsMessage(refreshCost),
     };
   }
 
@@ -199,12 +224,17 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
     ok: true,
     refreshedAt: now,
     boostCredits: Number(spent.boost_credits) || 0,
-    cost: REFRESH_COST,
+    cost: refreshCost,
   };
 }
 
 module.exports = {
   REFRESH_COST,
+  REFRESH_COST_FREE,
+  REFRESH_COST_PREMIUM,
+  REFRESH_COST_OKAZION,
+  refreshCostForListing,
+  insufficientRefreshCreditsMessage,
   refreshListingWithBoost,
   getRefreshWindowHours,
   isValidKind,

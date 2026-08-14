@@ -438,7 +438,7 @@ const sq = {
     productListings: (n: number) => `${n} njoftime produkte`,
     premiumListingDays: (n: number, days: number) => `${n} Premium listing · ${days} ditë`,
     okazionListingDays: (n: number, days: number) => `${n} OKAZION · ${days} ditë`,
-    refreshAfterHours: (h: number) => `Rifresko postimin pas ${h} orësh`,
+    refreshAfterHours: (h: number) => `Ngrije postimin në krye pas ${h} orësh`,
     premiumBadge: 'Premium Badge',
     aiBuildPerDay: (n: number) => `AI Build ${n}× në ditë`,
     aiBuildUnlimited: 'AI Build pa limit',
@@ -478,7 +478,7 @@ const sq = {
     okazionInfo:
       'Shitje të shpejta — njoftimi shfaqet me temë të kuqe në OKAZION për 5 ditë. Vlen për prona, makina, pune dhe tregun.',
     autoRefreshInfo:
-      'Njoftimet tuaja ngrihen automatikisht në krye sipas intervalit të planit · 1 BC për çdo rifreskim.',
+      'Njoftimet tuaja ngrihen automatikisht në krye sipas intervalit të planit · 1–10 BC për çdo ngjitje (sipas OKAZION / Premium / falas).',
     premiumListingInfo: 'Njoftimi juaj shfaqet i theksuar dhe më lart në rezultate për kohëzgjatjen e zgjedhur.',
     convertListingInfo: 'Konvertoni kuotat e papërdorura të paketës në Boost Coins.',
     packageInfoAria: 'Çfarë bën kjo paketë',
@@ -1126,7 +1126,7 @@ const en: AppMessages = {
     productListings: (n: number) => `${n} product listings`,
     premiumListingDays: (n: number, days: number) => `${n} Premium listing · ${days} days`,
     okazionListingDays: (n: number, days: number) => `${n} OKAZION · ${days} days`,
-    refreshAfterHours: (h: number) => `Refresh listing after ${h} hours`,
+    refreshAfterHours: (h: number) => `Bump listing to top after ${h} hours`,
     premiumBadge: 'Premium Badge',
     aiBuildPerDay: (n: number) => `AI Build ${n}× per day`,
     aiBuildUnlimited: 'Unlimited AI Build',
@@ -1163,7 +1163,7 @@ const en: AppMessages = {
     okazionInfo:
       'Fast sales — your listing appears with a red OKAZION theme for 5 days. Applies to property, cars, jobs, and marketplace.',
     autoRefreshInfo:
-      'Your listings rise automatically to the top on your plan’s interval · 1 BC per refresh.',
+      'Your listings rise automatically to the top on your plan’s interval · 1–10 BC per bump (OKAZION / Premium / free).',
     premiumListingInfo: 'Your listing appears highlighted and higher in results for the chosen duration.',
     convertListingInfo: 'Convert unused package quotas into Boost Coins.',
     packageInfoAria: 'What this package does',

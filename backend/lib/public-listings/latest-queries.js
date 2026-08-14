@@ -213,6 +213,16 @@ function sortLooksPremium(sortSpec) {
   );
 }
 
+/** True when browse sort is chronological (newest feed), not price/rating. */
+function sortIsNewestFeed(sortSpec = []) {
+  const nonFeatured = (sortSpec || []).filter(
+    (s) => s.column !== 'premium_until' && s.column !== 'okazion_until',
+  );
+  if (!nonFeatured.length) return true;
+  const col = nonFeatured[0].column;
+  return col === 'bumped_at' || col === 'created_at';
+}
+
 async function runListingQuery(table, filterSpec, sortSpec, limit, skip = 0) {
   const sb = getSupabaseAdmin();
   const effectiveSort = sortSpec && sortSpec.length ? sortSpec : buildSort('newest');
@@ -250,7 +260,9 @@ async function runListingQuery(table, filterSpec, sortSpec, limit, skip = 0) {
   const rows = camelizeRows(data);
   // Only re-pin featured ads when the sort intentionally boosts them (browse/home).
   // Keyword search uses chronological/price sort — keep that order.
-  return sortLooksPremium(effectiveSort) ? prioritizeActivePremium(rows) : rows;
+  return sortLooksPremium(effectiveSort)
+    ? prioritizeActivePremium(rows, { sortRestByBump: sortIsNewestFeed(effectiveSort) })
+    : rows;
 }
 
 async function countListingQuery(table, filterSpec) {

@@ -37,15 +37,14 @@ const BRAND_GREEN = '#76ba1b';
 const SHEET_BG = 'rgba(12, 12, 12, 0.94)';
 const CARD_BG = '#141414';
 
-async function shareLink(title: string, url: string): Promise<void> {
-  if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
-    throw new Error('share_unavailable');
-  }
-  await navigator.share({ title, text: title, url });
-}
-
 async function copyLink(url: string): Promise<void> {
   await navigator.clipboard.writeText(url);
+}
+
+function isMobileShareDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  return /Android|iP(hone|ad|od)/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
 }
 
 function isIosLike(): boolean {
@@ -130,6 +129,80 @@ async function ensureListingImageEmbedded(root: HTMLElement, imageUrl: string | 
   });
 }
 
+type JpegCaptureOptions = {
+  root: HTMLElement;
+  imageUrl: string | null | undefined;
+  width: number;
+  height: number;
+  backgroundColor: string;
+  pixelRatio?: number;
+  dropShadow?: boolean;
+};
+
+async function captureElementAsJpegFile(
+  {
+    root,
+    imageUrl,
+    width,
+    height,
+    backgroundColor,
+    pixelRatio = 2,
+    dropShadow = false,
+  }: JpegCaptureOptions,
+  filename: string,
+): Promise<File> {
+  await ensureListingImageEmbedded(root, imageUrl);
+  await waitForImages(root);
+  await new Promise((r) => window.setTimeout(r, 120));
+
+  const jpegOpts = {
+    cacheBust: false,
+    skipFonts: true,
+    pixelRatio,
+    quality: 0.92,
+    width: Math.max(1, Math.round(width)),
+    height: Math.max(1, Math.round(height)),
+    backgroundColor,
+    imagePlaceholder: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
+    onImageErrorHandler: () => undefined,
+    fetchRequestInit: { mode: 'cors' as RequestMode, credentials: 'omit' as RequestCredentials },
+    style: {
+      transform: 'none',
+      transformOrigin: 'top left',
+      boxShadow: dropShadow ? undefined : 'none',
+    },
+  };
+
+  const capture = () => toJpeg(root, jpegOpts);
+
+  if (needsCaptureWarmup()) {
+    await capture().catch(() => null);
+    await new Promise((r) => window.setTimeout(r, 80));
+  }
+
+  const dataUrl = await capture();
+  if (!dataUrl.startsWith('data:image/')) {
+    throw new Error('capture empty');
+  }
+
+  return dataUrlToFile(dataUrl, filename);
+}
+
+/**
+ * Open the native share sheet with a story image so the user can pick Instagram Stories.
+ * iOS Safari rejects file shares when title/text are set — pass files only.
+ */
+async function shareStoryImage(file: File): Promise<void> {
+  if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
+    throw new Error('share_unavailable');
+  }
+  const shareData = { files: [file] };
+  if (typeof navigator.canShare === 'function' && !navigator.canShare(shareData)) {
+    throw new Error('share_unavailable');
+  }
+  await navigator.share(shareData);
+}
+
 /**
  * Save the card image to the device.
  * On mobile, the share sheet usually includes “Save image” / Photos;
@@ -193,6 +266,7 @@ export function ListingSharePage({
 }) {
   const previewWrapRef = React.useRef<HTMLDivElement>(null);
   const cardCaptureRef = React.useRef<HTMLDivElement>(null);
+  const storyCaptureRef = React.useRef<HTMLDivElement>(null);
   const embeddedImageRef = React.useRef<string | null>(null);
   const [busy, setBusy] = React.useState<'share' | 'copy' | 'save' | null>(null);
   const [feedback, setFeedback] = React.useState<string | null>(null);
@@ -272,30 +346,39 @@ export function ListingSharePage({
   }, [onShared, payload]);
 
   const handleShare = React.useCallback(async () => {
-    if (!payload || busy) return;
+    if (!payload || busy || !storyCaptureRef.current) return;
     setBusy('share');
     setError(null);
     setFeedback(null);
     try {
-      const url = resolveListingShareUrl(payload);
-      await shareLink(payload.title, url);
-      await bumpShareMetric();
-      setFeedback('Linku u nda.');
+      const file = await captureElementAsJpegFile(
+        {
+          root: storyCaptureRef.current,
+          imageUrl: embeddedImageRef.current ?? payload.imageUrl,
+          width: STORY_WIDTH,
+          height: STORY_HEIGHT,
+          backgroundColor: '#0a0a0a',
+          pixelRatio: 1,
+        },
+        `kutagjej-story-${payload.listingId.slice(0, 8)}.jpg`,
+      );
+
+      if (isMobileShareDevice()) {
+        await shareStoryImage(file);
+        await bumpShareMetric();
+        setFeedback('Zgjidh Instagram, pastaj shtyp Posto.');
+      } else {
+        downloadFile(file);
+        await bumpShareMetric();
+        setFeedback('Story u shkarkua. Hape Instagram në telefon për ta postuar.');
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         // User cancelled the share sheet.
       } else if (err instanceof Error && err.message === 'share_unavailable') {
-        // Desktop / unsupported — fall back to copy.
-        try {
-          const url = resolveListingShareUrl(payload);
-          await copyLink(url);
-          await bumpShareMetric();
-          setFeedback('Linku u kopjua.');
-        } catch {
-          setError('Nuk u nda linku. Provo përsëri.');
-        }
+        setError('Nuk mbështetet ndarja e fotos. Provo "Ruaj foton" dhe posto manualisht.');
       } else {
-        setError('Nuk u nda linku. Provo përsëri.');
+        setError('Nuk u përgatit story-ja. Provo përsëri.');
       }
     } finally {
       setBusy(null);
@@ -325,48 +408,18 @@ export function ListingSharePage({
     setError(null);
     setFeedback(null);
     try {
-      await ensureListingImageEmbedded(
-        cardCaptureRef.current,
-        embeddedImageRef.current ?? payload.imageUrl,
-      );
-      await waitForImages(cardCaptureRef.current);
-      await new Promise((r) => window.setTimeout(r, 120));
-
       const width = Math.max(1, Math.round(cardCaptureRef.current.offsetWidth));
       const height = Math.max(1, Math.round(cardCaptureRef.current.offsetHeight));
-      const jpegOpts = {
-        cacheBust: false,
-        skipFonts: true,
-        pixelRatio: 2,
-        quality: 0.92,
-        width,
-        height,
-        backgroundColor: CARD_BG,
-        imagePlaceholder:
-          'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
-        onImageErrorHandler: () => undefined,
-        fetchRequestInit: { mode: 'cors' as RequestMode, credentials: 'omit' as RequestCredentials },
-        style: {
-          transform: 'none',
-          transformOrigin: 'top left',
-          // Drop soft shadow so the saved file is just the card frame.
-          boxShadow: 'none',
+      const file = await captureElementAsJpegFile(
+        {
+          root: cardCaptureRef.current,
+          imageUrl: embeddedImageRef.current ?? payload.imageUrl,
+          width,
+          height,
+          backgroundColor: CARD_BG,
         },
-      };
-
-      const capture = () => toJpeg(cardCaptureRef.current!, jpegOpts);
-
-      if (needsCaptureWarmup()) {
-        await capture().catch(() => null);
-        await new Promise((r) => window.setTimeout(r, 80));
-      }
-
-      const dataUrl = await capture();
-      if (!dataUrl.startsWith('data:image/')) {
-        throw new Error('card capture empty');
-      }
-
-      const file = dataUrlToFile(dataUrl, `kutagjej-card-${payload.listingId.slice(0, 8)}.jpg`);
+        `kutagjej-card-${payload.listingId.slice(0, 8)}.jpg`,
+      );
       const result = await saveCardImage(file);
 
       setFeedback(
@@ -502,6 +555,7 @@ export function ListingSharePage({
         }}
       >
         <ListingShareCard ref={cardCaptureRef} payload={payload} />
+        <ListingStoryTemplate ref={storyCaptureRef} payload={payload} />
       </Box>
 
       {/* Bottom actions */}

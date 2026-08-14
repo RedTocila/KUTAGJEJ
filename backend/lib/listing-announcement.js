@@ -4,7 +4,7 @@ const { getSupabaseAdmin } = require('./supabase');
 const { isUuid } = require('./public-listings/query-helpers');
 const { bumpTimestampPatch } = require('./listing-bump');
 
-const ANNOUNCE_COST = 20;
+const ANNOUNCE_COST = 10;
 const TITLE_MAX = 80;
 const SUBTITLE_MAX = 160;
 const BANNER_URL_MAX = 2000;
@@ -20,7 +20,7 @@ const ANNOUNCE_VERTICALS = new Set(['businesses', 'professionals']);
 
 /**
  * Create or update a directory listing announcement (businesses / professionals).
- * - First publish or reAnnounce=true: charge 20 BC and bump listing to top (bumped_at).
+ * - First publish or reAnnounce=true: charge 10 BC and bump listing to top (bumped_at).
  * - Edit existing without reAnnounce: free content update, no bump.
  */
 async function upsertBusinessAnnouncement({ userId, listingId, title, subtitle, bannerUrl, reAnnounce }) {

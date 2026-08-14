@@ -29,7 +29,7 @@ export async function refreshListingBoost(params: {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      return { error: typeof data.message === 'string' ? data.message : 'Rifreskimi dështoi.' };
+      return { error: typeof data.message === 'string' ? data.message : 'Nuk u ngrijt në krye.' };
     }
     return {
       refreshedAt: typeof data.refreshedAt === 'string' ? data.refreshedAt : undefined,

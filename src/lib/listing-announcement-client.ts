@@ -17,14 +17,14 @@ export type BusinessAnnouncement = {
   announcedAt?: string | null;
 };
 
-export const ANNOUNCE_COST_BC = 20;
+export const ANNOUNCE_COST_BC = 10;
 
 export async function upsertBusinessAnnouncement(params: {
   listingId: string;
   title: string;
   subtitle?: string | null;
   bannerUrl?: string | null;
-  /** Charge 20 BC and bump listing when true, or when creating the first announcement. */
+  /** Charge 10 BC and bump listing when true, or when creating the first announcement. */
   reAnnounce?: boolean;
 }): Promise<{
   announcement?: BusinessAnnouncement;

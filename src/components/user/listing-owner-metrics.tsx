@@ -35,6 +35,7 @@ import type { BusinessAnnouncement } from '@/lib/listing-announcement-client';
 import { ANNOUNCE_COST_BC } from '@/lib/listing-announcement-client';
 import type { ListingMetricKind, ListingMetrics } from '@/lib/listing-metrics';
 import { refreshListingBoost, setListingAutoRefresh } from '@/lib/listing-refresh-client';
+import { refreshCostBc, refreshCostButtonLabel, bumpButtonAriaLabelSq, refreshCostTooltipSq } from '@/lib/listing-refresh-cost';
 import { applyOkazionFromPlan, applyPremiumFromPlan } from '@/lib/payments-client';
 import {
   errorMainAlpha,
@@ -411,6 +412,18 @@ export function ListingOwnerMetrics({
   const okazionSupported =
     kind === 'real-estate' || kind === 'car' || kind === 'job' || kind === 'marketplace';
 
+  const refreshTierFlags = React.useMemo(
+    () => ({
+      isOkazion: okazionSupported && (okazionOn || Boolean(isOkazion)),
+      isPremium: premiumOn || Boolean(isPremium),
+    }),
+    [okazionSupported, okazionOn, isOkazion, premiumOn, isPremium],
+  );
+  const refreshCost = refreshCostBc(refreshTierFlags);
+  const bumpButtonLabel = refreshCostButtonLabel(refreshTierFlags);
+  const bumpButtonAriaLabel = bumpButtonAriaLabelSq(refreshTierFlags);
+  const refreshTooltip = refreshCostTooltipSq(refreshTierFlags);
+
   const handleRefresh = async () => {
     if (!listingId || !kind || busy) return;
     setError(null);
@@ -418,7 +431,7 @@ export function ListingOwnerMetrics({
     try {
       const res = await refreshListingBoost({ kind, listingId });
       if (res.error || !res.refreshedAt) {
-        setError(res.error || 'Rifreskimi dështoi.');
+        setError(res.error || 'Nuk u ngrijt në krye.');
         return;
       }
       setLastRefreshAtLocal(res.refreshedAt);
@@ -432,9 +445,7 @@ export function ListingOwnerMetrics({
   handleRefreshRef.current = handleRefresh;
 
   /**
-   * Auto-Refresh: when enrolled and the Rifresko cooldown ends, fire the same
-   * bump as a manual click (1 BC). Needed on Vercel where the API has no
-   * long-lived setInterval scheduler.
+   * Auto: when enrolled and cooldown ends, fire the same bump as a manual click.
    */
   const autoRefreshAttemptKeyRef = React.useRef<string | null>(null);
   React.useEffect(() => {
@@ -569,13 +580,13 @@ export function ListingOwnerMetrics({
               '& .MuiButton-root': { width: '100%', justifyContent: 'center' },
             }}
           >
-            <Tooltip title="Vendose njoftimin në krye të listës · kushton 1 Boost Coin">
+            <Tooltip title={refreshTooltip}>
               <span>
                 <Button
                   size="small"
                   variant="contained"
                   color="primary"
-                  aria-label="Rifresko"
+                  aria-label={bumpButtonAriaLabel}
                   disabled={refreshButtonDisabled}
                   onClick={() => {
                     void handleRefresh();
@@ -585,6 +596,7 @@ export function ListingOwnerMetrics({
                   }
                   sx={{
                     ...labeledBtnSx,
+                    whiteSpace: 'nowrap',
                     ...(refreshLocked
                       ? {
                           bgcolor: 'action.hover',
@@ -600,15 +612,15 @@ export function ListingOwnerMetrics({
                       : fadedPrimarySx),
                   }}
                 >
-                  {refreshLocked ? refreshTimer : 'Rifresko'}
+                  {refreshLocked ? refreshTimer : bumpButtonLabel}
                 </Button>
               </span>
             </Tooltip>
             <Tooltip
               title={
                 autoRefreshEnabled
-                  ? 'Hiq nga Auto-Refresh'
-                  : 'Shto në Auto-Refresh · rifreskon automatikisht sa herë që Rifresko bëhet i disponueshëm · 1 BC për çdo rifreskim'
+                  ? 'Hiq nga Auto'
+                  : `Shto në Auto · ngrihet automatikisht në krye pas cooldown · ${refreshCost} BC`
               }
             >
               <span>

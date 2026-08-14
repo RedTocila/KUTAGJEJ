@@ -37,7 +37,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       refreshedAt: result.refreshedAt,
       boostCredits: result.boostCredits,
       cost: result.cost,
-      message: 'Njoftimi u rifreskua.',
+      message: 'Njoftimi u ngrijt në krye.',
     });
   } catch (err) {
     console.error('POST /listings/refresh:', err?.message || err);

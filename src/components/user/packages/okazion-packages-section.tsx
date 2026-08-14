@@ -38,10 +38,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
 import {
-  listMyCarListings,
-  listMyJobListings,
-  listMyMarketplaceListings,
-  listMyRealEstateListings,
+  listMyListings,
 } from '@/lib/listings-client';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import { localizedLabel } from '@/lib/language';
@@ -55,11 +52,11 @@ import {
 import { paths } from '@/paths';
 import type { OkazionPackage, OkazionVoucher } from '@/types/payment';
 import {
-  PackageCheckoutCard,
+  DualPayOfferRow,
   PackageEurPrice,
   SectionBlock,
   SoftChip,
-  accentButtonSx,
+  dualPayButtonSx,
   formatBc,
 } from './package-ui';
 
@@ -114,15 +111,10 @@ function checkoutOkazionHref(packageId: string, quantity: number) {
 }
 
 async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
-  const [re, cars, jobs, mkt] = await Promise.all([
-    listMyRealEstateListings(),
-    listMyCarListings(),
-    listMyJobListings(),
-    listMyMarketplaceListings(),
-  ]);
+  const mine = await listMyListings();
 
   const out: PickerListing[] = [];
-  for (const l of re.listings ?? []) {
+  for (const l of mine.realEstate ?? []) {
     if (l.status !== 'approved') continue;
     out.push({
       key: `real-estate:${l.id}`,
@@ -133,7 +125,7 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
       imageUrl: coverImage(l.imageUrls),
     });
   }
-  for (const l of cars.listings ?? []) {
+  for (const l of mine.cars ?? []) {
     if (l.status !== 'approved') continue;
     const title = [l.make, l.model, l.variant].filter(Boolean).join(' ') || 'Makinë';
     out.push({
@@ -145,7 +137,7 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
       imageUrl: coverImage(l.imageUrls),
     });
   }
-  for (const l of jobs.listings ?? []) {
+  for (const l of mine.jobs ?? []) {
     if (l.status !== 'approved') continue;
     out.push({
       key: `job:${l.id}`,
@@ -156,7 +148,7 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
       imageUrl: coverImage(l.imageUrls),
     });
   }
-  for (const l of mkt.listings ?? []) {
+  for (const l of mine.marketplace ?? []) {
     if (l.status !== 'approved') continue;
     out.push({
       key: `marketplace:${l.id}`,
@@ -317,30 +309,28 @@ export function OkazionPackagesSection() {
     <SectionBlock
       icon={SealPercentIcon}
       title="OKAZION"
-      description="Shitje të shpejta — njoftimi shfaqet me temë të kuqe në OKAZION për 5 ditë. Vlen për prona, makina, pune dhe tregun."
+      info={t.packages.okazionInfo}
+      infoAriaLabel={t.packages.packageInfoAria}
       accent="error"
       chips={
-        <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-          <SoftChip label={`${formatBc(balance)} BC`} color="error" />
-          {unused.length > 0 ? (
-            <SoftChip label={`${unused.length} për t'u aplikuar`} color="error" />
-          ) : null}
-        </Stack>
+        unused.length > 0 ? (
+          <SoftChip label={`${unused.length} për t'u aplikuar`} color="error" />
+        ) : undefined
       }
     >
       {error ? (
-        <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError(null)}>
+        <Alert severity="warning" sx={{ mb: 1.5, borderRadius: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       ) : null}
       {success ? (
-        <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setSuccess(null)}>
+        <Alert severity="success" sx={{ mb: 1.5, borderRadius: 2 }} onClose={() => setSuccess(null)}>
           {success}
         </Alert>
       ) : null}
 
       {unused.length > 0 ? (
-        <Stack spacing={1} sx={{ mb: 2 }}>
+        <Stack spacing={1} sx={{ mb: 1.25 }}>
           {unused.map((v) => (
             <Stack
               key={v.id}
@@ -349,7 +339,7 @@ export function OkazionPackagesSection() {
               sx={{
                 alignItems: { sm: 'center' },
                 justifyContent: 'space-between',
-                p: 1.5,
+                p: 1.35,
                 borderRadius: 2,
                 border: '1px dashed',
                 borderColor: OKAZION_ACCENT,
@@ -373,46 +363,75 @@ export function OkazionPackagesSection() {
         </Stack>
       ) : null}
 
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ alignItems: 'center', mb: 1.5, flexWrap: 'wrap', gap: 1 }}
-      >
-        <Typography variant="body2" sx={{ fontWeight: 700 }}>
-          Sasia (stoko për më vonë):
-        </Typography>
-        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-          <Button
-            size="small"
-            variant="outlined"
-            color="error"
-            disabled={quantity <= 1}
-            onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-            sx={{ minWidth: 36, px: 0 }}
-            aria-label={t.packages.decrease}
-          >
-            <MinusIcon size={14} weight="bold" />
-          </Button>
-          <Typography sx={{ fontWeight: 800, minWidth: 28, textAlign: 'center' }}>{quantity}</Typography>
-          <Button
-            size="small"
-            variant="outlined"
-            color="error"
-            disabled={quantity >= 50}
-            onClick={() => setQuantity((q) => Math.min(50, q + 1))}
-            sx={{ minWidth: 36, px: 0 }}
-            aria-label={t.packages.increase}
-          >
-            <PlusIcon size={14} weight="bold" />
-          </Button>
-        </Stack>
-      </Stack>
-
-      <PackageCheckoutCard
+      <DualPayOfferRow
         title={quantity > 1 ? `${pkgTitle} ×${quantity}` : pkgTitle}
-        subtitle={t.packages.okazionCardSubtitle}
-        badge={t.packages.daysShort(5)}
+        badge={t.packages.daysShort(pkg.days)}
         accent="error"
+        highlighted
+        meta={
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+              Sasia (stoko për më vonë)
+            </Typography>
+            <Stack
+              direction="row"
+              spacing={0}
+              sx={{
+                alignItems: 'center',
+                borderRadius: 999,
+                border: '1px solid',
+                borderColor: `${OKAZION_ACCENT}55`,
+                bgcolor: (theme) =>
+                  theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                overflow: 'hidden',
+              }}
+            >
+              <Button
+                size="small"
+                disabled={quantity <= 1}
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                sx={{
+                  minWidth: 34,
+                  px: 0,
+                  py: 0.55,
+                  borderRadius: 0,
+                  color: OKAZION_ACCENT,
+                  '&:hover': { bgcolor: `${OKAZION_ACCENT}14` },
+                }}
+                aria-label={t.packages.decrease}
+              >
+                <MinusIcon size={13} weight="bold" />
+              </Button>
+              <Typography
+                sx={{
+                  fontWeight: 850,
+                  minWidth: 28,
+                  textAlign: 'center',
+                  fontSize: '0.85rem',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {quantity}
+              </Typography>
+              <Button
+                size="small"
+                disabled={quantity >= 50}
+                onClick={() => setQuantity((q) => Math.min(50, q + 1))}
+                sx={{
+                  minWidth: 34,
+                  px: 0,
+                  py: 0.55,
+                  borderRadius: 0,
+                  color: OKAZION_ACCENT,
+                  '&:hover': { bgcolor: `${OKAZION_ACCENT}14` },
+                }}
+                aria-label={t.packages.increase}
+              >
+                <PlusIcon size={13} weight="bold" />
+              </Button>
+            </Stack>
+          </Stack>
+        }
         actions={
           <>
             <Button
@@ -421,14 +440,7 @@ export function OkazionPackagesSection() {
               color="error"
               disabled={busy}
               onClick={() => onBuyCard(pkg)}
-              sx={{
-                ...accentButtonSx('error'),
-                flex: 1,
-                borderRadius: 1.75,
-                py: 1,
-                fontSize: '0.85rem',
-                fontWeight: 850,
-              }}
+              sx={dualPayButtonSx('error')}
             >
               <PackageEurPrice listPrice={totalEur} percent={lifetimePercent} onAccent />
             </Button>
@@ -439,14 +451,7 @@ export function OkazionPackagesSection() {
               disabled={busy || !canAfford}
               onClick={() => void onBuyBc(pkg)}
               startIcon={busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={14} />}
-              sx={{
-                ...accentButtonSx('error', 'outlined'),
-                flex: 1,
-                borderRadius: 1.75,
-                py: 1,
-                fontSize: '0.85rem',
-                fontWeight: 850,
-              }}
+              sx={dualPayButtonSx('error', 'outlined')}
             >
               {formatBc(totalBc)} BC
             </Button>
@@ -454,7 +459,7 @@ export function OkazionPackagesSection() {
         }
       />
 
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5, px: 0.25 }}>
         {t.packages.okazionGrowEliteNote}
       </Typography>
 

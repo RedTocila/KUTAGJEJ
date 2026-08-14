@@ -10,6 +10,7 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  IconButton,
   InputAdornment,
   List,
   ListItemButton,
@@ -17,6 +18,7 @@ import {
   Slider,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { ArrowClockwise as ArrowClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowClockwise';
@@ -25,6 +27,7 @@ import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
+import { Question as QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
@@ -49,12 +52,8 @@ import {
   type QuotaKind,
 } from '@/lib/listing-quota-convert-client';
 import {
-  listMyCarListings,
-  listMyJobListings,
-  listMyMarketplaceListings,
-  listMyRealEstateListings,
+  listMyListings,
 } from '@/lib/listings-client';
-import { listMyBusinessListings, listMyProfessionalListings } from '@/lib/directory-listings-client';
 import { localizedLabel } from '@/lib/language';
 import {
   applyPremiumVoucher,
@@ -68,12 +67,12 @@ import { paths } from '@/paths';
 import type { AutoRefreshPackage, PremiumPackage, PremiumVoucher } from '@/types/payment';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import {
-  PackageCheckoutCard,
+  DualPayOfferRow,
   PackageEurPrice,
   ReferralDiscountNote,
   SectionBlock,
   SoftChip,
-  accentButtonSx,
+  dualPayButtonSx,
   formatBc,
 } from './package-ui';
 import { OkazionPackagesSection } from './okazion-packages-section';
@@ -187,17 +186,10 @@ function rawCreditsFrom(counts: QuotaCounts, rates: QuotaCounts) {
 }
 
 async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
-  const [re, cars, jobs, mkt, biz, pro] = await Promise.all([
-    listMyRealEstateListings(),
-    listMyCarListings(),
-    listMyJobListings(),
-    listMyMarketplaceListings(),
-    listMyBusinessListings(),
-    listMyProfessionalListings(),
-  ]);
+  const mine = await listMyListings();
 
   const out: PickerListing[] = [];
-  for (const l of re.listings ?? []) {
+  for (const l of mine.realEstate ?? []) {
     if (l.status !== 'approved') continue;
     out.push({
       key: `real-estate:${l.id}`,
@@ -208,7 +200,7 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
       imageUrl: coverImage(l.imageUrls),
     });
   }
-  for (const l of cars.listings ?? []) {
+  for (const l of mine.cars ?? []) {
     if (l.status !== 'approved') continue;
     const title = [l.make, l.model, l.variant].filter(Boolean).join(' ') || 'Makinë';
     out.push({
@@ -220,7 +212,7 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
       imageUrl: coverImage(l.imageUrls),
     });
   }
-  for (const l of jobs.listings ?? []) {
+  for (const l of mine.jobs ?? []) {
     if (l.status !== 'approved') continue;
     out.push({
       key: `job:${l.id}`,
@@ -231,7 +223,7 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
       imageUrl: coverImage(l.imageUrls),
     });
   }
-  for (const l of mkt.listings ?? []) {
+  for (const l of mine.marketplace ?? []) {
     if (l.status !== 'approved') continue;
     out.push({
       key: `marketplace:${l.id}`,
@@ -242,7 +234,7 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
       imageUrl: coverImage(l.imageUrls),
     });
   }
-  for (const l of biz.listings ?? []) {
+  for (const l of mine.businesses ?? []) {
     if (l.status !== 'approved') continue;
     out.push({
       key: `businesses:${l.id}`,
@@ -253,7 +245,7 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
       imageUrl: coverImage(l.imageUrls),
     });
   }
-  for (const l of pro.listings ?? []) {
+  for (const l of mine.professionals ?? []) {
     if (l.status !== 'approved') continue;
     out.push({
       key: `professionals:${l.id}`,
@@ -270,7 +262,6 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
 function AutoRefreshSection() {
   const router = useRouter();
   const t = useCopy();
-  const { language } = useLanguage();
   const { user, checkSession } = useUser();
   const lifetimePercent = useLifetimePackageDiscount();
   const balance = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
@@ -336,21 +327,17 @@ function AutoRefreshSection() {
     <SectionBlock
       icon={ArrowClockwiseIcon}
       title="Auto-Refresh"
-      description="Njoftimet tuaja ngrihen automatikisht në krye sipas intervalit të planit · 1 BC për çdo rifreskim."
-      chips={
-        <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-          <SoftChip label={`${used}/${slots} vende`} />
-          <SoftChip label={`${formatBc(balance)} BC`} color="warning" />
-        </Stack>
-      }
+      info={t.packages.autoRefreshInfo}
+      infoAriaLabel={t.packages.packageInfoAria}
+      chips={<SoftChip label={t.packages.inUse(used, slots)} />}
     >
       {error ? (
-        <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError(null)}>
+        <Alert severity="warning" sx={{ mb: 1.5, borderRadius: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       ) : null}
       {success ? (
-        <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setSuccess(null)}>
+        <Alert severity="success" sx={{ mb: 1.5, borderRadius: 2 }} onClose={() => setSuccess(null)}>
           {success}
         </Alert>
       ) : null}
@@ -360,17 +347,18 @@ function AutoRefreshSection() {
           <CircularProgress size={24} />
         </Box>
       ) : (
-        <Stack spacing={1.25} sx={{ pb: { xs: 1, md: 0 } }}>
+        <Stack spacing={1}>
           {packages.map((pkg, index) => {
             const busy = busyId === pkg.id;
             const priceBc = Number(pkg.priceBc) || 0;
             const canAfford = balance >= priceBc && priceBc > 0;
+            const best = index === 1;
             return (
-              <PackageCheckoutCard
+              <DualPayOfferRow
                 key={pkg.id}
                 title={t.packages.slots(pkg.slots)}
-                subtitle={`${localizedLabel(language, pkg.labelSq, pkg.labelEn)} · ${t.packages.inUse(used, slots)}`}
-                badge={index === 1 ? t.packages.bestValue : null}
+                badge={best ? t.packages.bestValue : null}
+                highlighted={best}
                 actions={
                   <>
                     <Button
@@ -378,14 +366,7 @@ function AutoRefreshSection() {
                       variant="contained"
                       disabled={busy}
                       onClick={() => onBuyCard(pkg)}
-                      sx={{
-                        ...accentButtonSx('primary'),
-                        flex: 1,
-                        borderRadius: 1.75,
-                        py: 1,
-                        fontSize: '0.85rem',
-                        fontWeight: 850,
-                      }}
+                      sx={dualPayButtonSx('primary')}
                     >
                       <PackageEurPrice listPrice={pkg.priceEur} percent={lifetimePercent} onAccent />
                     </Button>
@@ -397,14 +378,7 @@ function AutoRefreshSection() {
                       startIcon={
                         busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={14} />
                       }
-                      sx={{
-                        ...accentButtonSx('primary', 'outlined'),
-                        flex: 1,
-                        borderRadius: 1.75,
-                        py: 1,
-                        fontSize: '0.85rem',
-                        fontWeight: 850,
-                      }}
+                      sx={dualPayButtonSx('primary', 'outlined')}
                     >
                       {formatBc(priceBc)} BC
                     </Button>
@@ -559,28 +533,28 @@ function PremiumListingSection() {
     <SectionBlock
       icon={SparkleIcon}
       title="Premium Listing"
-      description="Njoftimi juaj shfaqet i theksuar dhe më lart në rezultate për kohëzgjatjen e zgjedhur."
+      info={t.packages.premiumListingInfo}
+      infoAriaLabel={t.packages.packageInfoAria}
       accent="warning"
       chips={
-        <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-          <SoftChip label={`${formatBc(balance)} BC`} color="warning" />
-          {unused.length > 0 ? <SoftChip label={`${unused.length} për t'u aplikuar`} color="primary" /> : null}
-        </Stack>
+        unused.length > 0 ? (
+          <SoftChip label={`${unused.length} për t'u aplikuar`} color="warning" />
+        ) : undefined
       }
     >
       {error ? (
-        <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError(null)}>
+        <Alert severity="warning" sx={{ mb: 1.5, borderRadius: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       ) : null}
       {success ? (
-        <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setSuccess(null)}>
+        <Alert severity="success" sx={{ mb: 1.5, borderRadius: 2 }} onClose={() => setSuccess(null)}>
           {success}
         </Alert>
       ) : null}
 
       {unused.length > 0 ? (
-        <Stack spacing={1} sx={{ mb: 2 }}>
+        <Stack spacing={1} sx={{ mb: 1.25 }}>
           {unused.map((v) => (
             <Stack
               key={v.id}
@@ -589,7 +563,7 @@ function PremiumListingSection() {
               sx={{
                 alignItems: { sm: 'center' },
                 justifyContent: 'space-between',
-                p: 1.5,
+                p: 1.35,
                 borderRadius: 2,
                 border: '1px dashed',
                 borderColor: 'warning.main',
@@ -607,18 +581,18 @@ function PremiumListingSection() {
         </Stack>
       ) : null}
 
-      <Stack spacing={1.25}>
+      <Stack spacing={1}>
         {packages.map((pkg) => {
           const busy = busyId === pkg.id;
           const canAfford = balance >= pkg.priceBc;
           const highlighted = pkg.days === 15;
           return (
-            <PackageCheckoutCard
+            <DualPayOfferRow
               key={pkg.id}
               title={localizedLabel(language, pkg.labelSq, pkg.labelEn)}
-              subtitle={t.packages.premiumCardSubtitle(pkg.days)}
               badge={highlighted ? t.packages.bestValue : null}
               accent="warning"
+              highlighted={highlighted}
               actions={
                 <>
                   <Button
@@ -627,14 +601,7 @@ function PremiumListingSection() {
                     color="warning"
                     disabled={busy}
                     onClick={() => onBuyCard(pkg)}
-                    sx={{
-                      ...accentButtonSx('warning'),
-                      flex: 1,
-                      borderRadius: 1.75,
-                      py: 1,
-                      fontSize: '0.85rem',
-                      fontWeight: 850,
-                    }}
+                    sx={dualPayButtonSx('warning')}
                   >
                     <PackageEurPrice listPrice={pkg.priceEur} percent={lifetimePercent} onAccent />
                   </Button>
@@ -647,14 +614,7 @@ function PremiumListingSection() {
                     startIcon={
                       busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={14} />
                     }
-                    sx={{
-                      ...accentButtonSx('warning', 'outlined'),
-                      flex: 1,
-                      borderRadius: 1.75,
-                      py: 1,
-                      fontSize: '0.85rem',
-                      fontWeight: 850,
-                    }}
+                    sx={dualPayButtonSx('warning', 'outlined')}
                   >
                     {formatBc(pkg.priceBc)} BC
                   </Button>
@@ -665,7 +625,7 @@ function PremiumListingSection() {
         })}
       </Stack>
 
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5, px: 0.25 }}>
         {t.packages.premiumGrowEliteNote}
       </Typography>
 
@@ -790,6 +750,7 @@ function PremiumListingSection() {
 }
 
 function ConvertListingSection() {
+  const t = useCopy();
   const { checkSession } = useUser();
   const [loading, setLoading] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
@@ -860,42 +821,81 @@ function ConvertListingSection() {
     <Box
       id="convert"
       sx={{
-        p: { xs: 2, sm: 2.5 },
-        borderRadius: 2.5,
+        p: { xs: 1.85, sm: 2.25 },
+        borderRadius: 3,
         border: '1px solid',
         borderColor: 'divider',
         bgcolor: 'background.paper',
         scrollMarginTop: { xs: 96, md: 112 },
+        overflow: 'hidden',
+        position: 'relative',
       }}
     >
-      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mb: 0.5 }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 3,
+          bgcolor: 'warning.main',
+          opacity: 0.9,
+        }}
+      />
+      <Stack direction="row" spacing={1.1} sx={{ alignItems: 'flex-start', mb: 0.5, mt: 0.35 }}>
         <Box
           sx={{
             width: 36,
             height: 36,
-            borderRadius: 1.5,
+            borderRadius: 1.75,
             display: 'grid',
             placeItems: 'center',
             flexShrink: 0,
-            bgcolor: (t) => `${t.palette.warning.main}18`,
+            bgcolor: (theme) => `${theme.palette.warning.main}18`,
             color: 'warning.main',
           }}
         >
           <BoostCoinIcon size={20} />
         </Box>
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
-            <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', letterSpacing: 0.4 }}>
-              CONVERT LISTING
-            </Typography>
-            <Chip size="small" label="BOOST COINS" color="warning" sx={{ fontWeight: 700, height: 22 }} />
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 0.5 }}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5, minWidth: 0 }}>
+              <Typography sx={{ fontWeight: 850, fontSize: '1.02rem', letterSpacing: '-0.01em' }}>
+                Convert Listing
+              </Typography>
+              <Chip size="small" label="BOOST COINS" color="warning" sx={{ fontWeight: 700, height: 22 }} />
+            </Stack>
+            <Tooltip
+              arrow
+              enterTouchDelay={0}
+              leaveTouchDelay={4000}
+              title={
+                <Typography variant="body2" component="span" sx={{ display: 'block', lineHeight: 1.45 }}>
+                  {t.packages.convertListingInfo}
+                </Typography>
+              }
+              slotProps={{
+                tooltip: {
+                  sx: { maxWidth: 300, p: 1.25 },
+                },
+              }}
+            >
+              <IconButton
+                aria-label={t.packages.packageInfoAria}
+                size="small"
+                sx={{
+                  color: 'text.secondary',
+                  p: 0.35,
+                  flexShrink: 0,
+                  '&:hover': { color: 'warning.main', bgcolor: 'action.hover' },
+                }}
+              >
+                <QuestionIcon size={17} weight="bold" />
+              </IconButton>
+            </Tooltip>
           </Stack>
         </Box>
       </Stack>
-
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 0.5 }}>
-        Konvertoni kuotat e papërdorura të paketës në Boost Coins.
-      </Typography>
 
       {error ? (
         <Alert severity="warning" sx={{ mt: 1.5, borderRadius: 1.5 }} onClose={() => setError(null)}>
@@ -1022,6 +1022,8 @@ function ConvertListingSection() {
 
 export function ExtraPackagesPanel() {
   const lifetimePercent = useLifetimePackageDiscount();
+  const { user } = useUser();
+  const balance = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1066,8 +1068,35 @@ export function ExtraPackagesPanel() {
   }, []);
 
   return (
-    <Stack spacing={2.5}>
-      <ReferralDiscountNote percent={lifetimePercent} />
+    <Stack spacing={2}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 0.75 }}
+      >
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <ReferralDiscountNote percent={lifetimePercent} />
+        </Box>
+        <Stack
+          direction="row"
+          spacing={0.65}
+          sx={{
+            alignItems: 'center',
+            px: 1.1,
+            py: 0.55,
+            borderRadius: 999,
+            bgcolor: (t) => `${t.palette.warning.main}18`,
+            border: '1px solid',
+            borderColor: (t) => `${t.palette.warning.main}40`,
+            flexShrink: 0,
+          }}
+        >
+          <BoostCoinIcon size={15} />
+          <Typography sx={{ fontWeight: 850, fontSize: '0.78rem', color: 'warning.main', letterSpacing: '-0.01em' }}>
+            {formatBc(balance)} BC
+          </Typography>
+        </Stack>
+      </Stack>
       <AutoRefreshSection />
       <OkazionPackagesSection />
       <PremiumListingSection />

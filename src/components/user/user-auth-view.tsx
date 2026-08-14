@@ -16,9 +16,7 @@ import {
   IconButton,
   InputAdornment,
   Link as MuiLink,
-  MenuItem,
   OutlinedInput,
-  Select,
   Stack,
   Tab,
   Tabs,
@@ -36,6 +34,7 @@ import { Controller, useForm, type Control } from 'react-hook-form';
 import { z as zod } from 'zod';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
+import { SearchableSelect } from '@/components/core/searchable-select';
 import { useCopy } from '@/hooks/use-copy';
 import { useNavigateBack } from '@/hooks/use-navigate-back';
 import { authClient } from '@/lib/auth/client';
@@ -135,39 +134,17 @@ function BasedCityRegisterField<T extends { basedCityId: string }>({
       control={control}
       name={'basedCityId' as never}
       render={({ field }) => (
-        <FormControl error={Boolean(error)} fullWidth disabled={citiesLoading || cities.length === 0}>
-          <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(error))}>
-            Ku jeni bazuar{' '}
-            <Typography component="span" variant="caption" sx={{ fontWeight: 400, opacity: 0.75 }}>
-              (opsional)
-            </Typography>
-          </Typography>
-          <Select
-            {...field}
-            displayEmpty
-            sx={{
-              ...outlinedFieldSx,
-              '& .MuiSelect-icon': { color: 'text.secondary' },
-            }}
-            MenuProps={{
-              slotProps: {
-                paper: {
-                  sx: { maxHeight: 320 },
-                },
-              },
-            }}
-          >
-            <MenuItem value="">
-              <em>Zgjidhni qytetin…</em>
-            </MenuItem>
-            {cities.map((c) => (
-              <MenuItem key={c.id} value={c.id}>
-                {c.name}
-              </MenuItem>
-            ))}
-          </Select>
-          {error ? <FormHelperText>{error}</FormHelperText> : null}
-        </FormControl>
+        <SearchableSelect
+          label="Ku jeni bazuar (opsional)"
+          value={typeof field.value === 'string' ? field.value : ''}
+          onChange={field.onChange}
+          options={cities.map((c) => ({ value: c.id, label: c.name }))}
+          emptyLabel="Zgjidhni qytetin…"
+          clearable
+          disabled={citiesLoading || cities.length === 0}
+          error={Boolean(error)}
+          helperText={error}
+        />
       )}
     />
   );
@@ -180,65 +157,82 @@ function AcceptTermsField<T extends { acceptTerms: boolean }>({
   control: Control<T>;
   error?: string;
 }) {
+  const checkboxId = React.useId();
+
   return (
     <Controller
       control={control}
       name={'acceptTerms' as never}
       render={({ field }) => (
         <FormControl error={Boolean(error)} sx={{ width: '100%' }}>
-          <FormControlLabel
-            sx={{
-              alignItems: 'flex-start',
-              mx: 0,
-              gap: 1,
-              '& .MuiFormControlLabel-label': {
+          {/*
+            Do not nest terms/privacy links inside FormControlLabel — on mobile that
+            steals taps from the checkbox and makes acceptance impossible.
+          */}
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, width: '100%' }}>
+            <Checkbox
+              id={checkboxId}
+              checked={Boolean(field.value)}
+              onChange={(event) => field.onChange(event.target.checked)}
+              onBlur={field.onBlur}
+              slotProps={{ input: { ref: field.ref } }}
+              sx={{
+                color: 'text.disabled',
+                p: 0.75,
+                mt: -0.25,
+                flexShrink: 0,
+                // Enlarge the hit target beyond the icon for touch devices.
+                '& input': {
+                  width: 44,
+                  height: 44,
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                },
+                '&.Mui-checked': { color: 'primary.main' },
+              }}
+            />
+            <Typography
+              variant="body2"
+              sx={{
                 color: 'text.secondary',
                 fontSize: '0.85rem',
                 lineHeight: 1.45,
-                pt: 0.35,
-              },
-            }}
-            control={
-              <Checkbox
-                checked={Boolean(field.value)}
-                onChange={(event) => field.onChange(event.target.checked)}
-                onBlur={field.onBlur}
-                slotProps={{ input: { ref: field.ref } }}
-                sx={{
-                  color: 'text.disabled',
-                  p: 0.5,
-                  '&.Mui-checked': { color: 'primary.main' },
-                }}
-              />
-            }
-            label={
-              <Typography component="span" variant="body2" sx={{ color: 'inherit' }}>
-                Pranoj{' '}
-                <MuiLink
-                  component={RouterLink}
-                  href={paths.public.terms}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{ color: 'primary.main', fontWeight: 700 }}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  kushtet e përdorimit
-                </MuiLink>{' '}
-                dhe{' '}
-                <MuiLink
-                  component={RouterLink}
-                  href={paths.public.privacy}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{ color: 'primary.main', fontWeight: 700 }}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  politikën e privatësisë
-                </MuiLink>
-                .
-              </Typography>
-            }
-          />
+                pt: 0.75,
+                cursor: 'pointer',
+                userSelect: 'none',
+              }}
+              onClick={(event) => {
+                // Toggle when tapping the sentence; ignore taps on the legal links.
+                if ((event.target as HTMLElement).closest('a')) return;
+                field.onChange(!field.value);
+              }}
+            >
+              Pranoj{' '}
+              <MuiLink
+                component={RouterLink}
+                href={paths.public.terms}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{ color: 'primary.main', fontWeight: 700 }}
+                onClick={(event) => event.stopPropagation()}
+              >
+                kushtet e përdorimit
+              </MuiLink>{' '}
+              dhe{' '}
+              <MuiLink
+                component={RouterLink}
+                href={paths.public.privacy}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{ color: 'primary.main', fontWeight: 700 }}
+                onClick={(event) => event.stopPropagation()}
+              >
+                politikën e privatësisë
+              </MuiLink>
+              .
+            </Typography>
+          </Box>
           {error ? <FormHelperText>{error}</FormHelperText> : null}
         </FormControl>
       )}

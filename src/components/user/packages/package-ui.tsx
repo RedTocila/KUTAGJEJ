@@ -2,10 +2,11 @@
 
 import * as React from 'react';
 import { alpha, type Theme } from '@mui/material/styles';
-import { Box, ButtonBase, Chip, Collapse, Stack, Typography } from '@mui/material';
+import { Box, ButtonBase, Chip, Collapse, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
 import { Check as CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
+import { Question as QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { OKAZION_RED } from '@/lib/home-categories';
@@ -325,7 +326,7 @@ export function FeatureList({
   compact?: boolean;
 }) {
   return (
-    <Stack spacing={compact ? 0.4 : 0.7} sx={{ mb: compact ? 0 : 2, flex: compact ? undefined : 1, mt: compact ? 0.35 : 0 }}>
+    <Stack spacing={compact ? 0.45 : 0.7} sx={{ mb: compact ? 0 : 2, flex: compact ? undefined : 1 }}>
       {items.map((item, index) => (
         <Stack
           key={featureItemKey(item, index)}
@@ -563,7 +564,7 @@ export function PackageOfferRow({
  * Package card:
  * - Clickable price on the right (Boost Coins / Auto-Refresh / main plans), or
  * - Two equal action buttons in a row (Premium / OKAZION: € + BC).
- * - Optional collapsible feature details at the bottom.
+ * - Optional feature list always shown below the header.
  */
 export function PackageCheckoutCard({
   title,
@@ -589,7 +590,7 @@ export function PackageCheckoutCard({
   onClick?: () => void;
   /** When set, renders a full-width row of buttons (e.g. € + BC) instead of a price column. */
   actions?: React.ReactNode;
-  /** Feature lines shown in a collapsed "Detajet" dropdown at the bottom. */
+  /** Feature lines always shown below the header. */
   details?: FeatureListItem[];
   /** Optional row under details (e.g. cancel subscription). */
   footer?: React.ReactNode;
@@ -598,7 +599,6 @@ export function PackageCheckoutCard({
   /** Current / selected plan — accent border + corner checkmark. */
   selected?: boolean;
 }) {
-  const [detailsOpen, setDetailsOpen] = React.useState(false);
   const hasDetails = details.length > 0;
   const hasFooter = Boolean(footer);
 
@@ -607,7 +607,7 @@ export function PackageCheckoutCard({
       <Stack
         direction="row"
         spacing={0.75}
-        sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5, mb: subtitle ? 0.4 : 0 }}
+        sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5, mb: subtitle ? 0.35 : 0 }}
       >
         <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', minWidth: 0 }}>
           <Typography
@@ -679,14 +679,15 @@ export function PackageCheckoutCard({
     : null;
 
   const priceColumn = (
-    <Box sx={{ flexShrink: 0, textAlign: 'right', minWidth: 72 }}>
+    <Box sx={{ flexShrink: 0, textAlign: 'right' }}>
       <Typography
         sx={{
           fontWeight: 900,
-          fontSize: { xs: '1.2rem', sm: '1.35rem' },
-          lineHeight: 1.1,
-          letterSpacing: '-0.02em',
+          fontSize: { xs: '1.85rem', sm: '2.15rem' },
+          lineHeight: 1,
+          letterSpacing: '-0.03em',
           color: 'text.primary',
+          whiteSpace: 'nowrap',
           transition: 'color 0.15s ease',
           ...(onClick
             ? {
@@ -699,29 +700,31 @@ export function PackageCheckoutCard({
       >
         {price}
       </Typography>
-      <Typography
-        sx={{
-          mt: 0.2,
-          fontWeight: 600,
-          fontSize: '0.75rem',
-          color: 'text.secondary',
-        }}
-      >
-        {priceSuffix}
-      </Typography>
+      {priceSuffix ? (
+        <Typography
+          sx={{
+            mt: 0.2,
+            fontWeight: 600,
+            fontSize: '0.72rem',
+            lineHeight: 1.2,
+            color: 'text.secondary',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {priceSuffix}
+        </Typography>
+      ) : null}
     </Box>
   );
 
-  const mainRowPaddingY = hasDetails || hasFooter
-    ? { xs: 1.5, sm: 1.65 }
-    : actions
-      ? { xs: 1.75, sm: 1.9 }
-      : { xs: 1.85, sm: 2 };
+  const headerPaddingX = { xs: 2, sm: 2.25 };
+  const headerPaddingTop = { xs: 1.65, sm: 1.85 };
+  const headerPaddingBottom = hasDetails || hasFooter || actions ? 1 : { xs: 1.65, sm: 1.85 };
 
   const body = actions ? (
-    <Box sx={{ px: { xs: 2, sm: 2.25 }, pt: mainRowPaddingY, pb: hasDetails || hasFooter ? 0.75 : mainRowPaddingY }}>
+    <Box sx={{ px: headerPaddingX, pt: headerPaddingTop, pb: headerPaddingBottom }}>
       {header}
-      <Stack direction="row" spacing={1} sx={{ mt: 1.35 }}>
+      <Stack direction="row" spacing={1} sx={{ mt: 1.25 }}>
         {actions}
       </Stack>
     </Box>
@@ -732,10 +735,10 @@ export function PackageCheckoutCard({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 2,
-        px: { xs: 2, sm: 2.25 },
-        pt: mainRowPaddingY,
-        pb: hasDetails || hasFooter ? 0.75 : mainRowPaddingY,
+        gap: 1.5,
+        px: headerPaddingX,
+        pt: headerPaddingTop,
+        pb: headerPaddingBottom,
       }}
     >
       {header}
@@ -801,70 +804,22 @@ export function PackageCheckoutCard({
       ) : null}
       {body}
       {hasDetails ? (
-        <Box>
-          <ButtonBase
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              setDetailsOpen((v) => !v);
-            }}
-            onMouseDown={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-            }}
-            onTouchStart={(event) => {
-              event.stopPropagation();
-            }}
-            aria-expanded={detailsOpen}
-            sx={{
-              position: 'relative',
-              display: 'flex',
-              width: '100%',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 1,
-              px: { xs: 2, sm: 2.25 },
-              py: 0.6,
-              minHeight: 28,
-              borderRadius: 0,
-              color: 'text.secondary',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: { xs: 16, sm: 20 },
-                right: { xs: 16, sm: 20 },
-                height: 0,
-                borderTop: '1px solid',
-                borderColor: 'divider',
-              },
-              '&:hover': { color: (t) => resolveAccent(t, accent) },
-            }}
-          >
-            <Typography sx={{ fontWeight: 750, fontSize: '0.7rem', letterSpacing: '0.02em' }}>
-              Detajet
-            </Typography>
-            <Box
-              sx={{
-                display: 'inline-flex',
-                transition: 'transform 0.15s ease',
-                transform: detailsOpen ? 'rotate(180deg)' : 'none',
-              }}
-            >
-              <CaretDownIcon size={12} weight="bold" />
-            </Box>
-          </ButtonBase>
-          <Collapse in={detailsOpen} unmountOnExit>
-            <Box sx={{ px: { xs: 2, sm: 2.25 }, pb: hasFooter ? 0.75 : { xs: 1.25, sm: 1.35 } }}>
-              <FeatureList items={details} accent={accent} compact />
-            </Box>
-          </Collapse>
+        <Box
+          sx={{
+            px: headerPaddingX,
+            pt: 1.1,
+            pb: hasFooter ? 0.75 : { xs: 1.35, sm: 1.5 },
+            borderTop: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <FeatureList items={details} accent={accent} compact />
         </Box>
       ) : null}
       {hasFooter ? (
         <Box
           sx={{
-            px: { xs: 2, sm: 2.25 },
+            px: headerPaddingX,
             pb: { xs: 1.35, sm: 1.5 },
             pt: hasDetails ? 0 : 0.25,
           }}
@@ -884,10 +839,105 @@ export function PackageCheckoutCard({
   );
 }
 
+/**
+ * Flat dual-pay offer inside a SectionBlock — title + € / BC CTAs without a nested card shell.
+ */
+export function DualPayOfferRow({
+  title,
+  badge,
+  accent = 'primary',
+  highlighted = false,
+  meta,
+  actions,
+}: {
+  title: string;
+  badge?: string | null;
+  accent?: PlanAccent;
+  highlighted?: boolean;
+  /** Optional line under the title (e.g. quantity stepper). */
+  meta?: React.ReactNode;
+  actions: React.ReactNode;
+}) {
+  return (
+    <Box
+      sx={{
+        px: { xs: 1.75, sm: 2 },
+        py: { xs: 1.5, sm: 1.65 },
+        borderRadius: 2.25,
+        bgcolor: highlighted
+          ? (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.14 : 0.07)
+          : (t) => (t.palette.mode === 'dark' ? alpha(t.palette.common.white, 0.03) : alpha(t.palette.common.black, 0.02)),
+        border: '1px solid',
+        borderColor: highlighted
+          ? (t) => alpha(resolveAccent(t, accent), 0.45)
+          : (t) => (t.palette.mode === 'dark' ? alpha(t.palette.common.white, 0.06) : 'divider'),
+      }}
+    >
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={{ xs: 1.15, sm: 1.5 }}
+        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
+      >
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Stack
+            direction="row"
+            spacing={0.75}
+            sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}
+          >
+            <Typography
+              sx={{
+                fontWeight: 850,
+                fontSize: { xs: '0.98rem', sm: '1.02rem' },
+                lineHeight: 1.25,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {title}
+            </Typography>
+            {badge ? (
+              <Box
+                sx={{
+                  px: 0.85,
+                  py: 0.2,
+                  borderRadius: 999,
+                  bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.28 : 0.16),
+                  color: (t) => resolveAccent(t, accent),
+                  fontWeight: 850,
+                  fontSize: '0.66rem',
+                  lineHeight: 1.35,
+                  letterSpacing: '0.02em',
+                  flexShrink: 0,
+                }}
+              >
+                {badge}
+              </Box>
+            ) : null}
+          </Stack>
+          {meta ? <Box sx={{ mt: 1 }}>{meta}</Box> : null}
+        </Box>
+
+        <Stack
+          direction="row"
+          spacing={0.85}
+          sx={{
+            flexShrink: 0,
+            width: { xs: '100%', sm: 'auto' },
+            minWidth: { sm: 220 },
+          }}
+        >
+          {actions}
+        </Stack>
+      </Stack>
+    </Box>
+  );
+}
+
 export function SectionBlock({
   icon: Icon,
   title,
   description,
+  info,
+  infoAriaLabel = 'More info',
   chips,
   accent = 'primary',
   children,
@@ -895,6 +945,9 @@ export function SectionBlock({
   icon: PhosphorIcon;
   title: string;
   description?: string;
+  /** Shown in a top-right “?” tooltip instead of (or in addition to) inline description. */
+  info?: string;
+  infoAriaLabel?: string;
   chips?: React.ReactNode;
   accent?: PlanAccent;
   children: React.ReactNode;
@@ -902,69 +955,119 @@ export function SectionBlock({
   return (
     <Box
       sx={{
-        borderRadius: 3.5,
+        borderRadius: 3,
         border: '1px solid',
         borderColor: 'divider',
         bgcolor: 'background.paper',
         overflow: 'hidden',
+        boxShadow: (t) =>
+          t.palette.mode === 'dark' ? 'none' : `0 1px 0 ${alpha(t.palette.common.black, 0.03)}`,
       }}
     >
-      <Stack
-        spacing={0.75}
+      <Box
         sx={{
-          px: { xs: 2.25, sm: 2.75 },
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'divider',
-          bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.08 : 0.05),
+          height: 3,
+          bgcolor: (t) => resolveAccent(t, accent),
+          opacity: 0.9,
+        }}
+      />
+      <Stack
+        spacing={0.65}
+        sx={{
+          px: { xs: 1.85, sm: 2.25 },
+          pt: 1.65,
+          pb: 1.35,
         }}
       >
-        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start' }}>
+        <Stack direction="row" spacing={1.1} sx={{ alignItems: 'center' }}>
           <Box
             sx={{
-              width: 40,
-              height: 40,
-              borderRadius: 2.25,
+              width: 36,
+              height: 36,
+              borderRadius: 1.75,
               display: 'grid',
               placeItems: 'center',
               flexShrink: 0,
-              bgcolor: 'background.paper',
-              border: '1px solid',
-              borderColor: 'divider',
+              bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.18 : 0.12),
               color: (t) => resolveAccent(t, accent),
             }}
           >
-            <Icon size={22} weight="duotone" />
+            <Icon size={20} weight="duotone" />
           </Box>
-          <Stack spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
             <Stack
               direction="row"
-              spacing={1}
-              sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 0.75 }}
+              spacing={0.75}
+              sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 0.5 }}
             >
-              <Typography sx={{ fontWeight: 850, fontSize: '1.05rem', lineHeight: 1.2, minWidth: 0 }}>
+              <Typography
+                sx={{
+                  fontWeight: 850,
+                  fontSize: '1.02rem',
+                  lineHeight: 1.2,
+                  letterSpacing: '-0.01em',
+                  minWidth: 0,
+                }}
+              >
                 {title}
               </Typography>
-              {chips ? (
-                <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexShrink: 0, ml: 'auto' }}>{chips}</Box>
+              {info ? (
+                <Tooltip
+                  arrow
+                  enterTouchDelay={0}
+                  leaveTouchDelay={4000}
+                  title={
+                    <Typography variant="body2" component="span" sx={{ display: 'block', lineHeight: 1.45 }}>
+                      {info}
+                    </Typography>
+                  }
+                  slotProps={{
+                    tooltip: {
+                      sx: { maxWidth: 300, p: 1.25 },
+                    },
+                  }}
+                >
+                  <IconButton
+                    aria-label={infoAriaLabel}
+                    size="small"
+                    onClick={(event) => event.stopPropagation()}
+                    onMouseDown={(event) => event.preventDefault()}
+                    sx={{
+                      color: 'text.secondary',
+                      p: 0.35,
+                      flexShrink: 0,
+                      '&:hover': { color: (t) => resolveAccent(t, accent), bgcolor: 'action.hover' },
+                    }}
+                  >
+                    <QuestionIcon size={17} weight="bold" />
+                  </IconButton>
+                </Tooltip>
               ) : null}
             </Stack>
             {description ? (
               <Typography
                 variant="body2"
                 color="text.secondary"
-                sx={{ fontSize: '0.82rem', lineHeight: 1.45 }}
+                sx={{ mt: 0.35, fontSize: '0.8rem', lineHeight: 1.4 }}
               >
                 {description}
               </Typography>
             ) : null}
-            {chips ? (
-              <Box sx={{ display: { xs: 'flex', sm: 'none' }, flexWrap: 'wrap', gap: 0.5 }}>{chips}</Box>
-            ) : null}
-          </Stack>
+          </Box>
         </Stack>
+        {chips ? (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.55, pl: { xs: 0, sm: '46px' } }}>{chips}</Box>
+        ) : null}
       </Stack>
-      <Box sx={{ p: { xs: 2.25, sm: 2.75 } }}>{children}</Box>
+      <Box
+        sx={{
+          px: { xs: 1.35, sm: 1.75 },
+          pb: { xs: 1.5, sm: 1.85 },
+          pt: 0.25,
+        }}
+      >
+        {children}
+      </Box>
     </Box>
   );
 }
@@ -974,25 +1077,33 @@ export function SoftChip({
   color = 'default',
   accent,
   compact = false,
+  icon,
 }: {
   label: string;
   color?: 'default' | 'primary' | 'warning' | 'success' | 'error' | 'info';
   /** Custom accent overrides MUI `color` when set. */
   accent?: PlanAccent;
   compact?: boolean;
+  icon?: React.ReactElement;
 }) {
   return (
     <Chip
       size="small"
       label={label}
+      icon={icon}
       color={accent || color === 'default' ? undefined : color}
       sx={{
-        height: compact ? 20 : 24,
+        height: compact ? 22 : 26,
         fontWeight: 800,
         fontSize: compact ? '0.62rem' : '0.72rem',
         flexShrink: 0,
+        borderRadius: 999,
         '& .MuiChip-label': {
-          px: compact ? 0.7 : undefined,
+          px: compact ? 0.7 : 0.9,
+        },
+        '& .MuiChip-icon': {
+          ml: 0.65,
+          mr: -0.25,
         },
         ...(accent
           ? {
@@ -1030,6 +1141,22 @@ export function accentButtonSx(accent: PlanAccent, variant: 'contained' | 'outli
     '&:hover': {
       bgcolor: (t: Theme) => alpha(resolveAccent(t, accent), 0.88),
     },
+  };
+}
+
+/** Shared sizing for dual € / BC CTAs in DualPayOfferRow. */
+export function dualPayButtonSx(accent: PlanAccent, variant: 'contained' | 'outlined' = 'contained') {
+  return {
+    ...accentButtonSx(accent, variant),
+    flex: 1,
+    minWidth: 0,
+    borderRadius: 2,
+    minHeight: 42,
+    py: 1,
+    px: 1.25,
+    fontSize: '0.88rem',
+    fontWeight: 850,
+    letterSpacing: '-0.01em',
   };
 }
 

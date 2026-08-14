@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardContent,
   Grid,
@@ -27,6 +28,8 @@ import { fetchSavedListings, listingMetricsKey, type ListingMetricKind, type Sav
 import type { PublicCarListing, PublicDirectoryListing, PublicJobListing, PublicMarketplaceListing, PublicRealEstateListing } from '@/lib/public-listings-client';
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';
+
+const SAVED_PAGE_SIZE = 24;
 
 function SavedListingCard({ item }: { item: SavedListingItem }) {
   const listing = item.listing;
@@ -51,11 +54,14 @@ export default function UserSavedListingsPage() {
   const router = useRouter();
   const { user } = useUser();
   const t = useCopy();
-  const { refresh: refreshKeys, keys } = useSavedListings();
+  const { hydrateKeys, keys } = useSavedListings();
   const [items, setItems] = React.useState<SavedListingItem[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [loadingMore, setLoadingMore] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [tab, setTab] = React.useState(0);
+  const [page, setPage] = React.useState(1);
+  const [totalPages, setTotalPages] = React.useState(1);
 
   const kindTabs: { value: 'all' | ListingMetricKind; label: string }[] = [
     { value: 'all', label: t.saved.all },
@@ -73,19 +79,30 @@ export default function UserSavedListingsPage() {
       user?.accountType === 'business' ||
       user?.role === 'business-user');
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    const res = await fetchSavedListings(1, 48);
-    if (res.error) {
-      setError(res.error);
-      setItems([]);
-    } else {
-      setItems(res.items ?? []);
-      await refreshKeys();
-    }
-    setLoading(false);
-  }, [refreshKeys]);
+  const loadPage = React.useCallback(
+    async (nextPage: number, append: boolean) => {
+      if (append) setLoadingMore(true);
+      else {
+        setLoading(true);
+        setError(null);
+      }
+      const res = await fetchSavedListings(nextPage, SAVED_PAGE_SIZE);
+      if (res.error) {
+        if (!append) {
+          setError(res.error);
+          setItems([]);
+        }
+      } else {
+        setItems((prev) => (append ? [...prev, ...(res.items ?? [])] : (res.items ?? [])));
+        setPage(res.page ?? nextPage);
+        setTotalPages(res.totalPages ?? 1);
+        if (res.keys) hydrateKeys(res.keys);
+      }
+      setLoading(false);
+      setLoadingMore(false);
+    },
+    [hydrateKeys],
+  );
 
   React.useEffect(() => {
     if (!user) return;
@@ -93,8 +110,8 @@ export default function UserSavedListingsPage() {
       router.replace(paths.user.dashboard);
       return;
     }
-    void load();
-  }, [user, canView, router, load]);
+    void loadPage(1, false);
+  }, [user, canView, router, loadPage]);
 
   if (!user || !canView) return null;
 
@@ -113,6 +130,8 @@ export default function UserSavedListingsPage() {
       : visibleItems.length === 0
         ? t.saved.emptyInactive
         : t.saved.emptyCategory;
+
+  const canLoadMore = page < totalPages;
 
   return (
     <Stack spacing={{ xs: 2.5, md: 3 }}>
@@ -252,13 +271,26 @@ export default function UserSavedListingsPage() {
           </CardContent>
         </Card>
       ) : (
-        <Grid container spacing={2}>
-          {filtered.map((item) => (
-            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={`${item.kind}-${item.listingId}`}>
-              <SavedListingCard item={item} />
-            </Grid>
-          ))}
-        </Grid>
+        <Stack spacing={2}>
+          <Grid container spacing={2}>
+            {filtered.map((item) => (
+              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={`${item.kind}-${item.listingId}`}>
+                <SavedListingCard item={item} />
+              </Grid>
+            ))}
+          </Grid>
+          {canLoadMore ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Button
+                variant="outlined"
+                disabled={loadingMore}
+                onClick={() => void loadPage(page + 1, true)}
+              >
+                {loadingMore ? '…' : 'Shfaq më shumë'}
+              </Button>
+            </Box>
+          ) : null}
+        </Stack>
       )}
     </Stack>
   );

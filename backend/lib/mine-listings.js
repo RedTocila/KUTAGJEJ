@@ -565,10 +565,12 @@ async function loadMineKind(posterId, {
   format,
   limit = DEFAULT_LIMIT_PER_KIND,
   extraEq,
+  withMetrics = true,
 }) {
   const docs = await queryMineRows(table, posterId, { limit, extraEq });
   const cityById = await buildCityIndex(docs);
   const listings = docs.map((d) => format(d, cityById));
+  if (!withMetrics) return listings;
   return attachOwnerMetrics(listings, metricKind);
 }
 
@@ -602,6 +604,7 @@ async function loadMineListingById(posterId, {
 
 /**
  * Loads slim card payloads for every vertical owned by `posterId`.
+ * Metrics are attached in one cross-kind batch (not 6 separate round-trips).
  * @returns {{
  *   realEstate: object[],
  *   cars: object[],
@@ -619,30 +622,35 @@ async function loadMineListingsForPoster(posterId, { limitPerKind = DEFAULT_LIMI
       metricKind: 'real-estate',
       format: formatMineRealEstate,
       limit,
+      withMetrics: false,
     }),
     loadMineKind(posterId, {
       table: 'car_listings',
       metricKind: 'car',
       format: formatMineCar,
       limit,
+      withMetrics: false,
     }),
     loadMineKind(posterId, {
       table: 'job_listings',
       metricKind: 'job',
       format: formatMineJob,
       limit,
+      withMetrics: false,
     }),
     loadMineKind(posterId, {
       table: 'marketplace_listings',
       metricKind: 'marketplace',
       format: formatMineMarketplace,
       limit,
+      withMetrics: false,
     }),
     loadMineKind(posterId, {
       table: 'directory_listings',
       metricKind: 'businesses',
       format: formatMineBusiness,
       limit,
+      withMetrics: false,
       extraEq: { vertical: 'businesses' },
     }),
     loadMineKind(posterId, {
@@ -650,9 +658,32 @@ async function loadMineListingsForPoster(posterId, { limitPerKind = DEFAULT_LIMI
       metricKind: 'professionals',
       format: formatMineProfessional,
       limit,
+      withMetrics: false,
       extraEq: { vertical: 'professionals' },
     }),
   ]);
+
+  const { fetchMetricsMap, metricsKey, emptyMetrics } = require('./listing-metrics');
+  const kindBuckets = [
+    { kind: 'real-estate', listings: realEstate },
+    { kind: 'car', listings: cars },
+    { kind: 'job', listings: jobs },
+    { kind: 'marketplace', listings: marketplace },
+    { kind: 'businesses', listings: businesses },
+    { kind: 'professionals', listings: professionals },
+  ];
+  const refs = kindBuckets.flatMap(({ kind, listings }) =>
+    listings.map((l) => ({ kind, listingId: l.id })),
+  );
+  const map = await fetchMetricsMap(refs);
+  for (const { kind, listings } of kindBuckets) {
+    for (const listing of listings) {
+      const m = map.get(metricsKey(kind, listing.id)) ?? emptyMetrics();
+      listing.viewCount = m.viewCount;
+      listing.shareCount = m.shareCount;
+      listing.saveCount = m.saveCount;
+    }
+  }
 
   return { realEstate, cars, jobs, marketplace, businesses, professionals };
 }

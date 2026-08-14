@@ -19,13 +19,19 @@ export function storageImageUrl(
 
   try {
     const parsed = new URL(raw);
-    const marker = '/storage/v1/object/public/';
-    const idx = parsed.pathname.indexOf(marker);
-    if (idx === -1) return raw;
+    const renderMarker = '/storage/v1/render/image/public/';
+    const objectMarker = '/storage/v1/object/public/';
+    const renderIdx = parsed.pathname.indexOf(renderMarker);
+    const objectIdx = parsed.pathname.indexOf(objectMarker);
 
-    parsed.pathname =
-      `${parsed.pathname.slice(0, idx)}/storage/v1/render/image/public/` +
-      parsed.pathname.slice(idx + marker.length);
+    if (renderIdx === -1 && objectIdx === -1) return raw;
+
+    if (objectIdx !== -1) {
+      parsed.pathname =
+        `${parsed.pathname.slice(0, objectIdx)}${renderMarker}` +
+        parsed.pathname.slice(objectIdx + objectMarker.length);
+    }
+
     parsed.search = '';
     parsed.searchParams.set('width', String(Math.max(1, Math.round(width))));
     parsed.searchParams.set('height', String(Math.max(1, Math.round(height))));
@@ -34,6 +40,32 @@ export function storageImageUrl(
       'quality',
       String(Math.min(100, Math.max(1, Math.round(quality)))),
     );
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
+/** Card / grid covers (~2× mobile column width). Falls back to original if not Supabase. */
+export function listingCardImageUrl(url: string | null | undefined): string | null {
+  const raw = String(url || '').trim();
+  if (!raw) return null;
+  return storageImageUrl(raw, { width: 640, height: 400, resize: 'cover', quality: 72 }) ?? raw;
+}
+
+/** Strip transform params so callers can fall back to the full object URL. */
+export function storageImageOriginalUrl(url: string | null | undefined): string | null {
+  const raw = String(url || '').trim();
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    const renderMarker = '/storage/v1/render/image/public/';
+    const idx = parsed.pathname.indexOf(renderMarker);
+    if (idx === -1) return raw;
+    parsed.pathname =
+      `${parsed.pathname.slice(0, idx)}/storage/v1/object/public/` +
+      parsed.pathname.slice(idx + renderMarker.length);
+    parsed.search = '';
     return parsed.toString();
   } catch {
     return raw;

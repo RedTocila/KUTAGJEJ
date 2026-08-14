@@ -193,19 +193,17 @@ async function countSaves(kind, listingId) {
 
 async function getSavedSet(saver, refs) {
   if (!saver || refs.length === 0) return new Set();
+  const orFilter = refs
+    .map((r) => `and(listing_kind.eq."${r.kind}",listing_id.eq."${r.listingId}")`)
+    .join(',');
   const { data, error } = await getSupabaseAdmin()
     .from('saved_listings')
     .select('listing_kind, listing_id')
-    .eq('saver_id', saver.saverId);
+    .eq('saver_id', saver.saverId)
+    .or(orFilter);
   if (error) throw error;
 
-  const wanted = new Set(refs.map((r) => metricsKey(r.kind, r.listingId)));
-  const out = new Set();
-  for (const row of data || []) {
-    const key = metricsKey(row.listing_kind, row.listing_id);
-    if (wanted.has(key)) out.add(key);
-  }
-  return out;
+  return new Set((data || []).map((row) => metricsKey(row.listing_kind, row.listing_id)));
 }
 
 /**

@@ -80,7 +80,7 @@ export function PortalLinkCard({
 }: {
   href: string;
   title: string;
-  description: string;
+  description?: string;
   icon: PhosphorIcon;
   badge?: string;
   /** Optional accent for the badge chip (hex / CSS color). */
@@ -132,15 +132,17 @@ export function PortalLinkCard({
           <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
             {title}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35, lineHeight: 1.45 }}>
-            {description}
-          </Typography>
+          {description ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35, lineHeight: 1.45 }}>
+              {description}
+            </Typography>
+          ) : null}
           {badge ? (
             <Chip
               label={badge}
               size="small"
               sx={{
-                mt: 1.15,
+                mt: description ? 1.15 : 0.75,
                 height: 24,
                 fontWeight: 800,
                 fontSize: '0.68rem',

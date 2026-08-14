@@ -1,7 +1,7 @@
 'use strict';
 
 const { getSupabaseAdmin } = require('./supabase');
-const { camelizeRow } = require('./profiles');
+const { camelizeRow, camelizeRows } = require('./profiles');
 const { isUuid, buildCityIndex } = require('./public-listings/query-helpers');
 const { reviewStatsByListingIds } = require('./business-review-stats');
 const { professionalReviewStatsByListingIds } = require('./professional-review-stats');
@@ -50,6 +50,28 @@ async function loadApprovedListing(kind, listingId) {
   const { data, error } = await q.maybeSingle();
   if (error) throw error;
   return data ? camelizeRow(data) : null;
+}
+
+/**
+ * Batch-load approved listings for one kind (replaces sequential N+1 lookups).
+ * @returns {Map<string, object>}
+ */
+async function loadApprovedListingsByKind(kind, listingIds) {
+  const table = TABLE_BY_KIND[kind];
+  const ids = [...new Set((listingIds || []).map(String).filter(isUuid))];
+  const byId = new Map();
+  if (!table || ids.length === 0) return byId;
+
+  let q = getSupabaseAdmin().from(table).select('*').in('id', ids).eq('status', 'approved');
+  if (kind === 'businesses' || kind === 'professionals') {
+    q = q.eq('vertical', kind);
+  }
+  const { data, error } = await q;
+  if (error) throw error;
+  for (const row of camelizeRows(data || [])) {
+    byId.set(String(row.id), row);
+  }
+  return byId;
 }
 
 function listingCardTitle(kind, formatted) {
@@ -121,11 +143,30 @@ async function listSavedListingsForSaver(saver, { page = 1, limit = 24 } = {}) {
   if (countRes.error) throw countRes.error;
 
   const total = countRes.count ?? 0;
+  const rows = rowsRes.data || [];
+
+  /** @type {Map<string, string[]>} */
+  const idsByKind = new Map();
+  for (const row of rows) {
+    const kind = row.listing_kind;
+    if (!TABLE_BY_KIND[kind]) continue;
+    const list = idsByKind.get(kind) ?? [];
+    list.push(String(row.listing_id));
+    idsByKind.set(kind, list);
+  }
+
+  const docsByKind = new Map();
+  await Promise.all(
+    [...idsByKind.entries()].map(async ([kind, ids]) => {
+      docsByKind.set(kind, await loadApprovedListingsByKind(kind, ids));
+    }),
+  );
+
   const loaded = [];
-  for (const row of rowsRes.data || []) {
+  for (const row of rows) {
     const kind = row.listing_kind;
     const listingId = String(row.listing_id);
-    const doc = await loadApprovedListing(kind, listingId);
+    const doc = docsByKind.get(kind)?.get(listingId);
     if (!doc) continue;
     loaded.push({ kind, doc, savedAt: row.created_at });
   }
@@ -188,5 +229,7 @@ async function listSavedListingsForSaver(saver, { page = 1, limit = 24 } = {}) {
 module.exports = {
   getSavedKeysForSaver,
   listSavedListingsForSaver,
+  loadApprovedListing,
+  loadApprovedListingsByKind,
   KIND_LABELS,
 };

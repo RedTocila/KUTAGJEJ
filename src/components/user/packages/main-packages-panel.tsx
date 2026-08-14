@@ -37,24 +37,6 @@ import {
   type PlanAccent,
 } from './package-ui';
 
-function durationLabel(t: AppMessages, months: number): string {
-  if (months === 1) return t.packages.monthly;
-  if (months === 3) return t.packages.months3;
-  if (months === 6) return t.packages.months6;
-  if (months === 12) return t.packages.yearly;
-  return t.packages.perMonths(months).replace(/^\//, '').trim();
-}
-
-function planSubtitle(t: AppMessages, plan: PublicContract, duration?: string): string {
-  const bits = [t.packages.listingsCount(plan.maxListAllCategories)];
-  if (plan.maxPremiumListings > 0) bits.push(`${plan.maxPremiumListings} Premium`);
-  if (plan.maxOkazionListings > 0) bits.push(`${plan.maxOkazionListings} OKAZION`);
-  if ((plan.boostCredits ?? 0) > 0) bits.push(`${plan.boostCredits} BC`);
-  bits.push(aiBuildFeatureLine(t, plan.planCode));
-  const base = bits.join(' · ');
-  return duration ? `${duration} · ${base}` : base;
-}
-
 function aiBuildFeatureLine(t: AppMessages, planCode: string | null | undefined): string {
   const code = (planCode || 'free').toLowerCase();
   if (code === 'grow' || code === 'elite') return t.packages.aiBuildUnlimited;
@@ -290,7 +272,6 @@ export function MainPackagesPanel() {
                 <PackageCheckoutCard
                   key={plan.id}
                   title={plan.title}
-                  subtitle={planSubtitle(t, plan, t.packages.startFree)}
                   badge={isPlanCurrent ? t.packages.yourPlan : null}
                   titleAdornment={titleAdornment}
                   price="€0"
@@ -328,7 +309,6 @@ export function MainPackagesPanel() {
                 <PackageCheckoutCard
                   key={`${plan.id}-${opt.months}`}
                   title={plan.title}
-                  subtitle={planSubtitle(t, plan, durationLabel(t, opt.months))}
                   badge={badge}
                   titleAdornment={titleAdornment}
                   price={<PackageEurPrice listPrice={opt.price} percent={lifetimePercent} />}

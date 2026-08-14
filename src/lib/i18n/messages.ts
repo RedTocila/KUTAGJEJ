@@ -475,7 +475,13 @@ const sq = {
       'Nuk keni njoftime të aprovuara. Shtoni një njoftim dhe aprovoni atë, pastaj aplikoni Premium.',
     decrease: 'Zvogëlo',
     increase: 'Rrit',
-    okazionCardSubtitle: 'OKAZION 5 ditë · temë e kuqe + renditje e favorizuar',
+    okazionInfo:
+      'Shitje të shpejta — njoftimi shfaqet me temë të kuqe në OKAZION për 5 ditë. Vlen për prona, makina, pune dhe tregun.',
+    autoRefreshInfo:
+      'Njoftimet tuaja ngrihen automatikisht në krye sipas intervalit të planit · 1 BC për çdo rifreskim.',
+    premiumListingInfo: 'Njoftimi juaj shfaqet i theksuar dhe më lart në rezultate për kohëzgjatjen e zgjedhur.',
+    convertListingInfo: 'Konvertoni kuotat e papërdorura të paketës në Boost Coins.',
+    packageInfoAria: 'Çfarë bën kjo paketë',
     okazionGrowEliteNote:
       'Grow: 5 OKAZION · Elite: 10 OKAZION — aktivizohen te Shpalljet e mia ose kur postoni njoftim.',
     autoRefresh10: '10 njoftime Auto-Refresh',
@@ -493,7 +499,6 @@ const sq = {
     selectListing: 'Zgjidh njoftimin',
     selectPremiumListing: 'Zgjidh njoftimin Premium',
     unusedPremiumDays: (days: number) => `${days} ditë Premium · e papërdorur`,
-    premiumCardSubtitle: (days: number) => `Premium për ${days} ditë · renditje e favorizuar`,
     premiumGrowEliteNote:
       'Premium nga abonimi Grow/Elite: 30 ditë — aktivizohet me butonin Premium te Shpalljet e mia.',
     applyDaysToListing: (days: number) => `${days} ditë do të aplikohen në njoftimin e zgjedhur`,
@@ -1155,7 +1160,13 @@ const en: AppMessages = {
       'You have no approved listings. Add and approve a listing, then apply Premium.',
     decrease: 'Decrease',
     increase: 'Increase',
-    okazionCardSubtitle: 'OKAZION 5 days · red theme + favored ranking',
+    okazionInfo:
+      'Fast sales — your listing appears with a red OKAZION theme for 5 days. Applies to property, cars, jobs, and marketplace.',
+    autoRefreshInfo:
+      'Your listings rise automatically to the top on your plan’s interval · 1 BC per refresh.',
+    premiumListingInfo: 'Your listing appears highlighted and higher in results for the chosen duration.',
+    convertListingInfo: 'Convert unused package quotas into Boost Coins.',
+    packageInfoAria: 'What this package does',
     okazionGrowEliteNote:
       'Grow: 5 OKAZION · Elite: 10 OKAZION — activate in My listings or when posting.',
     autoRefresh10: '10 njoftime Auto-Refresh',
@@ -1173,7 +1184,6 @@ const en: AppMessages = {
     selectListing: 'Choose listing',
     selectPremiumListing: 'Choose Premium listing',
     unusedPremiumDays: (days: number) => `${days} days Premium · unused`,
-    premiumCardSubtitle: (days: number) => `Premium for ${days} days · favored ranking`,
     premiumGrowEliteNote:
       'Premium from Grow/Elite subscription: 30 days — activate with the Premium button in My listings.',
     applyDaysToListing: (days: number) => `${days} days will be applied to the selected listing`,

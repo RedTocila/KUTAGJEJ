@@ -262,7 +262,11 @@ export function SearchableSelect({
             zIndex: 1600,
             width: Math.max(anchorRef.current?.offsetWidth ?? 240, menuMinWidth ?? 0),
           }}
-          modifiers={[{ name: 'preventOverflow', options: { padding: 8 } }]}
+          modifiers={[
+            { name: 'offset', options: { offset: [0, 4] } },
+            { name: 'flip', options: { fallbackPlacements: ['top-start'] } },
+            { name: 'preventOverflow', options: { padding: 8 } },
+          ]}
         >
           <Paper
             elevation={0}
@@ -270,7 +274,6 @@ export function SearchableSelect({
             onTouchMove={(e) => e.stopPropagation()}
             sx={(theme) => ({
               ...productSurfacePaperSx(theme),
-              mt: 0.5,
               display: 'flex',
               flexDirection: 'column',
               maxHeight: { xs: 'min(70dvh, 480px)', sm: 'min(60vh, 420px)' },

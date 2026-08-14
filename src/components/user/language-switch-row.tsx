@@ -26,9 +26,6 @@ export function LanguageSwitchRow({ grouped = false }: { grouped?: boolean }) {
           <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
             {t.language.title}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35, lineHeight: 1.45 }}>
-            {t.language.description}
-          </Typography>
         </Box>
         <ToggleButtonGroup
           exclusive

@@ -19,11 +19,43 @@ function canUseBookmarks(user: ReturnType<typeof useUser>['user']) {
   );
 }
 
+const CACHE_PREFIX = 'kutagjej-saved-keys:';
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+function cacheKey(userId: string) {
+  return `${CACHE_PREFIX}${userId}`;
+}
+
+function readCachedKeys(userId: string): string[] | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(cacheKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { at?: number; keys?: string[] };
+    if (!parsed || !Array.isArray(parsed.keys) || typeof parsed.at !== 'number') return null;
+    if (Date.now() - parsed.at > CACHE_TTL_MS) return null;
+    return parsed.keys;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedKeys(userId: string, keys: string[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(cacheKey(userId), JSON.stringify({ at: Date.now(), keys }));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
 export type SavedListingsContextValue = {
   ready: boolean;
   keys: Set<string>;
   isSaved: (kind: ListingMetricKind, listingId: string) => boolean;
   refresh: () => Promise<void>;
+  /** Apply keys from another API (e.g. saved list payload) without a second round-trip. */
+  hydrateKeys: (keys: string[]) => void;
   applySaved: (kind: ListingMetricKind, listingId: string, saved: boolean) => void;
   toggleSaved: (
     kind: ListingMetricKind,
@@ -42,37 +74,72 @@ export function SavedListingsProvider({ children }: { children: React.ReactNode 
 
   keysRef.current = keys;
 
+  const hydrateKeys = React.useCallback(
+    (nextKeys: string[]) => {
+      setKeys(new Set(nextKeys));
+      setReady(true);
+      if (user?.id) writeCachedKeys(user.id, nextKeys);
+    },
+    [user?.id],
+  );
+
   const refresh = React.useCallback(async () => {
-    if (!canUseBookmarks(user)) {
+    const allowed =
+      user?.accountType === 'individual' ||
+      user?.accountType === 'business' ||
+      user?.role === 'business-user';
+    if (!allowed) {
       setKeys(new Set());
       setReady(true);
       return;
     }
     const res = await fetchSavedListingKeys();
-    setKeys(new Set(res.keys ?? []));
+    const next = res.keys ?? [];
+    setKeys(new Set(next));
     setReady(true);
-  }, [user]);
+    if (user?.id) writeCachedKeys(user.id, next);
+  }, [user?.id, user?.accountType, user?.role]);
 
   React.useEffect(() => {
     if (isLoading) return;
+    if (!canUseBookmarks(user) || !user?.id) {
+      setKeys(new Set());
+      setReady(true);
+      return;
+    }
+
+    const userId = user.id;
+    const cached = readCachedKeys(userId);
+    if (cached) {
+      setKeys(new Set(cached));
+      setReady(true);
+      // Revalidate in background without blanking bookmark state.
+      void refresh();
+      return;
+    }
+
     setReady(false);
     void refresh();
-  }, [isLoading, refresh, user?.id]);
+  }, [isLoading, refresh, user?.id, user?.accountType, user?.role]);
 
   const isSaved = React.useCallback(
     (kind: ListingMetricKind, listingId: string) => keys.has(listingMetricsKey(kind, listingId)),
     [keys],
   );
 
-  const applySaved = React.useCallback((kind: ListingMetricKind, listingId: string, saved: boolean) => {
-    const key = listingMetricsKey(kind, listingId);
-    setKeys((prev) => {
-      const next = new Set(prev);
-      if (saved) next.add(key);
-      else next.delete(key);
-      return next;
-    });
-  }, []);
+  const applySaved = React.useCallback(
+    (kind: ListingMetricKind, listingId: string, saved: boolean) => {
+      const key = listingMetricsKey(kind, listingId);
+      setKeys((prev) => {
+        const next = new Set(prev);
+        if (saved) next.add(key);
+        else next.delete(key);
+        if (user?.id) writeCachedKeys(user.id, [...next]);
+        return next;
+      });
+    },
+    [user?.id],
+  );
 
   const toggleSaved = React.useCallback(
     async (kind: ListingMetricKind, listingId: string) => {
@@ -104,8 +171,8 @@ export function SavedListingsProvider({ children }: { children: React.ReactNode 
   );
 
   const value = React.useMemo(
-    () => ({ ready, keys, isSaved, refresh, applySaved, toggleSaved }),
-    [ready, keys, isSaved, refresh, applySaved, toggleSaved],
+    () => ({ ready, keys, isSaved, refresh, hydrateKeys, applySaved, toggleSaved }),
+    [ready, keys, isSaved, refresh, hydrateKeys, applySaved, toggleSaved],
   );
 
   return <SavedListingsContext.Provider value={value}>{children}</SavedListingsContext.Provider>;

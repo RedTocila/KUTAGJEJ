@@ -18,16 +18,38 @@ import type {
 import { apiFetch, authHeadersAsync } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
 
+const CATALOG_TTL_MS = 60_000;
+const catalogCache = new Map<string, { at: number; value: unknown }>();
+
+function readCatalogCache<T>(key: string): T | null {
+  const hit = catalogCache.get(key) as { at: number; value: T & { error?: string } } | undefined;
+  if (!hit || Date.now() - hit.at > CATALOG_TTL_MS || hit.value.error) return null;
+  return hit.value;
+}
+
+function writeCatalogCache(key: string, value: unknown): void {
+  catalogCache.set(key, { at: Date.now(), value });
+}
+
 export async function listCreditPackages(): Promise<{
   packages?: CreditPackage[];
   pokEnv?: PokEnv;
   error?: string;
 }> {
+  const cached = readCatalogCache<{ packages?: CreditPackage[]; pokEnv?: PokEnv; error?: string }>(
+    'credit-packages',
+  );
+  if (cached) return cached;
   try {
     const res = await apiFetch(getApiUrl('/payments/credit-packages'), { cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista dështoi.' };
-    return { packages: data.packages as CreditPackage[], pokEnv: data.pokEnv as PokEnv };
+    const value = {
+      packages: data.packages as CreditPackage[],
+      pokEnv: data.pokEnv as PokEnv,
+    };
+    writeCatalogCache('credit-packages', value);
+    return value;
   } catch {
     return { error: 'Nuk u arrit lidhja me serverin.' };
   }
@@ -38,11 +60,20 @@ export async function listAutoRefreshPackages(): Promise<{
   pokEnv?: PokEnv;
   error?: string;
 }> {
+  const cached = readCatalogCache<{ packages?: AutoRefreshPackage[]; pokEnv?: PokEnv; error?: string }>(
+    'auto-refresh-packages',
+  );
+  if (cached) return cached;
   try {
     const res = await apiFetch(getApiUrl('/payments/auto-refresh-packages'), { cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista dështoi.' };
-    return { packages: data.packages as AutoRefreshPackage[], pokEnv: data.pokEnv as PokEnv };
+    const value = {
+      packages: data.packages as AutoRefreshPackage[],
+      pokEnv: data.pokEnv as PokEnv,
+    };
+    writeCatalogCache('auto-refresh-packages', value);
+    return value;
   } catch {
     return { error: 'Nuk u arrit lidhja me serverin.' };
   }
@@ -160,11 +191,20 @@ export async function listPremiumPackages(): Promise<{
   pokEnv?: PokEnv;
   error?: string;
 }> {
+  const cached = readCatalogCache<{ packages?: PremiumPackage[]; pokEnv?: PokEnv; error?: string }>(
+    'premium-packages',
+  );
+  if (cached) return cached;
   try {
     const res = await apiFetch(getApiUrl('/payments/premium-packages'), { cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista dështoi.' };
-    return { packages: data.packages as PremiumPackage[], pokEnv: data.pokEnv as PokEnv };
+    const value = {
+      packages: data.packages as PremiumPackage[],
+      pokEnv: data.pokEnv as PokEnv,
+    };
+    writeCatalogCache('premium-packages', value);
+    return value;
   } catch {
     return { error: 'Nuk u arrit lidhja me serverin.' };
   }
@@ -328,11 +368,20 @@ export async function listOkazionPackages(): Promise<{
   pokEnv?: PokEnv;
   error?: string;
 }> {
+  const cached = readCatalogCache<{ packages?: OkazionPackage[]; pokEnv?: PokEnv; error?: string }>(
+    'okazion-packages',
+  );
+  if (cached) return cached;
   try {
     const res = await apiFetch(getApiUrl('/payments/okazion-packages'), { cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Lista dështoi.' };
-    return { packages: data.packages as OkazionPackage[], pokEnv: data.pokEnv as PokEnv };
+    const value = {
+      packages: data.packages as OkazionPackage[],
+      pokEnv: data.pokEnv as PokEnv,
+    };
+    writeCatalogCache('okazion-packages', value);
+    return value;
   } catch {
     return { error: 'Nuk u arrit lidhja me serverin.' };
   }

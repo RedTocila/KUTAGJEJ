@@ -14,7 +14,7 @@ import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr
 
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
-import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
+import { ListingPremiumBadge } from '@/components/public/listing-premium-badge';
 import { useSavedListingsOptional } from '@/contexts/saved-listings-context';
 import { useListingSavedState } from '@/hooks/use-listing-saved-state';
 import { useUser } from '@/hooks/use-user';
@@ -24,6 +24,7 @@ import {
   toggleListingSave,
   type ListingMetricKind,
 } from '@/lib/listing-metrics';
+import { listingCardImageUrl, storageImageOriginalUrl } from '@/lib/storage-image';
 import { paths } from '@/paths';
 
 import { OkazionCountdownPlaceholder } from './okazion-countdown';
@@ -95,29 +96,32 @@ export function CardMedia({
   const saved = useListingSavedState(listingKind, listingId, initialSaved);
   const [shareCount, setShareCount] = React.useState(initialShareCount);
   const [saveCount, setSaveCount] = React.useState(initialSaveCount);
-  const [metricsReady, setMetricsReady] = React.useState(false);
   const [shareOpen, setShareOpen] = React.useState(false);
+  const thumbUrl = React.useMemo(() => listingCardImageUrl(imageUrl), [imageUrl]);
+  const originalUrl = React.useMemo(() => storageImageOriginalUrl(imageUrl), [imageUrl]);
+  const [displaySrc, setDisplaySrc] = React.useState<string | null>(thumbUrl);
   const [imageFailed, setImageFailed] = React.useState(false);
 
   React.useEffect(() => {
+    setDisplaySrc(thumbUrl);
     setImageFailed(false);
-  }, [imageUrl]);
-
-  const showImage = Boolean(imageUrl) && !imageFailed;
+  }, [thumbUrl]);
 
   React.useEffect(() => {
+    setShareCount(initialShareCount);
+    setSaveCount(initialSaveCount);
+  }, [initialShareCount, initialSaveCount, listingId]);
+
+  const showImage = Boolean(displaySrc) && !imageFailed;
+
+  // Paint embedded counts immediately; refresh in the background without blanking badges.
+  React.useEffect(() => {
     let cancelled = false;
-    setMetricsReady(false);
-
     void fetchListingMetrics(listingKind, listingId).then((metrics) => {
-      if (cancelled) return;
-      if (metrics) {
-        setShareCount(metrics.shareCount);
-        setSaveCount(metrics.saveCount);
-      }
-      setMetricsReady(true);
+      if (cancelled || !metrics) return;
+      setShareCount(metrics.shareCount);
+      setSaveCount(metrics.saveCount);
     });
-
     return () => {
       cancelled = true;
     };
@@ -157,7 +161,6 @@ export function CardMedia({
         return;
       }
       const wasSaved = saved;
-      setMetricsReady(true);
       setSaveCount((count) => Math.max(0, count + (wasSaved ? -1 : 1)));
 
       if (savedCtx) {
@@ -191,14 +194,20 @@ export function CardMedia({
     >
       {showImage ? (
         <Image
-          src={imageUrl!}
+          src={displaySrc!}
           alt={alt}
           fill
           sizes="(max-width: 600px) 100vw, 320px"
           priority={priority}
           className="listing-card-media-image"
           style={{ objectFit: 'cover' }}
-          onError={() => setImageFailed(true)}
+          onError={() => {
+            if (displaySrc && originalUrl && displaySrc !== originalUrl) {
+              setDisplaySrc(originalUrl);
+              return;
+            }
+            setImageFailed(true);
+          }}
         />
       ) : (
         <Stack
@@ -245,13 +254,7 @@ export function CardMedia({
               }}
             />
           ) : showPremiumBadge ? (
-            <ListingTrustBadge
-              size={28}
-              aria-label="Premium"
-              sx={{
-                filter: 'drop-shadow(0 2px 10px rgba(245, 166, 35, 0.55))',
-              }}
-            />
+            <ListingPremiumBadge size={28} aria-label="Premium" />
           ) : topLeftOverlay ? (
             <Box sx={{ lineHeight: 0 }}>{topLeftOverlay}</Box>
           ) : topLeftBadge ? (
@@ -329,13 +332,13 @@ export function CardMedia({
       >
         <ListingMediaActionButton
           aria-label="Ndaj njoftimin"
-          count={metricsReady ? shareCount : null}
+          count={shareCount}
           icon={<ShareNetworkIcon size={17} weight="regular" />}
           onClick={handleShare}
         />
         <ListingMediaActionButton
           aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
-          count={metricsReady ? saveCount : null}
+          count={saveCount}
           active={saved}
           accent="primary"
           icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} />}

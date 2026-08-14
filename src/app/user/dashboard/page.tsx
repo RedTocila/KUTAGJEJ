@@ -618,7 +618,6 @@ export default function UserDashboardPage() {
           grouped
           href={paths.user.packagesMain}
           title={t.packagesTitle}
-          description={t.packagesDescription}
           icon={PackageIcon}
           badge={activePlanLabel}
           badgeColor={activePlanBadgeColor}
@@ -627,7 +626,6 @@ export default function UserDashboardPage() {
           grouped
           href={paths.user.packagesExtra}
           title={t.extraPackagesTitle}
-          description={t.extraPackagesDescription}
           icon={SquaresFourIcon}
         />
         {canPublish ? (
@@ -635,7 +633,6 @@ export default function UserDashboardPage() {
             grouped
             href={paths.user.payments}
             title={t.paymentsTitle}
-            description={t.paymentsDescription}
             icon={ReceiptIcon}
           />
         ) : null}
@@ -646,7 +643,6 @@ export default function UserDashboardPage() {
           grouped
           href={paths.user.profile}
           title={t.profileTitle}
-          description={t.profileDescription}
           icon={UserGearIcon}
           badge={categoryLabel}
           badgeColor={categoryBadgeColor}
@@ -655,7 +651,6 @@ export default function UserDashboardPage() {
           grouped
           href={paths.user.notificationSettings}
           title={t.notificationsTitle}
-          description={t.notificationsDescription}
           icon={BellIcon}
         />
         <ThemeSwitchRow grouped />
@@ -665,14 +660,12 @@ export default function UserDashboardPage() {
           grouped
           href={paths.public.terms}
           title={t.termsTitle}
-          description={t.termsDescription}
           icon={FileTextIcon}
         />
         <PortalLinkCard
           grouped
           href={paths.public.privacy}
           title={t.privacyTitle}
-          description={t.privacyDescription}
           icon={ShieldCheckIcon}
         />
       </PortalLinkGroup>

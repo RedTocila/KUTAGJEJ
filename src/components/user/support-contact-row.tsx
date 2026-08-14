@@ -57,9 +57,6 @@ export function SupportContactRow({ grouped = false }: { grouped?: boolean }) {
             <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
               {t.support.title}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35, lineHeight: 1.45 }}>
-              {t.support.description}
-            </Typography>
           </Box>
           <Box sx={{ color: 'text.secondary', display: 'flex', flexShrink: 0, opacity: 0.7 }}>
             <CaretRightIcon size={20} weight="bold" />

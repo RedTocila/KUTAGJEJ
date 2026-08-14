@@ -13,6 +13,7 @@ import { MuiDialog } from './dialog';
 import { MuiIconButton } from './icon-button';
 import { MuiLink } from './link';
 import { MuiRating } from './rating';
+import { MuiMenuItem, MuiSelect } from './select';
 import { MuiStack } from './stack';
 import { MuiTab } from './tab';
 import { MuiTableBody } from './table-body';
@@ -32,7 +33,9 @@ export const components = {
   MuiFab,
   MuiIconButton,
   MuiLink,
+  MuiMenuItem,
   MuiRating,
+  MuiSelect,
   MuiStack,
   MuiTab,
   MuiTableBody,

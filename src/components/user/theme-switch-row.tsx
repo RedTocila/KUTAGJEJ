@@ -43,9 +43,6 @@ export function ThemeSwitchRow({ grouped = false }: { grouped?: boolean }) {
           <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
             {t.theme.title}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35, lineHeight: 1.45 }}>
-            {t.theme.description}
-          </Typography>
         </Box>
         <ToggleButtonGroup
           exclusive

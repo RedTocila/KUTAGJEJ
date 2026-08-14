@@ -86,6 +86,7 @@ import { fetchListingAutoRefresh } from '@/lib/listing-refresh-client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { hardNavigate } from '@/lib/hard-navigate';
 import { hasUnlimitedDirectoryListings } from '@/lib/directory-listing-limits';
+import { listingCardImageUrl, storageImageOriginalUrl } from '@/lib/storage-image';
 import type { ListingCategoryKey } from '@/types/listing-category';
 
 function autoRefreshKey(kind: string, listingId: string) {
@@ -175,6 +176,16 @@ function CardImageHeader({
   selectionMode?: boolean;
   selected?: boolean;
 }) {
+  const thumbUrl = React.useMemo(() => listingCardImageUrl(imageUrl), [imageUrl]);
+  const originalUrl = React.useMemo(() => storageImageOriginalUrl(imageUrl), [imageUrl]);
+  const [displaySrc, setDisplaySrc] = React.useState<string | null>(thumbUrl);
+  const [imageFailed, setImageFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    setDisplaySrc(thumbUrl);
+    setImageFailed(false);
+  }, [thumbUrl]);
+
   const topLeftLabel = (() => {
     if (selectionMode) return null;
     if (isOkazion) {
@@ -201,6 +212,8 @@ function CardImageHeader({
     return null;
   })();
 
+  const showImage = Boolean(displaySrc) && !imageFailed;
+
   return (
     <Box
       sx={{
@@ -215,14 +228,21 @@ function CardImageHeader({
         overflow: 'hidden',
       }}
     >
-      {imageUrl ? (
+      {showImage ? (
         <Image
-          src={imageUrl}
+          src={displaySrc!}
           alt={alt}
           fill
           sizes="(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 33vw"
           quality={75}
           style={{ objectFit: 'cover', objectPosition: 'center' }}
+          onError={() => {
+            if (displaySrc && originalUrl && displaySrc !== originalUrl) {
+              setDisplaySrc(originalUrl);
+              return;
+            }
+            setImageFailed(true);
+          }}
         />
       ) : (
         <Stack
@@ -954,6 +974,8 @@ function ProfessionalCard({
 // Generic tab content
 // ---------------------------------------------------------------------------
 
+const MINE_PAGE_SIZE = 24;
+
 function TabGrid<T>({ loading, error, items, renderCard, emptyLabel, getKey }: {
   loading: boolean;
   error: string | null;
@@ -962,6 +984,29 @@ function TabGrid<T>({ loading, error, items, renderCard, emptyLabel, getKey }: {
   emptyLabel?: string;
   getKey?: (item: T, index: number) => string | number;
 }) {
+  const [visibleCount, setVisibleCount] = React.useState(MINE_PAGE_SIZE);
+  const sentinelRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    setVisibleCount(MINE_PAGE_SIZE);
+  }, [items]);
+
+  React.useEffect(() => {
+    if (visibleCount >= items.length) return;
+    const node = sentinelRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setVisibleCount((n) => Math.min(items.length, n + MINE_PAGE_SIZE));
+        }
+      },
+      { rootMargin: '400px 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [items.length, visibleCount]);
+
   if (loading) {
     return (
       <Grid container spacing={2}>
@@ -1013,17 +1058,25 @@ function TabGrid<T>({ loading, error, items, renderCard, emptyLabel, getKey }: {
       </Card>
     );
   }
+
+  const visible = items.slice(0, visibleCount);
+
   return (
-    <Grid container spacing={2}>
-      {items.map((item, idx) => (
-        <Grid
-          size={{ xs: 12, sm: 6, lg: 4 }}
-          key={getKey?.(item, idx) ?? (item as { id?: string }).id ?? idx}
-        >
-          {renderCard(item)}
-        </Grid>
-      ))}
-    </Grid>
+    <Stack spacing={2}>
+      <Grid container spacing={2}>
+        {visible.map((item, idx) => (
+          <Grid
+            size={{ xs: 12, sm: 6, lg: 4 }}
+            key={getKey?.(item, idx) ?? (item as { id?: string }).id ?? idx}
+          >
+            {renderCard(item)}
+          </Grid>
+        ))}
+      </Grid>
+      {visibleCount < items.length ? (
+        <Box ref={sentinelRef} sx={{ height: 1 }} aria-hidden />
+      ) : null}
+    </Stack>
   );
 }
 
@@ -1181,7 +1234,7 @@ export default function UserMyListingsPage() {
     let cancelled = false;
     setLoading(true);
 
-    void Promise.all([listMyListings(), fetchListingAutoRefresh()]).then(([mine, auto]) => {
+    void listMyListings().then((mine) => {
       if (cancelled) return;
       const err = mine.error ?? null;
       setReListings(mine.realEstate ?? []);
@@ -1191,6 +1244,11 @@ export default function UserMyListingsPage() {
       setBizListings(mine.businesses ?? []);
       setProListings(mine.professionals ?? []);
       setErrors([err, err, err, err, err, err]);
+      setLoading(false);
+    });
+
+    void fetchListingAutoRefresh().then((auto) => {
+      if (cancelled) return;
       setAutoRefreshKeys(
         new Set((auto.enrolled ?? []).map((e) => autoRefreshKey(e.kind, e.listingId))),
       );
@@ -1201,7 +1259,6 @@ export default function UserMyListingsPage() {
       }
       setRefreshCooldownByKey(cooldownMap);
       setRefreshEveryHours(Number(auto.refreshEveryHours) > 0 ? Number(auto.refreshEveryHours) : 48);
-      setLoading(false);
     });
 
     return () => { cancelled = true; };

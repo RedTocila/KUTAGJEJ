@@ -90,15 +90,10 @@ const businessRegisterSchema = zod
     email: zod.string().min(1, { message: 'Emaili është i detyrueshëm' }).email('Email i pavlefshëm'),
     password: zod.string().min(6, { message: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere' }),
     confirmPassword: zod.string().min(1, { message: 'Konfirmo fjalëkalimin' }),
-    acceptTerms: zod.boolean(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Fjalëkalimet nuk përputhen',
     path: ['confirmPassword'],
-  })
-  .refine((data) => data.acceptTerms, {
-    message: acceptTermsMessage,
-    path: ['acceptTerms'],
   });
 
 type IndividualRegisterValues = zod.infer<typeof individualRegisterSchema>;
@@ -156,17 +151,17 @@ function BasedCityRegisterField<T extends { basedCityId: string }>({
   );
 }
 
-function AcceptTermsField<T extends { acceptTerms: boolean }>({
+function IndividualAcceptTermsField({
   control,
   error,
 }: {
-  control: Control<T>;
+  control: Control<IndividualRegisterValues>;
   error?: string;
 }) {
   return (
     <Controller
       control={control}
-      name={'acceptTerms' as never}
+      name="acceptTerms"
       render={({ field: { ref, onChange, onBlur, value, name } }) => (
         <FormControl error={Boolean(error)} sx={{ width: '100%' }}>
           <FormControlLabel
@@ -176,7 +171,7 @@ function AcceptTermsField<T extends { acceptTerms: boolean }>({
                 checked={value === true}
                 onChange={(event) => onChange(event.target.checked)}
                 onBlur={onBlur}
-                slotProps={{ input: { ref } }}
+                slotProps={{ input: { ref, id: 'register-individual-accept-terms' } }}
                 disableRipple
                 sx={{
                   color: 'text.disabled',
@@ -238,6 +233,82 @@ function AcceptTermsField<T extends { acceptTerms: boolean }>({
         </FormControl>
       )}
     />
+  );
+}
+
+function BusinessAcceptTermsField({
+  checked,
+  onCheckedChange,
+  error,
+}: {
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  error?: string;
+}) {
+  const checkboxId = 'register-business-accept-terms';
+
+  return (
+    <FormControl error={Boolean(error)} sx={{ width: '100%' }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+        <Checkbox
+          checked={checked}
+          onChange={(event) => onCheckedChange(event.target.checked)}
+          slotProps={{ input: { id: checkboxId } }}
+          disableRipple
+          sx={{
+            color: 'text.disabled',
+            alignSelf: 'flex-start',
+            py: 0.75,
+            mt: -0.25,
+            ml: -0.75,
+            '&.Mui-checked': { color: 'primary.main' },
+          }}
+        />
+        <Typography
+          component="label"
+          htmlFor={checkboxId}
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+            fontSize: '0.8125rem',
+            lineHeight: 1.5,
+            flex: 1,
+            pt: 1.25,
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+        >
+          Pranoj{' '}
+          <MuiLink
+            component={RouterLink}
+            href={paths.public.terms}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{ color: 'primary.main', fontWeight: 700 }}
+            onMouseDown={(event) => event.preventDefault()}
+            onTouchStart={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+          >
+            kushtet e përdorimit
+          </MuiLink>{' '}
+          dhe{' '}
+          <MuiLink
+            component={RouterLink}
+            href={paths.public.privacy}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{ color: 'primary.main', fontWeight: 700 }}
+            onMouseDown={(event) => event.preventDefault()}
+            onTouchStart={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+          >
+            politikën e privatësisë
+          </MuiLink>
+          .
+        </Typography>
+      </Box>
+      {error ? <FormHelperText>{error}</FormHelperText> : null}
+    </FormControl>
   );
 }
 
@@ -657,6 +728,8 @@ export function UserAuthView() {
   const [referralCode, setReferralCode] = React.useState(refFromUrl);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [citiesLoading, setCitiesLoading] = React.useState(false);
+  const [businessAcceptTerms, setBusinessAcceptTerms] = React.useState(false);
+  const [businessAcceptTermsError, setBusinessAcceptTermsError] = React.useState<string | undefined>();
 
   React.useEffect(() => {
     if (refFromUrl) {
@@ -722,9 +795,14 @@ export function UserAuthView() {
       email: '',
       password: '',
       confirmPassword: '',
-      acceptTerms: false,
     },
   });
+
+  React.useEffect(() => {
+    if (registerKind === 'business') return;
+    setBusinessAcceptTerms(false);
+    setBusinessAcceptTermsError(undefined);
+  }, [registerKind]);
 
   const onSignIn = signInForm.handleSubmit(async (values) => {
     signInForm.clearErrors('root');
@@ -777,6 +855,11 @@ export function UserAuthView() {
 
   const onRegisterBusiness = businessForm.handleSubmit(async (values) => {
     businessForm.clearErrors('root');
+    if (!businessAcceptTerms) {
+      setBusinessAcceptTermsError(acceptTermsMessage);
+      return;
+    }
+    setBusinessAcceptTermsError(undefined);
     const { error, user } = await authClient.register({
       userType: 'business',
       nipt: values.nipt,
@@ -982,7 +1065,7 @@ export function UserAuthView() {
                   </FormControl>
 
                   {registerKind === 'individual' ? (
-                    <Box component="form" onSubmit={onRegisterIndividual} noValidate autoComplete="off">
+                    <Box component="form" key="register-individual-form" onSubmit={onRegisterIndividual} noValidate autoComplete="off">
                       <Stack spacing={2.5}>
                         <RegisterFieldsIndividual
                           control={individualForm.control}
@@ -992,7 +1075,7 @@ export function UserAuthView() {
                           cities={cities}
                           citiesLoading={citiesLoading}
                         />
-                        <AcceptTermsField
+                        <IndividualAcceptTermsField
                           control={individualForm.control}
                           error={individualForm.formState.errors.acceptTerms?.message}
                         />
@@ -1009,7 +1092,7 @@ export function UserAuthView() {
                       </Stack>
                     </Box>
                   ) : (
-                    <Box component="form" onSubmit={onRegisterBusiness} noValidate autoComplete="off">
+                    <Box component="form" key="register-business-form" onSubmit={onRegisterBusiness} noValidate autoComplete="off">
                       <Stack spacing={2.5}>
                         <RegisterFieldsBusiness
                           control={businessForm.control}
@@ -1019,9 +1102,13 @@ export function UserAuthView() {
                           cities={cities}
                           citiesLoading={citiesLoading}
                         />
-                        <AcceptTermsField
-                          control={businessForm.control}
-                          error={businessForm.formState.errors.acceptTerms?.message}
+                        <BusinessAcceptTermsField
+                          checked={businessAcceptTerms}
+                          onCheckedChange={(next) => {
+                            setBusinessAcceptTerms(next);
+                            if (next) setBusinessAcceptTermsError(undefined);
+                          }}
+                          error={businessAcceptTermsError}
                         />
                         <Button
                           type="submit"

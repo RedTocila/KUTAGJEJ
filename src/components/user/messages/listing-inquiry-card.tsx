@@ -13,12 +13,8 @@ type ListingInquiryCardProps = {
   data: ListingInquiryCardData;
   /** @deprecated use variant="card" */
   compact?: boolean;
-  variant?: 'card' | 'composer' | 'bubble';
+  variant?: 'card' | 'composer';
   href?: string | null;
-  /** Message text shown on bubble variant (over image footer). */
-  intro?: string;
-  /** Timestamp / delivery meta for bubble variant. */
-  meta?: React.ReactNode;
 };
 
 export function ListingInquiryCard({
@@ -26,8 +22,6 @@ export function ListingInquiryCard({
   compact = false,
   variant,
   href,
-  intro,
-  meta,
 }: ListingInquiryCardProps) {
   const resolvedVariant = variant ?? (compact ? 'card' : 'card');
   const imageSrc = listingCardImageUrl(data.imageUrl) || data.imageUrl || undefined;
@@ -86,103 +80,6 @@ export function ListingInquiryCard({
       </Box>
     );
     return inner;
-  }
-
-  if (resolvedVariant === 'bubble') {
-    const inner = (
-      <Box
-        sx={{
-          overflow: 'hidden',
-          borderRadius: 2.5,
-          border: '1px solid',
-          borderColor: 'primary.main',
-          bgcolor: '#0c0c0c',
-          boxShadow: (theme) =>
-            theme.palette.mode === 'dark'
-              ? '0 8px 28px rgba(0,0,0,0.35)'
-              : '0 8px 24px rgba(15, 23, 10, 0.12)',
-          maxWidth: 280,
-          cursor: cardHref ? 'pointer' : 'default',
-          transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-          '&:hover': cardHref
-            ? {
-                transform: 'translateY(-1px)',
-                boxShadow: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? '0 10px 32px rgba(0,0,0,0.45)'
-                    : '0 10px 28px rgba(15, 23, 10, 0.16)',
-              }
-            : undefined,
-        }}
-      >
-        <Box sx={{ position: 'relative', lineHeight: 0 }}>
-          {imageSrc ? (
-            <Box
-              component="img"
-              src={imageSrc}
-              alt={data.title}
-              sx={{
-                display: 'block',
-                width: '100%',
-                aspectRatio: '16 / 10',
-                objectFit: 'cover',
-                bgcolor: 'action.hover',
-              }}
-            />
-          ) : (
-            <Box sx={{ width: '100%', aspectRatio: '16 / 10', bgcolor: 'action.hover' }} />
-          )}
-          <Box
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.45) 42%, transparent 72%)',
-              pointerEvents: 'none',
-            }}
-          />
-          <Box
-            sx={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              px: 1.25,
-              pb: meta ? 0.65 : 1,
-              pt: 2.5,
-              color: '#fff',
-            }}
-          >
-            {data.priceLabel ? (
-              <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', color: 'primary.main', lineHeight: 1.1, mb: 0.25 }}>
-                {data.priceLabel}
-              </Typography>
-            ) : null}
-            <Typography
-              sx={{
-                fontWeight: 700,
-                fontSize: '0.8125rem',
-                lineHeight: 1.35,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                textShadow: '0 1px 4px rgba(0,0,0,0.55)',
-              }}
-            >
-              {intro?.trim() || data.title}
-            </Typography>
-          </Box>
-        </Box>
-        {meta ? (
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1, py: 0.5, bgcolor: '#0c0c0c' }}>{meta}</Box>
-        ) : null}
-      </Box>
-    );
-
-    if (!cardHref) return inner;
-    return (
-      <Link href={cardHref} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-        {inner}
-      </Link>
-    );
   }
 
   const inner = (

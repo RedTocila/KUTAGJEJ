@@ -767,7 +767,9 @@ function MessageBubble({
   const mine = message.isMine;
   const isRead = deliveryStatus === 'read';
   const listingInquiry = parseListingInquiryMessage(message.body);
-  const imageUrl = listingInquiry ? '' : String(message.imageUrl || '').trim();
+  const imageUrl = listingInquiry
+    ? String(listingInquiry.data.imageUrl || '').trim()
+    : String(message.imageUrl || '').trim();
   const bubbleImageUrl =
     storageImageUrl(imageUrl, {
       width: CHAT_BUBBLE_IMAGE_THUMB,
@@ -833,40 +835,6 @@ function MessageBubble({
     },
     [handleImageError, handleImageLoad],
   );
-
-  if (listingInquiry) {
-    const inquiryMeta = (
-      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.4, pointerEvents: 'none' }}>
-        <Typography component="span" variant="caption" sx={{ fontSize: '0.68rem', lineHeight: 1, color: 'rgba(255,255,255,0.55)' }}>
-          {formatMessageTime(message.createdAt, locale)}
-        </Typography>
-        {mine && deliveryStatus ? (
-          <Box component="span" aria-label={isRead ? t.messages.read : t.messages.delivered} sx={{ display: 'inline-flex', lineHeight: 0, color: isRead ? '#6ec8e8' : 'rgba(255,255,255,0.55)' }}>
-            <ChecksIcon size={14} weight="bold" />
-          </Box>
-        ) : null}
-      </Box>
-    );
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: mine ? 'flex-end' : 'flex-start',
-          px: { xs: 1.5, md: 2 },
-          py: 0.35,
-        }}
-      >
-        <Box sx={{ maxWidth: '88%', display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start' }}>
-          <ListingInquiryCard
-            data={listingInquiry.data}
-            variant="bubble"
-            intro={body}
-            meta={inquiryMeta}
-          />
-        </Box>
-      </Box>
-    );
-  }
 
   const meta = (
     <Box

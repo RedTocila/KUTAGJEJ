@@ -3,12 +3,12 @@
 import * as React from 'react';
 import { Box, Stack } from '@mui/material';
 
-import { BannerSlideCard, BANNER_SLIDE_VISUALS } from '@/components/public/banner-slide-card';
-import { BannerSliderPager } from '@/components/public/banner-slider-pager';
-import { BannerSliderViewport } from '@/components/public/banner-slider-viewport';
+import type { HomeBannerDto } from '@/lib/home-banners-client';
 import { useBannerSlider } from '@/hooks/use-banner-slider';
 import { useCopy } from '@/hooks/use-copy';
-import type { HomeBannerDto } from '@/lib/home-banners-client';
+import { BANNER_SLIDE_VISUALS, BannerSlideCard } from '@/components/public/banner-slide-card';
+import { BannerSliderPager } from '@/components/public/banner-slider-pager';
+import { BannerSliderViewport } from '@/components/public/banner-slider-viewport';
 
 export interface HomeBannerCarouselProps {
   banners?: HomeBannerDto[];
@@ -24,20 +24,11 @@ function slideHref(slide: HomeBannerDto): string | null {
 export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
   const t = useCopy();
   const slides = banners;
-  const {
-    idx,
-    slideBasis,
-    trackRef,
-    suppressNavRef,
-    goToSlide,
-    autoplay,
-    toggleAutoplay,
-    touchHandlers,
-    trackSx,
-  } = useBannerSlider({
-    slideCount: slides.length,
-    slideMs: SLIDE_MS,
-  });
+  const { idx, slideBasis, trackRef, suppressNavRef, goToSlide, autoplay, toggleAutoplay, touchHandlers, trackSx } =
+    useBannerSlider({
+      slideCount: slides.length,
+      slideMs: SLIDE_MS,
+    });
 
   if (slides.length === 0) return null;
 
@@ -65,6 +56,7 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
                 imageUrl={slide.imageUrl}
                 fallbackBg={BANNER_SLIDE_VISUALS[i % BANNER_SLIDE_VISUALS.length].bg}
                 eager={eager}
+                priority={i === 0}
                 title={slide.title}
                 hideTitleWhenImage
               />

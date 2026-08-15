@@ -3,18 +3,20 @@
 import * as React from 'react';
 import Image from 'next/image';
 import { Box, Button, Grid, IconButton, Stack, Typography } from '@mui/material';
-import type { ProfessionalPortfolioItem } from '@/lib/professional-listing-detail-content';
-import { ProductDialog } from '@/components/core/product-dialog';
-import { formatRatingDisplay } from '@/lib/format-rating';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { emitListingPhotoView } from '@/lib/listing-hot-lead';
-import type { ListingMetricKind } from '@/lib/listing-metrics';
-import { productPanelSx } from '@/styles/product-sx';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import { StarHalf as StarHalfIcon } from '@phosphor-icons/react/dist/ssr/StarHalf';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
+
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { formatRatingDisplay } from '@/lib/format-rating';
+import { emitListingPhotoView } from '@/lib/listing-hot-lead';
+import type { ListingMetricKind } from '@/lib/listing-metrics';
+import type { ProfessionalPortfolioItem } from '@/lib/professional-listing-detail-content';
+import { listingCardImageUrl, listingHeroImageUrl } from '@/lib/storage-image';
+import { ProductDialog } from '@/components/core/product-dialog';
+import { productPanelSx } from '@/styles/product-sx';
 
 const FONT_CAPTION = '0.75rem';
 const FONT_BODY = '0.875rem';
@@ -44,35 +46,15 @@ export function ProfessionalFiveStarRating({
       {Array.from({ length: 5 }, (_, index) => {
         const diff = clamped - index;
         if (diff >= 0.875) {
-          return (
-            <StarIcon
-              key={index}
-              size={size}
-              weight="fill"
-              color="var(--mui-palette-warning-main)"
-              aria-hidden
-            />
-          );
+          return <StarIcon key={index} size={size} weight="fill" color="var(--mui-palette-warning-main)" aria-hidden />;
         }
         if (diff >= 0.125) {
           return (
-            <StarHalfIcon
-              key={index}
-              size={size}
-              weight="fill"
-              color="var(--mui-palette-warning-main)"
-              aria-hidden
-            />
+            <StarHalfIcon key={index} size={size} weight="fill" color="var(--mui-palette-warning-main)" aria-hidden />
           );
         }
         return (
-          <StarIcon
-            key={index}
-            size={size}
-            weight="regular"
-            color="var(--mui-palette-text-disabled)"
-            aria-hidden
-          />
+          <StarIcon key={index} size={size} weight="regular" color="var(--mui-palette-text-disabled)" aria-hidden />
         );
       })}
     </Stack>
@@ -207,12 +189,7 @@ export function ProfessionalRatingBadge({
           lineHeight: 0,
         }}
       >
-        <StarIcon
-          size={17}
-          weight="fill"
-          color="var(--mui-palette-warning-main)"
-          aria-hidden
-        />
+        <StarIcon size={17} weight="fill" color="var(--mui-palette-warning-main)" aria-hidden />
         <Typography
           component="span"
           sx={{
@@ -248,9 +225,7 @@ export function ProfessionalRatingBadge({
     >
       <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', justifyContent: 'center' }}>
         <StarIcon size={14} weight="fill" color="var(--mui-palette-warning-main)" aria-hidden />
-        <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY, lineHeight: 1, color: '#fff' }}>
-          {rating}
-        </Typography>
+        <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY, lineHeight: 1, color: '#fff' }}>{rating}</Typography>
       </Stack>
       <Typography
         sx={{
@@ -267,22 +242,11 @@ export function ProfessionalRatingBadge({
   );
 }
 
-export function ProfessionalReviewsSectionHeader({
-  rating,
-  reviewCount,
-}: {
-  rating: string;
-  reviewCount: number;
-}) {
+export function ProfessionalReviewsSectionHeader({ rating, reviewCount }: { rating: string; reviewCount: number }) {
   return (
     <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
       <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Vlerësimet</Typography>
-      <ProfessionalRatingSummary
-        rating={rating}
-        reviewCount={reviewCount}
-        starSize={16}
-        showReviewLabel
-      />
+      <ProfessionalRatingSummary rating={rating} reviewCount={reviewCount} starSize={16} showReviewLabel />
     </Stack>
   );
 }
@@ -361,13 +325,7 @@ export function ProfessionalMetaStat({
 
 const PORTFOLIO_INITIAL_VISIBLE = 6;
 
-function ProfessionalPortfolioCard({
-  item,
-  onOpen,
-}: {
-  item: ProfessionalPortfolioItem;
-  onOpen: () => void;
-}) {
+function ProfessionalPortfolioCard({ item, onOpen }: { item: ProfessionalPortfolioItem; onOpen: () => void }) {
   return (
     <Box
       component="button"
@@ -402,7 +360,7 @@ function ProfessionalPortfolioCard({
       <Box sx={{ position: 'relative', height: { xs: 112, sm: 140 }, bgcolor: 'action.hover' }}>
         {item.imageUrl ? (
           <Image
-            src={item.imageUrl}
+            src={listingCardImageUrl(item.imageUrl) ?? item.imageUrl}
             alt={item.title}
             fill
             sizes="(max-width: 600px) 50vw, 220px"
@@ -411,10 +369,7 @@ function ProfessionalPortfolioCard({
         ) : null}
       </Box>
       <Stack spacing={0.25} sx={{ p: { xs: 1, sm: 1.25 } }}>
-        <Typography
-          sx={{ fontWeight: 800, fontSize: { xs: FONT_CAPTION, sm: '0.85rem' }, lineHeight: 1.25 }}
-          noWrap
-        >
+        <Typography sx={{ fontWeight: 800, fontSize: { xs: FONT_CAPTION, sm: '0.85rem' }, lineHeight: 1.25 }} noWrap>
           {item.title}
         </Typography>
         {item.location ? (
@@ -453,7 +408,7 @@ export function ProfessionalPortfolioSection({
         emitListingPhotoView(listingKind, listingId, index + 1);
       }
     },
-    [listingId, listingKind],
+    [listingId, listingKind]
   );
 
   if (items.length === 0 && !headerAction) return null;
@@ -468,10 +423,7 @@ export function ProfessionalPortfolioSection({
         <Grid container spacing={1.5}>
           {visible.map((item, index) => (
             <Grid key={item.id} size={{ xs: 6, sm: 4 }}>
-              <ProfessionalPortfolioCard
-                item={item}
-                onOpen={() => openItem(index)}
-              />
+              <ProfessionalPortfolioCard item={item} onOpen={() => openItem(index)} />
             </Grid>
           ))}
         </Grid>
@@ -494,22 +446,16 @@ export function ProfessionalPortfolioSection({
         ) : null}
       </Stack>
 
-      <ProductDialog
-        open={Boolean(active)}
-        onClose={() => setActiveIndex(null)}
-        maxWidth="sm"
-        fullWidth
-      >
+      <ProductDialog open={Boolean(active)} onClose={() => setActiveIndex(null)} maxWidth="sm" fullWidth>
         {active ? (
           <>
             <Box sx={{ position: 'relative', width: '100%', aspectRatio: '4 / 3', bgcolor: 'grey.900' }}>
               <Image
-                src={active.imageUrl}
+                src={listingHeroImageUrl(active.imageUrl) ?? active.imageUrl}
                 alt={active.title}
                 fill
                 sizes="(max-width: 600px) 100vw, 560px"
                 style={{ objectFit: 'contain' }}
-                priority
               />
               <IconButton
                 aria-label="Mbyll"
@@ -527,9 +473,7 @@ export function ProfessionalPortfolioSection({
               </IconButton>
             </Box>
             <Stack spacing={0.35} sx={{ px: 2.25, py: 1.75 }}>
-              <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.3 }}>
-                {active.title}
-              </Typography>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.3 }}>{active.title}</Typography>
               {active.location ? (
                 <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', fontWeight: 600 }}>
                   {active.location}

@@ -3,11 +3,11 @@
 import * as React from 'react';
 import { Box, Skeleton, Stack } from '@mui/material';
 
+import { buildHomepageMixedLatest, type HomepageMixedListing } from '@/lib/homepage-latest-listings';
+import { fetchHomepageListings } from '@/lib/public-listings-client';
 import { HomepageMixedListingCard, mixedListingKey } from '@/components/public/homepage-mixed-listing-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { ListingsSection } from '@/components/public/listings-section';
-import { buildHomepageMixedLatest, type HomepageMixedListing } from '@/lib/homepage-latest-listings';
-import { fetchHomepageListings } from '@/lib/public-listings-client';
 
 function CarouselSkeleton() {
   return (
@@ -28,11 +28,7 @@ function CarouselSkeleton() {
  * Prefers SSR mixed latest; if SSR came back empty (often a cold API timeout),
  * retries once on the client instead of locking on a false empty state.
  */
-export function HomepageRecommendedSection({
-  fallbackItems,
-}: {
-  fallbackItems: HomepageMixedListing[];
-}) {
+export function HomepageRecommendedSection({ fallbackItems }: { fallbackItems: HomepageMixedListing[] }) {
   const needsRecovery = fallbackItems.length === 0;
   const [items, setItems] = React.useState(fallbackItems);
   const [loading, setLoading] = React.useState(needsRecovery);
@@ -67,12 +63,8 @@ export function HomepageRecommendedSection({
         <CarouselSkeleton />
       ) : (
         <ListingsCarousel>
-          {items.map((item, index) => (
-            <HomepageMixedListingCard
-              key={mixedListingKey(item)}
-              item={item}
-              imagePriority={index < 4}
-            />
+          {items.map((item) => (
+            <HomepageMixedListingCard key={mixedListingKey(item)} item={item} />
           ))}
         </ListingsCarousel>
       )}

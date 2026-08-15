@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Box, Button, Divider, Stack, Typography } from '@mui/material';
 import { ArrowRight as ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 
+import { ImageLightbox } from '@/components/common/image-lightbox';
 import { formatPrice } from '@/components/public/listing-cards/format-helpers';
 import { ProductBackButton, ProductTag } from '@/components/public/product-browse-chrome';
 import {
@@ -25,10 +26,25 @@ function MenuItemRow({
   dense?: boolean;
 }) {
   const size = dense ? 64 : 80;
+  const [previewOpen, setPreviewOpen] = React.useState(false);
 
   return (
+    <>
     <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', py: dense ? 0.25 : 0.5 }}>
       <Box
+        role={item.imageUrl ? 'button' : undefined}
+        tabIndex={item.imageUrl ? 0 : undefined}
+        aria-label={item.imageUrl ? `Shiko ${item.name}` : undefined}
+        onClick={() => {
+          if (item.imageUrl) setPreviewOpen(true);
+        }}
+        onKeyDown={(event) => {
+          if (!item.imageUrl) return;
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setPreviewOpen(true);
+          }
+        }}
         sx={{
           position: 'relative',
           width: size,
@@ -37,6 +53,7 @@ function MenuItemRow({
           borderRadius: 2,
           overflow: 'hidden',
           bgcolor: 'action.hover',
+          cursor: item.imageUrl ? 'zoom-in' : 'default',
         }}
       >
         {item.imageUrl ? (
@@ -92,6 +109,14 @@ function MenuItemRow({
         ) : null}
       </Stack>
     </Stack>
+    <ImageLightbox
+      open={previewOpen}
+      urls={item.imageUrl ? [item.imageUrl] : []}
+      index={0}
+      alt={item.name}
+      onClose={() => setPreviewOpen(false)}
+    />
+    </>
   );
 }
 

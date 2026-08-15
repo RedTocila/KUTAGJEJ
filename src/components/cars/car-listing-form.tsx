@@ -32,6 +32,7 @@ import {
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { ImageLightbox, useObjectUrls } from '@/components/common/image-lightbox';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { VehicleTypePicker } from '@/components/cars/vehicle-type-picker';
 import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
@@ -248,23 +249,25 @@ function mapServerErrorToField(message: string): keyof CarFormState | null {
 // ---------------------------------------------------------------------------
 
 interface ImagePreviewProps {
-  file: File;
+  src: string;
+  alt?: string;
   onRemove: () => void;
+  onPreview: () => void;
 }
 
-function ImagePreview({ file, onRemove }: ImagePreviewProps) {
-  const [src, setSrc] = React.useState<string>('');
-
-  React.useEffect(() => {
-    const url = URL.createObjectURL(file);
-    setSrc(url);
-    return () => {
-      URL.revokeObjectURL(url);
-    };
-  }, [file]);
-
+function ImagePreview({ src, alt, onRemove, onPreview }: ImagePreviewProps) {
   return (
     <Box
+      role="button"
+      tabIndex={0}
+      aria-label="Shiko foton"
+      onClick={onPreview}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onPreview();
+        }
+      }}
       sx={{
         position: 'relative',
         width: 96,
@@ -274,19 +277,26 @@ function ImagePreview({ file, onRemove }: ImagePreviewProps) {
         border: '1px solid',
         borderColor: 'divider',
         flexShrink: 0,
+        cursor: 'zoom-in',
       }}
     >
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
-          alt={file.name}
+          alt={alt ?? ''}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
       ) : null}
       <IconButton
         size="small"
-        onClick={onRemove}
+        type="button"
+        aria-label="Hiq foton"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onRemove();
+        }}
         sx={{
           position: 'absolute',
           top: 2,
@@ -369,6 +379,12 @@ export function CarListingForm({
   const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(
     () => (initialListing?.imageUrls ?? []).filter(Boolean).slice(0, MAX_IMAGES),
   );
+  const filePreviewUrls = useObjectUrls(images);
+  const previewUrls = React.useMemo(
+    () => [...existingImageUrls, ...filePreviewUrls],
+    [existingImageUrls, filePreviewUrls],
+  );
+  const [previewIndex, setPreviewIndex] = React.useState<number | null>(null);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [loadingCities, setLoadingCities] = React.useState(true);
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
@@ -735,44 +751,21 @@ export function CarListingForm({
 
           <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.5 }}>
             {existingImageUrls.map((url, idx) => (
-              <Box
+              <ImagePreview
                 key={`url-${url}-${idx}`}
-                sx={{
-                  position: 'relative',
-                  width: 96,
-                  height: 80,
-                  borderRadius: 1.5,
-                  overflow: 'hidden',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  flexShrink: 0,
+                src={url}
+                onPreview={() => setPreviewIndex(idx)}
+                onRemove={() => {
+                  removeExistingUrl(idx);
                 }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    removeExistingUrl(idx);
-                  }}
-                  sx={{
-                    position: 'absolute',
-                    top: 2,
-                    right: 2,
-                    bgcolor: 'rgba(0,0,0,0.55)',
-                    color: '#fff',
-                    p: 0.25,
-                    '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
-                  }}
-                >
-                  <XIcon size={12} weight="bold" />
-                </IconButton>
-              </Box>
+              />
             ))}
             {images.map((img, idx) => (
               <ImagePreview
                 key={`${img.name}-${idx}`}
-                file={img}
+                src={filePreviewUrls[idx] ?? ''}
+                alt={img.name}
+                onPreview={() => setPreviewIndex(existingImageUrls.length + idx)}
                 onRemove={() => {
                   removeImage(idx);
                 }}
@@ -821,6 +814,14 @@ export function CarListingForm({
               Up to {MAX_IMAGES} images · JPG, PNG, WEBP
             </Typography>
           ) : null}
+
+          <ImageLightbox
+            open={previewIndex != null}
+            urls={previewUrls}
+            index={previewIndex ?? 0}
+            onClose={() => setPreviewIndex(null)}
+            onIndexChange={setPreviewIndex}
+          />
         </Stack>
 
         <ListingTextField

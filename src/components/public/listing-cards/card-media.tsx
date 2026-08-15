@@ -5,37 +5,29 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Box, Chip, Stack } from '@mui/material';
-
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { OKAZION_ACCENT } from '@/lib/home-categories';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 
-import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
-import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
-import { ListingPremiumBadge } from '@/components/public/listing-premium-badge';
+import { paths } from '@/paths';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { OKAZION_ACCENT } from '@/lib/home-categories';
+import { fetchListingMetrics, toggleListingSave, type ListingMetricKind } from '@/lib/listing-metrics';
+import type { ListingSharePayload } from '@/lib/listing-share';
+import { listingCardImageUrl, storageImageOriginalUrl } from '@/lib/storage-image';
 import { useSavedListingsOptional } from '@/contexts/saved-listings-context';
 import { useListingSavedState } from '@/hooks/use-listing-saved-state';
 import { useUser } from '@/hooks/use-user';
-import type { ListingSharePayload } from '@/lib/listing-share';
-import {
-  fetchListingMetrics,
-  toggleListingSave,
-  type ListingMetricKind,
-} from '@/lib/listing-metrics';
-import { listingCardImageUrl, storageImageOriginalUrl } from '@/lib/storage-image';
-import { paths } from '@/paths';
+import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
+import { ListingPremiumBadge } from '@/components/public/listing-premium-badge';
+import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
 
 import { OkazionCountdownPlaceholder } from './okazion-countdown';
 
-const OkazionCountdown = dynamic(
-  () => import('./okazion-countdown').then((m) => m.OkazionCountdown),
-  {
-    ssr: false,
-    loading: () => <OkazionCountdownPlaceholder />,
-  },
-);
+const OkazionCountdown = dynamic(() => import('./okazion-countdown').then((m) => m.OkazionCountdown), {
+  ssr: false,
+  loading: () => <OkazionCountdownPlaceholder />,
+});
 export interface CardMediaProps {
   listingKind: ListingMetricKind;
   listingId: string;
@@ -143,7 +135,7 @@ export function CardMedia({
       saveCount: sharePayload?.saveCount ?? saveCount,
       url: sharePayload?.url,
     }),
-    [alt, imageUrl, listingId, listingKind, saveCount, sharePayload, topLeftBadge],
+    [alt, imageUrl, listingId, listingKind, saveCount, sharePayload, topLeftBadge]
   );
 
   const handleShare = React.useCallback((event: React.MouseEvent) => {
@@ -173,7 +165,7 @@ export function CardMedia({
       if (metrics) setSaveCount(metrics.saveCount);
       else setSaveCount((count) => Math.max(0, count + (wasSaved ? 1 : -1)));
     },
-    [listingKind, listingId, router, saved, savedCtx, user],
+    [listingKind, listingId, router, saved, savedCtx, user]
   );
 
   // OKAZION badge wins when both are active (same priority as before for chrome).
@@ -197,7 +189,7 @@ export function CardMedia({
           src={displaySrc!}
           alt={alt}
           fill
-          sizes="(max-width: 600px) 100vw, 320px"
+          sizes="(max-width: 600px) 92vw, (max-width: 900px) 45vw, 320px"
           priority={priority}
           className="listing-card-media-image"
           style={{ objectFit: 'cover' }}
@@ -225,7 +217,7 @@ export function CardMedia({
         </Stack>
       )}
 
-      {(okazion || showPremiumBadge || topLeftOverlay || topLeftBadge) ? (
+      {okazion || showPremiumBadge || topLeftOverlay || topLeftBadge ? (
         <Stack
           spacing={0.6}
           sx={{

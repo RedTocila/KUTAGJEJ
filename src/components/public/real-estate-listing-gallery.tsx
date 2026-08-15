@@ -3,31 +3,33 @@
 import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { IconButton, Box, Typography, Avatar, Skeleton, Stack, ButtonBase } from '@mui/material';
+import { Avatar, Box, ButtonBase, IconButton, Skeleton, Stack, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
-import { CaretLeft as CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft';
-import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
+import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
-import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
+import { CaretLeft as CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft';
+import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 import { ShoppingBag as ShoppingBagIcon } from '@phosphor-icons/react/dist/ssr/ShoppingBag';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle';
 
+import { paths } from '@/paths';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import type { ListingGalleryPlaceholderKey } from '@/lib/listing-gallery-placeholder';
+import { emitListingPhotoView } from '@/lib/listing-hot-lead';
+import { type ListingMetricKind } from '@/lib/listing-metrics';
+import type { ListingSharePayload } from '@/lib/listing-share';
+import { listingHeroImageUrl, listingThumbImageUrl } from '@/lib/storage-image';
+import { useHistoryBackProps } from '@/hooks/use-navigate-back';
+import { ImageLightbox } from '@/components/common/image-lightbox';
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
 import { OwnerEditPencil } from '@/components/user/owner-edit-pencil';
-import { useHistoryBackProps } from '@/hooks/use-navigate-back';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import type { ListingSharePayload } from '@/lib/listing-share';
-import { type ListingMetricKind } from '@/lib/listing-metrics';
-import { emitListingPhotoView } from '@/lib/listing-hot-lead';
-import type { ListingGalleryPlaceholderKey } from '@/lib/listing-gallery-placeholder';
-import { paths } from '@/paths';
 
 export type { ListingGalleryPlaceholderKey };
 
@@ -38,6 +40,7 @@ const SLIDE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const SLIDE_DURATION_MS = 320;
 const SWIPE_COMMIT_RATIO = 0.18;
 const SWIPE_COMMIT_MIN_PX = 56;
+const TAP_MAX_PX = 12;
 
 function usePrefersReducedMotion(): boolean {
   const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(false);
@@ -111,6 +114,7 @@ export function RealEstateListingGallery(props: {
   const [shareCount, setShareCount] = React.useState(initialShareCount);
   const [saveCount, setSaveCount] = React.useState(initialSaveCount);
   const [shareOpen, setShareOpen] = React.useState(false);
+  const [previewOpen, setPreviewOpen] = React.useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
   const historyBack = useHistoryBackProps(browseListHref);
 
@@ -129,7 +133,7 @@ export function RealEstateListingGallery(props: {
 
   const viewportRef = React.useRef<HTMLDivElement>(null);
   const trackRef = React.useRef<HTMLDivElement>(null);
-  const dragStartRef = React.useRef<{ x: number; pointerId: number } | null>(null);
+  const dragStartRef = React.useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const dragOffsetRef = React.useRef(0);
   const activeRef = React.useRef(0);
   const thumbnailRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
@@ -153,7 +157,7 @@ export function RealEstateListingGallery(props: {
         el.style.transform = `translate3d(calc((-${index} * 100% / ${Math.max(urls.length, 1)}) + ${offsetPx}px), 0, 0)`;
       }
     },
-    [prefersReducedMotion, urls.length, viewportWidth],
+    [prefersReducedMotion, urls.length, viewportWidth]
   );
 
   React.useEffect(() => {
@@ -210,7 +214,7 @@ export function RealEstateListingGallery(props: {
       const normalized = ((index % urls.length) + urls.length) % urls.length;
       setActive(normalized);
     },
-    [urls.length],
+    [urls.length]
   );
 
   const goToPrevious = React.useCallback(() => {
@@ -224,11 +228,12 @@ export function RealEstateListingGallery(props: {
   const slideWidthPx = viewportWidth > 0 ? viewportWidth : null;
 
   const finishDrag = React.useCallback(
-    (clientX: number, pointerId: number, target: HTMLElement) => {
+    (clientX: number, clientY: number, pointerId: number, target: HTMLElement, commitTap: boolean) => {
       const start = dragStartRef.current;
       if (!start || start.pointerId !== pointerId) return;
 
       const delta = clientX - start.x;
+      const distance = Math.hypot(delta, clientY - start.y);
       const threshold = Math.max(SWIPE_COMMIT_MIN_PX, viewportWidth * SWIPE_COMMIT_RATIO);
 
       dragStartRef.current = null;
@@ -239,11 +244,15 @@ export function RealEstateListingGallery(props: {
       else if (delta >= threshold) goToPrevious();
       else applyTrackTransform(activeRef.current, 0, true);
 
+      if (commitTap && distance < TAP_MAX_PX) {
+        setPreviewOpen(true);
+      }
+
       if (target.hasPointerCapture(pointerId)) {
         target.releasePointerCapture(pointerId);
       }
     },
-    [applyTrackTransform, goToNext, goToPrevious, viewportWidth],
+    [applyTrackTransform, goToNext, goToPrevious, viewportWidth]
   );
 
   const isGalleryControlTarget = (target: EventTarget | null) =>
@@ -252,7 +261,7 @@ export function RealEstateListingGallery(props: {
   const handleViewportPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!hasMultipleImages || event.button !== 0 || isGalleryControlTarget(event.target)) return;
 
-    dragStartRef.current = { x: event.clientX, pointerId: event.pointerId };
+    dragStartRef.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
     dragOffsetRef.current = 0;
     setIsDragging(true);
     applyTrackTransform(activeRef.current, 0, false);
@@ -269,14 +278,30 @@ export function RealEstateListingGallery(props: {
   };
 
   const handleViewportPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
-    finishDrag(event.clientX, event.pointerId, event.currentTarget);
+    finishDrag(event.clientX, event.clientY, event.pointerId, event.currentTarget, true);
   };
 
   const handleViewportPointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
-    finishDrag(event.clientX, event.pointerId, event.currentTarget);
+    finishDrag(event.clientX, event.clientY, event.pointerId, event.currentTarget, false);
+  };
+
+  const openPreview = React.useCallback(() => {
+    if (showPlaceholder) return;
+    setPreviewOpen(true);
+  }, [showPlaceholder]);
+
+  const handleViewportClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (showPlaceholder || hasMultipleImages) return;
+    if (isGalleryControlTarget(event.target)) return;
+    openPreview();
   };
 
   const handleViewportKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!showPlaceholder && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault();
+      openPreview();
+      return;
+    }
     if (!hasMultipleImages) return;
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
@@ -311,7 +336,7 @@ export function RealEstateListingGallery(props: {
       if (!listingKind || !listingId) return;
       setShareOpen(true);
     },
-    [listingKind, listingId],
+    [listingKind, listingId]
   );
 
   const resolvedSharePayload = React.useMemo<ListingSharePayload | null>(() => {
@@ -346,11 +371,18 @@ export function RealEstateListingGallery(props: {
     >
       <Box
         ref={viewportRef}
-        role={hasMultipleImages ? 'group' : undefined}
+        role={!showPlaceholder ? 'group' : undefined}
         aria-roledescription={hasMultipleImages ? 'carousel' : undefined}
-        aria-label={hasMultipleImages ? `Galeria e fotove, ${active + 1} nga ${urls.length}` : undefined}
-        tabIndex={hasMultipleImages ? 0 : undefined}
+        aria-label={
+          hasMultipleImages
+            ? `Galeria e fotove, ${active + 1} nga ${urls.length}`
+            : !showPlaceholder
+              ? `${title}. Shiko foton`
+              : undefined
+        }
+        tabIndex={!showPlaceholder ? 0 : undefined}
         onKeyDown={handleViewportKeyDown}
+        onClick={handleViewportClick}
         onPointerDown={handleViewportPointerDown}
         onPointerMove={handleViewportPointerMove}
         onPointerUp={handleViewportPointerUp}
@@ -363,10 +395,10 @@ export function RealEstateListingGallery(props: {
           overflow: 'hidden',
           mx: 'auto',
           touchAction: hasMultipleImages ? 'pan-y pinch-zoom' : 'auto',
-          cursor: isDragging ? 'grabbing' : hasMultipleImages ? 'grab' : 'default',
+          cursor: isDragging ? 'grabbing' : showPlaceholder ? 'default' : 'zoom-in',
           userSelect: isDragging ? 'none' : 'auto',
           outline: 'none',
-          '&:focus-visible': hasMultipleImages
+          '&:focus-visible': !showPlaceholder
             ? {
                 boxShadow: (theme) => `inset 0 0 0 2px ${alpha(theme.palette.primary.main, 0.55)}`,
               }
@@ -375,33 +407,46 @@ export function RealEstateListingGallery(props: {
       >
         {showPlaceholder ? (
           <Stack
-            sx={{
+            sx={(theme) => ({
               position: 'absolute',
               inset: 0,
               alignItems: 'center',
               justifyContent: 'center',
-              // `primaryMainAlpha` uses `--mui-palette-primary-mainChannel`; do not pass `palette.primary.main` to `alpha()` (often `var(...)`).
-              background: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? `linear-gradient(145deg, ${primaryMainAlpha(0.14)} 0%, ${theme.palette.grey[900]} 45%, rgba(0,0,0,0.9) 100%)`
-                  : `linear-gradient(145deg, ${primaryMainAlpha(0.12)} 0%, ${theme.palette.grey[50]} 50%, ${primaryMainAlpha(0.06)} 100%)`,
-            }}
+              bgcolor: 'background.level1',
+              backgroundImage: `linear-gradient(160deg, ${primaryMainAlpha(0.1)} 0%, transparent 62%)`,
+              ...theme.applyStyles('dark', {
+                bgcolor: 'background.default',
+                backgroundImage: `linear-gradient(160deg, ${primaryMainAlpha(0.1)} 0%, rgba(0,0,0,0.72) 100%)`,
+              }),
+            })}
           >
             <Avatar
-              sx={{
+              sx={(theme) => ({
                 width: 88,
                 height: 88,
-                bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.16 : 0.12),
+                bgcolor: primaryMainAlpha(0.12),
                 color: 'primary.main',
                 border: `1px solid ${primaryMainAlpha(0.38)}`,
-              }}
+                ...theme.applyStyles('dark', {
+                  bgcolor: primaryMainAlpha(0.16),
+                }),
+              })}
               variant="rounded"
               aria-hidden
             >
               <PlaceholderSvg weight="regular" size={42} />
             </Avatar>
             <Typography
-              sx={{ mt: 2.5, maxWidth: 280, px: 2, textAlign: 'center', color: 'text.primary', opacity: 0.92, fontSize: '0.9rem', fontWeight: 600 }}
+              sx={{
+                mt: 2.5,
+                maxWidth: 280,
+                px: 2,
+                textAlign: 'center',
+                color: 'text.primary',
+                opacity: 0.92,
+                fontSize: '0.9rem',
+                fontWeight: 600,
+              }}
             >
               {title}
             </Typography>
@@ -428,17 +473,14 @@ export function RealEstateListingGallery(props: {
                   sx={{
                     position: 'relative',
                     flexShrink: 0,
-                    width:
-                      slideWidthPx != null
-                        ? slideWidthPx
-                        : `calc(100% / ${Math.max(urls.length, 1)})`,
+                    width: slideWidthPx != null ? slideWidthPx : `calc(100% / ${Math.max(urls.length, 1)})`,
                     height: '100%',
                     overflow: 'hidden',
                   }}
                   aria-hidden={idx !== active}
                 >
                   <Image
-                    src={url}
+                    src={listingHeroImageUrl(url) ?? url}
                     alt={idx === active ? title : ''}
                     fill
                     sizes={heroSizes}
@@ -454,7 +496,14 @@ export function RealEstateListingGallery(props: {
           </Box>
         ) : urls[0] ? (
           <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-            <Image src={urls[0]} alt={title} fill priority sizes={heroSizes} style={{ objectFit: 'cover' }} />
+            <Image
+              src={listingHeroImageUrl(urls[0]) ?? urls[0]}
+              alt={title}
+              fill
+              priority
+              sizes={heroSizes}
+              style={{ objectFit: 'cover' }}
+            />
           </Box>
         ) : (
           <Skeleton variant="rectangular" sx={{ position: 'absolute', inset: 0, height: 1 }} />
@@ -631,7 +680,13 @@ export function RealEstateListingGallery(props: {
               }}
             >
               <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-                <Image src={url} alt="" fill sizes="120px" style={{ objectFit: 'cover' }} />
+                <Image
+                  src={listingThumbImageUrl(url) ?? url}
+                  alt=""
+                  fill
+                  sizes="120px"
+                  style={{ objectFit: 'cover' }}
+                />
               </Box>
             </ButtonBase>
           ))}
@@ -646,6 +701,15 @@ export function RealEstateListingGallery(props: {
           onShared={(metrics) => setShareCount(metrics.shareCount)}
         />
       ) : null}
+
+      <ImageLightbox
+        open={previewOpen}
+        urls={urls}
+        index={active}
+        alt={title}
+        onClose={() => setPreviewOpen(false)}
+        onIndexChange={goToIndex}
+      />
     </Box>
   );
 }

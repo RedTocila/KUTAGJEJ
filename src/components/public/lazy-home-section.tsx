@@ -3,13 +3,6 @@
 import * as React from 'react';
 import { Box, Skeleton, Stack } from '@mui/material';
 
-import { CarCard } from '@/components/public/listing-cards/car-card';
-import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
-import { JobCard } from '@/components/public/listing-cards/job-card';
-import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
-import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
-import { ListingsCarousel } from '@/components/public/listings-carousel';
-import { ListingsSection } from '@/components/public/listings-section';
 import {
   fetchLatestVertical,
   type HomepageLatestVerticalId,
@@ -19,6 +12,13 @@ import {
   type PublicMarketplaceListing,
   type PublicRealEstateListing,
 } from '@/lib/public-listings-client';
+import { CarCard } from '@/components/public/listing-cards/car-card';
+import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
+import { JobCard } from '@/components/public/listing-cards/job-card';
+import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
+import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
+import { ListingsCarousel } from '@/components/public/listings-carousel';
+import { ListingsSection } from '@/components/public/listings-section';
 
 type HomeListing =
   | PublicRealEstateListing
@@ -47,16 +47,10 @@ function CarouselSkeleton() {
   );
 }
 
-function renderListingCard(verticalId: HomepageLatestVerticalId, listing: HomeListing, index: number) {
+function renderListingCard(verticalId: HomepageLatestVerticalId, listing: HomeListing) {
   switch (verticalId) {
     case 'real-estate':
-      return (
-        <RealEstateCard
-          key={listing.id}
-          listing={listing as PublicRealEstateListing}
-          imagePriority={index < 4}
-        />
-      );
+      return <RealEstateCard key={listing.id} listing={listing as PublicRealEstateListing} />;
     case 'cars':
       return <CarCard key={listing.id} listing={listing as PublicCarListing} />;
     case 'jobs':
@@ -103,11 +97,9 @@ export function LazyHomeSection({
   const ssrTrusted = Boolean(initialListings && initialListings.length > 0);
 
   const [listings, setListings] = React.useState<HomeListing[]>(
-    () => (ssrTrusted ? initialListings! : cached?.listings) ?? [],
+    () => (ssrTrusted ? initialListings! : cached?.listings) ?? []
   );
-  const [total, setTotal] = React.useState(
-    () => (ssrTrusted ? initialTotal : undefined) ?? cached?.total ?? 0,
-  );
+  const [total, setTotal] = React.useState(() => (ssrTrusted ? initialTotal : undefined) ?? cached?.total ?? 0);
   const [loaded, setLoaded] = React.useState(() => ssrTrusted || Boolean(cached));
   const [active, setActive] = React.useState(() => eager || ssrTrusted || Boolean(cached));
   const rootRef = React.useRef<HTMLDivElement | null>(null);
@@ -126,7 +118,7 @@ export function LazyHomeSection({
           observer.disconnect();
         }
       },
-      { rootMargin: '400px 0px' },
+      { rootMargin: '400px 0px' }
     );
     observer.observe(node);
     return () => observer.disconnect();
@@ -171,9 +163,7 @@ export function LazyHomeSection({
         {!loaded ? (
           <CarouselSkeleton />
         ) : (
-          <ListingsCarousel>
-            {listings.map((listing, index) => renderListingCard(verticalId, listing, index))}
-          </ListingsCarousel>
+          <ListingsCarousel>{listings.map((listing) => renderListingCard(verticalId, listing))}</ListingsCarousel>
         )}
       </ListingsSection>
     </Box>

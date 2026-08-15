@@ -1,10 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import Image from 'next/image';
 import RouterLink from 'next/link';
 import { Box, Stack, Typography } from '@mui/material';
 import { ArrowUpRight as ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 
+import { homeBannerImageUrl } from '@/lib/storage-image';
 import { MOTION } from '@/styles/motion';
 
 export const BANNER_SLIDE_VISUALS = [
@@ -41,6 +43,8 @@ export type BannerSlideCardProps = {
   subtitle?: string | null;
   /** Promo artwork already includes the message — hide the HTML title. */
   hideTitleWhenImage?: boolean;
+  /** First visible slide only — homepage LCP. */
+  priority?: boolean;
 };
 
 /**
@@ -55,9 +59,11 @@ export function BannerSlideCard({
   title,
   subtitle,
   hideTitleWhenImage = false,
+  priority = false,
 }: BannerSlideCardProps) {
-  const imageBg = imageUrl && /^https?:\/\//i.test(imageUrl) ? imageUrl : null;
-  const showTitle = Boolean(title) && (!hideTitleWhenImage || !imageBg);
+  const rawImage = imageUrl && /^https?:\/\//i.test(imageUrl) ? imageUrl : null;
+  const imageSrc = rawImage ? (homeBannerImageUrl(rawImage) ?? rawImage) : null;
+  const showTitle = Boolean(title) && (!hideTitleWhenImage || !imageSrc);
 
   const content = (
     <Box
@@ -81,8 +87,9 @@ export function BannerSlideCard({
           aspectRatio: { md: '4 / 3' },
           maxHeight: { md: 'min(58vh, 560px)' },
           height: { md: 'auto' },
+          overflow: 'hidden',
           backgroundColor: 'background.paper',
-          backgroundImage: imageBg ? `url(${imageBg})` : fallbackBg,
+          backgroundImage: imageSrc ? 'none' : fallbackBg,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           contentVisibility: eager ? 'visible' : 'auto',
@@ -100,7 +107,18 @@ export function BannerSlideCard({
             : null),
         }}
       >
-        {!imageBg ? (
+        {imageSrc ? (
+          <Image
+            src={imageSrc}
+            alt={title || ''}
+            fill
+            sizes="(max-width: 900px) 100vw, min(1400px, 92vw)"
+            priority={priority}
+            loading={priority ? undefined : eager ? 'eager' : 'lazy'}
+            style={{ objectFit: 'cover' }}
+          />
+        ) : null}
+        {!imageSrc ? (
           <Box
             sx={(theme) => ({
               position: 'absolute',
@@ -132,7 +150,7 @@ export function BannerSlideCard({
             // Light mode: no bottom vignette on image slides.
             background: 'none',
             ...theme.applyStyles('dark', {
-              background: imageBg
+              background: imageSrc
                 ? 'linear-gradient(to top, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.12) 42%, transparent 70%)'
                 : 'none',
             }),

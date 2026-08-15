@@ -3,19 +3,7 @@
 import * as React from 'react';
 import { Box, Button, Grid, Stack } from '@mui/material';
 
-import { ListingCardsSkeleton } from '@/components/core/content-skeletons';
-import { useBrowseLoadContext } from '@/components/public/browse-load-context';
-import { CarCard } from '@/components/public/listing-cards/car-card';
-import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
-import { JobCard } from '@/components/public/listing-cards/job-card';
-import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
-import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
-import { useCopy } from '@/hooks/use-copy';
-import {
-  BROWSE_PAGE_SIZE,
-  type BrowseFilters,
-  type BrowseOkazionFilters,
-} from '@/lib/listing-filters';
+import { BROWSE_PAGE_SIZE, type BrowseFilters, type BrowseOkazionFilters } from '@/lib/listing-filters';
 import {
   fetchBrowseBusinesses,
   fetchBrowseCars,
@@ -32,6 +20,14 @@ import {
   type PublicOkazionListing,
   type PublicRealEstateListing,
 } from '@/lib/public-listings-client';
+import { useCopy } from '@/hooks/use-copy';
+import { ListingCardsSkeleton } from '@/components/core/content-skeletons';
+import { useBrowseLoadContext } from '@/components/public/browse-load-context';
+import { CarCard } from '@/components/public/listing-cards/car-card';
+import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
+import { JobCard } from '@/components/public/listing-cards/job-card';
+import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
+import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 
 export type BrowseInfiniteVerticalId =
   | 'real-estate'
@@ -55,36 +51,36 @@ function listingKey(listing: BrowseListing) {
   return kind ? `${kind}:${listing.id}` : listing.id;
 }
 
-function OkazionCard({ listing }: { listing: PublicOkazionListing }) {
+function OkazionCard({ listing, imagePriority = false }: { listing: PublicOkazionListing; imagePriority?: boolean }) {
   switch (listing.kind) {
     case 'real-estate':
-      return <RealEstateCard listing={listing} />;
+      return <RealEstateCard listing={listing} imagePriority={imagePriority} />;
     case 'car':
-      return <CarCard listing={listing} />;
+      return <CarCard listing={listing} imagePriority={imagePriority} />;
     case 'job':
-      return <JobCard listing={listing} />;
+      return <JobCard listing={listing} imagePriority={imagePriority} />;
     case 'marketplace':
-      return <MarketplaceCard listing={listing} />;
+      return <MarketplaceCard listing={listing} imagePriority={imagePriority} />;
     default:
       return null;
   }
 }
 
-function renderBrowseCard(verticalId: BrowseInfiniteVerticalId, listing: BrowseListing) {
+function renderBrowseCard(verticalId: BrowseInfiniteVerticalId, listing: BrowseListing, imagePriority = false) {
   switch (verticalId) {
     case 'real-estate':
-      return <RealEstateCard listing={listing as PublicRealEstateListing} />;
+      return <RealEstateCard listing={listing as PublicRealEstateListing} imagePriority={imagePriority} />;
     case 'cars':
-      return <CarCard listing={listing as PublicCarListing} />;
+      return <CarCard listing={listing as PublicCarListing} imagePriority={imagePriority} />;
     case 'jobs':
-      return <JobCard listing={listing as PublicJobListing} />;
+      return <JobCard listing={listing as PublicJobListing} imagePriority={imagePriority} />;
     case 'marketplace':
-      return <MarketplaceCard listing={listing as PublicMarketplaceListing} />;
+      return <MarketplaceCard listing={listing as PublicMarketplaceListing} imagePriority={imagePriority} />;
     case 'businesses':
     case 'professionals':
       return <DirectoryListingCard listing={listing as PublicDirectoryListing} />;
     case 'okazion':
-      return <OkazionCard listing={listing as PublicOkazionListing} />;
+      return <OkazionCard listing={listing as PublicOkazionListing} imagePriority={imagePriority} />;
     default:
       return null;
   }
@@ -93,7 +89,7 @@ function renderBrowseCard(verticalId: BrowseInfiniteVerticalId, listing: BrowseL
 async function fetchPage(
   verticalId: BrowseInfiniteVerticalId,
   filters: BrowseFilters | BrowseOkazionFilters,
-  page: number,
+  page: number
 ): Promise<BrowseListingsResult<BrowseListing>> {
   switch (verticalId) {
     case 'real-estate':
@@ -166,7 +162,7 @@ export function BrowseInfiniteGrid({
       });
       if (!res.ok && res.listings.length === 0) setError(true);
     },
-    [reportResolved],
+    [reportResolved]
   );
 
   React.useEffect(() => {
@@ -211,7 +207,16 @@ export function BrowseInfiniteGrid({
     return () => {
       cancelled = true;
     };
-  }, [recoverEmpty, verticalId, filters, filtersKey, initialPage, initialListings.length, applyFirstPage, reportResolved]);
+  }, [
+    recoverEmpty,
+    verticalId,
+    filters,
+    filtersKey,
+    initialPage,
+    initialListings.length,
+    applyFirstPage,
+    reportResolved,
+  ]);
 
   const recovering = recoverEmpty && listings.length === 0 && (loading || error);
   const hasMore = !recovering && page < pagesTotal;
@@ -273,7 +278,7 @@ export function BrowseInfiniteGrid({
           void loadMore();
         }
       },
-      { rootMargin: '320px 0px' },
+      { rootMargin: '320px 0px' }
     );
     observer.observe(node);
     return () => observer.disconnect();
@@ -296,18 +301,15 @@ export function BrowseInfiniteGrid({
   return (
     <Stack spacing={3}>
       <Grid container spacing={{ xs: 2, md: 2.5 }}>
-        {listings.map((listing) => (
+        {listings.map((listing, index) => (
           <Grid key={listingKey(listing)} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-            {renderBrowseCard(verticalId, listing)}
+            {renderBrowseCard(verticalId, listing, index === 0)}
           </Grid>
         ))}
       </Grid>
 
       {hasMore ? (
-        <Box
-          ref={sentinelRef}
-          sx={{ display: 'flex', justifyContent: 'center', py: 1, minHeight: 48 }}
-        >
+        <Box ref={sentinelRef} sx={{ display: 'flex', justifyContent: 'center', py: 1, minHeight: 48 }}>
           {loading ? (
             <Box sx={{ width: '100%' }}>
               <ListingCardsSkeleton count={4} />

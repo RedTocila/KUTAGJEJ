@@ -40,9 +40,9 @@ const config = {
   },
 
   images: {
-    // Vercel multi-service deploy currently returns HTML 404 for `/_next/image`
-    // (even for already-allowed hosts like images.unsplash.com). Serve remote
-    // URLs directly so listing photos load.
+    // Vercel multi-service deploy currently returns HTML 404 for `/_next/image`.
+    // Serve remote URLs directly; public photos are resized via Supabase
+    // `/storage/v1/render/image` (see `src/lib/storage-image.ts`).
     unoptimized: true,
     qualities: [75, 85],
     remotePatterns: [

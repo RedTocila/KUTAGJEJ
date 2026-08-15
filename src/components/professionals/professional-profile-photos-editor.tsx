@@ -7,6 +7,7 @@ import { Image as ImageIcon } from '@phosphor-icons/react/dist/ssr/Image';
 import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
+import { ImageLightbox } from '@/components/common/image-lightbox';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 
 function useObjectUrl(file: File | null): string | null {
@@ -33,6 +34,7 @@ function PhotoSlot({
   emptyIcon,
   onPick,
   onClear,
+  onPreview,
 }: {
   label: string;
   hint: string;
@@ -43,6 +45,7 @@ function PhotoSlot({
   emptyIcon: React.ReactNode;
   onPick: () => void;
   onClear: () => void;
+  onPreview?: () => void;
 }) {
   return (
     <Stack
@@ -64,7 +67,10 @@ function PhotoSlot({
 
       <Box sx={{ position: 'relative', width: round ? 'auto' : '100%', alignSelf: round ? 'center' : 'stretch' }}>
         <ButtonBase
-          onClick={onPick}
+          onClick={() => {
+            if (previewUrl) onPreview?.();
+            else onPick();
+          }}
           sx={{
             display: 'block',
             width: round ? 120 : '100%',
@@ -75,6 +81,7 @@ function PhotoSlot({
             borderColor: previewUrl ? 'transparent' : 'divider',
             bgcolor: 'action.hover',
             position: 'relative',
+            cursor: previewUrl ? 'zoom-in' : 'pointer',
           }}
         >
           {previewUrl ? (
@@ -101,28 +108,32 @@ function PhotoSlot({
               <Typography sx={{ fontSize: '0.72rem', fontWeight: 700 }}>Zgjidh foto</Typography>
             </Stack>
           )}
-          {previewUrl ? (
-            <Box
-              sx={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                alignItems: 'flex-end',
-                justifyContent: 'center',
-                pb: 1,
-                background: 'linear-gradient(transparent 50%, rgba(0,0,0,0.45))',
-                opacity: 0,
-                transition: 'opacity 0.15s',
-                '.MuiButtonBase-root:hover &': { opacity: 1 },
-              }}
-            >
-              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: '#fff' }}>
-                <CameraIcon size={14} weight="bold" />
-                <Typography sx={{ fontSize: '0.7rem', fontWeight: 700 }}>Ndrysho</Typography>
-              </Stack>
-            </Box>
-          ) : null}
         </ButtonBase>
+
+        {previewUrl ? (
+          <IconButton
+            size="small"
+            aria-label={`Ndrysho ${label}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onPick();
+            }}
+            sx={{
+              position: 'absolute',
+              top: 6,
+              left: round ? '50%' : 6,
+              transform: round ? 'translate(-48px, 0)' : 'none',
+              bgcolor: 'rgba(0,0,0,0.6)',
+              color: '#fff',
+              width: 28,
+              height: 28,
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
+            }}
+          >
+            <CameraIcon size={14} weight="bold" />
+          </IconButton>
+        ) : null}
 
         {previewUrl ? (
           <IconButton
@@ -180,6 +191,14 @@ export function ProfessionalProfilePhotosEditor({
   const avatarObjectUrl = useObjectUrl(avatarFile);
   const coverPreview = coverObjectUrl || coverUrl || null;
   const avatarPreview = avatarObjectUrl || avatarUrl || null;
+  const [preview, setPreview] = React.useState<'cover' | 'avatar' | null>(null);
+  const previewUrls = [coverPreview, avatarPreview].filter((url): url is string => Boolean(url));
+  const previewIndex =
+    preview === 'cover' && coverPreview
+      ? previewUrls.indexOf(coverPreview)
+      : preview === 'avatar' && avatarPreview
+        ? previewUrls.indexOf(avatarPreview)
+        : 0;
 
   React.useEffect(() => {
     const t = window.setTimeout(() => {
@@ -224,6 +243,7 @@ export function ProfessionalProfilePhotosEditor({
         aspect="2 / 1"
         emptyIcon={<ImageIcon size={28} weight="duotone" />}
         onPick={() => coverInputRef.current?.click()}
+        onPreview={() => setPreview('cover')}
         onClear={() => {
           onCoverFile(null);
           onCoverUrl('');
@@ -238,9 +258,22 @@ export function ProfessionalProfilePhotosEditor({
         round
         emptyIcon={<UserCircleIcon size={36} weight="duotone" />}
         onPick={() => avatarInputRef.current?.click()}
+        onPreview={() => setPreview('avatar')}
         onClear={() => {
           onAvatarFile(null);
           onAvatarUrl('');
+        }}
+      />
+
+      <ImageLightbox
+        open={preview != null && previewUrls.length > 0}
+        urls={previewUrls}
+        index={Math.max(0, previewIndex)}
+        onClose={() => setPreview(null)}
+        onIndexChange={(index) => {
+          const url = previewUrls[index];
+          if (url && url === coverPreview) setPreview('cover');
+          else if (url && url === avatarPreview) setPreview('avatar');
         }}
       />
     </Stack>

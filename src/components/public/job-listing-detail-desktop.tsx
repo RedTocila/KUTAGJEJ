@@ -1,18 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Avatar,
-  Box,
-  ButtonBase,
-  Chip,
-  Container,
-  Grid,
-  IconButton,
-  Stack,
-  Typography,
-} from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import GroupsOutlined from '@mui/icons-material/GroupsOutlined';
 import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
 import PaymentsOutlined from '@mui/icons-material/PaymentsOutlined';
@@ -21,38 +9,41 @@ import SchoolOutlined from '@mui/icons-material/SchoolOutlined';
 import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import TrendingUpOutlined from '@mui/icons-material/TrendingUpOutlined';
 import WorkOutlineOutlined from '@mui/icons-material/WorkOutlineOutlined';
-import { HistoryBackButton, ProductBackButton } from '@/components/public/product-browse-chrome';
-import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
+import { Avatar, Box, ButtonBase, Chip, Container, Grid, IconButton, Stack, Typography } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
+import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 
-import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
-import { JobCard } from '@/components/public/listing-cards/job-card';
-import { ListingsCarousel } from '@/components/public/listings-carousel';
-import { LocationMapEmbed } from '@/components/public/location-map-embed';
-import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
-import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
-import { ListingMessageButton } from '@/components/public/listing-message-button';
-import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
-import { listingContactCtaSx } from '@/components/public/sticky-listing-contact';
-import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
-import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
+import { paths } from '@/paths';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
+import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
 import {
   buildJobDetailSections,
   isJobListingNew,
   jobDetailMetaRows,
   type JobDetailBenefit,
 } from '@/lib/job-listing-detail-content';
-import { JobVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
+import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
+import { LISTING_DETAIL_STICKY_TOP_MD } from '@/lib/listing-detail-layout';
+import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
+import { listingHeroImageUrl } from '@/lib/storage-image';
+import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
+import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
+import { JobCard } from '@/components/public/listing-cards/job-card';
+import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
+import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
-import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
-import { LISTING_DETAIL_STICKY_TOP_MD } from '@/lib/listing-detail-layout';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { paths } from '@/paths';
+import { ListingsCarousel } from '@/components/public/listings-carousel';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
+import { HistoryBackButton, ProductBackButton } from '@/components/public/product-browse-chrome';
+import { JobVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
+import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
+import { listingContactCtaSx } from '@/components/public/sticky-listing-contact';
 
 function benefitIcon(id: JobDetailBenefit['id']) {
   const iconSx = { fontSize: 22, color: 'primary.main' };
@@ -102,16 +93,15 @@ export function JobListingDetailDesktop({
         mapsUrl: listing.mapsUrl,
         cityName: listing.cityName,
       }),
-    [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl],
+    [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl]
   );
-  const companyName =
-    listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
+  const companyName = listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const heroImage = listing.imageUrl ?? listing.imageUrls[0] ?? null;
   const isNew = isJobListingNew(listing.createdAt);
   const viewCount = listing.viewCount ?? 0;
   const expiresAt = listing.isOkazion
     ? listing.okazionUntil || listing.expiresAt || getJobListingExpiresAt(listing.createdAt).toISOString()
-    : listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
+    : (listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString());
   const salary =
     listing.salary != null ? `${formatPrice(listing.salary, listing.currency)} / muaj` : 'Pagë e diskutueshme';
   const jobTypeLabel = findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType);
@@ -146,488 +136,354 @@ export function JobListingDetailDesktop({
                 bgcolor: 'grey.900',
               }}
             >
-            {heroImage ? (
-              <Box
-                component="img"
-                src={heroImage}
-                alt=""
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  objectPosition: 'center',
-                  display: 'block',
-                }}
-              />
-            ) : (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'grid',
-                  placeItems: 'center',
-                  bgcolor: 'grey.900',
-                  color: 'primary.main',
-                  opacity: 0.35,
-                }}
-              >
-                <BriefcaseIcon size={72} weight="duotone" />
-              </Box>
-            )}
-            <Box
-              sx={{
-                position: 'absolute',
-                inset: 0,
-                background:
-                  'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.88) 100%)',
-              }}
-            />
-            <Box
-              sx={{
-                position: 'absolute',
-                inset: 0,
-                zIndex: 2,
-                pointerEvents: 'none',
-                '& [data-hero-control]': { pointerEvents: 'auto' },
-              }}
-            >
-              <Stack
-                direction="row"
-                sx={{
-                  alignItems: 'flex-start',
-                  justifyContent: 'space-between',
-                  p: { xs: 1.5, sm: 2.5 },
-                }}
-              >
-                <ProductBackButton
-                  href={paths.public.jobs}
-                  aria-label="Prapa te lista e punëve"
-                  data-hero-control
-                />
-                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-                  <Box data-hero-control component="span" sx={{ display: 'inline-flex' }}>
-                    <ListingMediaActionButton
-                      aria-label="Ndaj njoftimin"
-                      count={shareCount}
-                      surface="glass"
-                      icon={<ShareNetworkIcon size={17} weight="regular" />}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        onShare();
-                      }}
-                    />
-                  </Box>
-                  <Box data-hero-control component="span" sx={{ display: 'inline-flex' }}>
-                    <ListingMediaActionButton
-                      aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
-                      count={saveCount}
-                      surface="glass"
-                      active={saved}
-                      icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} />}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        onToggleSave();
-                      }}
-                    />
-                  </Box>
-                </Stack>
-              </Stack>
-            </Box>
-            <Stack
-              spacing={1.5}
-              sx={{
-                position: 'absolute',
-                inset: 0,
-                zIndex: 1,
-                p: 3,
-                justifyContent: 'flex-end',
-                pointerEvents: 'none',
-              }}
-            >
-              <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                <Avatar
+              {heroImage ? (
+                <Box
+                  component="img"
+                  src={listingHeroImageUrl(heroImage) ?? heroImage}
+                  alt=""
+                  decoding="async"
+                  fetchPriority="high"
                   sx={{
-                    width: 48,
-                    height: 48,
-                    bgcolor: 'background.paper',
-                    color: 'primary.main',
-                    fontWeight: 800,
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: 'center',
+                    display: 'block',
                   }}
-                >
-                  {companyName.charAt(0).toUpperCase()}
-                </Avatar>
-                {isNew ? (
-                  <Chip
-                    label="E re"
-                    size="small"
-                    sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}
-                  />
-                ) : null}
-              </Stack>
-              <Typography
-                component="h1"
-                sx={{
-                  fontWeight: 800,
-                  fontSize: '2rem',
-                  lineHeight: 1.15,
-                  color: '#fff',
-                  letterSpacing: '-0.02em',
-                  maxWidth: 720,
-                }}
-              >
-                {listing.title}
-                {listing.seller?.verified ? (
-                  <Box
-                    component="span"
-                    sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
-                  >
-                    <JobVerifiedBadge size={22} color="#fff" />
-                  </Box>
-                ) : null}
-                {listing.seller?.trustBadge ? (
-                  <Box
-                    component="span"
-                    sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
-                  >
-                    <ListingTrustBadge size={22} />
-                  </Box>
-                ) : null}
-              </Typography>
-              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
+                />
+              ) : (
                 <Box
                   sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    px: 1.35,
-                    py: 0.65,
-                    borderRadius: 999,
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'grid',
+                    placeItems: 'center',
+                    bgcolor: 'grey.900',
+                    color: 'primary.main',
+                    opacity: 0.35,
                   }}
                 >
-                  <PaymentsOutlined sx={{ fontSize: 16 }} />
-                  <Typography sx={{ fontWeight: 800, fontSize: '0.8125rem', lineHeight: 1 }}>
-                    {salary}
-                  </Typography>
+                  <BriefcaseIcon size={72} weight="duotone" />
                 </Box>
-                {jobTypeLabel ? (
+              )}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  background:
+                    'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.88) 100%)',
+                }}
+              />
+              <Box
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: 2,
+                  pointerEvents: 'none',
+                  '& [data-hero-control]': { pointerEvents: 'auto' },
+                }}
+              >
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    p: { xs: 1.5, sm: 2.5 },
+                  }}
+                >
+                  <ProductBackButton href={paths.public.jobs} aria-label="Prapa te lista e punëve" data-hero-control />
+                  <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                    <Box data-hero-control component="span" sx={{ display: 'inline-flex' }}>
+                      <ListingMediaActionButton
+                        aria-label="Ndaj njoftimin"
+                        count={shareCount}
+                        surface="glass"
+                        icon={<ShareNetworkIcon size={17} weight="regular" />}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          onShare();
+                        }}
+                      />
+                    </Box>
+                    <Box data-hero-control component="span" sx={{ display: 'inline-flex' }}>
+                      <ListingMediaActionButton
+                        aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
+                        count={saveCount}
+                        surface="glass"
+                        active={saved}
+                        icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} />}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          onToggleSave();
+                        }}
+                      />
+                    </Box>
+                  </Stack>
+                </Stack>
+              </Box>
+              <Stack
+                spacing={1.5}
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: 1,
+                  p: 3,
+                  justifyContent: 'flex-end',
+                  pointerEvents: 'none',
+                }}
+              >
+                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                  <Avatar
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      bgcolor: 'background.paper',
+                      color: 'primary.main',
+                      fontWeight: 800,
+                    }}
+                  >
+                    {companyName.charAt(0).toUpperCase()}
+                  </Avatar>
+                  {isNew ? (
+                    <Chip
+                      label="E re"
+                      size="small"
+                      sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}
+                    />
+                  ) : null}
+                </Stack>
+                <Typography
+                  component="h1"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: '2rem',
+                    lineHeight: 1.15,
+                    color: '#fff',
+                    letterSpacing: '-0.02em',
+                    maxWidth: 720,
+                  }}
+                >
+                  {listing.title}
+                  {listing.seller?.verified ? (
+                    <Box
+                      component="span"
+                      sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
+                    >
+                      <JobVerifiedBadge size={22} color="#fff" />
+                    </Box>
+                  ) : null}
+                  {listing.seller?.trustBadge ? (
+                    <Box
+                      component="span"
+                      sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
+                    >
+                      <ListingTrustBadge size={22} />
+                    </Box>
+                  ) : null}
+                </Typography>
+                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
                   <Box
                     sx={{
                       display: 'inline-flex',
                       alignItems: 'center',
+                      gap: 0.5,
                       px: 1.35,
                       py: 0.65,
                       borderRadius: 999,
-                      bgcolor: 'rgba(255,255,255,0.14)',
-                      color: '#fff',
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                    }}
+                  >
+                    <PaymentsOutlined sx={{ fontSize: 16 }} />
+                    <Typography sx={{ fontWeight: 800, fontSize: '0.8125rem', lineHeight: 1 }}>{salary}</Typography>
+                  </Box>
+                  {jobTypeLabel ? (
+                    <Box
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        px: 1.35,
+                        py: 0.65,
+                        borderRadius: 999,
+                        bgcolor: 'rgba(255,255,255,0.14)',
+                        color: '#fff',
+                      }}
+                    >
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.8125rem', lineHeight: 1 }}>
+                        {jobTypeLabel}
+                      </Typography>
+                    </Box>
+                  ) : null}
+                  <Box
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      px: 1.35,
+                      py: 0.65,
+                      borderRadius: 999,
+                      bgcolor: 'rgba(255,255,255,0.1)',
+                      color: 'rgba(255,255,255,0.9)',
                     }}
                   >
                     <Typography sx={{ fontWeight: 700, fontSize: '0.8125rem', lineHeight: 1 }}>
-                      {jobTypeLabel}
+                      {companyName}
                     </Typography>
+                    {listing.seller?.verified ? <JobVerifiedBadge size={16} /> : null}
                   </Box>
-                ) : null}
-                <Box
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    px: 1.35,
-                    py: 0.65,
-                    borderRadius: 999,
-                    bgcolor: 'rgba(255,255,255,0.1)',
-                    color: 'rgba(255,255,255,0.9)',
-                  }}
+                </Stack>
+                <Stack
+                  direction="row"
+                  sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5, width: '100%', maxWidth: 420 }}
                 >
-                  <Typography sx={{ fontWeight: 700, fontSize: '0.8125rem', lineHeight: 1 }}>
-                    {companyName}
-                  </Typography>
-                  {listing.seller?.verified ? <JobVerifiedBadge size={16} /> : null}
-                </Box>
-              </Stack>
-              <Stack
-                direction="row"
-                sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5, width: '100%', maxWidth: 420 }}
-              >
-                <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', color: 'rgba(255,255,255,0.75)', minWidth: 0 }}>
-                  <CalendarIcon size={16} weight="regular" aria-hidden />
-                  <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>
-                    {postedLabelSq(listing.createdAt)}
-                  </Typography>
+                  <Stack
+                    direction="row"
+                    spacing={0.55}
+                    sx={{ alignItems: 'center', color: 'rgba(255,255,255,0.75)', minWidth: 0 }}
+                  >
+                    <CalendarIcon size={16} weight="regular" aria-hidden />
+                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>
+                      {postedLabelSq(listing.createdAt)}
+                    </Typography>
+                  </Stack>
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
+                    sx={{ alignItems: 'center', color: 'rgba(255,255,255,0.75)', flexShrink: 0 }}
+                  >
+                    <EyeIcon size={16} weight="regular" aria-hidden />
+                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>
+                      {new Intl.NumberFormat('sq-AL').format(viewCount)} shikime
+                    </Typography>
+                  </Stack>
                 </Stack>
-                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'rgba(255,255,255,0.75)', flexShrink: 0 }}>
-                  <EyeIcon size={16} weight="regular" aria-hidden />
-                  <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>
-                    {new Intl.NumberFormat('sq-AL').format(viewCount)} shikime
-                  </Typography>
-                </Stack>
+                <ListingVerifiedNotice
+                  verified={Boolean(listing.seller?.verified)}
+                  label="Kjo punë është e verifikuar dhe e sigurt"
+                  color="rgba(255,255,255,0.55)"
+                />
               </Stack>
-              <ListingVerifiedNotice
-                verified={Boolean(listing.seller?.verified)}
-                label="Kjo punë është e verifikuar dhe e sigurt"
-                color="rgba(255,255,255,0.55)"
-              />
-            </Stack>
             </Box>
 
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              bgcolor: 'rgba(0,0,0,0.55)',
-              backdropFilter: 'blur(8px)',
-              width: '100%',
-            }}
-          >
-            {metaRows.map((row, index) => {
-              const Icon = metaIcons[index] ?? ScheduleOutlined;
-              const isLocation = row.label === 'Lokacioni';
-              const isFullWidth = 'fullWidth' in row && row.fullWidth;
-              const content = (
-                <>
-                  <Box
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 1.75,
-                      display: 'grid',
-                      placeItems: 'center',
-                      flexShrink: 0,
-                      bgcolor: primaryMainAlpha(0.2),
-                      color: 'primary.main',
-                    }}
-                  >
-                    <Icon sx={{ fontSize: 18 }} />
-                  </Box>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography
-                      sx={{
-                        fontWeight: 750,
-                        fontSize: '0.9rem',
-                        color: '#fff',
-                        lineHeight: 1.2,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {row.value}
-                    </Typography>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.72rem', mt: 0.2 }}>
-                      {row.label}
-                    </Typography>
-                  </Box>
-                </>
-              );
-              return (
-                <Box
-                  key={row.label}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.25,
-                    py: 1.75,
-                    px: 2.25,
-                    minWidth: 0,
-                    gridColumn: isFullWidth ? '1 / -1' : undefined,
-                    borderRight:
-                      !isFullWidth && index < metaRows.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
-                    borderBottom: isFullWidth ? '1px solid rgba(255,255,255,0.08)' : 'none',
-                  }}
-                >
-                  {isLocation && mapLocation ? (
-                    <ButtonBase
-                      component="a"
-                      href="#business-location-map"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        scrollToBusinessLocationMap();
-                      }}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1.25,
-                        minWidth: 0,
-                        maxWidth: '100%',
-                        textAlign: 'left',
-                        borderRadius: 1,
-                        color: 'inherit',
-                        '&:hover': { opacity: 0.9 },
-                      }}
-                    >
-                      {content}
-                    </ButtonBase>
-                  ) : (
-                    content
-                  )}
-                </Box>
-              );
-            })}
-          </Box>
-          </Box>
-
-          <Grid container spacing={4} sx={{ width: '100%' }}>
-          <Grid size={{ md: 8 }}>
-            <Stack spacing={3.5}>
-              <Box
-                sx={{
-                  position: 'relative',
-                  pl: 2.5,
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    left: 0,
-                    top: 6,
-                    bottom: 6,
-                    width: 3,
-                    borderRadius: 999,
-                    bgcolor: 'primary.main',
-                  },
-                }}
-              >
-                <Typography
-                  sx={{
-                    fontWeight: 800,
-                    fontSize: '0.72rem',
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    color: 'text.secondary',
-                    mb: 1.25,
-                  }}
-                >
-                  Përshkrimi i punës
-                </Typography>
-                <RealEstateListingExpandableText
-                  text={sections.intro}
-                  readMoreLabel="Shfaq më shumë"
-                  readLessLabel="Shfaq më pak"
-                  fontSize="0.9rem"
-                  maxLines={4}
-                />
-              </Box>
-
-              {sections.responsibilities.length > 0 ? (
-                <Box>
-                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.75 }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                bgcolor: 'rgba(0,0,0,0.55)',
+                backdropFilter: 'blur(8px)',
+                width: '100%',
+              }}
+            >
+              {metaRows.map((row, index) => {
+                const Icon = metaIcons[index] ?? ScheduleOutlined;
+                const isLocation = row.label === 'Lokacioni';
+                const isFullWidth = 'fullWidth' in row && row.fullWidth;
+                const content = (
+                  <>
                     <Box
                       sx={{
-                        width: 30,
-                        height: 30,
-                        borderRadius: 1.5,
+                        width: 36,
+                        height: 36,
+                        borderRadius: 1.75,
                         display: 'grid',
                         placeItems: 'center',
-                        bgcolor: primaryMainAlpha(0.14),
+                        flexShrink: 0,
+                        bgcolor: primaryMainAlpha(0.2),
                         color: 'primary.main',
                       }}
                     >
-                      <GroupsOutlined sx={{ fontSize: 17 }} />
+                      <Icon sx={{ fontSize: 18 }} />
                     </Box>
-                    <Typography sx={{ fontWeight: 800, fontSize: '1.05rem' }}>Përgjegjësitë</Typography>
-                  </Stack>
-                  <Grid container spacing={1.5}>
-                    {sections.responsibilities.map((item, index) => (
-                      <Grid key={`${index}-${item.slice(0, 24)}`} size={6}>
-                        <Stack
-                          direction="row"
-                          spacing={1.25}
-                          sx={{
-                            alignItems: 'flex-start',
-                            p: 1.5,
-                            height: '100%',
-                            borderRadius: 2.5,
-                            border: '1px solid',
-                            borderColor: 'divider',
-                            bgcolor: 'background.paper',
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              width: 28,
-                              height: 28,
-                              borderRadius: '50%',
-                              display: 'grid',
-                              placeItems: 'center',
-                              flexShrink: 0,
-                              bgcolor: 'primary.main',
-                              color: 'primary.contrastText',
-                              fontWeight: 800,
-                              fontSize: '0.72rem',
-                            }}
-                          >
-                            {index + 1}
-                          </Box>
-                          <Typography sx={{ fontSize: '0.875rem', lineHeight: 1.5, color: 'text.secondary' }}>
-                            {item}
-                          </Typography>
-                        </Stack>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Box>
-              ) : null}
-
-              {sections.requirements.length > 0 ? (
-                <Box
-                  sx={{
-                    p: 2.25,
-                    borderRadius: 3,
-                    border: '1px dashed',
-                    borderColor: primaryMainAlpha(0.45),
-                    bgcolor: primaryMainAlpha(0.05),
-                  }}
-                >
-                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
-                    <SchoolOutlined sx={{ fontSize: 20, color: 'primary.main' }} />
-                    <Typography sx={{ fontWeight: 800, fontSize: '1.05rem' }}>Kërkesat</Typography>
-                  </Stack>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {sections.requirements.map((item, index) => (
-                      <Box
-                        key={`${index}-${item.slice(0, 24)}`}
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography
                         sx={{
-                          display: 'inline-flex',
-                          alignItems: 'flex-start',
-                          gap: 0.75,
-                          maxWidth: '100%',
-                          px: 1.25,
-                          py: 1,
-                          borderRadius: 2,
-                          bgcolor: 'background.paper',
-                          border: '1px solid',
-                          borderColor: 'divider',
+                          fontWeight: 750,
+                          fontSize: '0.9rem',
+                          color: '#fff',
+                          lineHeight: 1.2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                         }}
                       >
-                        <Box
-                          sx={{
-                            mt: 0.1,
-                            width: 20,
-                            height: 20,
-                            borderRadius: 1,
-                            display: 'grid',
-                            placeItems: 'center',
-                            flexShrink: 0,
-                            bgcolor: primaryMainAlpha(0.16),
-                            color: 'primary.main',
-                            fontWeight: 800,
-                            fontSize: '0.65rem',
-                          }}
-                        >
-                          {index + 1}
-                        </Box>
-                        <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.4 }}>{item}</Typography>
-                      </Box>
-                    ))}
+                        {row.value}
+                      </Typography>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.72rem', mt: 0.2 }}>
+                        {row.label}
+                      </Typography>
+                    </Box>
+                  </>
+                );
+                return (
+                  <Box
+                    key={row.label}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.25,
+                      py: 1.75,
+                      px: 2.25,
+                      minWidth: 0,
+                      gridColumn: isFullWidth ? '1 / -1' : undefined,
+                      borderRight:
+                        !isFullWidth && index < metaRows.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                      borderBottom: isFullWidth ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                    }}
+                  >
+                    {isLocation && mapLocation ? (
+                      <ButtonBase
+                        component="a"
+                        href="#business-location-map"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          scrollToBusinessLocationMap();
+                        }}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.25,
+                          minWidth: 0,
+                          maxWidth: '100%',
+                          textAlign: 'left',
+                          borderRadius: 1,
+                          color: 'inherit',
+                          '&:hover': { opacity: 0.9 },
+                        }}
+                      >
+                        {content}
+                      </ButtonBase>
+                    ) : (
+                      content
+                    )}
                   </Box>
-                </Box>
-              ) : null}
+                );
+              })}
+            </Box>
+          </Box>
 
-              {sections.benefits.length > 0 ? (
-                <Box>
+          <Grid container spacing={4} sx={{ width: '100%' }}>
+            <Grid size={{ md: 8 }}>
+              <Stack spacing={3.5}>
+                <Box
+                  sx={{
+                    position: 'relative',
+                    pl: 2.5,
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      left: 0,
+                      top: 6,
+                      bottom: 6,
+                      width: 3,
+                      borderRadius: 999,
+                      bgcolor: 'primary.main',
+                    },
+                  }}
+                >
                   <Typography
                     sx={{
                       fontWeight: 800,
@@ -635,103 +491,241 @@ export function JobListingDetailDesktop({
                       letterSpacing: '0.08em',
                       textTransform: 'uppercase',
                       color: 'text.secondary',
-                      mb: 1.5,
+                      mb: 1.25,
                     }}
                   >
-                    Çfarë ofrojmë
+                    Përshkrimi i punës
                   </Typography>
-                  <Grid container spacing={1.5}>
-                    {sections.benefits.map((benefit) => (
-                      <Grid key={benefit.id} size={3}>
+                  <RealEstateListingExpandableText
+                    text={sections.intro}
+                    readMoreLabel="Shfaq më shumë"
+                    readLessLabel="Shfaq më pak"
+                    fontSize="0.9rem"
+                    maxLines={4}
+                  />
+                </Box>
+
+                {sections.responsibilities.length > 0 ? (
+                  <Box>
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.75 }}>
+                      <Box
+                        sx={{
+                          width: 30,
+                          height: 30,
+                          borderRadius: 1.5,
+                          display: 'grid',
+                          placeItems: 'center',
+                          bgcolor: primaryMainAlpha(0.14),
+                          color: 'primary.main',
+                        }}
+                      >
+                        <GroupsOutlined sx={{ fontSize: 17 }} />
+                      </Box>
+                      <Typography sx={{ fontWeight: 800, fontSize: '1.05rem' }}>Përgjegjësitë</Typography>
+                    </Stack>
+                    <Grid container spacing={1.5}>
+                      {sections.responsibilities.map((item, index) => (
+                        <Grid key={`${index}-${item.slice(0, 24)}`} size={6}>
+                          <Stack
+                            direction="row"
+                            spacing={1.25}
+                            sx={{
+                              alignItems: 'flex-start',
+                              p: 1.5,
+                              height: '100%',
+                              borderRadius: 2.5,
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              bgcolor: 'background.paper',
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: '50%',
+                                display: 'grid',
+                                placeItems: 'center',
+                                flexShrink: 0,
+                                bgcolor: 'primary.main',
+                                color: 'primary.contrastText',
+                                fontWeight: 800,
+                                fontSize: '0.72rem',
+                              }}
+                            >
+                              {index + 1}
+                            </Box>
+                            <Typography sx={{ fontSize: '0.875rem', lineHeight: 1.5, color: 'text.secondary' }}>
+                              {item}
+                            </Typography>
+                          </Stack>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Box>
+                ) : null}
+
+                {sections.requirements.length > 0 ? (
+                  <Box
+                    sx={{
+                      p: 2.25,
+                      borderRadius: 3,
+                      border: '1px dashed',
+                      borderColor: primaryMainAlpha(0.45),
+                      bgcolor: primaryMainAlpha(0.05),
+                    }}
+                  >
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
+                      <SchoolOutlined sx={{ fontSize: 20, color: 'primary.main' }} />
+                      <Typography sx={{ fontWeight: 800, fontSize: '1.05rem' }}>Kërkesat</Typography>
+                    </Stack>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {sections.requirements.map((item, index) => (
                         <Box
+                          key={`${index}-${item.slice(0, 24)}`}
                           sx={{
-                            p: 1.75,
-                            height: '100%',
-                            borderRadius: 3,
+                            display: 'inline-flex',
+                            alignItems: 'flex-start',
+                            gap: 0.75,
+                            maxWidth: '100%',
+                            px: 1.25,
+                            py: 1,
+                            borderRadius: 2,
+                            bgcolor: 'background.paper',
                             border: '1px solid',
                             borderColor: 'divider',
-                            bgcolor: 'background.paper',
-                            backgroundImage: `linear-gradient(160deg, ${primaryMainAlpha(0.12)} 0%, transparent 60%)`,
                           }}
                         >
                           <Box
                             sx={{
-                              width: 38,
-                              height: 38,
-                              borderRadius: 2,
+                              mt: 0.1,
+                              width: 20,
+                              height: 20,
+                              borderRadius: 1,
                               display: 'grid',
                               placeItems: 'center',
-                              mb: 1.15,
-                              bgcolor: primaryMainAlpha(0.14),
+                              flexShrink: 0,
+                              bgcolor: primaryMainAlpha(0.16),
+                              color: 'primary.main',
+                              fontWeight: 800,
+                              fontSize: '0.65rem',
                             }}
                           >
-                            {benefitIcon(benefit.id)}
+                            {index + 1}
                           </Box>
-                          <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', lineHeight: 1.35 }}>
-                            {benefit.label}
-                          </Typography>
+                          <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.4 }}>{item}</Typography>
                         </Box>
-                      </Grid>
-                    ))}
-                  </Grid>
+                      ))}
+                    </Box>
+                  </Box>
+                ) : null}
+
+                {sections.benefits.length > 0 ? (
+                  <Box>
+                    <Typography
+                      sx={{
+                        fontWeight: 800,
+                        fontSize: '0.72rem',
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        color: 'text.secondary',
+                        mb: 1.5,
+                      }}
+                    >
+                      Çfarë ofrojmë
+                    </Typography>
+                    <Grid container spacing={1.5}>
+                      {sections.benefits.map((benefit) => (
+                        <Grid key={benefit.id} size={3}>
+                          <Box
+                            sx={{
+                              p: 1.75,
+                              height: '100%',
+                              borderRadius: 3,
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              bgcolor: 'background.paper',
+                              backgroundImage: `linear-gradient(160deg, ${primaryMainAlpha(0.12)} 0%, transparent 60%)`,
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 38,
+                                height: 38,
+                                borderRadius: 2,
+                                display: 'grid',
+                                placeItems: 'center',
+                                mb: 1.15,
+                                bgcolor: primaryMainAlpha(0.14),
+                              }}
+                            >
+                              {benefitIcon(benefit.id)}
+                            </Box>
+                            <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', lineHeight: 1.35 }}>
+                              {benefit.label}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Box>
+                ) : null}
+
+                {mapLocation ? (
+                  <Box data-business-location-map sx={{ scrollMarginTop: 96 }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', mb: 1.5 }}>Vendndodhja</Typography>
+                    <LocationMapEmbed
+                      query={mapLocation.query}
+                      lat={mapLocation.lat}
+                      lng={mapLocation.lng}
+                      height={280}
+                    />
+                  </Box>
+                ) : null}
+
+                {similar.length > 0 ? (
+                  <Stack spacing={2} component="aside" aria-labelledby="job-similar-heading-desktop">
+                    <Typography id="job-similar-heading-desktop" sx={{ fontWeight: 800, fontSize: '1.05rem' }}>
+                      Punë të ngjashme
+                    </Typography>
+                    <ListingsCarousel slotWidth={{ md: 300 }}>
+                      {similar.map((item) => (
+                        <JobCard key={item.id} listing={item} />
+                      ))}
+                    </ListingsCarousel>
+                  </Stack>
+                ) : null}
+
+                <Box sx={{ textAlign: 'center', pt: 1 }}>
+                  <HistoryBackButton href={paths.public.jobs}>Kthehu te lista e punëve</HistoryBackButton>
                 </Box>
-              ) : null}
-
-              {mapLocation ? (
-                <Box data-business-location-map sx={{ scrollMarginTop: 96 }}>
-                  <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', mb: 1.5 }}>Vendndodhja</Typography>
-                  <LocationMapEmbed
-                    query={mapLocation.query}
-                    lat={mapLocation.lat}
-                    lng={mapLocation.lng}
-                    height={280}
-                  />
-                </Box>
-              ) : null}
-
-              {similar.length > 0 ? (
-                <Stack spacing={2} component="aside" aria-labelledby="job-similar-heading-desktop">
-                  <Typography id="job-similar-heading-desktop" sx={{ fontWeight: 800, fontSize: '1.05rem' }}>
-                    Punë të ngjashme
-                  </Typography>
-                  <ListingsCarousel slotWidth={{ md: 300 }}>
-                    {similar.map((item) => (
-                      <JobCard key={item.id} listing={item} />
-                    ))}
-                  </ListingsCarousel>
-                </Stack>
-              ) : null}
-
-              <Box sx={{ textAlign: 'center', pt: 1 }}>
-                <HistoryBackButton href={paths.public.jobs}>Kthehu te lista e punëve</HistoryBackButton>
-              </Box>
-            </Stack>
-          </Grid>
-
-          <Grid size={{ md: 4 }} sx={{ alignSelf: 'stretch' }}>
-            <Box sx={{ position: 'sticky', top: LISTING_DETAIL_STICKY_TOP_MD, zIndex: 1 }}>
-              <Stack spacing={2} sx={{ alignItems: 'stretch', width: '100%' }}>
-                <JobListingDetailCountdown expiresAt={expiresAt} />
-                <ListingMessageButton
-                  listingKind="jobs"
-                  listingId={listing.id}
-                  contactPhone={listing.contactPhone ?? listing.seller?.phone}
-                  listingTitle={listing.title}
-                  listingUrl={canonicalUrl}
-                  label="Kontakto"
-                  variant="contained"
-                  size="large"
-                  disableElevation
-                  fullWidth
-                  sx={listingContactCtaSx}
-                />
-                <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', display: 'block' }}>
-                  Hap bisedën me punëdhënësin në mesazhe
-                </Typography>
               </Stack>
-            </Box>
+            </Grid>
+
+            <Grid size={{ md: 4 }} sx={{ alignSelf: 'stretch' }}>
+              <Box sx={{ position: 'sticky', top: LISTING_DETAIL_STICKY_TOP_MD, zIndex: 1 }}>
+                <Stack spacing={2} sx={{ alignItems: 'stretch', width: '100%' }}>
+                  <JobListingDetailCountdown expiresAt={expiresAt} />
+                  <ListingMessageButton
+                    listingKind="jobs"
+                    listingId={listing.id}
+                    contactPhone={listing.contactPhone ?? listing.seller?.phone}
+                    listingTitle={listing.title}
+                    listingUrl={canonicalUrl}
+                    label="Kontakto"
+                    variant="contained"
+                    size="large"
+                    disableElevation
+                    fullWidth
+                    sx={listingContactCtaSx}
+                  />
+                  <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', display: 'block' }}>
+                    Hap bisedën me punëdhënësin në mesazhe
+                  </Typography>
+                </Stack>
+              </Box>
+            </Grid>
           </Grid>
-        </Grid>
         </Stack>
       </Container>
     </Box>

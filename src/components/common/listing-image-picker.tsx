@@ -5,6 +5,8 @@ import { Box, IconButton, Stack, Typography } from '@mui/material';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
+import { ImageLightbox, useObjectUrls } from '@/components/common/image-lightbox';
+
 const GRID_THUMB_SX = {
   position: 'relative',
   width: 96,
@@ -37,59 +39,53 @@ const removeButtonSx = {
   '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
 } as const;
 
-interface ImagePreviewProps {
-  file: File;
+function ThumbPreview({
+  src,
+  alt,
+  onRemove,
+  onPreview,
+  sx = GRID_THUMB_SX,
+}: {
+  src: string;
+  alt?: string;
   onRemove: () => void;
+  onPreview: () => void;
   sx?: typeof GRID_THUMB_SX | typeof HERO_THUMB_SX;
-}
-
-function ImagePreview({ file, onRemove, sx = GRID_THUMB_SX }: ImagePreviewProps) {
-  const [src, setSrc] = React.useState<string>('');
-
-  React.useEffect(() => {
-    const url = URL.createObjectURL(file);
-    setSrc(url);
-    return () => {
-      URL.revokeObjectURL(url);
-    };
-  }, [file]);
-
+}) {
   return (
-    <Box sx={sx}>
+    <Box
+      role="button"
+      tabIndex={0}
+      aria-label="Shiko foton"
+      onClick={onPreview}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onPreview();
+        }
+      }}
+      sx={{ ...sx, cursor: 'zoom-in' }}
+    >
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
-          alt={file.name}
+          alt={alt ?? ''}
+          referrerPolicy="no-referrer"
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
       ) : null}
-      <IconButton size="small" onClick={onRemove} sx={removeButtonSx}>
-        <XIcon size={12} weight="bold" />
-      </IconButton>
-    </Box>
-  );
-}
-
-function UrlPreview({
-  url,
-  onRemove,
-  sx = GRID_THUMB_SX,
-}: {
-  url: string;
-  onRemove: () => void;
-  sx?: typeof GRID_THUMB_SX | typeof HERO_THUMB_SX;
-}) {
-  return (
-    <Box sx={sx}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={url}
-        alt=""
-        referrerPolicy="no-referrer"
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-      />
-      <IconButton size="small" onClick={onRemove} sx={removeButtonSx}>
+      <IconButton
+        size="small"
+        type="button"
+        aria-label="Hiq foton"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onRemove();
+        }}
+        sx={removeButtonSx}
+      >
         <XIcon size={12} weight="bold" />
       </IconButton>
     </Box>
@@ -129,6 +125,20 @@ export function ListingImagePicker({
   const slotsLeft = Math.max(0, max - total);
   const isHero = variant === 'hero';
   const thumbSx = isHero ? HERO_THUMB_SX : GRID_THUMB_SX;
+  const fileUrls = useObjectUrls(value);
+  const previewUrls = React.useMemo(() => [...existingUrls, ...fileUrls], [existingUrls, fileUrls]);
+  const [previewIndex, setPreviewIndex] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (previewIndex == null) return;
+    if (previewUrls.length === 0) {
+      setPreviewIndex(null);
+      return;
+    }
+    if (previewIndex >= previewUrls.length) {
+      setPreviewIndex(previewUrls.length - 1);
+    }
+  }, [previewIndex, previewUrls.length]);
 
   const handleFileChange = (ev: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(ev.target.files ?? []);
@@ -179,20 +189,23 @@ export function ListingImagePicker({
         }}
       >
         {existingUrls.map((url, idx) => (
-          <UrlPreview
+          <ThumbPreview
             key={`url-${url}-${idx}`}
-            url={url}
+            src={url}
             sx={thumbSx}
+            onPreview={() => setPreviewIndex(idx)}
             onRemove={() => {
               removeExisting(idx);
             }}
           />
         ))}
         {value.map((img, idx) => (
-          <ImagePreview
+          <ThumbPreview
             key={`${img.name}-${idx}`}
-            file={img}
+            src={fileUrls[idx] ?? ''}
+            alt={img.name}
             sx={thumbSx}
+            onPreview={() => setPreviewIndex(existingUrls.length + idx)}
             onRemove={() => {
               removeImage(idx);
             }}
@@ -239,6 +252,14 @@ export function ListingImagePicker({
           {max === 1 ? '1 foto · JPG, PNG, WEBP' : `Deri në ${max} foto · JPG, PNG, WEBP`}
         </Typography>
       ) : null}
+
+      <ImageLightbox
+        open={previewIndex != null}
+        urls={previewUrls}
+        index={previewIndex ?? 0}
+        onClose={() => setPreviewIndex(null)}
+        onIndexChange={setPreviewIndex}
+      />
     </Stack>
   );
 }

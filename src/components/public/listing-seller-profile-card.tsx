@@ -4,12 +4,13 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Avatar, Box, Button, Paper, Stack, Typography, type SxProps, type Theme } from '@mui/material';
 
-import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
-import { ProfessionalRatingSummary, ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
-import { formatRatingDisplay } from '@/lib/format-rating';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import type { PublicRealEstateListingSeller } from '@/lib/public-listings-client';
 import { pathsPublicMemberProfile } from '@/paths';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { formatRatingDisplay } from '@/lib/format-rating';
+import type { PublicRealEstateListingSeller } from '@/lib/public-listings-client';
+import { avatarImageUrl } from '@/lib/storage-image';
+import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
+import { ListingVerifiedBadge, ProfessionalRatingSummary } from '@/components/public/professional-listing-detail-ui';
 
 function sellerInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -62,7 +63,7 @@ export function ListingSellerProfileCard({
       >
         <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
           <Avatar
-            src={seller?.avatarUrl?.trim() || undefined}
+            src={avatarImageUrl(seller?.avatarUrl, 144) ?? undefined}
             sx={{
               width: { xs: 64, sm: 72 },
               height: { xs: 64, sm: 72 },
@@ -119,15 +120,13 @@ export function ListingSellerProfileCard({
             fontWeight: 800,
             textTransform: 'none',
             py: 1.25,
-            bgcolor: (theme) =>
-              theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+            bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)'),
             color: 'text.primary',
             border: '1.5px solid',
             borderColor: 'divider',
             boxShadow: 'none',
             '&:hover': {
-              bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.1)',
+              bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.1)'),
               color: 'text.primary',
               borderColor: 'divider',
               boxShadow: 'none',

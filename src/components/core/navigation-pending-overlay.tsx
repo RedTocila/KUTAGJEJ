@@ -4,14 +4,8 @@ import * as React from 'react';
 import { usePathname } from 'next/navigation';
 import { Box, Container, Grid, Skeleton, Stack } from '@mui/material';
 
-import { CategoryBrowseSkeleton } from '@/components/public/category-browse-skeleton';
-import { ListingDetailSkeleton } from '@/components/public/listing-detail-skeleton';
-import { useNavigationPendingPath } from '@/hooks/use-navigation-pending';
-import {
-  HISTORY_BACK_ATTR,
-  canPageNavigateBack,
-  isModifiedClick,
-} from '@/lib/navigate-back';
+import { paths } from '@/paths';
+import { canPageNavigateBack, HISTORY_BACK_ATTR, isModifiedClick } from '@/lib/navigate-back';
 import {
   beginPendingNavigation,
   clearPendingNavigation,
@@ -19,7 +13,11 @@ import {
   pathFromHref,
 } from '@/lib/navigation-pending';
 import { isPublicBrowsePath, isPublicListingDetailPath } from '@/lib/public-browse-path';
-import { paths } from '@/paths';
+import { useNavigationPendingPath } from '@/hooks/use-navigation-pending';
+import { CategoryBrowseSkeleton } from '@/components/public/category-browse-skeleton';
+import { HeroSection } from '@/components/public/hero-section';
+import { HomeBannerSkeleton, HomeCarouselsSkeleton } from '@/components/public/homepage-skeletons';
+import { ListingDetailSkeleton } from '@/components/public/listing-detail-skeleton';
 
 const PENDING_TIMEOUT_MS = 10_000;
 
@@ -38,31 +36,12 @@ function shouldSkipOverlay(path: string): boolean {
 
 function HomePendingSkeleton() {
   return (
-    <Box sx={{ bgcolor: 'background.default' }} aria-busy aria-label="Duke u ngarkuar">
-      <Skeleton
-        variant="rounded"
-        animation="wave"
-        sx={{ width: '100%', height: { xs: 220, md: 360 }, borderRadius: 0 }}
-      />
-      <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
-        <Stack spacing={4}>
-          {Array.from({ length: 2 }).map((_, section) => (
-            <Stack key={section} spacing={2}>
-              <Skeleton variant="text" animation="wave" width={220} height={36} />
-              <Stack direction="row" spacing={2} sx={{ overflow: 'hidden' }}>
-                {Array.from({ length: 4 }).map((__, i) => (
-                  <Box key={i} sx={{ minWidth: 260, flex: '0 0 auto' }}>
-                    <Skeleton variant="rounded" animation="wave" height={180} sx={{ borderRadius: 3 }} />
-                    <Skeleton width="70%" sx={{ mt: 1.5 }} />
-                    <Skeleton width="40%" />
-                  </Box>
-                ))}
-              </Stack>
-            </Stack>
-          ))}
-        </Stack>
-      </Container>
-    </Box>
+    <>
+      <HeroSection>
+        <HomeBannerSkeleton />
+      </HeroSection>
+      <HomeCarouselsSkeleton />
+    </>
   );
 }
 

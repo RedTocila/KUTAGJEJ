@@ -76,15 +76,16 @@ function renderListingCard(verticalId: HomepageLatestVerticalId, listing: HomeLi
  * Keeps an in-memory cache so soft navigations back to `/` don’t refetch.
  * Cards are rendered inside this client module (no function props from the server).
  *
- * When SSR returned a failed empty (`initialOk === false`), we treat it as unloaded
- * and refetch on the client so a cold/timeout first paint can recover without refresh.
+ * When SSR returned an empty list (cold API, timeout, or a false empty), we
+ * treat it as unloaded and refetch on the client so the first paint is a
+ * skeleton — never a “no listings yet” flash.
  */
 export function LazyHomeSection({
   verticalId,
   limit = 8,
   initialListings,
   initialTotal,
-  initialOk = true,
+  initialOk: _initialOk = true,
   eager = false,
 }: {
   verticalId: HomepageLatestVerticalId;
@@ -99,8 +100,7 @@ export function LazyHomeSection({
 }) {
   const key = cacheKey(verticalId, limit);
   const cached = sectionCache.get(key);
-  const ssrTrusted =
-    initialListings !== undefined && (initialOk || initialListings.length > 0);
+  const ssrTrusted = Boolean(initialListings && initialListings.length > 0);
 
   const [listings, setListings] = React.useState<HomeListing[]>(
     () => (ssrTrusted ? initialListings! : cached?.listings) ?? [],

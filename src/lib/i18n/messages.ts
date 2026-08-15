@@ -214,6 +214,7 @@ const sq = {
   browse: {
     listingsCount: (n: number) => (n === 1 ? '1 njoftim' : `${n.toLocaleString('en-GB')} njoftime`),
     noListingsYet: 'Asnjë njoftim ende',
+    retryLoad: 'Provo përsëri',
     showingRange: (start: number, end: number, total: number) =>
       `Shfaqen ${start.toLocaleString('en-GB')}–${end.toLocaleString('en-GB')} nga ${total.toLocaleString('en-GB')} njoftime`,
     filteredCount: (shown: number, total: number) =>
@@ -906,6 +907,7 @@ const en: AppMessages = {
   browse: {
     listingsCount: (n: number) => (n === 1 ? '1 listing' : `${n.toLocaleString('en-GB')} listings`),
     noListingsYet: 'No listings yet',
+    retryLoad: 'Try again',
     showingRange: (start: number, end: number, total: number) =>
       `Showing ${start.toLocaleString('en-GB')}–${end.toLocaleString('en-GB')} of ${total.toLocaleString('en-GB')} listings`,
     filteredCount: (shown: number, total: number) =>

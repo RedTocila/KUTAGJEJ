@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { BrowseInfiniteGrid } from '@/components/public/browse-infinite-grid';
 import { CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 import { generateBrowseMetadata } from '@/lib/browse-page-seo';
+import { skipIsrOnFailedBrowse } from '@/lib/browse-ssr';
 import {
   BROWSE_PAGE_SIZE,
   hasActiveBrowseFilters,
@@ -30,11 +31,12 @@ export default async function CarsBrowsePage({ searchParams }: PageProps) {
   const page = parseBrowsePage(sp);
   const hasFilters = hasActiveBrowseFilters(filters);
 
-  const [{ listings, total, page: currentPage, totalPages }, cities, topViewed] = await Promise.all([
+  const [{ listings, total, page: currentPage, totalPages, ok }, cities, topViewed] = await Promise.all([
     fetchBrowseCars(BROWSE_PAGE_SIZE, filters, page),
     fetchPublicCities(),
     fetchTopViewedListings('cars'),
   ]);
+  skipIsrOnFailedBrowse(ok);
 
   return (
     <CategoryBrowseLayout
@@ -48,6 +50,7 @@ export default async function CarsBrowsePage({ searchParams }: PageProps) {
       cities={cities}
       topViewed={topViewed}
       enableInfiniteScroll
+      ssrOk={ok}
     >
       <BrowseInfiniteGrid
         verticalId="cars"

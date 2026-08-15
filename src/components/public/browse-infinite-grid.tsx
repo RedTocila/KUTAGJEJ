@@ -4,11 +4,13 @@ import * as React from 'react';
 import { Box, Button, Grid, Stack } from '@mui/material';
 
 import { ListingCardsSkeleton } from '@/components/core/content-skeletons';
+import { useBrowseLoadContext } from '@/components/public/browse-load-context';
 import { CarCard } from '@/components/public/listing-cards/car-card';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
+import { useCopy } from '@/hooks/use-copy';
 import {
   BROWSE_PAGE_SIZE,
   type BrowseFilters,
@@ -22,6 +24,7 @@ import {
   fetchBrowseOkazion,
   fetchBrowseProfessionals,
   fetchBrowseRealEstate,
+  type BrowseListingsResult,
   type PublicCarListing,
   type PublicDirectoryListing,
   type PublicJobListing,
@@ -91,7 +94,7 @@ async function fetchPage(
   verticalId: BrowseInfiniteVerticalId,
   filters: BrowseFilters | BrowseOkazionFilters,
   page: number,
-): Promise<{ listings: BrowseListing[]; totalPages: number }> {
+): Promise<BrowseListingsResult<BrowseListing>> {
   switch (verticalId) {
     case 'real-estate':
       return fetchBrowseRealEstate(BROWSE_PAGE_SIZE, filters as BrowseFilters, page);
@@ -108,13 +111,16 @@ async function fetchPage(
     case 'okazion':
       return fetchBrowseOkazion(BROWSE_PAGE_SIZE, filters as BrowseOkazionFilters, page);
     default:
-      return { listings: [], totalPages: 1 };
+      return { listings: [], total: 0, page, limit: BROWSE_PAGE_SIZE, totalPages: 1, ok: false };
   }
 }
 
 /**
  * First page comes from SSR; further pages append on scroll (or “Load more”).
  * Cards are rendered inside this client module (no function props from the server).
+ *
+ * When SSR painted an untrusted empty list, we refetch on the client and keep a
+ * skeleton up until that request resolves — never flash “no listings yet”.
  */
 export function BrowseInfiniteGrid({
   verticalId,
@@ -129,23 +135,86 @@ export function BrowseInfiniteGrid({
   initialPage: number;
   totalPages: number;
 }) {
+  const t = useCopy();
+  const loadCtx = useBrowseLoadContext();
+  const recoverEmpty = Boolean(loadCtx?.recoverEmpty) && initialListings.length === 0;
   const [listings, setListings] = React.useState<BrowseListing[]>(initialListings);
   const [page, setPage] = React.useState(initialPage);
   const [pagesTotal, setPagesTotal] = React.useState(totalPages);
-  const [loading, setLoading] = React.useState(false);
+  const [loading, setLoading] = React.useState(recoverEmpty);
   const [error, setError] = React.useState(false);
   const sentinelRef = React.useRef<HTMLDivElement | null>(null);
   const loadingRef = React.useRef(false);
+  const recoveredRef = React.useRef(false);
   const filtersKey = JSON.stringify(filters);
+  const routeKey = `${verticalId}:${filtersKey}:${initialPage}`;
+  const routeKeyRef = React.useRef(routeKey);
+  const reportResolved = loadCtx?.reportResolved;
+
+  const applyFirstPage = React.useCallback(
+    (res: BrowseListingsResult<BrowseListing>) => {
+      recoveredRef.current = true;
+      setListings(res.listings);
+      setPage(res.page);
+      setPagesTotal(res.totalPages);
+      reportResolved?.({
+        total: res.total,
+        shownCount: res.listings.length,
+        totalPages: res.totalPages,
+        page: res.page,
+        ok: res.ok,
+      });
+      if (!res.ok && res.listings.length === 0) setError(true);
+    },
+    [reportResolved],
+  );
 
   React.useEffect(() => {
+    const routeChanged = routeKeyRef.current !== routeKey;
+    routeKeyRef.current = routeKey;
+    if (!routeChanged && recoveredRef.current) return;
+    recoveredRef.current = false;
     setListings(initialListings);
     setPage(initialPage);
     setPagesTotal(totalPages);
     setError(false);
-  }, [initialListings, initialPage, totalPages, verticalId, filtersKey]);
+    setLoading(initialListings.length === 0 && recoverEmpty);
+  }, [routeKey, initialListings, initialPage, totalPages, recoverEmpty]);
 
-  const hasMore = page < pagesTotal;
+  React.useEffect(() => {
+    if (!recoverEmpty || initialListings.length > 0 || recoveredRef.current) return;
+    let cancelled = false;
+    void (async () => {
+      loadingRef.current = true;
+      setLoading(true);
+      setError(false);
+      try {
+        const res = await fetchPage(verticalId, filters, initialPage);
+        if (cancelled) return;
+        applyFirstPage(res);
+      } catch {
+        if (!cancelled) {
+          setError(true);
+          reportResolved?.({
+            total: 0,
+            shownCount: 0,
+            totalPages: 1,
+            page: initialPage,
+            ok: false,
+          });
+        }
+      } finally {
+        loadingRef.current = false;
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [recoverEmpty, verticalId, filters, filtersKey, initialPage, initialListings.length, applyFirstPage, reportResolved]);
+
+  const recovering = recoverEmpty && listings.length === 0 && (loading || error);
+  const hasMore = !recovering && page < pagesTotal;
 
   const loadMore = React.useCallback(async () => {
     if (loadingRef.current || !hasMore) return;
@@ -170,6 +239,30 @@ export function BrowseInfiniteGrid({
     }
   }, [filters, hasMore, page, verticalId]);
 
+  const retryFirstPage = React.useCallback(() => {
+    setError(false);
+    setLoading(true);
+    void (async () => {
+      loadingRef.current = true;
+      try {
+        const res = await fetchPage(verticalId, filters, initialPage);
+        applyFirstPage(res);
+      } catch {
+        setError(true);
+        reportResolved?.({
+          total: 0,
+          shownCount: 0,
+          totalPages: 1,
+          page: initialPage,
+          ok: false,
+        });
+      } finally {
+        loadingRef.current = false;
+        setLoading(false);
+      }
+    })();
+  }, [applyFirstPage, filters, initialPage, reportResolved, verticalId]);
+
   React.useEffect(() => {
     if (!hasMore) return;
     const node = sentinelRef.current;
@@ -185,6 +278,20 @@ export function BrowseInfiniteGrid({
     observer.observe(node);
     return () => observer.disconnect();
   }, [hasMore, loadMore, listings.length]);
+
+  if (recovering && error && !loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+        <Button variant="outlined" onClick={retryFirstPage} sx={{ fontWeight: 700 }}>
+          {t.browse.retryLoad}
+        </Button>
+      </Box>
+    );
+  }
+
+  if (recovering) {
+    return <ListingCardsSkeleton count={8} />;
+  }
 
   return (
     <Stack spacing={3}>
@@ -207,7 +314,7 @@ export function BrowseInfiniteGrid({
             </Box>
           ) : error ? (
             <Button variant="outlined" onClick={() => void loadMore()} sx={{ fontWeight: 700 }}>
-              Provo përsëri
+              {t.browse.retryLoad}
             </Button>
           ) : (
             <Button variant="text" onClick={() => void loadMore()} sx={{ fontWeight: 700 }}>

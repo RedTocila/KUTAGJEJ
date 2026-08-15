@@ -44,10 +44,13 @@ export function PublicCategoryHero({
   verticalId,
   total,
   cities,
+  pending = false,
 }: {
   verticalId: BrowseCategoryId;
   total: number;
   cities: RealEstateCityDto[];
+  /** Listings are still loading — never show “no listings yet”. */
+  pending?: boolean;
 }) {
   const { language } = useLanguage();
   const t = useCopy();
@@ -73,7 +76,7 @@ export function PublicCategoryHero({
     const ro = new ResizeObserver(sync);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [verticalId, total]);
+  }, [verticalId, total, pending]);
 
   return (
     <>
@@ -159,7 +162,11 @@ export function PublicCategoryHero({
                 {label}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.45 }}>
-                {total > 0 ? t.browse.listingsCount(total) : t.browse.noListingsYet}
+                {pending
+                  ? t.common.loading
+                  : total > 0
+                    ? t.browse.listingsCount(total)
+                    : t.browse.noListingsYet}
               </Typography>
             </Stack>
           </Stack>

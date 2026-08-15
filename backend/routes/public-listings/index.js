@@ -139,6 +139,7 @@ router.get('/latest', optionalAuth, async (req, res) => {
       countMkt,
       countBiz,
       countPro,
+      okazionPage,
     ] = await Promise.all([
       latestRealEstate(limit),
       latestCars(limit),
@@ -152,14 +153,17 @@ router.get('/latest', optionalAuth, async (req, res) => {
       countMarketplace(),
       countDirectory({ eq: { vertical: 'businesses' } }),
       countDirectory({ eq: { vertical: 'professionals' } }),
+      queryOkazionListings(limit, 0, {}),
     ]);
     const bundle = { realEstate, cars, jobs, marketplace, businesses, professionals };
+    let okazion = okazionPage.listings;
     if (saver) {
       await Promise.all(
         Object.keys(bundle).map(async (key) => {
           bundle[key] = await enrichListingsSaverState(bundle[key], saver);
         }),
       );
+      okazion = await enrichListingsSaverState(okazion, saver);
     }
     res.json({
       realEstate: bundle.realEstate,
@@ -168,6 +172,8 @@ router.get('/latest', optionalAuth, async (req, res) => {
       marketplace: bundle.marketplace,
       businesses: bundle.businesses,
       professionals: bundle.professionals,
+      okazion,
+      okazionTotal: okazionPage.total,
       totals: {
         realEstate: countRe,
         cars: countCarsVal,

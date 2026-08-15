@@ -1,27 +1,14 @@
 import * as React from 'react';
 import type { Metadata } from 'next';
-import { unstable_noStore as noStore } from 'next/cache';
-import { HeroSection } from '@/components/public/hero-section';
-import { HomepageCommunityBanner, HomepagePostBanner } from '@/components/public/homepage-community-banner';
-import { PublicShell } from '@/components/public/public-shell';
-import { HomepageOkazionSection } from '@/components/public/homepage-okazion-section';
-import { HomepageRecommendedSection } from '@/components/public/homepage-recommended-section';
-import { LazyHomeSection } from '@/components/public/lazy-home-section';
-import { SeoIntroSection } from '@/components/public/seo-intro-section';
-import { buildHomepageMixedLatest } from '@/lib/homepage-latest-listings';
+
 import { brandLogoSrc, config } from '@/config';
-import { HOME_VERTICALS } from '@/lib/home-categories';
-import { fetchHomeBanners } from '@/lib/home-banners-client';
-import {
-  fetchBrowseOkazion,
-  fetchLatestVertical,
-  type PublicCarListing,
-  type PublicDirectoryListing,
-  type PublicJobListing,
-  type PublicMarketplaceListing,
-  type PublicRealEstateListing,
-} from '@/lib/public-listings-client';
 import { paths } from '@/paths';
+import { homepageStaticJsonLd } from '@/lib/homepage-json-ld';
+import { HeroSection } from '@/components/public/hero-section';
+import { HomepageBanners } from '@/components/public/homepage-banners';
+import { HomepageFeed } from '@/components/public/homepage-feed';
+import { HomeBannerSkeleton, HomeCarouselsSkeleton } from '@/components/public/homepage-skeletons';
+import { PublicShell } from '@/components/public/public-shell';
 
 export const revalidate = 15;
 
@@ -59,8 +46,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: `${config.site.name} — Njoftime në një vend`,
-    description:
-      'Posto, kërko dhe gjej shpejt: prona, makina, punë dhe tregu — të gjitha në KuTaGjej.',
+    description: 'Posto, kërko dhe gjej shpejt: prona, makina, punë dhe tregu — të gjitha në KuTaGjej.',
     images: [brandLogoSrc],
   },
   robots: {
@@ -71,329 +57,25 @@ export const metadata: Metadata = {
   category: 'classifieds',
 };
 
-export default async function HomePage() {
-  // Above-the-fold only: banners, OKAZION, and the 3 verticals used for hero stats + recommended mix.
-  // Remaining vertical carousels lazy-load on scroll (see LazyHomeSection).
-  const [homeBanners, okazion, realEstate, cars, jobs] = await Promise.all([
-    fetchHomeBanners(),
-    fetchBrowseOkazion(8),
-    fetchLatestVertical<PublicRealEstateListing>('real-estate', 8),
-    fetchLatestVertical<PublicCarListing>('cars', 8),
-    fetchLatestVertical<PublicJobListing>('jobs', 8),
-  ]);
-
-  const bundle = {
-    realEstate: realEstate.listings,
-    cars: cars.listings,
-    jobs: jobs.listings,
-    marketplace: [] as PublicMarketplaceListing[],
-    businesses: [] as PublicDirectoryListing[],
-    professionals: [] as PublicDirectoryListing[],
-    totals: {
-      realEstate: realEstate.total,
-      cars: cars.total,
-      jobs: jobs.total,
-      marketplace: 0,
-      businesses: 0,
-      professionals: 0,
-    },
-  };
-  const totals = bundle.totals;
-  const latestMixed = buildHomepageMixedLatest(bundle, 8);
-  // SSR failures collapse to [] — tell client sections so they can recover without a hard refresh.
-  const listingsSsrOk = realEstate.ok || cars.ok || jobs.ok;
-  if (!listingsSsrOk) {
-    // Prevent ISR from pinning a failed empty homepage for `revalidate` seconds.
-    noStore();
-  }
-
+export default function HomePage() {
   const siteOrigin = config.site.url.replace(/\/$/, '');
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: config.site.name,
-    alternateName: 'Ku Ta Gjej',
-    url: siteOrigin,
-    description: config.site.description,
-    inLanguage: 'sq-AL',
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: `${siteOrigin}${paths.public.realEstate}?q={search_term_string}`,
-      'query-input': 'required name=search_term_string',
-    },
-  };
-
-  const orgLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: config.site.name,
-    url: siteOrigin,
-    logo: `${siteOrigin}${brandLogoSrc}`,
-  };
-
-  const breadcrumbsLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Ballina',
-        item: siteOrigin,
-      },
-    ],
-  };
-
-  // Per-section ItemList tells Google what each carousel contains and helps
-  // it surface the homepage for keyword searches (e.g. "apartamente Tiranë").
-  const itemListLd = HOME_VERTICALS.map((v) => {
-    const items = (() => {
-      switch (v.id) {
-        case 'real-estate':
-          return bundle.realEstate.map((l) => realEstateItem(l));
-        case 'cars':
-          return bundle.cars.map((l) => carItem(l));
-        case 'jobs':
-          return bundle.jobs.map((l) => jobItem(l));
-        case 'marketplace':
-          return bundle.marketplace.map((l) => marketplaceItem(l));
-        case 'businesses':
-          return bundle.businesses.map((l) => directoryItem(l));
-        case 'professionals':
-          return bundle.professionals.map((l) => directoryItem(l));
-        default:
-          return [];
-      }
-    })();
-    return {
-      '@context': 'https://schema.org',
-      '@type': 'ItemList',
-      name: v.label,
-      description: v.tagline,
-      url: `${siteOrigin}${v.href}`,
-      numberOfItems: items.length,
-      itemListElement: items.map((item, index) => ({
-        '@type': 'ListItem',
-        position: index + 1,
-        ...item,
-      })),
-    };
-  });
+  const { website, organization, breadcrumbs } = homepageStaticJsonLd(siteOrigin);
 
   return (
     <PublicShell>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsLd) }} />
-      {itemListLd.map((ld, i) => (
-        <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
-      ))}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(website) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }} />
 
-      <HeroSection
-        banners={homeBanners}
-        stats={{
-          realEstate: totals.realEstate,
-          cars: totals.cars,
-          jobs: totals.jobs,
-        }}
-      />
+      <HeroSection>
+        <React.Suspense fallback={<HomeBannerSkeleton />}>
+          <HomepageBanners />
+        </React.Suspense>
+      </HeroSection>
 
-      <HomepageRecommendedSection fallbackItems={latestMixed} />
-
-      <HomepageOkazionSection
-        listings={okazion.listings}
-        total={okazion.total}
-        ssrOk={okazion.ok}
-      />
-
-      <LazyHomeSection
-        verticalId="real-estate"
-        initialListings={bundle.realEstate}
-        initialTotal={totals.realEstate}
-        initialOk={realEstate.ok}
-        eager
-      />
-
-      <LazyHomeSection
-        verticalId="cars"
-        initialListings={bundle.cars}
-        initialTotal={totals.cars}
-        initialOk={cars.ok}
-      />
-
-      <HomepageCommunityBanner
-        activeListingsCount={totals.realEstate + totals.cars + totals.jobs}
-      />
-
-      <LazyHomeSection
-        verticalId="jobs"
-        initialListings={bundle.jobs}
-        initialTotal={totals.jobs}
-        initialOk={jobs.ok}
-      />
-
-      <LazyHomeSection verticalId="marketplace" />
-
-      <LazyHomeSection verticalId="businesses" />
-
-      <LazyHomeSection verticalId="professionals" />
-
-      <HomepagePostBanner />
-
-      <SeoIntroSection />
+      <React.Suspense fallback={<HomeCarouselsSkeleton />}>
+        <HomepageFeed />
+      </React.Suspense>
     </PublicShell>
   );
 }
-
-// ---------------------------------------------------------------------------
-// JSON-LD item builders — one per vertical
-// ---------------------------------------------------------------------------
-
-function realEstateItem(l: PublicRealEstateListing) {
-  return {
-    item: {
-      '@type': 'Accommodation',
-      name: l.title,
-      description: l.description,
-      image: l.imageUrl ?? undefined,
-      address: {
-        '@type': 'PostalAddress',
-        addressLocality: l.cityName ?? undefined,
-        addressRegion: l.zoneName ?? undefined,
-        addressCountry: 'AL',
-      },
-      floorSize: l.surfaceM2 ? { '@type': 'QuantitativeValue', value: l.surfaceM2, unitCode: 'MTK' } : undefined,
-      numberOfBedrooms: l.bedrooms ?? undefined,
-      numberOfBathroomsTotal: l.bathrooms ?? undefined,
-      offers: {
-        '@type': 'Offer',
-        price: l.price,
-        priceCurrency: l.currency,
-        availability: 'https://schema.org/InStock',
-      },
-    },
-  };
-}
-
-function carItem(l: PublicCarListing) {
-  return {
-    item: {
-      '@type': 'Car',
-      name: [l.make, l.model, l.variant].filter(Boolean).join(' '),
-      description: l.description,
-      image: l.imageUrl ?? undefined,
-      brand: { '@type': 'Brand', name: l.make },
-      model: l.model,
-      vehicleModelDate: l.year,
-      mileageFromOdometer: { '@type': 'QuantitativeValue', value: l.kilometers, unitCode: 'KMT' },
-      fuelType: l.fuelType,
-      vehicleTransmission: l.transmission,
-      color: l.color,
-      offers: {
-        '@type': 'Offer',
-        price: l.price,
-        priceCurrency: l.currency,
-        availability: 'https://schema.org/InStock',
-        areaServed: l.cityName ?? 'AL',
-      },
-    },
-  };
-}
-
-function jobItem(l: PublicJobListing) {
-  return {
-    item: {
-      '@type': 'JobPosting',
-      title: l.title,
-      description: l.description,
-      datePosted: l.createdAt,
-      employmentType: l.jobType,
-      industry: l.industry,
-      jobLocationType: l.workLocation,
-      hiringOrganization: { '@type': 'Organization', name: config.site.name },
-      jobLocation: l.cityName
-        ? {
-            '@type': 'Place',
-            address: {
-              '@type': 'PostalAddress',
-              addressLocality: l.cityName,
-              addressCountry: 'AL',
-            },
-          }
-        : undefined,
-      baseSalary:
-        l.salary != null
-          ? {
-              '@type': 'MonetaryAmount',
-              currency: l.currency ?? 'EUR',
-              value: { '@type': 'QuantitativeValue', value: l.salary, unitText: 'MONTH' },
-            }
-          : undefined,
-    },
-  };
-}
-
-function marketplaceItem(l: PublicMarketplaceListing) {
-  return {
-    item: {
-      '@type': 'Product',
-      name: l.title,
-      description: l.description,
-      image: l.imageUrl ?? undefined,
-      category: l.category,
-      offers:
-        l.price != null
-          ? {
-              '@type': 'Offer',
-              price: l.price,
-              priceCurrency: l.currency ?? 'EUR',
-              availability: 'https://schema.org/InStock',
-              areaServed: l.cityName ?? 'AL',
-            }
-          : undefined,
-    },
-  };
-}
-
-function directoryItem(l: PublicDirectoryListing) {
-  if (l.kind === 'businesses') {
-    return {
-      item: {
-        '@type': 'Restaurant',
-        name: l.title,
-        description: l.description,
-        image: l.imageUrl ?? undefined,
-        address: l.cityName
-          ? {
-              '@type': 'PostalAddress',
-              addressLocality: l.cityName,
-              addressCountry: 'AL',
-            }
-          : undefined,
-        telephone: l.contactPhone ?? undefined,
-        openingHours: l.openingHours ?? undefined,
-        servesCuisine: l.servicesHighlight ?? undefined,
-      },
-    };
-  }
-  return {
-    item: {
-      '@type': 'ProfessionalService',
-      name: l.title,
-      description: l.description,
-      image: l.imageUrl ?? undefined,
-      address: l.cityName
-        ? {
-            '@type': 'PostalAddress',
-            addressLocality: l.cityName,
-            addressCountry: 'AL',
-          }
-        : undefined,
-      priceRange:
-        l.price != null
-          ? `${l.price} ${l.currency === 'LEK' ? 'ALL' : l.currency ?? 'EUR'}`
-          : undefined,
-    },
-  };
-}
-

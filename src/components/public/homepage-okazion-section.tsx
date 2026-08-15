@@ -3,13 +3,13 @@
 import * as React from 'react';
 import { Box, Skeleton, Stack } from '@mui/material';
 
-import { ListingsCarousel } from '@/components/public/listings-carousel';
-import { ListingsSection } from '@/components/public/listings-section';
+import { fetchBrowseOkazion, type PublicOkazionListing } from '@/lib/public-listings-client';
 import { CarCard } from '@/components/public/listing-cards/car-card';
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
-import { fetchBrowseOkazion, type PublicOkazionListing } from '@/lib/public-listings-client';
+import { ListingsCarousel } from '@/components/public/listings-carousel';
+import { ListingsSection } from '@/components/public/listings-section';
 
 function OkazionCard({ listing }: { listing: PublicOkazionListing }) {
   switch (listing.kind) {
@@ -48,6 +48,7 @@ export function HomepageOkazionSection({
 }: {
   listings: PublicOkazionListing[];
   total: number;
+  /** False when SSR fetch failed (empty is not trustworthy). */
   ssrOk?: boolean;
 }) {
   const needsRecovery = initialListings.length === 0 && !ssrOk;

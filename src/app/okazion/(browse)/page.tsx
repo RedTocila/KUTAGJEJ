@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 
 import { BrowseInfiniteGrid } from '@/components/public/browse-infinite-grid';
 import { CategoryBrowseLayout } from '@/components/public/category-browse-layout';
+import { skipIsrOnFailedBrowse } from '@/lib/browse-ssr';
 import {
   BROWSE_PAGE_SIZE,
   hasActiveBrowseFilters,
@@ -29,11 +30,12 @@ export default async function OkazionBrowsePage({ searchParams }: PageProps) {
   const filters = parseOkazionBrowseParams(sp);
   const page = parseBrowsePage(sp);
   const hasFilters = hasActiveBrowseFilters(filters);
-  const { listings, total, page: currentPage, totalPages } = await fetchBrowseOkazion(
+  const { listings, total, page: currentPage, totalPages, ok } = await fetchBrowseOkazion(
     BROWSE_PAGE_SIZE,
     filters,
     page,
   );
+  skipIsrOnFailedBrowse(ok);
 
   return (
     <CategoryBrowseLayout
@@ -46,6 +48,7 @@ export default async function OkazionBrowsePage({ searchParams }: PageProps) {
       hasFilters={hasFilters}
       cities={[]}
       enableInfiniteScroll
+      ssrOk={ok}
     >
       <BrowseInfiniteGrid
         verticalId="okazion"

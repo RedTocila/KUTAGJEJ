@@ -195,7 +195,7 @@ export function MobileBottomNav() {
         }}
       >
         <Box
-          sx={(theme) => ({
+          sx={{
             flex: 1,
             height: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
             boxSizing: 'border-box',
@@ -204,18 +204,11 @@ export function MobileBottomNav() {
             borderRadius: 999,
             border: '1px solid',
             borderColor: 'divider',
-            // Light: solid flat bar. Dark: frosted + elevation.
             bgcolor: 'background.paper',
             backdropFilter: 'none',
             WebkitBackdropFilter: 'none',
             boxShadow: 'none',
-            ...theme.applyStyles('dark', {
-              bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.94)',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
-              boxShadow: '0 10px 28px rgba(0, 0, 0, 0.22)',
-            }),
-          })}
+          }}
         >
           <Box
             sx={{
@@ -302,7 +295,7 @@ export function MobileBottomNav() {
           aria-label={t.common.search}
           aria-current={searchActive ? 'page' : undefined}
           onClick={handleSearchClick}
-          sx={(theme) => ({
+          sx={{
             width: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
             height: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
             flexShrink: 0,
@@ -318,10 +311,7 @@ export function MobileBottomNav() {
             '&:active': {
               transform: 'scale(0.96)',
             },
-            ...theme.applyStyles('dark', {
-              boxShadow: '0 10px 28px rgba(0, 0, 0, 0.22)',
-            }),
-          })}
+          }}
         >
           <MagnifyingGlassIcon size={24} weight={searchActive ? 'fill' : 'regular'} />
         </Box>

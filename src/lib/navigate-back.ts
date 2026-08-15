@@ -32,6 +32,16 @@ function getNavigationIndex(): number | null {
   return typeof index === 'number' ? index : null;
 }
 
+/** True when this tab has not recorded a first in-app page yet (cold open). */
+export function isColdSessionStart(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return !sessionStorage.getItem(FIRST_PAGE_KEY);
+  } catch {
+    return false;
+  }
+}
+
 /** Record the first page of this tab so later back controls can tell in-app history from a cold landing. */
 export function rememberFirstPageIfNeeded(): void {
   if (typeof window === 'undefined') return;

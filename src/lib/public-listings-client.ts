@@ -1,7 +1,7 @@
-import type { ListingMetrics } from '@/lib/listing-metrics';
+import type { HomeVerticalId } from '@/lib/home-categories';
 import type { BrowseFilters, BrowseOkazionFilters } from '@/lib/listing-filters';
 import { BROWSE_PAGE_SIZE, buildBrowseApiQuery } from '@/lib/listing-filters';
-import type { HomeVerticalId } from '@/lib/home-categories';
+import type { ListingMetrics } from '@/lib/listing-metrics';
 import { isListingId } from '@/lib/real-estate-permalink';
 import { loadPublicEntity, safeServerJson, type PublicEntityLoadResult } from '@/lib/server-fetch';
 
@@ -317,6 +317,13 @@ export type AnyPublicListingDetail =
   | PublicMarketplaceListingDetail
   | PublicDirectoryListingDetail;
 
+/** OKAZION applies to sellable ads only — not businesses / professionals. */
+export type PublicOkazionListing =
+  | PublicRealEstateListing
+  | PublicCarListing
+  | PublicJobListing
+  | PublicMarketplaceListing;
+
 export interface PublicListingsBundle {
   realEstate: PublicRealEstateListing[];
   cars: PublicCarListing[];
@@ -324,6 +331,8 @@ export interface PublicListingsBundle {
   marketplace: PublicMarketplaceListing[];
   businesses: PublicDirectoryListing[];
   professionals: PublicDirectoryListing[];
+  okazion: PublicOkazionListing[];
+  okazionTotal: number;
   totals: {
     realEstate: number;
     cars: number;
@@ -345,12 +354,12 @@ const EMPTY_BUNDLE: PublicListingsBundle = {
   marketplace: [],
   businesses: [],
   professionals: [],
+  okazion: [],
+  okazionTotal: 0,
   totals: { realEstate: 0, cars: 0, jobs: 0, marketplace: 0, businesses: 0, professionals: 0 },
 };
 
-export async function fetchHomepageListings(
-  limit = 8,
-): Promise<PublicListingsBundle & { ok: boolean }> {
+export async function fetchHomepageListings(limit = 8): Promise<PublicListingsBundle & { ok: boolean }> {
   const data = await safeJson<PublicListingsBundle>(`/public/listings/latest?limit=${limit}`);
   if (!data) return { ...EMPTY_BUNDLE, ok: false };
   return {
@@ -360,25 +369,21 @@ export async function fetchHomepageListings(
     marketplace: data.marketplace ?? [],
     businesses: data.businesses ?? [],
     professionals: data.professionals ?? [],
+    okazion: data.okazion ?? [],
+    okazionTotal: data.okazionTotal ?? 0,
     totals: data.totals ?? EMPTY_BUNDLE.totals,
     ok: true,
   };
 }
 
-export type HomepageLatestVerticalId =
-  | 'real-estate'
-  | 'cars'
-  | 'jobs'
-  | 'marketplace'
-  | 'businesses'
-  | 'professionals';
+export type HomepageLatestVerticalId = 'real-estate' | 'cars' | 'jobs' | 'marketplace' | 'businesses' | 'professionals';
 
 export async function fetchLatestVertical<T = unknown>(
   vertical: HomepageLatestVerticalId,
-  limit = 8,
+  limit = 8
 ): Promise<{ listings: T[]; total: number; vertical: string; ok: boolean }> {
   const data = await safeJson<{ listings?: T[]; total?: number; vertical?: string }>(
-    `/public/listings/latest/${vertical}?limit=${limit}`,
+    `/public/listings/latest/${vertical}?limit=${limit}`
   );
   if (!data) {
     return { listings: [], total: 0, vertical, ok: false };
@@ -404,7 +409,7 @@ export interface BrowseListingsResult<T> {
 export async function fetchBrowseRealEstate(
   limit = BROWSE_PAGE_SIZE,
   filters: BrowseFilters = {},
-  page = 1,
+  page = 1
 ): Promise<BrowseListingsResult<PublicRealEstateListing>> {
   const data = await safeJson<{
     listings: PublicRealEstateListing[];
@@ -425,7 +430,7 @@ function parseBrowseResult<T>(
     totalPages?: number;
   } | null,
   limit: number,
-  page: number,
+  page: number
 ): BrowseListingsResult<T> {
   if (!data) {
     return { listings: [], total: 0, page, limit, totalPages: 1, ok: false };
@@ -446,7 +451,7 @@ function parseBrowseResult<T>(
 export async function fetchBrowseCars(
   limit = BROWSE_PAGE_SIZE,
   filters: BrowseFilters = {},
-  page = 1,
+  page = 1
 ): Promise<BrowseListingsResult<PublicCarListing>> {
   const data = await safeJson<{
     listings: PublicCarListing[];
@@ -461,7 +466,7 @@ export async function fetchBrowseCars(
 export async function fetchBrowseJobs(
   limit = BROWSE_PAGE_SIZE,
   filters: BrowseFilters = {},
-  page = 1,
+  page = 1
 ): Promise<BrowseListingsResult<PublicJobListing>> {
   const data = await safeJson<{
     listings: PublicJobListing[];
@@ -476,7 +481,7 @@ export async function fetchBrowseJobs(
 export async function fetchBrowseMarketplace(
   limit = BROWSE_PAGE_SIZE,
   filters: BrowseFilters = {},
-  page = 1,
+  page = 1
 ): Promise<BrowseListingsResult<PublicMarketplaceListing>> {
   const data = await safeJson<{
     listings: PublicMarketplaceListing[];
@@ -491,7 +496,7 @@ export async function fetchBrowseMarketplace(
 export async function fetchBrowseBusinesses(
   limit = BROWSE_PAGE_SIZE,
   filters: BrowseFilters = {},
-  page = 1,
+  page = 1
 ): Promise<BrowseListingsResult<PublicDirectoryListing>> {
   const data = await safeJson<{
     listings: PublicDirectoryListing[];
@@ -506,7 +511,7 @@ export async function fetchBrowseBusinesses(
 export async function fetchBrowseProfessionals(
   limit = BROWSE_PAGE_SIZE,
   filters: BrowseFilters = {},
-  page = 1,
+  page = 1
 ): Promise<BrowseListingsResult<PublicDirectoryListing>> {
   const data = await safeJson<{
     listings: PublicDirectoryListing[];
@@ -518,17 +523,10 @@ export async function fetchBrowseProfessionals(
   return parseBrowseResult(data, limit, page);
 }
 
-/** OKAZION applies to sellable ads only — not businesses / professionals. */
-export type PublicOkazionListing =
-  | PublicRealEstateListing
-  | PublicCarListing
-  | PublicJobListing
-  | PublicMarketplaceListing;
-
 export async function fetchBrowseOkazion(
   limit = BROWSE_PAGE_SIZE,
   filters: BrowseOkazionFilters = {},
-  page = 1,
+  page = 1
 ): Promise<BrowseListingsResult<PublicOkazionListing>> {
   const q = new URLSearchParams({
     limit: String(limit),
@@ -588,11 +586,11 @@ export type TopViewedListing =
 /** Featured listings for a category page slider (max 10). Views for commerce; ratings for businesses/professionals. */
 export async function fetchTopViewedListings(
   verticalId: HomeVerticalId,
-  limit = TOP_VIEWED_LIMIT,
+  limit = TOP_VIEWED_LIMIT
 ): Promise<TopViewedListing[]> {
   const capped = Math.min(Math.max(1, limit), TOP_VIEWED_LIMIT);
   const data = await safeJson<{ listings?: TopViewedListing[] }>(
-    `/public/listings/top-viewed?vertical=${encodeURIComponent(verticalId)}&limit=${capped}`,
+    `/public/listings/top-viewed?vertical=${encodeURIComponent(verticalId)}&limit=${capped}`
   );
   return data?.listings ?? [];
 }
@@ -604,13 +602,13 @@ function pickListing<T>(payload: unknown): T | null {
 }
 
 export async function loadPublicRealEstateListingById(
-  id: string,
+  id: string
 ): Promise<PublicEntityLoadResult<PublicRealEstateListingDetail>> {
   const raw = typeof id === 'string' ? id.trim() : '';
   if (!isListingId(raw)) return { data: null, unavailable: false };
   return loadPublicEntity<PublicRealEstateListingDetail>(
     `/public/listings/real-estate/${encodeURIComponent(raw)}`,
-    pickListing<PublicRealEstateListingDetail>,
+    pickListing<PublicRealEstateListingDetail>
   );
 }
 
@@ -623,7 +621,7 @@ export async function loadPublicCarListingById(id: string): Promise<PublicEntity
   if (!isListingId(raw)) return { data: null, unavailable: false };
   return loadPublicEntity<PublicCarListingDetail>(
     `/public/listings/cars/${encodeURIComponent(raw)}`,
-    pickListing<PublicCarListingDetail>,
+    pickListing<PublicCarListingDetail>
   );
 }
 
@@ -636,7 +634,7 @@ export async function loadPublicJobListingById(id: string): Promise<PublicEntity
   if (!isListingId(raw)) return { data: null, unavailable: false };
   return loadPublicEntity<PublicJobListingDetail>(
     `/public/listings/jobs/${encodeURIComponent(raw)}`,
-    pickListing<PublicJobListingDetail>,
+    pickListing<PublicJobListingDetail>
   );
 }
 
@@ -645,13 +643,13 @@ export async function fetchPublicJobListingById(id: string): Promise<PublicJobLi
 }
 
 export async function loadPublicMarketplaceListingById(
-  id: string,
+  id: string
 ): Promise<PublicEntityLoadResult<PublicMarketplaceListingDetail>> {
   const raw = typeof id === 'string' ? id.trim() : '';
   if (!isListingId(raw)) return { data: null, unavailable: false };
   return loadPublicEntity<PublicMarketplaceListingDetail>(
     `/public/listings/marketplace/${encodeURIComponent(raw)}`,
-    pickListing<PublicMarketplaceListingDetail>,
+    pickListing<PublicMarketplaceListingDetail>
   );
 }
 
@@ -660,7 +658,7 @@ export async function fetchPublicMarketplaceListingById(id: string): Promise<Pub
 }
 
 export async function loadPublicBusinessListingById(
-  id: string,
+  id: string
 ): Promise<PublicEntityLoadResult<PublicDirectoryListingDetail>> {
   const raw = typeof id === 'string' ? id.trim() : '';
   if (!isListingId(raw)) return { data: null, unavailable: false };
@@ -669,7 +667,7 @@ export async function loadPublicBusinessListingById(
     pickListing<PublicDirectoryListingDetail>,
     {
       cache: 'no-store',
-    },
+    }
   );
 }
 
@@ -678,7 +676,7 @@ export async function fetchPublicBusinessListingById(id: string): Promise<Public
 }
 
 export async function loadPublicProfessionalListingById(
-  id: string,
+  id: string
 ): Promise<PublicEntityLoadResult<PublicDirectoryListingDetail>> {
   const raw = typeof id === 'string' ? id.trim() : '';
   if (!isListingId(raw)) return { data: null, unavailable: false };
@@ -687,7 +685,7 @@ export async function loadPublicProfessionalListingById(
     pickListing<PublicDirectoryListingDetail>,
     {
       cache: 'no-store',
-    },
+    }
   );
 }
 

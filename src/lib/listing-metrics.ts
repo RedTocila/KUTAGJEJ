@@ -165,66 +165,6 @@ export async function fetchListingSavers(
   }
 }
 
-export async function fetchListingMetricsBatch(
-  refs: { kind: ListingMetricKind; listingId: string }[],
-): Promise<Record<string, ListingMetrics & { saved?: boolean }>> {
-  if (refs.length === 0) return {};
-  try {
-    const items = refs.map((r) => `${r.kind}:${r.listingId}`).join(',');
-    const res = await fetch(getApiUrl(`/listing-metrics/batch?items=${encodeURIComponent(items)}`), {
-      headers: metricHeaders(),
-      cache: 'no-store',
-    });
-    if (!res.ok) return {};
-    const data = (await res.json()) as { metrics?: Record<string, ListingMetrics & { saved?: boolean }> };
-    return data.metrics ?? {};
-  } catch {
-    return {};
-  }
-}
-
-type PendingMetricRequest = {
-  ref: { kind: ListingMetricKind; listingId: string };
-  resolve: (metrics: ListingMetrics | null) => void;
-};
-
-let pendingMetricRequests = new Map<string, PendingMetricRequest[]>();
-let metricFlushScheduled = false;
-
-/**
- * Refresh one listing's volatile counters without using the cached public
- * listing response. Requests made by cards in the same render are coalesced
- * into one batch call.
- */
-export function fetchListingMetrics(
-  kind: ListingMetricKind,
-  listingId: string,
-): Promise<ListingMetrics | null> {
-  return new Promise((resolve) => {
-    const key = listingMetricsKey(kind, listingId);
-    const requests = pendingMetricRequests.get(key) ?? [];
-    requests.push({ ref: { kind, listingId }, resolve });
-    pendingMetricRequests.set(key, requests);
-
-    if (metricFlushScheduled) return;
-    metricFlushScheduled = true;
-
-    queueMicrotask(async () => {
-      const batch = pendingMetricRequests;
-      pendingMetricRequests = new Map();
-      metricFlushScheduled = false;
-
-      const refs = Array.from(batch.values(), (entries) => entries[0]!.ref);
-      const metricsByKey = await fetchListingMetricsBatch(refs);
-
-      for (const [metricKey, entries] of batch) {
-        const metrics = metricsByKey[metricKey] ?? null;
-        for (const entry of entries) entry.resolve(metrics);
-      }
-    });
-  });
-}
-
 /** Opens the native share sheet or copies the URL, then records a share only on success. */
 export async function shareListing(opts: {
   title: string;

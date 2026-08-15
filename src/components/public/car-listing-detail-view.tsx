@@ -1,17 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Box,
-  Button,
-  ButtonBase,
-  Chip,
-  Container,
-  Divider,
-  Paper,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Box, Button, ButtonBase, Chip, Container, Divider, Paper, Stack, Typography } from '@mui/material';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { GasPump as GasPumpIcon } from '@phosphor-icons/react/dist/ssr/GasPump';
@@ -21,6 +11,13 @@ import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
 
+import { paths } from '@/paths';
+import { CAR_COLOUR_OPTIONS, FUEL_TYPE_OPTIONS, TRANSMISSION_OPTIONS, vehicleTypeLabel } from '@/lib/car-constants';
+import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
+import { whatsappInquireHref as buildWhatsappInquireHref, whatsappInquireText } from '@/lib/listing-contact';
+import { LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX, LISTING_DETAIL_HERO_IMAGE_SIZES } from '@/lib/listing-detail-layout';
+import type { PublicCarListing, PublicCarListingDetail } from '@/lib/public-listings-client';
+import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { CarCard } from '@/components/public/listing-cards/car-card';
 import {
   findOptionLabel,
@@ -29,10 +26,10 @@ import {
   postedLabelSq,
 } from '@/components/public/listing-cards/format-helpers';
 import { ListingPrice } from '@/components/public/listing-cards/listing-price';
-import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
-import { ListingMessageButton } from '@/components/public/listing-message-button';
-import { ListingSellerProfileCard } from '@/components/public/listing-seller-profile-card';
 import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
+import { ListingMessageButton } from '@/components/public/listing-message-button';
+import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
+import { ListingSellerProfileCard } from '@/components/public/listing-seller-profile-card';
 import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
@@ -42,21 +39,6 @@ import { StickyListingContact } from '@/components/public/sticky-listing-contact
 import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
 import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
-import { useListingBookmark } from '@/hooks/use-listing-bookmark';
-import {
-  CAR_COLOUR_OPTIONS,
-  FUEL_TYPE_OPTIONS,
-  TRANSMISSION_OPTIONS,
-  vehicleTypeLabel,
-} from '@/lib/car-constants';
-import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
-import {
-  LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
-  LISTING_DETAIL_HERO_IMAGE_SIZES,
-} from '@/lib/listing-detail-layout';
-import { whatsappInquireHref as buildWhatsappInquireHref, whatsappInquireText } from '@/lib/listing-contact';
-import type { PublicCarListing, PublicCarListingDetail } from '@/lib/public-listings-client';
-import { paths } from '@/paths';
 import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 
 const FUEL_SQ: Record<string, string> = {
@@ -127,15 +109,7 @@ function sectionTitle(text: string, id: string, edit?: { label: string; onClick:
   );
 }
 
-function SpecIconBox({
-  Icon,
-  primary,
-  secondary,
-}: {
-  Icon: typeof CalendarIcon;
-  primary: string;
-  secondary: string;
-}) {
+function SpecIconBox({ Icon, primary, secondary }: { Icon: typeof CalendarIcon; primary: string; secondary: string }) {
   return (
     <Stack
       spacing={0.65}
@@ -252,7 +226,16 @@ function CarPriceContactAside(props: {
               '&:hover': { color: 'primary.main' },
             }}
           >
-            <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', flexShrink: 0, lineHeight: 0, pt: 0.35 }}>
+            <Box
+              sx={{
+                color: 'primary.main',
+                opacity: 0.9,
+                display: 'inline-flex',
+                flexShrink: 0,
+                lineHeight: 0,
+                pt: 0.35,
+              }}
+            >
               <MapPinIcon size={17} weight="regular" color="currentColor" aria-hidden />
             </Box>
             <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.45 }}>
@@ -327,13 +310,15 @@ function CarPriceContactAside(props: {
 
 export function CarListingDetailView({
   listing,
-  similar,
+  similar = [],
+  similarSlot,
   canonicalUrl,
   ownerPreview = false,
   ownerEdit,
 }: {
   listing: PublicCarListingDetail;
-  similar: PublicCarListing[];
+  similar?: PublicCarListing[];
+  similarSlot?: React.ReactNode;
   canonicalUrl: string;
   /** Owner edit canvas — hide buyer chrome (contact, similar, metrics). */
   ownerPreview?: boolean;
@@ -349,7 +334,7 @@ export function CarListingDetailView({
         locationAddress: listing.locationAddress,
         cityName: listing.cityName,
       }),
-    [listing.cityName, listing.locationAddress],
+    [listing.cityName, listing.locationAddress]
   );
   const mapLocation = React.useMemo(
     () =>
@@ -359,7 +344,7 @@ export function CarListingDetailView({
         mapsUrl: listing.mapsUrl,
         cityName: listing.cityName,
       }),
-    [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl],
+    [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl]
   );
   const displayPhone = listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
   const viewCount = listing.viewCount ?? 0;
@@ -372,10 +357,7 @@ export function CarListingDetailView({
   const transmission = transmissionLabel(listing.transmission);
   const colour = colourLabel(listing.color);
 
-  const whatsappInquireHref = buildWhatsappInquireHref(
-    displayPhone,
-    whatsappInquireText(listing.title, canonicalUrl),
-  );
+  const whatsappInquireHref = buildWhatsappInquireHref(displayPhone, whatsappInquireText(listing.title, canonicalUrl));
 
   const sharePayload = {
     title: listing.title,
@@ -398,9 +380,7 @@ export function CarListingDetailView({
   };
 
   const detailRows: Array<{ label: string; value: string }> = [
-    ...(listing.vehicleType
-      ? [{ label: 'Kategoria', value: vehicleTypeLabel(listing.vehicleType) }]
-      : []),
+    ...(listing.vehicleType ? [{ label: 'Kategoria', value: vehicleTypeLabel(listing.vehicleType) }] : []),
     { label: 'Markë', value: listing.make },
     { label: 'Model', value: listing.model },
     ...(listing.variant ? [{ label: 'Variant', value: listing.variant }] : []),
@@ -517,7 +497,10 @@ export function CarListingDetailView({
               </Stack>
             </Box>
 
-            <Stack spacing={{ xs: 3, md: 3.5 }} sx={{ px: { xs: 2, sm: 3, md: 0 }, pb: ownerPreview ? 3 : { xs: 14, md: 6 }, width: '100%' }}>
+            <Stack
+              spacing={{ xs: 3, md: 3.5 }}
+              sx={{ px: { xs: 2, sm: 3, md: 0 }, pb: ownerPreview ? 3 : { xs: 14, md: 6 }, width: '100%' }}
+            >
               <Stack spacing={1.75}>
                 <OwnerEditableSpot
                   field="title"
@@ -604,7 +587,10 @@ export function CarListingDetailView({
                           <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
                             <MapPinIcon size={17} weight="regular" color="currentColor" />
                           </Box>
-                          <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.4 }}>
+                          <Typography
+                            variant="body2"
+                            sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.4 }}
+                          >
                             Shtoni lokacionin
                           </Typography>
                         </>
@@ -612,13 +598,23 @@ export function CarListingDetailView({
                     </OwnerEditableSpot>
                   ) : null}
                   <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                    <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
+                    <Stack
+                      direction="row"
+                      spacing={0.55}
+                      sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}
+                    >
                       <CalendarIcon size={17} weight="regular" aria-hidden />
                       <Typography variant="body2">{postedLabelSq(listing.createdAt)}</Typography>
                     </Stack>
-                    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}>
+                    <Stack
+                      direction="row"
+                      spacing={0.5}
+                      sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}
+                    >
                       <EyeIcon size={17} weight="regular" aria-hidden />
-                      <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)} shikime</Typography>
+                      <Typography variant="body2">
+                        {new Intl.NumberFormat('sq-AL').format(viewCount)} shikime
+                      </Typography>
                     </Stack>
                   </Stack>
                   <ListingVerifiedNotice verified={Boolean(listing.seller?.verified)} />
@@ -699,7 +695,8 @@ export function CarListingDetailView({
                     Përshkrimi
                   </Typography>
                 </OwnerEditableSpot>
-                {ownerEdit?.editingField === 'description' && ownerEdit.inlineEditors?.description ? null : listing.description ? (
+                {ownerEdit?.editingField === 'description' &&
+                ownerEdit.inlineEditors?.description ? null : listing.description ? (
                   <RealEstateListingExpandableText text={listing.description} />
                 ) : canInline || onEditSpecs ? (
                   <Typography sx={{ color: 'text.secondary' }}>Shtoni përshkrimin</Typography>
@@ -714,26 +711,22 @@ export function CarListingDetailView({
                     ? {
                         label: 'Ndrysho detajet',
                         onClick: () =>
-                          ownerEdit?.onStartInlineEdit
-                            ? ownerEdit.onStartInlineEdit('specs')
-                            : onEditSpecs?.(),
+                          ownerEdit?.onStartInlineEdit ? ownerEdit.onStartInlineEdit('specs') : onEditSpecs?.(),
                       }
-                    : undefined,
+                    : undefined
                 )}
-                {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs
-                  ? null
-                  : (
-                <Paper
-                  variant="outlined"
-                  sx={{ borderRadius: 2.5, borderColor: 'divider', bgcolor: 'background.paper', px: 2, py: 0.5 }}
-                >
-                  <Stack divider={<Divider flexItem />} spacing={0}>
-                    {detailRows.map((row) => (
-                      <DetailRow key={`${row.label}-${row.value}`} label={row.label} value={row.value} />
-                    ))}
-                  </Stack>
-                </Paper>
-                  )}
+                {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : (
+                  <Paper
+                    variant="outlined"
+                    sx={{ borderRadius: 2.5, borderColor: 'divider', bgcolor: 'background.paper', px: 2, py: 0.5 }}
+                  >
+                    <Stack divider={<Divider flexItem />} spacing={0}>
+                      {detailRows.map((row) => (
+                        <DetailRow key={`${row.label}-${row.value}`} label={row.label} value={row.value} />
+                      ))}
+                    </Stack>
+                  </Paper>
+                )}
               </Stack>
 
               {hasExtras || canInline || onEditSpecs ? (
@@ -745,31 +738,27 @@ export function CarListingDetailView({
                       ? {
                           label: 'Ndrysho ekstrat',
                           onClick: () =>
-                            ownerEdit?.onStartInlineEdit
-                              ? ownerEdit.onStartInlineEdit('specs')
-                              : onEditSpecs?.(),
+                            ownerEdit?.onStartInlineEdit ? ownerEdit.onStartInlineEdit('specs') : onEditSpecs?.(),
                         }
-                      : undefined,
+                      : undefined
                   )}
-                  {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs
-                    ? null
-                    : hasExtras ? (
-                  <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
-                    {listing.finish?.map((f) => (
-                      <Chip
-                        key={f}
-                        size="small"
-                        label={FINISH_SQ[f] ?? String(f)}
-                        sx={{ bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)', fontWeight: 700 }}
-                      />
-                    ))}
-                    {listing.extras?.map((e) => (
-                      <Chip key={e} size="small" label={String(e)} variant="outlined" sx={{ fontWeight: 600 }} />
-                    ))}
-                  </Stack>
-                    ) : (
-                      <Typography sx={{ color: 'text.secondary' }}>Shtoni finish ose ekstra</Typography>
-                    )}
+                  {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : hasExtras ? (
+                    <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
+                      {listing.finish?.map((f) => (
+                        <Chip
+                          key={f}
+                          size="small"
+                          label={FINISH_SQ[f] ?? String(f)}
+                          sx={{ bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)', fontWeight: 700 }}
+                        />
+                      ))}
+                      {listing.extras?.map((e) => (
+                        <Chip key={e} size="small" label={String(e)} variant="outlined" sx={{ fontWeight: 600 }} />
+                      ))}
+                    </Stack>
+                  ) : (
+                    <Typography sx={{ color: 'text.secondary' }}>Shtoni finish ose ekstra</Typography>
+                  )}
                 </Stack>
               ) : null}
 
@@ -783,15 +772,9 @@ export function CarListingDetailView({
                 >
                   {sectionTitle('Vendndodhja', 'car-location-heading')}
                   {mapLocation ? (
-                    <LocationMapEmbed
-                      query={mapLocation.query}
-                      lat={mapLocation.lat}
-                      lng={mapLocation.lng}
-                    />
+                    <LocationMapEmbed query={mapLocation.query} lat={mapLocation.lat} lng={mapLocation.lng} />
                   ) : (
-                    <Typography sx={{ color: 'text.secondary' }}>
-                      Shtoni qytetin ose linkun e Google Maps.
-                    </Typography>
+                    <Typography sx={{ color: 'text.secondary' }}>Shtoni qytetin ose linkun e Google Maps.</Typography>
                   )}
                 </Stack>
               ) : null}
@@ -800,7 +783,9 @@ export function CarListingDetailView({
                 <ListingSellerProfileCard seller={listing.seller} headingId="car-seller-heading-mobile" />
               </Box>
 
-              {!ownerPreview && similar.length ? (
+              {!ownerPreview && similarSlot ? (
+                similarSlot
+              ) : !ownerPreview && similar.length ? (
                 <Stack spacing={1.5} component="aside" aria-labelledby="car-similar-heading">
                   <Divider />
                   {sectionTitle('Automjete të fundit', 'car-similar-heading')}
@@ -824,7 +809,6 @@ export function CarListingDetailView({
           </Stack>
         </Container>
       </Box>
-
     </>
   );
 }

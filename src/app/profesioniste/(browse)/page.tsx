@@ -15,7 +15,7 @@ import { fetchBrowseProfessionals, fetchTopViewedListings } from '@/lib/public-l
 import { fetchPublicCities } from '@/lib/real-estate-locations-server';
 import { paths } from '@/paths';
 
-export const revalidate = 15;
+export const revalidate = 60;
 
 type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

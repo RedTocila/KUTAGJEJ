@@ -1,48 +1,21 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Avatar,
-  Box,
-  ButtonBase,
-  Chip,
-  Container,
-  Divider,
-  Grid,
-  IconButton,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { useRouter } from 'next/navigation';
+import { Avatar, Box, ButtonBase, Chip, Container, Divider, Grid, IconButton, Stack, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
+import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Hammer as HammerIcon } from '@phosphor-icons/react/dist/ssr/Hammer';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { PaintBrush as PaintBrushIcon } from '@phosphor-icons/react/dist/ssr/PaintBrush';
 import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
-import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 
-import { HistoryBackButton } from '@/components/public/product-browse-chrome';
-import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
-import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
-import { ListingMessageButton } from '@/components/public/listing-message-button';
-import { ListingsCarousel } from '@/components/public/listings-carousel';
-import { LocationMapEmbed } from '@/components/public/location-map-embed';
-import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
-import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
-import { listingContactCtaSx } from '@/components/public/sticky-listing-contact';
-import {
-  ProfessionalPortfolioSection,
-  ProfessionalRatingSummary,
-  ProfessionalVerifiedBadge,
-} from '@/components/public/professional-listing-detail-ui';
-import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
-import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
-import {
-  LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
-  LISTING_DETAIL_HERO_IMAGE_SIZES,
-} from '@/lib/listing-detail-layout';
+import { paths } from '@/paths';
 import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
+import { LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX, LISTING_DETAIL_HERO_IMAGE_SIZES } from '@/lib/listing-detail-layout';
+import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import {
   professionalAvatarUrl,
   professionalCoverImageUrls,
@@ -58,8 +31,21 @@ import {
   ProfessionalReviewSection,
   type ProfessionalReviewStats,
 } from '@/components/professionals/professional-review-section';
-import { paths } from '@/paths';
-import { useRouter } from 'next/navigation';
+import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
+import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
+import { ListingMessageButton } from '@/components/public/listing-message-button';
+import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
+import { ListingsCarousel } from '@/components/public/listings-carousel';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
+import { HistoryBackButton } from '@/components/public/product-browse-chrome';
+import {
+  ProfessionalPortfolioSection,
+  ProfessionalRatingSummary,
+  ProfessionalVerifiedBadge,
+} from '@/components/public/professional-listing-detail-ui';
+import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
+import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
+import { listingContactCtaSx } from '@/components/public/sticky-listing-contact';
 import { productPanelSx } from '@/styles/product-sx';
 
 const surfaceSx = {
@@ -72,6 +58,7 @@ const SERVICE_TAG_ICONS = [HammerIcon, PaintBrushIcon, RulerIcon, SparkleIcon, B
 export function ProfessionalListingDetailDesktop({
   listing,
   similar,
+  similarSlot,
   saved,
   saveCount,
   onToggleSave,
@@ -80,6 +67,7 @@ export function ProfessionalListingDetailDesktop({
 }: {
   listing: PublicDirectoryListingDetail;
   similar: PublicDirectoryListing[];
+  similarSlot?: React.ReactNode;
   saved: boolean;
   saveCount: number;
   onToggleSave: () => void;
@@ -95,9 +83,9 @@ export function ProfessionalListingDetailDesktop({
       professionalRatingDisplay(
         liveReviewStats
           ? { ...listing, ratingAverage: liveReviewStats.ratingAverage, reviewCount: liveReviewStats.reviewCount }
-          : listing,
+          : listing
       ),
-    [listing, liveReviewStats],
+    [listing, liveReviewStats]
   );
   const onReviewStatsChange = React.useCallback((stats: ProfessionalReviewStats) => {
     setLiveReviewStats(stats);
@@ -116,7 +104,7 @@ export function ProfessionalListingDetailDesktop({
         zoneName: listing.zoneName,
         cityName: listing.cityName,
       }),
-    [listing.cityName, listing.locationAddress, listing.zoneName],
+    [listing.cityName, listing.locationAddress, listing.zoneName]
   );
   const mapLocation = React.useMemo(
     () =>
@@ -135,7 +123,7 @@ export function ProfessionalListingDetailDesktop({
       listing.mapsPlaceQuery,
       listing.mapsUrl,
       listing.zoneName,
-    ],
+    ]
   );
   const isVerified = Boolean(listing.seller?.verified);
 
@@ -145,8 +133,8 @@ export function ProfessionalListingDetailDesktop({
     <Box component="article" sx={{ bgcolor: 'background.default', pb: 6, display: { xs: 'none', md: 'block' } }}>
       <Container maxWidth="lg" sx={{ px: { md: 3 }, pt: 2, pb: 2 }}>
         <Stack spacing={4}>
-            <Box
-              sx={(theme) => ({
+          <Box
+            sx={(theme) => ({
               width: '100%',
               borderRadius: 2.5,
               overflow: 'hidden',
@@ -156,7 +144,7 @@ export function ProfessionalListingDetailDesktop({
                   ? `0 20px 50px ${alpha(theme.palette.common.black, 0.35)}`
                   : '0 12px 40px rgba(0, 0, 0, 0.08)',
             })}
-            >
+          >
             <Stack direction="row" sx={{ alignItems: 'stretch', minHeight: 0, width: '100%' }}>
               <Box
                 sx={{
@@ -196,7 +184,11 @@ export function ProfessionalListingDetailDesktop({
                 }}
               >
                 <Stack spacing={2.25} sx={{ width: '100%' }}>
-                  <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}
+                  >
                     <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start', minWidth: 0, flex: 1 }}>
                       <Avatar
                         src={avatarUrl ?? undefined}
@@ -212,7 +204,11 @@ export function ProfessionalListingDetailDesktop({
                         {initials}
                       </Avatar>
                       <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
-                        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, maxWidth: '100%' }}>
+                        <Stack
+                          direction="row"
+                          spacing={0.75}
+                          sx={{ alignItems: 'center', minWidth: 0, maxWidth: '100%' }}
+                        >
                           <Typography
                             component="h1"
                             sx={{
@@ -414,7 +410,9 @@ export function ProfessionalListingDetailDesktop({
             </Grid>
           </Grid>
 
-          {similar.length > 0 ? (
+          {similarSlot ? (
+            similarSlot
+          ) : similar.length > 0 ? (
             <Stack spacing={1.5}>
               <Typography sx={{ fontWeight: 800, fontSize: '1.05rem' }}>Profesionistë të ngjashëm</Typography>
               <ListingsCarousel slotWidth={{ md: 320 }}>
@@ -426,9 +424,7 @@ export function ProfessionalListingDetailDesktop({
           ) : null}
 
           <Box sx={{ textAlign: 'center' }}>
-            <HistoryBackButton href={paths.public.professionals}>
-              Kthehu te lista e profesionistëve
-            </HistoryBackButton>
+            <HistoryBackButton href={paths.public.professionals}>Kthehu te lista e profesionistëve</HistoryBackButton>
           </Box>
         </Stack>
       </Container>

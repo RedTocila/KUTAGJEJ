@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Box, Skeleton, Stack } from '@mui/material';
 
+import { getHomepageListingsCacheSnapshot, sliceHomepageVertical } from '@/lib/homepage-session-cache';
 import {
   fetchLatestVertical,
   type HomepageLatestVerticalId,
@@ -137,14 +138,20 @@ export function LazyHomeSection({
         }
         return;
       }
+      const session = getHomepageListingsCacheSnapshot();
+      const sessionSlice = session ? sliceHomepageVertical(session, verticalId, limit) : null;
+      if (sessionSlice && sessionSlice.listings.length > 0 && !cancelled) {
+        setListings(sessionSlice.listings as HomeListing[]);
+        setTotal(sessionSlice.total);
+      }
       const res = await fetchLatestVertical<HomeListing>(verticalId, limit);
       if (cancelled) return;
       // Only cache successful responses — failed empties must not stick forever.
       if (res.ok) {
         sectionCache.set(key, { listings: res.listings, total: res.total });
+        setListings(res.listings);
+        setTotal(res.total);
       }
-      setListings(res.listings);
-      setTotal(res.total);
       setLoaded(true);
     })();
     return () => {
@@ -160,7 +167,7 @@ export function LazyHomeSection({
         isEmpty={loaded && listings.length === 0}
         useMuiVerticalIcon
       >
-        {!loaded ? (
+        {!loaded && listings.length === 0 ? (
           <CarouselSkeleton />
         ) : (
           <ListingsCarousel>{listings.map((listing) => renderListingCard(verticalId, listing))}</ListingsCarousel>

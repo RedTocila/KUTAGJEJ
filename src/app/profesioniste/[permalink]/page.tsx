@@ -2,14 +2,15 @@ import * as React from 'react';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
+import { config } from '@/config';
+import { paths, pathsPublicVerticalListingDetail } from '@/paths';
+import { loadPublicProfessionalListingById } from '@/lib/public-listings-client';
+import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
+import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
+import { ProfessionalListingDetailView } from '@/components/public/professional-listing-detail-view';
 import { PublicLoadErrorView } from '@/components/public/public-load-error-view';
 import { PublicShell } from '@/components/public/public-shell';
-import { ProfessionalListingDetailView } from '@/components/public/professional-listing-detail-view';
-import { config } from '@/config';
-import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
-import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
-import { fetchLatestProfessionals, loadPublicProfessionalListingById } from '@/lib/public-listings-client';
-import { paths, pathsPublicVerticalListingDetail } from '@/paths';
+import { similarListingsSlot } from '@/components/public/similar-listings-section';
 
 export const revalidate = 0;
 
@@ -57,10 +58,7 @@ export default async function ProfessionalListingPage({ params }: PageProps): Pr
   const id = mongoIdFromPublicListingSegment(permalink);
   if (!id) notFound();
 
-  const [loaded, pool] = await Promise.all([
-    loadPublicProfessionalListingById(id),
-    fetchLatestProfessionals(28),
-  ]);
+  const loaded = await loadPublicProfessionalListingById(id);
   if (loaded.unavailable) {
     return (
       <PublicShell hideHeaderBelowMd>
@@ -84,14 +82,13 @@ export default async function ProfessionalListingPage({ params }: PageProps): Pr
     ? pathsPublicVerticalListingDetail(paths.public.professionals, canonRaw)
     : pathsPublicVerticalListingDetail(paths.public.professionals, listing.id);
   const canonicalUrl = `${config.site.url.replace(/\/$/, '')}${pathHref}`;
-  const similar = pool.filter((l) => l.id !== listing.id).slice(0, 10);
-
   return (
     <PublicShell hideHeaderBelowMd>
       <ProfessionalListingDetailView
         listing={listing}
         canonicalUrl={canonicalUrl}
-        similar={similar}
+        similarSlot={similarListingsSlot('professionals', listing.id, 'Profesionistë të ngjashëm')}
+        similarSlotDesktop={similarListingsSlot('professionals', listing.id, 'Profesionistë të ngjashëm')}
       />
     </PublicShell>
   );

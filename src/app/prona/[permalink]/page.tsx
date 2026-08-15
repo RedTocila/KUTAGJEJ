@@ -2,20 +2,15 @@ import * as React from 'react';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
+import { config } from '@/config';
+import { pathsPublicRealEstateListingDetail } from '@/paths';
+import { loadPublicRealEstateListingById } from '@/lib/public-listings-client';
+import { buildRealEstateListingMetadata, realEstateListingJsonLd } from '@/lib/real-estate-listing-seo';
+import { mongoIdFromPronaDynamicSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { PublicLoadErrorView } from '@/components/public/public-load-error-view';
 import { PublicShell } from '@/components/public/public-shell';
 import { RealEstateListingDetailView } from '@/components/public/real-estate-listing-detail-view';
-import { config } from '@/config';
-import { mongoIdFromPronaDynamicSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
-import {
-  buildRealEstateListingMetadata,
-  realEstateListingJsonLd,
-} from '@/lib/real-estate-listing-seo';
-import {
-  fetchLatestRealEstate,
-  loadPublicRealEstateListingById,
-} from '@/lib/public-listings-client';
-import { pathsPublicRealEstateListingDetail } from '@/paths';
+import { similarListingsSlot } from '@/components/public/similar-listings-section';
 
 export const revalidate = 60;
 
@@ -58,10 +53,7 @@ export default async function RealEstateListingPage({ params }: PageProps): Prom
   const id = mongoIdFromPronaDynamicSegment(permalink);
   if (!id) notFound();
 
-  const [loaded, similarPool] = await Promise.all([
-    loadPublicRealEstateListingById(id),
-    fetchLatestRealEstate(28),
-  ]);
+  const loaded = await loadPublicRealEstateListingById(id);
 
   if (loaded.unavailable) {
     return (
@@ -85,24 +77,20 @@ export default async function RealEstateListingPage({ params }: PageProps): Prom
     }
   }
 
-  const similar = similarPool.filter((l) => l.id !== listing.id).slice(0, 10);
-
-  const pathHref = canonRaw
-    ? pathsPublicRealEstateListingDetail(canonRaw)
-    : `/prona/${encodeURIComponent(listing.id)}`;
+  const pathHref = canonRaw ? pathsPublicRealEstateListingDetail(canonRaw) : `/prona/${encodeURIComponent(listing.id)}`;
   const canonicalUrl = `${config.site.url.replace(/\/$/, '')}${pathHref}`;
   const jsonLd = realEstateListingJsonLd(listing, canonicalUrl);
   const jsonLdHtml = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        suppressHydrationWarning
-        dangerouslySetInnerHTML={{ __html: jsonLdHtml }}
-      />
+      <script type="application/ld+json" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: jsonLdHtml }} />
       <PublicShell hideHeaderBelowMd>
-        <RealEstateListingDetailView listing={listing} similar={similar} canonicalUrl={canonicalUrl} />
+        <RealEstateListingDetailView
+          listing={listing}
+          canonicalUrl={canonicalUrl}
+          similarSlot={similarListingsSlot('real-estate', listing.id, 'Prona të ngjashme')}
+        />
       </PublicShell>
     </>
   );

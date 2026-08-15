@@ -65,6 +65,7 @@ const metaIcons = [LocationOnOutlined, WorkOutlineOutlined, ScheduleOutlined] as
 export function JobListingDetailDesktop({
   listing,
   similar,
+  similarSlot,
   saved,
   saveCount,
   shareCount,
@@ -75,6 +76,7 @@ export function JobListingDetailDesktop({
 }: {
   listing: PublicJobListingDetail;
   similar: PublicJobListing[];
+  similarSlot?: React.ReactNode;
   saved: boolean;
   saveCount: number;
   shareCount: number;
@@ -683,7 +685,9 @@ export function JobListingDetailDesktop({
                   </Box>
                 ) : null}
 
-                {similar.length > 0 ? (
+                {similarSlot ? (
+                  similarSlot
+                ) : similar.length > 0 ? (
                   <Stack spacing={2} component="aside" aria-labelledby="job-similar-heading-desktop">
                     <Typography id="job-similar-heading-desktop" sx={{ fontWeight: 800, fontSize: '1.05rem' }}>
                       Punë të ngjashme

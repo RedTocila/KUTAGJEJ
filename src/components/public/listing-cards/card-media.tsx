@@ -12,7 +12,7 @@ import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr
 import { paths } from '@/paths';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
-import { fetchListingMetrics, toggleListingSave, type ListingMetricKind } from '@/lib/listing-metrics';
+import { toggleListingSave, type ListingMetricKind } from '@/lib/listing-metrics';
 import type { ListingSharePayload } from '@/lib/listing-share';
 import { listingCardImageUrl, storageImageOriginalUrl } from '@/lib/storage-image';
 import { useSavedListingsOptional } from '@/contexts/saved-listings-context';
@@ -105,19 +105,6 @@ export function CardMedia({
   }, [initialShareCount, initialSaveCount, listingId]);
 
   const showImage = Boolean(displaySrc) && !imageFailed;
-
-  // Paint embedded counts immediately; refresh in the background without blanking badges.
-  React.useEffect(() => {
-    let cancelled = false;
-    void fetchListingMetrics(listingKind, listingId).then((metrics) => {
-      if (cancelled || !metrics) return;
-      setShareCount(metrics.shareCount);
-      setSaveCount(metrics.saveCount);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [listingId, listingKind]);
 
   const resolvedSharePayload = React.useMemo<ListingSharePayload>(
     () => ({

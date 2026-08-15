@@ -7,10 +7,11 @@ import { homepageStaticJsonLd } from '@/lib/homepage-json-ld';
 import { HeroSection } from '@/components/public/hero-section';
 import { HomepageBanners } from '@/components/public/homepage-banners';
 import { HomepageFeed } from '@/components/public/homepage-feed';
-import { HomeBannerSkeleton, HomeCarouselsSkeleton } from '@/components/public/homepage-skeletons';
+import { HomeCarouselsFallback } from '@/components/public/home-carousels-fallback';
+import { HomeBannerSkeleton } from '@/components/public/homepage-skeletons';
 import { PublicShell } from '@/components/public/public-shell';
 
-export const revalidate = 15;
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: `${config.site.name} — Njoftime falas: prona, makina, punë dhe tregu në Shqipëri`,
@@ -73,7 +74,7 @@ export default function HomePage() {
         </React.Suspense>
       </HeroSection>
 
-      <React.Suspense fallback={<HomeCarouselsSkeleton />}>
+      <React.Suspense fallback={<HomeCarouselsFallback />}>
         <HomepageFeed />
       </React.Suspense>
     </PublicShell>

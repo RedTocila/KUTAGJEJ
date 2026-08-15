@@ -1,14 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Avatar,
-  Box,
-  ButtonBase,
-  Stack,
-  Typography,
-} from '@mui/material';
-
+import { useRouter } from 'next/navigation';
+import { Avatar, Box, ButtonBase, Stack, Typography } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Hammer as HammerIcon } from '@phosphor-icons/react/dist/ssr/Hammer';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
@@ -16,24 +10,10 @@ import { PaintBrush as PaintBrushIcon } from '@phosphor-icons/react/dist/ssr/Pai
 import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 
-import { HistoryBackButton } from '@/components/public/product-browse-chrome';
-import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
-import { ListingsCarousel } from '@/components/public/listings-carousel';
-import { LocationMapEmbed } from '@/components/public/location-map-embed';
-import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
-import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
-import { StickyListingContact } from '@/components/public/sticky-listing-contact';
-import { ProfessionalListingDetailDesktop } from '@/components/public/professional-listing-detail-desktop';
-import {
-  ProfessionalPortfolioSection,
-  ProfessionalRatingSummary,
-  ProfessionalVerifiedBadge,
-} from '@/components/public/professional-listing-detail-ui';
-import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
-import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
-import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
-import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
+import { paths } from '@/paths';
 import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
+import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
+import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import {
   professionalAvatarUrl,
@@ -46,18 +26,30 @@ import {
   professionalSubtitle,
 } from '@/lib/professional-listing-detail-content';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
+import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import {
   ProfessionalReviewSection,
   type ProfessionalReviewStats,
 } from '@/components/professionals/professional-review-section';
-import { paths } from '@/paths';
-import { useRouter } from 'next/navigation';
+import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
+import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
-import { useListingBookmark } from '@/hooks/use-listing-bookmark';
+import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
+import { ListingsCarousel } from '@/components/public/listings-carousel';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
+import { HistoryBackButton, ProductTag } from '@/components/public/product-browse-chrome';
+import { ProfessionalListingDetailDesktop } from '@/components/public/professional-listing-detail-desktop';
+import {
+  ProfessionalPortfolioSection,
+  ProfessionalRatingSummary,
+  ProfessionalVerifiedBadge,
+} from '@/components/public/professional-listing-detail-ui';
+import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
+import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
+import { StickyListingContact } from '@/components/public/sticky-listing-contact';
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
 import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
 import { productPanelSx } from '@/styles/product-sx';
-import { ProductTag } from '@/components/public/product-browse-chrome';
 
 const FONT_BODY = '0.875rem';
 const FONT_CAPTION = '0.75rem';
@@ -74,12 +66,16 @@ export function ProfessionalListingDetailView({
   listing,
   canonicalUrl,
   similar = [],
+  similarSlot,
+  similarSlotDesktop,
   ownerPreview = false,
   ownerEdit,
 }: {
   listing: PublicDirectoryListingDetail;
   canonicalUrl: string;
   similar?: PublicDirectoryListing[];
+  similarSlot?: React.ReactNode;
+  similarSlotDesktop?: React.ReactNode;
   /** Owner edit canvas — hide buyer chrome (contact, similar, metrics). */
   ownerPreview?: boolean;
   ownerEdit?: OwnerEditHandlers;
@@ -97,9 +93,9 @@ export function ProfessionalListingDetailView({
       professionalRatingDisplay(
         liveReviewStats
           ? { ...listing, ratingAverage: liveReviewStats.ratingAverage, reviewCount: liveReviewStats.reviewCount }
-          : listing,
+          : listing
       ),
-    [listing, liveReviewStats],
+    [listing, liveReviewStats]
   );
   const onReviewStatsChange = React.useCallback((stats: ProfessionalReviewStats) => {
     setLiveReviewStats(stats);
@@ -124,7 +120,7 @@ export function ProfessionalListingDetailView({
         zoneName: listing.zoneName,
         cityName: listing.cityName,
       }),
-    [listing.cityName, listing.locationAddress, listing.zoneName],
+    [listing.cityName, listing.locationAddress, listing.zoneName]
   );
   const mapLocation = React.useMemo(
     () =>
@@ -143,7 +139,7 @@ export function ProfessionalListingDetailView({
       listing.mapsPlaceQuery,
       listing.mapsUrl,
       listing.zoneName,
-    ],
+    ]
   );
   const isVerified = Boolean(listing.seller?.verified);
 
@@ -161,7 +157,8 @@ export function ProfessionalListingDetailView({
       )}
       <ProfessionalListingDetailDesktop
         listing={listing}
-        similar={ownerPreview ? [] : similar}
+        similar={ownerPreview || similarSlotDesktop ? [] : similar}
+        similarSlot={ownerPreview ? undefined : similarSlotDesktop}
         saved={saved}
         saveCount={saveCount}
         onToggleSave={() => void toggleSave()}
@@ -237,11 +234,7 @@ export function ProfessionalListingDetailView({
                   ) : null}
                 </Box>
                 <Box sx={{ flexShrink: 0, pb: 0.35, pr: 0.25 }}>
-                  <ProfessionalRatingSummary
-                    rating={rating.rating}
-                    reviewCount={rating.reviews}
-                    starSize={14}
-                  />
+                  <ProfessionalRatingSummary rating={rating.rating} reviewCount={rating.reviews} starSize={14} />
                 </Box>
               </Stack>
 
@@ -293,7 +286,9 @@ export function ProfessionalListingDetailView({
                   label="Ndrysho kategorinë"
                   legacyOnClick={ownerEdit?.onEditInfo}
                 >
-                  <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', lineHeight: 1.35, textAlign: 'left' }}>
+                  <Typography
+                    sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', lineHeight: 1.35, textAlign: 'left' }}
+                  >
                     {subtitle}
                   </Typography>
                 </OwnerEditableSpot>
@@ -377,7 +372,8 @@ export function ProfessionalListingDetailView({
                 >
                   <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Rreth profesionistit</Typography>
                 </OwnerEditableSpot>
-                {ownerEdit?.editingField === 'description' && ownerEdit.inlineEditors?.description ? null : listing.description ? (
+                {ownerEdit?.editingField === 'description' &&
+                ownerEdit.inlineEditors?.description ? null : listing.description ? (
                   <RealEstateListingExpandableText
                     text={listing.description}
                     fontSize={FONT_BODY}
@@ -412,12 +408,12 @@ export function ProfessionalListingDetailView({
                     <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Shërbimet e mia</Typography>
                   </OwnerEditableSpot>
                   {ownerEdit?.editingField === 'services' && ownerEdit.inlineEditors?.services ? null : (
-                  <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
-                    {serviceTags.map((tag, index) => {
-                      const TagIcon = SERVICE_TAG_ICONS[index % SERVICE_TAG_ICONS.length]!;
-                      return <ProductTag key={tag} label={tag} icon={TagIcon} />;
-                    })}
-                  </Stack>
+                    <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
+                      {serviceTags.map((tag, index) => {
+                        const TagIcon = SERVICE_TAG_ICONS[index % SERVICE_TAG_ICONS.length]!;
+                        return <ProductTag key={tag} label={tag} icon={TagIcon} />;
+                      })}
+                    </Stack>
                   )}
                 </Stack>
               </Box>
@@ -455,12 +451,14 @@ export function ProfessionalListingDetailView({
                 aria-labelledby="professional-location-heading"
               >
                 {ownerEdit?.editingField === 'location' && ownerEdit.inlineEditors?.location ? (
-                  <Box sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
-                    {ownerEdit.inlineEditors.location}
-                  </Box>
+                  <Box sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>{ownerEdit.inlineEditors.location}</Box>
                 ) : (
                   <Stack spacing={1.25}>
-                    <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Stack
+                      direction="row"
+                      spacing={0.75}
+                      sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+                    >
                       <Typography id="professional-location-heading" sx={{ fontWeight: 800, fontSize: FONT_BODY }}>
                         Vendndodhja
                       </Typography>
@@ -472,11 +470,7 @@ export function ProfessionalListingDetailView({
                       ) : null}
                     </Stack>
                     {mapLocation ? (
-                      <LocationMapEmbed
-                        query={mapLocation.query}
-                        lat={mapLocation.lat}
-                        lng={mapLocation.lng}
-                      />
+                      <LocationMapEmbed query={mapLocation.query} lat={mapLocation.lat} lng={mapLocation.lng} />
                     ) : (
                       <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary' }}>
                         Shtoni qytetin ose linkun e Google Maps.
@@ -497,7 +491,9 @@ export function ProfessionalListingDetailView({
               />
             )}
 
-            {!ownerPreview && similar.length > 0 ? (
+            {!ownerPreview && similarSlot ? (
+              similarSlot
+            ) : !ownerPreview && similar.length > 0 ? (
               <Stack spacing={1.5} sx={{ pt: 0.5 }}>
                 <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Profesionistë të ngjashëm</Typography>
                 <Box sx={{ mx: -2, '& > div > div': { py: '8px 0 0 !important' } }}>

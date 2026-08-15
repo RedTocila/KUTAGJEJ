@@ -80,8 +80,8 @@ async function loadApprovedById(table, id, extraEq = {}) {
   return data ? camelizeRow(data) : null;
 }
 
-// Short CDN TTL so new announcements / review stats show quickly on browse/home.
-router.use(publicCache(15));
+// ~1 min CDN TTL — new ads show quickly without refetching every homepage paint.
+router.use(publicCache(60));
 
 /** GET /api/public/listings/top-viewed?vertical=cars&limit=10 — most-viewed (or highest-rated for businesses/professionals). */
 router.get('/top-viewed', optionalAuth, async (req, res) => {

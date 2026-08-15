@@ -1,7 +1,7 @@
 import { getApiUrl } from '@/lib/api-config';
 
 const DEFAULT_TIMEOUT_MS = 8000;
-const DETAIL_TIMEOUT_MS = 12_000;
+const DETAIL_TIMEOUT_MS = 8_000;
 
 export type SafeJsonResult<T> =
   | { ok: true; data: T; status: number }
@@ -13,7 +13,7 @@ export type SafeJsonResult<T> =
  */
 export async function safeServerJsonResult<T>(
   path: string,
-  init?: RequestInit & { timeoutMs?: number },
+  init?: RequestInit & { timeoutMs?: number }
 ): Promise<SafeJsonResult<T>> {
   const timeoutMs = init?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const restInit: RequestInit = { ...(init ?? {}) };
@@ -23,7 +23,7 @@ export async function safeServerJsonResult<T>(
   try {
     const skipCache = restInit.cache === 'no-store';
     const res = await fetch(getApiUrl(path), {
-      ...(skipCache ? {} : { next: { revalidate: 15 } }),
+      ...(skipCache ? {} : { next: { revalidate: 60 } }),
       ...restInit,
       signal: controller?.signal ?? restInit.signal,
     });
@@ -52,13 +52,13 @@ export type PublicEntityLoadResult<T> = {
 };
 
 /**
- * Load a public detail entity. Retries once on transient failures (cold starts).
- * Only reports `unavailable` for non-404 failures.
+ * Load a public detail entity.
+ * Retries once on HTTP 5xx (cold start). Timeouts are not retried.
  */
 export async function loadPublicEntity<T>(
   path: string,
   pick: (payload: unknown) => T | null,
-  init?: RequestInit & { timeoutMs?: number },
+  init?: RequestInit & { timeoutMs?: number }
 ): Promise<PublicEntityLoadResult<T>> {
   const run = () =>
     safeServerJsonResult<unknown>(path, {
@@ -67,7 +67,8 @@ export async function loadPublicEntity<T>(
     });
 
   let result = await run();
-  if (!result.ok && result.status !== 404) {
+  // Retry only transient HTTP 5xx (cold start). Timeouts already waited `timeoutMs`.
+  if (!result.ok && result.status != null && result.status >= 500) {
     result = await run();
   }
 

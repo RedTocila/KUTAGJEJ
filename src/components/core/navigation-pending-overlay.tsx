@@ -16,7 +16,8 @@ import { isPublicBrowsePath, isPublicListingDetailPath } from '@/lib/public-brow
 import { useNavigationPendingPath } from '@/hooks/use-navigation-pending';
 import { CategoryBrowseSkeleton } from '@/components/public/category-browse-skeleton';
 import { HeroSection } from '@/components/public/hero-section';
-import { HomeBannerSkeleton, HomeCarouselsSkeleton } from '@/components/public/homepage-skeletons';
+import { HomeCarouselsFallback } from '@/components/public/home-carousels-fallback';
+import { HomeBannerSkeleton } from '@/components/public/homepage-skeletons';
 import { ListingDetailSkeleton } from '@/components/public/listing-detail-skeleton';
 
 const PENDING_TIMEOUT_MS = 10_000;
@@ -40,7 +41,7 @@ function HomePendingSkeleton() {
       <HeroSection>
         <HomeBannerSkeleton />
       </HeroSection>
-      <HomeCarouselsSkeleton />
+      <HomeCarouselsFallback />
     </>
   );
 }

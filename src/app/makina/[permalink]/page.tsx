@@ -2,14 +2,15 @@ import * as React from 'react';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
+import { config } from '@/config';
+import { paths, pathsPublicVerticalListingDetail } from '@/paths';
+import { loadPublicCarListingById } from '@/lib/public-listings-client';
+import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
+import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { CarListingDetailView } from '@/components/public/car-listing-detail-view';
 import { PublicLoadErrorView } from '@/components/public/public-load-error-view';
 import { PublicShell } from '@/components/public/public-shell';
-import { config } from '@/config';
-import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
-import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
-import { fetchLatestCars, loadPublicCarListingById } from '@/lib/public-listings-client';
-import { paths, pathsPublicVerticalListingDetail } from '@/paths';
+import { similarListingsSlot } from '@/components/public/similar-listings-section';
 
 export const revalidate = 60;
 
@@ -57,7 +58,7 @@ export default async function CarListingPage({ params }: PageProps): Promise<Rea
   const id = mongoIdFromPublicListingSegment(permalink);
   if (!id) notFound();
 
-  const [loaded, pool] = await Promise.all([loadPublicCarListingById(id), fetchLatestCars(28)]);
+  const loaded = await loadPublicCarListingById(id);
   if (loaded.unavailable) {
     return (
       <PublicShell hideHeaderBelowMd>
@@ -81,11 +82,14 @@ export default async function CarListingPage({ params }: PageProps): Promise<Rea
     ? pathsPublicVerticalListingDetail(paths.public.cars, canonRaw)
     : pathsPublicVerticalListingDetail(paths.public.cars, listing.id);
   const canonicalUrl = `${config.site.url.replace(/\/$/, '')}${pathHref}`;
-  const similar = pool.filter((l) => l.id !== listing.id).slice(0, 10);
 
   return (
     <PublicShell hideHeaderBelowMd>
-      <CarListingDetailView listing={listing} similar={similar} canonicalUrl={canonicalUrl} />
+      <CarListingDetailView
+        listing={listing}
+        canonicalUrl={canonicalUrl}
+        similarSlot={similarListingsSlot('cars', listing.id, 'Automjete të fundit')}
+      />
     </PublicShell>
   );
 }

@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Box, Skeleton, Stack } from '@mui/material';
 
+import { getHomepageListingsCacheSnapshot } from '@/lib/homepage-session-cache';
 import { fetchBrowseOkazion, type PublicOkazionListing } from '@/lib/public-listings-client';
 import { CarCard } from '@/components/public/listing-cards/car-card';
 import { JobCard } from '@/components/public/listing-cards/job-card';
@@ -60,10 +61,17 @@ export function HomepageOkazionSection({
     if (!needsRecovery) return;
     let cancelled = false;
     void (async () => {
+      const cached = getHomepageListingsCacheSnapshot();
+      if (cached?.okazion.length && !cancelled) {
+        setListings(cached.okazion);
+        setTotal(cached.okazionTotal);
+      }
       const res = await fetchBrowseOkazion(8);
       if (cancelled) return;
-      setListings(res.listings);
-      setTotal(res.total);
+      if (res.ok) {
+        setListings(res.listings);
+        setTotal(res.total);
+      }
       setLoading(false);
     })();
     return () => {
@@ -80,7 +88,7 @@ export function HomepageOkazionSection({
       useMuiVerticalIcon
       hideSubcategoryPills
     >
-      {loading ? (
+      {loading && listings.length === 0 ? (
         <CarouselSkeleton />
       ) : (
         <ListingsCarousel>

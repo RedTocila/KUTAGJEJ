@@ -2,14 +2,15 @@ import * as React from 'react';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
+import { config } from '@/config';
+import { paths, pathsPublicVerticalListingDetail } from '@/paths';
+import { loadPublicMarketplaceListingById } from '@/lib/public-listings-client';
+import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
+import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { PublicLoadErrorView } from '@/components/public/public-load-error-view';
 import { PublicShell } from '@/components/public/public-shell';
+import { similarListingsSlot } from '@/components/public/similar-listings-section';
 import { VerticalListingDetailView } from '@/components/public/vertical-listing-detail-view';
-import { config } from '@/config';
-import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
-import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
-import { fetchLatestMarketplace, loadPublicMarketplaceListingById } from '@/lib/public-listings-client';
-import { paths, pathsPublicVerticalListingDetail } from '@/paths';
 
 export const revalidate = 60;
 
@@ -57,10 +58,7 @@ export default async function MarketplaceListingPage({ params }: PageProps): Pro
   const id = mongoIdFromPublicListingSegment(permalink);
   if (!id) notFound();
 
-  const [loaded, pool] = await Promise.all([
-    loadPublicMarketplaceListingById(id),
-    fetchLatestMarketplace(28),
-  ]);
+  const loaded = await loadPublicMarketplaceListingById(id);
   if (loaded.unavailable) {
     return (
       <PublicShell hideHeaderBelowMd>
@@ -84,7 +82,6 @@ export default async function MarketplaceListingPage({ params }: PageProps): Pro
     ? pathsPublicVerticalListingDetail(paths.public.marketplace, canonRaw)
     : pathsPublicVerticalListingDetail(paths.public.marketplace, listing.id);
   const canonicalUrl = `${config.site.url.replace(/\/$/, '')}${pathHref}`;
-  const similar = pool.filter((l) => l.id !== listing.id).slice(0, 10);
 
   return (
     <PublicShell hideHeaderBelowMd>
@@ -93,7 +90,7 @@ export default async function MarketplaceListingPage({ params }: PageProps): Pro
         canonicalUrl={canonicalUrl}
         browseHref={paths.public.marketplace}
         similarSectionTitle="Artikuj të ngjashëm në treg"
-        similar={similar}
+        similarSlot={similarListingsSlot('marketplace', listing.id, 'Artikuj të ngjashëm në treg')}
       />
     </PublicShell>
   );

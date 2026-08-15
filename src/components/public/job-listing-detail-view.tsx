@@ -1,36 +1,22 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Avatar,
-  Box,
-  ButtonBase,
-  Chip,
-  Stack,
-  Typography,
-} from '@mui/material';
 import GroupsOutlined from '@mui/icons-material/GroupsOutlined';
+import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
 import PaymentsOutlined from '@mui/icons-material/PaymentsOutlined';
 import ScheduleOutlined from '@mui/icons-material/ScheduleOutlined';
 import SchoolOutlined from '@mui/icons-material/SchoolOutlined';
 import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import TrendingUpOutlined from '@mui/icons-material/TrendingUpOutlined';
 import WorkOutlineOutlined from '@mui/icons-material/WorkOutlineOutlined';
-import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
-import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
+import { Avatar, Box, ButtonBase, Chip, Stack, Typography } from '@mui/material';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
+import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 
-import { HistoryBackButton } from '@/components/public/product-browse-chrome';
-import { JobCard } from '@/components/public/listing-cards/job-card';
-import { ListingsCarousel } from '@/components/public/listings-carousel';
-import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
-import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
-import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
-import { StickyListingContact } from '@/components/public/sticky-listing-contact';
-import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
-import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
-import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
+import { paths } from '@/paths';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
+import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
 import {
   buildJobDetailSections,
   isJobListingNew,
@@ -40,23 +26,30 @@ import {
   jobDetailMetaRows,
   type JobDetailBenefit,
 } from '@/lib/job-listing-detail-content';
-import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
-import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
-import { JobListingDetailDesktop } from '@/components/public/job-listing-detail-desktop';
-import { JobVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
-import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
-import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
+import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
-import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
-import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
-import { LocationMapEmbed } from '@/components/public/location-map-embed';
-import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
-import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
-import { useListingBookmark } from '@/hooks/use-listing-bookmark';
+import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import type { ListingSharePayload } from '@/lib/listing-share';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { paths } from '@/paths';
+import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
+import { useListingBookmark } from '@/hooks/use-listing-bookmark';
+import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
+import { JobListingDetailDesktop } from '@/components/public/job-listing-detail-desktop';
+import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
+import { JobCard } from '@/components/public/listing-cards/job-card';
+import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
+import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
+import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
+import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
+import { ListingsCarousel } from '@/components/public/listings-carousel';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
+import { HistoryBackButton } from '@/components/public/product-browse-chrome';
+import { JobVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
+import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
+import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
+import { StickyListingContact } from '@/components/public/sticky-listing-contact';
+import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
+import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
 
 /** 14px body — standard readable size on mobile. */
 const FONT_BODY = '0.875rem';
@@ -79,13 +72,7 @@ function benefitIcon(id: JobDetailBenefit['id']) {
   }
 }
 
-function SoftSectionLabel({
-  title,
-  edit,
-}: {
-  title: string;
-  edit?: { label: string; onClick: () => void };
-}) {
+function SoftSectionLabel({ title, edit }: { title: string; edit?: { label: string; onClick: () => void } }) {
   return (
     <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', mb: 1.25 }}>
       <Typography
@@ -110,12 +97,16 @@ export function JobListingDetailView({
   listing,
   canonicalUrl,
   similar = [],
+  similarSlot,
+  similarSlotDesktop,
   ownerPreview = false,
   ownerEdit,
 }: {
   listing: PublicJobListingDetail;
   canonicalUrl: string;
   similar?: PublicJobListing[];
+  similarSlot?: React.ReactNode;
+  similarSlotDesktop?: React.ReactNode;
   /** Owner edit canvas — hide buyer chrome (contact, similar, metrics). */
   ownerPreview?: boolean;
   ownerEdit?: OwnerEditHandlers;
@@ -136,7 +127,7 @@ export function JobListingDetailView({
 
   const expiresAt = listing.isOkazion
     ? listing.okazionUntil || listing.expiresAt || getJobListingExpiresAt(listing.createdAt).toISOString()
-    : listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
+    : (listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString());
   const sections = React.useMemo(() => buildJobDetailSections(listing), [listing]);
   const metaRows = React.useMemo(() => jobDetailMetaRows(listing), [listing]);
   const locationLine = React.useMemo(
@@ -145,7 +136,7 @@ export function JobListingDetailView({
         locationAddress: listing.locationAddress,
         cityName: listing.cityName,
       }),
-    [listing.cityName, listing.locationAddress],
+    [listing.cityName, listing.locationAddress]
   );
   const mapLocation = React.useMemo(
     () =>
@@ -155,10 +146,9 @@ export function JobListingDetailView({
         mapsUrl: listing.mapsUrl,
         cityName: listing.cityName,
       }),
-    [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl],
+    [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl]
   );
-  const companyName =
-    listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
+  const companyName = listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const coverImageUrls = React.useMemo(() => jobCoverImageUrls(listing), [listing]);
   const companyAvatarUrl = React.useMemo(() => jobCompanyAvatarUrl(listing), [listing]);
   const companyInitials = React.useMemo(() => jobCompanyInitials(companyName), [companyName]);
@@ -191,7 +181,7 @@ export function JobListingDetailView({
       saveCount: listing.saveCount,
       url: canonicalUrl,
     }),
-    [canonicalUrl, coverImageUrls, industryLabel, jobTypeLabel, listing, locationLine, salary],
+    [canonicalUrl, coverImageUrls, industryLabel, jobTypeLabel, listing, locationLine, salary]
   );
 
   const stickyFooterHeight = '80px';
@@ -214,7 +204,8 @@ export function JobListingDetailView({
       )}
       <JobListingDetailDesktop
         listing={listing}
-        similar={ownerPreview ? [] : similar}
+        similar={ownerPreview || similarSlotDesktop ? [] : similar}
+        similarSlot={ownerPreview ? undefined : similarSlotDesktop}
         saved={saved}
         saveCount={saveCount}
         shareCount={shareCount}
@@ -405,9 +396,7 @@ export function JobListingDetailView({
                     }}
                   >
                     <PaymentsOutlined sx={{ fontSize: 15 }} />
-                    <Typography sx={{ fontWeight: 800, fontSize: FONT_CAPTION, lineHeight: 1 }}>
-                      {salary}
-                    </Typography>
+                    <Typography sx={{ fontWeight: 800, fontSize: FONT_CAPTION, lineHeight: 1 }}>{salary}</Typography>
                   </Box>
                 </OwnerEditableSpot>
                 {jobTypeLabel || canInline || onEditSpecs ? (
@@ -432,9 +421,7 @@ export function JobListingDetailView({
                       <OwnerEditPencil
                         label="Ndrysho llojin e punës"
                         onClick={() =>
-                          ownerEdit?.onStartInlineEdit
-                            ? ownerEdit.onStartInlineEdit('specs')
-                            : onEditSpecs?.()
+                          ownerEdit?.onStartInlineEdit ? ownerEdit.onStartInlineEdit('specs') : onEditSpecs?.()
                         }
                       />
                     ) : null}
@@ -446,13 +433,21 @@ export function JobListingDetailView({
                 direction="row"
                 sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5, width: '100%' }}
               >
-                <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
+                <Stack
+                  direction="row"
+                  spacing={0.55}
+                  sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}
+                >
                   <CalendarIcon size={16} weight="regular" aria-hidden />
                   <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', fontWeight: 600 }}>
                     {postedLabelSq(listing.createdAt)}
                   </Typography>
                 </Stack>
-                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}>
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}
+                >
                   <EyeIcon size={16} weight="regular" aria-hidden />
                   <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', fontWeight: 600 }}>
                     {new Intl.NumberFormat('sq-AL').format(viewCount)} shikime
@@ -495,148 +490,144 @@ export function JobListingDetailView({
                   Detaje
                 </Typography>
               </OwnerEditableSpot>
-              {ownerEdit?.editingField === 'location' && ownerEdit.inlineEditors?.location
-                ? ownerEdit.inlineEditors.location
-                : ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs
-                  ? null
-                  : (
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 0.85,
-              }}
-            >
-              {metaRows.map((row, index) => {
-                const Icon = metaIcons[index] ?? ScheduleOutlined;
-                const isLocation = row.label === 'Lokacioni';
-                const isJobType = row.label === 'Lloji i punës';
-                const isExperience = row.label === 'Përvoja';
-                const locationEditClick = ownerEdit?.onStartInlineEdit
-                  ? () => ownerEdit.onStartInlineEdit!('location')
-                  : onEditInfo;
-                const specsClick = ownerEdit?.onStartInlineEdit
-                  ? () => ownerEdit.onStartInlineEdit!('specs')
-                  : onEditSpecs;
-                const rowClick = isLocation
-                  ? locationEditClick
-                  : isJobType || isExperience
-                    ? specsClick
-                    : undefined;
-                const pencilLabel = isLocation
-                  ? 'Ndrysho lokacionin'
-                  : isJobType
-                    ? 'Ndrysho llojin e punës'
-                    : isExperience
-                      ? 'Ndrysho eksperiencën'
-                      : '';
-                return (
-                  <Box
-                    key={row.label}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1,
-                      px: 1.15,
-                      py: 1,
-                      borderRadius: 2.5,
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      bgcolor: 'background.paper',
-                      minWidth: 0,
-                      gridColumn: 'fullWidth' in row && row.fullWidth ? '1 / -1' : undefined,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 1.5,
-                        display: 'grid',
-                        placeItems: 'center',
-                        flexShrink: 0,
-                        bgcolor: primaryMainAlpha(0.14),
-                        color: 'primary.main',
-                      }}
-                    >
-                      <Icon sx={{ fontSize: 17 }} />
-                    </Box>
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                      {isLocation && mapLocation ? (
-                        <ButtonBase
-                          component="a"
-                          href="#business-location-map"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            scrollToBusinessLocationMap();
-                          }}
+              {ownerEdit?.editingField === 'location' && ownerEdit.inlineEditors?.location ? (
+                ownerEdit.inlineEditors.location
+              ) : ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : (
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: 0.85,
+                  }}
+                >
+                  {metaRows.map((row, index) => {
+                    const Icon = metaIcons[index] ?? ScheduleOutlined;
+                    const isLocation = row.label === 'Lokacioni';
+                    const isJobType = row.label === 'Lloji i punës';
+                    const isExperience = row.label === 'Përvoja';
+                    const locationEditClick = ownerEdit?.onStartInlineEdit
+                      ? () => ownerEdit.onStartInlineEdit!('location')
+                      : onEditInfo;
+                    const specsClick = ownerEdit?.onStartInlineEdit
+                      ? () => ownerEdit.onStartInlineEdit!('specs')
+                      : onEditSpecs;
+                    const rowClick = isLocation
+                      ? locationEditClick
+                      : isJobType || isExperience
+                        ? specsClick
+                        : undefined;
+                    const pencilLabel = isLocation
+                      ? 'Ndrysho lokacionin'
+                      : isJobType
+                        ? 'Ndrysho llojin e punës'
+                        : isExperience
+                          ? 'Ndrysho eksperiencën'
+                          : '';
+                    return (
+                      <Box
+                        key={row.label}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          px: 1.15,
+                          py: 1,
+                          borderRadius: 2.5,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          bgcolor: 'background.paper',
+                          minWidth: 0,
+                          gridColumn: 'fullWidth' in row && row.fullWidth ? '1 / -1' : undefined,
+                        }}
+                      >
+                        <Box
                           sx={{
-                            display: 'block',
-                            textAlign: 'left',
-                            maxWidth: '100%',
-                            borderRadius: 1,
-                            '&:hover .job-location-value': { color: 'primary.main' },
+                            width: 32,
+                            height: 32,
+                            borderRadius: 1.5,
+                            display: 'grid',
+                            placeItems: 'center',
+                            flexShrink: 0,
+                            bgcolor: primaryMainAlpha(0.14),
+                            color: 'primary.main',
                           }}
                         >
-                          <Typography
-                            className="job-location-value"
-                            sx={{
-                              fontWeight: 750,
-                              fontSize: '0.78rem',
-                              lineHeight: 1.2,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {row.value}
-                          </Typography>
-                          <Typography
-                            sx={{
-                              color: 'text.secondary',
-                              fontSize: '0.65rem',
-                              lineHeight: 1.2,
-                              mt: 0.2,
-                            }}
-                          >
-                            {row.label}
-                          </Typography>
-                        </ButtonBase>
-                      ) : (
-                        <>
-                          <Typography
-                            sx={{
-                              fontWeight: 750,
-                              fontSize: '0.78rem',
-                              lineHeight: 1.2,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {row.value}
-                          </Typography>
-                          <Typography
-                            sx={{
-                              color: 'text.secondary',
-                              fontSize: '0.65rem',
-                              lineHeight: 1.2,
-                              mt: 0.2,
-                            }}
-                          >
-                            {row.label}
-                          </Typography>
-                        </>
-                      )}
-                    </Box>
-                    {rowClick ? (
-                      <OwnerEditPencil label={pencilLabel} onClick={rowClick} />
-                    ) : null}
-                  </Box>
-                );
-              })}
-            </Box>
-                  )}
+                          <Icon sx={{ fontSize: 17 }} />
+                        </Box>
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                          {isLocation && mapLocation ? (
+                            <ButtonBase
+                              component="a"
+                              href="#business-location-map"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                scrollToBusinessLocationMap();
+                              }}
+                              sx={{
+                                display: 'block',
+                                textAlign: 'left',
+                                maxWidth: '100%',
+                                borderRadius: 1,
+                                '&:hover .job-location-value': { color: 'primary.main' },
+                              }}
+                            >
+                              <Typography
+                                className="job-location-value"
+                                sx={{
+                                  fontWeight: 750,
+                                  fontSize: '0.78rem',
+                                  lineHeight: 1.2,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {row.value}
+                              </Typography>
+                              <Typography
+                                sx={{
+                                  color: 'text.secondary',
+                                  fontSize: '0.65rem',
+                                  lineHeight: 1.2,
+                                  mt: 0.2,
+                                }}
+                              >
+                                {row.label}
+                              </Typography>
+                            </ButtonBase>
+                          ) : (
+                            <>
+                              <Typography
+                                sx={{
+                                  fontWeight: 750,
+                                  fontSize: '0.78rem',
+                                  lineHeight: 1.2,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {row.value}
+                              </Typography>
+                              <Typography
+                                sx={{
+                                  color: 'text.secondary',
+                                  fontSize: '0.65rem',
+                                  lineHeight: 1.2,
+                                  mt: 0.2,
+                                }}
+                              >
+                                {row.label}
+                              </Typography>
+                            </>
+                          )}
+                        </Box>
+                        {rowClick ? <OwnerEditPencil label={pencilLabel} onClick={rowClick} /> : null}
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
             </Stack>
 
             <JobListingDetailCountdown expiresAt={expiresAt} />
@@ -677,7 +668,8 @@ export function JobListingDetailView({
                   Përshkrimi i punës
                 </Typography>
               </OwnerEditableSpot>
-              {ownerEdit?.editingField === 'description' && ownerEdit.inlineEditors?.description ? null : sections.intro ? (
+              {ownerEdit?.editingField === 'description' &&
+              ownerEdit.inlineEditors?.description ? null : sections.intro ? (
                 <RealEstateListingExpandableText
                   text={sections.intro}
                   readMoreLabel="Shfaq më shumë"
@@ -686,9 +678,7 @@ export function JobListingDetailView({
                   maxLines={4}
                 />
               ) : canInline || onEditInfo ? (
-                <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>
-                  Shtoni përshkrimin
-                </Typography>
+                <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>Shtoni përshkrimin</Typography>
               ) : null}
             </Box>
 
@@ -715,85 +705,82 @@ export function JobListingDetailView({
                     <OwnerEditPencil
                       label="Ndrysho përgjegjësitë"
                       onClick={() =>
-                        ownerEdit?.onStartInlineEdit
-                          ? ownerEdit.onStartInlineEdit('specs')
-                          : onEditSpecs?.()
+                        ownerEdit?.onStartInlineEdit ? ownerEdit.onStartInlineEdit('specs') : onEditSpecs?.()
                       }
                     />
                   ) : null}
                 </Stack>
-                {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : sections.responsibilities.length > 0 ? (
-                <Stack spacing={0} sx={{ position: 'relative', pl: 0.5 }}>
-                  {sections.responsibilities.map((item, index) => {
-                    const isLast = index === sections.responsibilities.length - 1;
-                    return (
-                      <Stack
-                        key={`${index}-${item.slice(0, 24)}`}
-                        direction="row"
-                        spacing={1.25}
-                        sx={{ alignItems: 'stretch', position: 'relative' }}
-                      >
-                        <Box
-                          sx={{
-                            width: 28,
-                            flexShrink: 0,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                          }}
+                {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : sections
+                    .responsibilities.length > 0 ? (
+                  <Stack spacing={0} sx={{ position: 'relative', pl: 0.5 }}>
+                    {sections.responsibilities.map((item, index) => {
+                      const isLast = index === sections.responsibilities.length - 1;
+                      return (
+                        <Stack
+                          key={`${index}-${item.slice(0, 24)}`}
+                          direction="row"
+                          spacing={1.25}
+                          sx={{ alignItems: 'stretch', position: 'relative' }}
                         >
                           <Box
                             sx={{
                               width: 28,
-                              height: 28,
-                              borderRadius: '50%',
-                              display: 'grid',
-                              placeItems: 'center',
-                              bgcolor: 'primary.main',
-                              color: 'primary.contrastText',
-                              fontWeight: 800,
-                              fontSize: '0.7rem',
-                              zIndex: 1,
+                              flexShrink: 0,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
                             }}
                           >
-                            {index + 1}
-                          </Box>
-                          {isLast ? null : (
                             <Box
                               sx={{
-                                flex: 1,
-                                width: 2,
-                                my: 0.35,
-                                bgcolor: primaryMainAlpha(0.35),
-                                borderRadius: 1,
+                                width: 28,
+                                height: 28,
+                                borderRadius: '50%',
+                                display: 'grid',
+                                placeItems: 'center',
+                                bgcolor: 'primary.main',
+                                color: 'primary.contrastText',
+                                fontWeight: 800,
+                                fontSize: '0.7rem',
+                                zIndex: 1,
                               }}
-                            />
-                          )}
-                        </Box>
-                        <Box
-                          sx={{
-                            flex: 1,
-                            minWidth: 0,
-                            mb: isLast ? 0 : 1.25,
-                            p: 1.35,
-                            borderRadius: 2.25,
-                            bgcolor: 'background.paper',
-                            border: '1px solid',
-                            borderColor: 'divider',
-                          }}
-                        >
-                          <Typography sx={{ fontSize: FONT_BODY, lineHeight: 1.5, color: 'text.secondary' }}>
-                            {item}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                    );
-                  })}
-                </Stack>
+                            >
+                              {index + 1}
+                            </Box>
+                            {isLast ? null : (
+                              <Box
+                                sx={{
+                                  flex: 1,
+                                  width: 2,
+                                  my: 0.35,
+                                  bgcolor: primaryMainAlpha(0.35),
+                                  borderRadius: 1,
+                                }}
+                              />
+                            )}
+                          </Box>
+                          <Box
+                            sx={{
+                              flex: 1,
+                              minWidth: 0,
+                              mb: isLast ? 0 : 1.25,
+                              p: 1.35,
+                              borderRadius: 2.25,
+                              bgcolor: 'background.paper',
+                              border: '1px solid',
+                              borderColor: 'divider',
+                            }}
+                          >
+                            <Typography sx={{ fontSize: FONT_BODY, lineHeight: 1.5, color: 'text.secondary' }}>
+                              {item}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      );
+                    })}
+                  </Stack>
                 ) : (
-                  <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>
-                    Shtoni përgjegjësitë
-                  </Typography>
+                  <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>Shtoni përgjegjësitë</Typography>
                 )}
               </Box>
             ) : null}
@@ -817,58 +804,55 @@ export function JobListingDetailView({
                     <OwnerEditPencil
                       label="Ndrysho kërkesat"
                       onClick={() =>
-                        ownerEdit?.onStartInlineEdit
-                          ? ownerEdit.onStartInlineEdit('specs')
-                          : onEditSpecs?.()
+                        ownerEdit?.onStartInlineEdit ? ownerEdit.onStartInlineEdit('specs') : onEditSpecs?.()
                       }
                     />
                   ) : null}
                 </Stack>
-                {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : sections.requirements.length > 0 ? (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.85 }}>
-                  {sections.requirements.map((item, index) => (
-                    <Box
-                      key={`${index}-${item.slice(0, 24)}`}
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'flex-start',
-                        gap: 0.65,
-                        maxWidth: '100%',
-                        px: 1.15,
-                        py: 0.85,
-                        borderRadius: 2,
-                        bgcolor: 'background.paper',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                      }}
-                    >
+                {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : sections.requirements
+                    .length > 0 ? (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.85 }}>
+                    {sections.requirements.map((item, index) => (
                       <Box
+                        key={`${index}-${item.slice(0, 24)}`}
                         sx={{
-                          mt: 0.15,
-                          width: 18,
-                          height: 18,
-                          borderRadius: 1,
-                          display: 'grid',
-                          placeItems: 'center',
-                          flexShrink: 0,
-                          bgcolor: primaryMainAlpha(0.16),
-                          color: 'primary.main',
-                          fontWeight: 800,
-                          fontSize: '0.62rem',
+                          display: 'inline-flex',
+                          alignItems: 'flex-start',
+                          gap: 0.65,
+                          maxWidth: '100%',
+                          px: 1.15,
+                          py: 0.85,
+                          borderRadius: 2,
+                          bgcolor: 'background.paper',
+                          border: '1px solid',
+                          borderColor: 'divider',
                         }}
                       >
-                        {index + 1}
+                        <Box
+                          sx={{
+                            mt: 0.15,
+                            width: 18,
+                            height: 18,
+                            borderRadius: 1,
+                            display: 'grid',
+                            placeItems: 'center',
+                            flexShrink: 0,
+                            bgcolor: primaryMainAlpha(0.16),
+                            color: 'primary.main',
+                            fontWeight: 800,
+                            fontSize: '0.62rem',
+                          }}
+                        >
+                          {index + 1}
+                        </Box>
+                        <Typography sx={{ fontSize: '0.8125rem', lineHeight: 1.4, color: 'text.primary' }}>
+                          {item}
+                        </Typography>
                       </Box>
-                      <Typography sx={{ fontSize: '0.8125rem', lineHeight: 1.4, color: 'text.primary' }}>
-                        {item}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
+                    ))}
+                  </Box>
                 ) : (
-                  <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>
-                    Shtoni kërkesat
-                  </Typography>
+                  <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>Shtoni kërkesat</Typography>
                 )}
               </Box>
             ) : null}
@@ -882,63 +866,60 @@ export function JobListingDetailView({
                       ? {
                           label: 'Ndrysho përfitimet',
                           onClick: () =>
-                            ownerEdit?.onStartInlineEdit
-                              ? ownerEdit.onStartInlineEdit('specs')
-                              : onEditSpecs?.(),
+                            ownerEdit?.onStartInlineEdit ? ownerEdit.onStartInlineEdit('specs') : onEditSpecs?.(),
                         }
                       : undefined
                   }
                 />
-                {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : sections.benefits.length > 0 ? (
-                <Box
-                  sx={{
-                    display: 'flex',
-                    gap: 1,
-                    overflowX: 'auto',
-                    pb: 0.5,
-                    mx: -2,
-                    px: 2,
-                    scrollbarWidth: 'none',
-                    '&::-webkit-scrollbar': { display: 'none' },
-                  }}
-                >
-                  {sections.benefits.map((benefit) => (
-                    <Box
-                      key={benefit.id}
-                      sx={{
-                        flex: '0 0 auto',
-                        width: 148,
-                        p: 1.5,
-                        borderRadius: 3,
-                        bgcolor: 'background.paper',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        backgroundImage: `linear-gradient(160deg, ${primaryMainAlpha(0.12)} 0%, transparent 60%)`,
-                      }}
-                    >
+                {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : sections.benefits
+                    .length > 0 ? (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      gap: 1,
+                      overflowX: 'auto',
+                      pb: 0.5,
+                      mx: -2,
+                      px: 2,
+                      scrollbarWidth: 'none',
+                      '&::-webkit-scrollbar': { display: 'none' },
+                    }}
+                  >
+                    {sections.benefits.map((benefit) => (
                       <Box
+                        key={benefit.id}
                         sx={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 2,
-                          display: 'grid',
-                          placeItems: 'center',
-                          mb: 1.1,
-                          bgcolor: primaryMainAlpha(0.14),
+                          flex: '0 0 auto',
+                          width: 148,
+                          p: 1.5,
+                          borderRadius: 3,
+                          bgcolor: 'background.paper',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          backgroundImage: `linear-gradient(160deg, ${primaryMainAlpha(0.12)} 0%, transparent 60%)`,
                         }}
                       >
-                        {benefitIcon(benefit.id)}
+                        <Box
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 2,
+                            display: 'grid',
+                            placeItems: 'center',
+                            mb: 1.1,
+                            bgcolor: primaryMainAlpha(0.14),
+                          }}
+                        >
+                          {benefitIcon(benefit.id)}
+                        </Box>
+                        <Typography sx={{ fontWeight: 700, fontSize: '0.8125rem', lineHeight: 1.35 }}>
+                          {benefit.label}
+                        </Typography>
                       </Box>
-                      <Typography sx={{ fontWeight: 700, fontSize: '0.8125rem', lineHeight: 1.35 }}>
-                        {benefit.label}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
+                    ))}
+                  </Box>
                 ) : (
-                  <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>
-                    Shtoni përfitimet
-                  </Typography>
+                  <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>Shtoni përfitimet</Typography>
                 )}
               </Box>
             ) : null}
@@ -955,11 +936,7 @@ export function JobListingDetailView({
                   Vendndodhja
                 </Typography>
                 {mapLocation ? (
-                  <LocationMapEmbed
-                    query={mapLocation.query}
-                    lat={mapLocation.lat}
-                    lng={mapLocation.lng}
-                  />
+                  <LocationMapEmbed query={mapLocation.query} lat={mapLocation.lat} lng={mapLocation.lng} />
                 ) : (
                   <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>
                     Shtoni qytetin ose linkun e Google Maps.
@@ -968,13 +945,10 @@ export function JobListingDetailView({
               </Stack>
             ) : null}
 
-            {!ownerPreview && similar.length > 0 ? (
-              <Stack
-                spacing={1.5}
-                component="aside"
-                aria-labelledby="job-similar-heading"
-                sx={{ mb: 0, pb: 0 }}
-              >
+            {!ownerPreview && similarSlot ? (
+              similarSlot
+            ) : !ownerPreview && similar.length > 0 ? (
+              <Stack spacing={1.5} component="aside" aria-labelledby="job-similar-heading" sx={{ mb: 0, pb: 0 }}>
                 <Typography id="job-similar-heading" sx={{ fontWeight: 800, fontSize: FONT_SECTION, lineHeight: 1.3 }}>
                   Punë të ngjashme
                 </Typography>

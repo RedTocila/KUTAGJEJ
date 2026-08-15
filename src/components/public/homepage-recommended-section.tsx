@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Box, Skeleton, Stack } from '@mui/material';
 
 import { buildHomepageMixedLatest, type HomepageMixedListing } from '@/lib/homepage-latest-listings';
+import { getHomepageListingsCacheSnapshot, writeHomepageListingsCache } from '@/lib/homepage-session-cache';
 import { fetchHomepageListings } from '@/lib/public-listings-client';
 import { HomepageMixedListingCard, mixedListingKey } from '@/components/public/homepage-mixed-listing-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
@@ -37,9 +38,17 @@ export function HomepageRecommendedSection({ fallbackItems }: { fallbackItems: H
     if (!needsRecovery) return;
     let cancelled = false;
     void (async () => {
+      const cached = getHomepageListingsCacheSnapshot();
+      if (cached && !cancelled) {
+        const mixed = buildHomepageMixedLatest(cached, 8);
+        if (mixed.length > 0) setItems(mixed);
+      }
       const bundle = await fetchHomepageListings(8);
       if (cancelled) return;
-      setItems(buildHomepageMixedLatest(bundle, 8));
+      if (bundle.ok) {
+        writeHomepageListingsCache(bundle);
+        setItems(buildHomepageMixedLatest(bundle, 8));
+      }
       setLoading(false);
     })();
     return () => {
@@ -59,7 +68,7 @@ export function HomepageRecommendedSection({ fallbackItems }: { fallbackItems: H
       hideBrowseAction
       compactTop
     >
-      {loading ? (
+      {loading && items.length === 0 ? (
         <CarouselSkeleton />
       ) : (
         <ListingsCarousel>

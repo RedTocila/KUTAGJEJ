@@ -2,50 +2,42 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Box,
-  ButtonBase,
-  Stack,
-  Typography,
-} from '@mui/material';
-import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
+import { Box, ButtonBase, Stack, Typography } from '@mui/material';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
-import { HistoryBackButton } from '@/components/public/product-browse-chrome';
-import { BusinessMenuPreview } from '@/components/public/business-menu-section';
-import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
-import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
-import { ListingsCarousel } from '@/components/public/listings-carousel';
-import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
-import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
-import { LocationMapEmbed } from '@/components/public/location-map-embed';
+import { paths } from '@/paths';
+import { hasStoredAccessToken } from '@/lib/auth/storage';
 import {
   businessCategorySubtitle,
   businessOpenStatusLine,
   reservationDateBounds,
 } from '@/lib/business-listing-detail-content';
-import {
-  setPendingBusinessReservation,
-  submitBusinessReservationToMessages,
-} from '@/lib/business-reservation-message';
-import { BusinessReviewSection } from '@/components/businesses/business-review-section';
-import { BusinessReservationPanel } from '@/components/public/business-reservation-panel';
+import { businessMobileCtaLabel, businessMobileCtaModeFromListing } from '@/lib/business-mobile-cta';
+import { setPendingBusinessReservation, submitBusinessReservationToMessages } from '@/lib/business-reservation-message';
+import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
-import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
-import { BusinessListingDetailDesktop } from '@/components/public/business-listing-detail-desktop';
-import { BusinessOpenStatusLine } from '@/components/public/business-open-status-line';
-import { BusinessStickyMobileCta } from '@/components/public/business-sticky-mobile-cta';
+import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
-import { paths } from '@/paths';
-import { hasStoredAccessToken } from '@/lib/auth/storage';
-import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
-import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
-import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
+import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { useUser } from '@/hooks/use-user';
-import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
-import { businessMobileCtaLabel, businessMobileCtaModeFromListing } from '@/lib/business-mobile-cta';
-import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
+import { BusinessReviewSection } from '@/components/businesses/business-review-section';
+import { BusinessListingDetailDesktop } from '@/components/public/business-listing-detail-desktop';
+import { BusinessMenuPreview } from '@/components/public/business-menu-section';
+import { BusinessOpenStatusLine } from '@/components/public/business-open-status-line';
+import { BusinessReservationPanel } from '@/components/public/business-reservation-panel';
+import { BusinessStickyMobileCta } from '@/components/public/business-sticky-mobile-cta';
+import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
+import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
+import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
+import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
+import { ListingsCarousel } from '@/components/public/listings-carousel';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
+import { HistoryBackButton } from '@/components/public/product-browse-chrome';
+import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
+import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
+import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
+import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
 import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 
 const FONT_BODY = '0.875rem';
@@ -63,6 +55,8 @@ export function BusinessListingDetailView({
   listing,
   canonicalUrl,
   similar = [],
+  similarSlot,
+  similarSlotDesktop,
   ownerPreview = false,
   ownerEdit,
 }: {
@@ -70,6 +64,8 @@ export function BusinessListingDetailView({
   /** Reserved for metadata / future share overrides. */
   canonicalUrl?: string;
   similar?: PublicDirectoryListing[];
+  similarSlot?: React.ReactNode;
+  similarSlotDesktop?: React.ReactNode;
   /** Owner edit canvas — hide buyer chrome (contact, similar, metrics). */
   ownerPreview?: boolean;
   /** Inline pencil actions for owner edit. */
@@ -112,7 +108,7 @@ export function BusinessListingDetailView({
       listing.mapsPlaceQuery,
       listing.mapsUrl,
       listing.zoneName,
-    ],
+    ]
   );
   const locationLine = React.useMemo(
     () =>
@@ -121,7 +117,7 @@ export function BusinessListingDetailView({
         zoneName: listing.zoneName,
         cityName: listing.cityName,
       }),
-    [listing.cityName, listing.locationAddress, listing.zoneName],
+    [listing.cityName, listing.locationAddress, listing.zoneName]
   );
 
   const showReservation = listing.reservationsEnabled;
@@ -237,7 +233,8 @@ export function BusinessListingDetailView({
       )}
       <BusinessListingDetailDesktop
         listing={listing}
-        similar={ownerPreview ? [] : similar}
+        similar={ownerPreview || similarSlotDesktop ? [] : similar}
+        similarSlot={ownerPreview ? undefined : similarSlotDesktop}
         saved={saved}
         saveCount={saveCount}
         onToggleSave={() => void toggleSave()}
@@ -267,111 +264,106 @@ export function BusinessListingDetailView({
           display: ownerPreview ? 'block' : { xs: 'block', md: 'none' },
           bgcolor: 'background.default',
           minHeight: ownerPreview ? 'auto' : '100vh',
-          pb: ownerPreview
-            ? 3
-            : `calc(80px + ${MOBILE_BOTTOM_NAV_OFFSET})`,
+          pb: ownerPreview ? 3 : `calc(80px + ${MOBILE_BOTTOM_NAV_OFFSET})`,
         }}
       >
-      <Box sx={{ maxWidth: { md: CONTENT_MAX + 32 }, mx: 'auto', width: '100%' }}>
-        <RealEstateListingGallery
-          title={listing.title}
-          imageUrls={listing.imageUrls}
-          placeholderIcon={listingDetailGalleryPlaceholder(listing)}
-          browseListHref={ownerPreview ? undefined : paths.public.businesses}
-          browseListAriaLabel="Prapa te lista e bizneseve"
-          listingKind="businesses"
-          listingId={listing.id}
-          shareCount={ownerPreview ? undefined : listing.shareCount}
-          saveCount={ownerPreview ? undefined : saveCount}
-          bookmark={ownerPreview ? undefined : { saved, onToggle: () => void toggleSave() }}
-          onEditPhotos={ownerEdit?.onEditPhotos}
-        />
+        <Box sx={{ maxWidth: { md: CONTENT_MAX + 32 }, mx: 'auto', width: '100%' }}>
+          <RealEstateListingGallery
+            title={listing.title}
+            imageUrls={listing.imageUrls}
+            placeholderIcon={listingDetailGalleryPlaceholder(listing)}
+            browseListHref={ownerPreview ? undefined : paths.public.businesses}
+            browseListAriaLabel="Prapa te lista e bizneseve"
+            listingKind="businesses"
+            listingId={listing.id}
+            shareCount={ownerPreview ? undefined : listing.shareCount}
+            saveCount={ownerPreview ? undefined : saveCount}
+            bookmark={ownerPreview ? undefined : { saved, onToggle: () => void toggleSave() }}
+            onEditPhotos={ownerEdit?.onEditPhotos}
+          />
 
-        <Box sx={{ px: 2, pt: 2, pb: 3, maxWidth: CONTENT_MAX, mx: 'auto', width: '100%', boxSizing: 'border-box' }}>
-          <Stack spacing={2.5}>
-            {/* Title & meta */}
-            <Stack spacing={1.25}>
-              <OwnerEditableSpot
-                field="title"
-                ownerEdit={ownerEdit}
-                label="Ndrysho titullin"
-                legacyOnClick={ownerEdit?.onEditInfo}
-                align="flex-start"
-              >
-                <Typography
-                  component="h1"
-                  sx={{ fontWeight: 800, fontSize: FONT_TITLE, lineHeight: 1.2 }}
+          <Box sx={{ px: 2, pt: 2, pb: 3, maxWidth: CONTENT_MAX, mx: 'auto', width: '100%', boxSizing: 'border-box' }}>
+            <Stack spacing={2.5}>
+              {/* Title & meta */}
+              <Stack spacing={1.25}>
+                <OwnerEditableSpot
+                  field="title"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho titullin"
+                  legacyOnClick={ownerEdit?.onEditInfo}
+                  align="flex-start"
                 >
-                  {listing.title}
-                  <ListingDetailTitleBadges
-                    verified={Boolean(listing.seller?.verified)}
-                    trustBadge={Boolean(listing.seller?.trustBadge)}
-                    verifiedLabel="Biznes i verifikuar"
-                  />
-                </Typography>
-              </OwnerEditableSpot>
+                  <Typography component="h1" sx={{ fontWeight: 800, fontSize: FONT_TITLE, lineHeight: 1.2 }}>
+                    {listing.title}
+                    <ListingDetailTitleBadges
+                      verified={Boolean(listing.seller?.verified)}
+                      trustBadge={Boolean(listing.seller?.trustBadge)}
+                      verifiedLabel="Biznes i verifikuar"
+                    />
+                  </Typography>
+                </OwnerEditableSpot>
 
-              <OwnerEditableSpot
-                field="category"
-                ownerEdit={ownerEdit}
-                label="Ndrysho kategorinë"
-                legacyOnClick={ownerEdit?.onEditInfo}
-              >
-                <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', lineHeight: 1.4 }}>
-                  {categoryLine}
-                </Typography>
-              </OwnerEditableSpot>
-
-              {ownerEdit?.editingField === 'location' ? null : locationLine ? (
-                <ButtonBase
-                  component="a"
-                  href="#business-location-map"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    scrollToBusinessLocationMap();
-                  }}
-                  sx={{
-                    display: 'inline-flex',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 0.75,
-                    flexWrap: 'wrap',
-                    justifyContent: 'flex-start',
-                    color: 'text.primary',
-                    borderRadius: 1,
-                    textAlign: 'left',
-                    maxWidth: '100%',
-                    '&:hover': { color: 'primary.main' },
-                  }}
+                <OwnerEditableSpot
+                  field="category"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho kategorinë"
+                  legacyOnClick={ownerEdit?.onEditInfo}
                 >
-                  <MapPinIcon size={16} weight="regular" />
-                  <Typography sx={{ fontSize: FONT_CAPTION }}>{locationLine}</Typography>
-                </ButtonBase>
-              ) : null}
+                  <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', lineHeight: 1.4 }}>
+                    {categoryLine}
+                  </Typography>
+                </OwnerEditableSpot>
 
-              <BusinessReviewSection
-                variant="summary"
-                listingId={listing.id}
-                ratingAverage={listing.ratingAverage}
-                reviewCount={listing.reviewCount}
-                onReviewSubmitted={() => {
-                  router.refresh();
-                }}
-              />
+                {ownerEdit?.editingField === 'location' ? null : locationLine ? (
+                  <ButtonBase
+                    component="a"
+                    href="#business-location-map"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      scrollToBusinessLocationMap();
+                    }}
+                    sx={{
+                      display: 'inline-flex',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 0.75,
+                      flexWrap: 'wrap',
+                      justifyContent: 'flex-start',
+                      color: 'text.primary',
+                      borderRadius: 1,
+                      textAlign: 'left',
+                      maxWidth: '100%',
+                      '&:hover': { color: 'primary.main' },
+                    }}
+                  >
+                    <MapPinIcon size={16} weight="regular" />
+                    <Typography sx={{ fontSize: FONT_CAPTION }}>{locationLine}</Typography>
+                  </ButtonBase>
+                ) : null}
 
-              {statusLine || ownerEdit?.onEditHours ? (
-                <BusinessOpenStatusLine
-                  listing={listing}
-                  statusLine={statusLine || 'Vendosni orarin'}
-                  fontSize={FONT_CAPTION}
-                  endAdornment={
-                    ownerEdit?.onEditHours ? (
-                      <OwnerEditPencil label="Ndrysho orarin" onClick={ownerEdit.onEditHours} />
-                    ) : null
-                  }
+                <BusinessReviewSection
+                  variant="summary"
+                  listingId={listing.id}
+                  ratingAverage={listing.ratingAverage}
+                  reviewCount={listing.reviewCount}
+                  onReviewSubmitted={() => {
+                    router.refresh();
+                  }}
                 />
-              ) : null}
-            </Stack>
+
+                {statusLine || ownerEdit?.onEditHours ? (
+                  <BusinessOpenStatusLine
+                    listing={listing}
+                    statusLine={statusLine || 'Vendosni orarin'}
+                    fontSize={FONT_CAPTION}
+                    endAdornment={
+                      ownerEdit?.onEditHours ? (
+                        <OwnerEditPencil label="Ndrysho orarin" onClick={ownerEdit.onEditHours} />
+                      ) : null
+                    }
+                  />
+                ) : null}
+              </Stack>
 
               {ownerEdit ? (
                 <OwnerEditableSpot
@@ -444,7 +436,8 @@ export function BusinessListingDetailView({
                       Përshkrimi
                     </Typography>
                   </OwnerEditableSpot>
-                  {ownerEdit?.editingField === 'description' && ownerEdit.inlineEditors?.description ? null : listing.description ? (
+                  {ownerEdit?.editingField === 'description' &&
+                  ownerEdit.inlineEditors?.description ? null : listing.description ? (
                     <RealEstateListingExpandableText
                       text={listing.description}
                       fontSize={FONT_BODY}
@@ -452,135 +445,130 @@ export function BusinessListingDetailView({
                       readLessLabel="Shiko më pak"
                     />
                   ) : (
-                    <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>
-                      Shtoni përshkrimin
-                    </Typography>
+                    <Typography sx={{ fontSize: FONT_BODY, color: 'text.secondary' }}>Shtoni përshkrimin</Typography>
                   )}
                 </Stack>
               ) : null}
 
-            {/* Promo announcement */}
-            {listing.announcementTitle?.trim() && !ownerPreview ? (
-              showReservation ? (
-                <ButtonBase
-                  onClick={() => setReserveOpen(true)}
-                  sx={{ width: '100%', textAlign: 'left', display: 'block', borderRadius: 3 }}
-                >
+              {/* Promo announcement */}
+              {listing.announcementTitle?.trim() && !ownerPreview ? (
+                showReservation ? (
+                  <ButtonBase
+                    onClick={() => setReserveOpen(true)}
+                    sx={{ width: '100%', textAlign: 'left', display: 'block', borderRadius: 3 }}
+                  >
+                    <BusinessPromoBanner
+                      title={listing.announcementTitle}
+                      subtitle={listing.announcementSubtitle}
+                      bannerUrl={listing.announcementBannerUrl}
+                      variant="detail"
+                    />
+                  </ButtonBase>
+                ) : (
                   <BusinessPromoBanner
                     title={listing.announcementTitle}
                     subtitle={listing.announcementSubtitle}
                     bannerUrl={listing.announcementBannerUrl}
                     variant="detail"
                   />
-                </ButtonBase>
-              ) : (
-                <BusinessPromoBanner
-                  title={listing.announcementTitle}
-                  subtitle={listing.announcementSubtitle}
-                  bannerUrl={listing.announcementBannerUrl}
-                  variant="detail"
-                />
-              )
-            ) : null}
+                )
+              ) : null}
 
-            {/* Reservation widget — only when reserve is not the primary mobile CTA */}
-            {showReservation && !ownerPreview && !reservePrimaryCta ? (
-              <BusinessReservationPanel {...reservationPanelProps} />
-            ) : null}
+              {/* Reservation widget — only when reserve is not the primary mobile CTA */}
+              {showReservation && !ownerPreview && !reservePrimaryCta ? (
+                <BusinessReservationPanel {...reservationPanelProps} />
+              ) : null}
 
-            {/* Menu preview — 4 visible rows, scroll for more; full menu on separate page */}
-            <Box>
-              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Menu</Typography>
-                {ownerEdit?.onEditMenu ? (
-                  <OwnerEditPencil label="Ndrysho menunë" onClick={ownerEdit.onEditMenu} />
-                ) : null}
-              </Stack>
-              <BusinessMenuPreview listing={listing} maxPerCategory={3} />
-            </Box>
-
-            {mapLocation || ownerEdit?.onStartInlineEdit ? (
-              <Stack
-                data-business-location-map
-                spacing={1}
-                component="section"
-                aria-labelledby="business-location-heading"
-                sx={{ scrollMarginTop: 80 }}
-              >
-                {ownerEdit?.editingField === 'location' && ownerEdit.inlineEditors?.location ? (
-                  <Box sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
-                    {ownerEdit.inlineEditors.location}
-                  </Box>
-                ) : (
-                  <>
-                    <Stack
-                      direction="row"
-                      spacing={0.75}
-                      sx={{ alignItems: 'center', justifyContent: 'space-between' }}
-                    >
-                      <Typography
-                        id="business-location-heading"
-                        sx={{ fontWeight: 800, fontSize: FONT_BODY }}
-                      >
-                        Vendndodhja
-                      </Typography>
-                      {ownerEdit?.onStartInlineEdit ? (
-                        <OwnerEditPencil
-                          label="Ndrysho lokacionin"
-                          onClick={() => ownerEdit.onStartInlineEdit!('location')}
-                        />
-                      ) : null}
-                    </Stack>
-                    {mapLocation ? (
-                      <LocationMapEmbed
-                        query={mapLocation.query}
-                        lat={mapLocation.lat}
-                        lng={mapLocation.lng}
-                      />
-                    ) : (
-                      <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary' }}>
-                        Shtoni qytetin, lagjen ose linkun e Google Maps.
-                      </Typography>
-                    )}
-                  </>
-                )}
-              </Stack>
-            ) : null}
-
-            {/* Reviews list */}
-            <BusinessReviewSection
-              variant="list"
-              listingId={listing.id}
-              ratingAverage={listing.ratingAverage}
-              reviewCount={listing.reviewCount}
-              onReviewSubmitted={() => {
-                router.refresh();
-              }}
-            />
-
-            {/* Similar */}
-            {!ownerPreview && similar.length > 0 ? (
-              <Stack spacing={1.5} sx={{ pt: 1 }}>
-                <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Biznese të ngjashme</Typography>
-                <ListingsCarousel slotWidth={{ xs: 260, sm: 280, md: 300 }}>
-                  {similar.map((item) => (
-                    <DirectoryListingCard key={item.id} listing={item} />
-                  ))}
-                </ListingsCarousel>
-              </Stack>
-            ) : null}
-
-            {ownerPreview ? null : (
-              <Box sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'center', pt: 1 }}>
-                <HistoryBackButton href={paths.public.businesses} sx={{ fontSize: FONT_BODY }}>
-                  Kthehu te lista e bizneseve
-                </HistoryBackButton>
+              {/* Menu preview — 4 visible rows, scroll for more; full menu on separate page */}
+              <Box>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}
+                >
+                  <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Menu</Typography>
+                  {ownerEdit?.onEditMenu ? (
+                    <OwnerEditPencil label="Ndrysho menunë" onClick={ownerEdit.onEditMenu} />
+                  ) : null}
+                </Stack>
+                <BusinessMenuPreview listing={listing} maxPerCategory={3} />
               </Box>
-            )}
-          </Stack>
+
+              {mapLocation || ownerEdit?.onStartInlineEdit ? (
+                <Stack
+                  data-business-location-map
+                  spacing={1}
+                  component="section"
+                  aria-labelledby="business-location-heading"
+                  sx={{ scrollMarginTop: 80 }}
+                >
+                  {ownerEdit?.editingField === 'location' && ownerEdit.inlineEditors?.location ? (
+                    <Box sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>{ownerEdit.inlineEditors.location}</Box>
+                  ) : (
+                    <>
+                      <Stack
+                        direction="row"
+                        spacing={0.75}
+                        sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+                      >
+                        <Typography id="business-location-heading" sx={{ fontWeight: 800, fontSize: FONT_BODY }}>
+                          Vendndodhja
+                        </Typography>
+                        {ownerEdit?.onStartInlineEdit ? (
+                          <OwnerEditPencil
+                            label="Ndrysho lokacionin"
+                            onClick={() => ownerEdit.onStartInlineEdit!('location')}
+                          />
+                        ) : null}
+                      </Stack>
+                      {mapLocation ? (
+                        <LocationMapEmbed query={mapLocation.query} lat={mapLocation.lat} lng={mapLocation.lng} />
+                      ) : (
+                        <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary' }}>
+                          Shtoni qytetin, lagjen ose linkun e Google Maps.
+                        </Typography>
+                      )}
+                    </>
+                  )}
+                </Stack>
+              ) : null}
+
+              {/* Reviews list */}
+              <BusinessReviewSection
+                variant="list"
+                listingId={listing.id}
+                ratingAverage={listing.ratingAverage}
+                reviewCount={listing.reviewCount}
+                onReviewSubmitted={() => {
+                  router.refresh();
+                }}
+              />
+
+              {/* Similar */}
+              {!ownerPreview && similarSlot ? (
+                similarSlot
+              ) : !ownerPreview && similar.length > 0 ? (
+                <Stack spacing={1.5} sx={{ pt: 1 }}>
+                  <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Biznese të ngjashme</Typography>
+                  <ListingsCarousel slotWidth={{ xs: 260, sm: 280, md: 300 }}>
+                    {similar.map((item) => (
+                      <DirectoryListingCard key={item.id} listing={item} />
+                    ))}
+                  </ListingsCarousel>
+                </Stack>
+              ) : null}
+
+              {ownerPreview ? null : (
+                <Box sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'center', pt: 1 }}>
+                  <HistoryBackButton href={paths.public.businesses} sx={{ fontSize: FONT_BODY }}>
+                    Kthehu te lista e bizneseve
+                  </HistoryBackButton>
+                </Box>
+              )}
+            </Stack>
+          </Box>
         </Box>
       </Box>
-    </Box>
     </>
   );
 }

@@ -2,14 +2,15 @@ import * as React from 'react';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
+import { config } from '@/config';
+import { paths, pathsPublicVerticalListingDetail } from '@/paths';
+import { loadPublicJobListingById } from '@/lib/public-listings-client';
+import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
+import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
+import { JobListingDetailView } from '@/components/public/job-listing-detail-view';
 import { PublicLoadErrorView } from '@/components/public/public-load-error-view';
 import { PublicShell } from '@/components/public/public-shell';
-import { JobListingDetailView } from '@/components/public/job-listing-detail-view';
-import { config } from '@/config';
-import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
-import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
-import { fetchLatestJobs, loadPublicJobListingById } from '@/lib/public-listings-client';
-import { paths, pathsPublicVerticalListingDetail } from '@/paths';
+import { similarListingsSlot } from '@/components/public/similar-listings-section';
 
 export const revalidate = 60;
 
@@ -57,7 +58,7 @@ export default async function JobListingPage({ params }: PageProps): Promise<Rea
   const id = mongoIdFromPublicListingSegment(permalink);
   if (!id) notFound();
 
-  const [loaded, jobsPool] = await Promise.all([loadPublicJobListingById(id), fetchLatestJobs(28)]);
+  const loaded = await loadPublicJobListingById(id);
   if (loaded.unavailable) {
     return (
       <PublicShell hideHeaderBelowMd>
@@ -67,8 +68,6 @@ export default async function JobListingPage({ params }: PageProps): Promise<Rea
   }
   const listing = loaded.data;
   if (!listing) notFound();
-
-  const similar = jobsPool.filter((l) => l.id !== listing.id).slice(0, 10);
 
   const requestedNorm = normalizeListingPermalinkSegment(permalink);
   const canonRaw = listing.permalinkPath?.trim() ?? '';
@@ -85,7 +84,12 @@ export default async function JobListingPage({ params }: PageProps): Promise<Rea
   const canonicalUrl = `${config.site.url.replace(/\/$/, '')}${pathHref}`;
   return (
     <PublicShell hideHeaderBelowMd>
-      <JobListingDetailView listing={listing} canonicalUrl={canonicalUrl} similar={similar} />
+      <JobListingDetailView
+        listing={listing}
+        canonicalUrl={canonicalUrl}
+        similarSlot={similarListingsSlot('jobs', listing.id, 'Punë të ngjashme')}
+        similarSlotDesktop={similarListingsSlot('jobs', listing.id, 'Punë të ngjashme')}
+      />
     </PublicShell>
   );
 }

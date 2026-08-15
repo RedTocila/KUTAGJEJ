@@ -2,17 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import {
-  Box,
-  Button,
-  ButtonBase,
-  Container,
-  Divider,
-  Paper,
-  Stack,
-  Typography,
-  alpha,
-} from '@mui/material';
+import { alpha, Box, Button, ButtonBase, Container, Divider, Paper, Stack, Typography } from '@mui/material';
 import { Bathtub as BathtubIcon } from '@phosphor-icons/react/dist/ssr/Bathtub';
 import { Bed as BedIcon } from '@phosphor-icons/react/dist/ssr/Bed';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
@@ -25,33 +15,29 @@ import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Stairs as StairsIcon } from '@phosphor-icons/react/dist/ssr/Stairs';
 import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
 
-import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
-import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
-import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
-import { ListingsCarousel } from '@/components/public/listings-carousel';
-import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
-import { formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
-import { ListingPrice } from '@/components/public/listing-cards/listing-price';
-import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
-import { ListingMessageButton } from '@/components/public/listing-message-button';
-import { ListingSellerProfileCard } from '@/components/public/listing-seller-profile-card';
-import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
-import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
-import { LocationMapEmbed } from '@/components/public/location-map-embed';
-import { StickyListingContact } from '@/components/public/sticky-listing-contact';
-import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
-import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
-import { useListingBookmark } from '@/hooks/use-listing-bookmark';
+import { paths } from '@/paths';
 import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import { whatsappInquireHref as buildWhatsappInquireHref, whatsappInquireText } from '@/lib/listing-contact';
+import { LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX, LISTING_DETAIL_HERO_IMAGE_SIZES } from '@/lib/listing-detail-layout';
 import type { PublicRealEstateListing, PublicRealEstateListingDetail } from '@/lib/public-listings-client';
-import { paths } from '@/paths';
+import { useListingBookmark } from '@/hooks/use-listing-bookmark';
+import { formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
+import { ListingPrice } from '@/components/public/listing-cards/listing-price';
+import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
+import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
+import { ListingMessageButton } from '@/components/public/listing-message-button';
+import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
+import { ListingSellerProfileCard } from '@/components/public/listing-seller-profile-card';
+import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
+import { ListingsCarousel } from '@/components/public/listings-carousel';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
+import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
+import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
+import { StickyListingContact } from '@/components/public/sticky-listing-contact';
+import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
+import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
+import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
 import { productButtonSx, productPanelSx } from '@/styles/product-sx';
-
-import {
-  LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
-  LISTING_DETAIL_HERO_IMAGE_SIZES,
-} from '@/lib/listing-detail-layout';
 
 const CONDITION_SQ: Record<string, string> = {
   new: 'E re',
@@ -107,24 +93,22 @@ function sectionTitle(text: string, id: string, edit?: { label: string; onClick:
   );
 }
 
-function SpecIconBox({
-  Icon,
-  primary,
-  secondary,
-}: {
-  Icon: typeof BedIcon;
-  primary: string;
-  secondary: string;
-}) {
+function SpecIconBox({ Icon, primary, secondary }: { Icon: typeof BedIcon; primary: string; secondary: string }) {
   return (
     <Stack spacing={1} sx={{ alignItems: 'center', flex: '1 1 0', minWidth: 0, px: { xs: 0.75, sm: 1 }, py: 1.25 }}>
       <Box sx={{ color: 'primary.main', opacity: 0.95, display: 'inline-flex', lineHeight: 0 }}>
         <Icon weight="regular" color="currentColor" size={24} aria-hidden />
       </Box>
-      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary', fontSize: '0.9rem', textAlign: 'center' }}>
+      <Typography
+        variant="subtitle2"
+        sx={{ fontWeight: 800, color: 'text.primary', fontSize: '0.9rem', textAlign: 'center' }}
+      >
         {primary}
       </Typography>
-      <Typography variant="caption" sx={{ fontWeight: 500, color: 'text.secondary', fontSize: '0.72rem', textAlign: 'center' }}>
+      <Typography
+        variant="caption"
+        sx={{ fontWeight: 500, color: 'text.secondary', fontSize: '0.72rem', textAlign: 'center' }}
+      >
         {secondary}
       </Typography>
     </Stack>
@@ -209,7 +193,16 @@ function RealEstatePriceContactAside(props: {
               '&:hover': { color: 'primary.main' },
             }}
           >
-            <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', flexShrink: 0, lineHeight: 0, pt: 0.35 }}>
+            <Box
+              sx={{
+                color: 'primary.main',
+                opacity: 0.9,
+                display: 'inline-flex',
+                flexShrink: 0,
+                lineHeight: 0,
+                pt: 0.35,
+              }}
+            >
               <MapPinIcon size={17} weight="regular" color="currentColor" aria-hidden />
             </Box>
             <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.45 }}>
@@ -292,13 +285,7 @@ function RealEstateSellerCardContents({
   sellerSectionHeadingId?: string;
   cardSx?: React.ComponentProps<typeof ListingSellerProfileCard>['cardSx'];
 }) {
-  return (
-    <ListingSellerProfileCard
-      seller={listing.seller}
-      headingId={sellerSectionHeadingId}
-      cardSx={cardSx}
-    />
-  );
+  return <ListingSellerProfileCard seller={listing.seller} headingId={sellerSectionHeadingId} cardSx={cardSx} />;
 }
 
 function StickyContactBar(props: {
@@ -320,13 +307,16 @@ function StickyContactBar(props: {
 
 export function RealEstateListingDetailView({
   listing,
-  similar,
+  similar = [],
+  similarSlot,
   canonicalUrl,
   ownerPreview = false,
   ownerEdit,
 }: {
   listing: PublicRealEstateListingDetail;
-  similar: PublicRealEstateListing[];
+  similar?: PublicRealEstateListing[];
+  /** Streamed similar carousel — rendered instead of `similar` when set. */
+  similarSlot?: React.ReactNode;
   canonicalUrl: string;
   /** Owner edit canvas — hide buyer chrome (contact, similar, metrics). */
   ownerPreview?: boolean;
@@ -343,7 +333,7 @@ export function RealEstateListingDetailView({
         zoneName: listing.zoneName,
         cityName: listing.cityName,
       }),
-    [listing.cityName, listing.locationAddress, listing.zoneName],
+    [listing.cityName, listing.locationAddress, listing.zoneName]
   );
   const mapLocation = React.useMemo(
     () =>
@@ -354,10 +344,9 @@ export function RealEstateListingDetailView({
         zoneName: listing.zoneName,
         cityName: listing.cityName,
       }),
-    [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl, listing.zoneName],
+    [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl, listing.zoneName]
   );
-  const displayPhone =
-    listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
+  const displayPhone = listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
 
   const viewCount = listing.viewCount ?? 0;
   const { saved, saveCount, toggleSave } = useListingBookmark('real-estate', listing.id, {
@@ -366,10 +355,7 @@ export function RealEstateListingDetailView({
   });
 
   const transactionLabel = listing.transactionType === 'rent' ? 'Qera' : 'Shitje';
-  const whatsappInquireHref = buildWhatsappInquireHref(
-    displayPhone,
-    whatsappInquireText(listing.title, canonicalUrl),
-  );
+  const whatsappInquireHref = buildWhatsappInquireHref(displayPhone, whatsappInquireText(listing.title, canonicalUrl));
 
   const priceLabel =
     formatPrice(listing.price, listing.currency) + (listing.transactionType === 'rent' ? ' / muaj' : '');
@@ -401,9 +387,7 @@ export function RealEstateListingDetailView({
     { label: 'Lloji', value: propertyCategoryLabelSq(listing.propertyCategory) },
     listing.condition ? { label: 'Gjendja', value: CONDITION_SQ[listing.condition] ?? listing.condition } : null,
     listing.yearBuilt != null ? { label: 'Viti ndërtimit', value: String(listing.yearBuilt) } : null,
-    listing.furnishing
-      ? { label: 'Mobilimi', value: FURNISH_SQ[listing.furnishing] ?? listing.furnishing }
-      : null,
+    listing.furnishing ? { label: 'Mobilimi', value: FURNISH_SQ[listing.furnishing] ?? listing.furnishing } : null,
     listing.floor != null ? { label: 'Kati i apartamentit', value: `${listing.floor}` } : null,
     listing.totalFloors != null ? { label: 'Numri i katëve të ndërtesës', value: `${listing.totalFloors}` } : null,
     listing.parkingFloor != null ? { label: 'Kati i parkimit', value: `${listing.parkingFloor}` } : null,
@@ -453,399 +437,428 @@ export function RealEstateListingDetailView({
                 },
               })}
             >
-            <Stack
-              direction={ownerPreview ? 'column' : { xs: 'column', md: 'row' }}
-              sx={{ alignItems: { md: 'stretch' }, minHeight: 0, width: '100%' }}
-            >
-              <Box
-                sx={{
-                  flex: { md: `1 1 ${LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX}px` },
-                  maxWidth: { md: LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX },
-                  minWidth: 0,
-                  width: '100%',
-                  overflow: 'hidden',
-                }}
+              <Stack
+                direction={ownerPreview ? 'column' : { xs: 'column', md: 'row' }}
+                sx={{ alignItems: { md: 'stretch' }, minHeight: 0, width: '100%' }}
               >
-                <RealEstateListingGallery
-                  title={listing.title}
-                  imageUrls={listing.imageUrls}
-                  placeholderIcon={
-                    listing.propertyCategory === 'villa' || listing.propertyCategory === 'part-of-villa' ? 'house' : 'buildings'
-                  }
-                  browseListHref={ownerPreview ? undefined : paths.public.realEstate}
-                  browseListAriaLabel="Prapa te lista e pronës"
-                  heroSizes={LISTING_DETAIL_HERO_IMAGE_SIZES}
-                  listingKind="real-estate"
-                  listingId={listing.id}
-                  shareCount={ownerPreview ? undefined : listing.shareCount}
-                  saveCount={ownerPreview ? undefined : saveCount}
-                  bookmark={ownerPreview ? undefined : { saved, onToggle: () => void toggleSave() }}
-                  sharePayload={ownerPreview ? undefined : sharePayload}
-                  onEditPhotos={ownerEdit?.onEditPhotos}
-                />
-              </Box>
-              <Box
-                sx={{
-                  display: ownerPreview ? 'none' : { xs: 'none', md: 'flex' },
-                  flexDirection: 'column',
-                  flex: '0 0 auto',
-                  width: { md: 'min(340px, 34%)' },
-                  minWidth: { md: 280 },
-                  maxWidth: { md: 380 },
-                  bgcolor: 'background.paper',
-                  p: 2.5,
-                  justifyContent: 'flex-start',
-                  alignSelf: { md: 'stretch' },
-                }}
-              >
-                <Stack spacing={2} sx={{ width: '100%' }}>
-                  <RealEstatePriceContactAside
-                    listing={listing}
-                    transactionLabel={transactionLabel}
-                    locationFull={locationFull}
-                    displayPhone={displayPhone}
-                    whatsappInquireHref={whatsappInquireHref}
-                    canonicalUrl={canonicalUrl}
-                  />
-                  <Divider flexItem sx={{ borderColor: 'rgba(var(--mui-palette-dividerChannel) / 0.35)' }} />
-                  <RealEstateSellerCardContents
-                    sellerSectionHeadingId="re-seller-heading-hero"
-                    listing={listing}
-                    cardSx={{
-                      ...productPanelSx,
-                      border: 'none',
-                      p: 2,
-                      borderRadius: 2.5,
-                    }}
-                  />
-                </Stack>
-              </Box>
-            </Stack>
-            </Box>
-
-            <Stack spacing={{ xs: 3, md: 3.5 }} sx={{ px: { xs: 2, sm: 3, md: 0 }, pb: ownerPreview ? 3 : { xs: 14, md: 6 }, width: '100%' }}>
-            <Stack spacing={1.75}>
-              <OwnerEditableSpot
-                field="title"
-                ownerEdit={ownerEdit}
-                label="Ndrysho titullin"
-                legacyOnClick={onEditInfo}
-                align="flex-start"
-              >
-                <Typography
-                  variant="h3"
-                  component="h1"
+                <Box
                   sx={{
-                    fontWeight: 800,
-                    lineHeight: 1.18,
-                    letterSpacing: '-0.02em',
-                    color: 'text.primary',
-                    fontSize: { xs: '1.55rem', sm: '2rem', md: '2.125rem' },
+                    flex: { md: `1 1 ${LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX}px` },
+                    maxWidth: { md: LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX },
+                    minWidth: 0,
+                    width: '100%',
+                    overflow: 'hidden',
                   }}
                 >
-                  {listing.title}
-                  <ListingDetailTitleBadges
-                    verified={Boolean(listing.seller?.verified)}
-                    trustBadge={Boolean(listing.seller?.trustBadge)}
+                  <RealEstateListingGallery
+                    title={listing.title}
+                    imageUrls={listing.imageUrls}
+                    placeholderIcon={
+                      listing.propertyCategory === 'villa' || listing.propertyCategory === 'part-of-villa'
+                        ? 'house'
+                        : 'buildings'
+                    }
+                    browseListHref={ownerPreview ? undefined : paths.public.realEstate}
+                    browseListAriaLabel="Prapa te lista e pronës"
+                    heroSizes={LISTING_DETAIL_HERO_IMAGE_SIZES}
+                    listingKind="real-estate"
+                    listingId={listing.id}
+                    shareCount={ownerPreview ? undefined : listing.shareCount}
+                    saveCount={ownerPreview ? undefined : saveCount}
+                    bookmark={ownerPreview ? undefined : { saved, onToggle: () => void toggleSave() }}
+                    sharePayload={ownerPreview ? undefined : sharePayload}
+                    onEditPhotos={ownerEdit?.onEditPhotos}
                   />
-                </Typography>
-              </OwnerEditableSpot>
-
-              <Box sx={{ display: ownerPreview ? 'block' : { xs: 'block', md: 'none' } }}>
-                <OwnerEditableSpot
-                  field="price"
-                  ownerEdit={ownerEdit}
-                  label="Ndrysho çmimin"
-                  legacyOnClick={onEditPrice}
+                </Box>
+                <Box
+                  sx={{
+                    display: ownerPreview ? 'none' : { xs: 'none', md: 'flex' },
+                    flexDirection: 'column',
+                    flex: '0 0 auto',
+                    width: { md: 'min(340px, 34%)' },
+                    minWidth: { md: 280 },
+                    maxWidth: { md: 380 },
+                    bgcolor: 'background.paper',
+                    p: 2.5,
+                    justifyContent: 'flex-start',
+                    alignSelf: { md: 'stretch' },
+                  }}
                 >
-                  <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
-                    <ListingPrice
-                      price={listing.price}
-                      originalPrice={listing.originalPrice}
-                      currency={listing.currency}
-                      isPremium={listing.isPremium}
-                      isOkazion={listing.isOkazion}
-                      fontSize="1.85rem"
-                      fontWeight={900}
-                      suffix={
-                        listing.transactionType === 'rent' ? (
-                          <Typography component="span" variant="subtitle2" sx={{ ml: 0.5, fontWeight: 600, color: 'text.secondary' }}>
-                            / muaj
-                          </Typography>
-                        ) : null
-                      }
+                  <Stack spacing={2} sx={{ width: '100%' }}>
+                    <RealEstatePriceContactAside
+                      listing={listing}
+                      transactionLabel={transactionLabel}
+                      locationFull={locationFull}
+                      displayPhone={displayPhone}
+                      whatsappInquireHref={whatsappInquireHref}
+                      canonicalUrl={canonicalUrl}
                     />
-                    <Paper
-                      variant="outlined"
-                      sx={{
-                        borderColor: 'divider',
-                        bgcolor: 'action.hover',
-                        borderRadius: 999,
-                        px: 1.25,
-                        py: 0.35,
+                    <Divider flexItem sx={{ borderColor: 'rgba(var(--mui-palette-dividerChannel) / 0.35)' }} />
+                    <RealEstateSellerCardContents
+                      sellerSectionHeadingId="re-seller-heading-hero"
+                      listing={listing}
+                      cardSx={{
+                        ...productPanelSx,
+                        border: 'none',
+                        p: 2,
+                        borderRadius: 2.5,
                       }}
-                    >
-                      <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main' }}>
-                        {transactionLabel}
-                      </Typography>
-                    </Paper>
+                    />
                   </Stack>
-                </OwnerEditableSpot>
-              </Box>
+                </Box>
+              </Stack>
+            </Box>
 
-              <Stack spacing={1.25}>
-                {locationFull || canInline || onEditInfo ? (
-                  <OwnerEditableSpot
-                    field="location"
-                    ownerEdit={ownerEdit}
-                    label="Ndrysho lokacionin"
-                    legacyOnClick={onEditInfo}
+            <Stack
+              spacing={{ xs: 3, md: 3.5 }}
+              sx={{ px: { xs: 2, sm: 3, md: 0 }, pb: ownerPreview ? 3 : { xs: 14, md: 6 }, width: '100%' }}
+            >
+              <Stack spacing={1.75}>
+                <OwnerEditableSpot
+                  field="title"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho titullin"
+                  legacyOnClick={onEditInfo}
+                  align="flex-start"
+                >
+                  <Typography
+                    variant="h3"
+                    component="h1"
+                    sx={{
+                      fontWeight: 800,
+                      lineHeight: 1.18,
+                      letterSpacing: '-0.02em',
+                      color: 'text.primary',
+                      fontSize: { xs: '1.55rem', sm: '2rem', md: '2.125rem' },
+                    }}
                   >
-                    {locationFull ? (
-                      <ButtonBase
-                        component="a"
-                        href="#business-location-map"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          scrollToBusinessLocationMap();
-                        }}
+                    {listing.title}
+                    <ListingDetailTitleBadges
+                      verified={Boolean(listing.seller?.verified)}
+                      trustBadge={Boolean(listing.seller?.trustBadge)}
+                    />
+                  </Typography>
+                </OwnerEditableSpot>
+
+                <Box sx={{ display: ownerPreview ? 'block' : { xs: 'block', md: 'none' } }}>
+                  <OwnerEditableSpot
+                    field="price"
+                    ownerEdit={ownerEdit}
+                    label="Ndrysho çmimin"
+                    legacyOnClick={onEditPrice}
+                  >
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
+                      <ListingPrice
+                        price={listing.price}
+                        originalPrice={listing.originalPrice}
+                        currency={listing.currency}
+                        isPremium={listing.isPremium}
+                        isOkazion={listing.isOkazion}
+                        fontSize="1.85rem"
+                        fontWeight={900}
+                        suffix={
+                          listing.transactionType === 'rent' ? (
+                            <Typography
+                              component="span"
+                              variant="subtitle2"
+                              sx={{ ml: 0.5, fontWeight: 600, color: 'text.secondary' }}
+                            >
+                              / muaj
+                            </Typography>
+                          ) : null
+                        }
+                      />
+                      <Paper
+                        variant="outlined"
                         sx={{
-                          display: 'inline-flex',
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 0.65,
-                          color: 'text.secondary',
-                          borderRadius: 1,
-                          textAlign: 'left',
-                          maxWidth: '100%',
-                          '&:hover': { color: 'primary.main' },
+                          borderColor: 'divider',
+                          bgcolor: 'action.hover',
+                          borderRadius: 999,
+                          px: 1.25,
+                          py: 0.35,
                         }}
                       >
-                        <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
-                          <MapPinIcon size={17} weight="regular" color="currentColor" />
-                        </Box>
-                        <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.4 }}>
-                          {locationFull}
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main' }}>
+                          {transactionLabel}
                         </Typography>
-                      </ButtonBase>
-                    ) : (
-                      <>
-                        <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
-                          <MapPinIcon size={17} weight="regular" color="currentColor" />
-                        </Box>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.4 }}>
-                          Shtoni lokacionin
-                        </Typography>
-                      </>
-                    )}
+                      </Paper>
+                    </Stack>
                   </OwnerEditableSpot>
-                ) : null}
-                <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                  <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
-                    <CalendarIcon size={17} weight="regular" aria-hidden />
-                    <Typography variant="body2">{postedLabelSq(listing.createdAt)}</Typography>
-                  </Stack>
-                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}>
-                    <EyeIcon size={17} weight="regular" aria-hidden />
-                    <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)} shikime</Typography>
-                  </Stack>
-                </Stack>
-                <ListingVerifiedNotice verified={Boolean(listing.seller?.verified)} />
-              </Stack>
-            </Stack>
+                </Box>
 
-            {ownerPreview ? null : (
-              <StickyContactBar
-                listingId={listing.id}
-                contactPhone={displayPhone}
-                listingTitle={listing.title}
-                listingUrl={canonicalUrl}
-              />
-            )}
-
-            <Stack spacing={1.25}>
-              <OwnerEditableSpot
-                field="specs"
-                ownerEdit={ownerEdit}
-                label="Ndrysho specifikimet"
-                legacyOnClick={onEditSpecs}
-              >
-                <Typography
-                  variant="overline"
-                  color="text.secondary"
-                  sx={{ fontWeight: 800, letterSpacing: '0.1em' }}
-                >
-                  Përmbledhje
-                </Typography>
-              </OwnerEditableSpot>
-              {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : (
-                <Paper
-                  variant="outlined"
-                  sx={{ borderRadius: 2.5, borderColor: 'divider', bgcolor: 'background.paper', px: { xs: 1, sm: 1.5 }, py: { xs: 1.75, sm: 2 } }}
-                >
-                  <Stack direction="row" sx={{ flexWrap: 'wrap', justifyContent: 'space-evenly', rowGap: 1 }}>
-                    {listing.bedrooms != null ? (
-                      <SpecIconBox Icon={BedIcon} primary={`${listing.bedrooms}`} secondary={listing.bedrooms === 1 ? 'Dhomë gjumi' : 'Dhoma gjumi'} />
-                    ) : null}
-                    {listing.bathrooms != null ? (
-                      <SpecIconBox
-                        Icon={BathtubIcon}
-                        primary={`${listing.bathrooms}`}
-                        secondary={listing.bathrooms === 1 ? 'Tualet' : 'Tualete'}
-                      />
-                    ) : null}
-                    <SpecIconBox Icon={RulerIcon} primary={`${listing.surfaceM2} m²`} secondary="Sipërfaqe" />
-                    {listing.propertyCategory === 'parking' && listing.parkingFloor != null ? (
-                      <SpecIconBox Icon={CarIcon} primary={`Kati ${listing.parkingFloor}`} secondary="Parkim" />
-                    ) : listing.totalFloors != null ? (
-                      <SpecIconBox Icon={StairsIcon} primary={`${listing.totalFloors}`} secondary={listing.totalFloors === 1 ? 'Kat' : 'Kata'} />
-                    ) : listing.floor != null ? (
-                      <SpecIconBox Icon={StairsIcon} primary={`Kat ${listing.floor}`} secondary="Niveli" />
-                    ) : null}
-                  </Stack>
-                </Paper>
-              )}
-            </Stack>
-
-            <Stack spacing={2} component="section" aria-labelledby="re-desc-heading">
-              <OwnerEditableSpot
-                field="description"
-                ownerEdit={ownerEdit}
-                label="Ndrysho përshkrimin"
-                legacyOnClick={onEditSpecs}
-              >
-                <Typography
-                  id="re-desc-heading"
-                  component="h2"
-                  variant="overline"
-                  sx={{
-                    letterSpacing: '0.14em',
-                    fontWeight: 800,
-                    color: 'text.secondary',
-                  }}
-                >
-                  Përshkrimi
-                </Typography>
-              </OwnerEditableSpot>
-              {ownerEdit?.editingField === 'description' && ownerEdit.inlineEditors?.description ? null : listing.description ? (
-                <RealEstateListingExpandableText text={listing.description} />
-              ) : canInline || onEditSpecs ? (
-                <Typography sx={{ color: 'text.secondary' }}>Shtoni përshkrimin</Typography>
-              ) : null}
-            </Stack>
-
-            <Stack spacing={0} component="section" aria-labelledby="re-detail-heading">
-              {sectionTitle(
-                'Detajet',
-                're-detail-heading',
-                canInline || onEditSpecs
-                  ? {
-                      label: 'Ndrysho detajet',
-                      onClick: () =>
-                        ownerEdit?.onStartInlineEdit
-                          ? ownerEdit.onStartInlineEdit('specs')
-                          : onEditSpecs?.(),
-                    }
-                  : undefined,
-              )}
-              {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : (
-              <Stack divider={<Divider flexItem />} spacing={0}>
-                {detailRows.filter(Boolean).map((row) => (
-                  <DetailRow key={row!.label} label={row!.label} value={row!.value} />
-                ))}
-              </Stack>
-              )}
-            </Stack>
-
-            {featureChips.length ? (
-              <Stack spacing={1.5} component="section" aria-labelledby="re-amen-heading">
-                {sectionTitle('Veçoritë kryesore', 're-amen-heading')}
-                <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
-                  {featureChips.map((label) => (
-                    <Paper
-                      key={label}
-                      variant="outlined"
-                      sx={{
-                        borderRadius: 15,
-                        px: 1.5,
-                        py: 0.85,
-                        bgcolor: 'action.hover',
-                        borderColor: 'divider',
-                      }}
+                <Stack spacing={1.25}>
+                  {locationFull || canInline || onEditInfo ? (
+                    <OwnerEditableSpot
+                      field="location"
+                      ownerEdit={ownerEdit}
+                      label="Ndrysho lokacionin"
+                      legacyOnClick={onEditInfo}
                     >
-                      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-                        <Box sx={{ color: 'primary.main', display: 'inline-flex', lineHeight: 0 }}>
-                          <LightningIcon size={14} weight="regular" color="currentColor" aria-hidden />
-                        </Box>
-                        <Typography variant="body2" sx={{ fontWeight: 650, fontSize: '0.8125rem' }}>
-                          {label}
-                        </Typography>
-                      </Stack>
-                    </Paper>
-                  ))}
+                      {locationFull ? (
+                        <ButtonBase
+                          component="a"
+                          href="#business-location-map"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            scrollToBusinessLocationMap();
+                          }}
+                          sx={{
+                            display: 'inline-flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 0.65,
+                            color: 'text.secondary',
+                            borderRadius: 1,
+                            textAlign: 'left',
+                            maxWidth: '100%',
+                            '&:hover': { color: 'primary.main' },
+                          }}
+                        >
+                          <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
+                            <MapPinIcon size={17} weight="regular" color="currentColor" />
+                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.4 }}>
+                            {locationFull}
+                          </Typography>
+                        </ButtonBase>
+                      ) : (
+                        <>
+                          <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', lineHeight: 0 }}>
+                            <MapPinIcon size={17} weight="regular" color="currentColor" />
+                          </Box>
+                          <Typography
+                            variant="body2"
+                            sx={{ color: 'text.secondary', fontWeight: 600, lineHeight: 1.4 }}
+                          >
+                            Shtoni lokacionin
+                          </Typography>
+                        </>
+                      )}
+                    </OwnerEditableSpot>
+                  ) : null}
+                  <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
+                    <Stack
+                      direction="row"
+                      spacing={0.55}
+                      sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}
+                    >
+                      <CalendarIcon size={17} weight="regular" aria-hidden />
+                      <Typography variant="body2">{postedLabelSq(listing.createdAt)}</Typography>
+                    </Stack>
+                    <Stack
+                      direction="row"
+                      spacing={0.5}
+                      sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}
+                    >
+                      <EyeIcon size={17} weight="regular" aria-hidden />
+                      <Typography variant="body2">
+                        {new Intl.NumberFormat('sq-AL').format(viewCount)} shikime
+                      </Typography>
+                    </Stack>
+                  </Stack>
+                  <ListingVerifiedNotice verified={Boolean(listing.seller?.verified)} />
                 </Stack>
               </Stack>
-            ) : null}
 
-            <Box sx={{ display: ownerPreview ? 'block' : { xs: 'block', md: 'none' } }}>
-              <RealEstateSellerCardContents
-                sellerSectionHeadingId="re-seller-heading-scroll"
-                listing={listing}
-              />
-            </Box>
+              {ownerPreview ? null : (
+                <StickyContactBar
+                  listingId={listing.id}
+                  contactPhone={displayPhone}
+                  listingTitle={listing.title}
+                  listingUrl={canonicalUrl}
+                />
+              )}
 
-            {mapLocation || canInline || onEditInfo ? (
-              <Stack
-                data-business-location-map
-                spacing={1.5}
-                component="section"
-                aria-labelledby="re-loc-heading"
-                sx={{ scrollMarginTop: 80 }}
-              >
-                {sectionTitle('Vendndodhja', 're-loc-heading')}
-                {mapLocation ? (
-                  <LocationMapEmbed
-                    query={mapLocation.query}
-                    lat={mapLocation.lat}
-                    lng={mapLocation.lng}
-                  />
-                ) : (
-                  <Typography sx={{ color: 'text.secondary' }}>
-                    Shtoni qytetin, lagjen ose linkun e Google Maps.
+              <Stack spacing={1.25}>
+                <OwnerEditableSpot
+                  field="specs"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho specifikimet"
+                  legacyOnClick={onEditSpecs}
+                >
+                  <Typography
+                    variant="overline"
+                    color="text.secondary"
+                    sx={{ fontWeight: 800, letterSpacing: '0.1em' }}
+                  >
+                    Përmbledhje
                   </Typography>
-                )}
-              </Stack>
-            ) : null}
-
-            {!ownerPreview && similar.length > 0 ? (
-              <>
-                <Divider sx={{ borderColor: 'divider' }} />
-                <Stack spacing={2} component="aside" aria-labelledby="re-related-heading">
-                  {sectionTitle('Prona të ngjashme', 're-related-heading')}
-                  <Typography variant="caption" sx={{ color: 'text.secondary', mt: '-0.5rem !important' }}>
-                    Lista e përditësuar automatikisht.
-                  </Typography>
-                  <Box
+                </OwnerEditableSpot>
+                {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : (
+                  <Paper
+                    variant="outlined"
                     sx={{
-                      mx: { xs: -2, sm: -3, md: 0 },
-                      px: { xs: 2, sm: 3, md: 0 },
-                      '& > div > div': { py: '8px 0 0 !important' },
+                      borderRadius: 2.5,
+                      borderColor: 'divider',
+                      bgcolor: 'background.paper',
+                      px: { xs: 1, sm: 1.5 },
+                      py: { xs: 1.75, sm: 2 },
                     }}
                   >
-                    <ListingsCarousel>
-                      {similar.map((s) => (
-                        <RealEstateCard key={s.id} listing={s} />
-                      ))}
-                    </ListingsCarousel>
-                  </Box>
+                    <Stack direction="row" sx={{ flexWrap: 'wrap', justifyContent: 'space-evenly', rowGap: 1 }}>
+                      {listing.bedrooms != null ? (
+                        <SpecIconBox
+                          Icon={BedIcon}
+                          primary={`${listing.bedrooms}`}
+                          secondary={listing.bedrooms === 1 ? 'Dhomë gjumi' : 'Dhoma gjumi'}
+                        />
+                      ) : null}
+                      {listing.bathrooms != null ? (
+                        <SpecIconBox
+                          Icon={BathtubIcon}
+                          primary={`${listing.bathrooms}`}
+                          secondary={listing.bathrooms === 1 ? 'Tualet' : 'Tualete'}
+                        />
+                      ) : null}
+                      <SpecIconBox Icon={RulerIcon} primary={`${listing.surfaceM2} m²`} secondary="Sipërfaqe" />
+                      {listing.propertyCategory === 'parking' && listing.parkingFloor != null ? (
+                        <SpecIconBox Icon={CarIcon} primary={`Kati ${listing.parkingFloor}`} secondary="Parkim" />
+                      ) : listing.totalFloors != null ? (
+                        <SpecIconBox
+                          Icon={StairsIcon}
+                          primary={`${listing.totalFloors}`}
+                          secondary={listing.totalFloors === 1 ? 'Kat' : 'Kata'}
+                        />
+                      ) : listing.floor != null ? (
+                        <SpecIconBox Icon={StairsIcon} primary={`Kat ${listing.floor}`} secondary="Niveli" />
+                      ) : null}
+                    </Stack>
+                  </Paper>
+                )}
+              </Stack>
+
+              <Stack spacing={2} component="section" aria-labelledby="re-desc-heading">
+                <OwnerEditableSpot
+                  field="description"
+                  ownerEdit={ownerEdit}
+                  label="Ndrysho përshkrimin"
+                  legacyOnClick={onEditSpecs}
+                >
+                  <Typography
+                    id="re-desc-heading"
+                    component="h2"
+                    variant="overline"
+                    sx={{
+                      letterSpacing: '0.14em',
+                      fontWeight: 800,
+                      color: 'text.secondary',
+                    }}
+                  >
+                    Përshkrimi
+                  </Typography>
+                </OwnerEditableSpot>
+                {ownerEdit?.editingField === 'description' &&
+                ownerEdit.inlineEditors?.description ? null : listing.description ? (
+                  <RealEstateListingExpandableText text={listing.description} />
+                ) : canInline || onEditSpecs ? (
+                  <Typography sx={{ color: 'text.secondary' }}>Shtoni përshkrimin</Typography>
+                ) : null}
+              </Stack>
+
+              <Stack spacing={0} component="section" aria-labelledby="re-detail-heading">
+                {sectionTitle(
+                  'Detajet',
+                  're-detail-heading',
+                  canInline || onEditSpecs
+                    ? {
+                        label: 'Ndrysho detajet',
+                        onClick: () =>
+                          ownerEdit?.onStartInlineEdit ? ownerEdit.onStartInlineEdit('specs') : onEditSpecs?.(),
+                      }
+                    : undefined
+                )}
+                {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : (
+                  <Stack divider={<Divider flexItem />} spacing={0}>
+                    {detailRows.filter(Boolean).map((row) => (
+                      <DetailRow key={row!.label} label={row!.label} value={row!.value} />
+                    ))}
+                  </Stack>
+                )}
+              </Stack>
+
+              {featureChips.length ? (
+                <Stack spacing={1.5} component="section" aria-labelledby="re-amen-heading">
+                  {sectionTitle('Veçoritë kryesore', 're-amen-heading')}
+                  <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
+                    {featureChips.map((label) => (
+                      <Paper
+                        key={label}
+                        variant="outlined"
+                        sx={{
+                          borderRadius: 15,
+                          px: 1.5,
+                          py: 0.85,
+                          bgcolor: 'action.hover',
+                          borderColor: 'divider',
+                        }}
+                      >
+                        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                          <Box sx={{ color: 'primary.main', display: 'inline-flex', lineHeight: 0 }}>
+                            <LightningIcon size={14} weight="regular" color="currentColor" aria-hidden />
+                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 650, fontSize: '0.8125rem' }}>
+                            {label}
+                          </Typography>
+                        </Stack>
+                      </Paper>
+                    ))}
+                  </Stack>
                 </Stack>
-              </>
-            ) : null}
+              ) : null}
+
+              <Box sx={{ display: ownerPreview ? 'block' : { xs: 'block', md: 'none' } }}>
+                <RealEstateSellerCardContents sellerSectionHeadingId="re-seller-heading-scroll" listing={listing} />
+              </Box>
+
+              {mapLocation || canInline || onEditInfo ? (
+                <Stack
+                  data-business-location-map
+                  spacing={1.5}
+                  component="section"
+                  aria-labelledby="re-loc-heading"
+                  sx={{ scrollMarginTop: 80 }}
+                >
+                  {sectionTitle('Vendndodhja', 're-loc-heading')}
+                  {mapLocation ? (
+                    <LocationMapEmbed query={mapLocation.query} lat={mapLocation.lat} lng={mapLocation.lng} />
+                  ) : (
+                    <Typography sx={{ color: 'text.secondary' }}>
+                      Shtoni qytetin, lagjen ose linkun e Google Maps.
+                    </Typography>
+                  )}
+                </Stack>
+              ) : null}
+
+              {!ownerPreview && similarSlot ? (
+                similarSlot
+              ) : !ownerPreview && similar.length > 0 ? (
+                <>
+                  <Divider sx={{ borderColor: 'divider' }} />
+                  <Stack spacing={2} component="aside" aria-labelledby="re-related-heading">
+                    {sectionTitle('Prona të ngjashme', 're-related-heading')}
+                    <Typography variant="caption" sx={{ color: 'text.secondary', mt: '-0.5rem !important' }}>
+                      Lista e përditësuar automatikisht.
+                    </Typography>
+                    <Box
+                      sx={{
+                        mx: { xs: -2, sm: -3, md: 0 },
+                        px: { xs: 2, sm: 3, md: 0 },
+                        '& > div > div': { py: '8px 0 0 !important' },
+                      }}
+                    >
+                      <ListingsCarousel>
+                        {similar.map((s) => (
+                          <RealEstateCard key={s.id} listing={s} />
+                        ))}
+                      </ListingsCarousel>
+                    </Box>
+                  </Stack>
+                </>
+              ) : null}
             </Stack>
           </Stack>
         </Container>
       </Box>
-
     </>
   );
 }

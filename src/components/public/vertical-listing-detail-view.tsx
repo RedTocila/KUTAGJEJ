@@ -1,16 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Box,
-  Button,
-  ButtonBase,
-  Chip,
-  Container,
-  Divider,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Box, Button, ButtonBase, Chip, Container, Divider, Stack, Typography } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
@@ -29,11 +20,10 @@ import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
 import { Wrench as WrenchIcon } from '@phosphor-icons/react/dist/ssr/Wrench';
-import {
-  CAR_COLOUR_OPTIONS,
-  FUEL_TYPE_OPTIONS,
-  TRANSMISSION_OPTIONS,
-} from '@/lib/car-constants';
+
+import { CAR_COLOUR_OPTIONS, FUEL_TYPE_OPTIONS, TRANSMISSION_OPTIONS } from '@/lib/car-constants';
+import { metricKindToConversationKind } from '@/lib/conversations-client';
+import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import {
   JOB_EDUCATION_OPTIONS,
   JOB_EXPERIENCE_OPTIONS,
@@ -41,33 +31,15 @@ import {
   JOB_TYPE_OPTIONS,
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
-import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
-import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
+import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import { whatsappInquireHref as buildWhatsappInquireHref, whatsappInquireText } from '@/lib/listing-contact';
+import { LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX, LISTING_DETAIL_HERO_IMAGE_SIZES } from '@/lib/listing-detail-layout';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
-import {
-  LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX,
-  LISTING_DETAIL_HERO_IMAGE_SIZES,
-} from '@/lib/listing-detail-layout';
-import type {
-  AnyPublicListingDetail,
-  PublicCarListing,
-  PublicMarketplaceListing,
-} from '@/lib/public-listings-client';
-
-import { ListingMessageButton } from '@/components/public/listing-message-button';
-import { ListingSellerProfileCard } from '@/components/public/listing-seller-profile-card';
-import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
-import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
-import { ListingsCarousel } from '@/components/public/listings-carousel';
-import { LocationMapEmbed } from '@/components/public/location-map-embed';
-import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
-import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
-import { StickyListingContact } from '@/components/public/sticky-listing-contact';
-import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
-import { productButtonSx, productPanelSx } from '@/styles/product-sx';
+import type { ListingMetricKind } from '@/lib/listing-metrics';
+import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
+import type { AnyPublicListingDetail, PublicCarListing, PublicMarketplaceListing } from '@/lib/public-listings-client';
+import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { CarCard } from '@/components/public/listing-cards/car-card';
-import { ListingPrice } from '@/components/public/listing-cards/listing-price';
 import {
   findOptionLabel,
   formatKilometers,
@@ -75,14 +47,22 @@ import {
   postedLabelSq,
 } from '@/components/public/listing-cards/format-helpers';
 import { JobListingCountdown } from '@/components/public/listing-cards/job-listing-countdown';
+import { ListingPrice } from '@/components/public/listing-cards/listing-price';
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
-import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
+import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
+import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
+import { ListingSellerProfileCard } from '@/components/public/listing-seller-profile-card';
+import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
+import { ListingsCarousel } from '@/components/public/listings-carousel';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
+import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
+import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
+import { StickyListingContact } from '@/components/public/sticky-listing-contact';
+import { whatsappOutlinedButtonSx } from '@/components/public/whatsapp-outlined-button-sx';
 import { type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
 import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
-import { useListingBookmark } from '@/hooks/use-listing-bookmark';
-import { metricKindToConversationKind } from '@/lib/conversations-client';
-import type { ListingMetricKind } from '@/lib/listing-metrics';
+import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 
 type SpecIcon = typeof TagIcon;
 
@@ -227,7 +207,16 @@ function ListingContactAside(props: {
               '&:hover': { color: 'primary.main' },
             }}
           >
-            <Box sx={{ color: 'primary.main', opacity: 0.9, display: 'inline-flex', flexShrink: 0, lineHeight: 0, pt: 0.35 }}>
+            <Box
+              sx={{
+                color: 'primary.main',
+                opacity: 0.9,
+                display: 'inline-flex',
+                flexShrink: 0,
+                lineHeight: 0,
+                pt: 0.35,
+              }}
+            >
               <MapPinIcon size={17} weight="regular" color="currentColor" aria-hidden />
             </Box>
             <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.45 }}>
@@ -297,22 +286,31 @@ export function VerticalListingDetailView(props: {
   canonicalUrl: string;
   browseHref: string;
   similarSectionTitle: string;
-  similar: PublicCarListing[] | PublicMarketplaceListing[];
+  similar?: PublicCarListing[] | PublicMarketplaceListing[];
+  similarSlot?: React.ReactNode;
   /** Owner edit canvas — hide buyer chrome (contact, similar, metrics). */
   ownerPreview?: boolean;
   ownerEdit?: OwnerEditHandlers;
 }) {
-  const { listing, canonicalUrl, browseHref, similarSectionTitle, similar, ownerPreview = false, ownerEdit } = props;
+  const {
+    listing,
+    canonicalUrl,
+    browseHref,
+    similarSectionTitle,
+    similar = [],
+    similarSlot,
+    ownerPreview = false,
+    ownerEdit,
+  } = props;
   const onEditInfo = ownerEdit?.onEditInfo;
   const onEditPrice = ownerEdit?.onEditPrice ?? onEditInfo;
   const onEditSpecs = ownerEdit?.onEditSpecs ?? onEditInfo;
   const canInline = Boolean(ownerEdit?.onStartInlineEdit);
 
-  const displayPhone =
-    listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
+  const displayPhone = listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
   const whatsappInquireHref = buildWhatsappInquireHref(
     displayPhone,
-    whatsappInquireText(listingTitle(listing), canonicalUrl),
+    whatsappInquireText(listingTitle(listing), canonicalUrl)
   );
 
   const viewCount = listing.viewCount ?? 0;
@@ -402,10 +400,7 @@ export function VerticalListingDetailView(props: {
                     canonicalUrl={canonicalUrl}
                   />
                   <Divider flexItem />
-                  <SellerProfileInner
-                    listing={listing}
-                    cardSx={{ border: 'none', p: 2 }}
-                  />
+                  <SellerProfileInner listing={listing} cardSx={{ border: 'none', p: 2 }} />
                 </Stack>
               </Box>
             </Stack>
@@ -455,7 +450,10 @@ export function VerticalListingDetailView(props: {
               </Box>
 
               <Stack spacing={1.25}>
-                <Stack direction="row" sx={{ flexWrap: 'wrap', gap: { xs: 1.25, sm: 2 }, color: 'text.secondary', alignItems: 'center' }}>
+                <Stack
+                  direction="row"
+                  sx={{ flexWrap: 'wrap', gap: { xs: 1.25, sm: 2 }, color: 'text.secondary', alignItems: 'center' }}
+                >
                   {canInline || onEditInfo ? (
                     <OwnerEditableSpot
                       field="location"
@@ -533,19 +531,25 @@ export function VerticalListingDetailView(props: {
                   )}
                   {listing.kind === 'job' && !listing.isOkazion ? (
                     <JobListingCountdown
-                      expiresAt={
-                        listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString()
-                      }
+                      expiresAt={listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString()}
                       chipSx={{ height: 28, fontSize: '0.8rem' }}
                     />
                   ) : null}
                 </Stack>
                 <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                  <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
+                  <Stack
+                    direction="row"
+                    spacing={0.55}
+                    sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}
+                  >
                     <CalendarIcon size={17} weight="regular" aria-hidden />
                     <Typography variant="body2">{postedLabelSq(listing.createdAt)}</Typography>
                   </Stack>
-                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}>
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
+                    sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}
+                  >
                     <EyeIcon size={17} weight="regular" aria-hidden />
                     <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)} shikime</Typography>
                   </Stack>
@@ -581,43 +585,43 @@ export function VerticalListingDetailView(props: {
                 </Typography>
               </OwnerEditableSpot>
               {ownerEdit?.editingField === 'specs' && ownerEdit.inlineEditors?.specs ? null : (
-              <Box
-                sx={{
-                  ...productPanelSx,
-                  borderRadius: 2.5,
-                  px: { xs: 0.5, sm: 0.75 },
-                  py: { xs: 1.5, sm: 1.75 },
-                }}
-              >
-                <Stack
-                  direction="row"
-                  divider={
-                    summarySpecs.length <= 4 ? (
-                      <Divider
-                        orientation="vertical"
-                        flexItem
-                        sx={{ borderColor: 'rgba(var(--mui-palette-dividerChannel) / 0.55)', my: 0.5 }}
-                      />
-                    ) : undefined
-                  }
+                <Box
                   sx={{
-                    alignItems: 'stretch',
-                    width: '100%',
-                    flexWrap: summarySpecs.length > 4 ? 'wrap' : 'nowrap',
-                    rowGap: 1.5,
-                    justifyContent: summarySpecs.length > 4 ? 'space-evenly' : 'flex-start',
+                    ...productPanelSx,
+                    borderRadius: 2.5,
+                    px: { xs: 0.5, sm: 0.75 },
+                    py: { xs: 1.5, sm: 1.75 },
                   }}
                 >
-                  {summarySpecs.map((spec) => (
-                    <SpecIconBox
-                      key={`${spec.label}-${spec.value}`}
-                      Icon={spec.Icon}
-                      primary={spec.value}
-                      secondary={spec.label}
-                    />
-                  ))}
-                </Stack>
-              </Box>
+                  <Stack
+                    direction="row"
+                    divider={
+                      summarySpecs.length <= 4 ? (
+                        <Divider
+                          orientation="vertical"
+                          flexItem
+                          sx={{ borderColor: 'rgba(var(--mui-palette-dividerChannel) / 0.55)', my: 0.5 }}
+                        />
+                      ) : undefined
+                    }
+                    sx={{
+                      alignItems: 'stretch',
+                      width: '100%',
+                      flexWrap: summarySpecs.length > 4 ? 'wrap' : 'nowrap',
+                      rowGap: 1.5,
+                      justifyContent: summarySpecs.length > 4 ? 'space-evenly' : 'flex-start',
+                    }}
+                  >
+                    {summarySpecs.map((spec) => (
+                      <SpecIconBox
+                        key={`${spec.label}-${spec.value}`}
+                        Icon={spec.Icon}
+                        primary={spec.value}
+                        secondary={spec.label}
+                      />
+                    ))}
+                  </Stack>
+                </Box>
               )}
             </Stack>
 
@@ -634,7 +638,8 @@ export function VerticalListingDetailView(props: {
                   Përshkrimi
                 </Typography>
               </OwnerEditableSpot>
-              {ownerEdit?.editingField === 'description' && ownerEdit.inlineEditors?.description ? null : listing.description ? (
+              {ownerEdit?.editingField === 'description' &&
+              ownerEdit.inlineEditors?.description ? null : listing.description ? (
                 <RealEstateListingExpandableText text={listing.description} />
               ) : canInline || onEditSpecs ? (
                 <Typography sx={{ color: 'text.secondary' }}>Shtoni përshkrimin</Typography>
@@ -658,22 +663,18 @@ export function VerticalListingDetailView(props: {
                   Vendndodhja
                 </Typography>
                 {mapLocation ? (
-                  <LocationMapEmbed
-                    query={mapLocation.query}
-                    lat={mapLocation.lat}
-                    lng={mapLocation.lng}
-                  />
+                  <LocationMapEmbed query={mapLocation.query} lat={mapLocation.lat} lng={mapLocation.lng} />
                 ) : (
-                  <Typography sx={{ color: 'text.secondary' }}>
-                    Shtoni qytetin ose linkun e Google Maps.
-                  </Typography>
+                  <Typography sx={{ color: 'text.secondary' }}>Shtoni qytetin ose linkun e Google Maps.</Typography>
                 )}
               </Stack>
             ) : null}
 
             <Box sx={{ display: ownerPreview ? 'block' : { xs: 'block', md: 'none' } }}>{sellerBlock(listing)}</Box>
 
-            {!ownerPreview && similar.length ? (
+            {!ownerPreview && similarSlot ? (
+              similarSlot
+            ) : !ownerPreview && similar.length ? (
               <Stack spacing={1.5} component="aside" aria-labelledby="vertical-similar-heading">
                 <Divider />
                 <Typography
@@ -692,11 +693,7 @@ export function VerticalListingDetailView(props: {
                 >
                   <ListingsCarousel>
                     {similar.map((s) =>
-                      s.kind === 'car' ? (
-                        <CarCard key={s.id} listing={s} />
-                      ) : (
-                        <MarketplaceCard key={s.id} listing={s} />
-                      ),
+                      s.kind === 'car' ? <CarCard key={s.id} listing={s} /> : <MarketplaceCard key={s.id} listing={s} />
                     )}
                   </ListingsCarousel>
                 </Box>
@@ -705,7 +702,6 @@ export function VerticalListingDetailView(props: {
           </Stack>
         </Container>
       </Box>
-
     </>
   );
 }

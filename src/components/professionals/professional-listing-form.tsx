@@ -17,6 +17,7 @@ import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/Use
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import {
+  ListingDescriptionField,
   ListingFormActionError,
   ListingFormActions,
   ListingFormSection,
@@ -504,14 +505,12 @@ export function ProfessionalListingForm({
             showPreview
             disabled={submitting}
           />
-          <ListingTextField
+          <ListingDescriptionField
             label="Përshkrimi"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             required
             fullWidth
-            multiline
-            minRows={4}
           />
           <ListingTextField
             label="Shërbimet (opsionale)"

@@ -35,6 +35,7 @@ import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { BusinessMobileCtaPicker, reservationsEnabledForMobileCta } from '@/components/businesses/business-mobile-cta-picker';
 import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import {
+  ListingDescriptionField,
   ListingFormActionError,
   ListingFormActions,
   ListingFormSection,
@@ -400,13 +401,12 @@ export function BusinessListingForm({
             showPreview
             disabled={submitting}
           />
-          <ListingTextField
+          <ListingDescriptionField
             label="Përshkrimi"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             required
             fullWidth
-            multiline
             minRows={3}
           />
           <ListingTextField

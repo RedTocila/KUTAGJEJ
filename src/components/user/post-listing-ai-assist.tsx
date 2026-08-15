@@ -40,6 +40,7 @@ import {
   AI_SEARCH_BLUE_ON,
   AI_SEARCH_BLUE_SOFT,
 } from '@/lib/home-categories';
+import { POST_LISTING_AI_BAR_ID, POST_LISTING_AI_INPUT_ID } from '@/lib/post-listing-ai-focus';
 import { hardNavigate } from '@/lib/hard-navigate';
 import { knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
 import { paths } from '@/paths';
@@ -357,7 +358,13 @@ export function PostListingAiAssist({
   };
 
   return (
-    <Stack spacing={1} component="form" onSubmit={handleAnalyze}>
+    <Stack
+      id={POST_LISTING_AI_BAR_ID}
+      spacing={1}
+      component="form"
+      onSubmit={handleAnalyze}
+      sx={{ scrollMarginTop: 72 }}
+    >
       <input
         ref={fileInputRef}
         type="file"
@@ -399,6 +406,7 @@ export function PostListingAiAssist({
             }
           }}
           slotProps={{
+            htmlInput: { id: POST_LISTING_AI_INPUT_ID },
             input: {
               startAdornment: (
                 <InputAdornment

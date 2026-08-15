@@ -11,6 +11,7 @@ import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import {
+  ListingDescriptionField,
   ListingFormActionError,
   ListingFormActions,
   ListingFormSection,
@@ -334,14 +335,12 @@ export function MarketplaceListingForm({
           label="Foto të artikullit"
           disabled={submitting}
         />
-        <ListingTextField
+        <ListingDescriptionField
           label="Përshkrimi"
           value={form.description}
           onChange={onField('description')}
           required
           fullWidth
-          multiline
-          minRows={4}
           placeholder="Përshkruani artikullin, gjendjen, çdo detaj të rëndësishëm…"
         />
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>

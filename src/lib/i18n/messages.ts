@@ -593,6 +593,7 @@ const sq = {
     formHint:
       'Bashkëngjit foto — AI i njeh produktin — dhe shto detaje (çmim, gjendje, qytet). AI i bashkon në titull e përshkrim.',
     formPlaceholder: 'p.sh. përdorur një herë, 5000 LEK, Tiranë…',
+    writeWithAi: 'Shkruaj me AI',
     formApplied: 'Formulari u mbush me AI. Kontrollo dhe publiko.',
     formEmpty: 'Nuk u gjet draft i vlefshëm.',
     formWrongCategory: 'Ky rezultat duket për një kategori tjetër. Provoni përsëri me më shumë detaje.',
@@ -1279,6 +1280,7 @@ const en: AppMessages = {
     formHint:
       'Attach photos — AI identifies the product — and add extras (price, condition, city). AI merges them into title and description.',
     formPlaceholder: 'e.g. used once, 5000 LEK, Tirana…',
+    writeWithAi: 'Write with AI',
     formApplied: 'Form filled with AI. Review and publish.',
     formEmpty: 'No valid draft found.',
     formWrongCategory: 'This result looks like another category. Try again with more detail.',

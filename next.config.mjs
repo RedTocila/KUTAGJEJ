@@ -9,7 +9,9 @@ const backendHostname = (() => {
 })();
 
 const CANONICAL_HOST = 'kutagjej.al';
-const LEGACY_REDIRECT_HOSTS = ['www.kutagjej.al', 'kutagjej.vercel.app', 'ku-ta-gjej.vercel.app', 'ku-ta-gjej-front.vercel.app'];
+// Do not redirect www here — Vercel domain settings already choose www vs apex.
+// Redirecting the opposite way creates a 308 loop (Safari: "too many redirects").
+const LEGACY_REDIRECT_HOSTS = ['kutagjej.vercel.app', 'ku-ta-gjej.vercel.app', 'ku-ta-gjej-front.vercel.app'];
 
 function hostRedirects(host) {
   return [

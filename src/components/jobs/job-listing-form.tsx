@@ -25,6 +25,7 @@ import {
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import {
+  ListingDescriptionField,
   ListingFormActionError,
   ListingFormActions,
   ListingFormSection,
@@ -411,13 +412,12 @@ export function JobListingForm({
           label="Foto (logo / kopertinë — opsionale)"
           disabled={submitting}
         />
-        <ListingTextField
+        <ListingDescriptionField
           label="Përshkrimi i shkurtër"
           value={form.description}
           onChange={onField('description')}
           required
           fullWidth
-          multiline
           minRows={3}
           placeholder="Prezantim i pozicionit — 2–3 fjali për kandidatët…"
           helperText="Detyrat, kërkesat dhe përfitimet plotësohen më poshtë si seksione të veçanta."

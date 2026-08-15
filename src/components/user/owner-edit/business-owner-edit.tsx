@@ -7,6 +7,7 @@ import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { BusinessMobileCtaInlineEditor } from '@/components/businesses/business-mobile-cta-inline-editor';
 import { BusinessListingDetailView } from '@/components/public/business-listing-detail-view';
+import { ListingDescriptionField } from '@/components/user/listing-form-ui';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
 import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
 import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
@@ -398,13 +399,11 @@ export function BusinessOwnerEdit({
     ),
     description: (
       <Stack spacing={1} sx={{ width: '100%' }}>
-        <TextField
+        <ListingDescriptionField
           label="Përshkrimi"
           value={draft.description ?? ''}
           onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
           fullWidth
-          multiline
-          minRows={4}
           autoFocus
           sx={fieldSx}
         />

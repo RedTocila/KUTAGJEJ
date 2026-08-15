@@ -11,11 +11,11 @@ import { VehicleTypePicker } from '@/components/cars/vehicle-type-picker';
 import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import { CarListingDetailView } from '@/components/public/car-listing-detail-view';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
+import { ListingDescriptionField, ListingToggle } from '@/components/user/listing-form-ui';
 import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
 import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
 import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dialog';
 import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
-import { ListingToggle } from '@/components/user/listing-form-ui';
 import {
   CAR_COLOUR_OPTIONS,
   CAR_EXTRAS,
@@ -516,13 +516,11 @@ export function CarOwnerEdit({
     ),
     description: (
       <Stack spacing={1} sx={{ width: '100%' }}>
-        <TextField
+        <ListingDescriptionField
           label="Përshkrimi"
           value={draft.description ?? ''}
           onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
           fullWidth
-          multiline
-          minRows={4}
           autoFocus
           sx={fieldSx}
         />

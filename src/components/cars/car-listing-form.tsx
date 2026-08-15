@@ -36,6 +36,7 @@ import { SearchableSelect } from '@/components/core/searchable-select';
 import { VehicleTypePicker } from '@/components/cars/vehicle-type-picker';
 import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import {
+  ListingDescriptionField,
   ListingFormActionError,
   ListingFormActions,
   ListingTextField,
@@ -869,14 +870,12 @@ export function CarListingForm({
           disabled={submitting}
         />
 
-        <ListingTextField
+        <ListingDescriptionField
           label="Description"
           value={form.description}
           onChange={onField('description')}
           required
           fullWidth
-          multiline
-          minRows={4}
           placeholder="Describe the car's condition, service history, any additional info…"
           error={Boolean(fieldErrors.description)}
           helperText={fieldErrors.description}

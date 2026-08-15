@@ -6,6 +6,8 @@ import {
   Alert,
   Box,
   Button,
+  IconButton,
+  InputAdornment,
   Stack,
   TextField,
   Typography,
@@ -15,10 +17,18 @@ import {
   type TextFieldProps,
 } from '@mui/material';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
+import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 
 import { PortalIconBox } from '@/components/user/portal-cards';
+import { useCopy } from '@/hooks/use-copy';
 import { useHistoryBackProps } from '@/hooks/use-navigate-back';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import {
+  AI_SEARCH_BLUE,
+  AI_SEARCH_BLUE_HOVER,
+  AI_SEARCH_BLUE_ON,
+} from '@/lib/home-categories';
+import { focusPostListingAiAssist } from '@/lib/post-listing-ai-focus';
 import { paths } from '@/paths';
 import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 
@@ -85,6 +95,80 @@ export const ListingTextField = React.forwardRef(function ListingTextField(
         },
       }}
       sx={[listingOutlinedFieldSx, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])]}
+    />
+  );
+});
+
+/**
+ * Listing description textarea with an AI button in the bottom-right corner.
+ * The button scrolls to the top AI command bar and focuses it (opens the keyboard).
+ */
+export const ListingDescriptionField = React.forwardRef(function ListingDescriptionField(
+  props: TextFieldProps,
+  ref: React.Ref<HTMLDivElement>,
+) {
+  const t = useCopy();
+  const { slotProps, sx, multiline = true, minRows = 4, ...rest } = props;
+  const inputSlot =
+    typeof slotProps?.input === 'object' && slotProps.input !== null ? slotProps.input : {};
+  const inputSlotSx = 'sx' in inputSlot ? inputSlot.sx : undefined;
+  const existingEndAdornment =
+    'endAdornment' in inputSlot ? inputSlot.endAdornment : undefined;
+
+  return (
+    <ListingTextField
+      ref={ref}
+      {...rest}
+      multiline={multiline}
+      minRows={minRows}
+      slotProps={{
+        ...slotProps,
+        input: {
+          ...inputSlot,
+          endAdornment: (
+            <>
+              {existingEndAdornment}
+              <InputAdornment position="end" sx={{ pointerEvents: 'none' }}>
+                <IconButton
+                  type="button"
+                  size="small"
+                  aria-label={t.aiImport.writeWithAi}
+                  onClick={focusPostListingAiAssist}
+                  sx={{
+                    pointerEvents: 'auto',
+                    width: 32,
+                    height: 32,
+                    bgcolor: AI_SEARCH_BLUE,
+                    color: AI_SEARCH_BLUE_ON,
+                    '&:hover': {
+                      bgcolor: AI_SEARCH_BLUE_HOVER,
+                      color: AI_SEARCH_BLUE_ON,
+                    },
+                  }}
+                >
+                  <SparkleIcon size={16} weight="bold" />
+                </IconButton>
+              </InputAdornment>
+            </>
+          ),
+          sx: [
+            {
+              alignItems: 'stretch',
+              position: 'relative',
+              '& .MuiInputAdornment-positionEnd': {
+                position: 'absolute',
+                right: 8,
+                bottom: 8,
+                maxHeight: 'none',
+                height: 'auto',
+                margin: 0,
+              },
+            },
+            ...(Array.isArray(inputSlotSx) ? inputSlotSx : inputSlotSx ? [inputSlotSx] : []),
+          ],
+        },
+      }}
+      sx={sx}
     />
   );
 });

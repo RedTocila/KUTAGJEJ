@@ -31,6 +31,7 @@ import {
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import {
+  ListingDescriptionField,
   ListingFormActionError,
   ListingFormActions,
   ListingFormSection,
@@ -453,13 +454,12 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         label="Foto"
         disabled={submitting}
       />
-      <ListingTextField
+      <ListingDescriptionField
         label="Përshkrimi"
         value={form.description}
         onChange={onField('description')}
         required
         fullWidth
-        multiline
         minRows={3}
       />
 

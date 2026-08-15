@@ -31,6 +31,7 @@ import {
   type MainPackageBillingMonths,
 } from '@/lib/contract-pricing';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { paths } from '@/paths';
 import { MOTION } from '@/styles/motion';
 import { productButtonSx } from '@/styles/product-sx';
 import type { PublicContract } from '@/types/contract';

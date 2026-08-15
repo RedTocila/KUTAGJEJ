@@ -3,6 +3,7 @@ import type { MetadataRoute } from 'next';
 import { config } from '@/config';
 
 export default function robots(): MetadataRoute.Robots {
+  const base = config.site.url.replace(/\/$/, '');
   return {
     rules: [
       {
@@ -11,7 +12,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/dashboard', '/user/dashboard', '/auth', '/user/auth'],
       },
     ],
-    sitemap: `${config.site.url}/sitemap.xml`,
-    host: config.site.url,
+    sitemap: `${base}/sitemap.xml`,
+    host: base,
   };
 }

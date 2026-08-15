@@ -843,58 +843,10 @@ export function BusinessMenuEditor({
         </ProductDialogTitle>
         <ProductDialogContent>
           {productDraft ? (
-            <Stack spacing={2} sx={{ pt: 1 }}>
+            <Stack spacing={2.25} sx={{ pt: 0.5 }}>
               {productError ? <Alert severity="error">{productError}</Alert> : null}
-              <MenuField
-                label="Emri"
-                placeholder="p.sh. Bruschetta me domate"
-                value={productDraft.name}
-                onChange={(e) => setProductDraft({ ...productDraft, name: e.target.value })}
-                autoFocus
-              />
-              <MenuField
-                label="Përshkrimi"
-                placeholder="Opsionale"
-                value={productDraft.description}
-                onChange={(e) => setProductDraft({ ...productDraft, description: e.target.value })}
-                multiline
-                minRows={2}
-              />
-              <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-end' }}>
-                <MenuField
-                  label="Çmimi"
-                  type="number"
-                  placeholder="0"
-                  value={productDraft.price}
-                  onChange={(e) => setProductDraft({ ...productDraft, price: e.target.value })}
-                />
-                <ToggleButtonGroup
-                  exclusive
-                  size="small"
-                  value={productDraft.currency}
-                  onChange={(_e, value: 'EUR' | 'LEK' | null) => {
-                    if (!value) return;
-                    setProductDraft({ ...productDraft, currency: value });
-                  }}
-                  sx={{
-                    flexShrink: 0,
-                    height: 40,
-                    mb: 0.15,
-                    '& .MuiToggleButton-root': {
-                      px: 1.35,
-                      minWidth: 48,
-                      fontSize: '0.75rem',
-                      fontWeight: 800,
-                      textTransform: 'none',
-                      borderRadius: 1.5,
-                    },
-                  }}
-                >
-                  <ToggleButton value="EUR">EUR</ToggleButton>
-                  <ToggleButton value="LEK">LEK</ToggleButton>
-                </ToggleButtonGroup>
-              </Stack>
               <ListingImagePicker
+                variant="hero"
                 label="Foto e artikullit"
                 max={1}
                 value={productDraft.imageFile ? [productDraft.imageFile] : []}
@@ -914,6 +866,64 @@ export function BusinessMenuEditor({
                 }
                 disabled={productSaving}
               />
+              <Box
+                sx={{
+                  height: 1,
+                  bgcolor: 'divider',
+                  mx: 0.5,
+                }}
+              />
+              <Stack spacing={2}>
+                <MenuField
+                  label="Emri"
+                  placeholder="p.sh. Bruschetta me domate"
+                  value={productDraft.name}
+                  onChange={(e) => setProductDraft({ ...productDraft, name: e.target.value })}
+                  autoFocus
+                />
+                <MenuField
+                  label="Përshkrimi"
+                  placeholder="Opsionale"
+                  value={productDraft.description}
+                  onChange={(e) => setProductDraft({ ...productDraft, description: e.target.value })}
+                  multiline
+                  minRows={2}
+                />
+                <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-end' }}>
+                  <MenuField
+                    label="Çmimi"
+                    type="number"
+                    placeholder="0"
+                    value={productDraft.price}
+                    onChange={(e) => setProductDraft({ ...productDraft, price: e.target.value })}
+                  />
+                  <ToggleButtonGroup
+                    exclusive
+                    size="small"
+                    value={productDraft.currency}
+                    onChange={(_e, value: 'EUR' | 'LEK' | null) => {
+                      if (!value) return;
+                      setProductDraft({ ...productDraft, currency: value });
+                    }}
+                    sx={{
+                      flexShrink: 0,
+                      height: 40,
+                      mb: 0.15,
+                      '& .MuiToggleButton-root': {
+                        px: 1.35,
+                        minWidth: 48,
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        textTransform: 'none',
+                        borderRadius: 1.5,
+                      },
+                    }}
+                  >
+                    <ToggleButton value="EUR">EUR</ToggleButton>
+                    <ToggleButton value="LEK">LEK</ToggleButton>
+                  </ToggleButtonGroup>
+                </Stack>
+              </Stack>
             </Stack>
           ) : null}
         </ProductDialogContent>

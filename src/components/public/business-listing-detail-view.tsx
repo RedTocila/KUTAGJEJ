@@ -361,6 +361,7 @@ export function BusinessListingDetailView({
 
               {statusLine || ownerEdit?.onEditHours ? (
                 <BusinessOpenStatusLine
+                  listing={listing}
                   statusLine={statusLine || 'Vendosni orarin'}
                   fontSize={FONT_CAPTION}
                   endAdornment={

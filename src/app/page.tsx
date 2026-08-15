@@ -107,17 +107,18 @@ export default async function HomePage() {
     noStore();
   }
 
+  const siteOrigin = config.site.url.replace(/\/$/, '');
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: config.site.name,
     alternateName: 'Ku Ta Gjej',
-    url: config.site.url,
+    url: siteOrigin,
     description: config.site.description,
     inLanguage: 'sq-AL',
     potentialAction: {
       '@type': 'SearchAction',
-      target: `${config.site.url}${paths.public.realEstate}?q={search_term_string}`,
+      target: `${siteOrigin}${paths.public.realEstate}?q={search_term_string}`,
       'query-input': 'required name=search_term_string',
     },
   };
@@ -126,8 +127,8 @@ export default async function HomePage() {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: config.site.name,
-    url: config.site.url,
-    logo: `${config.site.url}/KuTaGjejLogo.png`,
+    url: siteOrigin,
+    logo: `${siteOrigin}/KuTaGjejLogo.png`,
   };
 
   const breadcrumbsLd = {
@@ -138,7 +139,7 @@ export default async function HomePage() {
         '@type': 'ListItem',
         position: 1,
         name: 'Ballina',
-        item: config.site.url,
+        item: siteOrigin,
       },
     ],
   };
@@ -169,7 +170,7 @@ export default async function HomePage() {
       '@type': 'ItemList',
       name: v.label,
       description: v.tagline,
-      url: `${config.site.url}${v.href}`,
+      url: `${siteOrigin}${v.href}`,
       numberOfItems: items.length,
       itemListElement: items.map((item, index) => ({
         '@type': 'ListItem',

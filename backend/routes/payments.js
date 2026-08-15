@@ -6,6 +6,7 @@ const { mapPayment, confirmAndApplyPayment } = require('../lib/apply-payment');
 const authMiddleware = require('../middleware/auth');
 const requirePortalUser = require('../middleware/require-portal-user');
 const pokClient = require('../lib/pok-client');
+const { getFrontendBaseUrl } = require('../lib/site-url');
 const {
   listActiveCreditPackages,
   getActiveCreditPackage,
@@ -101,7 +102,7 @@ function backendOrigin(req) {
 }
 
 function frontendOrigin() {
-  return String(process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+  return getFrontendBaseUrl();
 }
 
 /** Public: credit package catalog (no auth needed to show prices). */

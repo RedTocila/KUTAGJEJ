@@ -8,6 +8,26 @@ const backendHostname = (() => {
   }
 })();
 
+const CANONICAL_HOST = 'kutagjej.al';
+const LEGACY_REDIRECT_HOSTS = ['www.kutagjej.al', 'kutagjej.vercel.app', 'ku-ta-gjej.vercel.app', 'ku-ta-gjej-front.vercel.app'];
+
+function hostRedirects(host) {
+  return [
+    {
+      source: '/',
+      has: [{ type: 'host', value: host }],
+      destination: `https://${CANONICAL_HOST}/`,
+      permanent: true,
+    },
+    {
+      source: '/:path*',
+      has: [{ type: 'host', value: host }],
+      destination: `https://${CANONICAL_HOST}/:path*`,
+      permanent: true,
+    },
+  ];
+}
+
 const config = {
   reactStrictMode: true,
 
@@ -34,7 +54,12 @@ const config = {
         : []),
       {
         protocol: 'https',
-        hostname: 'retireesystem-backend.vercel.app',
+        hostname: CANONICAL_HOST,
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: `www.${CANONICAL_HOST}`,
         pathname: '/**',
       },
       {
@@ -68,6 +93,10 @@ const config = {
         pathname: '/**',
       },
     ],
+  },
+
+  async redirects() {
+    return LEGACY_REDIRECT_HOSTS.flatMap(hostRedirects);
   },
 
   async rewrites() {

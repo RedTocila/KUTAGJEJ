@@ -1,3 +1,4 @@
+import { computeOpenStatus } from '@/lib/business-hours';
 import type { PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { formatRatingDisplay } from '@/lib/format-rating';
 
@@ -35,13 +36,13 @@ export function businessRatingDisplay(listing: PublicDirectoryListingDetail): {
   return { rating: Number.isFinite(avg) ? formatRatingDisplay(avg) : null, reviews };
 }
 
-export function businessOpenStatusLine(listing: PublicDirectoryListingDetail): string | null {
-  if (listing.openStatusLine?.trim()) return listing.openStatusLine.trim();
-  if (!listing.openingHours?.trim()) return null;
-  const ranges = [...listing.openingHours.matchAll(/(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/g)];
-  const last = ranges.at(-1);
-  if (last?.[2]) return `Hapur • Mbyllet ${last[2]}`;
-  return 'Hapur';
+export function businessOpenStatusLine(
+  listing: PublicDirectoryListingDetail,
+  now = new Date(),
+): string | null {
+  const { label } = computeOpenStatus(listing.weeklyHours, listing.openingHours, now);
+  if (label) return label;
+  return listing.openStatusLine?.trim() || null;
 }
 
 export function businessMenuCategoryNames(listing: PublicDirectoryListingDetail): string[] {

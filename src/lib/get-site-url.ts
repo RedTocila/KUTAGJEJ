@@ -1,5 +1,6 @@
-/** Canonical public origin for shareable links (never localhost). */
-export const CANONICAL_SITE_ORIGIN = 'https://kutagjej.al';
+/** Canonical public origin for shareable links (never localhost / vercel.app). */
+export const CANONICAL_SITE_HOST = 'kutagjej.al';
+export const CANONICAL_SITE_ORIGIN = `https://${CANONICAL_SITE_HOST}`;
 
 export function isLocalHostname(hostname: string): boolean {
   const host = hostname.toLowerCase();
@@ -12,13 +13,30 @@ export function isLocalHostname(hostname: string): boolean {
   );
 }
 
+function isVercelAppHostname(hostname: string): boolean {
+  return hostname.toLowerCase().endsWith('.vercel.app');
+}
+
+function withTrailingSlash(origin: string): string {
+  return origin.endsWith('/') ? origin : `${origin}/`;
+}
+
+/** Map www / Vercel aliases onto the custom domain. */
+function toCanonicalOrigin(hostname: string): string | null {
+  const host = hostname.toLowerCase();
+  if (isLocalHostname(host)) return null;
+  if (host === CANONICAL_SITE_HOST || host === `www.${CANONICAL_SITE_HOST}` || isVercelAppHostname(host)) {
+    return CANONICAL_SITE_ORIGIN;
+  }
+  return `https://${host}`;
+}
+
 function originFromRaw(raw: string | undefined | null): string | null {
   const trimmed = String(raw || '').trim().replace(/\/$/, '');
   if (!trimmed) return null;
   try {
     const url = new URL(trimmed.includes('http') ? trimmed : `https://${trimmed}`);
-    if (isLocalHostname(url.hostname)) return null;
-    return url.origin;
+    return toCanonicalOrigin(url.hostname);
   } catch {
     return null;
   }
@@ -29,20 +47,19 @@ function originFromRaw(raw: string | undefined | null): string | null {
  * falls back to the canonical domain — never localhost.
  */
 export function getPublicSiteOrigin(): string {
-  if (typeof window !== 'undefined' && !isLocalHostname(window.location.hostname)) {
-    return window.location.origin;
+  if (typeof window !== 'undefined') {
+    const fromWindow = toCanonicalOrigin(window.location.hostname);
+    if (fromWindow) return fromWindow;
   }
   return originFromRaw(process.env.NEXT_PUBLIC_SITE_URL) || CANONICAL_SITE_ORIGIN;
 }
 
 export function getSiteURL(): string {
-  let url =
-    process.env.NEXT_PUBLIC_SITE_URL ?? // Set this to your site URL in production env.
-    process.env.NEXT_PUBLIC_VERCEL_URL ?? // Automatically set by Vercel.
-    'http://localhost:3000/';
-  // Make sure to include `https://` when not localhost.
-  url = url.includes('http') ? url : `https://${url}`;
-  // Make sure to include a trailing `/`.
-  url = url.endsWith('/') ? url : `${url}/`;
-  return url;
+  const fromEnv = originFromRaw(process.env.NEXT_PUBLIC_SITE_URL);
+  if (fromEnv) return withTrailingSlash(fromEnv);
+
+  const isLocalDev = !process.env.VERCEL && process.env.NODE_ENV !== 'production';
+  if (isLocalDev) return 'http://localhost:3000/';
+
+  return withTrailingSlash(CANONICAL_SITE_ORIGIN);
 }

@@ -4,8 +4,12 @@ import * as React from 'react';
 import { Box, Stack, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 
+import { businessOpenStatusLine } from '@/lib/business-listing-detail-content';
+import type { PublicDirectoryListingDetail } from '@/lib/public-listings-client';
+
 type BusinessOpenStatusLineProps = {
-  statusLine: string;
+  listing?: PublicDirectoryListingDetail;
+  statusLine?: string;
   fontSize?: string | number;
   endAdornment?: React.ReactNode;
 };
@@ -45,10 +49,22 @@ function parseOpenStatus(statusLine: string): {
 
 /** Dot + open/closed line with red accents for closed status or closing time. */
 export function BusinessOpenStatusLine({
-  statusLine,
+  listing,
+  statusLine: statusLineProp,
   fontSize = '0.8rem',
   endAdornment,
-}: BusinessOpenStatusLineProps): React.JSX.Element {
+}: BusinessOpenStatusLineProps): React.JSX.Element | null {
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    if (!listing) return undefined;
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, [listing]);
+
+  const computed = listing ? businessOpenStatusLine(listing, new Date(now)) : null;
+  const statusLine = computed || statusLineProp?.trim() || '';
+  if (!statusLine) return null;
+
   const { isOpen, isClosed, primary, secondary } = parseOpenStatus(statusLine);
   const accentColor = 'error.main';
   const calmColor = 'primary.main';

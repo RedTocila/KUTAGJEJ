@@ -1,23 +1,32 @@
-const DAY_LABELS_SQ = ['Hën', 'Mar', 'Mër', 'Enj', 'Pre', 'Sht', 'Die'];
+import { BUSINESS_DAY_LABELS } from '@/lib/business-constants';
+
 const ALBANIA_TZ = 'Europe/Tirane';
-const WEEKDAY_TO_MONDAY0 = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
-
 const TIME_RE = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+const WEEKDAY_TO_MONDAY0: Record<string, number> = {
+  Mon: 0,
+  Tue: 1,
+  Wed: 2,
+  Thu: 3,
+  Fri: 4,
+  Sat: 5,
+  Sun: 6,
+};
 
-function parseMinutes(hhmm) {
+export type BusinessHourRow = {
+  dayOfWeek: number;
+  closed?: boolean;
+  open?: string | null;
+  close?: string | null;
+};
+
+export function parseMinutes(hhmm: string | null | undefined): number | null {
   const m = String(hhmm || '').trim().match(TIME_RE);
   if (!m) return null;
   return Number(m[1]) * 60 + Number(m[2]);
 }
 
-function formatMinutes(total) {
-  const h = Math.floor(total / 60) % 24;
-  const min = total % 60;
-  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-}
-
 /** Monday = 0 … Sunday = 6, clock minutes, in Europe/Tirane. */
-function albaniaClock(date = new Date()) {
+export function albaniaClock(date = new Date()): { dayOfWeek: number; minutes: number } {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: ALBANIA_TZ,
     weekday: 'short',
@@ -25,23 +34,23 @@ function albaniaClock(date = new Date()) {
     minute: 'numeric',
     hourCycle: 'h23',
   }).formatToParts(date);
-  const get = (type) => parts.find((p) => p.type === type)?.value ?? '';
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
   const dayOfWeek = WEEKDAY_TO_MONDAY0[get('weekday')] ?? 0;
   const hour = Number(get('hour')) % 24;
   const minute = Number(get('minute')) || 0;
   return { dayOfWeek, minutes: hour * 60 + minute };
 }
 
-function rowForDay(weeklyHours, dayOfWeek) {
+function rowForDay(weeklyHours: BusinessHourRow[], dayOfWeek: number): BusinessHourRow | null {
   return weeklyHours.find((d) => d.dayOfWeek === dayOfWeek) ?? null;
 }
 
-function isOvernight(openM, closeM) {
+function isOvernight(openM: number, closeM: number): boolean {
   return closeM <= openM;
 }
 
-function weeklyFromLegacyOpeningHours(legacyOpeningHours) {
-  const ranges = [...String(legacyOpeningHours || '').matchAll(/(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/g)];
+function weeklyFromLegacyOpeningHours(legacyOpeningHours: string): BusinessHourRow[] {
+  const ranges = [...legacyOpeningHours.matchAll(/(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/g)];
   const last = ranges.at(-1);
   if (!last) return [];
   const open = last[1];
@@ -54,7 +63,11 @@ function weeklyFromLegacyOpeningHours(legacyOpeningHours) {
   }));
 }
 
-function nextOpenLabel(weeklyHours, dayOfWeek, nowM) {
+function nextOpenLabel(
+  weeklyHours: BusinessHourRow[],
+  dayOfWeek: number,
+  nowM: number,
+): string | null {
   const today = rowForDay(weeklyHours, dayOfWeek);
   if (today && !today.closed) {
     const openM = parseMinutes(today.open);
@@ -69,37 +82,23 @@ function nextOpenLabel(weeklyHours, dayOfWeek, nowM) {
     if (!row || row.closed || !row.open) continue;
     if (parseMinutes(row.open) == null) continue;
     if (i === 1) return `Hapet Nesër ${row.open}`;
-    return `Hapet ${DAY_LABELS_SQ[d] ?? ''} ${row.open}`.trim();
+    return `Hapet ${BUSINESS_DAY_LABELS[d] ?? ''} ${row.open}`.trim();
   }
   return null;
-}
-
-function formatWeeklyHoursLine(weeklyHours) {
-  if (!Array.isArray(weeklyHours) || weeklyHours.length === 0) return null;
-  const openDays = weeklyHours.filter((d) => !d.closed && d.open && d.close);
-  if (openDays.length === 0) return 'Mbyllur';
-  const same = openDays.every(
-    (d) => d.open === openDays[0].open && d.close === openDays[0].close,
-  );
-  if (same && openDays.length >= 5) {
-    return `Hën–Die ${openDays[0].open}–${openDays[0].close}`;
-  }
-  return openDays
-    .slice()
-    .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
-    .map((d) => `${DAY_LABELS_SQ[d.dayOfWeek] ?? ''} ${d.open}–${d.close}`)
-    .join(' · ');
 }
 
 /**
  * Live open/closed line in Albania time.
  * Overnight closes (e.g. 10:00–01:00) stay open past midnight until close, then show next open.
- * @returns {{ isOpen: boolean, label: string | null }}
  */
-function computeOpenStatus(weeklyHours, legacyOpeningHours, date = new Date()) {
+export function computeOpenStatus(
+  weeklyHours: BusinessHourRow[] | null | undefined,
+  legacyOpeningHours?: string | null,
+  date = new Date(),
+): { isOpen: boolean; label: string | null } {
   const weekly = Array.isArray(weeklyHours) && weeklyHours.length > 0
     ? weeklyHours
-    : weeklyFromLegacyOpeningHours(legacyOpeningHours);
+    : weeklyFromLegacyOpeningHours(String(legacyOpeningHours || '').trim());
   if (weekly.length === 0) return { isOpen: false, label: null };
 
   const { dayOfWeek, minutes: nowM } = albaniaClock(date);
@@ -127,31 +126,3 @@ function computeOpenStatus(weeklyHours, legacyOpeningHours, date = new Date()) {
   const next = nextOpenLabel(weekly, dayOfWeek, nowM);
   return { isOpen: false, label: next ? `Mbyllur • ${next}` : 'Mbyllur' };
 }
-
-function normalizeWeeklyHours(input) {
-  if (!Array.isArray(input)) return [];
-  const out = [];
-  for (const row of input) {
-    const dayOfWeek = Number(row?.dayOfWeek);
-    if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) continue;
-    const closed = Boolean(row.closed);
-    const open = closed ? null : String(row.open || '').trim();
-    const close = closed ? null : String(row.close || '').trim();
-    if (!closed) {
-      if (!TIME_RE.test(open) || !TIME_RE.test(close)) continue;
-      if (parseMinutes(open) == null || parseMinutes(close) == null) continue;
-    }
-    out.push({ dayOfWeek, closed, open: closed ? null : open, close: closed ? null : close });
-  }
-  return out;
-}
-
-module.exports = {
-  DAY_LABELS_SQ,
-  TIME_RE,
-  formatWeeklyHoursLine,
-  computeOpenStatus,
-  normalizeWeeklyHours,
-  parseMinutes,
-  formatMinutes,
-};

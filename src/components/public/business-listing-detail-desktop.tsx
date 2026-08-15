@@ -250,7 +250,7 @@ export function BusinessListingDetailDesktop({
                     ratingAverage={listing.ratingAverage}
                     reviewCount={listing.reviewCount}
                   />
-                  {statusLine ? <BusinessOpenStatusLine statusLine={statusLine} /> : null}
+                  {statusLine ? <BusinessOpenStatusLine listing={listing} /> : null}
                 </Stack>
 
                 <Divider />

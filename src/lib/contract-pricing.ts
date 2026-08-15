@@ -1,6 +1,14 @@
 /** Billing slots that can carry a price on a contract. */
 export type ContractPriceMonths = 1 | 3 | 6 | 12;
 
+/** Durations offered on the main packages catalog (monthly / 6 months / 12 months). */
+export const MAIN_PACKAGE_BILLING_MONTHS = [1, 6, 12] as const;
+export type MainPackageBillingMonths = (typeof MAIN_PACKAGE_BILLING_MONTHS)[number];
+
+export function isMainPackageBillingMonths(value: number): value is MainPackageBillingMonths {
+  return (MAIN_PACKAGE_BILLING_MONTHS as readonly number[]).includes(value);
+}
+
 export interface ContractPriceOption {
   months: ContractPriceMonths;
   /** Short label for end users (Albanian). */

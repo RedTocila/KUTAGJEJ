@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Alert,
+  Box,
   Button,
   Stack,
   Typography,
@@ -24,11 +25,18 @@ import { useUser } from '@/hooks/use-user';
 import type { AppMessages } from '@/lib/i18n/messages';
 import { cancelMySubscription, listMySubscriptions } from '@/lib/payments-client';
 import { listPublicContracts } from '@/lib/public-contracts-client';
-import { paths } from '@/paths';
+import {
+  isMainPackageBillingMonths,
+  MAIN_PACKAGE_BILLING_MONTHS,
+  type MainPackageBillingMonths,
+} from '@/lib/contract-pricing';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { MOTION } from '@/styles/motion';
 import { productButtonSx } from '@/styles/product-sx';
 import type { PublicContract } from '@/types/contract';
 import type { UserSubscriptionSummary } from '@/types/payment';
 import {
+  formatEur,
   PackageCheckoutCard,
   PackageEurPrice,
   ReferralDiscountNote,
@@ -89,6 +97,24 @@ function priceSuffixForMonths(t: AppMessages, months: number): string {
   return t.packages.perMonths(months);
 }
 
+function billingLabel(t: AppMessages, months: MainPackageBillingMonths): string {
+  if (months === 1) return t.packages.monthly;
+  if (months === 6) return t.packages.months6;
+  return t.packages.months12;
+}
+
+function equivalentMonthlyHint(
+  t: AppMessages,
+  months: number,
+  price: number,
+): string | null {
+  if (months <= 1 || price <= 0) return null;
+  return t.packages.equivPerMonth(formatEur(price / months));
+}
+
+const PILL_INSET_PX = 4;
+const PILL_SLIDE_MS = 320;
+
 /** Yellow pill when yearly (or longer) beats paying monthly. */
 function savingsBadge(t: AppMessages, monthlyPrice: number | null, months: number, price: number): string | null {
   if (months <= 1 || monthlyPrice == null || monthlyPrice <= 0) return null;
@@ -96,6 +122,21 @@ function savingsBadge(t: AppMessages, monthlyPrice: number | null, months: numbe
   if (price >= full) return null;
   const pct = Math.round((1 - price / full) * 100);
   return pct >= 5 ? t.packages.savePct(pct) : null;
+}
+
+function durationSaveLabel(
+  t: AppMessages,
+  plans: PublicContract[],
+  months: MainPackageBillingMonths,
+): string | null {
+  if (months <= 1) return null;
+  for (const plan of plans) {
+    const monthly = plan.priceOptions.find((o) => o.months === 1 && o.price > 0);
+    const opt = plan.priceOptions.find((o) => o.months === months && o.price > 0);
+    if (!monthly || !opt) continue;
+    return savingsBadge(t, monthly.price, months, opt.price);
+  }
+  return null;
 }
 
 function offerBadge(
@@ -114,6 +155,173 @@ function offerBadge(
   return null;
 }
 
+function BillingPeriodPillBar({
+  value,
+  onChange,
+  available,
+  plans,
+  t,
+}: {
+  value: MainPackageBillingMonths;
+  onChange: (months: MainPackageBillingMonths) => void;
+  available: readonly MainPackageBillingMonths[];
+  plans: PublicContract[];
+  t: AppMessages;
+}) {
+  const slotCount = MAIN_PACKAGE_BILLING_MONTHS.length;
+  const selectedIndex = Math.max(0, MAIN_PACKAGE_BILLING_MONTHS.indexOf(value));
+  const [indicatorIndex, setIndicatorIndex] = React.useState(selectedIndex);
+  const [transitionReady, setTransitionReady] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!transitionReady) {
+      setIndicatorIndex(selectedIndex);
+      const frame = requestAnimationFrame(() => setTransitionReady(true));
+      return () => cancelAnimationFrame(frame);
+    }
+    setIndicatorIndex(selectedIndex);
+    return undefined;
+  }, [selectedIndex, transitionReady]);
+
+  return (
+    <Box
+      role="radiogroup"
+      aria-label={t.packages.billingPeriod}
+      sx={(theme) => ({
+        height: 52,
+        boxSizing: 'border-box',
+        p: `${PILL_INSET_PX}px`,
+        overflow: 'hidden',
+        borderRadius: 999,
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
+        boxShadow: 'none',
+        ...theme.applyStyles('dark', {
+          bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.94)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          boxShadow: '0 10px 28px rgba(0, 0, 0, 0.22)',
+        }),
+      })}
+    >
+      <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+        <Box
+          aria-hidden
+          sx={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: 0,
+            width: `${100 / slotCount}%`,
+            borderRadius: 999,
+            bgcolor: primaryMainAlpha(0.18),
+            transform: `translate3d(${indicatorIndex * 100}%, 0, 0)`,
+            transition: transitionReady
+              ? `transform ${PILL_SLIDE_MS}ms ${MOTION.ease}, opacity 180ms ease`
+              : 'none',
+            pointerEvents: 'none',
+            zIndex: 0,
+            '@media (prefers-reduced-motion: reduce)': {
+              transition: 'none',
+            },
+          }}
+        />
+        <Box
+          sx={{
+            position: 'relative',
+            zIndex: 1,
+            display: 'grid',
+            gridTemplateColumns: `repeat(${slotCount}, minmax(0, 1fr))`,
+            height: '100%',
+          }}
+        >
+          {MAIN_PACKAGE_BILLING_MONTHS.map((months) => {
+            const selected = months === value;
+            const disabled = !available.includes(months);
+            const save = durationSaveLabel(t, plans, months);
+            return (
+              <Box
+                key={months}
+                component="button"
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                aria-label={billingLabel(t, months)}
+                disabled={disabled}
+                onClick={() => {
+                  if (disabled) return;
+                  onChange(months);
+                }}
+                sx={{
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  fontFamily: 'inherit',
+                  WebkitTapHighlightColor: 'transparent',
+                  minWidth: 0,
+                  height: '100%',
+                  px: 0.75,
+                  display: 'inline-flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 0.1,
+                  border: 'none',
+                  borderRadius: 999,
+                  bgcolor: 'transparent',
+                  color: disabled ? 'text.disabled' : selected ? 'primary.main' : 'text.secondary',
+                  cursor: disabled ? 'default' : 'pointer',
+                  transition: `color 200ms ${MOTION.ease}, transform 160ms ${MOTION.ease}`,
+                  '&:active': disabled
+                    ? undefined
+                    : {
+                        transform: 'scale(0.94)',
+                      },
+                  '@media (prefers-reduced-motion: reduce)': {
+                    transition: 'none',
+                    '&:active': { transform: 'none' },
+                  },
+                }}
+              >
+                <Typography
+                  component="span"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: '0.78rem',
+                    lineHeight: 1.15,
+                    letterSpacing: '0.01em',
+                    color: 'inherit',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {billingLabel(t, months)}
+                </Typography>
+                {save ? (
+                  <Typography
+                    component="span"
+                    sx={{
+                      fontWeight: 750,
+                      fontSize: '0.62rem',
+                      lineHeight: 1.1,
+                      opacity: selected ? 1 : 0.85,
+                      color: 'inherit',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {save}
+                  </Typography>
+                ) : null}
+              </Box>
+            );
+          })}
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
 export function MainPackagesPanel() {
   const router = useRouter();
   const t = useCopy();
@@ -129,6 +337,7 @@ export function MainPackagesPanel() {
   const [canceling, setCanceling] = React.useState(false);
   const [cancelError, setCancelError] = React.useState<string | null>(null);
   const [cancelSuccess, setCancelSuccess] = React.useState<string | null>(null);
+  const [pickedMonths, setPickedMonths] = React.useState<MainPackageBillingMonths | null>(null);
   const lifetimePercent = useLifetimePackageDiscount();
 
   const activeContractId = activeSubscription?.contractId ?? null;
@@ -183,9 +392,31 @@ export function MainPackagesPanel() {
     await reload();
   };
 
-  if (!user) return null;
+  const availableBillingMonths = React.useMemo(() => {
+    const priced = new Set<MainPackageBillingMonths>();
+    for (const plan of plans) {
+      for (const opt of plan.priceOptions) {
+        if (opt.price > 0 && isMainPackageBillingMonths(opt.months)) {
+          priced.add(opt.months);
+        }
+      }
+    }
+    return MAIN_PACKAGE_BILLING_MONTHS.filter((months) => priced.has(months));
+  }, [plans]);
+
+  const selectedMonths: MainPackageBillingMonths = React.useMemo(() => {
+    const fallback: MainPackageBillingMonths = availableBillingMonths[0] ?? 1;
+    const preferred: MainPackageBillingMonths =
+      pickedMonths ??
+      (activeMonths != null && isMainPackageBillingMonths(activeMonths) ? activeMonths : 1);
+    return availableBillingMonths.includes(preferred) ? preferred : fallback;
+  }, [pickedMonths, activeMonths, availableBillingMonths]);
 
   const firstPaidTarget = React.useMemo(() => {
+    for (const plan of plans) {
+      const match = plan.priceOptions.find((o) => o.price > 0 && o.months === selectedMonths);
+      if (match) return { contractId: plan.id, months: match.months };
+    }
     for (const plan of plans) {
       const paidOptions = plan.priceOptions.filter((o) => o.price > 0);
       if (!paidOptions.length) continue;
@@ -195,7 +426,9 @@ export function MainPackagesPanel() {
       return { contractId: plan.id, months: target.months };
     }
     return null;
-  }, [plans]);
+  }, [plans, selectedMonths]);
+
+  if (!user) return null;
 
   const cancelFooter =
     activeSubscription ? (
@@ -246,6 +479,13 @@ export function MainPackagesPanel() {
       {!loading && !error && plans.length > 0 ? (
         <Stack spacing={1.25}>
           <ReferralDiscountNote percent={lifetimePercent} />
+          <BillingPeriodPillBar
+            value={selectedMonths}
+            onChange={setPickedMonths}
+            available={availableBillingMonths}
+            plans={plans}
+            t={t}
+          />
           {plans.flatMap((plan) => {
             const paidOptions = plan.priceOptions.filter((o) => o.price > 0);
             const isFree = plan.planCode === 'free' || plan.priceOptions.every((o) => o.price === 0);
@@ -286,40 +526,37 @@ export function MainPackagesPanel() {
               ];
             }
 
-            const matchedMonths =
-              activeMonths != null && paidOptions.some((o) => o.months === activeMonths)
-                ? activeMonths
-                : Math.max(...paidOptions.map((o) => o.months));
+            const opt = paidOptions.find((o) => o.months === selectedMonths);
+            if (!opt) return [];
 
-            return paidOptions.map((opt) => {
-              const isCurrent = isPlanCurrent && opt.months === matchedMonths;
-              const badge = offerBadge(t, {
-                isCurrent,
-                months: opt.months,
-                monthlyPrice,
-                price: opt.price,
-              });
-
-              return (
-                <PackageCheckoutCard
-                  key={`${plan.id}-${opt.months}`}
-                  title={plan.title}
-                  badge={badge}
-                  titleAdornment={titleAdornment}
-                  price={<PackageEurPrice listPrice={opt.price} percent={lifetimePercent} />}
-                  priceSuffix={priceSuffixForMonths(t, opt.months)}
-                  accent={accent}
-                  selected={isCurrent}
-                  details={details}
-                  footer={isCurrent ? cancelFooter : undefined}
-                  onClick={
-                    isCurrent
-                      ? undefined
-                      : () => router.push(checkoutSubscriptionHref(plan.id, opt.months))
-                  }
-                />
-              );
+            const isCurrent = isPlanCurrent && activeMonths === selectedMonths;
+            const badge = offerBadge(t, {
+              isCurrent,
+              months: opt.months,
+              monthlyPrice,
+              price: opt.price,
             });
+
+            return [
+              <PackageCheckoutCard
+                key={`${plan.id}-${opt.months}`}
+                title={plan.title}
+                badge={badge}
+                titleAdornment={titleAdornment}
+                price={<PackageEurPrice listPrice={opt.price} percent={lifetimePercent} />}
+                priceSuffix={priceSuffixForMonths(t, opt.months)}
+                priceHint={equivalentMonthlyHint(t, opt.months, opt.price)}
+                accent={accent}
+                selected={isCurrent}
+                details={details}
+                footer={isCurrent ? cancelFooter : undefined}
+                onClick={
+                  isCurrent
+                    ? undefined
+                    : () => router.push(checkoutSubscriptionHref(plan.id, opt.months))
+                }
+              />,
+            ];
           })}
         </Stack>
       ) : null}

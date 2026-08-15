@@ -573,6 +573,7 @@ export function PackageCheckoutCard({
   titleAdornment,
   price,
   priceSuffix = '/ paketë',
+  priceHint,
   onClick,
   actions,
   details = [],
@@ -588,6 +589,8 @@ export function PackageCheckoutCard({
   titleAdornment?: React.ReactNode;
   price?: React.ReactNode;
   priceSuffix?: string;
+  /** Extra line under the suffix (e.g. equivalent monthly for 6/12-month plans). */
+  priceHint?: string | null;
   onClick?: () => void;
   /** When set, renders a full-width row of buttons (e.g. € + BC) instead of a price column. */
   actions?: React.ReactNode;
@@ -682,41 +685,65 @@ export function PackageCheckoutCard({
     : null;
 
   const priceColumn = (
-    <Box sx={{ flexShrink: 0, textAlign: 'right' }}>
-      <Typography
+    <Box sx={{ flexShrink: 0, textAlign: 'right', minWidth: 0 }}>
+      <Box
         sx={{
-          fontWeight: 900,
-          fontSize: compactPrice
-            ? { xs: '1.15rem', sm: '1.25rem' }
-            : { xs: '1.85rem', sm: '2.15rem' },
-          lineHeight: 1,
-          letterSpacing: compactPrice ? '-0.02em' : '-0.03em',
-          color: 'text.primary',
-          whiteSpace: 'nowrap',
-          transition: 'color 0.15s ease',
-          ...(onClick
-            ? {
-                '.package-checkout-card:hover &, .package-checkout-card:active &': {
-                  color: (t: Theme) => resolveAccent(t, accent),
-                },
-              }
-            : null),
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'baseline',
+          justifyContent: 'flex-end',
+          columnGap: 0.55,
+          flexWrap: 'nowrap',
         }}
       >
-        {price}
-      </Typography>
-      {priceSuffix ? (
         <Typography
           sx={{
-            mt: 0.2,
-            fontWeight: 600,
-            fontSize: '0.72rem',
+            fontWeight: 900,
+            fontSize: compactPrice
+              ? { xs: '1.15rem', sm: '1.25rem' }
+              : { xs: '1.45rem', sm: '1.75rem' },
+            lineHeight: 1,
+            letterSpacing: compactPrice ? '-0.02em' : '-0.03em',
+            color: 'text.primary',
+            whiteSpace: 'nowrap',
+            transition: 'color 0.15s ease',
+            ...(onClick
+              ? {
+                  '.package-checkout-card:hover &, .package-checkout-card:active &': {
+                    color: (t: Theme) => resolveAccent(t, accent),
+                  },
+                }
+              : null),
+          }}
+        >
+          {price}
+        </Typography>
+        {priceSuffix ? (
+          <Typography
+            sx={{
+              fontWeight: 700,
+              fontSize: compactPrice ? '0.7rem' : { xs: '0.72rem', sm: '0.78rem' },
+              lineHeight: 1.2,
+              color: 'text.secondary',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {priceSuffix}
+          </Typography>
+        ) : null}
+      </Box>
+      {priceHint ? (
+        <Typography
+          sx={{
+            mt: 0.3,
+            fontWeight: 650,
+            fontSize: '0.68rem',
             lineHeight: 1.2,
             color: 'text.secondary',
             whiteSpace: 'nowrap',
           }}
         >
-          {priceSuffix}
+          {priceHint}
         </Typography>
       ) : null}
     </Box>
@@ -738,9 +765,9 @@ export function PackageCheckoutCard({
       sx={{
         display: 'flex',
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'space-between',
-        gap: 1.5,
+        gap: 1.25,
         px: headerPaddingX,
         pt: headerPaddingTop,
         pb: headerPaddingBottom,

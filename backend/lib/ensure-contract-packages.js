@@ -1,6 +1,17 @@
 const { getSupabaseAdmin } = require('./supabase');
 
 /**
+ * Prepaid 6 / 12-month prices vs paying monthly:
+ * 6 months → 10% off, 12 months → 20% off. Rounded to whole euros.
+ */
+function prepaidFromMonthly(monthly, months) {
+  const m = Number(monthly);
+  if (!Number.isFinite(m) || m <= 0) return null;
+  const discount = months === 12 ? 0.2 : months === 6 ? 0.1 : 0;
+  return Math.round(m * months * (1 - discount));
+}
+
+/**
  * Canonical subscription packages (platform-wide, all categories).
  * Inserts missing FREE/STARTER/GROW/ELITE × agent/company rows only —
  * does not overwrite admin edits on existing rows.
@@ -108,8 +119,8 @@ function tierFields(tier) {
     max_okazion_listings: tier.maxOkazionListings,
     price_1_month: tier.price1Month,
     price_3_months: null,
-    price_6_months: null,
-    price_12_months: null,
+    price_6_months: prepaidFromMonthly(tier.price1Month, 6),
+    price_12_months: prepaidFromMonthly(tier.price1Month, 12),
   };
 }
 
@@ -169,6 +180,44 @@ async function ensureContractPackages() {
 
   if (upserted > 0) {
     console.log(`✓ Seeded missing contract packages (${upserted} inserted)`);
+  }
+
+  await backfillLongerTermPrices(sb);
+}
+
+/** Fill null 6/12-month prices from monthly — never overwrites admin-set amounts. */
+async function backfillLongerTermPrices(sb) {
+  const { data: rows, error } = await sb
+    .from('contracts')
+    .select('id, price_1_month, price_6_months, price_12_months');
+  if (error) throw error;
+
+  let updated = 0;
+  const now = new Date().toISOString();
+  for (const row of rows || []) {
+    const monthly = Number(row.price_1_month);
+    if (!Number.isFinite(monthly) || monthly <= 0) continue;
+    const patch = {};
+    if (row.price_6_months == null) {
+      const p6 = prepaidFromMonthly(monthly, 6);
+      if (p6 != null) patch.price_6_months = p6;
+    }
+    if (row.price_12_months == null) {
+      const p12 = prepaidFromMonthly(monthly, 12);
+      if (p12 != null) patch.price_12_months = p12;
+    }
+    if (Object.keys(patch).length === 0) continue;
+
+    const { error: updErr } = await sb
+      .from('contracts')
+      .update({ ...patch, updated_at: now })
+      .eq('id', row.id);
+    if (updErr) throw updErr;
+    updated += 1;
+  }
+
+  if (updated > 0) {
+    console.log(`✓ Backfilled 6/12-month package prices (${updated} contracts)`);
   }
 }
 

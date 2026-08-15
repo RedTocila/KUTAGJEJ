@@ -9,7 +9,7 @@ import { HomepageRecommendedSection } from '@/components/public/homepage-recomme
 import { LazyHomeSection } from '@/components/public/lazy-home-section';
 import { SeoIntroSection } from '@/components/public/seo-intro-section';
 import { buildHomepageMixedLatest } from '@/lib/homepage-latest-listings';
-import { config } from '@/config';
+import { brandLogoSrc, config } from '@/config';
 import { HOME_VERTICALS } from '@/lib/home-categories';
 import { fetchHomeBanners } from '@/lib/home-banners-client';
 import {
@@ -54,14 +54,14 @@ export const metadata: Metadata = {
     title: `${config.site.name} — Njoftime falas në Shqipëri`,
     description:
       'Posto, kërko dhe gjej në KuTaGjej — prona, makina, vende pune dhe artikuj. Falas dhe shumë i shpejtë.',
-    images: [{ url: '/KuTaGjejLogo.png', alt: config.site.name, width: 512, height: 512 }],
+    images: [{ url: brandLogoSrc, alt: config.site.name, width: 512, height: 512 }],
   },
   twitter: {
     card: 'summary_large_image',
     title: `${config.site.name} — Njoftime në një vend`,
     description:
       'Posto, kërko dhe gjej shpejt: prona, makina, punë dhe tregu — të gjitha në KuTaGjej.',
-    images: ['/KuTaGjejLogo.png'],
+    images: [brandLogoSrc],
   },
   robots: {
     index: true,
@@ -128,7 +128,7 @@ export default async function HomePage() {
     '@type': 'Organization',
     name: config.site.name,
     url: siteOrigin,
-    logo: `${siteOrigin}/KuTaGjejLogo.png`,
+    logo: `${siteOrigin}${brandLogoSrc}`,
   };
 
   const breadcrumbsLd = {

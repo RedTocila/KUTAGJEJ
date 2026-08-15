@@ -94,7 +94,6 @@ export function HeroCategoryCircles({
     const soft = accentSoft(mode);
     return {
       flexShrink: 0,
-      scrollSnapAlign: { xs: 'start', md: 'none' } as const,
       alignItems: 'center',
       flex: { md: '1 1 0' },
       width: { md: '100%' },
@@ -140,8 +139,8 @@ export function HeroCategoryCircles({
         overflowX: { xs: 'auto', md: 'visible' },
         overflowY: 'hidden',
         overscrollBehaviorX: 'contain',
-        WebkitOverflowScrolling: 'touch',
-        scrollSnapType: { xs: 'x proximity', md: 'none' },
+        WebkitOverflowScrolling: 'auto',
+        scrollBehavior: 'auto',
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
         pb: { xs: 0, md: 0 },

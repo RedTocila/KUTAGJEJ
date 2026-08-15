@@ -269,6 +269,151 @@ function StarFilterTags({
   );
 }
 
+const commentLinkSx = {
+  display: 'inline',
+  margin: 0,
+  padding: 0,
+  border: 0,
+  background: 'none',
+  boxShadow: 'none',
+  cursor: 'pointer',
+  font: 'inherit',
+  fontWeight: 800,
+  color: 'primary.main',
+  '&:hover': { textDecoration: 'underline', background: 'none' },
+} as const;
+
+const commentTextSx = {
+  fontSize: '0.8125rem',
+  color: 'text.secondary',
+  lineHeight: 1.5,
+  mt: 0.15,
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
+} as const;
+
+function commentFitsTwoLines(el: HTMLElement) {
+  return el.scrollHeight <= el.clientHeight + 1;
+}
+
+function fillMeasureNode(el: HTMLElement, text: string, withMore: boolean) {
+  el.replaceChildren();
+  el.append(text);
+  if (withMore) {
+    el.append('...');
+    const more = document.createElement('span');
+    more.textContent = ' më shumë';
+    more.style.fontWeight = '800';
+    more.style.whiteSpace = 'nowrap';
+    el.append(more);
+  }
+}
+
+function cutCommentToTwoLines(el: HTMLElement, comment: string) {
+  fillMeasureNode(el, comment, false);
+  if (commentFitsTwoLines(el)) return null;
+
+  let low = 0;
+  let high = comment.length;
+  let best = 0;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    fillMeasureNode(el, comment.slice(0, mid).trimEnd(), true);
+    if (commentFitsTwoLines(el)) {
+      best = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  const sliced = comment.slice(0, best);
+  const lastSpace = sliced.lastIndexOf(' ');
+  if (lastSpace > 0) {
+    fillMeasureNode(el, comment.slice(0, lastSpace).trimEnd(), true);
+    if (commentFitsTwoLines(el)) return lastSpace;
+  }
+  return best;
+}
+
+function ReviewComment({ comment }: { comment: string }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const [cut, setCut] = React.useState<number | null>(null);
+  const measureRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useLayoutEffect(() => {
+    if (expanded) {
+      setCut(null);
+      return undefined;
+    }
+    const el = measureRef.current;
+    if (!el) return undefined;
+    const measure = () => {
+      setCut(cutCommentToTwoLines(el, comment));
+    };
+    measure();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    ro?.observe(el);
+    return () => ro?.disconnect();
+  }, [comment, expanded]);
+
+  const shown = cut == null || expanded ? comment : comment.slice(0, cut).trimEnd();
+  const showMore = !expanded && cut != null && cut < comment.length;
+
+  return (
+    <Box sx={{ position: 'relative' }}>
+      <Typography
+        ref={measureRef}
+        component="div"
+        aria-hidden
+        sx={{
+          ...commentTextSx,
+          mt: 0,
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: 0,
+          height: '3em',
+          visibility: 'hidden',
+          pointerEvents: 'none',
+          overflow: 'hidden',
+        }}
+      />
+      <Typography component="div" sx={commentTextSx}>
+        {shown}
+        {showMore ? (
+          <>
+            ...{' '}
+            <Box
+              component="button"
+              type="button"
+              onClick={() => setExpanded(true)}
+              sx={{ ...commentLinkSx, whiteSpace: 'nowrap' }}
+            >
+              më shumë
+            </Box>
+          </>
+        ) : null}
+      </Typography>
+      {expanded ? (
+        <Box
+          component="button"
+          type="button"
+          onClick={() => setExpanded(false)}
+          sx={{
+            ...commentLinkSx,
+            mt: 0.15,
+            fontSize: '0.75rem',
+            lineHeight: 1.3,
+          }}
+        >
+          Shiko më pak
+        </Box>
+      ) : null}
+    </Box>
+  );
+}
+
 function ReviewCard({ review }: { review: BusinessReview }) {
   return (
     <Box
@@ -317,38 +462,11 @@ function ReviewCard({ review }: { review: BusinessReview }) {
                 {new Date(review.createdAt).toLocaleDateString('sq-AL')}
               </Typography>
             </Stack>
-            <Box
-              sx={{
-                flexShrink: 0,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 0.4,
-                px: 0.85,
-                py: 0.35,
-                borderRadius: 999,
-                bgcolor: (theme) => alpha(theme.palette.warning.main, 0.12),
-                color: 'warning.main',
-              }}
-            >
-              <Typography sx={{ fontWeight: 800, fontSize: '0.75rem', lineHeight: 1 }}>
-                {review.rating}
-              </Typography>
-              <StarIcon size={12} weight="fill" />
+            <Box sx={{ flexShrink: 0, pt: 0.15 }}>
+              <ProfessionalFiveStarRating value={review.rating} size={14} />
             </Box>
           </Stack>
-          <ProfessionalFiveStarRating value={review.rating} size={14} />
-          {review.comment ? (
-            <Typography
-              sx={{
-                fontSize: '0.8125rem',
-                color: 'text.secondary',
-                lineHeight: 1.5,
-                mt: 0.15,
-              }}
-            >
-              {review.comment}
-            </Typography>
-          ) : null}
+          {review.comment ? <ReviewComment comment={review.comment} /> : null}
         </Stack>
       </Stack>
     </Box>

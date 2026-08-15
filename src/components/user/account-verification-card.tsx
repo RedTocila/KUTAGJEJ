@@ -187,7 +187,7 @@ export function AccountVerificationCard() {
       {status.verified ? (
         <Chip
           icon={<ShieldCheckIcon size={16} weight="fill" />}
-          label="Llogaria e verifikuar"
+          label="Ky profil është i verifikuar"
           color="success"
           sx={{ alignSelf: 'flex-start', fontWeight: 700 }}
         />

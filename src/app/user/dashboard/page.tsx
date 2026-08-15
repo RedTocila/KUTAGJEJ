@@ -28,7 +28,6 @@ import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/S
 import { SignOut as SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
-import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGear';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
@@ -168,9 +167,6 @@ function QuotaStat({
   max,
   icon: Icon,
   tone,
-  convertible = false,
-  convertTooltip,
-  convertAria,
   unavailableLabel,
   loading = false,
 }: {
@@ -179,9 +175,6 @@ function QuotaStat({
   max: number;
   icon: PhosphorIcon;
   tone: string;
-  convertible?: boolean;
-  convertTooltip: string;
-  convertAria: string;
   unavailableLabel: string;
   loading?: boolean;
 }) {
@@ -274,28 +267,6 @@ function QuotaStat({
           }}
         />
       </Box>
-
-      {convertible ? (
-        <Tooltip title={convertTooltip} arrow>
-          <IconButton
-            component={RouterLink}
-            href={`${paths.user.packagesExtra}#convert`}
-            size="small"
-            aria-label={convertAria}
-            sx={{
-              width: 30,
-              height: 30,
-              color: 'text.secondary',
-              flexShrink: 0,
-              '&:hover': { color: tone, bgcolor: `${tone}18` },
-            }}
-          >
-            <ArrowsLeftRightIcon size={15} weight="bold" />
-          </IconButton>
-        </Tooltip>
-      ) : (
-        <Box sx={{ width: 30, height: 30, flexShrink: 0 }} aria-hidden />
-      )}
     </Stack>
   );
 }
@@ -542,17 +513,45 @@ export default function UserDashboardPage() {
 
       {canPublish ? (
         <Box sx={{ ...portalCardSx, p: { xs: 2, sm: 2.5 } }}>
-          <Stack spacing={0.35} sx={{ mb: 1.25 }}>
-            <Typography sx={{ fontWeight: 850, fontSize: '1.05rem', lineHeight: 1.2, letterSpacing: '-0.01em' }}>
-              {t.subscriptionPackage}
-            </Typography>
-            {subscriptionLoading ? (
-              <Skeleton variant="text" width={160} height={20} />
-            ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35 }}>
-                {t.quotasHint(activePlanLabel, categoryLabel)}
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: 1.25 }}>
+            <Stack spacing={0.35} sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontWeight: 850, fontSize: '1.05rem', lineHeight: 1.2, letterSpacing: '-0.01em' }}>
+                {t.subscriptionPackage}
               </Typography>
-            )}
+              {subscriptionLoading ? (
+                <Skeleton variant="text" width={160} height={20} />
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35 }}>
+                  {t.quotasHint(activePlanLabel, categoryLabel)}
+                </Typography>
+              )}
+            </Stack>
+            <Button
+              component={RouterLink}
+              href={`${paths.user.packagesExtra}#convert`}
+              size="small"
+              startIcon={<ArrowsLeftRightIcon size={15} weight="bold" />}
+              aria-label={t.convertTooltip}
+              sx={{
+                flexShrink: 0,
+                mt: 0.1,
+                textTransform: 'none',
+                fontWeight: 800,
+                borderRadius: 2,
+                px: 1.25,
+                minHeight: 32,
+                color: 'text.secondary',
+                border: '1px solid',
+                borderColor: 'divider',
+                '&:hover': {
+                  color: 'primary.main',
+                  borderColor: 'primary.main',
+                  bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.12 : 0.08),
+                },
+              }}
+            >
+              {t.convert}
+            </Button>
           </Stack>
 
           <Stack
@@ -576,9 +575,6 @@ export default function UserDashboardPage() {
               max={quotas.maxApartmentListings}
               icon={BuildingsIcon}
               tone="#3ec6e0"
-              convertible
-              convertTooltip={t.convertTooltip}
-              convertAria={t.convertAria(t.apartments)}
               unavailableLabel={t.unavailable}
               loading={quotasLoading}
             />
@@ -588,9 +584,6 @@ export default function UserDashboardPage() {
               max={quotas.maxCarListings}
               icon={CarIcon}
               tone="#7ac943"
-              convertible
-              convertTooltip={t.convertTooltip}
-              convertAria={t.convertAria(t.cars)}
               unavailableLabel={t.unavailable}
               loading={quotasLoading}
             />
@@ -600,9 +593,6 @@ export default function UserDashboardPage() {
               max={quotas.maxJobListings}
               icon={BriefcaseIcon}
               tone="#8b5cf6"
-              convertible
-              convertTooltip={t.convertTooltip}
-              convertAria={t.convertAria(t.jobs)}
               unavailableLabel={t.unavailable}
               loading={quotasLoading}
             />
@@ -612,9 +602,6 @@ export default function UserDashboardPage() {
               max={quotas.maxProductListings}
               icon={StorefrontIcon}
               tone="#f5a623"
-              convertible
-              convertTooltip={t.convertTooltip}
-              convertAria={t.convertAria(t.products)}
               unavailableLabel={t.unavailable}
               loading={quotasLoading}
             />
@@ -624,8 +611,6 @@ export default function UserDashboardPage() {
               max={quotas.maxPremiumListings}
               icon={SparkleIcon}
               tone="#e8b923"
-              convertTooltip={t.convertTooltip}
-              convertAria={t.convertAria(t.premium)}
               unavailableLabel={t.unavailable}
               loading={quotasLoading}
             />
@@ -635,8 +620,6 @@ export default function UserDashboardPage() {
               max={quotas.maxOkazionListings}
               icon={SealPercentIcon}
               tone={OKAZION_ACCENT}
-              convertTooltip={t.convertTooltip}
-              convertAria={t.convertAria(t.okazion)}
               unavailableLabel={t.unavailable}
               loading={quotasLoading}
             />
@@ -650,17 +633,11 @@ export default function UserDashboardPage() {
       <PortalLinkGroup>
         <PortalLinkCard
           grouped
-          href={paths.user.packagesMain}
+          href={paths.user.packages}
           title={t.packagesTitle}
           icon={PackageIcon}
           badge={subscriptionLoading ? undefined : activePlanLabel}
           badgeColor={activePlanBadgeColor}
-        />
-        <PortalLinkCard
-          grouped
-          href={paths.user.packagesExtra}
-          title={t.extraPackagesTitle}
-          icon={SquaresFourIcon}
         />
         {canPublish ? (
           <PortalLinkCard

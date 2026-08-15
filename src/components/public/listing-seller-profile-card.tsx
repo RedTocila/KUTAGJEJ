@@ -10,7 +10,7 @@ import { formatRatingDisplay } from '@/lib/format-rating';
 import type { PublicRealEstateListingSeller } from '@/lib/public-listings-client';
 import { avatarImageUrl } from '@/lib/storage-image';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
-import { ListingVerifiedBadge, ProfessionalRatingSummary } from '@/components/public/professional-listing-detail-ui';
+import { ListingVerifiedBadge, ProfessionalRatingSummary, ProfileVerifiedNotice } from '@/components/public/professional-listing-detail-ui';
 
 function sellerInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -103,6 +103,7 @@ export function ListingSellerProfileCard({
                 Anëtar që prej {memberYear}
               </Typography>
             ) : null}
+            <ProfileVerifiedNotice verified={Boolean(seller?.verified)} />
             <ProfessionalRatingSummary rating={ratingLabel} reviewCount={reviewCount} starSize={14} />
           </Stack>
         </Stack>

@@ -17,6 +17,7 @@ import { Coins as CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins';
 import { Database as DatabaseIcon } from '@phosphor-icons/react/dist/ssr/Database';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
+import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
@@ -45,9 +46,9 @@ const SUGGESTIONS = [
   'Sa njoftime pending ka platforma?',
   'Gjej përdoruesin me email …',
   'Shto 100 BC te user@email.com',
+  'Jep verifikimin te user@email.com',
   'A ka probleme me skemën e Supabase?',
   'Sa rreshta ka referral_signups?',
-  'Ndreq kolonat që mungojnë',
 ];
 
 const CONFIRM_RE = /^(po|yes|ok|okay|confirm|konfirmo)\.?!?$/i;
@@ -66,6 +67,8 @@ const TOOL_LABELS: Record<string, string> = {
   list_user_payments: 'Pagesat',
   grant_subscription: 'Paketa',
   cancel_subscription: 'Anulim pakete',
+  grant_verification: 'Verifikimi',
+  revoke_verification: 'Heqje verifikimi',
   update_user_identity: 'NIPT / ID',
   diagnose_schema: 'Diagnoza e skemës',
   list_db_tables: 'Tabelat',
@@ -139,15 +142,17 @@ function toolTone(status: AdminAiToolUse['status']) {
 
 function ToolNameIcon({ name }: { name: string }) {
   const Icon: PhosphorIcon =
-    name.includes('user') || name.includes('password') || name.includes('identity')
-      ? UserIcon
-      : name.includes('credit') || name.includes('subscription') || name.includes('payment')
-        ? CoinsIcon
-        : name.includes('schema') || name.includes('table') || name.includes('count') || name.includes('db')
-          ? DatabaseIcon
-          : name.includes('lookup') || name.includes('inspect') || name.includes('list')
-            ? MagnifyingGlassIcon
-            : SparkleIcon;
+    name.includes('verif')
+      ? ShieldCheckIcon
+      : name.includes('user') || name.includes('password') || name.includes('identity')
+        ? UserIcon
+        : name.includes('credit') || name.includes('subscription') || name.includes('payment')
+          ? CoinsIcon
+          : name.includes('schema') || name.includes('table') || name.includes('count') || name.includes('db')
+            ? DatabaseIcon
+            : name.includes('lookup') || name.includes('inspect') || name.includes('list')
+              ? MagnifyingGlassIcon
+              : SparkleIcon;
   return React.createElement(Icon, { size: 13, weight: 'bold' });
 }
 

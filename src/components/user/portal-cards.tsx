@@ -129,39 +129,50 @@ export function PortalLinkCard({
       <Stack direction="row" spacing={1.75} sx={{ alignItems: 'center' }}>
         <PortalIconBox>{React.createElement(Icon, { size: 24, weight: 'duotone' })}</PortalIconBox>
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
-            {title}
-          </Typography>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
+            <Typography
+              sx={{
+                fontWeight: 800,
+                fontSize: '1.05rem',
+                lineHeight: 1.25,
+                letterSpacing: '-0.01em',
+                minWidth: 0,
+              }}
+              noWrap
+            >
+              {title}
+            </Typography>
+            {badge ? (
+              <Chip
+                label={badge}
+                size="small"
+                sx={{
+                  flexShrink: 0,
+                  height: 22,
+                  fontWeight: 800,
+                  fontSize: '0.68rem',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  border: 'none',
+                  '& .MuiChip-label': { px: 1.1 },
+                  ...(badgeColor
+                    ? {
+                        bgcolor: (t) => alpha(badgeColor, t.palette.mode === 'dark' ? 0.22 : 0.14),
+                        color: badgeColor,
+                      }
+                    : {
+                        bgcolor: (t) =>
+                          t.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                        color: 'text.primary',
+                      }),
+                }}
+              />
+            ) : null}
+          </Stack>
           {description ? (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35, lineHeight: 1.45 }}>
               {description}
             </Typography>
-          ) : null}
-          {badge ? (
-            <Chip
-              label={badge}
-              size="small"
-              sx={{
-                mt: description ? 1.15 : 0.75,
-                height: 24,
-                fontWeight: 800,
-                fontSize: '0.68rem',
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                border: 'none',
-                '& .MuiChip-label': { px: 1.25 },
-                ...(badgeColor
-                  ? {
-                      bgcolor: (t) => alpha(badgeColor, t.palette.mode === 'dark' ? 0.22 : 0.14),
-                      color: badgeColor,
-                    }
-                  : {
-                      bgcolor: (t) =>
-                        t.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-                      color: 'text.primary',
-                    }),
-              }}
-            />
           ) : null}
         </Box>
         <Box

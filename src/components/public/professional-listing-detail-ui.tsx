@@ -20,6 +20,7 @@ import { productPanelSx } from '@/styles/product-sx';
 
 const FONT_CAPTION = '0.75rem';
 const FONT_BODY = '0.875rem';
+const VERIFIED_SHIELD_COLOR = 'var(--mui-palette-success-main)';
 
 /** Google-style 5 stars — full, half, or empty from a 0–5 rating (e.g. 4.7). */
 export function ProfessionalFiveStarRating({
@@ -97,7 +98,7 @@ export function ProfessionalRatingSummary({
 /** Shield with check — inline (e.g. inside a primary pill on job detail). */
 export function ListingVerifiedShieldBadge({
   size = 16,
-  color = 'var(--mui-palette-primary-main)',
+  color = VERIFIED_SHIELD_COLOR,
   'aria-label': ariaLabel = 'I verifikuar',
   decorative = false,
 }: {
@@ -128,7 +129,7 @@ export function ListingVerifiedShieldBadge({
 /** Shared verified shield for listing detail headers. */
 export function ListingVerifiedBadge({
   size = 20,
-  color = 'var(--mui-palette-primary-main)',
+  color = VERIFIED_SHIELD_COLOR,
   'aria-label': ariaLabel = 'I verifikuar',
 }: {
   size?: number;
@@ -136,6 +137,28 @@ export function ListingVerifiedBadge({
   'aria-label'?: string;
 }) {
   return <ListingVerifiedShieldBadge size={size} color={color} aria-label={ariaLabel} />;
+}
+
+/** Green shield + caption for public member / seller profiles. */
+export function ProfileVerifiedNotice({
+  verified,
+  label = 'Ky profil është i verifikuar',
+}: {
+  verified: boolean;
+  label?: string;
+}) {
+  if (!verified) return null;
+  return (
+    <Stack direction="row" spacing={0.6} sx={{ alignItems: 'center', minWidth: 0 }}>
+      <ListingVerifiedShieldBadge size={16} decorative aria-label={label} />
+      <Typography
+        variant="caption"
+        sx={{ color: 'success.main', fontWeight: 750, lineHeight: 1.25, overflowWrap: 'anywhere' }}
+      >
+        {label}
+      </Typography>
+    </Stack>
+  );
 }
 
 export function ProfessionalVerifiedBadge() {

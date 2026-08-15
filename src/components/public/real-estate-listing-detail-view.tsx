@@ -652,7 +652,7 @@ export function RealEstateListingDetailView({
                     >
                       <EyeIcon size={17} weight="regular" aria-hidden />
                       <Typography variant="body2">
-                        {new Intl.NumberFormat('sq-AL').format(viewCount)} shikime
+                        {new Intl.NumberFormat('sq-AL').format(viewCount)}
                       </Typography>
                     </Stack>
                   </Stack>

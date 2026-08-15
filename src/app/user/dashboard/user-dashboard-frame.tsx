@@ -84,6 +84,7 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const isDashboardHome = pathname === paths.user.dashboard;
   const isMessages = pathMatches(pathname, paths.user.messages);
+  const isPackagesHub = pathname === paths.user.packages;
   const isSavedListings = pathMatches(pathname, paths.user.savedListings);
   const isPostListing = isPostListingPath(pathname);
   const showFrameClose =
@@ -121,6 +122,7 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
               showBackLink={showBackLink}
               backHref={backHref}
               isMessages={isMessages}
+              isPackagesHub={isPackagesHub}
               showFrameClose={showFrameClose}
             >
               {children}
@@ -138,6 +140,7 @@ function UserDashboardFrameInner({
   showBackLink,
   backHref,
   isMessages,
+  isPackagesHub,
   showFrameClose,
 }: {
   children: React.ReactNode;
@@ -145,10 +148,12 @@ function UserDashboardFrameInner({
   showBackLink: boolean;
   backHref: string;
   isMessages: boolean;
+  isPackagesHub: boolean;
   showFrameClose: boolean;
 }) {
   const addListingPicker = useOptionalAddListingPicker();
   const hideChromeForPicker = Boolean(addListingPicker?.addListingPickerOpen);
+  const fillViewport = isMessages || isPackagesHub;
 
   return (
     <>
@@ -171,12 +176,14 @@ function UserDashboardFrameInner({
               flexDirection: 'column',
               position: 'relative',
               minHeight: '100%',
-              ...(isMessages
-                ? {
-                    height: { xs: '100dvh', md: 'auto' },
-                    overflow: { xs: 'hidden', md: 'visible' },
-                  }
-                : null),
+              ...(isPackagesHub
+                ? { height: '100dvh', overflow: 'hidden' }
+                : isMessages
+                  ? {
+                      height: { xs: '100dvh', md: 'auto' },
+                      overflow: { xs: 'hidden', md: 'visible' },
+                    }
+                  : null),
               ...(hideChromeForPicker ? { pointerEvents: 'none', userSelect: 'none' } : null),
             }}
           >
@@ -188,7 +195,11 @@ function UserDashboardFrameInner({
                 flexDirection: 'column',
                 pl: { lg: 'var(--SideNav-width)' },
                 minHeight: 0,
-                ...(isMessages ? { height: { xs: '100%', md: 'auto' } } : null),
+                ...(isPackagesHub
+                  ? { height: '100%' }
+                  : isMessages
+                    ? { height: { xs: '100%', md: 'auto' } }
+                    : null),
               }}
             >
               <main
@@ -200,9 +211,13 @@ function UserDashboardFrameInner({
                   sx={{
                     py: isMessages ? { xs: 0, md: 4 } : { xs: 3, md: 4 },
                     px: isMessages ? { xs: 0, md: 3 } : undefined,
-                    flex: isMessages ? { xs: '1 1 auto', md: '0 1 auto' } : undefined,
+                    flex: isPackagesHub
+                      ? '1 1 auto'
+                      : isMessages
+                        ? { xs: '1 1 auto', md: '0 1 auto' }
+                        : undefined,
                     minHeight: 0,
-                    display: isMessages ? 'flex' : undefined,
+                    display: fillViewport ? 'flex' : undefined,
                     flexDirection: 'column',
                     pb: showMobileBottomNav
                       ? {
@@ -225,9 +240,13 @@ function UserDashboardFrameInner({
                   />
                   <Box
                     sx={{
-                      flex: isMessages ? { xs: '1 1 auto', md: '0 1 auto' } : undefined,
+                      flex: isPackagesHub
+                        ? '1 1 auto'
+                        : isMessages
+                          ? { xs: '1 1 auto', md: '0 1 auto' }
+                          : undefined,
                       minHeight: 0,
-                      display: isMessages ? 'flex' : undefined,
+                      display: fillViewport ? 'flex' : undefined,
                       flexDirection: 'column',
                     }}
                   >

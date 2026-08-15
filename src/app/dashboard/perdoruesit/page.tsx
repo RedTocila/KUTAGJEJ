@@ -43,6 +43,7 @@ import {
   deleteManagedUser,
   listManagedUsers,
   revokePortalUserVerification,
+  grantPortalUserVerification,
   updateManagedUser,
   updatePortalUserProfile,
 } from '@/lib/admin-users-client';
@@ -557,6 +558,7 @@ function EditPortalUserDialog(props: {
   const [error, setError] = React.useState<string | null>(null);
   const [pending, setPending] = React.useState(false);
   const [revoking, setRevoking] = React.useState(false);
+  const [granting, setGranting] = React.useState(false);
 
   React.useEffect(() => {
     if (!open) return;
@@ -582,6 +584,22 @@ function EditPortalUserDialog(props: {
     setVerified(Boolean(user.verified));
     setError(null);
   }, [user]);
+
+  const grantVerification = async () => {
+    if (!user || verified) return;
+    setGranting(true);
+    setError(null);
+    try {
+      const res = await grantPortalUserVerification(user.id);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      setVerified(true);
+    } finally {
+      setGranting(false);
+    }
+  };
 
   const revokeVerification = async () => {
     if (!user || !verified) return;
@@ -654,13 +672,24 @@ function EditPortalUserDialog(props: {
                   size="small"
                   color="error"
                   variant="outlined"
-                  disabled={revoking || pending}
+                  disabled={revoking || granting || pending}
                   onClick={() => void revokeVerification()}
                   sx={productButtonSx}
                 >
                   {revoking ? 'Duke hequr…' : 'Hiq verifikimin'}
                 </Button>
-              ) : null}
+              ) : (
+                <Button
+                  size="small"
+                  color="success"
+                  variant="outlined"
+                  disabled={granting || revoking || pending}
+                  onClick={() => void grantVerification()}
+                  sx={productButtonSx}
+                >
+                  {granting ? 'Duke verifikuar…' : 'Jep verifikimin'}
+                </Button>
+              )}
             </Stack>
             <TextField label="Email" type="email" value={email} onChange={(ev) => setEmail(ev.target.value)} required fullWidth />
             <TextField label="Emri" value={firstName} onChange={(ev) => setFirstName(ev.target.value)} required fullWidth />

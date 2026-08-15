@@ -2,15 +2,16 @@
 
 import * as React from 'react';
 import { Stack, Typography } from '@mui/material';
-import LockOutlined from '@mui/icons-material/LockOutlined';
+
+import { ListingVerifiedShieldBadge } from '@/components/public/professional-listing-detail-ui';
 
 const DEFAULT_LABEL = 'Ky njoftim është i verifikuar dhe i sigurt';
 
-/** Lock + caption shown under listing meta when the seller account is verified. */
+/** Green shield + caption shown under listing meta when the seller account is verified. */
 export function ListingVerifiedNotice({
   verified,
   label = DEFAULT_LABEL,
-  color = 'text.disabled',
+  color = 'success.main',
   fontSize = '0.75rem',
 }: {
   verified: boolean;
@@ -21,8 +22,12 @@ export function ListingVerifiedNotice({
   if (!verified) return null;
   return (
     <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-      <LockOutlined sx={{ fontSize: 14, color }} />
-      <Typography sx={{ fontSize, color }}>{label}</Typography>
+      <ListingVerifiedShieldBadge
+        size={14}
+        decorative
+        color={color === 'success.main' ? undefined : color}
+      />
+      <Typography sx={{ fontSize, color, fontWeight: 650 }}>{label}</Typography>
     </Stack>
   );
 }

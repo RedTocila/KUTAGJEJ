@@ -44,6 +44,7 @@ function publicUser(profile) {
     isActive: profile.isActive !== false,
     boostCredits: Number(profile.boostCredits) || 0,
     autoRefreshSlots: Number(profile.autoRefreshSlots) || 0,
+    verified: Boolean(profile.professionalsVerifiedAt || profile.jobsEmployerVerifiedAt),
     jobsEmployerVerifiedAt: profile.jobsEmployerVerifiedAt || null,
     professionalsVerifiedAt: profile.professionalsVerifiedAt || null,
     createdAt: profile.createdAt || null,
@@ -604,6 +605,63 @@ async function updateUserIdentity(args, admin) {
   return result;
 }
 
+async function grantVerification(args, admin) {
+  const profile = await resolveUser(args);
+  const gate = assertMutable(profile, admin);
+  if (!gate.ok) return gate;
+  if (profile.accountType !== 'individual' && profile.accountType !== 'business') {
+    return { ok: false, message: 'Vetëm përdoruesit e portalit (individ / biznes) mund të verifikohen.' };
+  }
+
+  const alreadyVerified = Boolean(profile.professionalsVerifiedAt || profile.jobsEmployerVerifiedAt);
+  if (alreadyVerified) {
+    return {
+      ok: true,
+      alreadyVerified: true,
+      email: profile.email,
+      verified: true,
+      message: `${profile.email} është tashmë i verifikuar. Mburoja e gjelbër shfaqet te profili publik.`,
+    };
+  }
+
+  const reason = String(args?.reason || '').trim().slice(0, 200);
+  const preview = needsConfirm(args, `Jep verifikimin e llogarisë (mburoja e gjelbër) te ${profile.email}.`, {
+    email: profile.email,
+    userId: profile.id,
+    reason,
+  });
+  if (preview) return preview;
+
+  const { grantPortalVerification } = require('./admin-portal-users');
+  const result = await grantPortalVerification(profile.id, { admin, reason });
+  if (!result.ok) return result;
+  return {
+    ok: true,
+    email: result.email,
+    verified: true,
+    alreadyVerified: Boolean(result.alreadyVerified),
+    verifiedAt: result.verifiedAt || null,
+    message: `Profili ${result.email} u verifikua. Mburoja e gjelbër dhe teksti "Ky profil është i verifikuar" shfaqen te profili publik.`,
+  };
+}
+
+async function revokeVerification(args, admin) {
+  const profile = await resolveUser(args);
+  const gate = assertMutable(profile, admin);
+  if (!gate.ok) return gate;
+
+  const preview = needsConfirm(args, `Hiq verifikimin e llogarisë nga ${profile.email}.`, {
+    email: profile.email,
+    userId: profile.id,
+  });
+  if (preview) return preview;
+
+  const { revokePortalVerification } = require('./admin-portal-users');
+  const result = await revokePortalVerification(profile.id);
+  if (!result.ok) return { ok: false, message: result.message };
+  return { ok: true, email: result.email, verified: false, message: `Verifikimi u hoq nga ${result.email}.` };
+}
+
 async function cancelSubscription(args, admin) {
   const profile = await resolveUser(args);
   const gate = assertMutable(profile, admin);
@@ -651,6 +709,8 @@ const MUTATING_TOOLS = new Set([
   'review_listing',
   'grant_subscription',
   'cancel_subscription',
+  'grant_verification',
+  'revoke_verification',
   'update_user_identity',
   'repair_missing_schema',
   'ensure_referral_program',
@@ -670,6 +730,8 @@ const TOOL_HANDLERS = {
   list_user_payments: (args) => listUserPayments(args),
   grant_subscription: (args, ctx) => grantSubscription(args, ctx.admin),
   cancel_subscription: (args, ctx) => cancelSubscription(args, ctx.admin),
+  grant_verification: (args, ctx) => grantVerification(args, ctx.admin),
+  revoke_verification: (args, ctx) => revokeVerification(args, ctx.admin),
   update_user_identity: (args, ctx) => updateUserIdentity(args, ctx.admin),
   diagnose_schema: () => diagnoseSchema(),
   list_db_tables: () => listDbTables(),

@@ -20,6 +20,7 @@ import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/s
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { MemberReferralBadgesRow, MemberReferralBadgesSkeleton } from '@/components/public/member-referral-badges';
+import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 
@@ -388,13 +389,15 @@ export function MemberProfileView({
                     {member.verified ? (
                       <Chip
                         size="small"
-                        label="I verifikuar"
+                        icon={<ShieldCheckIcon size={14} weight="fill" />}
+                        label="Ky profil është i verifikuar"
                         sx={{
                           fontWeight: 700,
-                          bgcolor: 'transparent',
+                          bgcolor: 'rgba(var(--mui-palette-success-mainChannel) / 0.14)',
                           border: '1px solid',
-                          borderColor: 'divider',
-                          color: 'text.secondary',
+                          borderColor: 'rgba(var(--mui-palette-success-mainChannel) / 0.45)',
+                          color: 'success.main',
+                          '& .MuiChip-icon': { color: 'success.main', ml: 0.75 },
                         }}
                       />
                     ) : null}

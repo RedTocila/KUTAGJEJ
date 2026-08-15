@@ -508,6 +508,23 @@ export default function UserProfilePage() {
                   '& .MuiChip-icon': { color: 'inherit', ml: 0.65 },
                 }}
               />
+              {user.verified ? (
+                <Chip
+                  size="small"
+                  icon={<ShieldCheckIcon size={13} weight="fill" />}
+                  label="Ky profil është i verifikuar"
+                  sx={{
+                    height: 26,
+                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                    bgcolor: 'rgba(var(--mui-palette-success-mainChannel) / 0.14)',
+                    border: '1px solid',
+                    borderColor: 'rgba(var(--mui-palette-success-mainChannel) / 0.45)',
+                    color: 'success.main',
+                    '& .MuiChip-icon': { color: 'success.main', ml: 0.65 },
+                  }}
+                />
+              ) : null}
               {businessCategoryLabel ? (
                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
                   {businessCategoryLabel}

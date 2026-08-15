@@ -132,6 +132,28 @@ export async function updatePortalUserProfile(
   }
 }
 
+export async function grantPortalUserVerification(
+  id: string,
+  body?: { reason?: string },
+): Promise<{ ok?: boolean; alreadyVerified?: boolean; message?: string; error?: string }> {
+  try {
+    const res = await fetch(getApiUrl(`/admin/users/${encodeURIComponent(id)}/portal-verification`), {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(body ?? {}),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Verifikimi dështoi.' };
+    return {
+      ok: true,
+      alreadyVerified: Boolean(data.alreadyVerified),
+      message: typeof data.message === 'string' ? data.message : undefined,
+    };
+  } catch {
+    return { error: 'Nuk u arrit lidhja me serverin.' };
+  }
+}
+
 export async function revokePortalUserVerification(
   id: string,
 ): Promise<{ ok?: boolean; message?: string; error?: string }> {

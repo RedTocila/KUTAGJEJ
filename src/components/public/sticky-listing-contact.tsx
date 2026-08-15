@@ -39,6 +39,14 @@ export const listingContactCtaSx: SxProps<Theme> = {
 /** In-flow slot height (button) so layout does not jump when the CTA pins. */
 export const LISTING_CTA_SLOT_HEIGHT_PX = 52;
 
+/** Slide duration when the CTA pins / unpins above the mobile nav. */
+const CTA_PIN_MS = 320;
+const CTA_PIN_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 export interface StickyListingCtaSlotProps {
   children: React.ReactNode;
   /** When true, also show on `md+`. Default: mobile only. */
@@ -55,6 +63,8 @@ export function StickyListingCtaSlot({
 }: StickyListingCtaSlotProps) {
   const slotRef = React.useRef<HTMLDivElement>(null);
   const [stuck, setStuck] = React.useState(false);
+  const [pinned, setPinned] = React.useState(false);
+  const [entered, setEntered] = React.useState(false);
   const [host, setHost] = React.useState<HTMLElement | null>(null);
 
   React.useEffect(() => {
@@ -77,10 +87,39 @@ export function StickyListingCtaSlot({
     return () => observer.disconnect();
   }, []);
 
+  React.useEffect(() => {
+    const reduce = prefersReducedMotion();
+
+    if (stuck) {
+      setPinned(true);
+      if (reduce) {
+        setEntered(true);
+        return undefined;
+      }
+      let frame2 = 0;
+      const frame1 = requestAnimationFrame(() => {
+        frame2 = requestAnimationFrame(() => setEntered(true));
+      });
+      return () => {
+        cancelAnimationFrame(frame1);
+        cancelAnimationFrame(frame2);
+      };
+    }
+
+    setEntered(false);
+    if (reduce) {
+      setPinned(false);
+      return undefined;
+    }
+    const timeout = window.setTimeout(() => setPinned(false), CTA_PIN_MS);
+    return () => window.clearTimeout(timeout);
+  }, [stuck]);
+
   const displaySx = showOnDesktop ? 'flex' : { xs: 'flex', md: 'none' };
+  const inPortal = pinned;
 
   const fixedBar =
-    stuck && host
+    inPortal && host
       ? createPortal(
           <Box
             sx={(theme) => ({
@@ -96,7 +135,16 @@ export function StickyListingCtaSlot({
               pointerEvents: 'none',
               bgcolor: 'transparent',
               backgroundImage: 'none',
-              '& > *': { pointerEvents: 'auto' },
+              opacity: entered ? 1 : 0,
+              transform: entered ? 'translate3d(0, 0, 0)' : 'translate3d(0, calc(100% + 12px), 0)',
+              transition: `transform ${CTA_PIN_MS}ms ${CTA_PIN_EASING}, opacity ${CTA_PIN_MS}ms ${CTA_PIN_EASING}`,
+              willChange: 'transform, opacity',
+              '@media (prefers-reduced-motion: reduce)': {
+                transition: 'none',
+                transform: 'none',
+                opacity: 1,
+              },
+              '& > *': { pointerEvents: entered ? 'auto' : 'none' },
             })}
           >
             <Box
@@ -131,7 +179,7 @@ export function StickyListingCtaSlot({
           '& > *': { width: '100%', maxWidth: '100%' },
         }}
       >
-        {stuck ? null : children}
+        {inPortal ? null : children}
       </Box>
       {fixedBar}
     </>
@@ -156,6 +204,7 @@ export interface StickyListingContactProps {
 /**
  * In-flow “Kontakto” CTA that pins to the bottom of the screen (above the mobile
  * nav) once its natural position scrolls past the top of the viewport.
+ * The pinned bar slides up from the nav and slides back down when you return.
  */
 export function StickyListingContact({
   listingKind,

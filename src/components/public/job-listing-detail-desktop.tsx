@@ -359,7 +359,7 @@ export function JobListingDetailDesktop({
                   >
                     <EyeIcon size={16} weight="regular" aria-hidden />
                     <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>
-                      {new Intl.NumberFormat('sq-AL').format(viewCount)} shikime
+                      {new Intl.NumberFormat('sq-AL').format(viewCount)}
                     </Typography>
                   </Stack>
                 </Stack>

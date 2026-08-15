@@ -4,6 +4,7 @@ const { mapProfile, getProfileByEmail, createProfileForAuthUser } = require('../
 const { updatePortalUserIdentity } = require('../lib/portal-identity');
 const {
   formatPortalDirectoryUser,
+  grantPortalVerification,
   revokePortalVerification,
   updatePortalUserByAdmin,
 } = require('../lib/admin-portal-users');
@@ -206,6 +207,31 @@ router.patch('/:id/portal-profile', async (req, res) => {
     res.json({ ok: true, message: 'Profili u përditësua.' });
   } catch (error) {
     console.error('PATCH /admin/users/:id/portal-profile:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** Grant account verification badge to a portal user (no pending request required). */
+router.post('/:id/portal-verification', async (req, res) => {
+  try {
+    if (!UUID_RE.test(req.params.id)) {
+      return res.status(400).json({ message: 'ID e pavlefshme.' });
+    }
+
+    const result = await grantPortalVerification(req.params.id, {
+      admin: req.admin,
+      reason: req.body?.reason,
+    });
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ message: result.message });
+    }
+    res.json({
+      ok: true,
+      alreadyVerified: Boolean(result.alreadyVerified),
+      message: result.alreadyVerified ? 'Përdoruesi është tashmë i verifikuar.' : 'Profili u verifikua.',
+    });
+  } catch (error) {
+    console.error('POST /admin/users/:id/portal-verification:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
   }
 });

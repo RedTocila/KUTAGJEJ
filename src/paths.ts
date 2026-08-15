@@ -56,7 +56,7 @@ export const paths = {
     credits: '/user/dashboard/kredite',
     /** Full-page POK checkout (credits or subscription). */
     checkout: '/user/dashboard/checkout',
-    /** @deprecated Hub removed — redirects to dashboard. Prefer packagesMain / packagesExtra / packagesCredits. */
+    /** Categories hub: plans, extra packages, buy coins. */
     packages: '/user/dashboard/paketat',
     /** Main subscription plans. */
     packagesMain: '/user/dashboard/paketat/kryesore',

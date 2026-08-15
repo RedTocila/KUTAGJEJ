@@ -551,7 +551,7 @@ export function VerticalListingDetailView(props: {
                     sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}
                   >
                     <EyeIcon size={17} weight="regular" aria-hidden />
-                    <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)} shikime</Typography>
+                    <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)}</Typography>
                   </Stack>
                 </Stack>
                 <ListingVerifiedNotice verified={Boolean(listing.seller?.verified)} />

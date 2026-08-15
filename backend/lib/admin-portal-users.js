@@ -79,6 +79,76 @@ function formatPortalDirectoryUser(user, idNumber) {
   };
 }
 
+async function closePendingVerificationRequests(userId, { adminId = null, now, note = '' } = {}) {
+  const sb = getSupabaseAdmin();
+  const patch = {
+    status: 'approved',
+    reviewed_at: now,
+    updated_at: now,
+    admin_note: String(note || 'Verifikuar nga administratori.').slice(0, 2000),
+  };
+  if (adminId) patch.reviewed_by = adminId;
+
+  for (const table of ['professional_verification_requests', 'job_employer_verification_requests']) {
+    try {
+      const { error } = await sb.from(table).update(patch).eq('applicant_id', userId).eq('status', 'pending');
+      if (error) console.warn(`[grant-verification] ${table}:`, error.message);
+    } catch (err) {
+      console.warn(`[grant-verification] ${table}:`, err?.message || err);
+    }
+  }
+}
+
+async function grantPortalVerification(userId, { admin = null, reason = '' } = {}) {
+  const profile = await getProfileById(userId);
+  if (!profile) return { ok: false, status: 404, message: 'Përdoruesi nuk u gjet.' };
+  if (profile.accountType !== 'individual' && profile.accountType !== 'business') {
+    return { ok: false, status: 400, message: 'Vetëm përdoruesit e portalit mund të verifikohen.' };
+  }
+
+  const alreadyVerified = Boolean(profile.professionalsVerifiedAt || profile.jobsEmployerVerifiedAt);
+  if (alreadyVerified) {
+    return {
+      ok: true,
+      alreadyVerified: true,
+      userId: profile.id,
+      email: profile.email,
+      verified: true,
+      verifiedAt: profile.professionalsVerifiedAt || profile.jobsEmployerVerifiedAt,
+    };
+  }
+
+  const now = new Date().toISOString();
+  const { error } = await getSupabaseAdmin()
+    .from('profiles')
+    .update({
+      professionals_verified_at: now,
+      jobs_employer_verified_at: now,
+      updated_at: now,
+    })
+    .eq('id', profile.id);
+  if (error) throw error;
+
+  await closePendingVerificationRequests(profile.id, {
+    adminId: admin?.id || admin?._id || null,
+    now,
+    note: reason,
+  });
+
+  try {
+    const { notifyVerificationResult } = require('./user-notifications');
+    await notifyVerificationResult({
+      userId: profile.id,
+      approved: true,
+      adminNote: String(reason || '').trim(),
+    });
+  } catch (notifyErr) {
+    console.warn('notifyVerificationResult:', notifyErr?.message || notifyErr);
+  }
+
+  return { ok: true, userId: profile.id, email: profile.email, verified: true, verifiedAt: now };
+}
+
 async function revokePortalVerification(userId) {
   const profile = await getProfileById(userId);
   if (!profile) return { ok: false, status: 404, message: 'Përdoruesi nuk u gjet.' };
@@ -102,7 +172,7 @@ async function revokePortalVerification(userId) {
     .eq('id', profile.id);
   if (error) throw error;
 
-  return { ok: true, userId: profile.id, email: profile.email };
+  return { ok: true, userId: profile.id, email: profile.email, verified: false };
 }
 
 async function updatePortalUserByAdmin(userId, body = {}) {
@@ -217,6 +287,7 @@ async function updatePortalUserByAdmin(userId, body = {}) {
 module.exports = {
   portalDirectoryExtras,
   formatPortalDirectoryUser,
+  grantPortalVerification,
   revokePortalVerification,
   updatePortalUserByAdmin,
 };

@@ -188,6 +188,26 @@ const OPENAI_TOOLS = [
   {
     type: 'function',
     function: {
+      name: 'grant_verification',
+      description:
+        'Grant the green verified-shield badge on a portal user profile (individual or business). Does not require a pending verification request. First call without confirm to preview.',
+      parameters: withUserRef({
+        reason: { type: 'string', description: 'Optional admin note' },
+        confirm: { type: 'boolean' },
+      }),
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'revoke_verification',
+      description: 'Remove the verified badge from a portal user. First call without confirm to preview.',
+      parameters: withUserRef({ confirm: { type: 'boolean' } }),
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'update_user_identity',
       description:
         'Change a portal user NIPT (business profiles) and/or ID number (latest verification request). First call without confirm to preview.',
@@ -303,14 +323,15 @@ Përgjigju shkurt në shqip, përveç nëse admini shkruan anglisht.
 
 Rregulla:
 - Për çdo ndryshim, gjej fillimisht përdoruesin me lookup_user / get_user_overview (email është identifikuesi kryesor).
-- Veprimet mutuese (BC, fjalëkalim, fshirje, paketë, moderim, NIPT/ID, ndreqje skeme, program referimi) thirren SË PARI pa confirm. Nëse mjeti kthen needsConfirmation, trego përmbledhjen dhe thuaj që admini duhet të konfirmojë nga butoni ose duke shkruar "po". MOS e vë confirm=true vetë në të njëjtin hap.
+- Veprimet mutuese (BC, fjalëkalim, fshirje, paketë, verifikim, moderim, NIPT/ID, ndreqje skeme, program referimi) thirren SË PARI pa confirm. Nëse mjeti kthen needsConfirmation, trego përmbledhjen dhe thuaj që admini duhet të konfirmojë nga butoni ose duke shkruar "po". MOS e vë confirm=true vetë në të njëjtin hap.
 - MOS prek llogari admin. MOS ekzekuto SQL të lirë. MOS sugjero init.sql, DROP, TRUNCATE, ose supabase db reset.
 - Për të dhëna: list_db_tables, inspect_table, count_rows (vetëm tabela të lejuara).
 - Për probleme skeme: diagnose_schema. Nëse mungon diçka, përdor repair_missing_schema (konfirmim). Pastaj ensure_referral_program nëse faqja e referimit jep gabim serveri.
 - Mos përsërit fjalëkalime në përgjigje.
 - Nëse kërkesa është e paqartë, pyet për emailin.
+- Për verifikim llogarie (mburoja e gjelbër + "Ky profil është i verifikuar"): grant_verification. Nuk kërkon kërkesë në pritje. Hiq me revoke_verification.
 
-Mjete: lookup_user, get_user_overview, adjust_boost_credits, set_auto_refresh_slots, set_user_password, set_user_active, delete_user, list_pending_listings, review_listing, get_platform_stats, list_user_payments, grant_subscription, cancel_subscription, update_user_identity, diagnose_schema, list_db_tables, inspect_table, count_rows, repair_missing_schema, ensure_referral_program, list_recent_ai_actions.`;
+Mjete: lookup_user, get_user_overview, adjust_boost_credits, set_auto_refresh_slots, set_user_password, set_user_active, delete_user, list_pending_listings, review_listing, get_platform_stats, list_user_payments, grant_subscription, cancel_subscription, grant_verification, revoke_verification, update_user_identity, diagnose_schema, list_db_tables, inspect_table, count_rows, repair_missing_schema, ensure_referral_program, list_recent_ai_actions.`;
 }
 
 function sanitizeHistory(raw) {
@@ -406,6 +427,18 @@ function summarizeTool(name, args, result) {
   }
   if (name === 'ensure_referral_program') {
     return { name, status: 'ok', summary: result.message || 'Programi i referimit' };
+  }
+  if (name === 'grant_verification') {
+    return {
+      name,
+      status: 'ok',
+      summary: result.alreadyVerified
+        ? `${result.email} është tashmë i verifikuar`
+        : `U verifikua ${result.email}`,
+    };
+  }
+  if (name === 'revoke_verification') {
+    return { name, status: 'ok', summary: `Verifikimi u hoq nga ${result.email}` };
   }
   return { name, status: 'ok', summary: result?.email || result?.message || name };
 }

@@ -29,6 +29,7 @@ import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import {
   ProfessionalReviewSection,
+  type ProfessionalReviewSectionHandle,
   type ProfessionalReviewStats,
 } from '@/components/professionals/professional-review-section';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
@@ -88,6 +89,8 @@ export function ProfessionalListingDetailView({
   const displayName = React.useMemo(() => professionalDisplayName(listing), [listing]);
   const subtitle = React.useMemo(() => professionalSubtitle(listing), [listing]);
   const [liveReviewStats, setLiveReviewStats] = React.useState<ProfessionalReviewStats | null>(null);
+  const [leaveReviewAvailable, setLeaveReviewAvailable] = React.useState(false);
+  const reviewSectionRef = React.useRef<ProfessionalReviewSectionHandle>(null);
   const rating = React.useMemo(
     () =>
       professionalRatingDisplay(
@@ -233,8 +236,17 @@ export function ProfessionalListingDetailView({
                     </Box>
                   ) : null}
                 </Box>
-                <Box sx={{ flexShrink: 0, pb: 0.35, pr: 0.25 }}>
-                  <ProfessionalRatingSummary rating={rating.rating} reviewCount={rating.reviews} starSize={14} />
+                <Box sx={{ flexShrink: 0, py: 0.5, pr: 0.25, position: 'relative', zIndex: 2, overflow: 'visible' }}>
+                  <ProfessionalRatingSummary
+                    rating={rating.rating}
+                    reviewCount={rating.reviews}
+                    starSize={14}
+                    onLeaveReview={
+                      ownerPreview || !leaveReviewAvailable
+                        ? undefined
+                        : () => reviewSectionRef.current?.openLeaveReview()
+                    }
+                  />
                 </Box>
               </Stack>
 
@@ -483,10 +495,13 @@ export function ProfessionalListingDetailView({
 
             {ownerPreview ? null : (
               <ProfessionalReviewSection
+                ref={reviewSectionRef}
                 listingId={listing.id}
+                ownerId={listing.seller?.id}
                 ratingAverage={listing.ratingAverage}
                 reviewCount={listing.reviewCount}
                 onStatsChange={onReviewStatsChange}
+                onLeaveReviewAvailableChange={setLeaveReviewAvailable}
                 onReviewSubmitted={() => router.refresh()}
               />
             )}

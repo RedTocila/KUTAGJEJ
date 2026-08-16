@@ -29,6 +29,7 @@ import {
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import {
   ProfessionalReviewSection,
+  type ProfessionalReviewSectionHandle,
   type ProfessionalReviewStats,
 } from '@/components/professionals/professional-review-section';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
@@ -78,6 +79,8 @@ export function ProfessionalListingDetailDesktop({
   const displayName = React.useMemo(() => professionalDisplayName(listing), [listing]);
   const subtitle = React.useMemo(() => professionalSubtitle(listing), [listing]);
   const [liveReviewStats, setLiveReviewStats] = React.useState<ProfessionalReviewStats | null>(null);
+  const [leaveReviewAvailable, setLeaveReviewAvailable] = React.useState(false);
+  const reviewSectionRef = React.useRef<ProfessionalReviewSectionHandle>(null);
   const rating = React.useMemo(
     () =>
       professionalRatingDisplay(
@@ -289,6 +292,9 @@ export function ProfessionalListingDetailDesktop({
                         reviewCount={rating.reviews}
                         starSize={16}
                         showReviewLabel
+                        onLeaveReview={
+                          leaveReviewAvailable ? () => reviewSectionRef.current?.openLeaveReview() : undefined
+                        }
                       />
                     </Box>
                   </Stack>
@@ -400,10 +406,13 @@ export function ProfessionalListingDetailDesktop({
             <Grid size={{ md: 4 }}>
               <Box sx={surfaceSx}>
                 <ProfessionalReviewSection
+                  ref={reviewSectionRef}
                   listingId={listing.id}
+                  ownerId={listing.seller?.id}
                   ratingAverage={listing.ratingAverage}
                   reviewCount={listing.reviewCount}
                   onStatsChange={onReviewStatsChange}
+                  onLeaveReviewAvailableChange={setLeaveReviewAvailable}
                   onReviewSubmitted={() => router.refresh()}
                 />
               </Box>

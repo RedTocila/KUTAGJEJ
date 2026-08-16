@@ -48,20 +48,38 @@ export type ProfessionalReviewStats = {
   reviewCount: number;
 };
 
-export function ProfessionalReviewSection({
-  listingId,
-  ratingAverage,
-  reviewCount,
-  onReviewSubmitted,
-  onStatsChange,
-}: {
+export type ProfessionalReviewSectionHandle = {
+  openLeaveReview: () => void;
+};
+
+type ProfessionalReviewSectionProps = {
   listingId: string;
   ratingAverage: number | null | undefined;
   reviewCount: number | undefined;
   onReviewSubmitted?: () => void;
   /** Fired when the live review list is loaded/updated (keeps header stars in sync). */
   onStatsChange?: (stats: ProfessionalReviewStats) => void;
-}) {
+  /** Listing owner — hide leave-review for their own profile. */
+  ownerId?: string | null;
+  /** Whether the compact header “+” next to stars should show. */
+  onLeaveReviewAvailableChange?: (available: boolean) => void;
+};
+
+export const ProfessionalReviewSection = React.forwardRef<
+  ProfessionalReviewSectionHandle,
+  ProfessionalReviewSectionProps
+>(function ProfessionalReviewSection(
+  {
+    listingId,
+    ratingAverage,
+    reviewCount,
+    onReviewSubmitted,
+    onStatsChange,
+    ownerId,
+    onLeaveReviewAvailableChange,
+  },
+  ref
+) {
   const router = useRouter();
   const { user } = useUser();
   const [reviews, setReviews] = React.useState<ProfessionalReview[]>([]);
@@ -94,15 +112,20 @@ export function ProfessionalReviewSection({
     onStatsChange({ ratingAverage: nextAvg, reviewCount: nextCount });
   }, [onStatsChange, reviews, reviewsLoaded]);
 
-  const openDialog = () => {
+  const isOwnListing = Boolean(user?.id && ownerId && String(user.id) === String(ownerId));
+
+  const openDialog = React.useCallback(() => {
     if (!user) {
       router.push(
         `${paths.user.auth}?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : paths.public.professionals)}`,
       );
       return;
     }
+    setError(null);
     setOpen(true);
-  };
+  }, [router, user]);
+
+  React.useImperativeHandle(ref, () => ({ openLeaveReview: openDialog }), [openDialog]);
 
   const submit = async () => {
     if (!rating) {
@@ -136,7 +159,11 @@ export function ProfessionalReviewSection({
         : null;
 
   const views = reviews.map(mapApiReviewToView);
-  const showLeaveReview = !viewerHasReviewed;
+  const showLeaveReview = !viewerHasReviewed && !isOwnListing;
+
+  React.useEffect(() => {
+    onLeaveReviewAvailableChange?.(!isOwnListing && !viewerHasReviewed);
+  }, [onLeaveReviewAvailableChange, isOwnListing, viewerHasReviewed]);
 
   return (
     <Stack spacing={1.5}>
@@ -249,4 +276,4 @@ export function ProfessionalReviewSection({
       ) : null}
     </Stack>
   );
-}
+});

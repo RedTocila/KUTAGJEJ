@@ -4,8 +4,7 @@ import * as React from 'react';
 import RouterLink from 'next/link';
 import { Box, Chip, Stack, Typography, type Theme } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
-import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
+import { ArrowUpRight as ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 
@@ -18,25 +17,58 @@ import { useUser } from '@/hooks/use-user';
 import { primaryMainAlpha, warningMainAlpha } from '@/lib/css-var-alpha';
 import { listMySubscriptions } from '@/lib/payments-client';
 import { paths } from '@/paths';
+import { MOTION } from '@/styles/motion';
+
+function HubTag({ label }: { label: string }) {
+  return (
+    <Box
+      component="span"
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        height: 26,
+        px: 1.05,
+        borderRadius: 999,
+        fontSize: '0.68rem',
+        fontWeight: 700,
+        letterSpacing: '0.02em',
+        lineHeight: 1,
+        color: 'text.secondary',
+        bgcolor: (theme) =>
+          theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.045)' : 'rgba(0,0,0,0.035)',
+        border: '1px solid',
+        borderColor: 'divider',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {label}
+    </Box>
+  );
+}
 
 function CategoryCard({
   href,
   title,
   description,
-  icon: Icon,
+  icon,
   tone = 'primary',
   badge,
   badgeColor,
+  tags,
 }: {
   href: string;
   title: string;
   description: string;
-  icon: PhosphorIcon;
+  icon: React.ReactNode;
   tone?: 'primary' | 'amber';
   badge?: string;
   badgeColor?: string;
+  tags: string[];
 }) {
   const isAmber = tone === 'amber';
+  const accent = isAmber ? 'warning.main' : 'primary.main';
+  const accentBorder = isAmber ? warningMainAlpha(0.45) : primaryMainAlpha(0.45);
+  const accentFill = isAmber ? warningMainAlpha(0.18) : primaryMainAlpha(0.18);
 
   return (
     <Box
@@ -47,110 +79,111 @@ function CategoryCard({
         textDecoration: 'none',
         color: 'inherit',
         flex: '1 1 0',
-        minHeight: 0,
+        minHeight: 'min-content',
         display: 'flex',
-        alignItems: 'center',
+        flexDirection: 'column',
         px: { xs: 2.25, sm: 2.75 },
-        py: { xs: 1.75, sm: 2.25 },
-        transition:
-          'border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), background-color 140ms cubic-bezier(0.22, 1, 0.36, 1)',
+        py: { xs: 1.85, sm: 2.25 },
+        transition: `border-color ${MOTION.fast} ${MOTION.ease}, background-color ${MOTION.fast} ${MOTION.ease}`,
         '&:hover': {
-          borderColor: isAmber ? warningMainAlpha(0.45) : primaryMainAlpha(0.45),
+          borderColor: accentBorder,
           bgcolor: (t: Theme) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'action.hover'),
           '& .packages-hub-caret': {
-            transform: 'translateX(3px)',
-            color: isAmber ? 'warning.main' : 'primary.main',
-            opacity: 1,
+            transform: 'translate(1px, -1px)',
+            color: accent,
+            borderColor: accentBorder,
+            bgcolor: accentFill,
           },
         },
       }}
     >
-      <Stack direction="row" spacing={1.75} sx={{ alignItems: 'center', width: '100%', minWidth: 0 }}>
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0, flex: 1 }}>
+          <Box
+            sx={{
+              color: accent,
+              display: 'inline-flex',
+              flexShrink: 0,
+              lineHeight: 0,
+            }}
+          >
+            {icon}
+          </Box>
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: '1.4rem', sm: '1.55rem' },
+              lineHeight: 1.25,
+              letterSpacing: '-0.01em',
+              minWidth: 0,
+            }}
+            noWrap
+          >
+            {title}
+          </Typography>
+          {badge ? (
+            <Chip
+              label={badge}
+              size="small"
+              sx={{
+                flexShrink: 0,
+                height: 22,
+                fontWeight: 800,
+                fontSize: '0.68rem',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                border: 'none',
+                '& .MuiChip-label': { px: 1.1 },
+                ...(badgeColor
+                  ? {
+                      bgcolor: (t) => alpha(badgeColor, t.palette.mode === 'dark' ? 0.22 : 0.14),
+                      color: badgeColor,
+                    }
+                  : {
+                      bgcolor: (t) =>
+                        t.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                      color: 'text.primary',
+                    }),
+              }}
+            />
+          ) : null}
+        </Stack>
         <Box
+          className="packages-hub-caret"
+          aria-hidden
           sx={{
-            width: { xs: 52, sm: 56 },
-            height: { xs: 52, sm: 56 },
-            borderRadius: 2.25,
+            width: 34,
+            height: 34,
+            borderRadius: '50%',
             display: 'grid',
             placeItems: 'center',
             flexShrink: 0,
-            bgcolor: (t) =>
-              isAmber
-                ? warningMainAlpha(t.palette.mode === 'dark' ? 0.22 : 0.16)
-                : primaryMainAlpha(t.palette.mode === 'dark' ? 0.16 : 0.12),
-            color: isAmber ? 'warning.main' : 'primary.main',
+            color: 'text.disabled',
+            border: '1px solid',
+            borderColor: 'divider',
+            transition: `transform ${MOTION.base} ${MOTION.ease}, color ${MOTION.fast} ${MOTION.ease}, border-color ${MOTION.fast} ${MOTION.ease}, background-color ${MOTION.fast} ${MOTION.ease}`,
           }}
         >
-          {React.createElement(Icon, { size: 28, weight: 'duotone' })}
+          <ArrowUpRightIcon size={16} weight="bold" />
         </Box>
-        <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
-            <Typography
-              sx={{
-                fontWeight: 800,
-                fontSize: { xs: '1.08rem', sm: '1.15rem' },
-                lineHeight: 1.25,
-                letterSpacing: '-0.01em',
-                minWidth: 0,
-              }}
-              noWrap
-            >
-              {title}
-            </Typography>
-            {badge ? (
-              <Chip
-                label={badge}
-                size="small"
-                sx={{
-                  flexShrink: 0,
-                  height: 22,
-                  fontWeight: 800,
-                  fontSize: '0.68rem',
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  border: 'none',
-                  '& .MuiChip-label': { px: 1.1 },
-                  ...(badgeColor
-                    ? {
-                        bgcolor: (t) => alpha(badgeColor, t.palette.mode === 'dark' ? 0.22 : 0.14),
-                        color: badgeColor,
-                      }
-                    : {
-                        bgcolor: (t) =>
-                          t.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-                        color: 'text.primary',
-                      }),
-                }}
-              />
-            ) : null}
-          </Stack>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{
-              mt: 0.4,
-              lineHeight: 1.4,
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {description}
-          </Typography>
-        </Box>
-        <Box
-          className="packages-hub-caret"
-          sx={{
-            color: 'text.secondary',
-            display: 'flex',
-            flexShrink: 0,
-            opacity: 0.7,
-            transition: 'transform 160ms cubic-bezier(0.22, 1, 0.36, 1), color 160ms ease, opacity 160ms ease',
-          }}
-        >
-          <CaretRightIcon size={22} weight="bold" />
-        </Box>
+      </Stack>
+
+      <Typography
+        sx={{
+          mt: 0.7,
+          fontSize: '0.85rem',
+          lineHeight: 1.45,
+          color: 'var(--mui-palette-neutral-400)',
+          flexShrink: 0,
+        }}
+      >
+        {description}
+      </Typography>
+
+      <Stack direction="row" sx={{ mt: 1.15, flexWrap: 'wrap', gap: 0.6, minWidth: 0, flexShrink: 0 }}>
+        {tags.map((tag) => (
+          <HubTag key={tag} label={tag} />
+        ))}
       </Stack>
     </Box>
   );
@@ -180,7 +213,7 @@ export default function UserPackagesPage() {
   if (!user) return null;
 
   return (
-    <Stack spacing={2} sx={{ flex: 1, minHeight: 0, height: '100%', overflow: 'hidden' }}>
+    <Stack spacing={2} sx={{ flex: 1, minHeight: 0, height: '100%', overflow: 'auto' }}>
       <UserPageHeader
         icon={<PackageIcon size={20} weight="duotone" />}
         title={t.nav.packages}
@@ -192,22 +225,25 @@ export default function UserPackagesPage() {
           href={paths.user.packagesMain}
           title={t.packages.plansTitle}
           description={t.packages.mainDescription}
-          icon={PackageIcon}
+          icon={<PackageIcon size={24} weight="duotone" />}
           badge={activePlanLabel}
           badgeColor={activePlanBadgeColor}
+          tags={[t.packages.monthly, t.packages.months6, t.packages.months12]}
         />
         <CategoryCard
           href={paths.user.packagesExtra}
           title={t.nav.packagesExtra}
           description={t.packages.extraDescription}
-          icon={SquaresFourIcon}
+          icon={<SquaresFourIcon size={24} weight="duotone" />}
+          tags={[t.picker.okazion, 'Auto-Refresh', 'Premium']}
         />
         <CategoryCard
           href={paths.user.packagesCredits}
           title={t.packages.buyCoinsTitle}
           description={t.packages.boostCoinsDescription}
-          icon={BoostCoinIcon as PhosphorIcon}
+          icon={<BoostCoinIcon size={24} />}
           tone="amber"
+          tags={['Boost Coins']}
         />
       </Stack>
     </Stack>

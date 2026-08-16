@@ -13,17 +13,20 @@ import { productPanelSx } from '@/styles/product-sx';
 /** Shared surface used by portal link rows and content sections. */
 export const portalCardSx = productPanelSx;
 
-/** Two-option toggle used in dashboard settings rows (language, theme, …). */
+/** Two-option pill toggle used in dashboard settings rows (language, theme, …). */
 export const portalToggleGroupSx: SxProps<Theme> = {
   flexShrink: 0,
-  bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'),
-  borderRadius: 2,
+  bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+  borderRadius: 999,
+  p: 0.35,
+  border: '1px solid',
+  borderColor: 'divider',
   '& .MuiToggleButtonGroup-grouped': {
     border: 0,
     mx: 0,
     minWidth: 44,
     minHeight: 32,
-    px: 1.35,
+    px: 1.4,
     py: 0.65,
     display: 'inline-flex',
     alignItems: 'center',
@@ -33,11 +36,13 @@ export const portalToggleGroupSx: SxProps<Theme> = {
     letterSpacing: '0.04em',
     textTransform: 'uppercase',
     color: 'text.secondary',
-    borderRadius: '8px !important',
+    borderRadius: '999px !important',
     lineHeight: 1,
+    transition: 'background-color 160ms ease, color 160ms ease',
     '&.Mui-selected': {
       bgcolor: 'primary.main',
       color: 'primary.contrastText',
+      boxShadow: 'none',
       '&:hover': { bgcolor: 'primary.main' },
     },
   },

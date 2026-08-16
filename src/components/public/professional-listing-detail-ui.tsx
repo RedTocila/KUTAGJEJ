@@ -2,11 +2,11 @@
 
 import * as React from 'react';
 import Image from 'next/image';
-import { Box, Button, Grid, IconButton, Stack, Typography } from '@mui/material';
+import { Box, Button, ButtonBase, Grid, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
+import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
-import { StarHalf as StarHalfIcon } from '@phosphor-icons/react/dist/ssr/StarHalf';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -21,6 +21,63 @@ import { productPanelSx } from '@/styles/product-sx';
 const FONT_CAPTION = '0.75rem';
 const FONT_BODY = '0.875rem';
 const VERIFIED_SHIELD_COLOR = 'var(--mui-palette-success-main)';
+
+/** Material-style 5-point star — stays sharp at 13–16px (Phosphor fill blobs at that size). */
+const RATING_STAR_PATH =
+  'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z';
+
+function RatingStarGlyph({
+  size,
+  fill,
+}: {
+  size: number;
+  fill: 'full' | 'half' | 'empty';
+}) {
+  const filled = 'var(--mui-palette-warning-main)';
+  const empty = 'var(--mui-palette-text-disabled)';
+
+  return (
+    <Box
+      component="span"
+      aria-hidden
+      sx={{
+        width: size,
+        height: size,
+        flexShrink: 0,
+        display: 'block',
+        overflow: 'hidden',
+        lineHeight: 0,
+        position: 'relative',
+      }}
+    >
+      {fill === 'half' ? (
+        <>
+          <Box component="svg" viewBox="0 0 24 24" sx={{ width: size, height: size, display: 'block' }}>
+            <path d={RATING_STAR_PATH} fill={empty} />
+          </Box>
+          <Box
+            component="svg"
+            viewBox="0 0 24 24"
+            sx={{
+              width: size,
+              height: size,
+              display: 'block',
+              position: 'absolute',
+              inset: 0,
+              clipPath: 'inset(0 50% 0 0)',
+            }}
+          >
+            <path d={RATING_STAR_PATH} fill={filled} />
+          </Box>
+        </>
+      ) : (
+        <Box component="svg" viewBox="0 0 24 24" sx={{ width: size, height: size, display: 'block' }}>
+          <path d={RATING_STAR_PATH} fill={fill === 'full' ? filled : empty} />
+        </Box>
+      )}
+    </Box>
+  );
+}
 
 /** Google-style 5 stars — full, half, or empty from a 0–5 rating (e.g. 4.7). */
 export function ProfessionalFiveStarRating({
@@ -42,23 +99,40 @@ export function ProfessionalFiveStarRating({
       component="span"
       role="img"
       aria-label={ariaLabel ?? `${formatRatingDisplay(clamped)} nga 5 yje`}
-      sx={{ alignItems: 'center', lineHeight: 0 }}
+      sx={{ alignItems: 'center', lineHeight: 1.25, flexWrap: 'nowrap', flexShrink: 0 }}
     >
       {Array.from({ length: 5 }, (_, index) => {
         const diff = clamped - index;
-        if (diff >= 0.875) {
-          return <StarIcon key={index} size={size} weight="fill" color="var(--mui-palette-warning-main)" aria-hidden />;
-        }
-        if (diff >= 0.125) {
-          return (
-            <StarHalfIcon key={index} size={size} weight="fill" color="var(--mui-palette-warning-main)" aria-hidden />
-          );
-        }
-        return (
-          <StarIcon key={index} size={size} weight="regular" color="var(--mui-palette-text-disabled)" aria-hidden />
-        );
+        const fill = diff >= 0.875 ? 'full' : diff >= 0.125 ? 'half' : 'empty';
+        return <RatingStarGlyph key={index} size={size} fill={fill} />;
       })}
     </Stack>
+  );
+}
+
+/** Compact “+” control beside header stars — opens the leave-review dialog. */
+export function LeaveReviewIconButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Tooltip title="Lini vlerësim" placement="bottom">
+      <ButtonBase
+        aria-label="Lini vlerësim"
+        onClick={onClick}
+        sx={{
+          width: 18,
+          height: 18,
+          borderRadius: '50%',
+          flexShrink: 0,
+          color: 'primary.contrastText',
+          bgcolor: 'primary.main',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          '&:hover': { bgcolor: 'primary.dark' },
+        }}
+      >
+        <PlusIcon size={11} weight="bold" />
+      </ButtonBase>
+    </Tooltip>
   );
 }
 
@@ -68,21 +142,41 @@ export function ProfessionalRatingSummary({
   reviewCount,
   starSize = 14,
   showReviewLabel = false,
+  onLeaveReview,
 }: {
   rating: string;
   reviewCount: number;
   starSize?: number;
   /** When true, shows `(N vlerësime)` instead of `(N)`. */
   showReviewLabel?: boolean;
+  /** Compact “+” next to the count — leave a review. */
+  onLeaveReview?: () => void;
 }) {
+  const numberSx = {
+    fontWeight: 800,
+    lineHeight: 1.25,
+    overflow: 'visible',
+    display: 'block',
+    py: '1px',
+  } as const;
+
   return (
-    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexShrink: 0 }}>
-      <Typography sx={{ fontWeight: 800, fontSize: starSize >= 16 ? FONT_BODY : FONT_CAPTION, lineHeight: 1 }}>
-        {rating}
-      </Typography>
+    <Stack
+      direction="row"
+      spacing={0.5}
+      sx={{
+        alignItems: 'center',
+        flexShrink: 0,
+        flexWrap: 'nowrap',
+        overflow: 'visible',
+        minHeight: starSize + 4,
+      }}
+    >
+      <Typography sx={{ ...numberSx, fontSize: starSize >= 16 ? FONT_BODY : FONT_CAPTION }}>{rating}</Typography>
       <ProfessionalFiveStarRating value={rating} size={starSize} />
       <Typography
         sx={{
+          ...numberSx,
           fontSize: showReviewLabel ? '0.85rem' : '0.625rem',
           color: 'text.secondary',
           fontWeight: 600,
@@ -91,6 +185,7 @@ export function ProfessionalRatingSummary({
       >
         {showReviewLabel ? `(${reviewCount} vlerësime)` : `(${reviewCount})`}
       </Typography>
+      {onLeaveReview ? <LeaveReviewIconButton onClick={onLeaveReview} /> : null}
     </Stack>
   );
 }

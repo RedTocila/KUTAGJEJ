@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Avatar, Box, ButtonBase, Stack, Typography } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Hammer as HammerIcon } from '@phosphor-icons/react/dist/ssr/Hammer';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
@@ -192,63 +193,65 @@ export function ProfessionalListingDetailView({
             hideSlideCount
             mediaActionSurface="glass"
             onEditPhotos={ownerEdit?.onEditPhotos ? () => ownerEdit.onEditPhotos!('cover') : undefined}
+            heroOverlay={
+              <Box
+                sx={{
+                  px: 1,
+                  py: 0.4,
+                  borderRadius: 999,
+                  bgcolor: alpha('#000', 0.4),
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid',
+                  borderColor: alpha('#fff', 0.16),
+                }}
+              >
+                <ProfessionalRatingSummary
+                  rating={rating.rating}
+                  reviewCount={rating.reviews}
+                  starSize={14}
+                  onMedia
+                  onLeaveReview={
+                    ownerPreview || !leaveReviewAvailable
+                      ? undefined
+                      : () => reviewSectionRef.current?.openLeaveReview()
+                  }
+                />
+              </Box>
+            }
           />
         </Box>
 
         <Box sx={{ px: 2, maxWidth: CONTENT_MAX, mx: 'auto', width: '100%', boxSizing: 'border-box' }}>
           <Stack spacing={2.5} sx={{ pt: 0, pb: 3 }}>
             <Stack spacing={0.75} sx={{ mt: -1.5, alignItems: 'flex-start', width: '100%' }}>
-              <Stack
-                direction="row"
-                spacing={1}
-                sx={{
-                  width: '100%',
-                  alignItems: 'flex-end',
-                  justifyContent: 'space-between',
-                  minWidth: 0,
-                }}
-              >
-                <Box sx={{ position: 'relative', width: 'fit-content', flexShrink: 0 }}>
-                  <Avatar
-                    src={avatarUrl ?? undefined}
-                    alt={displayName}
-                    sx={{
-                      width: 72,
-                      height: 72,
-                      flexShrink: 0,
-                      mt: -5.5,
-                      border: '3px solid',
-                      borderColor: 'background.default',
-                      bgcolor: 'grey.900',
-                      color: 'primary.main',
-                      fontWeight: 800,
-                      fontSize: FONT_BODY,
-                    }}
-                  >
-                    {initials}
-                  </Avatar>
-                  {ownerEdit?.onEditPhotos ? (
-                    <Box sx={{ position: 'absolute', right: -6, bottom: -2 }}>
-                      <OwnerEditPencil
-                        label="Ndrysho foton e profilit"
-                        onClick={() => ownerEdit.onEditPhotos!('avatar')}
-                      />
-                    </Box>
-                  ) : null}
-                </Box>
-                <Box sx={{ flexShrink: 0, py: 0.5, pr: 0.25, position: 'relative', zIndex: 2, overflow: 'visible' }}>
-                  <ProfessionalRatingSummary
-                    rating={rating.rating}
-                    reviewCount={rating.reviews}
-                    starSize={14}
-                    onLeaveReview={
-                      ownerPreview || !leaveReviewAvailable
-                        ? undefined
-                        : () => reviewSectionRef.current?.openLeaveReview()
-                    }
-                  />
-                </Box>
-              </Stack>
+              <Box sx={{ position: 'relative', width: 'fit-content', flexShrink: 0 }}>
+                <Avatar
+                  src={avatarUrl ?? undefined}
+                  alt={displayName}
+                  sx={{
+                    width: 72,
+                    height: 72,
+                    flexShrink: 0,
+                    mt: -5.5,
+                    border: '3px solid',
+                    borderColor: 'background.default',
+                    bgcolor: 'grey.900',
+                    color: 'primary.main',
+                    fontWeight: 800,
+                    fontSize: FONT_BODY,
+                  }}
+                >
+                  {initials}
+                </Avatar>
+                {ownerEdit?.onEditPhotos ? (
+                  <Box sx={{ position: 'absolute', right: -6, bottom: -2 }}>
+                    <OwnerEditPencil
+                      label="Ndrysho foton e profilit"
+                      onClick={() => ownerEdit.onEditPhotos!('avatar')}
+                    />
+                  </Box>
+                ) : null}
+              </Box>
 
               <Stack spacing={0.5} sx={{ width: '100%', alignItems: 'flex-start' }}>
                 <OwnerEditableSpot

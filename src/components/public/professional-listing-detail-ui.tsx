@@ -143,6 +143,7 @@ export function ProfessionalRatingSummary({
   starSize = 14,
   showReviewLabel = false,
   onLeaveReview,
+  onMedia = false,
 }: {
   rating: string;
   reviewCount: number;
@@ -151,6 +152,8 @@ export function ProfessionalRatingSummary({
   showReviewLabel?: boolean;
   /** Compact “+” to the left of the stars — leave a review. */
   onLeaveReview?: () => void;
+  /** White type for overlaying on a photo. */
+  onMedia?: boolean;
 }) {
   const numberSx = {
     fontWeight: 800,
@@ -173,13 +176,21 @@ export function ProfessionalRatingSummary({
       }}
     >
       {onLeaveReview ? <LeaveReviewIconButton onClick={onLeaveReview} /> : null}
-      <Typography sx={{ ...numberSx, fontSize: starSize >= 16 ? FONT_BODY : FONT_CAPTION }}>{rating}</Typography>
+      <Typography
+        sx={{
+          ...numberSx,
+          fontSize: starSize >= 16 ? FONT_BODY : FONT_CAPTION,
+          color: onMedia ? '#fff' : undefined,
+        }}
+      >
+        {rating}
+      </Typography>
       <ProfessionalFiveStarRating value={rating} size={starSize} />
       <Typography
         sx={{
           ...numberSx,
           fontSize: showReviewLabel ? '0.85rem' : '0.625rem',
-          color: 'text.secondary',
+          color: onMedia ? 'rgba(255,255,255,0.86)' : 'text.secondary',
           fontWeight: 600,
           whiteSpace: 'nowrap',
         }}

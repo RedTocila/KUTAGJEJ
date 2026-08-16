@@ -89,6 +89,8 @@ export function RealEstateListingGallery(props: {
   };
   /** Owner-edit mode: pencil on the gallery to change photos. */
   onEditPhotos?: () => void;
+  /** Rendered inside the hero photo, bottom-right (e.g. reviews chip). */
+  heroOverlay?: React.ReactNode;
 }) {
   const {
     title,
@@ -106,6 +108,7 @@ export function RealEstateListingGallery(props: {
     saveCount: initialSaveCount = 0,
     sharePayload,
     onEditPhotos,
+    heroOverlay,
   } = props;
   const urls = urlsRaw.filter((u) => {
     const s = String(u || '').trim();
@@ -637,6 +640,20 @@ export function RealEstateListingGallery(props: {
           >
             {`${active + 1}/${urls.length}`}
           </Typography>
+        ) : null}
+
+        {heroOverlay ? (
+          <Box
+            data-gallery-control
+            sx={{
+              position: 'absolute',
+              right: 10,
+              bottom: 8,
+              zIndex: 5,
+            }}
+          >
+            {heroOverlay}
+          </Box>
         ) : null}
       </Box>
 

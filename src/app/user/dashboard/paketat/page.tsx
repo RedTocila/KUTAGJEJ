@@ -4,7 +4,6 @@ import * as React from 'react';
 import RouterLink from 'next/link';
 import { Box, Stack, Typography } from '@mui/material';
 import { alpha, type Theme } from '@mui/material/styles';
-import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { ArrowClockwise as ArrowClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowClockwise';
 import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
@@ -234,11 +233,11 @@ function BillingPreview({ labels }: { labels: string[] }) {
 }
 
 function ExtraTile({
-  icon: Icon,
+  icon,
   label,
   accent,
 }: {
-  icon: PhosphorIcon | React.ComponentType<{ size?: number; weight?: string }>;
+  icon: React.ReactNode;
   label: string;
   accent: PlanAccent;
 }) {
@@ -261,7 +260,7 @@ function ExtraTile({
       }}
     >
       <Box sx={{ color: (t) => resolveAccent(t, accent), display: 'grid', lineHeight: 0 }}>
-        <Icon size={22} weight="regular" />
+        {icon}
       </Box>
       <Typography
         sx={{
@@ -339,9 +338,9 @@ export default function UserPackagesPage() {
               gap: 0.75,
             }}
           >
-            <ExtraTile icon={SealPercentIcon} label={t.picker.okazion} accent="error" />
-            <ExtraTile icon={ArrowClockwiseIcon} label={t.packages.autoRefreshTitle} accent="primary" />
-            <ExtraTile icon={StarFourIcon} label="Premium" accent="warning" />
+            <ExtraTile icon={<SealPercentIcon size={22} weight="regular" />} label={t.picker.okazion} accent="error" />
+            <ExtraTile icon={<ArrowClockwiseIcon size={22} weight="regular" />} label={t.packages.autoRefreshTitle} accent="primary" />
+            <ExtraTile icon={<StarFourIcon size={22} weight="regular" />} label="Premium" accent="warning" />
           </Box>
         </Box>
 
@@ -360,9 +359,9 @@ export default function UserPackagesPage() {
               gap: 0.75,
             }}
           >
-            <ExtraTile icon={BoostCoinIcon} label="100 BC" accent="warning" />
-            <ExtraTile icon={BoostCoinIcon} label="300 BC" accent="warning" />
-            <ExtraTile icon={BoostCoinIcon} label="800 BC" accent="warning" />
+            <ExtraTile icon={<BoostCoinIcon size={22} />} label="100 BC" accent="warning" />
+            <ExtraTile icon={<BoostCoinIcon size={22} />} label="300 BC" accent="warning" />
+            <ExtraTile icon={<BoostCoinIcon size={22} />} label="800 BC" accent="warning" />
           </Box>
         </Box>
       </Stack>

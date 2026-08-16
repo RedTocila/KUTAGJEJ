@@ -624,7 +624,7 @@ export function PackageCheckoutCard({
   badge?: string | null;
   /** Shown immediately to the right of the title (e.g. Grow/Elite Premium Badge seal). */
   titleAdornment?: React.ReactNode;
-  icon?: PhosphorIcon | React.ComponentType<{ size?: number; weight?: string }>;
+  icon?: React.ElementType;
   price?: React.ReactNode;
   priceSuffix?: string;
   /** Extra line under the suffix (e.g. equivalent monthly for 6/12-month plans). */

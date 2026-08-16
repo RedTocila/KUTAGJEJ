@@ -65,7 +65,15 @@ function PhotoSlot({
         <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', lineHeight: 1.35 }}>{hint}</Typography>
       </Stack>
 
-      <Box sx={{ position: 'relative', width: round ? 'auto' : '100%', alignSelf: round ? 'center' : 'stretch' }}>
+      <Box
+        sx={{
+          position: 'relative',
+          width: round ? 120 : '100%',
+          alignSelf: round ? 'center' : 'stretch',
+          overflow: 'visible',
+          isolation: 'isolate',
+        }}
+      >
         <ButtonBase
           onClick={() => {
             if (previewUrl) onPreview?.();
@@ -73,7 +81,7 @@ function PhotoSlot({
           }}
           sx={{
             display: 'block',
-            width: round ? 120 : '100%',
+            width: '100%',
             aspectRatio: round ? '1 / 1' : aspect || '2 / 1',
             borderRadius: round ? '50%' : 2,
             overflow: 'hidden',
@@ -81,6 +89,7 @@ function PhotoSlot({
             borderColor: previewUrl ? 'transparent' : 'divider',
             bgcolor: 'action.hover',
             position: 'relative',
+            zIndex: 0,
             cursor: previewUrl ? 'zoom-in' : 'pointer',
           }}
         >
@@ -90,7 +99,7 @@ function PhotoSlot({
               src={previewUrl}
               alt=""
               referrerPolicy="no-referrer"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }}
             />
           ) : (
             <Stack
@@ -111,53 +120,59 @@ function PhotoSlot({
         </ButtonBase>
 
         {previewUrl ? (
-          <IconButton
-            size="small"
-            aria-label={`Ndrysho ${label}`}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onPick();
-            }}
+          <Stack
+            direction="row"
             sx={{
               position: 'absolute',
-              top: 6,
-              left: round ? '50%' : 6,
-              transform: round ? 'translate(-48px, 0)' : 'none',
-              bgcolor: 'rgba(0,0,0,0.6)',
-              color: '#fff',
-              width: 28,
-              height: 28,
-              '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
+              top: 4,
+              left: 4,
+              right: 4,
+              zIndex: 2,
+              justifyContent: 'space-between',
+              pointerEvents: 'none',
             }}
           >
-            <CameraIcon size={14} weight="bold" />
-          </IconButton>
-        ) : null}
-
-        {previewUrl ? (
-          <IconButton
-            size="small"
-            aria-label={`Hiq ${label}`}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onClear();
-            }}
-            sx={{
-              position: 'absolute',
-              top: 6,
-              right: round ? '50%' : 6,
-              transform: round ? 'translate(48px, 0)' : 'none',
-              bgcolor: 'rgba(0,0,0,0.6)',
-              color: '#fff',
-              width: 28,
-              height: 28,
-              '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
-            }}
-          >
-            <XIcon size={14} weight="bold" />
-          </IconButton>
+            <IconButton
+              size="small"
+              aria-label={`Ndrysho ${label}`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onPick();
+              }}
+              sx={{
+                pointerEvents: 'auto',
+                bgcolor: 'rgba(0,0,0,0.72)',
+                color: '#fff',
+                width: 32,
+                height: 32,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.45)',
+                '&:hover': { bgcolor: 'rgba(0,0,0,0.88)' },
+              }}
+            >
+              <CameraIcon size={15} weight="bold" />
+            </IconButton>
+            <IconButton
+              size="small"
+              aria-label={`Hiq ${label}`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClear();
+              }}
+              sx={{
+                pointerEvents: 'auto',
+                bgcolor: 'rgba(0,0,0,0.72)',
+                color: '#fff',
+                width: 32,
+                height: 32,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.45)',
+                '&:hover': { bgcolor: 'rgba(0,0,0,0.88)' },
+              }}
+            >
+              <XIcon size={15} weight="bold" />
+            </IconButton>
+          </Stack>
         ) : null}
       </Box>
     </Stack>

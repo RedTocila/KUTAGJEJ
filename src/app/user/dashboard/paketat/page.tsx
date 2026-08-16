@@ -33,7 +33,9 @@ function hubCardSx(accent: PlanAccent = 'primary') {
     color: 'inherit',
     display: 'flex',
     flexDirection: 'column',
+    flex: 1,
     minHeight: 0,
+    justifyContent: 'space-between',
     px: 1.75,
     py: 1.5,
     borderRadius: 3,
@@ -107,72 +109,56 @@ function CircleCaret() {
 function HubHeader({
   icon,
   title,
-  description,
   badge,
   badgeColor,
   accent = 'primary',
 }: {
   icon: React.ReactNode;
   title: string;
-  description: string;
   badge?: string;
   badgeColor?: string;
   accent?: PlanAccent;
 }) {
   return (
-    <Stack direction="row" spacing={1.15} sx={{ alignItems: 'flex-start', minWidth: 0 }}>
+    <Stack direction="row" spacing={1.15} sx={{ alignItems: 'center', minWidth: 0 }}>
       <CircleIcon accent={accent}>{icon}</CircleIcon>
-      <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, flexWrap: 'wrap', gap: 0.5 }}>
-          <Typography
-            sx={{
-              fontWeight: 900,
-              fontSize: { xs: '1.08rem', sm: '1.22rem' },
-              lineHeight: 1.15,
-              letterSpacing: '-0.02em',
-              minWidth: 0,
-            }}
-            noWrap
-          >
-            {title}
-          </Typography>
-          {badge ? (
-            <Box
-              sx={{
-                px: 0.85,
-                py: 0.22,
-                borderRadius: 999,
-                bgcolor: badgeColor || 'primary.main',
-                color: 'common.white',
-                fontWeight: 850,
-                fontSize: '0.58rem',
-                lineHeight: 1.3,
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-              }}
-            >
-              {badge}
-            </Box>
-          ) : null}
-        </Stack>
+      <Stack
+        direction="row"
+        spacing={0.75}
+        sx={{ alignItems: 'center', minWidth: 0, flex: 1, flexWrap: 'wrap', gap: 0.5 }}
+      >
         <Typography
           sx={{
-            mt: 0.4,
-            fontWeight: 550,
-            fontSize: '0.76rem',
-            lineHeight: 1.35,
-            color: 'text.secondary',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
+            fontWeight: 900,
+            fontSize: { xs: '1.08rem', sm: '1.22rem' },
+            lineHeight: 1.15,
+            letterSpacing: '-0.02em',
+            minWidth: 0,
           }}
         >
-          {description}
+          {title}
         </Typography>
-      </Box>
+        {badge ? (
+          <Box
+            sx={{
+              px: 0.85,
+              py: 0.22,
+              borderRadius: 999,
+              bgcolor: badgeColor || 'primary.main',
+              color: 'common.white',
+              fontWeight: 850,
+              fontSize: '0.58rem',
+              lineHeight: 1.3,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+          >
+            {badge}
+          </Box>
+        ) : null}
+      </Stack>
       <CircleCaret />
     </Stack>
   );
@@ -252,7 +238,7 @@ function ExtraTile({
   label,
   accent,
 }: {
-  icon: PhosphorIcon;
+  icon: PhosphorIcon | React.ComponentType<{ size?: number; weight?: string }>;
   label: string;
   accent: PlanAccent;
 }) {
@@ -275,7 +261,7 @@ function ExtraTile({
       }}
     >
       <Box sx={{ color: (t) => resolveAccent(t, accent), display: 'grid', lineHeight: 0 }}>
-        <Icon size={20} weight="regular" />
+        <Icon size={22} weight="regular" />
       </Box>
       <Typography
         sx={{
@@ -331,7 +317,6 @@ export default function UserPackagesPage() {
           <HubHeader
             icon={<PackageIcon size={20} weight="regular" />}
             title={t.packages.plansTitle}
-            description={t.packages.mainDescription}
             badge={activePlanLabel}
             badgeColor={activePlanBadgeColor}
           />
@@ -344,7 +329,6 @@ export default function UserPackagesPage() {
           <HubHeader
             icon={<SquaresFourIcon size={20} weight="regular" />}
             title={t.nav.packagesExtra}
-            description={t.packages.extraDescription}
           />
           <Box
             sx={{
@@ -361,64 +345,24 @@ export default function UserPackagesPage() {
           </Box>
         </Box>
 
-        <Box
-          component={RouterLink}
-          href={paths.user.packagesCredits}
-          sx={{
-            ...hubCardSx('warning'),
-            flex: '0 0 auto',
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 1.25,
-            py: 1.5,
-            '&:hover .packages-hub-caret-solid': {
-              filter: 'brightness(1.06)',
-            },
-          }}
-        >
-          <CircleIcon accent="warning">
-            <BoostCoinIcon size={20} />
-          </CircleIcon>
-          <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography
-              sx={{
-                fontWeight: 900,
-                fontSize: { xs: '1.08rem', sm: '1.22rem' },
-                lineHeight: 1.15,
-                letterSpacing: '-0.02em',
-              }}
-              noWrap
-            >
-              {t.packages.buyCoinsTitle}
-            </Typography>
-            <Typography
-              sx={{
-                mt: 0.35,
-                fontWeight: 550,
-                fontSize: '0.76rem',
-                lineHeight: 1.35,
-                color: 'text.secondary',
-              }}
-            >
-              {t.packages.boostCoinsDescription}
-            </Typography>
-          </Box>
+        <Box component={RouterLink} href={paths.user.packagesCredits} sx={hubCardSx('warning')}>
+          <HubHeader
+            icon={<BoostCoinIcon size={20} />}
+            title={t.packages.buyCoinsTitle}
+            accent="warning"
+          />
           <Box
-            className="packages-hub-caret-solid"
-            aria-hidden
             sx={{
-              width: 52,
-              height: 40,
-              borderRadius: 999,
+              mt: 1.15,
+              width: '100%',
               display: 'grid',
-              placeItems: 'center',
-              flexShrink: 0,
-              bgcolor: 'warning.main',
-              color: 'warning.contrastText',
-              transition: `filter ${MOTION.fast} ${MOTION.ease}`,
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: 0.75,
             }}
           >
-            <CaretRightIcon size={16} weight="bold" />
+            <ExtraTile icon={BoostCoinIcon} label="100 BC" accent="warning" />
+            <ExtraTile icon={BoostCoinIcon} label="300 BC" accent="warning" />
+            <ExtraTile icon={BoostCoinIcon} label="800 BC" accent="warning" />
           </Box>
         </Box>
       </Stack>

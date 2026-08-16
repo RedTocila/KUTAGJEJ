@@ -624,7 +624,7 @@ export function PackageCheckoutCard({
   badge?: string | null;
   /** Shown immediately to the right of the title (e.g. Grow/Elite Premium Badge seal). */
   titleAdornment?: React.ReactNode;
-  icon?: PhosphorIcon;
+  icon?: PhosphorIcon | React.ComponentType<{ size?: number; weight?: string }>;
   price?: React.ReactNode;
   priceSuffix?: string;
   /** Extra line under the suffix (e.g. equivalent monthly for 6/12-month plans). */
@@ -890,7 +890,7 @@ export function PackageCheckoutCard({
                 color: (t) => resolveAccent(t, accent),
               }}
             >
-              <Icon size={22} weight="regular" />
+              <Icon size={28} weight="regular" />
             </Box>
           ) : null}
           {titleRow}
@@ -1037,93 +1037,33 @@ export function ExtraPackageCard({
           ) : null}
 
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            {category ? (
-              <Typography
+            {category || badge ? (
+              <Box
                 sx={{
-                  fontWeight: 750,
-                  fontSize: '0.64rem',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: (t) => resolveAccent(t, accent),
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 1,
                   mb: 0.25,
-                  lineHeight: 1.2,
                 }}
               >
-                {category}
-              </Typography>
-            ) : null}
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0 }}>
-              <Typography
-                sx={{
-                  fontWeight: 900,
-                  fontSize: { xs: '1.08rem', sm: '1.22rem' },
-                  lineHeight: 1.15,
-                  letterSpacing: '-0.02em',
-                  minWidth: 0,
-                }}
-              >
-                {title}
-              </Typography>
-              {info ? (
-                <Tooltip
-                  arrow
-                  enterTouchDelay={0}
-                  leaveTouchDelay={4000}
-                  title={
-                    <Typography variant="body2" component="span" sx={{ display: 'block', lineHeight: 1.45 }}>
-                      {info}
-                    </Typography>
-                  }
-                  slotProps={{
-                    tooltip: {
-                      sx: { maxWidth: 300, p: 1.25 },
-                    },
-                  }}
-                >
-                  <IconButton
-                    aria-label={infoAriaLabel}
-                    size="small"
+                {category ? (
+                  <Typography
                     sx={{
-                      color: 'text.secondary',
-                      p: 0.25,
-                      flexShrink: 0,
-                      '&:hover': { color: (t) => resolveAccent(t, accent), bgcolor: 'action.hover' },
+                      fontWeight: 750,
+                      fontSize: '0.64rem',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: (t) => resolveAccent(t, accent),
+                      lineHeight: 1.2,
                     }}
                   >
-                    <QuestionIcon size={15} weight="bold" />
-                  </IconButton>
-                </Tooltip>
-              ) : null}
-            </Stack>
-            {subtitle ? (
-              <Typography
-                sx={{
-                  mt: 0.4,
-                  fontWeight: 550,
-                  fontSize: '0.76rem',
-                  lineHeight: 1.35,
-                  color: 'text.secondary',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                }}
-              >
-                {subtitle}
-              </Typography>
-            ) : null}
-          </Box>
-
-          {hasDetails || badge ? (
-            <Box sx={{ flexShrink: 0, minWidth: 0, maxWidth: { xs: 138, sm: 176 }, pt: 0.1 }}>
-              {badge ? (
-                <Box
-                  sx={{
-                    mb: hasDetails ? 0.7 : 0,
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                  }}
-                >
+                    {category}
+                  </Typography>
+                ) : (
+                  <Box />
+                )}
+                {badge ? (
                   <Box
                     sx={{
                       px: 0.85,
@@ -1137,15 +1077,93 @@ export function ExtraPackageCard({
                       letterSpacing: '0.06em',
                       textTransform: 'uppercase',
                       whiteSpace: 'nowrap',
+                      flexShrink: 0,
                     }}
                   >
                     {badge}
                   </Box>
+                ) : null}
+              </Box>
+            ) : null}
+
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'flex-start',
+                gap: { xs: 1.1, sm: 1.4 },
+              }}
+            >
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+                  <Typography
+                    sx={{
+                      fontWeight: 900,
+                      fontSize: { xs: '1.08rem', sm: '1.22rem' },
+                      lineHeight: 1.15,
+                      letterSpacing: '-0.02em',
+                      minWidth: 0,
+                    }}
+                  >
+                    {title}
+                  </Typography>
+                  {info ? (
+                    <Tooltip
+                      arrow
+                      enterTouchDelay={0}
+                      leaveTouchDelay={4000}
+                      title={
+                        <Typography variant="body2" component="span" sx={{ display: 'block', lineHeight: 1.45 }}>
+                          {info}
+                        </Typography>
+                      }
+                      slotProps={{
+                        tooltip: {
+                          sx: { maxWidth: 300, p: 1.25 },
+                        },
+                      }}
+                    >
+                      <IconButton
+                        aria-label={infoAriaLabel}
+                        size="small"
+                        sx={{
+                          color: 'text.secondary',
+                          p: 0.25,
+                          flexShrink: 0,
+                          '&:hover': { color: (t) => resolveAccent(t, accent), bgcolor: 'action.hover' },
+                        }}
+                      >
+                        <QuestionIcon size={15} weight="bold" />
+                      </IconButton>
+                    </Tooltip>
+                  ) : null}
+                </Stack>
+                {subtitle ? (
+                  <Typography
+                    sx={{
+                      mt: 0.4,
+                      fontWeight: 550,
+                      fontSize: '0.76rem',
+                      lineHeight: 1.35,
+                      color: 'text.secondary',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {subtitle}
+                  </Typography>
+                ) : null}
+              </Box>
+
+              {hasDetails ? (
+                <Box sx={{ flexShrink: 0, minWidth: 0, maxWidth: { xs: 138, sm: 176 } }}>
+                  <FeatureList items={details} accent={accent} compact />
                 </Box>
               ) : null}
-              {hasDetails ? <FeatureList items={details} accent={accent} compact /> : null}
             </Box>
-          ) : null}
+          </Box>
         </Box>
 
         {meta ? <Box sx={{ mt: 1.25 }}>{meta}</Box> : null}

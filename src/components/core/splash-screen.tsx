@@ -2,19 +2,9 @@
 
 import * as React from 'react';
 
-import { isPendingHomeDashboardRedirect } from '@/components/auth/signed-in-home-redirect';
 import { brandLogoSrc, config } from '@/config';
-import { hasStoredAccessToken } from '@/lib/auth/storage';
-import { isColdSessionStart } from '@/lib/navigate-back';
-import { paths } from '@/paths';
 
 const FADE_MS = 180;
-
-function shouldHoldForDashboardRedirect(): boolean {
-  if (typeof window === 'undefined') return false;
-  if (isPendingHomeDashboardRedirect()) return true;
-  return window.location.pathname === paths.home && isColdSessionStart() && hasStoredAccessToken();
-}
 
 /**
  * Cold-start branded overlay. Dismisses as soon as React hydrates so it does
@@ -25,8 +15,6 @@ export function SplashScreen(): React.JSX.Element | null {
   const [phase, setPhase] = React.useState<'show' | 'hiding' | 'gone'>('show');
 
   React.useEffect(() => {
-    if (shouldHoldForDashboardRedirect()) return;
-
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduceMotion) {
       setPhase('gone');

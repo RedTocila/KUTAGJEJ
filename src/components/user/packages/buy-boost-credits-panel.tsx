@@ -8,8 +8,6 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { Coins as CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins';
-
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import { useCopy } from '@/hooks/use-copy';
@@ -134,7 +132,8 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
             return (
               <PackageCheckoutCard
                 key={pkg.id}
-                icon={CoinsIcon}
+                icon={BoostCoinIcon}
+                accent="warning"
                 title={pkg.labelSq}
                 subtitle={packageSubtitle(pkg)}
                 badge={badge}

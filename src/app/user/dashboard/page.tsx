@@ -3,6 +3,7 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import {
+  Avatar,
   Box,
   Button,
   Grid,
@@ -364,6 +365,8 @@ export default function UserDashboardPage() {
   }, [user, canPublish]);
 
   const boostCoins = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
+  const avatarSrc = typeof user?.avatar === 'string' && user.avatar.trim() ? user.avatar.trim() : undefined;
+  const avatarInitial = (user?.firstName?.[0] || user?.email?.[0] || '?').toUpperCase();
   const categoryLabel = getUserPortalAccountCategoryLabel(user ?? null);
   const isBusinessAccount =
     user?.accountType === 'business' || user?.role === 'business-user';
@@ -399,21 +402,10 @@ export default function UserDashboardPage() {
           </Typography>
           <Stack
             direction="row"
-            spacing={0.75}
-            sx={{ display: { xs: 'flex', lg: 'none' }, alignItems: 'center', mr: -0.5 }}
+            spacing={0.25}
+            sx={{ display: { xs: 'flex', lg: 'none' }, alignItems: 'center', flexShrink: 0, mr: -0.5 }}
           >
             <UserNotificationsMenu />
-            <Tooltip title={t.profileTitle}>
-              <IconButton
-                component={RouterLink}
-                href={paths.user.profile}
-                size="large"
-                aria-label={t.profileTitle}
-                sx={{ color: 'text.secondary' }}
-              >
-                <UserGearIcon size={22} />
-              </IconButton>
-            </Tooltip>
             <Tooltip title={t.signOut}>
               <IconButton
                 size="large"
@@ -429,58 +421,106 @@ export default function UserDashboardPage() {
           </Stack>
         </Stack>
 
-        <Box
-          component={RouterLink}
-          href={paths.user.credits}
-          sx={{
-            alignSelf: 'flex-start',
-            textDecoration: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 1,
-            pl: 0.75,
-            pr: 1.5,
-            py: 0.75,
-            borderRadius: 999,
-            border: '1px solid',
-            borderColor: (theme) =>
-              theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.28)' : 'rgba(212, 160, 23, 0.35)',
-            bgcolor: (theme) =>
-              theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.08)' : 'rgba(232, 185, 35, 0.1)',
-            transition: 'border-color 0.15s ease, background-color 0.15s ease',
-            '&:hover': {
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
+          <Box
+            component={RouterLink}
+            href={paths.user.profile}
+            aria-label={t.profileTitle}
+            sx={{
+              minWidth: 0,
+              flex: 1,
+              textDecoration: 'none',
+              color: 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.1,
+            }}
+          >
+            <Avatar
+              src={avatarSrc}
+              alt=""
+              sx={{
+                width: 40,
+                height: 40,
+                flexShrink: 0,
+                fontWeight: 800,
+                fontSize: '0.95rem',
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+              }}
+            >
+              {avatarInitial}
+            </Avatar>
+            <Typography
+              sx={{
+                minWidth: 0,
+                fontWeight: 650,
+                fontSize: '0.88rem',
+                lineHeight: 1.25,
+                color: 'text.primary',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {user.email}
+            </Typography>
+          </Box>
+
+          <Box
+            component={RouterLink}
+            href={paths.user.credits}
+            sx={{
+              flexShrink: 0,
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.75,
+              pl: 0.65,
+              pr: 1.25,
+              py: 0.55,
+              borderRadius: 999,
+              border: '1px solid',
               borderColor: (theme) =>
-                theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.5)' : 'rgba(212, 160, 23, 0.55)',
+                theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.28)' : 'rgba(212, 160, 23, 0.35)',
               bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.14)' : 'rgba(232, 185, 35, 0.16)',
-            },
-          }}
-        >
-          <BoostCoinIcon size={28} />
-          <Typography
-            component="span"
-            sx={{
-              color: 'text.secondary',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              lineHeight: 1,
+                theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.08)' : 'rgba(232, 185, 35, 0.1)',
+              transition: 'border-color 0.15s ease, background-color 0.15s ease',
+              '&:hover': {
+                borderColor: (theme) =>
+                  theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.5)' : 'rgba(212, 160, 23, 0.55)',
+                bgcolor: (theme) =>
+                  theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.14)' : 'rgba(232, 185, 35, 0.16)',
+              },
             }}
           >
-            {t.boostCoins}
-          </Typography>
-          <Typography
-            component="span"
-            sx={{
-              color: '#e8b923',
-              fontWeight: 800,
-              fontSize: '0.95rem',
-              lineHeight: 1,
-              letterSpacing: '-0.01em',
-            }}
-          >
-            {new Intl.NumberFormat('en-US').format(boostCoins)}
-          </Typography>
-        </Box>
+            <BoostCoinIcon size={22} />
+            <Typography
+              component="span"
+              sx={{
+                display: { xs: 'none', sm: 'inline' },
+                color: 'text.secondary',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                lineHeight: 1,
+              }}
+            >
+              {t.boostCoins}
+            </Typography>
+            <Typography
+              component="span"
+              sx={{
+                color: '#e8b923',
+                fontWeight: 800,
+                fontSize: '0.88rem',
+                lineHeight: 1,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {new Intl.NumberFormat('en-US').format(boostCoins)}
+            </Typography>
+          </Box>
+        </Stack>
       </Stack>
 
       <Grid container spacing={2} sx={{ alignItems: 'stretch' }}>

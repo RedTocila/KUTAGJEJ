@@ -596,7 +596,7 @@ function PremiumListingSection() {
               key={pkg.id}
               icon={StarFourIcon}
               category="Premium"
-              title={t.packages.premiumBoostTitle}
+              title={t.packages.premiumBoostTitle(pkg.days)}
               subtitle={t.packages.premiumBoostSubtitle}
               badge={highlighted ? t.packages.bestValue : null}
               accent="warning"

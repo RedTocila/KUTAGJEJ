@@ -5,11 +5,16 @@ import { alpha, type Theme } from '@mui/material/styles';
 import { Box, ButtonBase, Chip, Collapse, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
 import { Check as CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
-import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
+import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
+import { Gift as GiftIcon } from '@phosphor-icons/react/dist/ssr/Gift';
+import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 import { Question as QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question';
+import { RocketLaunch as RocketLaunchIcon } from '@phosphor-icons/react/dist/ssr/RocketLaunch';
+import { Trophy as TrophyIcon } from '@phosphor-icons/react/dist/ssr/Trophy';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { OKAZION_RED } from '@/lib/home-categories';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { applyLifetimeDiscount } from '@/hooks/use-lifetime-package-discount';
 
 /** Theme palette key or raw CSS color (hex / rgb). */
@@ -36,6 +41,30 @@ export const PLAN_ACCENT_BY_CODE: Record<string, PlanAccent> = {
 export function planAccentForCode(planCode: string | null | undefined): PlanAccent {
   const code = (planCode || 'free').toLowerCase();
   return PLAN_ACCENT_BY_CODE[code] ?? PLAN_ACCENT_BY_CODE.free;
+}
+
+/** Gift · rocket · crown · trophy — one icon per main plan. */
+export function planIconForCode(planCode: string | null | undefined): PhosphorIcon {
+  switch ((planCode || 'free').toLowerCase()) {
+    case 'starter':
+      return RocketLaunchIcon;
+    case 'grow':
+      return CrownIcon;
+    case 'elite':
+      return TrophyIcon;
+    case 'free':
+      return GiftIcon;
+    default:
+      return PackageIcon;
+  }
+}
+
+function accentContrast(theme: Theme, accent: PlanAccent = 'primary'): string {
+  if (THEME_ACCENT_KEYS.has(accent)) {
+    const key = accent as 'primary' | 'warning' | 'error' | 'success' | 'info';
+    return theme.palette[key].contrastText;
+  }
+  return theme.palette.common.black;
 }
 
 export function formatEur(n: number) {
@@ -127,13 +156,10 @@ export function PlanCard({
           ? (t) => alpha(resolveAccent(t, accent), 0.55)
           : 'divider',
         bgcolor: 'background.paper',
-        boxShadow: highlighted
-          ? (t) => `0 10px 28px ${alpha(resolveAccent(t, accent), 0.14)}`
-          : 'none',
-        transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
+        boxShadow: 'none',
+        transition: 'transform 0.15s ease, border-color 0.15s ease',
         '&:hover': {
           transform: 'translateY(-2px)',
-          boxShadow: (t) => `0 12px 28px ${alpha(t.palette.common.black, 0.1)}`,
           borderColor: (t) => alpha(resolveAccent(t, accent), 0.45),
         },
       }}
@@ -326,25 +352,37 @@ export function FeatureList({
   compact?: boolean;
 }) {
   return (
-    <Stack spacing={compact ? 0.45 : 0.7} sx={{ mb: compact ? 0 : 2, flex: compact ? undefined : 1 }}>
+    <Stack spacing={compact ? 0.55 : 0.75} sx={{ mb: compact ? 0 : 2, flex: compact ? undefined : 1 }}>
       {items.map((item, index) => (
         <Stack
           key={featureItemKey(item, index)}
           direction="row"
-          spacing={0.65}
+          spacing={0.75}
           sx={{ alignItems: 'flex-start', width: '100%' }}
         >
-          <Box sx={{ color: (t) => resolveAccent(t, accent), mt: '1px', flexShrink: 0, display: 'inline-flex' }}>
-            <CheckCircleIcon size={compact ? 13 : 16} weight="fill" />
+          <Box
+            sx={{
+              width: compact ? 15 : 18,
+              height: compact ? 15 : 18,
+              borderRadius: '50%',
+              flexShrink: 0,
+              mt: '1px',
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: (t) => resolveAccent(t, accent),
+              color: (t) => accentContrast(t, accent),
+            }}
+          >
+            <CheckIcon size={compact ? 9 : 11} weight="bold" color="currentColor" />
           </Box>
           <Typography
             variant="body2"
             color="text.secondary"
             component="div"
             sx={{
-              fontWeight: 600,
-              lineHeight: 1.3,
-              fontSize: compact ? '0.72rem' : undefined,
+              fontWeight: 550,
+              lineHeight: 1.35,
+              fontSize: compact ? '0.75rem' : '0.82rem',
               flex: 1,
               minWidth: 0,
             }}
@@ -465,11 +503,10 @@ export function PackageOfferRow({
         bgcolor: highlighted
           ? (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.1 : 0.04)
           : 'background.paper',
-        boxShadow: highlighted ? (t) => `0 8px 22px ${alpha(resolveAccent(t, accent), 0.12)}` : 'none',
-        transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+        boxShadow: 'none',
+        transition: 'border-color 0.15s ease',
         '&:hover': {
           borderColor: (t) => alpha(resolveAccent(t, accent), 0.45),
-          boxShadow: (t) => `0 8px 22px ${alpha(t.palette.common.black, 0.08)}`,
         },
       }}
     >
@@ -561,19 +598,19 @@ export function PackageOfferRow({
 }
 
 /**
- * Package card:
- * - Clickable price on the right (Boost Coins / Auto-Refresh / main plans), or
- * - Two equal action buttons in a row (Premium / OKAZION: € + BC).
- * - Optional feature list always shown below the header.
+ * Package card — icon + title/features on the left, large price on the right.
+ * No section divider; selected plan gets an accent border, glow, and corner check.
  */
 export function PackageCheckoutCard({
   title,
   subtitle,
   badge,
   titleAdornment,
+  icon: Icon,
   price,
   priceSuffix = '/ paketë',
   priceHint,
+  priceBadge,
   onClick,
   actions,
   details = [],
@@ -587,14 +624,17 @@ export function PackageCheckoutCard({
   badge?: string | null;
   /** Shown immediately to the right of the title (e.g. Grow/Elite Premium Badge seal). */
   titleAdornment?: React.ReactNode;
+  icon?: PhosphorIcon;
   price?: React.ReactNode;
   priceSuffix?: string;
   /** Extra line under the suffix (e.g. equivalent monthly for 6/12-month plans). */
   priceHint?: string | null;
+  /** Pill under the price (e.g. “Save 20%”). */
+  priceBadge?: string | null;
   onClick?: () => void;
   /** When set, renders a full-width row of buttons (e.g. € + BC) instead of a price column. */
   actions?: React.ReactNode;
-  /** Feature lines always shown below the header. */
+  /** Feature lines always shown in the content column (no divider). */
   details?: FeatureListItem[];
   /** Optional row under details (e.g. cancel subscription). */
   footer?: React.ReactNode;
@@ -607,20 +647,24 @@ export function PackageCheckoutCard({
 }) {
   const hasDetails = details.length > 0;
   const hasFooter = Boolean(footer);
+  const padX = { xs: 1.75, sm: 2 };
+  const padY = { xs: 1.6, sm: 1.85 };
 
-  const header = (
+  const titleRow = (
     <Box sx={{ minWidth: 0, flex: 1 }}>
       <Stack
         direction="row"
         spacing={0.75}
-        sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5, mb: subtitle ? 0.35 : 0 }}
+        sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.55 }}
       >
         <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', minWidth: 0 }}>
           <Typography
             sx={{
-              fontWeight: 850,
-              fontSize: { xs: '1.05rem', sm: '1.15rem' },
-              lineHeight: 1.2,
+              fontWeight: 900,
+              fontSize: { xs: '0.98rem', sm: '1.08rem' },
+              lineHeight: 1.15,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
               color: 'text.primary',
             }}
           >
@@ -633,35 +677,31 @@ export function PackageCheckoutCard({
         {badge ? (
           <Box
             sx={{
-              px: 1,
-              py: 0.2,
+              px: 0.95,
+              py: 0.22,
               borderRadius: 999,
-              bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.25 : 0.14),
-              color: (t) => resolveAccent(t, accent),
               fontWeight: 850,
-              fontSize: '0.68rem',
-              lineHeight: 1.35,
-              border: '1px solid',
-              borderColor: (t) => alpha(resolveAccent(t, accent), 0.45),
+              fontSize: '0.66rem',
+              lineHeight: 1.3,
               flexShrink: 0,
+              ...(selected
+                ? {
+                    bgcolor: (t: Theme) => resolveAccent(t, accent),
+                    color: (t: Theme) => accentContrast(t, accent),
+                  }
+                : {
+                    bgcolor: (t: Theme) =>
+                      alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.25 : 0.14),
+                    color: (t: Theme) => resolveAccent(t, accent),
+                    border: '1px solid',
+                    borderColor: (t: Theme) => alpha(resolveAccent(t, accent), 0.45),
+                  }),
             }}
           >
             {badge}
           </Box>
         ) : null}
       </Stack>
-      {subtitle ? (
-        <Typography
-          sx={{
-            fontWeight: 550,
-            fontSize: '0.82rem',
-            lineHeight: 1.35,
-            color: 'text.secondary',
-          }}
-        >
-          {subtitle}
-        </Typography>
-      ) : null}
     </Box>
   );
 
@@ -676,11 +716,11 @@ export function PackageCheckoutCard({
   const selectedSx = selected
     ? {
         borderColor: (t: Theme) => resolveAccent(t, accent),
-        borderWidth: 2,
+        borderWidth: '1.5px',
         bgcolor: (t: Theme) =>
           t.palette.mode === 'dark'
-            ? alpha(resolveAccent(t, accent), 0.14)
-            : alpha(resolveAccent(t, accent), 0.07),
+            ? alpha(resolveAccent(t, accent), 0.1)
+            : alpha(resolveAccent(t, accent), 0.05),
       }
     : null;
 
@@ -692,7 +732,7 @@ export function PackageCheckoutCard({
           flexDirection: 'row',
           alignItems: 'baseline',
           justifyContent: 'flex-end',
-          columnGap: 0.55,
+          columnGap: 0.45,
           flexWrap: 'nowrap',
         }}
       >
@@ -701,9 +741,9 @@ export function PackageCheckoutCard({
             fontWeight: 900,
             fontSize: compactPrice
               ? { xs: '1.15rem', sm: '1.25rem' }
-              : { xs: '1.45rem', sm: '1.75rem' },
+              : { xs: '1.55rem', sm: '1.85rem' },
             lineHeight: 1,
-            letterSpacing: compactPrice ? '-0.02em' : '-0.03em',
+            letterSpacing: compactPrice ? '-0.02em' : '-0.04em',
             color: 'text.primary',
             whiteSpace: 'nowrap',
             transition: 'color 0.15s ease',
@@ -722,7 +762,7 @@ export function PackageCheckoutCard({
           <Typography
             sx={{
               fontWeight: 700,
-              fontSize: compactPrice ? '0.7rem' : { xs: '0.72rem', sm: '0.78rem' },
+              fontSize: compactPrice ? '0.7rem' : { xs: '0.72rem', sm: '0.8rem' },
               lineHeight: 1.2,
               color: 'text.secondary',
               whiteSpace: 'nowrap',
@@ -732,12 +772,32 @@ export function PackageCheckoutCard({
           </Typography>
         ) : null}
       </Box>
+      {priceBadge ? (
+        <Box
+          sx={{
+            mt: 0.65,
+            display: 'inline-flex',
+            px: 0.9,
+            py: 0.28,
+            borderRadius: 999,
+            bgcolor: (t) => resolveAccent(t, accent),
+            color: (t) => accentContrast(t, accent),
+            fontWeight: 850,
+            fontSize: '0.64rem',
+            lineHeight: 1.2,
+            letterSpacing: '0.01em',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {priceBadge}
+        </Box>
+      ) : null}
       {priceHint ? (
         <Typography
           sx={{
-            mt: 0.3,
+            mt: priceBadge ? 0.4 : 0.35,
             fontWeight: 650,
-            fontSize: '0.68rem',
+            fontSize: '0.66rem',
             lineHeight: 1.2,
             color: 'text.secondary',
             whiteSpace: 'nowrap',
@@ -746,35 +806,6 @@ export function PackageCheckoutCard({
           {priceHint}
         </Typography>
       ) : null}
-    </Box>
-  );
-
-  const headerPaddingX = { xs: 2, sm: 2.25 };
-  const headerPaddingTop = { xs: 1.65, sm: 1.85 };
-  const headerPaddingBottom = hasDetails || hasFooter || actions ? 1 : { xs: 1.65, sm: 1.85 };
-
-  const body = actions ? (
-    <Box sx={{ px: headerPaddingX, pt: headerPaddingTop, pb: headerPaddingBottom }}>
-      {header}
-      <Stack direction="row" spacing={1} sx={{ mt: 1.25 }}>
-        {actions}
-      </Stack>
-    </Box>
-  ) : (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        justifyContent: 'space-between',
-        gap: 1.25,
-        px: headerPaddingX,
-        pt: headerPaddingTop,
-        pb: headerPaddingBottom,
-      }}
-    >
-      {header}
-      {priceColumn}
     </Box>
   );
 
@@ -796,12 +827,12 @@ export function PackageCheckoutCard({
       tabIndex={onClick ? 0 : undefined}
       sx={{
         position: 'relative',
-        borderRadius: 2.5,
+        borderRadius: 3,
         border: '1px solid',
         borderColor: 'divider',
         bgcolor: 'background.paper',
-        overflow: selected ? 'visible' : 'hidden',
-        transition: 'border-color 0.15s ease, background-color 0.15s ease',
+        overflow: 'visible',
+        transition: 'border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease',
         cursor: onClick ? 'pointer' : undefined,
         ...selectedSx,
         ...(onClick || actions
@@ -817,44 +848,89 @@ export function PackageCheckoutCard({
         <Box
           sx={{
             position: 'absolute',
-            top: -9,
-            right: -9,
+            top: -8,
+            right: -8,
             zIndex: 1,
-            width: 26,
-            height: 26,
+            width: 24,
+            height: 24,
             borderRadius: '50%',
             display: 'grid',
             placeItems: 'center',
             bgcolor: (t) => resolveAccent(t, accent),
-            color: '#fff',
+            color: (t) => accentContrast(t, accent),
             boxShadow: (t) => `0 0 0 3px ${t.palette.background.default}`,
           }}
           aria-hidden
         >
-          <CheckIcon size={14} weight="bold" color="currentColor" />
+          <CheckIcon size={13} weight="bold" color="currentColor" />
         </Box>
       ) : null}
-      {body}
-      {hasDetails ? (
+
+      <Box sx={{ px: padX, pt: padY, pb: hasFooter || actions ? 1.15 : padY }}>
         <Box
           sx={{
-            px: headerPaddingX,
-            pt: 1.1,
-            pb: hasFooter ? 0.75 : { xs: 1.35, sm: 1.5 },
-            borderTop: '1px solid',
-            borderColor: 'divider',
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: { xs: 1.15, sm: 1.5 },
           }}
         >
-          <FeatureList items={details} accent={accent} compact />
+          {Icon ? (
+            <Box
+              sx={{
+                width: { xs: 44, sm: 52 },
+                height: { xs: 44, sm: 52 },
+                borderRadius: '50%',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+                border: '1.5px solid',
+                borderColor: (t) => resolveAccent(t, accent),
+                bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.12 : 0.08),
+                color: (t) => resolveAccent(t, accent),
+              }}
+            >
+              <Icon size={22} weight="regular" />
+            </Box>
+          ) : null}
+          {titleRow}
+          {actions ? null : priceColumn}
         </Box>
+
+        {subtitle || hasDetails ? (
+          <Box
+            sx={{
+              mt: 0.85,
+              pl: Icon ? { xs: 'calc(44px + 9.2px)', sm: 'calc(52px + 12px)' } : 0,
+            }}
+          >
+            {subtitle ? (
+              <Typography
+                sx={{
+                  fontWeight: 550,
+                  fontSize: '0.82rem',
+                  lineHeight: 1.35,
+                  color: 'text.secondary',
+                  mb: hasDetails ? 0.85 : 0,
+                }}
+              >
+                {subtitle}
+              </Typography>
+            ) : null}
+            {hasDetails ? <FeatureList items={details} accent={accent} compact /> : null}
+          </Box>
+        ) : null}
+      </Box>
+
+      {actions ? (
+        <Stack direction="row" spacing={1} sx={{ px: padX, pb: hasFooter ? 1.15 : padY }}>
+          {actions}
+        </Stack>
       ) : null}
+
       {hasFooter ? (
         <Box
-          sx={{
-            px: headerPaddingX,
-            pb: { xs: 1.35, sm: 1.5 },
-            pt: hasDetails ? 0 : 0.25,
-          }}
+          sx={{ px: padX, pb: padY, pt: 0 }}
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -873,17 +949,19 @@ export function PackageCheckoutCard({
 
 /**
  * Standalone dual-pay package card (no parent section shell).
- * Category eyebrow + title + € / BC CTAs.
+ * Icon + category/title/description, feature checklist, € / BC CTAs.
  */
 export function ExtraPackageCard({
   icon: Icon,
   category,
   title,
+  subtitle,
   badge,
   accent = 'primary',
   highlighted = false,
   info,
   infoAriaLabel = 'More info',
+  details = [],
   meta,
   footer,
   actions,
@@ -891,143 +969,184 @@ export function ExtraPackageCard({
   icon?: PhosphorIcon;
   category?: string;
   title: string;
+  subtitle?: string;
   badge?: string | null;
   accent?: PlanAccent;
   highlighted?: boolean;
   info?: string;
   infoAriaLabel?: string;
+  details?: FeatureListItem[];
   meta?: React.ReactNode;
   footer?: React.ReactNode;
   actions: React.ReactNode;
 }) {
+  const hasDetails = details.length > 0;
+  const padX = { xs: 1.75, sm: 2 };
+  const wash = (t: Theme) => {
+    const a = resolveAccent(t, accent);
+    const dark = t.palette.mode === 'dark';
+    return `linear-gradient(135deg, ${alpha(a, dark ? (highlighted ? 0.18 : 0.1) : highlighted ? 0.1 : 0.05)} 0%, transparent 58%)`;
+  };
+
   return (
     <Box
       sx={{
         position: 'relative',
-        borderRadius: 2.75,
+        borderRadius: 3,
         border: '1px solid',
-        borderColor: highlighted
-          ? (t) => resolveAccent(t, accent)
-          : 'divider',
+        borderColor: (t) => alpha(resolveAccent(t, accent), highlighted ? 0.78 : 0.36),
         bgcolor: 'background.paper',
         overflow: 'hidden',
-        boxShadow: highlighted
-          ? (t) => `0 10px 28px ${alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.22 : 0.14)}`
-          : (t) => (t.palette.mode === 'dark' ? 'none' : `0 1px 2px ${alpha(t.palette.common.black, 0.04)}`),
       }}
     >
-      {highlighted ? (
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          background: wash,
+        }}
+      />
+
+      <Box sx={{ position: 'relative', px: padX, pt: { xs: 1.65, sm: 1.85 }, pb: 1.15 }}>
         <Box
           sx={{
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-            background: (t) =>
-              `linear-gradient(135deg, ${alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.14 : 0.08)} 0%, transparent 55%)`,
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            gap: { xs: 1.1, sm: 1.4 },
           }}
-        />
-      ) : null}
+        >
+          {Icon ? (
+            <Box
+              sx={{
+                width: { xs: 44, sm: 52 },
+                height: { xs: 44, sm: 52 },
+                borderRadius: '50%',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+                border: '1.5px solid',
+                borderColor: (t) => resolveAccent(t, accent),
+                bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.16 : 0.1),
+                color: (t) => resolveAccent(t, accent),
+              }}
+            >
+              <Icon size={22} weight="regular" />
+            </Box>
+          ) : null}
 
-      <Box sx={{ position: 'relative', px: { xs: 1.85, sm: 2.15 }, pt: { xs: 1.65, sm: 1.85 }, pb: 1.15 }}>
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 0.75 }}>
-          <Stack direction="row" spacing={1.1} sx={{ alignItems: 'flex-start', minWidth: 0, flex: 1 }}>
-            {Icon ? (
-              <Box
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            {category ? (
+              <Typography
                 sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 2,
-                  display: 'grid',
-                  placeItems: 'center',
-                  flexShrink: 0,
-                  bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.2 : 0.12),
+                  fontWeight: 750,
+                  fontSize: '0.64rem',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
                   color: (t) => resolveAccent(t, accent),
+                  mb: 0.25,
+                  lineHeight: 1.2,
                 }}
               >
-                <Icon size={22} weight="duotone" />
-              </Box>
+                {category}
+              </Typography>
             ) : null}
-            <Box sx={{ minWidth: 0, flex: 1, pt: 0.1 }}>
-              {category ? (
-                <Typography
-                  sx={{
-                    fontWeight: 750,
-                    fontSize: '0.68rem',
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    color: (t) => resolveAccent(t, accent),
-                    mb: 0.3,
-                    lineHeight: 1.2,
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+              <Typography
+                sx={{
+                  fontWeight: 900,
+                  fontSize: { xs: '1.08rem', sm: '1.22rem' },
+                  lineHeight: 1.15,
+                  letterSpacing: '-0.02em',
+                  minWidth: 0,
+                }}
+              >
+                {title}
+              </Typography>
+              {info ? (
+                <Tooltip
+                  arrow
+                  enterTouchDelay={0}
+                  leaveTouchDelay={4000}
+                  title={
+                    <Typography variant="body2" component="span" sx={{ display: 'block', lineHeight: 1.45 }}>
+                      {info}
+                    </Typography>
+                  }
+                  slotProps={{
+                    tooltip: {
+                      sx: { maxWidth: 300, p: 1.25 },
+                    },
                   }}
                 >
-                  {category}
-                </Typography>
+                  <IconButton
+                    aria-label={infoAriaLabel}
+                    size="small"
+                    sx={{
+                      color: 'text.secondary',
+                      p: 0.25,
+                      flexShrink: 0,
+                      '&:hover': { color: (t) => resolveAccent(t, accent), bgcolor: 'action.hover' },
+                    }}
+                  >
+                    <QuestionIcon size={15} weight="bold" />
+                  </IconButton>
+                </Tooltip>
               ) : null}
-              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
-                <Typography
+            </Stack>
+            {subtitle ? (
+              <Typography
+                sx={{
+                  mt: 0.4,
+                  fontWeight: 550,
+                  fontSize: '0.76rem',
+                  lineHeight: 1.35,
+                  color: 'text.secondary',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {subtitle}
+              </Typography>
+            ) : null}
+          </Box>
+
+          {hasDetails || badge ? (
+            <Box sx={{ flexShrink: 0, minWidth: 0, maxWidth: { xs: 138, sm: 176 }, pt: 0.1 }}>
+              {badge ? (
+                <Box
                   sx={{
-                    fontWeight: 900,
-                    fontSize: { xs: '1.15rem', sm: '1.25rem' },
-                    lineHeight: 1.15,
-                    letterSpacing: '-0.02em',
+                    mb: hasDetails ? 0.7 : 0,
+                    display: 'flex',
+                    justifyContent: 'flex-end',
                   }}
                 >
-                  {title}
-                </Typography>
-                {badge ? (
                   <Box
                     sx={{
-                      px: 0.9,
-                      py: 0.25,
+                      px: 0.85,
+                      py: 0.22,
                       borderRadius: 999,
-                      bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.28 : 0.16),
-                      color: (t) => resolveAccent(t, accent),
+                      bgcolor: (t) => resolveAccent(t, accent),
+                      color: (t) => accentContrast(t, accent),
                       fontWeight: 850,
-                      fontSize: '0.66rem',
+                      fontSize: '0.58rem',
                       lineHeight: 1.3,
-                      letterSpacing: '0.01em',
-                      flexShrink: 0,
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {badge}
                   </Box>
-                ) : null}
-              </Stack>
+                </Box>
+              ) : null}
+              {hasDetails ? <FeatureList items={details} accent={accent} compact /> : null}
             </Box>
-          </Stack>
-
-          {info ? (
-            <Tooltip
-              arrow
-              enterTouchDelay={0}
-              leaveTouchDelay={4000}
-              title={
-                <Typography variant="body2" component="span" sx={{ display: 'block', lineHeight: 1.45 }}>
-                  {info}
-                </Typography>
-              }
-              slotProps={{
-                tooltip: {
-                  sx: { maxWidth: 300, p: 1.25 },
-                },
-              }}
-            >
-              <IconButton
-                aria-label={infoAriaLabel}
-                size="small"
-                sx={{
-                  color: 'text.secondary',
-                  p: 0.35,
-                  mt: -0.15,
-                  flexShrink: 0,
-                  '&:hover': { color: (t) => resolveAccent(t, accent), bgcolor: 'action.hover' },
-                }}
-              >
-                <QuestionIcon size={17} weight="bold" />
-              </IconButton>
-            </Tooltip>
           ) : null}
-        </Stack>
+        </Box>
 
         {meta ? <Box sx={{ mt: 1.25 }}>{meta}</Box> : null}
       </Box>
@@ -1035,12 +1154,12 @@ export function ExtraPackageCard({
       <Box
         sx={{
           position: 'relative',
-          px: { xs: 1.85, sm: 2.15 },
+          px: padX,
           pb: { xs: 1.65, sm: 1.85 },
-          pt: 0.25,
+          pt: 0.15,
         }}
       >
-        <Stack direction="row" spacing={0.9}>
+        <Stack direction="row" spacing={1}>
           {actions}
         </Stack>
         {footer ? (
@@ -1334,17 +1453,40 @@ export function accentButtonSx(accent: PlanAccent, variant: 'contained' | 'outli
 
 /** Shared sizing for dual € / BC CTAs on ExtraPackageCard. */
 export function dualPayButtonSx(accent: PlanAccent, variant: 'contained' | 'outlined' = 'contained') {
-  return {
-    ...accentButtonSx(accent, variant),
+  const shared = {
     flex: 1,
     minWidth: 0,
-    borderRadius: 2.25,
-    minHeight: 46,
-    py: 1.15,
-    px: 1.35,
-    fontSize: '0.92rem',
+    borderRadius: 999,
+    minHeight: 48,
+    py: 1.2,
+    px: 1.5,
+    fontSize: '0.95rem',
     fontWeight: 850,
     letterSpacing: '-0.01em',
+    textTransform: 'none' as const,
+  };
+  if (variant === 'outlined') {
+    return {
+      ...shared,
+      borderWidth: 1.5,
+      borderColor: (t: Theme) => resolveAccent(t, accent),
+      color: (t: Theme) => resolveAccent(t, accent),
+      bgcolor: 'transparent',
+      '&:hover': {
+        borderWidth: 1.5,
+        borderColor: (t: Theme) => resolveAccent(t, accent),
+        bgcolor: (t: Theme) => alpha(resolveAccent(t, accent), 0.08),
+      },
+    };
+  }
+  return {
+    ...shared,
+    bgcolor: (t: Theme) => resolveAccent(t, accent),
+    color: (t: Theme) => accentContrast(t, accent),
+    '&:hover': {
+      bgcolor: (t: Theme) => resolveAccent(t, accent),
+      filter: 'brightness(1.05)',
+    },
   };
 }
 

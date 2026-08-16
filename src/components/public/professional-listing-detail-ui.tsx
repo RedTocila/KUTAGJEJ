@@ -110,7 +110,7 @@ export function ProfessionalFiveStarRating({
   );
 }
 
-/** Compact “+” control beside header stars — opens the leave-review dialog. */
+/** Compact “+” control before header stars — opens the leave-review dialog. */
 export function LeaveReviewIconButton({ onClick }: { onClick: () => void }) {
   return (
     <Tooltip title="Lini vlerësim" placement="bottom">
@@ -149,7 +149,7 @@ export function ProfessionalRatingSummary({
   starSize?: number;
   /** When true, shows `(N vlerësime)` instead of `(N)`. */
   showReviewLabel?: boolean;
-  /** Compact “+” next to the count — leave a review. */
+  /** Compact “+” to the left of the stars — leave a review. */
   onLeaveReview?: () => void;
 }) {
   const numberSx = {
@@ -172,6 +172,7 @@ export function ProfessionalRatingSummary({
         minHeight: starSize + 4,
       }}
     >
+      {onLeaveReview ? <LeaveReviewIconButton onClick={onLeaveReview} /> : null}
       <Typography sx={{ ...numberSx, fontSize: starSize >= 16 ? FONT_BODY : FONT_CAPTION }}>{rating}</Typography>
       <ProfessionalFiveStarRating value={rating} size={starSize} />
       <Typography
@@ -185,7 +186,6 @@ export function ProfessionalRatingSummary({
       >
         {showReviewLabel ? `(${reviewCount} vlerësime)` : `(${reviewCount})`}
       </Typography>
-      {onLeaveReview ? <LeaveReviewIconButton onClick={onLeaveReview} /> : null}
     </Stack>
   );
 }

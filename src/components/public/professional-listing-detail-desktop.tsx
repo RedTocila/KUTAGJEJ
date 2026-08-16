@@ -218,11 +218,6 @@ export function ProfessionalListingDetailDesktop({
                               fontWeight: 800,
                               fontSize: '1.35rem',
                               lineHeight: 1.2,
-                              minWidth: 0,
-                              flex: '0 1 auto',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
                             }}
                           >
                             {displayName}

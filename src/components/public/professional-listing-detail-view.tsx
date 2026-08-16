@@ -256,8 +256,8 @@ export function ProfessionalListingDetailView({
                   ownerEdit={ownerEdit}
                   label="Ndrysho titullin"
                   legacyOnClick={ownerEdit?.onEditInfo}
-                  align="center"
-                  sx={{ maxWidth: '100%', minWidth: 0 }}
+                  align="flex-start"
+                  sx={{ maxWidth: '100%' }}
                 >
                   <Typography
                     component="h1"
@@ -265,11 +265,6 @@ export function ProfessionalListingDetailView({
                       fontWeight: 800,
                       fontSize: LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE,
                       lineHeight: 1.2,
-                      minWidth: 0,
-                      flex: '0 1 auto',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
                       textAlign: 'left',
                     }}
                   >

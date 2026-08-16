@@ -18,10 +18,6 @@ import { fetchMyReferralStats } from '@/lib/referrals-client';
 import { paths } from '@/paths';
 
 const AMBER = '#F5A623';
-const AMBER_SOFT_DARK = 'rgba(245, 166, 35, 0.14)';
-const AMBER_SOFT_LIGHT = 'rgba(245, 166, 35, 0.12)';
-const AMBER_BORDER_DARK = 'rgba(245, 166, 35, 0.38)';
-const AMBER_BORDER_LIGHT = 'rgba(245, 166, 35, 0.32)';
 
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -38,20 +34,18 @@ const copy = {
     subtitle: 'Ndani kodin me miqtë dhe fitoni Boost Coins.',
     copyCode: 'Kopjo kodin',
     copied: 'U kopjua',
-    streakTitle: 'Aktivitet ditor',
     streakDays: (n: number) => `${n} ditë radhazi`,
-    lifetimeHint: 'Përfundo të gjitha referimet dhe merr zbritje përgjithmonë në paketa.',
-    lifetimeActive: (pct: number) => `Ke −${pct}% në paketat e platformës nga badge-et e kompletuara.`,
+    lifetimeHint: (pct: number) => `Kompleto referimet · −${pct}% përgjithmonë`,
+    lifetimeActive: (pct: number) => `−${pct}% përgjithmonë në paketa.`,
   },
   en: {
     title: 'Referral',
     subtitle: 'Share your code with friends and earn Boost Coins.',
     copyCode: 'Copy code',
     copied: 'Copied',
-    streakTitle: 'Daily activity',
     streakDays: (n: number) => `${n}-day streak`,
-    lifetimeHint: 'Completing all referrals gives you a lifetime discount on packages.',
-    lifetimeActive: (pct: number) => `You have −${pct}% off platform packages from completed badges.`,
+    lifetimeHint: (pct: number) => `Finish all referrals · −${pct}% lifetime`,
+    lifetimeActive: (pct: number) => `−${pct}% lifetime on packages.`,
   },
 } as const;
 
@@ -67,6 +61,7 @@ export function ReferralSummaryCard() {
   const [daysRequired, setDaysRequired] = React.useState(7);
   const [streakReward, setStreakReward] = React.useState(10);
   const [lifetimePercent, setLifetimePercent] = React.useState(0);
+  const [maxLifetimePercent, setMaxLifetimePercent] = React.useState(20);
 
   const canView =
     Boolean(user) &&
@@ -87,12 +82,18 @@ export function ReferralSummaryCard() {
         res.referral.loginStreakBoostCredits ?? res.program?.loginStreak.boostCredits ?? 10,
       );
       setLifetimePercent(Number(res.referral.lifetimePercent) || 0);
+      const maxPct = Number(res.program?.platformDominatorBadge?.lifetimePercent) || 20;
+      setMaxLifetimePercent(maxPct);
       if (res.referral.loginStreakAwarded) {
         void checkSession();
       }
-    } else if (res.program?.loginStreak) {
-      setDaysRequired(res.program.loginStreak.daysRequired);
-      setStreakReward(res.program.loginStreak.boostCredits);
+    } else if (res.program) {
+      if (res.program.loginStreak) {
+        setDaysRequired(res.program.loginStreak.daysRequired);
+        setStreakReward(res.program.loginStreak.boostCredits);
+      }
+      const maxPct = Number(res.program.platformDominatorBadge?.lifetimePercent) || 20;
+      setMaxLifetimePercent(maxPct);
     }
   }, [user?.id, canView, checkSession]);
 
@@ -134,7 +135,8 @@ export function ReferralSummaryCard() {
       href={paths.user.referral}
       sx={{
         ...portalCardSx,
-        p: { xs: 2, sm: 2.25 },
+        p: { xs: 1.5, sm: 1.65 },
+        pb: { xs: 2, sm: 2.15 },
         alignSelf: 'stretch',
         width: '100%',
         textDecoration: 'none',
@@ -142,208 +144,137 @@ export function ReferralSummaryCard() {
         display: 'block',
         cursor: 'pointer',
         WebkitTapHighlightColor: 'transparent',
-        transition: 'border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
+        transition: 'border-color 0.15s ease, background-color 0.15s ease',
         '&:hover': {
           borderColor: (theme) => alpha(theme.palette.primary.main, 0.5),
           bgcolor: (theme) =>
-            theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'action.hover',
-          transform: 'translateY(-1px)',
-          boxShadow: (theme) =>
-            theme.palette.mode === 'dark'
-              ? `0 8px 24px ${alpha(theme.palette.common.black, 0.35)}`
-              : `0 8px 22px ${alpha(theme.palette.common.black, 0.1)}`,
+            theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'action.hover',
           '& .referral-card-caret': {
             color: 'primary.main',
             transform: 'translateX(2px)',
           },
-          '& .referral-amber-row': {
-            borderColor: AMBER,
-            bgcolor: (theme) =>
-              theme.palette.mode === 'dark' ? 'rgba(245, 166, 35, 0.2)' : 'rgba(245, 166, 35, 0.18)',
-          },
-        },
-        '&:active': {
-          transform: 'translateY(0)',
         },
       }}
     >
-      <Stack spacing={1.5}>
-        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start' }}>
+      <Stack spacing={1.1}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
           <Box
             sx={{
-              width: 40,
-              height: 40,
-              borderRadius: 2,
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
               display: 'grid',
               placeItems: 'center',
               flexShrink: 0,
-              bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.18 : 0.12),
+              border: '1.5px solid',
+              borderColor: 'primary.main',
+              bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.16 : 0.1),
               color: 'primary.main',
             }}
           >
-            <HandshakeIcon size={22} weight="fill" />
+            <HandshakeIcon size={18} weight="fill" />
           </Box>
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-              <Typography sx={{ fontWeight: 850, fontSize: '0.98rem', lineHeight: 1.25 }}>
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+              <Typography sx={{ fontWeight: 850, fontSize: '0.95rem', lineHeight: 1.2, minWidth: 0 }} noWrap>
                 {t.title}
               </Typography>
               <Box
                 className="referral-card-caret"
                 sx={{
-                  color: 'primary.main',
+                  color: 'text.disabled',
                   display: 'inline-flex',
-                  opacity: 0.85,
+                  flexShrink: 0,
                   transition: 'transform 0.15s ease, color 0.15s ease',
                 }}
               >
-                <CaretRightIcon size={18} weight="bold" />
+                <CaretRightIcon size={14} weight="bold" />
               </Box>
             </Stack>
             <Typography
               variant="caption"
               color="text.secondary"
-              sx={{ display: 'block', mt: 0.2, lineHeight: 1.35 }}
+              sx={{ display: 'block', mt: 0.15, lineHeight: 1.3, fontSize: '0.72rem' }}
+              noWrap
             >
               {t.subtitle}
             </Typography>
           </Box>
         </Stack>
 
-        <Stack
-          direction="row"
-          spacing={1}
+        <Box
           sx={{
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            px: 1.25,
-            py: 1,
-            borderRadius: 2.25,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: (theme) =>
-              theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+            gap: 0.75,
+            alignItems: 'stretch',
           }}
         >
-          <Typography
-            sx={{
-              fontWeight: 900,
-              fontSize: '1.05rem',
-              letterSpacing: '0.08em',
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-              minWidth: 0,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {loading ? '…' : code || '—'}
-          </Typography>
-          <IconButton
-            size="small"
-            aria-label={t.copyCode}
-            disabled={!code || loading}
-            onClick={(event) => void handleCopy(event)}
-            sx={{
-              flexShrink: 0,
-              color: copied ? 'primary.main' : 'text.secondary',
-              bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.14 : 0.1),
-              '&:hover': {
-                bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.22 : 0.16),
-              },
-            }}
-          >
-            <CopyIcon size={16} weight="bold" />
-          </IconButton>
-        </Stack>
-        {copied ? (
-          <Typography
-            variant="caption"
-            sx={{ mt: -0.75, color: 'primary.main', fontWeight: 700, px: 0.25 }}
-          >
-            {t.copied}
-          </Typography>
-        ) : null}
-
-        <Box sx={{ pt: 1.15, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.75 }}>
-            <Box
-              sx={{
-                width: 28,
-                height: 28,
-                borderRadius: 1.5,
-                display: 'grid',
-                placeItems: 'center',
-                flexShrink: 0,
-                bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.16 : 0.1),
-                color: 'primary.main',
-              }}
-            >
-              <FireIcon size={15} weight="fill" />
-            </Box>
-            <Typography sx={{ fontWeight: 750, fontSize: '0.82rem', flex: 1, minWidth: 0 }}>
-              {t.streakTitle}
-            </Typography>
-            <Typography
-              sx={{ fontWeight: 800, fontSize: '0.75rem', color: 'primary.main', flexShrink: 0 }}
-            >
-              {loading ? '…' : `${streakCurrent}/${required}`}
-              {!loading ? (
-                <Typography
-                  component="span"
-                  sx={{ ml: 0.55, fontWeight: 700, fontSize: '0.68rem', color: 'text.secondary' }}
-                >
-                  +{streakReward} BC
-                </Typography>
-              ) : null}
-            </Typography>
-          </Stack>
-          <LinearProgress
-            variant="determinate"
-            value={loading ? 0 : streakProgress}
-            sx={{
-              height: 5,
-              borderRadius: 999,
-              mb: 0.85,
-              bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.14 : 0.1),
-              '& .MuiLinearProgress-bar': { borderRadius: 999 },
-            }}
-          />
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block' }}>
-            {t.streakDays(required)}
-          </Typography>
-
           <Stack
-            className="referral-amber-row"
             direction="row"
-            spacing={1}
+            spacing={0.5}
             sx={{
               alignItems: 'center',
-              mt: 1,
-              px: 1.1,
-              py: 0.95,
-              borderRadius: 2,
+              minWidth: 0,
+              px: 1,
+              py: 0.7,
+              borderRadius: 1.5,
+              overflow: 'hidden',
               border: '1px solid',
-              borderColor: (theme) =>
-                theme.palette.mode === 'dark' ? AMBER_BORDER_DARK : AMBER_BORDER_LIGHT,
+              borderColor: 'divider',
               bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? AMBER_SOFT_DARK : AMBER_SOFT_LIGHT,
-              transition: 'border-color 0.15s ease, background-color 0.15s ease',
+                theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
             }}
           >
-            <Box
+            <Typography
               sx={{
-                width: 26,
-                height: 26,
-                borderRadius: 1.25,
-                display: 'grid',
-                placeItems: 'center',
-                flexShrink: 0,
-                bgcolor: (theme) =>
-                  theme.palette.mode === 'dark' ? 'rgba(245, 166, 35, 0.22)' : 'rgba(245, 166, 35, 0.2)',
-                color: AMBER,
+                flex: 1,
+                minWidth: 0,
+                fontWeight: 850,
+                fontSize: '0.82rem',
+                letterSpacing: '0.08em',
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
-              <SealPercentIcon size={15} weight="fill" />
+              {loading ? '…' : code || '—'}
+            </Typography>
+            <IconButton
+              size="small"
+              aria-label={copied ? t.copied : t.copyCode}
+              disabled={!code || loading}
+              onClick={(event) => void handleCopy(event)}
+              sx={{
+                flexShrink: 0,
+                p: 0.4,
+                color: copied ? 'primary.main' : 'text.secondary',
+                '&:hover': { color: 'primary.main', bgcolor: 'action.hover' },
+              }}
+            >
+              <CopyIcon size={14} weight="bold" />
+            </IconButton>
+          </Stack>
+
+          <Stack
+            direction="row"
+            spacing={0.55}
+            sx={{
+              alignItems: 'center',
+              minWidth: 0,
+              px: 1,
+              py: 0.7,
+              borderRadius: 1.5,
+              overflow: 'hidden',
+              border: '1px solid',
+              borderColor: (theme) =>
+                theme.palette.mode === 'dark' ? 'rgba(245, 166, 35, 0.4)' : 'rgba(245, 166, 35, 0.35)',
+              bgcolor: (theme) =>
+                theme.palette.mode === 'dark' ? 'rgba(245, 166, 35, 0.12)' : 'rgba(245, 166, 35, 0.1)',
+            }}
+          >
+            <Box sx={{ color: AMBER, display: 'inline-flex', flexShrink: 0, lineHeight: 0 }}>
+              <SealPercentIcon size={13} weight="fill" />
             </Box>
             <Typography
               variant="caption"
@@ -351,18 +282,67 @@ export function ReferralSummaryCard() {
                 flex: 1,
                 minWidth: 0,
                 color: AMBER,
-                fontWeight: 700,
-                lineHeight: 1.35,
-                fontSize: '0.72rem',
+                fontWeight: 750,
+                lineHeight: 1.25,
+                fontSize: '0.64rem',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
               }}
             >
-              {lifetimePercent > 0 ? t.lifetimeActive(lifetimePercent) : t.lifetimeHint}
+              {lifetimePercent >= maxLifetimePercent
+                ? t.lifetimeActive(lifetimePercent)
+                : t.lifetimeHint(maxLifetimePercent)}
             </Typography>
-            <Box sx={{ color: AMBER, display: 'inline-flex', flexShrink: 0, opacity: 0.9 }}>
-              <CaretRightIcon size={16} weight="bold" />
+            <Box
+              className="referral-card-caret"
+              sx={{
+                color: AMBER,
+                display: 'inline-flex',
+                flexShrink: 0,
+                lineHeight: 0,
+                opacity: 0.9,
+                transition: 'transform 0.15s ease, color 0.15s ease',
+              }}
+            >
+              <CaretRightIcon size={12} weight="bold" />
             </Box>
           </Stack>
         </Box>
+
+        <Stack spacing={0.45} sx={{ pb: 0.35 }}>
+          <Stack direction="row" spacing={0.65} sx={{ alignItems: 'center' }}>
+            <Box sx={{ color: 'primary.main', display: 'inline-flex', flexShrink: 0, lineHeight: 0 }}>
+              <FireIcon size={14} weight="fill" />
+            </Box>
+            <Typography sx={{ fontWeight: 800, fontSize: '0.75rem', color: 'primary.main', flexShrink: 0 }}>
+              {loading ? '…' : `${streakCurrent}/${required}`}
+            </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ fontWeight: 650, fontSize: '0.7rem', minWidth: 0 }}
+              noWrap
+            >
+              {t.streakDays(required)}
+            </Typography>
+            <Box sx={{ flex: 1 }} />
+            <Typography sx={{ fontWeight: 750, fontSize: '0.7rem', color: 'text.secondary', flexShrink: 0 }}>
+              +{streakReward} BC
+            </Typography>
+          </Stack>
+          <LinearProgress
+            variant="determinate"
+            value={loading ? 0 : streakProgress}
+            sx={{
+              height: 4,
+              borderRadius: 999,
+              bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.14 : 0.1),
+              '& .MuiLinearProgress-bar': { borderRadius: 999 },
+            }}
+          />
+        </Stack>
       </Stack>
     </Box>
   );

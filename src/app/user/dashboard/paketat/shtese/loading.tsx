@@ -6,7 +6,7 @@ import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
 export default function Loading(): React.JSX.Element {
   return (
     <Stack spacing={2.5} aria-busy aria-label="Duke u ngarkuar">
-      <PackageRowsSkeleton count={5} rowHeight={88} />
+      <PackageRowsSkeleton count={4} rowHeight={200} />
     </Stack>
   );
 }

@@ -30,7 +30,6 @@ import {
   MAIN_PACKAGE_BILLING_MONTHS,
   type MainPackageBillingMonths,
 } from '@/lib/contract-pricing';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { paths } from '@/paths';
 import { MOTION } from '@/styles/motion';
 import { productButtonSx } from '@/styles/product-sx';
@@ -41,6 +40,7 @@ import {
   PackageCheckoutCard,
   PackageEurPrice,
   ReferralDiscountNote,
+  planIconForCode,
   type FeatureListItem,
   type PlanAccent,
 } from './package-ui';
@@ -140,20 +140,8 @@ function durationSaveLabel(
   return null;
 }
 
-function offerBadge(
-  t: AppMessages,
-  opts: {
-    isCurrent: boolean;
-    months: number;
-    monthlyPrice: number | null;
-    price: number;
-  },
-): string | null {
-  if (opts.isCurrent) return t.packages.yourPlan;
-  const save = savingsBadge(t, opts.monthlyPrice, opts.months, opts.price);
-  if (save) return save;
-  if (opts.months === 12) return t.packages.annual;
-  return null;
+function titleBadge(t: AppMessages, isCurrent: boolean): string | null {
+  return isCurrent ? t.packages.yourPlan : null;
 }
 
 function BillingPeriodPillBar({
@@ -204,7 +192,7 @@ function BillingPeriodPillBar({
           bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.94)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
-          boxShadow: '0 10px 28px rgba(0, 0, 0, 0.22)',
+          boxShadow: 'none',
         }),
       })}
     >
@@ -218,7 +206,7 @@ function BillingPeriodPillBar({
             left: 0,
             width: `${100 / slotCount}%`,
             borderRadius: 999,
-            bgcolor: primaryMainAlpha(0.18),
+            bgcolor: 'primary.main',
             transform: `translate3d(${indicatorIndex * 100}%, 0, 0)`,
             transition: transitionReady
               ? `transform ${PILL_SLIDE_MS}ms ${MOTION.ease}, opacity 180ms ease`
@@ -272,7 +260,11 @@ function BillingPeriodPillBar({
                   border: 'none',
                   borderRadius: 999,
                   bgcolor: 'transparent',
-                  color: disabled ? 'text.disabled' : selected ? 'primary.main' : 'text.secondary',
+                  color: disabled
+                    ? 'text.disabled'
+                    : selected
+                      ? 'primary.contrastText'
+                      : 'text.secondary',
                   cursor: disabled ? 'default' : 'pointer',
                   transition: `color 200ms ${MOTION.ease}, transform 160ms ${MOTION.ease}`,
                   '&:active': disabled
@@ -306,8 +298,8 @@ function BillingPeriodPillBar({
                       fontWeight: 750,
                       fontSize: '0.62rem',
                       lineHeight: 1.1,
-                      opacity: selected ? 1 : 0.85,
-                      color: 'inherit',
+                      opacity: 1,
+                      color: selected ? 'inherit' : 'primary.main',
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -457,7 +449,7 @@ export function MainPackagesPanel() {
 
   return (
     <Stack spacing={2.5}>
-      {loading ? <PackageRowsSkeleton count={3} rowHeight={120} /> : null}
+      {loading ? <PackageRowsSkeleton count={3} rowHeight={220} /> : null}
 
       {error ? (
         <Alert severity="warning" sx={{ borderRadius: 2 }}>
@@ -478,7 +470,7 @@ export function MainPackagesPanel() {
       ) : null}
 
       {!loading && !error && plans.length > 0 ? (
-        <Stack spacing={1.25}>
+        <Stack spacing={1.5}>
           <ReferralDiscountNote percent={lifetimePercent} />
           <BillingPeriodPillBar
             value={selectedMonths}
@@ -503,12 +495,15 @@ export function MainPackagesPanel() {
               <ListingTrustBadge size={20} />
             ) : undefined;
 
+            const PlanIcon = planIconForCode(plan.planCode);
+
             if (isFree) {
               return [
                 <PackageCheckoutCard
                   key={plan.id}
+                  icon={PlanIcon}
                   title={plan.title}
-                  badge={isPlanCurrent ? t.packages.yourPlan : null}
+                  badge={titleBadge(t, isPlanCurrent)}
                   titleAdornment={titleAdornment}
                   price="€0"
                   priceSuffix={t.packages.perMonth}
@@ -531,22 +526,19 @@ export function MainPackagesPanel() {
             if (!opt) return [];
 
             const isCurrent = isPlanCurrent && activeMonths === selectedMonths;
-            const badge = offerBadge(t, {
-              isCurrent,
-              months: opt.months,
-              monthlyPrice,
-              price: opt.price,
-            });
+            const save = isCurrent ? null : savingsBadge(t, monthlyPrice, opt.months, opt.price);
 
             return [
               <PackageCheckoutCard
                 key={`${plan.id}-${opt.months}`}
+                icon={PlanIcon}
                 title={plan.title}
-                badge={badge}
+                badge={titleBadge(t, isCurrent)}
                 titleAdornment={titleAdornment}
                 price={<PackageEurPrice listPrice={opt.price} percent={lifetimePercent} />}
                 priceSuffix={priceSuffixForMonths(t, opt.months)}
                 priceHint={equivalentMonthlyHint(t, opt.months, opt.price)}
+                priceBadge={save}
                 accent={accent}
                 selected={isCurrent}
                 details={details}

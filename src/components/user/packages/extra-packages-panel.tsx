@@ -2,15 +2,14 @@
 
 import * as React from 'react';
 import Image from 'next/image';
+import RouterLink from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Divider,
-  IconButton,
   InputAdornment,
   List,
   ListItemButton,
@@ -18,17 +17,18 @@ import {
   Slider,
   Stack,
   TextField,
-  Tooltip,
   Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { ArrowClockwise as ArrowClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowClockwise';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist/ssr/BuildingOffice';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
+import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
-import { Question as QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question';
-import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
+import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
+import { StarFour as StarFourIcon } from '@phosphor-icons/react/dist/ssr/StarFour';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
@@ -43,7 +43,6 @@ import {
 } from '@/components/core/product-dialog';
 
 import { useCopy } from '@/hooks/use-copy';
-import { useLanguage } from '@/hooks/use-language';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
 import {
@@ -55,7 +54,6 @@ import {
 import {
   listMyListings,
 } from '@/lib/listings-client';
-import { localizedLabel } from '@/lib/language';
 import {
   applyPremiumVoucher,
   buyAutoRefreshWithCredits,
@@ -70,9 +68,7 @@ import type { ListingMetricKind } from '@/lib/listing-metrics';
 import {
   ExtraPackageCard,
   PackageEurPrice,
-  PackageGroupHeader,
   ReferralDiscountNote,
-  SoftChip,
   dualPayButtonSx,
   formatBc,
 } from './package-ui';
@@ -325,11 +321,26 @@ function AutoRefreshSection() {
   };
 
   return (
-    <Stack spacing={1.15}>
-      <PackageGroupHeader
-        title="Auto-Refresh"
-        chips={<SoftChip label={t.packages.inUse(used, slots)} compact />}
-      />
+    <Stack spacing={1.25}>
+      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'flex-end' }}>
+        <Box
+          sx={{
+            px: 1.05,
+            py: 0.4,
+            borderRadius: 999,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            fontWeight: 750,
+            fontSize: '0.68rem',
+            lineHeight: 1.2,
+            color: 'text.secondary',
+            letterSpacing: '0.01em',
+          }}
+        >
+          {t.packages.inUse(used, slots)}
+        </Box>
+      </Stack>
 
       {error ? (
         <Alert severity="warning" sx={{ borderRadius: 2 }} onClose={() => setError(null)}>
@@ -343,9 +354,9 @@ function AutoRefreshSection() {
       ) : null}
 
       {loading ? (
-        <PackageRowsSkeleton count={3} rowHeight={88} />
+        <PackageRowsSkeleton count={2} rowHeight={200} />
       ) : (
-        <Stack spacing={1.15}>
+        <Stack spacing={1.35}>
           {packages.map((pkg, index) => {
             const busy = busyId === pkg.id;
             const priceBc = Number(pkg.priceBc) || 0;
@@ -355,12 +366,16 @@ function AutoRefreshSection() {
               <ExtraPackageCard
                 key={pkg.id}
                 icon={ArrowClockwiseIcon}
-                category="Auto-Refresh"
-                title={t.packages.slots(pkg.slots)}
+                category="Auto-refresh"
+                title={t.packages.autoRefreshTitle}
+                subtitle={t.packages.autoRefreshSubtitle}
                 badge={best ? t.packages.bestValue : null}
                 highlighted={best}
-                info={index === 0 ? t.packages.autoRefreshInfo : undefined}
-                infoAriaLabel={t.packages.packageInfoAria}
+                details={[
+                  t.packages.autoRefreshFeatureRefreshes(pkg.slots),
+                  t.packages.autoRefreshFeatureValid,
+                  t.packages.autoRefreshFeatureAnytime,
+                ]}
                 actions={
                   <>
                     <Button
@@ -378,7 +393,7 @@ function AutoRefreshSection() {
                       disabled={busy || !canAfford}
                       onClick={() => void onBuyBc(pkg)}
                       startIcon={
-                        busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={14} />
+                        busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={16} />
                       }
                       sx={dualPayButtonSx('primary', 'outlined')}
                     >
@@ -399,7 +414,6 @@ function PremiumListingSection() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useCopy();
-  const { language } = useLanguage();
   const { user, checkSession } = useUser();
   const lifetimePercent = useLifetimePackageDiscount();
   const balance = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
@@ -532,17 +546,7 @@ function PremiumListingSection() {
   };
 
   return (
-    <Stack spacing={1.15}>
-      <PackageGroupHeader
-        title="Premium Listing"
-        accent="warning"
-        chips={
-          unused.length > 0 ? (
-            <SoftChip label={`${unused.length} për t'u aplikuar`} color="warning" compact />
-          ) : undefined
-        }
-      />
-
+    <Stack spacing={1.25}>
       {error ? (
         <Alert severity="warning" sx={{ borderRadius: 2 }} onClose={() => setError(null)}>
           {error}
@@ -582,7 +586,7 @@ function PremiumListingSection() {
         </Stack>
       ) : null}
 
-      <Stack spacing={1.15}>
+      <Stack spacing={1.35}>
         {packages.map((pkg, index) => {
           const busy = busyId === pkg.id;
           const canAfford = balance >= pkg.priceBc;
@@ -590,14 +594,18 @@ function PremiumListingSection() {
           return (
             <ExtraPackageCard
               key={pkg.id}
-              icon={SparkleIcon}
+              icon={StarFourIcon}
               category="Premium"
-              title={localizedLabel(language, pkg.labelSq, pkg.labelEn)}
+              title={t.packages.premiumBoostTitle}
+              subtitle={t.packages.premiumBoostSubtitle}
               badge={highlighted ? t.packages.bestValue : null}
               accent="warning"
               highlighted={highlighted}
-              info={index === 0 ? t.packages.premiumListingInfo : undefined}
-              infoAriaLabel={t.packages.packageInfoAria}
+              details={[
+                t.packages.premiumFeaturePlacement,
+                t.packages.premiumFeatureClicks,
+                t.packages.premiumFeatureDays(pkg.days),
+              ]}
               footer={index === packages.length - 1 ? t.packages.premiumGrowEliteNote : undefined}
               actions={
                 <>
@@ -618,7 +626,7 @@ function PremiumListingSection() {
                     disabled={busy || !canAfford}
                     onClick={() => void onBuyBc(pkg)}
                     startIcon={
-                      busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={14} />
+                      busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={16} />
                     }
                     sx={dualPayButtonSx('warning', 'outlined')}
                   >
@@ -738,7 +746,7 @@ function PremiumListingSection() {
             variant="contained"
             disabled={!selectedKey || applying || pickerListings.length === 0}
             onClick={() => void onApply()}
-            startIcon={applying ? <CircularProgress size={16} color="inherit" /> : <SparkleIcon size={18} />}
+            startIcon={applying ? <CircularProgress size={16} color="inherit" /> : <StarFourIcon size={18} />}
             sx={{ fontWeight: 800 }}
           >
             Apliko Premium
@@ -821,10 +829,10 @@ function ConvertListingSection() {
     <Box
       id="convert"
       sx={{
-        p: { xs: 1.85, sm: 2.25 },
+        p: { xs: 1.75, sm: 2 },
         borderRadius: 3,
         border: '1px solid',
-        borderColor: 'divider',
+        borderColor: (theme) => alpha(theme.palette.warning.main, 0.36),
         bgcolor: 'background.paper',
         scrollMarginTop: { xs: 96, md: 112 },
         overflow: 'hidden',
@@ -834,66 +842,64 @@ function ConvertListingSection() {
       <Box
         sx={{
           position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 3,
-          bgcolor: 'warning.main',
-          opacity: 0.9,
+          inset: 0,
+          pointerEvents: 'none',
+          background: (theme) =>
+            `linear-gradient(135deg, ${alpha(theme.palette.warning.main, theme.palette.mode === 'dark' ? 0.1 : 0.05)} 0%, transparent 58%)`,
         }}
       />
-      <Stack direction="row" spacing={1.1} sx={{ alignItems: 'flex-start', mb: 0.5, mt: 0.35 }}>
+      <Stack direction="row" spacing={1.25} sx={{ position: 'relative', alignItems: 'flex-start', mb: 0.5 }}>
         <Box
           sx={{
-            width: 36,
-            height: 36,
-            borderRadius: 1.75,
+            width: { xs: 44, sm: 52 },
+            height: { xs: 44, sm: 52 },
+            borderRadius: '50%',
             display: 'grid',
             placeItems: 'center',
             flexShrink: 0,
-            bgcolor: (theme) => `${theme.palette.warning.main}18`,
+            border: '1.5px solid',
+            borderColor: 'warning.main',
+            bgcolor: (theme) => alpha(theme.palette.warning.main, theme.palette.mode === 'dark' ? 0.16 : 0.1),
             color: 'warning.main',
           }}
         >
-          <BoostCoinIcon size={20} />
+          <BoostCoinIcon size={22} />
         </Box>
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 0.5 }}>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.5, minWidth: 0 }}>
-              <Typography sx={{ fontWeight: 850, fontSize: '1.02rem', letterSpacing: '-0.01em' }}>
-                Convert Listing
-              </Typography>
-              <Chip size="small" label="BOOST COINS" color="warning" sx={{ fontWeight: 700, height: 22 }} />
-            </Stack>
-            <Tooltip
-              arrow
-              enterTouchDelay={0}
-              leaveTouchDelay={4000}
-              title={
-                <Typography variant="body2" component="span" sx={{ display: 'block', lineHeight: 1.45 }}>
-                  {t.packages.convertListingInfo}
-                </Typography>
-              }
-              slotProps={{
-                tooltip: {
-                  sx: { maxWidth: 300, p: 1.25 },
-                },
-              }}
-            >
-              <IconButton
-                aria-label={t.packages.packageInfoAria}
-                size="small"
-                sx={{
-                  color: 'text.secondary',
-                  p: 0.35,
-                  flexShrink: 0,
-                  '&:hover': { color: 'warning.main', bgcolor: 'action.hover' },
-                }}
-              >
-                <QuestionIcon size={17} weight="bold" />
-              </IconButton>
-            </Tooltip>
-          </Stack>
+          <Typography
+            sx={{
+              fontWeight: 750,
+              fontSize: '0.64rem',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'warning.main',
+              mb: 0.25,
+              lineHeight: 1.2,
+            }}
+          >
+            Conversion
+          </Typography>
+          <Typography
+            sx={{
+              fontWeight: 900,
+              fontSize: { xs: '1.08rem', sm: '1.22rem' },
+              lineHeight: 1.15,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Convert Listing
+          </Typography>
+          <Typography
+            sx={{
+              mt: 0.4,
+              fontWeight: 550,
+              fontSize: '0.76rem',
+              lineHeight: 1.35,
+              color: 'text.secondary',
+            }}
+          >
+            {t.packages.convertListingInfo}
+          </Typography>
         </Box>
       </Stack>
 
@@ -1020,10 +1026,41 @@ function ConvertListingSection() {
   );
 }
 
+export function BoostBalanceChip({ balance }: { balance: number }) {
+  return (
+    <Stack
+      direction="row"
+      spacing={0.65}
+      sx={{
+        alignItems: 'center',
+        px: 1.2,
+        py: 0.55,
+        borderRadius: 999,
+        bgcolor: (t) => alpha(t.palette.warning.main, t.palette.mode === 'dark' ? 0.16 : 0.12),
+        border: '1px solid',
+        borderColor: (t) => alpha(t.palette.warning.main, 0.4),
+        flexShrink: 0,
+      }}
+    >
+      <BoostCoinIcon size={15} />
+      <Typography
+        sx={{
+          fontWeight: 850,
+          fontSize: '0.78rem',
+          color: 'warning.main',
+          letterSpacing: '-0.01em',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {formatBc(balance)} BC
+      </Typography>
+    </Stack>
+  );
+}
+
 export function ExtraPackagesPanel() {
+  const t = useCopy();
   const lifetimePercent = useLifetimePackageDiscount();
-  const { user } = useUser();
-  const balance = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1068,39 +1105,72 @@ export function ExtraPackagesPanel() {
   }, []);
 
   return (
-    <Stack spacing={2.25}>
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 0.75 }}
-      >
-        <Box sx={{ minWidth: 0, flex: 1 }}>
-          <ReferralDiscountNote percent={lifetimePercent} />
-        </Box>
-        <Stack
-          direction="row"
-          spacing={0.65}
-          sx={{
-            alignItems: 'center',
-            px: 1.1,
-            py: 0.55,
-            borderRadius: 999,
-            bgcolor: (t) => `${t.palette.warning.main}18`,
-            border: '1px solid',
-            borderColor: (t) => `${t.palette.warning.main}40`,
-            flexShrink: 0,
-          }}
-        >
-          <BoostCoinIcon size={15} />
-          <Typography sx={{ fontWeight: 850, fontSize: '0.78rem', color: 'warning.main', letterSpacing: '-0.01em' }}>
-            {formatBc(balance)} BC
-          </Typography>
-        </Stack>
-      </Stack>
+    <Stack spacing={1.5}>
+      <ReferralDiscountNote percent={lifetimePercent} />
       <AutoRefreshSection />
       <OkazionPackagesSection />
       <PremiumListingSection />
       <ConvertListingSection />
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 1.15,
+          px: 1.6,
+          py: 1.35,
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: (theme) => alpha(theme.palette.primary.main, 0.35),
+          bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.1 : 0.05),
+        }}
+      >
+        <Box
+          sx={{
+            width: 36,
+            height: 36,
+            borderRadius: '50%',
+            display: 'grid',
+            placeItems: 'center',
+            flexShrink: 0,
+            bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.2 : 0.12),
+            color: 'primary.main',
+          }}
+        >
+          <ShieldCheckIcon size={18} weight="fill" />
+        </Box>
+        <Typography
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            fontWeight: 550,
+            fontSize: '0.76rem',
+            lineHeight: 1.4,
+            color: 'text.secondary',
+          }}
+        >
+          {t.packages.bcPayNote}
+        </Typography>
+        <Box
+          component={RouterLink}
+          href={paths.user.packagesCredits}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.25,
+            flexShrink: 0,
+            color: 'primary.main',
+            fontWeight: 800,
+            fontSize: '0.75rem',
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+            '&:hover': { textDecoration: 'underline' },
+          }}
+        >
+          {t.packages.bcPayLearnMore}
+          <CaretRightIcon size={12} weight="bold" />
+        </Box>
+      </Box>
     </Stack>
   );
 }

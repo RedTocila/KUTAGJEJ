@@ -35,14 +35,12 @@ import {
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
 import { useCopy } from '@/hooks/use-copy';
-import { useLanguage } from '@/hooks/use-language';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
 import {
   listMyListings,
 } from '@/lib/listings-client';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
-import { localizedLabel } from '@/lib/language';
 import { OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
 import {
   applyOkazionVoucher,
@@ -55,8 +53,6 @@ import type { OkazionPackage, OkazionVoucher } from '@/types/payment';
 import {
   ExtraPackageCard,
   PackageEurPrice,
-  PackageGroupHeader,
-  SoftChip,
   dualPayButtonSx,
   formatBc,
 } from './package-ui';
@@ -167,7 +163,6 @@ export function OkazionPackagesSection() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useCopy();
-  const { language } = useLanguage();
   const { user, checkSession } = useUser();
   const lifetimePercent = useLifetimePackageDiscount();
   const balance = Number(user?.boostCredits) || 0;
@@ -300,24 +295,13 @@ export function OkazionPackagesSection() {
   };
 
   const pkg = packages[0] || FALLBACK_OKAZION_PACKAGES[0];
-  const pkgTitle = localizedLabel(language, pkg.labelSq, pkg.labelEn);
   const totalEur = pkg.priceEur * quantity;
   const totalBc = pkg.priceBc * quantity;
   const canAfford = balance >= totalBc;
   const busy = busyId === pkg.id;
 
   return (
-    <Stack spacing={1.15}>
-      <PackageGroupHeader
-        title="OKAZION"
-        accent="error"
-        chips={
-          unused.length > 0 ? (
-            <SoftChip label={`${unused.length} për t'u aplikuar`} color="error" compact />
-          ) : undefined
-        }
-      />
-
+    <Stack spacing={1.25}>
       {error ? (
         <Alert severity="warning" sx={{ borderRadius: 2 }} onClose={() => setError(null)}>
           {error}
@@ -366,12 +350,15 @@ export function OkazionPackagesSection() {
       <ExtraPackageCard
         icon={SealPercentIcon}
         category="OKAZION"
-        title={quantity > 1 ? `${pkgTitle} ×${quantity}` : pkgTitle}
-        badge={t.packages.daysShort(pkg.days)}
+        title={quantity > 1 ? `${t.packages.okazionCardTitle(pkg.days)} ×${quantity}` : t.packages.okazionCardTitle(pkg.days)}
+        subtitle={t.packages.okazionSubtitle}
         accent="error"
         highlighted
-        info={t.packages.okazionInfo}
-        infoAriaLabel={t.packages.packageInfoAria}
+        details={[
+          t.packages.okazionFeatureDays(pkg.days),
+          t.packages.okazionFeatureViews,
+          t.packages.okazionFeatureStandOut,
+        ]}
         footer={t.packages.okazionGrowEliteNote}
         meta={
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
@@ -455,7 +442,7 @@ export function OkazionPackagesSection() {
               color="error"
               disabled={busy || !canAfford}
               onClick={() => void onBuyBc(pkg)}
-              startIcon={busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={14} />}
+              startIcon={busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={16} />}
               sx={dualPayButtonSx('error', 'outlined')}
             >
               {formatBc(totalBc)} BC

@@ -4,6 +4,7 @@ import * as React from 'react';
 import RouterLink from 'next/link';
 import { alpha } from '@mui/material/styles';
 import { Box, Chip, Divider, Stack, Typography, type SxProps, type Theme } from '@mui/material';
+import type { SystemStyleObject } from '@mui/system';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
@@ -14,7 +15,7 @@ import { productPanelSx } from '@/styles/product-sx';
 export const portalCardSx = productPanelSx;
 
 /** Two-option pill toggle used in dashboard settings rows (language, theme, …). */
-export const portalToggleGroupSx: SxProps<Theme> = {
+export const portalToggleGroupSx: SystemStyleObject<Theme> = {
   flexShrink: 0,
   bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
   borderRadius: 999,

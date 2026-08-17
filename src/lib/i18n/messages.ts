@@ -419,6 +419,7 @@ const sq = {
   },
   packages: {
     hubDescription: 'Zgjidhni planet, paketat shtesë ose bli coins.',
+    exploreNow: 'Eksploro tani',
     plansTitle: 'Planet e abonimit',
     buyCoinsTitle: 'Bli coins',
     mainDescription: 'Zgjidhni planin dhe kohëzgjatjen: mujore, 6 muaj ose 12 muaj.',
@@ -1133,6 +1134,7 @@ const en: AppMessages = {
   },
   packages: {
     hubDescription: 'Choose plans, extra packages, or buy coins.',
+    exploreNow: 'Explore now',
     plansTitle: 'Subscription Plans',
     buyCoinsTitle: 'Buy coins',
     mainDescription: 'Choose a plan and billing period: monthly, 6 months, or 12 months.',

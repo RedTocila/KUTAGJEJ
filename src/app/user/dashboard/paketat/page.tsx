@@ -5,246 +5,222 @@ import RouterLink from 'next/link';
 import { Box, Chip, Stack, Typography } from '@mui/material';
 import { alpha, type Theme } from '@mui/material/styles';
 import { ArrowClockwise as ArrowClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowClockwise';
+import { ArrowsLeftRight as ArrowsLeftRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowsLeftRight';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
-import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { StarFour as StarFourIcon } from '@phosphor-icons/react/dist/ssr/StarFour';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
-import { planAccentForCode, resolveAccent, type PlanAccent, packageAccentSurfaceSx, packageAccentWash } from '@/components/user/packages/package-ui';
-import { PortalIconBox, portalCardSx, portalToggleGroupSx } from '@/components/user/portal-cards';
+import {
+  planAccentForCode,
+  resolveAccent,
+  type PlanAccent,
+  packageAccentSurfaceSx,
+} from '@/components/user/packages/package-ui';
+import { portalCardSx } from '@/components/user/portal-cards';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import { listMySubscriptions } from '@/lib/payments-client';
 import { paths } from '@/paths';
 
-const HUB_PAD = 1.5;
-const HUB_GAP = 1.15;
-const TILE_PAD = 1;
-
-function hubCardSx(accent: PlanAccent = 'primary') {
+function categoryCardSx(accent: PlanAccent = 'primary') {
   return {
     ...portalCardSx,
     ...packageAccentSurfaceSx(accent),
     textDecoration: 'none',
     color: 'inherit',
     display: 'flex',
-    flexDirection: 'column',
+    flexDirection: 'row',
+    alignItems: 'stretch',
     flex: 1,
     minHeight: 0,
-    p: HUB_PAD,
-    gap: HUB_GAP,
+    p: { xs: 1.5, sm: 1.75 },
+    gap: { xs: 1.5, sm: 2 },
     cursor: 'pointer',
     WebkitTapHighlightColor: 'transparent',
-    backgroundImage: (t: Theme) => packageAccentWash(t, accent),
-    transition:
-      'border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), background-color 140ms cubic-bezier(0.22, 1, 0.36, 1)',
+    transition: 'border-color 140ms cubic-bezier(0.22, 1, 0.36, 1)',
     '&:hover': {
       borderColor: (t: Theme) => alpha(resolveAccent(t, accent), 0.72),
+      '& .packages-hub-cta': {
+        color: (th: Theme) => resolveAccent(th, accent),
+      },
       '& .packages-hub-caret': {
         transform: 'translateX(3px)',
-        color: (th: Theme) => resolveAccent(th, accent),
-        opacity: 1,
       },
     },
   } as const;
 }
 
-const hubBodySx = {
-  flex: 1,
-  minHeight: 0,
-  width: '100%',
-  display: 'grid',
-  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-  gap: 0.75,
-} as const;
-
-function HubHeader({
-  icon,
-  title,
-  badge,
-  badgeColor,
-  iconTone = 'primary',
+function VisualPanel({
+  accent,
+  children,
 }: {
-  icon: React.ReactNode;
-  title: string;
-  badge?: string;
-  badgeColor?: string;
-  iconTone?: 'primary' | 'warning';
+  accent: PlanAccent;
+  children: React.ReactNode;
 }) {
   return (
-    <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0, flexShrink: 0 }}>
-      <PortalIconBox size={36} tone={iconTone}>
-        {icon}
-      </PortalIconBox>
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0, flex: 1 }}>
-        <Typography
-          sx={{
-            fontWeight: 800,
-            fontSize: '1.05rem',
-            lineHeight: 1.25,
-            letterSpacing: '-0.01em',
-            minWidth: 0,
-          }}
-          noWrap
-        >
-          {title}
-        </Typography>
-        {badge ? (
-          <Chip
-            label={badge}
-            size="small"
-            sx={{
-              flexShrink: 0,
-              height: 22,
-              fontWeight: 800,
-              fontSize: '0.68rem',
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              border: 'none',
-              '& .MuiChip-label': { px: 1.1 },
-              ...(badgeColor
-                ? {
-                    bgcolor: (t) => alpha(badgeColor, t.palette.mode === 'dark' ? 0.22 : 0.14),
-                    color: badgeColor,
-                  }
-                : {
-                    bgcolor: (t) =>
-                      t.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-                    color: 'text.primary',
-                  }),
-            }}
-          />
-        ) : null}
-      </Stack>
-      <Box
-        className="packages-hub-caret"
-        aria-hidden
-        sx={{
-          color: 'text.secondary',
-          display: 'flex',
-          flexShrink: 0,
-          opacity: 0.7,
-          transition: 'transform 160ms cubic-bezier(0.22, 1, 0.36, 1), color 160ms ease, opacity 160ms ease',
-        }}
-      >
-        <CaretRightIcon size={20} weight="bold" />
-      </Box>
-    </Stack>
-  );
-}
-
-function BillingPreview({ labels }: { labels: string[] }) {
-  return (
     <Box
-      aria-hidden
       sx={{
-        ...portalToggleGroupSx,
-        display: 'grid',
-        gridTemplateColumns: `repeat(${labels.length}, minmax(0, 1fr))`,
-        width: '100%',
+        width: { xs: 112, sm: 136 },
         flexShrink: 0,
-        height: 40,
+        alignSelf: 'stretch',
+        borderRadius: 2.5,
+        display: 'grid',
+        placeItems: 'center',
+        overflow: 'hidden',
         boxSizing: 'border-box',
-        mt: 'auto',
+        px: 1,
+        py: 1,
+        bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.18 : 0.1),
+        color: (t) => resolveAccent(t, accent),
       }}
     >
-      {labels.map((label, index) => {
-        const active = index === 0;
-        return (
-          <Box
-            key={label}
-            sx={{
-              minWidth: 0,
-              minHeight: 0,
-              height: '100%',
-              px: 0.75,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 999,
-              bgcolor: active ? 'primary.main' : 'transparent',
-              color: active ? 'primary.contrastText' : 'text.secondary',
-              fontWeight: 800,
-              fontSize: '0.72rem',
-              letterSpacing: '0.01em',
-              lineHeight: 1,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {label}
-          </Box>
-        );
-      })}
+      {children}
     </Box>
   );
 }
 
-function ExtraTile({
-  icon,
-  label,
+function ClusterIcon({
+  icon: Icon,
   accent,
 }: {
-  icon: React.ReactNode;
-  label: string;
+  icon: PhosphorIcon;
   accent: PlanAccent;
 }) {
   return (
     <Box
       sx={{
-        width: '100%',
-        height: '100%',
-        minWidth: 0,
-        minHeight: 0,
-        boxSizing: 'border-box',
-        p: TILE_PAD,
-        borderRadius: 2.25,
+        width: 30,
+        height: 30,
+        borderRadius: 1.5,
+        display: 'grid',
+        placeItems: 'center',
+        flexShrink: 0,
+        bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.28 : 0.18),
+        color: (t) => resolveAccent(t, accent),
         border: '1px solid',
-        borderColor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.32 : 0.28),
-        bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.12 : 0.08),
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 0.5,
+        borderColor: (t) => alpha(resolveAccent(t, accent), 0.45),
       }}
     >
-      <Box
+      <Icon size={15} weight="bold" />
+    </Box>
+  );
+}
+
+function CategoryCard({
+  href,
+  accent,
+  visual,
+  title,
+  description,
+  badge,
+  badgeColor,
+  cta,
+}: {
+  href: string;
+  accent: PlanAccent;
+  visual: React.ReactNode;
+  title: string;
+  description: string;
+  badge?: string;
+  badgeColor?: string;
+  cta: string;
+}) {
+  return (
+    <Box component={RouterLink} href={href} sx={categoryCardSx(accent)}>
+      <VisualPanel accent={accent}>{visual}</VisualPanel>
+      <Stack
+        spacing={0.7}
         sx={{
-          width: 28,
-          height: 28,
-          borderRadius: 1.5,
-          display: 'grid',
-          placeItems: 'center',
-          bgcolor: (t) =>
-            alpha(
-              resolveAccent(t, accent),
-              t.palette.mode === 'dark' ? (accent === 'warning' ? 0.32 : 0.22) : accent === 'warning' ? 0.2 : 0.16,
-            ),
-          color: (t) => resolveAccent(t, accent),
+          flex: 1,
+          minWidth: 0,
+          justifyContent: 'center',
+          py: 0.25,
         }}
       >
-        {icon}
-      </Box>
-      <Typography
-        sx={{
-          fontSize: '0.68rem',
-          fontWeight: 800,
-          lineHeight: 1.15,
-          color: 'text.primary',
-          textAlign: 'center',
-          maxWidth: '100%',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {label}
-      </Typography>
+        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0 }}>
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: '1.05rem', sm: '1.15rem' },
+              lineHeight: 1.2,
+              letterSpacing: '-0.02em',
+              minWidth: 0,
+            }}
+            noWrap
+          >
+            {title}
+          </Typography>
+          {badge ? (
+            <Chip
+              label={badge}
+              size="small"
+              sx={{
+                flexShrink: 0,
+                height: 22,
+                fontWeight: 800,
+                fontSize: '0.68rem',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                border: 'none',
+                '& .MuiChip-label': { px: 1.1 },
+                ...(badgeColor
+                  ? {
+                      bgcolor: (t) => alpha(badgeColor, t.palette.mode === 'dark' ? 0.22 : 0.14),
+                      color: badgeColor,
+                    }
+                  : {
+                      bgcolor: (t) =>
+                        t.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                      color: 'text.primary',
+                    }),
+              }}
+            />
+          ) : null}
+        </Stack>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{
+            lineHeight: 1.45,
+            fontSize: '0.8rem',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {description}
+        </Typography>
+        <Stack
+          className="packages-hub-cta"
+          direction="row"
+          spacing={0.35}
+          sx={{
+            alignItems: 'center',
+            mt: 0.35,
+            color: (t) => resolveAccent(t, accent),
+            fontWeight: 800,
+            fontSize: '0.82rem',
+            letterSpacing: '-0.01em',
+            transition: 'color 140ms ease',
+          }}
+        >
+          {cta}
+          <Box
+            className="packages-hub-caret"
+            sx={{
+              display: 'inline-flex',
+              transition: 'transform 160ms cubic-bezier(0.22, 1, 0.36, 1)',
+            }}
+          >
+            <CaretRightIcon size={14} weight="bold" />
+          </Box>
+        </Stack>
+      </Stack>
     </Box>
   );
 }
@@ -273,52 +249,55 @@ export default function UserPackagesPage() {
   if (!user) return null;
 
   return (
-    <Stack spacing={1.35} sx={{ flex: 1, minHeight: 0, height: '100%', overflow: 'hidden' }}>
+    <Stack spacing={1.5} sx={{ flex: 1, minHeight: 0, height: '100%', overflow: 'hidden' }}>
       <UserPageHeader
         icon={<PackageIcon size={20} weight="duotone" />}
         title={t.nav.packages}
         description={t.packages.hubDescription}
         sx={{ flexShrink: 0 }}
       />
-      <Stack spacing={1.25} sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        <Box component={RouterLink} href={paths.user.packagesMain} sx={hubCardSx('primary')}>
-          <HubHeader
-            icon={<PackageIcon size={22} weight="duotone" />}
-            title={t.packages.plansTitle}
-            badge={activePlanLabel}
-            badgeColor={activePlanBadgeColor}
-          />
-          <BillingPreview labels={[t.packages.monthly, t.packages.months6, t.packages.months12]} />
-        </Box>
-
-        <Box component={RouterLink} href={paths.user.packagesExtra} sx={hubCardSx('primary')}>
-          <HubHeader
-            icon={<SquaresFourIcon size={22} weight="duotone" />}
-            title={t.nav.packagesExtra}
-          />
-          <Box sx={hubBodySx}>
-            <ExtraTile icon={<SealPercentIcon size={16} weight="bold" />} label={t.picker.okazion} accent="error" />
-            <ExtraTile
-              icon={<ArrowClockwiseIcon size={16} weight="bold" />}
-              label={t.packages.autoRefreshTitle}
-              accent="primary"
-            />
-            <ExtraTile icon={<StarFourIcon size={16} weight="bold" />} label="Premium" accent="warning" />
-          </Box>
-        </Box>
-
-        <Box component={RouterLink} href={paths.user.packagesCredits} sx={hubCardSx('warning')}>
-          <HubHeader
-            icon={<BoostCoinIcon size={22} />}
-            title={t.packages.buyCoinsTitle}
-            iconTone="warning"
-          />
-          <Box sx={hubBodySx}>
-            <ExtraTile icon={<BoostCoinIcon size={16} />} label="100 BC" accent="warning" />
-            <ExtraTile icon={<BoostCoinIcon size={16} />} label="300 BC" accent="warning" />
-            <ExtraTile icon={<BoostCoinIcon size={16} />} label="800 BC" accent="warning" />
-          </Box>
-        </Box>
+      <Stack spacing={1.35} sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <CategoryCard
+          href={paths.user.packagesMain}
+          accent="primary"
+          title={t.packages.plansTitle}
+          description={t.packages.mainDescription}
+          badge={activePlanLabel}
+          badgeColor={activePlanBadgeColor}
+          cta={t.packages.exploreNow}
+          visual={<PackageIcon size={56} weight="duotone" />}
+        />
+        <CategoryCard
+          href={paths.user.packagesExtra}
+          accent="primary"
+          title={t.nav.packagesExtra}
+          description={t.packages.extraDescription}
+          cta={t.packages.exploreNow}
+          visual={
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 30px)',
+                gap: 0.65,
+                justifyContent: 'center',
+                alignContent: 'center',
+              }}
+            >
+              <ClusterIcon icon={SealPercentIcon} accent="error" />
+              <ClusterIcon icon={ArrowClockwiseIcon} accent="primary" />
+              <ClusterIcon icon={StarFourIcon} accent="warning" />
+              <ClusterIcon icon={ArrowsLeftRightIcon} accent="warning" />
+            </Box>
+          }
+        />
+        <CategoryCard
+          href={paths.user.packagesCredits}
+          accent="warning"
+          title={t.packages.buyCoinsTitle}
+          description={t.packages.boostCoinsDescription}
+          cta={t.packages.exploreNow}
+          visual={<BoostCoinIcon size={56} />}
+        />
       </Stack>
     </Stack>
   );

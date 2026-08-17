@@ -330,7 +330,7 @@ export function MainPackagesPanel() {
   const [canceling, setCanceling] = React.useState(false);
   const [cancelError, setCancelError] = React.useState<string | null>(null);
   const [cancelSuccess, setCancelSuccess] = React.useState<string | null>(null);
-  const [pickedMonths, setPickedMonths] = React.useState<MainPackageBillingMonths | null>(null);
+  const [pickedMonths, setPickedMonths] = React.useState<MainPackageBillingMonths>(1);
   const lifetimePercent = useLifetimePackageDiscount();
 
   const activeContractId = activeSubscription?.contractId ?? null;
@@ -398,12 +398,10 @@ export function MainPackagesPanel() {
   }, [plans]);
 
   const selectedMonths: MainPackageBillingMonths = React.useMemo(() => {
-    const fallback: MainPackageBillingMonths = availableBillingMonths[0] ?? 1;
-    const preferred: MainPackageBillingMonths =
-      pickedMonths ??
-      (activeMonths != null && isMainPackageBillingMonths(activeMonths) ? activeMonths : 1);
-    return availableBillingMonths.includes(preferred) ? preferred : fallback;
-  }, [pickedMonths, activeMonths, availableBillingMonths]);
+    if (availableBillingMonths.includes(pickedMonths)) return pickedMonths;
+    if (availableBillingMonths.includes(1)) return 1;
+    return availableBillingMonths[0] ?? 1;
+  }, [pickedMonths, availableBillingMonths]);
 
   const firstPaidTarget = React.useMemo(() => {
     for (const plan of plans) {

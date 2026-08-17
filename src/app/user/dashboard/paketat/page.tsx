@@ -20,6 +20,10 @@ import { useUser } from '@/hooks/use-user';
 import { listMySubscriptions } from '@/lib/payments-client';
 import { paths } from '@/paths';
 
+const HUB_PAD = 1.5;
+const HUB_GAP = 1.15;
+const TILE_PAD = 1;
+
 function hubCardSx(accent: PlanAccent = 'primary') {
   return {
     ...portalCardSx,
@@ -30,9 +34,8 @@ function hubCardSx(accent: PlanAccent = 'primary') {
     flexDirection: 'column',
     flex: 1,
     minHeight: 0,
-    justifyContent: 'space-between',
-    px: { xs: 2, sm: 2.25 },
-    py: { xs: 1.65, sm: 1.85 },
+    p: HUB_PAD,
+    gap: HUB_GAP,
     cursor: 'pointer',
     WebkitTapHighlightColor: 'transparent',
     backgroundImage: (t: Theme) => packageAccentWash(t, accent),
@@ -49,6 +52,15 @@ function hubCardSx(accent: PlanAccent = 'primary') {
   } as const;
 }
 
+const hubBodySx = {
+  flex: 1,
+  minHeight: 0,
+  width: '100%',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  gap: 0.75,
+} as const;
+
 function HubHeader({
   icon,
   title,
@@ -63,8 +75,8 @@ function HubHeader({
   iconTone?: 'primary' | 'warning';
 }) {
   return (
-    <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
-      <PortalIconBox size={40} tone={iconTone}>
+    <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0, flexShrink: 0 }}>
+      <PortalIconBox size={36} tone={iconTone}>
         {icon}
       </PortalIconBox>
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0, flex: 1 }}>
@@ -134,6 +146,9 @@ function BillingPreview({ labels }: { labels: string[] }) {
         gridTemplateColumns: `repeat(${labels.length}, minmax(0, 1fr))`,
         width: '100%',
         flexShrink: 0,
+        height: 40,
+        boxSizing: 'border-box',
+        mt: 'auto',
       }}
     >
       {labels.map((label, index) => {
@@ -143,7 +158,8 @@ function BillingPreview({ labels }: { labels: string[] }) {
             key={label}
             sx={{
               minWidth: 0,
-              minHeight: 36,
+              minHeight: 0,
+              height: '100%',
               px: 0.75,
               display: 'inline-flex',
               alignItems: 'center',
@@ -181,9 +197,11 @@ function ExtraTile({
     <Box
       sx={{
         width: '100%',
+        height: '100%',
         minWidth: 0,
-        py: 1.1,
-        px: 0.5,
+        minHeight: 0,
+        boxSizing: 'border-box',
+        p: TILE_PAD,
         borderRadius: 2.25,
         border: '1px solid',
         borderColor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.32 : 0.28),
@@ -192,14 +210,14 @@ function ExtraTile({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 0.75,
+        gap: 0.5,
       }}
     >
       <Box
         sx={{
-          width: 32,
-          height: 32,
-          borderRadius: 1.75,
+          width: 28,
+          height: 28,
+          borderRadius: 1.5,
           display: 'grid',
           placeItems: 'center',
           bgcolor: (t) =>
@@ -270,9 +288,7 @@ export default function UserPackagesPage() {
             badge={activePlanLabel}
             badgeColor={activePlanBadgeColor}
           />
-          <Box sx={{ mt: 1.25, width: '100%' }}>
-            <BillingPreview labels={[t.packages.monthly, t.packages.months6, t.packages.months12]} />
-          </Box>
+          <BillingPreview labels={[t.packages.monthly, t.packages.months6, t.packages.months12]} />
         </Box>
 
         <Box component={RouterLink} href={paths.user.packagesExtra} sx={hubCardSx('primary')}>
@@ -280,15 +296,7 @@ export default function UserPackagesPage() {
             icon={<SquaresFourIcon size={22} weight="duotone" />}
             title={t.nav.packagesExtra}
           />
-          <Box
-            sx={{
-              mt: 1.25,
-              width: '100%',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-              gap: 0.75,
-            }}
-          >
+          <Box sx={hubBodySx}>
             <ExtraTile icon={<SealPercentIcon size={16} weight="bold" />} label={t.picker.okazion} accent="error" />
             <ExtraTile
               icon={<ArrowClockwiseIcon size={16} weight="bold" />}
@@ -305,15 +313,7 @@ export default function UserPackagesPage() {
             title={t.packages.buyCoinsTitle}
             iconTone="warning"
           />
-          <Box
-            sx={{
-              mt: 1.25,
-              width: '100%',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-              gap: 0.75,
-            }}
-          >
+          <Box sx={hubBodySx}>
             <ExtraTile icon={<BoostCoinIcon size={16} />} label="100 BC" accent="warning" />
             <ExtraTile icon={<BoostCoinIcon size={16} />} label="300 BC" accent="warning" />
             <ExtraTile icon={<BoostCoinIcon size={16} />} label="800 BC" accent="warning" />

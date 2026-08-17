@@ -470,7 +470,7 @@ export function MainPackagesPanel() {
       ) : null}
 
       {!loading && !error && plans.length > 0 ? (
-        <Stack spacing={1.5}>
+        <Stack spacing={1.75}>
           <ReferralDiscountNote percent={lifetimePercent} />
           <BillingPeriodPillBar
             value={selectedMonths}

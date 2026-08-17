@@ -71,6 +71,7 @@ import {
   ReferralDiscountNote,
   dualPayButtonSx,
   formatBc,
+  packageAccentSurfaceSx,
 } from './package-ui';
 import { OkazionPackagesSection } from './okazion-packages-section';
 
@@ -356,7 +357,7 @@ function AutoRefreshSection() {
       {loading ? (
         <PackageRowsSkeleton count={2} rowHeight={200} />
       ) : (
-        <Stack spacing={1.35}>
+        <Stack spacing={1.75}>
           {packages.map((pkg, index) => {
             const busy = busyId === pkg.id;
             const priceBc = Number(pkg.priceBc) || 0;
@@ -586,7 +587,7 @@ function PremiumListingSection() {
         </Stack>
       ) : null}
 
-      <Stack spacing={1.35}>
+      <Stack spacing={1.75}>
         {packages.map((pkg, index) => {
           const busy = busyId === pkg.id;
           const canAfford = balance >= pkg.priceBc;
@@ -831,12 +832,10 @@ function ConvertListingSection() {
       sx={{
         p: { xs: 1.75, sm: 2 },
         borderRadius: 3,
-        border: '1px solid',
-        borderColor: (theme) => alpha(theme.palette.warning.main, 0.36),
-        bgcolor: 'background.paper',
         scrollMarginTop: { xs: 96, md: 112 },
         overflow: 'hidden',
         position: 'relative',
+        ...packageAccentSurfaceSx('warning'),
       }}
     >
       <Box
@@ -1105,7 +1104,7 @@ export function ExtraPackagesPanel() {
   }, []);
 
   return (
-    <Stack spacing={1.5}>
+    <Stack spacing={1.75}>
       <ReferralDiscountNote percent={lifetimePercent} />
       <AutoRefreshSection />
       <OkazionPackagesSection />

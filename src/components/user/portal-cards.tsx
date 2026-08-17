@@ -52,10 +52,14 @@ export const portalToggleGroupSx: SystemStyleObject<Theme> = {
 export function PortalIconBox({
   children,
   size = 44,
+  tone = 'primary',
 }: {
   children: React.ReactNode;
   size?: number;
+  /** Amber wash for Boost Coin marks; default is brand green. */
+  tone?: 'primary' | 'warning';
 }) {
+  const amber = tone === 'warning';
   return (
     <Box
       sx={{
@@ -65,8 +69,11 @@ export function PortalIconBox({
         display: 'grid',
         placeItems: 'center',
         flexShrink: 0,
-        bgcolor: (t) => primaryMainAlpha(t.palette.mode === 'dark' ? 0.16 : 0.12),
-        color: 'primary.main',
+        bgcolor: (t) =>
+          amber
+            ? alpha(t.palette.warning.main, t.palette.mode === 'dark' ? 0.28 : 0.18)
+            : primaryMainAlpha(t.palette.mode === 'dark' ? 0.16 : 0.12),
+        color: amber ? 'warning.main' : 'primary.main',
       }}
     >
       {children}

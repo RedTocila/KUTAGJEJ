@@ -24,7 +24,7 @@ import {
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { ContentBlockSkeleton } from '@/components/core/content-skeletons';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
-import { PortalIconBox, PortalSectionCard } from '@/components/user/portal-cards';
+import { PortalIconBox, PortalSectionCard, portalToggleGroupSx } from '@/components/user/portal-cards';
 import { useCopy } from '@/hooks/use-copy';
 import {
   cancelMySubscription,
@@ -300,32 +300,24 @@ export default function MyPaymentsPage() {
                 if (value) setCategory(value);
               }}
               aria-label="Kategoria e shpenzimeve"
-              sx={{
-                mb: 1.75,
-                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'),
-                borderRadius: 2,
-                '& .MuiToggleButtonGroup-grouped': {
-                  border: 0,
-                  mx: 0,
-                  px: 1.25,
-                  py: 1,
-                  fontWeight: 800,
-                  fontSize: '0.78rem',
-                  letterSpacing: '0.02em',
-                  textTransform: 'none',
-                  color: 'text.secondary',
-                  borderRadius: '10px !important',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 0.75,
-                  '&.Mui-selected': {
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                    '&:hover': { bgcolor: 'primary.main' },
+              sx={[
+                portalToggleGroupSx,
+                {
+                  mb: 1.75,
+                  width: '100%',
+                  '& .MuiToggleButtonGroup-grouped': {
+                    flex: 1,
+                    minWidth: 0,
+                    minHeight: 38,
+                    px: 1.5,
+                    py: 0.85,
+                    gap: 0.75,
+                    fontSize: '0.8rem',
+                    letterSpacing: '0.01em',
+                    textTransform: 'none',
                   },
                 },
-              }}
+              ]}
             >
               <ToggleButton value="money" aria-label="Shpenzime me para">
                 <CurrencyEurIcon size={16} weight="bold" />

@@ -124,7 +124,7 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
       {loading ? (
         <PackageRowsSkeleton count={6} />
       ) : (
-        <Stack spacing={1.25}>
+        <Stack spacing={1.75}>
           <ReferralDiscountNote percent={lifetimePercent} />
           {packages.map((pkg) => {
             const bonus = Number(pkg.bonusCredits) || 0;

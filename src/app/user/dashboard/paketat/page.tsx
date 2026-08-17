@@ -2,10 +2,9 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { Box, Stack, Typography } from '@mui/material';
+import { Box, Chip, Stack, Typography } from '@mui/material';
 import { alpha, type Theme } from '@mui/material/styles';
 import { ArrowClockwise as ArrowClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowClockwise';
-import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
@@ -14,20 +13,17 @@ import { StarFour as StarFourIcon } from '@phosphor-icons/react/dist/ssr/StarFou
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
-import {
-  planAccentForCode,
-  resolveAccent,
-  type PlanAccent,
-} from '@/components/user/packages/package-ui';
+import { planAccentForCode, resolveAccent, type PlanAccent, packageAccentSurfaceSx, packageAccentWash } from '@/components/user/packages/package-ui';
+import { PortalIconBox, portalCardSx, portalToggleGroupSx } from '@/components/user/portal-cards';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import { listMySubscriptions } from '@/lib/payments-client';
 import { paths } from '@/paths';
-import { MOTION } from '@/styles/motion';
 
 function hubCardSx(accent: PlanAccent = 'primary') {
   return {
-    position: 'relative',
+    ...portalCardSx,
+    ...packageAccentSurfaceSx(accent),
     textDecoration: 'none',
     color: 'inherit',
     display: 'flex',
@@ -35,74 +31,22 @@ function hubCardSx(accent: PlanAccent = 'primary') {
     flex: 1,
     minHeight: 0,
     justifyContent: 'space-between',
-    px: 1.75,
-    py: 1.5,
-    borderRadius: 3,
-    border: '1px solid',
-    overflow: 'hidden',
-    bgcolor: 'background.paper',
-    borderColor: (t: Theme) => alpha(resolveAccent(t, accent), 0.36),
-    backgroundImage: (t: Theme) =>
-      `linear-gradient(135deg, ${alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.1 : 0.05)} 0%, transparent 58%)`,
-    transition: `border-color ${MOTION.fast} ${MOTION.ease}`,
+    px: { xs: 2, sm: 2.25 },
+    py: { xs: 1.65, sm: 1.85 },
+    cursor: 'pointer',
+    WebkitTapHighlightColor: 'transparent',
+    backgroundImage: (t: Theme) => packageAccentWash(t, accent),
+    transition:
+      'border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), background-color 140ms cubic-bezier(0.22, 1, 0.36, 1)',
     '&:hover': {
       borderColor: (t: Theme) => alpha(resolveAccent(t, accent), 0.72),
-      '& .packages-hub-caret-circle': {
+      '& .packages-hub-caret': {
+        transform: 'translateX(3px)',
         color: (th: Theme) => resolveAccent(th, accent),
-        borderColor: (th: Theme) => alpha(resolveAccent(th, accent), 0.55),
+        opacity: 1,
       },
     },
   } as const;
-}
-
-function CircleIcon({
-  children,
-  accent = 'primary',
-}: {
-  children: React.ReactNode;
-  accent?: PlanAccent;
-}) {
-  return (
-    <Box
-      sx={{
-        width: 44,
-        height: 44,
-        borderRadius: '50%',
-        display: 'grid',
-        placeItems: 'center',
-        flexShrink: 0,
-        border: '1.5px solid',
-        borderColor: (t) => resolveAccent(t, accent),
-        bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.16 : 0.1),
-        color: (t) => resolveAccent(t, accent),
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-function CircleCaret() {
-  return (
-    <Box
-      className="packages-hub-caret-circle"
-      aria-hidden
-      sx={{
-        width: 32,
-        height: 32,
-        borderRadius: '50%',
-        display: 'grid',
-        placeItems: 'center',
-        flexShrink: 0,
-        border: '1px solid',
-        borderColor: 'divider',
-        color: 'text.disabled',
-        transition: `color ${MOTION.fast} ${MOTION.ease}, border-color ${MOTION.fast} ${MOTION.ease}`,
-      }}
-    >
-      <CaretRightIcon size={14} weight="bold" />
-    </Box>
-  );
 }
 
 function HubHeader({
@@ -110,55 +54,72 @@ function HubHeader({
   title,
   badge,
   badgeColor,
-  accent = 'primary',
+  iconTone = 'primary',
 }: {
   icon: React.ReactNode;
   title: string;
   badge?: string;
   badgeColor?: string;
-  accent?: PlanAccent;
+  iconTone?: 'primary' | 'warning';
 }) {
   return (
-    <Stack direction="row" spacing={1.15} sx={{ alignItems: 'center', minWidth: 0 }}>
-      <CircleIcon accent={accent}>{icon}</CircleIcon>
-      <Stack
-        direction="row"
-        spacing={0.75}
-        sx={{ alignItems: 'center', minWidth: 0, flex: 1, flexWrap: 'wrap', gap: 0.5 }}
-      >
+    <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+      <PortalIconBox size={40} tone={iconTone}>
+        {icon}
+      </PortalIconBox>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0, flex: 1 }}>
         <Typography
           sx={{
-            fontWeight: 900,
-            fontSize: { xs: '1.08rem', sm: '1.22rem' },
-            lineHeight: 1.15,
-            letterSpacing: '-0.02em',
+            fontWeight: 800,
+            fontSize: '1.05rem',
+            lineHeight: 1.25,
+            letterSpacing: '-0.01em',
             minWidth: 0,
           }}
+          noWrap
         >
           {title}
         </Typography>
         {badge ? (
-          <Box
+          <Chip
+            label={badge}
+            size="small"
             sx={{
-              px: 0.85,
-              py: 0.22,
-              borderRadius: 999,
-              bgcolor: badgeColor || 'primary.main',
-              color: 'common.white',
-              fontWeight: 850,
-              fontSize: '0.58rem',
-              lineHeight: 1.3,
+              flexShrink: 0,
+              height: 22,
+              fontWeight: 800,
+              fontSize: '0.68rem',
               letterSpacing: '0.06em',
               textTransform: 'uppercase',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
+              border: 'none',
+              '& .MuiChip-label': { px: 1.1 },
+              ...(badgeColor
+                ? {
+                    bgcolor: (t) => alpha(badgeColor, t.palette.mode === 'dark' ? 0.22 : 0.14),
+                    color: badgeColor,
+                  }
+                : {
+                    bgcolor: (t) =>
+                      t.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                    color: 'text.primary',
+                  }),
             }}
-          >
-            {badge}
-          </Box>
+          />
         ) : null}
       </Stack>
-      <CircleCaret />
+      <Box
+        className="packages-hub-caret"
+        aria-hidden
+        sx={{
+          color: 'text.secondary',
+          display: 'flex',
+          flexShrink: 0,
+          opacity: 0.7,
+          transition: 'transform 160ms cubic-bezier(0.22, 1, 0.36, 1), color 160ms ease, opacity 160ms ease',
+        }}
+      >
+        <CaretRightIcon size={20} weight="bold" />
+      </Box>
     </Stack>
   );
 }
@@ -168,16 +129,11 @@ function BillingPreview({ labels }: { labels: string[] }) {
     <Box
       aria-hidden
       sx={{
-        width: '100%',
-        height: 48,
-        boxSizing: 'border-box',
-        p: '4px',
+        ...portalToggleGroupSx,
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-        borderRadius: 999,
-        border: '1px solid',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
+        gridTemplateColumns: `repeat(${labels.length}, minmax(0, 1fr))`,
+        width: '100%',
+        flexShrink: 0,
       }}
     >
       {labels.map((label, index) => {
@@ -187,44 +143,24 @@ function BillingPreview({ labels }: { labels: string[] }) {
             key={label}
             sx={{
               minWidth: 0,
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
+              minHeight: 36,
+              px: 0.75,
+              display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 0.1,
               borderRadius: 999,
-              border: '1.5px solid',
-              ...(active
-                ? {
-                    bgcolor: 'transparent',
-                    borderColor: 'primary.main',
-                    color: 'primary.main',
-                  }
-                : {
-                    color: 'text.secondary',
-                    bgcolor: 'transparent',
-                    borderColor: 'transparent',
-                  }),
+              bgcolor: active ? 'primary.main' : 'transparent',
+              color: active ? 'primary.contrastText' : 'text.secondary',
+              fontWeight: 800,
+              fontSize: '0.72rem',
+              letterSpacing: '0.01em',
+              lineHeight: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
-            <CalendarBlankIcon size={14} weight={active ? 'bold' : 'regular'} />
-            <Typography
-              sx={{
-                fontSize: '0.62rem',
-                fontWeight: 800,
-                lineHeight: 1,
-                letterSpacing: '0.01em',
-                color: 'inherit',
-                maxWidth: '100%',
-                px: 0.35,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {label}
-            </Typography>
+            {label}
           </Box>
         );
       })}
@@ -246,32 +182,47 @@ function ExtraTile({
       sx={{
         width: '100%',
         minWidth: 0,
-        py: 1.05,
+        py: 1.1,
         px: 0.5,
-        borderRadius: 2.5,
+        borderRadius: 2.25,
         border: '1px solid',
-        borderColor: (t) => alpha(resolveAccent(t, accent), 0.4),
-        bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.12 : 0.07),
+        borderColor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.32 : 0.28),
+        bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.12 : 0.08),
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 0.5,
+        gap: 0.75,
       }}
     >
-      <Box sx={{ color: (t) => resolveAccent(t, accent), display: 'grid', lineHeight: 0 }}>
+      <Box
+        sx={{
+          width: 32,
+          height: 32,
+          borderRadius: 1.75,
+          display: 'grid',
+          placeItems: 'center',
+          bgcolor: (t) =>
+            alpha(
+              resolveAccent(t, accent),
+              t.palette.mode === 'dark' ? (accent === 'warning' ? 0.32 : 0.22) : accent === 'warning' ? 0.2 : 0.16,
+            ),
+          color: (t) => resolveAccent(t, accent),
+        }}
+      >
         {icon}
       </Box>
       <Typography
         sx={{
-          fontSize: '0.62rem',
+          fontSize: '0.68rem',
           fontWeight: 800,
           lineHeight: 1.15,
-          letterSpacing: '0.04em',
-          textTransform: 'uppercase',
-          color: (t) => resolveAccent(t, accent),
+          color: 'text.primary',
           textAlign: 'center',
           maxWidth: '100%',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
         }}
       >
         {label}
@@ -314,54 +265,58 @@ export default function UserPackagesPage() {
       <Stack spacing={1.25} sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <Box component={RouterLink} href={paths.user.packagesMain} sx={hubCardSx('primary')}>
           <HubHeader
-            icon={<PackageIcon size={20} weight="regular" />}
+            icon={<PackageIcon size={22} weight="duotone" />}
             title={t.packages.plansTitle}
             badge={activePlanLabel}
             badgeColor={activePlanBadgeColor}
           />
-          <Box sx={{ mt: 1.15, width: '100%' }}>
+          <Box sx={{ mt: 1.25, width: '100%' }}>
             <BillingPreview labels={[t.packages.monthly, t.packages.months6, t.packages.months12]} />
           </Box>
         </Box>
 
         <Box component={RouterLink} href={paths.user.packagesExtra} sx={hubCardSx('primary')}>
           <HubHeader
-            icon={<SquaresFourIcon size={20} weight="regular" />}
+            icon={<SquaresFourIcon size={22} weight="duotone" />}
             title={t.nav.packagesExtra}
           />
           <Box
             sx={{
-              mt: 1.15,
+              mt: 1.25,
               width: '100%',
               display: 'grid',
               gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
               gap: 0.75,
             }}
           >
-            <ExtraTile icon={<SealPercentIcon size={22} weight="regular" />} label={t.picker.okazion} accent="error" />
-            <ExtraTile icon={<ArrowClockwiseIcon size={22} weight="regular" />} label={t.packages.autoRefreshTitle} accent="primary" />
-            <ExtraTile icon={<StarFourIcon size={22} weight="regular" />} label="Premium" accent="warning" />
+            <ExtraTile icon={<SealPercentIcon size={16} weight="bold" />} label={t.picker.okazion} accent="error" />
+            <ExtraTile
+              icon={<ArrowClockwiseIcon size={16} weight="bold" />}
+              label={t.packages.autoRefreshTitle}
+              accent="primary"
+            />
+            <ExtraTile icon={<StarFourIcon size={16} weight="bold" />} label="Premium" accent="warning" />
           </Box>
         </Box>
 
         <Box component={RouterLink} href={paths.user.packagesCredits} sx={hubCardSx('warning')}>
           <HubHeader
-            icon={<BoostCoinIcon size={20} />}
+            icon={<BoostCoinIcon size={22} />}
             title={t.packages.buyCoinsTitle}
-            accent="warning"
+            iconTone="warning"
           />
           <Box
             sx={{
-              mt: 1.15,
+              mt: 1.25,
               width: '100%',
               display: 'grid',
               gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
               gap: 0.75,
             }}
           >
-            <ExtraTile icon={<BoostCoinIcon size={22} />} label="100 BC" accent="warning" />
-            <ExtraTile icon={<BoostCoinIcon size={22} />} label="300 BC" accent="warning" />
-            <ExtraTile icon={<BoostCoinIcon size={22} />} label="800 BC" accent="warning" />
+            <ExtraTile icon={<BoostCoinIcon size={16} />} label="100 BC" accent="warning" />
+            <ExtraTile icon={<BoostCoinIcon size={16} />} label="300 BC" accent="warning" />
+            <ExtraTile icon={<BoostCoinIcon size={16} />} label="800 BC" accent="warning" />
           </Box>
         </Box>
       </Stack>

@@ -30,6 +30,22 @@ export function resolveAccent(theme: Theme, accent: PlanAccent = 'primary'): str
   return accent;
 }
 
+export function packageAccentWash(theme: Theme, accent: PlanAccent, highlighted = false) {
+  const a = resolveAccent(theme, accent);
+  const dark = theme.palette.mode === 'dark';
+  return `linear-gradient(135deg, ${alpha(a, dark ? (highlighted ? 0.18 : 0.1) : highlighted ? 0.1 : 0.05)} 0%, transparent 58%)`;
+}
+
+/** Accent border + inner wash — no outer glow. */
+export function packageAccentSurfaceSx(accent: PlanAccent = 'primary', highlighted = false) {
+  return {
+    border: '1px solid',
+    borderColor: (t: Theme) => alpha(resolveAccent(t, accent), highlighted ? 0.78 : 0.42),
+    bgcolor: 'background.paper',
+    boxShadow: 'none',
+  } as const;
+}
+
 /** FREE blue · STARTER mint · GROW orange · ELITE red */
 export const PLAN_ACCENT_BY_CODE: Record<string, PlanAccent> = {
   free: '#3b82f6',
@@ -828,12 +844,10 @@ export function PackageCheckoutCard({
       sx={{
         position: 'relative',
         borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
         overflow: 'visible',
-        transition: 'border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease',
+        transition: 'border-color 0.15s ease, background-color 0.15s ease',
         cursor: onClick ? 'pointer' : undefined,
+        ...packageAccentSurfaceSx(accent, selected),
         ...selectedSx,
         ...(onClick || actions
           ? {
@@ -844,6 +858,15 @@ export function PackageCheckoutCard({
           : null),
       }}
     >
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          borderRadius: 'inherit',
+          background: (t) => packageAccentWash(t, accent, selected),
+        }}
+      />
       {selected ? (
         <Box
           sx={{
@@ -866,7 +889,7 @@ export function PackageCheckoutCard({
         </Box>
       ) : null}
 
-      <Box sx={{ px: padX, pt: padY, pb: hasFooter || actions ? 1.15 : padY }}>
+      <Box sx={{ position: 'relative', px: padX, pt: padY, pb: hasFooter || actions ? 1.15 : padY }}>
         <Box
           sx={{
             display: 'flex',
@@ -886,7 +909,17 @@ export function PackageCheckoutCard({
                 flexShrink: 0,
                 border: '1.5px solid',
                 borderColor: (t) => resolveAccent(t, accent),
-                bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.12 : 0.08),
+                bgcolor: (t) =>
+                  alpha(
+                    resolveAccent(t, accent),
+                    t.palette.mode === 'dark'
+                      ? accent === 'warning'
+                        ? 0.28
+                        : 0.12
+                      : accent === 'warning'
+                        ? 0.18
+                        : 0.08,
+                  ),
                 color: (t) => resolveAccent(t, accent),
               }}
             >
@@ -923,14 +956,14 @@ export function PackageCheckoutCard({
       </Box>
 
       {actions ? (
-        <Stack direction="row" spacing={1} sx={{ px: padX, pb: hasFooter ? 1.15 : padY }}>
+        <Stack direction="row" spacing={1} sx={{ position: 'relative', px: padX, pb: hasFooter ? 1.15 : padY }}>
           {actions}
         </Stack>
       ) : null}
 
       {hasFooter ? (
         <Box
-          sx={{ px: padX, pb: padY, pt: 0 }}
+          sx={{ position: 'relative', px: padX, pb: padY, pt: 0 }}
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -982,21 +1015,14 @@ export function ExtraPackageCard({
 }) {
   const hasDetails = details.length > 0;
   const padX = { xs: 1.75, sm: 2 };
-  const wash = (t: Theme) => {
-    const a = resolveAccent(t, accent);
-    const dark = t.palette.mode === 'dark';
-    return `linear-gradient(135deg, ${alpha(a, dark ? (highlighted ? 0.18 : 0.1) : highlighted ? 0.1 : 0.05)} 0%, transparent 58%)`;
-  };
 
   return (
     <Box
       sx={{
         position: 'relative',
         borderRadius: 3,
-        border: '1px solid',
-        borderColor: (t) => alpha(resolveAccent(t, accent), highlighted ? 0.78 : 0.36),
-        bgcolor: 'background.paper',
         overflow: 'hidden',
+        ...packageAccentSurfaceSx(accent, highlighted),
       }}
     >
       <Box
@@ -1004,7 +1030,8 @@ export function ExtraPackageCard({
           position: 'absolute',
           inset: 0,
           pointerEvents: 'none',
-          background: wash,
+          borderRadius: 'inherit',
+          background: (t) => packageAccentWash(t, accent, highlighted),
         }}
       />
 

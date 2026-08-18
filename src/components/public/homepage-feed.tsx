@@ -2,37 +2,59 @@ import * as React from 'react';
 import { unstable_noStore as noStore } from 'next/cache';
 
 import { HomepageCacheSync } from '@/components/public/homepage-cache-sync';
-import { HomepageCarousels } from '@/components/public/homepage-carousels';
-import { HomeCarouselsFallback } from '@/components/public/home-carousels-fallback';
+import { HomepageBelowFold } from '@/components/public/homepage-carousels';
+import { HomeOkazionFallback, HomeRecommendedFallback } from '@/components/public/home-carousels-fallback';
+import { HomepageOkazionSection } from '@/components/public/homepage-okazion-section';
+import { HomepageRecommendedSection } from '@/components/public/homepage-recommended-section';
 import { homepageItemListJsonLd } from '@/lib/homepage-json-ld';
-import { homepageBundleHasListings } from '@/lib/homepage-session-cache';
-import { fetchHomepageListings } from '@/lib/public-listings-client';
+import { buildHomepageMixedLatest } from '@/lib/homepage-latest-listings';
+import { fetchBrowseOkazion, fetchHomepageRecommended } from '@/lib/public-listings-client';
 import { config } from '@/config';
 
 /**
- * Homepage listing carousels + JSON-LD ItemLists.
- * Fetched as one `/public/listings/latest` round-trip and streamed behind Suspense.
+ * Priority homepage: recommended streams first, OKAZION next, category rows on scroll.
  */
-export async function HomepageFeed(): Promise<React.JSX.Element> {
-  const bundle = await fetchHomepageListings(8);
+export function HomepageFeed(): React.JSX.Element {
+  return (
+    <>
+      <React.Suspense fallback={<HomeRecommendedFallback />}>
+        <HomepageRecommendedFeed />
+      </React.Suspense>
+      <React.Suspense fallback={<HomeOkazionFallback />}>
+        <HomepageOkazionFeed />
+      </React.Suspense>
+      <HomepageBelowFold />
+    </>
+  );
+}
+
+async function HomepageRecommendedFeed(): Promise<React.JSX.Element> {
+  const bundle = await fetchHomepageRecommended(8);
   if (!bundle.ok) {
     noStore();
   }
 
-  if (!bundle.ok && !homepageBundleHasListings(bundle)) {
-    return <HomeCarouselsFallback refresh />;
-  }
-
+  const mixed = buildHomepageMixedLatest(bundle, 8);
   const siteOrigin = config.site.url.replace(/\/$/, '');
-  const itemListLd = homepageItemListJsonLd(bundle, siteOrigin);
+  const itemListLd = bundle.ok ? homepageItemListJsonLd(bundle, siteOrigin) : [];
 
   return (
     <>
       {itemListLd.map((ld, i) => (
         <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       ))}
-      <HomepageCacheSync bundle={bundle} />
-      <HomepageCarousels bundle={bundle} ssrOk={bundle.ok} />
+      {bundle.ok ? <HomepageCacheSync bundle={bundle} /> : null}
+      <HomepageRecommendedSection fallbackItems={mixed} ssrOk={bundle.ok} />
     </>
   );
+}
+
+async function HomepageOkazionFeed(): Promise<React.JSX.Element | null> {
+  const res = await fetchBrowseOkazion(8);
+  if (!res.ok) {
+    noStore();
+    return <HomepageOkazionSection listings={[]} total={0} ssrOk={false} />;
+  }
+  if (res.listings.length === 0) return null;
+  return <HomepageOkazionSection listings={res.listings} total={res.total} ssrOk />;
 }

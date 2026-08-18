@@ -35,6 +35,17 @@ function CarouselRowSkeleton() {
   );
 }
 
+/** One homepage carousel placeholder (recommended / OKAZION suspense). */
+export function HomeCarouselRowSkeleton({ compactTop = false }: { compactTop?: boolean }): React.JSX.Element {
+  return (
+    <Box sx={{ bgcolor: 'background.default', pt: compactTop ? 0 : { xs: 3, md: 4 }, pb: { xs: 3, md: 4 } }} aria-busy>
+      <Container maxWidth="xl" sx={{ px: { xs: 2, md: 3, lg: 4 } }}>
+        <CarouselRowSkeleton />
+      </Container>
+    </Box>
+  );
+}
+
 /** Placeholder while homepage listing carousels stream in. */
 export function HomeCarouselsSkeleton(): React.JSX.Element {
   return (

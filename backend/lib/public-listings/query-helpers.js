@@ -335,7 +335,10 @@ async function enrichTextSearchWithLocations(spec, q) {
 async function buildCityIndex(docs) {
   const cityIds = [...new Set((docs || []).map((d) => d.cityId).filter(Boolean))];
   if (cityIds.length === 0) return new Map();
-  const { data, error } = await getSupabaseAdmin().from('real_estate_cities').select('*').in('id', cityIds);
+  const { data, error } = await getSupabaseAdmin()
+    .from('real_estate_cities')
+    .select('id, name, zones')
+    .in('id', cityIds);
   if (error) throw error;
   const cities = camelizeRows(data);
   return new Map(cities.map((c) => [c.id, c]));

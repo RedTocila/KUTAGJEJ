@@ -1,7 +1,19 @@
 import type { HomepageLatestVerticalId, PublicListingsBundle } from '@/lib/public-listings-client';
 
-const STORAGE_KEY = 'kutagjej:home-listings:v1';
+const STORAGE_KEY = 'kutagjej:home-listings:v2';
 const MAX_AGE_MS = 10 * 60 * 1000;
+
+const EMPTY_BUNDLE: PublicListingsBundle = {
+  realEstate: [],
+  cars: [],
+  jobs: [],
+  marketplace: [],
+  businesses: [],
+  professionals: [],
+  okazion: [],
+  okazionTotal: 0,
+  totals: { realEstate: 0, cars: 0, jobs: 0, marketplace: 0, businesses: 0, professionals: 0 },
+};
 
 type Stored = { at: number; bundle: PublicListingsBundle };
 
@@ -58,18 +70,78 @@ export function sliceHomepageVertical(
   return { listings: slice.listings.slice(0, limit), total: slice.total };
 }
 
+export function patchHomepageVertical(
+  verticalId: HomepageLatestVerticalId,
+  listings: unknown[],
+  total = 0,
+): void {
+  const totalsPatch =
+    total > 0
+      ? {
+          realEstate: verticalId === 'real-estate' ? total : undefined,
+          cars: verticalId === 'cars' ? total : undefined,
+          jobs: verticalId === 'jobs' ? total : undefined,
+          marketplace: verticalId === 'marketplace' ? total : undefined,
+          businesses: verticalId === 'businesses' ? total : undefined,
+          professionals: verticalId === 'professionals' ? total : undefined,
+        }
+      : undefined;
+  const totals = totalsPatch
+    ? Object.fromEntries(Object.entries(totalsPatch).filter(([, v]) => typeof v === 'number')) as PublicListingsBundle['totals']
+    : undefined;
+  patchHomepageListingsCache({
+    ...(verticalId === 'real-estate' ? { realEstate: listings as PublicListingsBundle['realEstate'] } : {}),
+    ...(verticalId === 'cars' ? { cars: listings as PublicListingsBundle['cars'] } : {}),
+    ...(verticalId === 'jobs' ? { jobs: listings as PublicListingsBundle['jobs'] } : {}),
+    ...(verticalId === 'marketplace' ? { marketplace: listings as PublicListingsBundle['marketplace'] } : {}),
+    ...(verticalId === 'businesses' ? { businesses: listings as PublicListingsBundle['businesses'] } : {}),
+    ...(verticalId === 'professionals' ? { professionals: listings as PublicListingsBundle['professionals'] } : {}),
+    ...(totals ? { totals } : {}),
+  });
+}
+
 export function writeHomepageListingsCache(bundle: PublicListingsBundle): void {
-  if (!homepageBundleHasListings(bundle)) return;
-  memory = bundle;
+  patchHomepageListingsCache(bundle);
+}
+
+/** Merge a partial homepage payload so recommended / OKAZION / lazy rows can update independently. */
+export function patchHomepageListingsCache(patch: Partial<PublicListingsBundle>): void {
+  const prev = getHomepageListingsCacheSnapshot() ?? EMPTY_BUNDLE;
+  const next: PublicListingsBundle = {
+    realEstate: patch.realEstate ?? prev.realEstate,
+    cars: patch.cars ?? prev.cars,
+    jobs: patch.jobs ?? prev.jobs,
+    marketplace: patch.marketplace ?? prev.marketplace,
+    businesses: patch.businesses ?? prev.businesses,
+    professionals: patch.professionals ?? prev.professionals,
+    okazion: patch.okazion ?? prev.okazion,
+    okazionTotal: patch.okazionTotal ?? prev.okazionTotal,
+    totals: mergeTotals(prev.totals, patch.totals),
+  };
+  if (!homepageBundleHasListings(next)) return;
+  memory = next;
   if (typeof window !== 'undefined') {
     try {
-      const stored: Stored = { at: Date.now(), bundle };
+      const stored: Stored = { at: Date.now(), bundle: next };
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
     } catch {
       // quota / private mode
     }
   }
   emit();
+}
+
+function mergeTotals(
+  prev: PublicListingsBundle['totals'],
+  patch?: PublicListingsBundle['totals'],
+): PublicListingsBundle['totals'] {
+  if (!patch) return prev;
+  const next = { ...prev };
+  for (const key of Object.keys(next) as (keyof PublicListingsBundle['totals'])[]) {
+    const n = patch[key];
+    if (typeof n === 'number' && n > 0) next[key] = n;
+  }
+  return next;
 }
 
 function readSession(): PublicListingsBundle | null {

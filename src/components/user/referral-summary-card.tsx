@@ -276,8 +276,17 @@ export function ReferralSummaryCard() {
           </IconButton>
         </Stack>
 
-        <Stack spacing={0.55}>
-          <Stack direction="row" spacing={0.65} sx={{ alignItems: 'center' }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'auto 1fr auto',
+            alignItems: 'center',
+            columnGap: 1,
+            width: '100%',
+          }}
+          aria-label={`${streakCurrent}/${required}`}
+        >
+          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0 }}>
             <Box sx={{ color: 'primary.main', display: 'inline-flex', flexShrink: 0, lineHeight: 0 }}>
               <FireIcon size={14} weight="fill" />
             </Box>
@@ -292,8 +301,7 @@ export function ReferralSummaryCard() {
           </Stack>
           <Stack
             direction="row"
-            sx={{ alignItems: 'center', width: '100%', justifyContent: 'space-between' }}
-            aria-label={`${streakCurrent}/${required}`}
+            sx={{ alignItems: 'center', justifyContent: 'space-between', minWidth: 0, px: 0.25 }}
           >
             {Array.from({ length: streakDots }, (_, index) => {
               const done = !loading && index < streakCurrent;
@@ -317,11 +325,11 @@ export function ReferralSummaryCard() {
                 </Box>
               );
             })}
-            <Typography sx={{ fontWeight: 750, fontSize: '0.7rem', color: 'text.secondary', flexShrink: 0 }}>
-              +{streakReward} BC
-            </Typography>
           </Stack>
-        </Stack>
+          <Typography sx={{ fontWeight: 750, fontSize: '0.7rem', color: 'text.secondary', textAlign: 'right' }}>
+            +{streakReward} BC
+          </Typography>
+        </Box>
       </Stack>
     </Box>
   );

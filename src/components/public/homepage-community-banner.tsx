@@ -5,14 +5,35 @@ import * as React from 'react';
 import { HomepageBanner } from '@/components/public/homepage-banner';
 import { HowItWorksTutorial } from '@/components/public/how-it-works-tutorial';
 import { useCopy } from '@/hooks/use-copy';
+import { getHomepageListingsCacheSnapshot } from '@/lib/homepage-session-cache';
 import { paths } from '@/paths';
 
 export function HomepageCommunityBanner({
-  activeListingsCount,
+  activeListingsCount = 0,
 }: {
-  activeListingsCount: number;
+  activeListingsCount?: number;
 }) {
   const t = useCopy();
+  const cached = getHomepageListingsCacheSnapshot();
+  const fromCache = cached
+    ? cached.totals.realEstate + cached.totals.cars + cached.totals.jobs
+    : 0;
+  const count = activeListingsCount > 0 ? activeListingsCount : fromCache;
+  const stats =
+    count > 0
+      ? [
+          {
+            value: count,
+            suffix: '+',
+            label: t.home.activeListings,
+          },
+          { value: 6, label: t.home.mainCategories },
+          { value: 12, suffix: '+', label: t.home.citiesCovered },
+        ]
+      : [
+          { value: 6, label: t.home.mainCategories },
+          { value: 12, suffix: '+', label: t.home.citiesCovered },
+        ];
 
   return (
     <HomepageBanner
@@ -22,15 +43,7 @@ export function HomepageCommunityBanner({
       subtitle={t.home.communitySubtitle}
       primaryAction={{ label: t.home.exploreListings, href: paths.public.realEstate }}
       secondaryAction={{ label: t.common.postFree, href: paths.user.realEstateListing }}
-      stats={[
-        {
-          value: activeListingsCount,
-          suffix: '+',
-          label: t.home.activeListings,
-        },
-        { value: 6, label: t.home.mainCategories },
-        { value: 12, suffix: '+', label: t.home.citiesCovered },
-      ]}
+      stats={stats}
     />
   );
 }

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Box, Skeleton, Stack } from '@mui/material';
 
-import { getHomepageListingsCacheSnapshot, sliceHomepageVertical } from '@/lib/homepage-session-cache';
+import { getHomepageListingsCacheSnapshot, patchHomepageVertical, sliceHomepageVertical } from '@/lib/homepage-session-cache';
 import {
   fetchLatestVertical,
   type HomepageLatestVerticalId,
@@ -96,11 +96,21 @@ export function LazyHomeSection({
   const key = cacheKey(verticalId, limit);
   const cached = sectionCache.get(key);
   const ssrTrusted = Boolean(initialListings && initialListings.length > 0);
+  const sessionSlice =
+    !ssrTrusted && !cached
+      ? (() => {
+          const session = getHomepageListingsCacheSnapshot();
+          return session ? sliceHomepageVertical(session, verticalId, limit) : null;
+        })()
+      : null;
+  const sessionListings = (sessionSlice?.listings as HomeListing[] | undefined) ?? [];
 
   const [listings, setListings] = React.useState<HomeListing[]>(
-    () => (ssrTrusted ? initialListings! : cached?.listings) ?? []
+    () => (ssrTrusted ? initialListings! : cached?.listings ?? sessionListings) ?? []
   );
-  const [total, setTotal] = React.useState(() => (ssrTrusted ? initialTotal : undefined) ?? cached?.total ?? 0);
+  const [total, setTotal] = React.useState(
+    () => (ssrTrusted ? initialTotal : undefined) ?? cached?.total ?? sessionSlice?.total ?? 0
+  );
   const [loaded, setLoaded] = React.useState(() => ssrTrusted || Boolean(cached));
   const [active, setActive] = React.useState(() => eager || ssrTrusted || Boolean(cached));
   const rootRef = React.useRef<HTMLDivElement | null>(null);
@@ -149,6 +159,7 @@ export function LazyHomeSection({
       // Only cache successful responses — failed empties must not stick forever.
       if (res.ok) {
         sectionCache.set(key, { listings: res.listings, total: res.total });
+        patchHomepageVertical(verticalId, res.listings, res.total);
         setListings(res.listings);
         setTotal(res.total);
       }

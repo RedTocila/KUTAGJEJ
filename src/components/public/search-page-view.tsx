@@ -37,6 +37,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { useHistoryBackProps } from '@/hooks/use-navigate-back';
 import { fetchAiSearch, type AiSearchResult } from '@/lib/ai-search-client';
 import { hardRefreshToTop } from '@/lib/hard-navigate';
+import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
@@ -393,8 +394,21 @@ export function SearchPageView() {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ pt: { xs: 1.5, md: 2.5 }, pb: { xs: 2.5, md: 4 }, px: { xs: 2, sm: 3 } }}>
-      <Stack spacing={2}>
+    <Container
+      maxWidth="xl"
+      sx={{
+        pt: { xs: 1.5, md: 2.5 },
+        pb: { xs: 2.5, md: 4 },
+        px: { xs: 2, sm: 3 },
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: {
+          xs: `calc(100dvh - (${MOBILE_CONTENT_BOTTOM_PADDING}))`,
+          md: '100dvh',
+        },
+      }}
+    >
+      <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
         <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
           <Typography sx={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.01em' }}>
             {t.search.title}
@@ -406,149 +420,186 @@ export function SearchPageView() {
 
         <HeroCategoryCircles variant="tabs" selectedIndex={selectedIndex} onSelect={handleSelectCategory} />
 
-        {!categoryId ? (
-          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 1 }}>
-            {t.search.pickCategory}
-          </Typography>
-        ) : (
-          <Box
-            component="form"
-            onSubmit={handleSubmit}
-            sx={{
-              display: 'flex',
-              gap: 1,
-              p: 1,
-              alignItems: inputExpanded ? 'flex-end' : 'center',
-              transition: 'border-radius 120ms ease',
-              ...productSearchBarSx(
-                Boolean(query.trim()),
-                isAi
-                  ? { color: AI_SEARCH_BLUE, soft: AI_SEARCH_BLUE_SOFT }
-                  : isOkazion
-                    ? { color: OKAZION_ACCENT, soft: OKAZION_ACCENT_SOFT }
-                    : undefined,
-              ),
-              borderRadius: inputExpanded ? 2.5 : 999,
-              height: 'auto',
-              minHeight: 40,
-            }}
-          >
-            <TextField
-              fullWidth
-              size="small"
-              autoComplete="off"
-              inputRef={inputRef}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                  event.preventDefault();
-                  handleSubmit();
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          aria-disabled={!categoryId}
+          sx={{
+            display: 'flex',
+            gap: 1,
+            p: 1,
+            alignItems: inputExpanded ? 'flex-end' : 'center',
+            transition: 'border-radius 120ms ease, opacity 160ms ease',
+            ...productSearchBarSx(
+              Boolean(categoryId && query.trim()),
+              isAi
+                ? { color: AI_SEARCH_BLUE, soft: AI_SEARCH_BLUE_SOFT }
+                : isOkazion
+                  ? { color: OKAZION_ACCENT, soft: OKAZION_ACCENT_SOFT }
+                  : undefined,
+            ),
+            borderRadius: inputExpanded ? 2.5 : 999,
+            height: 'auto',
+            minHeight: 40,
+            ...(!categoryId
+              ? {
+                  opacity: 0.48,
+                  cursor: 'not-allowed',
+                  bgcolor: 'action.hover',
                 }
-              }}
-              placeholder={activeCategory?.searchPlaceholder ?? t.search.genericPlaceholder}
-              multiline
-              minRows={1}
-              maxRows={4}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment
-                      position="start"
-                      sx={{
-                        alignSelf: inputExpanded ? 'flex-start' : 'center',
-                        mt: inputExpanded ? 0.75 : 0,
-                      }}
+              : null),
+          }}
+        >
+          <TextField
+            fullWidth
+            size="small"
+            autoComplete="off"
+            disabled={!categoryId}
+            inputRef={inputRef}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (!categoryId) {
+                event.preventDefault();
+                return;
+              }
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                handleSubmit();
+              }
+            }}
+            placeholder={activeCategory?.searchPlaceholder ?? t.search.genericPlaceholder}
+            multiline
+            minRows={1}
+            maxRows={4}
+            slotProps={{
+              input: {
+                readOnly: !categoryId,
+                startAdornment: (
+                  <InputAdornment
+                    position="start"
+                    sx={{
+                      alignSelf: inputExpanded ? 'flex-start' : 'center',
+                      mt: inputExpanded ? 0.75 : 0,
+                    }}
+                  >
+                    {isAi ? (
+                      <SparkleIcon size={18} color={AI_SEARCH_BLUE} />
+                    ) : (
+                      <ProductSearchIcon color={isOkazion ? OKAZION_ACCENT : undefined} />
+                    )}
+                  </InputAdornment>
+                ),
+                endAdornment: query ? (
+                  <InputAdornment
+                    position="end"
+                    sx={{ alignSelf: inputExpanded ? 'flex-start' : 'center', mt: inputExpanded ? 0.5 : 0 }}
+                  >
+                    <IconButton
+                      size="small"
+                      aria-label={t.search.clear}
+                      onClick={() => setQuery('')}
+                      edge="end"
+                      disabled={!categoryId}
                     >
-                      {isAi ? (
-                        <SparkleIcon size={18} color={AI_SEARCH_BLUE} />
-                      ) : (
-                        <ProductSearchIcon color={isOkazion ? OKAZION_ACCENT : undefined} />
-                      )}
-                    </InputAdornment>
-                  ),
-                  endAdornment: query ? (
-                    <InputAdornment
-                      position="end"
-                      sx={{ alignSelf: inputExpanded ? 'flex-start' : 'center', mt: inputExpanded ? 0.5 : 0 }}
-                    >
-                      <IconButton
-                        size="small"
-                        aria-label={t.search.clear}
-                        onClick={() => setQuery('')}
-                        edge="end"
-                      >
-                        <XIcon size={14} weight="bold" />
-                      </IconButton>
-                    </InputAdornment>
-                  ) : null,
-                },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
+                      <XIcon size={14} weight="bold" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+              },
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                bgcolor: 'transparent',
+                alignItems: inputExpanded ? 'flex-start' : 'center',
+                py: 0.25,
+                cursor: categoryId ? 'text' : 'not-allowed',
+                '& fieldset': { border: 'none' },
+                '&.Mui-disabled': {
                   bgcolor: 'transparent',
-                  alignItems: inputExpanded ? 'flex-start' : 'center',
-                  py: 0.25,
-                  '& fieldset': { border: 'none' },
+                  '& textarea': { WebkitTextFillColor: 'inherit', color: 'text.disabled' },
                 },
-                '& textarea': {
-                  resize: 'none',
-                  lineHeight: 1.4,
-                  ...(!query
-                    ? {
-                        whiteSpace: 'nowrap',
-                        textOverflow: 'ellipsis',
-                        overflow: 'hidden !important',
-                      }
-                    : null),
-                },
-              }}
-            />
-            <IconButton
-              type="submit"
-              aria-label={t.search.title}
-              disabled={loading && isAi}
-              sx={{
-                flexShrink: 0,
-                alignSelf: inputExpanded ? 'flex-end' : 'center',
-                ...productFilterButtonSx(true),
-                ...(isAi
+              },
+              '& textarea': {
+                resize: 'none',
+                lineHeight: 1.4,
+                ...(!query
                   ? {
-                      bgcolor: AI_SEARCH_BLUE,
-                      color: AI_SEARCH_BLUE_ON,
-                      borderColor: AI_SEARCH_BLUE,
-                      boxShadow: '0 2px 10px rgba(167, 139, 250, 0.45)',
-                      '&:hover': { bgcolor: AI_SEARCH_BLUE_HOVER, borderColor: AI_SEARCH_BLUE_HOVER },
-                      '&.Mui-disabled': {
-                        bgcolor: AI_SEARCH_BLUE_SOFT,
-                        color: AI_SEARCH_BLUE_ON,
-                      },
+                      whiteSpace: 'nowrap',
+                      textOverflow: 'ellipsis',
+                      overflow: 'hidden !important',
                     }
-                  : isOkazion
+                  : null),
+              },
+            }}
+          />
+          <IconButton
+            type="submit"
+            aria-label={t.search.title}
+            disabled={!categoryId || (loading && isAi)}
+            sx={{
+              flexShrink: 0,
+              alignSelf: inputExpanded ? 'flex-end' : 'center',
+              ...productFilterButtonSx(Boolean(categoryId)),
+              ...(isAi
+                ? {
+                    bgcolor: AI_SEARCH_BLUE,
+                    color: AI_SEARCH_BLUE_ON,
+                    borderColor: AI_SEARCH_BLUE,
+                    boxShadow: '0 2px 10px rgba(167, 139, 250, 0.45)',
+                    '&:hover': { bgcolor: AI_SEARCH_BLUE_HOVER, borderColor: AI_SEARCH_BLUE_HOVER },
+                    '&.Mui-disabled': {
+                      bgcolor: AI_SEARCH_BLUE_SOFT,
+                      color: AI_SEARCH_BLUE_ON,
+                    },
+                  }
+                : isOkazion
+                  ? {
+                      bgcolor: OKAZION_RED,
+                      color: '#fff',
+                      borderColor: OKAZION_RED,
+                      boxShadow: '0 2px 10px rgba(247, 47, 53, 0.45)',
+                      '&:hover': { bgcolor: OKAZION_RED_DARK, borderColor: OKAZION_RED_DARK },
+                    }
+                  : categoryId
                     ? {
-                        bgcolor: OKAZION_RED,
-                        color: '#fff',
-                        borderColor: OKAZION_RED,
-                        boxShadow: '0 2px 10px rgba(247, 47, 53, 0.45)',
-                        '&:hover': { bgcolor: OKAZION_RED_DARK, borderColor: OKAZION_RED_DARK },
-                      }
-                    : {
                         bgcolor: 'primary.main',
                         color: 'primary.contrastText',
                         '&:hover': { bgcolor: 'primary.dark' },
+                      }
+                    : {
+                        bgcolor: 'action.disabledBackground',
+                        color: 'text.disabled',
+                        cursor: 'not-allowed',
+                        '&:hover': { bgcolor: 'action.disabledBackground' },
                       }),
-              }}
-            >
-              {loading && isAi ? (
-                <CircularProgress size={18} sx={{ color: AI_SEARCH_BLUE_ON }} />
-              ) : isAi ? (
-                <SparkleIcon size={18} weight="bold" />
-              ) : (
-                <MagnifyingGlassIcon size={18} weight="bold" />
-              )}
-            </IconButton>
+            }}
+          >
+            {loading && isAi ? (
+              <CircularProgress size={18} sx={{ color: AI_SEARCH_BLUE_ON }} />
+            ) : isAi ? (
+              <SparkleIcon size={18} weight="bold" />
+            ) : (
+              <MagnifyingGlassIcon size={18} weight="bold" />
+            )}
+          </IconButton>
+        </Box>
+
+        {!categoryId ? (
+          <Box
+            sx={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: 0,
+            }}
+          >
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+              {t.search.pickCategory}
+            </Typography>
           </Box>
-        )}
+        ) : null}
 
         {aiReply && isAi ? (
           <Alert

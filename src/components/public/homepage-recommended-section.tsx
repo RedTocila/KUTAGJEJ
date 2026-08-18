@@ -4,8 +4,8 @@ import * as React from 'react';
 import { Box, Skeleton, Stack } from '@mui/material';
 
 import { buildHomepageMixedLatest, type HomepageMixedListing } from '@/lib/homepage-latest-listings';
-import { getHomepageListingsCacheSnapshot, writeHomepageListingsCache } from '@/lib/homepage-session-cache';
-import { fetchHomepageListings } from '@/lib/public-listings-client';
+import { getHomepageListingsCacheSnapshot, patchHomepageListingsCache } from '@/lib/homepage-session-cache';
+import { fetchHomepageRecommended } from '@/lib/public-listings-client';
 import { HomepageMixedListingCard, mixedListingKey } from '@/components/public/homepage-mixed-listing-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { ListingsSection } from '@/components/public/listings-section';
@@ -29,8 +29,14 @@ function CarouselSkeleton() {
  * Prefers SSR mixed latest; if SSR came back empty (often a cold API timeout),
  * retries once on the client instead of locking on a false empty state.
  */
-export function HomepageRecommendedSection({ fallbackItems }: { fallbackItems: HomepageMixedListing[] }) {
-  const needsRecovery = fallbackItems.length === 0;
+export function HomepageRecommendedSection({
+  fallbackItems,
+  ssrOk = true,
+}: {
+  fallbackItems: HomepageMixedListing[];
+  ssrOk?: boolean;
+}) {
+  const needsRecovery = fallbackItems.length === 0 && !ssrOk;
   const [items, setItems] = React.useState(fallbackItems);
   const [loading, setLoading] = React.useState(needsRecovery);
 
@@ -43,10 +49,10 @@ export function HomepageRecommendedSection({ fallbackItems }: { fallbackItems: H
         const mixed = buildHomepageMixedLatest(cached, 8);
         if (mixed.length > 0) setItems(mixed);
       }
-      const bundle = await fetchHomepageListings(8);
+      const bundle = await fetchHomepageRecommended(8);
       if (cancelled) return;
       if (bundle.ok) {
-        writeHomepageListingsCache(bundle);
+        patchHomepageListingsCache(bundle);
         setItems(buildHomepageMixedLatest(bundle, 8));
       }
       setLoading(false);
@@ -72,8 +78,12 @@ export function HomepageRecommendedSection({ fallbackItems }: { fallbackItems: H
         <CarouselSkeleton />
       ) : (
         <ListingsCarousel>
-          {items.map((item) => (
-            <HomepageMixedListingCard key={mixedListingKey(item)} item={item} />
+          {items.map((item, index) => (
+            <HomepageMixedListingCard
+              key={mixedListingKey(item)}
+              item={item}
+              imagePriority={index === 0}
+            />
           ))}
         </ListingsCarousel>
       )}

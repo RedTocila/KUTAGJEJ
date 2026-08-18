@@ -70,10 +70,6 @@ const LIST_SELECT_BY_TABLE = {
     'created_at',
     'bumped_at',
     'poster_id',
-    'maps_url',
-    'location_lat',
-    'location_lng',
-    'location_address',
   ].join(','),
   car_listings: [
     'id',
@@ -99,10 +95,6 @@ const LIST_SELECT_BY_TABLE = {
     'created_at',
     'bumped_at',
     'poster_id',
-    'maps_url',
-    'location_lat',
-    'location_lng',
-    'location_address',
   ].join(','),
   job_listings: [
     'id',
@@ -124,10 +116,6 @@ const LIST_SELECT_BY_TABLE = {
     'created_at',
     'bumped_at',
     'poster_id',
-    'maps_url',
-    'location_lat',
-    'location_lng',
-    'location_address',
   ].join(','),
   marketplace_listings: [
     'id',
@@ -148,10 +136,6 @@ const LIST_SELECT_BY_TABLE = {
     'created_at',
     'bumped_at',
     'poster_id',
-    'maps_url',
-    'location_lat',
-    'location_lng',
-    'location_address',
   ].join(','),
   directory_listings: [
     'id',
@@ -273,12 +257,7 @@ async function countListingQuery(table, filterSpec) {
   return count ?? 0;
 }
 
-async function attachSellerVerified(docs, listings) {
-  const posterIds = docs.map((d) => d.posterId);
-  const [verifiedIds, trustIds] = await Promise.all([
-    loadVerifiedPosterIdSet(posterIds),
-    loadTrustBadgePosterIdSet(posterIds),
-  ]);
+function applySellerBadges(docs, listings, verifiedIds, trustIds) {
   return listings.map((listing, i) => {
     const posterId = docs[i]?.posterId ? String(docs[i].posterId) : '';
     return {
@@ -289,27 +268,105 @@ async function attachSellerVerified(docs, listings) {
   });
 }
 
+function formatDocsLocal(kind, docs, cityById, reviewStats) {
+  if (kind === 'real-estate') return docs.map((d) => formatRealEstate(d, cityById));
+  if (kind === 'car') return docs.map((d) => formatCar(d, cityById));
+  if (kind === 'job') return docs.map((d) => formatJob(d, cityById));
+  if (kind === 'marketplace') return docs.map((d) => formatMarketplace(d, cityById));
+  return docs.map((d) => formatDirectory(d, cityById, reviewStats));
+}
+
 async function formatDocsForKind(kind, docs) {
-  const cityById = await buildCityIndex(docs);
-  let listings;
-  if (kind === 'real-estate') {
-    listings = await attachMetricsToListings(docs.map((d) => formatRealEstate(d, cityById)));
-  } else if (kind === 'car') {
-    listings = await attachMetricsToListings(docs.map((d) => formatCar(d, cityById)));
-  } else if (kind === 'job') {
-    listings = await attachMetricsToListings(docs.map((d) => formatJob(d, cityById)));
-  } else if (kind === 'marketplace') {
-    listings = await attachMetricsToListings(docs.map((d) => formatMarketplace(d, cityById)));
-  } else {
-    let reviewStats = null;
-    if (kind === 'businesses') {
-      reviewStats = await reviewStatsByListingIds(docs.map((d) => d.id));
-    } else if (kind === 'professionals') {
-      reviewStats = await professionalReviewStatsByListingIds(docs.map((d) => d.id));
-    }
-    listings = await attachMetricsToListings(docs.map((d) => formatDirectory(d, cityById, reviewStats)));
+  if (!Array.isArray(docs) || docs.length === 0) return [];
+  const needsBiz = kind === 'businesses';
+  const needsPro = kind === 'professionals';
+  const [cityById, reviewStats] = await Promise.all([
+    buildCityIndex(docs),
+    needsBiz
+      ? reviewStatsByListingIds(docs.map((d) => d.id))
+      : needsPro
+        ? professionalReviewStatsByListingIds(docs.map((d) => d.id))
+        : Promise.resolve(null),
+  ]);
+  const formatted = formatDocsLocal(kind, docs, cityById, reviewStats);
+  const [withMetrics, verifiedIds, trustIds] = await Promise.all([
+    attachMetricsToListings(formatted),
+    loadVerifiedPosterIdSet(docs.map((d) => d.posterId)),
+    loadTrustBadgePosterIdSet(docs.map((d) => d.posterId)),
+  ]);
+  return applySellerBadges(docs, withMetrics, verifiedIds, trustIds);
+}
+
+const LATEST_VERTICAL_SPECS = [
+  { key: 'realEstate', kind: 'real-estate', table: 'real_estate_listings', filter: {}, sort: () => buildSort('newest') },
+  { key: 'cars', kind: 'car', table: 'car_listings', filter: {}, sort: () => buildSort('newest') },
+  {
+    key: 'jobs',
+    kind: 'job',
+    table: 'job_listings',
+    filter: activeJobCreatedAtFilter(),
+    sort: () => buildSort('newest'),
+  },
+  { key: 'marketplace', kind: 'marketplace', table: 'marketplace_listings', filter: {}, sort: () => buildSort('newest') },
+  {
+    key: 'businesses',
+    kind: 'businesses',
+    table: 'directory_listings',
+    filter: { eq: { vertical: 'businesses' } },
+    sort: () => buildDirectorySort('newest'),
+  },
+  {
+    key: 'professionals',
+    kind: 'professionals',
+    table: 'directory_listings',
+    filter: { eq: { vertical: 'professionals' } },
+    sort: () => buildDirectorySort('newest'),
+  },
+];
+
+/**
+ * Newest card rows for every homepage vertical — one shared city/metrics/badge round-trip.
+ * No exact counts, no OKAZION. Used by `/public/listings/recommended`.
+ */
+async function queryLatestVerticals(limit) {
+  const docGroups = await Promise.all(
+    LATEST_VERTICAL_SPECS.map((spec) =>
+      runListingQuery(spec.table, mergePublicFilter(spec.filter), spec.sort(), limit, 0),
+    ),
+  );
+
+  const allDocs = docGroups.flat();
+  const bizDocs = docGroups[4] || [];
+  const proDocs = docGroups[5] || [];
+  const [cityById, bizReviews, proReviews] = await Promise.all([
+    buildCityIndex(allDocs),
+    reviewStatsByListingIds(bizDocs.map((d) => d.id)),
+    professionalReviewStatsByListingIds(proDocs.map((d) => d.id)),
+  ]);
+
+  const formattedGroups = docGroups.map((docs, i) => {
+    const kind = LATEST_VERTICAL_SPECS[i].kind;
+    const reviewStats =
+      kind === 'businesses' ? bizReviews : kind === 'professionals' ? proReviews : null;
+    return formatDocsLocal(kind, docs, cityById, reviewStats);
+  });
+
+  const allFormatted = formattedGroups.flat();
+  const [withMetrics, verifiedIds, trustIds] = await Promise.all([
+    attachMetricsToListings(allFormatted),
+    loadVerifiedPosterIdSet(allDocs.map((d) => d.posterId)),
+    loadTrustBadgePosterIdSet(allDocs.map((d) => d.posterId)),
+  ]);
+
+  const bundle = {};
+  let offset = 0;
+  for (let i = 0; i < LATEST_VERTICAL_SPECS.length; i += 1) {
+    const docs = docGroups[i];
+    const slice = withMetrics.slice(offset, offset + docs.length);
+    offset += docs.length;
+    bundle[LATEST_VERTICAL_SPECS[i].key] = applySellerBadges(docs, slice, verifiedIds, trustIds);
   }
-  return attachSellerVerified(docs, listings);
+  return bundle;
 }
 
 /**
@@ -711,6 +768,7 @@ module.exports = {
   countActiveJobs,
   latestMarketplace,
   latestDirectory,
+  queryLatestVerticals,
   topViewedByKind,
   queryOkazionListings,
   attachDetailMetrics,

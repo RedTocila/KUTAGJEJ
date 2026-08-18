@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Box, Skeleton, Stack } from '@mui/material';
 
-import { getHomepageListingsCacheSnapshot } from '@/lib/homepage-session-cache';
+import { getHomepageListingsCacheSnapshot, patchHomepageListingsCache } from '@/lib/homepage-session-cache';
 import { fetchBrowseOkazion, type PublicOkazionListing } from '@/lib/public-listings-client';
 import { CarCard } from '@/components/public/listing-cards/car-card';
 import { JobCard } from '@/components/public/listing-cards/job-card';
@@ -58,6 +58,11 @@ export function HomepageOkazionSection({
   const [loading, setLoading] = React.useState(needsRecovery);
 
   React.useEffect(() => {
+    if (!ssrOk || initialListings.length === 0) return;
+    patchHomepageListingsCache({ okazion: initialListings, okazionTotal: initialTotal });
+  }, [ssrOk, initialListings, initialTotal]);
+
+  React.useEffect(() => {
     if (!needsRecovery) return;
     let cancelled = false;
     void (async () => {
@@ -69,6 +74,7 @@ export function HomepageOkazionSection({
       const res = await fetchBrowseOkazion(8);
       if (cancelled) return;
       if (res.ok) {
+        patchHomepageListingsCache({ okazion: res.listings, okazionTotal: res.total });
         setListings(res.listings);
         setTotal(res.total);
       }
@@ -78,6 +84,8 @@ export function HomepageOkazionSection({
       cancelled = true;
     };
   }, [needsRecovery]);
+
+  if (!loading && listings.length === 0) return null;
 
   return (
     <ListingsSection

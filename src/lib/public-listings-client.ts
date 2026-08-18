@@ -378,6 +378,29 @@ export async function fetchHomepageListings(limit = 8): Promise<PublicListingsBu
   };
 }
 
+/** Slim first-row payload — no OKAZION, no exact category counts. */
+export const fetchHomepageRecommended = cache(async function fetchHomepageRecommended(
+  limit = 8
+): Promise<PublicListingsBundle & { ok: boolean }> {
+  const data = await safeJson<Pick<
+    PublicListingsBundle,
+    'realEstate' | 'cars' | 'jobs' | 'marketplace' | 'businesses' | 'professionals'
+  >>(`/public/listings/recommended?limit=${limit}`);
+  if (!data) return { ...EMPTY_BUNDLE, ok: false };
+  return {
+    realEstate: data.realEstate ?? [],
+    cars: data.cars ?? [],
+    jobs: data.jobs ?? [],
+    marketplace: data.marketplace ?? [],
+    businesses: data.businesses ?? [],
+    professionals: data.professionals ?? [],
+    okazion: [],
+    okazionTotal: 0,
+    totals: EMPTY_BUNDLE.totals,
+    ok: true,
+  };
+});
+
 export type HomepageLatestVerticalId = 'real-estate' | 'cars' | 'jobs' | 'marketplace' | 'businesses' | 'professionals';
 
 export async function fetchLatestVertical<T = unknown>(

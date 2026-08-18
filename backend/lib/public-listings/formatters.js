@@ -82,7 +82,6 @@ function formatRealEstate(doc, cityById) {
     ...bumpTimeFields(doc),
     permalinkPath: realEstatePermalink(doc),
     ...featuredCardFields(doc),
-    ...mapsJsonFromDoc(doc),
   };
 }
 
@@ -149,7 +148,6 @@ function formatCar(doc, cityById) {
     ...bumpTimeFields(doc),
     permalinkPath: listingPermalinkFromSlugSource(carSlugSource(doc), doc.id),
     ...featuredCardFields(doc),
-    ...mapsJsonFromDoc(doc),
   };
 }
 
@@ -181,7 +179,6 @@ function formatJob(doc, cityById) {
       ? doc.benefits.map((b) => ({ id: String(b.id), label: String(b.label) }))
       : [],
     ...featuredCardFields(doc),
-    ...mapsJsonFromDoc(doc),
   };
 }
 
@@ -205,7 +202,6 @@ function formatMarketplace(doc, cityById) {
     ...bumpTimeFields(doc),
     permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
     ...featuredCardFields(doc),
-    ...mapsJsonFromDoc(doc),
   };
 }
 

@@ -29,6 +29,7 @@ const {
   countActiveJobs,
   latestMarketplace,
   latestDirectory,
+  queryLatestVerticals,
   attachDetailMetrics,
   queryRealEstate,
   countRealEstate,
@@ -54,6 +55,7 @@ const {
 const { reviewStatsByListingIds } = require('../../lib/business-review-stats');
 const { professionalReviewStatsByListingIds } = require('../../lib/professional-review-stats');
 const { saverFromUser, enrichListingsSaverState } = require('../../lib/listing-metrics');
+const { getCached, setCached } = require('../../lib/public-listings-cache');
 
 const router = express.Router();
 
@@ -109,14 +111,46 @@ router.get('/okazion', optionalAuth, async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
     const saver = saverFromUser(req.user);
-    const { listings, total } = await queryOkazionListings(limit, skip, req.query);
-    let enriched = listings;
-    if (saver) {
-      enriched = await enrichListingsSaverState(listings, saver);
+    const cacheKey = `okazion:${limit}:${page}:${String(req.query.kind || '')}:${String(req.query.q || '')}`;
+    let payload = skip === 0 ? getCached(cacheKey) : null;
+    if (!payload) {
+      const { listings, total } = await queryOkazionListings(limit, skip, req.query);
+      payload = { listings, total };
+      if (skip === 0) setCached(cacheKey, payload);
     }
-    res.json(buildPaginatedResponse(enriched, total, limit, page));
+    let enriched = payload.listings;
+    if (saver) {
+      enriched = await enrichListingsSaverState(payload.listings, saver);
+    }
+    res.json(buildPaginatedResponse(enriched, payload.total, limit, page));
   } catch (err) {
     console.error('GET /public/listings/okazion:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/** GET /api/public/listings/recommended — slim homepage first row (no counts / OKAZION). */
+router.get('/recommended', optionalAuth, async (req, res) => {
+  try {
+    const limit = clampLimit(req.query.limit);
+    const saver = saverFromUser(req.user);
+    const cacheKey = `recommended:${limit}`;
+    let bundle = getCached(cacheKey);
+    if (!bundle) {
+      bundle = await queryLatestVerticals(limit);
+      setCached(cacheKey, bundle);
+    }
+    const out = { ...bundle };
+    if (saver) {
+      await Promise.all(
+        Object.keys(out).map(async (key) => {
+          out[key] = await enrichListingsSaverState(out[key], saver);
+        }),
+      );
+    }
+    res.json(out);
+  } catch (err) {
+    console.error('GET /public/listings/recommended:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -126,37 +160,44 @@ router.get('/latest', optionalAuth, async (req, res) => {
   try {
     const limit = clampLimit(req.query.limit);
     const saver = saverFromUser(req.user);
-    const [
-      realEstate,
-      cars,
-      jobs,
-      marketplace,
-      businesses,
-      professionals,
-      countRe,
-      countCarsVal,
-      countJobsVal,
-      countMkt,
-      countBiz,
-      countPro,
-      okazionPage,
-    ] = await Promise.all([
-      latestRealEstate(limit),
-      latestCars(limit),
-      latestJobs(limit),
-      latestMarketplace(limit),
-      latestDirectory('businesses', limit),
-      latestDirectory('professionals', limit),
-      countRealEstate(),
-      countCars(),
-      countActiveJobs(),
-      countMarketplace(),
-      countDirectory({ eq: { vertical: 'businesses' } }),
-      countDirectory({ eq: { vertical: 'professionals' } }),
-      queryOkazionListings(limit, 0, {}),
-    ]);
-    const bundle = { realEstate, cars, jobs, marketplace, businesses, professionals };
-    let okazion = okazionPage.listings;
+    const cacheKey = `latest:${limit}`;
+    let cached = getCached(cacheKey);
+    if (!cached) {
+      const [verticals, countRe, countCarsVal, countJobsVal, countMkt, countBiz, countPro, okazionPage] =
+        await Promise.all([
+          queryLatestVerticals(limit),
+          countRealEstate(),
+          countCars(),
+          countActiveJobs(),
+          countMarketplace(),
+          countDirectory({ eq: { vertical: 'businesses' } }),
+          countDirectory({ eq: { vertical: 'professionals' } }),
+          queryOkazionListings(limit, 0, {}),
+        ]);
+      cached = {
+        ...verticals,
+        okazion: okazionPage.listings,
+        okazionTotal: okazionPage.total,
+        totals: {
+          realEstate: countRe,
+          cars: countCarsVal,
+          jobs: countJobsVal,
+          marketplace: countMkt,
+          businesses: countBiz,
+          professionals: countPro,
+        },
+      };
+      setCached(cacheKey, cached);
+    }
+    const bundle = {
+      realEstate: cached.realEstate,
+      cars: cached.cars,
+      jobs: cached.jobs,
+      marketplace: cached.marketplace,
+      businesses: cached.businesses,
+      professionals: cached.professionals,
+    };
+    let okazion = cached.okazion;
     if (saver) {
       await Promise.all(
         Object.keys(bundle).map(async (key) => {
@@ -173,15 +214,8 @@ router.get('/latest', optionalAuth, async (req, res) => {
       businesses: bundle.businesses,
       professionals: bundle.professionals,
       okazion,
-      okazionTotal: okazionPage.total,
-      totals: {
-        realEstate: countRe,
-        cars: countCarsVal,
-        jobs: countJobsVal,
-        marketplace: countMkt,
-        businesses: countBiz,
-        professionals: countPro,
-      },
+      okazionTotal: cached.okazionTotal,
+      totals: cached.totals,
     });
   } catch (err) {
     console.error('GET /public/listings/latest:', err?.message || err);
@@ -226,10 +260,17 @@ router.get('/latest/:vertical', optionalAuth, async (req, res) => {
       return;
     }
     const limit = clampLimit(req.query.limit);
-    let [listings, total] = await Promise.all([handlers.list(limit), handlers.count()]);
+    const cacheKey = `latest-vertical:${vertical}:${limit}`;
+    let cached = getCached(cacheKey);
+    if (!cached) {
+      const listings = await handlers.list(limit);
+      cached = { listings, total: 0 };
+      setCached(cacheKey, cached);
+    }
+    let listings = cached.listings;
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
-    res.json({ listings, vertical, total });
+    res.json({ listings, vertical, total: cached.total });
   } catch (err) {
     console.error('GET /public/listings/latest/:vertical:', err?.message || err);
     res.status(500).json({ message: 'Server error' });

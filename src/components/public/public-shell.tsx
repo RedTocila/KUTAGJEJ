@@ -17,12 +17,14 @@ import { PublicHeader } from './public-header';
  *   below `md`, so hero imagery can hug the viewport top edge on phones / small tablets.
  * @param hideHeader Hide `PublicHeader` on all breakpoints (e.g. public member profile).
  * @param hideFooter Hide `PublicFooter` (e.g. focused search page).
+ * @param hideMobileNav Hide the floating bottom nav (search page replaces it with its own dock).
  */
 export function PublicShell({
   children,
   hideHeaderBelowMd = false,
   hideHeader = false,
   hideFooter = false,
+  hideMobileNav = false,
 }: {
   children: React.ReactNode;
   /** Hide header below `md` (listing detail fullscreen hero). */
@@ -31,6 +33,8 @@ export function PublicShell({
   hideHeader?: boolean;
   /** Hide site footer. */
   hideFooter?: boolean;
+  /** Hide floating bottom nav — used when the page renders its own bottom chrome. */
+  hideMobileNav?: boolean;
 }) {
   const header = hideHeader ? null : hideHeaderBelowMd ? (
     <Box sx={{ display: { xs: 'none', md: 'block' } }}>
@@ -60,14 +64,14 @@ export function PublicShell({
           minWidth: 0,
           maxWidth: '100%',
           overflowX: 'clip',
-          pb: { xs: MOBILE_CONTENT_BOTTOM_PADDING, md: 0 },
+          pb: hideMobileNav ? 0 : { xs: MOBILE_CONTENT_BOTTOM_PADDING, md: 0 },
         }}
       >
         {header}
         <Box className="kutagjej-fade">{children}</Box>
       </Box>
       {hideFooter ? null : <PublicFooter />}
-      <MobileBottomNav />
+      {hideMobileNav ? null : <MobileBottomNav />}
     </Box>
   );
 }

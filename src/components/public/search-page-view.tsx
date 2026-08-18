@@ -29,7 +29,6 @@ import { HeroCategoryCircles } from '@/components/public/hero-category-circles';
 import { ListingCardsSkeleton } from '@/components/core/content-skeletons';
 import {
   ProductSearchIcon,
-  productFilterButtonSx,
   productSearchBarSx,
 } from '@/components/public/product-browse-chrome';
 import { useCopy } from '@/hooks/use-copy';
@@ -37,11 +36,15 @@ import { useLanguage } from '@/hooks/use-language';
 import { useHistoryBackProps } from '@/hooks/use-navigate-back';
 import { fetchAiSearch, type AiSearchResult } from '@/lib/ai-search-client';
 import { hardRefreshToTop } from '@/lib/hard-navigate';
-import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
+import {
+  MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
+  MOBILE_BOTTOM_NAV_FLOAT_INSET_PX,
+  MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX,
+  MOBILE_SEARCH_DOCK_PADDING,
+} from '@/lib/mobile-layout';
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
-  AI_SEARCH_BLUE_ON,
   AI_SEARCH_BLUE_SOFT,
   OKAZION_ACCENT,
   OKAZION_ACCENT_SOFT,
@@ -393,146 +396,196 @@ export function SearchPageView() {
     router.push(href);
   };
 
+  const searchAccent = isAi
+    ? { color: AI_SEARCH_BLUE, soft: AI_SEARCH_BLUE_SOFT }
+    : isOkazion
+      ? { color: OKAZION_ACCENT, soft: OKAZION_ACCENT_SOFT }
+      : undefined;
+
   return (
     <Container
       maxWidth="xl"
       sx={{
         pt: { xs: 1.5, md: 2.5 },
-        pb: { xs: 2.5, md: 4 },
+        pb: { xs: MOBILE_SEARCH_DOCK_PADDING, lg: 4 },
         px: { xs: 2, sm: 3 },
         display: 'flex',
         flexDirection: 'column',
-        minHeight: {
-          xs: `calc(100dvh - (${MOBILE_CONTENT_BOTTOM_PADDING}))`,
-          md: '100dvh',
-        },
+        minHeight: '100dvh',
       }}
     >
-      <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
-        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-          <Typography sx={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.01em' }}>
-            {t.search.title}
-          </Typography>
-          <IconButton component={RouterLink} {...historyBack} aria-label={t.common.close} edge="end" size="small">
-            <XIcon size={22} weight="bold" />
-          </IconButton>
-        </Stack>
+      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+        <Typography sx={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.01em' }}>
+          {t.search.title}
+        </Typography>
+        <IconButton component={RouterLink} {...historyBack} aria-label={t.common.close} edge="end" size="small">
+          <XIcon size={22} weight="bold" />
+        </IconButton>
+      </Stack>
 
-        <HeroCategoryCircles variant="tabs" selectedIndex={selectedIndex} onSelect={handleSelectCategory} />
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: { xs: 1.5, lg: 2 },
+          mt: { xs: 0, lg: 2 },
+          width: { xs: '100%', lg: 'auto' },
+          position: { xs: 'fixed', lg: 'static' },
+          left: { xs: 0, lg: 'auto' },
+          right: { xs: 0, lg: 'auto' },
+          bottom: {
+            xs: `calc(${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + env(safe-area-inset-bottom, 0px))`,
+            lg: 'auto',
+          },
+          zIndex: { xs: (theme) => theme.zIndex.appBar, lg: 'auto' },
+          px: { xs: 2, sm: 3, lg: 0 },
+          pt: { xs: 1.25, lg: 0 },
+          pb: { xs: `${MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX}px`, lg: 0 },
+          alignItems: { xs: 'center', lg: 'stretch' },
+          bgcolor: { xs: 'background.default', lg: 'transparent' },
+        }}
+      >
+        <Box sx={{ width: '100%' }}>
+          <HeroCategoryCircles variant="tabs" selectedIndex={selectedIndex} onSelect={handleSelectCategory} />
+        </Box>
 
         <Box
           component="form"
           onSubmit={handleSubmit}
           aria-disabled={!categoryId}
-          sx={{
+          sx={(theme) => ({
             display: 'flex',
-            gap: 1,
-            p: 1,
+            flexDirection: 'row',
             alignItems: inputExpanded ? 'flex-end' : 'center',
-            transition: 'border-radius 120ms ease, opacity 160ms ease',
-            ...productSearchBarSx(
-              Boolean(categoryId && query.trim()),
-              isAi
-                ? { color: AI_SEARCH_BLUE, soft: AI_SEARCH_BLUE_SOFT }
-                : isOkazion
-                  ? { color: OKAZION_ACCENT, soft: OKAZION_ACCENT_SOFT }
-                  : undefined,
-            ),
-            borderRadius: inputExpanded ? 2.5 : 999,
-            height: 'auto',
-            minHeight: 40,
-            ...(!categoryId
-              ? {
-                  opacity: 0.48,
-                  cursor: 'not-allowed',
-                  bgcolor: 'action.hover',
-                }
-              : null),
-          }}
+            width: '100%',
+            maxWidth: { xs: 420, lg: 'none' },
+            [theme.breakpoints.up('lg')]: {
+              ...productSearchBarSx(Boolean(categoryId && query.trim()), searchAccent),
+              gap: 1,
+              p: 1,
+              height: 'auto',
+              minHeight: 40,
+              borderRadius: inputExpanded ? 2.5 : 999,
+              ...(!categoryId
+                ? {
+                    opacity: 0.48,
+                    cursor: 'not-allowed',
+                    bgcolor: 'action.hover',
+                  }
+                : null),
+            },
+            [theme.breakpoints.down('lg')]: {
+              gap: 1.25,
+              p: 0,
+              bgcolor: 'transparent',
+              border: 'none',
+              overflow: 'visible',
+              height: 'auto',
+              minHeight: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
+            },
+          })}
         >
-          <TextField
-            fullWidth
-            size="small"
-            autoComplete="off"
-            disabled={!categoryId}
-            inputRef={inputRef}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (!categoryId) {
-                event.preventDefault();
-                return;
-              }
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                handleSubmit();
-              }
-            }}
-            placeholder={activeCategory?.searchPlaceholder ?? t.search.genericPlaceholder}
-            multiline
-            minRows={1}
-            maxRows={4}
-            slotProps={{
-              input: {
-                readOnly: !categoryId,
-                startAdornment: (
-                  <InputAdornment
-                    position="start"
-                    sx={{
-                      alignSelf: inputExpanded ? 'flex-start' : 'center',
-                      mt: inputExpanded ? 0.75 : 0,
-                    }}
-                  >
-                    {isAi ? (
-                      <SparkleIcon size={18} color={AI_SEARCH_BLUE} />
-                    ) : (
-                      <ProductSearchIcon color={isOkazion ? OKAZION_ACCENT : undefined} />
-                    )}
-                  </InputAdornment>
-                ),
-                endAdornment: query ? (
-                  <InputAdornment
-                    position="end"
-                    sx={{ alignSelf: inputExpanded ? 'flex-start' : 'center', mt: inputExpanded ? 0.5 : 0 }}
-                  >
-                    <IconButton
-                      size="small"
-                      aria-label={t.search.clear}
-                      onClick={() => setQuery('')}
-                      edge="end"
-                      disabled={!categoryId}
+          <Box
+            sx={(theme) => ({
+              flex: 1,
+              minWidth: 0,
+              display: 'flex',
+              alignItems: inputExpanded ? 'flex-end' : 'center',
+              [theme.breakpoints.down('lg')]: {
+                ...productSearchBarSx(Boolean(categoryId && query.trim()), searchAccent),
+                height: inputExpanded ? 'auto' : MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
+                minHeight: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
+                px: 1.5,
+                py: 0.5,
+                overflow: 'hidden',
+                opacity: categoryId ? 1 : 0.55,
+              },
+            })}
+          >
+            <TextField
+              fullWidth
+              size="small"
+              autoComplete="off"
+              disabled={!categoryId}
+              inputRef={inputRef}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (!categoryId) {
+                  event.preventDefault();
+                  return;
+                }
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault();
+                  handleSubmit();
+                }
+              }}
+              placeholder={activeCategory?.searchPlaceholder ?? t.search.genericPlaceholder}
+              multiline
+              minRows={1}
+              maxRows={4}
+              slotProps={{
+                input: {
+                  readOnly: !categoryId,
+                  startAdornment: (
+                    <InputAdornment
+                      position="start"
+                      sx={{
+                        alignSelf: inputExpanded ? 'flex-start' : 'center',
+                        mt: inputExpanded ? 0.75 : 0,
+                      }}
                     >
-                      <XIcon size={14} weight="bold" />
-                    </IconButton>
-                  </InputAdornment>
-                ) : null,
-              },
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                bgcolor: 'transparent',
-                alignItems: inputExpanded ? 'flex-start' : 'center',
-                py: 0.25,
-                cursor: categoryId ? 'text' : 'not-allowed',
-                '& fieldset': { border: 'none' },
-                '&.Mui-disabled': {
-                  bgcolor: 'transparent',
-                  '& textarea': { WebkitTextFillColor: 'inherit', color: 'text.disabled' },
+                      {isAi ? (
+                        <SparkleIcon size={18} color={AI_SEARCH_BLUE} />
+                      ) : (
+                        <ProductSearchIcon color={isOkazion ? OKAZION_ACCENT : undefined} />
+                      )}
+                    </InputAdornment>
+                  ),
+                  endAdornment: query ? (
+                    <InputAdornment
+                      position="end"
+                      sx={{ alignSelf: inputExpanded ? 'flex-start' : 'center', mt: inputExpanded ? 0.5 : 0 }}
+                    >
+                      <IconButton
+                        size="small"
+                        aria-label={t.search.clear}
+                        onClick={() => setQuery('')}
+                        edge="end"
+                        disabled={!categoryId}
+                      >
+                        <XIcon size={14} weight="bold" />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
                 },
-              },
-              '& textarea': {
-                resize: 'none',
-                lineHeight: 1.4,
-                ...(!query
-                  ? {
-                      whiteSpace: 'nowrap',
-                      textOverflow: 'ellipsis',
-                      overflow: 'hidden !important',
-                    }
-                  : null),
-              },
-            }}
-          />
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: 'transparent',
+                  alignItems: inputExpanded ? 'flex-start' : 'center',
+                  py: 0.25,
+                  cursor: categoryId ? 'text' : 'not-allowed',
+                  '& fieldset': { border: 'none' },
+                  '&.Mui-disabled': {
+                    bgcolor: 'transparent',
+                    '& textarea': { WebkitTextFillColor: 'inherit', color: 'text.disabled' },
+                  },
+                },
+                '& textarea': {
+                  resize: 'none',
+                  lineHeight: 1.4,
+                  ...(!query
+                    ? {
+                        whiteSpace: 'nowrap',
+                        textOverflow: 'ellipsis',
+                        overflow: 'hidden !important',
+                      }
+                    : null),
+                },
+              }}
+            />
+          </Box>
           <IconButton
             type="submit"
             aria-label={t.search.title}
@@ -540,51 +593,42 @@ export function SearchPageView() {
             sx={{
               flexShrink: 0,
               alignSelf: inputExpanded ? 'flex-end' : 'center',
-              ...productFilterButtonSx(Boolean(categoryId)),
-              ...(isAi
-                ? {
-                    bgcolor: AI_SEARCH_BLUE,
-                    color: AI_SEARCH_BLUE_ON,
-                    borderColor: AI_SEARCH_BLUE,
-                    boxShadow: '0 2px 10px rgba(167, 139, 250, 0.45)',
-                    '&:hover': { bgcolor: AI_SEARCH_BLUE_HOVER, borderColor: AI_SEARCH_BLUE_HOVER },
-                    '&.Mui-disabled': {
-                      bgcolor: AI_SEARCH_BLUE_SOFT,
-                      color: AI_SEARCH_BLUE_ON,
-                    },
-                  }
-                : isOkazion
-                  ? {
-                      bgcolor: OKAZION_RED,
-                      color: '#fff',
-                      borderColor: OKAZION_RED,
-                      boxShadow: '0 2px 10px rgba(247, 47, 53, 0.45)',
-                      '&:hover': { bgcolor: OKAZION_RED_DARK, borderColor: OKAZION_RED_DARK },
-                    }
-                  : categoryId
-                    ? {
-                        bgcolor: 'primary.main',
-                        color: 'primary.contrastText',
-                        '&:hover': { bgcolor: 'primary.dark' },
-                      }
-                    : {
-                        bgcolor: 'action.disabledBackground',
-                        color: 'text.disabled',
-                        cursor: 'not-allowed',
-                        '&:hover': { bgcolor: 'action.disabledBackground' },
-                      }),
+              p: 0,
+              width: { xs: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX, lg: 36 },
+              height: { xs: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX, lg: 36 },
+              borderRadius: '50%',
+              border: { xs: 'none', lg: '1px solid' },
+              color: isAi || isOkazion ? '#fff' : 'primary.contrastText',
+              bgcolor: isAi ? AI_SEARCH_BLUE : isOkazion ? OKAZION_RED : 'primary.main',
+              borderColor: {
+                lg: isAi ? AI_SEARCH_BLUE : isOkazion ? OKAZION_RED : categoryId ? 'primary.main' : 'divider',
+              },
+              boxShadow: 'none',
+              opacity: categoryId ? 1 : 0.72,
+              transition: 'background-color 160ms ease, transform 160ms ease, opacity 160ms ease',
+              '&:hover': {
+                bgcolor: isAi ? AI_SEARCH_BLUE_HOVER : isOkazion ? OKAZION_RED_DARK : 'primary.dark',
+              },
+              '&:active': { transform: 'scale(0.96)' },
+              '&.Mui-disabled': {
+                bgcolor: isAi ? AI_SEARCH_BLUE : isOkazion ? OKAZION_RED : 'primary.main',
+                color: isAi || isOkazion ? '#fff' : 'primary.contrastText',
+                opacity: 0.72,
+              },
             }}
           >
             {loading && isAi ? (
-              <CircularProgress size={18} sx={{ color: AI_SEARCH_BLUE_ON }} />
+              <CircularProgress size={18} sx={{ color: 'inherit' }} />
             ) : isAi ? (
-              <SparkleIcon size={18} weight="bold" />
+              <SparkleIcon size={24} weight="bold" />
             ) : (
-              <MagnifyingGlassIcon size={18} weight="bold" />
+              <MagnifyingGlassIcon size={24} weight="bold" />
             )}
           </IconButton>
         </Box>
+      </Box>
 
+      <Box sx={{ flex: 1, minHeight: 0, mt: 2, display: 'flex', flexDirection: 'column' }}>
         {!categoryId ? (
           <Box
             sx={{
@@ -668,7 +712,7 @@ export function SearchPageView() {
             ) : null}
           </Stack>
         )}
-      </Stack>
+      </Box>
     </Container>
   );
 }

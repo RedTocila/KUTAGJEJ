@@ -44,16 +44,16 @@ body {
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(ellipse 70% 55% at 50% 42%, rgba(118, 186, 27, 0.14), transparent 70%),
+    radial-gradient(ellipse 80% 50% at 50% 38%, rgba(118, 186, 27, 0.16), transparent 68%),
     #f2f6ec;
   opacity: 1;
-  transition: opacity 0.18s ease;
+  transition: opacity 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: auto;
 }
 
 html.dark .kutagjej-splash {
   background:
-    radial-gradient(ellipse 70% 55% at 50% 42%, rgba(118, 186, 27, 0.18), transparent 70%),
+    radial-gradient(ellipse 80% 50% at 50% 38%, rgba(118, 186, 27, 0.2), transparent 68%),
     #0a0a0a;
 }
 
@@ -66,29 +66,96 @@ html.dark .kutagjej-splash {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.25rem;
+  gap: 1.1rem;
+  padding: 1.5rem;
+}
+
+.kutagjej-splash__mark {
+  display: grid;
+  place-items: center;
+  width: min(46vw, 152px);
+  height: min(46vw, 152px);
+  border-radius: 36px;
+  border: 1.5px solid rgba(95, 152, 22, 0.22);
+  background: rgba(118, 186, 27, 0.1);
+  animation: kutagjejSplashLogoIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+html.dark .kutagjej-splash__mark {
+  border-color: rgba(118, 186, 27, 0.28);
+  background: rgba(118, 186, 27, 0.14);
 }
 
 .kutagjej-splash__logo {
-  width: min(52vw, 168px);
+  width: 78%;
   height: auto;
   display: block;
-  animation: kutagjejSplashLogoIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.kutagjej-splash__bar {
-  width: 48px;
-  height: 3px;
+.kutagjej-splash__wordmark {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  column-gap: 0.12em;
+  font-family: var(--font-kutagjej-wordmark), 'Space Grotesk', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
+  font-size: clamp(1.65rem, 6vw, 2.15rem);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  animation: kutagjejSplashWordmarkIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+
+.kutagjej-splash__wordmark-muted {
+  color: #5c6656;
+  font-weight: 600;
+}
+
+.kutagjej-splash__wordmark-brand {
+  color: #5f9816;
+  font-weight: 800;
+}
+
+html.dark .kutagjej-splash__wordmark-muted {
+  color: #c4cbb8;
+}
+
+html.dark .kutagjej-splash__wordmark-brand {
+  color: #76ba1b;
+}
+
+.kutagjej-splash__progress {
+  width: 56px;
+  height: 4px;
+  margin-top: 0.35rem;
   border-radius: 999px;
+  background: rgba(95, 152, 22, 0.18);
+  overflow: hidden;
+  animation: kutagjejSplashWordmarkIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
+}
+
+html.dark .kutagjej-splash__progress {
+  background: rgba(118, 186, 27, 0.22);
+}
+
+.kutagjej-splash__progress-fill {
+  display: block;
+  width: 40%;
+  height: 100%;
+  border-radius: inherit;
   background: #5f9816;
-  transform-origin: center;
-  animation: kutagjejSplashBar 1.1s ease-in-out infinite;
+  animation: kutagjejSplashProgress 1s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+html.dark .kutagjej-splash__progress-fill {
+  background: #76ba1b;
 }
 
 @keyframes kutagjejSplashLogoIn {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.94);
+    transform: translateY(12px) scale(0.92);
   }
   to {
     opacity: 1;
@@ -96,15 +163,23 @@ html.dark .kutagjej-splash {
   }
 }
 
-@keyframes kutagjejSplashBar {
-  0%,
-  100% {
-    transform: scaleX(0.45);
-    opacity: 0.55;
+@keyframes kutagjejSplashWordmarkIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
-  50% {
-    transform: scaleX(1);
+  to {
     opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes kutagjejSplashProgress {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(280%);
   }
 }
 
@@ -176,8 +251,10 @@ html.dark .kutagjej-splash {
     transition: none;
   }
 
-  .kutagjej-splash__logo,
-  .kutagjej-splash__bar {
+  .kutagjej-splash__mark,
+  .kutagjej-splash__wordmark,
+  .kutagjej-splash__progress,
+  .kutagjej-splash__progress-fill {
     animation: none;
   }
 

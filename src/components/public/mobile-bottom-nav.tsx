@@ -168,6 +168,9 @@ export function MobileBottomNav() {
     hardNavigate(paths.public.search, event);
   };
 
+  const isSearchPage = Boolean(displayPathname.startsWith(paths.public.search));
+  if (isSearchPage) return null;
+
   return (
     <Box
       component="nav"

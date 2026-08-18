@@ -23,7 +23,7 @@ function SearchFallback() {
 
 export default function SearchPage() {
   return (
-    <PublicShell hideHeader hideFooter>
+    <PublicShell hideHeader hideFooter hideMobileNav>
       <Suspense fallback={<SearchFallback />}>
         <SearchPageView />
       </Suspense>

@@ -47,7 +47,7 @@ body {
     radial-gradient(ellipse 80% 50% at 50% 38%, rgba(118, 186, 27, 0.16), transparent 68%),
     #f2f6ec;
   opacity: 1;
-  transition: opacity 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.18s ease;
   pointer-events: auto;
 }
 
@@ -78,7 +78,6 @@ html.dark .kutagjej-splash {
   border-radius: 36px;
   border: 1.5px solid rgba(95, 152, 22, 0.22);
   background: rgba(118, 186, 27, 0.1);
-  animation: kutagjejSplashLogoIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 html.dark .kutagjej-splash__mark {
@@ -104,7 +103,6 @@ html.dark .kutagjej-splash__mark {
   letter-spacing: -0.05em;
   line-height: 1;
   -webkit-font-smoothing: antialiased;
-  animation: kutagjejSplashWordmarkIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
 }
 
 .kutagjej-splash__wordmark-muted {
@@ -132,7 +130,6 @@ html.dark .kutagjej-splash__wordmark-brand {
   border-radius: 999px;
   background: rgba(95, 152, 22, 0.18);
   overflow: hidden;
-  animation: kutagjejSplashWordmarkIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
 }
 
 html.dark .kutagjej-splash__progress {
@@ -150,28 +147,6 @@ html.dark .kutagjej-splash__progress {
 
 html.dark .kutagjej-splash__progress-fill {
   background: #76ba1b;
-}
-
-@keyframes kutagjejSplashLogoIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes kutagjejSplashWordmarkIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 @keyframes kutagjejSplashProgress {
@@ -251,9 +226,6 @@ html.dark .kutagjej-splash__progress-fill {
     transition: none;
   }
 
-  .kutagjej-splash__mark,
-  .kutagjej-splash__wordmark,
-  .kutagjej-splash__progress,
   .kutagjej-splash__progress-fill {
     animation: none;
   }

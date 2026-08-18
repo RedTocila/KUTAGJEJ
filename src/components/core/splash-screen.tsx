@@ -4,8 +4,7 @@ import * as React from 'react';
 
 import { brandLogoSrc, config } from '@/config';
 
-const HOLD_MS = 520;
-const FADE_MS = 220;
+const FADE_MS = 180;
 
 const wordmarkSegments =
   config.site.wordmarkSegments && config.site.wordmarkSegments[0] + config.site.wordmarkSegments[1] === config.site.name
@@ -13,8 +12,9 @@ const wordmarkSegments =
     : null;
 
 /**
- * Cold-start branded overlay. Holds just long enough for the lockup to land,
- * then fades. Fully React-owned (do not inject/remove sibling DOM under `<body>`).
+ * Cold-start branded overlay. Dismisses as soon as React hydrates so it does
+ * not hold the first paint for a minimum time or wait on images (`window.load`).
+ * Fully React-owned (do not inject/remove sibling DOM under `<body>`).
  */
 export function SplashScreen(): React.JSX.Element | null {
   const [phase, setPhase] = React.useState<'show' | 'hiding' | 'gone'>('show');
@@ -26,8 +26,8 @@ export function SplashScreen(): React.JSX.Element | null {
       return;
     }
 
-    const fadeTimer = window.setTimeout(() => setPhase('hiding'), HOLD_MS);
-    const goneTimer = window.setTimeout(() => setPhase('gone'), HOLD_MS + FADE_MS);
+    const fadeTimer = window.setTimeout(() => setPhase('hiding'), 0);
+    const goneTimer = window.setTimeout(() => setPhase('gone'), FADE_MS);
     return () => {
       window.clearTimeout(fadeTimer);
       window.clearTimeout(goneTimer);
@@ -54,7 +54,7 @@ export function SplashScreen(): React.JSX.Element | null {
             width={140}
             height={140}
             decoding="async"
-            fetchPriority="low"
+            fetchPriority="high"
           />
         </div>
         <p className="kutagjej-splash__wordmark">

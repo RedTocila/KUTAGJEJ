@@ -19,7 +19,7 @@ export type HomeVerticalId =
   | 'businesses'
   | 'professionals';
 
-/** Search tabs include AI, OKAZION deals, plus listing verticals. */
+/** Search tabs include AI plus listing verticals (OKAZION is a home browse section, not a search tab). */
 export type SearchCategoryId = 'ai' | 'okazion' | HomeVerticalId;
 
 export interface HomeVertical {
@@ -158,10 +158,9 @@ export const OKAZION_SEARCH_CATEGORY: SearchCategory = {
   searchPlaceholder: 'Kërko oferta OKAZION…',
 };
 
-/** /kerko categories: AI, OKAZION, then listing verticals. */
+/** /kerko + hero search tabs: AI, then listing verticals (OKAZION matches already appear in each vertical). */
 export const SEARCH_CATEGORIES: readonly SearchCategory[] = [
   AI_SEARCH_CATEGORY,
-  OKAZION_SEARCH_CATEGORY,
   ...HOME_VERTICALS,
 ];
 
@@ -186,7 +185,8 @@ export function findVertical(id: HomeVerticalId): HomeVertical {
 }
 
 export function findSearchCategory(id: SearchCategoryId): SearchCategory {
-  const cat = SEARCH_CATEGORIES.find((x) => x.id === id);
+  const cat =
+    SEARCH_CATEGORIES.find((x) => x.id === id) ?? HOME_BROWSE_CATEGORIES.find((x) => x.id === id);
   if (!cat) throw new Error(`Unknown search category id: ${id}`);
   return cat;
 }

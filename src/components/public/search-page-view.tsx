@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import RouterLink from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -15,6 +16,8 @@ import {
   Stack,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
@@ -34,11 +37,13 @@ import {
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import { useHistoryBackProps } from '@/hooks/use-navigate-back';
+import { useScrollRevealHidden } from '@/hooks/use-scroll-reveal-hidden';
 import { fetchAiSearch, type AiSearchResult } from '@/lib/ai-search-client';
 import { hardRefreshToTop } from '@/lib/hard-navigate';
 import {
   MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
   MOBILE_BOTTOM_NAV_FLOAT_INSET_PX,
+  MOBILE_SEARCH_BAR_PADDING,
   MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX,
   MOBILE_SEARCH_DOCK_PADDING,
 } from '@/lib/mobile-layout';
@@ -46,10 +51,6 @@ import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
   AI_SEARCH_BLUE_SOFT,
-  OKAZION_ACCENT,
-  OKAZION_ACCENT_SOFT,
-  OKAZION_RED,
-  OKAZION_RED_DARK,
   findVertical,
   isHomeVerticalId,
   isSearchCategoryId,
@@ -63,17 +64,16 @@ import {
   fetchBrowseCars,
   fetchBrowseJobs,
   fetchBrowseMarketplace,
-  fetchBrowseOkazion,
   fetchBrowseProfessionals,
   fetchBrowseRealEstate,
   type PublicCarListing,
   type PublicDirectoryListing,
   type PublicJobListing,
   type PublicMarketplaceListing,
-  type PublicOkazionListing,
   type PublicRealEstateListing,
 } from '@/lib/public-listings-client';
 import { paths } from '@/paths';
+import { MOTION } from '@/styles/motion';
 
 const PAGE_SIZE = 24;
 
@@ -83,12 +83,7 @@ type SearchItem =
   | { kind: 'job'; listing: PublicJobListing }
   | { kind: 'marketplace'; listing: PublicMarketplaceListing }
   | { kind: 'businesses'; listing: PublicDirectoryListing }
-  | { kind: 'professionals'; listing: PublicDirectoryListing }
-  | { kind: 'okazion'; listing: PublicOkazionListing };
-
-function toOkazionSearchItem(listing: PublicOkazionListing): SearchItem {
-  return { kind: 'okazion', listing };
-}
+  | { kind: 'professionals'; listing: PublicDirectoryListing };
 
 function buildAiBrowseHref(intent: AiSearchResult['intent']): string | null {
   const verticalId = intent.verticals.find((v): v is HomeVerticalId => isHomeVerticalId(v));
@@ -160,6 +155,20 @@ async function fetchVerticalResults(
   }
 }
 
+/** Pins the /kerko dock to `document.body` on mobile so listing cards cannot paint over it. */
+function SearchDockLayer({ children }: { children: React.ReactNode }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
+  const [host, setHost] = React.useState<HTMLElement | null>(null);
+
+  React.useEffect(() => {
+    setHost(document.body);
+  }, []);
+
+  if (isMobile && host) return createPortal(children, host);
+  return children;
+}
+
 function ResultCard({ item }: { item: SearchItem }) {
   switch (item.kind) {
     case 'real-estate':
@@ -173,21 +182,6 @@ function ResultCard({ item }: { item: SearchItem }) {
     case 'businesses':
     case 'professionals':
       return <DirectoryListingCard listing={item.listing} />;
-    case 'okazion': {
-      const listing = item.listing;
-      switch (listing.kind) {
-        case 'real-estate':
-          return <RealEstateCard listing={listing} />;
-        case 'car':
-          return <CarCard listing={listing} />;
-        case 'job':
-          return <JobCard listing={listing} />;
-        case 'marketplace':
-          return <MarketplaceCard listing={listing} />;
-        default:
-          return null;
-      }
-    }
     default:
       return null;
   }
@@ -205,7 +199,8 @@ export function SearchPageView() {
 
   const urlCat = searchParams.get('cat');
   const urlQ = searchParams.get('q') ?? '';
-  const initialCategory = isSearchCategoryId(urlCat) ? urlCat : null;
+  const initialCategory =
+    urlCat && urlCat !== 'okazion' && isSearchCategoryId(urlCat) ? urlCat : null;
 
   const [categoryId, setCategoryId] = React.useState<SearchCategoryId | null>(initialCategory);
   const [query, setQuery] = React.useState(urlQ);
@@ -219,6 +214,8 @@ export function SearchPageView() {
   const [total, setTotal] = React.useState(0);
   const [aiReply, setAiReply] = React.useState<string | null>(null);
   const [inputExpanded, setInputExpanded] = React.useState(false);
+  const [entered, setEntered] = React.useState(false);
+  const categoriesHidden = useScrollRevealHidden({ alwaysShowBelowY: 24 });
 
   const selectedIndex = categoryId
     ? localizedCategories.findIndex((v) => v.id === categoryId)
@@ -227,7 +224,22 @@ export function SearchPageView() {
     ? (localizedCategories.find((v) => v.id === categoryId) ?? null)
     : null;
   const isAi = categoryId === 'ai';
-  const isOkazion = categoryId === 'okazion';
+
+  React.useEffect(() => {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      setEntered(true);
+      return;
+    }
+    let frame2 = 0;
+    const frame1 = requestAnimationFrame(() => {
+      frame2 = requestAnimationFrame(() => setEntered(true));
+    });
+    return () => {
+      cancelAnimationFrame(frame1);
+      cancelAnimationFrame(frame2);
+    };
+  }, []);
 
   React.useLayoutEffect(() => {
     const el = inputRef.current;
@@ -257,22 +269,16 @@ export function SearchPageView() {
   );
 
   const runVerticalSearch = React.useCallback(
-    async (cat: Exclude<SearchCategoryId, 'ai'>, q: string) => {
+    async (cat: HomeVerticalId, q: string) => {
       setLoading(true);
       setError(null);
       setHasSearched(true);
       setSubmittedQuery(q.trim());
       setAiReply(null);
       try {
-        if (cat === 'okazion') {
-          const res = await fetchBrowseOkazion(PAGE_SIZE, { q: q.trim() || undefined }, 1);
-          setItems(res.listings.map(toOkazionSearchItem));
-          setTotal(res.total);
-        } else {
-          const res = await fetchVerticalResults(cat, q);
-          setItems(res.items);
-          setTotal(res.total);
-        }
+        const res = await fetchVerticalResults(cat, q);
+        setItems(res.items);
+        setTotal(res.total);
       } catch {
         setItems([]);
         setTotal(0);
@@ -319,6 +325,7 @@ export function SearchPageView() {
 
   React.useEffect(() => {
     if (!initialCategory || initialCategory === 'ai') return;
+    if (!isHomeVerticalId(initialCategory)) return;
     if (urlQ.trim()) {
       void runVerticalSearch(initialCategory, urlQ);
     }
@@ -341,7 +348,7 @@ export function SearchPageView() {
 
   // Live results while typing (debounced). AI only runs on explicit submit.
   React.useEffect(() => {
-    if (!categoryId || categoryId === 'ai') return;
+    if (!categoryId || !isHomeVerticalId(categoryId)) return;
     const trimmed = query.trim();
 
     if (!trimmed) {
@@ -396,22 +403,20 @@ export function SearchPageView() {
     router.push(href);
   };
 
-  const searchAccent = isAi
-    ? { color: AI_SEARCH_BLUE, soft: AI_SEARCH_BLUE_SOFT }
-    : isOkazion
-      ? { color: OKAZION_ACCENT, soft: OKAZION_ACCENT_SOFT }
-      : undefined;
+  const searchAccent = isAi ? { color: AI_SEARCH_BLUE, soft: AI_SEARCH_BLUE_SOFT } : undefined;
 
   return (
     <Container
       maxWidth="xl"
       sx={{
         pt: { xs: 1.5, md: 2.5 },
-        pb: { xs: MOBILE_SEARCH_DOCK_PADDING, lg: 4 },
+        pb: { xs: categoriesHidden ? MOBILE_SEARCH_BAR_PADDING : MOBILE_SEARCH_DOCK_PADDING, lg: 4 },
         px: { xs: 2, sm: 3 },
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100dvh',
+        transition: `padding-bottom ${MOTION.base} ${MOTION.ease}`,
+        '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
       }}
     >
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
@@ -423,30 +428,76 @@ export function SearchPageView() {
         </IconButton>
       </Stack>
 
+      <SearchDockLayer>
       <Box
         sx={{
           display: 'flex',
           flexDirection: 'column',
-          gap: { xs: 1.5, lg: 2 },
+          gap: { xs: categoriesHidden ? 0 : 1.5, lg: 2 },
           mt: { xs: 0, lg: 2 },
           width: { xs: '100%', lg: 'auto' },
           position: { xs: 'fixed', lg: 'static' },
           left: { xs: 0, lg: 'auto' },
           right: { xs: 0, lg: 'auto' },
           bottom: {
-            xs: `calc(${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + env(safe-area-inset-bottom, 0px))`,
+            xs: 0,
             lg: 'auto',
           },
-          zIndex: { xs: (theme) => theme.zIndex.appBar, lg: 'auto' },
+          zIndex: { xs: 4000, lg: 'auto' },
+          isolation: { xs: 'isolate', lg: 'auto' },
           px: { xs: 2, sm: 3, lg: 0 },
-          pt: { xs: 1.25, lg: 0 },
-          pb: { xs: `${MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX}px`, lg: 0 },
+          pt: { xs: categoriesHidden ? 0 : 1.25, lg: 0 },
+          pb: {
+            xs: `calc(${MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + env(safe-area-inset-bottom, 0px))`,
+            lg: 0,
+          },
           alignItems: { xs: 'center', lg: 'stretch' },
           bgcolor: { xs: 'background.default', lg: 'transparent' },
+          transform: {
+            xs: entered ? 'translate3d(0, 0, 0)' : 'translate3d(0, 100%, 0)',
+            lg: 'none',
+          },
+          transition: {
+            xs: `transform ${MOTION.enter} ${MOTION.ease}, gap ${MOTION.base} ${MOTION.ease}, padding-top ${MOTION.base} ${MOTION.ease}`,
+            lg: 'none',
+          },
+          willChange: { xs: 'transform', lg: 'auto' },
+          '@media (prefers-reduced-motion: reduce)': {
+            transform: 'none',
+            transition: 'none',
+          },
         }}
       >
-        <Box sx={{ width: '100%' }}>
-          <HeroCategoryCircles variant="tabs" selectedIndex={selectedIndex} onSelect={handleSelectCategory} />
+        <Box
+          sx={{
+            width: '100%',
+            display: { xs: 'grid', lg: 'block' },
+            gridTemplateRows: { xs: categoriesHidden ? '0fr' : '1fr', lg: 'none' },
+            opacity: { xs: categoriesHidden ? 0 : 1, lg: 1 },
+            pointerEvents: { xs: categoriesHidden ? 'none' : 'auto', lg: 'auto' },
+            transition: `grid-template-rows ${MOTION.base} ${MOTION.ease}, opacity ${MOTION.fast} ${MOTION.ease}`,
+            '@media (prefers-reduced-motion: reduce)': {
+              transition: 'none',
+            },
+          }}
+        >
+          <Box
+            sx={{
+              minHeight: 0,
+              overflow: 'hidden',
+              transform: {
+                xs: categoriesHidden ? 'translate3d(0, 16px, 0)' : 'translate3d(0, 0, 0)',
+                lg: 'none',
+              },
+              transition: `transform ${MOTION.base} ${MOTION.ease}`,
+              '@media (prefers-reduced-motion: reduce)': {
+                transform: 'none',
+                transition: 'none',
+              },
+            }}
+          >
+            <HeroCategoryCircles variant="tabs" selectedIndex={selectedIndex} onSelect={handleSelectCategory} />
+          </Box>
         </Box>
 
         <Box
@@ -538,7 +589,7 @@ export function SearchPageView() {
                       {isAi ? (
                         <SparkleIcon size={18} color={AI_SEARCH_BLUE} />
                       ) : (
-                        <ProductSearchIcon color={isOkazion ? OKAZION_ACCENT : undefined} />
+                        <ProductSearchIcon />
                       )}
                     </InputAdornment>
                   ),
@@ -598,21 +649,21 @@ export function SearchPageView() {
               height: { xs: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX, lg: 36 },
               borderRadius: '50%',
               border: { xs: 'none', lg: '1px solid' },
-              color: isAi || isOkazion ? '#fff' : 'primary.contrastText',
-              bgcolor: isAi ? AI_SEARCH_BLUE : isOkazion ? OKAZION_RED : 'primary.main',
+              color: isAi ? '#fff' : 'primary.contrastText',
+              bgcolor: isAi ? AI_SEARCH_BLUE : 'primary.main',
               borderColor: {
-                lg: isAi ? AI_SEARCH_BLUE : isOkazion ? OKAZION_RED : categoryId ? 'primary.main' : 'divider',
+                lg: isAi ? AI_SEARCH_BLUE : categoryId ? 'primary.main' : 'divider',
               },
               boxShadow: 'none',
               opacity: categoryId ? 1 : 0.72,
               transition: 'background-color 160ms ease, transform 160ms ease, opacity 160ms ease',
               '&:hover': {
-                bgcolor: isAi ? AI_SEARCH_BLUE_HOVER : isOkazion ? OKAZION_RED_DARK : 'primary.dark',
+                bgcolor: isAi ? AI_SEARCH_BLUE_HOVER : 'primary.dark',
               },
               '&:active': { transform: 'scale(0.96)' },
               '&.Mui-disabled': {
-                bgcolor: isAi ? AI_SEARCH_BLUE : isOkazion ? OKAZION_RED : 'primary.main',
-                color: isAi || isOkazion ? '#fff' : 'primary.contrastText',
+                bgcolor: isAi ? AI_SEARCH_BLUE : 'primary.main',
+                color: isAi ? '#fff' : 'primary.contrastText',
                 opacity: 0.72,
               },
             }}
@@ -627,8 +678,19 @@ export function SearchPageView() {
           </IconButton>
         </Box>
       </Box>
+      </SearchDockLayer>
 
-      <Box sx={{ flex: 1, minHeight: 0, mt: 2, display: 'flex', flexDirection: 'column' }}>
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          mt: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+          zIndex: 0,
+        }}
+      >
         {!categoryId ? (
           <Box
             sx={{

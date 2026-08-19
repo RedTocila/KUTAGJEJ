@@ -17,7 +17,10 @@ export const MOBILE_CONTENT_BOTTOM_PADDING = `calc(${MOBILE_BOTTOM_NAV_CONTENT_H
 export const MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX = 16;
 
 /** Category circles + labels stacked above the /kerko search bar (replaces the nav). */
-export const MOBILE_SEARCH_CATEGORY_ROW_PX = 100;
+export const MOBILE_SEARCH_CATEGORY_ROW_PX = 120;
+
+/** Content padding so /kerko results clear the search bar when categories are hidden. */
+export const MOBILE_SEARCH_BAR_PADDING = `calc(${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_GAP_PX}px + env(safe-area-inset-bottom, 0px))`;
 
 /** Content padding so /kerko results clear categories + the search bar. */
 export const MOBILE_SEARCH_DOCK_PADDING = `calc(${MOBILE_SEARCH_CATEGORY_ROW_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_GAP_PX}px + env(safe-area-inset-bottom, 0px))`;

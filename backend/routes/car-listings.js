@@ -8,7 +8,7 @@ const { camelizeRow } = require('../lib/profiles');
 const { validateCarPayload, FINISH_VALUES } = require('../lib/car-field-rules');
 const { notifyAdminsListingSubmitted, listingTitle } = require('../lib/listing-moderation');
 const { isUuid } = require('../lib/public-listings/query-helpers');
-const { sanitizeImageUrls } = require('../lib/image-upload');
+const { sanitizeImageUrls, requireListingPhotos } = require('../lib/image-upload');
 const { uploadBuffersToSupabase } = require('../lib/storage-uploads');
 const { parseComparePrice } = require('../lib/listing-compare-price');
 const { formatMineCar, formatMineCarFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
@@ -114,6 +114,8 @@ router.post(
         .filter(Boolean)
         .filter((url, idx, arr) => arr.indexOf(url) === idx)
         .slice(0, MAX_CAR_IMAGES);
+      const photos = requireListingPhotos(imageUrls);
+      if (!photos.ok) return res.status(400).json({ message: photos.message });
 
       const cityId = String(fields.cityId).trim();
       if (!isUuid(cityId)) return res.status(400).json({ message: 'City not found.' });
@@ -139,15 +141,15 @@ router.post(
         make: String(fields.make).trim(),
         model: String(fields.model).trim(),
         variant: String(fields.variant || '').trim(),
-        description: String(fields.description).trim(),
-        year: Number(fields.year),
-        kilometers: Number(fields.kilometers),
+        description: String(fields.description || '').trim(),
+        year: fields.year,
+        kilometers: fields.kilometers,
         transmission: fields.transmission,
         fuel_type: fields.fuelType,
         price,
         original_price: cmp.value,
         currency: fields.currency,
-        color: String(fields.color).trim().toLowerCase(),
+        color: fields.color || null,
         finish: parseFinish(fields),
         extras: parseExtras(fields),
         contact_phone: String(fields.contactPhone || '').trim(),
@@ -244,15 +246,15 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
       make: String(fields.make).trim(),
       model: String(fields.model).trim(),
       variant: String(fields.variant || '').trim(),
-      description: String(fields.description).trim(),
-      year: Number(fields.year),
-      kilometers: Number(fields.kilometers),
+      description: String(fields.description || '').trim(),
+      year: fields.year,
+      kilometers: fields.kilometers,
       transmission: fields.transmission,
       fuel_type: fields.fuelType,
       price,
       original_price: cmp.value,
       currency: fields.currency,
-      color: String(fields.color).trim().toLowerCase(),
+      color: fields.color || null,
       finish,
       extras,
       contact_phone: String(fields.contactPhone || '').trim(),
@@ -260,6 +262,8 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
       image_urls: sanitizeImageUrls(fields.imageUrls, MAX_CAR_IMAGES),
       updated_at: new Date().toISOString(),
     };
+    const photos = requireListingPhotos(patch.image_urls);
+    if (!photos.ok) return res.status(400).json({ message: photos.message });
     if (!maps.skip) Object.assign(patch, mapsColumnsFromParsed(maps));
 
     const { data: updated, error: updErr } = await getSupabaseAdmin()

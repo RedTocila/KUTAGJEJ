@@ -20,6 +20,7 @@ import {
   MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
   MOBILE_BOTTOM_NAV_FLOAT_INSET_PX,
 } from '@/lib/mobile-layout';
+import { normalizeNavPath } from '@/lib/navigation-pending';
 import { isPublicBrowsePath } from '@/lib/public-browse-path';
 import { paths } from '@/paths';
 
@@ -38,20 +39,26 @@ interface NavItem {
   ariaLabel: string;
   href: string;
   activeWhen: (pathname: string | null) => boolean;
-  icon: React.ComponentType<{ size?: number; weight?: 'fill' | 'regular' }>;
+  icon: React.ComponentType<{ size?: number; weight?: 'fill' | 'regular'; color?: string }>;
+}
+
+function resolveNavPathname(displayPathname: string): string {
+  if (displayPathname) return normalizeNavPath(displayPathname);
+  if (typeof window !== 'undefined') {
+    return normalizeNavPath(window.location.pathname || paths.home);
+  }
+  return paths.home;
 }
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const displayPathname = useDisplayPathname();
+  const displayPathname = resolveNavPathname(useDisplayPathname());
   const { user } = useUser();
   const unreadMessages = useUnreadMessagesCount();
   const t = useCopy();
   const isAuthed = Boolean(user);
   const searchActive =
     Boolean(displayPathname.startsWith(paths.public.search)) || isPublicBrowsePath(displayPathname);
-  const [indicatorIndex, setIndicatorIndex] = React.useState(persistedFromIndex);
-  const [transitionReady, setTransitionReady] = React.useState(false);
 
   const items: NavItem[] = React.useMemo(
     () => [
@@ -95,8 +102,10 @@ export function MobileBottomNav() {
   const activeIndex = items.findIndex((item) => item.activeWhen(displayPathname));
   const hasActiveTab = activeIndex >= 0;
   const slotCount = items.length;
+  const [indicatorIndex, setIndicatorIndex] = React.useState(persistedFromIndex);
+  const [transitionReady, setTransitionReady] = React.useState(false);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (activeIndex < 0) return undefined;
 
     const target = activeIndex;
@@ -253,6 +262,9 @@ export function MobileBottomNav() {
                 const Icon = item.icon;
                 const active = item.activeWhen(displayPathname);
                 const isMessages = item.id === 'messages';
+                const iconColor = active
+                  ? 'var(--mui-palette-primary-main)'
+                  : 'var(--mui-palette-text-secondary)';
 
                 return (
                   <Box
@@ -269,9 +281,16 @@ export function MobileBottomNav() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       borderRadius: 999,
-                      color: active ? 'primary.main' : 'text.secondary',
+                      color: iconColor,
                       textDecoration: 'none',
                       transition: 'color 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1)',
+                      '&:link, &:visited, &:hover, &:active': {
+                        color: iconColor,
+                      },
+                      '& svg': {
+                        color: 'inherit',
+                        fill: 'currentColor',
+                      },
                       '&:active': {
                         transform: 'scale(0.94)',
                       },
@@ -283,7 +302,12 @@ export function MobileBottomNav() {
                       invisible={!isMessages || unreadMessages <= 0}
                       overlap="circular"
                     >
-                      <Icon size={24} weight={active ? 'fill' : 'regular'} />
+                      <Icon
+                        key={active ? 'fill' : 'regular'}
+                        size={24}
+                        weight={active ? 'fill' : 'regular'}
+                        color={iconColor}
+                      />
                     </Badge>
                   </Box>
                 );

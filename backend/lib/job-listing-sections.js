@@ -17,7 +17,7 @@ const MAX_LINES = 8;
 const MIN_LINE_LEN = 8;
 const MAX_LINE_LEN = 500;
 const MAX_BENEFITS = 8;
-const MIN_BENEFITS = 1;
+const MIN_BENEFITS = 0;
 
 function normalizeLines(raw, { minItems = 1, maxItems = MAX_LINES } = {}) {
   if (!Array.isArray(raw)) return { ok: false, message: 'Lista duhet të jetë varg.' };
@@ -68,13 +68,19 @@ function normalizeBenefits(raw) {
 }
 
 function validateJobSections(body) {
-  const resp = normalizeLines(body?.responsibilities, { minItems: 1 });
+  const resp = normalizeLines(
+    Array.isArray(body?.responsibilities) ? body.responsibilities : [],
+    { minItems: 0 },
+  );
   if (!resp.ok) return { ok: false, message: `Detyrat: ${resp.message}` };
 
-  const req = normalizeLines(body?.requirements, { minItems: 1 });
+  const req = normalizeLines(
+    Array.isArray(body?.requirements) ? body.requirements : [],
+    { minItems: 0 },
+  );
   if (!req.ok) return { ok: false, message: `Kërkesat: ${req.message}` };
 
-  const ben = normalizeBenefits(body?.benefits);
+  const ben = normalizeBenefits(Array.isArray(body?.benefits) ? body.benefits : []);
   if (!ben.ok) return { ok: false, message: ben.message };
 
   return {

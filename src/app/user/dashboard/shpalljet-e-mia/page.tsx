@@ -632,12 +632,20 @@ function RealEstateCard({
       lastRefreshedAt={lastRefreshedAt}
       refreshEveryHours={refreshEveryHours}
       chips={<>
-        <Chip size="small" label={l.transactionType === 'rent' ? 'Qera' : 'Shitje'} color={l.transactionType === 'rent' ? 'info' : 'secondary'} variant="outlined" sx={chipSx} />
-        <Chip size="small" label={propertyCategoryLabel(l.propertyCategory)} variant="outlined" sx={chipSx} />
+        {l.transactionType === 'rent' || l.transactionType === 'sale' ? (
+          <Chip size="small" label={l.transactionType === 'rent' ? 'Qera' : 'Shitje'} color={l.transactionType === 'rent' ? 'info' : 'secondary'} variant="outlined" sx={chipSx} />
+        ) : null}
+        {l.propertyCategory ? (
+          <Chip size="small" label={propertyCategoryLabel(l.propertyCategory)} variant="outlined" sx={chipSx} />
+        ) : null}
       </>}
     >
       <Row icon={TagIcon}><strong>{formatPrice(l.price, l.currency)}</strong></Row>
-      <Row icon={RulerIcon}><strong>{l.surfaceM2}</strong> m²{l.bedrooms != null ? ` · ${l.bedrooms} dhoma · ${l.bathrooms ?? 0} banjo` : ''}</Row>
+      {l.surfaceM2 != null && Number(l.surfaceM2) > 0 ? (
+        <Row icon={RulerIcon}><strong>{l.surfaceM2}</strong> m²{l.bedrooms != null ? ` · ${l.bedrooms} dhoma · ${l.bathrooms ?? 0} banjo` : ''}</Row>
+      ) : l.bedrooms != null ? (
+        <Row icon={RulerIcon}>{l.bedrooms} dhoma · {l.bathrooms ?? 0} banjo</Row>
+      ) : null}
       <Row icon={MapPinIcon}>{location}</Row>
     </BaseCard>
   );
@@ -689,12 +697,18 @@ function CarCard({
       lastRefreshedAt={lastRefreshedAt}
       refreshEveryHours={refreshEveryHours}
       chips={<>
-        <Chip size="small" label={l.year} variant="outlined" sx={chipSx} />
-        <Chip size="small" label={l.transmission} variant="outlined" sx={chipSx} />
+        {l.year != null ? <Chip size="small" label={l.year} variant="outlined" sx={chipSx} /> : null}
+        {l.transmission ? <Chip size="small" label={l.transmission} variant="outlined" sx={chipSx} /> : null}
       </>}
     >
       <Row icon={TagIcon}><strong>{formatPrice(l.price, l.currency)}</strong></Row>
-      <Row icon={SpeedometerIcon}><strong>{new Intl.NumberFormat('en-GB').format(l.kilometers)}</strong> km · {l.fuelType}</Row>
+      {l.kilometers != null || l.fuelType ? (
+        <Row icon={SpeedometerIcon}>
+          {l.kilometers != null ? <><strong>{new Intl.NumberFormat('en-GB').format(l.kilometers)}</strong> km</> : null}
+          {l.kilometers != null && l.fuelType ? ' · ' : null}
+          {l.fuelType || null}
+        </Row>
+      ) : null}
       {l.cityName ? <Row icon={MapPinIcon}>{l.cityName}</Row> : null}
     </BaseCard>
   );

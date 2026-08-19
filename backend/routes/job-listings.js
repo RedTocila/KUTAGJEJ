@@ -6,7 +6,7 @@ const { getSupabaseAdmin } = require('../lib/supabase');
 const { camelizeRow } = require('../lib/profiles');
 const { validateJobPayload } = require('../lib/job-field-rules');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
-const { sanitizeImageUrls } = require('../lib/image-upload');
+const { sanitizeImageUrls, requireListingPhotos } = require('../lib/image-upload');
 const { isUuid } = require('../lib/public-listings/query-helpers');
 const { formatMineJob, formatMineJobFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
 const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
@@ -107,6 +107,8 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       status: 'approved',
       ...mapsColumnsFromParsed(maps),
     };
+    const photos = requireListingPhotos(row.image_urls);
+    if (!photos.ok) return res.status(400).json({ message: photos.message });
     if (hasSalary) row.currency = body.currency;
 
     const { data: created, error: insErr } = await getSupabaseAdmin()
@@ -190,6 +192,8 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
       image_urls: sanitizeImageUrls(body.imageUrls, MAX_JOB_IMAGES),
       updated_at: new Date().toISOString(),
     };
+    const photos = requireListingPhotos(patch.image_urls);
+    if (!photos.ok) return res.status(400).json({ message: photos.message });
     if (!maps.skip) Object.assign(patch, mapsColumnsFromParsed(maps));
 
     const { data: updated, error: updErr } = await getSupabaseAdmin()

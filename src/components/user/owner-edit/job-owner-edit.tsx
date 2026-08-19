@@ -189,6 +189,10 @@ export function JobOwnerEdit({
         uploaded = up.urls;
       }
       const imageUrls = [...kept, ...uploaded].slice(0, MAX_IMAGES);
+      if (imageUrls.length < 1) {
+        setError('Shtoni të paktën një foto.');
+        return;
+      }
       const cityId = draft.cityId;
       if (!cityId) {
         setError('Zgjidhni qytetin.');

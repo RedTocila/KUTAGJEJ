@@ -20,8 +20,9 @@ export function formatPrice(value: number | null | undefined, currency: string |
   return formatted;
 }
 
-export function formatKilometers(value: number): string {
-  return `${new Intl.NumberFormat('en-GB').format(value)} km`;
+export function formatKilometers(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(Number(value))) return '';
+  return `${new Intl.NumberFormat('en-GB').format(Number(value))} km`;
 }
 
 export function relativeAlbanianDate(iso: string): string {

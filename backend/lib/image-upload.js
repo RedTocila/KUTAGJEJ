@@ -66,10 +66,18 @@ function sanitizeImageUrls(input, max = MAX_IMAGES) {
     .slice(0, max);
 }
 
+function requireListingPhotos(urls, min = 1) {
+  if (!Array.isArray(urls) || urls.length < min) {
+    return { ok: false, message: 'Shtoni të paktën një foto.' };
+  }
+  return { ok: true };
+}
+
 module.exports = {
   imageUpload,
   uploadBuffersToBlob,
   sanitizeImageUrls,
+  requireListingPhotos,
   MAX_IMAGES,
   MAX_IMAGE_BYTES,
 };

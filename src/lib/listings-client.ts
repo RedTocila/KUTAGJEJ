@@ -39,16 +39,16 @@ async function jsonAuthFetch<T extends Record<string, unknown>>(
 
 
 export interface RealEstateListingPayload {
-  propertyCategory: string;
+  propertyCategory?: string;
   title: string;
-  description: string;
-  transactionType: 'rent' | 'sale';
+  description?: string;
+  transactionType?: 'rent' | 'sale' | null;
   price: number;
   originalPrice?: number | null;
-  currency: 'EUR' | 'LEK';
-  surfaceM2: number;
+  currency?: 'EUR' | 'LEK';
+  surfaceM2?: number | null;
   cityId: string;
-  zoneId: string;
+  zoneId?: string | null;
   mapsUrl?: string | null;
   contactPhone: string;
   condition?: string;
@@ -85,8 +85,8 @@ export interface CarMineListing extends ListingMetrics {
   model: string;
   variant: string;
   description?: string;
-  year: number;
-  kilometers: number;
+  year: number | null;
+  kilometers: number | null;
   transmission: string;
   fuelType: string;
   price: number;
@@ -404,12 +404,12 @@ export async function updateJobListing(id: string, body: JobListingPayload): Pro
 export interface MarketplaceListingPayload {
   transactionType: string;
   title: string;
-  description: string;
-  category: string;
-  condition: string | null;
+  description?: string;
+  category?: string | null;
+  condition?: string | null;
   price: number | null;
   originalPrice?: number | null;
-  currency: string | null;
+  currency?: string | null;
   cityId: string;
   mapsUrl?: string | null;
   contactPhone: string;
@@ -472,15 +472,15 @@ export type CarListingJsonPayload = {
   make: string;
   model: string;
   variant?: string;
-  description: string;
-  year: number;
-  kilometers: number;
-  transmission: string;
-  fuelType: string;
+  description?: string;
+  year?: number | null;
+  kilometers?: number | null;
+  transmission?: string | null;
+  fuelType?: string | null;
   price: number;
   originalPrice?: number | null;
   currency: string;
-  color: string;
+  color?: string | null;
   finish: string[];
   extras: string[];
   cityId: string;

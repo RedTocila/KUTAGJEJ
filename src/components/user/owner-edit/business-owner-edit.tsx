@@ -234,6 +234,10 @@ export function BusinessOwnerEdit({
         uploaded = up.urls;
       }
       const imageUrls = [...kept, ...uploaded].slice(0, MAX_IMAGES);
+      if (imageUrls.length < 1) {
+        setError('Shtoni të paktën një foto.');
+        return;
+      }
       if (!draft.cityId) {
         setError('Zgjidhni qytetin.');
         return;

@@ -45,7 +45,12 @@ export function RealEstateCard({
   const t = useCopy();
   const { language } = useLanguage();
   const location = [listing.zoneName, listing.cityName].filter(Boolean).join(', ');
-  const transactionLabel = listing.transactionType === 'rent' ? t.common.forRent : t.common.forSale;
+  const transactionLabel =
+    listing.transactionType === 'rent'
+      ? t.common.forRent
+      : listing.transactionType === 'sale'
+        ? t.common.forSale
+        : '';
   const viewCount = listing.viewCount ?? 0;
   const cardRating = resolveListingCardRating(null, sellerRating);
   const categoryLabel = propertyCategoryLabel(listing.propertyCategory, language);
@@ -63,7 +68,9 @@ export function RealEstateCard({
   const specs: Spec[] = [
     ...(listing.bedrooms != null ? [{ Icon: BedIcon, label: `${listing.bedrooms}`, title: t.browse.bedrooms }] : []),
     ...(listing.bathrooms != null ? [{ Icon: BathtubIcon, label: `${listing.bathrooms}`, title: t.browse.bathrooms }] : []),
-    { Icon: RulerIcon, label: `${listing.surfaceM2} m²`, title: t.browse.surface },
+    ...(listing.surfaceM2 != null && Number(listing.surfaceM2) > 0
+      ? [{ Icon: RulerIcon, label: `${listing.surfaceM2} m²`, title: t.browse.surface }]
+      : []),
     ...(listing.floor != null ? [{ Icon: StairsIcon, label: t.browse.floorN(listing.floor), title: t.browse.floorN(listing.floor) }] : []),
     ...(listing.yearBuilt != null
       ? [{ Icon: CalendarIcon, label: String(listing.yearBuilt), title: t.browse.yearBuilt }]
@@ -79,7 +86,9 @@ export function RealEstateCard({
   const shareSpecs = [
     ...(listing.bedrooms != null ? [{ icon: 'bed' as const, label: `${listing.bedrooms}` }] : []),
     ...(listing.bathrooms != null ? [{ icon: 'bath' as const, label: `${listing.bathrooms}` }] : []),
-    { icon: 'ruler' as const, label: `${listing.surfaceM2} m²` },
+    ...(listing.surfaceM2 != null && Number(listing.surfaceM2) > 0
+      ? [{ icon: 'ruler' as const, label: `${listing.surfaceM2} m²` }]
+      : []),
     ...(listing.floor != null ? [{ icon: 'stairs' as const, label: t.browse.floorN(listing.floor) }] : []),
     ...(listing.yearBuilt != null ? [{ icon: 'calendar' as const, label: String(listing.yearBuilt) }] : []),
     ...(listing.furnishing
@@ -107,7 +116,7 @@ export function RealEstateCard({
           imageUrl={listing.imageUrl}
           FallbackIcon={listing.propertyCategory === 'villa' ? HouseIcon : BuildingsIcon}
           alt={listing.title}
-          topLeftBadge={transactionLabel}
+          topLeftBadge={transactionLabel || undefined}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}

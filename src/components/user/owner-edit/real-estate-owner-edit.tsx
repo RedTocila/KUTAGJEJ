@@ -47,11 +47,11 @@ type Snapshot = {
   title: string;
   description: string;
   propertyCategory: string;
-  transactionType: 'rent' | 'sale';
+  transactionType: 'rent' | 'sale' | string | null;
   price: number;
   originalPrice: number | null;
   currency: 'EUR' | 'LEK';
-  surfaceM2: number;
+  surfaceM2: number | null;
   cityId: string | null;
   zoneId: string | null;
   cityName: string | null;
@@ -181,25 +181,42 @@ export function RealEstateOwnerEdit({
         uploaded = up.urls;
       }
       const imageUrls = [...kept, ...uploaded].slice(0, MAX_IMAGES);
-      const cityId = draft.cityId;
-      const zoneId = draft.zoneId;
-      if (!cityId || !zoneId) {
-        setError('Zgjidhni qytetin dhe zonën.');
+      if (imageUrls.length < 1) {
+        setError('Shtoni të paktën një foto.');
         return;
       }
+      const cityId = draft.cityId;
+      if (!cityId) {
+        setError('Zgjidhni qytetin.');
+        return;
+      }
+      if (!draft.title.trim()) {
+        setError('Titulli është i detyrueshëm.');
+        return;
+      }
+      if (draft.price == null || !Number.isFinite(Number(draft.price)) || Number(draft.price) < 0) {
+        setError('Vendosni një çmim të vlefshëm.');
+        return;
+      }
+      const phone = String(draft.contactPhone ?? '').trim();
+      if (phone.length < 6) {
+        setError('Vendosni një numër telefoni të vlefshëm.');
+        return;
+      }
+      const zoneId = draft.zoneId || null;
       const res = await updateRealEstateListing(draft.id, {
-        propertyCategory: draft.propertyCategory,
+        propertyCategory: draft.propertyCategory || undefined,
         title: draft.title.trim(),
         description: (draft.description ?? '').trim(),
-        transactionType: draft.transactionType,
+        transactionType: draft.transactionType === 'rent' || draft.transactionType === 'sale' ? draft.transactionType : null,
         price: draft.price,
         originalPrice: draft.originalPrice ?? null,
-        currency: draft.currency,
+        currency: draft.currency || 'EUR',
         surfaceM2: draft.surfaceM2,
         cityId,
         zoneId,
         mapsUrl: draft.mapsUrl?.trim() || null,
-        contactPhone: draft.contactPhone ?? '',
+        contactPhone: phone,
         condition: draft.condition ?? undefined,
         apartmentTypeSlug: draft.apartmentTypeSlug ?? undefined,
         floor: draft.floor ?? undefined,
@@ -249,7 +266,7 @@ export function RealEstateOwnerEdit({
       <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
         <SearchableSelect
           label="Lloji i transakcionit"
-          value={draft.transactionType}
+          value={draft.transactionType ?? ''}
           onChange={(v) =>
             setDraft((d) => ({
               ...d,
@@ -317,8 +334,8 @@ export function RealEstateOwnerEdit({
             setDraft((d) => ({ ...d, zoneId: v || null, zoneName: zone?.name ?? null }));
           }}
           options={zones.map((z) => ({ value: z.id, label: z.name }))}
-          emptyLabel="Zgjidhni…"
-          required
+          emptyLabel="Zgjidhni… (opsionale)"
+          clearable
         />
         <ListingMapsLocationFields
           value={{
@@ -351,16 +368,17 @@ export function RealEstateOwnerEdit({
           onChange={(v) => setDraft((d) => ({ ...d, propertyCategory: v }))}
           options={PROPERTY_OPTIONS}
           emptyLabel="Zgjidhni…"
-          required
+          clearable
         />
         <TextField
           label="Sipërfaqja (m²)"
-          value={String(draft.surfaceM2)}
+          value={draft.surfaceM2 != null ? String(draft.surfaceM2) : ''}
           onChange={(e) =>
-            setDraft((d) => ({ ...d, surfaceM2: Number(e.target.value) || d.surfaceM2 }))
+            setDraft((d) => ({ ...d, surfaceM2: numOrNull(e.target.value) }))
           }
           fullWidth
           autoFocus
+          helperText="Opsionale"
           sx={fieldSx}
         />
         {needsCondition(cat) ? (

@@ -134,7 +134,7 @@ function emptyForm(): CarFormState {
     fuelType: '',
     price: '',
     originalPrice: '',
-    currency: '',
+    currency: 'EUR',
     color: '',
     isMatte: false,
     isMetallic: false,
@@ -157,22 +157,18 @@ type FieldErrors = Partial<Record<keyof CarFormState, string>>;
 function validateForm(f: CarFormState): FieldErrors {
   const errors: FieldErrors = {};
 
-  if (!f.vehicleType) errors.vehicleType = 'Ju lutem zgjidhni kategorinë e automjetit.';
-  if (!f.make) errors.make = 'Ju lutem zgjidhni markën.';
-  if (!f.model.trim()) errors.model = 'Ju lutem zgjidhni modelin.';
-  if (!f.description.trim()) errors.description = 'Përshkrimi është i detyrueshëm.';
-
-  const year = parsePositiveInt(f.year);
-  const currentYear = new Date().getFullYear();
-  if (year === null || year < 1970 || year > currentYear + 1) {
-    errors.year = `Year must be between 1970 and ${currentYear + 1}.`;
+  if (f.year.trim()) {
+    const year = parsePositiveInt(f.year);
+    const currentYear = new Date().getFullYear();
+    if (year === null || year < 1970 || year > currentYear + 1) {
+      errors.year = `Year must be between 1970 and ${currentYear + 1}.`;
+    }
   }
 
-  const km = parsePositiveInt(f.kilometers);
-  if (km === null) errors.kilometers = 'Kilometres must be a whole number (0 or more).';
-
-  if (!f.transmission) errors.transmission = 'Please select the transmission type.';
-  if (!f.fuelType) errors.fuelType = 'Please select the fuel type.';
+  if (f.kilometers.trim()) {
+    const km = parsePositiveInt(f.kilometers);
+    if (km === null) errors.kilometers = 'Kilometres must be a whole number (0 or more).';
+  }
 
   const price = parseFloatStrict(f.price);
   if (price === null || price < 0) errors.price = 'Enter a valid price.';
@@ -185,8 +181,6 @@ function validateForm(f: CarFormState): FieldErrors {
       errors.originalPrice = 'Previous price must be higher than the current price.';
     }
   }
-
-  if (!f.color) errors.color = 'Please select the exterior colour.';
 
   if (!f.cityId) errors.cityId = 'Please select a city.';
 
@@ -522,6 +516,10 @@ export function CarListingForm({
       return;
     }
     setFieldErrors({});
+    if (existingImageUrls.length + images.length < 1) {
+      setSubmitError('Shtoni të paktën një foto.');
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -544,14 +542,14 @@ export function CarListingForm({
           model: form.model.trim(),
           variant: form.variant.trim(),
           description: form.description.trim(),
-          year: Number(form.year),
-          kilometers: Number(form.kilometers),
-          transmission: form.transmission,
-          fuelType: form.fuelType,
+          year: form.year.trim() ? Number(form.year) : null,
+          kilometers: form.kilometers.trim() ? Number(form.kilometers) : null,
+          transmission: form.transmission || null,
+          fuelType: form.fuelType || null,
           price: Number(form.price),
           originalPrice: form.originalPrice.trim() ? Number(form.originalPrice) : null,
-          currency: form.currency,
-          color: form.color,
+          currency: form.currency || 'EUR',
+          color: form.color || null,
           finish,
           extras: form.extras,
           contactPhone: form.contactPhone.trim(),
@@ -696,7 +694,6 @@ export function CarListingForm({
             value={form.vehicleType}
             onChange={setVehicleType}
             label="Category"
-            required
             error={Boolean(fieldErrors.vehicleType)}
             helperText={fieldErrors.vehicleType}
           />
@@ -709,7 +706,6 @@ export function CarListingForm({
             onChange={setMake}
             options={makeOptions.map((m) => ({ value: m, label: m }))}
             emptyLabel={form.vehicleType ? 'Select make…' : 'Select category first…'}
-            required
             allowCustom
             disabled={!form.vehicleType}
             error={Boolean(fieldErrors.make)}
@@ -722,7 +718,6 @@ export function CarListingForm({
             onChange={(v) => setSelectField('model', v)}
             options={modelOptions.map((m) => ({ value: m, label: m }))}
             emptyLabel={form.make ? 'Select model…' : 'Select make first…'}
-            required
             allowCustom
             disabled={!form.make}
             error={Boolean(fieldErrors.model)}
@@ -733,7 +728,7 @@ export function CarListingForm({
         <Stack spacing={1.5}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
             <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-              Photos
+              Photos (të paktën 1)
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {existingImageUrls.length + images.length} / {MAX_IMAGES}
@@ -875,7 +870,6 @@ export function CarListingForm({
           label="Description"
           value={form.description}
           onChange={onField('description')}
-          required
           fullWidth
           placeholder="Describe the car's condition, service history, any additional info…"
           error={Boolean(fieldErrors.description)}
@@ -898,7 +892,6 @@ export function CarListingForm({
             onChange={(v) => setSelectField('year', v)}
             options={YEAR_OPTIONS.map((y) => ({ value: String(y), label: String(y) }))}
             emptyLabel="Select year…"
-            required
             error={Boolean(fieldErrors.year)}
             helperText={fieldErrors.year}
           />
@@ -909,7 +902,6 @@ export function CarListingForm({
             inputMode="numeric"
             value={form.kilometers}
             onChange={onField('kilometers')}
-            required
             fullWidth
             placeholder="e.g. 85000"
             error={Boolean(fieldErrors.kilometers)}
@@ -927,7 +919,6 @@ export function CarListingForm({
           value={form.transmission}
           onChange={(v) => setSelectField('transmission', v as CarFormState['transmission'])}
           options={TRANSMISSION_TOGGLE}
-          required
           error={Boolean(fieldErrors.transmission)}
           helperText={fieldErrors.transmission}
         />
@@ -938,7 +929,6 @@ export function CarListingForm({
           onChange={(v) => setSelectField('fuelType', v)}
           options={FUEL_TYPE_OPTIONS}
           emptyLabel="Select fuel type…"
-          required
           error={Boolean(fieldErrors.fuelType)}
           helperText={fieldErrors.fuelType}
         />

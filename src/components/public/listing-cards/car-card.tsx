@@ -47,8 +47,10 @@ export function CarCard({
   const cardRating = resolveListingCardRating(null, sellerRating);
 
   const specs: Spec[] = [
-    { Icon: CalendarIcon, label: String(listing.year), title: 'Viti' },
-    { Icon: GaugeIcon, label: formatKilometers(listing.kilometers), title: 'Kilometrazh' },
+    ...(listing.year != null ? [{ Icon: CalendarIcon, label: String(listing.year), title: 'Viti' }] : []),
+    ...(listing.kilometers != null
+      ? [{ Icon: GaugeIcon, label: formatKilometers(listing.kilometers), title: 'Kilometrazh' }]
+      : []),
     { Icon: GasPumpIcon, label: fuelLabel, title: 'Karburant' },
     { Icon: GearSixIcon, label: transmissionLabel, title: 'Transmision' },
     ...(listing.color ? [{ Icon: PaintBucketIcon, label: colourLabel, title: 'Ngjyra' }] : []),
@@ -84,8 +86,10 @@ export function CarCard({
           imageUrl: listing.imageUrl,
           location: listing.cityName || undefined,
           specs: [
-            { icon: 'calendar', label: String(listing.year) },
-            { icon: 'gauge', label: formatKilometers(listing.kilometers) },
+            ...(listing.year != null ? [{ icon: 'calendar' as const, label: String(listing.year) }] : []),
+            ...(listing.kilometers != null
+              ? [{ icon: 'gauge' as const, label: formatKilometers(listing.kilometers) }]
+              : []),
             { icon: 'gas', label: fuelLabel },
             { icon: 'gear', label: transmissionLabel },
             ...(listing.color ? [{ icon: 'paint' as const, label: colourLabel }] : []),

@@ -38,35 +38,42 @@ function validateJobPayload(body) {
   if (!title) return { ok: false, message: 'Titulli i punës është i detyrueshëm.' };
   if (title.length > 120) return { ok: false, message: 'Titulli është shumë i gjatë.' };
 
-  const description = String(body?.description || '').trim();
-  if (!description) return { ok: false, message: 'Përshkrimi është i detyrueshëm.' };
+  body.description = String(body?.description || '').trim();
 
   const industry = String(body?.industry || '').trim();
-  if (!industry || industry.length > 80) {
+  if (industry && industry.length > 80) {
     return { ok: false, message: 'Industria e zgjedhur nuk është e vlefshme.' };
   }
-  body.industry = industry;
+  body.industry = industry || null;
 
   const cityId = String(body?.cityId || '').trim();
   if (!cityId || !isUuid(cityId)) {
     return { ok: false, message: 'Ju lutem zgjidhni një qytet të vlefshëm.' };
   }
 
-  if (!EDUCATION_VALUES.includes(body?.education)) {
+  const education = String(body?.education || '').trim();
+  if (education && !EDUCATION_VALUES.includes(education)) {
     return { ok: false, message: 'Niveli i edukimit nuk është i vlefshëm.' };
   }
+  body.education = education || null;
 
-  if (!EXPERIENCE_VALUES.includes(body?.experience)) {
+  const experience = String(body?.experience || '').trim();
+  if (experience && !EXPERIENCE_VALUES.includes(experience)) {
     return { ok: false, message: 'Eksperienca e zgjedhur nuk është e vlefshme.' };
   }
+  body.experience = experience || null;
 
-  if (!JOB_TYPE_VALUES.includes(body?.jobType)) {
+  const jobType = String(body?.jobType || '').trim();
+  if (jobType && !JOB_TYPE_VALUES.includes(jobType)) {
     return { ok: false, message: 'Lloji i punës nuk është i vlefshëm.' };
   }
+  body.jobType = jobType || null;
 
-  if (!WORK_LOCATION_VALUES.includes(body?.workLocation)) {
+  const workLocation = String(body?.workLocation || '').trim();
+  if (workLocation && !WORK_LOCATION_VALUES.includes(workLocation)) {
     return { ok: false, message: 'Vendi i punës nuk është i vlefshëm.' };
   }
+  body.workLocation = workLocation || null;
 
   // Salary is optional — but if provided, currency must also be present.
   if (body?.salary !== null && body?.salary !== undefined && body?.salary !== '') {

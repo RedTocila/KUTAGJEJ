@@ -91,7 +91,7 @@ function emptyForm(): MarketplaceFormState {
     condition: '',
     price: '',
     originalPrice: '',
-    currency: '',
+    currency: 'EUR',
     cityId: '',
     mapsUrl: '',
     locationLat: null,
@@ -103,19 +103,12 @@ function emptyForm(): MarketplaceFormState {
 
 function validateForm(f: MarketplaceFormState): string | null {
   if (!f.title.trim()) return 'Titulli i njoftimit është i detyrueshëm.';
-  if (!f.description.trim()) return 'Përshkrimi është i detyrueshëm.';
-  if (!f.category) return 'Ju lutem zgjidhni kategorinë e artikullit.';
-  if (!f.condition) return 'Ju lutem zgjidhni gjendjen e artikullit.';
 
-  let price: number | null = null;
-  if (f.price.trim()) {
-    price = parseFloatStrict(f.price);
-    if (price === null || price < 0) return 'Çmimi duhet të jetë një numër pozitiv.';
-    if (f.currency !== 'EUR' && f.currency !== 'LEK') return 'Ju lutem zgjidhni monedhën.';
-  }
+  const price = parseFloatStrict(f.price);
+  if (price === null || price < 0) return 'Vendosni një çmim të vlefshëm.';
+  if (f.currency !== 'EUR' && f.currency !== 'LEK') return 'Ju lutem zgjidhni monedhën.';
 
   if (f.originalPrice.trim()) {
-    if (price === null) return 'Vendosni çmimin aktual për të shtuar çmimin e mëparshëm.';
     const was = parseFloatStrict(f.originalPrice);
     if (was === null || was < 0) return 'Çmimi i mëparshëm duhet të jetë një numër pozitiv.';
     if (was <= price) return 'Çmimi i mëparshëm duhet të jetë më i lartë se çmimi aktual.';
@@ -238,10 +231,13 @@ export function MarketplaceListingForm({
     setSubmitError(null);
     const err = validateForm(form);
     if (err) { setSubmitError(err); return; }
+    if (existingImageUrls.length + images.length < 1) {
+      setSubmitError('Shtoni të paktën një foto.');
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const hasPrice = Boolean(form.price.trim());
       let uploaded: string[] = [];
       if (images.length) {
         const up = await uploadListingImages(images, 'marketplace');
@@ -252,11 +248,11 @@ export function MarketplaceListingForm({
         transactionType: 'shes',
         title: form.title.trim(),
         description: form.description.trim(),
-        category: form.category,
-        condition: form.condition,
-        price: hasPrice ? parseFloatStrict(form.price) : null,
-        originalPrice: hasPrice && form.originalPrice.trim() ? parseFloatStrict(form.originalPrice) : null,
-        currency: hasPrice ? form.currency : null,
+        category: form.category || null,
+        condition: form.condition || null,
+        price: parseFloatStrict(form.price),
+        originalPrice: form.originalPrice.trim() ? parseFloatStrict(form.originalPrice) : null,
+        currency: form.currency === 'LEK' ? 'LEK' : 'EUR',
         cityId: form.cityId,
         mapsUrl: form.mapsUrl.trim() || null,
         contactPhone: form.contactPhone.trim(),
@@ -332,14 +328,13 @@ export function MarketplaceListingForm({
           existingUrls={existingImageUrls}
           onExistingUrlsChange={setExistingImageUrls}
           max={MAX_MARKETPLACE_IMAGES}
-          label="Foto të artikullit"
+          label="Foto të artikullit (të paktën 1)"
           disabled={submitting}
         />
         <ListingDescriptionField
           label="Përshkrimi"
           value={form.description}
           onChange={onField('description')}
-          required
           fullWidth
           placeholder="Përshkruani artikullin, gjendjen, çdo detaj të rëndësishëm…"
         />
@@ -350,7 +345,7 @@ export function MarketplaceListingForm({
             onChange={(v) => setForm((p) => ({ ...p, category: v }))}
             options={MARKETPLACE_CATEGORY_OPTIONS}
             emptyLabel="Zgjidhni kategorinë…"
-            required
+            clearable
             allowCustom
           />
           <SearchableSelect
@@ -359,7 +354,7 @@ export function MarketplaceListingForm({
             onChange={(v) => setForm((p) => ({ ...p, condition: v }))}
             options={MARKETPLACE_CONDITION_OPTIONS}
             emptyLabel="Zgjidhni gjendjen…"
-            required
+            clearable
           />
         </Stack>
       </ListingFormSection>
@@ -376,9 +371,9 @@ export function MarketplaceListingForm({
             inputMode="decimal"
             value={form.price}
             onChange={onField('price')}
+            required
             fullWidth
             placeholder="p.sh. 5000"
-            helperText="Opsionale — lëreni bosh nëse është me marrëveshje."
             slotProps={{ input: { endAdornment: <InputAdornment position="end">/ copë</InputAdornment> } }}
           />
           <ListingTextField
@@ -389,7 +384,6 @@ export function MarketplaceListingForm({
             onChange={onField('originalPrice')}
             fullWidth
             placeholder="p.sh. 6500"
-            disabled={!form.price.trim()}
             helperText="Opsionale — shfaqet i përshkruar (ishte…)."
           />
           <SearchableSelect
@@ -398,7 +392,7 @@ export function MarketplaceListingForm({
             onChange={(v) => setForm((p) => ({ ...p, currency: v as MarketplaceFormState['currency'] }))}
             options={CURRENCY_OPTIONS}
             emptyLabel="Zgjidhni…"
-            disabled={!form.price.trim()}
+            required
           />
         </Stack>
         <SearchableSelect

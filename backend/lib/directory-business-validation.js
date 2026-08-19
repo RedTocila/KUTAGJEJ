@@ -86,12 +86,11 @@ function normalizePartySizes(input) {
 function validateBusinessPayload(body, { partial = false } = {}) {
   if (!partial) {
     if (!String(body?.title || '').trim()) return { ok: false, message: 'Titulli është i detyrueshëm.' };
-    if (!String(body?.description || '').trim()) return { ok: false, message: 'Përshkrimi është i detyrueshëm.' };
     const category = String(body?.category || '').trim();
-    if (!category || category.length > 80) {
+    if (category && category.length > 80) {
       return { ok: false, message: 'Kategoria e biznesit nuk është e vlefshme.' };
     }
-    body.category = category;
+    body.category = category || null;
     const cityId = String(body?.cityId || '').trim();
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cityId)) {
       return { ok: false, message: 'Zgjidhni një qytet të vlefshëm.' };

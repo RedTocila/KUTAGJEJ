@@ -158,6 +158,7 @@ function RealEstatePriceContactAside(props: {
             ) : null
           }
         />
+        {transactionLabel ? (
         <Paper
           variant="outlined"
           sx={{
@@ -173,6 +174,7 @@ function RealEstatePriceContactAside(props: {
             {transactionLabel}
           </Typography>
         </Paper>
+        ) : null}
         {locationFull ? (
           <ButtonBase
             component="a"
@@ -354,7 +356,8 @@ export function RealEstateListingDetailView({
     saveCount: listing.saveCount,
   });
 
-  const transactionLabel = listing.transactionType === 'rent' ? 'Qera' : 'Shitje';
+  const transactionLabel =
+    listing.transactionType === 'rent' ? 'Qera' : listing.transactionType === 'sale' ? 'Shitje' : '';
   const whatsappInquireHref = buildWhatsappInquireHref(displayPhone, whatsappInquireText(listing.title, canonicalUrl));
 
   const priceLabel =
@@ -370,7 +373,9 @@ export function RealEstateListingDetailView({
     specs: [
       ...(listing.bedrooms != null ? [{ icon: 'bed' as const, label: `${listing.bedrooms}` }] : []),
       ...(listing.bathrooms != null ? [{ icon: 'bath' as const, label: `${listing.bathrooms}` }] : []),
-      { icon: 'ruler' as const, label: `${listing.surfaceM2} m²` },
+      ...(listing.surfaceM2 != null && Number(listing.surfaceM2) > 0
+        ? [{ icon: 'ruler' as const, label: `${listing.surfaceM2} m²` }]
+        : []),
       ...(listing.floor != null ? [{ icon: 'stairs' as const, label: `Kati ${listing.floor}` }] : []),
       ...(listing.yearBuilt != null ? [{ icon: 'calendar' as const, label: String(listing.yearBuilt) }] : []),
       ...(listing.furnishing
@@ -384,7 +389,7 @@ export function RealEstateListingDetailView({
   };
 
   const detailRows: Array<{ label: string; value: string } | null> = [
-    { label: 'Lloji', value: propertyCategoryLabelSq(listing.propertyCategory) },
+    listing.propertyCategory ? { label: 'Lloji', value: propertyCategoryLabelSq(listing.propertyCategory) } : null,
     listing.condition ? { label: 'Gjendja', value: CONDITION_SQ[listing.condition] ?? listing.condition } : null,
     listing.yearBuilt != null ? { label: 'Viti ndërtimit', value: String(listing.yearBuilt) } : null,
     listing.furnishing ? { label: 'Mobilimi', value: FURNISH_SQ[listing.furnishing] ?? listing.furnishing } : null,
@@ -568,6 +573,7 @@ export function RealEstateListingDetailView({
                           ) : null
                         }
                       />
+                      {transactionLabel ? (
                       <Paper
                         variant="outlined"
                         sx={{
@@ -582,6 +588,7 @@ export function RealEstateListingDetailView({
                           {transactionLabel}
                         </Typography>
                       </Paper>
+                      ) : null}
                     </Stack>
                   </OwnerEditableSpot>
                 </Box>
@@ -710,7 +717,9 @@ export function RealEstateListingDetailView({
                           secondary={listing.bathrooms === 1 ? 'Tualet' : 'Tualete'}
                         />
                       ) : null}
-                      <SpecIconBox Icon={RulerIcon} primary={`${listing.surfaceM2} m²`} secondary="Sipërfaqe" />
+                      {listing.surfaceM2 != null && Number(listing.surfaceM2) > 0 ? (
+                        <SpecIconBox Icon={RulerIcon} primary={`${listing.surfaceM2} m²`} secondary="Sipërfaqe" />
+                      ) : null}
                       {listing.propertyCategory === 'parking' && listing.parkingFloor != null ? (
                         <SpecIconBox Icon={CarIcon} primary={`Kati ${listing.parkingFloor}`} secondary="Parkim" />
                       ) : listing.totalFloors != null ? (

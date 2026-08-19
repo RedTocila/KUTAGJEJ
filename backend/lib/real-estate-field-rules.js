@@ -53,35 +53,42 @@ function validateRealEstatePayload(body) {
   const cat = String(body?.propertyCategory || '')
     .trim()
     .toLowerCase();
-  if (!PROPERTY_SLUGS.includes(cat)) {
+  if (cat && !PROPERTY_SLUGS.includes(cat)) {
     return { ok: false, message: 'Invalid property category.' };
   }
+  body.propertyCategory = cat || null;
 
   const title = String(body?.title || '').trim();
-  const description = String(body?.description || '').trim();
   if (!title) return { ok: false, message: 'Title is required.' };
-  if (!description) return { ok: false, message: 'Description is required.' };
 
-  const transactionType = body?.transactionType;
-  if (transactionType !== 'rent' && transactionType !== 'sale') {
+  const transactionType = String(body?.transactionType || '').trim();
+  if (transactionType && transactionType !== 'rent' && transactionType !== 'sale') {
     return { ok: false, message: 'Transaction type must be rent or sale.' };
   }
+  body.transactionType = transactionType || null;
 
   const price = Number(body?.price);
   if (!Number.isFinite(price) || price < 0) return { ok: false, message: 'Price must be a valid number.' };
 
-  const currency = body?.currency;
+  const currency = String(body?.currency || '').trim() || 'EUR';
   if (currency !== 'EUR' && currency !== 'LEK') {
     return { ok: false, message: 'Currency must be EUR or LEK.' };
   }
+  body.currency = currency;
 
-  const surfaceM2 = Number(body?.surfaceM2);
-  if (!Number.isFinite(surfaceM2) || surfaceM2 <= 0) {
-    return { ok: false, message: 'Surface (m²) must be a positive number.' };
+  const surfaceRaw = body?.surfaceM2;
+  if (surfaceRaw !== undefined && surfaceRaw !== null && String(surfaceRaw).trim() !== '') {
+    const surfaceM2 = Number(String(surfaceRaw).replace(',', '.').replace(/[^\d.]/g, ''));
+    if (!Number.isFinite(surfaceM2) || surfaceM2 <= 0) {
+      return { ok: false, message: 'Surface (m²) must be a positive number.' };
+    }
+    body.surfaceM2 = surfaceM2;
+  } else {
+    body.surfaceM2 = null;
   }
 
-  if (!body?.cityId || !body?.zoneId) {
-    return { ok: false, message: 'City and zone are required.' };
+  if (!body?.cityId) {
+    return { ok: false, message: 'City is required.' };
   }
 
   const contactPhone = String(body?.contactPhone ?? '').trim();

@@ -39,12 +39,12 @@ export interface PublicRealEstateListing extends ListingMetricsFields {
   title: string;
   description: string;
   propertyCategory: string;
-  transactionType: 'rent' | 'sale';
+  transactionType: 'rent' | 'sale' | string | null;
   price: number;
   /** Optional previous (“was”) price — shown struck when higher than `price`. */
   originalPrice?: number | null;
   currency: 'EUR' | 'LEK';
-  surfaceM2: number;
+  surfaceM2: number | null;
   cityName: string | null;
   zoneName: string | null;
   bedrooms: number | null;
@@ -98,11 +98,11 @@ export interface PublicRealEstateListingDetail extends ListingMetricsFields {
   title: string;
   description: string;
   propertyCategory: string;
-  transactionType: 'rent' | 'sale';
+  transactionType: 'rent' | 'sale' | string | null;
   price: number;
   originalPrice?: number | null;
   currency: 'EUR' | 'LEK';
-  surfaceM2: number;
+  surfaceM2: number | null;
   cityName: string | null;
   zoneName: string | null;
   bedrooms: number | null;
@@ -135,8 +135,8 @@ export interface PublicCarListing extends ListingMetricsFields {
   make: string;
   model: string;
   variant: string;
-  year: number;
-  kilometers: number;
+  year: number | null;
+  kilometers: number | null;
   transmission: 'automatic' | 'manual';
   fuelType: string;
   price: number;

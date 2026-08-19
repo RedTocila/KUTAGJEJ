@@ -14,7 +14,7 @@ const {
   needsYearBuilt,
 } = require('../lib/real-estate-field-rules');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
-const { sanitizeImageUrls } = require('../lib/image-upload');
+const { sanitizeImageUrls, requireListingPhotos } = require('../lib/image-upload');
 const { isUuid } = require('../lib/public-listings/query-helpers');
 const { parseComparePrice } = require('../lib/listing-compare-price');
 const {
@@ -51,6 +51,28 @@ function realEstateCategoryFields(propertyCategory, body) {
     furnishing: needsBedroomsBathFurnishing(propertyCategory) && filled(body.furnishing) ? body.furnishing : null,
     year_built: needsYearBuilt(propertyCategory) && filled(body.yearBuilt) ? Number(body.yearBuilt) : null,
   };
+}
+
+async function resolveCityAndOptionalZone(cityIdRaw, zoneIdRaw) {
+  const cityId = String(cityIdRaw ?? '').trim();
+  if (!isUuid(cityId)) return { ok: false, message: 'Invalid city id.' };
+
+  const { data: cityRow, error: cityErr } = await getSupabaseAdmin()
+    .from('real_estate_cities')
+    .select('*')
+    .eq('id', cityId)
+    .maybeSingle();
+  if (cityErr) throw cityErr;
+  if (!cityRow) return { ok: false, message: 'City not found.' };
+
+  const city = camelizeRow(cityRow);
+  const zoneId = String(zoneIdRaw ?? '').trim();
+  if (!zoneId) return { ok: true, cityId, zoneId: null };
+
+  if (!isUuid(zoneId)) return { ok: false, message: 'Invalid zone id.' };
+  const zone = (city.zones || []).find((z) => String(z.id) === zoneId);
+  if (!zone) return { ok: false, message: 'Zone does not belong to the selected city.' };
+  return { ok: true, cityId, zoneId };
 }
 
 function requirePortalUser(req, res, next) {
@@ -121,29 +143,17 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
     const v = validateRealEstatePayload(req.body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
-    const cityId = String(req.body.cityId ?? '').trim();
-    const zoneId = String(req.body.zoneId ?? '').trim();
-    if (!isUuid(cityId) || !isUuid(zoneId)) {
-      return res.status(400).json({ message: 'Invalid city or zone id.' });
-    }
-
-    const { data: cityRow, error: cityErr } = await getSupabaseAdmin()
-      .from('real_estate_cities')
-      .select('*')
-      .eq('id', cityId)
-      .maybeSingle();
-    if (cityErr) throw cityErr;
-    if (!cityRow) return res.status(400).json({ message: 'City not found.' });
-
-    const city = camelizeRow(cityRow);
-    const zone = (city.zones || []).find((z) => String(z.id) === zoneId);
-    if (!zone) return res.status(400).json({ message: 'Zone does not belong to the selected city.' });
+    const loc = await resolveCityAndOptionalZone(req.body.cityId, req.body.zoneId);
+    if (!loc.ok) return res.status(400).json({ message: loc.message });
 
     const maps = await parseMapsFieldsFromBody(req.body);
     if (!maps.ok) return res.status(400).json({ message: maps.message });
 
-    const propertyCategory = String(req.body.propertyCategory).trim().toLowerCase();
+    const propertyCategory = req.body.propertyCategory || null;
     const contactPhone = String(req.body.contactPhone ?? '').trim();
+    const imageUrls = sanitizeImageUrls(req.body.imageUrls, MAX_REAL_ESTATE_IMAGES);
+    const photos = requireListingPhotos(imageUrls);
+    if (!photos.ok) return res.status(400).json({ message: photos.message });
 
     const price = Number(req.body.price);
     const cmp = parseComparePrice(req.body.originalPrice, price);
@@ -153,17 +163,17 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
       poster_id: req.user.id,
       property_category: propertyCategory,
       title: String(req.body.title).trim(),
-      description: String(req.body.description).trim(),
-      transaction_type: req.body.transactionType,
+      description: String(req.body.description || '').trim(),
+      transaction_type: req.body.transactionType || null,
       price,
       original_price: cmp.value,
       currency: req.body.currency,
-      surface_m2: Number(req.body.surfaceM2),
-      city_id: cityId,
-      zone_id: zoneId,
+      surface_m2: req.body.surfaceM2,
+      city_id: loc.cityId,
+      zone_id: loc.zoneId,
       contact_phone: contactPhone,
       ...realEstateCategoryFields(propertyCategory, req.body),
-      image_urls: sanitizeImageUrls(req.body.imageUrls, MAX_REAL_ESTATE_IMAGES),
+      image_urls: imageUrls,
       status: 'approved',
       ...mapsColumnsFromParsed(maps),
     };
@@ -213,29 +223,17 @@ router.put('/real-estate/:id', authMiddleware, requirePortalUser, async (req, re
     const v = validateRealEstatePayload(req.body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
-    const cityId = String(req.body.cityId ?? '').trim();
-    const zoneId = String(req.body.zoneId ?? '').trim();
-    if (!isUuid(cityId) || !isUuid(zoneId)) {
-      return res.status(400).json({ message: 'Invalid city or zone id.' });
-    }
-
-    const { data: cityRow, error: cityErr } = await getSupabaseAdmin()
-      .from('real_estate_cities')
-      .select('*')
-      .eq('id', cityId)
-      .maybeSingle();
-    if (cityErr) throw cityErr;
-    if (!cityRow) return res.status(400).json({ message: 'City not found.' });
-
-    const city = camelizeRow(cityRow);
-    const zone = (city.zones || []).find((z) => String(z.id) === zoneId);
-    if (!zone) return res.status(400).json({ message: 'Zone does not belong to the selected city.' });
+    const loc = await resolveCityAndOptionalZone(req.body.cityId, req.body.zoneId);
+    if (!loc.ok) return res.status(400).json({ message: loc.message });
 
     const maps = await parseMapsFieldsFromBody(req.body);
     if (!maps.ok) return res.status(400).json({ message: maps.message });
 
-    const propertyCategory = String(req.body.propertyCategory).trim().toLowerCase();
+    const propertyCategory = req.body.propertyCategory || null;
     const contactPhone = String(req.body.contactPhone ?? '').trim();
+    const imageUrls = sanitizeImageUrls(req.body.imageUrls, MAX_REAL_ESTATE_IMAGES);
+    const photos = requireListingPhotos(imageUrls);
+    if (!photos.ok) return res.status(400).json({ message: photos.message });
 
     const price = Number(req.body.price);
     const cmp = parseComparePrice(req.body.originalPrice, price);
@@ -244,17 +242,17 @@ router.put('/real-estate/:id', authMiddleware, requirePortalUser, async (req, re
     const patch = {
       property_category: propertyCategory,
       title: String(req.body.title).trim(),
-      description: String(req.body.description).trim(),
-      transaction_type: req.body.transactionType,
+      description: String(req.body.description || '').trim(),
+      transaction_type: req.body.transactionType || null,
       price,
       original_price: cmp.value,
       currency: req.body.currency,
-      surface_m2: Number(req.body.surfaceM2),
-      city_id: cityId,
-      zone_id: zoneId,
+      surface_m2: req.body.surfaceM2,
+      city_id: loc.cityId,
+      zone_id: loc.zoneId,
       contact_phone: contactPhone,
       ...realEstateCategoryFields(propertyCategory, req.body),
-      image_urls: sanitizeImageUrls(req.body.imageUrls, MAX_REAL_ESTATE_IMAGES),
+      image_urls: imageUrls,
       updated_at: new Date().toISOString(),
     };
     if (!maps.skip) Object.assign(patch, mapsColumnsFromParsed(maps));

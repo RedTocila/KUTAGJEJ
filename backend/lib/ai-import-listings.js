@@ -1162,19 +1162,97 @@ async function fetchPageSnapshot(url) {
   }
 }
 
-async function resolveCityIdByName(cityName) {
+function foldLookupName(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ç/g, 'c')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function pickBestNamedMatch(query, rows, getName) {
+  const n = foldLookupName(query);
+  if (!n || !Array.isArray(rows) || !rows.length) return null;
+  const partial = [];
+  for (const row of rows) {
+    const rn = foldLookupName(getName(row));
+    if (!rn) continue;
+    if (rn === n) return row;
+    if (rn.includes(n) || n.includes(rn)) partial.push({ row, score: Math.min(rn.length, n.length) });
+  }
+  if (!partial.length) return null;
+  partial.sort((a, b) => b.score - a.score);
+  return partial[0].row;
+}
+
+let citiesWithZonesCache = null;
+
+async function loadCitiesWithZones() {
+  if (citiesWithZonesCache) return citiesWithZonesCache;
+  const sb = getSupabaseAdmin();
+  const { data, error } = await sb.from('real_estate_cities').select('id, name, zones');
+  if (error) throw error;
+  citiesWithZonesCache = data || [];
+  return citiesWithZonesCache;
+}
+
+async function resolveCityRowByName(cityName) {
   const name = String(cityName || '').trim();
   if (!name) return null;
-  const sb = getSupabaseAdmin();
-  const { data, error } = await sb
-    .from('real_estate_cities')
-    .select('id, name')
-    .ilike('name', name)
-    .limit(5);
-  if (error) throw error;
-  if (!data?.length) return null;
-  const exact = data.find((c) => String(c.name).toLowerCase() === name.toLowerCase());
-  return (exact || data[0]).id;
+  const cities = await loadCitiesWithZones();
+  return pickBestNamedMatch(name, cities, (c) => c.name);
+}
+
+async function resolveCityIdByName(cityName) {
+  const city = await resolveCityRowByName(cityName);
+  return city?.id || null;
+}
+
+function resolveZoneIdByName(cityRow, zoneName) {
+  const zones = Array.isArray(cityRow?.zones) ? cityRow.zones : [];
+  const match = pickBestNamedMatch(zoneName, zones, (z) => z.name);
+  return match?.id || null;
+}
+
+function parseSurfaceM2(value) {
+  if (value == null || value === '') return null;
+  const s = String(value).replace(',', '.').replace(/[^\d.]/g, '');
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+async function applyResolvedLocation(form, interpreted, profile) {
+  if (!form || typeof form !== 'object') return;
+  const cities = await loadCitiesWithZones();
+  const cityName = interpreted?.cityName || form.cityName || profile?.preferredCityName;
+  let city = await resolveCityRowByName(cityName);
+  if (!city) {
+    const id = form.cityId || profile?.preferredCityId;
+    if (id) city = cities.find((c) => String(c.id) === String(id)) || null;
+  }
+  if (city) {
+    form.cityId = city.id;
+    if (!interpreted.cityName) interpreted.cityName = city.name;
+    if (!form.cityName) form.cityName = city.name;
+  }
+  const zoneName = interpreted?.zoneName || form.zoneName;
+  if (zoneName && !form.zoneName) form.zoneName = zoneName;
+  if (city && zoneName) {
+    const zoneId = resolveZoneIdByName(city, zoneName);
+    if (zoneId) {
+      form.zoneId = zoneId;
+      const zone = (city.zones || []).find((z) => String(z.id) === String(zoneId));
+      if (zone?.name) {
+        form.zoneName = zone.name;
+        interpreted.zoneName = zone.name;
+      }
+    }
+  }
+  const surface = parseSurfaceM2(form.surfaceM2);
+  form.surfaceM2 = surface != null ? String(surface) : '';
 }
 
 function buildSystemPrompt(preferredCategory, { mode = 'create' } = {}) {
@@ -1255,6 +1333,7 @@ Return ONLY valid JSON:
   "title": "short listing title",
   "summary": "1 sentence preview of what you built/changed",
   "cityName": "Tiranë or null",
+  "zoneName": "Blloku or neighborhood/lagje or null",
   "imageUrls": ["https://..."],
   "imageRoles": ["cover", "profile", "gallery"],
   "form": { ...category-specific fields as strings when possible... }
@@ -1266,7 +1345,10 @@ imageRoles: optional array aligned with attachedImages order. Values: cover | pr
 - gallery / work / portfolio = additional listing photos
 
 Form fields by category:
-real-estate: propertyCategory (apartment|villa|penthouse-duplex|room-studio-attic|parking|shop|office|building-plot|agricultural-land|commercial-local|warehouse), title, description, transactionType (rent|sale), price, surfaceM2, currency (EUR|LEK), condition, floor, totalFloors, bedrooms, bathrooms, furnishing, yearBuilt, contactPhone
+real-estate: propertyCategory (apartment|villa|penthouse-duplex|room-studio-attic|parking|shop|office|building-plot|agricultural-land|commercial-local|warehouse), title, description, transactionType (rent|sale), price, surfaceM2 (number only, e.g. 85), currency (EUR|LEK), zoneName (neighborhood/lagje), condition, floor, totalFloors, bedrooms, bathrooms, furnishing, yearBuilt, contactPhone
+  - ALWAYS extract surfaceM2 when m² / m2 / sqm is mentioned or readable on photos (floor plans, captions).
+  - ALWAYS extract cityName AND zoneName/neighborhood when mentioned (Blloku, Komuna e Parisit, Qendër, Kashar, …). Put street/landmark in description as "• Adresa: …".
+  - If city, zone, or m² is NOT in the photos/caption/prompt, leave them empty/null — do NOT invent a size or neighborhood.
 cars: vehicleType (car|suv|van|truck|motorcycle|boat), make, model, variant, description, year, kilometers, transmission (automatic|manual), fuelType (petrol|diesel|electric|hybrid-petrol|plugin-hybrid|lpg), price, currency (EUR|LEK), color, contactPhone
   - LOOK at photos: scooters, bikes, motorcycles, dirt bikes → vehicleType "motorcycle" (NOT "car"/Vetura). Cars/sedans → "car". SUVs → "suv".
   - make/model MUST match common catalog spellings when visible or named (Yamaha, Honda, BMW, Mercedes-Benz, Volkswagen, …). Example: Yamaha Ténéré / TMAX → vehicleType motorcycle, make "Yamaha", model "Ténéré" or "TMAX".
@@ -1303,7 +1385,8 @@ Vision + text fusion (CRITICAL when attached images are present — applies to A
    - What is offered (product, job role(s), property, service, vehicle)
    - Business / employer / brand name
    - Title / positions (e.g. "Kamarier", "Banakier" → job title; product name → marketplace title)
-   - Location: cityName AND street / landmark / neighborhood (put street in description as "• Adresa: …"; map city to cityName)
+   - Location: cityName AND zoneName / neighborhood AND street / landmark (put street in description as "• Adresa: …"; map city to cityName and neighborhood to zoneName)
+   - Size: surfaceM2 for properties when m² is visible or stated
    - Phone numbers → contactPhone (and mention in description only if useful)
    - Price / salary / currency
    - Hours, shifts, schedule ("turni i 3", "darkë", "full-time")
@@ -1334,6 +1417,8 @@ General rules:
 - Use profile.businessName / full name for title ONLY for businesses/professionals AND ONLY when the caption does not describe a specific offer (generic "about the shop/pro" posts). Never reuse the same profile name for every Instagram post.
 - Use profile.preferredCityId / preferredCityName for city when the content does not mention a city.
 - cityName should be an Albanian city when mentioned (e.g. Tiranë, Durrës).
+- zoneName should be the neighborhood/lagje when mentioned (e.g. Blloku, Komuna e Parisit). Leave empty if unknown — never invent a zone.
+- surfaceM2 for real-estate when size is stated. Leave empty if unknown — never invent m².
 - imageUrls: keep absolute http(s) URLs from the page snapshot (snapshotImageUrls) whenever present (max 8). Never drop scraped listing photos that belong to the post. Attached images are sent separately — describe roles via imageRoles; do not invent fake image URLs.
 - If the page is thin (Instagram login wall, blocked scraper) but caption or photos are present, build the draft from caption + prompt + photos + profile.`;
 }
@@ -2013,7 +2098,7 @@ function buildVisionUserContent({ payload, attachedImages }) {
     const hint = img.hint ? ` Hint: ${img.hint}` : '';
     parts.push({
       type: 'text',
-      text: `Attached listing photo #${i + 1}.${hint} Read all visible text and visuals; use them for title, description bullets (including Adresa/Orari/Kompania when present), cityName, contactPhone, and other form fields.`,
+      text: `Attached listing photo #${i + 1}.${hint} Read all visible text and visuals; use them for title, description bullets (including Adresa/Orari/Kompania when present), cityName, zoneName, surfaceM2, contactPhone, and other form fields.`,
     });
     parts.push({
       type: 'image_url',
@@ -2021,6 +2106,13 @@ function buildVisionUserContent({ payload, attachedImages }) {
     });
   }
   return parts;
+}
+
+function zoneNameFromParsed(parsed) {
+  if (typeof parsed?.zoneName === 'string' && parsed.zoneName.trim()) return parsed.zoneName.trim();
+  const form = parsed?.form && typeof parsed.form === 'object' ? parsed.form : {};
+  if (typeof form.zoneName === 'string' && form.zoneName.trim()) return form.zoneName.trim();
+  return '';
 }
 
 function parseBooleanFlag(value) {
@@ -2063,6 +2155,7 @@ function buildCategoryMismatchResult(parsed, { forcedCategory, detectedCategory,
     title: typeof parsed.title === 'string' ? parsed.title.trim() : '',
     summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : '',
     cityName: typeof parsed.cityName === 'string' ? parsed.cityName.trim() : '',
+    zoneName: zoneNameFromParsed(parsed),
     imageUrls: mergeImageUrlLists(fallbackImageUrls, modelImageUrls),
     imageRoles,
     form,
@@ -2249,6 +2342,7 @@ function parseAiListingResponse(raw, { forcedCategory, fallbackImageUrls = [] })
     title: typeof parsed.title === 'string' ? parsed.title.trim() : '',
     summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : '',
     cityName: typeof parsed.cityName === 'string' ? parsed.cityName.trim() : '',
+    zoneName: zoneNameFromParsed(parsed),
     // Always keep scraped page photos even if the model omits or reorders them.
     imageUrls: mergeImageUrlLists(fallbackImageUrls, modelImageUrls),
     imageRoles,
@@ -2430,7 +2524,7 @@ async function interpretListing({
         hint: img.hint || null,
       })),
       instruction: visionImages.length
-        ? 'Photos are primary: OCR every readable word on flyers/posters/labels (roles, business name, street address, landmark, phone, price, hours/shifts) AND identify the product/vehicle/property/job from images. Write a concrete title and a listed SEO-friendly form.description (short opener + • keyword bullets including Adresa/Orari/Kompania when visible + CTA — never one paragraph or raw hashtags). Auto-fill every form field you can (title, cityName, contactPhone, enums, salary/price). Weave in EVERY useful detail from prompt/caption — especially transport/shipping/RoRo, delivery days, what price includes, warranty, financing, condition notes, parenthetical price notes, and shift/schedule notes. Do not invent unseen specs. Never use authorName / Instagram profile name as title. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.'
+        ? 'Photos are primary: OCR every readable word on flyers/posters/labels (roles, business name, street address, landmark, neighborhood/zone, m², phone, price, hours/shifts) AND identify the product/vehicle/property/job from images. Write a concrete title and a listed SEO-friendly form.description (short opener + • keyword bullets including Adresa/Orari/Kompania when visible + CTA — never one paragraph or raw hashtags). Auto-fill every form field you can (title, cityName, zoneName, surfaceM2, contactPhone, enums, salary/price). Weave in EVERY useful detail from prompt/caption — especially transport/shipping/RoRo, delivery days, what price includes, warranty, financing, condition notes, parenthetical price notes, and shift/schedule notes. Do not invent unseen specs (including fake m² or zones). Never use authorName / Instagram profile name as title. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.'
         : 'Build the listing from caption/description/text/prompt. Title must come from the post caption (what is offered), never from authorName or profile.businessName when caption exists. Rewrite caption into a listed SEO-friendly form.description (short opener + • keyword bullets + CTA — do not paste raw caption or write one wall of text). Extract structured fields AND preserve buyer-critical caption facts (transport/RoRo/shipping days, inclusions, warranty, financing, condition, street address when present). Do not invent professions or offers missing from the text. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.',
     },
   });
@@ -2456,11 +2550,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
     if (detected === 'cars') {
       form = normalizeCarFormFields(form, snapshot, interpreted);
     }
-    const cityId =
-      (await resolveCityIdByName(interpreted.cityName || form.cityName || profile?.preferredCityName)) ||
-      profile?.preferredCityId ||
-      null;
-    if (cityId) form.cityId = cityId;
+    await applyResolvedLocation(form, interpreted, profile);
     applyProfileDefaultsToForm(form, profile, { allowProfileTitle });
 
     const imageCap = maxImagesForCategory(detected);
@@ -2548,11 +2638,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
       caption: String(snapshot?.caption || snapshot?.description || '').trim(),
     });
   }
-  const cityId =
-    (await resolveCityIdByName(interpreted.cityName || form.cityName || profile?.preferredCityName)) ||
-    profile?.preferredCityId ||
-    null;
-  if (cityId) form.cityId = cityId;
+  await applyResolvedLocation(form, interpreted, profile);
   applyProfileDefaultsToForm(form, profile, { allowProfileTitle });
 
   // If profile defaults still left a profile-like title, prefer caption again.

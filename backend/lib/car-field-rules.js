@@ -33,56 +33,71 @@ const { isUuid } = require('./public-listings/query-helpers');
  * Returns { ok: true } or { ok: false, message }.
  */
 function validateCarPayload(fields) {
-  const vehicleType = String(fields.vehicleType || 'car').trim().toLowerCase();
+  const vehicleType = String(fields.vehicleType || '').trim().toLowerCase() || 'car';
   if (!VEHICLE_TYPE_VALUES.includes(vehicleType)) {
     return { ok: false, message: 'Please select a valid vehicle category.' };
   }
   fields.vehicleType = vehicleType;
 
   const make = String(fields.make || '').trim();
-  if (!make) return { ok: false, message: 'Make is required.' };
   if (make.length > 80) return { ok: false, message: 'Make is too long.' };
   const catalogMakes = makesForVehicleType(vehicleType);
   const matchedMake = catalogMakes.find((m) => m.toLowerCase() === make.toLowerCase());
   fields.make = matchedMake || make;
 
   const model = String(fields.model || '').trim();
-  if (!model) return { ok: false, message: 'Model is required.' };
   if (model.length > 80) return { ok: false, message: 'Model is too long.' };
+  fields.model = model;
 
-  const description = String(fields.description || '').trim();
-  if (!description) return { ok: false, message: 'Description is required.' };
+  fields.description = String(fields.description || '').trim();
 
-  const year = Number(fields.year);
-  if (!Number.isInteger(year) || year < 1970 || year > CURRENT_YEAR + 1) {
-    return { ok: false, message: `Year must be between 1970 and ${CURRENT_YEAR + 1}.` };
+  if (fields.year !== undefined && fields.year !== null && String(fields.year).trim() !== '') {
+    const year = Number(fields.year);
+    if (!Number.isInteger(year) || year < 1970 || year > CURRENT_YEAR + 1) {
+      return { ok: false, message: `Year must be between 1970 and ${CURRENT_YEAR + 1}.` };
+    }
+    fields.year = year;
+  } else {
+    fields.year = null;
   }
 
-  const km = Number(fields.kilometers);
-  if (!Number.isFinite(km) || !Number.isInteger(km) || km < 0) {
-    return { ok: false, message: 'Kilometres must be a non-negative whole number.' };
+  if (fields.kilometers !== undefined && fields.kilometers !== null && String(fields.kilometers).trim() !== '') {
+    const km = Number(fields.kilometers);
+    if (!Number.isFinite(km) || !Number.isInteger(km) || km < 0) {
+      return { ok: false, message: 'Kilometres must be a non-negative whole number.' };
+    }
+    fields.kilometers = km;
+  } else {
+    fields.kilometers = null;
   }
 
-  if (!TRANSMISSION_VALUES.includes(fields.transmission)) {
+  const transmission = String(fields.transmission || '').trim().toLowerCase();
+  if (transmission && !TRANSMISSION_VALUES.includes(transmission)) {
     return { ok: false, message: 'Transmission must be automatic or manual.' };
   }
+  fields.transmission = transmission || null;
 
-  if (!FUEL_TYPE_VALUES.includes(fields.fuelType)) {
+  const fuelType = String(fields.fuelType || '').trim().toLowerCase();
+  if (fuelType && !FUEL_TYPE_VALUES.includes(fuelType)) {
     return { ok: false, message: 'Invalid fuel type.' };
   }
+  fields.fuelType = fuelType || null;
 
   const price = Number(fields.price);
   if (!Number.isFinite(price) || price < 0) {
     return { ok: false, message: 'Price must be a valid non-negative number.' };
   }
 
-  if (!CURRENCY_VALUES.includes(fields.currency)) {
+  const currency = String(fields.currency || '').trim() || 'EUR';
+  if (!CURRENCY_VALUES.includes(currency)) {
     return { ok: false, message: 'Currency must be EUR or LEK.' };
   }
+  fields.currency = currency;
 
   const color = String(fields.color || '').trim().toLowerCase();
-  if (!COLOUR_VALUES.includes(color)) {
-    // AI / free-text often sends unknown colours — fall back instead of rejecting the listing.
+  if (!color) {
+    fields.color = null;
+  } else if (!COLOUR_VALUES.includes(color)) {
     fields.color = 'grey';
   } else {
     fields.color = color;

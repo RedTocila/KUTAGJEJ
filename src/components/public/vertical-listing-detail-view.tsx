@@ -807,8 +807,10 @@ function summarySpecsFor(l: AnyPublicListingDetail): SummarySpec[] {
         { Icon: CarIcon, label: 'Markë', value: l.make },
         { Icon: TagIcon, label: 'Model', value: l.model },
         ...(l.variant ? [{ Icon: TagIcon, label: 'Variant', value: l.variant }] : []),
-        { Icon: CalendarIcon, label: 'Viti', value: String(l.year) },
-        { Icon: GaugeIcon, label: 'Kilometrazhi', value: formatKilometers(l.kilometers) },
+        ...(l.year != null ? [{ Icon: CalendarIcon, label: 'Viti', value: String(l.year) }] : []),
+        ...(l.kilometers != null
+          ? [{ Icon: GaugeIcon, label: 'Kilometrazhi', value: formatKilometers(l.kilometers) }]
+          : []),
         { Icon: GearSixIcon, label: 'Transmision', value: findOptionLabel(TRANSMISSION_OPTIONS, l.transmission) },
         { Icon: GasPumpIcon, label: 'Karburant', value: findOptionLabel(FUEL_TYPE_OPTIONS, l.fuelType) },
         { Icon: PaletteIcon, label: 'Ngjyra', value: findOptionLabel(CAR_COLOUR_OPTIONS, l.color) },

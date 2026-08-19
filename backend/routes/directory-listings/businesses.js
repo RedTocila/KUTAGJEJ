@@ -10,6 +10,7 @@ const { resolveBusinessLocationFields } = require('../../lib/business-location-f
 const { hasUnlimitedDirectoryListings } = require('../../lib/directory-listing-limits');
 const { notifyAdminsListingSubmitted } = require('../../lib/listing-moderation');
 const { isUuid } = require('../../lib/public-listings/query-helpers');
+const { requireListingPhotos } = require('../../lib/image-upload');
 const { formatMineBusiness, formatMineBusinessFull, loadMineKind, loadMineListingById } = require('../../lib/mine-listings');
 const { parseGoogleMapsLocation } = require('../../lib/google-maps-location');
 
@@ -118,6 +119,8 @@ router.post('/businesses', authMiddleware, requirePortalUser, async (req, res) =
     if (!loc.ok) return res.status(400).json({ message: loc.message });
 
     const imageUrls = v.imageUrls ?? [];
+    const photos = requireListingPhotos(imageUrls);
+    if (!photos.ok) return res.status(400).json({ message: photos.message });
 
     const row = {
       vertical: 'businesses',

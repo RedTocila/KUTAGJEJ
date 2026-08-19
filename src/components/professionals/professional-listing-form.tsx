@@ -277,8 +277,12 @@ export function ProfessionalListingForm({
     e.preventDefault();
     setError(null);
     setSaveNotice(null);
-    if (!title.trim() || !description.trim() || !category || !cityId) {
-      setError('Plotësoni fushat e detyrueshme.');
+    if (!title.trim() || !cityId) {
+      setError('Plotësoni titullin, qytetin dhe numrin e telefonit.');
+      return;
+    }
+    if (contactPhone.trim().length < 6) {
+      setError('Vendosni një numër telefoni të vlefshëm.');
       return;
     }
 
@@ -313,6 +317,11 @@ export function ProfessionalListingForm({
     }
 
     const imageUrls = [cover.url, avatar.url].filter((u): u is string => Boolean(u));
+    if (!cover.url) {
+      setSubmitting(false);
+      setError('Shtoni të paktën një foto.');
+      return;
+    }
 
     const portfolioItems: ProfessionalPortfolioItem[] = [];
     for (let i = 0; i < portfolio.length; i += 1) {
@@ -460,7 +469,7 @@ export function ProfessionalListingForm({
               existingUrls={coverUrl ? [coverUrl] : []}
               onExistingUrlsChange={(urls) => setCoverUrl(urls[0] ?? null)}
               max={1}
-              label="Foto kopertinë"
+              label="Foto kopertinë (të paktën 1)"
               disabled={submitting}
             />
             <ListingImagePicker
@@ -482,7 +491,7 @@ export function ProfessionalListingForm({
             onChange={setCategory}
             options={PROFESSIONAL_CATEGORY_OPTIONS}
             emptyLabel="Zgjidhni kategorinë…"
-            required
+            clearable
             allowCustom
           />
           <SearchableSelect
@@ -509,7 +518,6 @@ export function ProfessionalListingForm({
             label="Përshkrimi"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            required
             fullWidth
           />
           <ListingTextField

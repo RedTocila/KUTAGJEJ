@@ -222,8 +222,12 @@ export function BusinessListingForm({
       setError('Krijoni një llogari biznesi për të kryer këtë veprim.');
       return;
     }
-    if (!title.trim() || !description.trim() || !category || !cityId) {
-      setError('Plotësoni fushat e detyrueshme.');
+    if (!title.trim() || !cityId) {
+      setError('Plotësoni titullin, qytetin dhe numrin e telefonit.');
+      return;
+    }
+    if (contactPhone.trim().length < 6) {
+      setError('Vendosni një numër telefoni të vlefshëm.');
       return;
     }
 
@@ -240,6 +244,11 @@ export function BusinessListingForm({
       uploadedUrls = up.urls;
     }
     const imageUrls = [...existingImageUrls, ...uploadedUrls].slice(0, MAX_BUSINESS_IMAGES);
+    if (imageUrls.length < 1) {
+      setSubmitting(false);
+      setError('Shtoni të paktën një foto.');
+      return;
+    }
     const payload = {
       title: title.trim(),
       description: description.trim(),
@@ -355,7 +364,7 @@ export function BusinessListingForm({
             existingUrls={existingImageUrls}
             onExistingUrlsChange={setExistingImageUrls}
             max={MAX_BUSINESS_IMAGES}
-            label="Foto të biznesit"
+            label="Foto të biznesit (të paktën 1)"
             disabled={submitting}
           />
           <SearchableSelect
@@ -364,7 +373,7 @@ export function BusinessListingForm({
             onChange={setCategory}
             options={BUSINESS_CATEGORY_OPTIONS}
             emptyLabel="Zgjidhni kategorinë…"
-            required
+            clearable
             allowCustom
           />
           <SearchableSelect
@@ -405,7 +414,6 @@ export function BusinessListingForm({
             label="Përshkrimi"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            required
             fullWidth
             minRows={3}
           />

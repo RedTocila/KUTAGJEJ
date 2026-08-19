@@ -153,13 +153,7 @@ function buildBenefitsPayload(f: JobFormState): { id: string; label: string }[] 
 
 function validateForm(f: JobFormState): string | null {
   if (!f.title.trim()) return 'Titulli i punës është i detyrueshëm.';
-  if (!f.description.trim()) return 'Përshkrimi është i detyrueshëm.';
-  if (!f.industry) return 'Ju lutem zgjidhni industrinë.';
   if (!f.cityId) return 'Ju lutem zgjidhni qytetin.';
-  if (!f.education) return 'Ju lutem zgjidhni nivelin e edukimit.';
-  if (!f.experience) return 'Ju lutem zgjidhni eksperiencën e kërkuar.';
-  if (!f.jobType) return 'Ju lutem zgjidhni llojin e punës.';
-  if (!f.workLocation) return 'Ju lutem zgjidhni vendin e punës.';
 
   if (f.salary.trim()) {
     const s = parseFloatStrict(f.salary);
@@ -173,17 +167,6 @@ function validateForm(f: JobFormState): string | null {
   if (!/^[\d+\s().-]{6,40}$/.test(phone)) {
     return 'Numri i telefonit mund të përmbajë vetëm shifra, hapësira dhe + ( ) . -';
   }
-
-  const responsibilities = normalizeLines(f.responsibilities);
-  if (responsibilities.length < 1) return 'Shtoni të paktën një detyrë.';
-  if (responsibilities.some((l) => l.length < 8)) return 'Çdo detyrë duhet të ketë të paktën 8 karaktere.';
-
-  const requirements = normalizeLines(f.requirements);
-  if (requirements.length < 1) return 'Shtoni të paktën një kërkesë.';
-  if (requirements.some((l) => l.length < 8)) return 'Çdo kërkesë duhet të ketë të paktën 8 karaktere.';
-
-  const benefits = buildBenefitsPayload(f);
-  if (benefits.length < 1) return 'Zgjidhni të paktën një përfitim ose shtoni një të personalizuar.';
 
   return null;
 }
@@ -305,6 +288,10 @@ export function JobListingForm({
       setSubmitError(err);
       return;
     }
+    if (existingImageUrls.length + images.length < 1) {
+      setSubmitError('Shtoni të paktën një foto.');
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -409,14 +396,13 @@ export function JobListingForm({
           existingUrls={existingImageUrls}
           onExistingUrlsChange={setExistingImageUrls}
           max={MAX_JOB_IMAGES}
-          label="Foto (logo / kopertinë — opsionale)"
+          label="Foto (të paktën 1)"
           disabled={submitting}
         />
         <ListingDescriptionField
           label="Përshkrimi i shkurtër"
           value={form.description}
           onChange={onField('description')}
-          required
           fullWidth
           minRows={3}
           placeholder="Prezantim i pozicionit — 2–3 fjali për kandidatët…"
@@ -477,7 +463,6 @@ export function JobListingForm({
           onChange={(v) => setForm((p) => ({ ...p, industry: v }))}
           options={JOB_INDUSTRY_OPTIONS}
           emptyLabel="Zgjidhni industrinë…"
-          required
           allowCustom
         />
         <SearchableSelect
@@ -524,7 +509,7 @@ export function JobListingForm({
             onChange={(v) => setForm((p) => ({ ...p, education: v }))}
             options={JOB_EDUCATION_OPTIONS}
             emptyLabel="Zgjidhni nivelin…"
-            required
+            clearable
           />
           <SearchableSelect
             label="Eksperienca"
@@ -532,13 +517,13 @@ export function JobListingForm({
             onChange={(v) => setForm((p) => ({ ...p, experience: v }))}
             options={JOB_EXPERIENCE_OPTIONS}
             emptyLabel="Zgjidhni eksperiencën…"
-            required
+            clearable
           />
         </Stack>
       </ListingFormSection>
 
       <ListingFormSection title="Lloji i punës">
-        <FormControl component="fieldset" required>
+        <FormControl component="fieldset">
           <FormLabel component="legend" sx={{ mb: 0.5, fontSize: '0.875rem', fontWeight: 600 }}>
             Lloji i kontratës
           </FormLabel>
@@ -553,7 +538,7 @@ export function JobListingForm({
             ))}
           </RadioGroup>
         </FormControl>
-        <FormControl component="fieldset" required>
+        <FormControl component="fieldset">
           <FormLabel component="legend" sx={{ mb: 0.5, fontSize: '0.875rem', fontWeight: 600 }}>
             Vendi i punës
           </FormLabel>

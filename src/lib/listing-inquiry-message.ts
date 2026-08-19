@@ -121,8 +121,8 @@ export async function fetchListingInquiryDraft(
         imageUrl: listing.imageUrl || null,
         priceLabel: formatPrice(listing.price, listing.currency),
         specs: [
-          String(listing.year),
-          formatKilometers(listing.kilometers),
+          listing.year != null ? String(listing.year) : '',
+          listing.kilometers != null ? formatKilometers(listing.kilometers) : '',
           findOptionLabel(FUEL_TYPE_OPTIONS, listing.fuelType),
           findOptionLabel(TRANSMISSION_OPTIONS, listing.transmission),
           listing.color ? findOptionLabel(CAR_COLOUR_OPTIONS, listing.color) : '',

@@ -9,6 +9,7 @@ const { validateProfessionalPayload } = require('../../lib/directory-professiona
 const { hasUnlimitedDirectoryListings } = require('../../lib/directory-listing-limits');
 const { notifyAdminsListingSubmitted } = require('../../lib/listing-moderation');
 const { isUuid } = require('../../lib/public-listings/query-helpers');
+const { requireListingPhotos } = require('../../lib/image-upload');
 const { formatMineProfessional, formatMineProfessionalFull, loadMineKind, loadMineListingById } = require('../../lib/mine-listings');
 const {
   parseMapsFieldsFromBody,
@@ -90,6 +91,8 @@ router.post('/professionals', authMiddleware, requirePortalUser, async (req, res
     if (!maps.ok) return res.status(400).json({ message: maps.message });
 
     const imageUrls = v.imageUrls ?? [];
+    const photos = requireListingPhotos(imageUrls);
+    if (!photos.ok) return res.status(400).json({ message: photos.message });
 
     const row = {
       vertical: 'professionals',

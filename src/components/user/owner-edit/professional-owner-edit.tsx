@@ -290,6 +290,10 @@ export function ProfessionalOwnerEdit({
       }
 
       const imageUrls = [cover.url, avatar.url].filter((u): u is string => Boolean(u));
+      if (!cover.url) {
+        setError('Shtoni të paktën një foto.');
+        return;
+      }
       const payload = {
         title: draft.title.trim(),
         description: (draft.description ?? '').trim(),

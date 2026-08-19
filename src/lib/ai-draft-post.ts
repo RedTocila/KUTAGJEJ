@@ -130,7 +130,18 @@ export async function postAiListingDraft(
     const cities = await loadCities();
     const city = resolveCity(cities, str(f.cityId), draft.cityName || str(f.cityName));
     const cityId = city?.id || str(f.cityId);
-    const zoneId = str(f.zoneId) || city?.zones?.[0]?.id || '';
+    const zoneName = str(f.zoneName);
+    const zoneId =
+      str(f.zoneId) ||
+      (city && zoneName
+        ? city.zones.find(
+            (z) =>
+              z.name.toLowerCase() === zoneName.toLowerCase() ||
+              z.name.toLowerCase().includes(zoneName.toLowerCase()) ||
+              zoneName.toLowerCase().includes(z.name.toLowerCase()),
+          )?.id
+        : '') ||
+      '';
 
     const folderByCategory: Record<string, string> = {
       'real-estate': 'real-estate',
@@ -148,32 +159,35 @@ export async function postAiListingDraft(
       return { draftId: draft.id, ok: false, error: hosted.error };
     }
     const imageUrls = hosted.urls;
+    if (imageUrls.length < 1) {
+      return { draftId: draft.id, ok: false, error: 'Shtoni të paktën një foto.' };
+    }
 
     let result: ListingCreateResult;
 
     switch (draft.category) {
       case 'real-estate': {
-        if (!cityId || !zoneId) {
+        if (!cityId) {
           return {
             draftId: draft.id,
             ok: false,
-            error: 'City/zone missing — open the form to pick location.',
+            error: 'City missing — open the form to pick location.',
           };
         }
         if (phone.length < 6) {
           return { draftId: draft.id, ok: false, error: 'Phone number is required.' };
         }
-        const propertyCategory = str(f.propertyCategory) || 'apartment';
+        const propertyCategory = str(f.propertyCategory);
         result = await createRealEstateListing({
-          propertyCategory,
+          propertyCategory: propertyCategory || undefined,
           title: str(f.title) || draft.title || 'Njoftim',
-          description: str(f.description) || draft.summary || draft.title || 'Njoftim',
-          transactionType: f.transactionType === 'rent' ? 'rent' : 'sale',
+          description: str(f.description) || draft.summary || '',
+          transactionType: f.transactionType === 'rent' || f.transactionType === 'sale' ? f.transactionType : undefined,
           price: num(f.price) ?? 0,
           currency: f.currency === 'LEK' ? 'LEK' : 'EUR',
-          surfaceM2: num(f.surfaceM2) ?? 0,
+          surfaceM2: num(f.surfaceM2),
           cityId,
-          zoneId,
+          zoneId: str(f.zoneId) || null,
           contactPhone: phone,
           condition: str(f.condition) || undefined,
           floor: num(f.floor) ?? undefined,

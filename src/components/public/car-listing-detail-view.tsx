@@ -367,8 +367,10 @@ export function CarListingDetailView({
     imageUrl: listing.imageUrls[0] ?? listing.imageUrl ?? null,
     location: listing.cityName || undefined,
     specs: [
-      { icon: 'calendar' as const, label: String(listing.year) },
-      { icon: 'gauge' as const, label: formatKilometers(listing.kilometers) },
+      ...(listing.year != null ? [{ icon: 'calendar' as const, label: String(listing.year) }] : []),
+      ...(listing.kilometers != null
+        ? [{ icon: 'gauge' as const, label: formatKilometers(listing.kilometers) }]
+        : []),
       { icon: 'gas' as const, label: fuel },
       { icon: 'gear' as const, label: transmission },
       ...(listing.color ? [{ icon: 'paint' as const, label: colour }] : []),
@@ -666,12 +668,16 @@ export function CarListingDetailView({
                       }
                       sx={{ alignItems: 'stretch', width: '100%' }}
                     >
-                      <SpecIconBox Icon={CalendarIcon} primary={String(listing.year)} secondary="Viti" />
+                      {listing.year != null ? (
+                        <SpecIconBox Icon={CalendarIcon} primary={String(listing.year)} secondary="Viti" />
+                      ) : null}
+                      {listing.kilometers != null ? (
                       <SpecIconBox
                         Icon={GaugeIcon}
                         primary={formatKilometers(listing.kilometers).replace(' ', '\u00A0')}
                         secondary="Kilometra"
                       />
+                      ) : null}
                       <SpecIconBox Icon={GasPumpIcon} primary={fuel} secondary="Karburant" />
                       <SpecIconBox Icon={GearSixIcon} primary={transmission} secondary="Transmision" />
                     </Stack>

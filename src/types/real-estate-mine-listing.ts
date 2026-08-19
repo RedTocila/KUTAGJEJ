@@ -6,11 +6,11 @@ export interface RealEstateMineListing extends ListingMetrics {
   title: string;
   description?: string;
   propertyCategory: string;
-  transactionType: 'rent' | 'sale';
+  transactionType: 'rent' | 'sale' | string | null;
   price: number;
   originalPrice?: number | null;
   currency: 'EUR' | 'LEK';
-  surfaceM2: number;
+  surfaceM2: number | null;
   cityName: string | null;
   zoneName: string | null;
   cityId?: string | null;

@@ -5,7 +5,7 @@ const authMiddleware = require('../middleware/auth');
 const { getSupabaseAdmin } = require('../lib/supabase');
 const { camelizeRow } = require('../lib/profiles');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
-const { sanitizeImageUrls } = require('../lib/image-upload');
+const { sanitizeImageUrls, requireListingPhotos } = require('../lib/image-upload');
 const { isUuid } = require('../lib/public-listings/query-helpers');
 const { parseComparePrice } = require('../lib/listing-compare-price');
 const { formatMineMarketplace, formatMineMarketplaceFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
@@ -27,28 +27,27 @@ const CATEGORY_VALUES = [
 ];
 const CONDITION_VALUES = ['i-ri', 'si-i-ri', 'shume-mire', 'mire', 'me-defekte'];
 const CURRENCY_VALUES = ['EUR', 'LEK'];
-const SELLING = new Set(['shes']);
 
 function validate(body) {
-  if (!TRANSACTION_VALUES.includes(body?.transactionType)) {
+  if (body?.transactionType && !TRANSACTION_VALUES.includes(body.transactionType)) {
     return { ok: false, message: 'Lloji i transaksionit nuk është i vlefshëm.' };
   }
+  body.transactionType = body?.transactionType || 'shes';
   if (!String(body?.title || '').trim()) return { ok: false, message: 'Titulli është i detyrueshëm.' };
-  if (!String(body?.description || '').trim()) return { ok: false, message: 'Përshkrimi është i detyrueshëm.' };
+  body.description = String(body?.description || '').trim();
   const category = String(body?.category || '').trim();
-  if (!category || category.length > 80) return { ok: false, message: 'Kategoria nuk është e vlefshme.' };
-  body.category = category;
+  if (category && category.length > 80) return { ok: false, message: 'Kategoria nuk është e vlefshme.' };
+  body.category = category || null;
 
-  if (SELLING.has(body.transactionType)) {
-    if (body?.condition && !CONDITION_VALUES.includes(body.condition)) {
-      return { ok: false, message: 'Gjendja e artikullit nuk është e vlefshme.' };
-    }
-    if (body?.price !== null && body?.price !== undefined && String(body.price).trim() !== '') {
-      const p = Number(body.price);
-      if (!Number.isFinite(p) || p < 0) return { ok: false, message: 'Çmimi duhet të jetë numër pozitiv.' };
-      if (!CURRENCY_VALUES.includes(body?.currency)) return { ok: false, message: 'Zgjidhni monedhën për çmimin.' };
-    }
+  if (body?.condition && !CONDITION_VALUES.includes(body.condition)) {
+    return { ok: false, message: 'Gjendja e artikullit nuk është e vlefshme.' };
   }
+
+  const p = Number(body?.price);
+  if (!Number.isFinite(p) || p < 0) return { ok: false, message: 'Çmimi duhet të jetë numër pozitiv.' };
+  const currency = String(body?.currency || '').trim() || 'EUR';
+  if (!CURRENCY_VALUES.includes(currency)) return { ok: false, message: 'Zgjidhni monedhën për çmimin.' };
+  body.currency = currency;
 
   const cityId = String(body?.cityId || '').trim();
   if (!cityId || !isUuid(cityId)) return { ok: false, message: 'Zgjidhni një qytet të vlefshëm.' };
@@ -121,28 +120,30 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     const maps = await parseMapsFieldsFromBody(body);
     if (!maps.ok) return res.status(400).json({ message: maps.message });
 
-    const selling = SELLING.has(body.transactionType);
-    const hasPrice = selling && body.price !== null && body.price !== undefined && String(body.price).trim() !== '';
-    const price = hasPrice ? Number(body.price) : null;
-    const cmp = parseComparePrice(hasPrice ? body.originalPrice : null, price);
+    const imageUrls = sanitizeImageUrls(body.imageUrls, MAX_MARKETPLACE_IMAGES);
+    const photos = requireListingPhotos(imageUrls);
+    if (!photos.ok) return res.status(400).json({ message: photos.message });
+
+    const price = Number(body.price);
+    const cmp = parseComparePrice(body.originalPrice, price);
     if (!cmp.ok) return res.status(400).json({ message: cmp.message });
 
     const row = {
       poster_id: req.user.id,
       transaction_type: body.transactionType,
       title: String(body.title).trim(),
-      description: String(body.description).trim(),
-      category: body.category,
-      condition: selling && body.condition ? body.condition : null,
+      description: String(body.description || '').trim(),
+      category: body.category || null,
+      condition: body.condition || null,
       price,
       original_price: cmp.value,
+      currency: body.currency,
       city_id: cityId,
       contact_phone: String(body.contactPhone || '').trim(),
-      image_urls: sanitizeImageUrls(body.imageUrls, MAX_MARKETPLACE_IMAGES),
+      image_urls: imageUrls,
       status: 'approved',
       ...mapsColumnsFromParsed(maps),
     };
-    if (hasPrice) row.currency = body.currency;
 
     const { data: created, error: insErr } = await getSupabaseAdmin()
       .from('marketplace_listings')
@@ -201,24 +202,26 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
     const maps = await parseMapsFieldsFromBody(body);
     if (!maps.ok) return res.status(400).json({ message: maps.message });
 
-    const selling = SELLING.has(body.transactionType);
-    const hasPrice = selling && body.price !== null && body.price !== undefined && String(body.price).trim() !== '';
-    const price = hasPrice ? Number(body.price) : null;
-    const cmp = parseComparePrice(hasPrice ? body.originalPrice : null, price);
+    const imageUrls = sanitizeImageUrls(body.imageUrls, MAX_MARKETPLACE_IMAGES);
+    const photos = requireListingPhotos(imageUrls);
+    if (!photos.ok) return res.status(400).json({ message: photos.message });
+
+    const price = Number(body.price);
+    const cmp = parseComparePrice(body.originalPrice, price);
     if (!cmp.ok) return res.status(400).json({ message: cmp.message });
 
     const patch = {
       transaction_type: body.transactionType,
       title: String(body.title).trim(),
-      description: String(body.description).trim(),
-      category: body.category,
-      condition: selling && body.condition ? body.condition : null,
+      description: String(body.description || '').trim(),
+      category: body.category || null,
+      condition: body.condition || null,
       price,
       original_price: cmp.value,
-      currency: hasPrice ? body.currency : 'EUR',
+      currency: body.currency,
       city_id: cityId,
       contact_phone: String(body.contactPhone || '').trim(),
-      image_urls: sanitizeImageUrls(body.imageUrls, MAX_MARKETPLACE_IMAGES),
+      image_urls: imageUrls,
       updated_at: new Date().toISOString(),
     };
     if (!maps.skip) Object.assign(patch, mapsColumnsFromParsed(maps));

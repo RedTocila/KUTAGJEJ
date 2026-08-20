@@ -170,6 +170,17 @@ export function ProfessionalListingDetailDesktop({
                   shareCount={listing.shareCount}
                   saveCount={saveCount}
                   bookmark={{ saved, onToggle: onToggleSave }}
+                  sharePayload={{
+                    title: displayName,
+                    category: listing.categoryLabel,
+                    imageUrl: coverImageUrls[0] ?? listing.imageUrl,
+                    location: locationLine || listing.cityName || undefined,
+                    contactPhone: (listing.contactPhone ?? listing.seller?.phone)?.trim() || undefined,
+                    createdAt: listing.createdAt,
+                    viewCount: listing.viewCount,
+                    saveCount,
+                    url: canonicalUrl,
+                  }}
                   hideSlideCount
                 />
               </Box>

@@ -357,6 +357,7 @@ export function RealEstateListingGallery(props: {
       createdAt: sharePayload?.createdAt,
       viewCount: sharePayload?.viewCount,
       saveCount: sharePayload?.saveCount ?? saveCount,
+      contactPhone: sharePayload?.contactPhone,
       url: sharePayload?.url,
     };
   }, [listingId, listingKind, saveCount, sharePayload, title, urls]);

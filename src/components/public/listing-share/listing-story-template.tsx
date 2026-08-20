@@ -20,6 +20,7 @@ import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { PaintBucket as PaintBucketIcon } from '@phosphor-icons/react/dist/ssr/PaintBucket';
 import { Path as PathIcon } from '@phosphor-icons/react/dist/ssr/Path';
+import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
@@ -46,11 +47,11 @@ export const FEED_WIDTH = 1080;
 export const FEED_HEIGHT = 1350;
 
 /**
- * Feed-style listing card for the story canvas.
- * Taller media, compact body — avoids empty black stretch when specs/price are missing.
+ * Feed-style listing card — always 4:5 (Instagram portrait).
+ * Photo fills leftover space so sparse listings stay tight without empty body stretch.
  */
 const CARD_W = 760;
-const MEDIA_H = 520;
+const CARD_H = Math.round((CARD_W * 5) / 4);
 const GREEN = '#76ba1b';
 /** Scale factor vs ~360px mobile card (760/360). */
 const S = 2.1;
@@ -277,16 +278,19 @@ function StoryListingImage({
 }
 
 /**
- * Listing card — height follows content so sparse listings stay tight (no empty black gap).
- * Exported so the share sheet can capture only the card (no story backdrop).
+ * Listing card — always 4:5. Photo grows to fill leftover space after the body.
+ * `fillFrame` is for the saved JPEG (no radius/shadow so the image is a full 4:5 rectangle).
  */
-export const ListingShareCard = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
-  function ListingShareCard({ payload }, ref) {
-  const specs = (payload.specs ?? []).filter((s) => s.label).slice(0, 6);
+export const ListingShareCard = React.forwardRef<
+  HTMLDivElement,
+  { payload: ListingSharePayload; fillFrame?: boolean }
+>(function ListingShareCard({ payload, fillFrame = false }, ref) {
+  const specs = (payload.specs ?? []).filter((s) => s.label).slice(0, 3);
   const saveCount = payload.saveCount ?? 0;
   const viewCount = payload.viewCount ?? 0;
   const posted = payload.createdAt ? relativeAlbanianDate(payload.createdAt) : null;
   const imageSrc = resolveStoryImageSrc(payload.imageUrl);
+  const contactPhone = payload.contactPhone?.trim() || '';
 
   return (
     <Box
@@ -294,11 +298,13 @@ export const ListingShareCard = React.forwardRef<HTMLDivElement, { payload: List
       data-listing-share-card=""
       sx={{
         width: CARD_W,
-        borderRadius: 2.25 * S,
+        height: CARD_H,
+        aspectRatio: '4 / 5',
+        borderRadius: fillFrame ? 0 : 2.25 * S,
         overflow: 'hidden',
         bgcolor: '#141414',
         border: `${2.5 * S}px solid ${GREEN}`,
-        boxShadow: '0 28px 80px rgba(0,0,0,0.55)',
+        boxShadow: fillFrame ? 'none' : '0 28px 80px rgba(0,0,0,0.55)',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
@@ -308,11 +314,11 @@ export const ListingShareCard = React.forwardRef<HTMLDivElement, { payload: List
         sx={{
           position: 'relative',
           width: '100%',
-          height: MEDIA_H,
+          flex: 1,
+          minHeight: 0,
           borderBottom: '1px solid rgba(255,255,255,0.08)',
           bgcolor: 'rgba(118,186,27,0.06)',
           overflow: 'hidden',
-          flexShrink: 0,
         }}
       >
         {imageSrc ? (
@@ -368,7 +374,7 @@ export const ListingShareCard = React.forwardRef<HTMLDivElement, { payload: List
         </Stack>
       </Box>
 
-      <Stack spacing={2.25} sx={{ px: 3.5, py: 3.25, bgcolor: '#141414' }}>
+      <Stack spacing={2.25} sx={{ px: 3.5, py: 3.25, bgcolor: '#141414', flexShrink: 0 }}>
         {payload.category ? (
           <Typography
             sx={{
@@ -433,6 +439,17 @@ export const ListingShareCard = React.forwardRef<HTMLDivElement, { payload: List
           </Stack>
         ) : null}
 
+        {contactPhone ? (
+          <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', color: '#fff', pt: 0.5 }}>
+            <Box sx={{ color: GREEN, display: 'inline-flex', lineHeight: 0 }}>
+              <PhoneIcon size={28} weight="fill" />
+            </Box>
+            <Typography sx={{ fontWeight: 800, fontSize: 28, lineHeight: 1.25, letterSpacing: '0.02em' }}>
+              {contactPhone}
+            </Typography>
+          </Stack>
+        ) : null}
+
         <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', pt: 0.75 }}>
           <Typography sx={{ fontSize: 22, color: 'rgba(255,255,255,0.42)', fontWeight: 550 }}>
             {posted ?? ''}
@@ -450,64 +467,6 @@ export const ListingShareCard = React.forwardRef<HTMLDivElement, { payload: List
   },
 );
 
-/** Scale the listing card to fill a parent without overflowing (used by the 4:5 feed export). */
-function FitShareCard({ payload }: { payload: ListingSharePayload }) {
-  const wrapRef = React.useRef<HTMLDivElement>(null);
-  const cardRef = React.useRef<HTMLDivElement>(null);
-  const [scale, setScale] = React.useState(1);
-  const [cardSize, setCardSize] = React.useState({ w: CARD_W, h: 0 });
-
-  React.useLayoutEffect(() => {
-    const wrap = wrapRef.current;
-    const card = cardRef.current;
-    if (!wrap || !card) return;
-
-    const fit = () => {
-      const w = card.offsetWidth;
-      const h = card.offsetHeight;
-      const next = Math.min(wrap.clientWidth / Math.max(1, w), wrap.clientHeight / Math.max(1, h));
-      const safe = Number.isFinite(next) && next > 0 ? Math.round(next * 1000) / 1000 : 1;
-      setCardSize({ w, h });
-      setScale(safe);
-    };
-
-    fit();
-    const ro = new ResizeObserver(fit);
-    ro.observe(wrap);
-    ro.observe(card);
-    return () => ro.disconnect();
-  }, [payload]);
-
-  const layoutW = cardSize.w * scale;
-  const layoutH = cardSize.h * scale;
-
-  return (
-    <Box
-      ref={wrapRef}
-      sx={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Box sx={{ width: layoutW || CARD_W, height: layoutH || 'auto', position: 'relative', flexShrink: 0 }}>
-        <Box
-          sx={{
-            transform: `scale(${scale})`,
-            transformOrigin: 'top left',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-          }}
-        >
-          <ListingShareCard ref={cardRef} payload={payload} />
-        </Box>
-      </Box>
-    </Box>
-  );
-}
 
 /**
  * Full Instagram-story template: branded dark backdrop + feed-exact listing card.
@@ -594,10 +553,12 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
 );
 
 /**
- * Instagram 4:5 feed post: branded backdrop + listing card, always 1080×1350.
+ * Saved photo: listing card only, always 1080×1350 (4:5). No story backdrop or brand chrome.
  */
 export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
   function ListingFeedTemplate({ payload }, ref) {
+    const scale = FEED_WIDTH / CARD_W;
+
     return (
       <Box
         ref={ref}
@@ -607,69 +568,21 @@ export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: L
           width: FEED_WIDTH,
           height: FEED_HEIGHT,
           overflow: 'hidden',
-          bgcolor: '#0a0a0a',
+          bgcolor: '#141414',
           color: '#fff',
           fontFamily:
             'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
         }}
       >
-        <StoryBackground />
-
         <Box
           sx={{
-            position: 'relative',
-            zIndex: 1,
-            height: '100%',
-            px: 5.5,
-            pt: 5,
-            pb: 4.5,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            width: CARD_W,
+            height: CARD_H,
           }}
         >
-          <Stack spacing={0.75} sx={{ alignItems: 'center', flexShrink: 0, mb: 3.5 }}>
-            <Box
-              component="img"
-              src={brandLogoSrc}
-              alt={config.site.name}
-              sx={{ width: 88, height: 88, objectFit: 'contain' }}
-            />
-            <Typography
-              sx={{
-                fontFamily: brandWordmarkFontFamily,
-                fontWeight: 700,
-                fontSize: 48,
-                letterSpacing: '-0.03em',
-                lineHeight: 1,
-                color: '#fff',
-              }}
-            >
-              {config.site.name}
-            </Typography>
-            <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-              <Typography sx={{ fontWeight: 500, fontSize: 24, color: 'rgba(255,255,255,0.82)' }}>
-                Gjithçka në një vend.
-              </Typography>
-              <Box sx={{ color: GREEN, display: 'inline-flex', lineHeight: 0 }}>
-                <MapPinIcon size={22} weight="fill" />
-              </Box>
-            </Stack>
-          </Stack>
-
-          <Box
-            sx={{
-              flex: 1,
-              minHeight: 0,
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden',
-            }}
-          >
-            <FitShareCard payload={payload} />
-          </Box>
+          <ListingShareCard payload={payload} fillFrame />
         </Box>
       </Box>
     );

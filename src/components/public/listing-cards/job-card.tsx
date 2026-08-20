@@ -133,6 +133,7 @@ export function JobCard({
           createdAt: listing.createdAt,
           viewCount,
           saveCount: listing.saveCount,
+          contactPhone: listing.contactPhone?.trim() || undefined,
           url: listingJobPublicHref(listing),
         }}
         bottomRightOverlay={

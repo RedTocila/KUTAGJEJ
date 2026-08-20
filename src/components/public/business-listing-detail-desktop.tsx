@@ -181,6 +181,17 @@ export function BusinessListingDetailDesktop({
                   shareCount={listing.shareCount}
                   saveCount={saveCount}
                   bookmark={{ saved, onToggle: onToggleSave }}
+                  sharePayload={{
+                    title: listing.title,
+                    category: categoryLine || listing.categoryLabel,
+                    imageUrl: listing.imageUrls[0] ?? listing.imageUrl,
+                    location: locationLine || listing.cityName || undefined,
+                    contactPhone: telHref?.trim() || undefined,
+                    createdAt: listing.createdAt,
+                    viewCount: listing.viewCount,
+                    saveCount,
+                    url: canonicalUrl,
+                  }}
                 />
               </Box>
               <Box

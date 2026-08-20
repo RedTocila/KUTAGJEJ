@@ -190,6 +190,21 @@ export function ProfessionalListingDetailView({
             shareCount={ownerPreview ? undefined : listing.shareCount}
             saveCount={ownerPreview ? undefined : saveCount}
             bookmark={ownerPreview ? undefined : { saved, onToggle: () => void toggleSave() }}
+            sharePayload={
+              ownerPreview
+                ? undefined
+                : {
+                    title: displayName,
+                    category: listing.categoryLabel,
+                    imageUrl: coverImageUrls[0] ?? listing.imageUrl,
+                    location: locationLine || listing.cityName || undefined,
+                    contactPhone: (listing.contactPhone ?? listing.seller?.phone)?.trim() || undefined,
+                    createdAt: listing.createdAt,
+                    viewCount: listing.viewCount,
+                    saveCount,
+                    url: canonicalUrl,
+                  }
+            }
             hideSlideCount
             mediaActionSurface="glass"
             onEditPhotos={ownerEdit?.onEditPhotos ? () => ownerEdit.onEditPhotos!('cover') : undefined}

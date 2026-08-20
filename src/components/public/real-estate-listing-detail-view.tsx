@@ -385,6 +385,7 @@ export function RealEstateListingDetailView({
     createdAt: listing.createdAt,
     viewCount,
     saveCount: listing.saveCount,
+    contactPhone: displayPhone || undefined,
     url: canonicalUrl,
   };
 

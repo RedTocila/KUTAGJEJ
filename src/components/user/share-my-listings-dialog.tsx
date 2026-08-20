@@ -184,6 +184,7 @@ export function ShareMyListingsDialog({
             createdAt: l.createdAt,
             viewCount: l.viewCount,
             saveCount: l.saveCount,
+            contactPhone: l.contactPhone?.trim() || undefined,
             url,
           },
         });
@@ -211,6 +212,7 @@ export function ShareMyListingsDialog({
             createdAt: l.createdAt,
             viewCount: l.viewCount,
             saveCount: l.saveCount,
+            contactPhone: l.contactPhone?.trim() || undefined,
             url,
           },
         });
@@ -235,6 +237,7 @@ export function ShareMyListingsDialog({
             createdAt: l.createdAt,
             viewCount: l.viewCount,
             saveCount: l.saveCount,
+            contactPhone: l.contactPhone?.trim() || undefined,
             url,
           },
         });
@@ -261,6 +264,7 @@ export function ShareMyListingsDialog({
             createdAt: l.createdAt,
             viewCount: l.viewCount,
             saveCount: l.saveCount,
+            contactPhone: l.contactPhone?.trim() || undefined,
             url,
           },
         });
@@ -285,6 +289,7 @@ export function ShareMyListingsDialog({
             createdAt: l.createdAt,
             viewCount: l.viewCount,
             saveCount: l.saveCount,
+            contactPhone: l.contactPhone?.trim() || undefined,
             url,
           },
         });
@@ -311,6 +316,7 @@ export function ShareMyListingsDialog({
             createdAt: l.createdAt,
             viewCount: l.viewCount,
             saveCount: l.saveCount,
+            contactPhone: l.contactPhone?.trim() || undefined,
             url,
           },
         });

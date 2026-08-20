@@ -1,5 +1,7 @@
 'use client';
 
+import { getApiUrl } from '@/lib/api-config';
+import { listingDisplayPhone } from '@/lib/listing-contact';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 
 /** Spec icons supported by the Instagram story template. */
@@ -47,9 +49,42 @@ export type ListingSharePayload = {
   createdAt?: string | null;
   viewCount?: number;
   saveCount?: number;
+  /** Seller contact — printed on story / saved card images only. */
+  contactPhone?: string | null;
   /** Absolute or path URL; defaults to current page. */
   url?: string;
 };
+
+const SHARE_PHONE_PATH: Record<ListingMetricKind, string> = {
+  'real-estate': 'real-estate',
+  car: 'cars',
+  job: 'jobs',
+  marketplace: 'marketplace',
+  businesses: 'businesses',
+  professionals: 'professionals',
+};
+
+/** Load the listing contact number for story / save images (browse cards omit it). */
+export async function fetchListingShareContactPhone(
+  kind: ListingMetricKind,
+  listingId: string,
+): Promise<string | null> {
+  const id = String(listingId || '').trim();
+  const slug = SHARE_PHONE_PATH[kind];
+  if (!id || !slug) return null;
+  try {
+    const res = await fetch(getApiUrl(`/public/listings/${slug}/${encodeURIComponent(id)}`), {
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      listing?: { contactPhone?: string | null; seller?: { phone?: string | null } | null };
+    };
+    return listingDisplayPhone(data.listing ?? {}) || null;
+  } catch {
+    return null;
+  }
+}
 
 export function resolveListingShareUrl(payload: ListingSharePayload): string {
   if (payload.url) {

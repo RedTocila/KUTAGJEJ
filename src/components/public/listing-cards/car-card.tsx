@@ -97,6 +97,7 @@ export function CarCard({
           createdAt: listing.createdAt,
           viewCount,
           saveCount: listing.saveCount,
+          contactPhone: listing.contactPhone?.trim() || undefined,
           url: listingCarPublicHref(listing),
         }}
       />

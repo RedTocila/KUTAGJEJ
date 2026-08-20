@@ -27,6 +27,7 @@ import {
 } from '@/components/public/listing-share/listing-story-template';
 import {
   embedImageAsDataUrl,
+  fetchListingShareContactPhone,
   resolveListingShareUrl,
   resolveStoryImageSrc,
   type ListingSharePayload,
@@ -279,6 +280,8 @@ export function ListingSharePage({
   const [error, setError] = React.useState<string | null>(null);
   const [previewScale, setPreviewScale] = React.useState(0.28);
   const [mounted, setMounted] = React.useState(false);
+  const [resolvedPhone, setResolvedPhone] = React.useState<string | null>(null);
+  const phoneReadyRef = React.useRef<Promise<string | null>>(Promise.resolve(null));
 
   useLockBodyScroll(open && mounted && Boolean(payload));
 
@@ -312,6 +315,47 @@ export function ListingSharePage({
       cancelled = true;
     };
   }, [open, payload?.listingId, payload?.imageUrl]);
+
+  React.useEffect(() => {
+    if (!open || !payload) {
+      setResolvedPhone(null);
+      phoneReadyRef.current = Promise.resolve(null);
+      return;
+    }
+
+    const existing = payload.contactPhone?.trim() || '';
+    if (existing) {
+      setResolvedPhone(existing);
+      phoneReadyRef.current = Promise.resolve(existing);
+      return;
+    }
+
+    setResolvedPhone(null);
+    const pending = fetchListingShareContactPhone(payload.listingKind, payload.listingId);
+    phoneReadyRef.current = pending;
+    let cancelled = false;
+    void pending.then((phone) => {
+      if (!cancelled) setResolvedPhone(phone);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, payload?.contactPhone, payload?.listingId, payload?.listingKind]);
+
+  const cardPayload = React.useMemo<ListingSharePayload | null>(() => {
+    if (!payload) return null;
+    const phone = resolvedPhone || payload.contactPhone?.trim() || '';
+    return phone ? { ...payload, contactPhone: phone } : payload;
+  }, [payload, resolvedPhone]);
+
+  const waitForSharePhone = React.useCallback(async () => {
+    const phone = (await phoneReadyRef.current)?.trim() || payload?.contactPhone?.trim() || '';
+    if (phone && phone !== resolvedPhone) {
+      setResolvedPhone(phone);
+      await new Promise((r) => window.setTimeout(r, 60));
+    }
+    return phone;
+  }, [payload?.contactPhone, resolvedPhone]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -357,6 +401,7 @@ export function ListingSharePage({
     setError(null);
     setFeedback(null);
     try {
+      await waitForSharePhone();
       const file = await captureElementAsJpegFile(
         {
           root: storyCaptureRef.current,
@@ -389,7 +434,7 @@ export function ListingSharePage({
     } finally {
       setBusy(null);
     }
-  }, [busy, bumpShareMetric, payload]);
+  }, [busy, bumpShareMetric, payload, waitForSharePhone]);
 
   const handleCopyLink = React.useCallback(async () => {
     if (!payload || busy) return;
@@ -414,13 +459,14 @@ export function ListingSharePage({
     setError(null);
     setFeedback(null);
     try {
+      await waitForSharePhone();
       const file = await captureElementAsJpegFile(
         {
           root: feedCaptureRef.current,
           imageUrl: embeddedImageRef.current ?? payload.imageUrl,
           width: FEED_WIDTH,
           height: FEED_HEIGHT,
-          backgroundColor: '#0a0a0a',
+          backgroundColor: '#141414',
           pixelRatio: 1,
         },
         `kutagjej-card-${payload.listingId.slice(0, 8)}.jpg`,
@@ -437,7 +483,7 @@ export function ListingSharePage({
     } finally {
       setBusy(null);
     }
-  }, [busy, payload]);
+  }, [busy, payload, waitForSharePhone]);
 
   if (!mounted || !open || !payload) return null;
 
@@ -540,7 +586,7 @@ export function ListingSharePage({
               pointerEvents: 'none',
             }}
           >
-            <ListingStoryTemplate payload={payload} />
+            <ListingStoryTemplate payload={cardPayload ?? payload} />
           </Box>
         </Box>
       </Box>
@@ -559,8 +605,8 @@ export function ListingSharePage({
             'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
         }}
       >
-        <ListingFeedTemplate ref={feedCaptureRef} payload={payload} />
-        <ListingStoryTemplate ref={storyCaptureRef} payload={payload} />
+        <ListingFeedTemplate ref={feedCaptureRef} payload={cardPayload ?? payload} />
+        <ListingStoryTemplate ref={storyCaptureRef} payload={cardPayload ?? payload} />
       </Box>
 
       {/* Bottom actions */}

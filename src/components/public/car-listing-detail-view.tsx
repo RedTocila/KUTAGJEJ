@@ -378,6 +378,7 @@ export function CarListingDetailView({
     createdAt: listing.createdAt,
     viewCount,
     saveCount: listing.saveCount,
+    contactPhone: displayPhone || undefined,
     url: canonicalUrl,
   };
 

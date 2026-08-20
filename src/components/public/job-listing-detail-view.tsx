@@ -179,6 +179,7 @@ export function JobListingDetailView({
       createdAt: listing.createdAt,
       viewCount: listing.viewCount ?? 0,
       saveCount: listing.saveCount,
+      contactPhone: (listing.contactPhone ?? listing.seller?.phone)?.trim() || undefined,
       url: canonicalUrl,
     }),
     [canonicalUrl, coverImageUrls, industryLabel, jobTypeLabel, listing, locationLine, salary]

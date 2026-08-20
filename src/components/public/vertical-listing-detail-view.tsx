@@ -373,6 +373,20 @@ export function VerticalListingDetailView(props: {
                   shareCount={ownerPreview ? undefined : listing.shareCount}
                   saveCount={ownerPreview ? undefined : saveCount}
                   bookmark={ownerPreview ? undefined : { saved, onToggle: () => void toggleSave() }}
+                  sharePayload={
+                    ownerPreview
+                      ? undefined
+                      : {
+                          title: listingTitle(listing),
+                          imageUrl: listing.imageUrls[0] ?? ('imageUrl' in listing ? listing.imageUrl : null),
+                          location: locationLine || ('cityName' in listing ? listing.cityName : undefined) || undefined,
+                          contactPhone: displayPhone || undefined,
+                          createdAt: listing.createdAt,
+                          viewCount,
+                          saveCount,
+                          url: canonicalUrl,
+                        }
+                  }
                   onEditPhotos={ownerEdit?.onEditPhotos}
                 />
               </Box>

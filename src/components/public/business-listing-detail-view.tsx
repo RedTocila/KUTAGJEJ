@@ -279,6 +279,21 @@ export function BusinessListingDetailView({
             shareCount={ownerPreview ? undefined : listing.shareCount}
             saveCount={ownerPreview ? undefined : saveCount}
             bookmark={ownerPreview ? undefined : { saved, onToggle: () => void toggleSave() }}
+            sharePayload={
+              ownerPreview
+                ? undefined
+                : {
+                    title: listing.title,
+                    category: categoryLine || listing.categoryLabel,
+                    imageUrl: listing.imageUrls[0] ?? listing.imageUrl,
+                    location: locationLine || listing.cityName || undefined,
+                    contactPhone: phone?.trim() || undefined,
+                    createdAt: listing.createdAt,
+                    viewCount: listing.viewCount,
+                    saveCount,
+                    url: canonicalUrl,
+                  }
+            }
             onEditPhotos={ownerEdit?.onEditPhotos}
           />
 

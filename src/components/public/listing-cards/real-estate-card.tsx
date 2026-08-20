@@ -135,6 +135,7 @@ export function RealEstateCard({
             createdAt: listing.createdAt,
             viewCount,
             saveCount: listing.saveCount,
+            contactPhone: listing.contactPhone?.trim() || undefined,
             url: listingRealEstatePublicHref(listing),
           }}
         />

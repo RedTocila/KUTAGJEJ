@@ -120,6 +120,7 @@ export function CardMedia({
       createdAt: sharePayload?.createdAt,
       viewCount: sharePayload?.viewCount,
       saveCount: sharePayload?.saveCount ?? saveCount,
+      contactPhone: sharePayload?.contactPhone,
       url: sharePayload?.url,
     }),
     [alt, imageUrl, listingId, listingKind, saveCount, sharePayload, topLeftBadge]

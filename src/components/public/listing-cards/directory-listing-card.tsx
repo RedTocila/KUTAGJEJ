@@ -91,6 +91,7 @@ function BusinessVenueCardBody({
             createdAt: listing.createdAt,
             viewCount,
             saveCount: listing.saveCount,
+            contactPhone: listing.contactPhone?.trim() || undefined,
             url: listingBusinessPublicHref(listing),
           }}
           bottomOverlay={
@@ -297,6 +298,7 @@ function ProfessionalListingCardBody({
             createdAt: listing.createdAt,
             viewCount,
             saveCount: listing.saveCount,
+            contactPhone: listing.contactPhone?.trim() || undefined,
             url: listingProfessionalPublicHref(listing),
           }}
           bottomOverlay={

@@ -655,6 +655,8 @@ const sq = {
     retryingFailed: 'Duke riprovuar…',
     progressStarting: (total: number) =>
       total === 1 ? 'Duke analizuar 1 njoftim…' : `Duke analizuar ${total} njoftime…`,
+    progressWorking: (current: number, total: number) =>
+      `Duke analizuar ${current} nga ${total}…`,
     progress: (done: number, total: number) => {
       const left = Math.max(0, total - done);
       if (left <= 0) return `Përfunduan ${done} nga ${total}`;
@@ -1382,6 +1384,8 @@ const en: AppMessages = {
     retryingFailed: 'Retrying…',
     progressStarting: (total: number) =>
       total === 1 ? 'Analyzing 1 listing…' : `Analyzing ${total} listings…`,
+    progressWorking: (current: number, total: number) =>
+      `Analyzing ${current} of ${total}…`,
     progress: (done: number, total: number) => {
       const left = Math.max(0, total - done);
       if (left <= 0) return `Completed ${done} of ${total}`;

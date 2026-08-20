@@ -125,6 +125,112 @@ function formatAiDraftError(
   return draft.error || t.aiImport.failed;
 }
 
+function AiImportProgressPanel({
+  progress,
+  loading,
+  onStop,
+  showStop,
+  t,
+}: {
+  progress: { done: number; total: number } | null;
+  loading: boolean;
+  onStop: () => void;
+  showStop?: boolean;
+  t: ReturnType<typeof useCopy>;
+}) {
+  if (!loading && !progress) return null;
+  const total = progress?.total ?? 0;
+  const done = progress?.done ?? 0;
+  const current = total <= 0 ? 1 : Math.min(total, done + (loading ? 1 : 0));
+  const percent = total <= 0 ? 0 : (done / total) * 100;
+
+  return (
+    <Stack
+      spacing={1}
+      sx={{
+        width: '100%',
+        p: 1.5,
+        borderRadius: 2.5,
+        border: '1px solid',
+        borderColor: loading ? AI_SEARCH_BLUE : 'divider',
+        bgcolor: (theme) =>
+          theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : AI_SEARCH_BLUE_SOFT,
+      }}
+    >
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+        {loading ? (
+          <CircularProgress size={22} thickness={5} sx={{ color: AI_SEARCH_BLUE, flexShrink: 0 }} />
+        ) : (
+          <SparkleIcon size={22} weight="fill" color={AI_SEARCH_BLUE} />
+        )}
+        <Stack spacing={0.2} sx={{ minWidth: 0, flex: 1 }}>
+          <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', color: 'text.primary' }}>
+            {loading
+              ? total > 0
+                ? t.aiImport.progressWorking(current, total)
+                : t.aiImport.analyzing
+              : t.aiImport.progress(done, total)}
+          </Typography>
+          {loading && done > 0 && total > 0 ? (
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+              {t.aiImport.progress(done, total)}
+            </Typography>
+          ) : null}
+        </Stack>
+      </Stack>
+      <Box sx={{ position: 'relative', height: 8 }}>
+        <LinearProgress
+          variant="determinate"
+          value={percent}
+          sx={{
+            height: 8,
+            borderRadius: 999,
+            bgcolor: (theme) =>
+              theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+            '& .MuiLinearProgress-bar': {
+              borderRadius: 999,
+              bgcolor: AI_SEARCH_BLUE,
+            },
+          }}
+        />
+        {loading ? (
+          <LinearProgress
+            variant="indeterminate"
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              height: 8,
+              borderRadius: 999,
+              opacity: 0.4,
+              bgcolor: 'transparent',
+              '& .MuiLinearProgress-bar': {
+                borderRadius: 999,
+                bgcolor: AI_SEARCH_BLUE,
+              },
+            }}
+          />
+        ) : null}
+      </Box>
+      {showStop && loading ? (
+        <Button
+          type="button"
+          size="small"
+          onClick={onStop}
+          startIcon={<StopIcon size={14} weight="fill" />}
+          sx={{
+            alignSelf: 'flex-start',
+            textTransform: 'none',
+            fontWeight: 800,
+            color: 'error.main',
+          }}
+        >
+          {t.aiImport.stop}
+        </Button>
+      ) : null}
+    </Stack>
+  );
+}
+
 export default function AiImportListingsPage() {
   const router = useRouter();
   const { user } = useUser();
@@ -928,7 +1034,8 @@ export default function AiImportListingsPage() {
                     variant="contained"
                     fullWidth
                     onClick={handleStop}
-                    startIcon={<StopIcon size={18} weight="fill" />}
+                    startIcon={<CircularProgress size={18} color="inherit" />}
+                    endIcon={<StopIcon size={18} weight="fill" />}
                     sx={{
                       borderRadius: '16px',
                       textTransform: 'none',
@@ -975,30 +1082,13 @@ export default function AiImportListingsPage() {
                     {t.aiImport.analyze}
                   </Button>
                 )}
-                {progress ? (
-                  <Stack spacing={0.75}>
-                    <LinearProgress
-                      variant="determinate"
-                      value={progress.total <= 0 ? 0 : (progress.done / progress.total) * 100}
-                      sx={{
-                        height: 8,
-                        borderRadius: 999,
-                        bgcolor: (theme) =>
-                          theme.palette.mode === 'dark'
-                            ? 'rgba(255,255,255,0.08)'
-                            : 'rgba(0,0,0,0.08)',
-                        '& .MuiLinearProgress-bar': {
-                          borderRadius: 999,
-                          bgcolor: AI_SEARCH_BLUE,
-                        },
-                      }}
-                    />
-                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                      {progress.done <= 0
-                        ? t.aiImport.progressStarting(progress.total)
-                        : t.aiImport.progress(progress.done, progress.total)}
-                    </Typography>
-                  </Stack>
+                {loading || progress ? (
+                  <AiImportProgressPanel
+                    progress={progress}
+                    loading={loading}
+                    onStop={handleStop}
+                    t={t}
+                  />
                 ) : null}
               </>
             ) : (
@@ -1014,47 +1104,8 @@ export default function AiImportListingsPage() {
         </Box>
       </PostListingFormSurface>
 
-      {drafts.length > 0 ? (
+      {drafts.length > 0 || loading ? (
         <Stack spacing={1.5}>
-          {progress ? (
-            <Stack spacing={0.75}>
-              <LinearProgress
-                variant="determinate"
-                value={progress.total <= 0 ? 0 : (progress.done / progress.total) * 100}
-                sx={{
-                  height: 8,
-                  borderRadius: 999,
-                  bgcolor: (theme) =>
-                    theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-                  '& .MuiLinearProgress-bar': {
-                    borderRadius: 999,
-                    bgcolor: AI_SEARCH_BLUE,
-                  },
-                }}
-              />
-              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                {progress.done <= 0
-                  ? t.aiImport.progressStarting(progress.total)
-                  : t.aiImport.progress(progress.done, progress.total)}
-              </Typography>
-              {loading ? (
-                <Button
-                  type="button"
-                  size="small"
-                  onClick={handleStop}
-                  startIcon={<StopIcon size={14} weight="fill" />}
-                  sx={{
-                    alignSelf: 'flex-start',
-                    textTransform: 'none',
-                    fontWeight: 800,
-                    color: 'error.main',
-                  }}
-                >
-                  {t.aiImport.stop}
-                </Button>
-              ) : null}
-            </Stack>
-          ) : null}
           <Stack
             direction="row"
             spacing={1}
@@ -1145,6 +1196,35 @@ export default function AiImportListingsPage() {
             <Alert severity="success" sx={{ borderRadius: 2.5 }}>
               {statusMessage}
             </Alert>
+          ) : null}
+          {loading ? (
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 2.5,
+                border: '1px dashed',
+                borderColor: AI_SEARCH_BLUE,
+                bgcolor: (theme) =>
+                  theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : AI_SEARCH_BLUE_SOFT,
+                animation: 'aiImportPulse 1.6s ease-in-out infinite',
+                '@keyframes aiImportPulse': {
+                  '0%, 100%': { opacity: 1 },
+                  '50%': { opacity: 0.62 },
+                },
+              }}
+            >
+              <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+                <CircularProgress size={20} thickness={5} sx={{ color: AI_SEARCH_BLUE }} />
+                <Typography sx={{ fontWeight: 800, fontSize: '0.95rem' }}>
+                  {progress && progress.total > 0
+                    ? t.aiImport.progressWorking(
+                        Math.min(progress.total, progress.done + 1),
+                        progress.total,
+                      )
+                    : t.aiImport.analyzing}
+                </Typography>
+              </Stack>
+            </Box>
           ) : null}
           {drafts.map((draft) => {
             const mismatch = isAiCategoryMismatch(draft);

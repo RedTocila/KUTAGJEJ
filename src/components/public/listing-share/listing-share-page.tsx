@@ -12,12 +12,14 @@ import {
 } from '@mui/material';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
 import { DownloadSimple as DownloadSimpleIcon } from '@phosphor-icons/react/dist/ssr/DownloadSimple';
+import { InstagramLogo as InstagramLogoIcon } from '@phosphor-icons/react/dist/ssr/InstagramLogo';
 import { LinkSimple as LinkSimpleIcon } from '@phosphor-icons/react/dist/ssr/LinkSimple';
-import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 import { toJpeg } from 'html-to-image';
 
 import {
-  ListingShareCard,
+  FEED_HEIGHT,
+  FEED_WIDTH,
+  ListingFeedTemplate,
   ListingStoryTemplate,
   STORY_HEIGHT,
   STORY_WIDTH,
@@ -35,7 +37,6 @@ import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 
 const BRAND_GREEN = '#76ba1b';
 const SHEET_BG = 'rgba(12, 12, 12, 0.94)';
-const CARD_BG = '#141414';
 
 async function copyLink(url: string): Promise<void> {
   await navigator.clipboard.writeText(url);
@@ -158,10 +159,13 @@ async function captureElementAsJpegFile(
   const jpegOpts = {
     cacheBust: false,
     skipFonts: true,
+    skipAutoScale: true,
     pixelRatio,
     quality: 0.92,
     width: Math.max(1, Math.round(width)),
     height: Math.max(1, Math.round(height)),
+    canvasWidth: Math.max(1, Math.round(width)),
+    canvasHeight: Math.max(1, Math.round(height)),
     backgroundColor,
     imagePlaceholder: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
     onImageErrorHandler: () => undefined,
@@ -170,6 +174,8 @@ async function captureElementAsJpegFile(
       transform: 'none',
       transformOrigin: 'top left',
       boxShadow: dropShadow ? undefined : 'none',
+      width: `${Math.max(1, Math.round(width))}px`,
+      height: `${Math.max(1, Math.round(height))}px`,
     },
   };
 
@@ -265,7 +271,7 @@ export function ListingSharePage({
   onShared?: (metrics: ListingMetrics) => void;
 }) {
   const previewWrapRef = React.useRef<HTMLDivElement>(null);
-  const cardCaptureRef = React.useRef<HTMLDivElement>(null);
+  const feedCaptureRef = React.useRef<HTMLDivElement>(null);
   const storyCaptureRef = React.useRef<HTMLDivElement>(null);
   const embeddedImageRef = React.useRef<string | null>(null);
   const [busy, setBusy] = React.useState<'share' | 'copy' | 'save' | null>(null);
@@ -403,20 +409,19 @@ export function ListingSharePage({
   }, [busy, bumpShareMetric, payload]);
 
   const handleSaveCard = React.useCallback(async () => {
-    if (!payload || busy || !cardCaptureRef.current) return;
+    if (!payload || busy || !feedCaptureRef.current) return;
     setBusy('save');
     setError(null);
     setFeedback(null);
     try {
-      const width = Math.max(1, Math.round(cardCaptureRef.current.offsetWidth));
-      const height = Math.max(1, Math.round(cardCaptureRef.current.offsetHeight));
       const file = await captureElementAsJpegFile(
         {
-          root: cardCaptureRef.current,
+          root: feedCaptureRef.current,
           imageUrl: embeddedImageRef.current ?? payload.imageUrl,
-          width,
-          height,
-          backgroundColor: CARD_BG,
+          width: FEED_WIDTH,
+          height: FEED_HEIGHT,
+          backgroundColor: '#0a0a0a',
+          pixelRatio: 1,
         },
         `kutagjej-card-${payload.listingId.slice(0, 8)}.jpg`,
       );
@@ -554,7 +559,7 @@ export function ListingSharePage({
             'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
         }}
       >
-        <ListingShareCard ref={cardCaptureRef} payload={payload} />
+        <ListingFeedTemplate ref={feedCaptureRef} payload={payload} />
         <ListingStoryTemplate ref={storyCaptureRef} payload={payload} />
       </Box>
 
@@ -574,35 +579,37 @@ export function ListingSharePage({
         }}
       >
         <Stack spacing={1.25} sx={{ maxWidth: 440, mx: 'auto', width: '100%' }}>
-          <Stack direction="row" spacing={1.25} sx={{ width: '100%' }}>
-            <Button
-              type="button"
-              variant="contained"
-              disableElevation
-              size="large"
-              disabled={Boolean(busy)}
-              onClick={() => void handleShare()}
-              startIcon={
-                busy === 'share' ? (
-                  <CircularProgress size={18} sx={{ color: '#0a0a0a' }} />
-                ) : (
-                  <ShareNetworkIcon size={20} weight="bold" />
-                )
-              }
-              sx={{
-                ...btnSx,
-                bgcolor: BRAND_GREEN,
-                color: '#0a0a0a',
-                '&:hover': { bgcolor: '#86c92a', color: '#0a0a0a', boxShadow: 'none' },
-                '&.Mui-disabled': {
-                  bgcolor: 'rgba(118,186,27,0.35)',
-                  color: 'rgba(10,10,10,0.5)',
-                },
-              }}
-            >
-              Ndaj
-            </Button>
+          <Button
+            type="button"
+            variant="contained"
+            disableElevation
+            size="large"
+            disabled={Boolean(busy)}
+            onClick={() => void handleShare()}
+            startIcon={
+              busy === 'share' ? (
+                <CircularProgress size={18} sx={{ color: '#0a0a0a' }} />
+              ) : (
+                <InstagramLogoIcon size={22} weight="fill" />
+              )
+            }
+            sx={{
+              ...btnSx,
+              flex: 'none',
+              width: '100%',
+              bgcolor: BRAND_GREEN,
+              color: '#0a0a0a',
+              '&:hover': { bgcolor: '#86c92a', color: '#0a0a0a', boxShadow: 'none' },
+              '&.Mui-disabled': {
+                bgcolor: 'rgba(118,186,27,0.35)',
+                color: 'rgba(10,10,10,0.5)',
+              },
+            }}
+          >
+            Share Story
+          </Button>
 
+          <Stack direction="row" spacing={1.25} sx={{ width: '100%' }}>
             <Button
               type="button"
               variant="outlined"
@@ -634,41 +641,39 @@ export function ListingSharePage({
             >
               Kopjo linkun
             </Button>
-          </Stack>
 
-          <Button
-            type="button"
-            variant="outlined"
-            size="large"
-            disabled={Boolean(busy)}
-            onClick={() => void handleSaveCard()}
-            startIcon={
-              busy === 'save' ? (
-                <CircularProgress size={18} sx={{ color: '#fff' }} />
-              ) : (
-                <DownloadSimpleIcon size={18} weight="bold" />
-              )
-            }
-            sx={{
-              ...btnSx,
-              flex: 'none',
-              width: '100%',
-              borderColor: 'rgba(255,255,255,0.22)',
-              color: '#fff',
-              bgcolor: 'rgba(255,255,255,0.04)',
-              '&:hover': {
-                borderColor: BRAND_GREEN,
-                bgcolor: 'rgba(118,186,27,0.12)',
+            <Button
+              type="button"
+              variant="outlined"
+              size="large"
+              disabled={Boolean(busy)}
+              onClick={() => void handleSaveCard()}
+              startIcon={
+                busy === 'save' ? (
+                  <CircularProgress size={18} sx={{ color: '#fff' }} />
+                ) : (
+                  <DownloadSimpleIcon size={18} weight="bold" />
+                )
+              }
+              sx={{
+                ...btnSx,
+                borderColor: 'rgba(255,255,255,0.22)',
                 color: '#fff',
-              },
-              '&.Mui-disabled': {
-                borderColor: 'rgba(255,255,255,0.1)',
-                color: 'rgba(255,255,255,0.35)',
-              },
-            }}
-          >
-            Ruaj foton
-          </Button>
+                bgcolor: 'rgba(255,255,255,0.04)',
+                '&:hover': {
+                  borderColor: BRAND_GREEN,
+                  bgcolor: 'rgba(118,186,27,0.12)',
+                  color: '#fff',
+                },
+                '&.Mui-disabled': {
+                  borderColor: 'rgba(255,255,255,0.1)',
+                  color: 'rgba(255,255,255,0.35)',
+                },
+              }}
+            >
+              Ruaj foton
+            </Button>
+          </Stack>
 
           {feedback ? (
             <Typography

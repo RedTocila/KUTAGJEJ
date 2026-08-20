@@ -41,6 +41,9 @@ import {
 
 export const STORY_WIDTH = 1080;
 export const STORY_HEIGHT = 1920;
+/** Instagram portrait feed post — always 4:5, never device-dependent. */
+export const FEED_WIDTH = 1080;
+export const FEED_HEIGHT = 1350;
 
 /**
  * Feed-style listing card for the story canvas.
@@ -187,11 +190,11 @@ export function StoryBackground() {
 function MediaActionChip({
   icon,
   count,
-  accent,
+  iconColor,
 }: {
   icon: React.ReactNode;
   count: number;
-  accent?: boolean;
+  iconColor?: string;
 }) {
   return (
     <Box
@@ -203,14 +206,13 @@ function MediaActionChip({
         height: 32 * S,
         px: 1 * S,
         borderRadius: 999,
-        bgcolor: accent ? 'rgba(118,186,27,0.22)' : 'rgba(18,18,18,0.92)',
-        border: '1px solid',
-        borderColor: accent ? 'rgba(118,186,27,0.45)' : 'rgba(255,255,255,0.14)',
-        color: accent ? GREEN : '#fff',
+        bgcolor: 'rgba(18,18,18,0.92)',
+        border: '1px solid rgba(255,255,255,0.14)',
+        color: '#fff',
       }}
     >
-      {icon}
-      <Typography sx={{ fontSize: 11.5 * S, fontWeight: 700, lineHeight: 1, color: 'inherit' }}>
+      <Box sx={{ color: iconColor ?? 'inherit', display: 'inline-flex', lineHeight: 0 }}>{icon}</Box>
+      <Typography sx={{ fontSize: 11.5 * S, fontWeight: 700, lineHeight: 1, color: '#fff' }}>
         {new Intl.NumberFormat('en-GB').format(count)}
       </Typography>
     </Box>
@@ -361,7 +363,7 @@ export const ListingShareCard = React.forwardRef<HTMLDivElement, { payload: List
           <MediaActionChip
             icon={<BookmarkSimpleIcon size={17 * S} weight="fill" />}
             count={saveCount}
-            accent
+            iconColor={GREEN}
           />
         </Stack>
       </Box>
@@ -448,6 +450,65 @@ export const ListingShareCard = React.forwardRef<HTMLDivElement, { payload: List
   },
 );
 
+/** Scale the listing card to fill a parent without overflowing (used by the 4:5 feed export). */
+function FitShareCard({ payload }: { payload: ListingSharePayload }) {
+  const wrapRef = React.useRef<HTMLDivElement>(null);
+  const cardRef = React.useRef<HTMLDivElement>(null);
+  const [scale, setScale] = React.useState(1);
+  const [cardSize, setCardSize] = React.useState({ w: CARD_W, h: 0 });
+
+  React.useLayoutEffect(() => {
+    const wrap = wrapRef.current;
+    const card = cardRef.current;
+    if (!wrap || !card) return;
+
+    const fit = () => {
+      const w = card.offsetWidth;
+      const h = card.offsetHeight;
+      const next = Math.min(wrap.clientWidth / Math.max(1, w), wrap.clientHeight / Math.max(1, h));
+      const safe = Number.isFinite(next) && next > 0 ? Math.round(next * 1000) / 1000 : 1;
+      setCardSize({ w, h });
+      setScale(safe);
+    };
+
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(wrap);
+    ro.observe(card);
+    return () => ro.disconnect();
+  }, [payload]);
+
+  const layoutW = cardSize.w * scale;
+  const layoutH = cardSize.h * scale;
+
+  return (
+    <Box
+      ref={wrapRef}
+      sx={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Box sx={{ width: layoutW || CARD_W, height: layoutH || 'auto', position: 'relative', flexShrink: 0 }}>
+        <Box
+          sx={{
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+          }}
+        >
+          <ListingShareCard ref={cardRef} payload={payload} />
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
 /**
  * Full Instagram-story template: branded dark backdrop + feed-exact listing card.
  */
@@ -526,6 +587,89 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
 
           {/* Balances the top row so the listing sits in the vertical middle */}
           <Box aria-hidden sx={{ width: '100%', height: '100%', minHeight: 0 }} />
+        </Box>
+      </Box>
+    );
+  },
+);
+
+/**
+ * Instagram 4:5 feed post: branded backdrop + listing card, always 1080×1350.
+ */
+export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
+  function ListingFeedTemplate({ payload }, ref) {
+    return (
+      <Box
+        ref={ref}
+        data-listing-feed-template=""
+        sx={{
+          position: 'relative',
+          width: FEED_WIDTH,
+          height: FEED_HEIGHT,
+          overflow: 'hidden',
+          bgcolor: '#0a0a0a',
+          color: '#fff',
+          fontFamily:
+            'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        }}
+      >
+        <StoryBackground />
+
+        <Box
+          sx={{
+            position: 'relative',
+            zIndex: 1,
+            height: '100%',
+            px: 5.5,
+            pt: 5,
+            pb: 4.5,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}
+        >
+          <Stack spacing={0.75} sx={{ alignItems: 'center', flexShrink: 0, mb: 3.5 }}>
+            <Box
+              component="img"
+              src={brandLogoSrc}
+              alt={config.site.name}
+              sx={{ width: 88, height: 88, objectFit: 'contain' }}
+            />
+            <Typography
+              sx={{
+                fontFamily: brandWordmarkFontFamily,
+                fontWeight: 700,
+                fontSize: 48,
+                letterSpacing: '-0.03em',
+                lineHeight: 1,
+                color: '#fff',
+              }}
+            >
+              {config.site.name}
+            </Typography>
+            <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+              <Typography sx={{ fontWeight: 500, fontSize: 24, color: 'rgba(255,255,255,0.82)' }}>
+                Gjithçka në një vend.
+              </Typography>
+              <Box sx={{ color: GREEN, display: 'inline-flex', lineHeight: 0 }}>
+                <MapPinIcon size={22} weight="fill" />
+              </Box>
+            </Stack>
+          </Stack>
+
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+            }}
+          >
+            <FitShareCard payload={payload} />
+          </Box>
         </Box>
       </Box>
     );

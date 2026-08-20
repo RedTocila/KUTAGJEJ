@@ -180,6 +180,8 @@ export function ProfessionalListingDetailDesktop({
                     viewCount: listing.viewCount,
                     saveCount,
                     url: canonicalUrl,
+                    ratingAverage: liveReviewStats?.ratingAverage ?? listing.ratingAverage,
+                    reviewCount: liveReviewStats?.reviewCount ?? listing.reviewCount,
                   }}
                   hideSlideCount
                 />

@@ -291,6 +291,8 @@ export function BusinessListingDetailView({
                     createdAt: listing.createdAt,
                     viewCount: listing.viewCount,
                     saveCount,
+                    ratingAverage: listing.ratingAverage,
+                    reviewCount: listing.reviewCount,
                     url: canonicalUrl,
                   }
             }

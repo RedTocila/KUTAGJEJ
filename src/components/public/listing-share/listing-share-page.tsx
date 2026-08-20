@@ -466,7 +466,7 @@ export function ListingSharePage({
           imageUrl: embeddedImageRef.current ?? payload.imageUrl,
           width: FEED_WIDTH,
           height: FEED_HEIGHT,
-          backgroundColor: '#141414',
+          backgroundColor: '#0a0a0a',
           pixelRatio: 1,
         },
         `kutagjej-card-${payload.listingId.slice(0, 8)}.jpg`,

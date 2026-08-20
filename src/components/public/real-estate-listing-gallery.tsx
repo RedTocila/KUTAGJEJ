@@ -357,6 +357,8 @@ export function RealEstateListingGallery(props: {
       createdAt: sharePayload?.createdAt,
       viewCount: sharePayload?.viewCount,
       saveCount: sharePayload?.saveCount ?? saveCount,
+      ratingAverage: sharePayload?.ratingAverage,
+      reviewCount: sharePayload?.reviewCount,
       contactPhone: sharePayload?.contactPhone,
       url: sharePayload?.url,
     };

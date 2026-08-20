@@ -6,7 +6,6 @@ import {
   Box,
   Drawer,
   IconButton,
-  Skeleton,
   Stack,
   Typography,
 } from '@mui/material';
@@ -173,7 +172,6 @@ export function AddListingPickerDialog({
   const t = useCopy();
   const { user } = useUser();
   const unlimitedDirectory = hasUnlimitedDirectoryListings(user?.email);
-  const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [categories, setCategories] = React.useState<ListingCategory[]>([]);
   const [hasBusinessListing, setHasBusinessListing] = React.useState(false);
@@ -195,7 +193,6 @@ export function AddListingPickerDialog({
   React.useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    setLoading(true);
     setError(null);
     void (async () => {
       const [catRes, bizRes, proRes, quotaRes] = await Promise.all([
@@ -212,7 +209,6 @@ export function AddListingPickerDialog({
       setHasBusinessListing(!unlimitedDirectory && (bizRes.listings?.length ?? 0) > 0);
       setHasProfessionalListing(!unlimitedDirectory && (proRes.listings?.length ?? 0) > 0);
       setCategoryQuotas(quotaRes.snapshot ?? null);
-      setLoading(false);
     })();
     return () => {
       cancelled = true;
@@ -386,25 +382,7 @@ export function AddListingPickerDialog({
           </Alert>
         ) : null}
 
-        {loading ? (
-          <Stack spacing={0} aria-busy aria-label="Duke ngarkuar kategoritë">
-            {Array.from({ length: 6 }, (_, i) => (
-              <Stack
-                key={i}
-                direction="row"
-                spacing={1.25}
-                sx={{ alignItems: 'center', px: 0.5, py: 1.2 }}
-              >
-                <Skeleton variant="rounded" animation="wave" width={34} height={34} sx={{ borderRadius: 1.5, flexShrink: 0 }} />
-                <Stack spacing={0.4} sx={{ flex: 1, minWidth: 0 }}>
-                  <Skeleton variant="text" animation="wave" width={i % 2 === 0 ? '48%' : '56%'} height={18} />
-                  <Skeleton variant="text" animation="wave" width={i % 3 === 0 ? '72%' : '64%'} height={14} />
-                </Stack>
-              </Stack>
-            ))}
-          </Stack>
-        ) : (
-          <Stack spacing={0}>
+        <Stack spacing={0}>
             {!showRootActions ? null : (
               <>
                 <Box
@@ -679,7 +657,6 @@ export function AddListingPickerDialog({
               );
             })}
           </Stack>
-        )}
       </Box>
     </Drawer>
   );

@@ -1,6 +1,7 @@
 'use strict';
 
 const { getSupabaseAdmin } = require('./supabase');
+const { compressImageBuffer } = require('./compress-image');
 const {
   VEHICLE_TYPE_VALUES,
   makesForVehicleType,
@@ -14,8 +15,8 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const MAX_IMPORT_URLS = 20;
 /** Max images kept on a car listing draft (matches create-form / API). */
 const MAX_CAR_LISTING_IMAGES = 8;
-/** Max remote snapshot photos sent to vision (OpenAI). */
-const MAX_SNAPSHOT_VISION_IMAGES = 3;
+/** Max remote snapshot photos sent to vision (OpenAI). Compressed first. */
+const MAX_SNAPSHOT_VISION_IMAGES = 2;
 
 const CATEGORIES = [
   'real-estate',
@@ -76,6 +77,37 @@ function hasHardRestrictedReasons(reasons) {
 function isOpenAiConfigured() {
   return Boolean(String(process.env.OPENAI_API_KEY || '').trim());
 }
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isOpenAiRateLimitError(status, message) {
+  if (status === 429) return true;
+  return /rate limit reached|tokens per min|\bTPM\b/i.test(String(message || ''));
+}
+
+function parseOpenAiRetryMs(message, retryAfterHeader) {
+  const header = Number.parseFloat(String(retryAfterHeader || '').trim());
+  if (Number.isFinite(header) && header > 0) {
+    return Math.min(45_000, Math.max(400, Math.ceil(header * 1000)));
+  }
+  const match = String(message || '').match(/try again in\s+([\d.]+)\s*(ms|s)?/i);
+  if (match) {
+    const n = Number.parseFloat(match[1]);
+    if (Number.isFinite(n)) {
+      const unit = (match[2] || 's').toLowerCase();
+      const ms = unit === 'ms' ? n : n * 1000;
+      return Math.min(45_000, Math.max(400, Math.ceil(ms + 250)));
+    }
+  }
+  return 2500;
+}
+
+const OPENAI_RATE_LIMIT_MESSAGE =
+  'AI is temporarily busy (too many listings at once). Wait a minute and retry the remaining links.';
+
+const OPENAI_RATE_LIMIT_CODE = 'openai_rate_limit';
 
 function categoryMismatchMessage(preferredCategory, detectedCategory) {
   const preferred = CATEGORY_LABELS[preferredCategory] || preferredCategory;
@@ -2102,7 +2134,7 @@ function buildVisionUserContent({ payload, attachedImages }) {
     });
     parts.push({
       type: 'image_url',
-      image_url: { url: img.url, detail: 'high' },
+      image_url: { url: img.url, detail: img.detail === 'low' ? 'low' : 'high' },
     });
   }
   return parts;
@@ -2364,47 +2396,61 @@ async function callListingModel({
   }
 
   const forcedCategory = CATEGORIES.includes(preferredCategory) ? preferredCategory : null;
-  const res = await fetch(OPENAI_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      temperature: mode === 'edit' ? 0.15 : 0.25,
-      max_tokens: 1800,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: buildSystemPrompt(forcedCategory, { mode }) },
-        {
-          role: 'user',
-          content: buildVisionUserContent({
-            payload: userPayload,
-            attachedImages,
-          }),
-        },
-      ],
-    }),
+  const body = JSON.stringify({
+    model: OPENAI_MODEL,
+    temperature: mode === 'edit' ? 0.15 : 0.25,
+    max_tokens: 1800,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: buildSystemPrompt(forcedCategory, { mode }) },
+      {
+        role: 'user',
+        content: buildVisionUserContent({
+          payload: userPayload,
+          attachedImages,
+        }),
+      },
+    ],
   });
 
-  const payload = await res.json().catch(() => ({}));
-  if (!res.ok) {
+  const maxAttempts = 6;
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const res = await fetch(OPENAI_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body,
+    });
+
+    const payload = await res.json().catch(() => ({}));
+    if (res.ok) {
+      const raw = payload?.choices?.[0]?.message?.content;
+      return parseAiListingResponse(raw, {
+        forcedCategory,
+        fallbackImageUrls: Array.isArray(userPayload.snapshotImageUrls)
+          ? userPayload.snapshotImageUrls
+          : Array.isArray(userPayload.imageUrls)
+            ? userPayload.imageUrls
+            : [],
+      });
+    }
+
     const message = payload?.error?.message || `OpenAI request failed (${res.status})`;
     const err = new Error(message);
     err.status = res.status >= 400 && res.status < 600 ? res.status : 502;
-    throw err;
+    lastError = err;
+
+    const retryable = isOpenAiRateLimitError(res.status, message) || res.status === 503;
+    if (!retryable || attempt === maxAttempts) break;
+
+    const waitMs = parseOpenAiRetryMs(message, res.headers.get('retry-after'));
+    await sleep(waitMs);
   }
 
-  const raw = payload?.choices?.[0]?.message?.content;
-  return parseAiListingResponse(raw, {
-    forcedCategory,
-    fallbackImageUrls: Array.isArray(userPayload.snapshotImageUrls)
-      ? userPayload.snapshotImageUrls
-      : Array.isArray(userPayload.imageUrls)
-        ? userPayload.imageUrls
-        : [],
-  });
+  throw lastError || new Error('OpenAI request failed');
 }
 
 async function fetchImageAsDataUrl(url) {
@@ -2439,8 +2485,8 @@ async function fetchImageAsDataUrl(url) {
     if (contentType && !contentType.startsWith('image/')) return null;
     const buf = Buffer.from(await res.arrayBuffer());
     if (!buf.length || buf.length > 4_500_000) return null;
-    const mime = contentType && contentType.startsWith('image/') ? contentType : 'image/jpeg';
-    const dataUrl = `data:${mime};base64,${buf.toString('base64')}`;
+    const compressed = await compressImageBuffer(buf, { folder: 'listings' });
+    const dataUrl = `data:${compressed.mimetype};base64,${compressed.buffer.toString('base64')}`;
     if (dataUrl.length > MAX_IMAGE_CHARS) return null;
     return dataUrl;
   } catch {
@@ -2450,16 +2496,40 @@ async function fetchImageAsDataUrl(url) {
   }
 }
 
+async function compressAttachedVisionImage(img) {
+  if (!img || typeof img !== 'object') return img;
+  const raw = String(img.url || '').trim();
+  if (!raw) return img;
+  if (/^https?:\/\//i.test(raw)) {
+    const dataUrl = await fetchImageAsDataUrl(raw);
+    return dataUrl ? { ...img, url: dataUrl } : img;
+  }
+  const match = /^data:image\/[a-zA-Z0-9.+-]+;base64,([A-Za-z0-9+/=\s]+)$/i.exec(raw);
+  if (!match) return img;
+  try {
+    const buf = Buffer.from(match[1].replace(/\s+/g, ''), 'base64');
+    if (!buf.length || buf.length > 4_500_000) return img;
+    const compressed = await compressImageBuffer(buf, { folder: 'listings' });
+    const dataUrl = `data:${compressed.mimetype};base64,${compressed.buffer.toString('base64')}`;
+    if (dataUrl.length > MAX_IMAGE_CHARS) return img;
+    return { ...img, url: dataUrl };
+  } catch {
+    return img;
+  }
+}
+
 /** Download a few scraped post photos so the model can visually identify vehicle type/make. */
-async function prepareSnapshotVisionImages(snapshotImageUrls) {
+async function prepareSnapshotVisionImages(snapshotImageUrls, maxImages = MAX_SNAPSHOT_VISION_IMAGES) {
+  const cap = Math.max(0, Math.min(MAX_SNAPSHOT_VISION_IMAGES, Number(maxImages) || 0));
   const urls = Array.isArray(snapshotImageUrls) ? snapshotImageUrls : [];
   const out = [];
   for (const url of urls) {
-    if (out.length >= MAX_SNAPSHOT_VISION_IMAGES) break;
+    if (out.length >= cap) break;
     const dataUrl = await fetchImageAsDataUrl(url);
     if (dataUrl) {
       out.push({
         url: dataUrl,
+        detail: 'low',
         hint: 'Scraped listing photo — identify the product/vehicle and fill vehicleType/make/model when visible.',
       });
     }
@@ -2476,12 +2546,17 @@ async function interpretListing({
   mode,
   prompt,
   currentListing,
+  maxSnapshotVisionImages = MAX_SNAPSHOT_VISION_IMAGES,
 }) {
   const userAttached = attachedImages || [];
   // When the user didn't attach photos, analyze the scraped post images with vision.
   let visionImages = userAttached;
   if (!visionImages.length && Array.isArray(snapshot?.imageUrls) && snapshot.imageUrls.length) {
-    visionImages = await prepareSnapshotVisionImages(snapshot.imageUrls);
+    visionImages = await prepareSnapshotVisionImages(snapshot.imageUrls, maxSnapshotVisionImages);
+  } else if (visionImages.length) {
+    visionImages = (
+      await Promise.all(visionImages.map((img) => compressAttachedVisionImage(img)))
+    ).filter(Boolean);
   }
 
   const motorcycleMakes = makesForVehicleType('motorcycle').filter((m) => m !== 'Other').slice(0, 40);
@@ -2762,6 +2837,7 @@ async function importListingsFromLinks({
         }),
       );
     } catch (err) {
+      const rateLimited = isOpenAiRateLimitError(err?.status, err?.message);
       drafts.push({
         id: `ai-${Date.now()}`,
         sourceUrl: '',
@@ -2772,13 +2848,17 @@ async function importListingsFromLinks({
         imageUrls: [],
         imageRoles: [],
         form: {},
-        error: err?.message || 'Failed to analyze prompt',
+        error: rateLimited ? OPENAI_RATE_LIMIT_MESSAGE : err?.message || 'Failed to analyze prompt',
+        errorCode: rateLimited ? OPENAI_RATE_LIMIT_CODE : null,
       });
     }
     return { drafts };
   }
 
-  for (const url of urls) {
+  const maxSnapshotVisionImages = MAX_SNAPSHOT_VISION_IMAGES;
+
+  for (let i = 0; i < urls.length; i += 1) {
+    const url = urls[i];
     try {
       const snapshot = await fetchPageSnapshot(url);
       const interpreted = await interpretListing({
@@ -2790,6 +2870,7 @@ async function importListingsFromLinks({
         mode,
         prompt,
         currentListing,
+        maxSnapshotVisionImages,
       });
       interpreted.imageUrls = mergeImageUrlLists(
         snapshot.imageUrls,
@@ -2808,6 +2889,7 @@ async function importListingsFromLinks({
         }),
       );
     } catch (err) {
+      const rateLimited = isOpenAiRateLimitError(err?.status, err?.message);
       drafts.push({
         id: `ai-${Date.now()}-${drafts.length}`,
         sourceUrl: url,
@@ -2818,8 +2900,12 @@ async function importListingsFromLinks({
         imageUrls: [],
         imageRoles: [],
         form: {},
-        error: err?.message || 'Failed to analyze link',
+        error: rateLimited ? OPENAI_RATE_LIMIT_MESSAGE : err?.message || 'Failed to analyze link',
+        errorCode: rateLimited ? OPENAI_RATE_LIMIT_CODE : null,
       });
+      if (rateLimited && i < urls.length - 1) {
+        await sleep(parseOpenAiRetryMs(err?.message));
+      }
     }
   }
 

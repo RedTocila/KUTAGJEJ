@@ -26,6 +26,56 @@ export interface AiImportDraftResult {
 export const AI_CATEGORY_MISMATCH_CODE = 'category_mismatch';
 export const AI_CONTENT_RESTRICTED_CODE = 'content_restricted';
 export const AI_DAILY_LIMIT_CODE = 'ai_daily_limit';
+export const AI_RATE_LIMIT_CODE = 'openai_rate_limit';
+
+const MAX_IMPORT_URLS = 20;
+
+function normalizeImportUrl(raw: string): string | null {
+  const trimmed = String(raw || '').trim();
+  if (!trimmed || /\s/.test(trimmed)) return null;
+  try {
+    const hasProtocol = /^https?:\/\//i.test(trimmed);
+    const withProtocol = hasProtocol ? trimmed : `https://${trimmed}`;
+    const url = new URL(withProtocol);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    const host = url.hostname.replace(/\.$/, '').toLowerCase();
+    if (!host) return null;
+    const isLocalhost = host === 'localhost';
+    const isIpv4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
+    const hasDot = host.includes('.');
+    if (!isLocalhost && !isIpv4 && !hasDot) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+/** Pull up to 20 unique http(s) links from pasted text or an explicit list. */
+export function extractImportUrls(input: string | string[]): string[] {
+  const text = Array.isArray(input) ? input.join('\n') : String(input || '');
+  const seen = new Set<string>();
+  const urls: string[] = [];
+
+  const push = (candidate: string) => {
+    const normalized = normalizeImportUrl(candidate);
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    urls.push(normalized);
+  };
+
+  for (const line of text.split(/[\n,]+/)) {
+    if (urls.length >= MAX_IMPORT_URLS) break;
+    push(line);
+  }
+
+  const matches = text.match(/https?:\/\/[^\s<>"']+/gi) || [];
+  for (const match of matches) {
+    if (urls.length >= MAX_IMPORT_URLS) break;
+    push(match.replace(/[),.;]+$/, ''));
+  }
+
+  return urls;
+}
 
 export interface AiImportQuota {
   planCode: string;
@@ -93,6 +143,16 @@ export function isAiContentRestricted(
   );
 }
 
+export function isAiRateLimitError(input: {
+  errorCode?: string | null;
+  error?: string | null;
+}): boolean {
+  if (input.errorCode === AI_RATE_LIMIT_CODE) return true;
+  return /rate limit reached|tokens per min|\bTPM\b|too many listings at once/i.test(
+    String(input.error || ''),
+  );
+}
+
 /** Clear the mismatch block after the user switches to the detected category. */
 export function acceptAiCategoryCorrection(
   draft: AiImportDraftResult,
@@ -140,18 +200,22 @@ export async function importListingsFromLinks(input: {
   images?: Array<string | { url: string; hint?: string }>;
   mode?: 'create' | 'edit';
   currentListing?: Record<string, unknown> | null;
+  batchId?: string | null;
+  batchSize?: number;
 }): Promise<{
   drafts: AiImportDraftResult[];
   error?: string;
   code?: string;
   quota?: AiImportQuota | null;
   status?: number;
+  batchId?: string | null;
 }> {
   const res = await clientFetch<{
     drafts?: AiImportDraftResult[];
     message?: string;
     code?: string;
     quota?: AiImportQuota;
+    batchId?: string;
   }>('/ai/import-listings', {
     method: 'POST',
     body: JSON.stringify({
@@ -162,6 +226,8 @@ export async function importListingsFromLinks(input: {
       ...(input.images?.length ? { images: input.images } : {}),
       ...(input.mode ? { mode: input.mode } : {}),
       ...(input.currentListing ? { currentListing: input.currentListing } : {}),
+      ...(input.batchId ? { batchId: input.batchId } : {}),
+      ...(input.batchSize ? { batchSize: input.batchSize } : {}),
     }),
   });
 
@@ -178,12 +244,14 @@ export async function importListingsFromLinks(input: {
       code,
       quota: res.data?.quota ?? null,
       status: res.status,
+      batchId: typeof res.data?.batchId === 'string' ? res.data.batchId : null,
     };
   }
 
   return {
     drafts: Array.isArray(res.data?.drafts) ? res.data.drafts : [],
     quota: res.data?.quota ?? null,
+    batchId: typeof res.data?.batchId === 'string' ? res.data.batchId : null,
   };
 }
 

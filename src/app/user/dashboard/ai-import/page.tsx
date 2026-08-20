@@ -8,6 +8,7 @@ import {
   Button,
   CircularProgress,
   IconButton,
+  LinearProgress,
   Stack,
   TextField,
   Typography,
@@ -33,9 +34,11 @@ import {
   fetchAiImportQuota,
   filesToAiImagePayload,
   importListingsFromLinks,
+  extractImportUrls,
   isAiCategoryMismatch,
   isAiContentRestricted,
   isAiDailyLimitError,
+  isAiRateLimitError,
   mergeAttachedImageUrls,
   toAiListingDraft,
   type AiImportDraftResult,
@@ -107,6 +110,20 @@ function draftImageUrls(draft: AiImportDraftResult | AiListingDraft): string[] {
   });
 }
 
+function isRetryableFailedDraft(draft: AiImportDraftResult): boolean {
+  if (isAiCategoryMismatch(draft) || isAiContentRestricted(draft)) return false;
+  if (!draft.sourceUrl) return false;
+  return Boolean(draft.error) || !draft.category;
+}
+
+function formatAiDraftError(
+  t: ReturnType<typeof useCopy>,
+  draft: Pick<AiImportDraftResult, 'error' | 'errorCode'>,
+): string {
+  if (isAiRateLimitError(draft)) return t.aiImport.rateLimited;
+  return draft.error || t.aiImport.failed;
+}
+
 export default function AiImportListingsPage() {
   const router = useRouter();
   const { user } = useUser();
@@ -129,6 +146,7 @@ export default function AiImportListingsPage() {
   const [pendingImageUrls, setPendingImageUrls] = React.useState<string[]>([]);
   const [lastPrompt, setLastPrompt] = React.useState('');
   const [quota, setQuota] = React.useState<AiImportQuota | null>(null);
+  const [progress, setProgress] = React.useState<{ done: number; total: number } | null>(null);
 
   const canPublish =
     Boolean(user) &&
@@ -191,6 +209,11 @@ export default function AiImportListingsPage() {
     [drafts],
   );
 
+  const retryableFailedDrafts = React.useMemo(
+    () => drafts.filter(isRetryableFailedDraft),
+    [drafts],
+  );
+
   const handleFilesPicked = (list: FileList | null) => {
     if (!list?.length) return;
     const next = [...files];
@@ -206,6 +229,43 @@ export default function AiImportListingsPage() {
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
+
+  const importProfile = React.useCallback(() => {
+    if (!user) return null;
+    const loc = knownCreateDefaultsFromStorage(user.id);
+    return {
+      accountType: user.accountType ?? null,
+      firstName: user.firstName ?? null,
+      lastName: user.lastName ?? null,
+      phone: user.phone ?? null,
+      email: user.email ?? null,
+      businessName: user.businessName ?? null,
+      businessOwner: user.businessOwner ?? null,
+      businessCategory: user.businessCategory ?? null,
+      nipt: user.nipt ?? null,
+      preferredCityId: loc.cityId || null,
+      preferredCityName: loc.cityName || null,
+    };
+  }, [user]);
+
+  const decorateImportedDraft = React.useCallback(
+    (draft: AiImportDraftResult, prompt: string, uploadedUrls: string[]): AiImportDraftResult => ({
+      ...draft,
+      sourcePrompt: draft.sourcePrompt || prompt,
+      imageUrls: uploadedUrls.length
+        ? mergeAttachedImageUrls({
+            remoteUrls: draft.imageUrls ?? [],
+            uploadedUrls,
+            roles: draft.imageRoles,
+            max:
+              draft.category === 'professionals' || draft.detectedCategory === 'professionals'
+                ? 2
+                : 8,
+          })
+        : draft.imageUrls,
+    }),
+    [],
+  );
 
   const handleAnalyze = async (event?: React.FormEvent) => {
     event?.preventDefault();
@@ -244,62 +304,143 @@ export default function AiImportListingsPage() {
       setLastPrompt(trimmed);
       setPendingImageUrls(uploadedUrls);
 
-      const loc = knownCreateDefaultsFromStorage(user?.id);
-      const res = await importListingsFromLinks({
-        text: trimmed,
-        category,
-        images: imagePayload,
-        profile: user
-          ? {
-              accountType: user.accountType ?? null,
-              firstName: user.firstName ?? null,
-              lastName: user.lastName ?? null,
-              phone: user.phone ?? null,
-              email: user.email ?? null,
-              businessName: user.businessName ?? null,
-              businessOwner: user.businessOwner ?? null,
-              businessCategory: user.businessCategory ?? null,
-              nipt: user.nipt ?? null,
-              preferredCityId: loc.cityId || null,
-              preferredCityName: loc.cityName || null,
-            }
-          : null,
-      });
-      if (res.quota) setQuota(res.quota);
-      if (res.error) {
-        if (isAiDailyLimitError({ code: res.code, error: res.error, status: res.status })) {
-          setError(aiDailyLimitMessage(t, res.quota?.planCode || quota?.planCode));
-        } else {
-          setError(res.error);
+      const urls = extractImportUrls(trimmed);
+      const units = urls.length > 0 ? urls.length : 1;
+      setProgress({ done: 0, total: units });
+
+      const collected: AiImportDraftResult[] = [];
+      let batchId: string | null = null;
+      const profile = importProfile();
+
+      if (urls.length === 0) {
+        const res = await importListingsFromLinks({
+          text: trimmed,
+          category,
+          images: imagePayload,
+          profile,
+          batchSize: 1,
+        });
+        if (res.quota) setQuota(res.quota);
+        if (res.error) {
+          if (isAiDailyLimitError({ code: res.code, error: res.error, status: res.status })) {
+            setError(aiDailyLimitMessage(t, res.quota?.planCode || quota?.planCode));
+          } else {
+            setError(res.error);
+          }
+          return;
         }
-        return;
+        if (!res.drafts.length) {
+          setError(t.aiImport.empty);
+          return;
+        }
+        collected.push(...res.drafts.map((d) => decorateImportedDraft(d, trimmed, uploadedUrls)));
+        persistDrafts(collected);
+        setProgress({ done: 1, total: 1 });
+      } else {
+        for (let i = 0; i < urls.length; i += 1) {
+          const res = await importListingsFromLinks({
+            text: i === 0 ? trimmed : '',
+            urls: [urls[i]],
+            category,
+            images: i === 0 ? imagePayload : undefined,
+            profile,
+            batchId,
+            batchSize: urls.length,
+          });
+          if (res.quota) setQuota(res.quota);
+          if (res.batchId) batchId = res.batchId;
+          if (res.error) {
+            if (isAiDailyLimitError({ code: res.code, error: res.error, status: res.status })) {
+              setError(aiDailyLimitMessage(t, res.quota?.planCode || quota?.planCode));
+            } else {
+              setError(res.error);
+            }
+            if (collected.length) persistDrafts(collected);
+            return;
+          }
+          const chunk = (res.drafts.length
+            ? res.drafts
+            : [
+                {
+                  id: `ai-miss-${i}`,
+                  sourceUrl: urls[i],
+                  category: null,
+                  title: '',
+                  summary: '',
+                  imageUrls: [],
+                  form: {},
+                  error: t.aiImport.failed,
+                } satisfies AiImportDraftResult,
+              ]
+          ).map((d) => decorateImportedDraft(d, trimmed, uploadedUrls));
+          collected.push(...chunk);
+          persistDrafts(collected);
+          setProgress({ done: i + 1, total: urls.length });
+        }
       }
-      if (!res.drafts.length) {
-        setError(t.aiImport.empty);
-        return;
-      }
-      const nextDrafts =
-        uploadedUrls.length > 0
-          ? res.drafts.map((draft) => ({
-              ...draft,
-              sourcePrompt: draft.sourcePrompt || trimmed,
-              imageUrls: mergeAttachedImageUrls({
-                remoteUrls: draft.imageUrls ?? [],
-                uploadedUrls,
-                roles: draft.imageRoles,
-                max: draft.category === 'professionals' || draft.detectedCategory === 'professionals' ? 2 : 8,
-              }),
-            }))
-          : res.drafts.map((draft) => ({
-              ...draft,
-              sourcePrompt: draft.sourcePrompt || trimmed,
-            }));
-      persistDrafts(nextDrafts);
-      const hasMismatch = nextDrafts.some((d) => isAiCategoryMismatch(d));
+
+      const hasMismatch = collected.some((d) => isAiCategoryMismatch(d));
       if (!hasMismatch) {
         setText('');
         setFiles([]);
         setPendingImageUrls([]);
+      }
+    } catch {
+      setError(t.aiImport.failed);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRetryFailed = async () => {
+    if (!category) {
+      setError(t.aiImport.categoryRequired);
+      return;
+    }
+    if (quotaExhausted) {
+      setError(aiDailyLimitMessage(t, quota?.planCode));
+      return;
+    }
+    const failed = drafts.filter(isRetryableFailedDraft);
+    const urls = failed.map((d) => d.sourceUrl).filter(Boolean);
+    if (!urls.length) return;
+
+    setLoading(true);
+    setError(null);
+    setStatusMessage(null);
+    const failedIds = new Set(failed.map((d) => d.id));
+    const kept = drafts.filter((d) => !failedIds.has(d.id));
+    try {
+      const collected: AiImportDraftResult[] = [];
+      let batchId: string | null = null;
+      const profile = importProfile();
+      setProgress({ done: 0, total: urls.length });
+
+      for (let i = 0; i < urls.length; i += 1) {
+        const res = await importListingsFromLinks({
+          urls: [urls[i]],
+          category,
+          profile,
+          batchId,
+          batchSize: urls.length,
+        });
+        if (res.quota) setQuota(res.quota);
+        if (res.batchId) batchId = res.batchId;
+        if (res.error) {
+          if (isAiDailyLimitError({ code: res.code, error: res.error, status: res.status })) {
+            setError(aiDailyLimitMessage(t, res.quota?.planCode || quota?.planCode));
+          } else {
+            setError(res.error);
+          }
+          persistDrafts([...kept, ...collected, ...failed.filter((d) => !collected.some((c) => c.sourceUrl === d.sourceUrl))]);
+          return;
+        }
+        const chunk = (res.drafts.length ? res.drafts : []).map((d) =>
+          decorateImportedDraft(d, lastPrompt, []),
+        );
+        collected.push(...chunk);
+        persistDrafts([...kept, ...collected]);
+        setProgress({ done: i + 1, total: urls.length });
       }
     } catch {
       setError(t.aiImport.failed);
@@ -792,6 +933,31 @@ export default function AiImportListingsPage() {
                 >
                   {loading ? t.aiImport.analyzing : t.aiImport.analyze}
                 </Button>
+                {progress ? (
+                  <Stack spacing={0.75}>
+                    <LinearProgress
+                      variant="determinate"
+                      value={progress.total <= 0 ? 0 : (progress.done / progress.total) * 100}
+                      sx={{
+                        height: 8,
+                        borderRadius: 999,
+                        bgcolor: (theme) =>
+                          theme.palette.mode === 'dark'
+                            ? 'rgba(255,255,255,0.08)'
+                            : 'rgba(0,0,0,0.08)',
+                        '& .MuiLinearProgress-bar': {
+                          borderRadius: 999,
+                          bgcolor: AI_SEARCH_BLUE,
+                        },
+                      }}
+                    />
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+                      {progress.done <= 0
+                        ? t.aiImport.progressStarting(progress.total)
+                        : t.aiImport.progress(progress.done, progress.total)}
+                    </Typography>
+                  </Stack>
+                ) : null}
               </>
             ) : (
               <Typography
@@ -808,6 +974,29 @@ export default function AiImportListingsPage() {
 
       {drafts.length > 0 ? (
         <Stack spacing={1.5}>
+          {progress ? (
+            <Stack spacing={0.75}>
+              <LinearProgress
+                variant="determinate"
+                value={progress.total <= 0 ? 0 : (progress.done / progress.total) * 100}
+                sx={{
+                  height: 8,
+                  borderRadius: 999,
+                  bgcolor: (theme) =>
+                    theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+                  '& .MuiLinearProgress-bar': {
+                    borderRadius: 999,
+                    bgcolor: AI_SEARCH_BLUE,
+                  },
+                }}
+              />
+              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+                {progress.done <= 0
+                  ? t.aiImport.progressStarting(progress.total)
+                  : t.aiImport.progress(progress.done, progress.total)}
+              </Typography>
+            </Stack>
+          ) : null}
           <Stack
             direction="row"
             spacing={1}
@@ -849,6 +1038,24 @@ export default function AiImportListingsPage() {
               >
                 {postingAll ? t.aiImport.posting : t.aiImport.postAll}
               </Button>
+              {retryableFailedDrafts.length > 0 ? (
+                <Button
+                  variant="outlined"
+                  disabled={loading || postingAll || postingId != null || openingId != null || quotaExhausted}
+                  onClick={() => void handleRetryFailed()}
+                  startIcon={
+                    loading ? <CircularProgress size={14} color="inherit" /> : undefined
+                  }
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 800,
+                    borderRadius: '16px',
+                    flex: { xs: 1, sm: 'none' },
+                  }}
+                >
+                  {loading ? t.aiImport.retryingFailed : t.aiImport.retryFailed}
+                </Button>
+              ) : null}
               <Button
                 variant="contained"
                 aria-label={t.aiImport.deleteAll}
@@ -965,7 +1172,7 @@ export default function AiImportListingsPage() {
                       ) : null}
                       {failed && !restricted && draft.error ? (
                         <Alert severity="error" sx={{ borderRadius: 2, py: 0 }}>
-                          {draft.error}
+                          {formatAiDraftError(t, draft)}
                         </Alert>
                       ) : null}
                       {mismatch ? (

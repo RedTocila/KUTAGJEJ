@@ -35,7 +35,7 @@ const config = {
 
   // AI import (and similar) can exceed the default 30s rewrite proxy timeout.
   experimental: {
-    proxyTimeout: 120_000,
+    proxyTimeout: 180_000,
     optimizePackageImports: ['@mui/material', '@mui/icons-material', '@mui/system'],
   },
 

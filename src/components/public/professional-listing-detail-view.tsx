@@ -202,6 +202,8 @@ export function ProfessionalListingDetailView({
                     createdAt: listing.createdAt,
                     viewCount: listing.viewCount,
                     saveCount,
+                    ratingAverage: liveReviewStats?.ratingAverage ?? listing.ratingAverage,
+                    reviewCount: liveReviewStats?.reviewCount ?? listing.reviewCount,
                     url: canonicalUrl,
                   }
             }

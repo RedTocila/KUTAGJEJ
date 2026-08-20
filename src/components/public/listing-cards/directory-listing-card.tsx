@@ -91,6 +91,8 @@ function BusinessVenueCardBody({
             createdAt: listing.createdAt,
             viewCount,
             saveCount: listing.saveCount,
+            ratingAverage: cardRating?.ratingAverage,
+            reviewCount: cardRating?.reviewCount,
             contactPhone: listing.contactPhone?.trim() || undefined,
             url: listingBusinessPublicHref(listing),
           }}
@@ -298,6 +300,8 @@ function ProfessionalListingCardBody({
             createdAt: listing.createdAt,
             viewCount,
             saveCount: listing.saveCount,
+            ratingAverage: cardRating?.ratingAverage,
+            reviewCount: cardRating?.reviewCount,
             contactPhone: listing.contactPhone?.trim() || undefined,
             url: listingProfessionalPublicHref(listing),
           }}

@@ -12,6 +12,7 @@ const {
   importMenuFromImages,
 } = require('../lib/ai-import-menu');
 const { getAiImportQuota, consumeAiImportQuota } = require('../lib/ai-import-quota');
+const { createAiImportBatch, takeAiImportBatchSlot } = require('../lib/ai-import-batch');
 
 const router = express.Router();
 
@@ -55,13 +56,43 @@ router.post('/import-listings', authMiddleware, requirePortalUser, async (req, r
       req.body?.currentListing && typeof req.body.currentListing === 'object'
         ? req.body.currentListing
         : null;
+    const incomingBatchId = String(req.body?.batchId || '').trim();
+    const requestedBatchSize = Number.parseInt(String(req.body?.batchSize ?? ''), 10);
 
     if (!urls.length && !text && !images.length) {
       res.status(400).json({ message: 'Paste a link, describe the listing, or attach images' });
       return;
     }
 
-    const consumed = await consumeAiImportQuota(req.user.id);
+    let consumed;
+    let batchId = incomingBatchId;
+
+    if (incomingBatchId) {
+      const slot = takeAiImportBatchSlot({ batchId: incomingBatchId, userId: req.user.id });
+      if (slot.ok) {
+        consumed = { ok: true, quota: await getAiImportQuota(req.user.id) };
+      } else if (slot.reason === 'exhausted') {
+        res.status(400).json({ message: 'This AI batch is finished. Start a new analysis.' });
+        return;
+      } else {
+        consumed = await consumeAiImportQuota(req.user.id);
+        if (consumed.ok) {
+          batchId = createAiImportBatch({
+            userId: req.user.id,
+            cap: Number.isFinite(requestedBatchSize) ? requestedBatchSize : 1,
+          });
+        }
+      }
+    } else {
+      consumed = await consumeAiImportQuota(req.user.id);
+      if (consumed.ok) {
+        batchId = createAiImportBatch({
+          userId: req.user.id,
+          cap: Number.isFinite(requestedBatchSize) ? requestedBatchSize : Math.max(1, urls.length || 1),
+        });
+      }
+    }
+
     if (!consumed.ok) {
       res.status(consumed.status).json({
         message: consumed.message,
@@ -80,7 +111,12 @@ router.post('/import-listings', authMiddleware, requirePortalUser, async (req, r
       mode,
       currentListing,
     });
-    res.json({ ok: true, drafts: result.drafts, quota: quotaPayload(consumed.quota) });
+    res.json({
+      ok: true,
+      drafts: result.drafts,
+      quota: quotaPayload(consumed.quota),
+      batchId,
+    });
   } catch (err) {
     console.error('POST /ai/import-listings:', err?.message || err);
     const status = Number.isFinite(err?.status) ? err.status : 500;

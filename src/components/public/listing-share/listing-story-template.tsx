@@ -33,6 +33,7 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { relativeAlbanianDate } from '@/components/public/listing-cards/format-helpers';
 import { brandLogoSrc, config } from '@/config';
+import { formatRatingDisplay } from '@/lib/format-rating';
 import { brandWordmarkFontFamily } from '@/styles/brand-font';
 import {
   resolveStoryImageSrc,
@@ -53,8 +54,16 @@ export const FEED_HEIGHT = 1350;
 const CARD_W = 760;
 const CARD_H = Math.round((CARD_W * 5) / 4);
 const GREEN = '#76ba1b';
+const STAR_GOLD = '#f5b400';
+const STAR_EMPTY = 'rgba(255,255,255,0.28)';
+/** Inset so the saved JPEG keeps the card’s rounded corners. */
+const FEED_PAD = 48;
 /** Scale factor vs ~360px mobile card (760/360). */
 const S = 2.1;
+const CARD_RADIUS = 2.25 * S;
+
+const RATING_STAR_PATH =
+  'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z';
 
 const SPEC_ICONS: Record<ListingShareSpecIcon, PhosphorIcon> = {
   bed: BedIcon,
@@ -220,6 +229,77 @@ function MediaActionChip({
   );
 }
 
+function StoryRatingStar({ size, fill }: { size: number; fill: 'full' | 'half' | 'empty' }) {
+  return (
+    <Box
+      component="span"
+      aria-hidden
+      sx={{
+        width: size,
+        height: size,
+        flexShrink: 0,
+        display: 'block',
+        overflow: 'hidden',
+        lineHeight: 0,
+        position: 'relative',
+      }}
+    >
+      <Box component="svg" viewBox="0 0 24 24" sx={{ width: size, height: size, display: 'block' }}>
+        <path d={RATING_STAR_PATH} fill={STAR_EMPTY} />
+      </Box>
+      {fill !== 'empty' ? (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            width: fill === 'half' ? '50%' : '100%',
+            overflow: 'hidden',
+          }}
+        >
+          <Box component="svg" viewBox="0 0 24 24" sx={{ width: size, height: size, display: 'block' }}>
+            <path d={RATING_STAR_PATH} fill={STAR_GOLD} />
+          </Box>
+        </Box>
+      ) : null}
+    </Box>
+  );
+}
+
+function StoryRatingRow({
+  ratingAverage,
+  reviewCount,
+}: {
+  ratingAverage?: number | null;
+  reviewCount?: number;
+}) {
+  const count = reviewCount ?? 0;
+  if (count <= 0 && (ratingAverage == null || !Number.isFinite(ratingAverage))) {
+    return null;
+  }
+
+  const numeric =
+    count > 0 && ratingAverage != null && Number.isFinite(ratingAverage) ? ratingAverage : 0;
+  const clamped = Math.min(5, Math.max(0, numeric));
+  const label = formatRatingDisplay(clamped);
+  const starSize = 26;
+
+  return (
+    <Stack direction="row" spacing={1.1} sx={{ alignItems: 'center', pt: 0.25, flexWrap: 'nowrap' }}>
+      <Typography sx={{ fontWeight: 800, fontSize: 28, lineHeight: 1, color: '#fff' }}>{label}</Typography>
+      <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', lineHeight: 0 }}>
+        {Array.from({ length: 5 }, (_, index) => {
+          const diff = clamped - index;
+          const fill = diff >= 0.875 ? 'full' : diff >= 0.125 ? 'half' : 'empty';
+          return <StoryRatingStar key={index} size={starSize} fill={fill} />;
+        })}
+      </Stack>
+      <Typography sx={{ fontWeight: 650, fontSize: 24, lineHeight: 1, color: 'rgba(255,255,255,0.5)' }}>
+        ({count})
+      </Typography>
+    </Stack>
+  );
+}
+
 /** Spec chips — enlarged to fill the card body. */
 function SpecChip({ icon, label }: { icon: ListingShareSpecIcon; label: string }) {
   const Icon = SPEC_ICONS[icon] ?? TagIcon;
@@ -279,12 +359,9 @@ function StoryListingImage({
 
 /**
  * Listing card — always 4:5. Photo grows to fill leftover space after the body.
- * `fillFrame` is for the saved JPEG (no radius/shadow so the image is a full 4:5 rectangle).
  */
-export const ListingShareCard = React.forwardRef<
-  HTMLDivElement,
-  { payload: ListingSharePayload; fillFrame?: boolean }
->(function ListingShareCard({ payload, fillFrame = false }, ref) {
+export const ListingShareCard = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
+  function ListingShareCard({ payload }, ref) {
   const specs = (payload.specs ?? []).filter((s) => s.label).slice(0, 3);
   const saveCount = payload.saveCount ?? 0;
   const viewCount = payload.viewCount ?? 0;
@@ -300,11 +377,11 @@ export const ListingShareCard = React.forwardRef<
         width: CARD_W,
         height: CARD_H,
         aspectRatio: '4 / 5',
-        borderRadius: fillFrame ? 0 : 2.25 * S,
+        borderRadius: CARD_RADIUS,
         overflow: 'hidden',
         bgcolor: '#141414',
         border: `${2.5 * S}px solid ${GREEN}`,
-        boxShadow: fillFrame ? 'none' : '0 28px 80px rgba(0,0,0,0.55)',
+        boxShadow: '0 28px 80px rgba(0,0,0,0.55)',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
@@ -404,6 +481,8 @@ export const ListingShareCard = React.forwardRef<
         >
           {payload.title}
         </Typography>
+
+        <StoryRatingRow ratingAverage={payload.ratingAverage} reviewCount={payload.reviewCount} />
 
         {payload.priceLabel ? (
           <Typography sx={{ fontWeight: 900, fontSize: 52, color: GREEN, lineHeight: 1.05 }}>
@@ -554,10 +633,15 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
 
 /**
  * Saved photo: listing card only, always 1080×1350 (4:5). No story backdrop or brand chrome.
+ * Card is inset so rounded corners match the on-screen listing card.
  */
 export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
   function ListingFeedTemplate({ payload }, ref) {
-    const scale = FEED_WIDTH / CARD_W;
+    const innerW = FEED_WIDTH - FEED_PAD * 2;
+    const innerH = FEED_HEIGHT - FEED_PAD * 2;
+    const scale = Math.min(innerW / CARD_W, innerH / CARD_H);
+    const scaledW = CARD_W * scale;
+    const scaledH = CARD_H * scale;
 
     return (
       <Box
@@ -568,7 +652,7 @@ export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: L
           width: FEED_WIDTH,
           height: FEED_HEIGHT,
           overflow: 'hidden',
-          bgcolor: '#141414',
+          bgcolor: '#0a0a0a',
           color: '#fff',
           fontFamily:
             'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
@@ -576,13 +660,16 @@ export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: L
       >
         <Box
           sx={{
-            transform: `scale(${scale})`,
-            transformOrigin: 'top left',
+            position: 'absolute',
+            left: (FEED_WIDTH - scaledW) / 2,
+            top: (FEED_HEIGHT - scaledH) / 2,
             width: CARD_W,
             height: CARD_H,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
           }}
         >
-          <ListingShareCard payload={payload} fillFrame />
+          <ListingShareCard payload={payload} />
         </Box>
       </Box>
     );

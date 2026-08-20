@@ -649,6 +649,18 @@ const sq = {
       `${remaining} nga ${limit} AI Build sot`,
     quotaUnlimited: 'AI Build pa limit',
     upgradeForMore: 'Shiko paketat',
+    rateLimited:
+      'AI u ngarkua shumë me kaq shumë linke njëherësh. Prit rreth 1 minutë dhe riprovo dështimet.',
+    retryFailed: 'Riprovo dështimet',
+    retryingFailed: 'Duke riprovuar…',
+    progressStarting: (total: number) =>
+      total === 1 ? 'Duke analizuar 1 njoftim…' : `Duke analizuar ${total} njoftime…`,
+    progress: (done: number, total: number) => {
+      const left = Math.max(0, total - done);
+      if (left <= 0) return `Përfunduan ${done} nga ${total}`;
+      if (left === 1) return `Përfunduan ${done}, 1 tjetër`;
+      return `Përfunduan ${done}, ${left} të tjera`;
+    },
   },
   language: {
     title: 'Gjuha',
@@ -1362,6 +1374,18 @@ const en: AppMessages = {
       `${remaining} of ${limit} AI Builds left today`,
     quotaUnlimited: 'Unlimited AI Build',
     upgradeForMore: 'View packages',
+    rateLimited:
+      'AI was overloaded by this many links at once. Wait about a minute, then retry the failed ones.',
+    retryFailed: 'Retry failed',
+    retryingFailed: 'Retrying…',
+    progressStarting: (total: number) =>
+      total === 1 ? 'Analyzing 1 listing…' : `Analyzing ${total} listings…`,
+    progress: (done: number, total: number) => {
+      const left = Math.max(0, total - done);
+      if (left <= 0) return `Completed ${done} of ${total}`;
+      if (left === 1) return `Completed ${done}, 1 more to go`;
+      return `Completed ${done}, ${left} more to go`;
+    },
   },
   language: {
     title: 'Language',

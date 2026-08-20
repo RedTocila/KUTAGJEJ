@@ -49,6 +49,9 @@ export type ListingSharePayload = {
   createdAt?: string | null;
   viewCount?: number;
   saveCount?: number;
+  /** Directory listing / seller rating — shown on story and saved card images. */
+  ratingAverage?: number | null;
+  reviewCount?: number;
   /** Seller contact — printed on story / saved card images only. */
   contactPhone?: string | null;
   /** Absolute or path URL; defaults to current page. */

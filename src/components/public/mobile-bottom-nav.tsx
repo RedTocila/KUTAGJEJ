@@ -14,6 +14,7 @@ import { useCopy } from '@/hooks/use-copy';
 import { useDisplayPathname } from '@/hooks/use-navigation-pending';
 import { useUnreadMessagesCount } from '@/hooks/use-unread-messages-count';
 import { useUser } from '@/hooks/use-user';
+import { useOptionalSearchOverlay } from '@/contexts/search-overlay-context';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { hardNavigate, hardRefreshToTop } from '@/lib/hard-navigate';
 import {
@@ -56,9 +57,12 @@ export function MobileBottomNav() {
   const { user } = useUser();
   const unreadMessages = useUnreadMessagesCount();
   const t = useCopy();
+  const searchOverlay = useOptionalSearchOverlay();
   const isAuthed = Boolean(user);
   const searchActive =
-    Boolean(displayPathname.startsWith(paths.public.search)) || isPublicBrowsePath(displayPathname);
+    Boolean(searchOverlay?.open) ||
+    Boolean(displayPathname.startsWith(paths.public.search)) ||
+    isPublicBrowsePath(displayPathname);
 
   const items: NavItem[] = React.useMemo(
     () => [
@@ -169,12 +173,13 @@ export function MobileBottomNav() {
   };
 
   const handleSearchClick = (event: React.MouseEvent) => {
-    if (!searchActive) return;
+    event.preventDefault();
     if (pathname === paths.public.search) {
       hardRefreshToTop(event);
       return;
     }
-    hardNavigate(paths.public.search, event);
+    if (searchOverlay?.open) return;
+    searchOverlay?.openSearch();
   };
 
   const isSearchPage = Boolean(displayPathname.startsWith(paths.public.search));
@@ -281,15 +286,11 @@ export function MobileBottomNav() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       borderRadius: 999,
-                      color: iconColor,
+                      color: 'inherit',
                       textDecoration: 'none',
-                      transition: 'color 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1)',
+                      transition: 'transform 160ms cubic-bezier(0.22, 1, 0.36, 1)',
                       '&:link, &:visited, &:hover, &:active': {
-                        color: iconColor,
-                      },
-                      '& svg': {
                         color: 'inherit',
-                        fill: 'currentColor',
                       },
                       '&:active': {
                         transform: 'scale(0.94)',
@@ -302,12 +303,24 @@ export function MobileBottomNav() {
                       invisible={!isMessages || unreadMessages <= 0}
                       overlap="circular"
                     >
-                      <Icon
-                        key={active ? 'fill' : 'regular'}
-                        size={24}
-                        weight={active ? 'fill' : 'regular'}
-                        color={iconColor}
-                      />
+                      <Box
+                        component="span"
+                        sx={{
+                          display: 'inline-flex',
+                          color: iconColor,
+                          '& svg': {
+                            color: iconColor,
+                            fill: iconColor,
+                          },
+                        }}
+                      >
+                        <Icon
+                          key={active ? 'fill' : 'regular'}
+                          size={24}
+                          weight={active ? 'fill' : 'regular'}
+                          color={iconColor}
+                        />
+                      </Box>
                     </Badge>
                   </Box>
                 );
@@ -317,9 +330,11 @@ export function MobileBottomNav() {
         </Box>
 
         <Box
-          component={RouterLink}
-          href={paths.public.search}
+          component="button"
+          type="button"
           aria-label={t.common.search}
+          aria-haspopup="dialog"
+          aria-expanded={Boolean(searchOverlay?.open)}
           aria-current={searchActive ? 'page' : undefined}
           onClick={handleSearchClick}
           sx={{
@@ -329,6 +344,11 @@ export function MobileBottomNav() {
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
+            border: 'none',
+            p: 0,
+            appearance: 'none',
+            WebkitAppearance: 'none',
+            cursor: 'pointer',
             borderRadius: '50%',
             color: 'primary.contrastText',
             bgcolor: 'primary.main',

@@ -94,7 +94,7 @@ export function BannerSliderPager({
                   active
                     ? theme.palette.mode === 'dark'
                       ? '#fff'
-                      : 'text.primary'
+                      : 'primary.main'
                     : theme.palette.mode === 'dark'
                       ? 'rgba(186, 176, 204, 0.42)'
                       : 'action.disabled',
@@ -127,9 +127,11 @@ export function BannerSliderPager({
           sx={{
             width: 32,
             height: 32,
-            color: '#fff',
+            color: (theme) => (theme.palette.mode === 'dark' ? '#fff' : 'primary.main'),
             bgcolor: (theme) =>
-              theme.palette.mode === 'dark' ? 'rgba(20, 24, 48, 0.92)' : 'grey.900',
+              theme.palette.mode === 'dark' ? 'rgba(20, 24, 48, 0.92)' : 'background.paper',
+            border: (theme) => (theme.palette.mode === 'dark' ? 0 : '1px solid'),
+            borderColor: 'divider',
             animation: playBurst ? `bannerPlayPop 320ms ${MOTION.ease}` : 'none',
             '@keyframes bannerPlayPop': {
               '0%': { transform: 'scale(0.82)', bgcolor: 'primary.main', color: 'primary.contrastText' },
@@ -138,7 +140,7 @@ export function BannerSliderPager({
             },
             '&:hover': {
               bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? 'rgba(28, 34, 64, 1)' : 'grey.800',
+                theme.palette.mode === 'dark' ? 'rgba(28, 34, 64, 1)' : 'background.level2',
             },
             '&:active': {
               transform: 'scale(0.92)',

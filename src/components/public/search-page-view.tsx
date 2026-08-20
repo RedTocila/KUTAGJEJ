@@ -156,7 +156,13 @@ async function fetchVerticalResults(
 }
 
 /** Pins the /kerko dock to `document.body` on mobile so listing cards cannot paint over it. */
-function SearchDockLayer({ children }: { children: React.ReactNode }) {
+function SearchDockLayer({
+  children,
+  portaled = true,
+}: {
+  children: React.ReactNode;
+  portaled?: boolean;
+}) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
   const [host, setHost] = React.useState<HTMLElement | null>(null);
@@ -165,7 +171,7 @@ function SearchDockLayer({ children }: { children: React.ReactNode }) {
     setHost(document.body);
   }, []);
 
-  if (isMobile && host) return createPortal(children, host);
+  if (portaled && isMobile && host) return createPortal(children, host);
   return children;
 }
 
@@ -187,7 +193,15 @@ function ResultCard({ item }: { item: SearchItem }) {
   }
 }
 
-export function SearchPageView() {
+export function SearchPageView({
+  variant = 'page',
+  onClose,
+  onNavigate,
+}: {
+  variant?: 'page' | 'overlay';
+  onClose?: () => void;
+  onNavigate?: () => void;
+} = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -195,6 +209,7 @@ export function SearchPageView() {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const { language } = useLanguage();
   const t = useCopy();
+  const isOverlay = variant === 'overlay';
   const localizedCategories = React.useMemo(() => localizeSearchCategories(language), [language]);
 
   const urlCat = searchParams.get('cat');
@@ -214,7 +229,7 @@ export function SearchPageView() {
   const [total, setTotal] = React.useState(0);
   const [aiReply, setAiReply] = React.useState<string | null>(null);
   const [inputExpanded, setInputExpanded] = React.useState(false);
-  const [entered, setEntered] = React.useState(false);
+  const [entered, setEntered] = React.useState(isOverlay);
   const categoriesHidden = useScrollRevealHidden({ alwaysShowBelowY: 24 });
 
   const selectedIndex = categoryId
@@ -226,6 +241,10 @@ export function SearchPageView() {
   const isAi = categoryId === 'ai';
 
   React.useEffect(() => {
+    if (isOverlay) {
+      setEntered(true);
+      return;
+    }
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduceMotion) {
       setEntered(true);
@@ -239,7 +258,7 @@ export function SearchPageView() {
       cancelAnimationFrame(frame1);
       cancelAnimationFrame(frame2);
     };
-  }, []);
+  }, [isOverlay]);
 
   React.useLayoutEffect(() => {
     const el = inputRef.current;
@@ -256,8 +275,21 @@ export function SearchPageView() {
     return () => cancelAnimationFrame(raf);
   }, [query, categoryId]);
 
+  const goTo = React.useCallback(
+    (href: string) => {
+      onNavigate?.();
+      if (isOverlay) {
+        router.replace(href);
+        return;
+      }
+      router.push(href);
+    },
+    [isOverlay, onNavigate, router],
+  );
+
   const syncUrl = React.useCallback(
     (nextCat: SearchCategoryId | null, nextQ: string) => {
+      if (isOverlay) return;
       const params = new URLSearchParams();
       if (nextCat) params.set('cat', nextCat);
       const trimmed = nextQ.trim();
@@ -265,7 +297,7 @@ export function SearchPageView() {
       const qs = params.toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [pathname, router],
+    [isOverlay, pathname, router],
   );
 
   const runVerticalSearch = React.useCallback(
@@ -313,14 +345,14 @@ export function SearchPageView() {
           setLoading(false);
           return;
         }
-        router.push(href);
+        goTo(href);
       } catch {
         setAiReply(null);
         setError(t.search.failed);
         setLoading(false);
       }
     },
-    [language, router, syncUrl, t.search.failed],
+    [goTo, language, syncUrl, t.search.failed],
   );
 
   React.useEffect(() => {
@@ -374,7 +406,7 @@ export function SearchPageView() {
     const next = localizedCategories[index];
     if (!next) return;
     if (categoryId === next.id) {
-      hardRefreshToTop();
+      if (!isOverlay) hardRefreshToTop();
       return;
     }
     setCategoryId(next.id);
@@ -400,7 +432,7 @@ export function SearchPageView() {
     }
     const base = activeCategory.href.split('?')[0];
     const href = trimmed ? `${base}?q=${encodeURIComponent(trimmed)}` : base;
-    router.push(href);
+    goTo(href);
   };
 
   const searchAccent = isAi ? { color: AI_SEARCH_BLUE, soft: AI_SEARCH_BLUE_SOFT } : undefined;
@@ -414,7 +446,10 @@ export function SearchPageView() {
         px: { xs: 2, sm: 3 },
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100dvh',
+        flex: isOverlay ? 1 : undefined,
+        minHeight: isOverlay ? '100%' : '100dvh',
+        height: isOverlay ? '100%' : 'auto',
+        overflow: isOverlay ? 'auto' : 'visible',
         transition: `padding-bottom ${MOTION.base} ${MOTION.ease}`,
         '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
       }}
@@ -423,12 +458,19 @@ export function SearchPageView() {
         <Typography sx={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.01em' }}>
           {t.search.title}
         </Typography>
-        <IconButton component={RouterLink} {...historyBack} aria-label={t.common.close} edge="end" size="small">
+        <IconButton
+          {...(onClose
+            ? { onClick: onClose }
+            : { component: RouterLink, ...historyBack })}
+          aria-label={t.common.close}
+          edge="end"
+          size="small"
+        >
           <XIcon size={22} weight="bold" />
         </IconButton>
       </Stack>
 
-      <SearchDockLayer>
+      <SearchDockLayer portaled={!isOverlay}>
       <Box
         sx={{
           display: 'flex',

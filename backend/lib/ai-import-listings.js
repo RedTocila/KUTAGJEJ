@@ -12,7 +12,7 @@ const {
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 /** Max listing/source links processed in one import request. */
-const MAX_IMPORT_URLS = 20;
+const MAX_IMPORT_URLS = 50;
 /** Max images kept on a car listing draft (matches create-form / API). */
 const MAX_CAR_LISTING_IMAGES = 8;
 /** Max remote snapshot photos sent to vision (OpenAI). Compressed first. */

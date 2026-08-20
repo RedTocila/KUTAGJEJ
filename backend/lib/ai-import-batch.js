@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 
 const TTL_MS = 20 * 60 * 1000;
-const MAX_BATCH = 20;
+const MAX_BATCH = 50;
 
 /** In-memory AI Build batch so one paste of N links still costs one daily use. */
 const sessions = new Map();

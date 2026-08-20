@@ -590,7 +590,7 @@ const sq = {
   aiImport: {
     title: 'AI Build',
     subtitle:
-      'Zgjidh kategorinë e saktë, pastaj ngjit deri në 20 linke (Instagram, faqe, etj.). AI ndërton draftet — dhe bllokon kategoritë e gabuara ose përmbajtjen e ndaluar.',
+      'Zgjidh kategorinë e saktë, pastaj ngjit deri në 50 linke (Instagram, faqe, etj.). AI ndërton draftet — dhe bllokon kategoritë e gabuara ose përmbajtjen e ndaluar.',
     chooseCategory: 'Zgjidh kategorinë',
     chooseCategoryToContinue: 'Zgjidh një kategori për të vazhduar',
     categoryRequired: 'Zgjidh kategorinë e njoftimit përpara analizës.',
@@ -609,7 +609,7 @@ const sq = {
         : `U postuan ${ok} njoftime.`,
     draftsKeptHint: 'Ruhen këtu — i gjen përsëri pasi të kthehesh nga formulari.',
     placeholder:
-      'Përshkruaj, ngjit linke (deri në 20) ose bashkëngjit foto — AI ndërton njoftimet…\nhttps://example.com/apartament\nhttps://www.instagram.com/p/...',
+      'Përshkruaj, ngjit linke (deri në 50) ose bashkëngjit foto — AI ndërton njoftimet…\nhttps://example.com/apartament\nhttps://www.instagram.com/p/...',
     analyze: 'Analizo me AI',
     analyzing: 'Duke analizuar…',
     results: 'Draftet e gatshme',
@@ -661,6 +661,8 @@ const sq = {
       if (left === 1) return `Përfunduan ${done}, 1 tjetër`;
       return `Përfunduan ${done}, ${left} të tjera`;
     },
+    stop: 'Ndalo',
+    stopped: (done: number, total: number) => `U ndalua. Përfunduan ${done} nga ${total}.`,
   },
   language: {
     title: 'Gjuha',
@@ -1315,7 +1317,7 @@ const en: AppMessages = {
   aiImport: {
     title: 'AI Build',
     subtitle:
-      'Choose the correct category, then paste up to 20 links (Instagram, website, etc.). AI builds drafts — and blocks wrong categories or prohibited content.',
+      'Choose the correct category, then paste up to 50 links (Instagram, website, etc.). AI builds drafts — and blocks wrong categories or prohibited content.',
     chooseCategory: 'Choose a category',
     chooseCategoryToContinue: 'Choose a category to continue',
     categoryRequired: 'Choose the listing category before analyzing.',
@@ -1334,7 +1336,7 @@ const en: AppMessages = {
         : `Posted ${ok} listings.`,
     draftsKeptHint: 'Saved here — you’ll find them again after you return from the form.',
     placeholder:
-      'Describe, paste links (up to 20), or attach photos — AI builds the listings…\nhttps://example.com/apartment\nhttps://www.instagram.com/p/...',
+      'Describe, paste links (up to 50), or attach photos — AI builds the listings…\nhttps://example.com/apartment\nhttps://www.instagram.com/p/...',
     analyze: 'Analyze with AI',
     analyzing: 'Analyzing…',
     results: 'Ready drafts',
@@ -1386,6 +1388,8 @@ const en: AppMessages = {
       if (left === 1) return `Completed ${done}, 1 more to go`;
       return `Completed ${done}, ${left} more to go`;
     },
+    stop: 'Stop',
+    stopped: (done: number, total: number) => `Stopped. Completed ${done} of ${total}.`,
   },
   language: {
     title: 'Language',

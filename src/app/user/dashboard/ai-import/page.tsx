@@ -18,6 +18,7 @@ import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/Car
 import { LinkSimple as LinkSimpleIcon } from '@phosphor-icons/react/dist/ssr/LinkSimple';
 import { Paperclip as PaperclipIcon } from '@phosphor-icons/react/dist/ssr/Paperclip';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
+import { Stop as StopIcon } from '@phosphor-icons/react/dist/ssr/Stop';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
@@ -147,6 +148,7 @@ export default function AiImportListingsPage() {
   const [lastPrompt, setLastPrompt] = React.useState('');
   const [quota, setQuota] = React.useState<AiImportQuota | null>(null);
   const [progress, setProgress] = React.useState<{ done: number; total: number } | null>(null);
+  const stopRequestedRef = React.useRef(false);
 
   const canPublish =
     Boolean(user) &&
@@ -285,6 +287,7 @@ export default function AiImportListingsPage() {
     setLoading(true);
     setError(null);
     setStatusMessage(null);
+    stopRequestedRef.current = false;
     try {
       let uploadedUrls: string[] = [...pendingImageUrls];
       if (files.length > 0) {
@@ -338,6 +341,12 @@ export default function AiImportListingsPage() {
         setProgress({ done: 1, total: 1 });
       } else {
         for (let i = 0; i < urls.length; i += 1) {
+          if (stopRequestedRef.current) {
+            setText(urls.slice(i).join('\n'));
+            setStatusMessage(t.aiImport.stopped(collected.length, urls.length));
+            persistDrafts(collected);
+            break;
+          }
           const res = await importListingsFromLinks({
             text: i === 0 ? trimmed : '',
             urls: [urls[i]],
@@ -379,8 +388,9 @@ export default function AiImportListingsPage() {
         }
       }
 
+      const stopped = stopRequestedRef.current;
       const hasMismatch = collected.some((d) => isAiCategoryMismatch(d));
-      if (!hasMismatch) {
+      if (!stopped && !hasMismatch) {
         setText('');
         setFiles([]);
         setPendingImageUrls([]);
@@ -408,6 +418,7 @@ export default function AiImportListingsPage() {
     setLoading(true);
     setError(null);
     setStatusMessage(null);
+    stopRequestedRef.current = false;
     const failedIds = new Set(failed.map((d) => d.id));
     const kept = drafts.filter((d) => !failedIds.has(d.id));
     try {
@@ -417,6 +428,14 @@ export default function AiImportListingsPage() {
       setProgress({ done: 0, total: urls.length });
 
       for (let i = 0; i < urls.length; i += 1) {
+        if (stopRequestedRef.current) {
+          const leftover = failed.filter(
+            (d) => !collected.some((c) => c.sourceUrl === d.sourceUrl),
+          );
+          persistDrafts([...kept, ...collected, ...leftover]);
+          setStatusMessage(t.aiImport.stopped(collected.length, urls.length));
+          break;
+        }
         const res = await importListingsFromLinks({
           urls: [urls[i]],
           category,
@@ -447,6 +466,10 @@ export default function AiImportListingsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleStop = () => {
+    stopRequestedRef.current = true;
   };
 
   const acceptMismatch = (draft: AiImportDraftResult) => {
@@ -899,40 +922,59 @@ export default function AiImportListingsPage() {
                   </Alert>
                 ) : null}
 
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={loading || quotaExhausted || (!text.trim() && files.length === 0)}
-                  fullWidth
-                  startIcon={
-                    loading ? (
-                      <CircularProgress size={16} color="inherit" />
-                    ) : (
-                      <SparkleIcon size={18} weight="bold" />
-                    )
-                  }
-                  sx={{
-                    borderRadius: '16px',
-                    textTransform: 'none',
-                    fontWeight: 800,
-                    py: 1.35,
-                    boxShadow: 'none',
-                    bgcolor: AI_SEARCH_BLUE,
-                    color: AI_SEARCH_BLUE_ON,
-                    '&:hover': {
+                {loading ? (
+                  <Button
+                    type="button"
+                    variant="contained"
+                    fullWidth
+                    onClick={handleStop}
+                    startIcon={<StopIcon size={18} weight="fill" />}
+                    sx={{
+                      borderRadius: '16px',
+                      textTransform: 'none',
+                      fontWeight: 800,
+                      py: 1.35,
                       boxShadow: 'none',
-                      bgcolor: AI_SEARCH_BLUE_HOVER,
-                      color: AI_SEARCH_BLUE_ON,
-                    },
-                    '&.Mui-disabled': {
+                      bgcolor: 'error.main',
+                      color: 'error.contrastText',
+                      '&:hover': {
+                        boxShadow: 'none',
+                        bgcolor: 'error.dark',
+                      },
+                    }}
+                  >
+                    {t.aiImport.stop}
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={quotaExhausted || (!text.trim() && files.length === 0)}
+                    fullWidth
+                    startIcon={<SparkleIcon size={18} weight="bold" />}
+                    sx={{
+                      borderRadius: '16px',
+                      textTransform: 'none',
+                      fontWeight: 800,
+                      py: 1.35,
+                      boxShadow: 'none',
                       bgcolor: AI_SEARCH_BLUE,
                       color: AI_SEARCH_BLUE_ON,
-                      opacity: 0.55,
-                    },
-                  }}
-                >
-                  {loading ? t.aiImport.analyzing : t.aiImport.analyze}
-                </Button>
+                      '&:hover': {
+                        boxShadow: 'none',
+                        bgcolor: AI_SEARCH_BLUE_HOVER,
+                        color: AI_SEARCH_BLUE_ON,
+                      },
+                      '&.Mui-disabled': {
+                        bgcolor: AI_SEARCH_BLUE,
+                        color: AI_SEARCH_BLUE_ON,
+                        opacity: 0.55,
+                      },
+                    }}
+                  >
+                    {t.aiImport.analyze}
+                  </Button>
+                )}
                 {progress ? (
                   <Stack spacing={0.75}>
                     <LinearProgress
@@ -995,6 +1037,22 @@ export default function AiImportListingsPage() {
                   ? t.aiImport.progressStarting(progress.total)
                   : t.aiImport.progress(progress.done, progress.total)}
               </Typography>
+              {loading ? (
+                <Button
+                  type="button"
+                  size="small"
+                  onClick={handleStop}
+                  startIcon={<StopIcon size={14} weight="fill" />}
+                  sx={{
+                    alignSelf: 'flex-start',
+                    textTransform: 'none',
+                    fontWeight: 800,
+                    color: 'error.main',
+                  }}
+                >
+                  {t.aiImport.stop}
+                </Button>
+              ) : null}
             </Stack>
           ) : null}
           <Stack
@@ -1015,7 +1073,7 @@ export default function AiImportListingsPage() {
             >
               <Button
                 variant="contained"
-                disabled={postingAll || postingId != null || openingId != null || readyDrafts.length === 0}
+                disabled={loading || postingAll || postingId != null || openingId != null || readyDrafts.length === 0}
                 onClick={() => void postAll()}
                 startIcon={
                   postingAll ? <CircularProgress size={14} color="inherit" /> : undefined

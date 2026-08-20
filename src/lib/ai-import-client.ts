@@ -28,7 +28,7 @@ export const AI_CONTENT_RESTRICTED_CODE = 'content_restricted';
 export const AI_DAILY_LIMIT_CODE = 'ai_daily_limit';
 export const AI_RATE_LIMIT_CODE = 'openai_rate_limit';
 
-const MAX_IMPORT_URLS = 20;
+const MAX_IMPORT_URLS = 50;
 
 function normalizeImportUrl(raw: string): string | null {
   const trimmed = String(raw || '').trim();
@@ -50,7 +50,7 @@ function normalizeImportUrl(raw: string): string | null {
   }
 }
 
-/** Pull up to 20 unique http(s) links from pasted text or an explicit list. */
+/** Pull up to 50 unique http(s) links from pasted text or an explicit list. */
 export function extractImportUrls(input: string | string[]): string[] {
   const text = Array.isArray(input) ? input.join('\n') : String(input || '');
   const seen = new Set<string>();

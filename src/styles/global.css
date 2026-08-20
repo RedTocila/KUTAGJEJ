@@ -20,7 +20,7 @@
 
 html {
   height: 100%;
-  background-color: var(--mui-palette-background-default, #f2f6ec);
+  background-color: var(--mui-palette-background-default, #ffffff);
   /* `clip` (not `hidden`) so overflow-y stays visible and the header can't lag behind scroll. */
   overflow-x: clip;
   overscroll-behavior-x: none;
@@ -29,7 +29,7 @@ html {
 body {
   height: 100%;
   margin: 0;
-  background-color: var(--mui-palette-background-default, #f2f6ec);
+  background-color: var(--mui-palette-background-default, #ffffff);
   color: var(--mui-palette-text-primary, #141a11);
   overflow-x: clip;
   overscroll-behavior-x: none;
@@ -45,7 +45,7 @@ body {
   justify-content: center;
   background:
     radial-gradient(ellipse 80% 50% at 50% 38%, rgba(118, 186, 27, 0.16), transparent 68%),
-    #f2f6ec;
+    #ffffff;
   opacity: 1;
   transition: opacity 0.18s ease;
   pointer-events: auto;

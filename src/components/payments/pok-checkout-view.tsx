@@ -41,8 +41,8 @@ const EMPTY_POK_FORM_STATE = {
 } as const;
 
 const POK_LIGHT = {
-  surface: '#ffffff',
-  surfaceSoft: '#f2f6ec',
+  surface: '#f2f6ec',
+  surfaceSoft: '#ffffff',
   text: '#141a11',
   textMuted: '#324029',
   textSubtle: '#567044',

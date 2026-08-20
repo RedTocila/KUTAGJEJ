@@ -84,16 +84,16 @@ export const colorSchemes = {
     palette: {
       action: { disabledBackground: 'rgba(43, 84, 10, 0.08)' },
       background: {
-        default: '#f2f6ec',
-        defaultChannel: '242 246 236',
-        paper: '#ffffff',
-        paperChannel: '255 255 255',
+        default: '#ffffff',
+        defaultChannel: '255 255 255',
+        paper: '#f2f6ec',
+        paperChannel: '242 246 236',
         level1: 'var(--mui-palette-neutral-50)',
         level2: 'var(--mui-palette-neutral-100)',
         level3: 'var(--mui-palette-neutral-200)',
       },
       common: { black: '#000000', white: '#ffffff' },
-      // Stronger sage border so cards / inputs read clearly on white.
+      // Stronger sage border so cards / inputs read clearly on the white page.
       divider: 'var(--mui-palette-neutral-300)',
       dividerChannel: '163 188 143',
       error: {

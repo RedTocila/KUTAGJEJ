@@ -56,8 +56,7 @@ const CARD_H = Math.round((CARD_W * 5) / 4);
 const GREEN = '#76ba1b';
 const STAR_GOLD = '#f5b400';
 const STAR_EMPTY = 'rgba(255,255,255,0.28)';
-/** Inset so the saved JPEG keeps the card’s rounded corners. */
-const FEED_PAD = 48;
+const CARD_BG = '#141414';
 /** Scale factor vs ~360px mobile card (760/360). */
 const S = 2.1;
 const CARD_RADIUS = 2.25 * S;
@@ -359,15 +358,19 @@ function StoryListingImage({
 
 /**
  * Listing card — always 4:5. Photo grows to fill leftover space after the body.
+ * `feed` fills the saved JPEG edge-to-edge so Instagram posts don’t show a black frame.
  */
-export const ListingShareCard = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
-  function ListingShareCard({ payload }, ref) {
+export const ListingShareCard = React.forwardRef<
+  HTMLDivElement,
+  { payload: ListingSharePayload; variant?: 'story' | 'feed' }
+>(function ListingShareCard({ payload, variant = 'story' }, ref) {
   const specs = (payload.specs ?? []).filter((s) => s.label).slice(0, 3);
   const saveCount = payload.saveCount ?? 0;
   const viewCount = payload.viewCount ?? 0;
   const posted = payload.createdAt ? relativeAlbanianDate(payload.createdAt) : null;
   const imageSrc = resolveStoryImageSrc(payload.imageUrl);
   const contactPhone = payload.contactPhone?.trim() || '';
+  const feed = variant === 'feed';
 
   return (
     <Box
@@ -377,11 +380,11 @@ export const ListingShareCard = React.forwardRef<HTMLDivElement, { payload: List
         width: CARD_W,
         height: CARD_H,
         aspectRatio: '4 / 5',
-        borderRadius: CARD_RADIUS,
+        borderRadius: feed ? 0 : CARD_RADIUS,
         overflow: 'hidden',
-        bgcolor: '#141414',
+        bgcolor: CARD_BG,
         border: `${2.5 * S}px solid ${GREEN}`,
-        boxShadow: '0 28px 80px rgba(0,0,0,0.55)',
+        boxShadow: feed ? 'none' : '0 28px 80px rgba(0,0,0,0.55)',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
@@ -451,7 +454,7 @@ export const ListingShareCard = React.forwardRef<HTMLDivElement, { payload: List
         </Stack>
       </Box>
 
-      <Stack spacing={2.25} sx={{ px: 3.5, py: 3.25, bgcolor: '#141414', flexShrink: 0 }}>
+      <Stack spacing={2.25} sx={{ px: 3.5, py: 3.25, bgcolor: CARD_BG, flexShrink: 0 }}>
         {payload.category ? (
           <Typography
             sx={{
@@ -633,15 +636,11 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
 
 /**
  * Saved photo: listing card only, always 1080×1350 (4:5). No story backdrop or brand chrome.
- * Card is inset so rounded corners match the on-screen listing card.
+ * Card fills the canvas so a feed post is the listing itself, not a card on a black frame.
  */
 export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
   function ListingFeedTemplate({ payload }, ref) {
-    const innerW = FEED_WIDTH - FEED_PAD * 2;
-    const innerH = FEED_HEIGHT - FEED_PAD * 2;
-    const scale = Math.min(innerW / CARD_W, innerH / CARD_H);
-    const scaledW = CARD_W * scale;
-    const scaledH = CARD_H * scale;
+    const scale = FEED_WIDTH / CARD_W;
 
     return (
       <Box
@@ -652,7 +651,7 @@ export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: L
           width: FEED_WIDTH,
           height: FEED_HEIGHT,
           overflow: 'hidden',
-          bgcolor: '#0a0a0a',
+          bgcolor: CARD_BG,
           color: '#fff',
           fontFamily:
             'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
@@ -660,16 +659,13 @@ export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: L
       >
         <Box
           sx={{
-            position: 'absolute',
-            left: (FEED_WIDTH - scaledW) / 2,
-            top: (FEED_HEIGHT - scaledH) / 2,
             width: CARD_W,
             height: CARD_H,
             transform: `scale(${scale})`,
             transformOrigin: 'top left',
           }}
         >
-          <ListingShareCard payload={payload} />
+          <ListingShareCard payload={payload} variant="feed" />
         </Box>
       </Box>
     );

@@ -70,66 +70,65 @@ function matchesSearch(query: string, parts: Array<string | number | null | unde
 }
 
 function mixedListingMatches(item: HomepageMixedListing, query: string): boolean {
-  const listing = item.listing;
   switch (item.kind) {
     case 'real-estate':
       return matchesSearch(query, [
-        listing.title,
-        listing.description,
-        listing.cityName,
-        listing.zoneName,
-        listing.propertyCategory,
-        listing.transactionType,
-        listing.price,
-        listing.currency,
+        item.listing.title,
+        item.listing.description,
+        item.listing.cityName,
+        item.listing.zoneName,
+        item.listing.propertyCategory,
+        item.listing.transactionType,
+        item.listing.price,
+        item.listing.currency,
       ]);
     case 'cars':
       return matchesSearch(query, [
-        listing.make,
-        listing.model,
-        listing.variant,
-        listing.year,
-        listing.fuelType,
-        listing.vehicleType,
-        listing.color,
-        listing.cityName,
-        listing.description,
-        listing.price,
-        listing.currency,
+        item.listing.make,
+        item.listing.model,
+        item.listing.variant,
+        item.listing.year,
+        item.listing.fuelType,
+        item.listing.vehicleType,
+        item.listing.color,
+        item.listing.cityName,
+        item.listing.description,
+        item.listing.price,
+        item.listing.currency,
       ]);
     case 'jobs':
       return matchesSearch(query, [
-        listing.title,
-        listing.description,
-        listing.cityName,
-        listing.industry,
-        listing.jobType,
-        listing.workLocation,
-        listing.education,
-        listing.experience,
+        item.listing.title,
+        item.listing.description,
+        item.listing.cityName,
+        item.listing.industry,
+        item.listing.jobType,
+        item.listing.workLocation,
+        item.listing.education,
+        item.listing.experience,
       ]);
     case 'marketplace':
       return matchesSearch(query, [
-        listing.title,
-        listing.description,
-        listing.cityName,
-        listing.category,
-        listing.condition,
-        listing.price,
-        listing.currency,
+        item.listing.title,
+        item.listing.description,
+        item.listing.cityName,
+        item.listing.category,
+        item.listing.condition,
+        item.listing.price,
+        item.listing.currency,
       ]);
     case 'businesses':
     case 'professionals':
       return matchesSearch(query, [
-        listing.title,
-        listing.description,
-        listing.cityName,
-        listing.zoneName,
-        listing.category,
-        listing.categoryLabel,
-        listing.servicesHighlight,
-        listing.announcementTitle,
-        listing.announcementSubtitle,
+        item.listing.title,
+        item.listing.description,
+        item.listing.cityName,
+        item.listing.zoneName,
+        item.listing.category,
+        item.listing.categoryLabel,
+        item.listing.servicesHighlight,
+        item.listing.announcementTitle,
+        item.listing.announcementSubtitle,
       ]);
   }
 }

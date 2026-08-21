@@ -166,6 +166,11 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
   const index = displayTab?.index ?? 0;
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
   const paneRefs = React.useRef<Array<HTMLDivElement | null>>([]);
+  const setPaneRef = React.useCallback((paneIndex: number) => {
+    return (node: unknown) => {
+      paneRefs.current[paneIndex] = node instanceof HTMLDivElement ? node : null;
+    };
+  }, []);
   const dragXRef = React.useRef(0);
   const [dragX, setDragX] = React.useState(0);
   const [dragging, setDragging] = React.useState(false);
@@ -354,17 +359,13 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
             }}
           >
             <Box
-              ref={(node) => {
-                paneRefs.current[0] = node;
-              }}
+              ref={setPaneRef(0)}
               sx={paneSx}
             >
               {routeTab?.id === 'home' ? children : <MainTabsHomePreview />}
             </Box>
             <Box
-              ref={(node) => {
-                paneRefs.current[1] = node;
-              }}
+              ref={setPaneRef(1)}
               sx={{ ...paneSx, px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
             >
               {shouldMountPane(1, index, visited) ? (
@@ -376,9 +377,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               ) : null}
             </Box>
             <Box
-              ref={(node) => {
-                paneRefs.current[2] = node;
-              }}
+              ref={setPaneRef(2)}
               sx={{
                 ...paneSx,
                 display: 'flex',
@@ -395,9 +394,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               ) : null}
             </Box>
             <Box
-              ref={(node) => {
-                paneRefs.current[3] = node;
-              }}
+              ref={setPaneRef(3)}
               sx={{ ...paneSx, px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
             >
               {shouldMountPane(3, index, visited) ? (

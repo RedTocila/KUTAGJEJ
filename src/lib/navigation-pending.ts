@@ -10,6 +10,9 @@
 
 import { flushSync } from 'react-dom';
 
+import { previewMainTabIndex } from '@/lib/main-tab-pager';
+import { paths } from '@/paths';
+
 type Listener = () => void;
 
 let pendingPath: string | null = null;
@@ -49,6 +52,15 @@ export function getServerNavigationPendingPath(): string | null {
   return null;
 }
 
+function mainTabIndexFromPath(path: string): number | null {
+  const p = normalizeNavPath(path);
+  if (p === paths.home) return 0;
+  if (p === paths.user.savedListings) return 1;
+  if (p === paths.user.messages) return 2;
+  if (p === paths.user.dashboard) return 3;
+  return null;
+}
+
 export function beginPendingNavigation(href: string): void {
   const next = pathFromHref(href);
   if (typeof window !== 'undefined' && next === normalizeNavPath(window.location.pathname)) {
@@ -61,8 +73,17 @@ export function beginPendingNavigation(href: string): void {
     emit();
   };
 
-  // Paint skeleton/active chrome in the same click turn, before the route transition.
   if (typeof window !== 'undefined') {
+    const fromIndex = mainTabIndexFromPath(window.location.pathname);
+    const toIndex = mainTabIndexFromPath(next);
+    if (toIndex != null && fromIndex != null) {
+      // Start the pager slide in this turn; skip flushSync so mounting the
+      // destination pane does not hitch the first animation frames.
+      previewMainTabIndex(toIndex, true);
+      apply();
+      return;
+    }
+    // Paint skeleton/active chrome in the same click turn, before the route transition.
     flushSync(apply);
     return;
   }

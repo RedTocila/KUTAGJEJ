@@ -6,6 +6,8 @@
  * load only before that bridge mounts.
  */
 
+import { runActiveTabRefresh } from '@/lib/tab-refresh';
+
 type NavigateFn = (href: string) => void;
 type RefreshFn = () => void;
 
@@ -48,6 +50,7 @@ export function hardRefreshToTop(event?: { preventDefault(): void }): void {
     history.scrollRestoration = 'manual';
   }
   window.scrollTo(0, 0);
+  void runActiveTabRefresh();
   if (softRefreshFn) {
     softRefreshFn();
     return;

@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
-import { Box } from '@mui/material';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Box, type SxProps, type Theme } from '@mui/material';
 
+import { PullToRefreshIndicator, usePullToRefresh } from '@/components/core/pull-to-refresh';
 import { MainTabsGuestPane } from '@/components/main-tabs/main-tabs-guest-pane';
 import { MainTabsHomePreview } from '@/components/main-tabs/main-tabs-home-preview';
 import { MobileBottomNav } from '@/components/public/mobile-bottom-nav';
@@ -13,6 +14,7 @@ import { MessagesThreadChromeProvider } from '@/contexts/messages-thread-chrome-
 import { useOptionalSearchOverlay } from '@/contexts/search-overlay-context';
 import { useCopy } from '@/hooks/use-copy';
 import { useDisplayPathname } from '@/hooks/use-navigation-pending';
+import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
 import { useWarmMainTabs } from '@/hooks/use-warm-main-tabs';
 import { useUser } from '@/hooks/use-user';
 import { hardNavigate } from '@/lib/hard-navigate';
@@ -23,9 +25,12 @@ import {
   mainTabByIndex,
   mainTabFromPath,
   type MainTab,
+  type MainTabId,
 } from '@/lib/main-tabs';
+import { MAIN_TAB_SLIDE_MS, registerMainTabPagerPreview } from '@/lib/main-tab-pager';
 import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 import { beginPendingNavigation } from '@/lib/navigation-pending';
+import { runTabRefresh, setActiveTabForRefresh, subscribeTabRefresh } from '@/lib/tab-refresh';
 import { MOTION } from '@/styles/motion';
 import { paths } from '@/paths';
 
@@ -84,7 +89,9 @@ function isTabSwipeBlocked(target: EventTarget | null): boolean {
   if (target.closest('[data-no-tab-swipe]')) return true;
   if (target.closest('input, textarea, select, [contenteditable="true"]')) return true;
   let el: Element | null = target;
-  while (el instanceof HTMLElement) {
+  let depth = 0;
+  while (el instanceof HTMLElement && depth < 10) {
+    if (el.hasAttribute('data-main-tab-pane')) break;
     const style = window.getComputedStyle(el);
     if (
       (style.overflowX === 'auto' || style.overflowX === 'scroll') &&
@@ -93,6 +100,7 @@ function isTabSwipeBlocked(target: EventTarget | null): boolean {
       return true;
     }
     el = el.parentElement;
+    depth += 1;
   }
   return false;
 }
@@ -112,6 +120,81 @@ function useMobileTabsMq(): boolean {
 function shouldMountPane(index: number, current: number, visited: ReadonlySet<number>): boolean {
   if (index === 0) return true;
   return index === current || Math.abs(index - current) <= 1 || visited.has(index);
+}
+
+function HomeTabSoftRefresh() {
+  const router = useRouter();
+  useRegisterTabRefresh('home', () => {
+    router.refresh();
+  });
+  return null;
+}
+
+function MainTabPane({
+  paneIndex,
+  tabId,
+  active,
+  enabled,
+  fill,
+  contentSx,
+  onPaneRef,
+  children,
+}: {
+  paneIndex: number;
+  tabId: MainTabId;
+  active: boolean;
+  enabled: boolean;
+  fill?: boolean;
+  contentSx?: SxProps<Theme>;
+  onPaneRef: (paneIndex: number) => (node: unknown) => void;
+  children: React.ReactNode;
+}) {
+  const { setRoot, pullPx, refreshing, dragging } = usePullToRefresh({
+    enabled: enabled && active,
+    onRefresh: () => runTabRefresh(tabId),
+  });
+
+  const setRef = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      onPaneRef(paneIndex)(node);
+      setRoot(node);
+    },
+    [onPaneRef, paneIndex, setRoot],
+  );
+
+  return (
+    <Box
+      ref={setRef}
+      data-main-tab-pane=""
+      aria-hidden={!active}
+      sx={{
+        width: `${100 / MAIN_TAB_COUNT}%`,
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflowX: 'hidden',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehaviorY: 'contain',
+        overscrollBehaviorX: 'none',
+        contain: 'layout paint',
+        backfaceVisibility: 'hidden',
+        pointerEvents: active ? 'auto' : 'none',
+      }}
+    >
+      <PullToRefreshIndicator pullPx={pullPx} refreshing={refreshing} dragging={dragging} />
+      <Box
+        sx={[
+          fill
+            ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }
+            : { flex: '0 0 auto', width: '100%' },
+          ...(Array.isArray(contentSx) ? contentSx : contentSx ? [contentSx] : []),
+        ]}
+      >
+        {children}
+      </Box>
+    </Box>
+  );
 }
 
 function ThreadQuerySync({
@@ -174,6 +257,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
   const indexRef = React.useRef(index);
   indexRef.current = index;
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
+  const trackRef = React.useRef<HTMLDivElement | null>(null);
   const paneRefs = React.useRef<Array<HTMLDivElement | null>>([]);
   const [scrollParent, setScrollParent] = React.useState<HTMLElement | null>(null);
   const setPaneRef = React.useCallback((paneIndex: number) => {
@@ -184,8 +268,9 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
     };
   }, []);
   const dragXRef = React.useRef(0);
-  const [dragX, setDragX] = React.useState(0);
-  const [dragging, setDragging] = React.useState(false);
+  const draggingRef = React.useRef(false);
+  const appliedIndexRef = React.useRef(index);
+  const reduceMotionRef = React.useRef(false);
   const startRef = React.useRef<{
     x: number;
     y: number;
@@ -193,6 +278,26 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
     locked: boolean | null;
     blocked: boolean;
   } | null>(null);
+
+  const applyTransform = React.useCallback((tabIndex: number, offsetPx: number, withTransition: boolean) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const animate = withTransition && !reduceMotionRef.current;
+    el.style.willChange = 'transform';
+    el.style.transition = animate ? `transform ${MAIN_TAB_SLIDE_MS}ms ${MOTION.ease}` : 'none';
+    el.style.transform = `translate3d(calc(${(-tabIndex * 100) / MAIN_TAB_COUNT}% + ${offsetPx}px), 0, 0)`;
+    if (offsetPx === 0) appliedIndexRef.current = tabIndex;
+  }, []);
+
+  const setTrackRef = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      trackRef.current = node;
+      if (node && !draggingRef.current) {
+        applyTransform(indexRef.current, 0, false);
+      }
+    },
+    [applyTransform],
+  );
 
   const setThreadOpen = React.useCallback((open: boolean | null) => {
     setThreadUiOpen(open);
@@ -224,6 +329,21 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
   }, [hosted, index]);
 
   React.useEffect(() => {
+    setActiveTabForRefresh(displayTab?.id ?? null);
+    return () => {
+      setActiveTabForRefresh(null);
+    };
+  }, [displayTab?.id]);
+
+  React.useEffect(() => {
+    if (!hosted || !displayTab) return;
+    const tabIndex = displayTab.index;
+    return subscribeTabRefresh(displayTab.id, () => {
+      paneRefs.current[tabIndex]?.scrollTo({ top: 0 });
+    });
+  }, [displayTab, hosted]);
+
+  React.useEffect(() => {
     if (!pagerActive) return;
     const pane = paneRefs.current[index];
     if (pane) pane.scrollTop = 0;
@@ -236,6 +356,50 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
     return () => {
       document.body.style.overflow = prev;
     };
+  }, [hosted]);
+
+  React.useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => {
+      reduceMotionRef.current = mq.matches;
+    };
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
+  React.useEffect(() => {
+    registerMainTabPagerPreview((nextIndex, animate) => {
+      if (draggingRef.current) return;
+      if (appliedIndexRef.current === nextIndex && dragXRef.current === 0) return;
+      dragXRef.current = 0;
+      applyTransform(nextIndex, 0, animate);
+    });
+    return () => {
+      registerMainTabPagerPreview(null);
+    };
+  }, [applyTransform]);
+
+  React.useLayoutEffect(() => {
+    if (!hosted || draggingRef.current) return;
+    if (appliedIndexRef.current === index && dragXRef.current === 0) return;
+    dragXRef.current = 0;
+    applyTransform(index, 0, true);
+  }, [applyTransform, hosted, index]);
+
+  React.useEffect(() => {
+    if (!hosted) return;
+    const win = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const warm = () => setVisited(new Set([0, 1, 2, 3]));
+    if (typeof win.requestIdleCallback === 'function') {
+      const id = win.requestIdleCallback(warm, { timeout: 900 });
+      return () => win.cancelIdleCallback?.(id);
+    }
+    const timer = window.setTimeout(warm, 400);
+    return () => window.clearTimeout(timer);
   }, [hosted]);
 
   React.useEffect(() => {
@@ -267,17 +431,26 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
         if (Math.abs(dx) < 12 && Math.abs(dy) < 12) return;
         start.locked = Math.abs(dx) > Math.abs(dy) * 1.15;
         if (!start.locked) return;
-        setDragging(true);
+        draggingRef.current = true;
+        applyTransform(appliedIndexRef.current, 0, false);
       }
       if (!start.locked) return;
       event.preventDefault();
       const width = el.clientWidth || window.innerWidth;
+      const current = appliedIndexRef.current;
       let next = dx;
-      if (index <= 0 && next > 0) next *= 0.35;
-      if (index >= MAIN_TAB_COUNT - 1 && next < 0) next *= 0.35;
+      if (current <= 0 && next > 0) next *= 0.35;
+      if (current >= MAIN_TAB_COUNT - 1 && next < 0) next *= 0.35;
       next = Math.max(-width, Math.min(width, next));
       dragXRef.current = next;
-      setDragX(next);
+      applyTransform(current, next, false);
+    };
+
+    const settleTo = (tabIndex: number, navigate: boolean) => {
+      draggingRef.current = false;
+      dragXRef.current = 0;
+      applyTransform(tabIndex, 0, true);
+      if (navigate && tabIndex !== indexRef.current) goToIndex(tabIndex);
     };
 
     const onEnd = () => {
@@ -285,9 +458,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
       startRef.current = null;
       const dx = dragXRef.current;
       if (!start || start.blocked || start.locked !== true) {
-        dragXRef.current = 0;
-        setDragX(0);
-        setDragging(false);
+        if (draggingRef.current) settleTo(indexRef.current, false);
         return;
       }
       const width = el.clientWidth || window.innerWidth;
@@ -295,29 +466,32 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
       const vx = dx / dt;
       const commit = Math.abs(dx) > width * 0.2 || Math.abs(vx) > 0.45;
       if (commit) {
-        if (dx < 0) goToIndex(index + 1);
-        else goToIndex(index - 1);
-        dragXRef.current = 0;
-        setDragX(0);
-        requestAnimationFrame(() => setDragging(false));
+        settleTo(clampMainTabIndex(dx < 0 ? indexRef.current + 1 : indexRef.current - 1), true);
         return;
       }
-      dragXRef.current = 0;
-      setDragX(0);
-      setDragging(false);
+      settleTo(indexRef.current, false);
+    };
+
+    const onTransitionEnd = (event: TransitionEvent) => {
+      if (event.target !== trackRef.current || event.propertyName !== 'transform') return;
+      const track = trackRef.current;
+      if (track && !draggingRef.current) track.style.willChange = 'auto';
     };
 
     el.addEventListener('touchstart', onStart, { passive: true });
     el.addEventListener('touchmove', onMove, { passive: false });
     el.addEventListener('touchend', onEnd);
     el.addEventListener('touchcancel', onEnd);
+    const track = trackRef.current;
+    track?.addEventListener('transitionend', onTransitionEnd);
     return () => {
       el.removeEventListener('touchstart', onStart);
       el.removeEventListener('touchmove', onMove);
       el.removeEventListener('touchend', onEnd);
       el.removeEventListener('touchcancel', onEnd);
+      track?.removeEventListener('transitionend', onTransitionEnd);
     };
-  }, [goToIndex, index, pagerActive, searchOverlay?.open, threadOpen]);
+  }, [applyTransform, goToIndex, pagerActive, searchOverlay?.open, threadOpen]);
 
   const ctx = React.useMemo<MainTabsContextValue>(
     () => ({
@@ -331,22 +505,12 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
     [displayTab, hosted, pagerActive, scrollParent, setThreadOpen, threadOpen],
   );
 
+  const ptrEnabled = !searchOverlay?.open;
+  const ptrAuthed = ptrEnabled && authed;
+
   if (!hosted) {
     return <MainTabsContext.Provider value={ctx}>{children}</MainTabsContext.Provider>;
   }
-
-  const widthPercent = 100 / MAIN_TAB_COUNT;
-  const translate = `translate3d(calc(${-index * widthPercent}% + ${dragX}px), 0, 0)`;
-
-  const paneSx = {
-    width: `${widthPercent}%`,
-    height: '100%',
-    overflowX: 'hidden',
-    overflowY: 'auto',
-    WebkitOverflowScrolling: 'touch',
-    overscrollBehaviorY: 'contain',
-    overscrollBehaviorX: 'none',
-  } as const;
 
   return (
     <MainTabsContext.Provider value={ctx}>
@@ -370,24 +534,30 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
           }}
         >
           <Box
+            ref={setTrackRef}
             sx={{
               display: 'flex',
               width: `${MAIN_TAB_COUNT * 100}%`,
               height: '100%',
-              transform: translate,
-              transition: dragging ? 'none' : `transform 280ms ${MOTION.ease}`,
-              willChange: 'transform',
             }}
           >
-            <Box
-              ref={setPaneRef(0)}
-              sx={paneSx}
+            <MainTabPane
+              paneIndex={0}
+              tabId="home"
+              active={index === 0}
+              enabled={ptrEnabled}
+              onPaneRef={setPaneRef}
             >
+              <HomeTabSoftRefresh />
               {routeTab?.id === 'home' ? children : <MainTabsHomePreview />}
-            </Box>
-            <Box
-              ref={setPaneRef(1)}
-              sx={{ ...paneSx, px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
+            </MainTabPane>
+            <MainTabPane
+              paneIndex={1}
+              tabId="saved"
+              active={index === 1}
+              enabled={ptrAuthed}
+              contentSx={{ px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
+              onPaneRef={setPaneRef}
             >
               {shouldMountPane(1, index, visited) ? (
                 authed ? (
@@ -396,15 +566,15 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
                   <MainTabsGuestPane title={t.chrome.navSaved} />
                 )
               ) : null}
-            </Box>
-            <Box
-              ref={setPaneRef(2)}
-              sx={{
-                ...paneSx,
-                display: 'flex',
-                flexDirection: 'column',
-                pb: threadOpen ? 0 : MOBILE_CONTENT_BOTTOM_PADDING,
-              }}
+            </MainTabPane>
+            <MainTabPane
+              paneIndex={2}
+              tabId="messages"
+              active={index === 2}
+              enabled={ptrAuthed}
+              fill
+              contentSx={{ pb: threadOpen ? 0 : MOBILE_CONTENT_BOTTOM_PADDING }}
+              onPaneRef={setPaneRef}
             >
               {shouldMountPane(2, index, visited) ? (
                 authed ? (
@@ -413,10 +583,14 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
                   <MainTabsGuestPane title={t.chrome.navMessages} />
                 )
               ) : null}
-            </Box>
-            <Box
-              ref={setPaneRef(3)}
-              sx={{ ...paneSx, px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
+            </MainTabPane>
+            <MainTabPane
+              paneIndex={3}
+              tabId="profile"
+              active={index === 3}
+              enabled={ptrAuthed}
+              contentSx={{ px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
+              onPaneRef={setPaneRef}
             >
               {shouldMountPane(3, index, visited) ? (
                 authed ? (
@@ -427,7 +601,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
                   <MainTabsGuestPane title={t.chrome.navProfile} />
                 )
               ) : null}
-            </Box>
+            </MainTabPane>
           </Box>
         </Box>
         {pagerActive ? <MobileBottomNav /> : null}

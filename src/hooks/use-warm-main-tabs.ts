@@ -24,5 +24,6 @@ export function useWarmMainTabs(): void {
     if (isLoading || !enabled) return;
     void prefetchConversations();
     void prefetchSavedListings();
+    void import('@/app/user/dashboard/page');
   }, [enabled, isLoading]);
 }

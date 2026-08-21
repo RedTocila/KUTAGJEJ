@@ -9,6 +9,7 @@ import { fetchHomepageRecommended } from '@/lib/public-listings-client';
 import { HomepageMixedListingCard, mixedListingKey } from '@/components/public/homepage-mixed-listing-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { ListingsSection } from '@/components/public/listings-section';
+import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
 
 function CarouselSkeleton() {
   return (
@@ -61,6 +62,14 @@ export function HomepageRecommendedSection({
       cancelled = true;
     };
   }, [needsRecovery]);
+
+  useRegisterTabRefresh('home', async () => {
+    const bundle = await fetchHomepageRecommended(8);
+    if (bundle.ok) {
+      patchHomepageListingsCache(bundle);
+      setItems(buildHomepageMixedLatest(bundle, 8));
+    }
+  });
 
   return (
     <ListingsSection

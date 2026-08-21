@@ -20,6 +20,7 @@ import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-c
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { ListingsSection } from '@/components/public/listings-section';
+import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
 
 type HomeListing =
   | PublicRealEstateListing
@@ -169,6 +170,17 @@ export function LazyHomeSection({
       cancelled = true;
     };
   }, [active, loaded, key, verticalId, limit]);
+
+  useRegisterTabRefresh('home', async () => {
+    if (!active) return;
+    const res = await fetchLatestVertical<HomeListing>(verticalId, limit);
+    if (!res.ok) return;
+    sectionCache.set(key, { listings: res.listings, total: res.total });
+    patchHomepageVertical(verticalId, res.listings, res.total);
+    setListings(res.listings);
+    setTotal(res.total);
+    setLoaded(true);
+  });
 
   return (
     <Box ref={rootRef}>

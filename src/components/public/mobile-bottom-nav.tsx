@@ -21,6 +21,7 @@ import {
   MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
   MOBILE_BOTTOM_NAV_FLOAT_INSET_PX,
 } from '@/lib/mobile-layout';
+import { MAIN_TAB_SLIDE_MS } from '@/lib/main-tab-pager';
 import { normalizeNavPath } from '@/lib/navigation-pending';
 import { isPublicBrowsePath } from '@/lib/public-browse-path';
 import { paths } from '@/paths';
@@ -247,7 +248,7 @@ export function MobileBottomNav() {
                 opacity: hasActiveTab ? 1 : 0,
                 transform: `translate3d(${indicatorIndex * 100}%, 0, 0)`,
                 transition: transitionReady
-                  ? 'transform 320ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease'
+                  ? `transform ${MAIN_TAB_SLIDE_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease`
                   : 'none',
                 pointerEvents: 'none',
                 zIndex: 0,

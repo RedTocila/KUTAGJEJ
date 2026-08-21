@@ -48,6 +48,7 @@ import { ListingInquiryCard } from '@/components/user/messages/listing-inquiry-c
 import { useMessagesThreadChrome } from '@/contexts/messages-thread-chrome-context';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
+import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
 import { useUser } from '@/hooks/use-user';
 import {
   consumePendingListingChat,
@@ -1688,6 +1689,11 @@ export function UserMessagesView() {
   React.useEffect(() => {
     void loadInbox();
   }, [loadInbox]);
+
+  useRegisterTabRefresh('messages', async () => {
+    const conversationId = selectedIdRef.current;
+    await Promise.all([loadInbox(), conversationId ? loadThread(conversationId) : Promise.resolve()]);
+  });
 
   React.useEffect(() => {
     if (pendingHandled.current) return;

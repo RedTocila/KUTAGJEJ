@@ -11,6 +11,7 @@ import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-c
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { ListingsSection } from '@/components/public/listings-section';
+import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
 
 function OkazionCard({ listing }: { listing: PublicOkazionListing }) {
   switch (listing.kind) {
@@ -84,6 +85,15 @@ export function HomepageOkazionSection({
       cancelled = true;
     };
   }, [needsRecovery]);
+
+  useRegisterTabRefresh('home', async () => {
+    const res = await fetchBrowseOkazion(8);
+    if (res.ok) {
+      patchHomepageListingsCache({ okazion: res.listings, okazionTotal: res.total });
+      setListings(res.listings);
+      setTotal(res.total);
+    }
+  });
 
   if (!loading && listings.length === 0) return null;
 

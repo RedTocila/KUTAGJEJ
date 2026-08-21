@@ -63,6 +63,7 @@ import { planAccentForCode } from '@/components/user/packages/package-ui';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
 import { useMainTabsHosted } from '@/components/main-tabs/main-tabs-shell';
+import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
 
 function quotasFromSub(sub: UserSubscriptionSummary | null): ContractQuotas {
   if (!sub) return FREE_PLAN_QUOTAS;
@@ -364,6 +365,38 @@ export function UserDashboardHome() {
       cancelled = true;
     };
   }, [user, canPublish]);
+
+  const refreshDashboard = React.useCallback(async () => {
+    await checkSession();
+    if (!user) return;
+    const [{ contracts }, subsRes] = await Promise.all([
+      listPublicContracts({ subscriberKind: subscriberKindFilter }),
+      listMySubscriptions(),
+    ]);
+    setPlans(contracts ?? []);
+    const active =
+      (subsRes.subscriptions ?? []).find((s) => s.status === 'active' && Number(s.priceEur) > 0) ?? null;
+    setActiveSub(active);
+    if (!canPublish) return;
+    const [re, cars, jobs, mkt, premium, okazion] = await Promise.all([
+      listMyRealEstateListings(),
+      listMyCarListings(),
+      listMyJobListings(),
+      listMyMarketplaceListings(),
+      fetchPremiumPlanQuota(),
+      fetchOkazionPlanQuota(),
+    ]);
+    setUsage({
+      apartments: (re.listings ?? []).length,
+      cars: (cars.listings ?? []).length,
+      jobs: (jobs.listings ?? []).length,
+      products: (mkt.listings ?? []).length,
+      premium: premium.quota?.used ?? 0,
+      okazion: okazion.quota?.used ?? 0,
+    });
+  }, [canPublish, checkSession, subscriberKindFilter, user]);
+
+  useRegisterTabRefresh('profile', () => refreshDashboard());
 
   const boostCoins = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
   const avatarSrc = typeof user?.avatar === 'string' && user.avatar.trim() ? user.avatar.trim() : undefined;

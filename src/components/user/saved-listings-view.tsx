@@ -23,6 +23,7 @@ import { RealEstateCard } from '@/components/public/listing-cards/real-estate-ca
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { useSavedListings } from '@/contexts/saved-listings-context';
 import { useCopy } from '@/hooks/use-copy';
+import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import {
   fetchSavedListings,
@@ -134,6 +135,8 @@ export function SavedListingsView() {
     }
     void loadPage(1, false);
   }, [user, canView, router, loadPage]);
+
+  useRegisterTabRefresh('saved', () => loadPage(1, false));
 
   if (user && !canView) return null;
   if (!user && items.length === 0) return null;

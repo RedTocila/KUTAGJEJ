@@ -27,16 +27,20 @@ import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
 
 import { HeaderMobileSearch } from './header-mobile-search';
-import { useMainTabsPagerActive } from '@/components/main-tabs/main-tabs-shell';
+import { useMainTabs } from '@/components/main-tabs/main-tabs-shell';
 
 const TOOLBAR_MIN_HEIGHT = { xs: 72, md: 88 } as const;
 
 export function PublicHeader() {
   const { user } = useUser();
   const t = useCopy();
-  const pagerActive = useMainTabsPagerActive();
-  const elevated = useScrollTrigger({ disableHysteresis: true, threshold: 8 });
-  const headerHidden = useScrollRevealHidden();
+  const { active: pagerActive, scrollParent } = useMainTabs();
+  const elevated = useScrollTrigger({
+    disableHysteresis: true,
+    threshold: 8,
+    target: scrollParent ?? undefined,
+  });
+  const headerHidden = useScrollRevealHidden({ target: scrollParent });
   const [mounted, setMounted] = React.useState(false);
   const [addListingOpen, setAddListingOpen] = React.useState(false);
 
@@ -85,8 +89,7 @@ export function PublicHeader() {
 
           return {
             top: 0,
-            left: 0,
-            right: 0,
+            ...(pagerActive ? { width: '100%' } : { left: 0, right: 0 }),
             color: 'text.primary',
             backgroundColor,
             backdropFilter: backdrop,
@@ -249,15 +252,15 @@ export function PublicHeader() {
         </Container>
       </AppBar>
       {pagerActive ? null : (
-      <Toolbar
-        disableGutters
-        aria-hidden
-        sx={{
-          minHeight: TOOLBAR_MIN_HEIGHT,
-          visibility: 'hidden',
-          pointerEvents: 'none',
-        }}
-      />
+        <Toolbar
+          disableGutters
+          aria-hidden
+          sx={{
+            minHeight: TOOLBAR_MIN_HEIGHT,
+            visibility: 'hidden',
+            pointerEvents: 'none',
+          }}
+        />
       )}
       <AddListingPickerDialog open={addListingOpen} onClose={() => setAddListingOpen(false)} />
     </>

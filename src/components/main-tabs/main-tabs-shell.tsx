@@ -40,6 +40,8 @@ type MainTabsContextValue = {
   tab: MainTab | null;
   threadOpen: boolean;
   setThreadOpen: (open: boolean | null) => void;
+  /** Scroll container for the visible tab pane (window when the pager is off). */
+  scrollParent: HTMLElement | null;
 };
 
 const MainTabsContext = React.createContext<MainTabsContextValue>({
@@ -48,6 +50,7 @@ const MainTabsContext = React.createContext<MainTabsContextValue>({
   tab: null,
   threadOpen: false,
   setThreadOpen: () => {},
+  scrollParent: null,
 });
 
 export function useMainTabs(): MainTabsContextValue {
@@ -61,6 +64,10 @@ export function useMainTabsHosted(): boolean {
 
 export function useMainTabsPagerActive(): boolean {
   return React.useContext(MainTabsContext).active;
+}
+
+export function useMainTabsScrollParent(): HTMLElement | null {
+  return React.useContext(MainTabsContext).scrollParent;
 }
 
 function canUsePortal(user: ReturnType<typeof useUser>['user']): boolean {
@@ -164,11 +171,16 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
   }, [displayTab]);
 
   const index = displayTab?.index ?? 0;
+  const indexRef = React.useRef(index);
+  indexRef.current = index;
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
   const paneRefs = React.useRef<Array<HTMLDivElement | null>>([]);
+  const [scrollParent, setScrollParent] = React.useState<HTMLElement | null>(null);
   const setPaneRef = React.useCallback((paneIndex: number) => {
     return (node: unknown) => {
-      paneRefs.current[paneIndex] = node instanceof HTMLDivElement ? node : null;
+      const el = node instanceof HTMLDivElement ? node : null;
+      paneRefs.current[paneIndex] = el;
+      if (paneIndex === indexRef.current) setScrollParent(el);
     };
   }, []);
   const dragXRef = React.useRef(0);
@@ -202,6 +214,14 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
     },
     [authed, index],
   );
+
+  React.useLayoutEffect(() => {
+    if (!hosted) {
+      setScrollParent(null);
+      return;
+    }
+    setScrollParent(paneRefs.current[index] ?? null);
+  }, [hosted, index]);
 
   React.useEffect(() => {
     if (!pagerActive) return;
@@ -306,8 +326,9 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
       tab: displayTab,
       threadOpen,
       setThreadOpen,
+      scrollParent,
     }),
-    [displayTab, hosted, pagerActive, setThreadOpen, threadOpen],
+    [displayTab, hosted, pagerActive, scrollParent, setThreadOpen, threadOpen],
   );
 
   if (!hosted) {

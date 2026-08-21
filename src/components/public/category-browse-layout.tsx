@@ -129,6 +129,7 @@ export function CategoryBrowseLayout({
                     pageSize={pageSize}
                     hasFilters={hasFilters}
                     enableInfiniteScroll={enableInfiniteScroll}
+                    countKind={verticalId === 'profiles' ? 'profiles' : 'listings'}
                   />
                 )}
                 {children}

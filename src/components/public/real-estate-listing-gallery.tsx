@@ -364,6 +364,7 @@ export function RealEstateListingGallery(props: {
       ratingAverage: sharePayload?.ratingAverage,
       reviewCount: sharePayload?.reviewCount,
       contactPhone: sharePayload?.contactPhone,
+      themeColor: sharePayload?.themeColor,
       url: sharePayload?.url,
     };
   }, [listingId, listingKind, saveCount, sharePayload, title, urls]);

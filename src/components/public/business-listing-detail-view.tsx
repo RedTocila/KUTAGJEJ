@@ -288,6 +288,7 @@ export function BusinessListingDetailView({
                     imageUrl: listing.imageUrls[0] ?? listing.imageUrl,
                     location: locationLine || listing.cityName || undefined,
                     contactPhone: phone?.trim() || undefined,
+                    themeColor: listing.seller?.shareThemeColor || undefined,
                     createdAt: listing.createdAt,
                     viewCount: listing.viewCount,
                     saveCount,

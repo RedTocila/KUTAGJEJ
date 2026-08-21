@@ -369,6 +369,11 @@ export async function fetchPublicMemberProfile(id: string): Promise<PublicMember
   return (await loadPublicMemberProfile(id)).data;
 }
 
+/** Latest public member profiles (homepage slider) — same payload as search without `q`. */
+export async function fetchLatestPublicMembers(limit = 8): Promise<PublicMemberSearchResult> {
+  return fetchPublicMemberSearch('', limit, 1);
+}
+
 export async function fetchPublicMemberSearch(
   query: string,
   limit = 24,

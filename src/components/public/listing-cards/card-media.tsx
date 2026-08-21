@@ -131,6 +131,7 @@ export function CardMedia({
       ratingAverage: sharePayload?.ratingAverage,
       reviewCount: sharePayload?.reviewCount,
       contactPhone: sharePayload?.contactPhone,
+      themeColor: sharePayload?.themeColor,
       url: sharePayload?.url,
     }),
     [alt, imageUrl, listingId, listingKind, saveCount, sharePayload, topLeftBadge]

@@ -57,6 +57,9 @@ function wrapProfile(row) {
   };
 
   // Only attach columns that exist on the row — later migrations may be missing after a reset.
+  if (Object.prototype.hasOwnProperty.call(row, 'share_theme_color')) {
+    user.shareThemeColor = row.share_theme_color || null;
+  }
   if (Object.prototype.hasOwnProperty.call(row, 'daily_share_claimed_on')) {
     user.dailyShareClaimedOn = row.daily_share_claimed_on || null;
   }
@@ -86,6 +89,7 @@ function profileUpdateFromCamel(fields) {
     businessCategory: 'business_category',
     basedCityId: 'based_city_id',
     basedCityName: 'based_city_name',
+    shareThemeColor: 'share_theme_color',
     createdBy: 'created_by',
     jobsEmployerVerifiedAt: 'jobs_employer_verified_at',
     professionalsVerifiedAt: 'professionals_verified_at',
@@ -112,6 +116,7 @@ function profileUpdateFromCamel(fields) {
   if (out.avatar_url === '') out.avatar_url = null;
   if (out.based_city_id === '') out.based_city_id = null;
   if (out.based_city_name === '') out.based_city_name = null;
+  if (out.share_theme_color === '') out.share_theme_color = null;
   return out;
 }
 

@@ -379,6 +379,7 @@ export function CarListingDetailView({
     viewCount,
     saveCount: listing.saveCount,
     contactPhone: displayPhone || undefined,
+    themeColor: listing.seller?.shareThemeColor || undefined,
     url: canonicalUrl,
   };
 

@@ -78,13 +78,6 @@ export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
       onNavigate?.();
       return;
     }
-    if (active.id === 'profiles') {
-      const params = new URLSearchParams({ cat: 'profiles' });
-      if (trimmed) params.set('q', trimmed);
-      router.push(`${paths.public.search}?${params.toString()}`);
-      onNavigate?.();
-      return;
-    }
     if (isHomeVerticalId(active.id)) {
       recordSearchInterest({ verticalId: active.id, q: trimmed || undefined });
     }

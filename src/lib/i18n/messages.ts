@@ -228,7 +228,9 @@ const sq = {
   },
   browse: {
     listingsCount: (n: number) => (n === 1 ? '1 njoftim' : `${n.toLocaleString('en-GB')} njoftime`),
+    profilesCount: (n: number) => (n === 1 ? '1 profil' : `${n.toLocaleString('en-GB')} profile`),
     noListingsYet: 'Asnjë njoftim ende',
+    noProfilesYet: 'Asnjë profil ende',
     retryLoad: 'Provo përsëri',
     showingRange: (start: number, end: number, total: number) =>
       `Shfaqen ${start.toLocaleString('en-GB')}–${end.toLocaleString('en-GB')} nga ${total.toLocaleString('en-GB')} njoftime`,
@@ -244,6 +246,8 @@ const sq = {
     slideN: (n: number) => `Njoftimi ${n}`,
     emptyState: 'Nuk ka njoftime ende — bëhu i pari.',
     emptyBeFirst: 'Nuk ka njoftime këtu. Bëhu i pari që liston.',
+    emptyProfiles: 'Nuk ka profile për momentin.',
+    emptyProfilesFiltered: 'Nuk u gjet asnjë profil për këtë kërkim.',
     emptyOkazion: 'Nuk ka OKAZION aktive për momentin. Kontrollo përsëri së shpejti.',
     addOkazion: 'Shto OKAZION',
     listingPlaceholder: 'Hapësirë për njoftim',
@@ -977,7 +981,9 @@ const en: AppMessages = {
   },
   browse: {
     listingsCount: (n: number) => (n === 1 ? '1 listing' : `${n.toLocaleString('en-GB')} listings`),
+    profilesCount: (n: number) => (n === 1 ? '1 profile' : `${n.toLocaleString('en-GB')} profiles`),
     noListingsYet: 'No listings yet',
+    noProfilesYet: 'No profiles yet',
     retryLoad: 'Try again',
     showingRange: (start: number, end: number, total: number) =>
       `Showing ${start.toLocaleString('en-GB')}–${end.toLocaleString('en-GB')} of ${total.toLocaleString('en-GB')} listings`,
@@ -993,6 +999,8 @@ const en: AppMessages = {
     slideN: (n: number) => `Listing ${n}`,
     emptyState: 'No listings yet — be the first.',
     emptyBeFirst: 'No listing on this one. Be the first to list.',
+    emptyProfiles: 'No profiles right now.',
+    emptyProfilesFiltered: 'No profiles matched this search.',
     emptyOkazion: 'No active OKAZION deals right now. Check back soon.',
     addOkazion: 'Add OKAZION',
     listingPlaceholder: 'Space for a listing',

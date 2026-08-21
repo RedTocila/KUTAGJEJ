@@ -10,6 +10,8 @@ import {
   localizeVertical,
   OKAZION_ACCENT,
   OKAZION_ACCENT_SOFT,
+  PROFILES_ACCENT,
+  PROFILES_ACCENT_SOFT,
   type HomeVerticalId,
 } from '@/lib/home-categories';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
@@ -24,14 +26,15 @@ import { useUser } from '@/hooks/use-user';
 import { hardNavigate } from '@/lib/hard-navigate';
 
 import { CategoryBrowseControls } from './listing-filters/category-browse-controls';
+import { MembersBrowseControls } from './listing-filters/members-browse-controls';
 import {
   OkazionBrowseControls,
   OkazionBrowseControlsFallback,
 } from './listing-filters/okazion-browse-controls';
 import { HomeVerticalIcon } from './home-vertical-icon';
 
-/** Browse pages that share the quiet category hero (listing verticals + OKAZION). */
-export type BrowseCategoryId = HomeVerticalId | 'okazion';
+/** Browse pages that share the quiet category hero (listing verticals + OKAZION + profiles). */
+export type BrowseCategoryId = HomeVerticalId | 'okazion' | 'profiles';
 
 /**
  * Quiet header used by every public browse page (Real Estate, Cars, Jobs,
@@ -57,6 +60,10 @@ export function PublicCategoryHero({
   const label = isHomeVerticalId(verticalId)
     ? localizeVertical(verticalId, language).label
     : localizeSearchCategory(verticalId, language).label;
+  const isOkazion = verticalId === 'okazion';
+  const isProfiles = verticalId === 'profiles';
+  const accent = isOkazion ? OKAZION_ACCENT : isProfiles ? PROFILES_ACCENT : undefined;
+  const accentSoft = isOkazion ? OKAZION_ACCENT_SOFT : isProfiles ? PROFILES_ACCENT_SOFT : undefined;
   const elevated = useScrollTrigger({ disableHysteresis: true, threshold: 8 });
   const chromeHidden = useScrollRevealHidden({ alwaysShowBelowY: 24 });
   const [mounted, setMounted] = React.useState(false);
@@ -99,7 +106,7 @@ export function PublicCategoryHero({
               xs: 'max(10px, env(safe-area-inset-top, 0px))',
               md: 5,
             },
-            pb: verticalId === 'okazion' ? { xs: 1.25, md: 2.5 } : { xs: 1.5, md: 5 },
+            pb: isOkazion || isProfiles ? { xs: 1.25, md: 2.5 } : { xs: 1.5, md: 5 },
             bgcolor: {
               xs: showFrost ? frosted : 'background.default',
               md: 'transparent',
@@ -128,7 +135,7 @@ export function PublicCategoryHero({
               aria-label={t.browse.backHomeAria}
               sx={{ display: { xs: 'inline-flex', md: 'none' }, mt: 0.5 }}
             />
-            {verticalId === 'okazion' ? (
+            {accent && accentSoft ? (
               <Box
                 sx={{
                   width: 40,
@@ -137,11 +144,11 @@ export function PublicCategoryHero({
                   display: 'grid',
                   placeItems: 'center',
                   flexShrink: 0,
-                  bgcolor: OKAZION_ACCENT_SOFT,
-                  color: OKAZION_ACCENT,
+                  bgcolor: accentSoft,
+                  color: accent,
                 }}
               >
-                <HomeVerticalIcon verticalId="okazion" size={22} />
+                <HomeVerticalIcon verticalId={verticalId} size={22} />
               </Box>
             ) : (
               <PortalIconBox size={40}>
@@ -165,8 +172,12 @@ export function PublicCategoryHero({
                 {pending
                   ? t.common.loading
                   : total > 0
-                    ? t.browse.listingsCount(total)
-                    : t.browse.noListingsYet}
+                    ? isProfiles
+                      ? t.browse.profilesCount(total)
+                      : t.browse.listingsCount(total)
+                    : isProfiles
+                      ? t.browse.noProfilesYet
+                      : t.browse.noListingsYet}
               </Typography>
             </Stack>
           </Stack>
@@ -174,6 +185,10 @@ export function PublicCategoryHero({
           {isHomeVerticalId(verticalId) ? (
             <Suspense fallback={null}>
               <CategoryBrowseControls verticalId={verticalId} cities={cities} />
+            </Suspense>
+          ) : isProfiles ? (
+            <Suspense fallback={null}>
+              <MembersBrowseControls />
             </Suspense>
           ) : (
             <Suspense fallback={<OkazionBrowseControlsFallback />}>
@@ -207,6 +222,7 @@ export function BrowseListingsCountCaption({
   pageSize,
   hasFilters,
   enableInfiniteScroll,
+  countKind = 'listings',
 }: {
   total: number;
   shownCount: number;
@@ -215,16 +231,21 @@ export function BrowseListingsCountCaption({
   pageSize: number;
   hasFilters: boolean;
   enableInfiniteScroll: boolean;
+  countKind?: 'listings' | 'profiles';
 }) {
   const t = useCopy();
   const rangeStart = shownCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const rangeEnd = shownCount === 0 ? 0 : (page - 1) * pageSize + shownCount;
   const text =
-    totalPages > 1 && !enableInfiniteScroll
-      ? t.browse.showingRange(rangeStart, rangeEnd, total)
-      : hasFilters
-        ? t.browse.filteredCount(shownCount, total)
-        : t.browse.listingsCount(total);
+    countKind === 'profiles'
+      ? hasFilters
+        ? t.search.profileCount(shownCount)
+        : t.browse.profilesCount(total)
+      : totalPages > 1 && !enableInfiniteScroll
+        ? t.browse.showingRange(rangeStart, rangeEnd, total)
+        : hasFilters
+          ? t.browse.filteredCount(shownCount, total)
+          : t.browse.listingsCount(total);
 
   return (
     <Typography variant="body2" color="text.secondary">
@@ -238,6 +259,7 @@ export function BrowseListingsCountCaption({
  */
 export function PublicCategoryEmptyState({
   verticalId,
+  hasFilters = false,
 }: {
   verticalId: BrowseCategoryId;
   hasFilters?: boolean;
@@ -245,6 +267,7 @@ export function PublicCategoryEmptyState({
   const t = useCopy();
   const { user } = useUser();
   const isOkazion = verticalId === 'okazion';
+  const isProfiles = verticalId === 'profiles';
   const [pickerOpen, setPickerOpen] = React.useState(false);
 
   const openPicker = () => {
@@ -277,37 +300,45 @@ export function PublicCategoryEmptyState({
                 borderRadius: 2.5,
                 display: 'grid',
                 placeItems: 'center',
-                color: isOkazion ? OKAZION_ACCENT : 'primary.main',
+                color: isOkazion ? OKAZION_ACCENT : isProfiles ? PROFILES_ACCENT : 'primary.main',
                 bgcolor: isOkazion
                   ? OKAZION_ACCENT_SOFT
-                  : (theme) =>
-                      theme.palette.mode === 'dark'
-                        ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
-                        : 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
+                  : isProfiles
+                    ? PROFILES_ACCENT_SOFT
+                    : (theme) =>
+                        theme.palette.mode === 'dark'
+                          ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
+                          : 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
               }}
             >
               <HomeVerticalIcon verticalId={verticalId} size={32} />
             </Box>
             <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.5 }}>
-              {t.browse.emptyBeFirst}
+              {isProfiles
+                ? hasFilters
+                  ? t.browse.emptyProfilesFiltered
+                  : t.browse.emptyProfiles
+                : t.browse.emptyBeFirst}
             </Typography>
-            <Button
-              onClick={openPicker}
-              variant="outlined"
-              size="small"
-              sx={{
-                textTransform: 'none',
-                fontWeight: 600,
-                borderRadius: 2,
-                ...(isOkazion ? { borderColor: OKAZION_ACCENT, color: OKAZION_ACCENT } : null),
-              }}
-            >
-              {t.picker.title}
-            </Button>
+            {isProfiles ? null : (
+              <Button
+                onClick={openPicker}
+                variant="outlined"
+                size="small"
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  ...(isOkazion ? { borderColor: OKAZION_ACCENT, color: OKAZION_ACCENT } : null),
+                }}
+              >
+                {t.picker.title}
+              </Button>
+            )}
           </Stack>
         </Box>
       </Container>
-      <AddListingPickerDialog open={pickerOpen} onClose={() => setPickerOpen(false)} />
+      {isProfiles ? null : <AddListingPickerDialog open={pickerOpen} onClose={() => setPickerOpen(false)} />}
     </>
   );
 }

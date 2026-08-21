@@ -12,6 +12,8 @@ export const paths = {
     businesses: '/biznese',
     /** Professionals & freelance services. */
     professionals: '/profesioniste',
+    /** Public member profiles directory. */
+    profiles: '/anetares',
     /** Full-page search: pick category, then query + results. Opens as an overlay in-app. */
     search: '/kerko',
     about: '/rreth-nesh',

@@ -280,6 +280,7 @@ const SAFE_COLUMN_ADDS = [
   ['profiles', 'boost_credits', 'integer not null default 0'],
   ['profiles', 'based_city_id', 'uuid'],
   ['profiles', 'based_city_name', 'text'],
+  ['profiles', 'share_theme_color', 'text'],
   ['real_estate_listings', 'premium_until', 'timestamptz'],
   ['real_estate_listings', 'okazion_until', 'timestamptz'],
   ['real_estate_listings', 'bumped_at', 'timestamptz'],

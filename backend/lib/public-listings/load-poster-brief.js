@@ -110,6 +110,7 @@ async function loadPosterBrief(_posterModelHint, posterId, verifiedContext = nul
         trustBadge,
         businessOwner: profile.businessOwner?.trim() || null,
         businessCategory: profile.businessCategory?.trim() || null,
+        shareThemeColor: profile.shareThemeColor || null,
       });
     }
 
@@ -125,6 +126,7 @@ async function loadPosterBrief(_posterModelHint, posterId, verifiedContext = nul
       trustBadge,
       businessOwner: null,
       businessCategory: null,
+      shareThemeColor: profile.shareThemeColor || null,
     });
   } catch (e) {
     console.warn('loadPosterBrief:', e?.message || e);

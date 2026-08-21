@@ -13,6 +13,8 @@ import {
   localizeVertical,
   OKAZION_ACCENT,
   OKAZION_ACCENT_SOFT,
+  PROFILES_ACCENT,
+  PROFILES_ACCENT_SOFT,
   type HomeVerticalId,
   type SearchCategoryId,
 } from '@/lib/home-categories';
@@ -23,8 +25,8 @@ import { SubcategoryPills } from './subcategory-pills';
 import { HomeVerticalIcon } from './home-vertical-icon';
 import { VerticalIcon } from './vertical-icon';
 
-/** Homepage / browse section ids — listing verticals plus OKAZION. */
-export type ListingsSectionVerticalId = HomeVerticalId | 'okazion';
+/** Homepage / browse section ids — listing verticals plus OKAZION / profiles. */
+export type ListingsSectionVerticalId = HomeVerticalId | 'okazion' | 'profiles';
 
 export interface ListingsSectionProps {
   verticalId: ListingsSectionVerticalId;
@@ -50,13 +52,15 @@ export interface ListingsSectionProps {
 }
 
 function sectionMeta(verticalId: ListingsSectionVerticalId, language: AppLanguage) {
-  if (verticalId === 'okazion') {
-    const cat = localizeSearchCategory('okazion' satisfies SearchCategoryId, language);
+  if (verticalId === 'okazion' || verticalId === 'profiles') {
+    const cat = localizeSearchCategory(verticalId satisfies SearchCategoryId, language);
+    const isOkazion = verticalId === 'okazion';
     return {
       label: cat.label,
       href: cat.href,
-      postHref: `${paths.user.realEstateListing}?okazion=1`,
-      isOkazion: true as const,
+      postHref: isOkazion ? `${paths.user.realEstateListing}?okazion=1` : undefined,
+      accent: isOkazion ? OKAZION_ACCENT : PROFILES_ACCENT,
+      accentSoft: isOkazion ? OKAZION_ACCENT_SOFT : PROFILES_ACCENT_SOFT,
     };
   }
   const vertical = localizeVertical(verticalId, language);
@@ -64,7 +68,8 @@ function sectionMeta(verticalId: ListingsSectionVerticalId, language: AppLanguag
     label: vertical.label,
     href: vertical.href,
     postHref: vertical.postHref,
-    isOkazion: false as const,
+    accent: undefined,
+    accentSoft: undefined,
   };
 }
 
@@ -95,7 +100,7 @@ export function ListingsSection({
           : (titleOverride ?? meta.label);
 
   const showPills = !hideSubcategoryPills && isHomeVerticalId(verticalId);
-  const usePhosphorIcon = useMuiVerticalIcon || verticalId === 'okazion';
+  const usePhosphorIcon = useMuiVerticalIcon || Boolean(meta.accent);
 
   return (
     <Box
@@ -120,10 +125,10 @@ export function ListingsSection({
                     display: 'grid',
                     placeItems: 'center',
                     flexShrink: 0,
-                    color: meta.isOkazion ? OKAZION_ACCENT : 'primary.main',
+                    color: meta.accent ?? 'primary.main',
                     bgcolor: (theme) =>
-                      meta.isOkazion
-                        ? OKAZION_ACCENT_SOFT
+                      meta.accentSoft
+                        ? meta.accentSoft
                         : theme.palette.mode === 'dark'
                           ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
                           : 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
@@ -144,7 +149,7 @@ export function ListingsSection({
                   fontSize: { xs: '1.1rem', md: '1.25rem' },
                   lineHeight: 1.3,
                   letterSpacing: '-0.01em',
-                  ...(meta.isOkazion ? { color: OKAZION_ACCENT } : null),
+                  ...(meta.accent ? { color: meta.accent } : null),
                 }}
               >
                 {title}
@@ -204,22 +209,22 @@ function EmptyPlaceholder({ verticalId }: { verticalId: ListingsSectionVerticalI
         <Typography variant="body2" color="text.secondary">
           {t.common.noListingsYet(meta.label.toLowerCase())}
         </Typography>
-        <Button
-          component={RouterLink}
-          href={meta.postHref}
-          size="small"
-          variant="outlined"
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            borderRadius: 2,
-            ...(meta.isOkazion
-              ? { borderColor: OKAZION_ACCENT, color: OKAZION_ACCENT }
-              : null),
-          }}
-        >
-          {t.common.beFirstToPost}
-        </Button>
+        {meta.postHref ? (
+          <Button
+            component={RouterLink}
+            href={meta.postHref}
+            size="small"
+            variant="outlined"
+            sx={{
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: 2,
+              ...(meta.accent ? { borderColor: meta.accent, color: meta.accent } : null),
+            }}
+          >
+            {t.common.beFirstToPost}
+          </Button>
+        ) : null}
       </Stack>
     </Box>
   );

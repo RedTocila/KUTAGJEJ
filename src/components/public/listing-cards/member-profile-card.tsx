@@ -1,9 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
-import { Avatar, Box, Paper, Stack, Typography } from '@mui/material';
+import { Avatar, Box, Stack, Typography } from '@mui/material';
 
+import { SearchHitCard } from '@/components/public/listing-cards/search-hit-card';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import {
   ListingVerifiedBadge,
@@ -16,7 +16,6 @@ import { formatRatingDisplay } from '@/lib/format-rating';
 import { memberInitials, type PublicMemberSearchHit } from '@/lib/public-member-client';
 import { avatarImageUrl } from '@/lib/storage-image';
 import { pathsPublicMemberProfile } from '@/paths';
-import { MOTION } from '@/styles/motion';
 
 export function MemberProfileCard({ member }: { member: PublicMemberSearchHit }) {
   const t = useCopy();
@@ -27,50 +26,7 @@ export function MemberProfileCard({ member }: { member: PublicMemberSearchHit })
   const ratingLabel = formatRatingDisplay(member.ratingAverage);
 
   return (
-    <Paper
-      component={Link}
-      href={href}
-      variant="outlined"
-      onClick={() => {
-        if (typeof window !== 'undefined') {
-          window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-        }
-      }}
-      sx={{
-        height: '100%',
-        borderRadius: 2.5,
-        border: '2px solid',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
-        p: { xs: 2, sm: 2.5 },
-        display: 'flex',
-        flexDirection: 'column',
-        textDecoration: 'none',
-        color: 'inherit',
-        cursor: 'pointer',
-        transition: `border-color ${MOTION.base} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}, box-shadow ${MOTION.base} ${MOTION.ease}`,
-        '@media (hover: hover) and (pointer: fine)': {
-          '&:hover': {
-            borderColor: 'primary.main',
-            transform: 'translateY(-3px)',
-            boxShadow: (theme) =>
-              theme.palette.mode === 'dark'
-                ? '0 12px 28px rgba(0, 0, 0, 0.35)'
-                : '0 12px 28px rgba(15, 23, 10, 0.1)',
-          },
-        },
-        '&:active': {
-          transform: 'scale(0.985)',
-          boxShadow: 'none',
-          transitionDuration: MOTION.press,
-        },
-        '@media (prefers-reduced-motion: reduce)': {
-          transition: 'none',
-          '&:hover': { transform: 'none', boxShadow: 'none' },
-          '&:active': { transform: 'none' },
-        },
-      }}
-    >
+    <SearchHitCard href={href}>
       <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
         <Avatar
           src={avatarImageUrl(member.avatarUrl, 144) ?? undefined}
@@ -115,6 +71,6 @@ export function MemberProfileCard({ member }: { member: PublicMemberSearchHit })
           <ProfessionalRatingSummary rating={ratingLabel} reviewCount={reviewCount} starSize={14} />
         </Stack>
       </Stack>
-    </Paper>
+    </SearchHitCard>
   );
 }

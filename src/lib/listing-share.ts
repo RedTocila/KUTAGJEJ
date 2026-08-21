@@ -54,6 +54,8 @@ export type ListingSharePayload = {
   reviewCount?: number;
   /** Seller contact — printed on story / saved card images only. */
   contactPhone?: string | null;
+  /** Profile accent for the card / story chrome. Falls back to brand green. */
+  themeColor?: string | null;
   /** Absolute or path URL; defaults to current page. */
   url?: string;
 };
@@ -67,26 +69,49 @@ const SHARE_PHONE_PATH: Record<ListingMetricKind, string> = {
   professionals: 'professionals',
 };
 
+export type ListingShareExtras = {
+  contactPhone: string | null;
+  themeColor: string | null;
+};
+
+/** Load contact + owner theme color for story / save images (browse cards omit them). */
+export async function fetchListingShareExtras(
+  kind: ListingMetricKind,
+  listingId: string,
+): Promise<ListingShareExtras> {
+  const empty: ListingShareExtras = { contactPhone: null, themeColor: null };
+  const id = String(listingId || '').trim();
+  const slug = SHARE_PHONE_PATH[kind];
+  if (!id || !slug) return empty;
+  try {
+    const res = await fetch(getApiUrl(`/public/listings/${slug}/${encodeURIComponent(id)}`), {
+      cache: 'no-store',
+    });
+    if (!res.ok) return empty;
+    const data = (await res.json()) as {
+      listing?: {
+        contactPhone?: string | null;
+        seller?: { phone?: string | null; shareThemeColor?: string | null } | null;
+      };
+    };
+    const listing = data.listing ?? {};
+    const theme = String(listing.seller?.shareThemeColor || '').trim() || null;
+    return {
+      contactPhone: listingDisplayPhone(listing) || null,
+      themeColor: theme,
+    };
+  } catch {
+    return empty;
+  }
+}
+
 /** Load the listing contact number for story / save images (browse cards omit it). */
 export async function fetchListingShareContactPhone(
   kind: ListingMetricKind,
   listingId: string,
 ): Promise<string | null> {
-  const id = String(listingId || '').trim();
-  const slug = SHARE_PHONE_PATH[kind];
-  if (!id || !slug) return null;
-  try {
-    const res = await fetch(getApiUrl(`/public/listings/${slug}/${encodeURIComponent(id)}`), {
-      cache: 'no-store',
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as {
-      listing?: { contactPhone?: string | null; seller?: { phone?: string | null } | null };
-    };
-    return listingDisplayPhone(data.listing ?? {}) || null;
-  } catch {
-    return null;
-  }
+  const extras = await fetchListingShareExtras(kind, listingId);
+  return extras.contactPhone;
 }
 
 export function resolveListingShareUrl(payload: ListingSharePayload): string {

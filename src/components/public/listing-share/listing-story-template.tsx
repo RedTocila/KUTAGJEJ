@@ -40,6 +40,7 @@ import {
   type ListingSharePayload,
   type ListingShareSpecIcon,
 } from '@/lib/listing-share';
+import { DEFAULT_SHARE_THEME_COLOR, normalizeShareThemeColor, shareThemeToRgba } from '@/lib/share-theme-color';
 
 export const STORY_WIDTH = 1080;
 export const STORY_HEIGHT = 1920;
@@ -53,7 +54,6 @@ export const FEED_HEIGHT = 1350;
  */
 const CARD_W = 760;
 const CARD_H = Math.round((CARD_W * 5) / 4);
-const GREEN = '#76ba1b';
 const STAR_GOLD = '#f5b400';
 const STAR_EMPTY = 'rgba(255,255,255,0.28)';
 const CARD_BG = '#141414';
@@ -91,7 +91,9 @@ const SPEC_ICONS: Record<ListingShareSpecIcon, PhosphorIcon> = {
 };
 
 /** Dark branded backdrop matching the share-story template art. */
-export function StoryBackground() {
+export function StoryBackground({ accent }: { accent?: string }) {
+  const color = normalizeShareThemeColor(accent || DEFAULT_SHARE_THEME_COLOR);
+  const glow = shareThemeToRgba(color, 0.14);
   return (
     <Box aria-hidden sx={{ position: 'absolute', inset: 0, overflow: 'hidden', bgcolor: '#0a0a0a' }}>
       <Box
@@ -99,7 +101,7 @@ export function StoryBackground() {
           position: 'absolute',
           inset: 0,
           background: `
-            radial-gradient(ellipse 70% 40% at 50% 0%, rgba(118,186,27,0.14) 0%, transparent 55%),
+            radial-gradient(ellipse 70% 40% at 50% 0%, ${glow} 0%, transparent 55%),
             linear-gradient(180deg, #0c0c0c 0%, #101010 50%, #0a0a0a 100%)
           `,
         }}
@@ -122,7 +124,7 @@ export function StoryBackground() {
             width: pin.size,
             height: pin.size,
             opacity: pin.opacity,
-            color: GREEN,
+            color: color,
           }}
         >
           <MapPinIcon size={pin.size} weight="fill" />
@@ -134,7 +136,7 @@ export function StoryBackground() {
         viewBox="0 0 1080 1920"
         sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.22 }}
       >
-        <g stroke={GREEN} strokeWidth="1.5" fill="none">
+        <g stroke={color} strokeWidth="1.5" fill="none">
           <path d="M70 220 L240 380 L150 600" />
           <path d="M1010 260 L840 420 L940 660" />
           <path d="M90 1100 L280 1280 L160 1520" />
@@ -142,7 +144,7 @@ export function StoryBackground() {
           <path d="M200 800 L400 920 L320 1100" />
           <path d="M880 780 L700 940 L820 1120" />
         </g>
-        <g fill={GREEN}>
+        <g fill={color}>
           <circle cx="240" cy="380" r="5" />
           <circle cx="840" cy="420" r="5" />
           <circle cx="280" cy="1280" r="5" />
@@ -173,7 +175,7 @@ export function StoryBackground() {
           fill="#1c1c1c"
           d="M0 280 V195 H55 V150 H110 V195 H175 V165 H240 V195 H320 V140 H390 V195 H470 V170 H540 V195 H620 V155 H700 V195 H780 V145 H860 V195 H940 V175 H1080 V280 Z"
         />
-        <g fill={GREEN} opacity="0.55">
+        <g fill={color} opacity="0.55">
           <circle cx="50" cy="120" r="2.2" />
           <circle cx="60" cy="135" r="2.2" />
           <circle cx="140" cy="80" r="2.2" />
@@ -300,7 +302,15 @@ function StoryRatingRow({
 }
 
 /** Spec chips — enlarged to fill the card body. */
-function SpecChip({ icon, label }: { icon: ListingShareSpecIcon; label: string }) {
+function SpecChip({
+  icon,
+  label,
+  accent,
+}: {
+  icon: ListingShareSpecIcon;
+  label: string;
+  accent: string;
+}) {
   const Icon = SPEC_ICONS[icon] ?? TagIcon;
   return (
     <Box
@@ -311,9 +321,9 @@ function SpecChip({ icon, label }: { icon: ListingShareSpecIcon; label: string }
         px: 2.75,
         py: 1.65,
         borderRadius: 2,
-        border: '2px solid rgba(118,186,27,0.5)',
-        bgcolor: 'rgba(118,186,27,0.14)',
-        color: GREEN,
+        border: `2px solid ${shareThemeToRgba(accent, 0.5)}`,
+        bgcolor: shareThemeToRgba(accent, 0.14),
+        color: accent,
       }}
     >
       <Icon size={30} weight="bold" />
@@ -371,6 +381,7 @@ export const ListingShareCard = React.forwardRef<
   const imageSrc = resolveStoryImageSrc(payload.imageUrl);
   const contactPhone = payload.contactPhone?.trim() || '';
   const feed = variant === 'feed';
+  const accent = normalizeShareThemeColor(payload.themeColor);
 
   return (
     <Box
@@ -383,7 +394,7 @@ export const ListingShareCard = React.forwardRef<
         borderRadius: feed ? 0 : CARD_RADIUS,
         overflow: 'hidden',
         bgcolor: CARD_BG,
-        border: `${2.5 * S}px solid ${GREEN}`,
+        border: `${2.5 * S}px solid ${accent}`,
         boxShadow: feed ? 'none' : '0 28px 80px rgba(0,0,0,0.55)',
         display: 'flex',
         flexDirection: 'column',
@@ -397,7 +408,7 @@ export const ListingShareCard = React.forwardRef<
           flex: 1,
           minHeight: 0,
           borderBottom: '1px solid rgba(255,255,255,0.08)',
-          bgcolor: 'rgba(118,186,27,0.06)',
+          bgcolor: shareThemeToRgba(accent, 0.06),
           overflow: 'hidden',
         }}
       >
@@ -410,7 +421,7 @@ export const ListingShareCard = React.forwardRef<
               inset: 0,
               alignItems: 'center',
               justifyContent: 'center',
-              color: GREEN,
+              color: accent,
               opacity: 0.5,
             }}
           >
@@ -449,7 +460,7 @@ export const ListingShareCard = React.forwardRef<
           <MediaActionChip
             icon={<BookmarkSimpleIcon size={17 * S} weight="fill" />}
             count={saveCount}
-            iconColor={GREEN}
+            iconColor={accent}
           />
         </Stack>
       </Box>
@@ -488,7 +499,7 @@ export const ListingShareCard = React.forwardRef<
         <StoryRatingRow ratingAverage={payload.ratingAverage} reviewCount={payload.reviewCount} />
 
         {payload.priceLabel ? (
-          <Typography sx={{ fontWeight: 900, fontSize: 52, color: GREEN, lineHeight: 1.05 }}>
+          <Typography sx={{ fontWeight: 900, fontSize: 52, color: accent, lineHeight: 1.05 }}>
             {payload.priceLabel}
           </Typography>
         ) : null}
@@ -505,14 +516,14 @@ export const ListingShareCard = React.forwardRef<
             }}
           >
             {specs.map((spec, i) => (
-              <SpecChip key={`${spec.label}-${i}`} icon={spec.icon} label={spec.label} />
+              <SpecChip key={`${spec.label}-${i}`} icon={spec.icon} label={spec.label} accent={accent} />
             ))}
           </Box>
         ) : null}
 
         {payload.location ? (
           <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', color: 'rgba(255,255,255,0.92)', pt: 0.5 }}>
-            <Box sx={{ color: GREEN, display: 'inline-flex', lineHeight: 0 }}>
+            <Box sx={{ color: accent, display: 'inline-flex', lineHeight: 0 }}>
               <MapPinIcon size={28} weight="fill" />
             </Box>
             <Typography sx={{ fontWeight: 650, fontSize: 26, lineHeight: 1.25 }}>
@@ -523,7 +534,7 @@ export const ListingShareCard = React.forwardRef<
 
         {contactPhone ? (
           <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', color: '#fff', pt: 0.5 }}>
-            <Box sx={{ color: GREEN, display: 'inline-flex', lineHeight: 0 }}>
+            <Box sx={{ color: accent, display: 'inline-flex', lineHeight: 0 }}>
               <PhoneIcon size={28} weight="fill" />
             </Box>
             <Typography sx={{ fontWeight: 800, fontSize: 28, lineHeight: 1.25, letterSpacing: '0.02em' }}>
@@ -555,6 +566,7 @@ export const ListingShareCard = React.forwardRef<
  */
 export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
   function ListingStoryTemplate({ payload }, ref) {
+    const accent = normalizeShareThemeColor(payload.themeColor);
     return (
       <Box
         ref={ref}
@@ -569,7 +581,7 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
             'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
         }}
       >
-        <StoryBackground />
+        <StoryBackground accent={accent} />
 
         <Box
           sx={{
@@ -617,7 +629,7 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
                 <Typography sx={{ fontWeight: 500, fontSize: 28, color: 'rgba(255,255,255,0.82)' }}>
                   Gjithçka në një vend.
                 </Typography>
-                <Box sx={{ color: GREEN, display: 'inline-flex', lineHeight: 0 }}>
+                <Box sx={{ color: accent, display: 'inline-flex', lineHeight: 0 }}>
                   <MapPinIcon size={26} weight="fill" />
                 </Box>
               </Stack>

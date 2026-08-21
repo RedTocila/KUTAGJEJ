@@ -199,6 +199,7 @@ export function ProfessionalListingDetailView({
                     imageUrl: coverImageUrls[0] ?? listing.imageUrl,
                     location: locationLine || listing.cityName || undefined,
                     contactPhone: (listing.contactPhone ?? listing.seller?.phone)?.trim() || undefined,
+                    themeColor: listing.seller?.shareThemeColor || undefined,
                     createdAt: listing.createdAt,
                     viewCount: listing.viewCount,
                     saveCount,

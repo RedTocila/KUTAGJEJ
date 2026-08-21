@@ -31,11 +31,13 @@ import { ListingVerifiedBadge } from '@/components/public/professional-listing-d
 import { AccountVerificationCard } from '@/components/user/account-verification-card';
 import { LockedIdentityField } from '@/components/user/locked-identity-field';
 import { PortalSectionCard, PortalSurface } from '@/components/user/portal-cards';
+import { ShareThemeColorPicker } from '@/components/user/share-theme-color-picker';
 import { useUser } from '@/hooks/use-user';
 import { clientFetch } from '@/lib/api-client';
 import { authClient } from '@/lib/auth/client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { rememberListingLocation } from '@/lib/listing-form-defaults';
+import { DEFAULT_SHARE_THEME_COLOR, normalizeShareThemeColor } from '@/lib/share-theme-color';
 import { listMySubscriptions } from '@/lib/payments-client';
 import {
   memberInitials,
@@ -92,6 +94,7 @@ export default function UserProfilePage() {
   const [niptInput, setNiptInput] = React.useState('');
   const [phoneInput, setPhoneInput] = React.useState('');
   const [basedCityId, setBasedCityId] = React.useState('');
+  const [shareThemeColor, setShareThemeColor] = React.useState(DEFAULT_SHARE_THEME_COLOR);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [citiesLoading, setCitiesLoading] = React.useState(false);
   const [profileSaving, setProfileSaving] = React.useState(false);
@@ -128,6 +131,7 @@ export default function UserProfilePage() {
     setNiptInput(typeof user.nipt === 'string' ? user.nipt : '');
     setPhoneInput(typeof user.phone === 'string' ? user.phone : '');
     setBasedCityId(typeof user.basedCityId === 'string' ? user.basedCityId : '');
+    setShareThemeColor(normalizeShareThemeColor(user.shareThemeColor));
   }, [
     user?.id,
     user?.firstName,
@@ -138,6 +142,7 @@ export default function UserProfilePage() {
     user?.nipt,
     user?.phone,
     user?.basedCityId,
+    user?.shareThemeColor,
   ]);
 
   React.useEffect(() => {
@@ -218,12 +223,14 @@ export default function UserProfilePage() {
             businessCategory: businessCategory.trim(),
             phone: phoneInput.trim(),
             basedCityId: basedCityId || null,
+            shareThemeColor,
           }
         : {
             firstName: firstName.trim(),
             lastName: lastName.trim(),
             phone: phoneInput.trim(),
             basedCityId: basedCityId || null,
+            shareThemeColor,
           };
       const { error, admin } = await authClient.updatePortalProfile(body);
       if (error) {
@@ -696,6 +703,8 @@ export default function UserProfilePage() {
                 clearable
                 disabled={citiesLoading || cities.length === 0}
               />
+
+              <ShareThemeColorPicker value={shareThemeColor} onChange={setShareThemeColor} />
 
               <Button
                 type="submit"

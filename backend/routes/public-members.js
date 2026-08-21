@@ -143,18 +143,15 @@ function formatSearchMember(row, extras) {
 }
 
 /**
- * GET /api/public/members — search public individual/business profiles.
- * Requires `q` (min 2 chars). Never returns email, phone, or admin/managed accounts.
+ * GET /api/public/members — public individual/business profiles.
+ * With `q` (min 2 chars): name/city/category search. Without `q`: latest members.
+ * Never returns email, phone, or admin/managed accounts.
  */
 router.get('/', publicCache(15), async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
     const tokens = memberSearchTokens(req.query.q);
-    if (!tokens.length) {
-      return res.json({ members: [], total: 0, page, limit, totalPages: 1 });
-    }
 
-    const cities = await loadSearchCities();
     let query = getSupabaseAdmin()
       .from('profiles')
       .select(
@@ -164,17 +161,20 @@ router.get('/', publicCache(15), async (req, res) => {
       .in('account_type', ['individual', 'business'])
       .eq('is_active', true);
 
-    for (const token of tokens) {
-      const parts = [];
-      const ilike = buildIlikeOrFilter(MEMBER_SEARCH_FIELDS, token);
-      if (ilike) parts.push(ilike);
-      for (const cityId of citiesMatchingTerm(cities, token)) {
-        parts.push(`based_city_id.eq.${cityId}`);
+    if (tokens.length) {
+      const cities = await loadSearchCities();
+      for (const token of tokens) {
+        const parts = [];
+        const ilike = buildIlikeOrFilter(MEMBER_SEARCH_FIELDS, token);
+        if (ilike) parts.push(ilike);
+        for (const cityId of citiesMatchingTerm(cities, token)) {
+          parts.push(`based_city_id.eq.${cityId}`);
+        }
+        if (!parts.length) {
+          return res.json({ members: [], total: 0, page, limit, totalPages: 1 });
+        }
+        query = query.or(parts.join(','));
       }
-      if (!parts.length) {
-        return res.json({ members: [], total: 0, page, limit, totalPages: 1 });
-      }
-      query = query.or(parts.join(','));
     }
 
     const { data, error, count } = await query

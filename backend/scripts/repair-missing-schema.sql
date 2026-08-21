@@ -72,6 +72,8 @@ alter table public.profiles
     references public.real_estate_cities (id) on delete set null;
 alter table public.profiles
   add column if not exists based_city_name text;
+alter table public.profiles
+  add column if not exists share_theme_color text;
 
 -- Business announcements
 alter table public.directory_listings

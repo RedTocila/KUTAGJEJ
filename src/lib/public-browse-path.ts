@@ -19,6 +19,7 @@ const PUBLIC_BROWSE_ROOTS = [
  */
 export function isPublicBrowsePath(pathname: string | null): boolean {
   if (!pathname) return false;
+  if (pathname === paths.public.profiles) return true;
   return PUBLIC_BROWSE_ROOTS.some((base) => pathname === base);
 }
 

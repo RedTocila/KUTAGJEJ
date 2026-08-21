@@ -2,6 +2,7 @@ import * as React from 'react';
 
 import { HomepageCommunityBanner, HomepagePostBanner } from '@/components/public/homepage-community-banner';
 import { HomepageOkazionSection } from '@/components/public/homepage-okazion-section';
+import { HomepageProfilesSection } from '@/components/public/homepage-profiles-section';
 import { HomepageRecommendedSection } from '@/components/public/homepage-recommended-section';
 import { LazyHomeSection } from '@/components/public/lazy-home-section';
 import { SeoIntroSection } from '@/components/public/seo-intro-section';
@@ -83,6 +84,10 @@ export function HomepageBelowFold({
         initialOk={ssrOk}
       />
 
+      <HomepageProfilesSection />
+
+      <HomepagePostBanner />
+
       <LazyHomeSection
         verticalId="businesses"
         initialListings={businesses}
@@ -96,8 +101,6 @@ export function HomepageBelowFold({
         initialTotal={totals?.professionals}
         initialOk={ssrOk}
       />
-
-      <HomepagePostBanner />
 
       <SeoIntroSection />
     </>

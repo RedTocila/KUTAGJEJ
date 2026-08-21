@@ -27,16 +27,22 @@ import {
 } from '@/components/public/listing-share/listing-story-template';
 import {
   embedImageAsDataUrl,
-  fetchListingShareContactPhone,
+  fetchListingShareExtras,
   resolveListingShareUrl,
   resolveStoryImageSrc,
   type ListingSharePayload,
 } from '@/lib/listing-share';
 import { emitHotLeadShare } from '@/lib/listing-hot-lead';
 import { recordListingMetricEvent, type ListingMetrics } from '@/lib/listing-metrics';
+import {
+  lightenShareThemeColor,
+  normalizeShareThemeColor,
+  shareThemeContrastText,
+  shareThemeToRgba,
+} from '@/lib/share-theme-color';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
+import { useUser } from '@/hooks/use-user';
 
-const BRAND_GREEN = '#76ba1b';
 const SHEET_BG = 'rgba(12, 12, 12, 0.94)';
 
 async function copyLink(url: string): Promise<void> {
@@ -321,6 +327,7 @@ export function ListingSharePage({
   payload: ListingSharePayload | null;
   onShared?: (metrics: ListingMetrics | null) => void;
 }) {
+  const { user } = useUser();
   const previewWrapRef = React.useRef<HTMLDivElement>(null);
   const feedCaptureRef = React.useRef<HTMLDivElement>(null);
   const storyCaptureRef = React.useRef<HTMLDivElement>(null);
@@ -331,7 +338,10 @@ export function ListingSharePage({
   const [previewScale, setPreviewScale] = React.useState(0.28);
   const [mounted, setMounted] = React.useState(false);
   const [resolvedPhone, setResolvedPhone] = React.useState<string | null>(null);
-  const phoneReadyRef = React.useRef<Promise<string | null>>(Promise.resolve(null));
+  const [resolvedThemeColor, setResolvedThemeColor] = React.useState<string | null>(null);
+  const extrasReadyRef = React.useRef<Promise<{ contactPhone: string | null; themeColor: string | null }>>(
+    Promise.resolve({ contactPhone: null, themeColor: null }),
+  );
 
   useLockBodyScroll(open && mounted && Boolean(payload));
 
@@ -369,43 +379,63 @@ export function ListingSharePage({
   React.useEffect(() => {
     if (!open || !payload) {
       setResolvedPhone(null);
-      phoneReadyRef.current = Promise.resolve(null);
+      setResolvedThemeColor(null);
+      extrasReadyRef.current = Promise.resolve({ contactPhone: null, themeColor: null });
       return;
     }
 
-    const existing = payload.contactPhone?.trim() || '';
-    if (existing) {
-      setResolvedPhone(existing);
-      phoneReadyRef.current = Promise.resolve(existing);
-      return;
-    }
+    const existingPhone = payload.contactPhone?.trim() || '';
+    const existingColor = payload.themeColor?.trim() || '';
+    if (existingPhone) setResolvedPhone(existingPhone);
+    if (existingColor) setResolvedThemeColor(existingColor);
 
-    setResolvedPhone(null);
-    const pending = fetchListingShareContactPhone(payload.listingKind, payload.listingId);
-    phoneReadyRef.current = pending;
+    const pending = fetchListingShareExtras(payload.listingKind, payload.listingId);
+    extrasReadyRef.current = pending;
     let cancelled = false;
-    void pending.then((phone) => {
-      if (!cancelled) setResolvedPhone(phone);
+    void pending.then((extras) => {
+      if (cancelled) return;
+      if (extras.contactPhone) setResolvedPhone(extras.contactPhone);
+      if (extras.themeColor) setResolvedThemeColor(extras.themeColor);
     });
     return () => {
       cancelled = true;
     };
-  }, [open, payload?.contactPhone, payload?.listingId, payload?.listingKind]);
+  }, [open, payload?.contactPhone, payload?.themeColor, payload?.listingId, payload?.listingKind]);
+
+  const themeColor = React.useMemo(
+    () =>
+      normalizeShareThemeColor(
+        resolvedThemeColor || payload?.themeColor || user?.shareThemeColor,
+      ),
+    [payload?.themeColor, resolvedThemeColor, user?.shareThemeColor],
+  );
 
   const cardPayload = React.useMemo<ListingSharePayload | null>(() => {
     if (!payload) return null;
     const phone = resolvedPhone || payload.contactPhone?.trim() || '';
-    return phone ? { ...payload, contactPhone: phone } : payload;
-  }, [payload, resolvedPhone]);
+    return {
+      ...payload,
+      ...(phone ? { contactPhone: phone } : {}),
+      themeColor,
+    };
+  }, [payload, resolvedPhone, themeColor]);
 
-  const waitForSharePhone = React.useCallback(async () => {
-    const phone = (await phoneReadyRef.current)?.trim() || payload?.contactPhone?.trim() || '';
+  const waitForShareExtras = React.useCallback(async () => {
+    const extras = await extrasReadyRef.current;
+    const phone = extras.contactPhone?.trim() || payload?.contactPhone?.trim() || '';
+    const color = extras.themeColor?.trim() || payload?.themeColor?.trim() || '';
+    let painted = false;
     if (phone && phone !== resolvedPhone) {
       setResolvedPhone(phone);
-      await new Promise((r) => window.setTimeout(r, 60));
+      painted = true;
     }
-    return phone;
-  }, [payload?.contactPhone, resolvedPhone]);
+    if (color && color !== resolvedThemeColor) {
+      setResolvedThemeColor(color);
+      painted = true;
+    }
+    if (painted) await new Promise((r) => window.setTimeout(r, 60));
+    return { phone, color };
+  }, [payload?.contactPhone, payload?.themeColor, resolvedPhone, resolvedThemeColor]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -449,7 +479,7 @@ export function ListingSharePage({
     setError(null);
     setFeedback(null);
     try {
-      await waitForSharePhone();
+      await waitForShareExtras();
       const file = await captureElementAsJpegFile(
         {
           root: storyCaptureRef.current,
@@ -483,7 +513,7 @@ export function ListingSharePage({
     } finally {
       setBusy(null);
     }
-  }, [busy, bumpShareMetric, payload, waitForSharePhone]);
+  }, [busy, bumpShareMetric, payload, waitForShareExtras]);
 
   const handleCopyLink = React.useCallback(async () => {
     if (!payload || busy) return;
@@ -508,7 +538,7 @@ export function ListingSharePage({
     setError(null);
     setFeedback(null);
     try {
-      await waitForSharePhone();
+      await waitForShareExtras();
       const file = await captureElementAsJpegFile(
         {
           root: feedCaptureRef.current,
@@ -532,7 +562,7 @@ export function ListingSharePage({
     } finally {
       setBusy(null);
     }
-  }, [busy, payload, waitForSharePhone]);
+  }, [busy, payload, waitForShareExtras]);
 
   if (!mounted || !open || !payload) return null;
 
@@ -559,7 +589,7 @@ export function ListingSharePage({
     >
       {/* Immersive branded backdrop behind preview */}
       <Box aria-hidden sx={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.55 }}>
-        <StoryBackground />
+        <StoryBackground accent={themeColor} />
       </Box>
 
       {/* Top bar */}
@@ -622,7 +652,7 @@ export function ListingSharePage({
             height: STORY_HEIGHT * previewScale,
             borderRadius: 3,
             overflow: 'hidden',
-            boxShadow: `0 0 0 1px rgba(118,186,27,0.35), 0 24px 64px rgba(0,0,0,0.65)`,
+            boxShadow: `0 0 0 1px ${shareThemeToRgba(themeColor, 0.35)}, 0 24px 64px rgba(0,0,0,0.65)`,
             position: 'relative',
           }}
         >
@@ -683,7 +713,7 @@ export function ListingSharePage({
             onClick={() => void handleShare()}
             startIcon={
               busy === 'share' ? (
-                <CircularProgress size={18} sx={{ color: '#0a0a0a' }} />
+                <CircularProgress size={18} sx={{ color: shareThemeContrastText(themeColor) }} />
               ) : (
                 <InstagramLogoIcon size={22} weight="fill" />
               )
@@ -692,12 +722,19 @@ export function ListingSharePage({
               ...btnSx,
               flex: 'none',
               width: '100%',
-              bgcolor: BRAND_GREEN,
-              color: '#0a0a0a',
-              '&:hover': { bgcolor: '#86c92a', color: '#0a0a0a', boxShadow: 'none' },
+              bgcolor: themeColor,
+              color: shareThemeContrastText(themeColor),
+              '&:hover': {
+                bgcolor: lightenShareThemeColor(themeColor, 0.12),
+                color: shareThemeContrastText(themeColor),
+                boxShadow: 'none',
+              },
               '&.Mui-disabled': {
-                bgcolor: 'rgba(118,186,27,0.35)',
-                color: 'rgba(10,10,10,0.5)',
+                bgcolor: shareThemeToRgba(themeColor, 0.35),
+                color:
+                  shareThemeContrastText(themeColor) === '#ffffff'
+                    ? 'rgba(255,255,255,0.5)'
+                    : 'rgba(10,10,10,0.5)',
               },
             }}
           >
@@ -724,8 +761,8 @@ export function ListingSharePage({
                 color: '#fff',
                 bgcolor: 'rgba(255,255,255,0.04)',
                 '&:hover': {
-                  borderColor: BRAND_GREEN,
-                  bgcolor: 'rgba(118,186,27,0.12)',
+                  borderColor: themeColor,
+                  bgcolor: shareThemeToRgba(themeColor, 0.12),
                   color: '#fff',
                 },
                 '&.Mui-disabled': {
@@ -756,8 +793,8 @@ export function ListingSharePage({
                 color: '#fff',
                 bgcolor: 'rgba(255,255,255,0.04)',
                 '&:hover': {
-                  borderColor: BRAND_GREEN,
-                  bgcolor: 'rgba(118,186,27,0.12)',
+                  borderColor: themeColor,
+                  bgcolor: shareThemeToRgba(themeColor, 0.12),
                   color: '#fff',
                 },
                 '&.Mui-disabled': {

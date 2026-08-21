@@ -18,6 +18,7 @@ const {
 const { imageUpload } = require('../lib/image-upload');
 const { uploadBuffersToSupabase } = require('../lib/storage-uploads');
 const { isUuid } = require('../lib/public-listings/query-helpers');
+const { sanitizeShareThemeColor } = require('../lib/share-theme-color');
 
 const router = express.Router();
 const rateLimit = require('../middleware/rate-limit');
@@ -47,6 +48,12 @@ function portalBasedCityFields(user) {
   return {
     basedCityId: user.basedCityId || null,
     basedCityName: user.basedCityName || '',
+  };
+}
+
+function portalShareThemeFields(user) {
+  return {
+    shareThemeColor: user.shareThemeColor || null,
   };
 }
 
@@ -103,6 +110,7 @@ const formatUser = (user) => {
       autoRefreshSlots: Number(user.autoRefreshSlots) || 0,
       verified: Boolean(user.professionalsVerifiedAt || user.jobsEmployerVerifiedAt),
       ...portalBasedCityFields(user),
+      ...portalShareThemeFields(user),
       ...referralFieldsForUser(user),
     };
   }
@@ -120,6 +128,7 @@ const formatUser = (user) => {
       autoRefreshSlots: Number(user.autoRefreshSlots) || 0,
       verified: Boolean(user.professionalsVerifiedAt || user.jobsEmployerVerifiedAt),
       ...portalBasedCityFields(user),
+      ...portalShareThemeFields(user),
       ...referralFieldsForUser(user),
     };
   }
@@ -468,6 +477,14 @@ router.put('/portal/update-profile', authMiddleware, requirePortalUser, async (r
         req.admin.basedCityId = based.id;
         req.admin.basedCityName = based.name || '';
       }
+    }
+
+    if (body.shareThemeColor !== undefined) {
+      const color = sanitizeShareThemeColor(body.shareThemeColor);
+      if (color === false) {
+        return res.status(400).json({ message: 'Ngjyra e temës nuk është e vlefshme.' });
+      }
+      req.admin.shareThemeColor = color;
     }
 
     if (body.avatar !== undefined || body.avatarUrl !== undefined) {

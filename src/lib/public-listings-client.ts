@@ -84,6 +84,8 @@ export interface PublicRealEstateListingSeller {
   ratingAverage?: number | null;
   /** Total reviews received across directory listings. */
   reviewCount?: number;
+  /** Accent used on shared / saved listing images. */
+  shareThemeColor?: string | null;
 }
 
 export interface JobListingBenefit {

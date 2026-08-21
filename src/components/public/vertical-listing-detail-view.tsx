@@ -381,6 +381,7 @@ export function VerticalListingDetailView(props: {
                           imageUrl: listing.imageUrls[0] ?? ('imageUrl' in listing ? listing.imageUrl : null),
                           location: locationLine || ('cityName' in listing ? listing.cityName : undefined) || undefined,
                           contactPhone: displayPhone || undefined,
+                          themeColor: listing.seller?.shareThemeColor || undefined,
                           createdAt: listing.createdAt,
                           viewCount,
                           saveCount,

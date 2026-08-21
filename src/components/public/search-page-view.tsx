@@ -23,14 +23,13 @@ import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/di
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
-import { CarCard } from '@/components/public/listing-cards/car-card';
-import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
-import { JobCard } from '@/components/public/listing-cards/job-card';
-import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
 import { MemberProfileCard } from '@/components/public/listing-cards/member-profile-card';
-import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
+import {
+  SearchListingCard,
+  type SearchListingItem,
+} from '@/components/public/listing-cards/search-listing-card';
 import { HeroCategoryCircles } from '@/components/public/hero-category-circles';
-import { ListingCardsSkeleton } from '@/components/core/content-skeletons';
+import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import {
   ProductSearchIcon,
   productSearchBarSx,
@@ -68,11 +67,6 @@ import {
   fetchBrowseMarketplace,
   fetchBrowseProfessionals,
   fetchBrowseRealEstate,
-  type PublicCarListing,
-  type PublicDirectoryListing,
-  type PublicJobListing,
-  type PublicMarketplaceListing,
-  type PublicRealEstateListing,
 } from '@/lib/public-listings-client';
 import { fetchPublicMemberSearch, type PublicMemberSearchHit } from '@/lib/public-member-client';
 import { paths } from '@/paths';
@@ -80,14 +74,7 @@ import { MOTION } from '@/styles/motion';
 
 const PAGE_SIZE = 24;
 
-type SearchItem =
-  | { kind: 'real-estate'; listing: PublicRealEstateListing }
-  | { kind: 'car'; listing: PublicCarListing }
-  | { kind: 'job'; listing: PublicJobListing }
-  | { kind: 'marketplace'; listing: PublicMarketplaceListing }
-  | { kind: 'businesses'; listing: PublicDirectoryListing }
-  | { kind: 'professionals'; listing: PublicDirectoryListing }
-  | { kind: 'profile'; member: PublicMemberSearchHit };
+type SearchItem = SearchListingItem | { kind: 'profile'; member: PublicMemberSearchHit };
 
 function searchItemKey(item: SearchItem): string {
   if (item.kind === 'profile') return `profile-${item.member.id}`;
@@ -111,49 +98,56 @@ function buildAiBrowseHref(intent: AiSearchResult['intent']): string | null {
   return `${vertical.href}${qs}`;
 }
 
+function isLiveSearchCategory(
+  value: string | null | undefined,
+): value is 'profiles' | HomeVerticalId {
+  return isProfilesSearchCategory(value) || isHomeVerticalId(value);
+}
+
 async function fetchVerticalResults(
   verticalId: HomeVerticalId,
   query: string,
+  page = 1,
 ): Promise<{ items: SearchItem[]; total: number }> {
   const filters = { q: query.trim() || undefined };
   switch (verticalId) {
     case 'real-estate': {
-      const res = await fetchBrowseRealEstate(PAGE_SIZE, filters);
+      const res = await fetchBrowseRealEstate(PAGE_SIZE, filters, page);
       return {
         items: res.listings.map((listing) => ({ kind: 'real-estate' as const, listing })),
         total: res.total,
       };
     }
     case 'cars': {
-      const res = await fetchBrowseCars(PAGE_SIZE, filters);
+      const res = await fetchBrowseCars(PAGE_SIZE, filters, page);
       return {
         items: res.listings.map((listing) => ({ kind: 'car' as const, listing })),
         total: res.total,
       };
     }
     case 'jobs': {
-      const res = await fetchBrowseJobs(PAGE_SIZE, filters);
+      const res = await fetchBrowseJobs(PAGE_SIZE, filters, page);
       return {
         items: res.listings.map((listing) => ({ kind: 'job' as const, listing })),
         total: res.total,
       };
     }
     case 'marketplace': {
-      const res = await fetchBrowseMarketplace(PAGE_SIZE, filters);
+      const res = await fetchBrowseMarketplace(PAGE_SIZE, filters, page);
       return {
         items: res.listings.map((listing) => ({ kind: 'marketplace' as const, listing })),
         total: res.total,
       };
     }
     case 'businesses': {
-      const res = await fetchBrowseBusinesses(PAGE_SIZE, filters);
+      const res = await fetchBrowseBusinesses(PAGE_SIZE, filters, page);
       return {
         items: res.listings.map((listing) => ({ kind: 'businesses' as const, listing })),
         total: res.total,
       };
     }
     case 'professionals': {
-      const res = await fetchBrowseProfessionals(PAGE_SIZE, filters);
+      const res = await fetchBrowseProfessionals(PAGE_SIZE, filters, page);
       return {
         items: res.listings.map((listing) => ({ kind: 'professionals' as const, listing })),
         total: res.total,
@@ -185,23 +179,8 @@ function SearchDockLayer({
 }
 
 function ResultCard({ item }: { item: SearchItem }) {
-  switch (item.kind) {
-    case 'real-estate':
-      return <RealEstateCard listing={item.listing} />;
-    case 'car':
-      return <CarCard listing={item.listing} />;
-    case 'job':
-      return <JobCard listing={item.listing} />;
-    case 'marketplace':
-      return <MarketplaceCard listing={item.listing} />;
-    case 'businesses':
-    case 'professionals':
-      return <DirectoryListingCard listing={item.listing} />;
-    case 'profile':
-      return <MemberProfileCard member={item.member} />;
-    default:
-      return null;
-  }
+  if (item.kind === 'profile') return <MemberProfileCard member={item.member} />;
+  return <SearchListingCard item={item} />;
 }
 
 export function SearchPageView({
@@ -232,16 +211,21 @@ export function SearchPageView({
   const [query, setQuery] = React.useState(urlQ);
   const [submittedQuery, setSubmittedQuery] = React.useState(urlQ);
   const [hasSearched, setHasSearched] = React.useState(
-    Boolean(initialCategory && initialCategory !== 'ai' && urlQ.trim()),
+    Boolean(initialCategory && isLiveSearchCategory(initialCategory)),
   );
-  const [loading, setLoading] = React.useState(false);
+  const [loading, setLoading] = React.useState(() =>
+    Boolean(initialCategory && isLiveSearchCategory(initialCategory)),
+  );
   const [error, setError] = React.useState<string | null>(null);
   const [items, setItems] = React.useState<SearchItem[]>([]);
   const [total, setTotal] = React.useState(0);
+  const [profilePage, setProfilePage] = React.useState(1);
   const [aiReply, setAiReply] = React.useState<string | null>(null);
   const [inputExpanded, setInputExpanded] = React.useState(false);
   const [entered, setEntered] = React.useState(isOverlay);
   const categoriesHidden = useScrollRevealHidden({ alwaysShowBelowY: 24 });
+  const skipFirstLive = React.useRef(isLiveSearchCategory(initialCategory));
+  const searchGeneration = React.useRef(0);
 
   const selectedIndex = categoryId
     ? localizedCategories.findIndex((v) => v.id === categoryId)
@@ -313,50 +297,77 @@ export function SearchPageView({
   );
 
   const runVerticalSearch = React.useCallback(
-    async (cat: HomeVerticalId, q: string) => {
+    async (cat: HomeVerticalId, q: string, nextPage = 1, append = false) => {
+      const generation = ++searchGeneration.current;
       setLoading(true);
       setError(null);
       setHasSearched(true);
       setSubmittedQuery(q.trim());
       setAiReply(null);
       try {
-        const res = await fetchVerticalResults(cat, q);
-        setItems(res.items);
+        const res = await fetchVerticalResults(cat, q, nextPage);
+        if (generation !== searchGeneration.current) return;
+        setItems((prev) => {
+          if (!append) return res.items;
+          const seen = new Set(prev.map(searchItemKey));
+          return [...prev, ...res.items.filter((item) => !seen.has(searchItemKey(item)))];
+        });
+        setProfilePage(nextPage);
         setTotal(res.total);
       } catch {
-        setItems([]);
-        setTotal(0);
+        if (generation !== searchGeneration.current) return;
+        if (!append) {
+          setItems([]);
+          setTotal(0);
+        }
         setError(t.search.failed);
       } finally {
-        setLoading(false);
+        if (generation === searchGeneration.current) setLoading(false);
       }
     },
     [t.search.failed],
   );
 
   const runProfileSearch = React.useCallback(
-    async (q: string) => {
+    async (q: string, nextPage = 1, append = false) => {
+      const generation = ++searchGeneration.current;
       setLoading(true);
       setError(null);
       setHasSearched(true);
       setSubmittedQuery(q.trim());
       setAiReply(null);
       try {
-        const res = await fetchPublicMemberSearch(q, PAGE_SIZE);
+        const res = await fetchPublicMemberSearch(q, PAGE_SIZE, nextPage);
+        if (generation !== searchGeneration.current) return;
         if (!res.ok) {
-          setItems([]);
-          setTotal(0);
+          if (!append) {
+            setItems([]);
+            setTotal(0);
+          }
           setError(t.search.failed);
           return;
         }
-        setItems(res.members.map((member) => ({ kind: 'profile' as const, member })));
+        const nextItems = res.members.map((member) => ({ kind: 'profile' as const, member }));
+        setItems((prev) => {
+          if (!append) return nextItems;
+          const seen = new Set(
+            prev.filter((item): item is Extract<SearchItem, { kind: 'profile' }> => item.kind === 'profile').map(
+              (item) => item.member.id,
+            ),
+          );
+          return [...prev, ...nextItems.filter((item) => !seen.has(item.member.id))];
+        });
+        setProfilePage(nextPage);
         setTotal(res.total);
       } catch {
-        setItems([]);
-        setTotal(0);
+        if (generation !== searchGeneration.current) return;
+        if (!append) {
+          setItems([]);
+          setTotal(0);
+        }
         setError(t.search.failed);
       } finally {
-        setLoading(false);
+        if (generation === searchGeneration.current) setLoading(false);
       }
     },
     [t.search.failed],
@@ -397,7 +408,6 @@ export function SearchPageView({
 
   React.useEffect(() => {
     if (!initialCategory || initialCategory === 'ai') return;
-    if (!urlQ.trim()) return;
     if (isProfilesSearchCategory(initialCategory)) {
       void runProfileSearch(urlQ);
       return;
@@ -424,19 +434,12 @@ export function SearchPageView({
   // Live results while typing (debounced). AI only runs on explicit submit.
   React.useEffect(() => {
     if (!categoryId || categoryId === 'ai') return;
-    if (!isHomeVerticalId(categoryId) && !isProfilesSearchCategory(categoryId)) return;
-    const trimmed = query.trim();
-
-    if (!trimmed) {
-      setItems([]);
-      setTotal(0);
-      setHasSearched(false);
-      setSubmittedQuery('');
-      setLoading(false);
-      setError(null);
+    if (!isLiveSearchCategory(categoryId)) return;
+    if (skipFirstLive.current) {
+      skipFirstLive.current = false;
       return;
     }
-
+    const trimmed = query.trim();
     setLoading(true);
     const handle = window.setTimeout(() => {
       syncUrl(categoryId, trimmed);
@@ -445,7 +448,7 @@ export function SearchPageView({
         return;
       }
       void runVerticalSearch(categoryId, trimmed);
-    }, 280);
+    }, trimmed ? 280 : 80);
 
     return () => window.clearTimeout(handle);
   }, [query, categoryId, runProfileSearch, runVerticalSearch, syncUrl]);
@@ -457,14 +460,16 @@ export function SearchPageView({
       if (!isOverlay) hardRefreshToTop();
       return;
     }
+    searchGeneration.current += 1;
     setCategoryId(next.id);
     setQuery('');
     setItems([]);
     setTotal(0);
-    setHasSearched(false);
+    setProfilePage(1);
+    setHasSearched(next.id !== 'ai');
     setSubmittedQuery('');
     setError(null);
-    setLoading(false);
+    setLoading(next.id !== 'ai');
     setAiReply(null);
     syncUrl(next.id, '');
   };
@@ -478,15 +483,15 @@ export function SearchPageView({
       void runAiNavigate(trimmed);
       return;
     }
-    if (categoryId === 'profiles') {
-      if (!trimmed) return;
+    if (isProfilesSearchCategory(categoryId)) {
       syncUrl('profiles', trimmed);
       void runProfileSearch(trimmed);
       return;
     }
-    const base = activeCategory.href.split('?')[0];
-    const href = trimmed ? `${base}?q=${encodeURIComponent(trimmed)}` : base;
-    goTo(href);
+    if (isHomeVerticalId(categoryId)) {
+      syncUrl(categoryId, trimmed);
+      void runVerticalSearch(categoryId, trimmed);
+    }
   };
 
   const searchAccent = isAi ? { color: AI_SEARCH_BLUE, soft: AI_SEARCH_BLUE_SOFT } : undefined;
@@ -827,16 +832,18 @@ export function SearchPageView({
         ) : null}
 
         {!hasSearched || isAi ? (
-          isAi && loading ? (
+          (isAi && loading) || (isLiveSearchCategory(categoryId) && loading && items.length === 0) ? (
             <Stack spacing={1.5}>
-              <ListingCardsSkeleton count={4} />
-              <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
-                {t.search.aiThinking}
-              </Typography>
+              <PackageRowsSkeleton count={isAi ? 4 : 8} rowHeight={104} />
+              {isAi ? (
+                <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                  {t.search.aiThinking}
+                </Typography>
+              ) : null}
             </Stack>
           ) : null
         ) : loading && items.length === 0 ? (
-          <ListingCardsSkeleton count={8} />
+          <PackageRowsSkeleton count={8} rowHeight={104} />
         ) : items.length === 0 ? (
           <Box sx={{ py: 4, textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary">
@@ -851,19 +858,22 @@ export function SearchPageView({
             </Typography>
             <Grid container spacing={2}>
               {items.map((item) => (
-                <Grid
-                  key={searchItemKey(item)}
-                  size={item.kind === 'profile' ? { xs: 12, md: 6 } : { xs: 12, sm: 6, md: 4, lg: 3 }}
-                >
+                <Grid key={searchItemKey(item)} size={{ xs: 12, md: 6 }}>
                   <ResultCard item={item} />
                 </Grid>
               ))}
             </Grid>
-            {activeCategory && !isProfiles && total > items.length ? (
+            {total > items.length && isLiveSearchCategory(categoryId) ? (
               <Box sx={{ textAlign: 'center' }}>
                 <Button
-                  component={RouterLink}
-                  href={`${activeCategory.href.split('?')[0]}${submittedQuery ? `?q=${encodeURIComponent(submittedQuery)}` : ''}`}
+                  onClick={() => {
+                    if (isProfilesSearchCategory(categoryId)) {
+                      void runProfileSearch(submittedQuery, profilePage + 1, true);
+                      return;
+                    }
+                    void runVerticalSearch(categoryId, submittedQuery, profilePage + 1, true);
+                  }}
+                  disabled={loading}
                   variant="text"
                   sx={{ fontWeight: 700, textTransform: 'none' }}
                 >

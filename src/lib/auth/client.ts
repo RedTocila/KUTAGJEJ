@@ -257,6 +257,7 @@ class AuthClient {
     businessOwner?: string;
     businessCategory?: string;
     basedCityId?: string | null;
+    shareThemeColor?: string | null;
     /** Public profile photo URL; empty string clears it. */
     avatar?: string;
   }): Promise<{ admin?: User; error?: string }> {

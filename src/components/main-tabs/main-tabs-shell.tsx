@@ -4,7 +4,6 @@ import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Box, type SxProps, type Theme } from '@mui/material';
 
-import { PullToRefreshIndicator, usePullToRefresh } from '@/components/core/pull-to-refresh';
 import { MainTabsGuestPane } from '@/components/main-tabs/main-tabs-guest-pane';
 import { MainTabsHomePreview } from '@/components/main-tabs/main-tabs-home-preview';
 import { MobileBottomNav } from '@/components/public/mobile-bottom-nav';
@@ -25,12 +24,11 @@ import {
   mainTabByIndex,
   mainTabFromPath,
   type MainTab,
-  type MainTabId,
 } from '@/lib/main-tabs';
 import { MAIN_TAB_SLIDE_MS, registerMainTabPagerPreview } from '@/lib/main-tab-pager';
 import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 import { beginPendingNavigation } from '@/lib/navigation-pending';
-import { runTabRefresh, setActiveTabForRefresh, subscribeTabRefresh } from '@/lib/tab-refresh';
+import { setActiveTabForRefresh, subscribeTabRefresh } from '@/lib/tab-refresh';
 import { MOTION } from '@/styles/motion';
 import { paths } from '@/paths';
 
@@ -132,57 +130,60 @@ function HomeTabSoftRefresh() {
 
 function MainTabPane({
   paneIndex,
-  tabId,
   active,
-  enabled,
   fill,
   contentSx,
   onPaneRef,
   children,
 }: {
   paneIndex: number;
-  tabId: MainTabId;
   active: boolean;
-  enabled: boolean;
   fill?: boolean;
   contentSx?: SxProps<Theme>;
   onPaneRef: (paneIndex: number) => (node: unknown) => void;
   children: React.ReactNode;
 }) {
-  const { setRoot, pullPx, refreshing, dragging } = usePullToRefresh({
-    enabled: enabled && active,
-    onRefresh: () => runTabRefresh(tabId),
-  });
-
-  const setRef = React.useCallback(
-    (node: HTMLDivElement | null) => {
-      onPaneRef(paneIndex)(node);
-      setRoot(node);
-    },
-    [onPaneRef, paneIndex, setRoot],
-  );
-
   return (
     <Box
-      ref={setRef}
+      ref={onPaneRef(paneIndex)}
       data-main-tab-pane=""
+      data-tab-scroll={fill ? 'pane' : 'page'}
       aria-hidden={!active}
       sx={{
         width: `${100 / MAIN_TAB_COUNT}%`,
-        height: '100%',
+        minHeight: '100dvh',
         display: 'flex',
         flexDirection: 'column',
-        overflowX: 'hidden',
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
-        overscrollBehaviorY: 'contain',
         overscrollBehaviorX: 'none',
-        contain: 'layout paint',
         backfaceVisibility: 'hidden',
         pointerEvents: active ? 'auto' : 'none',
+        ...(fill
+          ? {
+              height: '100dvh',
+              overflowX: 'hidden',
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+            }
+          : active
+            ? {
+                height: 'auto',
+                overflow: 'visible',
+                alignSelf: 'flex-start',
+                '& [data-tab-inner-scroll]': {
+                  overflow: 'visible !important',
+                  height: 'auto',
+                  maxHeight: 'none',
+                  flex: '0 0 auto',
+                  minHeight: 0,
+                },
+              }
+            : {
+                height: '100dvh',
+                overflow: 'hidden',
+                alignSelf: 'flex-start',
+              }),
       }}
     >
-      <PullToRefreshIndicator pullPx={pullPx} refreshing={refreshing} dragging={dragging} />
       <Box
         sx={[
           fill
@@ -321,12 +322,12 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
   );
 
   React.useLayoutEffect(() => {
-    if (!hosted) {
+    if (!hosted || pagerActive) {
       setScrollParent(null);
       return;
     }
     setScrollParent(paneRefs.current[index] ?? null);
-  }, [hosted, index]);
+  }, [hosted, index, pagerActive]);
 
   React.useEffect(() => {
     setActiveTabForRefresh(displayTab?.id ?? null);
@@ -337,26 +338,28 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (!hosted || !displayTab) return;
-    const tabIndex = displayTab.index;
     return subscribeTabRefresh(displayTab.id, () => {
-      paneRefs.current[tabIndex]?.scrollTo({ top: 0 });
+      window.scrollTo(0, 0);
+      paneRefs.current[displayTab.index]?.scrollTo({ top: 0 });
     });
   }, [displayTab, hosted]);
 
   React.useEffect(() => {
     if (!pagerActive) return;
+    window.scrollTo(0, 0);
     const pane = paneRefs.current[index];
     if (pane) pane.scrollTop = 0;
   }, [index, pagerActive]);
 
   React.useEffect(() => {
-    if (!hosted) return;
+    if (!hosted || !threadOpen) return;
+    window.scrollTo(0, 0);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [hosted]);
+  }, [hosted, threadOpen]);
 
   React.useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -505,9 +508,6 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
     [displayTab, hosted, pagerActive, scrollParent, setThreadOpen, threadOpen],
   );
 
-  const ptrEnabled = !searchOverlay?.open;
-  const ptrAuthed = ptrEnabled && authed;
-
   if (!hosted) {
     return <MainTabsContext.Provider value={ctx}>{children}</MainTabsContext.Provider>;
   }
@@ -526,11 +526,23 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
         <Box
           ref={viewportRef}
           sx={{
-            height: '100dvh',
-            overflow: 'hidden',
+            width: '100%',
+            maxWidth: '100%',
+            minHeight: '100dvh',
             touchAction: 'pan-y',
             overscrollBehaviorX: 'none',
             bgcolor: 'background.default',
+            ...(threadOpen
+              ? {
+                  height: '100dvh',
+                  overflow: 'hidden',
+                }
+              : {
+                  // Clip the 4-pane-wide track without creating a vertical scroller
+                  // (`overflow-x` alone would compute overflow-y to `auto`).
+                  height: 'auto',
+                  overflow: 'clip',
+                }),
           }}
         >
           <Box
@@ -538,14 +550,14 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
             sx={{
               display: 'flex',
               width: `${MAIN_TAB_COUNT * 100}%`,
-              height: '100%',
+              minHeight: threadOpen ? '100%' : '100dvh',
+              height: threadOpen ? '100%' : 'auto',
+              alignItems: 'flex-start',
             }}
           >
             <MainTabPane
               paneIndex={0}
-              tabId="home"
               active={index === 0}
-              enabled={ptrEnabled}
               onPaneRef={setPaneRef}
             >
               <HomeTabSoftRefresh />
@@ -553,9 +565,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
             </MainTabPane>
             <MainTabPane
               paneIndex={1}
-              tabId="saved"
               active={index === 1}
-              enabled={ptrAuthed}
               contentSx={{ px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
               onPaneRef={setPaneRef}
             >
@@ -569,9 +579,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
             </MainTabPane>
             <MainTabPane
               paneIndex={2}
-              tabId="messages"
               active={index === 2}
-              enabled={ptrAuthed}
               fill
               contentSx={{ pb: threadOpen ? 0 : MOBILE_CONTENT_BOTTOM_PADDING }}
               onPaneRef={setPaneRef}
@@ -586,9 +594,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
             </MainTabPane>
             <MainTabPane
               paneIndex={3}
-              tabId="profile"
               active={index === 3}
-              enabled={ptrAuthed}
               contentSx={{ px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
               onPaneRef={setPaneRef}
             >

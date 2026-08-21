@@ -23,8 +23,8 @@ import {
   AI_SEARCH_BLUE_ON,
   OKAZION_RED,
   OKAZION_RED_DARK,
+  isHomeVerticalId,
   localizeSearchCategories,
-  type HomeVerticalId,
   type SearchCategoryId,
 } from '@/lib/home-categories';
 import { recordSearchInterest } from '@/lib/user-interest-history';
@@ -35,10 +35,6 @@ export interface HeroSearchProps {
   defaultVertical?: SearchCategoryId;
   /** Called after the user submits and navigation runs (e.g. close mobile search sheet). */
   onNavigate?: () => void;
-}
-
-function isHomeVertical(id: SearchCategoryId): id is HomeVerticalId {
-  return id !== 'ai' && id !== 'okazion';
 }
 
 export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
@@ -82,7 +78,14 @@ export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
       onNavigate?.();
       return;
     }
-    if (isHomeVertical(active.id)) {
+    if (active.id === 'profiles') {
+      const params = new URLSearchParams({ cat: 'profiles' });
+      if (trimmed) params.set('q', trimmed);
+      router.push(`${paths.public.search}?${params.toString()}`);
+      onNavigate?.();
+      return;
+    }
+    if (isHomeVerticalId(active.id)) {
       recordSearchInterest({ verticalId: active.id, q: trimmed || undefined });
     }
     const params = new URLSearchParams();

@@ -34,13 +34,16 @@ const TOOLBAR_MIN_HEIGHT = { xs: 72, md: 88 } as const;
 export function PublicHeader() {
   const { user } = useUser();
   const t = useCopy();
-  const { active: pagerActive, scrollParent } = useMainTabs();
+  const { hosted, scrollParent } = useMainTabs();
   const elevated = useScrollTrigger({
     disableHysteresis: true,
     threshold: 8,
     target: scrollParent ?? undefined,
   });
   const headerHidden = useScrollRevealHidden({ target: scrollParent });
+  // Main tabs (including an open chat): header stays in document flow.
+  // Other public routes keep a fixed bar that hides on scroll-down.
+  const pinToViewport = !hosted;
   const [mounted, setMounted] = React.useState(false);
   const [addListingOpen, setAddListingOpen] = React.useState(false);
 
@@ -61,7 +64,7 @@ export function PublicHeader() {
   return (
     <>
       <AppBar
-        position={pagerActive ? 'sticky' : 'fixed'}
+        position={pinToViewport ? 'fixed' : 'relative'}
         elevation={0}
         component="header"
         suppressHydrationWarning
@@ -88,8 +91,7 @@ export function PublicHeader() {
               };
 
           return {
-            top: 0,
-            ...(pagerActive ? { width: '100%' } : { left: 0, right: 0 }),
+            ...(pinToViewport ? { top: 0, left: 0, right: 0 } : { width: '100%' }),
             color: 'text.primary',
             backgroundColor,
             backdropFilter: backdrop,
@@ -97,13 +99,15 @@ export function PublicHeader() {
             borderBottom: 'none',
             boxShadow: 'none',
             backgroundImage: 'none',
-            transform: headerHidden ? 'translateY(-100%)' : 'translateY(0)',
-            transition: theme.transitions.create(['transform', 'background-color'], {
-              duration: 220,
-              easing: theme.transitions.easing.easeInOut,
-            }),
+            transform: pinToViewport && headerHidden ? 'translateY(-100%)' : 'translateY(0)',
+            transition: pinToViewport
+              ? theme.transitions.create(['transform', 'background-color'], {
+                  duration: 220,
+                  easing: theme.transitions.easing.easeInOut,
+                })
+              : 'none',
             zIndex: theme.zIndex.appBar,
-            willChange: 'transform',
+            willChange: pinToViewport ? 'transform' : 'auto',
             '@media (prefers-reduced-motion: reduce)': {
               transition: 'background-color 0.2s ease',
             },
@@ -251,7 +255,7 @@ export function PublicHeader() {
           </Toolbar>
         </Container>
       </AppBar>
-      {pagerActive ? null : (
+      {pinToViewport ? (
         <Toolbar
           disableGutters
           aria-hidden
@@ -261,7 +265,7 @@ export function PublicHeader() {
             pointerEvents: 'none',
           }}
         />
-      )}
+      ) : null}
       <AddListingPickerDialog open={addListingOpen} onClose={() => setAddListingOpen(false)} />
     </>
   );

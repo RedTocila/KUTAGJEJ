@@ -33,7 +33,7 @@ export function ListingCardRating({
 
   return (
     <Box sx={{ minWidth: 0 }}>
-      <ProfessionalRatingSummary rating={rating} reviewCount={count} starSize={13} />
+      <ProfessionalRatingSummary rating={rating} reviewCount={count} starSize={18} />
     </Box>
   );
 }

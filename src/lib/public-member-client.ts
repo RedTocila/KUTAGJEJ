@@ -6,7 +6,7 @@ import type {
   PublicRealEstateListing,
   PublicRealEstateListingSeller,
 } from '@/lib/public-listings-client';
-import { loadPublicEntity, type PublicEntityLoadResult } from '@/lib/server-fetch';
+import { loadPublicEntity, safeServerJson, type PublicEntityLoadResult } from '@/lib/server-fetch';
 import type { HomepageMixedListing } from '@/lib/homepage-latest-listings';
 
 export interface PublicMemberListingsBundle {
@@ -280,6 +280,31 @@ export interface PublicMemberProfile {
   badges: PublicMemberReferralBadge[];
 }
 
+/** Compact public profile row returned by `GET /public/members?q=`. */
+export interface PublicMemberSearchHit {
+  id: string;
+  kind: 'individual' | 'business';
+  displayName: string | null;
+  avatarUrl: string | null;
+  memberSince: string;
+  verified: boolean;
+  trustBadge: boolean;
+  businessOwner: string | null;
+  businessCategory: string | null;
+  cityName: string | null;
+  ratingAverage: number | null;
+  reviewCount: number;
+}
+
+export interface PublicMemberSearchResult {
+  members: PublicMemberSearchHit[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  ok: boolean;
+}
+
 const EMPTY_LISTINGS: PublicMemberListingsBundle = {
   realEstate: [],
   cars: [],
@@ -342,6 +367,39 @@ export async function loadPublicMemberProfile(
 
 export async function fetchPublicMemberProfile(id: string): Promise<PublicMemberProfile | null> {
   return (await loadPublicMemberProfile(id)).data;
+}
+
+export async function fetchPublicMemberSearch(
+  query: string,
+  limit = 24,
+  page = 1,
+): Promise<PublicMemberSearchResult> {
+  const params = new URLSearchParams();
+  const trimmed = query.trim();
+  if (trimmed) params.set('q', trimmed);
+  params.set('limit', String(limit));
+  params.set('page', String(page));
+  const data = await safeServerJson<{
+    members?: PublicMemberSearchHit[];
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  }>(`/public/members?${params.toString()}`);
+  if (!data) {
+    return { members: [], total: 0, page, limit, totalPages: 1, ok: false };
+  }
+  const members = Array.isArray(data.members) ? data.members : [];
+  const total = data.total ?? members.length;
+  const resolvedLimit = data.limit ?? limit;
+  return {
+    members,
+    total,
+    page: data.page ?? page,
+    limit: resolvedLimit,
+    totalPages: data.totalPages ?? Math.max(1, Math.ceil(total / resolvedLimit) || 1),
+    ok: true,
+  };
 }
 
 /** Newest listings across all member verticals, merged and sorted by `createdAt`. */

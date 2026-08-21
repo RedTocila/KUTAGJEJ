@@ -104,12 +104,7 @@ export function ListingMapsLocationFields({
       ) : null}
       {showPreview && mapLocation ? (
         <Box sx={{ width: '100%', minWidth: 0 }}>
-          <LocationMapEmbed
-            query={mapLocation.query}
-            lat={mapLocation.lat}
-            lng={mapLocation.lng}
-            height={200}
-          />
+          <LocationMapEmbed query={mapLocation.query} lat={mapLocation.lat} lng={mapLocation.lng} />
         </Box>
       ) : null}
       <ListingTextField

@@ -19,8 +19,8 @@ export type HomeVerticalId =
   | 'businesses'
   | 'professionals';
 
-/** Search tabs include AI plus listing verticals (OKAZION is a home browse section, not a search tab). */
-export type SearchCategoryId = 'ai' | 'okazion' | HomeVerticalId;
+/** Search tabs include AI, listing verticals, and public profiles (OKAZION is a home browse section). */
+export type SearchCategoryId = 'ai' | 'okazion' | 'profiles' | HomeVerticalId;
 
 export interface HomeVertical {
   id: HomeVerticalId;
@@ -45,9 +45,9 @@ export interface SearchCategory {
   label: string;
   tagline: string;
   gradient: readonly [string, string];
-  iconKey: HomeVertical['iconKey'] | 'sparkle' | 'seal-percent';
+  iconKey: HomeVertical['iconKey'] | 'sparkle' | 'seal-percent' | 'users';
   href: string;
-  /** Listing verticals have a post path; AI / OKAZION search do not. */
+  /** Listing verticals have a post path; AI / OKAZION / profiles search do not. */
   postHref?: string;
   searchPlaceholder: string;
 }
@@ -158,9 +158,23 @@ export const OKAZION_SEARCH_CATEGORY: SearchCategory = {
   searchPlaceholder: 'Kërko oferta OKAZION…',
 };
 
-/** /kerko + hero search tabs: AI, then listing verticals (OKAZION matches already appear in each vertical). */
+/** Public member profiles — search tab only (not a home browse category). */
+export const PROFILES_ACCENT = '#6366F1';
+export const PROFILES_ACCENT_SOFT = 'rgba(99, 102, 241, 0.16)';
+export const PROFILES_SEARCH_CATEGORY: SearchCategory = {
+  id: 'profiles',
+  label: 'Profile',
+  tagline: 'Anëtarë dhe biznese — kërko sipas emrit, qytetit ose kategorisë',
+  gradient: [PROFILES_ACCENT, '#4338CA'] as const,
+  iconKey: 'users',
+  href: `${paths.public.search}?cat=profiles`,
+  searchPlaceholder: 'Kërko emër, biznes, qytet…',
+};
+
+/** /kerko + hero search tabs: AI, profiles, then listing verticals. */
 export const SEARCH_CATEGORIES: readonly SearchCategory[] = [
   AI_SEARCH_CATEGORY,
+  PROFILES_SEARCH_CATEGORY,
   ...HOME_VERTICALS,
 ];
 
@@ -174,8 +188,12 @@ export function isHomeVerticalId(value: string | null | undefined): value is Hom
   return Boolean(value && HOME_VERTICALS.some((v) => v.id === value));
 }
 
+export function isProfilesSearchCategory(value: string | null | undefined): value is 'profiles' {
+  return value === 'profiles';
+}
+
 export function isSearchCategoryId(value: string | null | undefined): value is SearchCategoryId {
-  return value === 'ai' || value === 'okazion' || isHomeVerticalId(value);
+  return value === 'ai' || value === 'okazion' || isProfilesSearchCategory(value) || isHomeVerticalId(value);
 }
 
 export function findVertical(id: HomeVerticalId): HomeVertical {

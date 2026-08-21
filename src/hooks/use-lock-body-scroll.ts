@@ -49,8 +49,12 @@ function releaseLock() {
   if (lockCount > 0 || !savedBody) return;
 
   const { body, documentElement } = document;
-  documentElement.style.overflow = savedHtmlOverflow;
-  body.style.overflow = savedBody.overflow;
+    documentElement.style.overflow = savedHtmlOverflow;
+    documentElement.style.removeProperty('overflow-x');
+    documentElement.style.removeProperty('overflow-y');
+    body.style.overflow = savedBody.overflow;
+    body.style.removeProperty('overflow-x');
+    body.style.removeProperty('overflow-y');
   body.style.position = savedBody.position;
   body.style.top = savedBody.top;
   body.style.left = savedBody.left;

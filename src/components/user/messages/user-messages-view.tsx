@@ -2127,6 +2127,7 @@ export function UserMessagesView() {
   return (
     <Stack
       spacing={{ xs: 0, md: 2 }}
+      data-tab-inner-scroll=""
       sx={{
         flex: { xs: '1 1 auto', md: '0 1 auto' },
         minHeight: 0,
@@ -2160,6 +2161,7 @@ export function UserMessagesView() {
 
       <Card
         elevation={0}
+        data-tab-inner-scroll=""
         sx={{
           border: { xs: 'none', md: '1px solid' },
           borderColor: { md: 'divider' },
@@ -2174,6 +2176,7 @@ export function UserMessagesView() {
         }}
       >
         <Box
+          data-tab-inner-scroll=""
           sx={{
             width: { xs: '100%', md: 340 },
             flexShrink: 0,
@@ -2423,6 +2426,7 @@ export function UserMessagesView() {
             </Stack>
           ) : (
             <Box
+              data-tab-inner-scroll=""
               sx={{
                 flex: 1,
                 overflow: 'auto',

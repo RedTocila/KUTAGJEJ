@@ -249,14 +249,25 @@ export default function UserPackagesPage() {
   if (!user) return null;
 
   return (
-    <Stack spacing={1.5} sx={{ flex: 1, minHeight: 0, height: '100%', overflow: 'hidden' }}>
+    <Stack
+      spacing={1.5}
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        height: { xs: 'auto', md: '100%' },
+        overflow: { xs: 'visible', md: 'hidden' },
+      }}
+    >
       <UserPageHeader
         icon={<PackageIcon size={20} weight="duotone" />}
         title={t.nav.packages}
         description={t.packages.hubDescription}
         sx={{ flexShrink: 0 }}
       />
-      <Stack spacing={1.35} sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <Stack
+        spacing={1.35}
+        sx={{ flex: 1, minHeight: 0, overflow: { xs: 'visible', md: 'hidden' } }}
+      >
         <CategoryCard
           href={paths.user.packagesMain}
           accent="primary"

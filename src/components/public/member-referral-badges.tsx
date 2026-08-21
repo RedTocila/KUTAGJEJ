@@ -388,14 +388,13 @@ export function MemberReferralBadgesSkeleton({
   );
 }
 
-/** Referral badges — scroll row or fixed grid (optionally collapsed to one row). */
+/** Referral badges — scroll row or fixed grid. */
 export function MemberReferralBadgesRow({
   badges,
   dense = false,
   layout = 'scroll',
   columns = 5,
   selfView = false,
-  collapsible = false,
 }: {
   badges: PublicMemberReferralBadge[];
   /** Slightly tighter layout for the portal profile card. */
@@ -406,11 +405,8 @@ export function MemberReferralBadgesRow({
   columns?: number;
   /** First-person earned copy + owner CTAs (my profile / own public profile). */
   selfView?: boolean;
-  /** Grid only: show one row, then “view all” expands the rest downward. */
-  collapsible?: boolean;
 }) {
   const [selected, setSelected] = React.useState<PublicMemberReferralBadge | null>(null);
-  const [expanded, setExpanded] = React.useState(false);
   const open = Boolean(selected);
 
   const orderedBadges = React.useMemo(() => {
@@ -418,27 +414,9 @@ export function MemberReferralBadgesRow({
     return [...badges].sort((a, b) => Number(Boolean(b.earned)) - Number(Boolean(a.earned)));
   }, [badges]);
 
-  const earnedBadges = React.useMemo(
-    () => orderedBadges.filter((badge) => Boolean(badge.earned)),
-    [orderedBadges],
-  );
-
   if (!orderedBadges.length) return null;
 
   const isGrid = layout === 'grid';
-  const previewCount = Math.max(1, columns);
-  /** Visitors always see completed badges; collapse only hides locked slots. */
-  const publicCompletedFirst = isGrid && collapsible && !selfView;
-  const canCollapse = isGrid && collapsible && (
-    publicCompletedFirst
-      ? orderedBadges.length > Math.max(earnedBadges.length, previewCount)
-      : orderedBadges.length > previewCount
-  );
-  const visibleBadges = (() => {
-    if (!(canCollapse && !expanded)) return orderedBadges;
-    if (publicCompletedFirst && earnedBadges.length > 0) return earnedBadges;
-    return orderedBadges.slice(0, previewCount);
-  })();
 
   return (
     <>
@@ -468,7 +446,7 @@ export function MemberReferralBadgesRow({
                 }
           }
         >
-          {visibleBadges.map((badge) => (
+          {orderedBadges.map((badge) => (
             <BadgeTile
               key={badge.id}
               badge={badge}
@@ -478,32 +456,6 @@ export function MemberReferralBadgesRow({
             />
           ))}
         </Box>
-        {canCollapse ? (
-          <Button
-            size="small"
-            variant="text"
-            onClick={() => setExpanded((v) => !v)}
-            aria-expanded={expanded}
-            sx={{
-              mt: 0.75,
-              mx: 'auto',
-              display: 'flex',
-              fontWeight: 700,
-              textTransform: 'none',
-              fontSize: '0.75rem',
-              py: 0.25,
-              minWidth: 0,
-              color: 'text.secondary',
-              '&:hover': { color: 'primary.main', bgcolor: 'transparent' },
-            }}
-          >
-            {expanded
-              ? 'Shfaq më pak'
-              : publicCompletedFirst && earnedBadges.length > 0
-                ? 'Shiko badge-et e tjera'
-                : 'Shiko të gjitha badge-et'}
-          </Button>
-        ) : null}
       </Box>
       <BadgeInfoDialog
         badge={selected}

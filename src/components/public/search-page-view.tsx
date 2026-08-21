@@ -27,6 +27,7 @@ import { CarCard } from '@/components/public/listing-cards/car-card';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
+import { MemberProfileCard } from '@/components/public/listing-cards/member-profile-card';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { HeroCategoryCircles } from '@/components/public/hero-category-circles';
 import { ListingCardsSkeleton } from '@/components/core/content-skeletons';
@@ -53,6 +54,7 @@ import {
   AI_SEARCH_BLUE_SOFT,
   findVertical,
   isHomeVerticalId,
+  isProfilesSearchCategory,
   isSearchCategoryId,
   localizeSearchCategories,
   type HomeVerticalId,
@@ -72,6 +74,7 @@ import {
   type PublicMarketplaceListing,
   type PublicRealEstateListing,
 } from '@/lib/public-listings-client';
+import { fetchPublicMemberSearch, type PublicMemberSearchHit } from '@/lib/public-member-client';
 import { paths } from '@/paths';
 import { MOTION } from '@/styles/motion';
 
@@ -83,7 +86,13 @@ type SearchItem =
   | { kind: 'job'; listing: PublicJobListing }
   | { kind: 'marketplace'; listing: PublicMarketplaceListing }
   | { kind: 'businesses'; listing: PublicDirectoryListing }
-  | { kind: 'professionals'; listing: PublicDirectoryListing };
+  | { kind: 'professionals'; listing: PublicDirectoryListing }
+  | { kind: 'profile'; member: PublicMemberSearchHit };
+
+function searchItemKey(item: SearchItem): string {
+  if (item.kind === 'profile') return `profile-${item.member.id}`;
+  return `${item.kind}-${item.listing.id}`;
+}
 
 function buildAiBrowseHref(intent: AiSearchResult['intent']): string | null {
   const verticalId = intent.verticals.find((v): v is HomeVerticalId => isHomeVerticalId(v));
@@ -188,6 +197,8 @@ function ResultCard({ item }: { item: SearchItem }) {
     case 'businesses':
     case 'professionals':
       return <DirectoryListingCard listing={item.listing} />;
+    case 'profile':
+      return <MemberProfileCard member={item.member} />;
     default:
       return null;
   }
@@ -239,6 +250,7 @@ export function SearchPageView({
     ? (localizedCategories.find((v) => v.id === categoryId) ?? null)
     : null;
   const isAi = categoryId === 'ai';
+  const isProfiles = categoryId === 'profiles';
 
   React.useEffect(() => {
     if (isOverlay) {
@@ -322,6 +334,34 @@ export function SearchPageView({
     [t.search.failed],
   );
 
+  const runProfileSearch = React.useCallback(
+    async (q: string) => {
+      setLoading(true);
+      setError(null);
+      setHasSearched(true);
+      setSubmittedQuery(q.trim());
+      setAiReply(null);
+      try {
+        const res = await fetchPublicMemberSearch(q, PAGE_SIZE);
+        if (!res.ok) {
+          setItems([]);
+          setTotal(0);
+          setError(t.search.failed);
+          return;
+        }
+        setItems(res.members.map((member) => ({ kind: 'profile' as const, member })));
+        setTotal(res.total);
+      } catch {
+        setItems([]);
+        setTotal(0);
+        setError(t.search.failed);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t.search.failed],
+  );
+
   const runAiNavigate = React.useCallback(
     async (q: string) => {
       const trimmed = q.trim();
@@ -357,10 +397,13 @@ export function SearchPageView({
 
   React.useEffect(() => {
     if (!initialCategory || initialCategory === 'ai') return;
-    if (!isHomeVerticalId(initialCategory)) return;
-    if (urlQ.trim()) {
-      void runVerticalSearch(initialCategory, urlQ);
+    if (!urlQ.trim()) return;
+    if (isProfilesSearchCategory(initialCategory)) {
+      void runProfileSearch(urlQ);
+      return;
     }
+    if (!isHomeVerticalId(initialCategory)) return;
+    void runVerticalSearch(initialCategory, urlQ);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -380,7 +423,8 @@ export function SearchPageView({
 
   // Live results while typing (debounced). AI only runs on explicit submit.
   React.useEffect(() => {
-    if (!categoryId || !isHomeVerticalId(categoryId)) return;
+    if (!categoryId || categoryId === 'ai') return;
+    if (!isHomeVerticalId(categoryId) && !isProfilesSearchCategory(categoryId)) return;
     const trimmed = query.trim();
 
     if (!trimmed) {
@@ -396,11 +440,15 @@ export function SearchPageView({
     setLoading(true);
     const handle = window.setTimeout(() => {
       syncUrl(categoryId, trimmed);
+      if (isProfilesSearchCategory(categoryId)) {
+        void runProfileSearch(trimmed);
+        return;
+      }
       void runVerticalSearch(categoryId, trimmed);
     }, 280);
 
     return () => window.clearTimeout(handle);
-  }, [query, categoryId, runVerticalSearch, syncUrl]);
+  }, [query, categoryId, runProfileSearch, runVerticalSearch, syncUrl]);
 
   const handleSelectCategory = (index: number) => {
     const next = localizedCategories[index];
@@ -428,6 +476,12 @@ export function SearchPageView({
     if (categoryId === 'ai') {
       if (!trimmed) return;
       void runAiNavigate(trimmed);
+      return;
+    }
+    if (categoryId === 'profiles') {
+      if (!trimmed) return;
+      syncUrl('profiles', trimmed);
+      void runProfileSearch(trimmed);
       return;
     }
     const base = activeCategory.href.split('?')[0];
@@ -786,23 +840,26 @@ export function SearchPageView({
         ) : items.length === 0 ? (
           <Box sx={{ py: 4, textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              {`Asnjë rezultat${submittedQuery ? ` për «${submittedQuery}»` : ''}${activeCategory ? ` në ${activeCategory.label}` : ''}.`}
+              {t.search.emptyResults(submittedQuery, activeCategory?.label ?? '')}
             </Typography>
           </Box>
         ) : (
           <Stack spacing={1.5}>
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-              {total} {total === 1 ? 'njoftim' : 'njoftime'}
-              {submittedQuery ? ` për «${submittedQuery}»` : activeCategory ? ` · ${activeCategory.label}` : ''}
+              {(isProfiles ? t.search.profileCount(total) : t.search.listingCount(total)) +
+                t.search.resultsSuffix(submittedQuery, activeCategory?.label ?? '')}
             </Typography>
             <Grid container spacing={2}>
               {items.map((item) => (
-                <Grid key={`${item.kind}-${item.listing.id}`} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                <Grid
+                  key={searchItemKey(item)}
+                  size={item.kind === 'profile' ? { xs: 12, md: 6 } : { xs: 12, sm: 6, md: 4, lg: 3 }}
+                >
                   <ResultCard item={item} />
                 </Grid>
               ))}
             </Grid>
-            {activeCategory && total > items.length ? (
+            {activeCategory && !isProfiles && total > items.length ? (
               <Box sx={{ textAlign: 'center' }}>
                 <Button
                   component={RouterLink}
@@ -810,7 +867,7 @@ export function SearchPageView({
                   variant="text"
                   sx={{ fontWeight: 700, textTransform: 'none' }}
                 >
-                  Shiko më shumë
+                  {t.search.seeMore}
                 </Button>
               </Box>
             ) : null}

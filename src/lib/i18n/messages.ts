@@ -48,6 +48,11 @@ const verticalsSq: Record<SearchCategoryId, VerticalCopy> = {
     tagline: 'Freelance, konsulence dhe shërbime profesionale',
     searchPlaceholder: 'Kërko profesion, shërbim, qytet…',
   },
+  profiles: {
+    label: 'Profile',
+    tagline: 'Anëtarë dhe biznese — kërko sipas emrit, qytetit ose kategorisë',
+    searchPlaceholder: 'Kërko emër, biznes, qytet…',
+  },
 };
 
 const verticalsEn: Record<SearchCategoryId, VerticalCopy> = {
@@ -91,6 +96,11 @@ const verticalsEn: Record<SearchCategoryId, VerticalCopy> = {
     tagline: 'Freelance, consulting and professional services',
     searchPlaceholder: 'Search profession, service, city…',
   },
+  profiles: {
+    label: 'Profiles',
+    tagline: 'Members and businesses — search by name, city or category',
+    searchPlaceholder: 'Search name, business, city…',
+  },
 };
 
 const sq = {
@@ -123,6 +133,11 @@ const sq = {
     typeYourOwn: 'Shkruaj vetë…',
     useCustomValue: (q: string) => `Përdor “${q}”`,
     noResults: 'Nuk u gjet asnjë rezultat',
+    expandMap: 'Zmadho hartën',
+    collapseMap: 'Zvogëlo hartën',
+    openInMaps: 'Hap në Maps',
+    mapDirections: 'Drejtimet',
+    locationMapTitle: 'Harta e vendndodhjes',
   },
   verticals: verticalsSq,
   chrome: {
@@ -326,6 +341,19 @@ const sq = {
     genericPlaceholder: 'Kërko…',
     aiThinking: 'AI po kërkon…',
     aiEmpty: 'Nuk u gjet asnjë njoftim për këtë kërkesë.',
+    listingCount: (n: number) => (n === 1 ? '1 njoftim' : `${n} njoftime`),
+    profileCount: (n: number) => (n === 1 ? '1 profil' : `${n} profile`),
+    resultsSuffix: (query: string, category: string) =>
+      query ? ` për «${query}»` : category ? ` · ${category}` : '',
+    emptyResults: (query: string, category: string) =>
+      `Asnjë rezultat${query ? ` për «${query}»` : ''}${category ? ` në ${category}` : ''}.`,
+    seeMore: 'Shiko më shumë',
+    memberSince: (year: number) => `Anëtar që prej ${year}`,
+    kindIndividual: 'Individ',
+    kindBusiness: 'Biznes',
+    unnamedMember: 'Përdorues KuTaGjej',
+    viewProfile: 'Shiko profilin',
+    verifiedNotice: 'Ky profil është i verifikuar',
   },
   nav: {
     overview: 'Përmbledhje',
@@ -854,6 +882,11 @@ const en: AppMessages = {
     typeYourOwn: 'Type your own…',
     useCustomValue: (q: string) => `Use “${q}”`,
     noResults: 'No results found',
+    expandMap: 'Expand map',
+    collapseMap: 'Collapse map',
+    openInMaps: 'Open in Maps',
+    mapDirections: 'Directions',
+    locationMapTitle: 'Location map',
   },
   verticals: verticalsEn,
   chrome: {
@@ -1057,6 +1090,19 @@ const en: AppMessages = {
     genericPlaceholder: 'Search…',
     aiThinking: 'AI is searching…',
     aiEmpty: 'No listings matched this request.',
+    listingCount: (n: number) => (n === 1 ? '1 listing' : `${n} listings`),
+    profileCount: (n: number) => (n === 1 ? '1 profile' : `${n} profiles`),
+    resultsSuffix: (query: string, category: string) =>
+      query ? ` for “${query}”` : category ? ` · ${category}` : '',
+    emptyResults: (query: string, category: string) =>
+      `No results${query ? ` for “${query}”` : ''}${category ? ` in ${category}` : ''}.`,
+    seeMore: 'See more',
+    memberSince: (year: number) => `Member since ${year}`,
+    kindIndividual: 'Individual',
+    kindBusiness: 'Business',
+    unnamedMember: 'KuTaGjej user',
+    viewProfile: 'View profile',
+    verifiedNotice: 'This profile is verified',
   },
   nav: {
     overview: 'Overview',

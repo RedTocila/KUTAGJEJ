@@ -13,6 +13,8 @@ import {
   AI_SEARCH_BLUE_SOFT,
   OKAZION_ACCENT,
   OKAZION_ACCENT_SOFT,
+  PROFILES_ACCENT,
+  PROFILES_ACCENT_SOFT,
   localizeHomeBrowseCategories,
   localizeSearchCategories,
 } from '@/lib/home-categories';
@@ -36,23 +38,26 @@ export interface HeroCategoryCirclesProps {
   includeAi?: boolean;
 }
 
-type AccentMode = 'ai' | 'okazion' | 'default';
+type AccentMode = 'ai' | 'okazion' | 'profiles' | 'default';
 
 function accentColor(mode: AccentMode): string {
   if (mode === 'ai') return AI_SEARCH_BLUE;
   if (mode === 'okazion') return OKAZION_ACCENT;
+  if (mode === 'profiles') return PROFILES_ACCENT;
   return 'var(--mui-palette-primary-main)';
 }
 
 function accentSoft(mode: AccentMode): string {
   if (mode === 'ai') return AI_SEARCH_BLUE_SOFT;
   if (mode === 'okazion') return OKAZION_ACCENT_SOFT;
+  if (mode === 'profiles') return PROFILES_ACCENT_SOFT;
   return 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)';
 }
 
 function accentModeFor(id: string): AccentMode {
   if (id === 'ai') return 'ai';
   if (id === 'okazion') return 'okazion';
+  if (id === 'profiles') return 'profiles';
   return 'default';
 }
 

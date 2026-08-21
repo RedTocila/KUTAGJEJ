@@ -19,19 +19,24 @@
 }
 
 html {
-  height: 100%;
+  /* `min-height` (not `height`) so the document can grow. `height: 100%` + any
+     non-visible overflow-x turns html/body into nested scrollers that iOS Safari
+     often refuses to pan — the “page won’t scroll” bug on some phones. */
+  height: auto;
+  min-height: 100%;
   background-color: var(--mui-palette-background-default, #ffffff);
-  /* `clip` (not `hidden`) so overflow-y stays visible and the header can't lag behind scroll. */
-  overflow-x: clip;
+  overflow-x: hidden;
+  overflow-y: scroll;
   overscroll-behavior-x: none;
 }
 
 body {
-  height: 100%;
+  height: auto;
+  min-height: 100%;
   margin: 0;
   background-color: var(--mui-palette-background-default, #ffffff);
   color: var(--mui-palette-text-primary, #141a11);
-  overflow-x: clip;
+  overflow: visible;
   overscroll-behavior-x: none;
 }
 

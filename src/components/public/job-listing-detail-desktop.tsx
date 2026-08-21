@@ -676,12 +676,7 @@ export function JobListingDetailDesktop({
                 {mapLocation ? (
                   <Box data-business-location-map sx={{ scrollMarginTop: 96 }}>
                     <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', mb: 1.5 }}>Vendndodhja</Typography>
-                    <LocationMapEmbed
-                      query={mapLocation.query}
-                      lat={mapLocation.lat}
-                      lng={mapLocation.lng}
-                      height={280}
-                    />
+                    <LocationMapEmbed query={mapLocation.query} lat={mapLocation.lat} lng={mapLocation.lng} />
                   </Box>
                 ) : null}
 

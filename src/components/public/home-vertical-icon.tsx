@@ -8,9 +8,10 @@ import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Hands
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
+import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import type { IconWeight } from '@phosphor-icons/react';
 
-import { AI_SEARCH_BLUE, OKAZION_ACCENT, type SearchCategoryId } from '@/lib/home-categories';
+import { AI_SEARCH_BLUE, OKAZION_ACCENT, PROFILES_ACCENT, type SearchCategoryId } from '@/lib/home-categories';
 
 export interface HomeVerticalIconProps {
   verticalId: SearchCategoryId;
@@ -32,7 +33,9 @@ export function HomeVerticalIcon({
       ? AI_SEARCH_BLUE
       : verticalId === 'okazion'
         ? OKAZION_ACCENT
-        : 'var(--mui-palette-primary-main)');
+        : verticalId === 'profiles'
+          ? PROFILES_ACCENT
+          : 'var(--mui-palette-primary-main)');
   const shared = {
     weight,
     size,
@@ -57,6 +60,8 @@ export function HomeVerticalIcon({
       return <ForkKnifeIcon {...shared} />;
     case 'professionals':
       return <HandshakeIcon {...shared} />;
+    case 'profiles':
+      return <UsersIcon {...shared} />;
     default:
       return <BuildingsIcon {...shared} />;
   }

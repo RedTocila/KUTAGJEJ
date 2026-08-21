@@ -13,6 +13,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import { ListingKeywordSearchInput } from '@/components/public/listing-filters/listing-keyword-search-input';
 import { MemberLeaveReviewButton } from '@/components/public/member-leave-review-button';
 import { ProductBackButton, ProductTag } from '@/components/public/product-browse-chrome';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
@@ -32,6 +33,7 @@ import {
   MemberReviewsDialog,
   MemberSeeReviewsButton,
 } from '@/components/public/member-reviews-dialog';
+import { BrandCover } from '@/components/brand/brand-cover';
 import {
   ListingVerifiedBadge,
   ProfessionalRatingSummary,
@@ -52,7 +54,85 @@ import {
 import type { PublicRealEstateListingSeller } from '@/lib/public-listings-client';
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
+
 type FilterKey = 'all' | HomepageMixedListing['kind'];
+
+function normalizeSearch(value: string): string {
+  return value.trim().toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
+}
+
+function matchesSearch(query: string, parts: Array<string | number | null | undefined>): boolean {
+  if (!query) return true;
+  const haystack = normalizeSearch(
+    parts.filter((p) => p != null && String(p).trim() !== '').join(' '),
+  );
+  return haystack.includes(query);
+}
+
+function mixedListingMatches(item: HomepageMixedListing, query: string): boolean {
+  const listing = item.listing;
+  switch (item.kind) {
+    case 'real-estate':
+      return matchesSearch(query, [
+        listing.title,
+        listing.description,
+        listing.cityName,
+        listing.zoneName,
+        listing.propertyCategory,
+        listing.transactionType,
+        listing.price,
+        listing.currency,
+      ]);
+    case 'cars':
+      return matchesSearch(query, [
+        listing.make,
+        listing.model,
+        listing.variant,
+        listing.year,
+        listing.fuelType,
+        listing.vehicleType,
+        listing.color,
+        listing.cityName,
+        listing.description,
+        listing.price,
+        listing.currency,
+      ]);
+    case 'jobs':
+      return matchesSearch(query, [
+        listing.title,
+        listing.description,
+        listing.cityName,
+        listing.industry,
+        listing.jobType,
+        listing.workLocation,
+        listing.education,
+        listing.experience,
+      ]);
+    case 'marketplace':
+      return matchesSearch(query, [
+        listing.title,
+        listing.description,
+        listing.cityName,
+        listing.category,
+        listing.condition,
+        listing.price,
+        listing.currency,
+      ]);
+    case 'businesses':
+    case 'professionals':
+      return matchesSearch(query, [
+        listing.title,
+        listing.description,
+        listing.cityName,
+        listing.zoneName,
+        listing.category,
+        listing.categoryLabel,
+        listing.servicesHighlight,
+        listing.announcementTitle,
+        listing.announcementSubtitle,
+      ]);
+  }
+}
 
 const FILTERS: { key: FilterKey; label: string; totalKey?: keyof PublicMemberListingsBundle['totals'] }[] = [
   { key: 'all', label: 'Të gjitha' },
@@ -171,6 +251,7 @@ export function MemberProfileView({
   const router = useRouter();
   const { user } = useUser();
   const [filter, setFilter] = React.useState<FilterKey>('all');
+  const [search, setSearch] = React.useState('');
   const [reviewsOpen, setReviewsOpen] = React.useState(false);
   const [viewerHasReviewed, setViewerHasReviewed] = React.useState(false);
   const [liveBadges, setLiveBadges] = React.useState<PublicMemberReferralBadge[] | null>(null);
@@ -232,7 +313,12 @@ export function MemberProfileView({
     return (listings.totals[f.totalKey] ?? 0) > 0;
   });
 
-  const filtered = filter === 'all' ? mixed : mixed.filter((item) => item.kind === filter);
+  const searchQuery = React.useMemo(() => normalizeSearch(search), [search]);
+  const filtered = React.useMemo(() => {
+    const byCategory = filter === 'all' ? mixed : mixed.filter((item) => item.kind === filter);
+    if (!searchQuery) return byCategory;
+    return byCategory.filter((item) => mixedListingMatches(item, searchQuery));
+  }, [mixed, filter, searchQuery]);
 
   const showOwner =
     isBusiness &&
@@ -264,17 +350,7 @@ export function MemberProfileView({
           width: { md: 'calc(100% - 48px)' },
         }}
       >
-        {/* Cover */}
-        <Box
-          sx={{
-            position: 'relative',
-            height: { xs: 120, sm: 140 },
-            background: (theme) =>
-              `linear-gradient(135deg, ${primaryMainAlpha(0.28)} 0%, ${
-                theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'
-              } 55%, ${primaryMainAlpha(0.1)} 100%)`,
-          }}
-        >
+        <BrandCover sx={{ height: { xs: 148, sm: 176 } }}>
           <ProductBackButton
             href={paths.home}
             aria-label="Kthehu"
@@ -282,10 +358,10 @@ export function MemberProfileView({
               position: 'absolute',
               top: { xs: 'max(10px, env(safe-area-inset-top, 0px))', sm: 14 },
               left: { xs: 8, sm: 12 },
-              zIndex: 1,
+              zIndex: 2,
             }}
           />
-        </Box>
+        </BrandCover>
 
         <Stack
           spacing={2.5}
@@ -295,6 +371,31 @@ export function MemberProfileView({
             mt: { xs: -5, sm: -6 },
           }}
         >
+            <Box sx={{ position: 'relative' }}>
+              <ButtonBase
+                onClick={() => setReviewsOpen(true)}
+                aria-label={`Shiko vlerësimet (${reviewCount})`}
+                sx={(theme) => ({
+                  position: 'absolute',
+                  top: {
+                    xs: `calc(${theme.spacing(5)} + 4px)`,
+                    sm: `calc(${theme.spacing(6)} + 4px)`,
+                  },
+                  right: 0,
+                  zIndex: 1,
+                  borderRadius: 999,
+                  px: 0.5,
+                  py: 0.25,
+                  '&:hover': { bgcolor: 'action.hover' },
+                })}
+              >
+                <ProfessionalRatingSummary
+                  rating={formatRatingDisplay(member.ratingAverage)}
+                  reviewCount={reviewCount}
+                  starSize={18}
+                />
+              </ButtonBase>
+
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
               spacing={{ xs: 2, sm: 2.5 }}
@@ -321,7 +422,7 @@ export function MemberProfileView({
                 {initials}
               </Avatar>
 
-              <Stack spacing={1} sx={{ flex: '1 1 auto', minWidth: 0, pb: { sm: 0.5 } }}>
+              <Stack spacing={1} sx={{ flex: '1 1 auto', minWidth: 0, pb: { sm: 0.5 }, pr: { sm: 12 } }}>
                 <Stack
                   direction="row"
                   spacing={1}
@@ -356,18 +457,7 @@ export function MemberProfileView({
                   </Typography>
                 </Stack>
 
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    rowGap: 0.75,
-                    width: '100%',
-                  }}
-                >
-                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 0.75, minWidth: 0 }}>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 0.75, minWidth: 0 }}>
                     <Chip
                       size="small"
                       icon={
@@ -401,23 +491,39 @@ export function MemberProfileView({
                         }}
                       />
                     ) : null}
-                  </Stack>
-                  <ButtonBase
-                    onClick={() => setReviewsOpen(true)}
-                    aria-label={`Shiko vlerësimet (${reviewCount})`}
-                    sx={{
-                      borderRadius: 999,
-                      px: 0.5,
-                      py: 0.25,
-                      '&:hover': { bgcolor: 'action.hover' },
-                    }}
-                  >
-                    <ProfessionalRatingSummary
-                      rating={formatRatingDisplay(member.ratingAverage)}
-                      reviewCount={reviewCount}
-                      starSize={15}
-                    />
-                  </ButtonBase>
+                </Stack>
+
+                <Stack spacing={1.25}>
+                  {since ? (
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+                      <CalendarBlankIcon size={18} weight="duotone" />
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        Anëtar që prej {since.year}
+                        <Box component="span" sx={{ opacity: 0.7, fontWeight: 500 }}>
+                          {' '}
+                          · {since.monthYear}
+                        </Box>
+                      </Typography>
+                    </Stack>
+                  ) : null}
+
+                  {showOwner ? (
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+                      <UserIcon size={18} weight="duotone" />
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        Pronar: {member.businessOwner}
+                      </Typography>
+                    </Stack>
+                  ) : null}
+
+                  {member.businessCategory?.trim() ? (
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+                      <StorefrontIcon size={18} weight="duotone" />
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {member.businessCategory.trim()}
+                      </Typography>
+                    </Stack>
+                  ) : null}
                 </Stack>
 
                 {badgesLoading ? (
@@ -436,45 +542,12 @@ export function MemberProfileView({
                       selfView={isOwnProfile}
                       layout="grid"
                       columns={5}
-                      collapsible
                     />
                   </Box>
                 ) : null}
               </Stack>
             </Stack>
-
-            <Stack spacing={1.25}>
-              {since ? (
-                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', color: 'text.secondary' }}>
-                  <CalendarBlankIcon size={18} weight="duotone" />
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    Anëtar që prej {since.year}
-                    <Box component="span" sx={{ opacity: 0.7, fontWeight: 500 }}>
-                      {' '}
-                      · {since.monthYear}
-                    </Box>
-                  </Typography>
-                </Stack>
-              ) : null}
-
-              {showOwner ? (
-                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', color: 'text.secondary' }}>
-                  <UserIcon size={18} weight="duotone" />
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    Pronar: {member.businessOwner}
-                  </Typography>
-                </Stack>
-              ) : null}
-
-              {member.businessCategory?.trim() ? (
-                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', color: 'text.secondary' }}>
-                  <StorefrontIcon size={18} weight="duotone" />
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {member.businessCategory.trim()}
-                  </Typography>
-                </Stack>
-              ) : null}
-            </Stack>
+            </Box>
 
             <Box
               sx={{
@@ -528,13 +601,6 @@ export function MemberProfileView({
                     />
                   </Box>
                 </Stack>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ fontWeight: 600, opacity: 0.85, textAlign: 'center' }}
-                >
-                  Duhet llogari KuTaGjej për të lënë vlerësim. Komuniko përmes mesazheve në platformë.
-                </Typography>
               </Stack>
             ) : null}
           </Stack>
@@ -575,7 +641,7 @@ export function MemberProfileView({
             {totalActive > 0 ? (
               <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
                 {filtered.length} {filtered.length === 1 ? 'njoftim' : 'njoftime'}
-                {filter !== 'all' ? ' në këtë kategori' : ''}
+                {filter !== 'all' && !searchQuery ? ' në këtë kategori' : ''}
               </Typography>
             ) : null}
           </Stack>
@@ -598,6 +664,12 @@ export function MemberProfileView({
             </Box>
           ) : (
             <>
+              <ListingKeywordSearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder="Kërko njoftimet…"
+              />
+
               {visibleFilters.length > 2 ? (
                 <Stack
                   direction="row"
@@ -640,7 +712,9 @@ export function MemberProfileView({
                   }}
                 >
                   <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                    Nuk ka njoftime në këtë kategori.
+                    {searchQuery
+                      ? 'Nuk u gjet asnjë njoftim për këtë kërkim.'
+                      : 'Nuk ka njoftime në këtë kategori.'}
                   </Typography>
                 </Box>
               ) : (

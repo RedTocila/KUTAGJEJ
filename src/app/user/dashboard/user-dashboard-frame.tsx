@@ -177,9 +177,13 @@ function UserDashboardFrameInner({
               display: 'flex',
               flexDirection: 'column',
               position: 'relative',
-              minHeight: '100%',
+              minHeight: '100dvh',
               ...(isPackagesHub
-                ? { height: '100dvh', overflow: 'hidden' }
+                ? {
+                    minHeight: '100dvh',
+                    height: { xs: 'auto', md: '100dvh' },
+                    overflow: { xs: 'visible', md: 'hidden' },
+                  }
                 : isMessages
                   ? {
                       height: { xs: '100dvh', md: 'auto' },
@@ -198,7 +202,7 @@ function UserDashboardFrameInner({
                 pl: { lg: 'var(--SideNav-width)' },
                 minHeight: 0,
                 ...(isPackagesHub
-                  ? { height: '100%' }
+                  ? { height: { xs: 'auto', md: '100%' } }
                   : isMessages
                     ? { height: { xs: '100%', md: 'auto' } }
                     : null),

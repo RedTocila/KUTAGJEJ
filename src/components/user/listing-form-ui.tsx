@@ -102,18 +102,41 @@ export const ListingTextField = React.forwardRef(function ListingTextField(
 /**
  * Listing description textarea with an AI button in the bottom-right corner.
  * The button scrolls to the top AI command bar and focuses it (opens the keyboard).
+ * Overflow is hidden so iOS does not trap vertical pans inside the field.
  */
+function autosizeTextarea(el: HTMLTextAreaElement | null) {
+  if (!el) return;
+  el.style.overflow = 'hidden';
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+}
+
 export const ListingDescriptionField = React.forwardRef(function ListingDescriptionField(
   props: TextFieldProps,
   ref: React.Ref<HTMLDivElement>,
 ) {
   const t = useCopy();
-  const { slotProps, sx, multiline = true, minRows = 4, ...rest } = props;
+  const { slotProps, sx, multiline = true, minRows = 4, inputRef, onChange, ...rest } = props;
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
   const inputSlot =
     typeof slotProps?.input === 'object' && slotProps.input !== null ? slotProps.input : {};
   const inputSlotSx = 'sx' in inputSlot ? inputSlot.sx : undefined;
   const existingEndAdornment =
     'endAdornment' in inputSlot ? inputSlot.endAdornment : undefined;
+
+  const setTextareaRef = React.useCallback(
+    (node: HTMLTextAreaElement | null) => {
+      textareaRef.current = node;
+      autosizeTextarea(node);
+      if (typeof inputRef === 'function') inputRef(node);
+      else if (inputRef) (inputRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
+    },
+    [inputRef],
+  );
+
+  React.useLayoutEffect(() => {
+    autosizeTextarea(textareaRef.current);
+  }, [rest.value, rest.defaultValue]);
 
   return (
     <ListingTextField
@@ -121,6 +144,11 @@ export const ListingDescriptionField = React.forwardRef(function ListingDescript
       {...rest}
       multiline={multiline}
       minRows={minRows}
+      inputRef={setTextareaRef}
+      onChange={(event) => {
+        autosizeTextarea(event.target as HTMLTextAreaElement);
+        onChange?.(event);
+      }}
       slotProps={{
         ...slotProps,
         input: {
@@ -155,6 +183,10 @@ export const ListingDescriptionField = React.forwardRef(function ListingDescript
             {
               alignItems: 'stretch',
               position: 'relative',
+              '& textarea': {
+                overflow: 'hidden !important',
+                overscrollBehavior: 'none',
+              },
               '& .MuiInputAdornment-positionEnd': {
                 position: 'absolute',
                 right: 8,

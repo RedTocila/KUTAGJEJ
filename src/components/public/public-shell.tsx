@@ -54,9 +54,6 @@ export function PublicShell({
         minHeight: '100vh',
         width: '100%',
         maxWidth: '100%',
-        // `clip` avoids the overflow-x:hidden → overflow-y:auto trap that can
-        // leave the header feeling sticky while main content scrolls first.
-        overflowX: 'clip',
       }}
     >
       <Box
@@ -65,7 +62,6 @@ export function PublicShell({
           flex: '1 1 auto',
           minWidth: 0,
           maxWidth: '100%',
-          overflowX: 'clip',
           pb: hideMobileNav ? 0 : { xs: MOBILE_CONTENT_BOTTOM_PADDING, md: 0 },
         }}
       >

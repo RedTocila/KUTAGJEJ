@@ -71,6 +71,14 @@ import type { ListingCategoryKey } from '@/types/listing-category';
 
 const MAX_AI_IMAGES = 6;
 
+const analyzingTextFlashSx = {
+  animation: 'aiImportTextFlash 1.4s ease-in-out infinite',
+  '@keyframes aiImportTextFlash': {
+    '0%, 100%': { opacity: 1 },
+    '50%': { opacity: 0.38 },
+  },
+};
+
 function formatCategoryMismatch(
   t: ReturnType<typeof useCopy>,
   draft: Pick<AiImportDraftResult, 'detectedCategory' | 'error'>,
@@ -158,13 +166,16 @@ function AiImportProgressPanel({
       }}
     >
       <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
-        {loading ? (
-          <CircularProgress size={22} thickness={5} sx={{ color: AI_SEARCH_BLUE, flexShrink: 0 }} />
-        ) : (
-          <SparkleIcon size={22} weight="fill" color={AI_SEARCH_BLUE} />
-        )}
+        {loading ? null : <SparkleIcon size={22} weight="fill" color={AI_SEARCH_BLUE} />}
         <Stack spacing={0.2} sx={{ minWidth: 0, flex: 1 }}>
-          <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', color: 'text.primary' }}>
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: '0.95rem',
+              color: 'text.primary',
+              ...(loading ? analyzingTextFlashSx : null),
+            }}
+          >
             {loading
               ? total > 0
                 ? t.aiImport.progressWorking(current, total)
@@ -1198,33 +1209,14 @@ export default function AiImportListingsPage() {
             </Alert>
           ) : null}
           {loading ? (
-            <Box
-              sx={{
-                p: 2,
-                borderRadius: 2.5,
-                border: '1px dashed',
-                borderColor: AI_SEARCH_BLUE,
-                bgcolor: (theme) =>
-                  theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : AI_SEARCH_BLUE_SOFT,
-                animation: 'aiImportPulse 1.6s ease-in-out infinite',
-                '@keyframes aiImportPulse': {
-                  '0%, 100%': { opacity: 1 },
-                  '50%': { opacity: 0.62 },
-                },
-              }}
-            >
-              <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
-                <CircularProgress size={20} thickness={5} sx={{ color: AI_SEARCH_BLUE }} />
-                <Typography sx={{ fontWeight: 800, fontSize: '0.95rem' }}>
-                  {progress && progress.total > 0
-                    ? t.aiImport.progressWorking(
-                        Math.min(progress.total, progress.done + 1),
-                        progress.total,
-                      )
-                    : t.aiImport.analyzing}
-                </Typography>
-              </Stack>
-            </Box>
+            <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', ...analyzingTextFlashSx }}>
+              {progress && progress.total > 0
+                ? t.aiImport.progressWorking(
+                    Math.min(progress.total, progress.done + 1),
+                    progress.total,
+                  )
+                : t.aiImport.analyzing}
+            </Typography>
           ) : null}
           {drafts.map((draft) => {
             const mismatch = isAiCategoryMismatch(draft);

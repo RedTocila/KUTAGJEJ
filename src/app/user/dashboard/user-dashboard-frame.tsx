@@ -17,6 +17,7 @@ import {
   useOwnerEditHeaderActionsSlot,
 } from '@/components/user/owner-edit-header-actions';
 import { MessagesThreadChromeProvider } from '@/contexts/messages-thread-chrome-context';
+import { useMainTabsHosted } from '@/components/main-tabs/main-tabs-shell';
 import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 import { isPostListingPath } from '@/lib/post-listing-path';
 import { paths } from '@/paths';
@@ -82,6 +83,7 @@ function MessageThreadSearchParams({
 
 export function UserDashboardFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const hostedTabs = useMainTabsHosted();
   const isDashboardHome = pathname === paths.user.dashboard;
   const isMessages = pathMatches(pathname, paths.user.messages);
   const isPackagesHub = pathname === paths.user.packages;
@@ -118,7 +120,7 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
               <MessageThreadSearchParams isMessages={isMessages} onUrlThreadOpen={onUrlThreadOpen} />
             </React.Suspense>
             <UserDashboardFrameInner
-              showMobileBottomNav={showMobileBottomNav}
+              showMobileBottomNav={showMobileBottomNav && !hostedTabs}
               showBackLink={showBackLink}
               backHref={backHref}
               isMessages={isMessages}

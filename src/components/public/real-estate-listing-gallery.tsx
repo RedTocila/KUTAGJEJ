@@ -22,7 +22,7 @@ import { paths } from '@/paths';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { ListingGalleryPlaceholderKey } from '@/lib/listing-gallery-placeholder';
 import { emitListingPhotoView } from '@/lib/listing-hot-lead';
-import { type ListingMetricKind } from '@/lib/listing-metrics';
+import { nextShareCount, type ListingMetricKind } from '@/lib/listing-metrics';
 import type { ListingSharePayload } from '@/lib/listing-share';
 import { listingHeroImageUrl, listingThumbImageUrl } from '@/lib/storage-image';
 import { useHistoryBackProps } from '@/hooks/use-navigate-back';
@@ -123,6 +123,10 @@ export function RealEstateListingGallery(props: {
 
   React.useEffect(() => {
     setShareCount(initialShareCount);
+  }, [listingId]);
+
+  React.useEffect(() => {
+    setShareCount((count) => Math.max(count, initialShareCount));
   }, [initialShareCount]);
 
   React.useEffect(() => {
@@ -718,7 +722,7 @@ export function RealEstateListingGallery(props: {
           open={shareOpen}
           onClose={() => setShareOpen(false)}
           payload={resolvedSharePayload}
-          onShared={(metrics) => setShareCount(metrics.shareCount)}
+          onShared={(metrics) => setShareCount((count) => nextShareCount(count, metrics))}
         />
       ) : null}
 

@@ -144,7 +144,6 @@ async function ensureEngagement(kind, listingId) {
       listing_kind: kind,
       listing_id: listingId,
       view_count: 0,
-      click_count: 0,
       share_count: 0,
     })
     .select('*')
@@ -172,13 +171,47 @@ async function ensureEngagement(kind, listingId) {
   };
 }
 
+function metricsFromEngagementRow(row) {
+  if (!row) return null;
+  return {
+    viewCount: row.view_count ?? row.viewCount ?? 0,
+    shareCount: row.share_count ?? row.shareCount ?? 0,
+  };
+}
+
+async function incrementEngagementFallback(kind, listingId, event) {
+  const current = await ensureEngagement(kind, listingId);
+  const patch = { updated_at: new Date().toISOString() };
+  if (event === 'share') patch.share_count = (current.shareCount ?? 0) + 1;
+  else if (event === 'view') patch.view_count = (current.viewCount ?? 0) + 1;
+  else return current;
+
+  const { data, error } = await getSupabaseAdmin()
+    .from('listing_engagements')
+    .update(patch)
+    .eq('listing_kind', kind)
+    .eq('listing_id', listingId)
+    .select('view_count, share_count')
+    .single();
+  if (error) throw error;
+  return metricsFromEngagementRow(data) ?? {
+    viewCount: patch.view_count ?? current.viewCount,
+    shareCount: patch.share_count ?? current.shareCount,
+  };
+}
+
 async function incrementEngagement(kind, listingId, event) {
-  const { error } = await getSupabaseAdmin().rpc('increment_listing_engagement', {
+  const { data, error } = await getSupabaseAdmin().rpc('increment_listing_engagement', {
     p_listing_kind: kind,
     p_listing_id: listingId,
     p_event: event,
   });
-  if (error) throw error;
+  if (error) {
+    console.warn('increment_listing_engagement RPC failed, using fallback:', error.message || error);
+    return incrementEngagementFallback(kind, listingId, event);
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  return metricsFromEngagementRow(row) ?? ensureEngagement(kind, listingId);
 }
 
 async function countSaves(kind, listingId) {
@@ -327,8 +360,9 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null 
     }
   }
 
+  let engagement = null;
   if (event === 'share' || (incremented && event !== 'hot_lead')) {
-    await incrementEngagement(kind, listingId, event);
+    engagement = await incrementEngagement(kind, listingId, event);
   }
 
   if (event === 'share') {
@@ -362,7 +396,9 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null 
   }
 
   const saveCount = await countSaves(kind, listingId);
-  const engagement = await ensureEngagement(kind, listingId);
+  if (!engagement) {
+    engagement = await ensureEngagement(kind, listingId);
+  }
   const saver = saverFromUser(req.user);
   let saved = false;
   if (saver) {

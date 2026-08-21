@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Box, Container, Grid, Skeleton, Stack } from '@mui/material';
 
 import { paths } from '@/paths';
+import { mainTabFromPath } from '@/lib/main-tabs';
 import { canPageNavigateBack, HISTORY_BACK_ATTR, isModifiedClick } from '@/lib/navigate-back';
 import {
   beginPendingNavigation,
@@ -22,9 +23,11 @@ import { ListingDetailSkeleton } from '@/components/public/listing-detail-skelet
 
 const PENDING_TIMEOUT_MS = 10_000;
 
-function shouldSkipOverlay(path: string): boolean {
+function shouldSkipOverlay(path: string, currentPath: string): boolean {
   // These routes paint from cache / their own cards — a full-page loader flashes.
   if (path === paths.user.messages || path.startsWith(`${paths.user.messages}/`)) return true;
+  if (path === paths.user.savedListings) return true;
+  if (path === paths.user.dashboard) return true;
   if (path === paths.user.myRealEstateListings || path.startsWith(`${paths.user.myRealEstateListings}/`)) {
     return true;
   }
@@ -32,6 +35,8 @@ function shouldSkipOverlay(path: string): boolean {
     return true;
   }
   if (path === paths.user.leads || path.startsWith(`${paths.user.leads}/`)) return true;
+  // Home ↔ Saves ↔ Messages ↔ Profile is a hosted pager on mobile; don't cover it.
+  if (mainTabFromPath(path) && mainTabFromPath(currentPath)) return true;
   return false;
 }
 
@@ -151,7 +156,7 @@ export function NavigationPendingOverlay(): React.JSX.Element | null {
     return () => window.clearTimeout(timer);
   }, [pendingPath]);
 
-  if (!pendingPath || shouldSkipOverlay(pendingPath)) return null;
+  if (!pendingPath || shouldSkipOverlay(pendingPath, pathname ?? '')) return null;
 
   const isAppShell = pendingPath.startsWith('/dashboard') || pendingPath.startsWith('/user/dashboard');
 

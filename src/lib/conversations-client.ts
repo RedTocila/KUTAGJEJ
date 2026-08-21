@@ -1,6 +1,7 @@
 'use client';
 
 import { clientFetch } from '@/lib/api-client';
+import { AUTH_USER_KEY, readAuthItem } from '@/lib/auth/storage';
 
 export type ConversationListingKind =
   | 'real-estate'
@@ -110,20 +111,78 @@ export async function startConversationWithMember(
   return { conversation: res.data?.conversation };
 }
 
+const INBOX_CACHE_PREFIX = 'kutagjej-inbox:v1:';
+const INBOX_CACHE_TTL_MS = 10 * 60 * 1000;
+
+function currentUserId(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = readAuthItem(AUTH_USER_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { id?: string };
+    return typeof parsed?.id === 'string' && parsed.id ? parsed.id : null;
+  } catch {
+    return null;
+  }
+}
+
+function readInboxSession(userId: string): ConversationSummary[] | null {
+  try {
+    const raw = sessionStorage.getItem(`${INBOX_CACHE_PREFIX}${userId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { at?: number; conversations?: ConversationSummary[] };
+    if (!parsed || typeof parsed.at !== 'number' || !Array.isArray(parsed.conversations)) return null;
+    if (Date.now() - parsed.at > INBOX_CACHE_TTL_MS) return null;
+    return parsed.conversations;
+  } catch {
+    return null;
+  }
+}
+
+function writeInboxSession(userId: string, conversations: ConversationSummary[]): void {
+  try {
+    sessionStorage.setItem(
+      `${INBOX_CACHE_PREFIX}${userId}`,
+      JSON.stringify({ at: Date.now(), conversations }),
+    );
+  } catch {
+    /* quota / private mode */
+  }
+}
+
 /** Survives remounts / route changes so Chats paints instantly. */
 let cachedInboxConversations: ConversationSummary[] | null = null;
+let cachedInboxUserId: string | null = null;
 const cachedThreads = new Map<
   string,
   { messages: ConversationMessage[]; conversation: ConversationSummary }
 >();
-let inboxPrefetch: Promise<ConversationSummary[] | null> | null = null;
+let inboxInflight: Promise<{
+  conversations?: ConversationSummary[];
+  total?: number;
+  error?: string;
+}> | null = null;
+
+function hydrateInboxMemory(): ConversationSummary[] | null {
+  const userId = currentUserId();
+  if (!userId) return cachedInboxConversations;
+  if (cachedInboxConversations && cachedInboxUserId === userId) return cachedInboxConversations;
+  const stored = readInboxSession(userId);
+  if (!stored) return cachedInboxConversations;
+  cachedInboxConversations = stored;
+  cachedInboxUserId = userId;
+  return stored;
+}
 
 export function getCachedConversations(): ConversationSummary[] | null {
-  return cachedInboxConversations;
+  return hydrateInboxMemory();
 }
 
 export function setCachedConversations(next: ConversationSummary[] | null): void {
   cachedInboxConversations = next;
+  const userId = currentUserId();
+  cachedInboxUserId = userId;
+  if (next && userId) writeInboxSession(userId, next);
 }
 
 export function getCachedThread(conversationId: string): {
@@ -153,30 +212,41 @@ export async function fetchConversations(
   total?: number;
   error?: string;
 }> {
-  const res = await clientFetch<{
-    conversations: ConversationSummary[];
-    total: number;
-  }>(`/conversations?page=${page}&limit=${limit}`);
-  if (!res.ok) return { error: res.error ?? 'Nuk u ngarkuan bisedat.' };
-  if (res.data?.conversations) {
-    cachedInboxConversations = res.data.conversations;
+  const share = page === 1 && limit === 30;
+  if (share && inboxInflight) return inboxInflight;
+
+  const request = (async () => {
+    const res = await clientFetch<{
+      conversations: ConversationSummary[];
+      total: number;
+    }>(`/conversations?page=${page}&limit=${limit}`);
+    if (!res.ok) return { error: res.error ?? 'Nuk u ngarkuan bisedat.' };
+    if (res.data?.conversations) {
+      setCachedConversations(res.data.conversations);
+    }
+    return { conversations: res.data?.conversations, total: res.data?.total };
+  })();
+
+  if (share) {
+    inboxInflight = request.finally(() => {
+      inboxInflight = null;
+    });
+    return inboxInflight;
   }
-  return { conversations: res.data?.conversations, total: res.data?.total };
+  return request;
 }
 
 /** Warm the inbox cache so opening Chats does not wait on the list fetch. */
 export function prefetchConversations(): Promise<ConversationSummary[] | null> {
-  if (cachedInboxConversations) return Promise.resolve(cachedInboxConversations);
-  if (inboxPrefetch) return inboxPrefetch;
-  inboxPrefetch = fetchConversations()
-    .then((res) => {
-      if (res.error || !res.conversations) return cachedInboxConversations;
-      return res.conversations;
-    })
-    .finally(() => {
-      inboxPrefetch = null;
-    });
-  return inboxPrefetch;
+  const cached = getCachedConversations();
+  if (cached) {
+    void fetchConversations();
+    return Promise.resolve(cached);
+  }
+  return fetchConversations().then((res) => {
+    if (res.error || !res.conversations) return getCachedConversations();
+    return res.conversations;
+  });
 }
 
 export async function fetchUnreadMessagesCount(): Promise<{ unreadCount?: number; error?: string }> {

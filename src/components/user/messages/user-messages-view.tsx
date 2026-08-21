@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Alert,
   Avatar,
@@ -1468,6 +1468,7 @@ export function UserMessagesView() {
   const t = useCopy();
   const { user } = useUser();
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const threadChrome = useMessagesThreadChrome();
   const urlSelectedId = searchParams.get('c');
@@ -1690,6 +1691,9 @@ export function UserMessagesView() {
 
   React.useEffect(() => {
     if (pendingHandled.current) return;
+    const onMessagesRoute =
+      pathname === paths.user.messages || Boolean(pathname?.startsWith(`${paths.user.messages}/`));
+    if (!onMessagesRoute) return;
     pendingHandled.current = true;
 
     // Notification / deep-link already picked a thread — don't replace it.
@@ -1721,7 +1725,7 @@ export function UserMessagesView() {
         await loadInbox();
       }
     })();
-  }, [router, loadInbox, urlSelectedId]);
+  }, [router, loadInbox, urlSelectedId, pathname]);
 
   React.useEffect(() => {
     if (!selectedId) {

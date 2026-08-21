@@ -27,12 +27,14 @@ import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
 
 import { HeaderMobileSearch } from './header-mobile-search';
+import { useMainTabsPagerActive } from '@/components/main-tabs/main-tabs-shell';
 
 const TOOLBAR_MIN_HEIGHT = { xs: 72, md: 88 } as const;
 
 export function PublicHeader() {
   const { user } = useUser();
   const t = useCopy();
+  const pagerActive = useMainTabsPagerActive();
   const elevated = useScrollTrigger({ disableHysteresis: true, threshold: 8 });
   const headerHidden = useScrollRevealHidden();
   const [mounted, setMounted] = React.useState(false);
@@ -55,7 +57,7 @@ export function PublicHeader() {
   return (
     <>
       <AppBar
-        position="fixed"
+        position={pagerActive ? 'sticky' : 'fixed'}
         elevation={0}
         component="header"
         suppressHydrationWarning
@@ -246,7 +248,7 @@ export function PublicHeader() {
           </Toolbar>
         </Container>
       </AppBar>
-      {/* Keeps document flow under `position: fixed` so content is not covered */}
+      {pagerActive ? null : (
       <Toolbar
         disableGutters
         aria-hidden
@@ -256,6 +258,7 @@ export function PublicHeader() {
           pointerEvents: 'none',
         }}
       />
+      )}
       <AddListingPickerDialog open={addListingOpen} onClose={() => setAddListingOpen(false)} />
     </>
   );

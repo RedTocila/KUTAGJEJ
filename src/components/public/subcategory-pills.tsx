@@ -71,6 +71,7 @@ function SubcategoryPillsList({
     <Box
       role="navigation"
       aria-label={t.browse.subcategoriesAria}
+      data-no-tab-swipe
       sx={{
         mt: { xs: 1.5, md: 2 },
         mb: 1.5,

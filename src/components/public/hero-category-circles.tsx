@@ -130,6 +130,7 @@ export function HeroCategoryCircles({
     <Box
       component="nav"
       aria-label={t.chrome.categoriesAria}
+      data-no-tab-swipe
       sx={{
         display: 'flex',
         flexDirection: 'row',

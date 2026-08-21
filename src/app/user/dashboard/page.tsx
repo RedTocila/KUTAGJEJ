@@ -62,6 +62,7 @@ import { ThemeSwitchRow } from '@/components/user/theme-switch-row';
 import { planAccentForCode } from '@/components/user/packages/package-ui';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
+import { useMainTabsHosted } from '@/components/main-tabs/main-tabs-shell';
 
 function quotasFromSub(sub: UserSubscriptionSummary | null): ContractQuotas {
   if (!sub) return FREE_PLAN_QUOTAS;
@@ -272,7 +273,7 @@ function QuotaStat({
   );
 }
 
-export default function UserDashboardPage() {
+export function UserDashboardHome() {
   const { user, checkSession } = useUser();
   const { language } = useLanguage();
   const t = getUserDashboardCopy(language);
@@ -745,4 +746,10 @@ export default function UserDashboardPage() {
       </Button>
     </Stack>
   );
+}
+
+export default function UserDashboardPage() {
+  const hosted = useMainTabsHosted();
+  if (hosted) return null;
+  return <UserDashboardHome />;
 }

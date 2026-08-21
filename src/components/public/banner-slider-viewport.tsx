@@ -50,6 +50,7 @@ export function BannerSliderViewport({
 
   return (
     <Box
+      data-no-tab-swipe
       {...touchHandlers}
       sx={{
         position: 'relative',

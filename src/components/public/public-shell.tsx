@@ -8,6 +8,7 @@ import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { PublicFooter } from './public-footer';
 import { PublicHeader } from './public-header';
+import { useMainTabsHosted } from '@/components/main-tabs/main-tabs-shell';
 
 /**
  * Wraps a public page in the marketing chrome (header + footer) so individual
@@ -36,6 +37,7 @@ export function PublicShell({
   /** Hide floating bottom nav — used when the page renders its own bottom chrome. */
   hideMobileNav?: boolean;
 }) {
+  const hostedTabs = useMainTabsHosted();
   const header = hideHeader ? null : hideHeaderBelowMd ? (
     <Box sx={{ display: { xs: 'none', md: 'block' } }}>
       <PublicHeader />
@@ -71,7 +73,7 @@ export function PublicShell({
         <Box className="kutagjej-fade">{children}</Box>
       </Box>
       {hideFooter ? null : <PublicFooter />}
-      {hideMobileNav ? null : <MobileBottomNav />}
+      {hideMobileNav || hostedTabs ? null : <MobileBottomNav />}
     </Box>
   );
 }

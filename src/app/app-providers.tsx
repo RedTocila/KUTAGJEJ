@@ -10,6 +10,7 @@ import { SavedListingsProvider } from '@/contexts/saved-listings-context';
 import { SoftNavigateBridge } from '@/components/core/soft-navigate-bridge';
 import { SplashScreen } from '@/components/core/splash-screen';
 import { SearchOverlayProvider } from '@/contexts/search-overlay-context';
+import { MainTabsShell } from '@/components/main-tabs/main-tabs-shell';
 import { ThemeProvider } from '@/components/core/theme-provider/theme-provider';
 import type { ColorScheme } from '@/lib/color-scheme';
 import { AuthProvider } from '@/providers/auth-provider';
@@ -34,7 +35,9 @@ export function AppProviders({
             <ThemeProvider initialColorScheme={initialColorScheme}>
               <SplashScreen />
               <SearchOverlayProvider>
-                <SoftNavigateBridge>{children}</SoftNavigateBridge>
+                <SoftNavigateBridge>
+                  <MainTabsShell>{children}</MainTabsShell>
+                </SoftNavigateBridge>
               </SearchOverlayProvider>
             </ThemeProvider>
           </SavedListingsProvider>

@@ -104,6 +104,7 @@ export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps)
     <Box sx={{ position: 'relative', width: '100%', maxWidth: '100%', minWidth: 0 }}>
       <Box
         ref={scrollRef}
+        data-no-tab-swipe
         sx={{
           display: 'flex',
           gap: { xs: 1.25, md: 1.75 },

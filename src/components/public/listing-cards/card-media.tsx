@@ -12,7 +12,7 @@ import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr
 import { paths } from '@/paths';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
-import { toggleListingSave, type ListingMetricKind } from '@/lib/listing-metrics';
+import { nextShareCount, toggleListingSave, type ListingMetricKind } from '@/lib/listing-metrics';
 import type { ListingSharePayload } from '@/lib/listing-share';
 import { listingCardImageUrl, storageImageOriginalUrl } from '@/lib/storage-image';
 import { useSavedListingsOptional } from '@/contexts/saved-listings-context';
@@ -94,13 +94,21 @@ export function CardMedia({
   const [displaySrc, setDisplaySrc] = React.useState<string | null>(thumbUrl);
   const [imageFailed, setImageFailed] = React.useState(false);
 
+  const listingKeyRef = React.useRef(listingId);
+
   React.useEffect(() => {
     setDisplaySrc(thumbUrl);
     setImageFailed(false);
   }, [thumbUrl]);
 
   React.useEffect(() => {
-    setShareCount(initialShareCount);
+    if (listingKeyRef.current !== listingId) {
+      listingKeyRef.current = listingId;
+      setShareCount(initialShareCount);
+      setSaveCount(initialSaveCount);
+      return;
+    }
+    setShareCount((count) => Math.max(count, initialShareCount));
     setSaveCount(initialSaveCount);
   }, [initialShareCount, initialSaveCount, listingId]);
 
@@ -333,7 +341,7 @@ export function CardMedia({
           open={shareOpen}
           onClose={() => setShareOpen(false)}
           payload={resolvedSharePayload}
-          onShared={(metrics) => setShareCount(metrics.shareCount)}
+          onShared={(metrics) => setShareCount((count) => nextShareCount(count, metrics))}
         />
       ) : null}
     </Box>

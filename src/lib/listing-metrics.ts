@@ -1,7 +1,8 @@
 'use client';
 
-import { authHeaders } from '@/lib/api-client';
+import { authHeaders, clientFetch } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
+import { AUTH_USER_KEY, readAuthItem } from '@/lib/auth/storage';
 
 export type ListingMetricKind =
   | 'real-estate'
@@ -70,6 +71,84 @@ export type SavedListingItem = {
   listing: Record<string, unknown> & ListingMetrics;
 };
 
+export type SavedListingsCache = {
+  items: SavedListingItem[];
+  keys: string[];
+  page: number;
+  totalPages: number;
+  total: number;
+};
+
+const SAVED_LIST_CACHE_PREFIX = 'kutagjej-saved-list:v1:';
+const SAVED_LIST_CACHE_TTL_MS = 10 * 60 * 1000;
+
+function currentUserId(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = readAuthItem(AUTH_USER_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { id?: string };
+    return typeof parsed?.id === 'string' && parsed.id ? parsed.id : null;
+  } catch {
+    return null;
+  }
+}
+
+let memorySavedList: SavedListingsCache | null = null;
+let memorySavedUserId: string | null = null;
+let savedListInflight: Promise<{
+  items?: SavedListingItem[];
+  keys?: string[];
+  total?: number;
+  page?: number;
+  totalPages?: number;
+  error?: string;
+}> | null = null;
+
+function readSavedListSession(userId: string): SavedListingsCache | null {
+  try {
+    const raw = sessionStorage.getItem(`${SAVED_LIST_CACHE_PREFIX}${userId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { at?: number; payload?: SavedListingsCache };
+    if (!parsed || typeof parsed.at !== 'number' || !parsed.payload || !Array.isArray(parsed.payload.items)) {
+      return null;
+    }
+    if (Date.now() - parsed.at > SAVED_LIST_CACHE_TTL_MS) return null;
+    return parsed.payload;
+  } catch {
+    return null;
+  }
+}
+
+function writeSavedListSession(userId: string, payload: SavedListingsCache): void {
+  try {
+    sessionStorage.setItem(
+      `${SAVED_LIST_CACHE_PREFIX}${userId}`,
+      JSON.stringify({ at: Date.now(), payload }),
+    );
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+export function getCachedSavedListings(): SavedListingsCache | null {
+  const userId = currentUserId();
+  if (!userId) return memorySavedList;
+  if (memorySavedList && memorySavedUserId === userId) return memorySavedList;
+  const stored = readSavedListSession(userId);
+  if (!stored) return memorySavedList;
+  memorySavedList = stored;
+  memorySavedUserId = userId;
+  return stored;
+}
+
+export function setCachedSavedListings(payload: SavedListingsCache | null): void {
+  memorySavedList = payload;
+  const userId = currentUserId();
+  memorySavedUserId = userId;
+  if (payload && userId) writeSavedListSession(userId, payload);
+}
+
 export async function fetchSavedListingKeys(): Promise<{ keys?: string[]; error?: string }> {
   try {
     const res = await fetch(getApiUrl('/listing-metrics/saved/keys'), {
@@ -95,24 +174,51 @@ export async function fetchSavedListings(
   totalPages?: number;
   error?: string;
 }> {
-  try {
+  const share = page === 1 && limit === 24;
+  if (share && savedListInflight) return savedListInflight;
+
+  const request = (async () => {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    const res = await fetch(getApiUrl(`/listing-metrics/saved?${params}`), {
-      headers: authHeaders(),
-      cache: 'no-store',
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Gabim.' };
-    return {
-      items: (data.items ?? []) as SavedListingItem[],
-      keys: (data.keys ?? []) as string[],
-      total: data.total,
-      page: data.page,
-      totalPages: data.totalPages,
+    const res = await clientFetch<{
+      items?: SavedListingItem[];
+      keys?: string[];
+      total?: number;
+      page?: number;
+      totalPages?: number;
+      message?: string;
+    }>(`/listing-metrics/saved?${params}`);
+    if (!res.ok) return { error: res.error ?? 'Gabim.' };
+    const payload: SavedListingsCache = {
+      items: (res.data?.items ?? []) as SavedListingItem[],
+      keys: (res.data?.keys ?? []) as string[],
+      total: res.data?.total ?? 0,
+      page: res.data?.page ?? page,
+      totalPages: res.data?.totalPages ?? 1,
     };
-  } catch {
-    return { error: 'Nuk u arrit lidhja me serverin.' };
+    if (share) setCachedSavedListings(payload);
+    return payload;
+  })();
+
+  if (share) {
+    savedListInflight = request.finally(() => {
+      savedListInflight = null;
+    });
+    return savedListInflight;
   }
+  return request;
+}
+
+/** Warm saved cards so the bookmark tab paints like the homepage. */
+export function prefetchSavedListings(): Promise<SavedListingsCache | null> {
+  const cached = getCachedSavedListings();
+  if (cached) {
+    void fetchSavedListings(1, 24);
+    return Promise.resolve(cached);
+  }
+  return fetchSavedListings(1, 24).then((res) => {
+    if (res.error) return getCachedSavedListings();
+    return getCachedSavedListings();
+  });
 }
 
 export type ListingSaverLead = {
@@ -165,6 +271,23 @@ export async function fetchListingSavers(
   }
 }
 
+/** Merge a confirmed share into the visible count. Always ticks at least +1. */
+export function nextShareCount(current: number, metrics: ListingMetrics | null | undefined): number {
+  const reported = metrics?.shareCount;
+  if (typeof reported === 'number' && reported > current) return reported;
+  return current + 1;
+}
+
+function beaconListingMetric(url: string, body: string): void {
+  if (typeof navigator === 'undefined' || typeof navigator.sendBeacon !== 'function') return;
+  try {
+    const blob = new Blob([body], { type: 'application/json' });
+    navigator.sendBeacon(url, blob);
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Opens the native share sheet or copies the URL, then records a share only on success. */
 export async function shareListing(opts: {
   title: string;
@@ -195,20 +318,28 @@ export async function recordListingMetricEvent(
   listingId: string,
   event: 'view' | 'share',
 ): Promise<ListingMetrics | null> {
+  const url = getApiUrl('/listing-metrics/event');
+  const body = JSON.stringify({ listingKind, listingId, event });
+
   try {
-    const res = await fetch(getApiUrl('/listing-metrics/event'), {
+    // Do not use `keepalive` here: Safari / iOS (and some Vercel rewrites) drop
+    // keepalive POSTs with a JSON body, so copy-link and completed shares never
+    // reached the API. Record after the share sheet closes instead.
+    const res = await fetch(url, {
       method: 'POST',
       headers: metricHeaders(),
-      body: JSON.stringify({ listingKind, listingId, event }),
-      // Sharing can move the browser into another app immediately. Keep the
-      // request alive so the metric still reaches the API while the page is
-      // being suspended or unloaded.
-      keepalive: event === 'share',
+      body,
     });
     if (!res.ok) return null;
-    const data = (await res.json()) as ListingMetrics;
-    return metricsFromListing(data);
+    try {
+      const data = (await res.json()) as ListingMetrics;
+      return metricsFromListing(data);
+    } catch {
+      // Posted successfully; the body was unreadable (backgrounded webview).
+      return null;
+    }
   } catch {
+    if (event === 'share') beaconListingMetric(url, body);
     return null;
   }
 }

@@ -40,13 +40,27 @@ const BRAND_GREEN = '#76ba1b';
 const SHEET_BG = 'rgba(12, 12, 12, 0.94)';
 
 async function copyLink(url: string): Promise<void> {
-  await navigator.clipboard.writeText(url);
+  try {
+    await navigator.clipboard.writeText(url);
+  } catch {
+    const el = document.createElement('textarea');
+    el.value = url;
+    el.setAttribute('readonly', '');
+    el.style.position = 'fixed';
+    el.style.left = '-9999px';
+    document.body.appendChild(el);
+    el.select();
+    const ok = document.execCommand('copy');
+    el.remove();
+    if (!ok) throw new Error('copy_failed');
+  }
 }
 
-function isMobileShareDevice(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  const ua = navigator.userAgent;
-  return /Android|iP(hone|ad|od)/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+function isAbortError(err: unknown): boolean {
+  return (
+    (err instanceof DOMException && err.name === 'AbortError') ||
+    (err instanceof Error && err.name === 'AbortError')
+  );
 }
 
 function isIosLike(): boolean {
@@ -54,6 +68,42 @@ function isIosLike(): boolean {
   const ua = navigator.userAgent;
   if (/iP(hone|ad|od)/.test(ua)) return true;
   return /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+}
+
+/**
+ * iOS often rejects `navigator.share()` with AbortError even after a completed
+ * share. A quick dismiss with the page still visible is a cancel; otherwise count it.
+ */
+async function runNativeShare(share: () => Promise<void>): Promise<'shared' | 'cancelled'> {
+  let leftPage = false;
+  const startedAt = Date.now();
+  const markHidden = () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      leftPage = true;
+    }
+  };
+  document.addEventListener('visibilitychange', markHidden);
+  window.addEventListener('pagehide', markHidden);
+  try {
+    await share();
+    return 'shared';
+  } catch (err) {
+    if (!isAbortError(err)) throw err;
+    if (leftPage) return 'shared';
+    // Share extensions (Instagram, Messages) stay over Safari and still abort
+    // after a completed share. Instant dismiss is the cancel gesture.
+    if (isIosLike() && Date.now() - startedAt > 900) return 'shared';
+    return 'cancelled';
+  } finally {
+    document.removeEventListener('visibilitychange', markHidden);
+    window.removeEventListener('pagehide', markHidden);
+  }
+}
+
+function isMobileShareDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  return /Android|iP(hone|ad|od)/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
 }
 
 function downloadFile(file: File) {
@@ -269,7 +319,7 @@ export function ListingSharePage({
   open: boolean;
   onClose: () => void;
   payload: ListingSharePayload | null;
-  onShared?: (metrics: ListingMetrics) => void;
+  onShared?: (metrics: ListingMetrics | null) => void;
 }) {
   const previewWrapRef = React.useRef<HTMLDivElement>(null);
   const feedCaptureRef = React.useRef<HTMLDivElement>(null);
@@ -388,10 +438,8 @@ export function ListingSharePage({
   const bumpShareMetric = React.useCallback(async () => {
     if (!payload) return null;
     const metrics = await recordListingMetricEvent(payload.listingKind, payload.listingId, 'share');
-    if (metrics) {
-      onShared?.(metrics);
-      emitHotLeadShare(payload.listingKind, payload.listingId);
-    }
+    onShared?.(metrics);
+    emitHotLeadShare(payload.listingKind, payload.listingId);
     return metrics;
   }, [onShared, payload]);
 
@@ -415,7 +463,8 @@ export function ListingSharePage({
       );
 
       if (isMobileShareDevice()) {
-        await shareStoryImage(file);
+        const outcome = await runNativeShare(() => shareStoryImage(file));
+        if (outcome === 'cancelled') return;
         await bumpShareMetric();
         setFeedback('Zgjidh Instagram, pastaj shtyp Posto.');
       } else {
@@ -424,7 +473,7 @@ export function ListingSharePage({
         setFeedback('Story u shkarkua. Hape Instagram në telefon për ta postuar.');
       }
     } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
+      if (isAbortError(err)) {
         // User cancelled the share sheet.
       } else if (err instanceof Error && err.message === 'share_unavailable') {
         setError('Nuk mbështetet ndarja e fotos. Provo "Ruaj foton" dhe posto manualisht.');

@@ -45,18 +45,16 @@ export function SplashScreen(): React.JSX.Element | null {
       aria-hidden={phase === 'hiding'}
     >
       <div className="kutagjej-splash__inner">
-        <div className="kutagjej-splash__mark">
-          {/* eslint-disable-next-line @next/next/no-img-element -- splash mark before image optimizer is needed */}
-          <img
-            className="kutagjej-splash__logo"
-            src={brandLogoSrc}
-            alt=""
-            width={140}
-            height={140}
-            decoding="async"
-            fetchPriority="high"
-          />
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element -- splash mark before image optimizer is needed */}
+        <img
+          className="kutagjej-splash__logo"
+          src={brandLogoSrc}
+          alt=""
+          width={140}
+          height={140}
+          decoding="async"
+          fetchPriority="high"
+        />
         <p className="kutagjej-splash__wordmark">
           {wordmarkSegments ? (
             <>

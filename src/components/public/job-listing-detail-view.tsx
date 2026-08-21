@@ -30,6 +30,7 @@ import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import type { ListingSharePayload } from '@/lib/listing-share';
+import { nextShareCount } from '@/lib/listing-metrics';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
@@ -123,6 +124,10 @@ export function JobListingDetailView({
 
   React.useEffect(() => {
     setShareCount(listing.shareCount ?? 0);
+  }, [listing.id]);
+
+  React.useEffect(() => {
+    setShareCount((count) => Math.max(count, listing.shareCount ?? 0));
   }, [listing.shareCount]);
 
   const expiresAt = listing.isOkazion
@@ -221,7 +226,7 @@ export function JobListingDetailView({
           open={shareOpen}
           onClose={() => setShareOpen(false)}
           payload={sharePayload}
-          onShared={(metrics) => setShareCount(metrics.shareCount)}
+          onShared={(metrics) => setShareCount((count) => nextShareCount(count, metrics))}
         />
       )}
 

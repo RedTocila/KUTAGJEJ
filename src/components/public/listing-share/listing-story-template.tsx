@@ -59,7 +59,10 @@ const STAR_EMPTY = 'rgba(255,255,255,0.28)';
 const CARD_BG = '#141414';
 /** Scale factor vs ~360px mobile card (760/360). */
 const S = 2.1;
+/** MUI `borderRadius` units (`n` × theme.shape.borderRadius). Same on story + saved card. */
 const CARD_RADIUS = 2.25 * S;
+/** Pixel radius of the saved 1080×1350 JPEG (MUI default shape.borderRadius is 4). */
+export const FEED_CARD_RADIUS_PX = Math.round(4 * CARD_RADIUS * (FEED_WIDTH / CARD_W));
 
 const RATING_STAR_PATH =
   'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z';
@@ -368,7 +371,7 @@ function StoryListingImage({
 
 /**
  * Listing card — always 4:5. Photo grows to fill leftover space after the body.
- * `feed` fills the saved JPEG edge-to-edge so Instagram posts don’t show a black frame.
+ * `feed` fills the saved JPEG at the same 4:5 size, with the same rounded corners as story.
  */
 export const ListingShareCard = React.forwardRef<
   HTMLDivElement,
@@ -391,7 +394,7 @@ export const ListingShareCard = React.forwardRef<
         width: CARD_W,
         height: CARD_H,
         aspectRatio: '4 / 5',
-        borderRadius: feed ? 0 : CARD_RADIUS,
+        borderRadius: CARD_RADIUS,
         overflow: 'hidden',
         bgcolor: CARD_BG,
         border: `${2.5 * S}px solid ${accent}`,
@@ -648,7 +651,7 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
 
 /**
  * Saved photo: listing card only, always 1080×1350 (4:5). No story backdrop or brand chrome.
- * Card fills the canvas so a feed post is the listing itself, not a card on a black frame.
+ * Same card size as before; corners are rounded to match the in-story card.
  */
 export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
   function ListingFeedTemplate({ payload }, ref) {
@@ -663,6 +666,7 @@ export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: L
           width: FEED_WIDTH,
           height: FEED_HEIGHT,
           overflow: 'hidden',
+          borderRadius: `${FEED_CARD_RADIUS_PX}px`,
           bgcolor: CARD_BG,
           color: '#fff',
           fontFamily:

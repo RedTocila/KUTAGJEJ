@@ -665,18 +665,20 @@ export function RealEstateListingDetailView({
                       </Typography>
                     </Stack>
                   </Stack>
-                  <ListingVerifiedNotice verified={Boolean(listing.seller?.verified)} />
                 </Stack>
               </Stack>
 
-              {ownerPreview ? null : (
-                <StickyContactBar
-                  listingId={listing.id}
-                  contactPhone={displayPhone}
-                  listingTitle={listing.title}
-                  listingUrl={canonicalUrl}
-                />
-              )}
+              <Stack spacing={1} sx={{ width: '100%' }}>
+                {ownerPreview ? null : (
+                  <StickyContactBar
+                    listingId={listing.id}
+                    contactPhone={displayPhone}
+                    listingTitle={listing.title}
+                    listingUrl={canonicalUrl}
+                  />
+                )}
+                <ListingVerifiedNotice verified={Boolean(listing.seller?.verified)} />
+              </Stack>
 
               <Stack spacing={1.25}>
                 <OwnerEditableSpot

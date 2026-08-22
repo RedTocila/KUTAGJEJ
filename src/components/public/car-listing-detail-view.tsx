@@ -621,19 +621,21 @@ export function CarListingDetailView({
                       </Typography>
                     </Stack>
                   </Stack>
-                  <ListingVerifiedNotice verified={Boolean(listing.seller?.verified)} />
                 </Stack>
               </Stack>
 
-              {ownerPreview ? null : (
-                <StickyListingContact
-                  listingKind="cars"
-                  listingId={listing.id}
-                  contactPhone={displayPhone}
-                  listingTitle={listing.title}
-                  listingUrl={canonicalUrl}
-                />
-              )}
+              <Stack spacing={1} sx={{ width: '100%' }}>
+                {ownerPreview ? null : (
+                  <StickyListingContact
+                    listingKind="cars"
+                    listingId={listing.id}
+                    contactPhone={displayPhone}
+                    listingTitle={listing.title}
+                    listingUrl={canonicalUrl}
+                  />
+                )}
+                <ListingVerifiedNotice verified={Boolean(listing.seller?.verified)} />
+              </Stack>
 
               <Stack spacing={1.25}>
                 <OwnerEditableSpot

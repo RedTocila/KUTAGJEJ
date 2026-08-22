@@ -367,6 +367,7 @@ export function JobListingDetailDesktop({
                   verified={Boolean(listing.seller?.verified)}
                   label="Kjo punë është e verifikuar dhe e sigurt"
                   color="rgba(255,255,255,0.55)"
+                  align="flex-start"
                 />
               </Stack>
             </Box>

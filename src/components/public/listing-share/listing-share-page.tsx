@@ -17,6 +17,7 @@ import { LinkSimple as LinkSimpleIcon } from '@phosphor-icons/react/dist/ssr/Lin
 import { toJpeg } from 'html-to-image';
 
 import {
+  FEED_CARD_RADIUS_PX,
   FEED_HEIGHT,
   FEED_WIDTH,
   ListingFeedTemplate,
@@ -187,6 +188,55 @@ async function ensureListingImageEmbedded(root: HTMLElement, imageUrl: string | 
   });
 }
 
+function roundJpegDataUrl(
+  dataUrl: string,
+  width: number,
+  height: number,
+  radius: number,
+  fill: string,
+): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.fillStyle = fill;
+        ctx.fillRect(0, 0, width, height);
+        ctx.beginPath();
+        if (typeof ctx.roundRect === 'function') {
+          ctx.roundRect(0, 0, width, height, radius);
+        } else {
+          const r = Math.min(radius, width / 2, height / 2);
+          ctx.moveTo(r, 0);
+          ctx.lineTo(width - r, 0);
+          ctx.quadraticCurveTo(width, 0, width, r);
+          ctx.lineTo(width, height - r);
+          ctx.quadraticCurveTo(width, height, width - r, height);
+          ctx.lineTo(r, height);
+          ctx.quadraticCurveTo(0, height, 0, height - r);
+          ctx.lineTo(0, r);
+          ctx.quadraticCurveTo(0, 0, r, 0);
+          ctx.closePath();
+        }
+        ctx.clip();
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.92));
+      } catch {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 type JpegCaptureOptions = {
   root: HTMLElement;
   imageUrl: string | null | undefined;
@@ -195,6 +245,7 @@ type JpegCaptureOptions = {
   backgroundColor: string;
   pixelRatio?: number;
   dropShadow?: boolean;
+  borderRadiusPx?: number;
 };
 
 async function captureElementAsJpegFile(
@@ -206,6 +257,7 @@ async function captureElementAsJpegFile(
     backgroundColor,
     pixelRatio = 2,
     dropShadow = false,
+    borderRadiusPx,
   }: JpegCaptureOptions,
   filename: string,
 ): Promise<File> {
@@ -233,6 +285,9 @@ async function captureElementAsJpegFile(
       boxShadow: dropShadow ? undefined : 'none',
       width: `${Math.max(1, Math.round(width))}px`,
       height: `${Math.max(1, Math.round(height))}px`,
+      ...(borderRadiusPx
+        ? { borderRadius: `${borderRadiusPx}px`, overflow: 'hidden' }
+        : null),
     },
   };
 
@@ -248,7 +303,18 @@ async function captureElementAsJpegFile(
     throw new Error('capture empty');
   }
 
-  return dataUrlToFile(dataUrl, filename);
+  const rounded =
+    borderRadiusPx && borderRadiusPx > 0
+      ? await roundJpegDataUrl(
+          dataUrl,
+          Math.max(1, Math.round(width)),
+          Math.max(1, Math.round(height)),
+          borderRadiusPx,
+          backgroundColor,
+        )
+      : dataUrl;
+
+  return dataUrlToFile(rounded, filename);
 }
 
 /**
@@ -547,6 +613,7 @@ export function ListingSharePage({
           height: FEED_HEIGHT,
           backgroundColor: '#141414',
           pixelRatio: 1,
+          borderRadiusPx: FEED_CARD_RADIUS_PX,
         },
         `kutagjej-card-${payload.listingId.slice(0, 8)}.jpg`,
       );

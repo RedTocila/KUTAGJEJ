@@ -1346,7 +1346,8 @@ If they ask to add/replace images, set imageRoles for attached images and/or kee
 When new photos are attached, re-identify the product/subject from the photos and refresh title/description accordingly (DESCRIPTION STYLE: listed bullets + keywords), then merge the user's edit notes.
 Still apply the CONTENT POLICY GUARD and CATEGORY GUARD: block only truly prohibited content; if new photos/text clearly show a different vertical than preferredCategory, set categoryMatch false with contentAllowed true (wrong category is not prohibited content).`
       : `MODE: CREATE a new listing from the user's prompt and/or website links and/or attached images.
-Use seller profile/signup info as defaults when the prompt omits contact details, business name, phone, etc.`;
+Use seller profile/signup info as defaults for business name / city when the listing omits them.
+contactPhone: if a phone number appears in the caption, page text, prompt, or photos (e.g. "Nr tel +355 69 865 3949"), you MUST put THAT number in form.contactPhone. Use profile.phone ONLY when the listing content has no phone at all.`;
 
   return `You are KuTaGjej's listing assistant for Albania.
 ${modeInstruction}
@@ -1441,11 +1442,12 @@ Link / caption rules (when a URL snapshot is present and few/no attached photos)
 - Instagram / social posts: each post needs its OWN listing title derived from THAT post's caption (and photos). NEVER use authorName, Instagram @handle, profile display name, or profile.businessName / fullName as the listing title when the caption describes a product, vehicle, service, job, or offer. Example: caption about a Yamaha T-MAX → title about the scooter, not "Geshtenja Light".
 - Description: ANALYZE the FULL caption — do NOT paste it verbatim. Rewrite in DESCRIPTION STYLE (listed bullets + keywords). Extract price, city, street address, make/model, phone into form fields / description. Preserve transport/shipping, inclusions, warranty, delivery time, and other buyer facts from the caption (including parenthetical notes on the price line).
 - payload.title is only a caption hint (or null) — never treat authorName as the title.
+- Phone from caption/photos ALWAYS wins over profile.phone (Albanian labels: "Nr tel", "Tel", "Telefon", WhatsApp, Viber).
 
 General rules:
 - Prefer Albanian for title/description when the caption/prompt is in Albanian; otherwise match the user's language.
 - Leave truly unknown fields empty string / empty array / null — but always fill title + description when you can see or read enough.
-- Use profile.phone for contactPhone when missing.
+- contactPhone MUST come from the listing (caption / prompt / photos) when a number is present. Use profile.phone ONLY if no phone appears in the listing content.
 - Use profile.businessName / full name for title ONLY for businesses/professionals AND ONLY when the caption does not describe a specific offer (generic "about the shop/pro" posts). Never reuse the same profile name for every Instagram post.
 - Use profile.preferredCityId / preferredCityName for city when the content does not mention a city.
 - cityName should be an Albanian city when mentioned (e.g. Tiranë, Durrës).
@@ -1489,6 +1491,135 @@ function normalizeAttachedImages(raw) {
     });
   }
   return out;
+}
+
+const PHONE_LABEL_RE =
+  /(?:nr\.?\s*(?:i\s+)?(?:tel(?:efon)?(?:it|i)?|cel(?:ular(?:i)?)?)|numri\s+(?:i\s+)?tel(?:efon)?it|tel(?:efon)?(?:i|it)?|phone|whats?\s*app|viber|cel(?:ular(?:i)?)?|gsm|kontakt(?:i)?)\b\s*[:.\-–—]?\s*/i;
+
+function phoneDigits(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function cleanPhoneCandidate(raw) {
+  let s = String(raw || '')
+    .replace(/[\u00a0\u202f]/g, ' ')
+    .trim()
+    .replace(/[)\]}.,;:]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!s) return '';
+  return s.slice(0, 40);
+}
+
+/** Albanian mobile / +355 / other plausible listing phones. Reject years, prices, IDs. */
+function isLikelyListingPhone(digits) {
+  if (!digits || digits.length < 8 || digits.length > 15) return false;
+  if (/^(\d)\1+$/.test(digits)) return false;
+  if (/^(19|20)\d{2}$/.test(digits)) return false;
+
+  let d = digits;
+  if (d.startsWith('00')) d = d.slice(2);
+
+  if (d.startsWith('355')) {
+    const rest = d.slice(3).replace(/^0/, '');
+    return rest.length === 8 || rest.length === 9;
+  }
+  // National mobile 0698653949 / 698653949
+  if (/^0?6[6-9]\d{7,8}$/.test(d)) return true;
+  // National landline 04xxxxxxx
+  if (/^0[2-5]\d{7,8}$/.test(d)) return true;
+  // International +XX …
+  if (d.length >= 10 && d.length <= 15) return true;
+  return false;
+}
+
+function scorePhoneCandidate(raw, { labeled = false } = {}) {
+  const digits = phoneDigits(raw);
+  if (!isLikelyListingPhone(digits)) return 0;
+  let score = labeled ? 100 : 20;
+  if (digits.startsWith('355') || /^\+355/.test(String(raw).trim())) score += 25;
+  const national = digits.startsWith('355')
+    ? digits.slice(3).replace(/^0/, '')
+    : digits.replace(/^0/, '');
+  if (/^6[6-9]\d{7}$/.test(national)) score += 15;
+  return score;
+}
+
+function pushPhoneCandidate(into, raw, labeled) {
+  const cleaned = cleanPhoneCandidate(raw);
+  if (!cleaned) return;
+  const score = scorePhoneCandidate(cleaned, { labeled });
+  if (!score) return;
+  const digits = phoneDigits(cleaned);
+  const existing = into.find((c) => c.digits === digits);
+  if (existing) {
+    if (score > existing.score) {
+      existing.raw = cleaned;
+      existing.score = score;
+    }
+    return;
+  }
+  into.push({ raw: cleaned, digits, score });
+}
+
+/**
+ * Pull a seller phone from Instagram caption / page text / prompt.
+ * Prefers labeled numbers ("Nr tel +355 69 865 3949") over unlabeled digit runs.
+ */
+function extractContactPhoneFromText(text) {
+  const src = String(text || '').replace(/[\u00a0\u202f]/g, ' ');
+  if (!src.trim()) return null;
+  const found = [];
+
+  const labeledRe = new RegExp(
+    `${PHONE_LABEL_RE.source}(\\+?\\d[\\d\\s()./-]{6,22}\\d)`,
+    'gi',
+  );
+  let labeledMatch;
+  while ((labeledMatch = labeledRe.exec(src))) {
+    pushPhoneCandidate(found, labeledMatch[1], true);
+  }
+
+  const intlRe = /(?:\+|00)\s*\d{1,3}(?:[\s./-]*\d){7,14}/g;
+  let intlMatch;
+  while ((intlMatch = intlRe.exec(src))) {
+    pushPhoneCandidate(found, intlMatch[0], false);
+  }
+
+  const localRe = /\b0?6[6-9](?:[\s./-]?\d){7,8}\b/g;
+  let localMatch;
+  while ((localMatch = localRe.exec(src))) {
+    pushPhoneCandidate(found, localMatch[0], false);
+  }
+
+  if (!found.length) return null;
+  found.sort((a, b) => b.score - a.score);
+  return found[0].raw;
+}
+
+function extractContactPhoneFromListingSources({ snapshot, sourcePrompt, form } = {}) {
+  const chunks = [
+    snapshot?.caption,
+    snapshot?.description,
+    snapshot?.text,
+    sourcePrompt,
+    form?.description,
+  ];
+  for (const chunk of chunks) {
+    const phone = extractContactPhoneFromText(chunk);
+    if (phone) return phone;
+  }
+  return null;
+}
+
+/** Listing text/photos win; profile phone is only used when the listing has no number. */
+function applyListingContactPhone(form, snapshot, sourcePrompt) {
+  if (!form || typeof form !== 'object') return form;
+  const fromListing = extractContactPhoneFromListingSources({ snapshot, sourcePrompt, form });
+  if (fromListing) {
+    form.contactPhone = fromListing;
+  }
+  return form;
 }
 
 function sanitizeProfile(raw) {
@@ -2599,8 +2730,8 @@ async function interpretListing({
         hint: img.hint || null,
       })),
       instruction: visionImages.length
-        ? 'Photos are primary: OCR every readable word on flyers/posters/labels (roles, business name, street address, landmark, neighborhood/zone, m², phone, price, hours/shifts) AND identify the product/vehicle/property/job from images. Write a concrete title and a listed SEO-friendly form.description (short opener + • keyword bullets including Adresa/Orari/Kompania when visible + CTA — never one paragraph or raw hashtags). Auto-fill every form field you can (title, cityName, zoneName, surfaceM2, contactPhone, enums, salary/price). Weave in EVERY useful detail from prompt/caption — especially transport/shipping/RoRo, delivery days, what price includes, warranty, financing, condition notes, parenthetical price notes, and shift/schedule notes. Do not invent unseen specs (including fake m² or zones). Never use authorName / Instagram profile name as title. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.'
-        : 'Build the listing from caption/description/text/prompt. Title must come from the post caption (what is offered), never from authorName or profile.businessName when caption exists. Rewrite caption into a listed SEO-friendly form.description (short opener + • keyword bullets + CTA — do not paste raw caption or write one wall of text). Extract structured fields AND preserve buyer-critical caption facts (transport/RoRo/shipping days, inclusions, warranty, financing, condition, street address when present). Do not invent professions or offers missing from the text. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.',
+        ? 'Photos are primary: OCR every readable word on flyers/posters/labels (roles, business name, street address, landmark, neighborhood/zone, m², phone, price, hours/shifts) AND identify the product/vehicle/property/job from images. Write a concrete title and a listed SEO-friendly form.description (short opener + • keyword bullets including Adresa/Orari/Kompania when visible + CTA — never one paragraph or raw hashtags). Auto-fill every form field you can (title, cityName, zoneName, surfaceM2, contactPhone, enums, salary/price). Phone in caption/photos MUST become form.contactPhone (never substitute profile.phone when a listing number is present). Weave in EVERY useful detail from prompt/caption — especially transport/shipping/RoRo, delivery days, what price includes, warranty, financing, condition notes, parenthetical price notes, and shift/schedule notes. Do not invent unseen specs (including fake m² or zones). Never use authorName / Instagram profile name as title. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.'
+        : 'Build the listing from caption/description/text/prompt. Title must come from the post caption (what is offered), never from authorName or profile.businessName when caption exists. Rewrite caption into a listed SEO-friendly form.description (short opener + • keyword bullets + CTA — do not paste raw caption or write one wall of text). Extract structured fields AND preserve buyer-critical caption facts (transport/RoRo/shipping days, inclusions, warranty, financing, condition, street address, phone when present). form.contactPhone must be the caption/prompt/photo number when one exists — profile.phone is only a fallback. Do not invent professions or offers missing from the text. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.',
     },
   });
 }
@@ -2626,6 +2757,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
       form = normalizeCarFormFields(form, snapshot, interpreted);
     }
     await applyResolvedLocation(form, interpreted, profile);
+    applyListingContactPhone(form, snapshot, sourcePrompt);
     applyProfileDefaultsToForm(form, profile, { allowProfileTitle });
 
     const imageCap = maxImagesForCategory(detected);
@@ -2714,6 +2846,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
     });
   }
   await applyResolvedLocation(form, interpreted, profile);
+  applyListingContactPhone(form, snapshot, sourcePrompt);
   applyProfileDefaultsToForm(form, profile, { allowProfileTitle });
 
   // If profile defaults still left a profile-like title, prefer caption again.
@@ -2917,6 +3050,7 @@ module.exports = {
   extractUrls,
   importListingsFromLinks,
   parseAiListingResponse,
+  extractContactPhoneFromText,
   MAX_IMPORT_URLS,
   CATEGORIES,
   CATEGORY_MISMATCH_CODE,

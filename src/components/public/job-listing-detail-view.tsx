@@ -462,21 +462,23 @@ export function JobListingDetailView({
                 </Stack>
               </Stack>
 
+            </Stack>
+
+            <Stack spacing={1} sx={{ width: '100%' }}>
+              {ownerPreview ? null : (
+                <StickyListingContact
+                  listingKind="jobs"
+                  listingId={listing.id}
+                  contactPhone={listing.contactPhone ?? listing.seller?.phone}
+                  listingTitle={listing.title}
+                  listingUrl={canonicalUrl}
+                />
+              )}
               <ListingVerifiedNotice
                 verified={Boolean(listing.seller?.verified)}
                 label="Kjo punë është e verifikuar dhe e sigurt"
               />
             </Stack>
-
-            {ownerPreview ? null : (
-              <StickyListingContact
-                listingKind="jobs"
-                listingId={listing.id}
-                contactPhone={listing.contactPhone ?? listing.seller?.phone}
-                listingTitle={listing.title}
-                listingUrl={canonicalUrl}
-              />
-            )}
 
             <Stack spacing={1}>
               <OwnerEditableSpot

@@ -34,7 +34,7 @@ import {
 } from '@/lib/listing-category-quota-client';
 import { listCategoriesPublic } from '@/lib/listings-client';
 import { hardNavigate } from '@/lib/hard-navigate';
-import { AI_SEARCH_BLUE, OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
+import { AI_SEARCH_BLUE, AI_SEARCH_BLUE_SOFT, OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
 import { paths } from '@/paths';
 import type { ListingCategory, ListingCategoryKey } from '@/types/listing-category';
 import { useCopy } from '@/hooks/use-copy';
@@ -415,7 +415,7 @@ export function AddListingPickerDialog({
                       display: 'grid',
                       placeItems: 'center',
                       flexShrink: 0,
-                      bgcolor: `${AI_SEARCH_BLUE}14`,
+                      bgcolor: AI_SEARCH_BLUE_SOFT,
                       color: AI_SEARCH_BLUE,
                     }}
                   >
@@ -568,7 +568,7 @@ export function AddListingPickerDialog({
                       display: 'grid',
                       placeItems: 'center',
                       flexShrink: 0,
-                      bgcolor: (theme) => `${theme.palette.primary.main}14`,
+                      bgcolor: (theme) => `${theme.palette.primary.main}2E`,
                       color: 'primary.main',
                     }}
                   >
@@ -639,7 +639,7 @@ export function AddListingPickerDialog({
                             ? OKAZION_ACCENT_SOFT
                             : pickingPremium
                               ? `${theme.palette.warning.main}1f`
-                            : `${theme.palette.primary.main}14`,
+                            : `${theme.palette.primary.main}2E`,
                         color: pickingOkazion ? OKAZION_ACCENT : pickingPremium ? 'warning.main' : 'primary.main',
                       }}
                     >

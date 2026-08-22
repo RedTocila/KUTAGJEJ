@@ -79,7 +79,9 @@ function isIosLike(): boolean {
 
 /**
  * iOS often rejects `navigator.share()` with AbortError even after a completed
- * share. A quick dismiss with the page still visible is a cancel; otherwise count it.
+ * share. Instagram Stories stays over Safari, so visibility often never changes.
+ * The sheet animation is ~300ms; tapping a first-row target is often 400–800ms.
+ * Only treat a near-instant dismiss as a cancel.
  */
 async function runNativeShare(share: () => Promise<void>): Promise<'shared' | 'cancelled'> {
   let leftPage = false;
@@ -97,9 +99,7 @@ async function runNativeShare(share: () => Promise<void>): Promise<'shared' | 'c
   } catch (err) {
     if (!isAbortError(err)) throw err;
     if (leftPage) return 'shared';
-    // Share extensions (Instagram, Messages) stay over Safari and still abort
-    // after a completed share. Instant dismiss is the cancel gesture.
-    if (isIosLike() && Date.now() - startedAt > 900) return 'shared';
+    if (isIosLike() && Date.now() - startedAt > 400) return 'shared';
     return 'cancelled';
   } finally {
     document.removeEventListener('visibilitychange', markHidden);
@@ -337,7 +337,7 @@ async function shareStoryImage(file: File): Promise<void> {
  * On mobile, the share sheet usually includes “Save image” / Photos;
  * desktop (and share failures) fall back to a file download.
  */
-async function saveCardImage(file: File): Promise<'shared' | 'downloaded'> {
+async function saveCardImage(file: File): Promise<'shared' | 'downloaded' | 'cancelled'> {
   const fileOnly = { files: [file] };
   const canShareFiles =
     typeof navigator !== 'undefined' &&
@@ -349,12 +349,7 @@ async function saveCardImage(file: File): Promise<'shared' | 'downloaded'> {
     (/Android|iP(hone|ad|od)/i.test(navigator.userAgent) || isIosLike());
 
   if (preferShareSheet) {
-    try {
-      await navigator.share(fileOnly);
-      return 'shared';
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') throw err;
-    }
+    return runNativeShare(() => navigator.share(fileOnly));
   }
 
   downloadFile(file);
@@ -518,11 +513,38 @@ export function ListingSharePage({
 
   const bumpShareMetric = React.useCallback(async () => {
     if (!payload) return null;
+    // Tick the card immediately — the API call often dies once Instagram backgrounds Safari.
+    onShared?.(null);
     const metrics = await recordListingMetricEvent(payload.listingKind, payload.listingId, 'share');
-    onShared?.(metrics);
+    if (metrics) onShared?.(metrics);
     emitHotLeadShare(payload.listingKind, payload.listingId);
     return metrics;
   }, [onShared, payload]);
+
+  const confirmAndRecordShare = React.useCallback(
+    async (share: () => Promise<void>): Promise<'shared' | 'cancelled'> => {
+      let recorded = false;
+      const record = () => {
+        if (recorded) return;
+        recorded = true;
+        void bumpShareMetric();
+      };
+      const onHide = () => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') record();
+      };
+      document.addEventListener('visibilitychange', onHide);
+      window.addEventListener('pagehide', onHide);
+      try {
+        const outcome = await runNativeShare(share);
+        if (outcome === 'shared') record();
+        return outcome;
+      } finally {
+        document.removeEventListener('visibilitychange', onHide);
+        window.removeEventListener('pagehide', onHide);
+      }
+    },
+    [bumpShareMetric],
+  );
 
   const handleShare = React.useCallback(async () => {
     if (!payload || busy || !storyCaptureRef.current) return;
@@ -544,9 +566,8 @@ export function ListingSharePage({
       );
 
       if (isMobileShareDevice()) {
-        const outcome = await runNativeShare(() => shareStoryImage(file));
+        const outcome = await confirmAndRecordShare(() => shareStoryImage(file));
         if (outcome === 'cancelled') return;
-        await bumpShareMetric();
         setFeedback('Zgjidh Instagram, pastaj shtyp Posto.');
       } else {
         downloadFile(file);
@@ -564,7 +585,7 @@ export function ListingSharePage({
     } finally {
       setBusy(null);
     }
-  }, [busy, bumpShareMetric, payload, waitForShareExtras]);
+  }, [busy, bumpShareMetric, confirmAndRecordShare, payload, waitForShareExtras]);
 
   const handleCopyLink = React.useCallback(async () => {
     if (!payload || busy) return;
@@ -603,12 +624,13 @@ export function ListingSharePage({
         `kutagjej-card-${payload.listingId.slice(0, 8)}.jpg`,
       );
       const result = await saveCardImage(file);
+      if (result === 'cancelled') return;
 
       setFeedback(
         result === 'shared' ? 'Fotoja e kartës u ruajt.' : 'Fotoja e kartës u shkarkua.',
       );
     } catch (err) {
-      if (!(err instanceof DOMException && err.name === 'AbortError')) {
+      if (!(err instanceof DOMException && err.name === 'AbortError') && !isAbortError(err)) {
         setError('Nuk u ruajt fotoja. Provo përsëri.');
       }
     } finally {

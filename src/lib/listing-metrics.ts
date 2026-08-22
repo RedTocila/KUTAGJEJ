@@ -271,10 +271,10 @@ export async function fetchListingSavers(
   }
 }
 
-/** Merge a confirmed share into the visible count. Always ticks at least +1. */
+/** Merge a confirmed share into the visible count. Optimistic (`null`) ticks +1; a server total never double-counts. */
 export function nextShareCount(current: number, metrics: ListingMetrics | null | undefined): number {
   const reported = metrics?.shareCount;
-  if (typeof reported === 'number' && reported > current) return reported;
+  if (typeof reported === 'number') return Math.max(current, reported);
   return current + 1;
 }
 
@@ -320,11 +320,17 @@ export async function recordListingMetricEvent(
 ): Promise<ListingMetrics | null> {
   const url = getApiUrl('/listing-metrics/event');
   const body = JSON.stringify({ listingKind, listingId, event });
+  const pageHidden =
+    event === 'share' && typeof document !== 'undefined' && document.visibilityState === 'hidden';
+
+  // Instagram / Messages background Safari. A regular fetch is killed; keepalive JSON
+  // POSTs are dropped on iOS. Beacon while hidden, fetch while the tab is visible.
+  if (pageHidden) {
+    beaconListingMetric(url, body);
+    return null;
+  }
 
   try {
-    // Do not use `keepalive` here: Safari / iOS (and some Vercel rewrites) drop
-    // keepalive POSTs with a JSON body, so copy-link and completed shares never
-    // reached the API. Record after the share sheet closes instead.
     const res = await fetch(url, {
       method: 'POST',
       headers: metricHeaders(),

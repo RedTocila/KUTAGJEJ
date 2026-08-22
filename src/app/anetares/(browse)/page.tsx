@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 import { MembersBrowseGrid } from '@/components/public/members-browse-grid';
 import { skipIsrOnFailedBrowse } from '@/lib/browse-ssr';
-import { BROWSE_PAGE_SIZE, parseBrowsePage } from '@/lib/listing-filters';
+import { BROWSE_PAGE_SIZE, formatBrowseKeywords, parseBrowsePage } from '@/lib/listing-filters';
 import { fetchPublicMemberSearch } from '@/lib/public-member-client';
 import { config } from '@/config';
 import { paths } from '@/paths';
@@ -21,14 +21,9 @@ type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-function firstString(value: string | string[] | undefined): string {
-  if (Array.isArray(value)) return value[0]?.trim() ?? '';
-  return value?.trim() ?? '';
-}
-
 export default async function MembersBrowsePage({ searchParams }: PageProps): Promise<React.JSX.Element> {
   const sp = (await searchParams) ?? {};
-  const query = firstString(sp.q);
+  const query = formatBrowseKeywords(sp.q);
   const page = parseBrowsePage(sp);
   const hasFilters = Boolean(query);
 

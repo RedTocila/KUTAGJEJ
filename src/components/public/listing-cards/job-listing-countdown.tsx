@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Chip, type SxProps, type Theme } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 
+import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
 import {
   formatJobListingCountdown,
   getJobListingCountdownUrgency,
@@ -12,14 +13,30 @@ import {
 
 const PLACEHOLDER_LABEL = '0d 0h 00m 00s';
 
+export type JobListingCountdownVariant = 'default' | 'overlay' | 'compact';
+
 const baseChipSx: SxProps<Theme> = {
   height: 24,
+  borderRadius: '8px',
   fontFamily: 'monospace',
   fontVariantNumeric: 'tabular-nums',
   fontWeight: 700,
   fontSize: '0.72rem',
   border: '1px solid',
   '& .MuiChip-label': { px: 1 },
+};
+
+/** Compact search-row chip — sits next to salary on job result cards. */
+const compactChipSx: SxProps<Theme> = {
+  height: 20,
+  borderRadius: '8px',
+  fontFamily: 'monospace',
+  fontVariantNumeric: 'tabular-nums',
+  fontWeight: 700,
+  fontSize: '0.62rem',
+  letterSpacing: '0.01em',
+  border: '1px solid',
+  '& .MuiChip-label': { px: 0.75 },
 };
 
 /** Shared with OKAZION countdown chip — identical size/radius on mobile + desktop. */
@@ -37,6 +54,12 @@ const overlayChipSx: SxProps<Theme> = {
   boxShadow: '0 2px 12px rgba(0,0,0,0.28)',
   '& .MuiChip-label': { px: 1.15 },
 };
+
+function chipSizeSx(variant: JobListingCountdownVariant): SxProps<Theme> {
+  if (variant === 'overlay') return overlayChipSx;
+  if (variant === 'compact') return compactChipSx;
+  return baseChipSx;
+}
 
 function chipUrgencySx(urgency: JobListingCountdownUrgency, overlay: boolean) {
   if (overlay) {
@@ -82,10 +105,10 @@ function chipUrgencySx(urgency: JobListingCountdownUrgency, overlay: boolean) {
   };
 }
 
-function tickState(expiresAt: string) {
+function tickState(expiresAt: string, now: Date) {
   return {
-    label: formatJobListingCountdown(expiresAt),
-    urgency: getJobListingCountdownUrgency(expiresAt),
+    label: formatJobListingCountdown(expiresAt, now),
+    urgency: getJobListingCountdownUrgency(expiresAt, now),
   };
 }
 
@@ -94,7 +117,7 @@ export function JobListingCountdownPlaceholder({
   variant = 'default',
 }: {
   chipSx?: SxProps<Theme>;
-  variant?: 'default' | 'overlay';
+  variant?: JobListingCountdownVariant;
 }) {
   const overlay = variant === 'overlay';
   return (
@@ -103,7 +126,7 @@ export function JobListingCountdownPlaceholder({
       size="small"
       aria-hidden
       sx={{
-        ...(overlay ? overlayChipSx : baseChipSx),
+        ...(chipSizeSx(variant) as object),
         ...chipUrgencySx('normal', overlay),
         ...(chipSx as object),
       }}
@@ -118,34 +141,21 @@ export function JobListingCountdown({
 }: {
   expiresAt: string;
   chipSx?: SxProps<Theme>;
-  variant?: 'default' | 'overlay';
+  variant?: JobListingCountdownVariant;
 }) {
   const overlay = variant === 'overlay';
   const [mounted, setMounted] = React.useState(false);
-  const [state, setState] = React.useState<{
-    label: string;
-    urgency: JobListingCountdownUrgency;
-  } | null>(null);
+  const nowMs = useSharedSecondTick();
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
-  React.useEffect(() => {
-    if (!mounted) return undefined;
-
-    const update = () => setState(tickState(expiresAt));
-    update();
-    const id = window.setInterval(update, 1000);
-    return () => window.clearInterval(id);
-  }, [expiresAt, mounted]);
-
   if (!mounted) {
     return <JobListingCountdownPlaceholder chipSx={chipSx} variant={variant} />;
   }
 
-  const label = state?.label ?? PLACEHOLDER_LABEL;
-  const urgency = state?.urgency ?? 'normal';
+  const { label, urgency } = tickState(expiresAt, new Date(nowMs || Date.now()));
 
   return (
     <Chip
@@ -154,7 +164,7 @@ export function JobListingCountdown({
       aria-live="polite"
       suppressHydrationWarning
       sx={{
-        ...(overlay ? overlayChipSx : baseChipSx),
+        ...(chipSizeSx(variant) as object),
         ...chipUrgencySx(urgency, overlay),
         ...(chipSx as object),
       }}

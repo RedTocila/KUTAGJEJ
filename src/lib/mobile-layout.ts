@@ -16,6 +16,12 @@ export const MOBILE_CONTENT_BOTTOM_PADDING = `calc(${MOBILE_BOTTOM_NAV_CONTENT_H
 /** Extra space under the /kerko search bar so it isn’t flush with the home indicator. */
 export const MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX = 16;
 
+/** Dock padding-top above category circles (`pt: 1.25`). */
+export const MOBILE_SEARCH_DOCK_TOP_PADDING_PX = 10;
+
+/** Gap between category circles and the search bar (`gap: 1.5`). */
+export const MOBILE_SEARCH_DOCK_GAP_PX = 12;
+
 /** Category circles + labels stacked above the /kerko search bar (replaces the nav). */
 export const MOBILE_SEARCH_CATEGORY_ROW_PX = 120;
 
@@ -23,4 +29,4 @@ export const MOBILE_SEARCH_CATEGORY_ROW_PX = 120;
 export const MOBILE_SEARCH_BAR_PADDING = `calc(${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_GAP_PX}px + env(safe-area-inset-bottom, 0px))`;
 
 /** Content padding so /kerko results clear categories + the search bar. */
-export const MOBILE_SEARCH_DOCK_PADDING = `calc(${MOBILE_SEARCH_CATEGORY_ROW_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_GAP_PX}px + env(safe-area-inset-bottom, 0px))`;
+export const MOBILE_SEARCH_DOCK_PADDING = `calc(${MOBILE_SEARCH_DOCK_TOP_PADDING_PX}px + ${MOBILE_SEARCH_CATEGORY_ROW_PX}px + ${MOBILE_SEARCH_DOCK_GAP_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_GAP_PX}px + env(safe-area-inset-bottom, 0px))`;

@@ -13,6 +13,7 @@ const {
   parsePagination,
   calcTotalPages,
   buildIlikeOrFilter,
+  parseQueryKeywords,
 } = require('../lib/public-listings/query-helpers');
 const { namesMatch, normalizeSearchText } = require('../lib/search-normalize');
 const { getReceivedReviewStats, resolveReferralBadges } = require('../lib/referrals');
@@ -51,8 +52,9 @@ function displayNameFromProfileRow(row) {
 }
 
 function memberSearchTokens(q) {
-  const folded = normalizeSearchText(q);
-  return folded.split(/[\s./-]+/).filter((token) => token.length >= 2).slice(0, 5);
+  const keywords = parseQueryKeywords({ q });
+  const folded = normalizeSearchText(keywords.join(' '));
+  return folded.split(/[\s./-]+/).filter((token) => token.length >= 2).slice(0, 8);
 }
 
 function tableMissing(error) {

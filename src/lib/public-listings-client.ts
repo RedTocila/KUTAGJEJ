@@ -560,7 +560,10 @@ export async function fetchBrowseOkazion(
     page: String(page),
   });
   if (filters.kind) q.set('kind', filters.kind);
-  if (filters.q?.trim()) q.set('q', filters.q.trim());
+  for (const keyword of filters.q ?? []) {
+    const trimmed = String(keyword ?? '').trim();
+    if (trimmed) q.append('q', trimmed);
+  }
   const data = await safeJson<{
     listings: PublicOkazionListing[];
     total?: number;

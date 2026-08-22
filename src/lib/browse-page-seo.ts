@@ -13,6 +13,7 @@ import {
 import {
   buildBrowseUrlQuery,
   BUSINESS_FILTER_OPTIONS,
+  formatBrowseKeywords,
   parseBrowseSearchParams,
   parseBrowsePage,
   PROFESSIONAL_FILTER_OPTIONS,
@@ -254,11 +255,12 @@ function buildDirectorySeo(
   const titleParts = [type ?? vertical.label];
   let title = joinPhrase(titleParts);
   if (location) title = `${title} ${location}`;
-  if (filters.q) title = `${filters.q} — ${title}`;
+  const keyword = formatBrowseKeywords(filters.q);
+  if (keyword) title = `${keyword} — ${title}`;
 
   const subject = type?.toLowerCase() ?? vertical.label.toLowerCase();
   let description = `Njoftime për ${subject}${location ? ` ${location}` : ' në Shqipëri'}. Shiko rezultatet dhe gjej atë që kërkon në KuTaGjej.`;
-  if (filters.q) description = `Kërkim për «${filters.q}». ${description}`;
+  if (keyword) description = `Kërkim për «${keyword}». ${description}`;
 
   return { title, description: metaSnippet(description) };
 }

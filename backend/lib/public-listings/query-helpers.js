@@ -79,7 +79,14 @@ function applyFilterSpec(query, spec = {}) {
   if (spec.notNull) {
     for (const col of spec.notNull) q = q.not(col, 'is', null);
   }
-  if (spec.or) q = q.or(spec.or);
+  const andOr = Array.isArray(spec.andOr) ? spec.andOr.filter(Boolean) : [];
+  if (andOr.length > 1) {
+    q = q.or(`and(${andOr.map((or) => `or(${or})`).join(',')})`);
+  } else if (andOr.length === 1) {
+    q = q.or(andOr[0]);
+  } else if (spec.or) {
+    q = q.or(spec.or);
+  }
   return q;
 }
 
@@ -95,6 +102,9 @@ function mergeSpecs(...specs) {
       out.notNull = [...new Set([...(out.notNull || []), ...spec.notNull])];
     }
     if (spec.or) out.or = out.or ? `${out.or},${spec.or}` : spec.or;
+    if (Array.isArray(spec.andOr) && spec.andOr.length) {
+      out.andOr = [...(out.andOr || []), ...spec.andOr.filter(Boolean)];
+    }
   }
   return out;
 }
@@ -289,19 +299,32 @@ function buildIlikeOrFilter(fields, q) {
   return parts.length ? parts.join(',') : null;
 }
 
-/**
- * Resolve free-text `q` to city/zone ids (accent + English-alias tolerant).
- * Appends `city_id.eq` / `zone_id.eq` clauses onto `spec.or` so location names find listings.
- */
-async function enrichTextSearchWithLocations(spec, q) {
+/** Flatten `q` from a string or repeated query values into unique keywords. */
+function parseQueryKeywords(query) {
+  const raw = query?.q;
+  const values = Array.isArray(raw) ? raw : raw != null && String(raw).trim() !== '' ? [raw] : [];
+  const seen = new Set();
+  const out = [];
+  for (const value of values) {
+    const trimmed = String(value ?? '').trim();
+    if (trimmed.length < 2) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+  }
+  return out;
+}
+
+async function locationOrForNeedle(q) {
   const needle = normalizeSearchText(q);
-  if (!needle || needle.length < 2) return spec;
+  if (!needle || needle.length < 2) return null;
 
   const { data, error } = await getSupabaseAdmin()
     .from('real_estate_cities')
     .select('id, name, zones');
   if (error) throw error;
-  if (!data?.length) return spec;
+  if (!data?.length) return null;
 
   const cityIds = new Set();
   const zoneIds = new Set();
@@ -322,9 +345,23 @@ async function enrichTextSearchWithLocations(spec, q) {
   const locationParts = [];
   for (const id of cityIds) locationParts.push(`city_id.eq.${id}`);
   for (const id of zoneIds) locationParts.push(`zone_id.eq.${id}`);
-  if (!locationParts.length) return spec;
+  return locationParts.length ? locationParts.join(',') : null;
+}
 
-  const locationOr = locationParts.join(',');
+/**
+ * Resolve free-text `q` to city/zone ids (accent + English-alias tolerant).
+ * Appends `city_id.eq` / `zone_id.eq` clauses onto `spec.or` so location names find listings.
+ */
+async function enrichTextSearchWithLocations(spec, q) {
+  const locationOr = await locationOrForNeedle(q);
+  if (!locationOr) return spec;
+
+  if (Array.isArray(spec.andOr) && spec.andOr.length) {
+    const groups = [...spec.andOr];
+    groups[0] = `${groups[0]},${locationOr}`;
+    return { ...spec, andOr: groups };
+  }
+
   return {
     ...spec,
     or: spec.or ? `${spec.or},${locationOr}` : locationOr,
@@ -371,7 +408,9 @@ module.exports = {
   sortDocsByBumpDesc,
   prioritizeActivePremium,
   buildIlikeOrFilter,
+  parseQueryKeywords,
   fieldsForTextSearch,
   enrichTextSearchWithLocations,
+  locationOrForNeedle,
   buildCityIndex,
 };

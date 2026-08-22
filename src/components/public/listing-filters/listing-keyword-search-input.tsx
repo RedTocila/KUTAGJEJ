@@ -23,23 +23,28 @@ export function ListingKeywordSearchInput({
   placeholder,
   onChange,
   accent,
+  commitToChip = false,
 }: {
   value: string;
   placeholder: string;
   onChange: (next: string) => void;
   /** Optional accent (e.g. OKAZION red) for icon + active/focus chrome. */
   accent?: ProductSearchAccent;
+  /** Applied keyword is a chip — this field is only for composing a new query. */
+  commitToChip?: boolean;
 }) {
   const t = useCopy();
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const [query, setQuery] = React.useState(value);
+  const [query, setQuery] = React.useState(commitToChip ? '' : value);
   const [focused, setFocused] = React.useState(false);
 
   React.useEffect(() => {
+    if (commitToChip) return;
     setQuery(value);
-  }, [value]);
+  }, [value, commitToChip]);
 
   React.useEffect(() => {
+    if (commitToChip) return;
     const trimmed = query.trim();
     const applied = value.trim();
     if (trimmed === applied) return;
@@ -49,16 +54,30 @@ export function ListingKeywordSearchInput({
     }, DEBOUNCE_MS);
 
     return () => window.clearTimeout(handle);
-  }, [query, value, onChange]);
+  }, [query, value, onChange, commitToChip]);
+
+  const commitDraft = (next: string) => {
+    const trimmed = next.trim();
+    if (commitToChip) {
+      if (!trimmed) {
+        setQuery('');
+        return;
+      }
+      onChange(trimmed);
+      setQuery('');
+      return;
+    }
+    onChange(trimmed);
+  };
 
   const clear = () => {
     setQuery('');
-    onChange('');
+    if (!commitToChip) onChange('');
     inputRef.current?.focus();
   };
 
   const hasQuery = Boolean(query.trim());
-  const highlighted = hasQuery || focused;
+  const highlighted = hasQuery || focused || (commitToChip && Boolean(value.trim()));
   const iconColor = accent?.color ?? 'var(--mui-palette-primary-main)';
 
   return (
@@ -66,7 +85,7 @@ export function ListingKeywordSearchInput({
       component="form"
       onSubmit={(e) => {
         e.preventDefault();
-        onChange(query.trim());
+        commitDraft(query);
       }}
       sx={{
         flex: 1,
@@ -86,7 +105,10 @@ export function ListingKeywordSearchInput({
         aria-label={placeholder}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onBlur={() => {
+          setFocused(false);
+          if (commitToChip && query.trim()) commitDraft(query);
+        }}
         slotProps={{
           input: {
             disableUnderline: true,

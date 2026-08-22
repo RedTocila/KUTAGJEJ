@@ -31,7 +31,7 @@ export interface BrowseRealEstateFilters {
   maxPrice?: string;
   minSurface?: string;
   bedrooms?: string;
-  q?: string;
+  q?: string[];
   sort?: BrowseSort;
   /** `1` = only listings from verified accounts. */
   verified?: string;
@@ -49,7 +49,7 @@ export interface BrowseCarFilters {
   minYear?: string;
   maxYear?: string;
   maxKm?: string;
-  q?: string;
+  q?: string[];
   sort?: BrowseSort;
   verified?: string;
 }
@@ -61,7 +61,7 @@ export interface BrowseJobFilters {
   education?: string;
   experience?: string;
   city?: string;
-  q?: string;
+  q?: string[];
   sort?: BrowseSort;
   verified?: string;
 }
@@ -72,7 +72,7 @@ export interface BrowseMarketplaceFilters {
   city?: string;
   minPrice?: string;
   maxPrice?: string;
-  q?: string;
+  q?: string[];
   sort?: BrowseSort;
   verified?: string;
 }
@@ -80,7 +80,7 @@ export interface BrowseMarketplaceFilters {
 export interface BrowseDirectoryFilters {
   type?: string;
   city?: string;
-  q?: string;
+  q?: string[];
   sort?: BrowseSort;
   verified?: string;
   minRating?: string;
@@ -92,7 +92,7 @@ export interface BrowseDirectoryFilters {
 export interface BrowseOkazionFilters {
   /** Main category vertical (`cars`, `real-estate`, …). */
   kind?: HomeVerticalId;
-  q?: string;
+  q?: string[];
 }
 
 /** Vertical browse filters (city/sort/etc). Okazion is a separate shape. */
@@ -166,6 +166,43 @@ export function normalizeZoneIds(zone: string[] | string | undefined): string[] 
   return single ? [single] : [];
 }
 
+const MAX_BROWSE_KEYWORDS = 8;
+
+/** URL / draft may expose `q` as a string or repeated keys — always a unique list. */
+export function normalizeBrowseKeywords(q: string[] | string | undefined): string[] {
+  if (!q) return [];
+  const values = Array.isArray(q) ? q : [q];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of values) {
+    const trimmed = String(raw ?? '').trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+    if (out.length >= MAX_BROWSE_KEYWORDS) break;
+  }
+  return out;
+}
+
+export function formatBrowseKeywords(q: string[] | string | undefined): string {
+  return normalizeBrowseKeywords(q).join(' ');
+}
+
+export function addBrowseKeyword(filters: BrowseFilters, keyword: string): BrowseFilters {
+  const nextKeyword = keyword.trim();
+  if (!nextKeyword) return filters;
+  const current = normalizeBrowseKeywords((filters as { q?: string | string[] }).q);
+  if (current.some((item) => item.toLowerCase() === nextKeyword.toLowerCase())) {
+    return current.length ? ({ ...filters, q: current } as BrowseFilters) : filters;
+  }
+  if (current.length >= MAX_BROWSE_KEYWORDS) {
+    return { ...filters, q: current } as BrowseFilters;
+  }
+  return { ...filters, q: [...current, nextKeyword] } as BrowseFilters;
+}
+
 /** Preserves repeated query keys (e.g. multiple `zone` values). */
 export function searchParamsToRecord(params: URLSearchParams): SearchParamsInput {
   const record: SearchParamsInput = {};
@@ -226,8 +263,8 @@ const OKAZION_KIND_VALUES = new Set<HomeVerticalId>([
 export function parseOkazionBrowseParams(searchParams: SearchParamsInput): BrowseOkazionFilters {
   const rawKind = firstParam(searchParams.kind).trim() as HomeVerticalId;
   const kind = OKAZION_KIND_VALUES.has(rawKind) ? rawKind : undefined;
-  const q = firstParam(searchParams.q).trim() || undefined;
-  return { kind, q };
+  const q = normalizeBrowseKeywords(allParams(searchParams.q));
+  return { kind, q: q.length ? q : undefined };
 }
 
 export function parseBrowseSearchParams(
@@ -243,7 +280,8 @@ export function parseBrowseSearchParams(
     sort = undefined;
   }
   const city = firstParam(searchParams.city).trim() || undefined;
-  const q = firstParam(searchParams.q).trim() || undefined;
+  const q = normalizeBrowseKeywords(allParams(searchParams.q));
+  const qValue = q.length ? q : undefined;
   const verified = parseOnFlag(firstParam(searchParams.verified));
 
   switch (verticalId) {
@@ -258,7 +296,7 @@ export function parseBrowseSearchParams(
         maxPrice: firstParam(searchParams.maxPrice).trim() || undefined,
         minSurface: firstParam(searchParams.minSurface).trim() || undefined,
         bedrooms: firstParam(searchParams.bedrooms).trim() || undefined,
-        q,
+        q: qValue,
         sort,
         verified,
       };
@@ -276,7 +314,7 @@ export function parseBrowseSearchParams(
         minYear: firstParam(searchParams.minYear).trim() || undefined,
         maxYear: firstParam(searchParams.maxYear).trim() || undefined,
         maxKm: firstParam(searchParams.maxKm).trim() || undefined,
-        q,
+        q: qValue,
         sort,
         verified,
       };
@@ -288,7 +326,7 @@ export function parseBrowseSearchParams(
         education: firstParam(searchParams.education).trim() || undefined,
         experience: firstParam(searchParams.experience).trim() || undefined,
         city,
-        q,
+        q: qValue,
         sort,
         verified,
       };
@@ -299,7 +337,7 @@ export function parseBrowseSearchParams(
         city,
         minPrice: firstParam(searchParams.minPrice).trim() || undefined,
         maxPrice: firstParam(searchParams.maxPrice).trim() || undefined,
-        q,
+        q: qValue,
         sort,
         verified,
       };
@@ -308,7 +346,7 @@ export function parseBrowseSearchParams(
       return {
         type: firstParam(searchParams.type).trim() || undefined,
         city,
-        q,
+        q: qValue,
         sort,
         verified,
         minRating: parseMinRating(firstParam(searchParams.minRating)),
@@ -383,6 +421,11 @@ export function getActiveFilterChips(
     chips.push({ key, label });
   };
 
+  const keywords = normalizeBrowseKeywords((filters as { q?: string | string[] }).q);
+  for (const keyword of keywords) {
+    push(`q:${keyword}`, keyword);
+  }
+
   const sortOptions = [
     ...BROWSE_SORT_OPTIONS,
     ...DIRECTORY_SORT_OPTIONS.filter((o) => o.value !== 'newest'),
@@ -437,7 +480,6 @@ export function getActiveFilterChips(
       if (f.maxPrice) push('maxPrice', `Max ${f.maxPrice}`);
       if (f.minSurface) push('minSurface', `≥ ${f.minSurface} m²`);
       if (f.bedrooms) push('bedrooms', t.minBedroomsChip(f.bedrooms));
-      // Keyword `q` is shown in the main search input — omit from chips.
       break;
     }
     case 'cars': {
@@ -513,6 +555,15 @@ export function removeBrowseFilterKey(filters: BrowseFilters, key: string): Brow
     const remaining = current.filter((id) => id !== zoneId);
     if (remaining.length) next.zone = remaining;
     else delete next.zone;
+    return next as BrowseFilters;
+  }
+  if (key.startsWith('q:')) {
+    const keyword = key.slice('q:'.length);
+    const remaining = normalizeBrowseKeywords(next.q as string | string[] | undefined).filter(
+      (item) => item.toLowerCase() !== keyword.toLowerCase(),
+    );
+    if (remaining.length) next.q = remaining;
+    else delete next.q;
     return next as BrowseFilters;
   }
   delete next[key];

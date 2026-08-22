@@ -479,7 +479,7 @@ export function parseSmartSearchQuery(
 
   const leftover = remaining.trim();
   if (leftover.length >= 2) {
-    filters.q = leftover;
+    filters.q = [leftover];
     matched.push(leftover);
   }
 

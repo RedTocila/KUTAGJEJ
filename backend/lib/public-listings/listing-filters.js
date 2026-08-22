@@ -20,7 +20,8 @@ const {
   buildSort,
   buildDirectorySort,
   buildIlikeOrFilter,
-  enrichTextSearchWithLocations,
+  parseQueryKeywords,
+  locationOrForNeedle,
   mergeSpecs,
   rankListingIdsByReviews,
   EMPTY_IN_UUID,
@@ -68,22 +69,45 @@ function parseAllowedFromArray(value, allowedValues) {
 }
 
 function applyTextSearch(spec, query, fields) {
-  const or = buildIlikeOrFilter(fields, query.q);
-  if (or) spec.or = or;
+  const keywords = parseQueryKeywords(query);
+  const groups = keywords.map((q) => buildIlikeOrFilter(fields, q)).filter(Boolean);
+  if (!groups.length) return;
+  if (groups.length === 1) spec.or = groups[0];
+  else spec.andOr = groups;
 }
 
 /** Keyword search → relevance only (no OKAZION / Premium pin to the top). */
 function featuredBoostForQuery(query) {
-  const searching = String(query?.q ?? '').trim().length >= 2;
+  const searching = parseQueryKeywords(query).some((q) => q.length >= 2);
   if (!searching) return {};
   return { includeOkazion: false, includePremium: false };
 }
 
 /** Finish keyword search: accent-tolerant text match + city/zone name resolution. */
 async function finalizeTextSearch(filter, query) {
-  const q = String(query?.q ?? '').trim();
-  if (q.length < 2) return filter;
-  return enrichTextSearchWithLocations(filter, q);
+  const keywords = parseQueryKeywords(query);
+  if (!keywords.length) return filter;
+
+  let next = filter;
+  const groups = Array.isArray(next.andOr) ? [...next.andOr] : next.or ? [next.or] : [];
+  for (let i = 0; i < keywords.length; i += 1) {
+    const loc = await locationOrForNeedle(keywords[i]);
+    if (!loc) continue;
+    if (groups.length) {
+      const idx = Math.min(i, groups.length - 1);
+      groups[idx] = `${groups[idx]},${loc}`;
+    } else {
+      groups.push(loc);
+    }
+  }
+
+  if (!groups.length) return next;
+  if (groups.length === 1) {
+    const { andOr: _andOr, ...rest } = next;
+    return { ...rest, or: groups[0] };
+  }
+  const { or: _or, ...rest } = next;
+  return { ...rest, andOr: groups };
 }
 
 function applyPriceRange(spec, minPrice, maxPrice) {

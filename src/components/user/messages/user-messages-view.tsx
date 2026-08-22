@@ -622,8 +622,8 @@ function ConversationListItem({
               height: 22,
               borderRadius: 0.75,
               overflow: 'hidden',
-              border: '2px solid',
-              borderColor: 'background.paper',
+              border: '1px solid',
+              borderColor: CHAT_ACCENT,
               bgcolor: 'action.hover',
               pointerEvents: 'none',
               boxShadow: '0 1px 4px rgba(0,0,0,0.28)',
@@ -780,6 +780,159 @@ function ConversationListItem({
   );
 }
 
+/** Determinate ring + percent so you can see when a chat photo will open. */
+function ChatImageProgressBadge({ value, size = 56 }: { value: number; size?: number }) {
+  const pct = Math.max(0, Math.min(100, value));
+  const ring = Math.round(size * 0.68);
+  return (
+    <Box
+      sx={{
+        position: 'relative',
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        bgcolor: 'rgba(0,0,0,0.55)',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
+        display: 'grid',
+        placeItems: 'center',
+      }}
+    >
+      <Box sx={{ position: 'relative', display: 'inline-flex', width: ring, height: ring }}>
+        <CircularProgress
+          variant="determinate"
+          value={100}
+          size={ring}
+          thickness={4.5}
+          aria-hidden
+          sx={{ color: 'rgba(255,255,255,0.22)', position: 'absolute' }}
+        />
+        <CircularProgress
+          variant="determinate"
+          value={pct}
+          size={ring}
+          thickness={4.5}
+          sx={{
+            color: '#fff',
+            position: 'absolute',
+            left: 0,
+            '& .MuiCircularProgress-circle': { strokeLinecap: 'round' },
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            display: 'grid',
+            placeItems: 'center',
+          }}
+        >
+          <Typography
+            component="span"
+            aria-hidden
+            sx={{
+              fontSize: size >= 56 ? '0.62rem' : '0.55rem',
+              fontWeight: 800,
+              color: '#fff',
+              lineHeight: 1,
+              letterSpacing: '-0.03em',
+            }}
+          >
+            {`${Math.round(pct)}%`}
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+/**
+ * Downloads a chat image with byte-level progress (XHR). Falls back to the
+ * native `<img>` URL when CORS blocks the request, easing the ring toward 90%
+ * until the caller reports decode complete.
+ */
+function useChatImageDownload(url: string): { progress: number; src: string | null } {
+  const [progress, setProgress] = React.useState(0);
+  const [src, setSrc] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!url) {
+      setProgress(0);
+      setSrc(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    let raf = 0;
+    const startedAt = performance.now();
+
+    setProgress(0);
+    setSrc(null);
+
+    const stopRaf = () => {
+      if (!raf) return;
+      cancelAnimationFrame(raf);
+      raf = 0;
+    };
+
+    const easeToward = (cap: number, ms: number) => {
+      const tick = (now: number) => {
+        if (cancelled) return;
+        const next = cap * (1 - Math.exp(-(now - startedAt) / ms));
+        setProgress((prev) => Math.max(prev, Math.min(cap, next)));
+        if (next >= cap - 0.4) return;
+        raf = requestAnimationFrame(tick);
+      };
+      stopRaf();
+      raf = requestAnimationFrame(tick);
+    };
+
+    easeToward(8, 420);
+
+    const adoptNative = () => {
+      if (cancelled) return;
+      setSrc(url);
+      easeToward(90, 1400);
+    };
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url);
+    xhr.responseType = 'blob';
+
+    xhr.onprogress = (event) => {
+      if (cancelled) return;
+      if (!event.lengthComputable || event.total <= 0) return;
+      stopRaf();
+      setProgress(Math.min(99, (event.loaded / event.total) * 100));
+    };
+
+    xhr.onload = () => {
+      if (cancelled) return;
+      const blob = xhr.response instanceof Blob ? xhr.response : null;
+      if (!(xhr.status >= 200 && xhr.status < 400) || !blob || blob.size <= 0) {
+        adoptNative();
+        return;
+      }
+      stopRaf();
+      objectUrl = URL.createObjectURL(blob);
+      setProgress(100);
+      setSrc(objectUrl);
+    };
+
+    xhr.onerror = () => adoptNative();
+    xhr.send();
+
+    return () => {
+      cancelled = true;
+      stopRaf();
+      xhr.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [url]);
+
+  return { progress, src };
+}
+
 function MessageBubble({
   message,
   deliveryStatus,
@@ -816,6 +969,10 @@ function MessageBubble({
   const [previewLoaded, setPreviewLoaded] = React.useState(false);
   const [previewFailed, setPreviewFailed] = React.useState(false);
   const [bubbleSrc, setBubbleSrc] = React.useState(bubbleImageUrl);
+  const bubbleDownload = useChatImageDownload(imageUrl ? bubbleSrc : '');
+  const previewDownload = useChatImageDownload(previewOpen && imageUrl ? imageUrl : '');
+  const loadProgress = imageLoaded ? 100 : bubbleDownload.progress;
+  const previewProgress = previewLoaded ? 100 : previewDownload.progress;
 
   React.useEffect(() => {
     setBubbleSrc(bubbleImageUrl);
@@ -980,28 +1137,7 @@ function MessageBubble({
                   pointerEvents: 'none',
                 }}
               >
-                <Box
-                  sx={{
-                    display: 'grid',
-                    placeItems: 'center',
-                    width: 56,
-                    height: 56,
-                    borderRadius: '50%',
-                    bgcolor: 'rgba(0,0,0,0.55)',
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
-                  }}
-                >
-                  <CircularProgress
-                    size={32}
-                    thickness={5}
-                    sx={{
-                      color: '#fff',
-                      '& .MuiCircularProgress-circle': {
-                        strokeLinecap: 'round',
-                      },
-                    }}
-                  />
-                </Box>
+                <ChatImageProgressBadge value={loadProgress} />
               </Box>
             ) : null}
             {imageFailed ? (
@@ -1019,11 +1155,11 @@ function MessageBubble({
                   {t.messages.imageLoadFailed}
                 </Typography>
               </Box>
-            ) : (
+            ) : bubbleDownload.src ? (
               <Box
                 component="img"
                 ref={imgRef}
-                src={bubbleSrc}
+                src={bubbleDownload.src}
                 alt=""
                 loading="eager"
                 decoding="async"
@@ -1062,7 +1198,7 @@ function MessageBubble({
                   transition: 'opacity 0.2s ease',
                 }}
               />
-            )}
+            ) : null}
             {imageOnly ? meta : null}
           </Box>
         ) : null}
@@ -1161,27 +1297,19 @@ function MessageBubble({
                 position: 'absolute',
                 display: 'grid',
                 placeItems: 'center',
-                width: 64,
-                height: 64,
-                borderRadius: '50%',
-                bgcolor: 'rgba(0,0,0,0.55)',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
               }}
             >
-              <CircularProgress
-                size={36}
-                thickness={5}
-                sx={{
-                  color: '#fff',
-                  '& .MuiCircularProgress-circle': { strokeLinecap: 'round' },
-                }}
-              />
+              <ChatImageProgressBadge value={previewProgress} size={64} />
             </Box>
           ) : null}
-          {!previewFailed ? (
+          {previewFailed ? (
+            <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 650 }}>
+              {t.messages.imageLoadFailed}
+            </Typography>
+          ) : previewDownload.src ? (
             <Box
               component="img"
-              src={imageUrl}
+              src={previewDownload.src}
               alt=""
               onLoad={() => {
                 setPreviewLoaded(true);
@@ -1205,11 +1333,7 @@ function MessageBubble({
                 transition: 'opacity 0.15s ease',
               }}
             />
-          ) : (
-            <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 650 }}>
-              {t.messages.imageLoadFailed}
-            </Typography>
-          )}
+          ) : null}
         </Box>
       </Dialog>
     ) : null}
@@ -2607,8 +2731,8 @@ export function UserMessagesView() {
                         height: 20,
                         borderRadius: 0.75,
                         overflow: 'hidden',
-                        border: '2px solid',
-                        borderColor: 'background.paper',
+                        border: '1px solid',
+                        borderColor: CHAT_ACCENT,
                         bgcolor: 'action.hover',
                         display: 'block',
                         lineHeight: 0,

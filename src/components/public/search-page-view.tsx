@@ -10,9 +10,9 @@ import {
   Button,
   CircularProgress,
   Container,
-  Grid,
   IconButton,
   InputAdornment,
+  Skeleton,
   Stack,
   TextField,
   Typography,
@@ -29,7 +29,6 @@ import {
   type SearchListingItem,
 } from '@/components/public/listing-cards/search-listing-card';
 import { HeroCategoryCircles } from '@/components/public/hero-category-circles';
-import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import {
   ProductSearchIcon,
   productSearchBarSx,
@@ -109,7 +108,7 @@ async function fetchVerticalResults(
   query: string,
   page = 1,
 ): Promise<{ items: SearchItem[]; total: number }> {
-  const filters = { q: query.trim() || undefined };
+  const filters = { q: query.trim() ? [query.trim()] : undefined };
   switch (verticalId) {
     case 'real-estate': {
       const res = await fetchBrowseRealEstate(PAGE_SIZE, filters, page);
@@ -178,9 +177,58 @@ function SearchDockLayer({
   return children;
 }
 
-function ResultCard({ item }: { item: SearchItem }) {
-  if (item.kind === 'profile') return <MemberProfileCard member={item.member} />;
-  return <SearchListingCard item={item} />;
+function SearchHitsSkeleton({
+  count = 8,
+  circular = false,
+}: {
+  count?: number;
+  circular?: boolean;
+}) {
+  return (
+    <Stack
+      spacing={0}
+      aria-busy
+      aria-label="Duke u ngarkuar"
+      sx={{ mx: { xs: -2, sm: -3 } }}
+    >
+      {Array.from({ length: count }, (_, i) => (
+        <Stack
+          key={i}
+          direction="row"
+          spacing={1.5}
+          sx={{ alignItems: 'center', px: { xs: 2, sm: 3 } }}
+        >
+          <Skeleton
+            variant={circular ? 'circular' : 'rounded'}
+            width={64}
+            height={64}
+            sx={{ flexShrink: 0, my: 1.15, borderRadius: circular ? undefined : 1.5 }}
+          />
+          <Stack
+            spacing={0.6}
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              py: 1.35,
+              borderBottom: i === count - 1 ? 'none' : '1px solid',
+              borderColor: 'divider',
+            }}
+          >
+            <Skeleton variant="text" width="72%" height={22} />
+            <Skeleton variant="text" width="48%" height={16} />
+            <Skeleton variant="text" width="36%" height={16} />
+          </Stack>
+        </Stack>
+      ))}
+    </Stack>
+  );
+}
+
+function ResultCard({ item, divider }: { item: SearchItem; divider?: boolean }) {
+  if (item.kind === 'profile') {
+    return <MemberProfileCard member={item.member} variant="list" divider={divider} />;
+  }
+  return <SearchListingCard item={item} variant="list" divider={divider} />;
 }
 
 export function SearchPageView({
@@ -483,34 +531,27 @@ export function SearchPageView({
       void runAiNavigate(trimmed);
       return;
     }
-    if (isProfilesSearchCategory(categoryId)) {
-      syncUrl('profiles', trimmed);
-      void runProfileSearch(trimmed);
-      return;
-    }
-    if (isHomeVerticalId(categoryId)) {
-      syncUrl(categoryId, trimmed);
-      void runVerticalSearch(categoryId, trimmed);
-    }
+    const base = activeCategory.href.split('?')[0];
+    const href = trimmed ? `${base}?q=${encodeURIComponent(trimmed)}` : base;
+    goTo(href);
   };
 
   const searchAccent = isAi ? { color: AI_SEARCH_BLUE, soft: AI_SEARCH_BLUE_SOFT } : undefined;
+  const mobileDockPadding = categoriesHidden ? MOBILE_SEARCH_BAR_PADDING : MOBILE_SEARCH_DOCK_PADDING;
 
   return (
     <Container
       maxWidth="xl"
       sx={{
         pt: { xs: 1.5, md: 2.5 },
-        pb: { xs: categoriesHidden ? MOBILE_SEARCH_BAR_PADDING : MOBILE_SEARCH_DOCK_PADDING, lg: 4 },
+        pb: { xs: 0, lg: 4 },
         px: { xs: 2, sm: 3 },
         display: 'flex',
         flexDirection: 'column',
         flex: isOverlay ? 1 : undefined,
-        minHeight: isOverlay ? '100%' : '100dvh',
+        minHeight: isOverlay ? 0 : '100dvh',
         height: isOverlay ? '100%' : 'auto',
         overflow: isOverlay ? 'auto' : 'visible',
-        transition: `padding-bottom ${MOTION.base} ${MOTION.ease}`,
-        '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
       }}
     >
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
@@ -783,7 +824,7 @@ export function SearchPageView({
 
       <Box
         sx={{
-          flex: 1,
+          flex: categoryId ? '0 0 auto' : 1,
           minHeight: 0,
           mt: 2,
           display: 'flex',
@@ -834,7 +875,7 @@ export function SearchPageView({
         {!hasSearched || isAi ? (
           (isAi && loading) || (isLiveSearchCategory(categoryId) && loading && items.length === 0) ? (
             <Stack spacing={1.5}>
-              <PackageRowsSkeleton count={isAi ? 4 : 8} rowHeight={104} />
+              <SearchHitsSkeleton count={isAi ? 4 : 8} circular={isProfiles} />
               {isAi ? (
                 <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
                   {t.search.aiThinking}
@@ -843,7 +884,7 @@ export function SearchPageView({
             </Stack>
           ) : null
         ) : loading && items.length === 0 ? (
-          <PackageRowsSkeleton count={8} rowHeight={104} />
+          <SearchHitsSkeleton count={8} circular={isProfiles} />
         ) : items.length === 0 ? (
           <Box sx={{ py: 4, textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary">
@@ -856,13 +897,15 @@ export function SearchPageView({
               {(isProfiles ? t.search.profileCount(total) : t.search.listingCount(total)) +
                 t.search.resultsSuffix(submittedQuery, activeCategory?.label ?? '')}
             </Typography>
-            <Grid container spacing={2}>
-              {items.map((item) => (
-                <Grid key={searchItemKey(item)} size={{ xs: 12, md: 6 }}>
-                  <ResultCard item={item} />
-                </Grid>
+            <Box sx={{ mx: { xs: -2, sm: -3 } }}>
+              {items.map((item, index) => (
+                <ResultCard
+                  key={searchItemKey(item)}
+                  item={item}
+                  divider={index < items.length - 1}
+                />
               ))}
-            </Grid>
+            </Box>
             {total > items.length && isLiveSearchCategory(categoryId) ? (
               <Box sx={{ textAlign: 'center' }}>
                 <Button
@@ -884,6 +927,17 @@ export function SearchPageView({
           </Stack>
         )}
       </Box>
+      {/* In-flow spacer so the last listing can scroll above the fixed search dock. */}
+      <Box
+        aria-hidden
+        sx={{
+          display: { xs: 'block', lg: 'none' },
+          flexShrink: 0,
+          height: mobileDockPadding,
+          transition: `height ${MOTION.base} ${MOTION.ease}`,
+          '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+        }}
+      />
     </Container>
   );
 }

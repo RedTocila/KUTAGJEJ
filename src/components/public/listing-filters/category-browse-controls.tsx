@@ -12,8 +12,10 @@ import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import { localizeVertical, type HomeVerticalId } from '@/lib/home-categories';
 import {
+  addBrowseKeyword,
   buildBrowseUrlQuery,
   countActiveBrowseFilters,
+  formatBrowseKeywords,
   getActiveFilterChips,
   hasActiveBrowseFilters,
   normalizeZoneIds,
@@ -146,10 +148,7 @@ export function CategoryBrowseControls({
 
   const applyKeyword = React.useCallback(
     (nextQ: string) => {
-      const next = {
-        ...applied,
-        q: nextQ.trim() || undefined,
-      } as BrowseFilters;
+      const next = addBrowseKeyword(applied, nextQ);
       setDraft(next);
       React.startTransition(() => {
         router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
@@ -161,7 +160,7 @@ export function CategoryBrowseControls({
   const activeCount = countActiveBrowseFilters(applied);
   const activeChips = getActiveFilterChips(verticalId, applied, cities, language);
   const hasPendingChanges = !filtersEqual(draft, applied);
-  const qValue = (applied as { q?: string }).q ?? '';
+  const qValue = formatBrowseKeywords((applied as { q?: string | string[] }).q);
   const cityValue = (draft as { city?: string }).city ?? '';
   const zoneValue =
     verticalId === 'real-estate' ? normalizeZoneIds((draft as BrowseRealEstateFilters).zone) : [];
@@ -186,6 +185,7 @@ export function CategoryBrowseControls({
               value={qValue}
               placeholder={vertical.searchPlaceholder}
               onChange={applyKeyword}
+              commitToChip
             />
           </Box>
 

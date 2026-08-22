@@ -109,7 +109,7 @@ function toMixed(
 
 function filtersForVertical(verticalId: HomeVerticalId, profile: InterestProfile): BrowseVerticalFilters {
   const city = profile.preferredCities[0];
-  const q = profile.preferredQueries[0];
+  const q = profile.preferredQueries[0] ? [profile.preferredQueries[0]] : undefined;
   const category = profile.preferredCategories[verticalId];
 
   switch (verticalId) {

@@ -13,6 +13,7 @@ const {
   buildSort,
   buildDirectorySort,
   buildIlikeOrFilter,
+  parseQueryKeywords,
   mergeSpecs,
   isUuid,
   isRatingSortSpec,
@@ -683,16 +684,17 @@ async function queryOkazionListings(limit = 48, skip = 0, query = {}) {
   const selectedKind = VERTICAL_TO_KIND[rawKind] || null;
   const kinds = selectedKind ? allKinds.filter((k) => k.kind === selectedKind) : allKinds;
 
-  const q = String(query.q ?? '').trim();
+  const keywords = parseQueryKeywords(query);
 
   const batches = await Promise.all(
     kinds.map(async ({ kind, table, base }) => {
       try {
         let filter = mergeSpecs(base, okazionFilter);
-        if (q.length >= 2) {
+        if (keywords.length) {
           const fields = SEARCH_FIELDS_BY_KIND[kind] || ['title', 'description'];
-          const or = buildIlikeOrFilter(fields, q);
-          if (or) filter = mergeSpecs(filter, { or });
+          const groups = keywords.map((q) => buildIlikeOrFilter(fields, q)).filter(Boolean);
+          if (groups.length === 1) filter = mergeSpecs(filter, { or: groups[0] });
+          else if (groups.length > 1) filter = mergeSpecs(filter, { andOr: groups });
         }
         const docs = await runListingQuery(
           table,

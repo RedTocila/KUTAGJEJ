@@ -3,7 +3,11 @@
 import * as React from 'react';
 import { Avatar, Box, Stack, Typography } from '@mui/material';
 
-import { SearchHitCard } from '@/components/public/listing-cards/search-hit-card';
+import {
+  SearchHitCard,
+  searchHitListTextSx,
+  type SearchHitVariant,
+} from '@/components/public/listing-cards/search-hit-card';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import {
   ListingVerifiedBadge,
@@ -17,22 +21,33 @@ import { memberInitials, type PublicMemberSearchHit } from '@/lib/public-member-
 import { avatarImageUrl } from '@/lib/storage-image';
 import { pathsPublicMemberProfile } from '@/paths';
 
-export function MemberProfileCard({ member }: { member: PublicMemberSearchHit }) {
+export function MemberProfileCard({
+  member,
+  variant = 'card',
+  divider = false,
+}: {
+  member: PublicMemberSearchHit;
+  variant?: SearchHitVariant;
+  divider?: boolean;
+}) {
   const t = useCopy();
   const name = member.displayName?.trim() || t.search.unnamedMember;
   const href = pathsPublicMemberProfile(member.id);
   const memberYear = member.memberSince ? new Date(member.memberSince).getFullYear() : undefined;
   const reviewCount = member.reviewCount ?? 0;
   const ratingLabel = formatRatingDisplay(member.ratingAverage);
+  const isList = variant === 'list';
 
   return (
-    <SearchHitCard href={href}>
-      <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+    <SearchHitCard href={href} variant={variant}>
+      <Stack direction="row" spacing={isList ? 1.5 : 2} sx={{ alignItems: 'center' }}>
         <Avatar
+          variant="circular"
           src={avatarImageUrl(member.avatarUrl, 144) ?? undefined}
           sx={{
             width: { xs: 64, sm: 72 },
             height: { xs: 64, sm: 72 },
+            my: isList ? 1.15 : 0,
             bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.16 : 0.12),
             color: 'primary.main',
             fontWeight: 800,
@@ -42,7 +57,7 @@ export function MemberProfileCard({ member }: { member: PublicMemberSearchHit })
         >
           {memberInitials(name)}
         </Avatar>
-        <Stack spacing={0.5} sx={{ flex: '1 1 auto', minWidth: 0 }}>
+        <Stack spacing={0.5} sx={isList ? searchHitListTextSx(divider) : { flex: '1 1 auto', minWidth: 0 }}>
           <Typography sx={{ fontWeight: 850, fontSize: '1.125rem', color: 'text.primary' }} noWrap>
             {name}
             {member.verified ? (

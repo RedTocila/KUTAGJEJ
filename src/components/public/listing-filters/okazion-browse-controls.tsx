@@ -18,8 +18,12 @@ import {
   type HomeVerticalId,
 } from '@/lib/home-categories';
 import {
+  addBrowseKeyword,
   buildBrowseUrlQuery,
+  formatBrowseKeywords,
+  normalizeBrowseKeywords,
   parseOkazionBrowseParams,
+  searchParamsToRecord,
   type BrowseOkazionFilters,
 } from '@/lib/listing-filters';
 import { paths } from '@/paths';
@@ -27,6 +31,7 @@ import {
   PRODUCT_BROWSE_CONTROL_HEIGHT,
   ProductTag,
 } from '@/components/public/product-browse-chrome';
+import { ActiveFilterChips } from '@/components/public/listing-filters/active-filter-chips';
 import { ListingKeywordSearchInput } from '@/components/public/listing-filters/listing-keyword-search-input';
 
 const OKAZION_SEARCH_ACCENT = { color: OKAZION_ACCENT, soft: OKAZION_ACCENT_SOFT } as const;
@@ -67,7 +72,7 @@ export function OkazionBrowseControls() {
   const { language } = useLanguage();
 
   const applied = React.useMemo(
-    () => parseOkazionBrowseParams(Object.fromEntries(searchParams.entries())),
+    () => parseOkazionBrowseParams(searchParamsToRecord(searchParams)),
     [searchParams],
   );
 
@@ -82,10 +87,7 @@ export function OkazionBrowseControls() {
 
   const applyKeyword = React.useCallback(
     (nextQ: string) => {
-      const next: BrowseOkazionFilters = {
-        ...applied,
-        q: nextQ.trim() || undefined,
-      };
+      const next = addBrowseKeyword(applied, nextQ);
       React.startTransition(() => {
         router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
       });
@@ -93,15 +95,42 @@ export function OkazionBrowseControls() {
     [applied, pathname, router],
   );
 
+  const keywordChips = normalizeBrowseKeywords(applied.q).map((keyword) => ({
+    key: `q:${keyword}`,
+    label: keyword,
+  }));
+
+  const removeKeyword = (key: string) => {
+    const keyword = key.startsWith('q:') ? key.slice('q:'.length) : '';
+    const remaining = normalizeBrowseKeywords(applied.q).filter(
+      (item) => item.toLowerCase() !== keyword.toLowerCase(),
+    );
+    const next: BrowseOkazionFilters = {
+      ...applied,
+      q: remaining.length ? remaining : undefined,
+    };
+    React.startTransition(() => {
+      router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
+    });
+  };
+
+  const clearKeywords = () => {
+    const next: BrowseOkazionFilters = { ...applied, q: undefined };
+    React.startTransition(() => {
+      router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
+    });
+  };
+
   return (
     <Box component="section" aria-label="Kontrollet e kërkimit" sx={{ mt: { xs: 1.25, md: 2 } }}>
       <Box sx={toolbarRowSx}>
         <Box sx={{ flex: 1, minWidth: 0, display: 'flex' }}>
           <ListingKeywordSearchInput
-            value={applied.q ?? ''}
+            value={formatBrowseKeywords(applied.q)}
             placeholder={searchPlaceholder}
             onChange={applyKeyword}
             accent={OKAZION_SEARCH_ACCENT}
+            commitToChip
           />
         </Box>
       </Box>
@@ -146,6 +175,16 @@ export function OkazionBrowseControls() {
           })}
         </Stack>
       </Box>
+
+      {keywordChips.length > 0 ? (
+        <Box sx={{ mt: 0.75 }}>
+          <ActiveFilterChips
+            chips={keywordChips}
+            onRemove={removeKeyword}
+            onClearAll={clearKeywords}
+          />
+        </Box>
+      ) : null}
     </Box>
   );
 }

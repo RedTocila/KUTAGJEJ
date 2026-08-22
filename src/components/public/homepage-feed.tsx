@@ -5,9 +5,11 @@ import { HomepageCacheSync } from '@/components/public/homepage-cache-sync';
 import { HomepageBelowFold } from '@/components/public/homepage-carousels';
 import { HomeOkazionFallback, HomeRecommendedFallback } from '@/components/public/home-carousels-fallback';
 import { HomepageOkazionSection } from '@/components/public/homepage-okazion-section';
+import { HomepageProfilesSection } from '@/components/public/homepage-profiles-section';
 import { HomepageRecommendedSection } from '@/components/public/homepage-recommended-section';
 import { homepageItemListJsonLd } from '@/lib/homepage-json-ld';
 import { buildHomepageMixedLatest } from '@/lib/homepage-latest-listings';
+import { fetchLatestPublicMembers } from '@/lib/public-member-client';
 import { fetchBrowseOkazion, fetchHomepageRecommended } from '@/lib/public-listings-client';
 import { config } from '@/config';
 
@@ -23,7 +25,13 @@ export function HomepageFeed(): React.JSX.Element {
       <React.Suspense fallback={<HomeOkazionFallback />}>
         <HomepageOkazionFeed />
       </React.Suspense>
-      <HomepageBelowFold />
+      <HomepageBelowFold
+        profilesSlot={
+          <React.Suspense fallback={<HomepageProfilesSection initialOk={false} />}>
+            <HomepageProfilesFeed />
+          </React.Suspense>
+        }
+      />
     </>
   );
 }
@@ -46,6 +54,20 @@ async function HomepageRecommendedFeed(): Promise<React.JSX.Element> {
       {bundle.ok ? <HomepageCacheSync bundle={bundle} /> : null}
       <HomepageRecommendedSection fallbackItems={mixed} ssrOk={bundle.ok} />
     </>
+  );
+}
+
+async function HomepageProfilesFeed(): Promise<React.JSX.Element> {
+  const res = await fetchLatestPublicMembers(8);
+  if (!res.ok) {
+    noStore();
+  }
+  return (
+    <HomepageProfilesSection
+      initialMembers={res.members}
+      initialTotal={res.total}
+      initialOk={res.ok}
+    />
   );
 }
 

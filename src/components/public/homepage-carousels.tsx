@@ -50,6 +50,7 @@ export function HomepageBelowFold({
   professionals,
   totals,
   ssrOk = true,
+  profilesSlot,
 }: {
   realEstate?: PublicListingsBundle['realEstate'];
   cars?: PublicListingsBundle['cars'];
@@ -59,6 +60,8 @@ export function HomepageBelowFold({
   professionals?: PublicListingsBundle['professionals'];
   totals?: PublicListingsBundle['totals'];
   ssrOk?: boolean;
+  /** Server-streamed profiles row; client fallback renders `HomepageProfilesSection`. */
+  profilesSlot?: React.ReactNode;
 }): React.JSX.Element {
   return (
     <>
@@ -84,7 +87,7 @@ export function HomepageBelowFold({
         initialOk={ssrOk}
       />
 
-      <HomepageProfilesSection />
+      {profilesSlot ?? <HomepageProfilesSection />}
 
       <HomepagePostBanner />
 

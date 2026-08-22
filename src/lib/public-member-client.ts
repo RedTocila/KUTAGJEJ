@@ -384,17 +384,18 @@ export async function fetchPublicMemberSearch(
   if (trimmed) params.set('q', trimmed);
   params.set('limit', String(limit));
   params.set('page', String(page));
+  // Client fetch cannot use `next.revalidate` (server-only). Skip it with no-store.
   const data = await safeServerJson<{
     members?: PublicMemberSearchHit[];
     total?: number;
     page?: number;
     limit?: number;
     totalPages?: number;
-  }>(`/public/members?${params.toString()}`);
+  }>(`/public/members?${params.toString()}`, typeof window !== 'undefined' ? { cache: 'no-store' } : undefined);
   if (!data) {
     return { members: [], total: 0, page, limit, totalPages: 1, ok: false };
   }
-  const members = Array.isArray(data.members) ? data.members : [];
+  const members = Array.isArray(data.members) ? data.members.map(normalizePublicMemberSearchHit) : [];
   const total = data.total ?? members.length;
   const resolvedLimit = data.limit ?? limit;
   return {
@@ -405,6 +406,12 @@ export async function fetchPublicMemberSearch(
     totalPages: data.totalPages ?? Math.max(1, Math.ceil(total / resolvedLimit) || 1),
     ok: true,
   };
+}
+
+function normalizePublicMemberSearchHit(row: PublicMemberSearchHit): PublicMemberSearchHit {
+  const raw = row as PublicMemberSearchHit & { display_name?: string | null };
+  const displayName = String(row.displayName || raw.display_name || '').trim() || null;
+  return { ...row, displayName };
 }
 
 /** Newest listings across all member verticals, merged and sorted by `createdAt`. */

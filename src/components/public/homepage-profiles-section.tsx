@@ -14,6 +14,11 @@ import {
 
 let sectionCache: { members: PublicMemberSearchHit[]; total: number } | null = null;
 
+function membersForSlider(members: PublicMemberSearchHit[]): PublicMemberSearchHit[] {
+  const named = members.filter((member) => Boolean(member.displayName?.trim()));
+  return named.length > 0 ? named : members;
+}
+
 function CarouselSkeleton() {
   return (
     <Stack direction="row" spacing={2} sx={{ overflow: 'hidden', px: { xs: 2, md: 0 } }}>
@@ -27,13 +32,32 @@ function CarouselSkeleton() {
 }
 
 /**
- * Homepage public-member carousel — loads when scrolled near the viewport.
+ * Homepage public-member carousel. Prefers SSR rows; otherwise loads on the client.
+ * Failed empties are not cached so a later visit can recover.
  */
-export function HomepageProfilesSection({ limit = 8 }: { limit?: number }): React.JSX.Element | null {
-  const [members, setMembers] = React.useState<PublicMemberSearchHit[]>(() => sectionCache?.members ?? []);
-  const [total, setTotal] = React.useState(() => sectionCache?.total ?? 0);
-  const [loaded, setLoaded] = React.useState(() => Boolean(sectionCache));
-  const [active, setActive] = React.useState(() => Boolean(sectionCache));
+export function HomepageProfilesSection({
+  limit = 8,
+  initialMembers,
+  initialTotal,
+  initialOk = true,
+}: {
+  limit?: number;
+  initialMembers?: PublicMemberSearchHit[];
+  initialTotal?: number;
+  initialOk?: boolean;
+}): React.JSX.Element {
+  const ssrMembers = membersForSlider(initialMembers ?? []);
+  const ssrTrusted = ssrMembers.length > 0;
+  const cached = sectionCache;
+
+  const [members, setMembers] = React.useState<PublicMemberSearchHit[]>(
+    () => (ssrTrusted ? ssrMembers : cached?.members ?? []),
+  );
+  const [total, setTotal] = React.useState(
+    () => (ssrTrusted ? (initialTotal ?? ssrMembers.length) : cached?.total ?? 0),
+  );
+  const [loaded, setLoaded] = React.useState(() => ssrTrusted || Boolean(cached));
+  const [active, setActive] = React.useState(() => ssrTrusted || Boolean(cached) || !initialOk);
   const rootRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
@@ -50,7 +74,7 @@ export function HomepageProfilesSection({ limit = 8 }: { limit?: number }): Reac
           observer.disconnect();
         }
       },
-      { rootMargin: '400px 0px' },
+      { rootMargin: '800px 0px' },
     );
     observer.observe(node);
     return () => observer.disconnect();
@@ -60,10 +84,11 @@ export function HomepageProfilesSection({ limit = 8 }: { limit?: number }): Reac
     if (!active || loaded) return;
     let cancelled = false;
     void (async () => {
-      if (sectionCache) {
+      const hit = sectionCache;
+      if (hit && hit.members.length > 0) {
         if (!cancelled) {
-          setMembers(sectionCache.members);
-          setTotal(sectionCache.total);
+          setMembers(hit.members);
+          setTotal(hit.total);
           setLoaded(true);
         }
         return;
@@ -71,9 +96,11 @@ export function HomepageProfilesSection({ limit = 8 }: { limit?: number }): Reac
       const res = await fetchLatestPublicMembers(limit);
       if (cancelled) return;
       if (res.ok) {
-        const named = res.members.filter((member) => Boolean(member.displayName?.trim()));
-        sectionCache = { members: named, total: res.total };
-        setMembers(named);
+        const next = membersForSlider(res.members);
+        if (next.length > 0) {
+          sectionCache = { members: next, total: res.total };
+        }
+        setMembers(next);
         setTotal(res.total);
       }
       setLoaded(true);
@@ -87,21 +114,21 @@ export function HomepageProfilesSection({ limit = 8 }: { limit?: number }): Reac
     if (!active) return;
     const res = await fetchLatestPublicMembers(limit);
     if (!res.ok) return;
-    const named = res.members.filter((member) => Boolean(member.displayName?.trim()));
-    sectionCache = { members: named, total: res.total };
-    setMembers(named);
+    const next = membersForSlider(res.members);
+    if (next.length > 0) {
+      sectionCache = { members: next, total: res.total };
+    }
+    setMembers(next);
     setTotal(res.total);
     setLoaded(true);
   });
-
-  if (loaded && members.length === 0) return <Box ref={rootRef} />;
 
   return (
     <Box ref={rootRef}>
       <ListingsSection
         verticalId="profiles"
         total={total}
-        isEmpty={false}
+        isEmpty={loaded && members.length === 0}
         useMuiVerticalIcon
         hideSubcategoryPills
       >

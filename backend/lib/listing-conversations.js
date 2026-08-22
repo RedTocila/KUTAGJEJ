@@ -129,6 +129,75 @@ function normalizeConversationListingKind(kind) {
   return k;
 }
 
+const LISTING_INQUIRY_MESSAGE_PREFIX = 'LISTING_INQUIRY';
+
+function parseListingInquiryMessage(body) {
+  const raw = String(body || '');
+  if (!raw.trimStart().startsWith(LISTING_INQUIRY_MESSAGE_PREFIX)) return null;
+  const rest = raw.trimStart().slice(LISTING_INQUIRY_MESSAGE_PREFIX.length).trimStart();
+  const newline = rest.indexOf('\n');
+  if (newline < 0) return null;
+  try {
+    const parsed = JSON.parse(rest.slice(0, newline).trim());
+    if (!parsed || parsed.v !== 1 || !parsed.listingKind || !parsed.listingId || !parsed.title) {
+      return null;
+    }
+    return {
+      listingKind: String(parsed.listingKind),
+      listingId: String(parsed.listingId),
+      title: String(parsed.title),
+      imageUrl: parsed.imageUrl ? String(parsed.imageUrl) : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Point an existing people-thread at the listing they are currently discussing.
+ * Does not change last_message_at (inbox order stays tied to actual messages).
+ */
+async function applyListingContextToConversation(row, listingKind, listingId, listing) {
+  if (!row?.id || !listing) return row;
+  const nextImage = listing.imageUrl || '';
+  const nextTitle = listing.title || '';
+  if (
+    String(row.listing_kind || '') === String(listingKind || '') &&
+    String(row.listing_id || '') === String(listingId || '') &&
+    String(row.listing_title || '') === String(nextTitle) &&
+    String(row.listing_image_url || '') === String(nextImage)
+  ) {
+    return row;
+  }
+  const { data, error } = await getSupabaseAdmin()
+    .from('conversations')
+    .update({
+      listing_kind: listingKind,
+      listing_id: listingId,
+      listing_title: nextTitle,
+      listing_image_url: nextImage,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', row.id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data || row;
+}
+
+/** Live listing from a LISTING_INQUIRY body, if it belongs to someone in this thread. */
+async function listingContextFromInquiryBody(body, conv) {
+  const parsed = parseListingInquiryMessage(body);
+  if (!parsed) return null;
+  const kind = normalizeConversationListingKind(parsed.listingKind);
+  if (!VALID_KINDS.has(kind) || !isUuid(parsed.listingId)) return null;
+  const listing = await loadListingForConversation(kind, parsed.listingId);
+  if (!listing) return null;
+  const posterId = String(listing.posterId);
+  if (posterId !== String(conv.posterId) && posterId !== String(conv.inquirerId)) return null;
+  return { kind, listingId: listing.id, listing };
+}
+
 /** Contact phone only — no poster profile fetch (thread header). */
 async function loadListingContactPhone(kind, listingId) {
   if (!kind || !listingId) return null;
@@ -162,4 +231,7 @@ module.exports = {
   loadPortalUserDisplayName,
   loadPortalUserPhone,
   loadListingContactPhone,
+  applyListingContextToConversation,
+  listingContextFromInquiryBody,
+  parseListingInquiryMessage,
 };

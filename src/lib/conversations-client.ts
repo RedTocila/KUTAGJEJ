@@ -89,6 +89,7 @@ export async function startConversation(
     body: JSON.stringify({ listingKind, listingId }),
   });
   if (!res.ok) return { error: res.error ?? 'Nuk u krijua biseda.' };
+  if (res.data?.conversation) patchCachedConversationListing(res.data.conversation);
   return { conversation: res.data?.conversation };
 }
 
@@ -108,6 +109,7 @@ export async function startConversationWithMember(
     },
   );
   if (!res.ok) return { error: res.error ?? 'Nuk u krijua biseda.' };
+  if (res.data?.conversation) patchCachedConversationListing(res.data.conversation);
   return { conversation: res.data?.conversation };
 }
 
@@ -183,6 +185,39 @@ export function setCachedConversations(next: ConversationSummary[] | null): void
   const userId = currentUserId();
   cachedInboxUserId = userId;
   if (next && userId) writeInboxSession(userId, next);
+}
+
+function patchCachedConversationListing(conversation: ConversationSummary): void {
+  const cached = getCachedConversations();
+  if (!cached) return;
+  const next = cached.map((c) =>
+    c.id === conversation.id
+      ? {
+          ...c,
+          listingKind: conversation.listingKind,
+          listingId: conversation.listingId,
+          listingTitle: conversation.listingTitle,
+          listingImageUrl: conversation.listingImageUrl,
+          listingContactPhone: conversation.listingContactPhone ?? c.listingContactPhone,
+        }
+      : c,
+  );
+  setCachedConversations(next);
+  const thread = cachedThreads.get(conversation.id);
+  if (thread) {
+    cachedThreads.set(conversation.id, {
+      messages: thread.messages,
+      conversation: {
+        ...thread.conversation,
+        listingKind: conversation.listingKind,
+        listingId: conversation.listingId,
+        listingTitle: conversation.listingTitle,
+        listingImageUrl: conversation.listingImageUrl,
+        listingContactPhone:
+          conversation.listingContactPhone ?? thread.conversation.listingContactPhone,
+      },
+    });
+  }
 }
 
 export function getCachedThread(conversationId: string): {

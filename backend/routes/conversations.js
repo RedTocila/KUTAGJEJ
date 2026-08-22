@@ -15,6 +15,9 @@ const {
   loadListingForConversation,
   normalizeConversationListingKind,
   loadListingContactPhone,
+  applyListingContextToConversation,
+  listingContextFromInquiryBody,
+  parseListingInquiryMessage,
 } = require('../lib/listing-conversations');
 const { sanitizeImageUrls } = require('../lib/image-upload');
 const { isOurStorageUrl } = require('../lib/storage-uploads');
@@ -91,12 +94,21 @@ function formatConversation(conv, userRef, state = null, reservationIds = null) 
   const otherId = role === 'poster' ? conv.inquirerId : conv.posterId;
   const otherModel = role === 'poster' ? conv.inquirerModel : conv.posterModel;
   const lastSenderId = conv.lastMessageSenderId ? String(conv.lastMessageSenderId) : '';
+  const lastInquiry = parseListingInquiryMessage(conv.lastMessageText);
+  const listingKind = lastInquiry
+    ? normalizeConversationListingKind(lastInquiry.listingKind)
+    : conv.listingKind || null;
+  const listingId = lastInquiry?.listingId
+    ? String(lastInquiry.listingId)
+    : conv.listingId
+      ? String(conv.listingId)
+      : null;
   return {
     id: String(conv.id || conv._id),
-    listingKind: conv.listingKind || null,
-    listingId: conv.listingId ? String(conv.listingId) : null,
-    listingTitle: conv.listingTitle || '',
-    listingImageUrl: conv.listingImageUrl || null,
+    listingKind,
+    listingId,
+    listingTitle: lastInquiry?.title || conv.listingTitle || '',
+    listingImageUrl: lastInquiry?.imageUrl || conv.listingImageUrl || null,
     /** `poster` = owner opened chat (saver outreach / direct); `inquirer` = contacted from a listing. */
     startedBy: conv.startedBy === 'poster' ? 'poster' : 'inquirer',
     role,
@@ -416,13 +428,6 @@ async function findExistingConversationBetween(userIdA, userIdB) {
   return data?.[0] || null;
 }
 
-function isSameListingThread(row, listingKind, listingId) {
-  return (
-    String(row?.listing_kind || '') === String(listingKind || '') &&
-    String(row?.listing_id || '') === String(listingId || '')
-  );
-}
-
 /** POST /api/conversations — start or return existing thread for a listing */
 router.post('/', auth, requirePortalUser, async (req, res) => {
   try {
@@ -471,26 +476,13 @@ router.post('/', auth, requirePortalUser, async (req, res) => {
         row = data;
         created = true;
       }
-    } else if (
-      isSameListingThread(row, listingKind, listingId) &&
-      (row.listing_title !== listing.title || row.listing_image_url !== (listing.imageUrl || ''))
-    ) {
-      const { data, error } = await sb
-        .from('conversations')
-        .update({
-          listing_title: listing.title,
-          listing_image_url: listing.imageUrl || '',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', row.id)
-        .select('*')
-        .single();
-      if (error) throw error;
-      row = data;
     }
 
     if (!row) {
       return res.status(500).json({ message: 'Server error' });
+    }
+    if (!created) {
+      row = await applyListingContextToConversation(row, listingKind, listingId, listing);
     }
 
     const [conv] = await attachParticipantModels([row]);
@@ -600,9 +592,6 @@ router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) 
         if (error) {
           if (isUniqueViolation(error)) {
             row = await findExistingConversationBetween(userRef.id, memberId);
-            if (row && isSameListingThread(row, listingKind, listingId)) {
-              row = await markConversationStartedByPoster(row);
-            }
           } else {
             throw error;
           }
@@ -610,10 +599,12 @@ router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) 
           row = data;
           created = true;
         }
-      } else if (isSameListingThread(row, listingKind, listingId)) {
-        row = await markConversationStartedByPoster(row);
       }
       if (!row) return res.status(500).json({ message: 'Server error' });
+      if (!created) {
+        row = await applyListingContextToConversation(row, listingKind, listingId, listing);
+        row = await markConversationStartedByPoster(row);
+      }
       return respondWithConversation(res, row, userRef, created ? 201 : 200);
     }
 
@@ -932,12 +923,19 @@ router.post('/:id/messages', auth, requirePortalUser, async (req, res) => {
     if (msgErr) throw msgErr;
 
     const role = userRoleInConversation(conv, userRef);
+    const inquiryContext = await listingContextFromInquiryBody(body, conv);
     const patch = {
       last_message_text: previewMessageText(body, imageUrl),
       last_message_at: msg.created_at,
       last_message_sender_id: userRef.id,
       updated_at: new Date().toISOString(),
     };
+    if (inquiryContext) {
+      patch.listing_kind = inquiryContext.kind;
+      patch.listing_id = inquiryContext.listingId;
+      patch.listing_title = inquiryContext.listing.title;
+      patch.listing_image_url = inquiryContext.listing.imageUrl || '';
+    }
     if (role === 'poster') {
       patch.inquirer_unread_count = (raw.inquirer_unread_count ?? 0) + 1;
     } else if (role === 'inquirer') {
@@ -963,7 +961,7 @@ router.post('/:id/messages', auth, requirePortalUser, async (req, res) => {
           conversationId: conv.id,
           senderId: userRef.id,
           senderName,
-          listingTitle: conv.listingTitle || '',
+          listingTitle: inquiryContext?.listing?.title || conv.listingTitle || '',
           preview: previewMessageText(body, imageUrl),
         });
       }

@@ -235,6 +235,15 @@ function filterConversations(items: ConversationSummary[], filter: InboxFilter):
   return items;
 }
 
+function listingContextPatch(draft: ListingInquiryCardData): Partial<ConversationSummary> {
+  return {
+    listingKind: draft.listingKind,
+    listingId: draft.listingId,
+    listingTitle: draft.title,
+    listingImageUrl: draft.imageUrl,
+  };
+}
+
 function patchConversationInList(
   prev: ConversationSummary[],
   conversationId: string,
@@ -269,13 +278,6 @@ function deliveryStatusByMessageId(
     }
   }
   return map;
-}
-
-/** Listing chrome only when *you* contacted from a listing (inquirer). All other chats show the person. */
-function isPersonFocusedConversation(
-  item: Pick<ConversationSummary, 'role' | 'listingId'>,
-): boolean {
-  return item.role !== 'inquirer' || !item.listingId;
 }
 
 function conversationAvatarSrc(url: string | null | undefined): string | undefined {
@@ -457,9 +459,8 @@ function ConversationListItem({
   const participantName = item.otherParticipantName?.trim() || t.messages.userFallback;
   const listingLabel = item.listingTitle?.trim() || '';
   const title = participantName;
-  const showListingAvatar =
-    !isPersonFocusedConversation(item) && Boolean(item.listingImageUrl?.trim());
-  const avatarUrl = showListingAvatar ? item.listingImageUrl : item.otherParticipantAvatarUrl;
+  const avatarUrl = item.otherParticipantAvatarUrl;
+  const listingThumbUrl = item.listingImageUrl?.trim() || '';
   const showListingSubtitle = Boolean(
     listingLabel && listingLabel.localeCompare(participantName, undefined, { sensitivity: 'accent' }) !== 0,
   );
@@ -606,17 +607,44 @@ function ConversationListItem({
         <ChatAvatar
           src={avatarUrl}
           alt={title}
-          variant={showListingAvatar ? 'rounded' : 'circular'}
+          variant="circular"
           size={49}
-          borderRadius={showListingAvatar ? 1.5 : '50%'}
+          borderRadius="50%"
         />
+        {listingThumbUrl ? (
+          <Box
+            aria-hidden
+            sx={{
+              position: 'absolute',
+              right: -3,
+              bottom: -3,
+              width: 22,
+              height: 22,
+              borderRadius: 0.75,
+              overflow: 'hidden',
+              border: '2px solid',
+              borderColor: 'background.paper',
+              bgcolor: 'action.hover',
+              pointerEvents: 'none',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.28)',
+            }}
+          >
+            <Box
+              component="img"
+              src={conversationAvatarSrc(listingThumbUrl) || listingThumbUrl}
+              alt=""
+              sx={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </Box>
+        ) : null}
         {pinned && !selectionMode ? (
           <Box
             aria-label={t.messages.pinnedAria}
             sx={{
               position: 'absolute',
               right: -4,
-              bottom: -4,
+              top: listingThumbUrl ? -4 : undefined,
+              bottom: listingThumbUrl ? undefined : -4,
               width: 18,
               height: 18,
               borderRadius: '50%',
@@ -1668,15 +1696,36 @@ export function UserMessagesView() {
 
     const nextMessages = res.messages ?? [];
     const nextConversation = res.conversation ?? null;
-    if (nextConversation) {
-      setCachedThread(conversationId, nextMessages, nextConversation);
-      setActiveConversation(nextConversation);
+    const draft = listingInquiryDraftRef.current;
+    const merged =
+      nextConversation && draft
+        ? { ...nextConversation, ...listingContextPatch(draft) }
+        : nextConversation;
+    if (merged) {
+      setCachedThread(conversationId, nextMessages, merged);
+      setActiveConversation(merged);
     }
     setMessages(nextMessages);
     setThreadLoading(false);
 
     setConversations((prev) => {
-      const cleared = prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c));
+      const source = merged ?? nextConversation;
+      const cleared = prev.map((c) => {
+        if (c.id !== conversationId) return c;
+        return {
+          ...c,
+          unreadCount: 0,
+          ...(source
+            ? {
+                listingKind: source.listingKind,
+                listingId: source.listingId,
+                listingTitle: source.listingTitle,
+                listingImageUrl: source.listingImageUrl,
+                listingContactPhone: source.listingContactPhone,
+              }
+            : null),
+        };
+      });
       setCachedConversations(cleared);
       return cleared;
     });
@@ -1744,6 +1793,29 @@ export function UserMessagesView() {
     }
     setListingInquiryDraft(null);
   }, [selectedId, urlInquiry, loadListingInquiryDraft]);
+
+  React.useEffect(() => {
+    if (!selectedId || !listingInquiryDraft) return;
+    const patch = listingContextPatch(listingInquiryDraft);
+    setActiveConversation((prev) =>
+      prev && prev.id === selectedId ? { ...prev, ...patch } : prev,
+    );
+    setConversations((prev) => {
+      const next = patchConversationInList(prev, selectedId, patch, null);
+      setCachedConversations(next);
+      return next;
+    });
+    const cached = getCachedThread(selectedId);
+    if (cached) {
+      setCachedThread(selectedId, cached.messages, { ...cached.conversation, ...patch });
+    }
+  }, [
+    selectedId,
+    listingInquiryDraft?.listingKind,
+    listingInquiryDraft?.listingId,
+    listingInquiryDraft?.title,
+    listingInquiryDraft?.imageUrl,
+  ]);
 
   React.useEffect(() => {
     if (!selectedId) {
@@ -1978,6 +2050,7 @@ export function UserMessagesView() {
       intro ||
       (file ? t.messages.photoPreview : outboundBody);
     const wasInInbox = conversationsRef.current.some((c) => c.id === conversationId);
+    const listingPatch = inquiryDraft ? listingContextPatch(inquiryDraft) : {};
     const baseOtherUnread =
       conversationsRef.current.find((c) => c.id === conversationId)?.otherUnreadCount ??
       activeConversationRef.current?.otherUnreadCount ??
@@ -2002,12 +2075,13 @@ export function UserMessagesView() {
         setCachedThread(conversationId, next, {
           ...conv,
           otherUnreadCount: baseOtherUnread + 1,
+          ...listingPatch,
         });
       }
       return next;
     });
     setActiveConversation((prev) =>
-      prev ? { ...prev, otherUnreadCount: baseOtherUnread + 1 } : prev,
+      prev ? { ...prev, otherUnreadCount: baseOtherUnread + 1, ...listingPatch } : prev,
     );
     setConversations((prev) => {
       const next = sortConversationsByRecent(
@@ -2019,6 +2093,7 @@ export function UserMessagesView() {
             lastMessageAt: createdAt,
             lastMessageIsMine: true,
             otherUnreadCount: baseOtherUnread + 1,
+            ...listingPatch,
           },
           activeConversationRef.current,
         ),
@@ -2070,8 +2145,10 @@ export function UserMessagesView() {
     const sent = res.message;
     setMessages((prev) => {
       const next = prev.map((m) => (m.id === tempId ? sent : m));
-      const conv = activeConversation;
-      if (conv) setCachedThread(conversationId, next, conv);
+      const conv = activeConversationRef.current;
+      if (conv) {
+        setCachedThread(conversationId, next, { ...conv, ...listingPatch });
+      }
       return next;
     });
     if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
@@ -2082,9 +2159,12 @@ export function UserMessagesView() {
           conversationId,
           {
             lastMessageText:
-              sent.body?.trim() || (sent.imageUrl ? t.messages.photoPreview : sent.body),
+              listingInquiryPreviewText(sent.body) ||
+              sent.body?.trim() ||
+              (sent.imageUrl ? t.messages.photoPreview : sent.body),
             lastMessageAt: sent.createdAt,
             lastMessageIsMine: true,
+            ...listingPatch,
           },
           activeConversationRef.current,
         ),
@@ -2116,6 +2196,7 @@ export function UserMessagesView() {
     ),
   );
   const threadHeaderAvatar = activeConversation?.otherParticipantAvatarUrl;
+  const threadListingImageUrl = activeConversation?.listingImageUrl?.trim() || '';
   const otherProfileHref = activeConversation?.otherParticipantId
     ? pathsPublicMemberProfile(activeConversation.otherParticipantId)
     : null;
@@ -2504,13 +2585,46 @@ export function UserMessagesView() {
                   }}
                   aria-label={t.messages.backAria}
                 />
-                <ChatAvatar
-                  src={threadHeaderAvatar}
-                  alt={threadHeaderName}
-                  variant="circular"
-                  href={otherProfileHref}
-                  size={46}
-                />
+                <Box sx={{ position: 'relative', flexShrink: 0 }}>
+                  <ChatAvatar
+                    src={threadHeaderAvatar}
+                    alt={threadHeaderName}
+                    variant="circular"
+                    href={otherProfileHref}
+                    size={46}
+                  />
+                  {threadListingImageUrl ? (
+                    <Box
+                      component={activeListingHref ? Link : 'span'}
+                      href={activeListingHref || undefined}
+                      aria-label={threadListingLabel || undefined}
+                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      sx={{
+                        position: 'absolute',
+                        right: -4,
+                        bottom: -4,
+                        width: 20,
+                        height: 20,
+                        borderRadius: 0.75,
+                        overflow: 'hidden',
+                        border: '2px solid',
+                        borderColor: 'background.paper',
+                        bgcolor: 'action.hover',
+                        display: 'block',
+                        lineHeight: 0,
+                        textDecoration: 'none',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.28)',
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={conversationAvatarSrc(threadListingImageUrl) || threadListingImageUrl}
+                        alt=""
+                        sx={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </Box>
+                  ) : null}
+                </Box>
                 <Stack
                   spacing={0.2}
                   sx={{

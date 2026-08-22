@@ -358,6 +358,7 @@ const sq = {
     unnamedMember: 'Përdorues KuTaGjej',
     viewProfile: 'Shiko profilin',
     verifiedNotice: 'Ky profil është i verifikuar',
+    shareProfile: 'Ndaj profilin',
   },
   nav: {
     overview: 'Përmbledhje',
@@ -1111,6 +1112,7 @@ const en: AppMessages = {
     unnamedMember: 'KuTaGjej user',
     viewProfile: 'View profile',
     verifiedNotice: 'This profile is verified',
+    shareProfile: 'Share profile',
   },
   nav: {
     overview: 'Overview',

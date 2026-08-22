@@ -10,18 +10,20 @@ import {
   Chip,
   CircularProgress,
   Container,
+  IconButton,
   Stack,
   Typography,
 } from '@mui/material';
 import { ListingKeywordSearchInput } from '@/components/public/listing-filters/listing-keyword-search-input';
 import { MemberLeaveReviewButton } from '@/components/public/member-leave-review-button';
-import { ProductBackButton, ProductTag } from '@/components/public/product-browse-chrome';
+import { ProductBackButton, ProductTag, productBackButtonSx } from '@/components/public/product-browse-chrome';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { MemberReferralBadgesRow, MemberReferralBadgesSkeleton } from '@/components/public/member-referral-badges';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
+import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 
@@ -33,6 +35,7 @@ import {
   MemberReviewsDialog,
   MemberSeeReviewsButton,
 } from '@/components/public/member-reviews-dialog';
+import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
 import { BrandCover } from '@/components/brand/brand-cover';
 import {
   ListingVerifiedBadge,
@@ -52,8 +55,9 @@ import {
   type PublicMemberReferralBadge,
 } from '@/lib/public-member-client';
 import type { PublicRealEstateListingSeller } from '@/lib/public-listings-client';
+import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
-import { paths } from '@/paths';
+import { paths, pathsPublicMemberProfile } from '@/paths';
 
 type FilterKey = 'all' | HomepageMixedListing['kind'];
 
@@ -248,10 +252,12 @@ export function MemberProfileView({
   badges?: PublicMemberReferralBadge[];
 }) {
   const router = useRouter();
+  const t = useCopy();
   const { user } = useUser();
   const [filter, setFilter] = React.useState<FilterKey>('all');
   const [search, setSearch] = React.useState('');
   const [reviewsOpen, setReviewsOpen] = React.useState(false);
+  const [shareOpen, setShareOpen] = React.useState(false);
   const [viewerHasReviewed, setViewerHasReviewed] = React.useState(false);
   const [liveBadges, setLiveBadges] = React.useState<PublicMemberReferralBadge[] | null>(null);
   const [badgesLoading, setBadgesLoading] = React.useState(true);
@@ -360,6 +366,22 @@ export function MemberProfileView({
               zIndex: 2,
             }}
           />
+          <IconButton
+            aria-label={t.search.shareProfile}
+            onClick={() => setShareOpen(true)}
+            size="small"
+            sx={[
+              productBackButtonSx,
+              {
+                position: 'absolute',
+                top: { xs: 'max(10px, env(safe-area-inset-top, 0px))', sm: 14 },
+                right: { xs: 8, sm: 12 },
+                zIndex: 2,
+              },
+            ]}
+          >
+            <ShareNetworkIcon size={18} weight="bold" />
+          </IconButton>
         </BrandCover>
 
         <Stack
@@ -615,6 +637,23 @@ export function MemberProfileView({
               onReviewSubmitted={() => {
                 setViewerHasReviewed(true);
                 router.refresh();
+              }}
+            />
+          ) : null}
+          {shareOpen ? (
+            <ListingSharePage
+              open={shareOpen}
+              onClose={() => setShareOpen(false)}
+              payload={{
+                listingId: memberId || undefined,
+                title: name,
+                category:
+                  member.businessCategory?.trim() ||
+                  (isBusiness ? t.search.kindBusiness : t.search.kindIndividual),
+                imageUrl: member.avatarUrl,
+                ratingAverage: member.ratingAverage,
+                reviewCount,
+                url: memberId ? pathsPublicMemberProfile(memberId) : undefined,
               }}
             />
           ) : null}

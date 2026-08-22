@@ -446,6 +446,11 @@ export function ListingSharePage({
     const existingPhone = payload.contactPhone?.trim() || '';
     if (existingPhone) setResolvedPhone(existingPhone);
 
+    if (!payload.listingKind || !payload.listingId) {
+      extrasReadyRef.current = Promise.resolve({ contactPhone: existingPhone || null });
+      return;
+    }
+
     const pending = fetchListingShareExtras(payload.listingKind, payload.listingId);
     extrasReadyRef.current = pending;
     let cancelled = false;
@@ -515,6 +520,7 @@ export function ListingSharePage({
     if (!payload) return null;
     // Tick the card immediately — the API call often dies once Instagram backgrounds Safari.
     onShared?.(null);
+    if (!payload.listingKind || !payload.listingId) return null;
     const metrics = await recordListingMetricEvent(payload.listingKind, payload.listingId, 'share');
     if (metrics) onShared?.(metrics);
     emitHotLeadShare(payload.listingKind, payload.listingId);
@@ -562,7 +568,7 @@ export function ListingSharePage({
           backgroundColor: '#0a0a0a',
           pixelRatio: 1,
         },
-        `kutagjej-story-${payload.listingId.slice(0, 8)}.jpg`,
+        `kutagjej-story-${(payload.listingId ?? 'profile').slice(0, 8)}.jpg`,
       );
 
       if (isMobileShareDevice()) {
@@ -621,7 +627,7 @@ export function ListingSharePage({
           pixelRatio: 1,
           borderRadiusPx: FEED_CARD_RADIUS_PX,
         },
-        `kutagjej-card-${payload.listingId.slice(0, 8)}.jpg`,
+        `kutagjej-card-${(payload.listingId ?? 'profile').slice(0, 8)}.jpg`,
       );
       const result = await saveCardImage(file);
       if (result === 'cancelled') return;

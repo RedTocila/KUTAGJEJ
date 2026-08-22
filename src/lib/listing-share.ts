@@ -37,8 +37,9 @@ export type ListingShareSpec = {
 
 /** Payload used to render the share sheet + Instagram story card. */
 export type ListingSharePayload = {
-  listingKind: ListingMetricKind;
-  listingId: string;
+  /** Omit for profile shares — extras fetch and listing metrics are skipped. */
+  listingKind?: ListingMetricKind;
+  listingId?: string;
   title: string;
   category?: string;
   priceLabel?: string;

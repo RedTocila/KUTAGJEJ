@@ -23,7 +23,7 @@ export interface User {
   /** Home / “based in” city — prefills listing forms. */
   basedCityId?: string | null;
   basedCityName?: string | null;
-  /** Accent used on shared / saved listing images. */
+  /** Viewer's accent on shared / saved listing images (not shown to other users). */
   shareThemeColor?: string | null;
   /** Admin-approved account verification. */
   verified?: boolean;

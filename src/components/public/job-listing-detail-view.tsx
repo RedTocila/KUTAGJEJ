@@ -185,7 +185,6 @@ export function JobListingDetailView({
       viewCount: listing.viewCount ?? 0,
       saveCount: listing.saveCount,
       contactPhone: (listing.contactPhone ?? listing.seller?.phone)?.trim() || undefined,
-      themeColor: listing.seller?.shareThemeColor || undefined,
       url: canonicalUrl,
     }),
     [canonicalUrl, coverImageUrls, industryLabel, jobTypeLabel, listing, locationLine, salary]

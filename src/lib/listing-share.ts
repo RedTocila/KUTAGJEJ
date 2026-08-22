@@ -54,7 +54,7 @@ export type ListingSharePayload = {
   reviewCount?: number;
   /** Seller contact — printed on story / saved card images only. */
   contactPhone?: string | null;
-  /** Profile accent for the card / story chrome. Falls back to brand green. */
+  /** Viewer's profile accent for the card / story chrome. Falls back to brand green. */
   themeColor?: string | null;
   /** Absolute or path URL; defaults to current page. */
   url?: string;
@@ -71,15 +71,14 @@ const SHARE_PHONE_PATH: Record<ListingMetricKind, string> = {
 
 export type ListingShareExtras = {
   contactPhone: string | null;
-  themeColor: string | null;
 };
 
-/** Load contact + owner theme color for story / save images (browse cards omit them). */
+/** Load listing contact for story / save images (browse cards omit it). */
 export async function fetchListingShareExtras(
   kind: ListingMetricKind,
   listingId: string,
 ): Promise<ListingShareExtras> {
-  const empty: ListingShareExtras = { contactPhone: null, themeColor: null };
+  const empty: ListingShareExtras = { contactPhone: null };
   const id = String(listingId || '').trim();
   const slug = SHARE_PHONE_PATH[kind];
   if (!id || !slug) return empty;
@@ -91,14 +90,11 @@ export async function fetchListingShareExtras(
     const data = (await res.json()) as {
       listing?: {
         contactPhone?: string | null;
-        seller?: { phone?: string | null; shareThemeColor?: string | null } | null;
+        seller?: { phone?: string | null } | null;
       };
     };
-    const listing = data.listing ?? {};
-    const theme = String(listing.seller?.shareThemeColor || '').trim() || null;
     return {
-      contactPhone: listingDisplayPhone(listing) || null,
-      themeColor: theme,
+      contactPhone: listingDisplayPhone(data.listing ?? {}) || null,
     };
   } catch {
     return empty;

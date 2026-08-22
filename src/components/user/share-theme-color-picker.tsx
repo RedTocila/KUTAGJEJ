@@ -82,7 +82,7 @@ export function ShareThemeColorPicker({
         })}
       </Box>
       <FormHelperText>
-        Përdoret kur ndani ose ruani foton e njoftimit.
+        Ngjyra juaj kur ndani ose ruani foton e çdo njoftimi. E shihni vetëm ju.
       </FormHelperText>
     </FormControl>
   );

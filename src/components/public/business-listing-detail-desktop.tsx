@@ -187,7 +187,6 @@ export function BusinessListingDetailDesktop({
                     imageUrl: listing.imageUrls[0] ?? listing.imageUrl,
                     location: locationLine || listing.cityName || undefined,
                     contactPhone: telHref?.trim() || undefined,
-                    themeColor: listing.seller?.shareThemeColor || undefined,
                     createdAt: listing.createdAt,
                     viewCount: listing.viewCount,
                     saveCount,

@@ -404,9 +404,8 @@ export function ListingSharePage({
   const [previewScale, setPreviewScale] = React.useState(0.28);
   const [mounted, setMounted] = React.useState(false);
   const [resolvedPhone, setResolvedPhone] = React.useState<string | null>(null);
-  const [resolvedThemeColor, setResolvedThemeColor] = React.useState<string | null>(null);
-  const extrasReadyRef = React.useRef<Promise<{ contactPhone: string | null; themeColor: string | null }>>(
-    Promise.resolve({ contactPhone: null, themeColor: null }),
+  const extrasReadyRef = React.useRef<Promise<{ contactPhone: string | null }>>(
+    Promise.resolve({ contactPhone: null }),
   );
 
   useLockBodyScroll(open && mounted && Boolean(payload));
@@ -445,15 +444,12 @@ export function ListingSharePage({
   React.useEffect(() => {
     if (!open || !payload) {
       setResolvedPhone(null);
-      setResolvedThemeColor(null);
-      extrasReadyRef.current = Promise.resolve({ contactPhone: null, themeColor: null });
+      extrasReadyRef.current = Promise.resolve({ contactPhone: null });
       return;
     }
 
     const existingPhone = payload.contactPhone?.trim() || '';
-    const existingColor = payload.themeColor?.trim() || '';
     if (existingPhone) setResolvedPhone(existingPhone);
-    if (existingColor) setResolvedThemeColor(existingColor);
 
     const pending = fetchListingShareExtras(payload.listingKind, payload.listingId);
     extrasReadyRef.current = pending;
@@ -461,19 +457,15 @@ export function ListingSharePage({
     void pending.then((extras) => {
       if (cancelled) return;
       if (extras.contactPhone) setResolvedPhone(extras.contactPhone);
-      if (extras.themeColor) setResolvedThemeColor(extras.themeColor);
     });
     return () => {
       cancelled = true;
     };
-  }, [open, payload?.contactPhone, payload?.themeColor, payload?.listingId, payload?.listingKind]);
+  }, [open, payload?.contactPhone, payload?.listingId, payload?.listingKind]);
 
   const themeColor = React.useMemo(
-    () =>
-      normalizeShareThemeColor(
-        resolvedThemeColor || payload?.themeColor || user?.shareThemeColor,
-      ),
-    [payload?.themeColor, resolvedThemeColor, user?.shareThemeColor],
+    () => normalizeShareThemeColor(user?.shareThemeColor),
+    [user?.shareThemeColor],
   );
 
   const cardPayload = React.useMemo<ListingSharePayload | null>(() => {
@@ -489,19 +481,12 @@ export function ListingSharePage({
   const waitForShareExtras = React.useCallback(async () => {
     const extras = await extrasReadyRef.current;
     const phone = extras.contactPhone?.trim() || payload?.contactPhone?.trim() || '';
-    const color = extras.themeColor?.trim() || payload?.themeColor?.trim() || '';
-    let painted = false;
     if (phone && phone !== resolvedPhone) {
       setResolvedPhone(phone);
-      painted = true;
+      await new Promise((r) => window.setTimeout(r, 60));
     }
-    if (color && color !== resolvedThemeColor) {
-      setResolvedThemeColor(color);
-      painted = true;
-    }
-    if (painted) await new Promise((r) => window.setTimeout(r, 60));
-    return { phone, color };
-  }, [payload?.contactPhone, payload?.themeColor, resolvedPhone, resolvedThemeColor]);
+    return { phone };
+  }, [payload?.contactPhone, resolvedPhone]);
 
   React.useEffect(() => {
     if (!open) return;

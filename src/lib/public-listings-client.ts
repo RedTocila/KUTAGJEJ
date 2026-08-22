@@ -84,7 +84,7 @@ export interface PublicRealEstateListingSeller {
   ratingAverage?: number | null;
   /** Total reviews received across directory listings. */
   reviewCount?: number;
-  /** Accent used on shared / saved listing images. */
+  /** Stored on the seller profile; share/save chrome uses the viewer's color instead. */
   shareThemeColor?: string | null;
 }
 

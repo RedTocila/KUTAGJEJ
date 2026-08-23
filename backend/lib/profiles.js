@@ -2,6 +2,7 @@
 
 const { getSupabaseAdmin } = require('./supabase');
 const { wrapProfile, profileUpdateFromCamel, ACCOUNT_TO_MODEL } = require('./profile');
+const { NEW_ACCOUNT_BOOST_CREDITS } = require('./boost-credits');
 
 function snakeToCamelKey(key) {
   return String(key).replace(/_([a-z])/g, (_, c) => c.toUpperCase());
@@ -142,7 +143,7 @@ async function ensureProfileForAuthUser(authUser) {
     account_type: accountType,
     role: roleForAccountType(accountType),
     is_active: true,
-    boost_credits: 0,
+    boost_credits: NEW_ACCOUNT_BOOST_CREDITS,
   };
 
   if (accountType === 'business') {
@@ -183,7 +184,11 @@ async function backfillOrphanProfiles() {
 }
 
 async function insertProfile(row) {
-  const { data, error } = await getSupabaseAdmin().from('profiles').insert(row).select('*').single();
+  const payload = { ...row };
+  if (payload.boost_credits == null) {
+    payload.boost_credits = NEW_ACCOUNT_BOOST_CREDITS;
+  }
+  const { data, error } = await getSupabaseAdmin().from('profiles').insert(payload).select('*').single();
   if (error) throw error;
   return mapProfile(data);
 }
@@ -223,7 +228,7 @@ async function createProfileForAuthUser(userId, fields) {
     business_category: patch.business_category ?? null,
     created_by: patch.created_by ?? null,
     referral_code: patch.referral_code ?? null,
-    boost_credits: patch.boost_credits ?? 0,
+    boost_credits: patch.boost_credits ?? NEW_ACCOUNT_BOOST_CREDITS,
   });
 }
 

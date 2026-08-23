@@ -75,6 +75,10 @@ alter table public.profiles
 alter table public.profiles
   add column if not exists share_theme_color text;
 
+-- New accounts start with 100 Boost Coins (existing rows unchanged).
+alter table public.profiles
+  alter column boost_credits set default 100;
+
 -- Business announcements
 alter table public.directory_listings
   add column if not exists announcement_title text,

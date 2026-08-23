@@ -8,13 +8,16 @@ import {
   Button,
   CircularProgress,
   IconButton,
+  Popover,
   Stack,
   Typography,
 } from '@mui/material';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
+import { Check as CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { DownloadSimple as DownloadSimpleIcon } from '@phosphor-icons/react/dist/ssr/DownloadSimple';
 import { InstagramLogo as InstagramLogoIcon } from '@phosphor-icons/react/dist/ssr/InstagramLogo';
 import { LinkSimple as LinkSimpleIcon } from '@phosphor-icons/react/dist/ssr/LinkSimple';
+import { Palette as PaletteIcon } from '@phosphor-icons/react/dist/ssr/Palette';
 import { toJpeg } from 'html-to-image';
 
 import {
@@ -37,7 +40,9 @@ import {
 } from '@/lib/listing-share';
 import { emitHotLeadShare } from '@/lib/listing-hot-lead';
 import { recordListingMetricEvent, type ListingMetrics } from '@/lib/listing-metrics';
+import { authClient } from '@/lib/auth/client';
 import {
+  SHARE_THEME_COLORS,
   lightenShareThemeColor,
   normalizeShareThemeColor,
   shareThemeContrastText,
@@ -378,6 +383,88 @@ const btnSx = {
   minWidth: 0,
 };
 
+function ShareThemePickerPopover({
+  anchorEl,
+  selected,
+  onClose,
+  onChange,
+}: {
+  anchorEl: HTMLElement | null;
+  selected: string;
+  onClose: () => void;
+  onChange: (color: string) => void;
+}) {
+  return (
+    <Popover
+      open={Boolean(anchorEl)}
+      anchorEl={anchorEl}
+      onClose={onClose}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      slotProps={{
+        paper: {
+          sx: {
+            mt: 1,
+            px: 1.75,
+            pt: 1.5,
+            pb: 1.65,
+            width: 248,
+            bgcolor: 'rgba(22,22,22,0.98)',
+            backgroundImage: 'none',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 2.5,
+            boxShadow: '0 18px 48px rgba(0,0,0,0.55)',
+          },
+        },
+      }}
+      sx={{ zIndex: 1700 }}
+    >
+      <Typography sx={{ fontWeight: 800, fontSize: '0.84rem', mb: 1.25, color: 'rgba(255,255,255,0.94)' }}>
+        Ngjyra e temës
+      </Typography>
+      <Box
+        role="radiogroup"
+        aria-label="Ngjyra e temës"
+        sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}
+      >
+        {SHARE_THEME_COLORS.map((color) => {
+          const isSelected = selected === color;
+          return (
+            <Box
+              key={color}
+              component="button"
+              type="button"
+              role="radio"
+              aria-checked={isSelected}
+              aria-label={color}
+              onClick={() => onChange(color)}
+              sx={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                bgcolor: color,
+                p: 0,
+                m: 0,
+                cursor: 'pointer',
+                display: 'grid',
+                placeItems: 'center',
+                color: shareThemeContrastText(color),
+                border: '2px solid',
+                borderColor: isSelected ? '#fff' : 'transparent',
+                boxShadow: isSelected ? `0 0 0 2px ${color}` : 'inset 0 0 0 1px rgba(0,0,0,0.22)',
+                transition: 'transform 120ms ease, box-shadow 120ms ease',
+                '&:hover': { transform: 'scale(1.08)' },
+              }}
+            >
+              {isSelected ? <CheckIcon size={13} weight="bold" /> : null}
+            </Box>
+          );
+        })}
+      </Box>
+    </Popover>
+  );
+}
+
 /** Full-page share experience — branded preview + share / copy / save card. */
 export function ListingSharePage({
   open,
@@ -390,7 +477,7 @@ export function ListingSharePage({
   payload: ListingSharePayload | null;
   onShared?: (metrics: ListingMetrics | null) => void;
 }) {
-  const { user } = useUser();
+  const { user, checkSession } = useUser();
   const previewWrapRef = React.useRef<HTMLDivElement>(null);
   const feedCaptureRef = React.useRef<HTMLDivElement>(null);
   const storyCaptureRef = React.useRef<HTMLDivElement>(null);
@@ -401,6 +488,10 @@ export function ListingSharePage({
   const [previewScale, setPreviewScale] = React.useState(0.28);
   const [mounted, setMounted] = React.useState(false);
   const [resolvedPhone, setResolvedPhone] = React.useState<string | null>(null);
+  const [themeColor, setThemeColor] = React.useState(() =>
+    normalizeShareThemeColor(user?.shareThemeColor),
+  );
+  const [themePickerAnchor, setThemePickerAnchor] = React.useState<HTMLElement | null>(null);
   const extrasReadyRef = React.useRef<Promise<{ contactPhone: string | null }>>(
     Promise.resolve({ contactPhone: null }),
   );
@@ -416,6 +507,7 @@ export function ListingSharePage({
       setBusy(null);
       setFeedback(null);
       setError(null);
+      setThemePickerAnchor(null);
       embeddedImageRef.current = null;
       return;
     }
@@ -465,10 +557,24 @@ export function ListingSharePage({
     };
   }, [open, payload?.contactPhone, payload?.listingId, payload?.listingKind]);
 
-  const themeColor = React.useMemo(
-    () => normalizeShareThemeColor(user?.shareThemeColor),
-    [user?.shareThemeColor],
-  );
+  React.useEffect(() => {
+    if (!open) return;
+    setThemeColor(normalizeShareThemeColor(user?.shareThemeColor));
+    // Seed from the profile when the sheet opens; do not reset while picking.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `user` is read at open time
+  }, [open]);
+
+  React.useEffect(() => {
+    if (!open || !user) return;
+    const saved = normalizeShareThemeColor(user.shareThemeColor);
+    if (saved === themeColor) return;
+    const timer = window.setTimeout(() => {
+      void authClient.updatePortalProfile({ shareThemeColor: themeColor }).then(({ error: saveError }) => {
+        if (!saveError) void checkSession();
+      });
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [themeColor, open, user, checkSession]);
 
   const cardPayload = React.useMemo<ListingSharePayload | null>(() => {
     if (!payload) return null;
@@ -709,7 +815,49 @@ export function ListingSharePage({
         >
           Ndaj njoftimin
         </Typography>
-        <Box sx={{ width: 40 }} />
+        <IconButton
+          type="button"
+          aria-label="Zgjidh temën"
+          aria-haspopup="dialog"
+          aria-expanded={Boolean(themePickerAnchor)}
+          disabled={Boolean(busy)}
+          onClick={(event) => {
+            event.stopPropagation();
+            const target = event.currentTarget;
+            setThemePickerAnchor(target);
+          }}
+          sx={{
+            width: 36,
+            height: 36,
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.18)',
+            bgcolor: 'rgba(255,255,255,0.06)',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' },
+          }}
+        >
+          <Box sx={{ position: 'relative', display: 'flex', lineHeight: 0 }}>
+            <PaletteIcon size={18} weight="bold" />
+            <Box
+              aria-hidden
+              sx={{
+                position: 'absolute',
+                right: -3,
+                bottom: -3,
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                bgcolor: themeColor,
+                border: '1px solid rgba(255,255,255,0.9)',
+              }}
+            />
+          </Box>
+        </IconButton>
+        <ShareThemePickerPopover
+          anchorEl={themePickerAnchor}
+          selected={themeColor}
+          onClose={() => setThemePickerAnchor(null)}
+          onChange={setThemeColor}
+        />
       </Stack>
 
       {/* Story preview */}

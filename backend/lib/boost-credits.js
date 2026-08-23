@@ -2,6 +2,9 @@
 
 const { getSupabaseAdmin } = require('./supabase');
 
+/** Boost Coins granted when a new profiles row is created. */
+const NEW_ACCOUNT_BOOST_CREDITS = 100;
+
 function roundBc(n) {
   const v = Number(n);
   if (!Number.isFinite(v)) return 0;
@@ -166,4 +169,5 @@ module.exports = {
   getBoostCredits,
   spendBoostCredits,
   creditBoostCredits,
+  NEW_ACCOUNT_BOOST_CREDITS,
 };

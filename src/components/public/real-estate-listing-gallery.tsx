@@ -26,6 +26,7 @@ import { nextShareCount, type ListingMetricKind } from '@/lib/listing-metrics';
 import type { ListingSharePayload } from '@/lib/listing-share';
 import { listingHeroImageUrl, listingThumbImageUrl } from '@/lib/storage-image';
 import { useHistoryBackProps } from '@/hooks/use-navigate-back';
+import { useListingSaveCount } from '@/hooks/use-listing-saved-state';
 import { ImageLightbox } from '@/components/common/image-lightbox';
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
@@ -115,7 +116,13 @@ export function RealEstateListingGallery(props: {
     return s && !/^blob:/i.test(s) && !/^data:/i.test(s);
   });
   const [shareCount, setShareCount] = React.useState(initialShareCount);
-  const [saveCount, setSaveCount] = React.useState(initialSaveCount);
+  const cachedSaveCount = useListingSaveCount(
+    listingKind ?? 'real-estate',
+    listingId ?? '',
+    initialSaveCount,
+    Boolean(bookmark?.saved),
+  );
+  const saveCount = listingKind && listingId ? cachedSaveCount : initialSaveCount;
   const [shareOpen, setShareOpen] = React.useState(false);
   const [previewOpen, setPreviewOpen] = React.useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -128,10 +135,6 @@ export function RealEstateListingGallery(props: {
   React.useEffect(() => {
     setShareCount((count) => Math.max(count, initialShareCount));
   }, [initialShareCount]);
-
-  React.useEffect(() => {
-    setSaveCount(initialSaveCount);
-  }, [initialSaveCount]);
   const showPlaceholder = urls.length === 0;
 
   const [active, setActive] = React.useState(0);

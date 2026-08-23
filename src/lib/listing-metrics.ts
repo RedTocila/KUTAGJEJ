@@ -278,6 +278,41 @@ export function nextShareCount(current: number, metrics: ListingMetrics | null |
   return current + 1;
 }
 
+/**
+ * Merge a save-toggle response into the visible count.
+ * Bookmark `saved` is tracked separately — never snap the number back to 0 while saved.
+ */
+export function nextSaveCount(
+  current: number,
+  result: { saved?: boolean; saveCount?: number; stale?: boolean } | null | undefined,
+): number {
+  if (!result || result.stale) return current;
+  if (result.saved) {
+    const reported = typeof result.saveCount === 'number' ? result.saveCount : 0;
+    return Math.max(current, reported, 1);
+  }
+  if (typeof result.saveCount === 'number') return Math.max(0, result.saveCount);
+  return current;
+}
+
+/**
+ * Count shown on a card/detail after navigation.
+ * Bookmark keys survive page changes; listing payloads often still have the old saveCount
+ * until a later refetch — `cached` is the toggle we already confirmed this session.
+ */
+export function resolveVisibleSaveCount(input: {
+  initial: number;
+  saved: boolean;
+  cached?: number | null;
+}): number {
+  const base = Number.isFinite(input.initial) ? Math.max(0, input.initial) : 0;
+  const held = typeof input.cached === 'number' && Number.isFinite(input.cached) ? Math.max(0, input.cached) : null;
+  if (held != null) {
+    return input.saved ? Math.max(held, base, 1) : held;
+  }
+  return input.saved ? Math.max(base, 1) : base;
+}
+
 function beaconListingMetric(url: string, body: string): void {
   if (typeof navigator === 'undefined' || typeof navigator.sendBeacon !== 'function') return;
   try {

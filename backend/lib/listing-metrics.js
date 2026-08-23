@@ -2,6 +2,7 @@
 
 const { getSupabaseAdmin } = require('./supabase');
 const { isUuid } = require('./public-listings/query-helpers');
+const { reportedSaveCount } = require('./save-count-utils');
 
 const LISTING_KINDS = new Set([
   'real-estate',
@@ -215,13 +216,45 @@ async function incrementEngagement(kind, listingId, event) {
 }
 
 async function countSaves(kind, listingId) {
-  const { count, error } = await getSupabaseAdmin()
+  const sb = getSupabaseAdmin();
+  const { count, error } = await sb
     .from('saved_listings')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .eq('listing_kind', kind)
     .eq('listing_id', listingId);
   if (error) throw error;
-  return count ?? 0;
+  if (typeof count === 'number') return count;
+
+  // HEAD Content-Range can be stripped; fall back to a real select.
+  const { data, error: fetchErr } = await sb
+    .from('saved_listings')
+    .select('id')
+    .eq('listing_kind', kind)
+    .eq('listing_id', listingId)
+    .limit(1000);
+  if (fetchErr) throw fetchErr;
+  return (data || []).length;
+}
+
+const SAVE_ROWS_PAGE = 1000;
+
+async function fetchSaveCounts(sb, orFilter) {
+  const savesByKey = new Map();
+  for (let from = 0; from <= 40_000; from += SAVE_ROWS_PAGE) {
+    const { data, error } = await sb
+      .from('saved_listings')
+      .select('listing_kind, listing_id')
+      .or(orFilter)
+      .range(from, from + SAVE_ROWS_PAGE - 1);
+    if (error) throw error;
+    const rows = data || [];
+    for (const row of rows) {
+      const key = metricsKey(row.listing_kind, row.listing_id);
+      savesByKey.set(key, (savesByKey.get(key) || 0) + 1);
+    }
+    if (rows.length < SAVE_ROWS_PAGE) break;
+  }
+  return savesByKey;
 }
 
 async function getSavedSet(saver, refs) {
@@ -252,13 +285,12 @@ async function fetchMetricsMap(refs, saver = null) {
     .map((r) => `and(listing_kind.eq."${r.kind}",listing_id.eq."${r.listingId}")`)
     .join(',');
 
-  const [engagementRes, savesRes, savedSet] = await Promise.all([
+  const [engagementRes, savesByKey, savedSet] = await Promise.all([
     sb.from('listing_engagements').select('*').or(orFilter),
-    sb.from('saved_listings').select('listing_kind, listing_id').or(orFilter),
+    fetchSaveCounts(sb, orFilter),
     getSavedSet(saver, valid),
   ]);
   if (engagementRes.error) throw engagementRes.error;
-  if (savesRes.error) throw savesRes.error;
 
   const engagementByKey = new Map(
     (engagementRes.data || []).map((e) => [
@@ -269,12 +301,6 @@ async function fetchMetricsMap(refs, saver = null) {
       },
     ]),
   );
-
-  const savesByKey = new Map();
-  for (const row of savesRes.data || []) {
-    const key = metricsKey(row.listing_kind, row.listing_id);
-    savesByKey.set(key, (savesByKey.get(key) || 0) + 1);
-  }
 
   const map = new Map();
   for (const r of valid) {
@@ -395,7 +421,7 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null 
     }
   }
 
-  const saveCount = await countSaves(kind, listingId);
+  const counted = await countSaves(kind, listingId);
   if (!engagement) {
     engagement = await ensureEngagement(kind, listingId);
   }
@@ -418,7 +444,7 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null 
     metrics: {
       viewCount: engagement.viewCount ?? 0,
       shareCount: engagement.shareCount ?? 0,
-      saveCount,
+      saveCount: reportedSaveCount(counted, saved),
       saved,
     },
   };
@@ -468,7 +494,7 @@ async function toggleSavedListing(req, { kind, listingId }) {
     }
   }
 
-  const saveCount = await countSaves(kind, listingId);
+  const saveCount = reportedSaveCount(await countSaves(kind, listingId), saved);
   const engagement = await ensureEngagement(kind, listingId);
   return {
     ok: true,

@@ -12,11 +12,11 @@ import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr
 import { paths } from '@/paths';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
-import { nextShareCount, toggleListingSave, type ListingMetricKind } from '@/lib/listing-metrics';
+import { nextSaveCount, nextShareCount, toggleListingSave, type ListingMetricKind } from '@/lib/listing-metrics';
 import type { ListingSharePayload } from '@/lib/listing-share';
 import { listingCardImageUrl, storageImageOriginalUrl } from '@/lib/storage-image';
 import { useSavedListingsOptional } from '@/contexts/saved-listings-context';
-import { useListingSavedState } from '@/hooks/use-listing-saved-state';
+import { useListingSaveCount, useListingSavedState } from '@/hooks/use-listing-saved-state';
 import { useUser } from '@/hooks/use-user';
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { ListingPremiumBadge } from '@/components/public/listing-premium-badge';
@@ -86,8 +86,9 @@ export function CardMedia({
   const { user } = useUser();
   const savedCtx = useSavedListingsOptional();
   const saved = useListingSavedState(listingKind, listingId, initialSaved);
+  const cachedSaveCount = useListingSaveCount(listingKind, listingId, initialSaveCount, saved);
   const [shareCount, setShareCount] = React.useState(initialShareCount);
-  const [saveCount, setSaveCount] = React.useState(initialSaveCount);
+  const [localSaveCount, setLocalSaveCount] = React.useState(initialSaveCount);
   const [shareOpen, setShareOpen] = React.useState(false);
   const thumbUrl = React.useMemo(() => listingCardImageUrl(imageUrl), [imageUrl]);
   const originalUrl = React.useMemo(() => storageImageOriginalUrl(imageUrl), [imageUrl]);
@@ -105,12 +106,18 @@ export function CardMedia({
     if (listingKeyRef.current !== listingId) {
       listingKeyRef.current = listingId;
       setShareCount(initialShareCount);
-      setSaveCount(initialSaveCount);
+      setLocalSaveCount(initialSaveCount);
       return;
     }
     setShareCount((count) => Math.max(count, initialShareCount));
-    setSaveCount(initialSaveCount);
+    setLocalSaveCount((count) => (initialSaveCount > count ? initialSaveCount : count));
   }, [initialShareCount, initialSaveCount, listingId]);
+
+  React.useEffect(() => {
+    if (saved) setLocalSaveCount((count) => Math.max(count, 1));
+  }, [saved]);
+
+  const saveCount = savedCtx ? cachedSaveCount : localSaveCount;
 
   const showImage = Boolean(displaySrc) && !imageFailed;
 
@@ -152,19 +159,17 @@ export function CardMedia({
         return;
       }
       const wasSaved = saved;
-      setSaveCount((count) => Math.max(0, count + (wasSaved ? -1 : 1)));
+      setLocalSaveCount((count) => Math.max(0, count + (wasSaved ? -1 : 1)));
 
       if (savedCtx) {
-        const result = await savedCtx.toggleSaved(listingKind, listingId);
-        if (result && !result.stale) setSaveCount(result.saveCount);
-        else if (!result) setSaveCount((count) => Math.max(0, count + (wasSaved ? 1 : -1)));
+        await savedCtx.toggleSaved(listingKind, listingId, { fromCount: saveCount });
         return;
       }
       const metrics = await toggleListingSave(listingKind, listingId);
-      if (metrics) setSaveCount(metrics.saveCount);
-      else setSaveCount((count) => Math.max(0, count + (wasSaved ? 1 : -1)));
+      if (metrics) setLocalSaveCount((count) => nextSaveCount(count, metrics));
+      else setLocalSaveCount((count) => Math.max(0, count + (wasSaved ? 1 : -1)));
     },
-    [listingKind, listingId, router, saved, savedCtx, user]
+    [listingKind, listingId, router, saveCount, saved, savedCtx, user]
   );
 
   // OKAZION badge wins when both are active (same priority as before for chrome).

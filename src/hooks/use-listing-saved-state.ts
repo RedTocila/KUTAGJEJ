@@ -1,9 +1,11 @@
 'use client';
 
-import * as React from 'react';
-
 import { useSavedListingsOptional } from '@/contexts/saved-listings-context';
-import { listingMetricsKey, type ListingMetricKind } from '@/lib/listing-metrics';
+import {
+  listingMetricsKey,
+  resolveVisibleSaveCount,
+  type ListingMetricKind,
+} from '@/lib/listing-metrics';
 
 /**
  * Resolves bookmark state from the global saved-keys cache (hydrated on login).
@@ -24,4 +26,16 @@ export function useListingSavedState(
   }
 
   return savedCtx.isSaved(listingKind, listingId);
+}
+
+/** Save count that survives navigation via the bookmark cache. */
+export function useListingSaveCount(
+  listingKind: ListingMetricKind,
+  listingId: string,
+  initialSaveCount: number,
+  saved: boolean,
+): number {
+  const savedCtx = useSavedListingsOptional();
+  const cached = savedCtx?.getSaveCount(listingKind, listingId);
+  return resolveVisibleSaveCount({ initial: initialSaveCount, saved, cached });
 }

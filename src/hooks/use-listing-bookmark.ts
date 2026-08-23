@@ -4,9 +4,9 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useSavedListingsOptional } from '@/contexts/saved-listings-context';
-import { useListingSavedState } from '@/hooks/use-listing-saved-state';
+import { useListingSaveCount, useListingSavedState } from '@/hooks/use-listing-saved-state';
 import { useUser } from '@/hooks/use-user';
-import { toggleListingSave, type ListingMetricKind } from '@/lib/listing-metrics';
+import { nextSaveCount, toggleListingSave, type ListingMetricKind } from '@/lib/listing-metrics';
 import { emitHotLeadSave } from '@/lib/listing-hot-lead';
 import { paths } from '@/paths';
 
@@ -19,11 +19,23 @@ export function useListingBookmark(
   const { user } = useUser();
   const savedCtx = useSavedListingsOptional();
   const hydratedSaved = useListingSavedState(listingKind, listingId, initial?.saved);
-  const [saveCount, setSaveCount] = React.useState(initial?.saveCount ?? 0);
+  const cachedCount = useListingSaveCount(
+    listingKind,
+    listingId,
+    initial?.saveCount ?? 0,
+    hydratedSaved,
+  );
+  const [localCount, setLocalCount] = React.useState(initial?.saveCount ?? 0);
 
   React.useEffect(() => {
-    if (initial?.saveCount !== undefined) setSaveCount(initial.saveCount);
-  }, [initial?.saveCount]);
+    setLocalCount(initial?.saveCount ?? 0);
+  }, [listingId]); // eslint-disable-line react-hooks/exhaustive-deps -- stale SSR count must not clobber a toggle
+
+  const saveCount = savedCtx
+    ? cachedCount
+    : hydratedSaved
+      ? Math.max(localCount, 1)
+      : localCount;
 
   const toggleSave = React.useCallback(async () => {
     if (!user) {
@@ -31,20 +43,20 @@ export function useListingBookmark(
       return;
     }
     const wasSaved = hydratedSaved;
-    setSaveCount((count) => Math.max(0, count + (wasSaved ? -1 : 1)));
+    const fromCount = saveCount;
 
     if (savedCtx) {
-      const result = await savedCtx.toggleSaved(listingKind, listingId);
-      if (result && !result.stale) setSaveCount(result.saveCount);
-      else if (!result) setSaveCount((count) => Math.max(0, count + (wasSaved ? 1 : -1)));
+      await savedCtx.toggleSaved(listingKind, listingId, { fromCount });
       return;
     }
+
+    setLocalCount((count) => Math.max(0, count + (wasSaved ? -1 : 1)));
     const metrics = await toggleListingSave(listingKind, listingId);
     if (metrics) {
-      setSaveCount(metrics.saveCount);
+      setLocalCount((count) => nextSaveCount(count, metrics));
       if (metrics.saved && !wasSaved) emitHotLeadSave(listingKind, listingId);
-    } else setSaveCount((count) => Math.max(0, count + (wasSaved ? 1 : -1)));
-  }, [hydratedSaved, listingKind, listingId, router, savedCtx, user]);
+    } else setLocalCount((count) => Math.max(0, count + (wasSaved ? 1 : -1)));
+  }, [hydratedSaved, listingId, listingKind, router, saveCount, savedCtx, user]);
 
   return { saved: hydratedSaved, saveCount, toggleSave };
 }

@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Box, Stack, Typography } from '@mui/material';
+import { ArrowCircleRight as ArrowCircleRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowCircleRight';
 import { Bathtub as BathtubIcon } from '@phosphor-icons/react/dist/ssr/Bathtub';
 import { Bed as BedIcon } from '@phosphor-icons/react/dist/ssr/Bed';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
@@ -15,6 +16,7 @@ import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { GasPump as GasPumpIcon } from '@phosphor-icons/react/dist/ssr/GasPump';
 import { Gauge as GaugeIcon } from '@phosphor-icons/react/dist/ssr/Gauge';
 import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
+import { Globe as GlobeIcon } from '@phosphor-icons/react/dist/ssr/Globe';
 import { GraduationCap as GraduationCapIcon } from '@phosphor-icons/react/dist/ssr/GraduationCap';
 import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
@@ -34,15 +36,18 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { relativeAlbanianDate } from '@/components/public/listing-cards/format-helpers';
 import { brandLogoSrc, config } from '@/config';
 import { formatRatingDisplay } from '@/lib/format-rating';
+import { CANONICAL_SITE_HOST } from '@/lib/get-site-url';
 import { brandWordmarkFontFamily } from '@/styles/brand-font';
 import {
   resolveStoryImageSrc,
   type ListingSharePayload,
+  type ListingShareSpec,
   type ListingShareSpecIcon,
 } from '@/lib/listing-share';
 import {
   DEFAULT_SHARE_THEME_COLOR,
   normalizeShareThemeColor,
+  shareThemeContrastText,
   shareThemeToRgba,
 } from '@/lib/share-theme-color';
 
@@ -57,7 +62,7 @@ const CARD_H = Math.round((CARD_W * 5) / 4);
 const STAR_GOLD = '#f5b400';
 const STAR_EMPTY = 'rgba(255,255,255,0.28)';
 /** Saved JPEG fill — keep in sync with feed capture `backgroundColor`. */
-export const CARD_BG = '#0d0d0d';
+export const CARD_BG = '#000000';
 const STORY_CARD_BG = '#141414';
 /** Scale factor vs ~360px mobile card (760/360). */
 const S = 2.1;
@@ -341,9 +346,11 @@ function SpecChip({
 function StoryListingImage({
   src,
   fallbackSrc,
+  objectPosition = 'center',
 }: {
   src: string;
   fallbackSrc?: string | null;
+  objectPosition?: string;
 }) {
   const [currentSrc, setCurrentSrc] = React.useState(src);
 
@@ -365,7 +372,14 @@ function StoryListingImage({
           setCurrentSrc(fallback);
         }
       }}
-      sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+      sx={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        objectPosition,
+      }}
     />
   );
 }
@@ -437,14 +451,40 @@ function ListingPhoto({
   );
 }
 
+function formatSaveBadge(badge?: string): string {
+  const raw = String(badge || '').trim();
+  if (!raw) return '';
+  const n = raw.toLowerCase();
+  if (n.includes('shitje') || n.includes('for sale') || n === 'sale') return 'PËR SHITJE';
+  if (n.includes('qera') || n.includes('qira') || n.includes('for rent') || n === 'rent') return 'PËR QERA';
+  return raw.toLocaleUpperCase('sq-AL');
+}
+
+function SaveSpecRow({ spec, accent }: { spec: ListingShareSpec; accent: string }) {
+  const Icon = SPEC_ICONS[spec.icon] ?? TagIcon;
+  return (
+    <Stack direction="row" spacing={1.15} sx={{ alignItems: 'center', justifyContent: 'flex-end' }}>
+      <Box sx={{ color: accent, display: 'inline-flex', lineHeight: 0, flexShrink: 0 }}>
+        <Icon size={26} weight="bold" />
+      </Box>
+      <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: 24, lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+        {spec.label}
+      </Typography>
+    </Stack>
+  );
+}
+
 /**
- * Saved photo (Ruaj foton): product image + compact Instagram banner.
+ * Saved photo (Ruaj foton): cinematic 4:5 card — photo bleeds into a branded dark panel.
  */
 function SavePhotoCard({ payload }: { payload: ListingSharePayload }) {
   const imageSrc = resolveStoryImageSrc(payload.imageUrl);
   const location = payload.location?.trim() || '';
-  const contactPhone = payload.contactPhone?.trim() || '';
   const accent = normalizeShareThemeColor(payload.themeColor);
+  const badge = formatSaveBadge(payload.badge);
+  const badgeText = shareThemeContrastText(accent);
+  const specs = (payload.specs ?? []).filter((spec) => spec.label).slice(0, 3);
+  const hasRightCol = Boolean(payload.priceLabel) || specs.length > 0;
 
   return (
     <Box
@@ -453,126 +493,244 @@ function SavePhotoCard({ payload }: { payload: ListingSharePayload }) {
         width: CARD_W,
         height: CARD_H,
         aspectRatio: '4 / 5',
-        borderRadius: CARD_RADIUS,
         overflow: 'hidden',
         bgcolor: CARD_BG,
-        border: `${2.5 * S}px solid ${accent}`,
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
       }}
     >
-      <ListingPhoto
-        imageSrc={imageSrc}
-        fallbackSrc={payload.imageUrl}
-        accent={accent}
-        badge={payload.badge}
-        topRight={
-          <Box
+      <Box sx={{ position: 'absolute', inset: 0 }}>
+        {imageSrc ? (
+          <StoryListingImage src={imageSrc} fallbackSrc={payload.imageUrl} objectPosition="center top" />
+        ) : (
+          <Stack
             sx={{
-              width: 56,
-              height: 56,
-              borderRadius: '50%',
-              bgcolor: 'rgba(10,10,10,0.92)',
-              border: '1px solid rgba(255,255,255,0.16)',
-              display: 'flex',
+              position: 'absolute',
+              inset: 0,
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 10px 28px rgba(0,0,0,0.45)',
+              color: accent,
+              opacity: 0.5,
             }}
           >
-            <Box component="img" src={brandLogoSrc} alt="" sx={{ width: 36, height: 36, objectFit: 'contain' }} />
-          </Box>
-        }
+            <BuildingsIcon size={42 * S} weight="duotone" />
+          </Stack>
+        )}
+      </Box>
+
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          background: `
+            linear-gradient(180deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.4) 12%, rgba(0,0,0,0.12) 20%, rgba(0,0,0,0) 30%),
+            linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.78) 72%, #000 88%)
+          `,
+        }}
       />
 
-      <Box sx={{ flexShrink: 0, bgcolor: CARD_BG, borderTop: `5px solid ${accent}` }}>
-        <Stack spacing={1.35} sx={{ px: 2.75, pt: 1.9, pb: 2.15 }}>
-          <Typography
-            sx={{
-              fontWeight: 800,
-              fontSize: 32,
-              lineHeight: 1.16,
-              letterSpacing: '-0.025em',
-              color: '#fff',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {payload.title}
-          </Typography>
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 1,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          px: 3.5,
+          pt: 3,
+          pb: 2.75,
+        }}
+      >
+        <Stack direction="row" sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+          <Stack direction="row" spacing={1.35} sx={{ alignItems: 'center', minWidth: 0 }}>
+            <Box
+              component="img"
+              src={brandLogoSrc}
+              alt=""
+              sx={{ width: 48, height: 48, objectFit: 'contain', flexShrink: 0 }}
+            />
+            <Stack spacing={0.35} sx={{ minWidth: 0 }}>
+              <Typography
+                sx={{
+                  fontFamily: brandWordmarkFontFamily,
+                  fontWeight: 700,
+                  fontSize: 34,
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1,
+                  color: '#fff',
+                }}
+              >
+                {config.site.name}
+              </Typography>
+              <Typography
+                sx={{
+                  fontWeight: 600,
+                  fontSize: 13,
+                  letterSpacing: '0.14em',
+                  lineHeight: 1.2,
+                  color: 'rgba(255,255,255,0.58)',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Gjithçka në një vend.
+              </Typography>
+            </Stack>
+          </Stack>
 
-          {payload.priceLabel || contactPhone ? (
-            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
-              {payload.priceLabel ? (
+          {badge ? (
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1.05,
+                flexShrink: 0,
+                px: 2.15,
+                py: 1.05,
+                borderRadius: 999,
+                bgcolor: accent,
+                color: badgeText,
+                boxShadow: '0 10px 24px rgba(0,0,0,0.35)',
+              }}
+            >
+              <Box
+                sx={{
+                  width: 9,
+                  height: 9,
+                  borderRadius: '50%',
+                  bgcolor: 'currentColor',
+                  flexShrink: 0,
+                }}
+              />
+              <Typography
+                sx={{
+                  fontWeight: 800,
+                  fontSize: 18,
+                  lineHeight: 1,
+                  letterSpacing: '0.06em',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {badge}
+              </Typography>
+            </Box>
+          ) : null}
+        </Stack>
+
+        <Stack spacing={2.4}>
+          <Stack direction="row" spacing={2.5} sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <Stack spacing={1.15} sx={{ minWidth: 0, flex: 1, pr: hasRightCol ? 1 : 0 }}>
+              {payload.category ? (
                 <Typography
                   sx={{
-                    fontWeight: 900,
-                    fontSize: 40,
+                    fontWeight: 800,
+                    fontSize: 18,
+                    letterSpacing: '0.16em',
+                    textTransform: 'uppercase',
                     color: accent,
-                    lineHeight: 1.05,
-                    letterSpacing: '-0.03em',
-                    minWidth: 0,
+                    lineHeight: 1,
                   }}
                 >
-                  {payload.priceLabel}
+                  {payload.category}
                 </Typography>
               ) : null}
-              {contactPhone ? (
-                <Box
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 1.1,
-                    ml: 'auto',
-                    flexShrink: 0,
-                    px: 1.85,
-                    py: 1.05,
-                    borderRadius: 2,
-                    bgcolor: shareThemeToRgba(accent, 0.16),
-                    border: `2px solid ${shareThemeToRgba(accent, 0.55)}`,
-                    color: '#fff',
-                  }}
-                >
-                  <Box sx={{ color: accent, display: 'inline-flex', lineHeight: 0 }}>
-                    <PhoneIcon size={28} weight="fill" />
+
+              <Typography
+                sx={{
+                  fontWeight: 800,
+                  fontSize: 38,
+                  lineHeight: 1.12,
+                  letterSpacing: '-0.03em',
+                  color: '#fff',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {payload.title}
+              </Typography>
+
+              {location ? (
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', minWidth: 0 }}>
+                  <Box sx={{ color: accent, display: 'inline-flex', lineHeight: 0, mt: 0.35, flexShrink: 0 }}>
+                    <MapPinIcon size={22} weight="fill" />
                   </Box>
                   <Typography
                     sx={{
-                      fontWeight: 800,
-                      fontSize: 30,
-                      lineHeight: 1,
-                      letterSpacing: '0.02em',
-                      whiteSpace: 'nowrap',
+                      fontWeight: 650,
+                      fontSize: 22,
+                      lineHeight: 1.3,
+                      color: 'rgba(255,255,255,0.94)',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
                     }}
                   >
-                    {contactPhone}
+                    {location}
                   </Typography>
-                </Box>
+                </Stack>
               ) : null}
             </Stack>
-          ) : null}
 
-          {location ? (
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', color: '#fff', minWidth: 0 }}>
-              <Box sx={{ color: accent, display: 'inline-flex', lineHeight: 0, mt: 0.35, flexShrink: 0 }}>
-                <MapPinIcon size={22} weight="fill" />
+            {hasRightCol ? (
+              <Stack spacing={1.25} sx={{ alignItems: 'flex-end', flexShrink: 0, maxWidth: '46%', pt: payload.category ? 0.15 : 0 }}>
+                {payload.priceLabel ? (
+                  <Typography
+                    sx={{
+                      fontWeight: 800,
+                      fontSize: 40,
+                      color: accent,
+                      lineHeight: 1.05,
+                      letterSpacing: '-0.03em',
+                      textAlign: 'right',
+                    }}
+                  >
+                    {payload.priceLabel}
+                  </Typography>
+                ) : null}
+                {specs.map((spec, index) => (
+                  <SaveSpecRow key={`${spec.label}-${index}`} spec={spec} accent={accent} />
+                ))}
+              </Stack>
+            ) : null}
+          </Stack>
+
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              pt: 1.85,
+              borderTop: '1px solid rgba(255,255,255,0.16)',
+              color: '#fff',
+            }}
+          >
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
+              <Box sx={{ display: 'inline-flex', lineHeight: 0, flexShrink: 0 }}>
+                <GlobeIcon size={22} weight="bold" />
               </Box>
-              <Typography
-                sx={{
-                  fontWeight: 650,
-                  fontSize: 22,
-                  lineHeight: 1.3,
-                  color: 'rgba(255,255,255,0.92)',
-                }}
-              >
-                {location}
+              <Typography sx={{ fontWeight: 700, fontSize: 20, lineHeight: 1, letterSpacing: '-0.01em' }}>
+                {CANONICAL_SITE_HOST}
               </Typography>
             </Stack>
-          ) : null}
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexShrink: 0 }}>
+              <Box sx={{ display: 'inline-flex', lineHeight: 0 }}>
+                <ArrowCircleRightIcon size={24} weight="fill" />
+              </Box>
+              <Typography sx={{ fontWeight: 650, fontSize: 18, lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                Shiko njoftimin e plotë në{' '}
+                <Box component="span" sx={{ fontWeight: 800 }}>
+                  {config.site.name}
+                </Box>
+              </Typography>
+            </Stack>
+          </Stack>
         </Stack>
       </Box>
     </Box>
@@ -826,11 +984,12 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
 );
 
 /**
- * Saved photo: Instagram 4:5 card only (title, price + phone on one row, full location).
+ * Saved photo: cinematic 4:5 card (brand header, specs, kutagjej.al footer).
  */
 export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
   function ListingFeedTemplate({ payload }, ref) {
     const scale = FEED_WIDTH / CARD_W;
+    const accent = normalizeShareThemeColor(payload.themeColor);
 
     return (
       <Box
@@ -842,6 +1001,8 @@ export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: L
           height: FEED_HEIGHT,
           overflow: 'hidden',
           borderRadius: `${FEED_CARD_RADIUS_PX}px`,
+          border: `3px solid ${accent}`,
+          boxSizing: 'border-box',
           bgcolor: CARD_BG,
           color: '#fff',
           fontFamily:
@@ -854,6 +1015,7 @@ export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: L
             height: CARD_H,
             transform: `scale(${scale})`,
             transformOrigin: 'top left',
+            backfaceVisibility: 'hidden',
           }}
         >
           <ListingShareCard payload={payload} variant="feed" />

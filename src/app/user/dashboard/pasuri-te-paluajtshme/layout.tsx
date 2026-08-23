@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense, type ReactNode } from 'react';
 
+import { PostListingFormSkeleton } from '@/components/user/post-listing-header';
 import { config } from '@/config';
 
 export const metadata: Metadata = {
@@ -8,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function UserRealEstateListingLayout({ children }: { children: ReactNode }) {
-  return <Suspense fallback={null}>{children}</Suspense>;
+  return <Suspense fallback={<PostListingFormSkeleton />}>{children}</Suspense>;
 }

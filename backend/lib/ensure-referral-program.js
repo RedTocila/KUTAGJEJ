@@ -73,7 +73,7 @@ const DEFAULT_DOC = {
   },
   login_streak_title: 'Log In streak',
   login_streak_subtitle: 'Angazhim i qëndrueshëm në platformë.',
-  login_streak: { daysRequired: 7, boostCredits: 10 },
+  login_streak: { daysRequired: 7, boostCredits: 25 },
 };
 
 /** @deprecated camelCase alias kept for callers that import the seed doc. */
@@ -173,8 +173,8 @@ function format(doc) {
     loginStreakTitle: pick(o, 'loginStreakTitle', 'login_streak_title', ''),
     loginStreakSubtitle: pick(o, 'loginStreakSubtitle', 'login_streak_subtitle', ''),
     loginStreak: {
-      daysRequired: loginStreak.daysRequired,
-      boostCredits: loginStreak.boostCredits,
+      daysRequired: Number(loginStreak.daysRequired ?? loginStreak.daysRequired) || 7,
+      boostCredits: Number(loginStreak.boostCredits ?? loginStreak.boostCredits) || 25,
     },
     updatedAt: pick(o, 'updatedAt', 'updated_at', null),
   };
@@ -223,8 +223,13 @@ async function ensureReferralProgram() {
     };
   }
   const streak = existing.login_streak || {};
-  if (Number(streak.boostCredits) === 5) {
-    patch.login_streak = { ...streak, boostCredits: 10 };
+  const streakCredits = Number(streak.boostCredits ?? streak.boostCredits);
+  if (streakCredits === 5 || streakCredits === 10) {
+    patch.login_streak = {
+      ...streak,
+      daysRequired: streak.daysRequired ?? streak.daysRequired ?? 7,
+      boostCredits: 25,
+    };
   }
   if (Object.keys(patch).length === 0) return;
 

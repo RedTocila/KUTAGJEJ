@@ -21,7 +21,7 @@ import { BusinessListingForm } from '@/components/businesses/business-listing-fo
 import { ProfessionalListingForm } from '@/components/professionals/professional-listing-form';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
-import { PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
+import { PostListingFormSkeleton, PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
 import { OkazionTheme } from '@/components/user/okazion-theme';
 import { OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
 import {
@@ -130,7 +130,6 @@ export default function UserPostListingPage() {
   const [phase, setPhase] = React.useState<Phase>('choose');
   const [picked, setPicked] = React.useState<ListingCategory | null>(null);
   const [categories, setCategories] = React.useState<ListingCategory[]>([]);
-  const [loadingCategories, setLoadingCategories] = React.useState(true);
   const [categoryQuotas, setCategoryQuotas] = React.useState<CategoryQuotaSnapshot | null>(null);
   const [quotasReady, setQuotasReady] = React.useState(false);
   const wantsAi = searchParams.get('ai') === '1';
@@ -160,14 +159,12 @@ export default function UserPostListingPage() {
   React.useEffect(() => {
     if (!user || !canPublish) return;
     let cancelled = false;
-    setLoadingCategories(true);
     setQuotasReady(false);
     void (async () => {
       const [catRes, quotaRes] = await Promise.all([listCategoriesPublic(), fetchCategoryQuotas()]);
       if (cancelled) return;
       setCategories(catRes.categories ?? []);
       setCategoryQuotas(quotaRes.snapshot ?? null);
-      setLoadingCategories(false);
       setQuotasReady(true);
     })();
     return () => {
@@ -218,10 +215,10 @@ export default function UserPostListingPage() {
 
   React.useEffect(() => {
     const raw = searchParams.get('category');
-    if (!raw || loadingCategories || !quotasReady) return;
+    if (!raw || !quotasReady) return;
     if (appliedCategoryRef.current === raw) return;
     applyCategoryKey(raw);
-  }, [searchParams, loadingCategories, quotasReady, applyCategoryKey]);
+  }, [searchParams, quotasReady, applyCategoryKey]);
 
   React.useEffect(() => {
     if (!wantsAi) {
@@ -248,6 +245,7 @@ export default function UserPostListingPage() {
       setPhase('quota-blocked');
       return;
     }
+    applyCategoryKey(key);
     const q = new URLSearchParams({ category: key });
     if (opts?.okazion || searchParams.get('okazion') === '1') q.set('okazion', '1');
     if (opts?.premium || searchParams.get('premium') === '1') q.set('premium', '1');
@@ -279,10 +277,13 @@ export default function UserPostListingPage() {
   const activeMeta = formMeta[phase];
   const showFormShell = Boolean(activeMeta);
   const activeCategory = phaseCategory(phase);
+  const categoryFromUrl = searchParams.get('category');
+  const showPicker = phase === 'choose' && !categoryFromUrl;
+  const showFormLoading = Boolean(categoryFromUrl) && (phase === 'choose' || (showFormShell && !aiReady));
 
   return (
     <Stack spacing={2.5}>
-      {phase === 'choose' ? (
+      {showPicker ? (
         <AddListingPickerDialog
           open
           onClose={() => hardNavigate(paths.user.dashboard)}
@@ -292,7 +293,9 @@ export default function UserPostListingPage() {
         />
       ) : null}
 
-      {showFormShell && activeMeta ? (
+      {showFormLoading ? <PostListingFormSkeleton /> : null}
+
+      {showFormShell && activeMeta && aiReady ? (
         <OkazionTheme enabled={wantsOkazion}>
           <>
           <PostListingHeader
@@ -327,8 +330,6 @@ export default function UserPostListingPage() {
             {activeCategory ? (
               <PostListingAiAssist category={activeCategory} onApply={handleAiApply} />
             ) : null}
-            {!aiReady ? null : (
-              <>
             {phase === 'real-estate-form' ? (
               <RealEstateListingForm
                 key={`re-${aiFormKey}`}
@@ -371,8 +372,6 @@ export default function UserPostListingPage() {
                 onSuccess={handleFormSuccess}
               />
             ) : null}
-              </>
-            )}
           </PostListingFormSurface>
           </>
         </OkazionTheme>

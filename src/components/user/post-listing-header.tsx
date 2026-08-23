@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Stack, Typography, type SxProps, type Theme } from '@mui/material';
+import { Box, Skeleton, Stack, Typography, type SxProps, type Theme } from '@mui/material';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { UserDashboardCloseButton } from '@/components/user/layout/user-dashboard-back-link';
@@ -86,4 +86,27 @@ export function PostListingHeader({
 /** Spacing wrapper for listing forms (sections provide their own cards). */
 export function PostListingFormSurface({ children }: { children: React.ReactNode }) {
   return <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.25 }}>{children}</Box>;
+}
+
+/** Placeholder while a listing form / AI Build page is opening. */
+export function PostListingFormSkeleton(): React.JSX.Element {
+  return (
+    <Stack spacing={2.5} aria-busy aria-label="Duke u ngarkuar">
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+        <Skeleton variant="rounded" animation="wave" width={40} height={40} sx={{ borderRadius: 2.25 }} />
+        <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+          <Skeleton variant="text" animation="wave" width="42%" height={36} />
+          <Skeleton variant="text" animation="wave" width="28%" height={20} />
+        </Stack>
+      </Stack>
+      <PostListingFormSurface>
+        <Skeleton variant="rounded" animation="wave" height={160} sx={{ borderRadius: 2.5 }} />
+        <Skeleton variant="rounded" animation="wave" height={56} sx={{ borderRadius: 2 }} />
+        <Skeleton variant="rounded" animation="wave" height={56} sx={{ borderRadius: 2 }} />
+        <Skeleton variant="rounded" animation="wave" height={56} sx={{ borderRadius: 2 }} />
+        <Skeleton variant="rounded" animation="wave" height={120} sx={{ borderRadius: 2 }} />
+        <Skeleton variant="rounded" animation="wave" height={48} sx={{ borderRadius: 2 }} />
+      </PostListingFormSurface>
+    </Stack>
+  );
 }

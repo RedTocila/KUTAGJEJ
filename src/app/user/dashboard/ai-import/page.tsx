@@ -128,21 +128,97 @@ function toListingCategory(id: HomeVerticalId): ListingCategoryKey {
   return id === 'jobs' ? 'job-listings' : id;
 }
 
+function isDisplayableImageUrl(url: unknown): url is string {
+  if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return false;
+  const lower = url.toLowerCase();
+  // Drop analytics beacons that scrape sometimes picks up as <img> sources.
+  if (/facebook\.com\/(?:tr|tr\/)\b|[?&]ev=pageview\b/i.test(lower)) return false;
+  if (
+    /google-analytics\.com|googletagmanager\.com|doubleclick\.net|bat\.bing\.com|adservice\.google/i.test(
+      lower,
+    )
+  ) {
+    return false;
+  }
+  return true;
+}
+
 function draftImageUrls(draft: AiImportDraftResult | AiListingDraft): string[] {
-  return (draft.imageUrls ?? []).filter((url) => {
-    if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return false;
-    const lower = url.toLowerCase();
-    // Drop analytics beacons that scrape sometimes picks up as <img> sources.
-    if (/facebook\.com\/(?:tr|tr\/)\b|[?&]ev=pageview\b/i.test(lower)) return false;
-    if (
-      /google-analytics\.com|googletagmanager\.com|doubleclick\.net|bat\.bing\.com|adservice\.google/i.test(
-        lower,
-      )
-    ) {
-      return false;
-    }
-    return true;
-  });
+  return (draft.imageUrls ?? []).filter(isDisplayableImageUrl);
+}
+
+function DraftImageThumb({
+  src,
+  size,
+  previewLabel,
+  removeLabel,
+  onPreview,
+  onRemove,
+  disabled,
+}: {
+  src: string;
+  size: number;
+  previewLabel: string;
+  removeLabel: string;
+  onPreview: () => void;
+  onRemove: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Box sx={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      <Box
+        component="button"
+        type="button"
+        aria-label={previewLabel}
+        onClick={onPreview}
+        sx={{
+          width: '100%',
+          height: '100%',
+          borderRadius: 1.5,
+          overflow: 'hidden',
+          border: '1px solid',
+          borderColor: 'divider',
+          padding: 0,
+          cursor: 'pointer',
+          bgcolor: 'action.hover',
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      </Box>
+      <IconButton
+        size="small"
+        aria-label={removeLabel}
+        disabled={disabled}
+        onClick={(event) => {
+          event.stopPropagation();
+          onRemove();
+        }}
+        sx={{
+          position: 'absolute',
+          top: 1,
+          right: 1,
+          zIndex: 1,
+          width: 18,
+          height: 18,
+          minWidth: 18,
+          minHeight: 18,
+          p: 0,
+          bgcolor: 'rgba(0,0,0,0.62)',
+          color: '#fff',
+          '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
+        }}
+      >
+        <XIcon size={9} weight="bold" />
+      </IconButton>
+    </Box>
+  );
 }
 
 function isRetryableFailedDraft(draft: AiImportDraftResult): boolean {
@@ -644,6 +720,56 @@ export default function AiImportListingsPage() {
     removeAiListingDraftFromQueue(draftId);
   };
 
+  const removeDraftImage = (draftId: string, displayIndex: number) => {
+    const draft = drafts.find((d) => d.id === draftId);
+    if (!draft) return;
+    const images = draftImageUrls(draft);
+    if (displayIndex < 0 || displayIndex >= images.length) return;
+
+    const original = draft.imageUrls ?? [];
+    let visibleCount = -1;
+    let removeAt = -1;
+    for (let i = 0; i < original.length; i += 1) {
+      if (isDisplayableImageUrl(original[i])) {
+        visibleCount += 1;
+        if (visibleCount === displayIndex) {
+          removeAt = i;
+          break;
+        }
+      }
+    }
+    if (removeAt < 0) return;
+
+    const nextUrls = original.filter((_, i) => i !== removeAt);
+    const nextRoles = draft.imageRoles ? draft.imageRoles.filter((_, i) => i !== removeAt) : draft.imageRoles;
+    const nextForm = { ...draft.form };
+    if (Array.isArray(nextForm.imageUrls)) {
+      nextForm.imageUrls = nextUrls;
+    }
+
+    persistDrafts(
+      drafts.map((d) =>
+        d.id === draftId
+          ? { ...d, imageUrls: nextUrls, imageRoles: nextRoles, form: nextForm }
+          : d,
+      ),
+    );
+
+    setPreview((current) => {
+      if (!current) return null;
+      const sameDraft =
+        current.urls.length === images.length && current.urls.every((url, i) => url === images[i]);
+      if (!sameDraft) return current;
+      const nextPreview = images.filter((_, i) => i !== displayIndex);
+      if (!nextPreview.length) return null;
+      const nextIndex = current.index > displayIndex ? current.index - 1 : current.index;
+      return {
+        urls: nextPreview,
+        index: Math.min(Math.max(0, nextIndex), nextPreview.length - 1),
+      };
+    });
+  };
+
   const deleteAllDrafts = () => {
     setDrafts([]);
     clearAiListingDraftQueue();
@@ -1096,33 +1222,15 @@ export default function AiImportListingsPage() {
                 <Stack spacing={0.85}>
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
                     {images[0] ? (
-                      <Box
-                        component="button"
-                        type="button"
-                        aria-label={t.aiImport.previewImage}
-                        onClick={() => openPreview(images, 0)}
-                        sx={{
-                          width: 52,
-                          height: 52,
-                          flexShrink: 0,
-                          borderRadius: 1.5,
-                          overflow: 'hidden',
-                          border: '1px solid',
-                          borderColor: 'divider',
-                          padding: 0,
-                          cursor: 'pointer',
-                          bgcolor: 'action.hover',
-                        }}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={images[0]}
-                          alt=""
-                          loading="lazy"
-                          referrerPolicy="no-referrer"
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                        />
-                      </Box>
+                      <DraftImageThumb
+                        src={images[0]}
+                        size={52}
+                        previewLabel={t.aiImport.previewImage}
+                        removeLabel={t.aiImport.removeImage}
+                        onPreview={() => openPreview(images, 0)}
+                        onRemove={() => removeDraftImage(draft.id, 0)}
+                        disabled={postingAll || postingId != null || openingId != null}
+                      />
                     ) : (
                       <Box
                         sx={{
@@ -1251,40 +1359,17 @@ export default function AiImportListingsPage() {
                         '&::-webkit-scrollbar': { display: 'none' },
                       }}
                     >
-                      {images.slice(1, 8).map((url, index) => (
-                        <Box
+                      {images.slice(1).map((url, index) => (
+                        <DraftImageThumb
                           key={`${draft.id}-${url}-${index}`}
-                          component="button"
-                          type="button"
-                          aria-label={t.aiImport.previewImage}
-                          onClick={() => openPreview(images, index + 1)}
-                          sx={{
-                            width: 48,
-                            height: 48,
-                            flexShrink: 0,
-                            borderRadius: 1.5,
-                            overflow: 'hidden',
-                            border: '1px solid',
-                            borderColor: 'divider',
-                            padding: 0,
-                            cursor: 'pointer',
-                            bgcolor: 'background.paper',
-                          }}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={url}
-                            alt=""
-                            loading="lazy"
-                            referrerPolicy="no-referrer"
-                            onError={(event) => {
-                              const img = event.currentTarget;
-                              const button = img.closest('button');
-                              if (button instanceof HTMLElement) button.style.display = 'none';
-                            }}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                          />
-                        </Box>
+                          src={url}
+                          size={48}
+                          previewLabel={t.aiImport.previewImage}
+                          removeLabel={t.aiImport.removeImage}
+                          onPreview={() => openPreview(images, index + 1)}
+                          onRemove={() => removeDraftImage(draft.id, index + 1)}
+                          disabled={postingAll || postingId != null || openingId != null}
+                        />
                       ))}
                     </Box>
                   ) : null}

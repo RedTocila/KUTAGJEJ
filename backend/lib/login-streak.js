@@ -19,8 +19,9 @@ async function loadLoginStreakConfig() {
     .maybeSingle();
   if (error) throw error;
   const program = data ? formatReferralProgram({ login_streak: data.login_streak }) : null;
-  const daysRequired = Math.max(1, Number(program?.loginStreak?.daysRequired) || 7);
-  const boostCredits = Math.max(0, Number(program?.loginStreak?.boostCredits) || 10);
+  const streak = program?.loginStreak || {};
+  const daysRequired = Math.max(1, Number(streak.daysRequired ?? streak.daysRequired) || 7);
+  const boostCredits = Math.max(0, Number(streak.boostCredits ?? streak.boostCredits) || 25);
   return { daysRequired, boostCredits };
 }
 

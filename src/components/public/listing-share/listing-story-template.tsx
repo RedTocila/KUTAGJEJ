@@ -43,7 +43,6 @@ import {
 import {
   DEFAULT_SHARE_THEME_COLOR,
   normalizeShareThemeColor,
-  shareThemeContrastText,
   shareThemeToRgba,
 } from '@/lib/share-theme-color';
 
@@ -446,7 +445,6 @@ function SavePhotoCard({ payload }: { payload: ListingSharePayload }) {
   const location = payload.location?.trim() || '';
   const contactPhone = payload.contactPhone?.trim() || '';
   const accent = normalizeShareThemeColor(payload.themeColor);
-  const phoneColor = shareThemeContrastText(accent);
 
   return (
     <Box
@@ -507,10 +505,45 @@ function SavePhotoCard({ payload }: { payload: ListingSharePayload }) {
             {payload.title}
           </Typography>
 
-          {payload.priceLabel ? (
-            <Typography sx={{ fontWeight: 900, fontSize: 40, color: accent, lineHeight: 1.05, letterSpacing: '-0.03em' }}>
-              {payload.priceLabel}
-            </Typography>
+          {payload.priceLabel || contactPhone ? (
+            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+              {payload.priceLabel ? (
+                <Typography
+                  sx={{
+                    fontWeight: 900,
+                    fontSize: 40,
+                    color: accent,
+                    lineHeight: 1.05,
+                    letterSpacing: '-0.03em',
+                    minWidth: 0,
+                  }}
+                >
+                  {payload.priceLabel}
+                </Typography>
+              ) : null}
+              {contactPhone ? (
+                <Stack
+                  direction="row"
+                  spacing={0.75}
+                  sx={{ alignItems: 'center', ml: 'auto', flexShrink: 0, color: '#fff' }}
+                >
+                  <Box sx={{ color: accent, display: 'inline-flex', lineHeight: 0 }}>
+                    <PhoneIcon size={22} weight="fill" />
+                  </Box>
+                  <Typography
+                    sx={{
+                      fontWeight: 800,
+                      fontSize: 22,
+                      lineHeight: 1,
+                      letterSpacing: '0.02em',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {contactPhone}
+                  </Typography>
+                </Stack>
+              ) : null}
+            </Stack>
           ) : null}
 
           {location ? (
@@ -529,28 +562,6 @@ function SavePhotoCard({ payload }: { payload: ListingSharePayload }) {
                 {location}
               </Typography>
             </Stack>
-          ) : null}
-
-          {contactPhone ? (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 1.25,
-                width: '100%',
-                py: 1.35,
-                px: 2,
-                borderRadius: 2,
-                bgcolor: accent,
-                color: phoneColor,
-              }}
-            >
-              <PhoneIcon size={26} weight="fill" />
-              <Typography sx={{ fontWeight: 900, fontSize: 28, lineHeight: 1, letterSpacing: '0.03em' }}>
-                {contactPhone}
-              </Typography>
-            </Box>
           ) : null}
         </Stack>
       </Box>
@@ -782,7 +793,7 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
 );
 
 /**
- * Saved photo: Instagram 4:5 card only (title, price, full location, phone).
+ * Saved photo: Instagram 4:5 card only (title, price + phone on one row, full location).
  */
 export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
   function ListingFeedTemplate({ payload }, ref) {

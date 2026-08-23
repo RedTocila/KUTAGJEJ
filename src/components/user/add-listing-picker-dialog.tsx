@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { flushSync } from 'react-dom';
 import {
   Alert,
   Box,
@@ -35,6 +36,8 @@ import {
 import { listCategoriesPublic } from '@/lib/listings-client';
 import { hardNavigate } from '@/lib/hard-navigate';
 import { AI_SEARCH_BLUE, AI_SEARCH_BLUE_SOFT, OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
+import { beginPendingNavigation } from '@/lib/navigation-pending';
+import { MOTION_DIALOG_MS } from '@/styles/motion';
 import { paths } from '@/paths';
 import type { ListingCategory, ListingCategoryKey } from '@/types/listing-category';
 import { useCopy } from '@/hooks/use-copy';
@@ -180,8 +183,13 @@ export function AddListingPickerDialog({
   const [pickingOkazion, setPickingOkazion] = React.useState(initialOkazion);
   const [pickingPremium, setPickingPremium] = React.useState(false);
   const [pickingAllListings, setPickingAllListings] = React.useState(false);
+  const [leaving, setLeaving] = React.useState(false);
 
-  useLockBodyScroll(open);
+  useLockBodyScroll(open && !leaving);
+
+  React.useEffect(() => {
+    if (!open) setLeaving(false);
+  }, [open]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -255,19 +263,36 @@ export function AddListingPickerDialog({
     onClose();
   };
 
+  const dismissSheet = () => {
+    flushSync(() => {
+      setLeaving(true);
+    });
+  };
+
   const handlePick = (key: ListingCategoryKey) => {
     if (pickingOkazion && !OKAZION_CATEGORY_KEYS.has(key)) return;
     if (pickingPremium && !PREMIUM_CATEGORY_KEYS.has(key)) return;
     if (!isCategoryQuotaAvailable(categoryQuotas, key)) return;
     if (onPick) {
+      const q = new URLSearchParams({ category: key });
+      if (pickingOkazion) q.set('okazion', '1');
+      if (pickingPremium) q.set('premium', '1');
+      dismissSheet();
+      beginPendingNavigation(`${paths.user.realEstateListing}?${q.toString()}`);
       onPick(key, pickingOkazion ? { okazion: true } : pickingPremium ? { premium: true } : undefined);
       return;
     }
+    const q = new URLSearchParams({ category: key });
+    if (pickingOkazion) q.set('okazion', '1');
+    if (pickingPremium) q.set('premium', '1');
+    const formHref = `${paths.user.realEstateListing}?${q.toString()}`;
+    dismissSheet();
+    onClose();
+    beginPendingNavigation(formHref);
     void (async () => {
       if (key === 'businesses' && !unlimitedDirectory) {
         const res = await listMyBusinessListings();
         if ((res.listings?.length ?? 0) > 0) {
-          onClose();
           hardNavigate(paths.user.businessesListing);
           return;
         }
@@ -275,20 +300,16 @@ export function AddListingPickerDialog({
       if (key === 'professionals' && !unlimitedDirectory) {
         const res = await listMyProfessionalListings();
         if ((res.listings?.length ?? 0) > 0) {
-          onClose();
           hardNavigate(paths.user.professionalsListing);
           return;
         }
       }
-      onClose();
-      const q = new URLSearchParams({ category: key });
-      if (pickingOkazion) q.set('okazion', '1');
-      if (pickingPremium) q.set('premium', '1');
-      hardNavigate(`${paths.user.realEstateListing}?${q.toString()}`);
+      hardNavigate(formHref);
     })();
   };
 
   const handleAiImport = () => {
+    dismissSheet();
     onClose();
     hardNavigate(paths.user.aiImport);
   };
@@ -313,12 +334,15 @@ export function AddListingPickerDialog({
 
   const showRootActions = !pickingOkazion && !pickingPremium && !pickingAllListings;
 
+  const sheetOpen = open && !leaving;
+
   return (
     <Drawer
       anchor="bottom"
-      open={open}
+      open={sheetOpen}
       onClose={handleCloseRequest}
       disableScrollLock
+      transitionDuration={leaving ? 0 : MOTION_DIALOG_MS}
       slotProps={{
         backdrop: {
           sx: {
@@ -385,6 +409,61 @@ export function AddListingPickerDialog({
         <Stack spacing={0}>
             {!showRootActions ? null : (
               <>
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={handleAllListings}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.25,
+                    width: '100%',
+                    px: 0.5,
+                    py: 1.2,
+                    border: 0,
+                    borderRadius: 1.5,
+                    bgcolor: 'transparent',
+                    color: 'text.primary',
+                    cursor: 'pointer',
+                    font: 'inherit',
+                    textAlign: 'left',
+                    '&:hover': { bgcolor: 'action.hover' },
+                    '&:active': { bgcolor: 'action.selected' },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 1.5,
+                      display: 'grid',
+                      placeItems: 'center',
+                      flexShrink: 0,
+                      bgcolor: (theme) => `${theme.palette.primary.main}2E`,
+                      color: 'primary.main',
+                    }}
+                  >
+                    <SquaresFourIcon size={18} weight="duotone" />
+                  </Box>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <PickerRowLabel
+                      title={t.picker.allListings}
+                      hint={t.picker.allListingsHint}
+                      titleWeight={600}
+                    />
+                  </Box>
+                </Box>
+
+                <Box
+                  sx={{
+                    height: '1px',
+                    bgcolor: 'divider',
+                    opacity: 0.55,
+                    ml: 6.5,
+                    mr: 0.5,
+                  }}
+                />
+
                 <Box
                   component="button"
                   type="button"
@@ -525,61 +604,6 @@ export function AddListingPickerDialog({
                   </Box>
                   <Box sx={{ minWidth: 0, flex: 1 }}>
                     <PickerRowLabel title={t.picker.postAsPremium} hint={t.picker.premiumHint} titleColor="warning.main" />
-                  </Box>
-                </Box>
-
-                <Box
-                  sx={{
-                    height: '1px',
-                    bgcolor: 'divider',
-                    opacity: 0.55,
-                    ml: 6.5,
-                    mr: 0.5,
-                  }}
-                />
-
-                <Box
-                  component="button"
-                  type="button"
-                  onClick={handleAllListings}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.25,
-                    width: '100%',
-                    px: 0.5,
-                    py: 1.2,
-                    border: 0,
-                    borderRadius: 1.5,
-                    bgcolor: 'transparent',
-                    color: 'text.primary',
-                    cursor: 'pointer',
-                    font: 'inherit',
-                    textAlign: 'left',
-                    '&:hover': { bgcolor: 'action.hover' },
-                    '&:active': { bgcolor: 'action.selected' },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 1.5,
-                      display: 'grid',
-                      placeItems: 'center',
-                      flexShrink: 0,
-                      bgcolor: (theme) => `${theme.palette.primary.main}2E`,
-                      color: 'primary.main',
-                    }}
-                  >
-                    <SquaresFourIcon size={18} weight="duotone" />
-                  </Box>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <PickerRowLabel
-                      title={t.picker.allListings}
-                      hint={t.picker.allListingsHint}
-                      titleWeight={600}
-                    />
                   </Box>
                 </Box>
               </>

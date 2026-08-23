@@ -13,6 +13,7 @@ import {
   clearPendingNavigationIfMatches,
   pathFromHref,
 } from '@/lib/navigation-pending';
+import { isPostListingPath } from '@/lib/post-listing-path';
 import { isPublicBrowsePath, isPublicListingDetailPath } from '@/lib/public-browse-path';
 import { useNavigationPendingPath } from '@/hooks/use-navigation-pending';
 import { CategoryBrowseSkeleton } from '@/components/public/category-browse-skeleton';
@@ -20,6 +21,7 @@ import { HeroSection } from '@/components/public/hero-section';
 import { HomeCarouselsFallback } from '@/components/public/home-carousels-fallback';
 import { HomeBannerSkeleton } from '@/components/public/homepage-skeletons';
 import { ListingDetailSkeleton } from '@/components/public/listing-detail-skeleton';
+import { PostListingFormSkeleton } from '@/components/user/post-listing-header';
 
 const PENDING_TIMEOUT_MS = 10_000;
 
@@ -78,6 +80,13 @@ function PendingRouteSkeleton({ path }: { path: string }) {
   if (path === paths.home) return <HomePendingSkeleton />;
   if (isPublicBrowsePath(path) || path === paths.public.search) return <CategoryBrowseSkeleton />;
   if (isPublicListingDetailPath(path)) return <ListingDetailSkeleton />;
+  if (isPostListingPath(path)) {
+    return (
+      <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, sm: 3 } }} aria-busy>
+        <PostListingFormSkeleton />
+      </Container>
+    );
+  }
   return <AppPendingSkeleton />;
 }
 
@@ -159,6 +168,7 @@ export function NavigationPendingOverlay(): React.JSX.Element | null {
   if (!pendingPath || shouldSkipOverlay(pendingPath, pathname ?? '')) return null;
 
   const isAppShell = pendingPath.startsWith('/dashboard') || pendingPath.startsWith('/user/dashboard');
+  const coverPicker = isPostListingPath(pendingPath);
 
   return (
     <Box
@@ -168,7 +178,9 @@ export function NavigationPendingOverlay(): React.JSX.Element | null {
       sx={{
         position: 'fixed',
         inset: 0,
-        zIndex: (theme) => theme.zIndex.appBar - 1,
+        // Listing-build navigations start from the add-listing sheet; sit above it
+        // so the drawer never stays on screen while the form skeleton paints.
+        zIndex: (theme) => (coverPicker ? theme.zIndex.modal + 2 : theme.zIndex.appBar - 1),
         bgcolor: 'background.default',
         overflow: 'auto',
         pointerEvents: 'auto',

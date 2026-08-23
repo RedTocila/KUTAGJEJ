@@ -6,6 +6,7 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   CircularProgress,
   IconButton,
   LinearProgress,
@@ -52,6 +53,8 @@ import {
   localizeHomeVerticals,
   type HomeVerticalId,
 } from '@/lib/home-categories';
+import { MOTION } from '@/styles/motion';
+import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 import {
   categoryLabel,
   clearAiListingDraftQueue,
@@ -68,6 +71,31 @@ import { paths } from '@/paths';
 import type { ListingCategoryKey } from '@/types/listing-category';
 
 const MAX_AI_IMAGES = 6;
+
+const aiButtonSx = {
+  ...productButtonSx,
+  minHeight: 36,
+  px: 1.5,
+  fontSize: '0.82rem',
+  bgcolor: AI_SEARCH_BLUE,
+  color: AI_SEARCH_BLUE_ON,
+  '&:hover': { boxShadow: 'none', bgcolor: AI_SEARCH_BLUE_HOVER, color: AI_SEARCH_BLUE_ON },
+  '&.Mui-disabled': {
+    bgcolor: AI_SEARCH_BLUE,
+    color: AI_SEARCH_BLUE_ON,
+    opacity: 0.55,
+  },
+} as const;
+
+const aiOutlinedButtonSx = {
+  ...productButtonSx,
+  minHeight: 36,
+  px: 1.5,
+  fontSize: '0.82rem',
+  borderColor: AI_SEARCH_BLUE,
+  color: AI_SEARCH_BLUE,
+  '&:hover': { borderColor: AI_SEARCH_BLUE, bgcolor: AI_SEARCH_BLUE_SOFT },
+} as const;
 
 const analyzingTextFlashSx = {
   animation: 'aiImportTextFlash 1.4s ease-in-out infinite',
@@ -134,14 +162,10 @@ function formatAiDraftError(
 function AiImportProgressPanel({
   progress,
   loading,
-  onStop,
-  showStop,
   t,
 }: {
   progress: { done: number; total: number } | null;
   loading: boolean;
-  onStop: () => void;
-  showStop?: boolean;
   t: ReturnType<typeof useCopy>;
 }) {
   if (!loading && !progress) return null;
@@ -152,54 +176,50 @@ function AiImportProgressPanel({
 
   return (
     <Stack
-      spacing={1}
+      spacing={0.65}
       sx={{
         width: '100%',
-        p: 1.5,
-        borderRadius: 2.5,
+        px: 1.15,
+        py: 0.9,
+        borderRadius: 2,
         border: '1px solid',
         borderColor: loading ? AI_SEARCH_BLUE : 'divider',
         bgcolor: (theme) =>
           theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : AI_SEARCH_BLUE_SOFT,
       }}
     >
-      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
-        {loading ? null : <SparkleIcon size={22} weight="fill" color={AI_SEARCH_BLUE} />}
-        <Stack spacing={0.2} sx={{ minWidth: 0, flex: 1 }}>
-          <Typography
-            sx={{
-              fontWeight: 800,
-              fontSize: '0.95rem',
-              color: 'text.primary',
-              ...(loading ? analyzingTextFlashSx : null),
-            }}
-          >
-            {loading
-              ? total > 0
-                ? t.aiImport.progressWorking(current, total)
-                : t.aiImport.analyzing
-              : t.aiImport.progress(done, total)}
-          </Typography>
-          {loading && done > 0 && total > 0 ? (
-            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-              {t.aiImport.progress(done, total)}
-            </Typography>
-          ) : null}
-        </Stack>
+      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+        {loading ? (
+          <CircularProgress size={14} thickness={5} sx={{ color: AI_SEARCH_BLUE }} />
+        ) : (
+          <SparkleIcon size={16} weight="fill" color={AI_SEARCH_BLUE} />
+        )}
+        <Typography
+          sx={{
+            fontWeight: 800,
+            fontSize: '0.8rem',
+            letterSpacing: '-0.01em',
+            color: 'text.primary',
+            ...(loading ? analyzingTextFlashSx : null),
+          }}
+        >
+          {loading
+            ? total > 0
+              ? t.aiImport.progressWorking(current, total)
+              : t.aiImport.analyzing
+            : t.aiImport.progress(done, total)}
+        </Typography>
       </Stack>
-      <Box sx={{ position: 'relative', height: 8 }}>
+      <Box sx={{ position: 'relative', height: 5 }}>
         <LinearProgress
           variant="determinate"
           value={percent}
           sx={{
-            height: 8,
+            height: 5,
             borderRadius: 999,
             bgcolor: (theme) =>
               theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-            '& .MuiLinearProgress-bar': {
-              borderRadius: 999,
-              bgcolor: AI_SEARCH_BLUE,
-            },
+            '& .MuiLinearProgress-bar': { borderRadius: 999, bgcolor: AI_SEARCH_BLUE },
           }}
         />
         {loading ? (
@@ -208,34 +228,15 @@ function AiImportProgressPanel({
             sx={{
               position: 'absolute',
               inset: 0,
-              height: 8,
+              height: 5,
               borderRadius: 999,
-              opacity: 0.4,
+              opacity: 0.35,
               bgcolor: 'transparent',
-              '& .MuiLinearProgress-bar': {
-                borderRadius: 999,
-                bgcolor: AI_SEARCH_BLUE,
-              },
+              '& .MuiLinearProgress-bar': { borderRadius: 999, bgcolor: AI_SEARCH_BLUE },
             }}
           />
         ) : null}
       </Box>
-      {showStop && loading ? (
-        <Button
-          type="button"
-          size="small"
-          onClick={onStop}
-          startIcon={<StopIcon size={14} weight="fill" />}
-          sx={{
-            alignSelf: 'flex-start',
-            textTransform: 'none',
-            fontWeight: 800,
-            color: 'error.main',
-          }}
-        >
-          {t.aiImport.stop}
-        </Button>
-      ) : null}
     </Stack>
   );
 }
@@ -715,9 +716,10 @@ export default function AiImportListingsPage() {
   if (!user || !canPublish) return null;
 
   const previewUrl = preview ? preview.urls[preview.index] : null;
+  const canAnalyze = Boolean(text.trim() || files.length > 0 || pendingImageUrls.length > 0);
 
   return (
-    <Stack spacing={2.5}>
+    <Stack spacing={1.75}>
       <PostListingHeader
         icon={SparkleIcon}
         title={t.aiImport.title}
@@ -727,153 +729,107 @@ export default function AiImportListingsPage() {
 
       <PostListingFormSurface>
         <Box
+          component="form"
+          onSubmit={handleAnalyze}
           sx={{
-            borderRadius: 2.75,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            overflow: 'hidden',
+            ...productPanelSx,
+            p: { xs: 1.25, sm: 1.5 },
           }}
         >
-          <Stack
-            spacing={1.75}
-            component="form"
-            onSubmit={handleAnalyze}
-            sx={{ p: { xs: 1.75, sm: 2.25 } }}
-          >
-            <Stack spacing={1.15}>
-              <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                <Typography sx={{ fontWeight: 800, fontSize: '0.92rem' }}>
-                  {t.aiImport.chooseCategory}
-                </Typography>
-                <Stack
-                  direction="row"
-                  spacing={0.25}
-                  sx={{ alignItems: 'center', color: AI_SEARCH_BLUE, flexShrink: 0 }}
-                  aria-hidden
-                >
-                  <Box
-                    sx={{
-                      width: 5,
-                      height: 5,
-                      borderRadius: '50%',
-                      bgcolor: AI_SEARCH_BLUE,
-                      opacity: 0.95,
+          <Stack spacing={1.15}>
+            <Typography sx={{ fontWeight: 800, fontSize: '0.82rem' }}>
+              {t.aiImport.chooseCategory}
+            </Typography>
+            <Box
+              role="listbox"
+              aria-label={t.aiImport.chooseCategory}
+              sx={{
+                display: 'flex',
+                gap: 0.5,
+                justifyContent: 'space-between',
+              }}
+            >
+              {categories.map((item) => {
+                const key = toListingCategory(item.id);
+                const selected = category === key;
+                return (
+                  <Stack
+                    key={item.id}
+                    component="button"
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => {
+                      setCategory(key);
+                      setError(null);
                     }}
-                  />
-                  <Box
+                    spacing={0.35}
                     sx={{
-                      width: 5,
-                      height: 5,
-                      borderRadius: '50%',
-                      bgcolor: AI_SEARCH_BLUE,
-                      opacity: 0.45,
+                      flex: '1 1 0',
+                      minWidth: 0,
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      WebkitTapHighlightColor: 'transparent',
+                      border: 'none',
+                      background: 'none',
+                      padding: 0,
+                      font: 'inherit',
+                      color: 'inherit',
+                      transition: `transform ${MOTION.release} ${MOTION.ease}`,
+                      '&:hover .ai-cat-circle': {
+                        borderColor: AI_SEARCH_BLUE,
+                        bgcolor: selected ? AI_SEARCH_BLUE : `${AI_SEARCH_BLUE}22`,
+                      },
+                      '&:hover .ai-cat-label': { color: AI_SEARCH_BLUE },
+                      '&:active': {
+                        transform: 'scale(0.96)',
+                        transitionDuration: MOTION.press,
+                      },
                     }}
-                  />
-                  <Box
-                    sx={{
-                      width: 5,
-                      height: 5,
-                      borderRadius: '50%',
-                      bgcolor: AI_SEARCH_BLUE,
-                      opacity: 0.25,
-                    }}
-                  />
-                  <CaretRightIcon size={14} weight="bold" />
-                </Stack>
-              </Stack>
-              <Box
-                role="listbox"
-                aria-label={t.aiImport.chooseCategory}
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'row',
-                  flexWrap: 'nowrap',
-                  gap: { xs: 1.25, sm: 2 },
-                  justifyContent: 'flex-start',
-                  overflowX: 'auto',
-                  overflowY: 'hidden',
-                  WebkitOverflowScrolling: 'touch',
-                  scrollSnapType: { xs: 'x proximity', sm: 'none' },
-                  scrollbarWidth: 'none',
-                  msOverflowStyle: 'none',
-                  pb: 0.25,
-                  '&::-webkit-scrollbar': { display: 'none' },
-                }}
-              >
-                {categories.map((item) => {
-                  const key = toListingCategory(item.id);
-                  const selected = category === key;
-                  return (
-                    <Stack
-                      key={item.id}
-                      component="button"
-                      type="button"
-                      role="option"
-                      aria-selected={selected}
-                      onClick={() => {
-                        setCategory(key);
-                        setError(null);
-                      }}
-                      spacing={0.4}
+                  >
+                    <Box
+                      className="ai-cat-circle"
                       sx={{
-                        flexShrink: 0,
-                        scrollSnapAlign: { xs: 'start', sm: 'none' },
-                        alignItems: 'center',
-                        cursor: 'pointer',
-                        userSelect: 'none',
-                        WebkitTapHighlightColor: 'transparent',
-                        border: 'none',
-                        background: 'none',
-                        padding: 0,
-                        font: 'inherit',
-                        color: 'inherit',
-                        '&:hover .ai-cat-circle': {
-                          borderColor: AI_SEARCH_BLUE,
-                          bgcolor: selected ? AI_SEARCH_BLUE : `${AI_SEARCH_BLUE}22`,
-                        },
-                        '&:hover .ai-cat-label': {
-                          color: AI_SEARCH_BLUE,
-                        },
+                        width: 42,
+                        height: 42,
+                        borderRadius: '50%',
+                        display: 'grid',
+                        placeItems: 'center',
+                        bgcolor: selected ? AI_SEARCH_BLUE : 'action.hover',
+                        border: '1.5px solid',
+                        borderColor: selected ? AI_SEARCH_BLUE : 'divider',
+                        transition: `border-color ${MOTION.fast} ${MOTION.ease}, background-color ${MOTION.fast} ${MOTION.ease}`,
                       }}
                     >
-                      <Box
-                        className="ai-cat-circle"
-                        sx={{
-                          width: { xs: 60, sm: 58 },
-                          height: { xs: 60, sm: 58 },
-                          borderRadius: '50%',
-                          display: 'grid',
-                          placeItems: 'center',
-                          bgcolor: selected ? AI_SEARCH_BLUE : 'action.hover',
-                          border: '1.5px solid',
-                          borderColor: selected ? AI_SEARCH_BLUE : 'divider',
-                          transition: 'border-color 0.15s ease, background-color 0.15s ease',
-                        }}
-                      >
-                        <HomeVerticalIcon
-                          verticalId={item.id}
-                          size={34}
-                          color={selected ? AI_SEARCH_BLUE_ON : AI_SEARCH_BLUE}
-                        />
-                      </Box>
-                      <Typography
-                        className="ai-cat-label"
-                        variant="caption"
-                        sx={{
-                          fontWeight: selected ? 700 : 600,
-                          color: selected ? AI_SEARCH_BLUE : 'text.secondary',
-                          whiteSpace: 'nowrap',
-                          transition: 'color 0.15s ease',
-                        }}
-                      >
-                        {item.label}
-                      </Typography>
-                    </Stack>
-                  );
-                })}
-              </Box>
-            </Stack>
+                      <HomeVerticalIcon
+                        verticalId={item.id}
+                        size={22}
+                        color={selected ? AI_SEARCH_BLUE_ON : AI_SEARCH_BLUE}
+                      />
+                    </Box>
+                    <Typography
+                      className="ai-cat-label"
+                      variant="caption"
+                      sx={{
+                        fontWeight: selected ? 700 : 600,
+                        fontSize: '0.62rem',
+                        lineHeight: 1.15,
+                        color: selected ? AI_SEARCH_BLUE : 'text.secondary',
+                        textAlign: 'center',
+                        maxWidth: '100%',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        transition: `color ${MOTION.fast} ${MOTION.ease}`,
+                      }}
+                    >
+                      {item.label}
+                    </Typography>
+                  </Stack>
+                );
+              })}
+            </Box>
 
             {category ? (
               <>
@@ -890,8 +846,8 @@ export default function AiImportListingsPage() {
                   <TextField
                     fullWidth
                     multiline
-                    minRows={5}
-                    maxRows={12}
+                    minRows={4}
+                    maxRows={10}
                     value={text}
                     onChange={(event) => setText(event.target.value)}
                     placeholder={t.aiImport.placeholder}
@@ -901,60 +857,102 @@ export default function AiImportListingsPage() {
                         borderRadius: 2.5,
                         bgcolor: (theme) =>
                           theme.palette.mode === 'dark' ? 'action.hover' : 'background.default',
-                        color: 'text.primary',
-                        pb: 4.5,
-                        '& fieldset': {
-                          borderWidth: 1.5,
-                          borderColor: 'divider',
-                        },
-                        '&:hover fieldset': {
-                          borderColor: 'text.secondary',
-                        },
+                        pb: 5,
+                        '& fieldset': { borderWidth: 1.5, borderColor: 'divider' },
+                        '&:hover fieldset': { borderColor: 'text.secondary' },
                         '&.Mui-focused fieldset': {
                           borderWidth: 1.5,
-                          borderColor: 'text.secondary',
+                          borderColor: AI_SEARCH_BLUE,
                         },
                       },
                       '& .MuiInputBase-input::placeholder': {
-                        color: '#9CA3AF',
+                        color: 'text.disabled',
                         opacity: 1,
                       },
                     }}
                   />
-                  <IconButton
-                    type="button"
-                    size="small"
-                    aria-label={t.aiImport.attachImages}
-                    disabled={loading || files.length >= MAX_AI_IMAGES}
-                    onClick={() => fileInputRef.current?.click()}
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
                     sx={{
                       position: 'absolute',
-                      right: 10,
-                      bottom: 10,
-                      color: files.length > 0 ? AI_SEARCH_BLUE : 'text.secondary',
-                      bgcolor: (theme) =>
-                        theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                      '&:hover': {
-                        bgcolor: (theme) =>
-                          theme.palette.mode === 'dark'
-                            ? 'rgba(255,255,255,0.12)'
-                            : 'rgba(0,0,0,0.08)',
-                      },
+                      left: 8,
+                      right: 8,
+                      bottom: 8,
+                      alignItems: 'center',
+                      pointerEvents: 'none',
+                      '& > *': { pointerEvents: 'auto' },
                     }}
                   >
-                    <PaperclipIcon size={20} weight="bold" />
-                  </IconButton>
+                    <IconButton
+                      type="button"
+                      size="small"
+                      aria-label={t.aiImport.attachImages}
+                      disabled={loading || files.length >= MAX_AI_IMAGES}
+                      onClick={() => fileInputRef.current?.click()}
+                      sx={{
+                        width: 34,
+                        height: 34,
+                        color: files.length > 0 ? AI_SEARCH_BLUE : 'text.secondary',
+                        bgcolor: (theme) =>
+                          theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                        '&:hover': {
+                          bgcolor: (theme) =>
+                            theme.palette.mode === 'dark'
+                              ? 'rgba(255,255,255,0.12)'
+                              : 'rgba(0,0,0,0.08)',
+                        },
+                      }}
+                    >
+                      <PaperclipIcon size={18} weight="bold" />
+                    </IconButton>
+                    {files.length > 0 ? (
+                      <Typography
+                        variant="caption"
+                        sx={{ fontWeight: 700, color: AI_SEARCH_BLUE, fontSize: '0.7rem' }}
+                      >
+                        {files.length}
+                      </Typography>
+                    ) : null}
+                    <Box sx={{ flex: 1 }} />
+                    <IconButton
+                      type={loading ? 'button' : 'submit'}
+                      aria-label={loading ? t.aiImport.stop : t.aiImport.analyze}
+                      disabled={!loading && !canAnalyze}
+                      onClick={loading ? handleStop : undefined}
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        bgcolor: loading ? 'error.main' : AI_SEARCH_BLUE,
+                        color: AI_SEARCH_BLUE_ON,
+                        '&:hover': {
+                          bgcolor: loading ? 'error.dark' : AI_SEARCH_BLUE_HOVER,
+                          color: AI_SEARCH_BLUE_ON,
+                        },
+                        '&.Mui-disabled': {
+                          bgcolor: AI_SEARCH_BLUE_SOFT,
+                          color: AI_SEARCH_BLUE_ON,
+                        },
+                      }}
+                    >
+                      {loading ? (
+                        <StopIcon size={16} weight="fill" />
+                      ) : (
+                        <SparkleIcon size={18} weight="bold" />
+                      )}
+                    </IconButton>
+                  </Stack>
                 </Box>
 
                 {previews.length > 0 ? (
-                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', gap: 0.75 }}>
                     {previews.map((src, index) => (
                       <Box
                         key={`${src}-${index}`}
                         sx={{
                           position: 'relative',
-                          width: 56,
-                          height: 56,
+                          width: 48,
+                          height: 48,
                           borderRadius: 1.5,
                           overflow: 'hidden',
                           border: '1px solid',
@@ -976,14 +974,15 @@ export default function AiImportListingsPage() {
                             position: 'absolute',
                             top: 2,
                             right: 2,
-                            width: 22,
-                            height: 22,
-                            bgcolor: 'rgba(0,0,0,0.55)',
+                            width: 16,
+                            height: 16,
+                            p: 0,
+                            bgcolor: 'rgba(0,0,0,0.62)',
                             color: '#fff',
-                            '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' },
+                            '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
                           }}
                         >
-                          <XIcon size={12} weight="bold" />
+                          <XIcon size={9} weight="bold" />
                         </IconButton>
                       </Box>
                     ))}
@@ -991,79 +990,20 @@ export default function AiImportListingsPage() {
                 ) : null}
 
                 {error ? (
-                  <Alert severity="error" sx={{ borderRadius: 2.5 }}>
+                  <Alert severity="error" sx={{ borderRadius: 2, py: 0.25 }}>
                     {error}
                   </Alert>
                 ) : null}
 
-                {loading ? (
-                  <Button
-                    type="button"
-                    variant="contained"
-                    fullWidth
-                    onClick={handleStop}
-                    startIcon={<CircularProgress size={18} color="inherit" />}
-                    endIcon={<StopIcon size={18} weight="fill" />}
-                    sx={{
-                      borderRadius: '16px',
-                      textTransform: 'none',
-                      fontWeight: 800,
-                      py: 1.35,
-                      boxShadow: 'none',
-                      bgcolor: 'error.main',
-                      color: 'error.contrastText',
-                      '&:hover': {
-                        boxShadow: 'none',
-                        bgcolor: 'error.dark',
-                      },
-                    }}
-                  >
-                    {t.aiImport.stop}
-                  </Button>
-                ) : (
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={!text.trim() && files.length === 0}
-                    fullWidth
-                    startIcon={<SparkleIcon size={18} weight="bold" />}
-                    sx={{
-                      borderRadius: '16px',
-                      textTransform: 'none',
-                      fontWeight: 800,
-                      py: 1.35,
-                      boxShadow: 'none',
-                      bgcolor: AI_SEARCH_BLUE,
-                      color: AI_SEARCH_BLUE_ON,
-                      '&:hover': {
-                        boxShadow: 'none',
-                        bgcolor: AI_SEARCH_BLUE_HOVER,
-                        color: AI_SEARCH_BLUE_ON,
-                      },
-                      '&.Mui-disabled': {
-                        bgcolor: AI_SEARCH_BLUE,
-                        color: AI_SEARCH_BLUE_ON,
-                        opacity: 0.55,
-                      },
-                    }}
-                  >
-                    {t.aiImport.analyze}
-                  </Button>
-                )}
                 {loading || progress ? (
-                  <AiImportProgressPanel
-                    progress={progress}
-                    loading={loading}
-                    onStop={handleStop}
-                    t={t}
-                  />
+                  <AiImportProgressPanel progress={progress} loading={loading} t={t} />
                 ) : null}
               </>
             ) : (
               <Typography
-                variant="body2"
+                variant="caption"
                 color="text.secondary"
-                sx={{ textAlign: 'center', py: 1.5, px: 1 }}
+                sx={{ textAlign: 'center', py: 0.5 }}
               >
                 {t.aiImport.chooseCategoryToContinue}
               </Typography>
@@ -1073,21 +1013,21 @@ export default function AiImportListingsPage() {
       </PostListingFormSurface>
 
       {drafts.length > 0 || loading ? (
-        <Stack spacing={1.5}>
+        <Stack spacing={1}>
           <Stack
             direction="row"
             spacing={1}
-            sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}
+            sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 0.75 }}
           >
-            <Stack spacing={0.35} sx={{ minWidth: 0, flex: 1 }}>
-              <Typography sx={{ fontWeight: 800 }}>{t.aiImport.results}</Typography>
-              <Typography variant="caption" color="text.secondary">
+            <Stack spacing={0.15} sx={{ minWidth: 0, flex: 1 }}>
+              <Typography sx={{ fontWeight: 800, fontSize: '0.92rem' }}>{t.aiImport.results}</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                 {t.aiImport.draftsKeptHint}
               </Typography>
             </Stack>
             <Stack
               direction="row"
-              spacing={1}
+              spacing={0.75}
               sx={{ flexShrink: 0, alignItems: 'stretch', width: { xs: '100%', sm: 'auto' } }}
             >
               <Button
@@ -1097,21 +1037,7 @@ export default function AiImportListingsPage() {
                 startIcon={
                   postingAll ? <CircularProgress size={14} color="inherit" /> : undefined
                 }
-                sx={{
-                  textTransform: 'none',
-                  fontWeight: 800,
-                  borderRadius: '16px',
-                  boxShadow: 'none',
-                  flex: { xs: 1, sm: 'none' },
-                  bgcolor: AI_SEARCH_BLUE,
-                  color: AI_SEARCH_BLUE_ON,
-                  '&:hover': { boxShadow: 'none', bgcolor: AI_SEARCH_BLUE_HOVER },
-                  '&.Mui-disabled': {
-                    bgcolor: AI_SEARCH_BLUE,
-                    color: AI_SEARCH_BLUE_ON,
-                    opacity: 0.55,
-                  },
-                }}
+                sx={{ ...aiButtonSx, flex: { xs: 1, sm: 'none' } }}
               >
                 {postingAll ? t.aiImport.posting : t.aiImport.postAll}
               </Button>
@@ -1123,57 +1049,34 @@ export default function AiImportListingsPage() {
                   startIcon={
                     loading ? <CircularProgress size={14} color="inherit" /> : undefined
                   }
-                  sx={{
-                    textTransform: 'none',
-                    fontWeight: 800,
-                    borderRadius: '16px',
-                    flex: { xs: 1, sm: 'none' },
-                  }}
+                  sx={{ ...aiOutlinedButtonSx, flex: { xs: 1, sm: 'none' } }}
                 >
                   {loading ? t.aiImport.retryingFailed : t.aiImport.retryFailed}
                 </Button>
               ) : null}
-              <Button
-                variant="contained"
+              <IconButton
                 aria-label={t.aiImport.deleteAll}
                 disabled={postingAll || postingId != null || openingId != null || drafts.length === 0}
                 onClick={deleteAllDrafts}
                 sx={{
-                  textTransform: 'none',
-                  fontWeight: 800,
-                  borderRadius: '16px',
-                  boxShadow: 'none',
-                  minWidth: 42,
-                  px: 1.25,
-                  bgcolor: 'error.main',
-                  color: 'error.contrastText',
-                  '&:hover': { boxShadow: 'none', bgcolor: 'error.dark' },
-                  '&.Mui-disabled': {
-                    bgcolor: 'error.main',
-                    color: 'error.contrastText',
-                    opacity: 0.55,
-                  },
+                  width: 36,
+                  height: 36,
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  color: 'text.secondary',
+                  '&:hover': { color: 'error.main', borderColor: 'error.main', bgcolor: 'action.hover' },
                 }}
               >
-                <TrashIcon size={18} weight="bold" />
-              </Button>
+                <TrashIcon size={16} weight="bold" />
+              </IconButton>
             </Stack>
           </Stack>
 
           {statusMessage ? (
-            <Alert severity="success" sx={{ borderRadius: 2.5 }}>
+            <Alert severity="success" sx={{ borderRadius: 2.25 }}>
               {statusMessage}
             </Alert>
-          ) : null}
-          {loading ? (
-            <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', ...analyzingTextFlashSx }}>
-              {progress && progress.total > 0
-                ? t.aiImport.progressWorking(
-                    Math.min(progress.total, progress.done + 1),
-                    progress.total,
-                  )
-                : t.aiImport.analyzing}
-            </Typography>
           ) : null}
           {drafts.map((draft) => {
             const mismatch = isAiCategoryMismatch(draft);
@@ -1184,27 +1087,68 @@ export default function AiImportListingsPage() {
               <Box
                 key={draft.id}
                 sx={{
-                  p: 2,
-                  borderRadius: 2.5,
-                  border: '1px solid',
+                  ...productPanelSx,
+                  p: 1.25,
+                  borderRadius: 2.25,
                   borderColor: mismatch || restricted || failed ? 'error.main' : 'divider',
-                  bgcolor: 'background.paper',
                 }}
               >
-                <Stack spacing={1.25}>
+                <Stack spacing={0.85}>
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
-                    <Box sx={{ color: 'text.secondary', mt: 0.25 }}>
-                      <LinkSimpleIcon size={18} />
-                    </Box>
-                    <Stack spacing={0.35} sx={{ minWidth: 0, flex: 1 }}>
-                      <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
+                    {images[0] ? (
+                      <Box
+                        component="button"
+                        type="button"
+                        aria-label={t.aiImport.previewImage}
+                        onClick={() => openPreview(images, 0)}
+                        sx={{
+                          width: 52,
+                          height: 52,
+                          flexShrink: 0,
+                          borderRadius: 1.5,
+                          overflow: 'hidden',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          padding: 0,
+                          cursor: 'pointer',
+                          bgcolor: 'action.hover',
+                        }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={images[0]}
+                          alt=""
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        />
+                      </Box>
+                    ) : (
+                      <Box
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          flexShrink: 0,
+                          borderRadius: 1.5,
+                          display: 'grid',
+                          placeItems: 'center',
+                          bgcolor: AI_SEARCH_BLUE_SOFT,
+                          color: AI_SEARCH_BLUE,
+                        }}
+                      >
+                        <LinkSimpleIcon size={16} />
+                      </Box>
+                    )}
+                    <Stack spacing={0.3} sx={{ minWidth: 0, flex: 1 }}>
+                      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'flex-start' }}>
                         <Typography
                           sx={{
                             fontWeight: 800,
-                            fontSize: '0.98rem',
+                            fontSize: '0.88rem',
                             flex: 1,
                             minWidth: 0,
                             color: 'text.primary',
+                            lineHeight: 1.3,
                           }}
                         >
                           {draft.title ||
@@ -1215,28 +1159,53 @@ export default function AiImportListingsPage() {
                           size="small"
                           aria-label={t.aiImport.dismissDraft}
                           onClick={() => dismissDraft(draft.id)}
-                          sx={{ mt: -0.5, mr: -0.75, color: 'text.secondary' }}
+                          sx={{ mt: -0.5, mr: -0.5, p: 0.4, color: 'text.secondary' }}
                         >
-                          <XIcon size={16} weight="bold" />
+                          <XIcon size={14} weight="bold" />
                         </IconButton>
                       </Stack>
                       {!mismatch && draft.sourceUrl ? (
                         <Typography
                           variant="caption"
                           color="text.secondary"
-                          sx={{ wordBreak: 'break-all' }}
+                          sx={{
+                            wordBreak: 'break-all',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 1,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            fontSize: '0.68rem',
+                          }}
                         >
                           {draft.sourceUrl}
                         </Typography>
                       ) : null}
                       {draft.category && !mismatch && !restricted ? (
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                          {categoryLabel(draft.category)}
-                          {draft.cityName ? ` · ${draft.cityName}` : ''}
-                        </Typography>
+                        <Chip
+                          size="small"
+                          label={`${categoryLabel(draft.category)}${draft.cityName ? ` · ${draft.cityName}` : ''}`}
+                          sx={{
+                            alignSelf: 'flex-start',
+                            height: 20,
+                            fontWeight: 700,
+                            fontSize: '0.65rem',
+                            bgcolor: AI_SEARCH_BLUE_SOFT,
+                            color: AI_SEARCH_BLUE,
+                          }}
+                        />
                       ) : null}
                       {draft.summary && !restricted && !mismatch ? (
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{
+                            fontSize: '0.8rem',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
                           {draft.summary}
                         </Typography>
                       ) : null}
@@ -1272,7 +1241,7 @@ export default function AiImportListingsPage() {
                     </Stack>
                   </Stack>
 
-                  {images.length > 0 ? (
+                  {images.length > 1 ? (
                     <Box
                       sx={{
                         display: 'flex',
@@ -1282,18 +1251,18 @@ export default function AiImportListingsPage() {
                         '&::-webkit-scrollbar': { display: 'none' },
                       }}
                     >
-                      {images.slice(0, 8).map((url, index) => (
+                      {images.slice(1, 8).map((url, index) => (
                         <Box
                           key={`${draft.id}-${url}-${index}`}
                           component="button"
                           type="button"
                           aria-label={t.aiImport.previewImage}
-                          onClick={() => openPreview(images, index)}
+                          onClick={() => openPreview(images, index + 1)}
                           sx={{
-                            width: 72,
-                            height: 72,
+                            width: 48,
+                            height: 48,
                             flexShrink: 0,
-                            borderRadius: 2,
+                            borderRadius: 1.5,
                             overflow: 'hidden',
                             border: '1px solid',
                             borderColor: 'divider',
@@ -1321,59 +1290,34 @@ export default function AiImportListingsPage() {
                   ) : null}
 
                   {!failed && !mismatch ? (
-                    <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                    <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap' }}>
                       <Button
                         variant="contained"
+                        size="small"
                         disabled={postingAll || postingId != null || openingId != null}
                         onClick={() => void postOne(draft)}
                         startIcon={
                           postingId === draft.id ? (
-                            <CircularProgress size={14} color="inherit" />
+                            <CircularProgress size={12} color="inherit" />
                           ) : (
-                            <SparkleIcon size={16} weight="bold" />
+                            <SparkleIcon size={14} weight="bold" />
                           )
                         }
-                        sx={{
-                          textTransform: 'none',
-                          fontWeight: 800,
-                          borderRadius: '16px',
-                          boxShadow: 'none',
-                          bgcolor: AI_SEARCH_BLUE,
-                          color: AI_SEARCH_BLUE_ON,
-                          '&:hover': {
-                            boxShadow: 'none',
-                            bgcolor: AI_SEARCH_BLUE_HOVER,
-                            color: AI_SEARCH_BLUE_ON,
-                          },
-                          '&.Mui-disabled': {
-                            bgcolor: AI_SEARCH_BLUE,
-                            color: AI_SEARCH_BLUE_ON,
-                            opacity: 0.55,
-                          },
-                        }}
+                        sx={aiButtonSx}
                       >
                         {postingId === draft.id ? t.aiImport.posting : t.aiImport.post}
                       </Button>
                       <Button
                         variant="outlined"
+                        size="small"
                         disabled={postingAll || postingId != null || openingId != null}
                         onClick={() => void openDraft(draft)}
                         startIcon={
                           openingId === draft.id ? (
-                            <CircularProgress size={14} color="inherit" />
+                            <CircularProgress size={12} color="inherit" />
                           ) : undefined
                         }
-                        sx={{
-                          textTransform: 'none',
-                          fontWeight: 800,
-                          borderRadius: '16px',
-                          borderColor: AI_SEARCH_BLUE,
-                          color: AI_SEARCH_BLUE,
-                          '&:hover': {
-                            borderColor: AI_SEARCH_BLUE,
-                            bgcolor: AI_SEARCH_BLUE_SOFT,
-                          },
-                        }}
+                        sx={aiOutlinedButtonSx}
                       >
                         {openingId === draft.id ? t.aiImport.openingForm : t.aiImport.openForm}
                       </Button>

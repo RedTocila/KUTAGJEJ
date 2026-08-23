@@ -715,6 +715,7 @@ const sq = {
     aiSearchDetail: 'Kërko njoftime me gjuhë natyrore',
     free: 'Falas',
     buyCoins: 'Bli Boost Coins',
+    retry: 'Provo përsëri',
   },
   language: {
     title: 'Gjuha',
@@ -1501,6 +1502,7 @@ const en: AppMessages = {
     aiSearchDetail: 'Find listings in natural language',
     free: 'Free',
     buyCoins: 'Buy Boost Coins',
+    retry: 'Try again',
   },
   language: {
     title: 'Language',

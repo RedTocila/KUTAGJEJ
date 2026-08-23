@@ -145,15 +145,20 @@ export async function apiFetch(input: string, init?: RequestInit, retries = 2): 
 export async function clientFetch<T = unknown>(
   path: string,
   init?: RequestInit,
+  retries = 2,
 ): Promise<ClientFetchResult<T>> {
   try {
-    const res = await apiFetch(getApiUrl(path), {
-      ...init,
-      headers: {
-        ...(await authHeadersAsync()),
-        ...(init?.headers as Record<string, string> | undefined),
+    const res = await apiFetch(
+      getApiUrl(path),
+      {
+        ...init,
+        headers: {
+          ...(await authHeadersAsync()),
+          ...(init?.headers as Record<string, string> | undefined),
+        },
       },
-    });
+      retries,
+    );
     const data = (await res.json().catch(() => ({}))) as T & {
       message?: string;
       error?: string;

@@ -125,9 +125,13 @@ export async function fetchAiUsage(): Promise<{
   snapshot: AiUsageSnapshot | null;
   error?: string;
 }> {
-  const res = await clientFetch<AiUsageSnapshot>('/ai/usage', {
-    method: 'GET',
-  });
+  const res = await clientFetch<AiUsageSnapshot>(
+    '/ai/usage',
+    {
+      method: 'GET',
+    },
+    5,
+  );
   if (!res.ok) {
     return { snapshot: null, error: res.error || 'Failed to load AI usage' };
   }

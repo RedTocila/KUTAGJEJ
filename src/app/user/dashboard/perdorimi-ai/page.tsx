@@ -24,6 +24,7 @@ import { PortalIconBox, PortalSectionCard } from '@/components/user/portal-cards
 import { formatBc } from '@/components/user/packages/package-ui';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
+import { useUser } from '@/hooks/use-user';
 import { fetchAiUsage, type AiUsageEvent, type AiUsageKind } from '@/lib/ai-import-client';
 import { paths } from '@/paths';
 
@@ -136,30 +137,33 @@ function RateRow({
 
 export default function AiUsagePage() {
   const t = useCopy();
+  const { user } = useUser();
   const { language } = useLanguage();
   const dateLocale = language === 'en' ? 'en-GB' : 'sq-AL';
+  const sessionBalance = Math.max(0, Math.round((Number(user?.boostCredits) || 0) * 10) / 10);
   const [events, setEvents] = React.useState<AiUsageEvent[]>([]);
   const [balance, setBalance] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const res = await fetchAiUsage();
-      if (cancelled) return;
-      setLoading(false);
-      if (res.error) {
-        setError(res.error);
-        return;
-      }
-      setEvents(res.snapshot?.events ?? []);
-      setBalance(res.snapshot?.balance ?? 0);
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const res = await fetchAiUsage();
+    setLoading(false);
+    if (res.error) {
+      setError(res.error);
+      return;
+    }
+    setEvents(res.snapshot?.events ?? []);
+    setBalance(res.snapshot?.balance ?? 0);
   }, []);
+
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+
+  const displayBalance = balance ?? (user ? sessionBalance : null);
 
   return (
     <Stack spacing={2.5} sx={{ maxWidth: 640, mx: 'auto', width: '100%' }}>
@@ -181,7 +185,15 @@ export default function AiUsagePage() {
       />
 
       {error ? (
-        <Alert severity="warning" sx={{ borderRadius: 2.5 }}>
+        <Alert
+          severity="warning"
+          sx={{ borderRadius: 2.5 }}
+          action={
+            <Button color="inherit" size="small" onClick={() => void load()} sx={{ fontWeight: 800, textTransform: 'none' }}>
+              {t.aiUsage.retry}
+            </Button>
+          }
+        >
           {error}
         </Alert>
       ) : null}
@@ -190,7 +202,7 @@ export default function AiUsagePage() {
         title={t.aiUsage.ratesTitle}
         icon={<SparkleIcon size={22} weight="duotone" />}
         headerExtra={
-          balance != null ? (
+          displayBalance != null ? (
             <Stack
               direction="row"
               spacing={0.5}
@@ -205,7 +217,7 @@ export default function AiUsagePage() {
             >
               <BoostCoinIcon size={14} />
               <Typography sx={{ fontWeight: 800, fontSize: '0.78rem', color: 'warning.main' }}>
-                {formatBc(balance)}
+                {formatBc(displayBalance)}
               </Typography>
             </Stack>
           ) : null

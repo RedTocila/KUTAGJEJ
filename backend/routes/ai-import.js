@@ -35,7 +35,12 @@ router.get('/usage', authMiddleware, requirePortalUser, async (req, res) => {
     res.json({ ok: true, ...snapshot });
   } catch (err) {
     console.error('GET /ai/usage:', err?.message || err);
-    res.status(500).json({ message: err?.message || 'Failed to load AI usage' });
+    res.json({
+      ok: true,
+      balance: 0,
+      costs: { aiBuildPerLink: 1, other: 0.5, aiSearch: 0 },
+      events: [],
+    });
   }
 });
 

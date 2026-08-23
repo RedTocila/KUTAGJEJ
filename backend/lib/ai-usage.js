@@ -223,18 +223,31 @@ async function listFromFallbackNotifications(userId, cap) {
 
 async function listAiUsage(userId, { limit = 80 } = {}) {
   const cap = Math.min(200, Math.max(1, Math.floor(Number(limit) || 80)));
-  const fromTable = await listFromEventsTable(userId, cap);
-  if (fromTable) return fromTable;
-  return listFromFallbackNotifications(userId, cap);
+  try {
+    const fromTable = await listFromEventsTable(userId, cap);
+    if (fromTable !== null) return fromTable;
+  } catch (err) {
+    console.warn('[ai-usage] events table:', err?.message || err);
+  }
+  try {
+    return await listFromFallbackNotifications(userId, cap);
+  } catch (err) {
+    console.warn('[ai-usage] fallback history:', err?.message || err);
+    return [];
+  }
 }
 
 async function getAiUsageSnapshot(userId) {
-  const [balance, events] = await Promise.all([getBoostCredits(userId), listAiUsage(userId)]);
-  return {
-    balance,
-    costs: aiCosts(),
-    events,
-  };
+  const costs = aiCosts();
+  let balance = 0;
+  let events = [];
+  try {
+    balance = await getBoostCredits(userId);
+  } catch (err) {
+    console.warn('[ai-usage] balance:', err?.message || err);
+  }
+  events = await listAiUsage(userId);
+  return { balance, costs, events };
 }
 
 module.exports = {

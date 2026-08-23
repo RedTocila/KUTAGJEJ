@@ -25,6 +25,9 @@ const SHARE_THEME_COLORS = [
   '#fbbf24',
   '#facc15',
   '#f5f5f5',
+  '#a1a1aa',
+  '#1e40af',
+  '#ea580c',
 ];
 
 const SHARE_THEME_COLOR_SET = new Set(SHARE_THEME_COLORS);

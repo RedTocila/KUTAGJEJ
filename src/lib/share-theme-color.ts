@@ -27,6 +27,9 @@ export const SHARE_THEME_COLORS = [
   '#fbbf24',
   '#facc15',
   '#f5f5f5',
+  '#a1a1aa',
+  '#1e40af',
+  '#ea580c',
 ] as const;
 
 export type ShareThemeColor = (typeof SHARE_THEME_COLORS)[number];

@@ -26,6 +26,7 @@ export interface AiImportDraftResult {
 export const AI_CATEGORY_MISMATCH_CODE = 'category_mismatch';
 export const AI_CONTENT_RESTRICTED_CODE = 'content_restricted';
 export const AI_DAILY_LIMIT_CODE = 'ai_daily_limit';
+export const AI_INSUFFICIENT_BC_CODE = 'insufficient_bc';
 export const AI_RATE_LIMIT_CODE = 'openai_rate_limit';
 
 const MAX_IMPORT_URLS = 50;
@@ -77,13 +78,26 @@ export function extractImportUrls(input: string | string[]): string[] {
   return urls;
 }
 
-export interface AiImportQuota {
-  planCode: string;
-  unlimited: boolean;
-  limit: number | null;
-  used: number;
-  remaining: number | null;
-  usedOn: string;
+export type AiUsageKind = 'ai_build' | 'ai_assist' | 'ai_menu';
+
+export interface AiUsageEvent {
+  id: string;
+  kind: AiUsageKind;
+  costBc: number;
+  units: number;
+  sourceLabel?: string | null;
+  status: 'charged' | 'refunded';
+  createdAt: string;
+}
+
+export interface AiUsageSnapshot {
+  balance: number;
+  costs: {
+    aiBuildPerLink: number;
+    other: number;
+    aiSearch: number;
+  };
+  events: AiUsageEvent[];
 }
 
 export function isAiDailyLimitError(input: {
@@ -91,38 +105,43 @@ export function isAiDailyLimitError(input: {
   error?: string | null;
   status?: number;
 }): boolean {
-  if (input.code === AI_DAILY_LIMIT_CODE) return true;
-  if (input.status === 403 && /AI Build/i.test(String(input.error || ''))) return true;
+  if (input.code === AI_INSUFFICIENT_BC_CODE || input.code === AI_DAILY_LIMIT_CODE) return true;
+  if (input.status === 403 && /Boost Coins|AI Build/i.test(String(input.error || ''))) return true;
   return false;
 }
 
 export function aiDailyLimitMessage(
   t: {
     aiImport: {
-      dailyLimitReached: string;
-      dailyLimitFree: string;
-      dailyLimitStarter: string;
+      insufficientBc: string;
     };
   },
-  planCode?: string | null,
+  _planCode?: string | null,
 ): string {
-  const code = String(planCode || '').toLowerCase();
-  if (code === 'starter') return t.aiImport.dailyLimitStarter;
-  if (code === 'free' || !code) return t.aiImport.dailyLimitFree;
-  return t.aiImport.dailyLimitReached;
+  return t.aiImport.insufficientBc;
 }
 
-export async function fetchAiImportQuota(): Promise<{
-  quota: AiImportQuota | null;
+export async function fetchAiUsage(): Promise<{
+  snapshot: AiUsageSnapshot | null;
   error?: string;
 }> {
-  const res = await clientFetch<{ quota?: AiImportQuota }>('/ai/import-quota', {
+  const res = await clientFetch<AiUsageSnapshot>('/ai/usage', {
     method: 'GET',
   });
   if (!res.ok) {
-    return { quota: null, error: res.error || 'Failed to load AI quota' };
+    return { snapshot: null, error: res.error || 'Failed to load AI usage' };
   }
-  return { quota: res.data?.quota ?? null };
+  return {
+    snapshot: {
+      balance: Number(res.data?.balance) || 0,
+      costs: {
+        aiBuildPerLink: Number(res.data?.costs?.aiBuildPerLink) || 1,
+        other: Number(res.data?.costs?.other) || 0.5,
+        aiSearch: Number(res.data?.costs?.aiSearch) || 0,
+      },
+      events: Array.isArray(res.data?.events) ? res.data.events : [],
+    },
+  };
 }
 
 export function isAiCategoryMismatch(
@@ -202,20 +221,21 @@ export async function importListingsFromLinks(input: {
   currentListing?: Record<string, unknown> | null;
   batchId?: string | null;
   batchSize?: number;
+  feature?: 'build' | 'assist';
 }): Promise<{
   drafts: AiImportDraftResult[];
   error?: string;
   code?: string;
-  quota?: AiImportQuota | null;
   status?: number;
   batchId?: string | null;
+  boostCredits?: number;
 }> {
   const res = await clientFetch<{
     drafts?: AiImportDraftResult[];
     message?: string;
     code?: string;
-    quota?: AiImportQuota;
     batchId?: string;
+    boostCredits?: number;
   }>('/ai/import-listings', {
     method: 'POST',
     body: JSON.stringify({
@@ -225,6 +245,7 @@ export async function importListingsFromLinks(input: {
       ...(input.profile ? { profile: input.profile } : {}),
       ...(input.images?.length ? { images: input.images } : {}),
       ...(input.mode ? { mode: input.mode } : {}),
+      ...(input.feature ? { feature: input.feature } : {}),
       ...(input.currentListing ? { currentListing: input.currentListing } : {}),
       ...(input.batchId ? { batchId: input.batchId } : {}),
       ...(input.batchSize ? { batchSize: input.batchSize } : {}),
@@ -242,7 +263,6 @@ export async function importListingsFromLinks(input: {
       drafts: [],
       error: res.error || 'AI import failed',
       code,
-      quota: res.data?.quota ?? null,
       status: res.status,
       batchId: typeof res.data?.batchId === 'string' ? res.data.batchId : null,
     };
@@ -250,8 +270,8 @@ export async function importListingsFromLinks(input: {
 
   return {
     drafts: Array.isArray(res.data?.drafts) ? res.data.drafts : [],
-    quota: res.data?.quota ?? null,
     batchId: typeof res.data?.batchId === 'string' ? res.data.batchId : null,
+    boostCredits: typeof res.data?.boostCredits === 'number' ? res.data.boostCredits : undefined,
   };
 }
 

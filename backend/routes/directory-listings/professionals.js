@@ -9,6 +9,7 @@ const { validateProfessionalPayload } = require('../../lib/directory-professiona
 const { hasUnlimitedDirectoryListings } = require('../../lib/directory-listing-limits');
 const { notifyAdminsListingSubmitted } = require('../../lib/listing-moderation');
 const { isUuid } = require('../../lib/public-listings/query-helpers');
+const { resolveOptionalCityId } = require('../../lib/listing-city');
 const { requireListingPhotos } = require('../../lib/image-upload');
 const { formatMineProfessional, formatMineProfessionalFull, loadMineKind, loadMineListingById } = require('../../lib/mine-listings');
 const {
@@ -76,16 +77,9 @@ router.post('/professionals', authMiddleware, requirePortalUser, async (req, res
       }
     }
 
-    const cityId = String(body.cityId).trim();
-    if (!isUuid(cityId)) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
-
-    const { data: city, error: cityErr } = await sb
-      .from('real_estate_cities')
-      .select('id')
-      .eq('id', cityId)
-      .maybeSingle();
-    if (cityErr) throw cityErr;
-    if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+    const city = await resolveOptionalCityId(body.cityId);
+    if (!city.ok) return res.status(400).json({ message: city.message });
+    const cityId = city.cityId;
 
     const maps = await parseMapsFieldsFromBody(body);
     if (!maps.ok) return res.status(400).json({ message: maps.message });
@@ -163,22 +157,15 @@ router.put('/professionals/:id', authMiddleware, requirePortalUser, async (req, 
     if (body.description != null) patch.description = String(body.description).trim();
     if (body.category != null) {
       const category = String(body.category).trim();
-      if (!category || category.length > 80) {
+      if (category.length > 80) {
         return res.status(400).json({ message: 'Kategoria nuk është e vlefshme.' });
       }
-      patch.category = category;
+      patch.category = category || null;
     }
     if (body.cityId != null) {
-      const cityId = String(body.cityId).trim();
-      if (!isUuid(cityId)) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
-      const { data: city, error: cityErr } = await getSupabaseAdmin()
-        .from('real_estate_cities')
-        .select('id')
-        .eq('id', cityId)
-        .maybeSingle();
-      if (cityErr) throw cityErr;
-      if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
-      patch.city_id = cityId;
+      const city = await resolveOptionalCityId(body.cityId);
+      if (!city.ok) return res.status(400).json({ message: city.message });
+      patch.city_id = city.cityId;
     }
     if (body.contactPhone != null) patch.contact_phone = String(body.contactPhone).trim();
 

@@ -55,6 +55,11 @@ function realEstateCategoryFields(propertyCategory, body) {
 
 async function resolveCityAndOptionalZone(cityIdRaw, zoneIdRaw) {
   const cityId = String(cityIdRaw ?? '').trim();
+  const zoneId = String(zoneIdRaw ?? '').trim();
+  if (!cityId) {
+    if (zoneId) return { ok: false, message: 'Zgjidhni qytetin para se të zgjidhni zonën.' };
+    return { ok: true, cityId: null, zoneId: null };
+  }
   if (!isUuid(cityId)) return { ok: false, message: 'Invalid city id.' };
 
   const { data: cityRow, error: cityErr } = await getSupabaseAdmin()
@@ -66,7 +71,6 @@ async function resolveCityAndOptionalZone(cityIdRaw, zoneIdRaw) {
   if (!cityRow) return { ok: false, message: 'City not found.' };
 
   const city = camelizeRow(cityRow);
-  const zoneId = String(zoneIdRaw ?? '').trim();
   if (!zoneId) return { ok: true, cityId, zoneId: null };
 
   if (!isUuid(zoneId)) return { ok: false, message: 'Invalid zone id.' };

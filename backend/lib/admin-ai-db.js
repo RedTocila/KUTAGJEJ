@@ -246,6 +246,12 @@ const TABLE_CATALOG = {
     filterColumns: ['user_id', 'used_on'],
     probe: 'user_id, used_on',
   },
+  ai_usage_events: {
+    label: 'Përdorimi AI (Boost Coins)',
+    select: 'user_id, kind, cost_bc, units, status, created_at',
+    filterColumns: ['user_id', 'kind', 'status'],
+    probe: 'user_id',
+  },
 };
 
 const CORE_TABLES = new Set([
@@ -265,6 +271,7 @@ const CORE_TABLES = new Set([
   'messages',
   'roles',
   'credit_packages',
+  'ai_usage_events',
 ]);
 
 /** Allowlisted ADD COLUMN IF NOT EXISTS — never user-supplied. */

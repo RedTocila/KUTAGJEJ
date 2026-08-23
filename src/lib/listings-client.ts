@@ -47,7 +47,7 @@ export interface RealEstateListingPayload {
   originalPrice?: number | null;
   currency?: 'EUR' | 'LEK';
   surfaceM2?: number | null;
-  cityId: string;
+  cityId?: string | null;
   zoneId?: string | null;
   mapsUrl?: string | null;
   contactPhone: string;
@@ -360,7 +360,7 @@ export interface JobListingPayload {
   title: string;
   description: string;
   industry: string;
-  cityId: string;
+  cityId?: string | null;
   mapsUrl?: string | null;
   education: string;
   experience: string;
@@ -410,7 +410,7 @@ export interface MarketplaceListingPayload {
   price: number | null;
   originalPrice?: number | null;
   currency?: string | null;
-  cityId: string;
+  cityId?: string | null;
   mapsUrl?: string | null;
   contactPhone: string;
   imageUrls?: string[];
@@ -483,7 +483,7 @@ export type CarListingJsonPayload = {
   color?: string | null;
   finish: string[];
   extras: string[];
-  cityId: string;
+  cityId?: string | null;
   mapsUrl?: string | null;
   contactPhone: string;
   imageUrls?: string[];

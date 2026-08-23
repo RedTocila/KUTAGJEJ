@@ -67,6 +67,13 @@ export const USER_PORTAL_NAV_ITEMS = [
     icon: 'user-gear',
     matcher: { type: 'startsWith', href: paths.user.profile } as const,
   },
+  {
+    key: 'ai-usage',
+    title: 'Përdorimi AI',
+    href: paths.user.aiUsage,
+    icon: 'sparkle',
+    matcher: { type: 'startsWith', href: paths.user.aiUsage } as const,
+  },
 ] satisfies NavItemConfig[];
 
 /** Hides real-estate listing nav for accounts that cannot publish (e.g. managed staff). */
@@ -84,7 +91,8 @@ export function getUserPortalNavItemsForUser(user: User | null | undefined): Nav
       item.key === 'messages' ||
       item.key === 'referral' ||
       item.key === 'credits' ||
-      item.key === 'payments'
+      item.key === 'payments' ||
+      item.key === 'ai-usage'
     )
       return canRealEstate;
     return true;
@@ -111,6 +119,8 @@ function localizedNavTitle(key: string, t: AppMessages): string | null {
       return t.nav.payments;
     case 'profile':
       return t.nav.profile;
+    case 'ai-usage':
+      return t.nav.aiUsage;
     default:
       return null;
   }

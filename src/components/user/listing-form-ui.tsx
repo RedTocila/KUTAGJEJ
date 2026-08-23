@@ -233,14 +233,14 @@ export function ListingFormSection({
         direction="row"
         spacing={1.25}
         sx={{
-          alignItems: 'flex-start',
+          alignItems: description ? 'flex-start' : 'center',
           px: { xs: 1.75, sm: 2.25 },
-          pt: { xs: 1.75, sm: 2 },
-          pb: 1.5,
+          pt: { xs: 1.5, sm: 1.75 },
+          pb: description ? 1.5 : 1.15,
         }}
       >
         {icon ? <PortalIconBox size={36}>{icon}</PortalIconBox> : null}
-        <Box sx={{ minWidth: 0, flex: 1, pt: 0.15 }}>
+        <Box sx={{ minWidth: 0, flex: 1, pt: description ? 0.15 : 0 }}>
           <Stack
             direction="row"
             spacing={1}

@@ -267,31 +267,13 @@ export default function UserPostListingPage() {
   if (!user) return null;
   if (!canPublish) return null;
 
-  const formMeta: Partial<Record<Phase, { title: string; description: string }>> = {
-    'real-estate-form': {
-      title: 'Posto njoftim',
-      description: 'Plotësoni detajet e pronës për ta publikuar në platformë.',
-    },
-    'cars-form': {
-      title: 'Posto njoftim',
-      description: 'Shtoni makinën tuaj me foto dhe specifikimet kryesore.',
-    },
-    'jobs-form': {
-      title: 'Posto njoftim pune',
-      description: 'Publikoni një vend pune dhe arrini kandidatët e duhur.',
-    },
-    'businesses-form': {
-      title: 'Posto profil biznesi',
-      description: 'Krijoni profilin e biznesit me orar, menu dhe kontakt. Vetëm një profil për llogari.',
-    },
-    'professionals-form': {
-      title: 'Posto profil profesionisti',
-      description: 'Prezantoni shërbimet dhe portofolin tuaj. Vetëm një profil për llogari.',
-    },
-    'marketplace-form': {
-      title: 'Posto njoftim tregu',
-      description: 'Shitni ose jepni me qira produkte në tregun online.',
-    },
+  const formMeta: Partial<Record<Phase, { title: string }>> = {
+    'real-estate-form': { title: 'Posto njoftim' },
+    'cars-form': { title: 'Posto njoftim' },
+    'jobs-form': { title: 'Posto njoftim pune' },
+    'businesses-form': { title: 'Posto profil biznesi' },
+    'professionals-form': { title: 'Posto profil profesionisti' },
+    'marketplace-form': { title: 'Posto njoftim tregu' },
   };
 
   const activeMeta = formMeta[phase];
@@ -327,13 +309,6 @@ export default function UserPostListingPage() {
                 : wantsPremium
                   ? 'Posto Premium'
                   : activeMeta.title
-            }
-            description={
-              wantsOkazion
-                ? 'Plotësoni njoftimin — publikohet me temë të kuqe në OKAZION për 5 ditë.'
-                : wantsPremium
-                  ? 'Plotësoni njoftimin — shfaqet me prioritet në krye për 30 ditë.'
-                  : activeMeta.description
             }
             iconColor={
               wantsOkazion ? OKAZION_ACCENT : wantsPremium ? PREMIUM_AMBER : undefined

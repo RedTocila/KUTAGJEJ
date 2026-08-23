@@ -28,7 +28,6 @@ export function PostListingHeader({
   const iconTileSx: SxProps<Theme> = {
     width: 40,
     height: 40,
-    mt: '1px',
     borderRadius: 2.25,
     display: 'inline-flex',
     alignItems: 'center',
@@ -39,10 +38,14 @@ export function PostListingHeader({
   };
 
   return (
-    <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start', minWidth: 0 }}>
+    <Stack
+      direction="row"
+      spacing={1.5}
+      sx={{ alignItems: description ? 'flex-start' : 'center', minWidth: 0 }}
+    >
       <Box sx={iconTileSx}>{React.createElement(Icon, { size: 22, weight: 'duotone' })}</Box>
 
-      <Stack spacing={0.4} sx={{ minWidth: 0, flex: 1, pt: 0.2 }}>
+      <Stack spacing={description ? 0.4 : 0} sx={{ minWidth: 0, flex: 1, pt: description ? 0.2 : 0 }}>
         <Stack
           direction="row"
           spacing={1}

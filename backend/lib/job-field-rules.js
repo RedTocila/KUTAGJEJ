@@ -47,9 +47,10 @@ function validateJobPayload(body) {
   body.industry = industry || null;
 
   const cityId = String(body?.cityId || '').trim();
-  if (!cityId || !isUuid(cityId)) {
+  if (cityId && !isUuid(cityId)) {
     return { ok: false, message: 'Ju lutem zgjidhni një qytet të vlefshëm.' };
   }
+  body.cityId = cityId || null;
 
   const education = String(body?.education || '').trim();
   if (education && !EDUCATION_VALUES.includes(education)) {

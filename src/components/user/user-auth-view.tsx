@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -402,6 +403,18 @@ function SignInFields({
           }
           label={t.auth.rememberLogin}
         />
+        <MuiLink
+          component={RouterLink}
+          href={paths.user.resetPassword}
+          sx={{
+            color: 'primary.main',
+            fontWeight: 700,
+            fontSize: '0.875rem',
+            alignSelf: 'flex-start',
+          }}
+        >
+          {t.auth.forgotPassword}
+        </MuiLink>
       </Stack>
     </Stack>
   );
@@ -730,6 +743,9 @@ export function UserAuthView() {
   const [citiesLoading, setCitiesLoading] = React.useState(false);
   const [businessAcceptTerms, setBusinessAcceptTerms] = React.useState(false);
   const [businessAcceptTermsError, setBusinessAcceptTermsError] = React.useState<string | undefined>();
+  const [pendingEmail, setPendingEmail] = React.useState('');
+  const [resendBusy, setResendBusy] = React.useState(false);
+  const [resendMessage, setResendMessage] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (refFromUrl) {
@@ -806,7 +822,11 @@ export function UserAuthView() {
 
   const onSignIn = signInForm.handleSubmit(async (values) => {
     signInForm.clearErrors('root');
-    const { error, user } = await authClient.signIn({ ...values, remember: rememberLogin });
+    const { error, user, code } = await authClient.signIn({ ...values, remember: rememberLogin });
+    if (code === 'EMAIL_NOT_CONFIRMED') {
+      setPendingEmail(values.email);
+      return;
+    }
     if (error) {
       signInForm.setError('root', { type: 'server', message: error });
       return;
@@ -820,7 +840,7 @@ export function UserAuthView() {
 
   const onRegisterIndividual = individualForm.handleSubmit(async (values) => {
     individualForm.clearErrors('root');
-    const { error, user } = await authClient.register({
+    const { error, user, needsEmailConfirmation, email } = await authClient.register({
       userType: 'individual',
       firstName: values.firstName,
       lastName: values.lastName,
@@ -834,21 +854,25 @@ export function UserAuthView() {
       individualForm.setError('root', { type: 'server', message: error });
       return;
     }
-    if (!user) {
-      individualForm.setError('root', { type: 'server', message: 'Regjistrimi dështoi.' });
-      return;
-    }
     if (values.basedCityId.trim()) {
       rememberListingLocation(
         {
           cityId: values.basedCityId.trim(),
           cityName:
-            (typeof user.basedCityName === 'string' && user.basedCityName.trim()) ||
+            (typeof user?.basedCityName === 'string' && user.basedCityName.trim()) ||
             cities.find((c) => c.id === values.basedCityId)?.name ||
             '',
         },
-        user.id,
+        user?.id,
       );
+    }
+    if (needsEmailConfirmation) {
+      setPendingEmail(email || values.email);
+      return;
+    }
+    if (!user) {
+      individualForm.setError('root', { type: 'server', message: 'Regjistrimi dështoi.' });
+      return;
     }
     window.location.href = getDefaultAuthenticatedPath(user);
   });
@@ -860,7 +884,7 @@ export function UserAuthView() {
       return;
     }
     setBusinessAcceptTermsError(undefined);
-    const { error, user } = await authClient.register({
+    const { error, user, needsEmailConfirmation, email } = await authClient.register({
       userType: 'business',
       nipt: values.nipt,
       businessName: values.businessName,
@@ -876,21 +900,25 @@ export function UserAuthView() {
       businessForm.setError('root', { type: 'server', message: error });
       return;
     }
-    if (!user) {
-      businessForm.setError('root', { type: 'server', message: 'Regjistrimi dështoi.' });
-      return;
-    }
     if (values.basedCityId.trim()) {
       rememberListingLocation(
         {
           cityId: values.basedCityId.trim(),
           cityName:
-            (typeof user.basedCityName === 'string' && user.basedCityName.trim()) ||
+            (typeof user?.basedCityName === 'string' && user.basedCityName.trim()) ||
             cities.find((c) => c.id === values.basedCityId)?.name ||
             '',
         },
-        user.id,
+        user?.id,
       );
+    }
+    if (needsEmailConfirmation) {
+      setPendingEmail(email || values.email);
+      return;
+    }
+    if (!user) {
+      businessForm.setError('root', { type: 'server', message: 'Regjistrimi dështoi.' });
+      return;
     }
     window.location.href = getDefaultAuthenticatedPath(user);
   });
@@ -900,6 +928,19 @@ export function UserAuthView() {
   const busRoot = businessForm.formState.errors.root;
 
   const handleBack = useNavigateBack(paths.home);
+
+  const onResendConfirmation = async () => {
+    if (!pendingEmail || resendBusy) return;
+    setResendBusy(true);
+    setResendMessage(null);
+    try {
+      const { error, message } = await authClient.resendConfirmation(pendingEmail);
+      if (error) setResendMessage(error);
+      else setResendMessage(message || t.auth.resendSent);
+    } finally {
+      setResendBusy(false);
+    }
+  };
 
   return (
     <Box
@@ -953,13 +994,43 @@ export function UserAuthView() {
                   variant="h4"
                   sx={{ color: 'text.primary', fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.02em' }}
                 >
-                  Mirë se vini
+                  {pendingEmail ? t.auth.checkEmailTitle : 'Mirë se vini'}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.55, maxWidth: 420 }}>
-                  Hyni në llogarinë tuaj ose krijoni një të re në pak hapa — e thjeshtë dhe e shpejtë.
+                  {pendingEmail
+                    ? t.auth.checkEmailBody(pendingEmail)
+                    : 'Hyni në llogarinë tuaj ose krijoni një të re në pak hapa — e thjeshtë dhe e shpejtë.'}
                 </Typography>
               </Box>
 
+              {pendingEmail ? (
+                <Stack spacing={1.5}>
+                  {resendMessage ? (
+                    <Alert severity="info">{resendMessage}</Alert>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="contained"
+                    disabled={resendBusy}
+                    onClick={() => void onResendConfirmation()}
+                    sx={{ ...productButtonSx, py: 1.5 }}
+                  >
+                    {resendBusy ? t.auth.submitting : t.auth.resendConfirmation}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setPendingEmail('');
+                      setResendMessage(null);
+                      setTab(0);
+                    }}
+                    sx={{ textTransform: 'none', fontWeight: 700 }}
+                  >
+                    {t.auth.backToLogin}
+                  </Button>
+                </Stack>
+              ) : (
+                <>
               <Tabs
                 value={tab}
                 onChange={(_, v) => setTab(v)}
@@ -1176,6 +1247,8 @@ export function UserAuthView() {
                   </Typography>
                 </Box>
               ) : null}
+                </>
+              )}
             </Stack>
           </CardContent>
         </Card>

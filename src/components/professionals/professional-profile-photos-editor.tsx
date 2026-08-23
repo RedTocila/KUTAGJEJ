@@ -37,7 +37,7 @@ function PhotoSlot({
   onPreview,
 }: {
   label: string;
-  hint: string;
+  hint?: string;
   previewUrl: string | null;
   active?: boolean;
   aspect?: string;
@@ -62,7 +62,11 @@ function PhotoSlot({
     >
       <Stack spacing={0.25}>
         <Typography sx={{ fontWeight: 800, fontSize: '0.9rem' }}>{label}</Typography>
-        <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', lineHeight: 1.35 }}>{hint}</Typography>
+        {hint ? (
+          <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', lineHeight: 1.35 }}>
+            {hint}
+          </Typography>
+        ) : null}
       </Stack>
 
       <Box
@@ -252,7 +256,6 @@ export function ProfessionalProfilePhotosEditor({
 
       <PhotoSlot
         label="Kopertina"
-        hint="Shfaqet lart në profilin publik"
         previewUrl={coverPreview}
         active={focus === 'cover'}
         aspect="2 / 1"
@@ -267,7 +270,6 @@ export function ProfessionalProfilePhotosEditor({
 
       <PhotoSlot
         label="Foto profili"
-        hint="Rrethi poshtë kopertinës"
         previewUrl={avatarPreview}
         active={focus === 'avatar'}
         round

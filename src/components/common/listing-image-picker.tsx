@@ -247,12 +247,6 @@ export function ListingImagePicker({
         ) : null}
       </Stack>
 
-      {slotsLeft > 0 && !disabled ? (
-        <Typography variant="caption" color="text.disabled">
-          {max === 1 ? '1 foto · JPG, PNG, WEBP' : `Deri në ${max} foto · JPG, PNG, WEBP`}
-        </Typography>
-      ) : null}
-
       <ImageLightbox
         open={previewIndex != null}
         urls={previewUrls}

@@ -120,12 +120,7 @@ export function ListingMapsLocationFields({
         fullWidth
         disabled={disabled || resolving}
         placeholder="https://maps.app.goo.gl/… ose maps.google.com/…"
-        helperText={
-          error ||
-          (resolving
-            ? 'Duke lexuar vendndodhjen…'
-            : 'Ngjitni linkun e vendndodhjes nga Google Maps për pin dhe emër rruge.')
-        }
+        helperText={error || (resolving ? 'Duke lexuar vendndodhjen…' : undefined)}
         error={Boolean(error)}
       />
     </Stack>

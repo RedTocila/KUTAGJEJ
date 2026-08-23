@@ -167,13 +167,6 @@ export async function postAiListingDraft(
 
     switch (draft.category) {
       case 'real-estate': {
-        if (!cityId) {
-          return {
-            draftId: draft.id,
-            ok: false,
-            error: 'City missing — open the form to pick location.',
-          };
-        }
         if (phone.length < 6) {
           return { draftId: draft.id, ok: false, error: 'Phone number is required.' };
         }
@@ -203,13 +196,6 @@ export async function postAiListingDraft(
       }
 
       case 'cars': {
-        if (!cityId) {
-          return {
-            draftId: draft.id,
-            ok: false,
-            error: 'City missing — open the form to pick location.',
-          };
-        }
         if (phone.length < 6) {
           return { draftId: draft.id, ok: false, error: 'Phone number is required.' };
         }
@@ -266,13 +252,6 @@ export async function postAiListingDraft(
       }
 
       case 'job-listings': {
-        if (!cityId) {
-          return {
-            draftId: draft.id,
-            ok: false,
-            error: 'City missing — open the form to pick location.',
-          };
-        }
         result = await createJobListing({
           title: str(f.title) || draft.title || 'Punë',
           description: str(f.description) || draft.summary || draft.title || '',
@@ -298,13 +277,6 @@ export async function postAiListingDraft(
       }
 
       case 'marketplace': {
-        if (!cityId) {
-          return {
-            draftId: draft.id,
-            ok: false,
-            error: 'City missing — open the form to pick location.',
-          };
-        }
         if (phone.length < 6) {
           return { draftId: draft.id, ok: false, error: 'Phone number is required.' };
         }
@@ -324,13 +296,6 @@ export async function postAiListingDraft(
       }
 
       case 'businesses': {
-        if (!cityId) {
-          return {
-            draftId: draft.id,
-            ok: false,
-            error: 'City missing — open the form to pick location.',
-          };
-        }
         if (phone.length < 6) {
           return { draftId: draft.id, ok: false, error: 'Phone number is required.' };
         }
@@ -352,13 +317,6 @@ export async function postAiListingDraft(
       }
 
       case 'professionals': {
-        if (!cityId) {
-          return {
-            draftId: draft.id,
-            ok: false,
-            error: 'City missing — open the form to pick location.',
-          };
-        }
         if (phone.length < 6) {
           return { draftId: draft.id, ok: false, error: 'Phone number is required.' };
         }

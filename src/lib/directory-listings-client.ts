@@ -24,7 +24,7 @@ export interface BusinessListingPayload {
   title: string;
   description: string;
   category: string;
-  cityId: string;
+  cityId?: string | null;
   zoneId?: string | null;
   mapsUrl?: string | null;
   contactPhone: string;
@@ -251,7 +251,7 @@ export interface ProfessionalListingPayload {
   title: string;
   description: string;
   category: string;
-  cityId: string;
+  cityId?: string | null;
   mapsUrl?: string | null;
   contactPhone: string;
   imageUrls: string[];

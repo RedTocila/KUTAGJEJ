@@ -193,16 +193,11 @@ export function JobOwnerEdit({
         setError('Shtoni të paktën një foto.');
         return;
       }
-      const cityId = draft.cityId;
-      if (!cityId) {
-        setError('Zgjidhni qytetin.');
-        return;
-      }
       const res = await updateJobListing(draft.id, {
         title: draft.title.trim(),
         description: (draft.description ?? '').trim(),
         industry: draft.industry,
-        cityId,
+        cityId: draft.cityId || null,
         mapsUrl: draft.mapsUrl?.trim() || null,
         education: draft.education,
         experience: draft.experience,
@@ -220,7 +215,7 @@ export function JobOwnerEdit({
         setError(res.error);
         return;
       }
-      const next = { ...draft, imageUrls, cityId };
+      const next = { ...draft, imageUrls };
       setDraft(next);
       setBaseline(JSON.stringify(next));
       setExistingUrls(imageUrls);
@@ -292,8 +287,8 @@ export function JobOwnerEdit({
             setDraft((d) => ({ ...d, cityId: v || null, cityName }));
           }}
           options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni…"
-          required
+          emptyLabel="Zgjidhni… (opsionale)"
+          clearable
         />
         <ListingMapsLocationFields
           value={{

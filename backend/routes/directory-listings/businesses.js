@@ -97,16 +97,21 @@ router.post('/businesses', authMiddleware, requirePortalUser, async (req, res) =
       }
     }
 
-    const cityId = String(body.cityId).trim();
-    if (!isUuid(cityId)) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
-
-    const { data: city, error: cityErr } = await sb
-      .from('real_estate_cities')
-      .select('id, zones')
-      .eq('id', cityId)
-      .maybeSingle();
-    if (cityErr) throw cityErr;
-    if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+    const cityIdRaw = String(body.cityId || '').trim();
+    let city = null;
+    let cityId = null;
+    if (cityIdRaw) {
+      if (!isUuid(cityIdRaw)) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+      const { data: cityRow, error: cityErr } = await sb
+        .from('real_estate_cities')
+        .select('id, zones')
+        .eq('id', cityIdRaw)
+        .maybeSingle();
+      if (cityErr) throw cityErr;
+      if (!cityRow) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+      city = cityRow;
+      cityId = cityIdRaw;
+    }
 
     const loc = await resolveBusinessLocationFields(
       {
@@ -199,10 +204,10 @@ router.put('/businesses/:id', authMiddleware, requirePortalUser, async (req, res
     if (body.description != null) patch.description = String(body.description).trim();
     if (body.category != null) {
       const category = String(body.category).trim();
-      if (!category || category.length > 80) {
+      if (category.length > 80) {
         return res.status(400).json({ message: 'Kategoria nuk është e vlefshme.' });
       }
-      patch.category = category;
+      patch.category = category || null;
     }
 
     const nextCityId =
@@ -210,18 +215,20 @@ router.put('/businesses/:id', authMiddleware, requirePortalUser, async (req, res
 
     let cityRow = null;
     if (body.cityId != null || body.zoneId !== undefined || body.mapsUrl !== undefined) {
-      if (!nextCityId || !isUuid(nextCityId)) {
-        return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+      if (nextCityId) {
+        if (!isUuid(nextCityId)) {
+          return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+        }
+        const { data: city, error: cityErr } = await getSupabaseAdmin()
+          .from('real_estate_cities')
+          .select('id, zones')
+          .eq('id', nextCityId)
+          .maybeSingle();
+        if (cityErr) throw cityErr;
+        if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+        cityRow = city;
       }
-      const { data: city, error: cityErr } = await getSupabaseAdmin()
-        .from('real_estate_cities')
-        .select('id, zones')
-        .eq('id', nextCityId)
-        .maybeSingle();
-      if (cityErr) throw cityErr;
-      if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
-      cityRow = city;
-      if (body.cityId != null) patch.city_id = nextCityId;
+      if (body.cityId != null) patch.city_id = nextCityId || null;
     }
 
     if (body.cityId != null || body.zoneId !== undefined || body.mapsUrl !== undefined) {
@@ -242,10 +249,14 @@ router.put('/businesses/:id', authMiddleware, requirePortalUser, async (req, res
         patch.location_address = loc.locationAddress ?? null;
       }
       // City change without zone: clear zone if it no longer belongs (when zone not sent).
-      if (body.cityId != null && body.zoneId === undefined && existing.zone_id && cityRow) {
-        const zones = Array.isArray(cityRow.zones) ? cityRow.zones : [];
-        const stillValid = zones.some((z) => String(z.id) === String(existing.zone_id));
-        if (!stillValid) patch.zone_id = null;
+      if (body.cityId != null && body.zoneId === undefined) {
+        if (!nextCityId) {
+          patch.zone_id = null;
+        } else if (existing.zone_id && cityRow) {
+          const zones = Array.isArray(cityRow.zones) ? cityRow.zones : [];
+          const stillValid = zones.some((z) => String(z.id) === String(existing.zone_id));
+          if (!stillValid) patch.zone_id = null;
+        }
       }
     }
 

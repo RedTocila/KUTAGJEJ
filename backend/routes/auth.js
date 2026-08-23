@@ -19,11 +19,21 @@ const { imageUpload } = require('../lib/image-upload');
 const { uploadBuffersToSupabase } = require('../lib/storage-uploads');
 const { isUuid } = require('../lib/public-listings/query-helpers');
 const { sanitizeShareThemeColor } = require('../lib/share-theme-color');
+const {
+  sendSignupConfirmation,
+  sendPasswordReset,
+  sendPasswordChangedNotice,
+  sendFromSupabaseHook,
+  displayNameFromProfile,
+} = require('../lib/mail/auth-emails');
+const { isResendConfigured } = require('../lib/mail/resend');
+const { verifySendEmailHook } = require('../lib/mail/hook-secret');
 
 const router = express.Router();
 const rateLimit = require('../middleware/rate-limit');
 
 const authRateLimit = rateLimit({ windowMs: 60_000, max: 15 });
+const mailRateLimit = rateLimit({ windowMs: 60_000, max: 5 });
 
 /**
  * Resolve optional based-city from request body.
@@ -144,7 +154,7 @@ async function createAuthUser({ email, password, metadata }) {
   const { data, error } = await sb.auth.admin.createUser({
     email,
     password,
-    email_confirm: true,
+    email_confirm: false,
     user_metadata: metadata || {},
   });
   if (error) {
@@ -157,6 +167,60 @@ async function createAuthUser({ email, password, metadata }) {
     throw error;
   }
   return data.user;
+}
+
+async function queueAuthEmail(label, fn) {
+  try {
+    if (!isResendConfigured()) {
+      console.warn(`auth email skipped (${label}): RESEND_API_KEY is not set`);
+      return;
+    }
+    await fn();
+  } catch (err) {
+    console.error(`auth email (${label}):`, err?.message || err);
+  }
+}
+
+function sessionPayload(session, profile) {
+  return {
+    token: session.access_token,
+    refreshToken: session.refresh_token,
+    admin: formatUser(profile),
+  };
+}
+
+async function verifyEmailOtp(tokenHash, type) {
+  const hashed = String(tokenHash || '').trim();
+  const requested = String(type || 'magiclink').trim() || 'magiclink';
+  if (!hashed) {
+    const err = new Error('TOKEN_MISSING');
+    err.code = 'TOKEN_MISSING';
+    throw err;
+  }
+  const sb = createAuthPasswordClient();
+  const candidates = [
+    ...new Set(
+      [requested, 'magiclink', 'signup', 'email', 'recovery', 'invite', 'email_change'].filter(Boolean),
+    ),
+  ];
+  let lastError = null;
+  for (const otpType of candidates) {
+    const { data, error } = await sb.auth.verifyOtp({
+      token_hash: hashed,
+      type: otpType,
+    });
+    if (error || !data?.session || !data?.user) {
+      lastError = error;
+      continue;
+    }
+    if (!data.user.email_confirmed_at) {
+      await getSupabaseAdmin().auth.admin.updateUserById(data.user.id, { email_confirm: true });
+    }
+    return data;
+  }
+  const err = new Error(lastError?.message || 'TOKEN_INVALID');
+  err.code = 'TOKEN_INVALID';
+  throw err;
 }
 
 async function signInWithPassword(email, password) {
@@ -177,6 +241,13 @@ router.post('/login', authRateLimit, async (req, res) => {
     const emailNorm = String(email).toLowerCase().trim();
     const { session, user: authUser, error } = await signInWithPassword(emailNorm, password);
     if (error || !session) {
+      const msg = String(error?.message || '');
+      if (/not confirmed|email_not_confirmed/i.test(msg)) {
+        return res.status(403).json({
+          code: 'EMAIL_NOT_CONFIRMED',
+          message: 'Konfirmo emailin për të hyrë. Kontrollo kutinë e postës.',
+        });
+      }
       return res.status(401).json({ message: 'Email ose fjalëkalim i pasaktë.' });
     }
 
@@ -307,14 +378,14 @@ router.post('/register', authRateLimit, async (req, res) => {
       if (refRaw) await processReferralOnSignup(doc, refRaw);
       await ensureUserReferralCode(doc);
 
-      const { session, error: signErr } = await signInWithPassword(emailNorm, password);
-      if (signErr || !session) {
-        return res.status(201).json({ token: null, admin: formatUser(doc), message: 'Llogaria u krijua. Identifikohuni.' });
-      }
+      await queueAuthEmail('signup', () =>
+        sendSignupConfirmation(emailNorm, { name: displayNameFromProfile(doc) }),
+      );
       return res.status(201).json({
-        token: session.access_token,
-        refreshToken: session.refresh_token,
+        needsEmailConfirmation: true,
+        email: emailNorm,
         admin: formatUser(doc),
+        message: 'Llogaria u krijua. Konfirmo emailin për të hyrë.',
       });
     }
 
@@ -369,14 +440,14 @@ router.post('/register', authRateLimit, async (req, res) => {
       if (refRaw) await processReferralOnSignup(doc, refRaw);
       await ensureUserReferralCode(doc);
 
-      const { session, error: signErr } = await signInWithPassword(emailNorm, password);
-      if (signErr || !session) {
-        return res.status(201).json({ token: null, admin: formatUser(doc), message: 'Llogaria u krijua. Identifikohuni.' });
-      }
+      await queueAuthEmail('signup', () =>
+        sendSignupConfirmation(emailNorm, { name: displayNameFromProfile(doc) }),
+      );
       return res.status(201).json({
-        token: session.access_token,
-        refreshToken: session.refresh_token,
+        needsEmailConfirmation: true,
+        email: emailNorm,
         admin: formatUser(doc),
+        message: 'Llogaria u krijua. Konfirmo emailin për të hyrë.',
       });
     }
 
@@ -446,6 +517,9 @@ router.put('/admin/change-password', authMiddleware, requireAdminRole, async (re
       password: String(newPassword),
     });
     if (error) throw error;
+    await queueAuthEmail('password-changed', () =>
+      sendPasswordChangedNotice(req.admin.email, { name: displayNameFromProfile(req.admin) }),
+    );
     res.json({ message: 'Fjalëkalimi u ndryshua.' });
   } catch (error) {
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -671,9 +745,128 @@ router.put('/portal/change-password', authMiddleware, requirePortalUser, async (
       password: String(newPassword),
     });
     if (error) throw error;
+    await queueAuthEmail('password-changed', () =>
+      sendPasswordChangedNotice(req.admin.email, { name: displayNameFromProfile(req.admin) }),
+    );
     res.json({ message: 'Fjalëkalimi u ndryshua.' });
   } catch (error) {
     res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+router.post('/resend-confirmation', mailRateLimit, async (req, res) => {
+  try {
+    const emailNorm = String(req.body?.email || '').toLowerCase().trim();
+    if (!emailNorm) {
+      return res.status(400).json({ message: 'Emaili është i detyrueshëm.' });
+    }
+    const profile = await getProfileByEmail(emailNorm);
+    if (profile) {
+      const { data } = await getSupabaseAdmin().auth.admin.getUserById(profile.id);
+      if (data?.user?.email_confirmed_at) {
+        return res.json({ ok: true, message: 'Emaili është tashmë i konfirmuar. Mund të hysh.' });
+      }
+      await queueAuthEmail('resend-signup', () =>
+        sendSignupConfirmation(emailNorm, { name: displayNameFromProfile(profile) }),
+      );
+    }
+    return res.json({
+      ok: true,
+      message: 'Nëse llogaria ekziston, të dërguam një email konfirmimi.',
+    });
+  } catch (error) {
+    console.error('POST /resend-confirmation:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+router.post('/forgot-password', mailRateLimit, async (req, res) => {
+  try {
+    const emailNorm = String(req.body?.email || '').toLowerCase().trim();
+    if (!emailNorm) {
+      return res.status(400).json({ message: 'Emaili është i detyrueshëm.' });
+    }
+    const profile = await getProfileByEmail(emailNorm);
+    if (profile) {
+      await queueAuthEmail('recovery', () =>
+        sendPasswordReset(emailNorm, { name: displayNameFromProfile(profile) }),
+      );
+    }
+    return res.json({
+      ok: true,
+      message: 'Nëse llogaria ekziston, të dërguam një link për rivendosjen e fjalëkalimit.',
+    });
+  } catch (error) {
+    console.error('POST /forgot-password:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+router.post('/confirm', authRateLimit, async (req, res) => {
+  try {
+    const tokenHash = String(req.body?.tokenHash || req.body?.token_hash || '').trim();
+    const type = String(req.body?.type || 'magiclink').trim() || 'magiclink';
+    const verified = await verifyEmailOtp(tokenHash, type);
+    let profile = await getProfileById(verified.user.id);
+    if (!profile) profile = await ensureProfileForAuthUser(verified.user);
+    if (!profile) {
+      return res.status(401).json({ message: 'Profili nuk u gjet. Kontaktoni mbështetjen.' });
+    }
+    return res.json(sessionPayload(verified.session, profile));
+  } catch (error) {
+    if (error.code === 'TOKEN_MISSING' || error.code === 'TOKEN_INVALID') {
+      return res.status(400).json({ message: 'Linku i konfirmimit është i pavlefshëm ose ka skaduar.' });
+    }
+    console.error('POST /confirm:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+router.post('/reset-password', authRateLimit, async (req, res) => {
+  try {
+    const tokenHash = String(req.body?.tokenHash || req.body?.token_hash || '').trim();
+    const type = String(req.body?.type || 'recovery').trim() || 'recovery';
+    const newPassword = String(req.body?.newPassword || req.body?.password || '');
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere.' });
+    }
+    const verified = await verifyEmailOtp(tokenHash, type);
+    const { error } = await getSupabaseAdmin().auth.admin.updateUserById(verified.user.id, {
+      password: newPassword,
+    });
+    if (error) throw error;
+    let profile = await getProfileById(verified.user.id);
+    if (!profile) profile = await ensureProfileForAuthUser(verified.user);
+    if (!profile) {
+      return res.status(401).json({ message: 'Profili nuk u gjet. Kontaktoni mbështetjen.' });
+    }
+    await queueAuthEmail('password-changed', () =>
+      sendPasswordChangedNotice(profile.email, { name: displayNameFromProfile(profile) }),
+    );
+    return res.json({
+      ...sessionPayload(verified.session, profile),
+      message: 'Fjalëkalimi u ndryshua.',
+    });
+  } catch (error) {
+    if (error.code === 'TOKEN_MISSING' || error.code === 'TOKEN_INVALID') {
+      return res.status(400).json({ message: 'Linku i rivendosjes është i pavlefshëm ose ka skaduar.' });
+    }
+    console.error('POST /reset-password:', error?.message || error);
+    res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
+
+/** Supabase Auth Send Email Hook — point the dashboard webhook here to brand all auth mail. */
+router.post('/hooks/send-email', async (req, res) => {
+  try {
+    if (!verifySendEmailHook(req)) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    await sendFromSupabaseHook(req.body || {});
+    return res.status(200).json({ ok: true });
+  } catch (error) {
+    console.error('POST /hooks/send-email:', error?.message || error);
+    res.status(500).json({ message: error?.message || 'Gabim serveri.' });
   }
 });
 

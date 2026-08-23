@@ -222,8 +222,8 @@ export function BusinessListingForm({
       setError('Krijoni një llogari biznesi për të kryer këtë veprim.');
       return;
     }
-    if (!title.trim() || !cityId) {
-      setError('Plotësoni titullin, qytetin dhe numrin e telefonit.');
+    if (!title.trim()) {
+      setError('Plotësoni titullin dhe numrin e telefonit.');
       return;
     }
     if (contactPhone.trim().length < 6) {
@@ -253,7 +253,7 @@ export function BusinessListingForm({
       title: title.trim(),
       description: description.trim(),
       category,
-      cityId,
+      cityId: cityId || null,
       zoneId: zoneId || null,
       mapsUrl: mapsUrl.trim() || null,
       contactPhone: contactPhone.trim(),
@@ -349,7 +349,6 @@ export function BusinessListingForm({
         <ListingFormSection
           icon={<StorefrontIcon size={20} weight="duotone" />}
           title="Informacioni bazë"
-          description="Emri, kategoria dhe të dhënat që shfaqen në profil."
         >
           <ListingTextField
             label="Emri i biznesit"
@@ -364,7 +363,7 @@ export function BusinessListingForm({
             existingUrls={existingImageUrls}
             onExistingUrlsChange={setExistingImageUrls}
             max={MAX_BUSINESS_IMAGES}
-            label="Foto të biznesit (të paktën 1)"
+            label="Foto"
             disabled={submitting}
           />
           <SearchableSelect
@@ -384,8 +383,8 @@ export function BusinessListingForm({
               setZoneId('');
             }}
             options={cities.map((c) => ({ value: c.id, label: c.name }))}
-            emptyLabel="Zgjidhni qytetin…"
-            required
+            emptyLabel="Zgjidhni qytetin… (opsionale)"
+            clearable
           />
           {zones.length > 0 ? (
             <SearchableSelect
@@ -439,7 +438,6 @@ export function BusinessListingForm({
         <ListingFormSection
           icon={<ClockIcon size={20} weight="duotone" />}
           title="Orari i hapjes"
-          description="Vendosni orarin javor që klientët të dinë kur jeni hapur."
         >
           <Stack spacing={1}>
             {weeklyHours.map((row, index) => (
@@ -513,7 +511,6 @@ export function BusinessListingForm({
         <ListingFormSection
           icon={<CalendarCheckIcon size={20} weight="duotone" />}
           title="Butoni kryesor & rezervime"
-          description="Zgjidhni çfarë shfaqet mbi përmbledhje në mobile. Rezervimet mund të mbeten aktive edhe me “Kontakto”."
         >
           <BusinessMobileCtaPicker
             value={mobileCtaMode}

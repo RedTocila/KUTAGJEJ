@@ -34,6 +34,7 @@ router.get('/', auth, requirePortalUser, async (req, res) => {
       .from('user_notifications')
       .select('*')
       .eq('user_id', userId)
+      .neq('type', 'ai_usage')
       .order('created_at', { ascending: false })
       .limit(limit);
     if (unreadOnly) listQ = listQ.is('read_at', null);
@@ -44,6 +45,7 @@ router.get('/', auth, requirePortalUser, async (req, res) => {
         .from('user_notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
+        .neq('type', 'ai_usage')
         .is('read_at', null),
     ]);
     if (error) {

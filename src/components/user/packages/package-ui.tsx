@@ -143,7 +143,12 @@ export function ReferralDiscountNote({ percent }: { percent: number }) {
 }
 
 export function formatBc(n: number) {
-  return new Intl.NumberFormat('en-US').format(Number(n) || 0);
+  const v = Number(n);
+  const rounded = Number.isFinite(v) ? Math.round(v * 10) / 10 : 0;
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  }).format(rounded);
 }
 
 /** Shared shell for a sellable plan / pack card. */

@@ -59,7 +59,7 @@ import { PortalLinkCard, PortalLinkGroup, portalCardSx } from '@/components/user
 import { ReferralSummaryCard } from '@/components/user/referral-summary-card';
 import { SupportContactRow } from '@/components/user/support-contact-row';
 import { ThemeSwitchRow } from '@/components/user/theme-switch-row';
-import { planAccentForCode } from '@/components/user/packages/package-ui';
+import { formatBc, planAccentForCode } from '@/components/user/packages/package-ui';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
 import { useMainTabsHosted } from '@/components/main-tabs/main-tabs-shell';
@@ -398,7 +398,7 @@ export function UserDashboardHome() {
 
   useRegisterTabRefresh('profile', () => refreshDashboard());
 
-  const boostCoins = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
+  const boostCoins = Math.max(0, Math.round((Number(user?.boostCredits) || 0) * 10) / 10);
   const avatarSrc = typeof user?.avatar === 'string' && user.avatar.trim() ? user.avatar.trim() : undefined;
   const avatarInitial = (user?.firstName?.[0] || user?.email?.[0] || '?').toUpperCase();
   const categoryLabel = getUserPortalAccountCategoryLabel(user ?? null);
@@ -551,7 +551,7 @@ export function UserDashboardHome() {
                 letterSpacing: '-0.01em',
               }}
             >
-              {new Intl.NumberFormat('en-US').format(boostCoins)}
+              {formatBc(boostCoins)}
             </Typography>
           </Box>
         </Stack>
@@ -732,6 +732,14 @@ export function UserDashboardHome() {
           badge={categoryLabel}
           badgeColor={categoryBadgeColor}
         />
+        {canPublish ? (
+          <PortalLinkCard
+            grouped
+            href={paths.user.aiUsage}
+            title={t.aiUsageTitle}
+            icon={SparkleIcon}
+          />
+        ) : null}
         <PortalLinkCard
           grouped
           href={paths.user.notificationSettings}

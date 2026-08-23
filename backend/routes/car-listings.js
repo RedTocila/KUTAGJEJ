@@ -8,6 +8,7 @@ const { camelizeRow } = require('../lib/profiles');
 const { validateCarPayload, FINISH_VALUES } = require('../lib/car-field-rules');
 const { notifyAdminsListingSubmitted, listingTitle } = require('../lib/listing-moderation');
 const { isUuid } = require('../lib/public-listings/query-helpers');
+const { resolveOptionalCityId } = require('../lib/listing-city');
 const { sanitizeImageUrls, requireListingPhotos } = require('../lib/image-upload');
 const { uploadBuffersToSupabase } = require('../lib/storage-uploads');
 const { parseComparePrice } = require('../lib/listing-compare-price');
@@ -117,16 +118,9 @@ router.post(
       const photos = requireListingPhotos(imageUrls);
       if (!photos.ok) return res.status(400).json({ message: photos.message });
 
-      const cityId = String(fields.cityId).trim();
-      if (!isUuid(cityId)) return res.status(400).json({ message: 'City not found.' });
-
-      const { data: city, error: cityErr } = await getSupabaseAdmin()
-        .from('real_estate_cities')
-        .select('id')
-        .eq('id', cityId)
-        .maybeSingle();
-      if (cityErr) throw cityErr;
-      if (!city) return res.status(400).json({ message: 'City not found.' });
+      const city = await resolveOptionalCityId(fields.cityId, 'City not found.');
+      if (!city.ok) return res.status(400).json({ message: city.message });
+      const cityId = city.cityId;
 
       const maps = await parseMapsFieldsFromBody(fields);
       if (!maps.ok) return res.status(400).json({ message: maps.message });
@@ -214,16 +208,9 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
     const v = validateCarPayload(fields);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
-    const cityId = String(fields.cityId || '').trim();
-    if (!isUuid(cityId)) return res.status(400).json({ message: 'City not found.' });
-
-    const { data: city, error: cityErr } = await getSupabaseAdmin()
-      .from('real_estate_cities')
-      .select('id')
-      .eq('id', cityId)
-      .maybeSingle();
-    if (cityErr) throw cityErr;
-    if (!city) return res.status(400).json({ message: 'City not found.' });
+    const city = await resolveOptionalCityId(fields.cityId, 'City not found.');
+    if (!city.ok) return res.status(400).json({ message: city.message });
+    const cityId = city.cityId;
 
     const maps = await parseMapsFieldsFromBody(fields);
     if (!maps.ok) return res.status(400).json({ message: maps.message });

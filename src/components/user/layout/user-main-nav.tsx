@@ -20,6 +20,7 @@ import { UserMobileNav } from './user-mobile-nav';
 import { UserPortalPopover } from './user-portal-popover';
 
 function titleForPath(pathname: string, t: AppMessages): string {
+  if (pathname.startsWith(paths.user.aiUsage)) return t.nav.aiUsage;
   if (pathname.startsWith(paths.user.profile)) return t.nav.profile;
   if (pathname.startsWith(paths.user.notificationSettings)) return t.notifications.prefsTitle;
   if (pathname.startsWith(paths.user.leads)) return t.notifications.leadsTitle;

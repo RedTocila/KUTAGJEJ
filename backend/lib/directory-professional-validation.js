@@ -47,7 +47,8 @@ function validateProfessionalPayload(body, { partial = false } = {}) {
     }
     body.category = category || null;
     const cityId = String(body?.cityId || '').trim();
-    if (!cityId || !isUuid(cityId)) return { ok: false, message: 'Zgjidhni një qytet të vlefshëm.' };
+    if (cityId && !isUuid(cityId)) return { ok: false, message: 'Zgjidhni një qytet të vlefshëm.' };
+    body.cityId = cityId || null;
     const phone = String(body?.contactPhone || '').trim();
     if (phone.length < 6) return { ok: false, message: 'Numri i telefonit duhet të ketë të paktën 6 karaktere.' };
   }

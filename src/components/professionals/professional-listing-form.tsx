@@ -277,8 +277,8 @@ export function ProfessionalListingForm({
     e.preventDefault();
     setError(null);
     setSaveNotice(null);
-    if (!title.trim() || !cityId) {
-      setError('Plotësoni titullin, qytetin dhe numrin e telefonit.');
+    if (!title.trim()) {
+      setError('Plotësoni titullin dhe numrin e telefonit.');
       return;
     }
     if (contactPhone.trim().length < 6) {
@@ -352,7 +352,7 @@ export function ProfessionalListingForm({
       title: title.trim(),
       description: description.trim(),
       category,
-      cityId,
+      cityId: cityId || null,
       mapsUrl: mapsUrl.trim() || null,
       contactPhone: contactPhone.trim(),
       imageUrls,
@@ -450,7 +450,6 @@ export function ProfessionalListingForm({
         <ListingFormSection
           icon={<UserCircleIcon size={20} weight="duotone" />}
           title="Informacioni bazë"
-          description="Titulli, kategoria dhe të dhënat që shfaqen në profil."
         >
           <ListingTextField
             label="Titulli i profilit"
@@ -469,7 +468,7 @@ export function ProfessionalListingForm({
               existingUrls={coverUrl ? [coverUrl] : []}
               onExistingUrlsChange={(urls) => setCoverUrl(urls[0] ?? null)}
               max={1}
-              label="Foto kopertinë (të paktën 1)"
+              label="Foto kopertinë"
               disabled={submitting}
             />
             <ListingImagePicker
@@ -481,7 +480,7 @@ export function ProfessionalListingForm({
               existingUrls={avatarUrl ? [avatarUrl] : []}
               onExistingUrlsChange={(urls) => setAvatarUrl(urls[0] ?? null)}
               max={1}
-              label="Foto profili (rrethi)"
+              label="Foto profili"
               disabled={submitting}
             />
           </Stack>
@@ -499,8 +498,8 @@ export function ProfessionalListingForm({
             value={cityId}
             onChange={setCityId}
             options={cities.map((c) => ({ value: c.id, label: c.name }))}
-            emptyLabel="Zgjidhni qytetin…"
-            required
+            emptyLabel="Zgjidhni qytetin… (opsionale)"
+            clearable
           />
           <ListingMapsLocationFields
             value={{ mapsUrl, locationLat, locationLng, locationAddress }}
@@ -550,7 +549,6 @@ export function ProfessionalListingForm({
         <ListingFormSection
           icon={<BriefcaseIcon size={20} weight="duotone" />}
           title="Portofoli"
-          description={`Opsionale — deri në ${MAX_PORTFOLIO_WORKS} projekte me foto pune.`}
           action={
             <Button
               size="small"

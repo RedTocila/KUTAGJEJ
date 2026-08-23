@@ -21,7 +21,6 @@ import { aiDraftToInitialListing, mergeAiIntoListing } from '@/lib/ai-draft-to-l
 import {
   acceptAiCategoryCorrection,
   aiDailyLimitMessage,
-  fetchAiImportQuota,
   filesToAiImagePayload,
   importListingsFromLinks,
   isAiCategoryMismatch,
@@ -30,7 +29,6 @@ import {
   mergeAttachedImageUrls,
   toAiListingDraft,
   type AiImportDraftResult,
-  type AiImportQuota,
 } from '@/lib/ai-import-client';
 import { saveAiListingDraft } from '@/lib/ai-listing-draft';
 import { hostAiDraftImages } from '@/lib/ai-draft-post';
@@ -94,7 +92,7 @@ export function PostListingAiAssist({
   variant?: 'panel' | 'composer';
 }) {
   const t = useCopy();
-  const { user } = useUser();
+  const { user, checkSession } = useUser();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const [text, setText] = React.useState('');
@@ -106,20 +104,6 @@ export function PostListingAiAssist({
   const [inputExpanded, setInputExpanded] = React.useState(false);
   const [mismatchDraft, setMismatchDraft] = React.useState<AiImportDraftResult | null>(null);
   const [pendingImageUrls, setPendingImageUrls] = React.useState<string[]>([]);
-  const [quota, setQuota] = React.useState<AiImportQuota | null>(null);
-  const quotaExhausted = Boolean(quota && !quota.unlimited && (quota.remaining ?? 0) <= 0);
-
-  React.useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    void (async () => {
-      const res = await fetchAiImportQuota();
-      if (!cancelled && res.quota) setQuota(res.quota);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
 
   React.useEffect(() => {
     const urls = files.map((f) => URL.createObjectURL(f));
@@ -161,7 +145,7 @@ export function PostListingAiAssist({
   const placeholder = isEdit ? t.aiImport.editPlaceholder : t.aiImport.formPlaceholder;
   const appliedMsg = isEdit ? t.aiImport.editApplied : t.aiImport.formApplied;
   const canSubmit = Boolean(text.trim() || files.length > 0 || pendingImageUrls.length > 0);
-  const canAnalyze = canSubmit && !quotaExhausted;
+  const canAnalyze = canSubmit;
 
   const openCorrectCategoryForm = async (draft: AiImportDraftResult) => {
     const accepted = acceptAiCategoryCorrection(draft) ?? {
@@ -213,11 +197,6 @@ export function PostListingAiAssist({
       setSuccess(null);
       return;
     }
-    if (quotaExhausted) {
-      setError(aiDailyLimitMessage(t, quota?.planCode));
-      setSuccess(null);
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -247,12 +226,12 @@ export function PostListingAiAssist({
         profile: profileFromUser(user),
         images: imagePayload,
         mode,
+        feature: 'assist',
         currentListing: isEdit ? currentListing : null,
       });
-      if (res.quota) setQuota(res.quota);
       if (res.error) {
         if (isAiDailyLimitError({ code: res.code, error: res.error, status: res.status })) {
-          setError(aiDailyLimitMessage(t, res.quota?.planCode || quota?.planCode));
+          setError(aiDailyLimitMessage(t));
         } else {
           setError(res.error);
         }
@@ -341,6 +320,7 @@ export function PostListingAiAssist({
       setError(t.aiImport.failed);
     } finally {
       setLoading(false);
+      void checkSession();
     }
   };
 
@@ -552,16 +532,6 @@ export function PostListingAiAssist({
           onAcceptDetected={acceptMismatchDetected}
           onStartOver={startOverMismatch}
         />      ) : null}
-
-      {quota && !quota.unlimited ? (
-        <Alert
-          severity={quotaExhausted ? 'warning' : 'info'}
-          sx={{ borderRadius: 2.5, py: 0, '& .MuiAlert-message': { fontSize: '0.78rem', fontWeight: 600 } }}
-        >
-          {t.aiImport.quotaRemaining(quota.remaining ?? 0, quota.limit ?? 0)}
-          {quotaExhausted ? ` — ${t.aiImport.upgradeForMore}` : null}
-        </Alert>
-      ) : null}
 
       {error ? (
         <Alert severity="error" sx={{ borderRadius: 2.5, py: 0 }}>

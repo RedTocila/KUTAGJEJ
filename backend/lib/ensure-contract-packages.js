@@ -34,7 +34,7 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: false,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/10 Job Listings · 0/5 Car Listings · 0/10 Apartment Listings · 0/5 Product Listings · Refresh same listing after 48 hours · AI Build 1×/day',
+      '0/1 List in All Categories · 0/10 Job Listings · 0/5 Car Listings · 0/10 Apartment Listings · 0/5 Product Listings · Refresh same listing after 48 hours',
   },
   {
     planCode: 'starter',
@@ -53,7 +53,7 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: false,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/15 Car · 0/25 Apartment · 0/15 Product · 0/50 Job · 150 Boost Coins · Refresh same listing after 24 hours · AI Build 10×/day',
+      '0/1 List in All Categories · 0/15 Car · 0/25 Apartment · 0/15 Product · 0/50 Job · 150 Boost Coins · Refresh same listing after 24 hours',
   },
   {
     planCode: 'grow',
@@ -72,7 +72,7 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: true,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/40 Cars · 0/250 Apartments · 0/50 Products · 0/200 Jobs · 0/20 Premium (30 days) · 0/5 OKAZION (5 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Premium Badge · Leads: contact from saves, shares & high interest · Unlimited AI Build',
+      '0/1 List in All Categories · 0/40 Cars · 0/250 Apartments · 0/50 Products · 0/200 Jobs · 0/20 Premium (30 days) · 0/5 OKAZION (5 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Premium Badge · Leads: contact from saves, shares & high interest',
   },
   {
     planCode: 'elite',
@@ -91,7 +91,7 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: true,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/150 Cars · 0/1000 Apartments · 0/200 Products · 0/500 Jobs · 0/30 Premium (30 days) · 0/10 OKAZION (5 days) · 2000 Boost Coins · Refresh same listing after 6 hours · Premium Badge · Leads: contact from saves, shares & high interest · Unlimited AI Build',
+      '0/1 List in All Categories · 0/150 Cars · 0/1000 Apartments · 0/200 Products · 0/500 Jobs · 0/30 Premium (30 days) · 0/10 OKAZION (5 days) · 2000 Boost Coins · Refresh same listing after 6 hours · Premium Badge · Leads: contact from saves, shares & high interest',
   },
 ];
 

@@ -107,7 +107,7 @@ export type RegisterParams =
     };
 
 class AuthClient {
-  async signIn(params: SignInParams): Promise<{ error?: string; user?: User }> {
+  async signIn(params: SignInParams): Promise<{ error?: string; user?: User; code?: string }> {
     try {
       const remember = params.remember !== false;
       const res = await fetch(getApiUrl('/auth/login'), {
@@ -116,7 +116,10 @@ class AuthClient {
         body: JSON.stringify({ email: params.email, password: params.password }),
       });
       const data = await res.json();
-      if (!res.ok) return { error: loginErrorSq(data.message) };
+      if (!res.ok) {
+        const code = typeof data.code === 'string' ? data.code : undefined;
+        return { error: loginErrorSq(data.message), code };
+      }
       setRememberLoginEnabled(remember);
       writeRememberedEmail(remember ? params.email : null);
       persistAccessToken(data.token, data.refreshToken ?? null);
@@ -128,7 +131,12 @@ class AuthClient {
     }
   }
 
-  async register(params: RegisterParams): Promise<{ error?: string; user?: User }> {
+  async register(params: RegisterParams): Promise<{
+    error?: string;
+    user?: User;
+    needsEmailConfirmation?: boolean;
+    email?: string;
+  }> {
     try {
       const res = await fetch(getApiUrl('/auth/register'), {
         method: 'POST',
@@ -137,6 +145,9 @@ class AuthClient {
       });
       const data = await res.json();
       if (!res.ok) return { error: registerErrorSq(data.message) };
+      if (data.needsEmailConfirmation) {
+        return { needsEmailConfirmation: true, email: data.email || params.email };
+      }
       setRememberLoginEnabled(true);
       writeRememberedEmail(params.email);
       if (data.token) persistAccessToken(data.token, data.refreshToken ?? null);
@@ -360,6 +371,78 @@ class AuthClient {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Ndryshimi i fjalëkalimit dështoi.' };
       return { ok: true };
+    } catch {
+      return { error: 'Nuk u arrit lidhja me serverin.' };
+    }
+  }
+
+  async forgotPassword(email: string): Promise<{ error?: string; message?: string }> {
+    try {
+      const res = await fetch(getApiUrl('/auth/forgot-password'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Dërgimi dështoi.' };
+      return { message: typeof data.message === 'string' ? data.message : undefined };
+    } catch {
+      return { error: 'Nuk u arrit lidhja me serverin.' };
+    }
+  }
+
+  async resendConfirmation(email: string): Promise<{ error?: string; message?: string }> {
+    try {
+      const res = await fetch(getApiUrl('/auth/resend-confirmation'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Dërgimi dështoi.' };
+      return { message: typeof data.message === 'string' ? data.message : undefined };
+    } catch {
+      return { error: 'Nuk u arrit lidhja me serverin.' };
+    }
+  }
+
+  async confirmEmail(tokenHash: string, type: string): Promise<{ error?: string; user?: User }> {
+    try {
+      const res = await fetch(getApiUrl('/auth/confirm'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokenHash, type }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Konfirmimi dështoi.' };
+      setRememberLoginEnabled(true);
+      persistAccessToken(data.token, data.refreshToken ?? null);
+      persistUserProfile(data.admin);
+      if (data.token) await syncBrowserSession(data.token, data.refreshToken ?? null);
+      return { user: data.admin as User };
+    } catch {
+      return { error: 'Nuk u arrit lidhja me serverin.' };
+    }
+  }
+
+  async resetPasswordWithToken(body: {
+    tokenHash: string;
+    type?: string;
+    newPassword: string;
+  }): Promise<{ error?: string; user?: User }> {
+    try {
+      const res = await fetch(getApiUrl('/auth/reset-password'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Rivendosja dështoi.' };
+      setRememberLoginEnabled(true);
+      persistAccessToken(data.token, data.refreshToken ?? null);
+      persistUserProfile(data.admin);
+      if (data.token) await syncBrowserSession(data.token, data.refreshToken ?? null);
+      return { user: data.admin as User };
     } catch {
       return { error: 'Nuk u arrit lidhja me serverin.' };
     }

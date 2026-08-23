@@ -87,9 +87,8 @@ function validateRealEstatePayload(body) {
     body.surfaceM2 = null;
   }
 
-  if (!body?.cityId) {
-    return { ok: false, message: 'City is required.' };
-  }
+  const cityId = String(body?.cityId ?? '').trim();
+  body.cityId = cityId || null;
 
   const contactPhone = String(body?.contactPhone ?? '').trim();
   if (contactPhone.length < 6) {
@@ -104,10 +103,12 @@ function validateRealEstatePayload(body) {
 
   const filled = (v) => v !== undefined && v !== null && String(v).trim() !== '';
 
-  if (needsCondition(cat) && filled(body?.condition)) {
-    if (!CONDITION_SLUGS.includes(body.condition)) {
-      return { ok: false, message: 'Condition is invalid for this category.' };
+  if (filled(body?.condition)) {
+    if (!needsCondition(cat) || !CONDITION_SLUGS.includes(body.condition)) {
+      body.condition = null;
     }
+  } else {
+    body.condition = null;
   }
 
   if (needsFloor(cat) && filled(body?.floor)) {
@@ -137,7 +138,7 @@ function validateRealEstatePayload(body) {
       if (!Number.isInteger(ba) || ba < 0) return { ok: false, message: 'Bathrooms must be a non-negative integer.' };
     }
     if (filled(body?.furnishing) && !FURNISHING_SLUGS.includes(body.furnishing)) {
-      return { ok: false, message: 'Furnishing is invalid for this category.' };
+      body.furnishing = null;
     }
   }
 

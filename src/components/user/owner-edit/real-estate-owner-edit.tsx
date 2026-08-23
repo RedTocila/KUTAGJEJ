@@ -185,11 +185,6 @@ export function RealEstateOwnerEdit({
         setError('Shtoni të paktën një foto.');
         return;
       }
-      const cityId = draft.cityId;
-      if (!cityId) {
-        setError('Zgjidhni qytetin.');
-        return;
-      }
       if (!draft.title.trim()) {
         setError('Titulli është i detyrueshëm.');
         return;
@@ -213,7 +208,7 @@ export function RealEstateOwnerEdit({
         originalPrice: draft.originalPrice ?? null,
         currency: draft.currency || 'EUR',
         surfaceM2: draft.surfaceM2,
-        cityId,
+        cityId: draft.cityId || null,
         zoneId,
         mapsUrl: draft.mapsUrl?.trim() || null,
         contactPhone: phone,
@@ -232,7 +227,7 @@ export function RealEstateOwnerEdit({
         setError(res.error);
         return;
       }
-      const next = { ...draft, imageUrls, cityId, zoneId };
+      const next = { ...draft, imageUrls, zoneId };
       setDraft(next);
       setBaseline(JSON.stringify(next));
       setExistingUrls(imageUrls);
@@ -323,8 +318,8 @@ export function RealEstateOwnerEdit({
             }));
           }}
           options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni…"
-          required
+          emptyLabel="Zgjidhni… (opsionale)"
+          clearable
         />
         <SearchableSelect
           label="Zona"
@@ -378,7 +373,6 @@ export function RealEstateOwnerEdit({
           }
           fullWidth
           autoFocus
-          helperText="Opsionale"
           sx={fieldSx}
         />
         {needsCondition(cat) ? (

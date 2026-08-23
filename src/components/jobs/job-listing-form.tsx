@@ -153,7 +153,6 @@ function buildBenefitsPayload(f: JobFormState): { id: string; label: string }[] 
 
 function validateForm(f: JobFormState): string | null {
   if (!f.title.trim()) return 'Titulli i punës është i detyrueshëm.';
-  if (!f.cityId) return 'Ju lutem zgjidhni qytetin.';
 
   if (f.salary.trim()) {
     const s = parseFloatStrict(f.salary);
@@ -308,7 +307,7 @@ export function JobListingForm({
         title: form.title.trim(),
         description: form.description.trim(),
         industry: form.industry,
-        cityId: form.cityId,
+        cityId: form.cityId || null,
         mapsUrl: form.mapsUrl.trim() || null,
         education: form.education,
         experience: form.experience,
@@ -381,7 +380,7 @@ export function JobListingForm({
       spacing={2.25}
       onSubmit={(e) => void handleSubmit(e)}
     >
-      <ListingFormSection title="Detajet e punës" description="Titulli dhe prezantimi i pozicionit.">
+      <ListingFormSection title="Detajet e punës">
         <ListingTextField
           label="Titulli i punës"
           value={form.title}
@@ -396,7 +395,7 @@ export function JobListingForm({
           existingUrls={existingImageUrls}
           onExistingUrlsChange={setExistingImageUrls}
           max={MAX_JOB_IMAGES}
-          label="Foto (të paktën 1)"
+          label="Foto"
           disabled={submitting}
         />
         <ListingDescriptionField
@@ -406,26 +405,23 @@ export function JobListingForm({
           fullWidth
           minRows={3}
           placeholder="Prezantim i pozicionit — 2–3 fjali për kandidatët…"
-          helperText="Detyrat, kërkesat dhe përfitimet plotësohen më poshtë si seksione të veçanta."
         />
       </ListingFormSection>
 
       <ListingFormSection title="Detyrat dhe kërkesat">
         <JobFormStringList
           label="Detyrat dhe përgjegjësitë"
-          hint="Lista e detyrave kryesore (të shfaqen në faqen e njoftimit)."
           items={form.responsibilities}
           onChange={(responsibilities) => setForm((p) => ({ ...p, responsibilities }))}
         />
         <JobFormStringList
           label="Kërkesat"
-          hint="Kualifikimet dhe aftësitë e kërkuara."
           items={form.requirements}
           onChange={(requirements) => setForm((p) => ({ ...p, requirements }))}
         />
       </ListingFormSection>
 
-      <ListingFormSection title="Përfitimet" description="Zgjidhni përfitimet që ofroni.">
+      <ListingFormSection title="Përfitimet">
         <FormGroup>
           {JOB_BENEFIT_PRESETS.map((preset) => (
             <FormControlLabel
@@ -470,8 +466,8 @@ export function JobListingForm({
           value={form.cityId}
           onChange={(v) => setForm((p) => ({ ...p, cityId: v }))}
           options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni qytetin…"
-          required
+          emptyLabel="Zgjidhni qytetin… (opsionale)"
+          clearable
           disabled={loadingCities || cities.length === 0}
         />
         {!loadingCities && cities.length === 0 ? (
@@ -567,7 +563,6 @@ export function JobListingForm({
             }}
             fullWidth
             placeholder="p.sh. 80000"
-            helperText="Opsionale — lëreni bosh nëse nuk dëshironi ta shfaqni."
             slotProps={{
               input: {
                 endAdornment: <InputAdornment position="end">/ muaj</InputAdornment>,
@@ -592,7 +587,6 @@ export function JobListingForm({
           onChange={onField('contactPhone')}
           required
           fullWidth
-          helperText="Do të shfaqet tek kandidatët e interesuar për këtë njoftim."
         />
       </ListingFormSection>
 

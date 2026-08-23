@@ -136,11 +136,6 @@ export function MarketplaceOwnerEdit({
         setError('Shtoni të paktën një foto.');
         return;
       }
-      const cityId = draft.cityId;
-      if (!cityId) {
-        setError('Zgjidhni qytetin.');
-        return;
-      }
       const res = await updateMarketplaceListing(draft.id, {
         transactionType: 'shes',
         title: draft.title.trim(),
@@ -150,7 +145,7 @@ export function MarketplaceOwnerEdit({
         price: draft.price,
         originalPrice: draft.originalPrice ?? null,
         currency: draft.currency,
-        cityId,
+        cityId: draft.cityId || null,
         mapsUrl: draft.mapsUrl?.trim() || null,
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
@@ -159,7 +154,7 @@ export function MarketplaceOwnerEdit({
         setError(res.error);
         return;
       }
-      const next = { ...draft, imageUrls, cityId };
+      const next = { ...draft, imageUrls };
       setDraft(next);
       setBaseline(JSON.stringify(next));
       setExistingUrls(imageUrls);
@@ -241,8 +236,8 @@ export function MarketplaceOwnerEdit({
             setDraft((d) => ({ ...d, cityId: v || null, cityName }));
           }}
           options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni…"
-          required
+          emptyLabel="Zgjidhni… (opsionale)"
+          clearable
         />
         <ListingMapsLocationFields
           value={{
@@ -274,7 +269,6 @@ export function MarketplaceOwnerEdit({
           onChange={(v) => setDraft((d) => ({ ...d, category: v }))}
           options={MARKETPLACE_CATEGORY_OPTIONS}
           emptyLabel="Zgjidhni…"
-          required
           allowCustom
         />
         <SearchableSelect

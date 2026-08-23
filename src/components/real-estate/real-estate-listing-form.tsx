@@ -149,13 +149,12 @@ function validateForm(f: FormState): string | null {
   if (!f.title.trim()) return 'Titulli është i detyrueshëm.';
   const price = parseFloatStrict(f.price);
   if (price === null || price < 0) return 'Vendosni një çmim të vlefshëm.';
-  if (f.currency !== 'EUR' && f.currency !== 'LEK') return 'Ju lutemi zgjidhni monedhën.';
+  if (f.currency && f.currency !== 'EUR' && f.currency !== 'LEK') return 'Ju lutemi zgjidhni monedhën.';
   if (f.originalPrice.trim()) {
     const was = parseFloatStrict(f.originalPrice);
     if (was === null || was < 0) return 'Çmimi i mëparshëm duhet të jetë një numër pozitiv.';
     if (was <= price) return 'Çmimi i mëparshëm duhet të jetë më i lartë se çmimi aktual.';
   }
-  if (!f.cityId) return 'Ju lutemi zgjidhni qytetin.';
   if (f.transactionType && f.transactionType !== 'rent' && f.transactionType !== 'sale') {
     return 'Ju lutemi zgjidhni me qira ose në shitje.';
   }
@@ -164,11 +163,6 @@ function validateForm(f: FormState): string | null {
   if (f.surfaceM2.trim()) {
     const surface = parseFloatStrict(f.surfaceM2);
     if (surface === null || surface <= 0) return 'Sipërfaqja duhet të jetë numër pozitiv (m²).';
-  }
-
-  if (needsCondition(cat) && f.condition) {
-    const ok = CONDITION_OPTIONS.some((o) => o.value === f.condition);
-    if (!ok) return 'Ju lutemi zgjidhni gjendjen.';
   }
 
   if (needsFloor(cat) && f.floor.trim()) {
@@ -194,10 +188,6 @@ function validateForm(f: FormState): string | null {
     if (f.bathrooms.trim()) {
       const ba = parseIntStrict(f.bathrooms);
       if (ba === null || ba < 0) return 'Banjot duhet të jenë numër i plotë (0 ose më shumë).';
-    }
-    if (f.furnishing) {
-      const okF = FURNISHING_OPTIONS.some((o) => o.value === f.furnishing);
-      if (!okF) return 'Ju lutemi zgjidhni mobilimin.';
     }
   }
 
@@ -227,12 +217,12 @@ function buildPayload(f: FormState): RealEstateListingPayload {
     originalPrice: f.originalPrice.trim() ? parseFloatStrict(f.originalPrice) : null,
     currency: (f.currency === 'LEK' ? 'LEK' : 'EUR') as 'EUR' | 'LEK',
     surfaceM2: f.surfaceM2.trim() ? parseFloatStrict(f.surfaceM2) : null,
-    cityId: f.cityId,
+    cityId: f.cityId || null,
     zoneId: f.zoneId || null,
     mapsUrl: f.mapsUrl.trim() || null,
     contactPhone: f.contactPhone.trim(),
   };
-  if (needsCondition(cat) && f.condition) {
+  if (needsCondition(cat) && CONDITION_OPTIONS.some((o) => o.value === f.condition)) {
     payload.condition = f.condition as RealEstateListingPayload['condition'];
   }
   if (needsFloor(cat) && f.floor.trim()) payload.floor = parseIntStrict(f.floor)!;
@@ -241,7 +231,9 @@ function buildPayload(f: FormState): RealEstateListingPayload {
   if (needsBedroomsBathFurnishing(cat)) {
     if (f.bedrooms.trim()) payload.bedrooms = parseIntStrict(f.bedrooms)!;
     if (f.bathrooms.trim()) payload.bathrooms = parseIntStrict(f.bathrooms)!;
-    if (f.furnishing) payload.furnishing = f.furnishing as RealEstateListingPayload['furnishing'];
+    if (f.furnishing && FURNISHING_OPTIONS.some((o) => o.value === f.furnishing)) {
+      payload.furnishing = f.furnishing as RealEstateListingPayload['furnishing'];
+    }
   }
   if (needsYearBuilt(cat) && f.yearBuilt.trim()) {
     payload.yearBuilt = parseIntStrict(f.yearBuilt)!;
@@ -265,13 +257,15 @@ function formFromListing(l: RealEstateMineListing): FormState {
     locationLng: l.locationLng ?? null,
     locationAddress: l.locationAddress ?? null,
     currency: l.currency === 'EUR' || l.currency === 'LEK' ? l.currency : '',
-    condition: (l.condition as FormState['condition']) || '',
+    condition: CONDITION_OPTIONS.some((o) => o.value === l.condition) ? (l.condition as FormState['condition']) : '',
     floor: l.floor != null ? String(l.floor) : '',
     totalFloors: l.totalFloors != null ? String(l.totalFloors) : '',
     parkingFloor: l.parkingFloor != null ? String(l.parkingFloor) : '',
     bedrooms: l.bedrooms != null ? String(l.bedrooms) : '',
     bathrooms: l.bathrooms != null ? String(l.bathrooms) : '',
-    furnishing: (l.furnishing as FormState['furnishing']) || '',
+    furnishing: FURNISHING_OPTIONS.some((o) => o.value === l.furnishing)
+      ? (l.furnishing as FormState['furnishing'])
+      : '',
     yearBuilt: l.yearBuilt != null ? String(l.yearBuilt) : '',
     contactPhone: l.contactPhone || '',
   };
@@ -446,7 +440,6 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
       <ListingFormSection
         icon={<BuildingsIcon size={20} weight="duotone" />}
         title="Detajet e njoftimit"
-        description="Plotësoni titullin, llojin e pronës dhe fushat e tjera sipas kategorisë."
       >
       <ListingTextField label="Titulli" value={form.title} onChange={onField('title')} required fullWidth />
       <ListingImagePicker
@@ -455,7 +448,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         existingUrls={existingImageUrls}
         onExistingUrlsChange={setExistingImageUrls}
         max={MAX_REAL_ESTATE_IMAGES}
-        label="Foto (të paktën 1)"
+        label="Foto"
         disabled={submitting}
       />
       <ListingDescriptionField
@@ -506,7 +499,6 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           value={form.originalPrice}
           onChange={onField('originalPrice')}
           fullWidth
-          helperText="Opsionale — shfaqet i përshkruar (ishte…)."
         />
         <SearchableSelect
           label="Monedha"
@@ -525,8 +517,8 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           value={form.cityId}
           onChange={(v) => setForm((p) => ({ ...p, cityId: v, zoneId: '' }))}
           options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidh…"
-          required
+          emptyLabel="Zgjidh… (opsionale)"
+          clearable
           disabled={loadingRefs || cities.length === 0}
         />
         <SearchableSelect
@@ -573,7 +565,6 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         value={form.surfaceM2}
         onChange={onField('surfaceM2')}
         fullWidth
-        helperText="Opsionale — sipërfaqja e brendshme ose e truallit në metra katrorë (m²)."
         slotProps={{
           input: {
             endAdornment: <InputAdornment position="end">m²</InputAdornment>,
@@ -596,7 +587,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           value={form.condition}
           onChange={(v) => setForm((p) => ({ ...p, condition: v as FormState['condition'] }))}
           options={CONDITION_OPTIONS}
-          emptyLabel="Zgjidh…"
+          emptyLabel="Zgjidh… (opsionale)"
           clearable
           disabled={loadingRefs}
         />
@@ -662,7 +653,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           value={form.furnishing}
           onChange={(v) => setForm((p) => ({ ...p, furnishing: v as FormState['furnishing'] }))}
           options={FURNISHING_OPTIONS}
-          emptyLabel="Zgjidh…"
+          emptyLabel="Zgjidh… (opsionale)"
           clearable
           disabled={loadingRefs}
         />
@@ -688,7 +679,6 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         onChange={onField('contactPhone')}
         required
         fullWidth
-        helperText="I shfaqet personave të interesuar për këtë njoftim. Është paraplotësuar nga llogaria juaj nëse keni shtuar një numër gjatë regjistrimit ose në profil — mund ta ndryshoni këtu."
       />
 
       </ListingFormSection>

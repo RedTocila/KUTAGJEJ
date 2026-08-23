@@ -182,8 +182,6 @@ function validateForm(f: CarFormState): FieldErrors {
     }
   }
 
-  if (!f.cityId) errors.cityId = 'Please select a city.';
-
   const phone = f.contactPhone.trim();
   if (phone.length < 6) errors.contactPhone = 'Enter a valid phone number (at least 6 characters).';
   else if (phone.length > 40) errors.contactPhone = 'Phone number is too long.';
@@ -553,7 +551,7 @@ export function CarListingForm({
           finish,
           extras: form.extras,
           contactPhone: form.contactPhone.trim(),
-          cityId: form.cityId,
+          cityId: form.cityId || null,
           mapsUrl: form.mapsUrl.trim() || null,
           imageUrls: [...existingImageUrls, ...uploaded].slice(0, MAX_IMAGES),
         });
@@ -728,7 +726,7 @@ export function CarListingForm({
         <Stack spacing={1.5}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
             <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-              Photos (të paktën 1)
+              Foto
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {existingImageUrls.length + images.length} / {MAX_IMAGES}
@@ -804,12 +802,6 @@ export function CarListingForm({
             ) : null}
           </Stack>
 
-          {existingImageUrls.length + images.length < MAX_IMAGES ? (
-            <Typography variant="caption" color="text.disabled">
-              Up to {MAX_IMAGES} images · JPG, PNG, WEBP
-            </Typography>
-          ) : null}
-
           <ImageLightbox
             open={previewIndex != null}
             urls={previewUrls}
@@ -833,8 +825,8 @@ export function CarListingForm({
             value={form.cityId}
             onChange={(v) => setSelectField('cityId', v)}
             options={cities.map((c) => ({ value: c.id, label: c.name }))}
-            emptyLabel="Select city…"
-            required
+            emptyLabel="Select city… (optional)"
+            clearable
             disabled={loadingCities || cities.length === 0}
             error={Boolean(fieldErrors.cityId)}
             helperText={
@@ -962,7 +954,7 @@ export function CarListingForm({
             onChange={onField('originalPrice')}
             fullWidth
             error={Boolean(fieldErrors.originalPrice)}
-            helperText={fieldErrors.originalPrice || 'Optional — shown as the old struck-through price.'}
+            helperText={fieldErrors.originalPrice}
           />
           <ListingToggle
             label="Currency"
@@ -986,7 +978,7 @@ export function CarListingForm({
           required
           fullWidth
           error={Boolean(fieldErrors.contactPhone)}
-          helperText={fieldErrors.contactPhone || 'Shown to interested buyers for this listing.'}
+          helperText={fieldErrors.contactPhone}
         />
       </Stack>
 
@@ -996,9 +988,6 @@ export function CarListingForm({
       <Stack spacing={1.5}>
         <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
           Exterior colour
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          Select the base colour. Only one colour can be active at a time.
         </Typography>
         {fieldErrors.color ? (
           <Typography variant="caption" color="error">

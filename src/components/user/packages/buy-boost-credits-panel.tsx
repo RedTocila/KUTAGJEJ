@@ -79,7 +79,7 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
     };
   }, []);
 
-  const balance = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
+  const balance = Math.max(0, Math.round((Number(user?.boostCredits) || 0) * 10) / 10);
 
   return (
     <Stack spacing={2.5} sx={{ pb: { xs: 12, md: 2 } }}>

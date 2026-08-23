@@ -32,7 +32,6 @@ import { useUser } from '@/hooks/use-user';
 import {
   acceptAiCategoryCorrection,
   aiDailyLimitMessage,
-  fetchAiImportQuota,
   filesToAiImagePayload,
   importListingsFromLinks,
   extractImportUrls,
@@ -43,7 +42,6 @@ import {
   mergeAttachedImageUrls,
   toAiListingDraft,
   type AiImportDraftResult,
-  type AiImportQuota,
 } from '@/lib/ai-import-client';
 import { knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
 import {
@@ -244,7 +242,7 @@ function AiImportProgressPanel({
 
 export default function AiImportListingsPage() {
   const router = useRouter();
-  const { user } = useUser();
+  const { user, checkSession } = useUser();
   const { language } = useLanguage();
   const t = useCopy();
   const categories = React.useMemo(() => localizeHomeVerticals(language), [language]);
@@ -263,7 +261,6 @@ export default function AiImportListingsPage() {
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [pendingImageUrls, setPendingImageUrls] = React.useState<string[]>([]);
   const [lastPrompt, setLastPrompt] = React.useState('');
-  const [quota, setQuota] = React.useState<AiImportQuota | null>(null);
   const [progress, setProgress] = React.useState<{ done: number; total: number } | null>(null);
   const stopRequestedRef = React.useRef(false);
 
@@ -273,24 +270,10 @@ export default function AiImportListingsPage() {
       user?.accountType === 'business' ||
       user?.role === 'business-user');
 
-  const quotaExhausted = Boolean(quota && !quota.unlimited && (quota.remaining ?? 0) <= 0);
-
   React.useEffect(() => {
     if (!user) return;
     if (!canPublish) router.replace(paths.user.dashboard);
   }, [user, canPublish, router]);
-
-  React.useEffect(() => {
-    if (!user || !canPublish) return;
-    let cancelled = false;
-    void (async () => {
-      const res = await fetchAiImportQuota();
-      if (!cancelled && res.quota) setQuota(res.quota);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user, canPublish]);
 
   React.useEffect(() => {
     const queued = loadAiListingDraftQueue();
@@ -392,10 +375,6 @@ export default function AiImportListingsPage() {
       setError(t.aiImport.categoryRequired);
       return;
     }
-    if (quotaExhausted) {
-      setError(aiDailyLimitMessage(t, quota?.planCode));
-      return;
-    }
     const trimmed = text.trim();
     if (!trimmed && files.length === 0 && pendingImageUrls.length === 0) {
       setError(t.aiImport.empty);
@@ -439,11 +418,11 @@ export default function AiImportListingsPage() {
           images: imagePayload,
           profile,
           batchSize: 1,
+          feature: 'build',
         });
-        if (res.quota) setQuota(res.quota);
         if (res.error) {
           if (isAiDailyLimitError({ code: res.code, error: res.error, status: res.status })) {
-            setError(aiDailyLimitMessage(t, res.quota?.planCode || quota?.planCode));
+            setError(aiDailyLimitMessage(t));
           } else {
             setError(res.error);
           }
@@ -472,12 +451,12 @@ export default function AiImportListingsPage() {
             profile,
             batchId,
             batchSize: urls.length,
+            feature: 'build',
           });
-          if (res.quota) setQuota(res.quota);
           if (res.batchId) batchId = res.batchId;
           if (res.error) {
             if (isAiDailyLimitError({ code: res.code, error: res.error, status: res.status })) {
-              setError(aiDailyLimitMessage(t, res.quota?.planCode || quota?.planCode));
+              setError(aiDailyLimitMessage(t));
             } else {
               setError(res.error);
             }
@@ -516,16 +495,13 @@ export default function AiImportListingsPage() {
       setError(t.aiImport.failed);
     } finally {
       setLoading(false);
+      void checkSession();
     }
   };
 
   const handleRetryFailed = async () => {
     if (!category) {
       setError(t.aiImport.categoryRequired);
-      return;
-    }
-    if (quotaExhausted) {
-      setError(aiDailyLimitMessage(t, quota?.planCode));
       return;
     }
     const failed = drafts.filter(isRetryableFailedDraft);
@@ -559,12 +535,12 @@ export default function AiImportListingsPage() {
           profile,
           batchId,
           batchSize: urls.length,
+          feature: 'build',
         });
-        if (res.quota) setQuota(res.quota);
         if (res.batchId) batchId = res.batchId;
         if (res.error) {
           if (isAiDailyLimitError({ code: res.code, error: res.error, status: res.status })) {
-            setError(aiDailyLimitMessage(t, res.quota?.planCode || quota?.planCode));
+            setError(aiDailyLimitMessage(t));
           } else {
             setError(res.error);
           }
@@ -582,6 +558,7 @@ export default function AiImportListingsPage() {
       setError(t.aiImport.failed);
     } finally {
       setLoading(false);
+      void checkSession();
     }
   };
 
@@ -1013,26 +990,6 @@ export default function AiImportListingsPage() {
                   </Stack>
                 ) : null}
 
-                {quota ? (
-                  <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 600 }}>
-                    {quota.unlimited
-                      ? t.aiImport.quotaUnlimited
-                      : t.aiImport.quotaRemaining(quota.remaining ?? 0, quota.limit ?? 0)}
-                    {quotaExhausted ? (
-                      <>
-                        {' · '}
-                        <Box
-                          component="a"
-                          href={paths.user.packagesMain}
-                          sx={{ color: AI_SEARCH_BLUE, fontWeight: 800, textDecoration: 'none' }}
-                        >
-                          {t.aiImport.upgradeForMore}
-                        </Box>
-                      </>
-                    ) : null}
-                  </Typography>
-                ) : null}
-
                 {error ? (
                   <Alert severity="error" sx={{ borderRadius: 2.5 }}>
                     {error}
@@ -1067,7 +1024,7 @@ export default function AiImportListingsPage() {
                   <Button
                     type="submit"
                     variant="contained"
-                    disabled={quotaExhausted || (!text.trim() && files.length === 0)}
+                    disabled={!text.trim() && files.length === 0}
                     fullWidth
                     startIcon={<SparkleIcon size={18} weight="bold" />}
                     sx={{
@@ -1161,7 +1118,7 @@ export default function AiImportListingsPage() {
               {retryableFailedDrafts.length > 0 ? (
                 <Button
                   variant="outlined"
-                  disabled={loading || postingAll || postingId != null || openingId != null || quotaExhausted}
+                  disabled={loading || postingAll || postingId != null || openingId != null}
                   onClick={() => void handleRetryFailed()}
                   startIcon={
                     loading ? <CircularProgress size={14} color="inherit" /> : undefined

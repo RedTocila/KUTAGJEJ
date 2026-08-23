@@ -45,13 +45,6 @@ import {
   type PlanAccent,
 } from './package-ui';
 
-function aiBuildFeatureLine(t: AppMessages, planCode: string | null | undefined): string {
-  const code = (planCode || 'free').toLowerCase();
-  if (code === 'grow' || code === 'elite') return t.packages.aiBuildUnlimited;
-  if (code === 'starter') return t.packages.aiBuildPerDay(10);
-  return t.packages.aiBuildPerDay(1);
-}
-
 function planFeatureLines(t: AppMessages, plan: PublicContract): FeatureListItem[] {
   const lines: FeatureListItem[] = [
     t.packages.upToListings(plan.maxListAllCategories),
@@ -72,7 +65,6 @@ function planFeatureLines(t: AppMessages, plan: PublicContract): FeatureListItem
   if (plan.refreshEveryHours != null) {
     lines.push(t.packages.refreshAfterHours(plan.refreshEveryHours));
   }
-  lines.push(aiBuildFeatureLine(t, plan.planCode));
   if (plan.glowBadgeEnabled) {
     lines.push(t.packages.premiumBadge);
     lines.push({ id: 'save-leads', label: <PackageLeadsFeatureLabel /> });

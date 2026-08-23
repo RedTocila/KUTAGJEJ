@@ -13,7 +13,7 @@ import { useUser } from '@/hooks/use-user';
 export default function ExtraPackagesPage() {
   const { user } = useUser();
   const t = useCopy();
-  const balance = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
+  const balance = Math.max(0, Math.round((Number(user?.boostCredits) || 0) * 10) / 10);
 
   if (!user) return null;
 

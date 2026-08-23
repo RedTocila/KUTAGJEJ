@@ -7,6 +7,7 @@ const { camelizeRow } = require('../lib/profiles');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls, requireListingPhotos } = require('../lib/image-upload');
 const { isUuid } = require('../lib/public-listings/query-helpers');
+const { resolveOptionalCityId } = require('../lib/listing-city');
 const { parseComparePrice } = require('../lib/listing-compare-price');
 const { formatMineMarketplace, formatMineMarketplaceFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
 const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
@@ -40,7 +41,7 @@ function validate(body) {
   body.category = category || null;
 
   if (body?.condition && !CONDITION_VALUES.includes(body.condition)) {
-    return { ok: false, message: 'Gjendja e artikullit nuk është e vlefshme.' };
+    body.condition = null;
   }
 
   const p = Number(body?.price);
@@ -50,7 +51,8 @@ function validate(body) {
   body.currency = currency;
 
   const cityId = String(body?.cityId || '').trim();
-  if (!cityId || !isUuid(cityId)) return { ok: false, message: 'Zgjidhni një qytet të vlefshëm.' };
+  if (cityId && !isUuid(cityId)) return { ok: false, message: 'Zgjidhni një qytet të vlefshëm.' };
+  body.cityId = cityId || null;
 
   const phone = String(body?.contactPhone || '').trim();
   if (phone.length < 6) return { ok: false, message: 'Numri i telefonit duhet të ketë të paktën 6 karaktere.' };
@@ -108,14 +110,9 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     const v = validate(body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
-    const cityId = String(body.cityId).trim();
-    const { data: city, error: cityErr } = await getSupabaseAdmin()
-      .from('real_estate_cities')
-      .select('id')
-      .eq('id', cityId)
-      .maybeSingle();
-    if (cityErr) throw cityErr;
-    if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+    const city = await resolveOptionalCityId(body.cityId);
+    if (!city.ok) return res.status(400).json({ message: city.message });
+    const cityId = city.cityId;
 
     const maps = await parseMapsFieldsFromBody(body);
     if (!maps.ok) return res.status(400).json({ message: maps.message });
@@ -190,14 +187,9 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
     const v = validate(body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
-    const cityId = String(body.cityId).trim();
-    const { data: city, error: cityErr } = await getSupabaseAdmin()
-      .from('real_estate_cities')
-      .select('id')
-      .eq('id', cityId)
-      .maybeSingle();
-    if (cityErr) throw cityErr;
-    if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+    const city = await resolveOptionalCityId(body.cityId);
+    if (!city.ok) return res.status(400).json({ message: city.message });
+    const cityId = city.cityId;
 
     const maps = await parseMapsFieldsFromBody(body);
     if (!maps.ok) return res.status(400).json({ message: maps.message });

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Button, IconButton, Stack, TextField, Typography } from '@mui/material';
+import { Button, IconButton, Stack, TextField } from '@mui/material';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
@@ -284,21 +284,16 @@ export function ProfessionalOwnerEdit({
         });
       }
 
-      if (!draft.cityId) {
-        setError('Zgjidhni qytetin.');
-        return;
-      }
-
-      const imageUrls = [cover.url, avatar.url].filter((u): u is string => Boolean(u));
       if (!cover.url) {
         setError('Shtoni të paktën një foto.');
         return;
       }
+      const imageUrls = [cover.url, avatar.url].filter((u): u is string => Boolean(u));
       const payload = {
         title: draft.title.trim(),
         description: (draft.description ?? '').trim(),
         category: draft.category,
-        cityId: draft.cityId,
+        cityId: draft.cityId || null,
         mapsUrl: draft.mapsUrl?.trim() || null,
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
@@ -362,7 +357,6 @@ export function ProfessionalOwnerEdit({
           onChange={(v) => setDraft((d) => ({ ...d, category: v }))}
           options={PROFESSIONAL_CATEGORY_OPTIONS}
           emptyLabel="Zgjidhni…"
-          required
           allowCustom
         />
         <TextField
@@ -414,8 +408,8 @@ export function ProfessionalOwnerEdit({
             setDraft((d) => ({ ...d, cityId: v || null, cityName }));
           }}
           options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni…"
-          required
+          emptyLabel="Zgjidhni… (opsionale)"
+          clearable
         />
         <ListingMapsLocationFields
           value={{
@@ -561,10 +555,7 @@ export function ProfessionalOwnerEdit({
         onClose={() => setDialog(null)}
         onApply={applyPortfolio}
       >
-        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            Deri në 8 projekte
-          </Typography>
+        <Stack direction="row" sx={{ justifyContent: 'flex-end', alignItems: 'center' }}>
           <Button
             size="small"
             startIcon={<PlusIcon size={14} />}

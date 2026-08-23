@@ -106,15 +106,13 @@ function validateForm(f: MarketplaceFormState): string | null {
 
   const price = parseFloatStrict(f.price);
   if (price === null || price < 0) return 'Vendosni një çmim të vlefshëm.';
-  if (f.currency !== 'EUR' && f.currency !== 'LEK') return 'Ju lutem zgjidhni monedhën.';
+  if (f.currency && f.currency !== 'EUR' && f.currency !== 'LEK') return 'Ju lutem zgjidhni monedhën.';
 
   if (f.originalPrice.trim()) {
     const was = parseFloatStrict(f.originalPrice);
     if (was === null || was < 0) return 'Çmimi i mëparshëm duhet të jetë një numër pozitiv.';
     if (was <= price) return 'Çmimi i mëparshëm duhet të jetë më i lartë se çmimi aktual.';
   }
-
-  if (!f.cityId) return 'Ju lutem zgjidhni qytetin.';
 
   const phone = f.contactPhone.trim();
   if (phone.length < 6) return 'Numri i telefonit duhet të ketë të paktën 6 karaktere.';
@@ -253,7 +251,7 @@ export function MarketplaceListingForm({
         price: parseFloatStrict(form.price),
         originalPrice: form.originalPrice.trim() ? parseFloatStrict(form.originalPrice) : null,
         currency: form.currency === 'LEK' ? 'LEK' : 'EUR',
-        cityId: form.cityId,
+        cityId: form.cityId || null,
         mapsUrl: form.mapsUrl.trim() || null,
         contactPhone: form.contactPhone.trim(),
         imageUrls: [...existingImageUrls, ...uploaded].slice(0, MAX_MARKETPLACE_IMAGES),
@@ -312,7 +310,6 @@ export function MarketplaceListingForm({
       <ListingFormSection
         icon={<PackageIcon size={20} weight="duotone" />}
         title="Detajet e artikullit"
-        description="Titulli, përshkrimi dhe kategoria e produktit."
       >
         <ListingTextField
           label="Titulli i njoftimit"
@@ -328,7 +325,7 @@ export function MarketplaceListingForm({
           existingUrls={existingImageUrls}
           onExistingUrlsChange={setExistingImageUrls}
           max={MAX_MARKETPLACE_IMAGES}
-          label="Foto të artikullit (të paktën 1)"
+          label="Foto"
           disabled={submitting}
         />
         <ListingDescriptionField
@@ -353,8 +350,8 @@ export function MarketplaceListingForm({
             value={form.condition}
             onChange={(v) => setForm((p) => ({ ...p, condition: v }))}
             options={MARKETPLACE_CONDITION_OPTIONS}
-            emptyLabel="Zgjidhni gjendjen…"
-            clearable
+          emptyLabel="Zgjidhni gjendjen… (opsionale)"
+          clearable
           />
         </Stack>
       </ListingFormSection>
@@ -362,7 +359,6 @@ export function MarketplaceListingForm({
       <ListingFormSection
         icon={<MapPinIcon size={20} weight="duotone" />}
         title="Çmimi dhe vendndodhja"
-        description="Vendosni çmimin, monedhën dhe qytetin."
       >
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <ListingTextField
@@ -384,7 +380,6 @@ export function MarketplaceListingForm({
             onChange={onField('originalPrice')}
             fullWidth
             placeholder="p.sh. 6500"
-            helperText="Opsionale — shfaqet i përshkruar (ishte…)."
           />
           <SearchableSelect
             label="Monedha"
@@ -400,8 +395,8 @@ export function MarketplaceListingForm({
           value={form.cityId}
           onChange={(v) => setForm((p) => ({ ...p, cityId: v }))}
           options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni qytetin…"
-          required
+          emptyLabel="Zgjidhni qytetin… (opsionale)"
+          clearable
           disabled={loadingCities || cities.length === 0}
         />
         <ListingMapsLocationFields
@@ -433,7 +428,6 @@ export function MarketplaceListingForm({
           onChange={onField('contactPhone')}
           required
           fullWidth
-          helperText="Do të shfaqet tek të interesuarit për këtë njoftim."
         />
       </ListingFormSection>
 

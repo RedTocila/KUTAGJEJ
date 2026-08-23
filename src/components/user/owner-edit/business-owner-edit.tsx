@@ -238,15 +238,11 @@ export function BusinessOwnerEdit({
         setError('Shtoni të paktën një foto.');
         return;
       }
-      if (!draft.cityId) {
-        setError('Zgjidhni qytetin.');
-        return;
-      }
       const payload = {
         title: draft.title.trim(),
         description: (draft.description ?? '').trim(),
         category: draft.category,
-        cityId: draft.cityId,
+        cityId: draft.cityId || null,
         zoneId: draft.zoneId ?? null,
         mapsUrl: draft.mapsUrl ?? null,
         contactPhone: draft.contactPhone ?? '',
@@ -323,7 +319,6 @@ export function BusinessOwnerEdit({
           onChange={(v) => setDraft((d) => ({ ...d, category: v }))}
           options={BUSINESS_CATEGORY_OPTIONS}
           emptyLabel="Zgjidhni…"
-          required
           allowCustom
         />
         <TextField
@@ -370,8 +365,8 @@ export function BusinessOwnerEdit({
             }));
           }}
           options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni…"
-          required
+          emptyLabel="Zgjidhni… (opsionale)"
+          clearable
         />
         {zones.length > 0 ? (
           <SearchableSelect
@@ -395,7 +390,6 @@ export function BusinessOwnerEdit({
           }}
           fullWidth
           placeholder="https://maps.app.goo.gl/…"
-          helperText="Ngjitni linkun e vendndodhjes për pin të saktë në hartë."
           sx={fieldSx}
         />
         <OwnerInlineEditActions onDone={() => void doneLocationInline()} onCancel={cancelInline} />

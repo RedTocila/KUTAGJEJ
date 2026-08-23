@@ -8,6 +8,7 @@ const { validateJobPayload } = require('../lib/job-field-rules');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls, requireListingPhotos } = require('../lib/image-upload');
 const { isUuid } = require('../lib/public-listings/query-helpers');
+const { resolveOptionalCityId } = require('../lib/listing-city');
 const { formatMineJob, formatMineJobFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
 const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
 const {
@@ -72,16 +73,9 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     const v = validateJobPayload(body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
-    const cityId = String(body.cityId).trim();
-    if (!isUuid(cityId)) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
-
-    const { data: city, error: cityErr } = await getSupabaseAdmin()
-      .from('real_estate_cities')
-      .select('id')
-      .eq('id', cityId)
-      .maybeSingle();
-    if (cityErr) throw cityErr;
-    if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+    const city = await resolveOptionalCityId(body.cityId);
+    if (!city.ok) return res.status(400).json({ message: city.message });
+    const cityId = city.cityId;
 
     const maps = await parseMapsFieldsFromBody(body);
     if (!maps.ok) return res.status(400).json({ message: maps.message });
@@ -157,16 +151,9 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
     const v = validateJobPayload(body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
-    const cityId = String(body.cityId).trim();
-    if (!isUuid(cityId)) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
-
-    const { data: city, error: cityErr } = await getSupabaseAdmin()
-      .from('real_estate_cities')
-      .select('id')
-      .eq('id', cityId)
-      .maybeSingle();
-    if (cityErr) throw cityErr;
-    if (!city) return res.status(400).json({ message: 'Qyteti nuk u gjet.' });
+    const city = await resolveOptionalCityId(body.cityId);
+    if (!city.ok) return res.status(400).json({ message: city.message });
+    const cityId = city.cityId;
 
     const maps = await parseMapsFieldsFromBody(body);
     if (!maps.ok) return res.status(400).json({ message: maps.message });

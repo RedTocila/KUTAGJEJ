@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 const express = require('express');
 const { isSupabaseConfigured, getSupabaseAdmin } = require('./lib/supabase');
@@ -70,7 +70,16 @@ app.use(
   }),
 );
 app.use(corsMiddleware);
-app.use(express.json({ limit: '30mb' }));
+app.use(
+  express.json({
+    limit: '30mb',
+    verify: (req, _res, buf) => {
+      if (String(req.originalUrl || req.url || '').includes('/auth/hooks/')) {
+        req.rawBody = buf.toString('utf8');
+      }
+    },
+  }),
+);
 app.use(express.urlencoded({ extended: true, limit: '30mb' }));
 
 let bootPromise = null;

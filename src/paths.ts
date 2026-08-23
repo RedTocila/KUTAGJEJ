@@ -24,8 +24,12 @@ export const paths = {
   auth: { signIn: '/auth/sign-in' },
   user: {
     auth: '/user/auth',
+    confirm: '/user/auth/confirm',
+    resetPassword: '/user/auth/reset-password',
     dashboard: '/user/dashboard',
     profile: '/user/dashboard/profili',
+    /** AI generation rates + Boost Coin spend history. */
+    aiUsage: '/user/dashboard/perdorimi-ai',
     /** AI link → listing draft importer. */
     aiImport: '/user/dashboard/ai-import',
     /** Immovable property — add listing (individual / business portal). */

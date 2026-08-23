@@ -116,9 +116,10 @@ function validateCarPayload(fields) {
 
   const rawCityId = Array.isArray(fields.cityId) ? fields.cityId[0] : fields.cityId;
   const cityId = String(rawCityId || '').trim();
-  if (!cityId || !isUuid(cityId)) {
+  if (cityId && !isUuid(cityId)) {
     return { ok: false, message: 'Please select a valid city.' };
   }
+  fields.cityId = cityId || null;
 
   return { ok: true };
 }

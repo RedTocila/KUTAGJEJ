@@ -262,7 +262,7 @@ function AutoRefreshSection() {
   const t = useCopy();
   const { user, checkSession } = useUser();
   const lifetimePercent = useLifetimePackageDiscount();
-  const balance = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
+  const balance = Math.max(0, Math.round((Number(user?.boostCredits) || 0) * 10) / 10);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
@@ -417,7 +417,7 @@ function PremiumListingSection() {
   const t = useCopy();
   const { user, checkSession } = useUser();
   const lifetimePercent = useLifetimePackageDiscount();
-  const balance = Math.max(0, Math.floor(Number(user?.boostCredits) || 0));
+  const balance = Math.max(0, Math.round((Number(user?.boostCredits) || 0) * 10) / 10);
 
   const [packages, setPackages] = React.useState<PremiumPackage[]>(FALLBACK_PREMIUM_PACKAGES);
   const [unused, setUnused] = React.useState<PremiumVoucher[]>([]);

@@ -171,11 +171,6 @@ export function CarOwnerEdit({
         setError('Shtoni të paktën një foto.');
         return;
       }
-      const cityId = draft.cityId;
-      if (!cityId) {
-        setError('Zgjidhni qytetin.');
-        return;
-      }
       const res = await updateCarListing(draft.id, {
         vehicleType: draft.vehicleType || 'car',
         make: draft.make,
@@ -192,7 +187,7 @@ export function CarOwnerEdit({
         color: draft.color,
         finish: draft.finish ?? [],
         extras: draft.extras ?? [],
-        cityId,
+        cityId: draft.cityId || null,
         mapsUrl: draft.mapsUrl?.trim() || null,
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
@@ -201,7 +196,7 @@ export function CarOwnerEdit({
         setError(res.error);
         return;
       }
-      const next = { ...draft, imageUrls, cityId };
+      const next = { ...draft, imageUrls };
       setDraft(next);
       setBaseline(JSON.stringify(next));
       setExistingUrls(imageUrls);
@@ -254,7 +249,6 @@ export function CarOwnerEdit({
             onChange={(v) => setDraft((d) => ({ ...d, make: v, model: '' }))}
             options={makeOptions.map((m) => ({ value: m, label: m }))}
             emptyLabel="Zgjidhni…"
-            required
             allowCustom
           />
           <SearchableSelect
@@ -263,7 +257,6 @@ export function CarOwnerEdit({
             onChange={(v) => setDraft((d) => ({ ...d, model: v }))}
             options={modelOptions.map((m) => ({ value: m, label: m }))}
             emptyLabel={draft.make ? 'Zgjidhni…' : 'Zgjidhni markën…'}
-            required
             allowCustom
             disabled={!draft.make}
           />
@@ -312,7 +305,6 @@ export function CarOwnerEdit({
             setDraft((d) => ({ ...d, originalPrice: raw ? Number(raw) : null }));
           }}
           fullWidth
-          helperText="Shfaqet si çmim i vjetër i çuar"
           sx={fieldSx}
         />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
@@ -328,8 +320,8 @@ export function CarOwnerEdit({
             setDraft((d) => ({ ...d, cityId: v || null, cityName }));
           }}
           options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni…"
-          required
+          emptyLabel="Zgjidhni… (opsionale)"
+          clearable
         />
         <ListingMapsLocationFields
           value={{
@@ -385,7 +377,6 @@ export function CarOwnerEdit({
             onChange={(v) => setDraft((d) => ({ ...d, make: v, model: '' }))}
             options={makeOptions.map((m) => ({ value: m, label: m }))}
             emptyLabel="Zgjidhni…"
-            required
             allowCustom
           />
           <SearchableSelect
@@ -394,7 +385,6 @@ export function CarOwnerEdit({
             onChange={(v) => setDraft((d) => ({ ...d, model: v }))}
             options={modelOptions.map((m) => ({ value: m, label: m }))}
             emptyLabel={draft.make ? 'Zgjidhni…' : 'Zgjidhni markën…'}
-            required
             allowCustom
             disabled={!draft.make}
           />

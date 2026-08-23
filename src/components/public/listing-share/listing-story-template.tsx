@@ -522,18 +522,28 @@ function SavePhotoCard({ payload }: { payload: ListingSharePayload }) {
                 </Typography>
               ) : null}
               {contactPhone ? (
-                <Stack
-                  direction="row"
-                  spacing={0.75}
-                  sx={{ alignItems: 'center', ml: 'auto', flexShrink: 0, color: '#fff' }}
+                <Box
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 1.1,
+                    ml: 'auto',
+                    flexShrink: 0,
+                    px: 1.85,
+                    py: 1.05,
+                    borderRadius: 2,
+                    bgcolor: shareThemeToRgba(accent, 0.16),
+                    border: `2px solid ${shareThemeToRgba(accent, 0.55)}`,
+                    color: '#fff',
+                  }}
                 >
                   <Box sx={{ color: accent, display: 'inline-flex', lineHeight: 0 }}>
-                    <PhoneIcon size={22} weight="fill" />
+                    <PhoneIcon size={28} weight="fill" />
                   </Box>
                   <Typography
                     sx={{
                       fontWeight: 800,
-                      fontSize: 22,
+                      fontSize: 30,
                       lineHeight: 1,
                       letterSpacing: '0.02em',
                       whiteSpace: 'nowrap',
@@ -541,7 +551,7 @@ function SavePhotoCard({ payload }: { payload: ListingSharePayload }) {
                   >
                     {contactPhone}
                   </Typography>
-                </Stack>
+                </Box>
               ) : null}
             </Stack>
           ) : null}
@@ -714,6 +724,7 @@ export const ListingShareCard = React.forwardRef<
 export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
   function ListingStoryTemplate({ payload }, ref) {
     const accent = normalizeShareThemeColor(payload.themeColor);
+    const contactPhone = payload.contactPhone?.trim() || '';
     return (
       <Box
         ref={ref}
@@ -736,9 +747,10 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
             zIndex: 1,
             height: '100%',
             px: 7,
-            py: 8,
+            pt: 12,
+            pb: 8,
             display: 'grid',
-            gridTemplateRows: '1.35fr auto 0.55fr',
+            gridTemplateRows: '1.2fr auto 0.75fr',
             alignItems: 'center',
             justifyItems: 'center',
           }}
@@ -783,7 +795,28 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
             </Stack>
           </Box>
 
-          <ListingShareCard payload={payload} variant="story" />
+          <Stack spacing={4} sx={{ alignItems: 'center', flexShrink: 0 }}>
+            <ListingShareCard payload={payload} variant="story" />
+            {contactPhone ? (
+              <Stack direction="row" spacing={1.75} sx={{ alignItems: 'center', color: accent }}>
+                <Box sx={{ display: 'inline-flex', lineHeight: 0 }}>
+                  <PhoneIcon size={48} weight="fill" />
+                </Box>
+                <Typography
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: 52,
+                    lineHeight: 1,
+                    letterSpacing: '0.02em',
+                    color: accent,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {contactPhone}
+                </Typography>
+              </Stack>
+            ) : null}
+          </Stack>
 
           <Box aria-hidden sx={{ width: '100%', height: '100%', minHeight: 0 }} />
         </Box>

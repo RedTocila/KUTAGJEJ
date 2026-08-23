@@ -7,6 +7,7 @@ import {
   Box,
   Button,
   CircularProgress,
+  IconButton,
   Stack,
   Typography,
 } from '@mui/material';
@@ -784,75 +785,45 @@ export function ListingSharePage({
           boxShadow: '0 -16px 48px rgba(0,0,0,0.45)',
         }}
       >
-        <Stack spacing={1.25} sx={{ maxWidth: 440, mx: 'auto', width: '100%' }}>
-          <Button
-            type="button"
-            variant="contained"
-            disableElevation
-            size="large"
-            disabled={Boolean(busy)}
-            onClick={() => void handleShare()}
-            startIcon={
-              busy === 'share' ? (
-                <CircularProgress size={18} sx={{ color: shareThemeContrastText(themeColor) }} />
-              ) : (
-                <InstagramLogoIcon size={22} weight="fill" />
-              )
-            }
-            sx={{
-              ...btnSx,
-              flex: 'none',
-              width: '100%',
-              bgcolor: themeColor,
-              color: shareThemeContrastText(themeColor),
-              '&:hover': {
-                bgcolor: lightenShareThemeColor(themeColor, 0.12),
-                color: shareThemeContrastText(themeColor),
-                boxShadow: 'none',
-              },
-              '&.Mui-disabled': {
-                bgcolor: shareThemeToRgba(themeColor, 0.35),
-                color:
-                  shareThemeContrastText(themeColor) === '#ffffff'
-                    ? 'rgba(255,255,255,0.5)'
-                    : 'rgba(10,10,10,0.5)',
-              },
-            }}
-          >
-            Share Story
-          </Button>
-
-          <Stack direction="row" spacing={1.25} sx={{ width: '100%' }}>
+        <Stack spacing={1.25} sx={{ maxWidth: 520, mx: 'auto', width: '100%' }}>
+          <Stack direction="row" spacing={1} sx={{ width: '100%', alignItems: 'stretch' }}>
             <Button
               type="button"
-              variant="outlined"
+              variant="contained"
+              disableElevation
               size="large"
               disabled={Boolean(busy)}
-              onClick={() => void handleCopyLink()}
+              onClick={() => void handleShare()}
               startIcon={
-                busy === 'copy' ? (
-                  <CircularProgress size={18} sx={{ color: '#fff' }} />
+                busy === 'share' ? (
+                  <CircularProgress size={16} sx={{ color: shareThemeContrastText(themeColor) }} />
                 ) : (
-                  <LinkSimpleIcon size={18} weight="bold" />
+                  <InstagramLogoIcon size={20} weight="fill" />
                 )
               }
               sx={{
                 ...btnSx,
-                borderColor: 'rgba(255,255,255,0.22)',
-                color: '#fff',
-                bgcolor: 'rgba(255,255,255,0.04)',
+                px: 1.25,
+                fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                whiteSpace: 'nowrap',
+                bgcolor: themeColor,
+                color: shareThemeContrastText(themeColor),
+                '& .MuiButton-startIcon': { mr: 0.75, ml: 0 },
                 '&:hover': {
-                  borderColor: themeColor,
-                  bgcolor: shareThemeToRgba(themeColor, 0.12),
-                  color: '#fff',
+                  bgcolor: lightenShareThemeColor(themeColor, 0.12),
+                  color: shareThemeContrastText(themeColor),
+                  boxShadow: 'none',
                 },
                 '&.Mui-disabled': {
-                  borderColor: 'rgba(255,255,255,0.1)',
-                  color: 'rgba(255,255,255,0.35)',
+                  bgcolor: shareThemeToRgba(themeColor, 0.35),
+                  color:
+                    shareThemeContrastText(themeColor) === '#ffffff'
+                      ? 'rgba(255,255,255,0.5)'
+                      : 'rgba(10,10,10,0.5)',
                 },
               }}
             >
-              Kopjo linkun
+              Share Story
             </Button>
 
             <Button
@@ -863,16 +834,20 @@ export function ListingSharePage({
               onClick={() => void handleSaveCard()}
               startIcon={
                 busy === 'save' ? (
-                  <CircularProgress size={18} sx={{ color: '#fff' }} />
+                  <CircularProgress size={16} sx={{ color: '#fff' }} />
                 ) : (
                   <DownloadSimpleIcon size={18} weight="bold" />
                 )
               }
               sx={{
                 ...btnSx,
+                px: 1.25,
+                fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                whiteSpace: 'nowrap',
                 borderColor: 'rgba(255,255,255,0.22)',
                 color: '#fff',
                 bgcolor: 'rgba(255,255,255,0.04)',
+                '& .MuiButton-startIcon': { mr: 0.75, ml: 0 },
                 '&:hover': {
                   borderColor: themeColor,
                   bgcolor: shareThemeToRgba(themeColor, 0.12),
@@ -886,6 +861,38 @@ export function ListingSharePage({
             >
               Ruaj foton
             </Button>
+
+            <IconButton
+              type="button"
+              aria-label="Kopjo linkun"
+              title="Kopjo linkun"
+              disabled={Boolean(busy)}
+              onClick={() => void handleCopyLink()}
+              sx={{
+                width: 54,
+                height: 54,
+                flex: 'none',
+                borderRadius: 2,
+                border: '1px solid rgba(255,255,255,0.22)',
+                color: '#fff',
+                bgcolor: 'rgba(255,255,255,0.04)',
+                '&:hover': {
+                  borderColor: themeColor,
+                  bgcolor: shareThemeToRgba(themeColor, 0.12),
+                  color: '#fff',
+                },
+                '&.Mui-disabled': {
+                  borderColor: 'rgba(255,255,255,0.1)',
+                  color: 'rgba(255,255,255,0.35)',
+                },
+              }}
+            >
+              {busy === 'copy' ? (
+                <CircularProgress size={18} sx={{ color: '#fff' }} />
+              ) : (
+                <LinkSimpleIcon size={22} weight="bold" />
+              )}
+            </IconButton>
           </Stack>
 
           {feedback ? (

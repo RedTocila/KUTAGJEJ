@@ -95,6 +95,7 @@ export interface AiUsageSnapshot {
   costs: {
     aiBuildPerLink: number;
     other: number;
+    aiAssist?: number;
     aiMenuPerImage: number;
     aiSearch: number;
   };

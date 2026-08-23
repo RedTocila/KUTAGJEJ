@@ -18,13 +18,13 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;');
 }
 
-function logoUrl() {
-  return `${getFrontendBaseUrl()}/Ku-Ta-Gjej-Logo.png`;
-}
-
 function siteUrl() {
   return getFrontendBaseUrl();
 }
+
+/** Public PNG on Supabase Storage (no Vercel 308). Gmail's proxy can fetch this. */
+const HOSTED_LOGO_URL =
+  'https://ksemrbndoenxdxijokke.supabase.co/storage/v1/object/public/uploads/brand/email-logo.png';
 
 /**
  * Transactional HTML matching the KuTaGjej dark + lime product chrome.
@@ -38,7 +38,10 @@ function renderAuthEmail({
   cta,
   href,
   footnote,
+  otp,
+  origin,
 }) {
+  const base = String(origin || siteUrl()).replace(/\/$/, '');
   const safeTitle = escapeHtml(title);
   const safeGreeting = escapeHtml(greeting);
   const safeBody = escapeHtml(body);
@@ -46,8 +49,9 @@ function renderAuthEmail({
   const safeHref = escapeHtml(href);
   const safeFoot = escapeHtml(footnote);
   const safePre = escapeHtml(preheader);
-  const home = escapeHtml(siteUrl());
-  const logo = escapeHtml(logoUrl());
+  const safeOtp = otp ? escapeHtml(otp) : '';
+  const home = escapeHtml(base);
+  const logo = escapeHtml(HOSTED_LOGO_URL);
 
   return `<!DOCTYPE html>
 <html lang="sq">
@@ -65,11 +69,11 @@ function renderAuthEmail({
           <tr>
             <td align="center" style="padding:8px 0 28px;">
               <a href="${home}" style="text-decoration:none;display:inline-block;">
-                <img src="${logo}" alt="KuTaGjej" width="56" height="56" style="display:block;border:0;border-radius:14px;" />
+                <img src="${logo}" alt="" width="56" height="56" style="display:block;margin:0 auto 12px;border:0;border-radius:14px;" />
+                <div style="font-size:22px;font-weight:800;letter-spacing:-0.03em;line-height:1;">
+                  <span style="color:${MUTED};">KuTa</span><span style="color:${GREEN};">Gjej</span>
+                </div>
               </a>
-              <div style="margin-top:12px;font-size:22px;font-weight:800;letter-spacing:-0.03em;line-height:1;">
-                <span style="color:${MUTED};">KuTa</span><span style="color:${GREEN};">Gjej</span>
-              </div>
             </td>
           </tr>
           <tr>
@@ -77,6 +81,17 @@ function renderAuthEmail({
               <h1 style="margin:0 0 16px;font-size:22px;line-height:1.25;letter-spacing:-0.02em;color:${TEXT};">${safeTitle}</h1>
               <p style="margin:0 0 12px;font-size:15px;line-height:1.55;color:${TEXT};">${safeGreeting}</p>
               <p style="margin:0 0 24px;font-size:15px;line-height:1.55;color:${MUTED};">${safeBody}</p>
+              ${
+                safeOtp
+                  ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                <tr>
+                  <td align="center" style="background:${BG};border:1px solid ${BORDER};border-radius:16px;padding:18px 12px;font-size:32px;font-weight:800;letter-spacing:0.28em;color:${GREEN};font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;">
+                    ${safeOtp}
+                  </td>
+                </tr>
+              </table>`
+                  : ''
+              }
               ${
                 href
                   ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 8px;">
@@ -109,4 +124,5 @@ function renderAuthEmail({
 module.exports = {
   renderAuthEmail,
   escapeHtml,
+  HOSTED_LOGO_URL,
 };

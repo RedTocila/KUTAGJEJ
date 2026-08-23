@@ -40,7 +40,12 @@ import {
   type ListingSharePayload,
   type ListingShareSpecIcon,
 } from '@/lib/listing-share';
-import { DEFAULT_SHARE_THEME_COLOR, normalizeShareThemeColor, shareThemeToRgba } from '@/lib/share-theme-color';
+import {
+  DEFAULT_SHARE_THEME_COLOR,
+  normalizeShareThemeColor,
+  shareThemeContrastText,
+  shareThemeToRgba,
+} from '@/lib/share-theme-color';
 
 export const STORY_WIDTH = 1080;
 export const STORY_HEIGHT = 1920;
@@ -48,18 +53,16 @@ export const STORY_HEIGHT = 1920;
 export const FEED_WIDTH = 1080;
 export const FEED_HEIGHT = 1350;
 
-/**
- * Feed-style listing card — always 4:5 (Instagram portrait).
- * Photo fills leftover space so sparse listings stay tight without empty body stretch.
- */
 const CARD_W = 760;
 const CARD_H = Math.round((CARD_W * 5) / 4);
 const STAR_GOLD = '#f5b400';
 const STAR_EMPTY = 'rgba(255,255,255,0.28)';
-const CARD_BG = '#141414';
+/** Saved JPEG fill — keep in sync with feed capture `backgroundColor`. */
+export const CARD_BG = '#0d0d0d';
+const STORY_CARD_BG = '#141414';
 /** Scale factor vs ~360px mobile card (760/360). */
 const S = 2.1;
-/** MUI `borderRadius` units (`n` × theme.shape.borderRadius). Same on story + saved card. */
+/** MUI `borderRadius` units (`n` × theme.shape.borderRadius). */
 const CARD_RADIUS = 2.25 * S;
 /** Pixel radius of the saved 1080×1350 JPEG (MUI default shape.borderRadius is 4). */
 export const FEED_CARD_RADIUS_PX = Math.round(4 * CARD_RADIUS * (FEED_WIDTH / CARD_W));
@@ -304,7 +307,6 @@ function StoryRatingRow({
   );
 }
 
-/** Spec chips — enlarged to fill the card body. */
 function SpecChip({
   icon,
   label,
@@ -369,26 +371,85 @@ function StoryListingImage({
   );
 }
 
+function ListingPhoto({
+  imageSrc,
+  fallbackSrc,
+  accent,
+  badge,
+  topRight,
+}: {
+  imageSrc: string | null;
+  fallbackSrc?: string | null;
+  accent: string;
+  badge?: string;
+  topRight: React.ReactNode;
+}) {
+  return (
+    <Box
+      sx={{
+        position: 'relative',
+        width: '100%',
+        flex: 1,
+        minHeight: 0,
+        bgcolor: shareThemeToRgba(accent, 0.06),
+        overflow: 'hidden',
+      }}
+    >
+      {imageSrc ? (
+        <StoryListingImage src={imageSrc} fallbackSrc={fallbackSrc} />
+      ) : (
+        <Stack
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: accent,
+            opacity: 0.5,
+          }}
+        >
+          <BuildingsIcon size={42 * S} weight="duotone" />
+        </Stack>
+      )}
+
+      {badge ? (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 16,
+            left: 16,
+            px: 1.6,
+            py: 0.7,
+            display: 'inline-flex',
+            alignItems: 'center',
+            borderRadius: 999,
+            bgcolor: 'rgba(12,12,12,0.88)',
+            border: '1px solid rgba(255,255,255,0.16)',
+          }}
+        >
+          <Typography sx={{ fontWeight: 700, fontSize: 18, color: '#fff', lineHeight: 1, letterSpacing: '0.02em' }}>
+            {badge}
+          </Typography>
+        </Box>
+      ) : null}
+
+      <Box sx={{ position: 'absolute', top: 14, right: 14 }}>{topRight}</Box>
+    </Box>
+  );
+}
+
 /**
- * Listing card — always 4:5. Photo grows to fill leftover space after the body.
- * `feed` fills the saved JPEG at the same 4:5 size, with the same rounded corners as story.
+ * Saved photo (Ruaj foton): product image + compact Instagram banner.
  */
-export const ListingShareCard = React.forwardRef<
-  HTMLDivElement,
-  { payload: ListingSharePayload; variant?: 'story' | 'feed' }
->(function ListingShareCard({ payload, variant = 'story' }, ref) {
-  const specs = (payload.specs ?? []).filter((s) => s.label).slice(0, 3);
-  const saveCount = payload.saveCount ?? 0;
-  const viewCount = payload.viewCount ?? 0;
-  const posted = payload.createdAt ? relativeAlbanianDate(payload.createdAt) : null;
+function SavePhotoCard({ payload }: { payload: ListingSharePayload }) {
   const imageSrc = resolveStoryImageSrc(payload.imageUrl);
+  const location = payload.location?.trim() || '';
   const contactPhone = payload.contactPhone?.trim() || '';
-  const feed = variant === 'feed';
   const accent = normalizeShareThemeColor(payload.themeColor);
+  const phoneColor = shareThemeContrastText(accent);
 
   return (
     <Box
-      ref={ref}
       data-listing-share-card=""
       sx={{
         width: CARD_W,
@@ -398,77 +459,153 @@ export const ListingShareCard = React.forwardRef<
         overflow: 'hidden',
         bgcolor: CARD_BG,
         border: `${2.5 * S}px solid ${accent}`,
-        boxShadow: feed ? 'none' : '0 28px 80px rgba(0,0,0,0.55)',
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
       }}
     >
-      <Box
-        sx={{
-          position: 'relative',
-          width: '100%',
-          flex: 1,
-          minHeight: 0,
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          bgcolor: shareThemeToRgba(accent, 0.06),
-          overflow: 'hidden',
-        }}
-      >
-        {imageSrc ? (
-          <StoryListingImage src={imageSrc} fallbackSrc={payload.imageUrl} />
-        ) : (
-          <Stack
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: accent,
-              opacity: 0.5,
-            }}
-          >
-            <BuildingsIcon size={42 * S} weight="duotone" />
-          </Stack>
-        )}
-
-        {payload.badge ? (
+      <ListingPhoto
+        imageSrc={imageSrc}
+        fallbackSrc={payload.imageUrl}
+        accent={accent}
+        badge={payload.badge}
+        topRight={
           <Box
             sx={{
-              position: 'absolute',
-              top: 8 * S,
-              left: 8 * S,
-              px: 1 * S,
-              py: 0.35 * S,
-              height: 22 * S,
-              display: 'inline-flex',
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              bgcolor: 'rgba(10,10,10,0.92)',
+              border: '1px solid rgba(255,255,255,0.16)',
+              display: 'flex',
               alignItems: 'center',
-              borderRadius: 999,
-              bgcolor: 'rgba(24,24,24,0.92)',
-              border: '1px solid rgba(255,255,255,0.14)',
+              justifyContent: 'center',
+              boxShadow: '0 10px 28px rgba(0,0,0,0.45)',
             }}
           >
-            <Typography sx={{ fontWeight: 600, fontSize: 11.2 * S, color: '#fff', lineHeight: 1 }}>
-              {payload.badge}
-            </Typography>
+            <Box component="img" src={brandLogoSrc} alt="" sx={{ width: 36, height: 36, objectFit: 'contain' }} />
           </Box>
-        ) : null}
+        }
+      />
 
-        <Stack
-          direction="row"
-          spacing={0.75 * S}
-          sx={{ position: 'absolute', top: 8 * S, right: 8 * S, alignItems: 'center' }}
-        >
-          <MediaActionChip icon={<ShareNetworkIcon size={17 * S} weight="regular" />} count={0} />
-          <MediaActionChip
-            icon={<BookmarkSimpleIcon size={17 * S} weight="fill" />}
-            count={saveCount}
-            iconColor={accent}
-          />
+      <Box sx={{ flexShrink: 0, bgcolor: CARD_BG, borderTop: `5px solid ${accent}` }}>
+        <Stack spacing={1.35} sx={{ px: 2.75, pt: 1.9, pb: 2.15 }}>
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: 32,
+              lineHeight: 1.16,
+              letterSpacing: '-0.025em',
+              color: '#fff',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {payload.title}
+          </Typography>
+
+          {payload.priceLabel ? (
+            <Typography sx={{ fontWeight: 900, fontSize: 40, color: accent, lineHeight: 1.05, letterSpacing: '-0.03em' }}>
+              {payload.priceLabel}
+            </Typography>
+          ) : null}
+
+          {location ? (
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', color: '#fff', minWidth: 0 }}>
+              <Box sx={{ color: accent, display: 'inline-flex', lineHeight: 0, mt: 0.35, flexShrink: 0 }}>
+                <MapPinIcon size={22} weight="fill" />
+              </Box>
+              <Typography
+                sx={{
+                  fontWeight: 650,
+                  fontSize: 22,
+                  lineHeight: 1.3,
+                  color: 'rgba(255,255,255,0.92)',
+                }}
+              >
+                {location}
+              </Typography>
+            </Stack>
+          ) : null}
+
+          {contactPhone ? (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1.25,
+                width: '100%',
+                py: 1.35,
+                px: 2,
+                borderRadius: 2,
+                bgcolor: accent,
+                color: phoneColor,
+              }}
+            >
+              <PhoneIcon size={26} weight="fill" />
+              <Typography sx={{ fontWeight: 900, fontSize: 28, lineHeight: 1, letterSpacing: '0.03em' }}>
+                {contactPhone}
+              </Typography>
+            </Box>
+          ) : null}
         </Stack>
       </Box>
+    </Box>
+  );
+}
 
-      <Stack spacing={2.25} sx={{ px: 3.5, py: 3.25, bgcolor: CARD_BG, flexShrink: 0 }}>
+/**
+ * Share Story card — same layout as home/dashboard listing cards.
+ */
+function StoryDashboardCard({ payload }: { payload: ListingSharePayload }) {
+  const specs = (payload.specs ?? []).filter((s) => s.label).slice(0, 5);
+  const saveCount = payload.saveCount ?? 0;
+  const viewCount = payload.viewCount ?? 0;
+  const posted = payload.createdAt ? relativeAlbanianDate(payload.createdAt) : null;
+  const imageSrc = resolveStoryImageSrc(payload.imageUrl);
+  const accent = normalizeShareThemeColor(payload.themeColor);
+
+  return (
+    <Box
+      data-listing-share-card=""
+      sx={{
+        width: CARD_W,
+        height: CARD_H,
+        aspectRatio: '4 / 5',
+        borderRadius: CARD_RADIUS,
+        overflow: 'hidden',
+        bgcolor: STORY_CARD_BG,
+        border: `${2.5 * S}px solid ${accent}`,
+        boxShadow: '0 28px 80px rgba(0,0,0,0.55)',
+        display: 'flex',
+        flexDirection: 'column',
+        flexShrink: 0,
+      }}
+    >
+      <Box sx={{ borderBottom: '1px solid rgba(255,255,255,0.08)', flex: 1, minHeight: 0, display: 'flex' }}>
+        <ListingPhoto
+          imageSrc={imageSrc}
+          fallbackSrc={payload.imageUrl}
+          accent={accent}
+          badge={payload.badge}
+          topRight={
+            <Stack direction="row" spacing={0.75 * S} sx={{ alignItems: 'center' }}>
+              <MediaActionChip icon={<ShareNetworkIcon size={17 * S} weight="regular" />} count={0} />
+              <MediaActionChip
+                icon={<BookmarkSimpleIcon size={17 * S} weight="fill" />}
+                count={saveCount}
+                iconColor={accent}
+              />
+            </Stack>
+          }
+        />
+      </Box>
+
+      <Stack spacing={2.1} sx={{ px: 3.5, py: 3.1, bgcolor: STORY_CARD_BG, flexShrink: 0 }}>
         {payload.category ? (
           <Typography
             sx={{
@@ -487,7 +624,7 @@ export const ListingShareCard = React.forwardRef<
         <Typography
           sx={{
             fontWeight: 800,
-            fontSize: 42,
+            fontSize: 40,
             lineHeight: 1.2,
             color: '#fff',
             display: '-webkit-box',
@@ -502,7 +639,7 @@ export const ListingShareCard = React.forwardRef<
         <StoryRatingRow ratingAverage={payload.ratingAverage} reviewCount={payload.reviewCount} />
 
         {payload.priceLabel ? (
-          <Typography sx={{ fontWeight: 900, fontSize: 52, color: accent, lineHeight: 1.05 }}>
+          <Typography sx={{ fontWeight: 900, fontSize: 50, color: accent, lineHeight: 1.05 }}>
             {payload.priceLabel}
           </Typography>
         ) : null}
@@ -529,20 +666,7 @@ export const ListingShareCard = React.forwardRef<
             <Box sx={{ color: accent, display: 'inline-flex', lineHeight: 0 }}>
               <MapPinIcon size={28} weight="fill" />
             </Box>
-            <Typography sx={{ fontWeight: 650, fontSize: 26, lineHeight: 1.25 }}>
-              {payload.location}
-            </Typography>
-          </Stack>
-        ) : null}
-
-        {contactPhone ? (
-          <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', color: '#fff', pt: 0.5 }}>
-            <Box sx={{ color: accent, display: 'inline-flex', lineHeight: 0 }}>
-              <PhoneIcon size={28} weight="fill" />
-            </Box>
-            <Typography sx={{ fontWeight: 800, fontSize: 28, lineHeight: 1.25, letterSpacing: '0.02em' }}>
-              {contactPhone}
-            </Typography>
+            <Typography sx={{ fontWeight: 650, fontSize: 26, lineHeight: 1.25 }}>{payload.location}</Typography>
           </Stack>
         ) : null}
 
@@ -560,12 +684,21 @@ export const ListingShareCard = React.forwardRef<
       </Stack>
     </Box>
   );
-  },
-);
+}
 
+export const ListingShareCard = React.forwardRef<
+  HTMLDivElement,
+  { payload: ListingSharePayload; variant?: 'story' | 'feed' }
+>(function ListingShareCard({ payload, variant = 'story' }, ref) {
+  return (
+    <Box ref={ref} sx={{ flexShrink: 0 }}>
+      {variant === 'feed' ? <SavePhotoCard payload={payload} /> : <StoryDashboardCard payload={payload} />}
+    </Box>
+  );
+});
 
 /**
- * Full Instagram-story template: branded dark backdrop + feed-exact listing card.
+ * Full Instagram-story template: branded dark backdrop + home-style listing card.
  */
 export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
   function ListingStoryTemplate({ payload }, ref) {
@@ -639,9 +772,8 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
             </Stack>
           </Box>
 
-          <ListingShareCard payload={payload} />
+          <ListingShareCard payload={payload} variant="story" />
 
-          {/* Balances the top row so the listing sits in the vertical middle */}
           <Box aria-hidden sx={{ width: '100%', height: '100%', minHeight: 0 }} />
         </Box>
       </Box>
@@ -650,8 +782,7 @@ export const ListingStoryTemplate = React.forwardRef<HTMLDivElement, { payload: 
 );
 
 /**
- * Saved photo: listing card only, always 1080×1350 (4:5). No story backdrop or brand chrome.
- * Same card size as before; corners are rounded to match the in-story card.
+ * Saved photo: Instagram 4:5 card only (title, price, full location, phone).
  */
 export const ListingFeedTemplate = React.forwardRef<HTMLDivElement, { payload: ListingSharePayload }>(
   function ListingFeedTemplate({ payload }, ref) {

@@ -17,6 +17,7 @@ import { LinkSimple as LinkSimpleIcon } from '@phosphor-icons/react/dist/ssr/Lin
 import { toJpeg } from 'html-to-image';
 
 import {
+  CARD_BG,
   FEED_CARD_RADIUS_PX,
   FEED_HEIGHT,
   FEED_WIDTH,
@@ -623,7 +624,7 @@ export function ListingSharePage({
           imageUrl: embeddedImageRef.current ?? payload.imageUrl,
           width: FEED_WIDTH,
           height: FEED_HEIGHT,
-          backgroundColor: '#141414',
+          backgroundColor: CARD_BG,
           pixelRatio: 1,
           borderRadiusPx: FEED_CARD_RADIUS_PX,
         },

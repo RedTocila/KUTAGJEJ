@@ -1,0 +1,57 @@
+<!--
+  Paste into Supabase → Authentication → Email Templates → Sign-in method linked
+  Subject: U shtua një mënyrë hyrjeje — KuTaGjej
+  Copy only from <!DOCTYPE html> downward (this comment can stay).
+-->
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mënyrë hyrjeje e re</title>
+</head>
+<body style="margin:0;padding:0;background:#0a0a0a;color:#fafafa;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Një mënyrë e re hyrjeje u lidh me llogarinë tënde në KuTaGjej.</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+          <tr>
+            <td align="center" style="padding:8px 0 28px;">
+              <a href="https://kutagjej.al" style="text-decoration:none;display:inline-block;">
+                <img src="https://ksemrbndoenxdxijokke.supabase.co/storage/v1/object/public/uploads/brand/email-logo.png" alt="" width="56" height="56" style="display:block;margin:0 auto 12px;border:0;border-radius:14px;" />
+                <div style="font-size:22px;font-weight:800;letter-spacing:-0.03em;line-height:1;">
+                  <span style="color:#a3a3a3;">KuTa</span><span style="color:#82c91e;">Gjej</span>
+                </div>
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#171717;border:1px solid #404040;border-radius:20px;padding:32px 28px;">
+              <h1 style="margin:0 0 16px;font-size:22px;line-height:1.25;letter-spacing:-0.02em;color:#fafafa;">Mënyrë hyrjeje e re</h1>
+              <p style="margin:0 0 12px;font-size:15px;line-height:1.55;color:#fafafa;">Përshëndetje,</p>
+              <p style="margin:0 0 24px;font-size:15px;line-height:1.55;color:#a3a3a3;">Llogaria {{ .Provider }} u lidh si mënyrë hyrjeje për {{ .Email }}.</p>
+              
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 8px;">
+                <tr>
+                  <td style="border-radius:999px;background:#82c91e;">
+                    <a href="https://kutagjej.al/user/auth" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:800;color:#0a0a0a;text-decoration:none;border-radius:999px;background:#82c91e;">Hyr në KuTaGjej</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:20px 0 0;font-size:12px;line-height:1.5;color:#a3a3a3;word-break:break-all;">Nëse butoni nuk hapet, kopjo këtë link:<br /><a href="https://kutagjej.al/user/auth" style="color:#82c91e;">https://kutagjej.al/user/auth</a></p>
+              <p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#a3a3a3;">Nëse nuk e bëre ti këtë ndryshim, kontakto mbështetjen menjëherë.</p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:24px 8px 8px;font-size:12px;line-height:1.5;color:#a3a3a3;">
+              <a href="https://kutagjej.al" style="color:#5f9816;text-decoration:none;font-weight:700;">kutagjej.al</a>
+              <div style="margin-top:8px;">Njoftime falas në Shqipëri — prona, makina, punë dhe tregu.</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

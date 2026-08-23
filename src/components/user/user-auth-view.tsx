@@ -384,37 +384,50 @@ function SignInFields({
             </FormControl>
           )}
         />
-        <FormControlLabel
+        <Box
           sx={{
-            mx: 0,
+            display: 'flex',
             alignItems: 'center',
-            '& .MuiFormControlLabel-label': {
-              color: 'text.secondary',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-            },
-          }}
-          control={
-            <Checkbox
-              checked={rememberLogin}
-              onChange={(event) => setRememberLogin(event.target.checked)}
-              sx={{ py: 0.25, mt: -0.25 }}
-            />
-          }
-          label={t.auth.rememberLogin}
-        />
-        <MuiLink
-          component={RouterLink}
-          href={paths.user.resetPassword}
-          sx={{
-            color: 'primary.main',
-            fontWeight: 700,
-            fontSize: '0.875rem',
-            alignSelf: 'flex-start',
+            justifyContent: 'space-between',
+            gap: 1.5,
+            minHeight: 32,
           }}
         >
-          {t.auth.forgotPassword}
-        </MuiLink>
+          <FormControlLabel
+            sx={{
+              mx: 0,
+              mr: 'auto',
+              alignItems: 'center',
+              '& .MuiFormControlLabel-label': {
+                color: 'text.secondary',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+              },
+            }}
+            control={
+              <Checkbox
+                checked={rememberLogin}
+                onChange={(event) => setRememberLogin(event.target.checked)}
+                sx={{ py: 0.25, mt: -0.25 }}
+              />
+            }
+            label={t.auth.rememberLogin}
+          />
+          <MuiLink
+            component={RouterLink}
+            href={paths.user.resetPassword}
+            sx={{
+              color: 'primary.main',
+              fontWeight: 700,
+              fontSize: '0.875rem',
+              flexShrink: 0,
+              textAlign: 'right',
+              lineHeight: 1.3,
+            }}
+          >
+            {t.auth.forgotPassword}
+          </MuiLink>
+        </Box>
       </Stack>
     </Stack>
   );

@@ -365,7 +365,7 @@ export function CarListingDetailView({
     priceLabel: formatPrice(listing.price, listing.currency),
     badge: String(listing.year),
     imageUrl: listing.imageUrls[0] ?? listing.imageUrl ?? null,
-    location: listing.cityName || undefined,
+    location: locationFull || listing.cityName || undefined,
     specs: [
       ...(listing.year != null ? [{ icon: 'calendar' as const, label: String(listing.year) }] : []),
       ...(listing.kilometers != null

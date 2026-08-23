@@ -16,8 +16,9 @@ const {
   chargeAiUsage,
   refundAiUsage,
   getAiUsageSnapshot,
-  COST_OTHER,
 } = require('../lib/ai-usage');
+const { getAiUsagePrices } = require('../lib/ai-usage-prices');
+const { roundBc } = require('../lib/boost-credits');
 const { createAiImportBatch } = require('../lib/ai-import-batch');
 
 const router = express.Router();
@@ -38,7 +39,7 @@ router.get('/usage', authMiddleware, requirePortalUser, async (req, res) => {
     res.json({
       ok: true,
       balance: 0,
-      costs: { aiBuildPerLink: 1, other: 0.5, aiSearch: 0 },
+      costs: { aiBuildPerLink: 1, other: 0.5, aiMenuPerImage: 1, aiSearch: 0 },
       events: [],
     });
   }
@@ -86,7 +87,7 @@ router.post('/import-listings', authMiddleware, requirePortalUser, async (req, r
       return;
     }
 
-    const chargePlan = resolveAiListingCharge({
+    const chargePlan = await resolveAiListingCharge({
       mode,
       feature,
       urlCount: urls.length,
@@ -161,11 +162,18 @@ router.post('/import-menu', authMiddleware, requirePortalUser, async (req, res) 
     }
 
     const images = Array.isArray(req.body?.images) ? req.body.images : [];
+    const imageCount = images.filter((img) => typeof img === 'string' && String(img).trim()).length;
+    if (!imageCount) {
+      res.status(400).json({ message: 'Ngarkoni të paktën një foto të menusë.' });
+      return;
+    }
+    const units = Math.min(20, imageCount);
+    const prices = await getAiUsagePrices();
     const charged = await chargeAiUsage({
       userId: req.user.id,
       kind: 'ai_menu',
-      units: 1,
-      cost: COST_OTHER,
+      units,
+      cost: roundBc(prices.aiMenuPerImage * units),
       sourceLabel: 'menu',
     });
     if (!charged.ok) {
@@ -185,7 +193,7 @@ router.post('/import-menu', authMiddleware, requirePortalUser, async (req, res) 
         categories: result.categories,
         items: result.items,
         boostCredits: charged.balance,
-        usage: { kind: 'ai_menu', cost: charged.cost, units: 1 },
+        usage: { kind: 'ai_menu', cost: charged.cost, units },
       });
     } catch (err) {
       await refundAiUsage({

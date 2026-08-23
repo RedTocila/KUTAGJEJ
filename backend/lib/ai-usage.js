@@ -7,6 +7,7 @@ const {
   spendBoostCredits,
   creditBoostCredits,
 } = require('./boost-credits');
+const { getAiUsagePrices, publicCosts } = require('./ai-usage-prices');
 
 const COST_AI_BUILD = 1;
 const COST_OTHER = 0.5;
@@ -14,29 +15,26 @@ const FALLBACK_NOTIF_TYPE = 'ai_usage';
 
 const KINDS = new Set(['ai_build', 'ai_assist', 'ai_menu']);
 
-function aiCosts() {
-  return {
-    aiBuildPerLink: COST_AI_BUILD,
-    other: COST_OTHER,
-    aiSearch: 0,
-  };
+async function aiCosts() {
+  return publicCosts(await getAiUsagePrices());
 }
 
-function resolveAiListingCharge({ mode, feature, urlCount }) {
+async function resolveAiListingCharge({ mode, feature, urlCount }) {
+  const prices = await getAiUsagePrices();
   const links = Math.max(0, Math.floor(Number(urlCount) || 0));
   if (links > 0) {
     return {
       kind: 'ai_build',
       units: links,
-      cost: roundBc(COST_AI_BUILD * links),
+      cost: roundBc(prices.aiBuildPerLink * links),
     };
   }
   const isAssist =
     String(mode || '').trim() === 'edit' || String(feature || '').trim().toLowerCase() === 'assist';
   if (isAssist) {
-    return { kind: 'ai_assist', units: 1, cost: COST_OTHER };
+    return { kind: 'ai_assist', units: 1, cost: prices.aiAssist };
   }
-  return { kind: 'ai_build', units: 1, cost: COST_AI_BUILD };
+  return { kind: 'ai_build', units: 1, cost: prices.aiBuildPerLink };
 }
 
 function isMissingRelation(error) {
@@ -238,7 +236,7 @@ async function listAiUsage(userId, { limit = 80 } = {}) {
 }
 
 async function getAiUsageSnapshot(userId) {
-  const costs = aiCosts();
+  const costs = publicCosts(await getAiUsagePrices());
   let balance = 0;
   let events = [];
   try {

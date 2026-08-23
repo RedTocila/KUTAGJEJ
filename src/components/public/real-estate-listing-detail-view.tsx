@@ -369,7 +369,7 @@ export function RealEstateListingDetailView({
     priceLabel,
     badge: transactionLabel,
     imageUrl: listing.imageUrls[0] ?? listing.imageUrl ?? null,
-    location: [listing.zoneName, listing.cityName].filter(Boolean).join(', ') || undefined,
+    location: locationFull || [listing.zoneName, listing.cityName].filter(Boolean).join(', ') || undefined,
     specs: [
       ...(listing.bedrooms != null ? [{ icon: 'bed' as const, label: `${listing.bedrooms}` }] : []),
       ...(listing.bathrooms != null ? [{ icon: 'bath' as const, label: `${listing.bathrooms}` }] : []),

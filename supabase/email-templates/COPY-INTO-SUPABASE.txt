@@ -1,0 +1,24 @@
+KuTaGjej — paste ALL 13 templates (not only Confirm sign up).
+Supabase → Authentication → Email Templates.
+For each row: set Subject, then paste Body from that .html (from <!DOCTYPE html> down). Save.
+
+Dashboard name                  | Subject                                      | File
+------------------------------- | -------------------------------------------- | -------------------------
+Confirm sign up                 | Konfirmo emailin — KuTaGjej                  | confirm-signup.html
+Invite user                     | Ftesë për KuTaGjej                           | invite.html
+Magic link                      | Linku i hyrjes — KuTaGjej                    | magic-link.html
+Change email address            | Konfirmo emailin e ri — KuTaGjej             | change-email.html
+Reset password                  | Rivendos fjalëkalimin — KuTaGjej             | reset-password.html
+Reauthentication                | {{ .Token }} është kodi yt — KuTaGjej        | reauthentication.html
+Password changed                | Fjalëkalimi u ndryshua — KuTaGjej            | password-changed.html
+Email address changed           | Emaili u ndryshua — KuTaGjej                 | email-changed.html
+Phone number changed            | Numri i telefonit u ndryshua — KuTaGjej      | phone-changed.html
+Sign-in method linked           | U shtua një mënyrë hyrjeje — KuTaGjej        | identity-linked.html
+Sign-in method removed          | U hoq një mënyrë hyrjeje — KuTaGjej          | identity-unlinked.html
+Verification method added       | U shtua verifikim — KuTaGjej                 | mfa-enrolled.html
+Verification method removed     | U hoq verifikimi — KuTaGjej                  | mfa-unenrolled.html
+
+Also enable security notifications on that same page (Password changed, Email changed, …).
+SMTP must already point at Resend (smtp.resend.com, user resend, password = API key).
+
+Regenerate: node backend/scripts/export-supabase-email-templates.js

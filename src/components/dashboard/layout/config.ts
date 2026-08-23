@@ -109,6 +109,13 @@ export const navSections = [
         icon: 'coins',
         platformAdminOnly: true,
       },
+      {
+        key: 'ai-prices',
+        title: 'Çmimet AI',
+        href: paths.dashboard.aiPrices,
+        icon: 'sparkle',
+        platformAdminOnly: true,
+      },
     ],
   },
   {

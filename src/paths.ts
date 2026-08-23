@@ -98,6 +98,8 @@ export const paths = {
     payments: '/dashboard/pagesat',
     /** Boost-credit packages catalog (platform admin only). */
     creditPackages: '/dashboard/paketat-kredite',
+    /** AI usage Boost Coin rates (platform admin). */
+    aiPrices: '/dashboard/cmimet-ai',
     /** Referral rewards program (all users); numbers editable by platform admin. */
     referral: '/dashboard/referral',
     /** Admin view: who referred whom, credits awarded. */

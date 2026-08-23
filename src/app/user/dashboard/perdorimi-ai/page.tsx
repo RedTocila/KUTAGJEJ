@@ -14,7 +14,7 @@ import { formatBc } from '@/components/user/packages/package-ui';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import { useUser } from '@/hooks/use-user';
-import { fetchAiUsage, type AiUsageEvent } from '@/lib/ai-import-client';
+import { fetchAiUsage, type AiUsageEvent, type AiUsageSnapshot } from '@/lib/ai-import-client';
 
 function PriceRow({
   title,
@@ -27,10 +27,11 @@ function PriceRow({
   free?: boolean;
   freeLabel: string;
 }) {
+  const isFree = Boolean(free) || (amount != null && amount <= 0);
   return (
     <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', justifyContent: 'space-between', py: 0.85 }}>
       <Typography sx={{ fontWeight: 700, fontSize: '0.92rem', letterSpacing: '-0.01em' }}>{title}</Typography>
-      {free ? (
+      {isFree ? (
         <Typography sx={{ fontWeight: 750, fontSize: '0.88rem', color: 'text.secondary' }}>{freeLabel}</Typography>
       ) : (
         <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexShrink: 0 }}>
@@ -51,6 +52,12 @@ export default function AiUsagePage() {
   const dateLocale = language === 'en' ? 'en-GB' : 'sq-AL';
   const sessionBalance = Math.max(0, Math.round((Number(user?.boostCredits) || 0) * 10) / 10);
   const [events, setEvents] = React.useState<AiUsageEvent[]>([]);
+  const [costs, setCosts] = React.useState<AiUsageSnapshot['costs']>({
+    aiBuildPerLink: 1,
+    other: 0.5,
+    aiMenuPerImage: 1,
+    aiSearch: 0,
+  });
   const [balance, setBalance] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -67,6 +74,7 @@ export default function AiUsagePage() {
     }
     setEvents(res.snapshot?.events ?? []);
     setBalance(res.snapshot?.balance ?? 0);
+    if (res.snapshot?.costs) setCosts(res.snapshot.costs);
   }, []);
 
   React.useEffect(() => {
@@ -141,13 +149,13 @@ export default function AiUsagePage() {
 
       <PortalSectionCard title={t.aiUsage.ratesTitle}>
         <Box>
-          <PriceRow title={t.aiUsage.aiBuild} amount={1} freeLabel={t.aiUsage.free} />
+          <PriceRow title={t.aiUsage.aiBuild} amount={costs.aiBuildPerLink} freeLabel={t.aiUsage.free} />
           <Divider />
-          <PriceRow title={t.aiUsage.aiAssist} amount={0.5} freeLabel={t.aiUsage.free} />
+          <PriceRow title={t.aiUsage.aiAssist} amount={costs.other} freeLabel={t.aiUsage.free} />
           <Divider />
-          <PriceRow title={t.aiUsage.aiMenu} amount={1} freeLabel={t.aiUsage.free} />
+          <PriceRow title={t.aiUsage.aiMenu} amount={costs.aiMenuPerImage} freeLabel={t.aiUsage.free} />
           <Divider />
-          <PriceRow title={t.aiUsage.aiSearch} free freeLabel={t.aiUsage.free} />
+          <PriceRow title={t.aiUsage.aiSearch} amount={costs.aiSearch} freeLabel={t.aiUsage.free} />
         </Box>
       </PortalSectionCard>
     </Stack>

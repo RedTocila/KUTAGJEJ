@@ -95,6 +95,7 @@ export interface AiUsageSnapshot {
   costs: {
     aiBuildPerLink: number;
     other: number;
+    aiMenuPerImage: number;
     aiSearch: number;
   };
   events: AiUsageEvent[];
@@ -121,6 +122,12 @@ export function aiDailyLimitMessage(
   return t.aiImport.insufficientBc;
 }
 
+
+function parseBcCost(value: unknown, fallback: number): number {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
 export async function fetchAiUsage(): Promise<{
   snapshot: AiUsageSnapshot | null;
   error?: string;
@@ -139,9 +146,10 @@ export async function fetchAiUsage(): Promise<{
     snapshot: {
       balance: Number(res.data?.balance) || 0,
       costs: {
-        aiBuildPerLink: Number(res.data?.costs?.aiBuildPerLink) || 1,
-        other: Number(res.data?.costs?.other) || 0.5,
-        aiSearch: Number(res.data?.costs?.aiSearch) || 0,
+        aiBuildPerLink: parseBcCost(res.data?.costs?.aiBuildPerLink, 1),
+        other: parseBcCost(res.data?.costs?.other ?? res.data?.costs?.aiAssist, 0.5),
+        aiMenuPerImage: parseBcCost(res.data?.costs?.aiMenuPerImage, 1),
+        aiSearch: parseBcCost(res.data?.costs?.aiSearch, 0),
       },
       events: Array.isArray(res.data?.events) ? res.data.events : [],
     },

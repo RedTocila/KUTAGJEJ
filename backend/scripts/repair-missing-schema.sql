@@ -650,3 +650,19 @@ revoke all on function public.spend_boost_credits(uuid, numeric) from public, an
 revoke all on function public.credit_boost_credits(uuid, numeric) from public, anon, authenticated;
 grant execute on function public.spend_boost_credits(uuid, numeric) to service_role;
 grant execute on function public.credit_boost_credits(uuid, numeric) to service_role;
+
+create table if not exists public.ai_usage_prices (
+  id text primary key default 'default' check (id = 'default'),
+  ai_build_per_link numeric(8, 2) not null default 1 check (ai_build_per_link >= 0),
+  ai_assist numeric(8, 2) not null default 0.5 check (ai_assist >= 0),
+  ai_menu_per_image numeric(8, 2) not null default 1 check (ai_menu_per_image >= 0),
+  ai_search numeric(8, 2) not null default 0 check (ai_search >= 0),
+  updated_at timestamptz not null default now(),
+  updated_by uuid references public.profiles (id) on delete set null
+);
+
+insert into public.ai_usage_prices (id)
+values ('default')
+on conflict (id) do nothing;
+
+alter table public.ai_usage_prices enable row level security;

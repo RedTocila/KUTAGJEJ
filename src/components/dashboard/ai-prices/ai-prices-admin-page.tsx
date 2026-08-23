@@ -112,7 +112,7 @@ export function AiPricesAdminPage() {
             <TextField
               label="AI Build — BC për link"
               type="number"
-              inputProps={{ min: 0, step: 0.1 }}
+              slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
               value={form.aiBuildPerLink}
               onChange={(e) => setForm((f) => ({ ...f, aiBuildPerLink: e.target.value }))}
               fullWidth
@@ -120,7 +120,7 @@ export function AiPricesAdminPage() {
             <TextField
               label="Shkruaj me AI — BC për përdorim"
               type="number"
-              inputProps={{ min: 0, step: 0.1 }}
+              slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
               value={form.aiAssist}
               onChange={(e) => setForm((f) => ({ ...f, aiAssist: e.target.value }))}
               fullWidth
@@ -128,7 +128,7 @@ export function AiPricesAdminPage() {
             <TextField
               label="Import menuje — BC për foto"
               type="number"
-              inputProps={{ min: 0, step: 0.1 }}
+              slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
               value={form.aiMenuPerImage}
               onChange={(e) => setForm((f) => ({ ...f, aiMenuPerImage: e.target.value }))}
               fullWidth
@@ -136,7 +136,7 @@ export function AiPricesAdminPage() {
             <TextField
               label="AI Search — BC për kërkim"
               type="number"
-              inputProps={{ min: 0, step: 0.1 }}
+              slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
               value={form.aiSearch}
               onChange={(e) => setForm((f) => ({ ...f, aiSearch: e.target.value }))}
               fullWidth

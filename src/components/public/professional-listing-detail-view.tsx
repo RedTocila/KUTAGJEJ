@@ -28,6 +28,7 @@ import {
 } from '@/lib/professional-listing-detail-content';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
+import { useListingViewCount } from '@/hooks/use-listing-view-count';
 import {
   ProfessionalReviewSection,
   type ProfessionalReviewSectionHandle,
@@ -86,6 +87,7 @@ export function ProfessionalListingDetailView({
     saved: listing.saved,
     saveCount: listing.saveCount,
   });
+  const { viewCount, onViewed } = useListingViewCount(listing.id, listing.viewCount ?? 0);
 
   const displayName = React.useMemo(() => professionalDisplayName(listing), [listing]);
   const subtitle = React.useMemo(() => professionalSubtitle(listing), [listing]);
@@ -157,6 +159,7 @@ export function ProfessionalListingDetailView({
           category={listing.category}
           ownerId={listing.seller?.id}
           photoCount={1 + portfolio.length}
+          onViewed={onViewed}
         />
       )}
       <ProfessionalListingDetailDesktop
@@ -165,6 +168,7 @@ export function ProfessionalListingDetailView({
         similarSlot={ownerPreview ? undefined : similarSlotDesktop}
         saved={saved}
         saveCount={saveCount}
+        viewCount={viewCount}
         onToggleSave={() => void toggleSave()}
         canonicalUrl={canonicalUrl}
         ownerPreview={ownerPreview}
@@ -200,7 +204,7 @@ export function ProfessionalListingDetailView({
                     location: locationLine || listing.cityName || undefined,
                     contactPhone: (listing.contactPhone ?? listing.seller?.phone)?.trim() || undefined,
                     createdAt: listing.createdAt,
-                    viewCount: listing.viewCount,
+                    viewCount,
                     saveCount,
                     ratingAverage: liveReviewStats?.ratingAverage ?? listing.ratingAverage,
                     reviewCount: liveReviewStats?.reviewCount ?? listing.reviewCount,

@@ -20,6 +20,7 @@ import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
+import { useListingViewCount } from '@/hooks/use-listing-view-count';
 import { useUser } from '@/hooks/use-user';
 import { BusinessReviewSection } from '@/components/businesses/business-review-section';
 import { BusinessListingDetailDesktop } from '@/components/public/business-listing-detail-desktop';
@@ -77,6 +78,7 @@ export function BusinessListingDetailView({
     saved: listing.saved,
     saveCount: listing.saveCount,
   });
+  const { viewCount, onViewed } = useListingViewCount(listing.id, listing.viewCount ?? 0);
   const [reserveDate, setReserveDate] = React.useState('');
   const [reservePeople, setReservePeople] = React.useState('2');
   const [reserveGuestName, setReserveGuestName] = React.useState('');
@@ -229,6 +231,7 @@ export function BusinessListingDetailView({
           category={listing.category}
           ownerId={listing.seller?.id}
           photoCount={listing.imageUrls?.filter(Boolean).length ?? 0}
+          onViewed={onViewed}
         />
       )}
       <BusinessListingDetailDesktop
@@ -237,6 +240,7 @@ export function BusinessListingDetailView({
         similarSlot={ownerPreview ? undefined : similarSlotDesktop}
         saved={saved}
         saveCount={saveCount}
+        viewCount={viewCount}
         onToggleSave={() => void toggleSave()}
         showReservation={showReservation}
         reserveDate={reserveDate}
@@ -289,7 +293,7 @@ export function BusinessListingDetailView({
                     location: locationLine || listing.cityName || undefined,
                     contactPhone: phone?.trim() || undefined,
                     createdAt: listing.createdAt,
-                    viewCount: listing.viewCount,
+                    viewCount,
                     saveCount,
                     ratingAverage: listing.ratingAverage,
                     reviewCount: listing.reviewCount,

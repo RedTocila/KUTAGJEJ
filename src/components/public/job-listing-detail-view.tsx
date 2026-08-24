@@ -34,6 +34,7 @@ import { nextShareCount } from '@/lib/listing-metrics';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
+import { useListingViewCount } from '@/hooks/use-listing-view-count';
 import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
 import { JobListingDetailDesktop } from '@/components/public/job-listing-detail-desktop';
 import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
@@ -120,6 +121,7 @@ export function JobListingDetailView({
     saved: listing.saved,
     saveCount: listing.saveCount,
   });
+  const { viewCount, onViewed } = useListingViewCount(listing.id, listing.viewCount ?? 0);
   const [shareCount, setShareCount] = React.useState(listing.shareCount ?? 0);
 
   React.useEffect(() => {
@@ -158,7 +160,6 @@ export function JobListingDetailView({
   const companyAvatarUrl = React.useMemo(() => jobCompanyAvatarUrl(listing), [listing]);
   const companyInitials = React.useMemo(() => jobCompanyInitials(companyName), [companyName]);
   const isNew = isJobListingNew(listing.createdAt);
-  const viewCount = listing.viewCount ?? 0;
 
   const [shareOpen, setShareOpen] = React.useState(false);
 
@@ -182,12 +183,12 @@ export function JobListingDetailView({
         { icon: 'briefcase', label: industryLabel },
       ],
       createdAt: listing.createdAt,
-      viewCount: listing.viewCount ?? 0,
+      viewCount,
       saveCount: listing.saveCount,
       contactPhone: (listing.contactPhone ?? listing.seller?.phone)?.trim() || undefined,
       url: canonicalUrl,
     }),
-    [canonicalUrl, coverImageUrls, industryLabel, jobTypeLabel, listing, locationLine, salary]
+    [canonicalUrl, coverImageUrls, industryLabel, jobTypeLabel, listing, locationLine, salary, viewCount]
   );
 
   const stickyFooterHeight = '80px';
@@ -206,6 +207,7 @@ export function JobListingDetailView({
           category={listing.industry}
           ownerId={listing.seller?.id}
           photoCount={coverImageUrls.filter(Boolean).length}
+          onViewed={onViewed}
         />
       )}
       <JobListingDetailDesktop
@@ -215,6 +217,7 @@ export function JobListingDetailView({
         saved={saved}
         saveCount={saveCount}
         shareCount={shareCount}
+        viewCount={viewCount}
         onToggleSave={() => void toggleSave()}
         onShare={() => setShareOpen(true)}
         canonicalUrl={canonicalUrl}

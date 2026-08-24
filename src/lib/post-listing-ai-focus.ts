@@ -1,20 +1,16 @@
-/** Native input inside `PostListingAiAssist` — focused from description AI buttons. */
+/** Native input inside the listing AI drawer — focused after the sheet opens. */
 export const POST_LISTING_AI_INPUT_ID = 'post-listing-ai-assist-input';
 
-/** Wrapper around the top AI command bar (used for scroll-into-view). */
+/** Trigger button for the listing AI drawer (used as a fallback scroll target). */
 export const POST_LISTING_AI_BAR_ID = 'post-listing-ai-assist';
 
-/**
- * Scrolls the listing AI bar into view and focuses it so the mobile keyboard opens.
- * Must stay synchronous (called from a click handler) — iOS will not open the
- * keyboard after an `await` or a delayed focus.
- */
-export function focusPostListingAiAssist() {
+/** Opens `PostListingAiAssist` from description-field sparkle buttons. */
+export const POST_LISTING_AI_OPEN_EVENT = 'kutagjej:open-post-listing-ai-assist';
+
+function focusAiInput() {
   const el = document.getElementById(POST_LISTING_AI_INPUT_ID);
   if (!(el instanceof HTMLTextAreaElement) && !(el instanceof HTMLInputElement)) return;
 
-  const bar = document.getElementById(POST_LISTING_AI_BAR_ID);
-  (bar ?? el).scrollIntoView({ behavior: 'auto', block: 'start' });
   el.focus({ preventScroll: true });
   const len = el.value.length;
   try {
@@ -22,4 +18,14 @@ export function focusPostListingAiAssist() {
   } catch {
     /* some input types reject setSelectionRange */
   }
+}
+
+/**
+ * Opens the listing AI drawer and focuses the input so the mobile keyboard opens.
+ * Must stay synchronous (called from a click handler) — iOS will not open the
+ * keyboard after an `await` or a delayed focus.
+ */
+export function focusPostListingAiAssist() {
+  window.dispatchEvent(new Event(POST_LISTING_AI_OPEN_EVENT));
+  focusAiInput();
 }

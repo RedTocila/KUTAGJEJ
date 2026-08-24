@@ -60,11 +60,20 @@ type SignInValues = zod.infer<typeof signInSchema>;
 
 const acceptTermsMessage = 'Duhet të pranoni kushtet e përdorimit';
 
+const registerPhoneSchema = zod
+  .string()
+  .trim()
+  .min(6, { message: 'Numri i telefonit është i detyrueshëm' })
+  .max(40, { message: 'Numri i telefonit është shumë i gjatë' })
+  .regex(/^[\d+\s().-]{6,40}$/, {
+    message: 'Numri i telefonit mund të përmbajë vetëm shifra, hapësira dhe + ( ) . -',
+  });
+
 const individualRegisterSchema = zod
   .object({
     firstName: zod.string().min(1, { message: 'Emri është i detyrueshëm' }),
     lastName: zod.string().min(1, { message: 'Mbiemri është i detyrueshëm' }),
-    phone: zod.string().max(40, { message: 'Numri i telefonit është shumë i gjatë' }),
+    phone: registerPhoneSchema,
     basedCityId: zod.string(),
     email: zod.string().min(1, { message: 'Emaili është i detyrueshëm' }).email('Email i pavlefshëm'),
     password: zod.string().min(6, { message: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere' }),
@@ -86,7 +95,7 @@ const businessRegisterSchema = zod
     businessName: zod.string().min(1, { message: 'Emri i biznesit është i detyrueshëm' }),
     businessOwner: zod.string().min(1, { message: 'Pronari i biznesit është i detyrueshëm' }),
     businessCategory: zod.string().min(1, { message: 'Kategoria është e detyrueshme' }),
-    phone: zod.string().max(40, { message: 'Numri i telefonit është shumë i gjatë' }),
+    phone: registerPhoneSchema,
     basedCityId: zod.string(),
     email: zod.string().min(1, { message: 'Emaili është i detyrueshëm' }).email('Email i pavlefshëm'),
     password: zod.string().min(6, { message: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere' }),
@@ -491,16 +500,14 @@ function RegisterFieldsIndividual({
         render={({ field }) => (
           <FormControl error={Boolean(errors.phone)} fullWidth>
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.phone))}>
-              Numri i telefonit{' '}
-              <Typography component="span" variant="caption" sx={{ fontWeight: 400, opacity: 0.75 }}>
-                (opsional)
-              </Typography>
+              Numri i telefonit
             </Typography>
             <OutlinedInput
               {...field}
               autoComplete="tel"
               placeholder="+355 69 …"
               type="tel"
+              required
               sx={outlinedFieldSx}
             />
             {errors.phone ? <FormHelperText>{errors.phone.message}</FormHelperText> : null}
@@ -656,12 +663,16 @@ function RegisterFieldsBusiness({
         render={({ field }) => (
           <FormControl error={Boolean(errors.phone)} fullWidth>
             <Typography component="label" variant="caption" sx={fieldLabelSx(Boolean(errors.phone))}>
-              Numri i telefonit{' '}
-              <Typography component="span" variant="caption" sx={{ fontWeight: 400, opacity: 0.75 }}>
-                (opsional)
-              </Typography>
+              Numri i telefonit
             </Typography>
-            <OutlinedInput {...field} autoComplete="tel" placeholder="+355 69 …" type="tel" sx={outlinedFieldSx} />
+            <OutlinedInput
+              {...field}
+              autoComplete="tel"
+              placeholder="+355 69 …"
+              type="tel"
+              required
+              sx={outlinedFieldSx}
+            />
             {errors.phone ? <FormHelperText>{errors.phone.message}</FormHelperText> : null}
           </FormControl>
         )}
@@ -859,7 +870,7 @@ export function UserAuthView() {
       lastName: values.lastName,
       email: values.email,
       password: values.password,
-      phone: values.phone.trim() || undefined,
+      phone: values.phone.trim(),
       basedCityId: values.basedCityId.trim() || undefined,
       referralCode: referralCode.trim() || undefined,
     });
@@ -905,7 +916,7 @@ export function UserAuthView() {
       businessCategory: values.businessCategory,
       email: values.email,
       password: values.password,
-      phone: values.phone.trim() || undefined,
+      phone: values.phone.trim(),
       basedCityId: values.basedCityId.trim() || undefined,
       referralCode: referralCode.trim() || undefined,
     });

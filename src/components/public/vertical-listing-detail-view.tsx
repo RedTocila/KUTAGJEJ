@@ -39,6 +39,7 @@ import type { ListingMetricKind } from '@/lib/listing-metrics';
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import type { AnyPublicListingDetail, PublicCarListing, PublicMarketplaceListing } from '@/lib/public-listings-client';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
+import { useListingViewCount } from '@/hooks/use-listing-view-count';
 import { CarCard } from '@/components/public/listing-cards/car-card';
 import {
   findOptionLabel,
@@ -313,8 +314,8 @@ export function VerticalListingDetailView(props: {
     whatsappInquireText(listingTitle(listing), canonicalUrl)
   );
 
-  const viewCount = listing.viewCount ?? 0;
   const metricKind = listing.kind as ListingMetricKind;
+  const { viewCount, onViewed } = useListingViewCount(listing.id, listing.viewCount ?? 0);
   const { saved, saveCount, toggleSave } = useListingBookmark(metricKind, listing.id, {
     saved: 'saved' in listing ? listing.saved : undefined,
     saveCount: listing.saveCount,
@@ -335,6 +336,7 @@ export function VerticalListingDetailView(props: {
           category={interestCategoryFromListing(listing)}
           ownerId={listing.seller?.id}
           photoCount={'imageUrls' in listing ? (listing.imageUrls?.filter(Boolean).length ?? 0) : 0}
+          onViewed={onViewed}
         />
       )}
       <Box component="article" sx={{ bgcolor: 'background.default', pb: ownerPreview ? 3 : { xs: 14, md: 6 } }}>

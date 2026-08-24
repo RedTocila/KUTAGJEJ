@@ -69,6 +69,7 @@ export function JobListingDetailDesktop({
   saved,
   saveCount,
   shareCount,
+  viewCount,
   onToggleSave,
   onShare,
   canonicalUrl,
@@ -80,6 +81,7 @@ export function JobListingDetailDesktop({
   saved: boolean;
   saveCount: number;
   shareCount: number;
+  viewCount: number;
   onToggleSave: () => void;
   onShare: () => void;
   canonicalUrl?: string;
@@ -100,7 +102,6 @@ export function JobListingDetailDesktop({
   const companyName = listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const heroImage = listing.imageUrl ?? listing.imageUrls[0] ?? null;
   const isNew = isJobListingNew(listing.createdAt);
-  const viewCount = listing.viewCount ?? 0;
   const expiresAt = listing.isOkazion
     ? listing.okazionUntil || listing.expiresAt || getJobListingExpiresAt(listing.createdAt).toISOString()
     : (listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString());

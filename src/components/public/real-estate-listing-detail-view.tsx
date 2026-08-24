@@ -21,6 +21,7 @@ import { whatsappInquireHref as buildWhatsappInquireHref, whatsappInquireText } 
 import { LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX, LISTING_DETAIL_HERO_IMAGE_SIZES } from '@/lib/listing-detail-layout';
 import type { PublicRealEstateListing, PublicRealEstateListingDetail } from '@/lib/public-listings-client';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
+import { useListingViewCount } from '@/hooks/use-listing-view-count';
 import { formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
 import { ListingPrice } from '@/components/public/listing-cards/listing-price';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
@@ -350,7 +351,7 @@ export function RealEstateListingDetailView({
   );
   const displayPhone = listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
 
-  const viewCount = listing.viewCount ?? 0;
+  const { viewCount, onViewed } = useListingViewCount(listing.id, listing.viewCount ?? 0);
   const { saved, saveCount, toggleSave } = useListingBookmark('real-estate', listing.id, {
     saved: listing.saved,
     saveCount: listing.saveCount,
@@ -413,6 +414,7 @@ export function RealEstateListingDetailView({
           category={listing.propertyCategory}
           ownerId={listing.seller?.id}
           photoCount={listing.imageUrls?.filter(Boolean).length ?? 0}
+          onViewed={onViewed}
         />
       )}
       {/* JSON-LD is emitted from the route; keep article semantics for headings + listing body. */}

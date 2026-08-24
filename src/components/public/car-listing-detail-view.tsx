@@ -18,6 +18,7 @@ import { whatsappInquireHref as buildWhatsappInquireHref, whatsappInquireText } 
 import { LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX, LISTING_DETAIL_HERO_IMAGE_SIZES } from '@/lib/listing-detail-layout';
 import type { PublicCarListing, PublicCarListingDetail } from '@/lib/public-listings-client';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
+import { useListingViewCount } from '@/hooks/use-listing-view-count';
 import { CarCard } from '@/components/public/listing-cards/car-card';
 import {
   findOptionLabel,
@@ -347,7 +348,7 @@ export function CarListingDetailView({
     [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl]
   );
   const displayPhone = listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
-  const viewCount = listing.viewCount ?? 0;
+  const { viewCount, onViewed } = useListingViewCount(listing.id, listing.viewCount ?? 0);
   const { saved, saveCount, toggleSave } = useListingBookmark('car', listing.id, {
     saved: listing.saved,
     saveCount: listing.saveCount,
@@ -407,6 +408,7 @@ export function CarListingDetailView({
           category={listing.make}
           ownerId={listing.seller?.id}
           photoCount={listing.imageUrls?.filter(Boolean).length ?? 0}
+          onViewed={onViewed}
         />
       )}
       <Box component="article" sx={{ bgcolor: 'background.default' }}>

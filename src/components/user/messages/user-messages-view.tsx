@@ -104,11 +104,17 @@ import { logoGreen } from '@/styles/theme/colors';
 const CHAT_AVATAR_THUMB = 96;
 const CHAT_BUBBLE_IMAGE_THUMB = 720;
 
+/**
+ * Phone for Call / WhatsApp in the thread header.
+ * Listing owners and owner outreach (contacting someone who saved the ad) must
+ * reach the other person — never the listing number, which is the owner's own.
+ */
 function conversationContactPhone(conv: ConversationSummary): string | null {
   const listingPhone = conv.listingContactPhone?.trim() || '';
   const otherPhone = conv.otherParticipantPhone?.trim() || '';
-  if (conv.role === 'inquirer') return listingPhone || otherPhone || null;
-  return otherPhone || listingPhone || null;
+  const ownerSide = conv.role === 'poster' || conv.startedBy === 'poster';
+  if (ownerSide) return otherPhone || null;
+  return listingPhone || otherPhone || null;
 }
 
 function listingPublicHref(
@@ -1846,6 +1852,8 @@ export function UserMessagesView() {
                 listingTitle: source.listingTitle,
                 listingImageUrl: source.listingImageUrl,
                 listingContactPhone: source.listingContactPhone,
+                otherParticipantPhone: source.otherParticipantPhone,
+                startedBy: source.startedBy,
               }
             : null),
         };

@@ -35,6 +35,19 @@ const rateLimit = require('../middleware/rate-limit');
 const authRateLimit = rateLimit({ windowMs: 60_000, max: 15 });
 const mailRateLimit = rateLimit({ windowMs: 60_000, max: 5 });
 
+const ACCOUNT_PHONE_RE = /^[\d+\s().-]{6,40}$/;
+
+function parseRequiredPhone(raw) {
+  const phone = String(raw || '').trim().slice(0, 40);
+  if (phone.length < 6) {
+    return { ok: false, message: 'Numri i telefonit është i detyrueshëm.' };
+  }
+  if (!ACCOUNT_PHONE_RE.test(phone)) {
+    return { ok: false, message: 'Numri i telefonit përmban karaktere të pavlefshme.' };
+  }
+  return { ok: true, phone };
+}
+
 /**
  * Resolve optional based-city from request body.
  * Returns { ok: true, id, name } | { ok: true, id: null, name: null } | { ok: false, message }.
@@ -349,7 +362,8 @@ router.post('/register', authRateLimit, async (req, res) => {
       if (!firstName || !lastName) {
         return res.status(400).json({ message: 'Emri dhe mbiemri janë të detyrueshëm.' });
       }
-      const phone = String(req.body.phone || '').trim().slice(0, 40);
+      const parsedPhone = parseRequiredPhone(req.body.phone);
+      if (!parsedPhone.ok) return res.status(400).json({ message: parsedPhone.message });
       const based = await resolveBasedCity(req.body.basedCityId ?? req.body.cityId);
       if (!based.ok) return res.status(400).json({ message: based.message });
       const referralCode = await allocateUniqueReferralCode();
@@ -357,7 +371,12 @@ router.post('/register', authRateLimit, async (req, res) => {
       const authUser = await createAuthUser({
         email: emailNorm,
         password,
-        metadata: { account_type: 'individual', first_name: firstName, last_name: lastName },
+        metadata: {
+          account_type: 'individual',
+          first_name: firstName,
+          last_name: lastName,
+          phone: parsedPhone.phone,
+        },
       });
 
       const doc = await insertProfile({
@@ -365,7 +384,7 @@ router.post('/register', authRateLimit, async (req, res) => {
         email: emailNorm,
         first_name: firstName,
         last_name: lastName,
-        phone: phone || '',
+        phone: parsedPhone.phone,
         account_type: 'individual',
         role: 'individual-user',
         referral_code: referralCode,
@@ -407,7 +426,8 @@ router.post('/register', authRateLimit, async (req, res) => {
       }
 
       const parts = businessOwner.split(/\s+/).filter(Boolean);
-      const phone = String(req.body.phone || '').trim().slice(0, 40);
+      const parsedPhone = parseRequiredPhone(req.body.phone);
+      if (!parsedPhone.ok) return res.status(400).json({ message: parsedPhone.message });
       const based = await resolveBasedCity(req.body.basedCityId ?? req.body.cityId);
       if (!based.ok) return res.status(400).json({ message: based.message });
       const referralCode = await allocateUniqueReferralCode();
@@ -415,7 +435,11 @@ router.post('/register', authRateLimit, async (req, res) => {
       const authUser = await createAuthUser({
         email: emailNorm,
         password,
-        metadata: { account_type: 'business', business_name: businessName },
+        metadata: {
+          account_type: 'business',
+          business_name: businessName,
+          phone: parsedPhone.phone,
+        },
       });
 
       const doc = await insertProfile({
@@ -423,7 +447,7 @@ router.post('/register', authRateLimit, async (req, res) => {
         email: emailNorm,
         first_name: parts[0] || businessOwner,
         last_name: parts.slice(1).join(' ') || '',
-        phone: phone || '',
+        phone: parsedPhone.phone,
         account_type: 'business',
         role: 'business-user',
         nipt,
@@ -539,7 +563,9 @@ router.put('/portal/update-profile', authMiddleware, requirePortalUser, async (r
     const body = req.body || {};
 
     if (body.phone !== undefined) {
-      req.admin.phone = String(body.phone ?? '').trim().slice(0, 40);
+      const parsedPhone = parseRequiredPhone(body.phone);
+      if (!parsedPhone.ok) return res.status(400).json({ message: parsedPhone.message });
+      req.admin.phone = parsedPhone.phone;
     }
 
     if (body.basedCityId !== undefined || body.cityId !== undefined) {
@@ -650,7 +676,9 @@ router.post('/portal/convert-to-business', authMiddleware, requirePortalUser, as
       req.admin.lastName = parts.slice(1).join(' ') || '';
     }
     if (body.phone !== undefined) {
-      req.admin.phone = String(body.phone ?? '').trim().slice(0, 40);
+      const parsedPhone = parseRequiredPhone(body.phone);
+      if (!parsedPhone.ok) return res.status(400).json({ message: parsedPhone.message });
+      req.admin.phone = parsedPhone.phone;
     }
 
     await req.admin.save();

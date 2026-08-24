@@ -278,6 +278,13 @@ export function nextShareCount(current: number, metrics: ListingMetrics | null |
   return current + 1;
 }
 
+/** Merge a confirmed view into the visible count. Never optimistic — dedup often returns the same total. */
+export function nextViewCount(current: number, metrics: ListingMetrics | null | undefined): number {
+  const reported = metrics?.viewCount;
+  if (typeof reported === 'number' && Number.isFinite(reported)) return Math.max(current, reported);
+  return current;
+}
+
 /**
  * Merge a save-toggle response into the visible count.
  * Bookmark `saved` is tracked separately — never snap the number back to 0 while saved.

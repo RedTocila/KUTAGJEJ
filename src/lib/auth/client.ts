@@ -89,7 +89,7 @@ export type RegisterParams =
       lastName: string;
       email: string;
       password: string;
-      phone?: string;
+      phone: string;
       basedCityId?: string;
       referralCode?: string;
     }
@@ -101,7 +101,7 @@ export type RegisterParams =
       businessCategory: string;
       email: string;
       password: string;
-      phone?: string;
+      phone: string;
       basedCityId?: string;
       referralCode?: string;
     };

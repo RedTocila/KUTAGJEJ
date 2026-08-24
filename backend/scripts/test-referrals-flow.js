@@ -33,6 +33,7 @@ async function main() {
       lastName: 'Test',
       email: referrerEmail,
       password,
+      phone: '+355691111111',
     }),
   });
   assert(r.status === 201, `Referrer register failed: ${r.status} ${JSON.stringify(r.data)}`);
@@ -59,6 +60,7 @@ async function main() {
       lastName: 'Test',
       email: referredEmail,
       password,
+      phone: '+355692222222',
       referralCode: code,
     }),
   });

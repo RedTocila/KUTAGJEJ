@@ -38,6 +38,7 @@ const submitBtnSx = {
   minHeight: 48,
   width: '100%',
   flex: 1,
+  borderRadius: 999,
 } as const;
 
 /**

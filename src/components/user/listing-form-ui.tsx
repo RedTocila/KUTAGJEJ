@@ -101,7 +101,7 @@ export const ListingTextField = React.forwardRef(function ListingTextField(
 
 /**
  * Listing description textarea with an AI button in the bottom-right corner.
- * The button scrolls to the top AI command bar and focuses it (opens the keyboard).
+ * The button opens the listing AI drawer and focuses the input (opens the keyboard).
  * Overflow is hidden so iOS does not trap vertical pans inside the field.
  */
 function autosizeTextarea(el: HTMLTextAreaElement | null) {
@@ -270,6 +270,7 @@ const submitButtonSx = {
   px: 3,
   minHeight: 48,
   width: { xs: '100%', sm: 'auto' },
+  borderRadius: 999,
 } as const;
 
 export function ListingFormActions({

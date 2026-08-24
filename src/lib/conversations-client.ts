@@ -59,7 +59,10 @@ export interface ConversationSummary {
   otherParticipantPhone?: string | null;
   /** Profile avatar of the other participant, when available. */
   otherParticipantAvatarUrl?: string | null;
-  /** Listing contact phone (seller number shown on the ad). */
+  /**
+   * Listing contact phone (seller number on the ad).
+   * Omitted when the current user owns that listing, so Call never dials your own ad.
+   */
   listingContactPhone?: string | null;
   /** Pinned to the top of the inbox for the current user. */
   pinned?: boolean;
@@ -198,7 +201,7 @@ function patchCachedConversationListing(conversation: ConversationSummary): void
           listingId: conversation.listingId,
           listingTitle: conversation.listingTitle,
           listingImageUrl: conversation.listingImageUrl,
-          listingContactPhone: conversation.listingContactPhone ?? c.listingContactPhone,
+          listingContactPhone: conversation.listingContactPhone,
         }
       : c,
   );
@@ -213,8 +216,7 @@ function patchCachedConversationListing(conversation: ConversationSummary): void
         listingId: conversation.listingId,
         listingTitle: conversation.listingTitle,
         listingImageUrl: conversation.listingImageUrl,
-        listingContactPhone:
-          conversation.listingContactPhone ?? thread.conversation.listingContactPhone,
+        listingContactPhone: conversation.listingContactPhone,
       },
     });
   }

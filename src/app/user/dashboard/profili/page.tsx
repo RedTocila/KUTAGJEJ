@@ -214,6 +214,11 @@ export default function UserProfilePage() {
     e.preventDefault();
     if (!user || !canEdit) return;
     setProfileMsg(null);
+    const phone = phoneInput.trim();
+    if (phone.length < 6) {
+      setProfileMsg({ type: 'error', text: 'Numri i telefonit është i detyrueshëm.' });
+      return;
+    }
     setProfileSaving(true);
     try {
       const body = isBusiness
@@ -221,14 +226,14 @@ export default function UserProfilePage() {
             businessName: businessName.trim(),
             businessOwner: businessOwner.trim(),
             businessCategory: businessCategory.trim(),
-            phone: phoneInput.trim(),
+            phone,
             basedCityId: basedCityId || null,
             shareThemeColor,
           }
         : {
             firstName: firstName.trim(),
             lastName: lastName.trim(),
-            phone: phoneInput.trim(),
+            phone,
             basedCityId: basedCityId || null,
             shareThemeColor,
           };
@@ -689,6 +694,7 @@ export default function UserProfilePage() {
                 type="tel"
                 value={phoneInput}
                 onChange={(ev) => setPhoneInput(ev.target.value)}
+                required
                 fullWidth
                 autoComplete="tel"
                 slotProps={{ htmlInput: { maxLength: 40 } }}

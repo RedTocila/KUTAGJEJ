@@ -198,8 +198,8 @@ async function listingContextFromInquiryBody(body, conv) {
   return { kind, listingId: listing.id, listing };
 }
 
-/** Contact phone only — no poster profile fetch (thread header). */
-async function loadListingContactPhone(kind, listingId) {
+/** Contact phone + owner id — no poster profile fetch (thread header). */
+async function loadListingContactMeta(kind, listingId) {
   if (!kind || !listingId) return null;
   if (!VALID_KINDS.has(kind) || !isUuid(listingId)) return null;
   const cfg = getKindConfig(kind);
@@ -207,7 +207,7 @@ async function loadListingContactPhone(kind, listingId) {
 
   let q = getSupabaseAdmin()
     .from(cfg.table)
-    .select('contact_phone')
+    .select('contact_phone, poster_id')
     .eq('id', listingId)
     .eq('status', 'approved');
   if (cfg.extraFilter) {
@@ -215,8 +215,18 @@ async function loadListingContactPhone(kind, listingId) {
   }
   const { data, error } = await q.maybeSingle();
   if (error) throw error;
-  const phone = data?.contact_phone != null ? String(data.contact_phone).trim() : '';
-  return phone || null;
+  if (!data) return null;
+  const phone = data.contact_phone != null ? String(data.contact_phone).trim() : '';
+  return {
+    phone: phone || null,
+    posterId: data.poster_id ? String(data.poster_id) : null,
+  };
+}
+
+/** Contact phone only — no poster profile fetch (thread header). */
+async function loadListingContactPhone(kind, listingId) {
+  const meta = await loadListingContactMeta(kind, listingId);
+  return meta?.phone || null;
 }
 
 module.exports = {
@@ -230,6 +240,7 @@ module.exports = {
   normalizeConversationListingKind,
   loadPortalUserDisplayName,
   loadPortalUserPhone,
+  loadListingContactMeta,
   loadListingContactPhone,
   applyListingContextToConversation,
   listingContextFromInquiryBody,

@@ -62,6 +62,7 @@ export function ProfessionalListingDetailDesktop({
   similarSlot,
   saved,
   saveCount,
+  viewCount,
   onToggleSave,
   canonicalUrl,
   ownerPreview = false,
@@ -71,6 +72,7 @@ export function ProfessionalListingDetailDesktop({
   similarSlot?: React.ReactNode;
   saved: boolean;
   saveCount: number;
+  viewCount: number;
   onToggleSave: () => void;
   /** Kept for call-site compatibility / future share overrides. */
   canonicalUrl?: string;
@@ -177,7 +179,7 @@ export function ProfessionalListingDetailDesktop({
                     location: locationLine || listing.cityName || undefined,
                     contactPhone: (listing.contactPhone ?? listing.seller?.phone)?.trim() || undefined,
                     createdAt: listing.createdAt,
-                    viewCount: listing.viewCount,
+                    viewCount,
                     saveCount,
                     url: canonicalUrl,
                     ratingAverage: liveReviewStats?.ratingAverage ?? listing.ratingAverage,

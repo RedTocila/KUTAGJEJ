@@ -105,14 +105,14 @@ export function LazyHomeSection({
         })()
       : null;
   const sessionListings = (sessionSlice?.listings as HomeListing[] | undefined) ?? [];
+  const initialCount = (ssrTrusted ? initialTotal : undefined) ?? cached?.total ?? sessionSlice?.total ?? 0;
+  const countReady = initialCount > 0;
 
   const [listings, setListings] = React.useState<HomeListing[]>(
     () => (ssrTrusted ? initialListings! : cached?.listings ?? sessionListings) ?? []
   );
-  const [total, setTotal] = React.useState(
-    () => (ssrTrusted ? initialTotal : undefined) ?? cached?.total ?? sessionSlice?.total ?? 0
-  );
-  const [loaded, setLoaded] = React.useState(() => ssrTrusted || Boolean(cached));
+  const [total, setTotal] = React.useState(() => initialCount);
+  const [loaded, setLoaded] = React.useState(() => (ssrTrusted || Boolean(cached)) && countReady);
   const [active, setActive] = React.useState(() => eager || ssrTrusted || Boolean(cached));
   const rootRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -141,7 +141,7 @@ export function LazyHomeSection({
     let cancelled = false;
     void (async () => {
       const hit = sectionCache.get(key);
-      if (hit) {
+      if (hit && !(hit.listings.length > 0 && hit.total === 0)) {
         if (!cancelled) {
           setListings(hit.listings);
           setTotal(hit.total);

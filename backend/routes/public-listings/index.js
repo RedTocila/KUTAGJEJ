@@ -263,8 +263,15 @@ router.get('/latest/:vertical', optionalAuth, async (req, res) => {
     const cacheKey = `latest-vertical:${vertical}:${limit}`;
     let cached = getCached(cacheKey);
     if (!cached) {
-      const listings = await handlers.list(limit);
-      cached = { listings, total: 0 };
+      const [listings, counted] = await Promise.all([
+        handlers.list(limit),
+        handlers.count().catch((err) => {
+          console.error(`GET /public/listings/latest/${vertical} count:`, err?.message || err);
+          return null;
+        }),
+      ]);
+      const total = Math.max(typeof counted === 'number' ? counted : 0, listings.length);
+      cached = { listings, total };
       setCached(cacheKey, cached);
     }
     let listings = cached.listings;

@@ -38,6 +38,7 @@ export function BusinessListingDetailDesktop({
   similarSlot,
   saved,
   saveCount,
+  viewCount,
   onToggleSave,
   showReservation,
   reserveDate,
@@ -64,6 +65,7 @@ export function BusinessListingDetailDesktop({
   similarSlot?: React.ReactNode;
   saved: boolean;
   saveCount: number;
+  viewCount: number;
   onToggleSave: () => void;
   showReservation: boolean;
   reserveDate: string;
@@ -188,7 +190,7 @@ export function BusinessListingDetailDesktop({
                     location: locationLine || listing.cityName || undefined,
                     contactPhone: telHref?.trim() || undefined,
                     createdAt: listing.createdAt,
-                    viewCount: listing.viewCount,
+                    viewCount,
                     saveCount,
                     ratingAverage: listing.ratingAverage,
                     reviewCount: listing.reviewCount,

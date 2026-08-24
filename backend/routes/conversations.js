@@ -13,8 +13,9 @@ const {
   userParticipatesInConversation,
   userRoleInConversation,
   loadListingForConversation,
+  findContactListingForPoster,
   normalizeConversationListingKind,
-  loadListingContactPhone,
+  loadListingContactMeta,
   applyListingContextToConversation,
   listingContextFromInquiryBody,
   parseListingInquiryMessage,
@@ -333,7 +334,10 @@ function dedupeInboxByParticipant(items) {
   return [...byOther.values()];
 }
 
-async function attachOtherParticipantDetails(items, { includeListingPhones = true } = {}) {
+async function attachOtherParticipantDetails(
+  items,
+  { includeListingPhones = true, currentUserId = null } = {},
+) {
   if (!items.length) return items;
 
   const profileIds = [
@@ -368,21 +372,56 @@ async function attachOtherParticipantDetails(items, { includeListingPhones = tru
     return `${row.first_name || ''} ${row.last_name || ''}`.replace(/\s+/g, ' ').trim() || null;
   };
 
-  const listingPhones = includeListingPhones
+  const listingMeta = includeListingPhones
     ? await Promise.all(
-        items.map((item) => loadListingContactPhone(item.listingKind, item.listingId)),
+        items.map((item) => loadListingContactMeta(item.listingKind, item.listingId)),
       )
     : items.map(() => null);
 
-  return items.map((item, index) => {
+  const viewerId = currentUserId ? String(currentUserId) : '';
+  const withProfiles = items.map((item, index) => {
     const profile = profileById.get(String(item.otherParticipantId));
+    const meta = listingMeta[index];
+    const listingOwnedByViewer = Boolean(viewerId && meta?.posterId && meta.posterId === viewerId);
     return {
       ...item,
       otherParticipantName: displayNameFromProfile(profile),
       otherParticipantPhone: (profile?.phone && String(profile.phone).trim()) || null,
       otherParticipantAvatarUrl: (profile?.avatar_url && String(profile.avatar_url).trim()) || null,
-      listingContactPhone: listingPhones[index] || null,
+      // Never send the ad number to the listing owner — that is their own phone.
+      listingContactPhone: listingOwnedByViewer ? null : meta?.phone || null,
     };
+  });
+
+  if (!includeListingPhones) return withProfiles;
+
+  const missingPhone = withProfiles.filter(
+    (item) => !item.otherParticipantPhone && isUuid(item.otherParticipantId),
+  );
+  if (!missingPhone.length) return withProfiles;
+
+  const fallbackPhones = await Promise.all(
+    missingPhone.map(async (item) => {
+      const listing = await findContactListingForPoster(
+        item.otherParticipantId,
+        item.otherParticipantModel,
+      );
+      if (!listing) return null;
+      if (item.listingId && String(listing.listingId) === String(item.listingId)) return null;
+      const meta = await loadListingContactMeta(listing.kind, listing.listingId);
+      return meta?.phone || null;
+    }),
+  );
+  const phoneByOtherId = new Map();
+  missingPhone.forEach((item, index) => {
+    if (fallbackPhones[index]) phoneByOtherId.set(String(item.otherParticipantId), fallbackPhones[index]);
+  });
+  if (!phoneByOtherId.size) return withProfiles;
+
+  return withProfiles.map((item) => {
+    if (item.otherParticipantPhone) return item;
+    const fallback = phoneByOtherId.get(String(item.otherParticipantId));
+    return fallback ? { ...item, otherParticipantPhone: fallback } : item;
   });
 }
 
@@ -489,7 +528,9 @@ router.post('/', auth, requirePortalUser, async (req, res) => {
     await upsertConversationUserState(conv.id, userRef.id, { hidden_at: null });
     const stateMap = await loadUserStatesByConversationIds(userRef.id, [conv.id]);
     const formatted = await formatConversationForUser(conv, userRef, stateMap.get(String(conv.id)));
-    const [withName] = await attachOtherParticipantDetails([formatted]);
+    const [withName] = await attachOtherParticipantDetails([formatted], {
+      currentUserId: userRef.id,
+    });
     res.status(created ? 201 : 200).json({ conversation: withName });
   } catch (err) {
     console.error('POST /conversations:', err?.message || err);
@@ -509,7 +550,9 @@ async function respondWithConversation(res, row, userRef, statusCode) {
   await upsertConversationUserState(conv.id, userRef.id, { hidden_at: null });
   const stateMap = await loadUserStatesByConversationIds(userRef.id, [conv.id]);
   const formatted = await formatConversationForUser(conv, userRef, stateMap.get(String(conv.id)));
-  const [withName] = await attachOtherParticipantDetails([formatted]);
+  const [withName] = await attachOtherParticipantDetails([formatted], {
+    currentUserId: userRef.id,
+  });
   return res.status(statusCode).json({ conversation: withName });
 }
 
@@ -714,6 +757,7 @@ router.get('/', auth, requirePortalUser, async (req, res) => {
     const formatted = await formatConversationsForUser(mapped, userRef, stateMap);
     const withNames = await attachOtherParticipantDetails(formatted, {
       includeListingPhones: false,
+      currentUserId: userRef.id,
     });
     const deduped = dedupeInboxByParticipant(withNames);
     const total = deduped.length < limit && page === 1 ? deduped.length : from + deduped.length;
@@ -810,7 +854,9 @@ router.get('/:id/messages', auth, requirePortalUser, async (req, res) => {
 
     const stateMap = await loadUserStatesByConversationIds(userRef.id, [conv.id]);
     const formatted = await formatConversationForUser(conv, userRef, stateMap.get(String(conv.id)));
-    const [withName] = await attachOtherParticipantDetails([formatted]);
+    const [withName] = await attachOtherParticipantDetails([formatted], {
+      currentUserId: userRef.id,
+    });
 
     res.json({
       messages: messages.map((m) => {
@@ -839,7 +885,9 @@ router.patch('/:id/pin', auth, requirePortalUser, async (req, res) => {
 
     const state = await upsertConversationUserState(conv.id, userRef.id, { pinned });
     const formatted = await formatConversationForUser(conv, userRef, state);
-    const [withName] = await attachOtherParticipantDetails([formatted]);
+    const [withName] = await attachOtherParticipantDetails([formatted], {
+      currentUserId: userRef.id,
+    });
     res.json({ conversation: withName });
   } catch (err) {
     console.error('PATCH /conversations/:id/pin:', err?.message || err);

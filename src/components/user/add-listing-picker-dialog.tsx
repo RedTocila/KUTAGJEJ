@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { flushSync } from 'react-dom';
+import { useRouter } from 'next/navigation';
 import {
   Alert,
   Box,
@@ -35,6 +36,11 @@ import {
 } from '@/lib/listing-category-quota-client';
 import { listCategoriesPublic } from '@/lib/listings-client';
 import { hardNavigate } from '@/lib/hard-navigate';
+import {
+  isListingFormCategoryKey,
+  prefetchListingForm,
+  prefetchPostListingPage,
+} from '@/lib/listing-form-loaders';
 import { AI_SEARCH_BLUE, AI_SEARCH_BLUE_SOFT, OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
 import { beginPendingNavigation } from '@/lib/navigation-pending';
 import { MOTION_DIALOG_MS } from '@/styles/motion';
@@ -173,6 +179,7 @@ export function AddListingPickerDialog({
   initialPremium?: boolean;
 }) {
   const t = useCopy();
+  const router = useRouter();
   const { user } = useUser();
   const unlimitedDirectory = hasUnlimitedDirectoryListings(user?.email);
   const [error, setError] = React.useState<string | null>(null);
@@ -196,7 +203,8 @@ export function AddListingPickerDialog({
     setPickingOkazion(Boolean(initialOkazion));
     setPickingPremium(Boolean(initialPremium));
     setPickingAllListings(false);
-  }, [open, initialOkazion, initialPremium]);
+    prefetchPostListingPage(router);
+  }, [open, initialOkazion, initialPremium, router]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -273,6 +281,7 @@ export function AddListingPickerDialog({
     if (pickingOkazion && !OKAZION_CATEGORY_KEYS.has(key)) return;
     if (pickingPremium && !PREMIUM_CATEGORY_KEYS.has(key)) return;
     if (!isCategoryQuotaAvailable(categoryQuotas, key)) return;
+    if (isListingFormCategoryKey(key)) prefetchListingForm(key);
     if (onPick) {
       const q = new URLSearchParams({ category: key });
       if (pickingOkazion) q.set('okazion', '1');
@@ -289,23 +298,15 @@ export function AddListingPickerDialog({
     dismissSheet();
     onClose();
     beginPendingNavigation(formHref);
-    void (async () => {
-      if (key === 'businesses' && !unlimitedDirectory) {
-        const res = await listMyBusinessListings();
-        if ((res.listings?.length ?? 0) > 0) {
-          hardNavigate(paths.user.businessesListing);
-          return;
-        }
-      }
-      if (key === 'professionals' && !unlimitedDirectory) {
-        const res = await listMyProfessionalListings();
-        if ((res.listings?.length ?? 0) > 0) {
-          hardNavigate(paths.user.professionalsListing);
-          return;
-        }
-      }
-      hardNavigate(formHref);
-    })();
+    if (key === 'businesses' && hasBusinessListing) {
+      hardNavigate(paths.user.businessesListing);
+      return;
+    }
+    if (key === 'professionals' && hasProfessionalListing) {
+      hardNavigate(paths.user.professionalsListing);
+      return;
+    }
+    hardNavigate(formHref);
   };
 
   const handleAiImport = () => {
@@ -630,6 +631,9 @@ export function AddListingPickerDialog({
                     type="button"
                     disabled={!quotaAvailable}
                     aria-label={quotaAvailable ? opt.title : `${opt.title} — ${t.picker.quotaUnavailable}`}
+                    onPointerDown={() => {
+                      if (isListingFormCategoryKey(opt.key)) prefetchListingForm(opt.key);
+                    }}
                     onClick={() => handlePick(opt.key)}
                     sx={{
                       display: 'flex',

@@ -1,9 +1,11 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { useUser } from '@/hooks/use-user';
+import { prefetchPostListingPage } from '@/lib/listing-form-loaders';
 
 type AddListingPickerContextValue = {
   openAddListingPicker: () => void;
@@ -28,6 +30,7 @@ export function useOptionalAddListingPicker(): AddListingPickerContextValue | nu
 
 export function AddListingPickerProvider({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
+  const router = useRouter();
   const [open, setOpen] = React.useState(false);
 
   const canPublish =
@@ -36,10 +39,16 @@ export function AddListingPickerProvider({ children }: { children: React.ReactNo
       user?.accountType === 'business' ||
       user?.role === 'business-user');
 
+  React.useEffect(() => {
+    if (!canPublish) return;
+    prefetchPostListingPage(router);
+  }, [canPublish, router]);
+
   const openAddListingPicker = React.useCallback(() => {
     if (!canPublish) return;
+    prefetchPostListingPage(router);
     setOpen(true);
-  }, [canPublish]);
+  }, [canPublish, router]);
 
   const value = React.useMemo(
     () => ({ openAddListingPicker, addListingPickerOpen: open }),

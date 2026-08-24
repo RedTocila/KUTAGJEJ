@@ -37,6 +37,8 @@ function shouldSkipOverlay(path: string, currentPath: string): boolean {
     return true;
   }
   if (path === paths.user.leads || path.startsWith(`${paths.user.leads}/`)) return true;
+  // Form chrome paints from the URL on the next frame — a full-page skeleton feels stuck.
+  if (isPostListingPath(path)) return true;
   // Home ↔ Saves ↔ Messages ↔ Profile is a hosted pager on mobile; don't cover it.
   if (mainTabFromPath(path) && mainTabFromPath(currentPath)) return true;
   return false;

@@ -88,6 +88,20 @@ export function PostListingFormSurface({ children }: { children: React.ReactNode
   return <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.25 }}>{children}</Box>;
 }
 
+/** Field placeholders under an already-visible post-listing header. */
+export function PostListingFormFieldsSkeleton(): React.JSX.Element {
+  return (
+    <PostListingFormSurface>
+      <Skeleton variant="rounded" animation="wave" height={160} sx={{ borderRadius: 2.5 }} />
+      <Skeleton variant="rounded" animation="wave" height={56} sx={{ borderRadius: 2 }} />
+      <Skeleton variant="rounded" animation="wave" height={56} sx={{ borderRadius: 2 }} />
+      <Skeleton variant="rounded" animation="wave" height={56} sx={{ borderRadius: 2 }} />
+      <Skeleton variant="rounded" animation="wave" height={120} sx={{ borderRadius: 2 }} />
+      <Skeleton variant="rounded" animation="wave" height={48} sx={{ borderRadius: 2 }} />
+    </PostListingFormSurface>
+  );
+}
+
 /** Placeholder while a listing form / AI Build page is opening. */
 export function PostListingFormSkeleton(): React.JSX.Element {
   return (
@@ -99,14 +113,7 @@ export function PostListingFormSkeleton(): React.JSX.Element {
           <Skeleton variant="text" animation="wave" width="28%" height={20} />
         </Stack>
       </Stack>
-      <PostListingFormSurface>
-        <Skeleton variant="rounded" animation="wave" height={160} sx={{ borderRadius: 2.5 }} />
-        <Skeleton variant="rounded" animation="wave" height={56} sx={{ borderRadius: 2 }} />
-        <Skeleton variant="rounded" animation="wave" height={56} sx={{ borderRadius: 2 }} />
-        <Skeleton variant="rounded" animation="wave" height={56} sx={{ borderRadius: 2 }} />
-        <Skeleton variant="rounded" animation="wave" height={120} sx={{ borderRadius: 2 }} />
-        <Skeleton variant="rounded" animation="wave" height={48} sx={{ borderRadius: 2 }} />
-      </PostListingFormSurface>
+      <PostListingFormFieldsSkeleton />
     </Stack>
   );
 }

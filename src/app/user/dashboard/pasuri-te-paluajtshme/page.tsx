@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Alert, Button, Stack } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
@@ -13,15 +14,13 @@ import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Sto
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
-import { RealEstateListingForm } from '@/components/real-estate/real-estate-listing-form';
-import { CarListingForm } from '@/components/cars/car-listing-form';
-import { JobListingForm } from '@/components/jobs/job-listing-form';
-import { MarketplaceListingForm } from '@/components/marketplace/marketplace-listing-form';
-import { BusinessListingForm } from '@/components/businesses/business-listing-form';
-import { ProfessionalListingForm } from '@/components/professionals/professional-listing-form';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
-import { PostListingFormSkeleton, PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
+import {
+  PostListingFormFieldsSkeleton,
+  PostListingFormSurface,
+  PostListingHeader,
+} from '@/components/user/post-listing-header';
 import { OkazionTheme } from '@/components/user/okazion-theme';
 import { OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
 import {
@@ -41,12 +40,41 @@ import {
   isCategoryQuotaAvailable,
   type CategoryQuotaSnapshot,
 } from '@/lib/listing-category-quota-client';
+import {
+  isListingFormCategoryKey,
+  prefetchListingForm,
+} from '@/lib/listing-form-loaders';
 import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';
 import { useCopy } from '@/hooks/use-copy';
 import type { ListingCategory, ListingCategoryKey } from '@/types/listing-category';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
+
+const RealEstateListingForm = dynamic(
+  () => import('@/components/real-estate/real-estate-listing-form').then((m) => m.RealEstateListingForm),
+  { loading: () => <PostListingFormFieldsSkeleton /> },
+);
+const CarListingForm = dynamic(
+  () => import('@/components/cars/car-listing-form').then((m) => m.CarListingForm),
+  { loading: () => <PostListingFormFieldsSkeleton /> },
+);
+const JobListingForm = dynamic(
+  () => import('@/components/jobs/job-listing-form').then((m) => m.JobListingForm),
+  { loading: () => <PostListingFormFieldsSkeleton /> },
+);
+const MarketplaceListingForm = dynamic(
+  () => import('@/components/marketplace/marketplace-listing-form').then((m) => m.MarketplaceListingForm),
+  { loading: () => <PostListingFormFieldsSkeleton /> },
+);
+const BusinessListingForm = dynamic(
+  () => import('@/components/businesses/business-listing-form').then((m) => m.BusinessListingForm),
+  { loading: () => <PostListingFormFieldsSkeleton /> },
+);
+const ProfessionalListingForm = dynamic(
+  () => import('@/components/professionals/professional-listing-form').then((m) => m.ProfessionalListingForm),
+  { loading: () => <PostListingFormFieldsSkeleton /> },
+);
 
 type Phase =
   | 'choose'
@@ -83,6 +111,33 @@ function fallbackCategory(key: ListingCategoryKey): ListingCategory {
     slug: key,
     listingTypes: [],
   };
+}
+
+function phaseFromCategoryKey(key: string): Phase | null {
+  switch (key) {
+    case 'real-estate':
+      return 'real-estate-form';
+    case 'cars':
+      return 'cars-form';
+    case 'job-listings':
+      return 'jobs-form';
+    case 'marketplace':
+      return 'marketplace-form';
+    case 'businesses':
+      return 'businesses-form';
+    case 'professionals':
+      return 'professionals-form';
+    default:
+      return null;
+  }
+}
+
+function initialPhase(category: string | null): Phase {
+  if (!category) return 'choose';
+  const formPhase = phaseFromCategoryKey(category);
+  if (formPhase) return formPhase;
+  if (KNOWN_CATEGORY_KEYS.includes(category as ListingCategoryKey)) return 'unsupported';
+  return 'choose';
 }
 
 function phaseIcon(phase: Phase): PhosphorIcon {
@@ -127,8 +182,13 @@ export default function UserPostListingPage() {
   const { user } = useUser();
   const t = useCopy();
 
-  const [phase, setPhase] = React.useState<Phase>('choose');
-  const [picked, setPicked] = React.useState<ListingCategory | null>(null);
+  const categoryFromUrl = searchParams.get('category');
+  const [phase, setPhase] = React.useState<Phase>(() => initialPhase(categoryFromUrl));
+  const [picked, setPicked] = React.useState<ListingCategory | null>(() =>
+    categoryFromUrl && KNOWN_CATEGORY_KEYS.includes(categoryFromUrl as ListingCategoryKey)
+      ? fallbackCategory(categoryFromUrl as ListingCategoryKey)
+      : null,
+  );
   const [categories, setCategories] = React.useState<ListingCategory[]>([]);
   const [categoryQuotas, setCategoryQuotas] = React.useState<CategoryQuotaSnapshot | null>(null);
   const [quotasReady, setQuotasReady] = React.useState(false);
@@ -140,7 +200,7 @@ export default function UserPostListingPage() {
   const [aiInitial, setAiInitial] = React.useState<Record<string, unknown> | null>(null);
   const [aiReady, setAiReady] = React.useState(!wantsAi);
   const [aiFormKey, setAiFormKey] = React.useState(0);
-  const appliedCategoryRef = React.useRef<string | null>(null);
+  const appliedCategoryRef = React.useRef<string | null>(categoryFromUrl);
   const aiConsumedRef = React.useRef(false);
 
   const canPublish =
@@ -150,6 +210,10 @@ export default function UserPostListingPage() {
       user?.role === 'business-user');
 
   React.useEffect(() => {
+    if (isListingFormCategoryKey(categoryFromUrl)) prefetchListingForm(categoryFromUrl);
+  }, [categoryFromUrl]);
+
+  React.useEffect(() => {
     if (!user) return;
     if (!canPublish) {
       router.replace(paths.user.dashboard);
@@ -157,43 +221,38 @@ export default function UserPostListingPage() {
   }, [user, canPublish, router]);
 
   React.useEffect(() => {
+    let cancelled = false;
+    void listCategoriesPublic().then((catRes) => {
+      if (!cancelled) setCategories(catRes.categories ?? []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  React.useEffect(() => {
     if (!user || !canPublish) return;
     let cancelled = false;
-    setQuotasReady(false);
-    void (async () => {
-      const [catRes, quotaRes] = await Promise.all([listCategoriesPublic(), fetchCategoryQuotas()]);
+    void fetchCategoryQuotas().then((quotaRes) => {
       if (cancelled) return;
-      setCategories(catRes.categories ?? []);
       setCategoryQuotas(quotaRes.snapshot ?? null);
       setQuotasReady(true);
-    })();
+    });
     return () => {
       cancelled = true;
     };
   }, [user, canPublish]);
 
-  const handlePickCategory = (cat: ListingCategory) => {
+  const handlePickCategory = React.useCallback((cat: ListingCategory) => {
     setPicked(cat);
-    if (!isCategoryQuotaAvailable(categoryQuotas, cat.key)) {
+    if (isListingFormCategoryKey(cat.key)) prefetchListingForm(cat.key);
+    if (categoryQuotas && !isCategoryQuotaAvailable(categoryQuotas, cat.key)) {
       setPhase('quota-blocked');
       return;
     }
-    if (cat.key === 'real-estate') {
-      setPhase('real-estate-form');
-    } else if (cat.key === 'cars') {
-      setPhase('cars-form');
-    } else if (cat.key === 'job-listings') {
-      setPhase('jobs-form');
-    } else if (cat.key === 'marketplace') {
-      setPhase('marketplace-form');
-    } else if (cat.key === 'businesses') {
-      setPhase('businesses-form');
-    } else if (cat.key === 'professionals') {
-      setPhase('professionals-form');
-    } else {
-      setPhase('unsupported');
-    }
-  };
+    const next = phaseFromCategoryKey(cat.key);
+    setPhase(next ?? 'unsupported');
+  }, [categoryQuotas]);
 
   const applyCategoryKey = React.useCallback(
     (raw: string) => {
@@ -208,17 +267,22 @@ export default function UserPostListingPage() {
         handlePickCategory(fallbackCategory(raw as ListingCategoryKey));
       }
     },
-    // categoryQuotas is read by handlePickCategory via closure — include it
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- handlePickCategory is intentionally inline
-    [categories, categoryQuotas],
+    [categories, handlePickCategory],
   );
 
   React.useEffect(() => {
     const raw = searchParams.get('category');
-    if (!raw || !quotasReady) return;
-    if (appliedCategoryRef.current === raw) return;
+    if (!raw) return;
+    if (appliedCategoryRef.current === raw && phase !== 'choose') return;
     applyCategoryKey(raw);
-  }, [searchParams, quotasReady, applyCategoryKey]);
+  }, [searchParams, applyCategoryKey, phase]);
+
+  React.useEffect(() => {
+    if (!quotasReady || !picked) return;
+    if (!isCategoryQuotaAvailable(categoryQuotas, picked.key)) {
+      setPhase('quota-blocked');
+    }
+  }, [quotasReady, categoryQuotas, picked]);
 
   React.useEffect(() => {
     if (!wantsAi) {
@@ -239,7 +303,7 @@ export default function UserPostListingPage() {
   }, [wantsAi, searchParams]);
 
   const handleSheetPick = (key: ListingCategoryKey, opts?: { okazion?: boolean; premium?: boolean }) => {
-    if (!isCategoryQuotaAvailable(categoryQuotas, key)) {
+    if (categoryQuotas && !isCategoryQuotaAvailable(categoryQuotas, key)) {
       const fromApi = categories.find((c) => c.key === key);
       setPicked(fromApi ?? fallbackCategory(key));
       setPhase('quota-blocked');
@@ -262,8 +326,7 @@ export default function UserPostListingPage() {
     hardNavigate(paths.user.dashboard);
   }, [wantsAi, aiDraftId]);
 
-  if (!user) return null;
-  if (!canPublish) return null;
+  if (user && !canPublish) return null;
 
   const formMeta: Partial<Record<Phase, { title: string }>> = {
     'real-estate-form': { title: 'Posto njoftim' },
@@ -277,9 +340,7 @@ export default function UserPostListingPage() {
   const activeMeta = formMeta[phase];
   const showFormShell = Boolean(activeMeta);
   const activeCategory = phaseCategory(phase);
-  const categoryFromUrl = searchParams.get('category');
   const showPicker = phase === 'choose' && !categoryFromUrl;
-  const showFormLoading = Boolean(categoryFromUrl) && (phase === 'choose' || (showFormShell && !aiReady));
 
   return (
     <Stack spacing={2.5}>
@@ -293,9 +354,7 @@ export default function UserPostListingPage() {
         />
       ) : null}
 
-      {showFormLoading ? <PostListingFormSkeleton /> : null}
-
-      {showFormShell && activeMeta && aiReady ? (
+      {showFormShell && activeMeta ? (
         <OkazionTheme enabled={wantsOkazion}>
           <>
           <PostListingHeader
@@ -330,48 +389,54 @@ export default function UserPostListingPage() {
             {activeCategory ? (
               <PostListingAiAssist category={activeCategory} onApply={handleAiApply} />
             ) : null}
-            {phase === 'real-estate-form' ? (
-              <RealEstateListingForm
-                key={`re-${aiFormKey}`}
-                initialListing={(aiInitial as RealEstateMineListing | null) ?? null}
-                onSuccess={handleFormSuccess}
-              />
-            ) : null}
-            {phase === 'cars-form' ? (
-              <CarListingForm
-                key={`cars-${aiFormKey}`}
-                initialListing={(aiInitial as CarMineListing | null) ?? null}
-                onSuccess={handleFormSuccess}
-              />
-            ) : null}
-            {phase === 'jobs-form' ? (
-              <JobListingForm
-                key={`jobs-${aiFormKey}`}
-                initialListing={(aiInitial as JobMineListing | null) ?? null}
-                onSuccess={handleFormSuccess}
-              />
-            ) : null}
-            {phase === 'businesses-form' ? (
-              <BusinessListingForm
-                key={`biz-${aiFormKey}`}
-                aiPrefill={aiInitial}
-                onSuccess={handleFormSuccess}
-              />
-            ) : null}
-            {phase === 'professionals-form' ? (
-              <ProfessionalListingForm
-                key={`pro-${aiFormKey}`}
-                aiPrefill={aiInitial}
-                onSuccess={handleFormSuccess}
-              />
-            ) : null}
-            {phase === 'marketplace-form' ? (
-              <MarketplaceListingForm
-                key={`mkt-${aiFormKey}`}
-                initialListing={(aiInitial as MarketplaceMineListing | null) ?? null}
-                onSuccess={handleFormSuccess}
-              />
-            ) : null}
+            {aiReady ? (
+              <>
+                {phase === 'real-estate-form' ? (
+                  <RealEstateListingForm
+                    key={`re-${aiFormKey}`}
+                    initialListing={(aiInitial as RealEstateMineListing | null) ?? null}
+                    onSuccess={handleFormSuccess}
+                  />
+                ) : null}
+                {phase === 'cars-form' ? (
+                  <CarListingForm
+                    key={`cars-${aiFormKey}`}
+                    initialListing={(aiInitial as CarMineListing | null) ?? null}
+                    onSuccess={handleFormSuccess}
+                  />
+                ) : null}
+                {phase === 'jobs-form' ? (
+                  <JobListingForm
+                    key={`jobs-${aiFormKey}`}
+                    initialListing={(aiInitial as JobMineListing | null) ?? null}
+                    onSuccess={handleFormSuccess}
+                  />
+                ) : null}
+                {phase === 'businesses-form' ? (
+                  <BusinessListingForm
+                    key={`biz-${aiFormKey}`}
+                    aiPrefill={aiInitial}
+                    onSuccess={handleFormSuccess}
+                  />
+                ) : null}
+                {phase === 'professionals-form' ? (
+                  <ProfessionalListingForm
+                    key={`pro-${aiFormKey}`}
+                    aiPrefill={aiInitial}
+                    onSuccess={handleFormSuccess}
+                  />
+                ) : null}
+                {phase === 'marketplace-form' ? (
+                  <MarketplaceListingForm
+                    key={`mkt-${aiFormKey}`}
+                    initialListing={(aiInitial as MarketplaceMineListing | null) ?? null}
+                    onSuccess={handleFormSuccess}
+                  />
+                ) : null}
+              </>
+            ) : (
+              <PostListingFormFieldsSkeleton />
+            )}
           </PostListingFormSurface>
           </>
         </OkazionTheme>

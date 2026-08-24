@@ -7,7 +7,7 @@ import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import { JobListingDetailView } from '@/components/public/job-listing-detail-view';
-import { ListingDescriptionField } from '@/components/user/listing-form-ui';
+import { ListingDescriptionField, ListingToggle } from '@/components/user/listing-form-ui';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
 import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
 import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
@@ -247,7 +247,7 @@ export function JobOwnerEdit({
     ),
     price: (
       <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
-        <Stack direction="row" spacing={1.25}>
+        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
           <TextField
             label="Paga"
             value={draft.salary != null ? String(draft.salary) : ''}
@@ -263,15 +263,15 @@ export function JobOwnerEdit({
             autoFocus
             sx={fieldSx}
           />
-          <SearchableSelect
+          <ListingToggle
             label="Monedha"
             value={draft.currency === 'EUR' || draft.currency === 'LEK' ? draft.currency : ''}
             onChange={(v) =>
               setDraft((d) => ({ ...d, currency: v === 'EUR' || v === 'LEK' ? v : null }))
             }
             options={CURRENCY_OPTIONS}
-            emptyLabel="—"
-            sx={{ minWidth: 120 }}
+            disabled={draft.salary == null}
+            fullWidth={false}
           />
         </Stack>
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />

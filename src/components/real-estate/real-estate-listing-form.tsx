@@ -4,16 +4,11 @@ import * as React from 'react';
 import {
   Alert,
   Divider,
-  FormControl,
-  FormControlLabel,
-  FormLabel,
   InputAdornment,
-  Radio,
-  RadioGroup,
   Stack,
-  Typography,
 } from '@mui/material';
-import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
+import { HouseLine as HouseLineIcon } from '@phosphor-icons/react/dist/ssr/HouseLine';
+import { Key as KeyIcon } from '@phosphor-icons/react/dist/ssr/Key';
 
 import {
   CONDITION_OPTIONS,
@@ -29,13 +24,19 @@ import {
   TRANSACTION_OPTIONS,
 } from '@/lib/real-estate-constants';
 import { SearchableSelect } from '@/components/core/searchable-select';
-import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
+import {
+  exclusiveLocationPayload,
+  inferListingLocationMode,
+  ListingLocationChoice,
+  type ListingLocationMode,
+} from '@/components/listings/listing-location-choice';
 import {
   ListingDescriptionField,
   ListingFormActionError,
   ListingFormActions,
   ListingFormSection,
   ListingTextField,
+  ListingToggle,
 } from '@/components/user/listing-form-ui';
 import { ListingBoostChoiceBar } from '@/components/user/listing-boost-choice-bar';
 import {
@@ -66,6 +67,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 const MAX_REAL_ESTATE_IMAGES = 8;
 
+const TRANSACTION_TOGGLE = TRANSACTION_OPTIONS.map((o) => ({
+  value: o.value,
+  label: o.label,
+  Icon: o.value === 'rent' ? KeyIcon : HouseLineIcon,
+}));
+
 
 export interface RealEstateListingFormProps {
   /** Called after a successful save (e.g. redirect to dashboard). */
@@ -88,6 +95,7 @@ type FormState = {
   surfaceM2: string;
   cityId: string;
   zoneId: string;
+  locationMode: ListingLocationMode | '';
   mapsUrl: string;
   locationLat: number | null;
   locationLng: number | null;
@@ -115,6 +123,7 @@ function emptyForm(): FormState {
     surfaceM2: '',
     cityId: '',
     zoneId: '',
+    locationMode: '',
     mapsUrl: '',
     locationLat: null,
     locationLng: null,
@@ -208,6 +217,7 @@ function validateForm(f: FormState): string | null {
 
 function buildPayload(f: FormState): RealEstateListingPayload {
   const cat = f.propertyCategory as RealEstatePropertySlug | '';
+  const loc = exclusiveLocationPayload(f.locationMode, f);
   const payload: RealEstateListingPayload = {
     propertyCategory: cat || undefined,
     title: f.title.trim(),
@@ -217,9 +227,9 @@ function buildPayload(f: FormState): RealEstateListingPayload {
     originalPrice: f.originalPrice.trim() ? parseFloatStrict(f.originalPrice) : null,
     currency: (f.currency === 'LEK' ? 'LEK' : 'EUR') as 'EUR' | 'LEK',
     surfaceM2: f.surfaceM2.trim() ? parseFloatStrict(f.surfaceM2) : null,
-    cityId: f.cityId || null,
-    zoneId: f.zoneId || null,
-    mapsUrl: f.mapsUrl.trim() || null,
+    cityId: loc.cityId,
+    zoneId: loc.zoneId,
+    mapsUrl: loc.mapsUrl,
     contactPhone: f.contactPhone.trim(),
   };
   if (needsCondition(cat) && CONDITION_OPTIONS.some((o) => o.value === f.condition)) {
@@ -253,6 +263,7 @@ function formFromListing(l: RealEstateMineListing): FormState {
     cityId: l.cityId ? String(l.cityId) : '',
     zoneId: l.zoneId ? String(l.zoneId) : '',
     mapsUrl: l.mapsUrl ?? '',
+    locationMode: inferListingLocationMode(l.cityId, l.mapsUrl),
     locationLat: l.locationLat ?? null,
     locationLng: l.locationLng ?? null,
     locationAddress: l.locationAddress ?? null,
@@ -285,9 +296,10 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
   const wantsPremium = searchParams.get('premium') === '1';
   const [form, setForm] = React.useState<FormState>(() => {
     const base = initialListing ? formFromListing(initialListing) : emptyForm();
-    return applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage(), {
+    const next = applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage(), {
       withZone: true,
     }) as FormState;
+    return { ...next, locationMode: next.locationMode || inferListingLocationMode(next.cityId, next.mapsUrl) };
   });
   const okazionPayRef = React.useRef<OkazionBoostMode>('buy-card');
   const premiumPayRef = React.useRef<PremiumPayMode>('buy-card');
@@ -303,11 +315,6 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [loadingRefs, setLoadingRefs] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
-
-  const zonesForCity = React.useMemo(() => {
-    const c = cities.find((x) => x.id === form.cityId);
-    return c?.zones ?? [];
-  }, [cities, form.cityId]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -331,18 +338,23 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
 
   React.useEffect(() => {
     if (!initialListing) return;
-    setForm(
-      applyEmptyKnownDefaults(formFromListing(initialListing), knownCreateDefaultsFromStorage(), {
+    setForm(() => {
+      const next = applyEmptyKnownDefaults(formFromListing(initialListing), knownCreateDefaultsFromStorage(), {
         withZone: true,
-      }) as FormState,
-    );
+      }) as FormState;
+      return { ...next, locationMode: next.locationMode || inferListingLocationMode(next.cityId, next.mapsUrl) };
+    });
     setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
     setImages([]);
   }, [initialListing]);
 
   React.useEffect(() => {
     if (isEdit) return;
-    setForm((prev) => applyKnown(prev) as FormState);
+    setForm((prev) => {
+      const next = applyKnown(prev) as FormState;
+      if (!next.locationMode && next.cityId) return { ...next, locationMode: 'city' };
+      return next;
+    });
   }, [isEdit, applyKnown]);
 
   const onField =
@@ -384,7 +396,9 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         return;
       }
       if (!isEdit) {
-        rememberLocation({ cityId: form.cityId, zoneId: form.zoneId });
+        if (form.locationMode === 'city') {
+          rememberLocation({ cityId: form.cityId, zoneId: form.zoneId });
+        }
       }
       if (!isEdit && result.id && (wantsPremium || boostKindRef.current === 'premium')) {
         const boost = await activatePremiumAfterCreate({
@@ -437,11 +451,15 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         </Alert>
       ) : null}
 
-      <ListingFormSection
-        icon={<BuildingsIcon size={20} weight="duotone" />}
-        title="Detajet e njoftimit"
-      >
-      <ListingTextField label="Titulli" value={form.title} onChange={onField('title')} required fullWidth />
+      <ListingFormSection>
+      <ListingTextField
+        label="Titulli"
+        value={form.title}
+        onChange={onField('title')}
+        required
+        fullWidth
+        placeholder="p.sh. Apartament 2+1 në Bllok, Vilë me pishinë në Golem…"
+      />
       <ListingImagePicker
         value={images}
         onChange={setImages}
@@ -456,7 +474,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         value={form.description}
         onChange={onField('description')}
         fullWidth
-        minRows={3}
+        placeholder="Përshkruani pronën, gjendjen, orientimin, çdo detaj të rëndësishëm…"
       />
 
       <SearchableSelect
@@ -464,25 +482,20 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         value={form.propertyCategory}
         onChange={(v) => setForm((p) => ({ ...p, propertyCategory: v as RealEstatePropertySlug | '' }))}
         options={REAL_ESTATE_PROPERTY_CATEGORIES.map((c) => ({ value: c.slug, label: c.label }))}
-        emptyLabel="Zgjidh… (opsionale)"
+        emptyLabel="Zgjidhni llojin e pronës… (opsionale)"
         clearable
         disabled={loadingRefs}
       />
 
-      <FormControl disabled={loadingRefs}>
-        <FormLabel>Lloji i transaksionit</FormLabel>
-        <RadioGroup
-          row
-          value={form.transactionType}
-          onChange={(_, v) => setForm((p) => ({ ...p, transactionType: v as FormState['transactionType'] }))}
-        >
-          {TRANSACTION_OPTIONS.map((o) => (
-            <FormControlLabel key={o.value} value={o.value} control={<Radio />} label={o.label} />
-          ))}
-        </RadioGroup>
-      </FormControl>
+      <ListingToggle
+        label="Qera / shitje"
+        value={form.transactionType}
+        onChange={(v) => setForm((p) => ({ ...p, transactionType: v as FormState['transactionType'] }))}
+        options={TRANSACTION_TOGGLE}
+        disabled={loadingRefs}
+      />
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
         <ListingTextField
           label="Çmimi"
           type="text"
@@ -491,6 +504,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           onChange={onField('price')}
           required
           fullWidth
+          placeholder="p.sh. 120000"
         />
         <ListingTextField
           label="Çmimi i mëparshëm"
@@ -499,51 +513,34 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           value={form.originalPrice}
           onChange={onField('originalPrice')}
           fullWidth
+          placeholder="p.sh. 135000"
         />
-        <SearchableSelect
+        <ListingToggle
           label="Monedha"
           value={form.currency}
           onChange={(v) => setForm((p) => ({ ...p, currency: v as FormState['currency'] }))}
           options={CURRENCY_OPTIONS}
-          emptyLabel="Zgjidh…"
           required
           disabled={loadingRefs}
+          fullWidth={false}
         />
       </Stack>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-        <SearchableSelect
-          label="Qyteti"
-          value={form.cityId}
-          onChange={(v) => setForm((p) => ({ ...p, cityId: v, zoneId: '' }))}
-          options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidh… (opsionale)"
-          clearable
-          disabled={loadingRefs || cities.length === 0}
-        />
-        <SearchableSelect
-          label="Zona"
-          value={form.zoneId}
-          onChange={(v) => setForm((p) => ({ ...p, zoneId: v }))}
-          options={zonesForCity.map((z) => ({ value: z.id, label: z.name }))}
-          emptyLabel="Zgjidh… (opsionale)"
-          clearable
-          disabled={loadingRefs || !form.cityId || zonesForCity.length === 0}
-        />
-      </Stack>
-      {!loadingRefs && cities.length === 0 ? (
-        <Typography variant="caption" color="text.secondary">
-          Ende nuk ka qytete — një administrator i platformës duhet të shtojë qytete dhe zona te Paneli → Vendndodhjet (pasuri).
-        </Typography>
-      ) : null}
-      <ListingMapsLocationFields
-        value={{
+      <ListingLocationChoice
+        mode={form.locationMode}
+        onModeChange={(locationMode) => setForm((p) => ({ ...p, locationMode }))}
+        cityId={form.cityId}
+        onCityIdChange={(cityId) => setForm((p) => ({ ...p, cityId, zoneId: '' }))}
+        zoneId={form.zoneId}
+        onZoneIdChange={(zoneId) => setForm((p) => ({ ...p, zoneId }))}
+        cities={cities}
+        maps={{
           mapsUrl: form.mapsUrl,
           locationLat: form.locationLat,
           locationLng: form.locationLng,
           locationAddress: form.locationAddress,
         }}
-        onChange={(next) =>
+        onMapsChange={(next) =>
           setForm((p) => ({
             ...p,
             mapsUrl: next.mapsUrl,
@@ -552,10 +549,13 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
             locationAddress: next.locationAddress,
           }))
         }
-        cityName={cities.find((c) => c.id === form.cityId)?.name}
-        zoneName={zonesForCity.find((z) => z.id === form.zoneId)?.name}
-        showPreview
+        showZone
+        loadingCities={loadingRefs}
         disabled={submitting}
+        labels={{
+          noCities:
+            'Ende nuk ka qytete — një administrator i platformës duhet të shtojë qytete dhe zona te Paneli → Vendndodhjet (pasuri).',
+        }}
       />
 
       <ListingTextField
@@ -565,6 +565,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         value={form.surfaceM2}
         onChange={onField('surfaceM2')}
         fullWidth
+        placeholder="p.sh. 85"
         slotProps={{
           input: {
             endAdornment: <InputAdornment position="end">m²</InputAdornment>,
@@ -572,14 +573,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         }}
       />
 
-      {cat ? (
-        <>
-          <Divider sx={{ my: 1 }} />
-          <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 700 }}>
-            Detaje sipas kategorisë
-          </Typography>
-        </>
-      ) : null}
+      {cat ? <Divider sx={{ my: 1 }} /> : null}
 
       {cat && needsCondition(cat) ? (
         <SearchableSelect
@@ -587,7 +581,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           value={form.condition}
           onChange={(v) => setForm((p) => ({ ...p, condition: v as FormState['condition'] }))}
           options={CONDITION_OPTIONS}
-          emptyLabel="Zgjidh… (opsionale)"
+          emptyLabel="Zgjidhni gjendjen… (opsionale)"
           clearable
           disabled={loadingRefs}
         />
@@ -601,6 +595,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           value={form.floor}
           onChange={onField('floor')}
           fullWidth
+          placeholder="p.sh. 3"
         />
       ) : null}
 
@@ -612,6 +607,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           value={form.totalFloors}
           onChange={onField('totalFloors')}
           fullWidth
+          placeholder="p.sh. 8"
         />
       ) : null}
 
@@ -623,6 +619,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           value={form.parkingFloor}
           onChange={onField('parkingFloor')}
           fullWidth
+          placeholder="p.sh. -1"
         />
       ) : null}
 
@@ -635,6 +632,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
             value={form.bedrooms}
             onChange={onField('bedrooms')}
             fullWidth
+            placeholder="p.sh. 2"
           />
           <ListingTextField
             label="Banjo"
@@ -643,6 +641,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
             value={form.bathrooms}
             onChange={onField('bathrooms')}
             fullWidth
+            placeholder="p.sh. 1"
           />
         </Stack>
       ) : null}
@@ -653,7 +652,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           value={form.furnishing}
           onChange={(v) => setForm((p) => ({ ...p, furnishing: v as FormState['furnishing'] }))}
           options={FURNISHING_OPTIONS}
-          emptyLabel="Zgjidh… (opsionale)"
+          emptyLabel="Zgjidhni mobilimin… (opsionale)"
           clearable
           disabled={loadingRefs}
         />
@@ -667,6 +666,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           value={form.yearBuilt}
           onChange={onField('yearBuilt')}
           fullWidth
+          placeholder="p.sh. 2018"
         />
       ) : null}
 
@@ -679,6 +679,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         onChange={onField('contactPhone')}
         required
         fullWidth
+        placeholder="+355 69 …"
       />
 
       </ListingFormSection>

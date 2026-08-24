@@ -20,7 +20,9 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-panel';
 import { useCopy } from '@/hooks/use-copy';
+import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 import { useUser } from '@/hooks/use-user';
+import { useVisualViewportBox } from '@/hooks/use-visual-viewport';
 import { aiDraftToInitialListing, mergeAiIntoListing } from '@/lib/ai-draft-to-listing';
 import {
   acceptAiCategoryCorrection,
@@ -53,7 +55,7 @@ import { knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
 import { paths } from '@/paths';
 import { isOurStorageUrl, uploadListingImages } from '@/lib/uploads-client';
 import type { ListingCategoryKey } from '@/types/listing-category';
-import { MOTION_DIALOG_MS } from '@/styles/motion';
+import { MOTION, MOTION_DIALOG_MS } from '@/styles/motion';
 import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 
 const MAX_AI_IMAGES = 6;
@@ -115,6 +117,9 @@ export function PostListingAiAssist({
   const [mismatchDraft, setMismatchDraft] = React.useState<AiImportDraftResult | null>(null);
   const [pendingImageUrls, setPendingImageUrls] = React.useState<string[]>([]);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const viewport = useVisualViewportBox(drawerOpen);
+  const keyboardOpen = viewport.insetBottom > 24;
+  useLockBodyScroll(drawerOpen);
 
   const focusInput = React.useCallback(() => {
     const el = inputRef.current;
@@ -402,11 +407,20 @@ export function PostListingAiAssist({
             sx: {
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
-              maxHeight: '85dvh',
+              maxHeight:
+                viewport.height > 0 ? `${Math.round(viewport.height * 0.85)}px` : '85dvh',
               overflowY: 'auto',
               overscrollBehavior: 'contain',
               backgroundImage: 'none',
-              pb: 'env(safe-area-inset-bottom, 0px)',
+              // Sit on the visual viewport (keyboard), not the layout viewport.
+              bottom: `${viewport.insetBottom}px`,
+              pb: keyboardOpen ? 0 : 'env(safe-area-inset-bottom, 0px)',
+              transition: drawerOpen
+                ? `bottom ${MOTION.fast} linear, max-height ${MOTION.fast} linear`
+                : undefined,
+              // MUI Slide's transform makes iOS pin this layer to the visual
+              // viewport and double-offset it above the keyboard.
+              ...(drawerOpen ? { transform: 'none !important' } : null),
             },
           },
         }}

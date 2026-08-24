@@ -84,7 +84,7 @@ export function PostListingHeader({
   );
 }
 
-/** Spacing wrapper for listing forms (sections provide their own cards). */
+/** Spacing wrapper for listing forms (sections are open headers + fields). */
 export function PostListingFormSurface({ children }: { children: React.ReactNode }) {
   return <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.25 }}>{children}</Box>;
 }

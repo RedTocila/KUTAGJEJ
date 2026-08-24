@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Stack, Typography } from '@mui/material';
+import { Box, IconButton, InputAdornment, Stack, Typography } from '@mui/material';
+import { ArrowSquareOut as ArrowSquareOutIcon } from '@phosphor-icons/react/dist/ssr/ArrowSquareOut';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
@@ -9,6 +10,7 @@ import { ListingTextField } from '@/components/user/listing-form-ui';
 import {
   businessLocationLine,
   businessMapLocation,
+  googleMapsOpenHref,
 } from '@/lib/google-maps-location';
 import { resolveListingMapsUrl } from '@/lib/listing-maps-client';
 
@@ -26,6 +28,10 @@ export function ListingMapsLocationFields({
   zoneName,
   disabled,
   showPreview = true,
+  label = 'Linku i Google Maps',
+  placeholder = 'https://maps.app.goo.gl/… ose maps.google.com/…',
+  idleHelperText = 'Hapni hartën, zgjidhni vendin, pastaj ngjitni linkun këtu.',
+  openMapsAriaLabel = 'Hap Google Maps',
 }: {
   value: ListingMapsLocationValue;
   onChange: (next: ListingMapsLocationValue) => void;
@@ -34,6 +40,10 @@ export function ListingMapsLocationFields({
   disabled?: boolean;
   /** Live map + name preview under the field (create / build mode). */
   showPreview?: boolean;
+  label?: string;
+  placeholder?: string;
+  idleHelperText?: string;
+  openMapsAriaLabel?: string;
 }) {
   const [resolving, setResolving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -108,7 +118,7 @@ export function ListingMapsLocationFields({
         </Box>
       ) : null}
       <ListingTextField
-        label="Linku i Google Maps (opsionale)"
+        label={label}
         value={value.mapsUrl}
         onChange={(e) =>
           onChange({
@@ -119,9 +129,31 @@ export function ListingMapsLocationFields({
         onBlur={() => void resolveNow(value.mapsUrl)}
         fullWidth
         disabled={disabled || resolving}
-        placeholder="https://maps.app.goo.gl/… ose maps.google.com/…"
-        helperText={error || (resolving ? 'Duke lexuar vendndodhjen…' : undefined)}
+        placeholder={placeholder}
+        helperText={error || (resolving ? 'Duke lexuar vendndodhjen…' : idleHelperText)}
         error={Boolean(error)}
+        slotProps={{
+          input: {
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  component="a"
+                  href={googleMapsOpenHref(value.mapsUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  edge="end"
+                  aria-label={openMapsAriaLabel}
+                  disabled={disabled || resolving}
+                  onClick={(event) => {
+                    if (disabled || resolving) event.preventDefault();
+                  }}
+                >
+                  <ArrowSquareOutIcon size={18} weight="bold" />
+                </IconButton>
+              </InputAdornment>
+            ),
+          },
+        }}
       />
     </Stack>
   );

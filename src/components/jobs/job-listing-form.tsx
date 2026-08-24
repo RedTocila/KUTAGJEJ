@@ -11,7 +11,6 @@ import {
   Radio,
   RadioGroup,
   Stack,
-  Typography,
 } from '@mui/material';
 
 import {
@@ -23,13 +22,19 @@ import {
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
 import { SearchableSelect } from '@/components/core/searchable-select';
-import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
+import {
+  exclusiveLocationPayload,
+  inferListingLocationMode,
+  ListingLocationChoice,
+  type ListingLocationMode,
+} from '@/components/listings/listing-location-choice';
 import {
   ListingDescriptionField,
   ListingFormActionError,
   ListingFormActions,
   ListingFormSection,
   ListingTextField,
+  ListingToggle,
 } from '@/components/user/listing-form-ui';
 import { ListingBoostChoiceBar } from '@/components/user/listing-boost-choice-bar';
 import {
@@ -58,7 +63,7 @@ import {
 import { uploadListingImages } from '@/lib/uploads-client';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-const MAX_JOB_IMAGES = 5;
+const MAX_JOB_IMAGES = 1;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -89,6 +94,7 @@ type JobFormState = {
   description: string;
   industry: string;
   cityId: string;
+  locationMode: ListingLocationMode | '';
   mapsUrl: string;
   locationLat: number | null;
   locationLng: number | null;
@@ -112,6 +118,7 @@ function emptyForm(): JobFormState {
     description: '',
     industry: '',
     cityId: '',
+    locationMode: '',
     mapsUrl: '',
     locationLat: null,
     locationLng: null,
@@ -187,6 +194,7 @@ function formFromListing(l: JobMineListing): JobFormState {
     industry: l.industry || '',
     cityId: l.cityId ? String(l.cityId) : '',
     mapsUrl: l.mapsUrl ?? '',
+    locationMode: inferListingLocationMode(l.cityId, l.mapsUrl),
     locationLat: l.locationLat ?? null,
     locationLng: l.locationLng ?? null,
     locationAddress: l.locationAddress ?? null,
@@ -221,7 +229,8 @@ export function JobListingForm({
 
   const [form, setForm] = React.useState<JobFormState>(() => {
     const base = initialListing ? formFromListing(initialListing) : emptyForm();
-    return applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage()) as JobFormState;
+    const next = applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage()) as JobFormState;
+    return { ...next, locationMode: next.locationMode || inferListingLocationMode(next.cityId, next.mapsUrl) };
   });
   const okazionPayRef = React.useRef<OkazionBoostMode>('buy-card');
   const premiumPayRef = React.useRef<PremiumPayMode>('buy-card');
@@ -231,7 +240,7 @@ export function JobListingForm({
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [images, setImages] = React.useState<File[]>([]);
   const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(
-    () => (initialListing?.imageUrls ?? []).filter(Boolean),
+    () => (initialListing?.imageUrls ?? []).filter(Boolean).slice(0, MAX_JOB_IMAGES),
   );
   const [loadingCities, setLoadingCities] = React.useState(true);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
@@ -252,16 +261,26 @@ export function JobListingForm({
 
   React.useEffect(() => {
     if (!initialListing) return;
-    setForm(
-      applyEmptyKnownDefaults(formFromListing(initialListing), knownCreateDefaultsFromStorage()) as JobFormState,
-    );
-    setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
+    setForm(() => {
+      const next = applyEmptyKnownDefaults(
+        formFromListing(initialListing),
+        knownCreateDefaultsFromStorage(),
+      ) as JobFormState;
+      return { ...next, locationMode: next.locationMode || inferListingLocationMode(next.cityId, next.mapsUrl) };
+    });
+    setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean).slice(0, MAX_JOB_IMAGES));
     setImages([]);
   }, [initialListing]);
 
   React.useEffect(() => {
     if (isEdit) return;
-    setForm((prev) => applyKnown(prev) as JobFormState);
+    setForm((prev) => {
+      const next = applyKnown(prev) as JobFormState;
+      if (!next.locationMode && next.cityId) {
+        return { ...next, locationMode: 'city' };
+      }
+      return next;
+    });
   }, [isEdit, applyKnown]);
 
   // -------------------------------------------------------------------------
@@ -303,12 +322,13 @@ export function JobListingForm({
         }
         uploaded = up.urls;
       }
+      const loc = exclusiveLocationPayload(form.locationMode, form);
       const payload = {
         title: form.title.trim(),
         description: form.description.trim(),
         industry: form.industry,
-        cityId: form.cityId || null,
-        mapsUrl: form.mapsUrl.trim() || null,
+        cityId: loc.cityId,
+        mapsUrl: loc.mapsUrl,
         education: form.education,
         experience: form.experience,
         jobType: form.jobType,
@@ -331,7 +351,7 @@ export function JobListingForm({
         return;
       }
       if (!isEdit) {
-        rememberLocation({ cityId: form.cityId });
+        rememberLocation({ cityId: loc.cityId ?? '' });
       }
       if (!isEdit && result.id && (wantsPremium || boostKindRef.current === 'premium')) {
         const boost = await activatePremiumAfterCreate({
@@ -380,7 +400,7 @@ export function JobListingForm({
       spacing={2.25}
       onSubmit={(e) => void handleSubmit(e)}
     >
-      <ListingFormSection title="Detajet e punës">
+      <ListingFormSection>
         <ListingTextField
           label="Titulli i punës"
           value={form.title}
@@ -395,7 +415,7 @@ export function JobListingForm({
           existingUrls={existingImageUrls}
           onExistingUrlsChange={setExistingImageUrls}
           max={MAX_JOB_IMAGES}
-          label="Foto"
+          label="Foto e kopertinës"
           disabled={submitting}
         />
         <ListingDescriptionField
@@ -403,12 +423,11 @@ export function JobListingForm({
           value={form.description}
           onChange={onField('description')}
           fullWidth
-          minRows={3}
           placeholder="Prezantim i pozicionit — 2–3 fjali për kandidatët…"
         />
       </ListingFormSection>
 
-      <ListingFormSection title="Detyrat dhe kërkesat">
+      <ListingFormSection>
         <JobFormStringList
           label="Detyrat dhe përgjegjësitë"
           items={form.responsibilities}
@@ -421,7 +440,7 @@ export function JobListingForm({
         />
       </ListingFormSection>
 
-      <ListingFormSection title="Përfitimet">
+      <ListingFormSection>
         <FormGroup>
           {JOB_BENEFIT_PRESETS.map((preset) => (
             <FormControlLabel
@@ -452,7 +471,7 @@ export function JobListingForm({
         />
       </ListingFormSection>
 
-      <ListingFormSection title="Industria dhe vendndodhja">
+      <ListingFormSection>
         <SearchableSelect
           label="Industria"
           value={form.industry}
@@ -461,28 +480,19 @@ export function JobListingForm({
           emptyLabel="Zgjidhni industrinë…"
           allowCustom
         />
-        <SearchableSelect
-          label="Qyteti"
-          value={form.cityId}
-          onChange={(v) => setForm((p) => ({ ...p, cityId: v }))}
-          options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni qytetin… (opsionale)"
-          clearable
-          disabled={loadingCities || cities.length === 0}
-        />
-        {!loadingCities && cities.length === 0 ? (
-          <Typography variant="caption" color="text.secondary">
-            Nuk ka qytete të disponueshme — një administrator duhet t&apos;i shtojë te Paneli → Vendndodhjet.
-          </Typography>
-        ) : null}
-        <ListingMapsLocationFields
-          value={{
+        <ListingLocationChoice
+          mode={form.locationMode}
+          onModeChange={(locationMode) => setForm((p) => ({ ...p, locationMode }))}
+          cityId={form.cityId}
+          onCityIdChange={(cityId) => setForm((p) => ({ ...p, cityId }))}
+          cities={cities}
+          maps={{
             mapsUrl: form.mapsUrl,
             locationLat: form.locationLat,
             locationLng: form.locationLng,
             locationAddress: form.locationAddress,
           }}
-          onChange={(next) =>
+          onMapsChange={(next) =>
             setForm((p) => ({
               ...p,
               mapsUrl: next.mapsUrl,
@@ -491,13 +501,12 @@ export function JobListingForm({
               locationAddress: next.locationAddress,
             }))
           }
-          cityName={cities.find((c) => c.id === form.cityId)?.name}
-          showPreview
+          loadingCities={loadingCities}
           disabled={submitting}
         />
       </ListingFormSection>
 
-      <ListingFormSection title="Arsimi dhe eksperienca">
+      <ListingFormSection>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <SearchableSelect
             label="Edukimi"
@@ -518,7 +527,7 @@ export function JobListingForm({
         </Stack>
       </ListingFormSection>
 
-      <ListingFormSection title="Lloji i punës">
+      <ListingFormSection>
         <FormControl component="fieldset">
           <FormLabel component="legend" sx={{ mb: 0.5, fontSize: '0.875rem', fontWeight: 600 }}>
             Lloji i kontratës
@@ -550,8 +559,8 @@ export function JobListingForm({
         </FormControl>
       </ListingFormSection>
 
-      <ListingFormSection title="Paga dhe kontakti">
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+      <ListingFormSection>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
           <ListingTextField
             label="Paga"
             type="text"
@@ -569,13 +578,13 @@ export function JobListingForm({
               },
             }}
           />
-          <SearchableSelect
+          <ListingToggle
             label="Monedha"
             value={form.currency}
             onChange={(v) => setForm((p) => ({ ...p, currency: v as JobFormState['currency'] }))}
             options={CURRENCY_OPTIONS}
-            emptyLabel="Zgjidhni…"
             disabled={!form.salary.trim()}
+            fullWidth={false}
           />
         </Stack>
         <ListingTextField

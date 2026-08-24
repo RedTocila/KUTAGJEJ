@@ -104,11 +104,15 @@ export const ListingTextField = React.forwardRef(function ListingTextField(
  * The button opens the listing AI drawer and focuses the input (opens the keyboard).
  * Overflow is hidden so iOS does not trap vertical pans inside the field.
  */
-function autosizeTextarea(el: HTMLTextAreaElement | null) {
+const DESCRIPTION_MIN_ROWS = 4;
+
+function autosizeTextarea(el: HTMLTextAreaElement | null, minRows = DESCRIPTION_MIN_ROWS) {
   if (!el) return;
   el.style.overflow = 'hidden';
+  const lineHeight = Number.parseFloat(window.getComputedStyle(el).lineHeight);
+  const minHeight = (Number.isFinite(lineHeight) ? lineHeight : 23) * minRows;
   el.style.height = 'auto';
-  el.style.height = `${el.scrollHeight}px`;
+  el.style.height = `${Math.max(el.scrollHeight, minHeight)}px`;
 }
 
 export const ListingDescriptionField = React.forwardRef(function ListingDescriptionField(
@@ -116,7 +120,8 @@ export const ListingDescriptionField = React.forwardRef(function ListingDescript
   ref: React.Ref<HTMLDivElement>,
 ) {
   const t = useCopy();
-  const { slotProps, sx, multiline = true, minRows = 4, inputRef, onChange, ...rest } = props;
+  const { slotProps, sx, multiline = true, minRows: minRowsProp, inputRef, onChange, ...rest } = props;
+  const minRows = Math.max(DESCRIPTION_MIN_ROWS, Number(minRowsProp) || 0);
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
   const inputSlot =
     typeof slotProps?.input === 'object' && slotProps.input !== null ? slotProps.input : {};
@@ -127,16 +132,16 @@ export const ListingDescriptionField = React.forwardRef(function ListingDescript
   const setTextareaRef = React.useCallback(
     (node: HTMLTextAreaElement | null) => {
       textareaRef.current = node;
-      autosizeTextarea(node);
+      autosizeTextarea(node, minRows);
       if (typeof inputRef === 'function') inputRef(node);
       else if (inputRef) (inputRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
     },
-    [inputRef],
+    [inputRef, minRows],
   );
 
   React.useLayoutEffect(() => {
-    autosizeTextarea(textareaRef.current);
-  }, [rest.value, rest.defaultValue]);
+    autosizeTextarea(textareaRef.current, minRows);
+  }, [minRows, rest.value, rest.defaultValue]);
 
   return (
     <ListingTextField
@@ -146,7 +151,7 @@ export const ListingDescriptionField = React.forwardRef(function ListingDescript
       minRows={minRows}
       inputRef={setTextareaRef}
       onChange={(event) => {
-        autosizeTextarea(event.target as HTMLTextAreaElement);
+        autosizeTextarea(event.target as HTMLTextAreaElement, minRows);
         onChange?.(event);
       }}
       slotProps={{
@@ -183,9 +188,11 @@ export const ListingDescriptionField = React.forwardRef(function ListingDescript
             {
               alignItems: 'stretch',
               position: 'relative',
+              minHeight: 136,
               '& textarea': {
                 overflow: 'hidden !important',
                 overscrollBehavior: 'none',
+                minHeight: `calc(1.4375em * ${minRows}) !important`,
               },
               '& .MuiInputAdornment-positionEnd': {
                 position: 'absolute',
@@ -200,7 +207,15 @@ export const ListingDescriptionField = React.forwardRef(function ListingDescript
           ],
         },
       }}
-      sx={sx}
+      sx={[
+        {
+          '& .MuiOutlinedInput-root': {
+            minHeight: 136,
+            alignItems: 'stretch',
+          },
+        },
+        ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+      ]}
     />
   );
 });
@@ -213,55 +228,46 @@ export function ListingFormSection({
   children,
 }: {
   icon?: React.ReactNode;
-  title: string;
+  title?: string;
   description?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const showHeader = Boolean(icon || title || description || action);
   return (
-    <Box
-      sx={{
-        borderRadius: 2.75,
-        border: '1px solid',
-        borderColor: 'divider',
-        bgcolor: (t) =>
-          t.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
-        overflow: 'hidden',
-      }}
-    >
-      <Stack
-        direction="row"
-        spacing={1.25}
-        sx={{
-          alignItems: description ? 'flex-start' : 'center',
-          px: { xs: 1.75, sm: 2.25 },
-          pt: { xs: 1.5, sm: 1.75 },
-          pb: description ? 1.5 : 1.15,
-        }}
-      >
-        {icon ? <PortalIconBox size={36}>{icon}</PortalIconBox> : null}
-        <Box sx={{ minWidth: 0, flex: 1, pt: description ? 0.15 : 0 }}>
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}
-          >
-            <Typography sx={{ fontWeight: 800, fontSize: '0.98rem', letterSpacing: '-0.01em' }}>
-              {title}
-            </Typography>
-            {action}
-          </Stack>
-          {description ? (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35, lineHeight: 1.4 }}>
-              {description}
-            </Typography>
-          ) : null}
-        </Box>
-      </Stack>
-      <Box sx={{ px: { xs: 1.75, sm: 2.25 }, pb: { xs: 1.75, sm: 2.25 } }}>
-        <Stack spacing={1.75}>{children}</Stack>
-      </Box>
-    </Box>
+    <Stack spacing={1.75}>
+      {showHeader ? (
+        <Stack
+          direction="row"
+          spacing={1.25}
+          sx={{ alignItems: description ? 'flex-start' : 'center' }}
+        >
+          {icon ? <PortalIconBox size={36}>{icon}</PortalIconBox> : null}
+          <Box sx={{ minWidth: 0, flex: 1, pt: description ? 0.15 : 0 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}
+            >
+              {title ? (
+                <Typography sx={{ fontWeight: 800, fontSize: '0.98rem', letterSpacing: '-0.01em' }}>
+                  {title}
+                </Typography>
+              ) : (
+                <Box sx={{ flex: 1 }} />
+              )}
+              {action}
+            </Stack>
+            {description ? (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35, lineHeight: 1.4 }}>
+                {description}
+              </Typography>
+            ) : null}
+          </Box>
+        </Stack>
+      ) : null}
+      <Stack spacing={1.75}>{children}</Stack>
+    </Stack>
   );
 }
 
@@ -343,7 +349,7 @@ export function ListingFormActions({
   );
 }
 
-/** Two-/few-option segmented toggle (currency, transmission, etc.). */
+/** Two-/few-option segmented toggle (currency, transaction type, transmission). */
 export function ListingToggle({
   label,
   value,
@@ -353,6 +359,7 @@ export function ListingToggle({
   error,
   helperText,
   fullWidth = true,
+  disabled = false,
 }: {
   label?: string;
   value: string;
@@ -362,12 +369,14 @@ export function ListingToggle({
   error?: boolean;
   helperText?: string;
   fullWidth?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <Box sx={{ width: fullWidth ? '100%' : 'auto', minWidth: fullWidth ? undefined : 160 }}>
       {/* fieldset + legend matches outlined TextField height/label so row layouts align */}
       <Box
         component="fieldset"
+        disabled={disabled}
         sx={{
           m: 0,
           p: 0,
@@ -377,7 +386,8 @@ export function ListingToggle({
           borderColor: error ? 'error.main' : value ? 'primary.main' : 'divider',
           bgcolor: value ? primaryMainAlpha(0.06) : 'background.paper',
           boxShadow: value ? `inset 0 0 0 1px ${primaryMainAlpha(0.1)}` : 'none',
-          transition: 'border-color 0.15s, background-color 0.15s, box-shadow 0.15s',
+          opacity: disabled ? 0.55 : 1,
+          transition: 'border-color 0.15s, background-color 0.15s, box-shadow 0.15s, opacity 0.15s',
         }}
       >
         {label ? (
@@ -419,6 +429,7 @@ export function ListingToggle({
                 type="button"
                 role="radio"
                 aria-checked={active}
+                disabled={disabled}
                 onClick={() => onChange(opt.value)}
                 sx={{
                   display: 'inline-flex',
@@ -433,13 +444,16 @@ export function ListingToggle({
                   color: active ? 'primary.contrastText' : 'text.secondary',
                   fontWeight: 800,
                   fontSize: '0.82rem',
-                  cursor: 'pointer',
+                  cursor: disabled ? 'default' : 'pointer',
                   fontFamily: 'inherit',
                   transition: 'background-color 0.15s, color 0.15s, box-shadow 0.15s',
                   boxShadow: active ? `0 3px 12px ${primaryMainAlpha(0.35)}` : 'none',
-                  '&:hover': {
+                  '&:not(:disabled):hover': {
                     bgcolor: active ? 'primary.main' : primaryMainAlpha(0.1),
                     color: active ? 'primary.contrastText' : 'text.primary',
+                  },
+                  '&:disabled': {
+                    color: active ? 'primary.contrastText' : 'text.secondary',
                   },
                 }}
               >

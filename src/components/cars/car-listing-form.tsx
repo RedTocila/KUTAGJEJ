@@ -35,7 +35,12 @@ import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { ImageLightbox, useObjectUrls } from '@/components/common/image-lightbox';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { VehicleTypePicker } from '@/components/cars/vehicle-type-picker';
-import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
+import {
+  exclusiveLocationPayload,
+  inferListingLocationMode,
+  ListingLocationChoice,
+  type ListingLocationMode,
+} from '@/components/listings/listing-location-choice';
 import {
   ListingDescriptionField,
   ListingFormActionError,
@@ -115,6 +120,7 @@ type CarFormState = {
   extras: string[];
   contactPhone: string;
   cityId: string;
+  locationMode: ListingLocationMode | '';
   mapsUrl: string;
   locationLat: number | null;
   locationLng: number | null;
@@ -141,6 +147,7 @@ function emptyForm(): CarFormState {
     extras: [],
     contactPhone: '',
     cityId: '',
+    locationMode: '',
     mapsUrl: '',
     locationLat: null,
     locationLng: null,
@@ -327,6 +334,7 @@ function formFromListing(l: CarMineListing): CarFormState {
     contactPhone: l.contactPhone || '',
     cityId: l.cityId ? String(l.cityId) : '',
     mapsUrl: l.mapsUrl ?? '',
+    locationMode: inferListingLocationMode(l.cityId, l.mapsUrl),
     locationLat: l.locationLat ?? null,
     locationLng: l.locationLng ?? null,
     locationAddress: l.locationAddress ?? null,
@@ -360,7 +368,8 @@ export function CarListingForm({
 
   const [form, setForm] = React.useState<CarFormState>(() => {
     const base = initialListing ? formFromListing(initialListing) : emptyForm();
-    return applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage()) as CarFormState;
+    const next = applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage()) as CarFormState;
+    return { ...next, locationMode: next.locationMode || inferListingLocationMode(next.cityId, next.mapsUrl) };
   });
   const okazionPayRef = React.useRef<OkazionBoostMode>('buy-card');
   const premiumPayRef = React.useRef<PremiumPayMode>('buy-card');
@@ -673,10 +682,6 @@ export function CarListingForm({
     >
       {/* ── Car identity ─────────────────────────────────────────────────── */}
       <Stack spacing={2}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-          Vehicle details
-        </Typography>
-
         <Box
           sx={{
             p: 1.75,
@@ -873,10 +878,6 @@ export function CarListingForm({
 
       {/* ── Key details ──────────────────────────────────────────────────── */}
       <Stack spacing={2}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-          Specifications
-        </Typography>
-
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <SearchableSelect
             label="Year"
@@ -930,10 +931,6 @@ export function CarListingForm({
 
       {/* ── Price ────────────────────────────────────────────────────────── */}
       <Stack spacing={2}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-          Price &amp; contact
-        </Typography>
-
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
           <ListingTextField
             label="Price"
@@ -986,9 +983,6 @@ export function CarListingForm({
 
       {/* ── Exterior colour ──────────────────────────────────────────────── */}
       <Stack spacing={1.5}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-          Exterior colour
-        </Typography>
         {fieldErrors.color ? (
           <Typography variant="caption" color="error">
             {fieldErrors.color}
@@ -1067,16 +1061,11 @@ export function CarListingForm({
 
       {/* ── Extras ───────────────────────────────────────────────────────── */}
       <Stack spacing={1.5}>
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-            Extras
+        {form.extras.length > 0 ? (
+          <Typography variant="caption" color="primary.main" sx={{ fontWeight: 600 }}>
+            {form.extras.length} selected
           </Typography>
-          {form.extras.length > 0 ? (
-            <Typography variant="caption" color="primary.main" sx={{ fontWeight: 600 }}>
-              {form.extras.length} selected
-            </Typography>
-          ) : null}
-        </Stack>
+        ) : null}
 
         <FormGroup>
           <Box

@@ -167,3 +167,18 @@ export function scrollToBusinessLocationMap() {
   const visible = Array.from(nodes).find((el) => el.getClientRects().length > 0);
   (visible ?? nodes[0])?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+export const GOOGLE_MAPS_HOME_HREF = 'https://www.google.com/maps';
+
+/** Open Maps itself, or the pasted pin/search, in a new tab. */
+export function googleMapsOpenHref(raw: string | null | undefined): string {
+  const trimmed = String(raw || '').trim();
+  if (!trimmed) return GOOGLE_MAPS_HOME_HREF;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol === 'http:' || url.protocol === 'https:') return url.href;
+  } catch {
+    /* treat as a search query */
+  }
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trimmed)}`;
+}

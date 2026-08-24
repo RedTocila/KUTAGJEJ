@@ -5,17 +5,21 @@ import {
   InputAdornment,
   Stack,
 } from '@mui/material';
-import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
-import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
-import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
+import {
+  exclusiveLocationPayload,
+  inferListingLocationMode,
+  ListingLocationChoice,
+  type ListingLocationMode,
+} from '@/components/listings/listing-location-choice';
 import {
   ListingDescriptionField,
   ListingFormActionError,
   ListingFormActions,
   ListingFormSection,
   ListingTextField,
+  ListingToggle,
 } from '@/components/user/listing-form-ui';
 import { ListingBoostChoiceBar } from '@/components/user/listing-boost-choice-bar';
 import {
@@ -75,6 +79,7 @@ type MarketplaceFormState = {
   originalPrice: string;
   currency: '' | 'EUR' | 'LEK';
   cityId: string;
+  locationMode: ListingLocationMode | '';
   mapsUrl: string;
   locationLat: number | null;
   locationLng: number | null;
@@ -93,6 +98,7 @@ function emptyForm(): MarketplaceFormState {
     originalPrice: '',
     currency: 'EUR',
     cityId: '',
+    locationMode: '',
     mapsUrl: '',
     locationLat: null,
     locationLng: null,
@@ -137,6 +143,7 @@ function formFromListing(l: MarketplaceMineListing): MarketplaceFormState {
     currency: l.currency === 'EUR' || l.currency === 'LEK' ? l.currency : hasPrice ? 'EUR' : '',
     cityId: l.cityId ? String(l.cityId) : '',
     mapsUrl: l.mapsUrl ?? '',
+    locationMode: inferListingLocationMode(l.cityId, l.mapsUrl),
     locationLat: l.locationLat ?? null,
     locationLng: l.locationLng ?? null,
     locationAddress: l.locationAddress ?? null,
@@ -161,7 +168,8 @@ export function MarketplaceListingForm({
 
   const [form, setForm] = React.useState<MarketplaceFormState>(() => {
     const base = initialListing ? formFromListing(initialListing) : emptyForm();
-    return applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage()) as MarketplaceFormState;
+    const next = applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage()) as MarketplaceFormState;
+    return { ...next, locationMode: next.locationMode || inferListingLocationMode(next.cityId, next.mapsUrl) };
   });
   const okazionPayRef = React.useRef<OkazionBoostMode>('buy-card');
   const premiumPayRef = React.useRef<PremiumPayMode>('buy-card');
@@ -190,12 +198,13 @@ export function MarketplaceListingForm({
 
   React.useEffect(() => {
     if (!initialListing) return;
-    setForm(
-      applyEmptyKnownDefaults(
+    setForm(() => {
+      const next = applyEmptyKnownDefaults(
         formFromListing(initialListing),
         knownCreateDefaultsFromStorage(),
-      ) as MarketplaceFormState,
-    );
+      ) as MarketplaceFormState;
+      return { ...next, locationMode: next.locationMode || inferListingLocationMode(next.cityId, next.mapsUrl) };
+    });
     setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
     setImages([]);
   }, [initialListing]);
@@ -210,12 +219,20 @@ export function MarketplaceListingForm({
       cities.find(
         (c) => c.name.toLowerCase().includes(name) || name.includes(c.name.toLowerCase()),
       );
-    if (match) setForm((prev) => (prev.cityId ? prev : { ...prev, cityId: match.id }));
+    if (match) {
+      setForm((prev) =>
+        prev.cityId ? prev : { ...prev, cityId: match.id, locationMode: prev.locationMode || 'city' },
+      );
+    }
   }, [initialListing, cities, form.cityId]);
 
   React.useEffect(() => {
     if (isEdit) return;
-    setForm((prev) => applyKnown(prev) as MarketplaceFormState);
+    setForm((prev) => {
+      const next = applyKnown(prev) as MarketplaceFormState;
+      if (!next.locationMode && next.cityId) return { ...next, locationMode: 'city' };
+      return next;
+    });
   }, [isEdit, applyKnown]);
 
   const onField =
@@ -242,6 +259,7 @@ export function MarketplaceListingForm({
         if (up.error) { setSubmitError(up.error); return; }
         uploaded = up.urls;
       }
+      const loc = exclusiveLocationPayload(form.locationMode, form);
       const payload = {
         transactionType: 'shes',
         title: form.title.trim(),
@@ -251,8 +269,8 @@ export function MarketplaceListingForm({
         price: parseFloatStrict(form.price),
         originalPrice: form.originalPrice.trim() ? parseFloatStrict(form.originalPrice) : null,
         currency: form.currency === 'LEK' ? 'LEK' : 'EUR',
-        cityId: form.cityId || null,
-        mapsUrl: form.mapsUrl.trim() || null,
+        cityId: loc.cityId,
+        mapsUrl: loc.mapsUrl,
         contactPhone: form.contactPhone.trim(),
         imageUrls: [...existingImageUrls, ...uploaded].slice(0, MAX_MARKETPLACE_IMAGES),
       };
@@ -262,7 +280,7 @@ export function MarketplaceListingForm({
           : await createMarketplaceListing(payload);
       if (result.error) { setSubmitError(result.error); return; }
       if (!isEdit) {
-        rememberLocation({ cityId: form.cityId });
+        rememberLocation({ cityId: loc.cityId ?? '' });
       }
       if (!isEdit && result.id && (wantsPremium || boostKindRef.current === 'premium')) {
         const boost = await activatePremiumAfterCreate({
@@ -307,10 +325,7 @@ export function MarketplaceListingForm({
       spacing={2.25}
       onSubmit={(e) => void handleSubmit(e)}
     >
-      <ListingFormSection
-        icon={<PackageIcon size={20} weight="duotone" />}
-        title="Detajet e artikullit"
-      >
+      <ListingFormSection>
         <ListingTextField
           label="Titulli i njoftimit"
           value={form.title}
@@ -356,11 +371,8 @@ export function MarketplaceListingForm({
         </Stack>
       </ListingFormSection>
 
-      <ListingFormSection
-        icon={<MapPinIcon size={20} weight="duotone" />}
-        title="Çmimi dhe vendndodhja"
-      >
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+      <ListingFormSection>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
           <ListingTextField
             label="Çmimi"
             type="text"
@@ -381,32 +393,28 @@ export function MarketplaceListingForm({
             fullWidth
             placeholder="p.sh. 6500"
           />
-          <SearchableSelect
+          <ListingToggle
             label="Monedha"
             value={form.currency}
             onChange={(v) => setForm((p) => ({ ...p, currency: v as MarketplaceFormState['currency'] }))}
             options={CURRENCY_OPTIONS}
-            emptyLabel="Zgjidhni…"
             required
+            fullWidth={false}
           />
         </Stack>
-        <SearchableSelect
-          label="Qyteti"
-          value={form.cityId}
-          onChange={(v) => setForm((p) => ({ ...p, cityId: v }))}
-          options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni qytetin… (opsionale)"
-          clearable
-          disabled={loadingCities || cities.length === 0}
-        />
-        <ListingMapsLocationFields
-          value={{
+        <ListingLocationChoice
+          mode={form.locationMode}
+          onModeChange={(locationMode) => setForm((p) => ({ ...p, locationMode }))}
+          cityId={form.cityId}
+          onCityIdChange={(cityId) => setForm((p) => ({ ...p, cityId }))}
+          cities={cities}
+          maps={{
             mapsUrl: form.mapsUrl,
             locationLat: form.locationLat,
             locationLng: form.locationLng,
             locationAddress: form.locationAddress,
           }}
-          onChange={(next) =>
+          onMapsChange={(next) =>
             setForm((p) => ({
               ...p,
               mapsUrl: next.mapsUrl,
@@ -415,8 +423,7 @@ export function MarketplaceListingForm({
               locationAddress: next.locationAddress,
             }))
           }
-          cityName={cities.find((c) => c.id === form.cityId)?.name}
-          showPreview
+          loadingCities={loadingCities}
           disabled={submitting}
         />
         <ListingTextField

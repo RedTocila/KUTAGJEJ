@@ -9,13 +9,16 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
-import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
-import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
+import {
+  exclusiveLocationPayload,
+  inferListingLocationMode,
+  ListingLocationChoice,
+  type ListingLocationMode,
+} from '@/components/listings/listing-location-choice';
 import {
   ListingDescriptionField,
   ListingFormActionError,
@@ -132,6 +135,12 @@ export function ProfessionalListingForm({
     return knownCreateDefaultsFromStorage().cityId;
   });
   const [mapsUrl, setMapsUrl] = React.useState('');
+  const [locationMode, setLocationMode] = React.useState<ListingLocationMode | ''>(() =>
+    inferListingLocationMode(
+      String(aiPrefill?.cityId ?? '').trim() || knownCreateDefaultsFromStorage().cityId,
+      '',
+    ),
+  );
   const [locationLat, setLocationLat] = React.useState<number | null>(null);
   const [locationLng, setLocationLng] = React.useState<number | null>(null);
   const [locationAddress, setLocationAddress] = React.useState<string | null>(null);
@@ -167,6 +176,7 @@ export function ProfessionalListingForm({
     setCategory(listing.category ?? '');
     setCityId(listing.cityId ?? '');
     setMapsUrl(listing.mapsUrl ?? '');
+    setLocationMode(inferListingLocationMode(listing.cityId, listing.mapsUrl));
     setLocationLat(listing.locationLat ?? null);
     setLocationLng(listing.locationLng ?? null);
     setLocationAddress(listing.locationAddress ?? null);
@@ -348,12 +358,13 @@ export function ProfessionalListingForm({
     }
 
     const hours = Number.parseInt(responseTimeHours, 10);
+    const loc = exclusiveLocationPayload(locationMode, { cityId, mapsUrl });
     const payload = {
       title: title.trim(),
       description: description.trim(),
       category,
-      cityId: cityId || null,
-      mapsUrl: mapsUrl.trim() || null,
+      cityId: loc.cityId,
+      mapsUrl: loc.mapsUrl,
       contactPhone: contactPhone.trim(),
       imageUrls,
       responseTimeHours: Number.isInteger(hours) && hours >= 1 ? hours : null,
@@ -391,7 +402,7 @@ export function ProfessionalListingForm({
       setError(res.error);
       return;
     }
-    rememberLocation({ cityId });
+    if (loc.cityId) rememberLocation({ cityId: loc.cityId });
     if (res.id && (wantsPremium || boostKindRef.current === 'premium')) {
       const boost = await activatePremiumAfterCreate({
         mode: premiumPayRef.current,
@@ -447,10 +458,7 @@ export function ProfessionalListingForm({
           </Alert>
         ) : null}
 
-        <ListingFormSection
-          icon={<UserCircleIcon size={20} weight="duotone" />}
-          title="Informacioni bazë"
-        >
+        <ListingFormSection>
           <ListingTextField
             label="Titulli i profilit"
             value={title}
@@ -493,24 +501,19 @@ export function ProfessionalListingForm({
             clearable
             allowCustom
           />
-          <SearchableSelect
-            label="Qyteti"
-            value={cityId}
-            onChange={setCityId}
-            options={cities.map((c) => ({ value: c.id, label: c.name }))}
-            emptyLabel="Zgjidhni qytetin… (opsionale)"
-            clearable
-          />
-          <ListingMapsLocationFields
-            value={{ mapsUrl, locationLat, locationLng, locationAddress }}
-            onChange={(next) => {
+          <ListingLocationChoice
+            mode={locationMode}
+            onModeChange={setLocationMode}
+            cityId={cityId}
+            onCityIdChange={setCityId}
+            cities={cities}
+            maps={{ mapsUrl, locationLat, locationLng, locationAddress }}
+            onMapsChange={(next) => {
               setMapsUrl(next.mapsUrl);
               setLocationLat(next.locationLat);
               setLocationLng(next.locationLng);
               setLocationAddress(next.locationAddress);
             }}
-            cityName={cities.find((c) => c.id === cityId)?.name}
-            showPreview
             disabled={submitting}
           />
           <ListingDescriptionField
@@ -547,8 +550,6 @@ export function ProfessionalListingForm({
         </ListingFormSection>
 
         <ListingFormSection
-          icon={<BriefcaseIcon size={20} weight="duotone" />}
-          title="Portofoli"
           action={
             <Button
               size="small"

@@ -10,11 +10,14 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { CalendarCheck as CalendarCheckIcon } from '@phosphor-icons/react/dist/ssr/CalendarCheck';
-import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
-import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
+import {
+  exclusiveLocationPayload,
+  inferListingLocationMode,
+  ListingLocationChoice,
+  type ListingLocationMode,
+} from '@/components/listings/listing-location-choice';
 import {
   BUSINESS_CATEGORY_OPTIONS,
   BUSINESS_DAY_LABELS,
@@ -33,7 +36,6 @@ import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/rea
 import { ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { BusinessMobileCtaPicker, reservationsEnabledForMobileCta } from '@/components/businesses/business-mobile-cta-picker';
-import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import {
   ListingDescriptionField,
   ListingFormActionError,
@@ -123,6 +125,12 @@ export function BusinessListingForm({
   });
   const [zoneId, setZoneId] = React.useState('');
   const [mapsUrl, setMapsUrl] = React.useState('');
+  const [locationMode, setLocationMode] = React.useState<ListingLocationMode | ''>(() =>
+    inferListingLocationMode(
+      String(aiPrefill?.cityId ?? '').trim() || knownCreateDefaultsFromStorage().cityId,
+      '',
+    ),
+  );
   const [locationLat, setLocationLat] = React.useState<number | null>(null);
   const [locationLng, setLocationLng] = React.useState<number | null>(null);
   const [locationAddress, setLocationAddress] = React.useState<string | null>(null);
@@ -139,11 +147,6 @@ export function BusinessListingForm({
   const [mobileCtaMode, setMobileCtaMode] = React.useState<'contact' | 'reserve' | 'none'>('contact');
   const [reservationsEnabled, setReservationsEnabled] = React.useState(false);
 
-  const zones = React.useMemo(
-    () => cities.find((c) => c.id === cityId)?.zones ?? [],
-    [cities, cityId],
-  );
-
   const applyExistingListing = React.useCallback((listing: BusinessMineListing) => {
     setExistingId(listing.id);
     setTitle(listing.title ?? '');
@@ -152,6 +155,7 @@ export function BusinessListingForm({
     setCityId(listing.cityId ?? '');
     setZoneId(listing.zoneId ?? '');
     setMapsUrl(listing.mapsUrl ?? '');
+    setLocationMode(inferListingLocationMode(listing.cityId, listing.mapsUrl));
     setLocationLat(listing.locationLat ?? null);
     setLocationLng(listing.locationLng ?? null);
     setLocationAddress(listing.locationAddress ?? null);
@@ -249,13 +253,14 @@ export function BusinessListingForm({
       setError('Shtoni të paktën një foto.');
       return;
     }
+    const loc = exclusiveLocationPayload(locationMode, { cityId, zoneId, mapsUrl });
     const payload = {
       title: title.trim(),
       description: description.trim(),
       category,
-      cityId: cityId || null,
-      zoneId: zoneId || null,
-      mapsUrl: mapsUrl.trim() || null,
+      cityId: loc.cityId,
+      zoneId: loc.zoneId,
+      mapsUrl: loc.mapsUrl,
       contactPhone: contactPhone.trim(),
       imageUrls,
       weeklyHours,
@@ -294,7 +299,7 @@ export function BusinessListingForm({
       setError(res.error);
       return;
     }
-    rememberLocation({ cityId });
+    if (loc.cityId) rememberLocation({ cityId: loc.cityId });
     if (res.id && (wantsPremium || boostKindRef.current === 'premium')) {
       const boost = await activatePremiumAfterCreate({
         mode: premiumPayRef.current,
@@ -346,10 +351,7 @@ export function BusinessListingForm({
           </Alert>
         ) : null}
 
-        <ListingFormSection
-          icon={<StorefrontIcon size={20} weight="duotone" />}
-          title="Informacioni bazë"
-        >
+        <ListingFormSection>
           <ListingTextField
             label="Emri i biznesit"
             value={title}
@@ -375,46 +377,33 @@ export function BusinessListingForm({
             clearable
             allowCustom
           />
-          <SearchableSelect
-            label="Qyteti"
-            value={cityId}
-            onChange={(v) => {
+          <ListingLocationChoice
+            mode={locationMode}
+            onModeChange={setLocationMode}
+            cityId={cityId}
+            onCityIdChange={(v) => {
               setCityId(v);
               setZoneId('');
             }}
-            options={cities.map((c) => ({ value: c.id, label: c.name }))}
-            emptyLabel="Zgjidhni qytetin… (opsionale)"
-            clearable
-          />
-          {zones.length > 0 ? (
-            <SearchableSelect
-              label="Lagja / zona"
-              value={zoneId}
-              onChange={setZoneId}
-              options={zones.map((z) => ({ value: z.id, label: z.name }))}
-              emptyLabel="Zgjidhni lagjen…"
-              clearable
-            />
-          ) : null}
-          <ListingMapsLocationFields
-            value={{ mapsUrl, locationLat, locationLng, locationAddress }}
-            onChange={(next) => {
+            zoneId={zoneId}
+            onZoneIdChange={setZoneId}
+            cities={cities}
+            maps={{ mapsUrl, locationLat, locationLng, locationAddress }}
+            onMapsChange={(next) => {
               setMapsUrl(next.mapsUrl);
               setLocationLat(next.locationLat);
               setLocationLng(next.locationLng);
               setLocationAddress(next.locationAddress);
             }}
-            cityName={cities.find((c) => c.id === cityId)?.name}
-            zoneName={zones.find((z) => z.id === zoneId)?.name}
-            showPreview
+            showZone
             disabled={submitting}
+            labels={{ zoneLabel: 'Lagja / zona' }}
           />
           <ListingDescriptionField
             label="Përshkrimi"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             fullWidth
-            minRows={3}
           />
           <ListingTextField
             label="Çfarë ofron (opsionale)"
@@ -435,10 +424,7 @@ export function BusinessListingForm({
           />
         </ListingFormSection>
 
-        <ListingFormSection
-          icon={<ClockIcon size={20} weight="duotone" />}
-          title="Orari i hapjes"
-        >
+        <ListingFormSection>
           <Stack spacing={1}>
             {weeklyHours.map((row, index) => (
               <Box
@@ -508,10 +494,7 @@ export function BusinessListingForm({
           </Stack>
         </ListingFormSection>
 
-        <ListingFormSection
-          icon={<CalendarCheckIcon size={20} weight="duotone" />}
-          title="Butoni kryesor & rezervime"
-        >
+        <ListingFormSection>
           <BusinessMobileCtaPicker
             value={mobileCtaMode}
             onChange={(mode) => {

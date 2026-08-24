@@ -3,11 +3,14 @@
 import * as React from 'react';
 import { Stack, TextField } from '@mui/material';
 
+import { HouseLine as HouseLineIcon } from '@phosphor-icons/react/dist/ssr/HouseLine';
+import { Key as KeyIcon } from '@phosphor-icons/react/dist/ssr/Key';
+
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
 import { RealEstateListingDetailView } from '@/components/public/real-estate-listing-detail-view';
-import { ListingDescriptionField } from '@/components/user/listing-form-ui';
+import { ListingDescriptionField, ListingToggle } from '@/components/user/listing-form-ui';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
 import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
 import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
@@ -41,6 +44,12 @@ const MAX_IMAGES = 8;
 const PROPERTY_OPTIONS = REAL_ESTATE_PROPERTY_CATEGORIES.map((c) => ({
   value: c.slug,
   label: c.label,
+}));
+
+const TRANSACTION_TOGGLE = TRANSACTION_OPTIONS.map((o) => ({
+  value: o.value,
+  label: o.label,
+  Icon: o.value === 'rent' ? KeyIcon : HouseLineIcon,
 }));
 
 type Snapshot = {
@@ -259,8 +268,8 @@ export function RealEstateOwnerEdit({
     ),
     price: (
       <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
-        <SearchableSelect
-          label="Lloji i transakcionit"
+        <ListingToggle
+          label="Qera / shitje"
           value={draft.transactionType ?? ''}
           onChange={(v) =>
             setDraft((d) => ({
@@ -268,10 +277,9 @@ export function RealEstateOwnerEdit({
               transactionType: v === 'rent' || v === 'sale' ? v : d.transactionType,
             }))
           }
-          options={TRANSACTION_OPTIONS}
-          emptyLabel="—"
+          options={TRANSACTION_TOGGLE}
         />
-        <Stack direction="row" spacing={1.25}>
+        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
           <TextField
             label="Çmimi"
             value={String(draft.price)}
@@ -283,13 +291,12 @@ export function RealEstateOwnerEdit({
             autoFocus
             sx={fieldSx}
           />
-          <SearchableSelect
+          <ListingToggle
             label="Monedha"
             value={draft.currency}
             onChange={(v) => setDraft((d) => ({ ...d, currency: v === 'LEK' ? 'LEK' : 'EUR' }))}
             options={CURRENCY_OPTIONS}
-            emptyLabel="—"
-            sx={{ minWidth: 120 }}
+            fullWidth={false}
           />
         </Stack>
         <TextField

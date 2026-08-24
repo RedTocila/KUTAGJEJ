@@ -125,15 +125,13 @@ export function VerticalFilterSections({
           {quickPicks}
           {locationSection}
           <FilterSection title={t.browse.transaction} index={1}>
-            <FilterChoiceCards
+            <FilterSegmented
               value={f.tx ?? ''}
               onChange={(v) => setField('tx', v)}
               options={REAL_ESTATE_TX_VISUAL.map((o) => ({
                 ...o,
                 label: o.value === 'rent' ? t.common.forRent : t.common.forSale,
-                hint: o.value === 'rent' ? t.browse.monthlyRent : t.browse.purchase,
               }))}
-              columns={2}
             />
           </FilterSection>
           <FilterSection title={t.browse.bedrooms} index={2}>

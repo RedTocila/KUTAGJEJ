@@ -7,7 +7,12 @@ import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
-import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
+import {
+  exclusiveLocationPayload,
+  inferListingLocationMode,
+  ListingLocationChoice,
+  type ListingLocationMode,
+} from '@/components/listings/listing-location-choice';
 import { ProfessionalProfilePhotosEditor } from '@/components/professionals/professional-profile-photos-editor';
 import { ProfessionalListingDetailView } from '@/components/public/professional-listing-detail-view';
 import { ListingDescriptionField } from '@/components/user/listing-form-ui';
@@ -134,6 +139,9 @@ export function ProfessionalOwnerEdit({
   const [photosFocus, setPhotosFocus] = React.useState<'cover' | 'avatar'>('cover');
   const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
+  const [locationMode, setLocationMode] = React.useState<ListingLocationMode | ''>(() =>
+    inferListingLocationMode(initial.cityId, initial.mapsUrl),
+  );
 
   const [coverFile, setCoverFile] = React.useState<File[]>([]);
   const [avatarFile, setAvatarFile] = React.useState<File[]>([]);
@@ -169,6 +177,7 @@ export function ProfessionalOwnerEdit({
   const cancelInline = () => {
     if (snapshot) {
       setDraft((d) => ({ ...d, ...snapshot }));
+      setLocationMode(inferListingLocationMode(snapshot.cityId, snapshot.mapsUrl));
     }
     setSnapshot(null);
     setEditingField(null);
@@ -289,12 +298,13 @@ export function ProfessionalOwnerEdit({
         return;
       }
       const imageUrls = [cover.url, avatar.url].filter((u): u is string => Boolean(u));
+      const loc = exclusiveLocationPayload(locationMode, draft);
       const payload = {
         title: draft.title.trim(),
         description: (draft.description ?? '').trim(),
         category: draft.category,
-        cityId: draft.cityId || null,
-        mapsUrl: draft.mapsUrl?.trim() || null,
+        cityId: loc.cityId,
+        mapsUrl: loc.mapsUrl,
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
         responseTimeHours: draft.responseTimeHours,
@@ -399,26 +409,23 @@ export function ProfessionalOwnerEdit({
       </Stack>
     ),
     location: (
-      <Stack spacing={1} sx={{ width: '100%', maxWidth: 360 }}>
-        <SearchableSelect
-          label="Qyteti"
-          value={draft.cityId ?? ''}
-          onChange={(v) => {
+      <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
+        <ListingLocationChoice
+          mode={locationMode}
+          onModeChange={setLocationMode}
+          cityId={draft.cityId ?? ''}
+          onCityIdChange={(v) => {
             const cityName = cities.find((c) => c.id === v)?.name ?? null;
             setDraft((d) => ({ ...d, cityId: v || null, cityName }));
           }}
-          options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni… (opsionale)"
-          clearable
-        />
-        <ListingMapsLocationFields
-          value={{
+          cities={cities}
+          maps={{
             mapsUrl: draft.mapsUrl ?? '',
             locationLat: draft.locationLat ?? null,
             locationLng: draft.locationLng ?? null,
             locationAddress: draft.locationAddress ?? null,
           }}
-          onChange={(next) =>
+          onMapsChange={(next) =>
             setDraft((d) => ({
               ...d,
               mapsUrl: next.mapsUrl.trim() || null,
@@ -427,8 +434,6 @@ export function ProfessionalOwnerEdit({
               locationAddress: next.locationAddress,
             }))
           }
-          cityName={draft.cityName}
-          showPreview
         />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>

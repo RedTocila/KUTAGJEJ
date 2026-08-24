@@ -8,7 +8,12 @@ import { Key as KeyIcon } from '@phosphor-icons/react/dist/ssr/Key';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
-import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
+import {
+  exclusiveLocationPayload,
+  inferListingLocationMode,
+  ListingLocationChoice,
+  type ListingLocationMode,
+} from '@/components/listings/listing-location-choice';
 import { RealEstateListingDetailView } from '@/components/public/real-estate-listing-detail-view';
 import { ListingDescriptionField, ListingToggle } from '@/components/user/listing-form-ui';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
@@ -135,6 +140,9 @@ export function RealEstateOwnerEdit({
   const [newFiles, setNewFiles] = React.useState<File[]>([]);
   const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
+  const [locationMode, setLocationMode] = React.useState<ListingLocationMode | ''>(() =>
+    inferListingLocationMode(initial.cityId, initial.mapsUrl),
+  );
 
   React.useEffect(() => {
     void listRealEstateLocationsPublic().then((res) => {
@@ -155,6 +163,7 @@ export function RealEstateOwnerEdit({
   const cancelInline = () => {
     if (snapshot) {
       setDraft((d) => ({ ...d, ...snapshot }));
+      setLocationMode(inferListingLocationMode(snapshot.cityId, snapshot.mapsUrl));
     }
     setSnapshot(null);
     setEditingField(null);
@@ -207,7 +216,7 @@ export function RealEstateOwnerEdit({
         setError('Vendosni një numër telefoni të vlefshëm.');
         return;
       }
-      const zoneId = draft.zoneId || null;
+      const loc = exclusiveLocationPayload(locationMode, draft);
       const res = await updateRealEstateListing(draft.id, {
         propertyCategory: draft.propertyCategory || undefined,
         title: draft.title.trim(),
@@ -217,9 +226,9 @@ export function RealEstateOwnerEdit({
         originalPrice: draft.originalPrice ?? null,
         currency: draft.currency || 'EUR',
         surfaceM2: draft.surfaceM2,
-        cityId: draft.cityId || null,
-        zoneId,
-        mapsUrl: draft.mapsUrl?.trim() || null,
+        cityId: loc.cityId,
+        zoneId: loc.zoneId,
+        mapsUrl: loc.mapsUrl,
         contactPhone: phone,
         condition: draft.condition ?? undefined,
         apartmentTypeSlug: draft.apartmentTypeSlug ?? undefined,
@@ -236,7 +245,7 @@ export function RealEstateOwnerEdit({
         setError(res.error);
         return;
       }
-      const next = { ...draft, imageUrls, zoneId };
+      const next = { ...draft, imageUrls, cityId: loc.cityId, zoneId: loc.zoneId, mapsUrl: loc.mapsUrl };
       setDraft(next);
       setBaseline(JSON.stringify(next));
       setExistingUrls(imageUrls);
@@ -311,10 +320,11 @@ export function RealEstateOwnerEdit({
     ),
     location: (
       <Stack spacing={1.25} sx={{ width: '100%', maxWidth: 420 }}>
-        <SearchableSelect
-          label="Qyteti"
-          value={draft.cityId ?? ''}
-          onChange={(v) => {
+        <ListingLocationChoice
+          mode={locationMode}
+          onModeChange={setLocationMode}
+          cityId={draft.cityId ?? ''}
+          onCityIdChange={(v) => {
             const city = cities.find((c) => c.id === v);
             setDraft((d) => ({
               ...d,
@@ -324,29 +334,19 @@ export function RealEstateOwnerEdit({
               zoneName: null,
             }));
           }}
-          options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni… (opsionale)"
-          clearable
-        />
-        <SearchableSelect
-          label="Zona"
-          value={draft.zoneId ?? ''}
-          onChange={(v) => {
+          zoneId={draft.zoneId ?? ''}
+          onZoneIdChange={(v) => {
             const zone = zones.find((z) => z.id === v);
             setDraft((d) => ({ ...d, zoneId: v || null, zoneName: zone?.name ?? null }));
           }}
-          options={zones.map((z) => ({ value: z.id, label: z.name }))}
-          emptyLabel="Zgjidhni… (opsionale)"
-          clearable
-        />
-        <ListingMapsLocationFields
-          value={{
+          cities={cities}
+          maps={{
             mapsUrl: draft.mapsUrl ?? '',
             locationLat: draft.locationLat ?? null,
             locationLng: draft.locationLng ?? null,
             locationAddress: draft.locationAddress ?? null,
           }}
-          onChange={(next) =>
+          onMapsChange={(next) =>
             setDraft((d) => ({
               ...d,
               mapsUrl: next.mapsUrl.trim() || null,
@@ -355,9 +355,7 @@ export function RealEstateOwnerEdit({
               locationAddress: next.locationAddress,
             }))
           }
-          cityName={draft.cityName}
-          zoneName={draft.zoneName}
-          showPreview
+          showZone
         />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>

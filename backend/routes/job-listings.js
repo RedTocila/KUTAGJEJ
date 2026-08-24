@@ -19,7 +19,7 @@ const {
 
 const router = express.Router();
 
-const MAX_JOB_IMAGES = 5;
+const MAX_JOB_IMAGES = 1;
 
 function requirePortalUser(req, res, next) {
   const model = req.user?.constructor?.modelName;

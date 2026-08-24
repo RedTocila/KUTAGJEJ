@@ -5,7 +5,12 @@ import { Stack, TextField } from '@mui/material';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
-import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
+import {
+  exclusiveLocationPayload,
+  inferListingLocationMode,
+  ListingLocationChoice,
+  type ListingLocationMode,
+} from '@/components/listings/listing-location-choice';
 import { VerticalListingDetailView } from '@/components/public/vertical-listing-detail-view';
 import { ListingDescriptionField, ListingToggle } from '@/components/user/listing-form-ui';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
@@ -79,6 +84,9 @@ export function MarketplaceOwnerEdit({
   const [newFiles, setNewFiles] = React.useState<File[]>([]);
   const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
+  const [locationMode, setLocationMode] = React.useState<ListingLocationMode | ''>(() =>
+    inferListingLocationMode(initial.cityId, initial.mapsUrl),
+  );
 
   React.useEffect(() => {
     void listRealEstateLocationsPublic().then((res) => {
@@ -97,6 +105,7 @@ export function MarketplaceOwnerEdit({
   const cancelInline = () => {
     if (snapshot) {
       setDraft((d) => ({ ...d, ...snapshot }));
+      setLocationMode(inferListingLocationMode(snapshot.cityId, snapshot.mapsUrl));
     }
     setSnapshot(null);
     setEditingField(null);
@@ -136,6 +145,7 @@ export function MarketplaceOwnerEdit({
         setError('Shtoni të paktën një foto.');
         return;
       }
+      const loc = exclusiveLocationPayload(locationMode, draft);
       const res = await updateMarketplaceListing(draft.id, {
         transactionType: 'shes',
         title: draft.title.trim(),
@@ -145,8 +155,8 @@ export function MarketplaceOwnerEdit({
         price: draft.price,
         originalPrice: draft.originalPrice ?? null,
         currency: draft.currency,
-        cityId: draft.cityId || null,
-        mapsUrl: draft.mapsUrl?.trim() || null,
+        cityId: loc.cityId,
+        mapsUrl: loc.mapsUrl,
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
       });
@@ -227,26 +237,23 @@ export function MarketplaceOwnerEdit({
       </Stack>
     ),
     location: (
-      <Stack spacing={1} sx={{ width: '100%', maxWidth: 360 }}>
-        <SearchableSelect
-          label="Qyteti"
-          value={draft.cityId ?? ''}
-          onChange={(v) => {
+      <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
+        <ListingLocationChoice
+          mode={locationMode}
+          onModeChange={setLocationMode}
+          cityId={draft.cityId ?? ''}
+          onCityIdChange={(v) => {
             const cityName = cities.find((c) => c.id === v)?.name ?? null;
             setDraft((d) => ({ ...d, cityId: v || null, cityName }));
           }}
-          options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni… (opsionale)"
-          clearable
-        />
-        <ListingMapsLocationFields
-          value={{
+          cities={cities}
+          maps={{
             mapsUrl: draft.mapsUrl ?? '',
             locationLat: draft.locationLat ?? null,
             locationLng: draft.locationLng ?? null,
             locationAddress: draft.locationAddress ?? null,
           }}
-          onChange={(next) =>
+          onMapsChange={(next) =>
             setDraft((d) => ({
               ...d,
               mapsUrl: next.mapsUrl.trim() || null,
@@ -255,8 +262,6 @@ export function MarketplaceOwnerEdit({
               locationAddress: next.locationAddress,
             }))
           }
-          cityName={draft.cityName}
-          showPreview
         />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>

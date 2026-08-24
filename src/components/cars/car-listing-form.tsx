@@ -537,6 +537,7 @@ export function CarListingForm({
     }
 
     setSubmitting(true);
+    const loc = exclusiveLocationPayload(form.locationMode, form);
     try {
       if (isEdit && editListingId) {
         let uploaded: string[] = [];
@@ -622,8 +623,8 @@ export function CarListingForm({
         if (form.isMetallic) fd.append('finish', 'metallic');
         form.extras.forEach((e) => fd.append('extras[]', e));
         fd.append('contactPhone', form.contactPhone.trim());
-        fd.append('cityId', form.cityId);
-        if (form.mapsUrl.trim()) fd.append('mapsUrl', form.mapsUrl.trim());
+        if (loc.cityId) fd.append('cityId', loc.cityId);
+        if (loc.mapsUrl) fd.append('mapsUrl', loc.mapsUrl);
         if (imageUrls.length) {
           fd.append('imageUrls', JSON.stringify(imageUrls));
         }
@@ -669,7 +670,7 @@ export function CarListingForm({
         }
       }
       if (!isEdit) {
-        rememberLocation({ cityId: form.cityId });
+        if (loc.cityId) rememberLocation({ cityId: loc.cityId });
       }
       onSuccess?.();
     } finally {
@@ -832,32 +833,22 @@ export function CarListingForm({
           placeholder="e.g. Sportback, Competition, S-Line…"
         />
 
-        <Box>
-          <SearchableSelect
-            label="City"
-            value={form.cityId}
-            onChange={(v) => setSelectField('cityId', v)}
-            options={cities.map((c) => ({ value: c.id, label: c.name }))}
-            emptyLabel="Select city… (optional)"
-            clearable
-            disabled={loadingCities || cities.length === 0}
-            error={Boolean(fieldErrors.cityId)}
-            helperText={
-              fieldErrors.cityId ||
-              (!loadingCities && cities.length === 0
-                ? 'No cities available yet — a platform admin must add them under Dashboard → Vendndodhjet (pasuri).'
-                : undefined)
-            }
-          />
-        </Box>
-        <ListingMapsLocationFields
-          value={{
+        <ListingLocationChoice
+          mode={form.locationMode}
+          onModeChange={(locationMode) => {
+            setForm((p) => ({ ...p, locationMode }));
+            clearFieldError('cityId');
+          }}
+          cityId={form.cityId}
+          onCityIdChange={(cityId) => setSelectField('cityId', cityId)}
+          cities={cities}
+          maps={{
             mapsUrl: form.mapsUrl,
             locationLat: form.locationLat,
             locationLng: form.locationLng,
             locationAddress: form.locationAddress,
           }}
-          onChange={(next) =>
+          onMapsChange={(next) =>
             setForm((p) => ({
               ...p,
               mapsUrl: next.mapsUrl,
@@ -866,9 +857,24 @@ export function CarListingForm({
               locationAddress: next.locationAddress,
             }))
           }
-          cityName={cities.find((c) => c.id === form.cityId)?.name}
-          showPreview
+          loadingCities={loadingCities}
           disabled={submitting}
+          cityError={Boolean(fieldErrors.cityId)}
+          cityHelperText={fieldErrors.cityId}
+          labels={{
+            modeLabel: 'Location',
+            cityMode: 'City',
+            mapMode: 'On the map',
+            helper: 'Choose a city, or set the location with a Google Maps link.',
+            cityLabel: 'City',
+            cityEmpty: 'Select city… (optional)',
+            noCities:
+              'No cities available yet — a platform admin must add them under Dashboard → Vendndodhjet (pasuri).',
+            mapsLabel: 'Google Maps link',
+            mapsPlaceholder: 'https://maps.app.goo.gl/… or maps.google.com/…',
+            mapsHelper: 'Open Maps, pick the place, then paste the link here.',
+            openMapsAria: 'Open Google Maps',
+          }}
         />
 
         <ListingDescriptionField

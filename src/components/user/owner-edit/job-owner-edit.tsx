@@ -5,7 +5,12 @@ import { Checkbox, FormControlLabel, FormGroup, Stack, TextField, Typography } f
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
-import { ListingMapsLocationFields } from '@/components/listings/listing-maps-location-fields';
+import {
+  exclusiveLocationPayload,
+  inferListingLocationMode,
+  ListingLocationChoice,
+  type ListingLocationMode,
+} from '@/components/listings/listing-location-choice';
 import { JobListingDetailView } from '@/components/public/job-listing-detail-view';
 import { ListingDescriptionField, ListingToggle } from '@/components/user/listing-form-ui';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
@@ -30,7 +35,7 @@ import { commitListingPhotos } from '@/lib/owner-edit-photos';
 import { uploadListingImages } from '@/lib/uploads-client';
 import { paths } from '@/paths';
 
-const MAX_IMAGES = 5;
+const MAX_IMAGES = 1;
 
 type JobBenefit = { id: string; label: string };
 
@@ -122,10 +127,15 @@ export function JobOwnerEdit({
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
   const [photosOpen, setPhotosOpen] = React.useState(false);
-  const [existingUrls, setExistingUrls] = React.useState(initial.imageUrls ?? []);
+  const [existingUrls, setExistingUrls] = React.useState(
+    () => (initial.imageUrls ?? []).slice(0, MAX_IMAGES),
+  );
   const [newFiles, setNewFiles] = React.useState<File[]>([]);
   const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
+  const [locationMode, setLocationMode] = React.useState<ListingLocationMode | ''>(() =>
+    inferListingLocationMode(initial.cityId, initial.mapsUrl),
+  );
   const [benefitIds, setBenefitIds] = React.useState(() => benefitIdsFrom(initial.benefits));
   const [customBenefit, setCustomBenefit] = React.useState(() => customBenefitFrom(initial.benefits));
 
@@ -154,6 +164,7 @@ export function JobOwnerEdit({
       setDraft((d) => ({ ...d, ...snapshot }));
       setBenefitIds(benefitIdsFrom(snapshot.benefits));
       setCustomBenefit(customBenefitFrom(snapshot.benefits));
+      setLocationMode(inferListingLocationMode(snapshot.cityId, snapshot.mapsUrl));
     }
     setSnapshot(null);
     setEditingField(null);
@@ -193,12 +204,13 @@ export function JobOwnerEdit({
         setError('Shtoni të paktën një foto.');
         return;
       }
+      const loc = exclusiveLocationPayload(locationMode, draft);
       const res = await updateJobListing(draft.id, {
         title: draft.title.trim(),
         description: (draft.description ?? '').trim(),
         industry: draft.industry,
-        cityId: draft.cityId || null,
-        mapsUrl: draft.mapsUrl?.trim() || null,
+        cityId: loc.cityId,
+        mapsUrl: loc.mapsUrl,
         education: draft.education,
         experience: draft.experience,
         jobType: draft.jobType,
@@ -278,26 +290,23 @@ export function JobOwnerEdit({
       </Stack>
     ),
     location: (
-      <Stack spacing={1} sx={{ width: '100%', maxWidth: 360 }}>
-        <SearchableSelect
-          label="Qyteti"
-          value={draft.cityId ?? ''}
-          onChange={(v) => {
+      <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
+        <ListingLocationChoice
+          mode={locationMode}
+          onModeChange={setLocationMode}
+          cityId={draft.cityId ?? ''}
+          onCityIdChange={(v) => {
             const cityName = cities.find((c) => c.id === v)?.name ?? null;
             setDraft((d) => ({ ...d, cityId: v || null, cityName }));
           }}
-          options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni… (opsionale)"
-          clearable
-        />
-        <ListingMapsLocationFields
-          value={{
+          cities={cities}
+          maps={{
             mapsUrl: draft.mapsUrl ?? '',
             locationLat: draft.locationLat ?? null,
             locationLng: draft.locationLng ?? null,
             locationAddress: draft.locationAddress ?? null,
           }}
-          onChange={(next) =>
+          onMapsChange={(next) =>
             setDraft((d) => ({
               ...d,
               mapsUrl: next.mapsUrl.trim() || null,
@@ -306,8 +315,6 @@ export function JobOwnerEdit({
               locationAddress: next.locationAddress,
             }))
           }
-          cityName={draft.cityName}
-          showPreview
         />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
@@ -472,7 +479,7 @@ export function JobOwnerEdit({
 
       <OwnerEditSectionDialog
         open={photosOpen}
-        title="Fotot"
+        title="Foto e kopertinës"
         onClose={() => setPhotosOpen(false)}
         onApply={async () => {
           const res = await commitListingPhotos({
@@ -497,7 +504,7 @@ export function JobOwnerEdit({
           existingUrls={existingUrls}
           onExistingUrlsChange={setExistingUrls}
           max={MAX_IMAGES}
-          label="Foto"
+          label="Foto e kopertinës"
         />
       </OwnerEditSectionDialog>
     </ListingOwnerEditShell>

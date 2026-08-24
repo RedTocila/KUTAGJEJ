@@ -5,6 +5,12 @@ import { Checkbox, FormControlLabel, Stack, TextField } from '@mui/material';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import {
+  exclusiveLocationPayload,
+  inferListingLocationMode,
+  ListingLocationChoice,
+  type ListingLocationMode,
+} from '@/components/listings/listing-location-choice';
 import { BusinessMobileCtaInlineEditor } from '@/components/businesses/business-mobile-cta-inline-editor';
 import { BusinessListingDetailView } from '@/components/public/business-listing-detail-view';
 import { ListingDescriptionField } from '@/components/user/listing-form-ui';
@@ -137,6 +143,9 @@ export function BusinessOwnerEdit({
   const [newFiles, setNewFiles] = React.useState<File[]>([]);
   const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
+  const [locationMode, setLocationMode] = React.useState<ListingLocationMode | ''>(() =>
+    inferListingLocationMode(initial.cityId, initial.mapsUrl),
+  );
   const [weeklyHours, setWeeklyHours] = React.useState<WeeklyHourRow[]>(
     initial.weeklyHours?.length ? initial.weeklyHours : defaultWeeklyHours(),
   );
@@ -162,6 +171,7 @@ export function BusinessOwnerEdit({
   const cancelInline = () => {
     if (snapshot) {
       setDraft((d) => ({ ...d, ...snapshot }));
+      setLocationMode(inferListingLocationMode(snapshot.cityId, snapshot.mapsUrl));
     }
     setSnapshot(null);
     setEditingField(null);
@@ -173,6 +183,10 @@ export function BusinessOwnerEdit({
   };
 
   const doneLocationInline = async () => {
+    if (locationMode !== 'map') {
+      doneInline();
+      return;
+    }
     const raw = String(draft.mapsUrl || '').trim();
     if (!raw) {
       setDraft((d) => ({
@@ -238,13 +252,14 @@ export function BusinessOwnerEdit({
         setError('Shtoni të paktën një foto.');
         return;
       }
+      const loc = exclusiveLocationPayload(locationMode, draft);
       const payload = {
         title: draft.title.trim(),
         description: (draft.description ?? '').trim(),
         category: draft.category,
-        cityId: draft.cityId || null,
-        zoneId: draft.zoneId ?? null,
-        mapsUrl: draft.mapsUrl ?? null,
+        cityId: loc.cityId,
+        zoneId: loc.zoneId,
+        mapsUrl: loc.mapsUrl,
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
         weeklyHours: draft.weeklyHours?.length ? draft.weeklyHours : weeklyHours,
@@ -351,10 +366,11 @@ export function BusinessOwnerEdit({
     ),
     location: (
       <Stack spacing={1.25} sx={{ width: '100%', maxWidth: 420 }}>
-        <SearchableSelect
-          label="Qyteti"
-          value={draft.cityId ?? ''}
-          onChange={(v) => {
+        <ListingLocationChoice
+          mode={locationMode}
+          onModeChange={setLocationMode}
+          cityId={draft.cityId ?? ''}
+          onCityIdChange={(v) => {
             const city = cities.find((c) => c.id === v);
             setDraft((d) => ({
               ...d,
@@ -364,33 +380,30 @@ export function BusinessOwnerEdit({
               zoneName: null,
             }));
           }}
-          options={cities.map((c) => ({ value: c.id, label: c.name }))}
-          emptyLabel="Zgjidhni… (opsionale)"
-          clearable
-        />
-        {zones.length > 0 ? (
-          <SearchableSelect
-            label="Lagja / zona"
-            value={draft.zoneId ?? ''}
-            onChange={(v) => {
-              const zone = zones.find((z) => z.id === v);
-              setDraft((d) => ({ ...d, zoneId: v || null, zoneName: zone?.name ?? null }));
-            }}
-            options={zones.map((z) => ({ value: z.id, label: z.name }))}
-            emptyLabel="Zgjidhni…"
-            clearable
-          />
-        ) : null}
-        <TextField
-          label="Linku i Google Maps (opsionale)"
-          value={draft.mapsUrl ?? ''}
-          onChange={(e) => {
-            const mapsPreview = withMapsPreview(e.target.value);
-            setDraft((d) => ({ ...d, ...mapsPreview }));
+          zoneId={draft.zoneId ?? ''}
+          onZoneIdChange={(v) => {
+            const zone = zones.find((z) => z.id === v);
+            setDraft((d) => ({ ...d, zoneId: v || null, zoneName: zone?.name ?? null }));
           }}
-          fullWidth
-          placeholder="https://maps.app.goo.gl/…"
-          sx={fieldSx}
+          cities={cities}
+          maps={{
+            mapsUrl: draft.mapsUrl ?? '',
+            locationLat: draft.locationLat ?? null,
+            locationLng: draft.locationLng ?? null,
+            locationAddress: draft.locationAddress ?? null,
+          }}
+          onMapsChange={(next) => {
+            const mapsPreview = withMapsPreview(next.mapsUrl);
+            setDraft((d) => ({
+              ...d,
+              ...mapsPreview,
+              locationLat: next.locationLat ?? mapsPreview.locationLat,
+              locationLng: next.locationLng ?? mapsPreview.locationLng,
+              locationAddress: next.locationAddress ?? mapsPreview.locationAddress,
+            }));
+          }}
+          showZone
+          labels={{ zoneLabel: 'Lagja / zona' }}
         />
         <OwnerInlineEditActions onDone={() => void doneLocationInline()} onCancel={cancelInline} />
       </Stack>

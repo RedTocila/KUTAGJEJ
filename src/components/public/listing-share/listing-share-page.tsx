@@ -161,37 +161,62 @@ async function waitForImages(root: HTMLElement): Promise<void> {
 /** Replace listing photo src with an embedded data URL on the live DOM (Safari-safe). */
 async function ensureListingImageEmbedded(root: HTMLElement, imageUrl: string | null | undefined) {
   if (!imageUrl) return;
-  const img = root.querySelector<HTMLImageElement>('img[data-story-listing-image]');
-  if (!img) return;
-  if (img.src.startsWith('data:image/') && img.complete && img.naturalWidth > 0) return;
+  const imgs = Array.from(root.querySelectorAll<HTMLImageElement>('img[data-story-listing-image]'));
+  if (imgs.length === 0) return;
 
-  const source = resolveStoryImageSrc(imageUrl) || imageUrl;
-  if (img.src !== source && !img.src.startsWith('data:image/')) {
-    await new Promise<void>((resolve) => {
-      const done = () => resolve();
-      img.addEventListener('load', done, { once: true });
-      img.addEventListener('error', done, { once: true });
-      img.removeAttribute('crossorigin');
-      img.referrerPolicy = 'no-referrer';
-      img.src = source;
-      if (img.complete && img.naturalWidth > 0) done();
-      else window.setTimeout(done, 2500);
-    });
-    if (img.complete && img.naturalWidth > 0) return;
+  const readyDataUrl = imgs.find(
+    (img) => img.src.startsWith('data:image/') && img.complete && img.naturalWidth > 0,
+  )?.src;
+  let embedded = readyDataUrl ?? null;
+
+  if (!embedded) {
+    const img = imgs[0];
+    const source = resolveStoryImageSrc(imageUrl) || imageUrl;
+    if (img.src !== source && !img.src.startsWith('data:image/')) {
+      await new Promise<void>((resolve) => {
+        const done = () => resolve();
+        img.addEventListener('load', done, { once: true });
+        img.addEventListener('error', done, { once: true });
+        img.removeAttribute('crossorigin');
+        img.referrerPolicy = 'no-referrer';
+        img.src = source;
+        if (img.complete && img.naturalWidth > 0) done();
+        else window.setTimeout(done, 2500);
+      });
+      if (img.complete && img.naturalWidth > 0 && img.src.startsWith('data:image/')) {
+        embedded = img.src;
+      }
+    }
+
+    if (!embedded) {
+      const fromSource = img.src.startsWith('data:image/') ? img.src : source;
+      embedded = img.src.startsWith('data:image/')
+        ? img.src
+        : await embedImageAsDataUrl(fromSource);
+    }
   }
 
-  const embedded = await embedImageAsDataUrl(source);
   if (!embedded) return;
 
-  await new Promise<void>((resolve) => {
-    const done = () => resolve();
-    img.addEventListener('load', done, { once: true });
-    img.addEventListener('error', done, { once: true });
-    img.removeAttribute('crossorigin');
-    img.src = embedded;
-    if (img.complete && img.naturalWidth > 0) done();
-    else window.setTimeout(done, 4000);
-  });
+  await Promise.all(
+    imgs.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.src === embedded && img.complete && img.naturalWidth > 0) {
+            resolve();
+            return;
+          }
+          const done = () => resolve();
+          img.addEventListener('load', done, { once: true });
+          img.addEventListener('error', done, { once: true });
+          img.removeAttribute('crossorigin');
+          img.referrerPolicy = 'no-referrer';
+          img.src = embedded as string;
+          if (img.complete && img.naturalWidth > 0) done();
+          else window.setTimeout(done, 4000);
+        }),
+    ),
+  );
 }
 
 function roundJpegDataUrl(

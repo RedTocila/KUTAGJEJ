@@ -409,16 +409,24 @@ export function CarListingForm({
 
   React.useEffect(() => {
     if (!initialListing) return;
-    setForm(
-      applyEmptyKnownDefaults(formFromListing(initialListing), knownCreateDefaultsFromStorage()) as CarFormState,
-    );
+    setForm(() => {
+      const next = applyEmptyKnownDefaults(
+        formFromListing(initialListing),
+        knownCreateDefaultsFromStorage(),
+      ) as CarFormState;
+      return { ...next, locationMode: next.locationMode || inferListingLocationMode(next.cityId, next.mapsUrl) };
+    });
     setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean).slice(0, MAX_IMAGES));
     setImages([]);
   }, [initialListing]);
 
   React.useEffect(() => {
     if (isEdit) return;
-    setForm((prev) => applyKnown(prev) as CarFormState);
+    setForm((prev) => {
+      const next = applyKnown(prev) as CarFormState;
+      if (!next.locationMode && next.cityId) return { ...next, locationMode: 'city' };
+      return next;
+    });
   }, [isEdit, applyKnown]);
 
   // -------------------------------------------------------------------------
@@ -560,8 +568,8 @@ export function CarListingForm({
           finish,
           extras: form.extras,
           contactPhone: form.contactPhone.trim(),
-          cityId: form.cityId || null,
-          mapsUrl: form.mapsUrl.trim() || null,
+          cityId: loc.cityId,
+          mapsUrl: loc.mapsUrl,
           imageUrls: [...existingImageUrls, ...uploaded].slice(0, MAX_IMAGES),
         });
         if (result.error) {

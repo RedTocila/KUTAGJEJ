@@ -22,7 +22,6 @@ import { toJpeg } from 'html-to-image';
 
 import {
   CARD_BG,
-  FEED_CARD_RADIUS_PX,
   FEED_HEIGHT,
   FEED_WIDTH,
   ListingFeedTemplate,
@@ -537,7 +536,7 @@ export function ListingSharePage({
       return;
     }
 
-    const existingPhone = payload.contactPhone?.trim() || '';
+    const existingPhone = payload.contactPhone?.trim() || user?.phone?.trim() || '';
     if (existingPhone) setResolvedPhone(existingPhone);
 
     if (!payload.listingKind || !payload.listingId) {
@@ -545,7 +544,9 @@ export function ListingSharePage({
       return;
     }
 
-    const pending = fetchListingShareExtras(payload.listingKind, payload.listingId);
+    const pending = fetchListingShareExtras(payload.listingKind, payload.listingId).then((extras) => ({
+      contactPhone: extras.contactPhone || existingPhone || null,
+    }));
     extrasReadyRef.current = pending;
     let cancelled = false;
     void pending.then((extras) => {
@@ -555,7 +556,7 @@ export function ListingSharePage({
     return () => {
       cancelled = true;
     };
-  }, [open, payload?.contactPhone, payload?.listingId, payload?.listingKind]);
+  }, [open, payload?.contactPhone, payload?.listingId, payload?.listingKind, user?.phone]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -578,23 +579,28 @@ export function ListingSharePage({
 
   const cardPayload = React.useMemo<ListingSharePayload | null>(() => {
     if (!payload) return null;
-    const phone = resolvedPhone || payload.contactPhone?.trim() || '';
+    const phone =
+      resolvedPhone || payload.contactPhone?.trim() || user?.phone?.trim() || '';
     return {
       ...payload,
-      ...(phone ? { contactPhone: phone } : {}),
+      contactPhone: phone,
       themeColor,
     };
-  }, [payload, resolvedPhone, themeColor]);
+  }, [payload, resolvedPhone, themeColor, user?.phone]);
 
   const waitForShareExtras = React.useCallback(async () => {
     const extras = await extrasReadyRef.current;
-    const phone = extras.contactPhone?.trim() || payload?.contactPhone?.trim() || '';
+    const phone =
+      extras.contactPhone?.trim() ||
+      payload?.contactPhone?.trim() ||
+      user?.phone?.trim() ||
+      '';
     if (phone && phone !== resolvedPhone) {
       setResolvedPhone(phone);
       await new Promise((r) => window.setTimeout(r, 60));
     }
     return { phone };
-  }, [payload?.contactPhone, resolvedPhone]);
+  }, [payload?.contactPhone, resolvedPhone, user?.phone]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -733,7 +739,6 @@ export function ListingSharePage({
           height: FEED_HEIGHT,
           backgroundColor: CARD_BG,
           pixelRatio: 1,
-          borderRadiusPx: FEED_CARD_RADIUS_PX,
         },
         `kutagjej-card-${(payload.listingId ?? 'profile').slice(0, 8)}.jpg`,
       );

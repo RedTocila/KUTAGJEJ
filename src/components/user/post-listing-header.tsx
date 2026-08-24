@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Box, Skeleton, Stack, Typography, type SxProps, type Theme } from '@mui/material';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
+import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 
 import { UserDashboardCloseButton } from '@/components/user/layout/user-dashboard-back-link';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -99,6 +100,19 @@ export function PostListingFormFieldsSkeleton(): React.JSX.Element {
       <Skeleton variant="rounded" animation="wave" height={120} sx={{ borderRadius: 2 }} />
       <Skeleton variant="rounded" animation="wave" height={48} sx={{ borderRadius: 2 }} />
     </PostListingFormSurface>
+  );
+}
+
+/**
+ * Client-only loading chrome for post-listing routes.
+ * Icons stay inside this module so Server layouts/loading files never pass functions.
+ */
+export function PostListingPageLoading({ title = 'Posto njoftim' }: { title?: string }): React.JSX.Element {
+  return (
+    <Stack spacing={2.5} aria-busy aria-label="Duke u ngarkuar">
+      <PostListingHeader icon={BuildingsIcon} title={title} />
+      <PostListingFormFieldsSkeleton />
+    </Stack>
   );
 }
 

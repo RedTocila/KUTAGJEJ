@@ -501,6 +501,7 @@ export function JobOwnerEdit({
           existingUrls={existingUrls}
           onExistingUrlsChange={setExistingUrls}
           max={MAX_IMAGES}
+          variant="gallery"
           label="Foto e kopertinës"
         />
       </OwnerEditSectionDialog>

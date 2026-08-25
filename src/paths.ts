@@ -34,6 +34,9 @@ export const paths = {
     aiImport: '/user/dashboard/ai-import',
     /** Immovable property — add listing (individual / business portal). */
     realEstateListing: '/user/dashboard/prona',
+    carsListing: '/user/dashboard/makina',
+    jobsListing: '/user/dashboard/pune',
+    marketplaceListing: '/user/dashboard/tregu',
     businessesListing: '/user/dashboard/biznese',
     /** Dedicated business menu editor: `?id=` optional (defaults to the user's business). */
     businessMenu: '/user/dashboard/biznese/menu',

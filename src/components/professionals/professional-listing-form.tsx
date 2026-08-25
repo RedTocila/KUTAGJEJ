@@ -589,6 +589,7 @@ export function ProfessionalListingForm({
               existingUrls={coverUrl ? [coverUrl] : []}
               onExistingUrlsChange={(urls) => setCoverUrl(urls[0] ?? null)}
               max={1}
+              variant="gallery"
               label="Foto kopertinë"
               disabled={submitting}
             />
@@ -601,6 +602,7 @@ export function ProfessionalListingForm({
               existingUrls={avatarUrl ? [avatarUrl] : []}
               onExistingUrlsChange={(urls) => setAvatarUrl(urls[0] ?? null)}
               max={1}
+              variant="avatar"
               label="Foto profili"
               disabled={submitting}
             />

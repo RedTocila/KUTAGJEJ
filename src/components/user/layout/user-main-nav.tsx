@@ -9,6 +9,7 @@ import { usePopover } from '@/hooks/use-popover';
 
 import { paths } from '@/paths';
 import type { AppMessages } from '@/lib/i18n/messages';
+import { isPostListingPath } from '@/lib/post-listing-path';
 import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
 import { useOptionalAddListingPicker } from '@/components/user/add-listing-picker-context';
 import { HeaderLanguageToggle } from '@/components/user/header-language-toggle';
@@ -37,7 +38,7 @@ function titleForPath(pathname: string, t: AppMessages): string {
   if (pathname.startsWith(paths.user.credits)) return t.nav.buyCredits;
   if (pathname.startsWith(paths.user.checkout)) return t.nav.checkout;
   if (pathname.startsWith(paths.user.payments)) return t.nav.payments;
-  if (pathname.startsWith(paths.user.realEstateListing)) return t.nav.postListing;
+  if (isPostListingPath(pathname)) return t.nav.postListing;
   if (pathname === paths.user.dashboard) return t.nav.overview;
   return t.nav.panel;
 }
@@ -57,7 +58,7 @@ export function UserMainNav() {
     (user?.accountType === 'individual' ||
       user?.accountType === 'business' ||
       user?.role === 'business-user');
-  const onPostFlow = pathname.startsWith(paths.user.realEstateListing);
+  const onPostFlow = isPostListingPath(pathname);
 
   return (
     <Box>

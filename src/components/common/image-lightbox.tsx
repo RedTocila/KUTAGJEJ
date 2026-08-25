@@ -35,11 +35,32 @@ const controlButtonSx = {
   '&:disabled': { color: 'rgba(255,255,255,0.32)', bgcolor: 'rgba(255,255,255,0.08)' },
 } as const;
 
-const navButtonSx = {
+const navZoneSx = {
   position: 'absolute',
-  top: '50%',
-  transform: 'translateY(-50%)',
-  ...controlButtonSx,
+  zIndex: 3,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  WebkitTapHighlightColor: 'transparent',
+  bgcolor: 'transparent',
+  border: 0,
+  p: 0,
+  m: 0,
+  color: '#fff',
+} as const;
+
+const navIconSx = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 44,
+  height: 44,
+  borderRadius: '50%',
+  color: '#fff',
+  bgcolor: 'rgba(255,255,255,0.12)',
+  transition: 'background-color 160ms ease',
+  'button:hover &': { bgcolor: 'rgba(255,255,255,0.22)' },
 } as const;
 
 function clamp(value: number, min: number, max: number) {
@@ -137,6 +158,7 @@ export function ImageLightbox({
   const [zoom, setZoom] = React.useState<Zoom>(IDENTITY);
   const [zoomSmooth, setZoomSmooth] = React.useState(false);
   const [isPanning, setIsPanning] = React.useState(false);
+  const [imageFrame, setImageFrame] = React.useState({ left: 0, top: 0, width: 0, height: 0 });
   const zoomRef = React.useRef(zoom);
   zoomRef.current = zoom;
   const isZoomed = zoom.scale > ZOOM_RESET_EPS;
@@ -219,6 +241,45 @@ export function ImageLightbox({
   React.useEffect(() => {
     resetZoom(false);
   }, [open, safeIndex, resetZoom]);
+
+  // Keep side nav hit zones aligned to the photo frame (not the black letterbox).
+  React.useLayoutEffect(() => {
+    if (!open || isZoomed) {
+      setImageFrame({ left: 0, top: 0, width: 0, height: 0 });
+      return undefined;
+    }
+
+    const viewport = viewportRef.current;
+    const img = imgRef.current;
+    if (!viewport || !img) return undefined;
+
+    const sync = () => {
+      const vr = viewport.getBoundingClientRect();
+      const ir = img.getBoundingClientRect();
+      if (ir.width < 1 || ir.height < 1) {
+        setImageFrame({ left: 0, top: 0, width: 0, height: 0 });
+        return;
+      }
+      setImageFrame({
+        left: ir.left - vr.left,
+        top: ir.top - vr.top,
+        width: ir.width,
+        height: ir.height,
+      });
+    };
+
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(viewport);
+    observer.observe(img);
+    img.addEventListener('load', sync);
+    window.addEventListener('resize', sync);
+    return () => {
+      observer.disconnect();
+      img.removeEventListener('load', sync);
+      window.removeEventListener('resize', sync);
+    };
+  }, [open, src, isZoomed, safeIndex]);
 
   React.useEffect(() => {
     if (!open) return undefined;
@@ -409,34 +470,13 @@ export function ImageLightbox({
         <XIcon size={22} weight="bold" />
       </IconButton>
 
-      {hasMultiple ? (
-        <>
-          <IconButton
-            type="button"
-            aria-label="Fotoja e mëparshme"
-            onClick={goPrevious}
-            sx={{ ...navButtonSx, left: { xs: 8, sm: 16 } }}
-          >
-            <CaretLeftIcon size={22} weight="bold" />
-          </IconButton>
-          <IconButton
-            type="button"
-            aria-label="Fotoja tjetër"
-            onClick={goNext}
-            sx={{ ...navButtonSx, right: { xs: 8, sm: 16 } }}
-          >
-            <CaretRightIcon size={22} weight="bold" />
-          </IconButton>
-        </>
-      ) : null}
-
       <Stack
         spacing={0.75}
         sx={{
           position: 'fixed',
           right: { xs: 'max(12px, env(safe-area-inset-right))', md: 16 },
           bottom: { xs: 'max(16px, env(safe-area-inset-bottom))', md: 20 },
-          zIndex: 3,
+          zIndex: 4,
         }}
       >
         <IconButton
@@ -505,6 +545,60 @@ export function ImageLightbox({
               willChange: 'transform',
             }}
           />
+        ) : null}
+
+        {hasMultiple && !isZoomed && imageFrame.height > 0 ? (
+          <>
+            <Box
+              component="button"
+              type="button"
+              aria-label="Fotoja e mëparshme"
+              onClick={(event) => {
+                event.stopPropagation();
+                goPrevious();
+              }}
+              onPointerDown={(event) => event.stopPropagation()}
+              sx={{
+                ...navZoneSx,
+                left: imageFrame.left,
+                top: imageFrame.top,
+                height: imageFrame.height,
+                width: Math.min(88, Math.max(44, imageFrame.width * 0.08)),
+                bottom: 'auto',
+                right: 'auto',
+              }}
+            >
+              <Box component="span" sx={navIconSx} aria-hidden>
+                <CaretLeftIcon size={22} weight="bold" />
+              </Box>
+            </Box>
+            <Box
+              component="button"
+              type="button"
+              aria-label="Fotoja tjetër"
+              onClick={(event) => {
+                event.stopPropagation();
+                goNext();
+              }}
+              onPointerDown={(event) => event.stopPropagation()}
+              sx={{
+                ...navZoneSx,
+                left:
+                  imageFrame.left +
+                  imageFrame.width -
+                  Math.min(88, Math.max(44, imageFrame.width * 0.08)),
+                top: imageFrame.top,
+                height: imageFrame.height,
+                width: Math.min(88, Math.max(44, imageFrame.width * 0.08)),
+                bottom: 'auto',
+                right: 'auto',
+              }}
+            >
+              <Box component="span" sx={navIconSx} aria-hidden>
+                <CaretRightIcon size={22} weight="bold" />
+              </Box>
+            </Box>
+          </>
         ) : null}
       </Box>
 

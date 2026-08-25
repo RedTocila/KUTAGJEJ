@@ -60,7 +60,7 @@ export const HOME_VERTICALS: readonly HomeVertical[] = [
     gradient: ['#76ba1b', '#3a8c00'] as const,
     iconKey: 'buildings',
     href: paths.public.realEstate,
-    postHref: '/user/dashboard/prona',
+    postHref: paths.user.realEstateListing,
     searchPlaceholder: 'Kërko apartament, qytet, zonë…',
   },
   {
@@ -70,7 +70,7 @@ export const HOME_VERTICALS: readonly HomeVertical[] = [
     gradient: ['#2563EB', '#1E3A8A'] as const,
     iconKey: 'car-profile',
     href: paths.public.cars,
-    postHref: '/user/dashboard/makina',
+    postHref: paths.user.carsListing,
     searchPlaceholder: 'Kërko marka, model, vit…',
   },
   {
@@ -80,7 +80,7 @@ export const HOME_VERTICALS: readonly HomeVertical[] = [
     gradient: ['#EA580C', '#9A3412'] as const,
     iconKey: 'briefcase',
     href: paths.public.jobs,
-    postHref: '/user/dashboard/pune',
+    postHref: paths.user.jobsListing,
     searchPlaceholder: 'Kërko pozicion, industri, qytet…',
   },
   {
@@ -90,7 +90,7 @@ export const HOME_VERTICALS: readonly HomeVertical[] = [
     gradient: ['#7C3AED', '#4C1D95'] as const,
     iconKey: 'storefront',
     href: paths.public.marketplace,
-    postHref: '/user/dashboard/tregu',
+    postHref: paths.user.marketplaceListing,
     searchPlaceholder: 'Kërko çfarëdo që ke në mendje…',
   },
   {
@@ -100,7 +100,7 @@ export const HOME_VERTICALS: readonly HomeVertical[] = [
     gradient: ['#0ea5e9', '#0369a1'] as const,
     iconKey: 'fork-knife',
     href: paths.public.businesses,
-    postHref: '/user/dashboard/biznese',
+    postHref: paths.user.businessesListing,
     searchPlaceholder: 'Kërko restorant, bar, qytet…',
   },
   {
@@ -110,7 +110,7 @@ export const HOME_VERTICALS: readonly HomeVertical[] = [
     gradient: ['#14b8a6', '#0f766e'] as const,
     iconKey: 'handshake',
     href: paths.public.professionals,
-    postHref: '/user/dashboard/profesioniste',
+    postHref: paths.user.professionalsListing,
     searchPlaceholder: 'Kërko profesion, shërbim, qytet…',
   },
 ] as const;

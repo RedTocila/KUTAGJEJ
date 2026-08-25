@@ -443,6 +443,7 @@ export function JobListingForm({
           existingUrls={existingImageUrls}
           onExistingUrlsChange={setExistingImageUrls}
           max={MAX_JOB_IMAGES}
+          variant="gallery"
           label="Foto e kopertinës"
           disabled={submitting}
         />

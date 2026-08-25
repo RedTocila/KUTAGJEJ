@@ -42,6 +42,9 @@ const SLIDE_DURATION_MS = 320;
 const SWIPE_COMMIT_RATIO = 0.18;
 const SWIPE_COMMIT_MIN_PX = 56;
 const TAP_MAX_PX = 12;
+/** Full-height side hit zones for prev/next; middle stays preview. */
+const SIDE_NAV_WIDTH = '8%';
+const AXIS_LOCK_PX = 10;
 
 function usePrefersReducedMotion(): boolean {
   const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(false);
@@ -145,6 +148,8 @@ export function RealEstateListingGallery(props: {
   const trackRef = React.useRef<HTMLDivElement>(null);
   const dragStartRef = React.useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const dragOffsetRef = React.useRef(0);
+  /** `null` until gesture axis is decided; `vertical` aborts slide so the page can scroll. */
+  const dragAxisRef = React.useRef<'horizontal' | 'vertical' | null>(null);
   const activeRef = React.useRef(0);
   const thumbnailRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -175,6 +180,7 @@ export function RealEstateListingGallery(props: {
     setIsDragging(false);
     dragStartRef.current = null;
     dragOffsetRef.current = 0;
+    dragAxisRef.current = null;
     applyTrackTransform(0, 0, false);
   }, [urls.join('|'), applyTrackTransform]);
 
@@ -218,6 +224,21 @@ export function RealEstateListingGallery(props: {
 
   const hasMultipleImages = urls.length > 1;
 
+  // Block page scroll only while a horizontal slide is in progress.
+  React.useEffect(() => {
+    const node = viewportRef.current;
+    if (!node || !hasMultipleImages) return undefined;
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (dragAxisRef.current === 'horizontal') {
+        event.preventDefault();
+      }
+    };
+
+    node.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => node.removeEventListener('touchmove', onTouchMove);
+  }, [hasMultipleImages, urls.length, showPlaceholder]);
+
   const goToIndex = React.useCallback(
     (index: number) => {
       if (urls.length === 0) return;
@@ -242,17 +263,31 @@ export function RealEstateListingGallery(props: {
       const start = dragStartRef.current;
       if (!start || start.pointerId !== pointerId) return;
 
+      const axis = dragAxisRef.current;
       const delta = clientX - start.x;
       const distance = Math.hypot(delta, clientY - start.y);
       const threshold = Math.max(SWIPE_COMMIT_MIN_PX, viewportWidth * SWIPE_COMMIT_RATIO);
 
       dragStartRef.current = null;
       dragOffsetRef.current = 0;
+      dragAxisRef.current = null;
       setIsDragging(false);
 
-      if (delta <= -threshold) goToNext();
-      else if (delta >= threshold) goToPrevious();
-      else applyTrackTransform(activeRef.current, 0, true);
+      if (axis === 'vertical') {
+        applyTrackTransform(activeRef.current, 0, false);
+        if (target.hasPointerCapture(pointerId)) {
+          target.releasePointerCapture(pointerId);
+        }
+        return;
+      }
+
+      if (axis === 'horizontal') {
+        if (delta <= -threshold) goToNext();
+        else if (delta >= threshold) goToPrevious();
+        else applyTrackTransform(activeRef.current, 0, true);
+      } else {
+        applyTrackTransform(activeRef.current, 0, true);
+      }
 
       if (commitTap && distance < TAP_MAX_PX) {
         setPreviewOpen(true);
@@ -273,18 +308,45 @@ export function RealEstateListingGallery(props: {
 
     dragStartRef.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
     dragOffsetRef.current = 0;
-    setIsDragging(true);
-    applyTrackTransform(activeRef.current, 0, false);
-    event.currentTarget.setPointerCapture(event.pointerId);
+    dragAxisRef.current = null;
+    // Mouse: capture immediately. Touch: wait for horizontal lock so vertical scroll still works.
+    if (event.pointerType === 'mouse') {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
   };
 
   const handleViewportPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     const start = dragStartRef.current;
     if (!start || start.pointerId !== event.pointerId) return;
 
-    const delta = event.clientX - start.x;
-    dragOffsetRef.current = delta;
-    applyTrackTransform(activeRef.current, delta, false);
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+
+    if (dragAxisRef.current === null) {
+      if (Math.abs(dx) < AXIS_LOCK_PX && Math.abs(dy) < AXIS_LOCK_PX) return;
+      if (Math.abs(dy) > Math.abs(dx)) {
+        // Vertical intent: abandon gallery drag so the page can scroll.
+        dragAxisRef.current = 'vertical';
+        dragStartRef.current = null;
+        dragOffsetRef.current = 0;
+        setIsDragging(false);
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+        return;
+      }
+      dragAxisRef.current = 'horizontal';
+      setIsDragging(true);
+      applyTrackTransform(activeRef.current, 0, false);
+      if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }
+    }
+
+    if (dragAxisRef.current !== 'horizontal') return;
+
+    dragOffsetRef.current = dx;
+    applyTrackTransform(activeRef.current, dx, false);
   };
 
   const handleViewportPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -322,16 +384,44 @@ export function RealEstateListingGallery(props: {
     }
   };
 
-  const heroNavButtonSx = {
+  const heroNavZoneSx = {
     position: 'absolute',
-    top: '50%',
-    transform: 'translateY(-50%)',
+    // Keep clear of top chrome (back / share / save) and bottom counter.
+    top: 52,
+    bottom: 40,
+    width: SIDE_NAV_WIDTH,
+    minWidth: 40,
+    maxWidth: 72,
     zIndex: 5,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     pointerEvents: 'auto',
+    cursor: 'pointer',
+    WebkitTapHighlightColor: 'transparent',
+    bgcolor: 'transparent',
+    border: 0,
+    p: 0,
+    m: 0,
+    color: '#fff',
+    '&:focus-visible': {
+      outline: `2px solid ${primaryMainAlpha(0.7)}`,
+      outlineOffset: -2,
+    },
+  } as const;
+
+  const heroNavIconSx = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: '50%',
     bgcolor: alpha('#000', 0.45),
     color: '#fff',
     backdropFilter: 'blur(10px)',
-    '&:hover': { bgcolor: alpha('#000', 0.62) },
+    transition: 'background-color 160ms ease',
+    'button:hover &': { bgcolor: alpha('#000', 0.62) },
   } as const;
 
   const stopGalleryControlEvent = (event: React.SyntheticEvent) => {
@@ -403,12 +493,13 @@ export function RealEstateListingGallery(props: {
         onPointerCancel={handleViewportPointerCancel}
         sx={{
           position: 'relative',
+          isolation: 'isolate',
           width: '100%',
           aspectRatio: '16 / 10',
           maxHeight: { xs: 'min(300px, 44vh)', sm: 'min(520px, 68vh)', md: 560 },
           overflow: 'hidden',
           mx: 'auto',
-          touchAction: hasMultipleImages ? 'pan-y pinch-zoom' : 'auto',
+          touchAction: hasMultipleImages ? 'pan-y' : 'auto',
           cursor: isDragging ? 'grabbing' : showPlaceholder ? 'default' : 'zoom-in',
           userSelect: isDragging ? 'none' : 'auto',
           outline: 'none',
@@ -469,6 +560,8 @@ export function RealEstateListingGallery(props: {
           <Box
             ref={trackRef}
             sx={{
+              position: 'relative',
+              zIndex: 0,
               display: 'flex',
               height: '100%',
               width: slideWidthPx != null ? slideWidthPx * urls.length : `${urls.length * 100}%`,
@@ -535,6 +628,8 @@ export function RealEstateListingGallery(props: {
           <Stack
             direction="row"
             sx={{
+              position: 'relative',
+              zIndex: 6,
               alignItems: 'flex-start',
               justifyContent: 'space-between',
               p: { xs: 1, sm: 1.75 },
@@ -600,32 +695,38 @@ export function RealEstateListingGallery(props: {
 
           {!showPlaceholder && hasMultipleImages ? (
             <>
-              <IconButton
+              <Box
+                component="button"
+                type="button"
                 aria-label="Fotoja e mëparshme"
-                size="medium"
                 data-gallery-control
                 onPointerDown={stopGalleryControlEvent}
                 onClick={(event) => {
                   stopGalleryControlEvent(event);
                   goToPrevious();
                 }}
-                sx={{ ...heroNavButtonSx, left: { xs: 8, sm: 12 } }}
+                sx={{ ...heroNavZoneSx, left: 0 }}
               >
-                <CaretLeftIcon size={22} weight="bold" />
-              </IconButton>
-              <IconButton
+                <Box component="span" sx={heroNavIconSx} aria-hidden>
+                  <CaretLeftIcon size={22} weight="bold" />
+                </Box>
+              </Box>
+              <Box
+                component="button"
+                type="button"
                 aria-label="Fotoja tjetër"
-                size="medium"
                 data-gallery-control
                 onPointerDown={stopGalleryControlEvent}
                 onClick={(event) => {
                   stopGalleryControlEvent(event);
                   goToNext();
                 }}
-                sx={{ ...heroNavButtonSx, right: { xs: 8, sm: 12 } }}
+                sx={{ ...heroNavZoneSx, right: 0 }}
               >
-                <CaretRightIcon size={22} weight="bold" />
-              </IconButton>
+                <Box component="span" sx={heroNavIconSx} aria-hidden>
+                  <CaretRightIcon size={22} weight="bold" />
+                </Box>
+              </Box>
             </>
           ) : null}
         </Box>
@@ -646,7 +747,8 @@ export function RealEstateListingGallery(props: {
               bgcolor: alpha('#000', 0.55),
               color: '#fff',
               backdropFilter: 'blur(10px)',
-              zIndex: 1,
+              zIndex: 4,
+              pointerEvents: 'none',
             }}
           >
             {`${active + 1}/${urls.length}`}

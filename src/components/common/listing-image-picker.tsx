@@ -29,6 +29,17 @@ const HERO_THUMB_SX = {
   flexShrink: 0,
 } as const;
 
+const AVATAR_THUMB_SX = {
+  position: 'relative',
+  width: 120,
+  height: 120,
+  borderRadius: '50%',
+  overflow: 'hidden',
+  border: '1px solid',
+  borderColor: 'divider',
+  flexShrink: 0,
+} as const;
+
 const GALLERY_THUMB_SX = {
   position: 'relative',
   boxSizing: 'border-box',
@@ -37,6 +48,8 @@ const GALLERY_THUMB_SX = {
   borderRadius: 1.5,
   overflow: 'hidden',
 } as const;
+
+type ThumbSx = typeof GRID_THUMB_SX | typeof HERO_THUMB_SX | typeof AVATAR_THUMB_SX;
 
 const removeButtonBaseSx = {
   position: 'absolute',
@@ -117,7 +130,7 @@ function ThumbPreview({
   alt?: string;
   onRemove: () => void;
   onPreview: () => void;
-  sx?: typeof GRID_THUMB_SX | typeof HERO_THUMB_SX;
+  sx?: ThumbSx;
 }) {
   return (
     <Box sx={{ position: 'relative', width: sx.width, height: sx.height, flexShrink: 0 }}>
@@ -203,9 +216,10 @@ export interface ListingImagePickerProps {
    * `grid` — equal thumbs (single-photo uses this). Multi-photo listing forms
    * render as `gallery` automatically.
    * `hero` — centered large square, e.g. product / menu item photo.
-   * `gallery` — large cover, extra photos wrap below (no slider).
+   * `gallery` — large cover (16:10), extra photos wrap below (no slider).
+   * `avatar` — circular profile photo.
    */
-  variant?: 'grid' | 'hero' | 'gallery';
+  variant?: 'grid' | 'hero' | 'gallery' | 'avatar';
 }
 
 /**
@@ -227,8 +241,9 @@ export function ListingImagePicker({
   const total = existingUrls.length + value.length;
   const slotsLeft = Math.max(0, max - total);
   const isHero = variant === 'hero';
+  const isAvatar = variant === 'avatar';
   const isGallery = variant === 'gallery' || (variant === 'grid' && max > 1);
-  const thumbSx = isHero ? HERO_THUMB_SX : GRID_THUMB_SX;
+  const thumbSx: ThumbSx = isAvatar ? AVATAR_THUMB_SX : isHero ? HERO_THUMB_SX : GRID_THUMB_SX;
   const fileUrls = useObjectUrls(value);
   const previewUrls = React.useMemo(() => [...existingUrls, ...fileUrls], [existingUrls, fileUrls]);
   const [previewIndex, setPreviewIndex] = React.useState<number | null>(null);
@@ -486,10 +501,10 @@ export function ListingImagePicker({
         {slotsLeft > 0 && !disabled ? (
           <EmptyAddButton
             onClick={openPicker}
-            plusSize={isHero ? 36 : 28}
+            plusSize={isHero || isAvatar ? 36 : 28}
             sx={{
               ...thumbSx,
-              bgcolor: isHero ? 'action.hover' : 'transparent',
+              bgcolor: isHero || isAvatar ? 'action.hover' : 'transparent',
             }}
           />
         ) : null}

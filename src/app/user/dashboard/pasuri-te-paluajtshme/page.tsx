@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import dynamic from 'next/dynamic';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Alert, Button, Stack } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist/ssr/BuildingOffice';
@@ -46,6 +46,7 @@ import {
   prefetchListingForm,
 } from '@/lib/listing-form-loaders';
 import { hardNavigate } from '@/lib/hard-navigate';
+import { listingCategoryFromPostPath } from '@/lib/post-listing-path';
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';
 import { useCopy } from '@/hooks/use-copy';
@@ -179,11 +180,12 @@ function phaseCategory(phase: Phase): ListingCategoryKey | null {
 
 export default function UserPostListingPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user } = useUser();
   const t = useCopy();
 
-  const categoryFromUrl = searchParams.get('category');
+  const categoryFromUrl = searchParams.get('category') ?? listingCategoryFromPostPath(pathname);
   const [phase, setPhase] = React.useState<Phase>(() => initialPhase(categoryFromUrl));
   const [picked, setPicked] = React.useState<ListingCategory | null>(() =>
     categoryFromUrl && KNOWN_CATEGORY_KEYS.includes(categoryFromUrl as ListingCategoryKey)
@@ -271,11 +273,11 @@ export default function UserPostListingPage() {
   );
 
   React.useEffect(() => {
-    const raw = searchParams.get('category');
+    const raw = searchParams.get('category') ?? listingCategoryFromPostPath(pathname);
     if (!raw) return;
     if (appliedCategoryRef.current === raw && phase !== 'choose') return;
     applyCategoryKey(raw);
-  }, [searchParams, applyCategoryKey, phase]);
+  }, [searchParams, pathname, applyCategoryKey, phase]);
 
   React.useEffect(() => {
     if (!quotasReady || !picked) return;

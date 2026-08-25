@@ -452,14 +452,6 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
       ) : null}
 
       <ListingFormSection>
-      <ListingTextField
-        label="Titulli"
-        value={form.title}
-        onChange={onField('title')}
-        required
-        fullWidth
-        placeholder="p.sh. Apartament 2+1 në Bllok, Vilë me pishinë në Golem…"
-      />
       <ListingImagePicker
         value={images}
         onChange={setImages}
@@ -468,6 +460,14 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         max={MAX_REAL_ESTATE_IMAGES}
         label="Foto"
         disabled={submitting}
+      />
+      <ListingTextField
+        label="Titulli"
+        value={form.title}
+        onChange={onField('title')}
+        required
+        fullWidth
+        placeholder="p.sh. Apartament 2+1 në Bllok, Vilë me pishinë në Golem…"
       />
       <ListingDescriptionField
         label="Përshkrimi"
@@ -487,6 +487,21 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         disabled={loadingRefs}
       />
 
+      <ListingTextField
+        label="Sipërfaqja"
+        type="text"
+        inputMode="decimal"
+        value={form.surfaceM2}
+        onChange={onField('surfaceM2')}
+        fullWidth
+        placeholder="p.sh. 85"
+        slotProps={{
+          input: {
+            endAdornment: <InputAdornment position="end">m²</InputAdornment>,
+          },
+        }}
+      />
+
       <ListingToggle
         label="Qera / shitje"
         value={form.transactionType}
@@ -495,7 +510,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         disabled={loadingRefs}
       />
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
+      <Stack direction="row" spacing={2}>
         <ListingTextField
           label="Çmimi"
           type="text"
@@ -515,16 +530,15 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
           fullWidth
           placeholder="p.sh. 135000"
         />
-        <ListingToggle
-          label="Monedha"
-          value={form.currency}
-          onChange={(v) => setForm((p) => ({ ...p, currency: v as FormState['currency'] }))}
-          options={CURRENCY_OPTIONS}
-          required
-          disabled={loadingRefs}
-          fullWidth={false}
-        />
       </Stack>
+      <ListingToggle
+        label="Monedha"
+        value={form.currency}
+        onChange={(v) => setForm((p) => ({ ...p, currency: v as FormState['currency'] }))}
+        options={CURRENCY_OPTIONS}
+        required
+        disabled={loadingRefs}
+      />
 
       <ListingLocationChoice
         mode={form.locationMode}
@@ -552,25 +566,6 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         showZone
         loadingCities={loadingRefs}
         disabled={submitting}
-        labels={{
-          noCities:
-            'Ende nuk ka qytete — një administrator i platformës duhet të shtojë qytete dhe zona te Paneli → Vendndodhjet (pasuri).',
-        }}
-      />
-
-      <ListingTextField
-        label="Sipërfaqja"
-        type="text"
-        inputMode="decimal"
-        value={form.surfaceM2}
-        onChange={onField('surfaceM2')}
-        fullWidth
-        placeholder="p.sh. 85"
-        slotProps={{
-          input: {
-            endAdornment: <InputAdornment position="end">m²</InputAdornment>,
-          },
-        }}
       />
 
       {cat ? <Divider sx={{ my: 1 }} /> : null}

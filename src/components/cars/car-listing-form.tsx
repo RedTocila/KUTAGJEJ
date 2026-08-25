@@ -10,15 +10,12 @@ import {
   FormControlLabel,
   FormGroup,
   FormLabel,
-  IconButton,
   InputAdornment,
   Stack,
   Typography,
 } from '@mui/material';
 import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
-import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { SteeringWheel as SteeringWheelIcon } from '@phosphor-icons/react/dist/ssr/SteeringWheel';
-import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import {
   CAR_COLOUR_OPTIONS,
@@ -32,7 +29,7 @@ import {
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { ImageLightbox, useObjectUrls } from '@/components/common/image-lightbox';
+import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { VehicleTypePicker } from '@/components/cars/vehicle-type-picker';
 import {
@@ -243,75 +240,6 @@ function mapServerErrorToField(message: string): keyof CarFormState | null {
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// Image preview item
-// ---------------------------------------------------------------------------
-
-interface ImagePreviewProps {
-  src: string;
-  alt?: string;
-  onRemove: () => void;
-  onPreview: () => void;
-}
-
-function ImagePreview({ src, alt, onRemove, onPreview }: ImagePreviewProps) {
-  return (
-    <Box
-      role="button"
-      tabIndex={0}
-      aria-label="Shiko foton"
-      onClick={onPreview}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onPreview();
-        }
-      }}
-      sx={{
-        position: 'relative',
-        width: 96,
-        height: 80,
-        borderRadius: 1.5,
-        overflow: 'hidden',
-        border: '1px solid',
-        borderColor: 'divider',
-        flexShrink: 0,
-        cursor: 'zoom-in',
-      }}
-    >
-      {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={src}
-          alt={alt ?? ''}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        />
-      ) : null}
-      <IconButton
-        size="small"
-        type="button"
-        aria-label="Hiq foton"
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          onRemove();
-        }}
-        sx={{
-          position: 'absolute',
-          top: 2,
-          right: 2,
-          bgcolor: 'rgba(0,0,0,0.55)',
-          color: '#fff',
-          p: 0.25,
-          '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
-        }}
-      >
-        <XIcon size={12} weight="bold" />
-      </IconButton>
-    </Box>
-  );
-}
-
 function formFromListing(l: CarMineListing): CarFormState {
   const finish = l.finish ?? [];
   return {
@@ -380,18 +308,11 @@ export function CarListingForm({
   const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(
     () => (initialListing?.imageUrls ?? []).filter(Boolean).slice(0, MAX_IMAGES),
   );
-  const filePreviewUrls = useObjectUrls(images);
-  const previewUrls = React.useMemo(
-    () => [...existingImageUrls, ...filePreviewUrls],
-    [existingImageUrls, filePreviewUrls],
-  );
-  const [previewIndex, setPreviewIndex] = React.useState<number | null>(null);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [loadingCities, setLoadingCities] = React.useState(true);
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Load cities once on mount.
   React.useEffect(() => {
@@ -490,29 +411,6 @@ export function CarListingForm({
   const selectColor = (value: string) => {
     setForm((prev) => ({ ...prev, color: prev.color === value ? '' : value }));
     clearFieldError('color');
-  };
-
-  // -------------------------------------------------------------------------
-  // Image handling
-  // -------------------------------------------------------------------------
-
-  const handleFileChange = (ev: React.ChangeEvent<HTMLInputElement>) => {
-    const picked = Array.from(ev.target.files ?? []);
-    if (!picked.length) return;
-    setImages((prev) => {
-      const slots = Math.max(0, MAX_IMAGES - existingImageUrls.length);
-      return [...prev, ...picked].slice(0, slots);
-    });
-    // Reset input so the same file can be picked again after removing.
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const removeExistingUrl = (index: number) => {
-    setExistingImageUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   // -------------------------------------------------------------------------
@@ -691,6 +589,16 @@ export function CarListingForm({
     >
       {/* ── Car identity ─────────────────────────────────────────────────── */}
       <Stack spacing={2}>
+        <ListingImagePicker
+          value={images}
+          onChange={setImages}
+          existingUrls={existingImageUrls}
+          onExistingUrlsChange={setExistingImageUrls}
+          max={MAX_IMAGES}
+          label="Foto"
+          disabled={submitting}
+        />
+
         <Box
           sx={{
             p: 1.75,
@@ -737,94 +645,6 @@ export function CarListingForm({
           />
         </Stack>
 
-        <Stack spacing={1.5}>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-              Foto
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {existingImageUrls.length + images.length} / {MAX_IMAGES}
-            </Typography>
-          </Stack>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            style={{ display: 'none' }}
-            onChange={handleFileChange}
-          />
-
-          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.5 }}>
-            {existingImageUrls.map((url, idx) => (
-              <ImagePreview
-                key={`url-${url}-${idx}`}
-                src={url}
-                onPreview={() => setPreviewIndex(idx)}
-                onRemove={() => {
-                  removeExistingUrl(idx);
-                }}
-              />
-            ))}
-            {images.map((img, idx) => (
-              <ImagePreview
-                key={`${img.name}-${idx}`}
-                src={filePreviewUrls[idx] ?? ''}
-                alt={img.name}
-                onPreview={() => setPreviewIndex(existingImageUrls.length + idx)}
-                onRemove={() => {
-                  removeImage(idx);
-                }}
-              />
-            ))}
-            {existingImageUrls.length + images.length < MAX_IMAGES ? (
-              <Box
-                component="button"
-                type="button"
-                aria-label="Add photos"
-                onClick={() => {
-                  fileInputRef.current?.click();
-                }}
-                sx={{
-                  position: 'relative',
-                  width: 96,
-                  height: 80,
-                  borderRadius: 1.5,
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '2px dashed',
-                  borderColor: 'divider',
-                  bgcolor: 'transparent',
-                  cursor: 'pointer',
-                  color: 'text.secondary',
-                  p: 0,
-                  font: 'inherit',
-                  transition: 'border-color 0.15s, color 0.15s, background-color 0.15s',
-                  '&:hover': {
-                    borderColor: 'primary.main',
-                    color: 'primary.main',
-                    bgcolor: (t) =>
-                      t.palette.mode === 'dark' ? 'rgba(130, 201, 30, 0.08)' : 'rgba(118, 186, 27, 0.06)',
-                  },
-                }}
-              >
-                <PlusIcon size={28} weight="bold" />
-              </Box>
-            ) : null}
-          </Stack>
-
-          <ImageLightbox
-            open={previewIndex != null}
-            urls={previewUrls}
-            index={previewIndex ?? 0}
-            onClose={() => setPreviewIndex(null)}
-            onIndexChange={setPreviewIndex}
-          />
-        </Stack>
-
         <ListingTextField
           label="Variant / subtitle"
           value={form.variant}
@@ -863,16 +683,12 @@ export function CarListingForm({
           cityHelperText={fieldErrors.cityId}
           labels={{
             modeLabel: 'Location',
-            cityMode: 'City',
-            mapMode: 'On the map',
-            helper: 'Choose a city, or set the location with a Google Maps link.',
+            cityMode: 'City / zone',
+            mapMode: 'Map Link',
             cityLabel: 'City',
-            cityEmpty: 'Select city… (optional)',
-            noCities:
-              'No cities available yet — a platform admin must add them under Dashboard → Vendndodhjet (pasuri).',
+            cityEmpty: 'Select city…',
             mapsLabel: 'Google Maps link',
             mapsPlaceholder: 'https://maps.app.goo.gl/… or maps.google.com/…',
-            mapsHelper: 'Open Maps, pick the place, then paste the link here.',
             openMapsAria: 'Open Google Maps',
           }}
         />
@@ -945,7 +761,7 @@ export function CarListingForm({
 
       {/* ── Price ────────────────────────────────────────────────────────── */}
       <Stack spacing={2}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
+        <Stack direction="row" spacing={2}>
           <ListingTextField
             label="Price"
             type="text"
@@ -967,17 +783,16 @@ export function CarListingForm({
             error={Boolean(fieldErrors.originalPrice)}
             helperText={fieldErrors.originalPrice}
           />
-          <ListingToggle
-            label="Currency"
-            value={form.currency}
-            onChange={(v) => setSelectField('currency', v as CarFormState['currency'])}
-            options={CURRENCY_TOGGLE}
-            required
-            error={Boolean(fieldErrors.currency)}
-            helperText={fieldErrors.currency}
-            fullWidth={false}
-          />
         </Stack>
+        <ListingToggle
+          label="Currency"
+          value={form.currency}
+          onChange={(v) => setSelectField('currency', v as CarFormState['currency'])}
+          options={CURRENCY_TOGGLE}
+          required
+          error={Boolean(fieldErrors.currency)}
+          helperText={fieldErrors.currency}
+        />
 
         <ListingTextField
           label="Phone number"

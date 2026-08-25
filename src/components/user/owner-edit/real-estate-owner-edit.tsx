@@ -288,7 +288,7 @@ export function RealEstateOwnerEdit({
           }
           options={TRANSACTION_TOGGLE}
         />
-        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+        <Stack direction="row" spacing={1.25}>
           <TextField
             label="Çmimi"
             value={String(draft.price)}
@@ -300,20 +300,19 @@ export function RealEstateOwnerEdit({
             autoFocus
             sx={fieldSx}
           />
-          <ListingToggle
-            label="Monedha"
-            value={draft.currency}
-            onChange={(v) => setDraft((d) => ({ ...d, currency: v === 'LEK' ? 'LEK' : 'EUR' }))}
-            options={CURRENCY_OPTIONS}
-            fullWidth={false}
+          <TextField
+            label="Çmimi i mëparshëm"
+            value={draft.originalPrice != null ? String(draft.originalPrice) : ''}
+            onChange={(e) => setDraft((d) => ({ ...d, originalPrice: numOrNull(e.target.value) }))}
+            fullWidth
+            sx={fieldSx}
           />
         </Stack>
-        <TextField
-          label="Çmimi i mëparshëm (opsional)"
-          value={draft.originalPrice != null ? String(draft.originalPrice) : ''}
-          onChange={(e) => setDraft((d) => ({ ...d, originalPrice: numOrNull(e.target.value) }))}
-          fullWidth
-          sx={fieldSx}
+        <ListingToggle
+          label="Monedha"
+          value={draft.currency}
+          onChange={(v) => setDraft((d) => ({ ...d, currency: v === 'LEK' ? 'LEK' : 'EUR' }))}
+          options={CURRENCY_OPTIONS}
         />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>

@@ -10,6 +10,8 @@ import {
   InputAdornment,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
   type ButtonProps,
   type SxProps,
@@ -19,10 +21,9 @@ import {
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 
-import { PortalIconBox } from '@/components/user/portal-cards';
+import { PortalIconBox, portalToggleGroupSx } from '@/components/user/portal-cards';
 import { useCopy } from '@/hooks/use-copy';
 import { useHistoryBackProps } from '@/hooks/use-navigate-back';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
@@ -349,7 +350,7 @@ export function ListingFormActions({
   );
 }
 
-/** Two-/few-option segmented toggle (currency, transaction type, transmission). */
+/** Two-/few-option pill toggle — same lime thumb as theme / language. */
 export function ListingToggle({
   label,
   value,
@@ -371,99 +372,65 @@ export function ListingToggle({
   fullWidth?: boolean;
   disabled?: boolean;
 }) {
+  const thumb = error ? 'error.main' : 'primary.main';
+  const thumbOn = error ? 'error.contrastText' : 'primary.contrastText';
+
   return (
-    <Box sx={{ width: fullWidth ? '100%' : 'auto', minWidth: fullWidth ? undefined : 160 }}>
-      {/* fieldset + legend matches outlined TextField height/label so row layouts align */}
-      <Box
-        component="fieldset"
+    <Box
+      sx={{
+        width: fullWidth ? '100%' : 'auto',
+        minWidth: fullWidth ? undefined : 160,
+        opacity: disabled ? 0.55 : 1,
+      }}
+    >
+      <ToggleButtonGroup
+        exclusive
+        fullWidth={fullWidth}
+        size="small"
+        value={value || null}
         disabled={disabled}
-        sx={{
-          m: 0,
-          p: 0,
-          minInlineSize: 0,
-          borderRadius: 2.5,
-          border: '1.5px solid',
-          borderColor: error ? 'error.main' : value ? 'primary.main' : 'divider',
-          bgcolor: value ? primaryMainAlpha(0.06) : 'background.paper',
-          boxShadow: value ? `inset 0 0 0 1px ${primaryMainAlpha(0.1)}` : 'none',
-          opacity: disabled ? 0.55 : 1,
-          transition: 'border-color 0.15s, background-color 0.15s, box-shadow 0.15s, opacity 0.15s',
+        onChange={(_event, next: string | null) => {
+          if (next) onChange(next);
         }}
+        aria-label={label}
+        aria-required={required || undefined}
+        sx={[
+          portalToggleGroupSx,
+          {
+            width: fullWidth ? '100%' : 'auto',
+            borderColor: error ? 'error.main' : 'divider',
+            '& .MuiToggleButtonGroup-grouped': {
+              flex: 1,
+              minHeight: 42,
+              px: 1.5,
+              gap: 0.65,
+              textTransform: 'none',
+              letterSpacing: '-0.01em',
+              fontSize: '0.82rem',
+              WebkitTapHighlightColor: 'transparent',
+              '&:not(.Mui-selected):hover': {
+                bgcolor: 'transparent',
+                color: 'text.primary',
+              },
+              '&.Mui-selected': {
+                bgcolor: thumb,
+                color: thumbOn,
+                '&:hover': { bgcolor: thumb, color: thumbOn },
+              },
+            },
+          },
+        ]}
       >
-        {label ? (
-          <Typography
-            component="legend"
-            sx={{
-              px: 0.5,
-              ml: 1,
-              float: 'unset',
-              width: 'auto',
-              fontWeight: 600,
-              fontSize: '0.75rem',
-              lineHeight: 1,
-              color: error ? 'error.main' : value ? 'primary.main' : 'text.secondary',
-            }}
-          >
-            {label}
-            {required ? ' *' : ''}
-          </Typography>
-        ) : null}
-        <Box
-          role="radiogroup"
-          aria-label={label}
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${options.length}, 1fr)`,
-            gap: 0.5,
-            p: 0.5,
-            minHeight: 48,
-          }}
-        >
-          {options.map((opt) => {
-            const active = value === opt.value;
-            const Icon = opt.Icon;
-            return (
-              <Box
-                key={opt.value}
-                component="button"
-                type="button"
-                role="radio"
-                aria-checked={active}
-                disabled={disabled}
-                onClick={() => onChange(opt.value)}
-                sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 0.65,
-                  minHeight: 42,
-                  px: 1.25,
-                  borderRadius: 2,
-                  border: 'none',
-                  bgcolor: active ? 'primary.main' : 'transparent',
-                  color: active ? 'primary.contrastText' : 'text.secondary',
-                  fontWeight: 800,
-                  fontSize: '0.82rem',
-                  cursor: disabled ? 'default' : 'pointer',
-                  fontFamily: 'inherit',
-                  transition: 'background-color 0.15s, color 0.15s, box-shadow 0.15s',
-                  boxShadow: active ? `0 3px 12px ${primaryMainAlpha(0.35)}` : 'none',
-                  '&:not(:disabled):hover': {
-                    bgcolor: active ? 'primary.main' : primaryMainAlpha(0.1),
-                    color: active ? 'primary.contrastText' : 'text.primary',
-                  },
-                  '&:disabled': {
-                    color: active ? 'primary.contrastText' : 'text.secondary',
-                  },
-                }}
-              >
-                {Icon ? <Icon size={16} weight={active ? 'fill' : 'duotone'} /> : null}
-                {opt.label}
-              </Box>
-            );
-          })}
-        </Box>
-      </Box>
+        {options.map((opt) => {
+          const Icon = opt.Icon;
+          return (
+            <ToggleButton key={opt.value} value={opt.value} aria-label={opt.label}>
+              {Icon ? <Icon size={16} weight="bold" /> : null}
+              {opt.label}
+            </ToggleButton>
+          );
+        })}
+      </ToggleButtonGroup>
       {helperText ? (
         <Typography variant="caption" color={error ? 'error' : 'text.secondary'} sx={{ mt: 0.5, display: 'block' }}>
           {helperText}

@@ -259,33 +259,30 @@ export function JobOwnerEdit({
     ),
     price: (
       <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
-        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
-          <TextField
-            label="Paga"
-            value={draft.salary != null ? String(draft.salary) : ''}
-            onChange={(e) => {
-              const raw = e.target.value.trim();
-              setDraft((d) => ({
-                ...d,
-                salary: raw ? Number(raw) : null,
-                currency: raw ? d.currency || 'EUR' : null,
-              }));
-            }}
-            fullWidth
-            autoFocus
-            sx={fieldSx}
-          />
-          <ListingToggle
-            label="Monedha"
-            value={draft.currency === 'EUR' || draft.currency === 'LEK' ? draft.currency : ''}
-            onChange={(v) =>
-              setDraft((d) => ({ ...d, currency: v === 'EUR' || v === 'LEK' ? v : null }))
-            }
-            options={CURRENCY_OPTIONS}
-            disabled={draft.salary == null}
-            fullWidth={false}
-          />
-        </Stack>
+        <TextField
+          label="Paga"
+          value={draft.salary != null ? String(draft.salary) : ''}
+          onChange={(e) => {
+            const raw = e.target.value.trim();
+            setDraft((d) => ({
+              ...d,
+              salary: raw ? Number(raw) : null,
+              currency: raw ? d.currency || 'EUR' : null,
+            }));
+          }}
+          fullWidth
+          autoFocus
+          sx={fieldSx}
+        />
+        <ListingToggle
+          label="Monedha"
+          value={draft.currency === 'EUR' || draft.currency === 'LEK' ? draft.currency : ''}
+          onChange={(v) =>
+            setDraft((d) => ({ ...d, currency: v === 'EUR' || v === 'LEK' ? v : null }))
+          }
+          options={CURRENCY_OPTIONS}
+          disabled={draft.salary == null}
+        />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
     ),

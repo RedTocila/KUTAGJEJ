@@ -459,13 +459,6 @@ export function ProfessionalListingForm({
         ) : null}
 
         <ListingFormSection>
-          <ListingTextField
-            label="Titulli i profilit"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            fullWidth
-          />
           <Stack spacing={2}>
             <ListingImagePicker
               value={coverFile}
@@ -492,6 +485,13 @@ export function ProfessionalListingForm({
               disabled={submitting}
             />
           </Stack>
+          <ListingTextField
+            label="Titulli i profilit"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            fullWidth
+          />
           <SearchableSelect
             label="Kategoria"
             value={category}

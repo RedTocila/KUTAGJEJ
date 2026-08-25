@@ -1,17 +1,20 @@
 'use client';
 
 import * as React from 'react';
-import { Stack, Typography } from '@mui/material';
+import { Box, Stack } from '@mui/material';
+import { Link as LinkIcon } from '@phosphor-icons/react/dist/ssr/Link';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
-import { MapTrifold as MapTrifoldIcon } from '@phosphor-icons/react/dist/ssr/MapTrifold';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import {
   ListingMapsLocationFields,
   type ListingMapsLocationValue,
 } from '@/components/listings/listing-maps-location-fields';
+import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { ListingToggle } from '@/components/user/listing-form-ui';
+import { businessMapLocation } from '@/lib/google-maps-location';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { productPanelSx } from '@/styles/product-sx';
 
 export type ListingLocationMode = 'city' | 'map';
 
@@ -19,15 +22,12 @@ export type ListingLocationChoiceLabels = {
   modeLabel?: string;
   cityMode?: string;
   mapMode?: string;
-  helper?: string;
   cityLabel?: string;
   zoneLabel?: string;
   cityEmpty?: string;
   zoneEmpty?: string;
-  noCities?: string;
   mapsLabel?: string;
   mapsPlaceholder?: string;
-  mapsHelper?: string;
   openMapsAria?: string;
 };
 
@@ -143,14 +143,15 @@ export function ListingLocationChoice({
   );
   const cityName = cities.find((c) => c.id === cityId)?.name;
   const zoneName = zones.find((z) => z.id === zoneId)?.name;
-
-  const cityModeLabel = labels?.cityMode ?? (showZone ? 'Qyteti dhe zona' : 'Qyteti');
-  const mapModeLabel = labels?.mapMode ?? 'Në hartë';
-  const helper =
-    labels?.helper ??
-    (showZone
-      ? 'Zgjidhni qytetin dhe zonën, ose vendoseni vendndodhjen me një link të Google Maps.'
-      : 'Zgjidhni qytetin, ose vendoseni vendndodhjen me një link të Google Maps.');
+  const mapLocation =
+    businessMapLocation({
+      locationLat: mode === 'map' ? maps.locationLat : null,
+      locationLng: mode === 'map' ? maps.locationLng : null,
+      mapsUrl: mode === 'map' ? maps.mapsUrl : null,
+      mapsPlaceQuery: mode === 'map' ? maps.locationAddress : null,
+      zoneName: mode === 'city' ? zoneName : null,
+      cityName: mode === 'city' ? cityName : null,
+    }) ?? (mode ? { query: 'Shqipëri' } : null);
 
   const handleModeChange = (next: string) => {
     const nextMode = next === 'map' ? 'map' : 'city';
@@ -171,21 +172,34 @@ export function ListingLocationChoice({
   };
 
   return (
-    <Stack spacing={1.75} sx={{ width: '100%', minWidth: 0 }}>
-      <ListingToggle
-        label={labels?.modeLabel ?? 'Vendndodhja'}
-        value={mode}
-        onChange={handleModeChange}
-        options={[
-          { value: 'city', label: cityModeLabel, Icon: MapPinIcon },
-          { value: 'map', label: mapModeLabel, Icon: MapTrifoldIcon },
-        ]}
-        helperText={helper}
-        disabled={disabled}
-      />
+    <Box
+      sx={{
+        ...productPanelSx,
+        p: 1.75,
+        width: '100%',
+        minWidth: 0,
+        overflow: 'visible',
+      }}
+    >
+      <Stack spacing={1.75} sx={{ width: '100%', minWidth: 0 }}>
+        <ListingToggle
+          label={labels?.modeLabel ?? 'Vendndodhja'}
+          value={mode}
+          onChange={handleModeChange}
+          options={[
+            { value: 'city', label: labels?.cityMode ?? 'Qyteti / zona', Icon: MapPinIcon },
+            { value: 'map', label: labels?.mapMode ?? 'Map Link', Icon: LinkIcon },
+          ]}
+          disabled={disabled}
+        />
 
-      {mode === 'city' ? (
-        <Stack spacing={1.75}>
+        {showPreview && mapLocation ? (
+          <Box sx={{ width: '100%', minWidth: 0 }}>
+            <LocationMapEmbed query={mapLocation.query} lat={mapLocation.lat} lng={mapLocation.lng} />
+          </Box>
+        ) : null}
+
+        {mode === 'city' ? (
           <Stack direction={{ xs: 'column', sm: showZone ? 'row' : 'column' }} spacing={2}>
             <SearchableSelect
               label={labels?.cityLabel ?? 'Qyteti'}
@@ -195,7 +209,7 @@ export function ListingLocationChoice({
                 if (showZone) onZoneIdChange?.('');
               }}
               options={cities.map((c) => ({ value: c.id, label: c.name }))}
-              emptyLabel={labels?.cityEmpty ?? 'Zgjidhni qytetin… (opsionale)'}
+              emptyLabel={labels?.cityEmpty ?? 'Zgjidhni qytetin…'}
               clearable
               disabled={disabled || loadingCities || cities.length === 0}
               error={cityError}
@@ -207,35 +221,25 @@ export function ListingLocationChoice({
                 value={zoneId ?? ''}
                 onChange={(v) => onZoneIdChange?.(v)}
                 options={zones.map((z) => ({ value: z.id, label: z.name }))}
-                emptyLabel={labels?.zoneEmpty ?? 'Zgjidhni zonën… (opsionale)'}
+                emptyLabel={labels?.zoneEmpty ?? 'Zgjidhni zonën…'}
                 clearable
                 disabled={disabled || loadingCities || !cityId || zones.length === 0}
               />
             ) : null}
           </Stack>
-          {!loadingCities && cities.length === 0 ? (
-            <Typography variant="caption" color="text.secondary">
-              {labels?.noCities ??
-                'Nuk ka qytete të disponueshme — një administrator duhet t’i shtojë te Paneli → Vendndodhjet.'}
-            </Typography>
-          ) : null}
-        </Stack>
-      ) : null}
+        ) : null}
 
-      {mode === 'map' ? (
-        <ListingMapsLocationFields
-          value={maps}
-          onChange={onMapsChange}
-          cityName={cityName}
-          zoneName={zoneName}
-          showPreview={showPreview}
-          disabled={disabled}
-          label={labels?.mapsLabel}
-          placeholder={labels?.mapsPlaceholder}
-          idleHelperText={labels?.mapsHelper}
-          openMapsAriaLabel={labels?.openMapsAria}
-        />
-      ) : null}
-    </Stack>
+        {mode === 'map' ? (
+          <ListingMapsLocationFields
+            value={maps}
+            onChange={onMapsChange}
+            disabled={disabled}
+            label={labels?.mapsLabel}
+            placeholder={labels?.mapsPlaceholder}
+            openMapsAriaLabel={labels?.openMapsAria}
+          />
+        ) : null}
+      </Stack>
+    </Box>
   );
 }

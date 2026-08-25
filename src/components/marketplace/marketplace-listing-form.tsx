@@ -326,14 +326,6 @@ export function MarketplaceListingForm({
       onSubmit={(e) => void handleSubmit(e)}
     >
       <ListingFormSection>
-        <ListingTextField
-          label="Titulli i njoftimit"
-          value={form.title}
-          onChange={onField('title')}
-          required
-          fullWidth
-          placeholder="p.sh. iPhone 14 Pro Max 256GB, Karrige zyre, Çantë Adidas…"
-        />
         <ListingImagePicker
           value={images}
           onChange={setImages}
@@ -342,6 +334,14 @@ export function MarketplaceListingForm({
           max={MAX_MARKETPLACE_IMAGES}
           label="Foto"
           disabled={submitting}
+        />
+        <ListingTextField
+          label="Titulli i njoftimit"
+          value={form.title}
+          onChange={onField('title')}
+          required
+          fullWidth
+          placeholder="p.sh. iPhone 14 Pro Max 256GB, Karrige zyre, Çantë Adidas…"
         />
         <ListingDescriptionField
           label="Përshkrimi"
@@ -372,7 +372,7 @@ export function MarketplaceListingForm({
       </ListingFormSection>
 
       <ListingFormSection>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
+        <Stack direction="row" spacing={2}>
           <ListingTextField
             label="Çmimi"
             type="text"
@@ -393,15 +393,14 @@ export function MarketplaceListingForm({
             fullWidth
             placeholder="p.sh. 6500"
           />
-          <ListingToggle
-            label="Monedha"
-            value={form.currency}
-            onChange={(v) => setForm((p) => ({ ...p, currency: v as MarketplaceFormState['currency'] }))}
-            options={CURRENCY_OPTIONS}
-            required
-            fullWidth={false}
-          />
         </Stack>
+        <ListingToggle
+          label="Monedha"
+          value={form.currency}
+          onChange={(v) => setForm((p) => ({ ...p, currency: v as MarketplaceFormState['currency'] }))}
+          options={CURRENCY_OPTIONS}
+          required
+        />
         <ListingLocationChoice
           mode={form.locationMode}
           onModeChange={(locationMode) => setForm((p) => ({ ...p, locationMode }))}

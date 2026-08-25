@@ -401,14 +401,6 @@ export function JobListingForm({
       onSubmit={(e) => void handleSubmit(e)}
     >
       <ListingFormSection>
-        <ListingTextField
-          label="Titulli i punës"
-          value={form.title}
-          onChange={onField('title')}
-          required
-          fullWidth
-          placeholder="p.sh. Menaxher Shitjesh, Programues Backend…"
-        />
         <ListingImagePicker
           value={images}
           onChange={setImages}
@@ -417,6 +409,14 @@ export function JobListingForm({
           max={MAX_JOB_IMAGES}
           label="Foto e kopertinës"
           disabled={submitting}
+        />
+        <ListingTextField
+          label="Titulli i punës"
+          value={form.title}
+          onChange={onField('title')}
+          required
+          fullWidth
+          placeholder="p.sh. Menaxher Shitjesh, Programues Backend…"
         />
         <ListingDescriptionField
           label="Përshkrimi i shkurtër"
@@ -560,33 +560,30 @@ export function JobListingForm({
       </ListingFormSection>
 
       <ListingFormSection>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
-          <ListingTextField
-            label="Paga"
-            type="text"
-            inputMode="numeric"
-            value={form.salary}
-            onChange={(e) => {
-              const v = e.target.value.replace(/[^\d]/g, '');
-              setForm((p) => ({ ...p, salary: v }));
-            }}
-            fullWidth
-            placeholder="p.sh. 80000"
-            slotProps={{
-              input: {
-                endAdornment: <InputAdornment position="end">/ muaj</InputAdornment>,
-              },
-            }}
-          />
-          <ListingToggle
-            label="Monedha"
-            value={form.currency}
-            onChange={(v) => setForm((p) => ({ ...p, currency: v as JobFormState['currency'] }))}
-            options={CURRENCY_OPTIONS}
-            disabled={!form.salary.trim()}
-            fullWidth={false}
-          />
-        </Stack>
+        <ListingTextField
+          label="Paga"
+          type="text"
+          inputMode="numeric"
+          value={form.salary}
+          onChange={(e) => {
+            const v = e.target.value.replace(/[^\d]/g, '');
+            setForm((p) => ({ ...p, salary: v }));
+          }}
+          fullWidth
+          placeholder="p.sh. 80000"
+          slotProps={{
+            input: {
+              endAdornment: <InputAdornment position="end">/ muaj</InputAdornment>,
+            },
+          }}
+        />
+        <ListingToggle
+          label="Monedha"
+          value={form.currency}
+          onChange={(v) => setForm((p) => ({ ...p, currency: v as JobFormState['currency'] }))}
+          options={CURRENCY_OPTIONS}
+          disabled={!form.salary.trim()}
+        />
         <ListingTextField
           label="Numri i telefonit"
           type="tel"

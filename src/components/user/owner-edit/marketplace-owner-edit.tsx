@@ -196,7 +196,7 @@ export function MarketplaceOwnerEdit({
     ),
     price: (
       <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
-        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+        <Stack direction="row" spacing={1.25}>
           <TextField
             label="Çmimi"
             value={draft.price != null ? String(draft.price) : ''}
@@ -212,26 +212,25 @@ export function MarketplaceOwnerEdit({
             autoFocus
             sx={fieldSx}
           />
-          <ListingToggle
-            label="Monedha"
-            value={draft.currency === 'EUR' || draft.currency === 'LEK' ? draft.currency : ''}
-            onChange={(v) =>
-              setDraft((d) => ({ ...d, currency: v === 'EUR' || v === 'LEK' ? v : null }))
-            }
-            options={CURRENCY_OPTIONS}
-            disabled={draft.price == null}
-            fullWidth={false}
+          <TextField
+            label="Çmimi i mëparshëm"
+            value={draft.originalPrice != null ? String(draft.originalPrice) : ''}
+            onChange={(e) => {
+              const raw = e.target.value.trim();
+              setDraft((d) => ({ ...d, originalPrice: raw ? Number(raw) : null }));
+            }}
+            fullWidth
+            sx={fieldSx}
           />
         </Stack>
-        <TextField
-          label="Çmimi i mëparshëm (opsional)"
-          value={draft.originalPrice != null ? String(draft.originalPrice) : ''}
-          onChange={(e) => {
-            const raw = e.target.value.trim();
-            setDraft((d) => ({ ...d, originalPrice: raw ? Number(raw) : null }));
-          }}
-          fullWidth
-          sx={fieldSx}
+        <ListingToggle
+          label="Monedha"
+          value={draft.currency === 'EUR' || draft.currency === 'LEK' ? draft.currency : ''}
+          onChange={(v) =>
+            setDraft((d) => ({ ...d, currency: v === 'EUR' || v === 'LEK' ? v : null }))
+          }
+          options={CURRENCY_OPTIONS}
+          disabled={draft.price == null}
         />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>

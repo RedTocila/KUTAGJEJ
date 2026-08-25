@@ -352,13 +352,6 @@ export function BusinessListingForm({
         ) : null}
 
         <ListingFormSection>
-          <ListingTextField
-            label="Emri i biznesit"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            fullWidth
-          />
           <ListingImagePicker
             value={images}
             onChange={setImages}
@@ -367,6 +360,13 @@ export function BusinessListingForm({
             max={MAX_BUSINESS_IMAGES}
             label="Foto"
             disabled={submitting}
+          />
+          <ListingTextField
+            label="Emri i biznesit"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            fullWidth
           />
           <SearchableSelect
             label="Kategoria"

@@ -38,14 +38,37 @@ const GALLERY_THUMB_SX = {
   overflow: 'hidden',
 } as const;
 
-const removeButtonSx = {
+const removeButtonBaseSx = {
   position: 'absolute',
-  top: 6,
-  right: 6,
-  bgcolor: 'rgba(0,0,0,0.55)',
+  zIndex: 2,
+  bgcolor: 'rgba(0,0,0,0.62)',
   color: '#fff',
-  p: 0.35,
-  '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
+  p: 0,
+  touchAction: 'manipulation',
+  '&:hover': { bgcolor: 'rgba(0,0,0,0.82)' },
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    inset: -8,
+  },
+} as const;
+
+const coverRemoveButtonSx = {
+  ...removeButtonBaseSx,
+  top: 8,
+  right: 8,
+  width: 40,
+  height: 40,
+  minWidth: 40,
+} as const;
+
+const thumbRemoveButtonSx = {
+  ...removeButtonBaseSx,
+  top: 4,
+  right: 4,
+  width: 32,
+  height: 32,
+  minWidth: 32,
 } as const;
 
 const emptyHoverSx = {
@@ -56,6 +79,32 @@ const emptyHoverSx = {
       t.palette.mode === 'dark' ? 'rgba(130, 201, 30, 0.08)' : 'rgba(118, 186, 27, 0.06)',
   },
 } as const;
+
+function RemoveImageButton({
+  label,
+  onRemove,
+  cover,
+}: {
+  label: string;
+  onRemove: () => void;
+  cover?: boolean;
+}) {
+  return (
+    <IconButton
+      size="small"
+      type="button"
+      aria-label={label}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onRemove();
+      }}
+      sx={cover ? coverRemoveButtonSx : thumbRemoveButtonSx}
+    >
+      <XIcon size={cover ? 20 : 16} weight="bold" />
+    </IconButton>
+  );
+}
 
 function ThumbPreview({
   src,
@@ -71,41 +120,31 @@ function ThumbPreview({
   sx?: typeof GRID_THUMB_SX | typeof HERO_THUMB_SX;
 }) {
   return (
-    <Box
-      role="button"
-      tabIndex={0}
-      aria-label="Shiko foton"
-      onClick={onPreview}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onPreview();
-        }
-      }}
-      sx={{ ...sx, cursor: 'zoom-in' }}
-    >
-      {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={src}
-          alt={alt ?? ''}
-          referrerPolicy="no-referrer"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        />
-      ) : null}
-      <IconButton
-        size="small"
-        type="button"
-        aria-label="Hiq foton"
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          onRemove();
+    <Box sx={{ position: 'relative', width: sx.width, height: sx.height, flexShrink: 0 }}>
+      <Box
+        role="button"
+        tabIndex={0}
+        aria-label="Shiko foton"
+        onClick={onPreview}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onPreview();
+          }
         }}
-        sx={removeButtonSx}
+        sx={{ ...sx, width: '100%', height: '100%', cursor: 'zoom-in' }}
       >
-        <XIcon size={12} weight="bold" />
-      </IconButton>
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src}
+            alt={alt ?? ''}
+            referrerPolicy="no-referrer"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : null}
+      </Box>
+      <RemoveImageButton label="Hiq foton" onRemove={onRemove} />
     </Box>
   );
 }
@@ -293,50 +332,44 @@ export function ListingImagePicker({
             }}
           />
         ) : (
-          <Box
-            role="button"
-            tabIndex={0}
-            aria-label="Shiko foton e kopertinës"
-            onClick={() => setPreviewIndex(0)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                setPreviewIndex(0);
-              }
-            }}
-            sx={{
-              position: 'relative',
-              width: '100%',
-              aspectRatio: '16 / 10',
-              maxHeight: { xs: 240, sm: 300 },
-              borderRadius: 1.5,
-              overflow: 'hidden',
-              border: '1px solid',
-              borderColor: 'divider',
-              cursor: 'zoom-in',
-              bgcolor: 'background.paper',
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={coverSrc}
-              alt=""
-              referrerPolicy="no-referrer"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            />
-            <IconButton
-              size="small"
-              type="button"
-              aria-label="Hiq foton e kopertinës"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                removeAt(0);
+          <Box sx={{ position: 'relative', width: '100%' }}>
+            <Box
+              role="button"
+              tabIndex={0}
+              aria-label="Shiko foton e kopertinës"
+              onClick={() => setPreviewIndex(0)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setPreviewIndex(0);
+                }
               }}
-              sx={removeButtonSx}
+              sx={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio: '16 / 10',
+                maxHeight: { xs: 240, sm: 300 },
+                borderRadius: 1.5,
+                overflow: 'hidden',
+                border: '1px solid',
+                borderColor: 'divider',
+                cursor: 'zoom-in',
+                bgcolor: 'background.paper',
+              }}
             >
-              <XIcon size={12} weight="bold" />
-            </IconButton>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={coverSrc}
+                alt=""
+                referrerPolicy="no-referrer"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+            </Box>
+            <RemoveImageButton
+              cover
+              label="Hiq foton e kopertinës"
+              onRemove={() => removeAt(0)}
+            />
           </Box>
         )}
 
@@ -347,60 +380,53 @@ export function ListingImagePicker({
               gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
               gap: 1.25,
               width: '100%',
+              overflow: 'hidden',
             }}
           >
             {extraUrls.map((url, extraIdx) => {
               const idx = extraIdx + 1;
               return (
-                <Box
-                  key={`extra-${idx}-${url}`}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Fotoja ${idx + 1}`}
-                  onClick={() => setPreviewIndex(idx)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      setPreviewIndex(idx);
-                    }
-                  }}
-                  sx={{
-                    ...GALLERY_THUMB_SX,
-                    p: 0,
-                    font: 'inherit',
-                    cursor: 'zoom-in',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    bgcolor: 'transparent',
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={url}
-                    alt=""
-                    referrerPolicy="no-referrer"
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block',
+                <Box key={`extra-${idx}-${url}`} sx={{ position: 'relative', minWidth: 0 }}>
+                  <Box
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Fotoja ${idx + 1}`}
+                    onClick={() => setPreviewIndex(idx)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setPreviewIndex(idx);
+                      }
                     }}
-                  />
-                  <IconButton
-                    size="small"
-                    type="button"
-                    aria-label={`Hiq foton ${idx + 1}`}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      removeAt(idx);
+                    sx={{
+                      ...GALLERY_THUMB_SX,
+                      p: 0,
+                      font: 'inherit',
+                      cursor: 'zoom-in',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      bgcolor: 'transparent',
                     }}
-                    sx={{ ...removeButtonSx, top: 2, right: 2, p: 0.2 }}
                   >
-                    <XIcon size={10} weight="bold" />
-                  </IconButton>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={url}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block',
+                      }}
+                    />
+                  </Box>
+                  <RemoveImageButton
+                    label={`Hiq foton ${idx + 1}`}
+                    onRemove={() => removeAt(idx)}
+                  />
                 </Box>
               );
             })}

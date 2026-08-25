@@ -9,13 +9,10 @@ import {
   Chip,
   CircularProgress,
   IconButton,
-  LinearProgress,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
-import { CaretLeft as CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft';
-import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { LinkSimple as LinkSimpleIcon } from '@phosphor-icons/react/dist/ssr/LinkSimple';
 import { Paperclip as PaperclipIcon } from '@phosphor-icons/react/dist/ssr/Paperclip';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
@@ -23,7 +20,7 @@ import { Stop as StopIcon } from '@phosphor-icons/react/dist/ssr/Stop';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
-import { ProductDialog } from '@/components/core/product-dialog';
+import { ImageLightbox } from '@/components/common/image-lightbox';
 import { HomeVerticalIcon } from '@/components/public/home-vertical-icon';
 import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-panel';
 import { PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
@@ -147,6 +144,173 @@ function draftImageUrls(draft: AiImportDraftResult | AiListingDraft): string[] {
   return (draft.imageUrls ?? []).filter(isDisplayableImageUrl);
 }
 
+const DRAFT_THUMB_GAP_PX = 8;
+const SLIDE_LOCK_PX = 10;
+const SLIDE_SNAP_MS = 180;
+
+function clampOffset(value: number, max: number) {
+  return Math.min(max, Math.max(0, value));
+}
+
+/** Horizontal snap slider — no native overflow scroll, so the page does not pan with it. */
+function ImageStripSlider({ children }: { children: React.ReactNode }) {
+  const viewportRef = React.useRef<HTMLDivElement>(null);
+  const trackRef = React.useRef<HTMLDivElement>(null);
+  const offsetRef = React.useRef(0);
+  const maxOffsetRef = React.useRef(0);
+  const ignoreClickRef = React.useRef(false);
+  const dragRef = React.useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startOffset: number;
+    axis: 'x' | 'y' | null;
+    moved: boolean;
+  } | null>(null);
+  const [maxOffset, setMaxOffset] = React.useState(0);
+  const [canSlidePrev, setCanSlidePrev] = React.useState(false);
+  const [canSlideNext, setCanSlideNext] = React.useState(false);
+
+  const applyOffset = React.useCallback((next: number, animate: boolean) => {
+    const track = trackRef.current;
+    if (!track) return;
+    const clamped = clampOffset(next, maxOffsetRef.current);
+    offsetRef.current = clamped;
+    track.style.transition = animate ? `transform ${SLIDE_SNAP_MS}ms ${MOTION.ease}` : 'none';
+    track.style.transform = `translate3d(${-clamped}px, 0, 0)`;
+    setCanSlidePrev(clamped > 1);
+    setCanSlideNext(clamped < maxOffsetRef.current - 1);
+  }, []);
+
+  const measure = React.useCallback(() => {
+    const viewport = viewportRef.current;
+    const track = trackRef.current;
+    if (!viewport || !track) return;
+    const nextMax = Math.max(0, track.scrollWidth - viewport.clientWidth);
+    maxOffsetRef.current = nextMax;
+    setMaxOffset(nextMax);
+    applyOffset(offsetRef.current, false);
+  }, [applyOffset]);
+
+  React.useLayoutEffect(() => {
+    measure();
+    const viewport = viewportRef.current;
+    const track = trackRef.current;
+    if (!viewport) return undefined;
+    const ro = new ResizeObserver(measure);
+    ro.observe(viewport);
+    if (track) ro.observe(track);
+    return () => ro.disconnect();
+  }, [children, measure]);
+
+  const snapPitch = () => {
+    const first = trackRef.current?.firstElementChild as HTMLElement | undefined;
+    return Math.max(1, (first?.offsetWidth ?? 56) + DRAFT_THUMB_GAP_PX);
+  };
+
+  const finishDrag = (event: React.PointerEvent<HTMLDivElement>, commit: boolean) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (drag.moved) ignoreClickRef.current = true;
+    if (!commit || drag.axis !== 'x') {
+      applyOffset(offsetRef.current, true);
+      return;
+    }
+    const pitch = snapPitch();
+    applyOffset(Math.round(offsetRef.current / pitch) * pitch, true);
+  };
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    if (maxOffset <= 0) return;
+    if (event.target instanceof Element && event.target.closest('[data-strip-no-drag]')) return;
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startOffset: offsetRef.current,
+      axis: null,
+      moved: false,
+    };
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (!drag.axis) {
+      if (Math.hypot(dx, dy) < SLIDE_LOCK_PX) return;
+      drag.axis = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y';
+      if (drag.axis === 'x') {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }
+    }
+    if (drag.axis !== 'x') return;
+    event.preventDefault();
+    drag.moved = true;
+    applyOffset(drag.startOffset - dx, false);
+  };
+
+  return (
+    <Box
+      ref={viewportRef}
+      data-no-tab-swipe
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={(event) => finishDrag(event, true)}
+      onPointerCancel={(event) => finishDrag(event, false)}
+      onClickCapture={(event) => {
+        if (!ignoreClickRef.current) return;
+        event.preventDefault();
+        event.stopPropagation();
+        ignoreClickRef.current = false;
+      }}
+      sx={{
+        overflow: 'hidden',
+        width: '100%',
+        touchAction: maxOffset > 0 ? 'none' : 'auto',
+        overscrollBehavior: 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        cursor: maxOffset > 0 ? 'grab' : undefined,
+        maskImage:
+          canSlidePrev && canSlideNext
+            ? 'linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%)'
+            : canSlidePrev
+              ? 'linear-gradient(to right, transparent 0, black 16px, black 100%)'
+              : canSlideNext
+                ? 'linear-gradient(to right, black 0, black calc(100% - 16px), transparent 100%)'
+                : undefined,
+        WebkitMaskImage:
+          canSlidePrev && canSlideNext
+            ? 'linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%)'
+            : canSlidePrev
+              ? 'linear-gradient(to right, transparent 0, black 16px, black 100%)'
+              : canSlideNext
+                ? 'linear-gradient(to right, black 0, black calc(100% - 16px), transparent 100%)'
+                : undefined,
+      }}
+    >
+      <Box
+        ref={trackRef}
+        sx={{
+          display: 'flex',
+          gap: `${DRAFT_THUMB_GAP_PX}px`,
+          width: 'max-content',
+          willChange: 'transform',
+        }}
+      >
+        {children}
+      </Box>
+    </Box>
+  );
+}
+
 function DraftImageThumb({
   src,
   size,
@@ -194,6 +358,7 @@ function DraftImageThumb({
       </Box>
       <IconButton
         size="small"
+        data-strip-no-drag
         aria-label={removeLabel}
         disabled={disabled}
         onClick={(event) => {
@@ -202,20 +367,26 @@ function DraftImageThumb({
         }}
         sx={{
           position: 'absolute',
-          top: 1,
-          right: 1,
+          top: 2,
+          right: 2,
           zIndex: 1,
-          width: 18,
-          height: 18,
-          minWidth: 18,
-          minHeight: 18,
+          width: 28,
+          height: 28,
+          minWidth: 28,
+          minHeight: 28,
           p: 0,
+          touchAction: 'manipulation',
           bgcolor: 'rgba(0,0,0,0.62)',
           color: '#fff',
-          '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
+          '&:hover': { bgcolor: 'rgba(0,0,0,0.82)' },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            inset: -8,
+          },
         }}
       >
-        <XIcon size={9} weight="bold" />
+        <XIcon size={14} weight="bold" />
       </IconButton>
     </Box>
   );
@@ -235,85 +406,30 @@ function formatAiDraftError(
   return draft.error || t.aiImport.failed;
 }
 
-function AiImportProgressPanel({
+function AiImportAnalyzingText({
   progress,
-  loading,
   t,
 }: {
   progress: { done: number; total: number } | null;
-  loading: boolean;
   t: ReturnType<typeof useCopy>;
 }) {
-  if (!loading && !progress) return null;
   const total = progress?.total ?? 0;
   const done = progress?.done ?? 0;
-  const current = total <= 0 ? 1 : Math.min(total, done + (loading ? 1 : 0));
-  const percent = total <= 0 ? 0 : (done / total) * 100;
+  const current = total <= 0 ? 1 : Math.min(total, done + 1);
 
   return (
-    <Stack
-      spacing={0.65}
+    <Typography
+      aria-live="polite"
       sx={{
-        width: '100%',
-        px: 1.15,
-        py: 0.9,
-        borderRadius: 2,
-        border: '1px solid',
-        borderColor: loading ? AI_SEARCH_BLUE : 'divider',
-        bgcolor: (theme) =>
-          theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : AI_SEARCH_BLUE_SOFT,
+        fontWeight: 800,
+        fontSize: '0.8rem',
+        letterSpacing: '-0.01em',
+        color: 'text.primary',
+        ...analyzingTextFlashSx,
       }}
     >
-      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-        {loading ? (
-          <CircularProgress size={14} thickness={5} sx={{ color: AI_SEARCH_BLUE }} />
-        ) : (
-          <SparkleIcon size={16} weight="fill" color={AI_SEARCH_BLUE} />
-        )}
-        <Typography
-          sx={{
-            fontWeight: 800,
-            fontSize: '0.8rem',
-            letterSpacing: '-0.01em',
-            color: 'text.primary',
-            ...(loading ? analyzingTextFlashSx : null),
-          }}
-        >
-          {loading
-            ? total > 0
-              ? t.aiImport.progressWorking(current, total)
-              : t.aiImport.analyzing
-            : t.aiImport.progress(done, total)}
-        </Typography>
-      </Stack>
-      <Box sx={{ position: 'relative', height: 5 }}>
-        <LinearProgress
-          variant="determinate"
-          value={percent}
-          sx={{
-            height: 5,
-            borderRadius: 999,
-            bgcolor: (theme) =>
-              theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-            '& .MuiLinearProgress-bar': { borderRadius: 999, bgcolor: AI_SEARCH_BLUE },
-          }}
-        />
-        {loading ? (
-          <LinearProgress
-            variant="indeterminate"
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              height: 5,
-              borderRadius: 999,
-              opacity: 0.35,
-              bgcolor: 'transparent',
-              '& .MuiLinearProgress-bar': { borderRadius: 999, bgcolor: AI_SEARCH_BLUE },
-            }}
-          />
-        ) : null}
-      </Box>
-    </Stack>
+      {total > 0 ? t.aiImport.progressWorking(current, total) : t.aiImport.analyzing}
+    </Typography>
   );
 }
 
@@ -340,6 +456,8 @@ export default function AiImportListingsPage() {
   const [lastPrompt, setLastPrompt] = React.useState('');
   const [progress, setProgress] = React.useState<{ done: number; total: number } | null>(null);
   const stopRequestedRef = React.useRef(false);
+  const abortRef = React.useRef<AbortController | null>(null);
+  const loadingRef = React.useRef(false);
 
   const canPublish =
     Boolean(user) &&
@@ -448,6 +566,7 @@ export default function AiImportListingsPage() {
 
   const handleAnalyze = async (event?: React.FormEvent) => {
     event?.preventDefault();
+    if (loadingRef.current) return;
     if (!category) {
       setError(t.aiImport.categoryRequired);
       return;
@@ -457,14 +576,22 @@ export default function AiImportListingsPage() {
       setError(t.aiImport.empty);
       return;
     }
+    const controller = new AbortController();
+    abortRef.current = controller;
+    stopRequestedRef.current = false;
+    loadingRef.current = true;
     setLoading(true);
     setError(null);
     setStatusMessage(null);
-    stopRequestedRef.current = false;
+    const wasStopped = () => stopRequestedRef.current || controller.signal.aborted;
     try {
       let uploadedUrls: string[] = [...pendingImageUrls];
       if (files.length > 0) {
         const up = await uploadListingImages(files, UPLOAD_FOLDER[category]);
+        if (wasStopped()) {
+          setStatusMessage(t.aiImport.stopped(0, 1));
+          return;
+        }
         if (up.error) {
           setError(up.error);
           return;
@@ -476,6 +603,11 @@ export default function AiImportListingsPage() {
         uploadedUrls.length > 0
           ? uploadedUrls.map((url) => ({ url }))
           : await filesToAiImagePayload(files);
+
+      if (wasStopped()) {
+        setStatusMessage(t.aiImport.stopped(0, 1));
+        return;
+      }
 
       setLastPrompt(trimmed);
       setPendingImageUrls(uploadedUrls);
@@ -496,7 +628,12 @@ export default function AiImportListingsPage() {
           profile,
           batchSize: 1,
           feature: 'build',
+          signal: controller.signal,
         });
+        if (res.aborted || wasStopped()) {
+          setStatusMessage(t.aiImport.stopped(0, 1));
+          return;
+        }
         if (res.error) {
           if (isAiDailyLimitError({ code: res.code, error: res.error, status: res.status })) {
             setError(aiDailyLimitMessage(t));
@@ -514,7 +651,7 @@ export default function AiImportListingsPage() {
         setProgress({ done: 1, total: 1 });
       } else {
         for (let i = 0; i < urls.length; i += 1) {
-          if (stopRequestedRef.current) {
+          if (wasStopped()) {
             setText(urls.slice(i).join('\n'));
             setStatusMessage(t.aiImport.stopped(collected.length, urls.length));
             persistDrafts(collected);
@@ -529,7 +666,14 @@ export default function AiImportListingsPage() {
             batchId,
             batchSize: urls.length,
             feature: 'build',
+            signal: controller.signal,
           });
+          if (res.aborted || wasStopped()) {
+            setText(urls.slice(i).join('\n'));
+            setStatusMessage(t.aiImport.stopped(collected.length, urls.length));
+            persistDrafts(collected);
+            break;
+          }
           if (res.batchId) batchId = res.batchId;
           if (res.error) {
             if (isAiDailyLimitError({ code: res.code, error: res.error, status: res.status })) {
@@ -561,7 +705,7 @@ export default function AiImportListingsPage() {
         }
       }
 
-      const stopped = stopRequestedRef.current;
+      const stopped = wasStopped();
       const hasMismatch = collected.some((d) => isAiCategoryMismatch(d));
       if (!stopped && !hasMismatch) {
         setText('');
@@ -569,14 +713,22 @@ export default function AiImportListingsPage() {
         setPendingImageUrls([]);
       }
     } catch {
-      setError(t.aiImport.failed);
+      if (wasStopped()) {
+        setStatusMessage(t.aiImport.stopped(0, 1));
+      } else {
+        setError(t.aiImport.failed);
+      }
     } finally {
+      if (abortRef.current === controller) abortRef.current = null;
+      loadingRef.current = false;
       setLoading(false);
+      setProgress(null);
       void checkSession();
     }
   };
 
   const handleRetryFailed = async () => {
+    if (loadingRef.current) return;
     if (!category) {
       setError(t.aiImport.categoryRequired);
       return;
@@ -585,10 +737,14 @@ export default function AiImportListingsPage() {
     const urls = failed.map((d) => d.sourceUrl).filter(Boolean);
     if (!urls.length) return;
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+    stopRequestedRef.current = false;
+    loadingRef.current = true;
     setLoading(true);
     setError(null);
     setStatusMessage(null);
-    stopRequestedRef.current = false;
+    const wasStopped = () => stopRequestedRef.current || controller.signal.aborted;
     const failedIds = new Set(failed.map((d) => d.id));
     const kept = drafts.filter((d) => !failedIds.has(d.id));
     try {
@@ -598,7 +754,7 @@ export default function AiImportListingsPage() {
       setProgress({ done: 0, total: urls.length });
 
       for (let i = 0; i < urls.length; i += 1) {
-        if (stopRequestedRef.current) {
+        if (wasStopped()) {
           const leftover = failed.filter(
             (d) => !collected.some((c) => c.sourceUrl === d.sourceUrl),
           );
@@ -613,7 +769,16 @@ export default function AiImportListingsPage() {
           batchId,
           batchSize: urls.length,
           feature: 'build',
+          signal: controller.signal,
         });
+        if (res.aborted || wasStopped()) {
+          const leftover = failed.filter(
+            (d) => !collected.some((c) => c.sourceUrl === d.sourceUrl),
+          );
+          persistDrafts([...kept, ...collected, ...leftover]);
+          setStatusMessage(t.aiImport.stopped(collected.length, urls.length));
+          break;
+        }
         if (res.batchId) batchId = res.batchId;
         if (res.error) {
           if (isAiDailyLimitError({ code: res.code, error: res.error, status: res.status })) {
@@ -632,15 +797,25 @@ export default function AiImportListingsPage() {
         setProgress({ done: i + 1, total: urls.length });
       }
     } catch {
-      setError(t.aiImport.failed);
+      if (wasStopped()) {
+        setStatusMessage(t.aiImport.stopped(0, urls.length));
+      } else {
+        setError(t.aiImport.failed);
+      }
     } finally {
+      if (abortRef.current === controller) abortRef.current = null;
+      loadingRef.current = false;
       setLoading(false);
+      setProgress(null);
       void checkSession();
     }
   };
 
-  const handleStop = () => {
+  const handleStop = (event?: React.SyntheticEvent) => {
+    event?.preventDefault();
+    event?.stopPropagation();
     stopRequestedRef.current = true;
+    abortRef.current?.abort();
   };
 
   const acceptMismatch = (draft: AiImportDraftResult) => {
@@ -841,7 +1016,6 @@ export default function AiImportListingsPage() {
 
   if (!user || !canPublish) return null;
 
-  const previewUrl = preview ? preview.urls[preview.index] : null;
   const canAnalyze = Boolean(text.trim() || files.length > 0 || pendingImageUrls.length > 0);
 
   return (
@@ -979,6 +1153,7 @@ export default function AiImportListingsPage() {
                     placeholder={t.aiImport.placeholder}
                     disabled={loading}
                     sx={{
+                      pointerEvents: loading ? 'none' : undefined,
                       '& .MuiOutlinedInput-root': {
                         borderRadius: 2.5,
                         bgcolor: (theme) =>
@@ -1005,6 +1180,7 @@ export default function AiImportListingsPage() {
                       left: 8,
                       right: 8,
                       bottom: 8,
+                      zIndex: 2,
                       alignItems: 'center',
                       pointerEvents: 'none',
                       '& > *': { pointerEvents: 'auto' },
@@ -1041,32 +1217,48 @@ export default function AiImportListingsPage() {
                       </Typography>
                     ) : null}
                     <Box sx={{ flex: 1 }} />
-                    <IconButton
-                      type={loading ? 'button' : 'submit'}
-                      aria-label={loading ? t.aiImport.stop : t.aiImport.analyze}
-                      disabled={!loading && !canAnalyze}
-                      onClick={loading ? handleStop : undefined}
-                      sx={{
-                        width: 36,
-                        height: 36,
-                        bgcolor: loading ? 'error.main' : AI_SEARCH_BLUE,
-                        color: AI_SEARCH_BLUE_ON,
-                        '&:hover': {
-                          bgcolor: loading ? 'error.dark' : AI_SEARCH_BLUE_HOVER,
+                    {loading ? (
+                      <IconButton
+                        type="button"
+                        aria-label={t.aiImport.stop}
+                        onPointerDown={handleStop}
+                        onClick={handleStop}
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          bgcolor: 'error.main',
                           color: AI_SEARCH_BLUE_ON,
-                        },
-                        '&.Mui-disabled': {
-                          bgcolor: AI_SEARCH_BLUE_SOFT,
-                          color: AI_SEARCH_BLUE_ON,
-                        },
-                      }}
-                    >
-                      {loading ? (
+                          '&:hover': {
+                            bgcolor: 'error.dark',
+                            color: AI_SEARCH_BLUE_ON,
+                          },
+                        }}
+                      >
                         <StopIcon size={16} weight="fill" />
-                      ) : (
+                      </IconButton>
+                    ) : (
+                      <IconButton
+                        type="submit"
+                        aria-label={t.aiImport.analyze}
+                        disabled={!canAnalyze}
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          bgcolor: AI_SEARCH_BLUE,
+                          color: AI_SEARCH_BLUE_ON,
+                          '&:hover': {
+                            bgcolor: AI_SEARCH_BLUE_HOVER,
+                            color: AI_SEARCH_BLUE_ON,
+                          },
+                          '&.Mui-disabled': {
+                            bgcolor: AI_SEARCH_BLUE_SOFT,
+                            color: AI_SEARCH_BLUE_ON,
+                          },
+                        }}
+                      >
                         <SparkleIcon size={18} weight="bold" />
-                      )}
-                    </IconButton>
+                      </IconButton>
+                    )}
                   </Stack>
                 </Box>
 
@@ -1075,22 +1267,25 @@ export default function AiImportListingsPage() {
                     {previews.map((src, index) => (
                       <Box
                         key={`${src}-${index}`}
-                        sx={{
-                          position: 'relative',
-                          width: 48,
-                          height: 48,
-                          borderRadius: 1.5,
-                          overflow: 'hidden',
-                          border: '1px solid',
-                          borderColor: 'divider',
-                        }}
+                        sx={{ position: 'relative', width: 56, height: 56, flexShrink: 0 }}
                       >
                         <Box
-                          component="img"
-                          src={src}
-                          alt=""
-                          sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
+                          sx={{
+                            width: '100%',
+                            height: '100%',
+                            borderRadius: 1.5,
+                            overflow: 'hidden',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          <Box
+                            component="img"
+                            src={src}
+                            alt=""
+                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </Box>
                         <IconButton
                           size="small"
                           aria-label={t.aiImport.removeImage}
@@ -1100,15 +1295,23 @@ export default function AiImportListingsPage() {
                             position: 'absolute',
                             top: 2,
                             right: 2,
-                            width: 16,
-                            height: 16,
+                            zIndex: 1,
+                            width: 28,
+                            height: 28,
+                            minWidth: 28,
                             p: 0,
+                            touchAction: 'manipulation',
                             bgcolor: 'rgba(0,0,0,0.62)',
                             color: '#fff',
-                            '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
+                            '&:hover': { bgcolor: 'rgba(0,0,0,0.82)' },
+                            '&::after': {
+                              content: '""',
+                              position: 'absolute',
+                              inset: -8,
+                            },
                           }}
                         >
-                          <XIcon size={9} weight="bold" />
+                          <XIcon size={14} weight="bold" />
                         </IconButton>
                       </Box>
                     ))}
@@ -1119,10 +1322,6 @@ export default function AiImportListingsPage() {
                   <Alert severity="error" sx={{ borderRadius: 2, py: 0.25 }}>
                     {error}
                   </Alert>
-                ) : null}
-
-                {loading || progress ? (
-                  <AiImportProgressPanel progress={progress} loading={loading} t={t} />
                 ) : null}
               </>
             ) : (
@@ -1199,6 +1398,8 @@ export default function AiImportListingsPage() {
             </Stack>
           </Stack>
 
+          {loading ? <AiImportAnalyzingText progress={progress} t={t} /> : null}
+
           {statusMessage ? (
             <Alert severity="success" sx={{ borderRadius: 2.25 }}>
               {statusMessage}
@@ -1224,7 +1425,7 @@ export default function AiImportListingsPage() {
                     {images[0] ? (
                       <DraftImageThumb
                         src={images[0]}
-                        size={52}
+                        size={56}
                         previewLabel={t.aiImport.previewImage}
                         removeLabel={t.aiImport.removeImage}
                         onPreview={() => openPreview(images, 0)}
@@ -1267,9 +1468,17 @@ export default function AiImportListingsPage() {
                           size="small"
                           aria-label={t.aiImport.dismissDraft}
                           onClick={() => dismissDraft(draft.id)}
-                          sx={{ mt: -0.5, mr: -0.5, p: 0.4, color: 'text.secondary' }}
+                          sx={{
+                            mt: -0.5,
+                            mr: -0.5,
+                            width: 36,
+                            height: 36,
+                            p: 0,
+                            color: 'text.secondary',
+                            touchAction: 'manipulation',
+                          }}
                         >
-                          <XIcon size={14} weight="bold" />
+                          <XIcon size={18} weight="bold" />
                         </IconButton>
                       </Stack>
                       {!mismatch && draft.sourceUrl ? (
@@ -1350,20 +1559,12 @@ export default function AiImportListingsPage() {
                   </Stack>
 
                   {images.length > 1 ? (
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        gap: 1,
-                        overflowX: 'auto',
-                        scrollbarWidth: 'none',
-                        '&::-webkit-scrollbar': { display: 'none' },
-                      }}
-                    >
+                    <ImageStripSlider>
                       {images.slice(1).map((url, index) => (
                         <DraftImageThumb
                           key={`${draft.id}-${url}-${index}`}
                           src={url}
-                          size={48}
+                          size={56}
                           previewLabel={t.aiImport.previewImage}
                           removeLabel={t.aiImport.removeImage}
                           onPreview={() => openPreview(images, index + 1)}
@@ -1371,7 +1572,7 @@ export default function AiImportListingsPage() {
                           disabled={postingAll || postingId != null || openingId != null}
                         />
                       ))}
-                    </Box>
+                    </ImageStripSlider>
                   ) : null}
 
                   {!failed && !mismatch ? (
@@ -1415,120 +1616,15 @@ export default function AiImportListingsPage() {
         </Stack>
       ) : null}
 
-      <ProductDialog
-        open={Boolean(previewUrl)}
+      <ImageLightbox
+        open={Boolean(preview)}
+        urls={preview?.urls ?? []}
+        index={preview?.index ?? 0}
         onClose={() => setPreview(null)}
-        maxWidth="md"
-        fullWidth
-      >
-        <Box sx={{ position: 'relative', minHeight: { xs: 280, sm: 420 } }}>
-          <IconButton
-            aria-label={t.common.close}
-            onClick={() => setPreview(null)}
-            sx={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              zIndex: 2,
-              color: '#fff',
-              bgcolor: 'rgba(0,0,0,0.45)',
-              '&:hover': { bgcolor: 'rgba(0,0,0,0.65)' },
-            }}
-          >
-            <XIcon size={18} weight="bold" />
-          </IconButton>
-
-          {preview && preview.urls.length > 1 ? (
-            <>
-              <IconButton
-                aria-label="Previous"
-                onClick={() =>
-                  setPreview((current) =>
-                    current
-                      ? {
-                          ...current,
-                          index: (current.index - 1 + current.urls.length) % current.urls.length,
-                        }
-                      : current,
-                  )
-                }
-                sx={{
-                  position: 'absolute',
-                  left: 8,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  zIndex: 2,
-                  color: '#fff',
-                  bgcolor: 'rgba(0,0,0,0.45)',
-                  '&:hover': { bgcolor: 'rgba(0,0,0,0.65)' },
-                }}
-              >
-                <CaretLeftIcon size={20} weight="bold" />
-              </IconButton>
-              <IconButton
-                aria-label="Next"
-                onClick={() =>
-                  setPreview((current) =>
-                    current
-                      ? {
-                          ...current,
-                          index: (current.index + 1) % current.urls.length,
-                        }
-                      : current,
-                  )
-                }
-                sx={{
-                  position: 'absolute',
-                  right: 8,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  zIndex: 2,
-                  color: '#fff',
-                  bgcolor: 'rgba(0,0,0,0.45)',
-                  '&:hover': { bgcolor: 'rgba(0,0,0,0.65)' },
-                }}
-              >
-                <CaretRightIcon size={20} weight="bold" />
-              </IconButton>
-            </>
-          ) : null}
-
-          {previewUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={previewUrl}
-              alt=""
-              referrerPolicy="no-referrer"
-              style={{
-                width: '100%',
-                height: 'min(70vh, 640px)',
-                objectFit: 'contain',
-                display: 'block',
-                background: '#0b0b0b',
-              }}
-            />
-          ) : null}
-
-          {preview && preview.urls.length > 1 ? (
-            <Typography
-              variant="caption"
-              sx={{
-                position: 'absolute',
-                bottom: 10,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                color: 'rgba(255,255,255,0.85)',
-                bgcolor: 'rgba(0,0,0,0.45)',
-                px: 1,
-                py: 0.35,
-                borderRadius: 999,
-              }}
-            >
-              {preview.index + 1} / {preview.urls.length}
-            </Typography>
-          ) : null}
-        </Box>
-      </ProductDialog>
+        onIndexChange={(index) =>
+          setPreview((current) => (current ? { ...current, index } : current))
+        }
+      />
     </Stack>
   );
 }

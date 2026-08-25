@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
 import { CrownSimple as CrownSimpleIcon } from '@phosphor-icons/react/dist/ssr/CrownSimple';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
@@ -69,31 +68,26 @@ const FALLBACK_PREMIUM: PremiumPackage[] = [
 const choiceBtnSx = {
   ...productButtonSx,
   flex: 1,
-  minHeight: 44,
+  minHeight: 48,
   px: 1.5,
 } as const;
 
-/** Muted fill + stronger border — same treatment as the “Edit with AI” chip. */
-function ghostAccentBtnSx(accent: string, hoverAccent: string) {
-  const fill = alpha(accent, 0.16);
-  const border = alpha(accent, 0.28);
+function filledAccentBtnSx(bg: string, hoverBg: string, onColor: string) {
   return {
     ...choiceBtnSx,
     borderRadius: 999,
-    bgcolor: fill,
-    color: accent,
-    border: '1px solid',
-    borderColor: border,
+    bgcolor: bg,
+    color: onColor,
+    boxShadow: 'none',
     '& .MuiButton-startIcon': { mr: 0.75 },
     '&:hover': {
-      bgcolor: border,
-      color: hoverAccent,
+      bgcolor: hoverBg,
+      color: onColor,
       boxShadow: 'none',
     },
     '&.Mui-disabled': {
-      bgcolor: fill,
-      color: accent,
-      borderColor: border,
+      bgcolor: bg,
+      color: onColor,
       opacity: 0.55,
     },
   } as const;
@@ -184,6 +178,7 @@ export function ListingBoostChoiceBar({
       <Stack direction="row" spacing={1.25} sx={{ width: '100%' }}>
         <Button
           type="button"
+          variant="contained"
           disabled={disabled || submitting || busy !== null}
           onClick={() => void handlePremium()}
           startIcon={
@@ -193,13 +188,14 @@ export function ListingBoostChoiceBar({
               <CrownSimpleIcon size={18} weight="regular" />
             )
           }
-          sx={ghostAccentBtnSx(PREMIUM_AMBER, PREMIUM_AMBER_DARK)}
+          sx={filledAccentBtnSx(PREMIUM_AMBER, PREMIUM_AMBER_DARK, PREMIUM_AMBER_ON)}
         >
           Premium
         </Button>
         {hideOkazion ? null : (
           <Button
             type="button"
+            variant="contained"
             disabled={disabled || submitting || busy !== null}
             onClick={() => void handleOkazion()}
             startIcon={
@@ -209,7 +205,7 @@ export function ListingBoostChoiceBar({
                 <SealPercentIcon size={18} weight="regular" />
               )
             }
-            sx={ghostAccentBtnSx(OKAZION_RED, OKAZION_RED_DARK)}
+            sx={filledAccentBtnSx(OKAZION_RED, OKAZION_RED_DARK, '#000000')}
           >
             OKAZION
           </Button>

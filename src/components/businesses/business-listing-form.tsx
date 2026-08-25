@@ -61,6 +61,9 @@ import {
   resolveContactPhone,
 } from '@/lib/listing-form-defaults';
 import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
+import { useListingFormDraft } from '@/hooks/use-listing-form-draft';
+import { usePublishListingFormSnapshot } from '@/components/user/listing-form-snapshot-context';
+import { mergeImageUrls, pickNonEmptyString } from '@/lib/listing-form-draft';
 import { useUser } from '@/hooks/use-user';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -218,6 +221,106 @@ export function BusinessListingForm({
     if (knownDefaults.cityId) setCityId((prev) => (prev.trim() ? prev : knownDefaults.cityId));
   }, [user, canPostBusiness, checkingExisting, existingId, knownDefaults.contactPhone, knownDefaults.cityId]);
 
+  const appliedAiRef = React.useRef<Record<string, unknown> | null>(null);
+  React.useEffect(() => {
+    if (!aiPrefill || appliedAiRef.current === aiPrefill) return;
+    appliedAiRef.current = aiPrefill;
+    const nextTitle = pickNonEmptyString(aiPrefill.title);
+    if (nextTitle) setTitle(nextTitle);
+    const nextDesc = pickNonEmptyString(aiPrefill.description);
+    if (nextDesc) setDescription(nextDesc);
+    const nextCat = pickNonEmptyString(aiPrefill.category);
+    if (nextCat) setCategory(nextCat);
+    const nextCity = pickNonEmptyString(aiPrefill.cityId);
+    if (nextCity) {
+      setCityId(nextCity);
+      setLocationMode((prev) => prev || 'city');
+    }
+    const nextPhone = pickNonEmptyString(aiPrefill.contactPhone);
+    if (nextPhone) setContactPhone(nextPhone);
+    const nextServices = pickNonEmptyString(aiPrefill.servicesHighlight);
+    if (nextServices) setServicesHighlight(nextServices);
+    const urls = Array.isArray(aiPrefill.imageUrls)
+      ? aiPrefill.imageUrls.filter((u): u is string => typeof u === 'string' && Boolean(u))
+      : [];
+    if (urls.length) {
+      setExistingImageUrls((prev) => mergeImageUrls(prev, urls, MAX_BUSINESS_IMAGES));
+    }
+  }, [aiPrefill]);
+
+  type BizFormDraft = {
+    title: string;
+    description: string;
+    category: string;
+    cityId: string;
+    zoneId: string;
+    mapsUrl: string;
+    locationMode: ListingLocationMode | '';
+    locationLat: number | null;
+    locationLng: number | null;
+    locationAddress: string | null;
+    contactPhone: string;
+    servicesHighlight: string;
+    weeklyHours: WeeklyHourRow[];
+    mobileCtaMode: 'contact' | 'reserve' | 'none';
+    reservationsEnabled: boolean;
+  };
+
+  const bizForm: BizFormDraft = {
+    title,
+    description,
+    category,
+    cityId,
+    zoneId,
+    mapsUrl,
+    locationMode,
+    locationLat,
+    locationLng,
+    locationAddress,
+    contactPhone,
+    servicesHighlight,
+    weeklyHours,
+    mobileCtaMode,
+    reservationsEnabled,
+  };
+  const bizFormRef = React.useRef(bizForm);
+  bizFormRef.current = bizForm;
+  const setBizForm = React.useCallback((action: React.SetStateAction<BizFormDraft>) => {
+    const next = typeof action === 'function' ? action(bizFormRef.current) : action;
+    setTitle(next.title);
+    setDescription(next.description);
+    setCategory(next.category);
+    setCityId(next.cityId);
+    setZoneId(next.zoneId);
+    setMapsUrl(next.mapsUrl);
+    setLocationMode(next.locationMode);
+    setLocationLat(next.locationLat);
+    setLocationLng(next.locationLng);
+    setLocationAddress(next.locationAddress);
+    setContactPhone(next.contactPhone);
+    setServicesHighlight(next.servicesHighlight);
+    setWeeklyHours(next.weeklyHours);
+    setMobileCtaMode(next.mobileCtaMode);
+    setReservationsEnabled(next.reservationsEnabled);
+  }, []);
+
+  usePublishListingFormSnapshot(
+    { ...bizForm, imageUrls: existingImageUrls } as Record<string, unknown>,
+    !existingId,
+  );
+  const { clearDraft } = useListingFormDraft({
+    category: 'businesses',
+    enabled: !existingId && !checkingExisting,
+    skipRestore: Boolean(aiPrefill),
+    form: bizForm,
+    setForm: setBizForm,
+    existingImageUrls,
+    setExistingImageUrls,
+    images,
+    setImages,
+    maxImages: MAX_BUSINESS_IMAGES,
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -299,6 +402,7 @@ export function BusinessListingForm({
       setError(res.error);
       return;
     }
+    clearDraft();
     if (loc.cityId) rememberLocation({ cityId: loc.cityId });
     if (res.id && (wantsPremium || boostKindRef.current === 'premium')) {
       const boost = await activatePremiumAfterCreate({

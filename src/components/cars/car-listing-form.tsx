@@ -61,10 +61,13 @@ import {
 import { useUser } from '@/hooks/use-user';
 import { createCarListing, updateCarListing, type CarMineListing } from '@/lib/listings-client';
 import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
+import { useListingFormDraft } from '@/hooks/use-listing-form-draft';
+import { usePublishListingFormSnapshot } from '@/components/user/listing-form-snapshot-context';
 import {
   applyEmptyKnownDefaults,
   knownCreateDefaultsFromStorage,
 } from '@/lib/listing-form-defaults';
+import { mergeCreateFormState, mergeImageUrls } from '@/lib/listing-form-draft';
 import { mirrorRemoteImageUrls, uploadListingImages } from '@/lib/uploads-client';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -313,6 +316,23 @@ export function CarListingForm({
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const formSnapshot = React.useMemo(
+    () => ({ ...form, imageUrls: existingImageUrls }) as Record<string, unknown>,
+    [form, existingImageUrls],
+  );
+  usePublishListingFormSnapshot(formSnapshot, !isEdit);
+  const { clearDraft } = useListingFormDraft({
+    category: 'cars',
+    enabled: !isEdit,
+    skipRestore: Boolean(initialListing),
+    form,
+    setForm,
+    existingImageUrls,
+    setExistingImageUrls,
+    images,
+    setImages,
+    maxImages: MAX_IMAGES,
+  });
 
   // Load cities once on mount.
   React.useEffect(() => {
@@ -330,16 +350,31 @@ export function CarListingForm({
 
   React.useEffect(() => {
     if (!initialListing) return;
-    setForm(() => {
-      const next = applyEmptyKnownDefaults(
-        formFromListing(initialListing),
-        knownCreateDefaultsFromStorage(),
-      ) as CarFormState;
-      return { ...next, locationMode: next.locationMode || inferListingLocationMode(next.cityId, next.mapsUrl) };
+    const fromAi = applyEmptyKnownDefaults(
+      formFromListing(initialListing),
+      knownCreateDefaultsFromStorage(),
+    ) as CarFormState;
+    const shaped = {
+      ...fromAi,
+      locationMode: fromAi.locationMode || inferListingLocationMode(fromAi.cityId, fromAi.mapsUrl),
+    };
+    if (isEdit) {
+      setForm(shaped);
+      setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean).slice(0, MAX_IMAGES));
+      setImages([]);
+      return;
+    }
+    setForm((prev) => {
+      const merged = mergeCreateFormState(prev, shaped);
+      return {
+        ...merged,
+        locationMode: merged.locationMode || inferListingLocationMode(merged.cityId, merged.mapsUrl),
+      };
     });
-    setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean).slice(0, MAX_IMAGES));
-    setImages([]);
-  }, [initialListing]);
+    setExistingImageUrls((prev) =>
+      mergeImageUrls(prev, (initialListing.imageUrls ?? []).filter(Boolean), MAX_IMAGES),
+    );
+  }, [initialListing, isEdit]);
 
   React.useEffect(() => {
     if (isEdit) return;
@@ -536,6 +571,7 @@ export function CarListingForm({
           setSubmitError(error);
           return;
         }
+        clearDraft();
         if (id && (wantsPremium || boostKindRef.current === 'premium')) {
           const boost = await activatePremiumAfterCreate({
             mode: premiumPayRef.current,

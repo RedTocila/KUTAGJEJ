@@ -28,7 +28,7 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
         description: str(f.description),
         propertyCategory: str(f.propertyCategory),
         transactionType: f.transactionType === 'rent' || f.transactionType === 'sale' ? f.transactionType : 'sale',
-        price: num(f.price) ?? 0,
+        price: num(f.price),
         currency: f.currency === 'LEK' ? 'LEK' : 'EUR',
         surfaceM2: num(f.surfaceM2),
         cityName: draft.cityName || str(f.cityName) || null,
@@ -159,6 +159,10 @@ export function mergeAiIntoListing(
     if (value == null) continue;
     if (typeof value === 'string' && value.trim() === '') continue;
     if (Array.isArray(value) && value.length === 0 && key !== 'imageUrls') continue;
+    if (typeof value === 'number' && value === 0) {
+      const cur = next[key];
+      if (cur != null && cur !== '' && cur !== 0 && cur !== '0') continue;
+    }
     next[key] = value;
   }
 

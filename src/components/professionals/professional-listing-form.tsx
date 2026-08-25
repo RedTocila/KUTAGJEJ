@@ -54,6 +54,9 @@ import {
 } from '@/lib/listing-form-defaults';
 import { hasUnlimitedDirectoryListings } from '@/lib/directory-listing-limits';
 import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
+import { useListingFormDraft } from '@/hooks/use-listing-form-draft';
+import { usePublishListingFormSnapshot } from '@/components/user/listing-form-snapshot-context';
+import { pickNonEmptyString } from '@/lib/listing-form-draft';
 import { useUser } from '@/hooks/use-user';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -257,6 +260,122 @@ export function ProfessionalListingForm({
     }
   }, [user, checkingExisting, existingId, knownDefaults.contactPhone, knownDefaults.cityId]);
 
+  const appliedAiRef = React.useRef<Record<string, unknown> | null>(null);
+  React.useEffect(() => {
+    if (!aiPrefill || appliedAiRef.current === aiPrefill) return;
+    appliedAiRef.current = aiPrefill;
+    const nextTitle = pickNonEmptyString(aiPrefill.title);
+    if (nextTitle) setTitle(nextTitle);
+    const nextDesc = pickNonEmptyString(aiPrefill.description);
+    if (nextDesc) setDescription(nextDesc);
+    const nextCat = pickNonEmptyString(aiPrefill.category);
+    if (nextCat) setCategory(nextCat);
+    const nextCity = pickNonEmptyString(aiPrefill.cityId);
+    if (nextCity) {
+      setCityId(nextCity);
+      setLocationMode((prev) => prev || 'city');
+    }
+    const nextPhone = pickNonEmptyString(aiPrefill.contactPhone);
+    if (nextPhone) setContactPhone(nextPhone);
+    const nextServices = pickNonEmptyString(aiPrefill.servicesHighlight);
+    if (nextServices) setServicesHighlight(nextServices);
+    const nextHours = pickNonEmptyString(aiPrefill.responseTimeHours);
+    if (nextHours) setResponseTimeHours(nextHours);
+    const urls = Array.isArray(aiPrefill.imageUrls)
+      ? aiPrefill.imageUrls.filter((u): u is string => typeof u === 'string' && Boolean(u))
+      : [];
+    if (urls[0]) setCoverUrl((prev) => prev || urls[0]!);
+    if (urls[1]) setAvatarUrl((prev) => prev || urls[1]!);
+  }, [aiPrefill]);
+
+  type ProFormDraft = {
+    title: string;
+    description: string;
+    category: string;
+    cityId: string;
+    mapsUrl: string;
+    locationMode: ListingLocationMode | '';
+    locationLat: number | null;
+    locationLng: number | null;
+    locationAddress: string | null;
+    contactPhone: string;
+    servicesHighlight: string;
+    responseTimeHours: string;
+    coverUrl: string | null;
+    avatarUrl: string | null;
+  };
+
+  const proForm: ProFormDraft = {
+    title,
+    description,
+    category,
+    cityId,
+    mapsUrl,
+    locationMode,
+    locationLat,
+    locationLng,
+    locationAddress,
+    contactPhone,
+    servicesHighlight,
+    responseTimeHours,
+    coverUrl,
+    avatarUrl,
+  };
+  const proFormRef = React.useRef(proForm);
+  proFormRef.current = proForm;
+  const setProForm = React.useCallback((action: React.SetStateAction<ProFormDraft>) => {
+    const next = typeof action === 'function' ? action(proFormRef.current) : action;
+    setTitle(next.title);
+    setDescription(next.description);
+    setCategory(next.category);
+    setCityId(next.cityId);
+    setMapsUrl(next.mapsUrl);
+    setLocationMode(next.locationMode);
+    setLocationLat(next.locationLat);
+    setLocationLng(next.locationLng);
+    setLocationAddress(next.locationAddress);
+    setContactPhone(next.contactPhone);
+    setServicesHighlight(next.servicesHighlight);
+    setResponseTimeHours(next.responseTimeHours);
+    setCoverUrl(next.coverUrl);
+    setAvatarUrl(next.avatarUrl);
+  }, []);
+
+  const existingImageUrls = React.useMemo(
+    () => [coverUrl, avatarUrl].filter((u): u is string => Boolean(u)),
+    [coverUrl, avatarUrl],
+  );
+  const setExistingImageUrls = React.useCallback(
+    (action: React.SetStateAction<string[]>) => {
+      const prev = [proFormRef.current.coverUrl, proFormRef.current.avatarUrl].filter((u): u is string => Boolean(u));
+      const next = typeof action === 'function' ? action(prev) : action;
+      setCoverUrl(next[0] ?? null);
+      setAvatarUrl(next[1] ?? null);
+    },
+    [],
+  );
+
+  usePublishListingFormSnapshot(
+    { ...proForm, imageUrls: existingImageUrls } as Record<string, unknown>,
+    !existingId,
+  );
+  const { clearDraft } = useListingFormDraft({
+    category: 'professionals',
+    enabled: !existingId && !checkingExisting,
+    skipRestore: Boolean(aiPrefill),
+    form: proForm,
+    setForm: setProForm,
+    existingImageUrls,
+    setExistingImageUrls,
+    images: coverFile,
+    setImages: setCoverFile,
+    extraFiles: { avatar: avatarFile },
+    onRestoreExtraFiles: (files) => {
+      if (files.avatar) setAvatarFile(files.avatar);
+    },
+    maxImages: 2,
+  });
+
   const addPortfolio = () => {
     setPortfolio((prev) => {
       if (prev.length >= MAX_PORTFOLIO_WORKS) return prev;
@@ -402,6 +521,7 @@ export function ProfessionalListingForm({
       setError(res.error);
       return;
     }
+    clearDraft();
     if (loc.cityId) rememberLocation({ cityId: loc.cityId });
     if (res.id && (wantsPremium || boostKindRef.current === 'premium')) {
       const boost = await activatePremiumAfterCreate({

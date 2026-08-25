@@ -56,10 +56,13 @@ import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/rea
 import { useUser } from '@/hooks/use-user';
 import { createJobListing, updateJobListing, type JobMineListing } from '@/lib/listings-client';
 import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
+import { useListingFormDraft } from '@/hooks/use-listing-form-draft';
+import { usePublishListingFormSnapshot } from '@/components/user/listing-form-snapshot-context';
 import {
   applyEmptyKnownDefaults,
   knownCreateDefaultsFromStorage,
 } from '@/lib/listing-form-defaults';
+import { mergeCreateFormState, mergeImageUrls } from '@/lib/listing-form-draft';
 import { uploadListingImages } from '@/lib/uploads-client';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -245,6 +248,23 @@ export function JobListingForm({
   const [loadingCities, setLoadingCities] = React.useState(true);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const formSnapshot = React.useMemo(
+    () => ({ ...form, imageUrls: existingImageUrls }) as Record<string, unknown>,
+    [form, existingImageUrls],
+  );
+  usePublishListingFormSnapshot(formSnapshot, !isEdit);
+  const { clearDraft } = useListingFormDraft({
+    category: 'job-listings',
+    enabled: !isEdit,
+    skipRestore: Boolean(initialListing),
+    form,
+    setForm,
+    existingImageUrls,
+    setExistingImageUrls,
+    images,
+    setImages,
+    maxImages: MAX_JOB_IMAGES,
+  });
 
   React.useEffect(() => {
     let cancelled = false;
@@ -261,16 +281,31 @@ export function JobListingForm({
 
   React.useEffect(() => {
     if (!initialListing) return;
-    setForm(() => {
-      const next = applyEmptyKnownDefaults(
-        formFromListing(initialListing),
-        knownCreateDefaultsFromStorage(),
-      ) as JobFormState;
-      return { ...next, locationMode: next.locationMode || inferListingLocationMode(next.cityId, next.mapsUrl) };
+    const fromAi = applyEmptyKnownDefaults(
+      formFromListing(initialListing),
+      knownCreateDefaultsFromStorage(),
+    ) as JobFormState;
+    const shaped = {
+      ...fromAi,
+      locationMode: fromAi.locationMode || inferListingLocationMode(fromAi.cityId, fromAi.mapsUrl),
+    };
+    if (isEdit) {
+      setForm(shaped);
+      setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean).slice(0, MAX_JOB_IMAGES));
+      setImages([]);
+      return;
+    }
+    setForm((prev) => {
+      const merged = mergeCreateFormState(prev, shaped);
+      return {
+        ...merged,
+        locationMode: merged.locationMode || inferListingLocationMode(merged.cityId, merged.mapsUrl),
+      };
     });
-    setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean).slice(0, MAX_JOB_IMAGES));
-    setImages([]);
-  }, [initialListing]);
+    setExistingImageUrls((prev) =>
+      mergeImageUrls(prev, (initialListing.imageUrls ?? []).filter(Boolean), MAX_JOB_IMAGES),
+    );
+  }, [initialListing, isEdit]);
 
   React.useEffect(() => {
     if (isEdit) return;
@@ -351,6 +386,7 @@ export function JobListingForm({
         return;
       }
       if (!isEdit) {
+        clearDraft();
         rememberLocation({ cityId: loc.cityId ?? '' });
       }
       if (!isEdit && result.id && (wantsPremium || boostKindRef.current === 'premium')) {

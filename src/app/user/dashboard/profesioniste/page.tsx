@@ -7,12 +7,12 @@ import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 
 import { ProfessionalListingForm } from '@/components/professionals/professional-listing-form';
 import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
+import { ListingFormSnapshotProvider } from '@/components/user/listing-form-snapshot-context';
 import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
 
 export default function UserProfessionalsDashboardPage() {
   const [aiPrefill, setAiPrefill] = React.useState<Record<string, unknown> | null>(null);
-  const [aiFormKey, setAiFormKey] = React.useState(0);
 
   return (
     <Stack spacing={3}>
@@ -53,20 +53,20 @@ export default function UserProfessionalsDashboardPage() {
             </Button>
           </Stack>
           <Stack spacing={2.25}>
+            <ListingFormSnapshotProvider>
             <PostListingAiAssist
               category="professionals"
               onApply={(initial) => {
                 setAiPrefill(initial);
-                setAiFormKey((k) => k + 1);
               }}
             />
             <ProfessionalListingForm
-              key={`pro-${aiFormKey}`}
               aiPrefill={aiPrefill}
               onSuccess={() => hardNavigate(paths.user.dashboard)}
               backHref={paths.user.dashboard}
               backLabel="Dashboard"
             />
+            </ListingFormSnapshotProvider>
           </Stack>
         </CardContent>
       </Card>

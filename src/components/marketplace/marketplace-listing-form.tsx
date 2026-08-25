@@ -1,10 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import {
-  InputAdornment,
-  Stack,
-} from '@mui/material';
+import { Stack } from '@mui/material';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import {
@@ -44,10 +41,13 @@ import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/rea
 import { useUser } from '@/hooks/use-user';
 import { createMarketplaceListing, updateMarketplaceListing, type MarketplaceMineListing } from '@/lib/listings-client';
 import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
+import { useListingFormDraft } from '@/hooks/use-listing-form-draft';
+import { usePublishListingFormSnapshot } from '@/components/user/listing-form-snapshot-context';
 import {
   applyEmptyKnownDefaults,
   knownCreateDefaultsFromStorage,
 } from '@/lib/listing-form-defaults';
+import { mergeCreateFormState, mergeImageUrls } from '@/lib/listing-form-draft';
 import { uploadListingImages } from '@/lib/uploads-client';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -184,6 +184,23 @@ export function MarketplaceListingForm({
   const [loadingCities, setLoadingCities] = React.useState(true);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const formSnapshot = React.useMemo(
+    () => ({ ...form, imageUrls: existingImageUrls }) as Record<string, unknown>,
+    [form, existingImageUrls],
+  );
+  usePublishListingFormSnapshot(formSnapshot, !isEdit);
+  const { clearDraft } = useListingFormDraft({
+    category: 'marketplace',
+    enabled: !isEdit,
+    skipRestore: Boolean(initialListing),
+    form,
+    setForm,
+    existingImageUrls,
+    setExistingImageUrls,
+    images,
+    setImages,
+    maxImages: MAX_MARKETPLACE_IMAGES,
+  });
 
   React.useEffect(() => {
     let cancelled = false;
@@ -198,16 +215,31 @@ export function MarketplaceListingForm({
 
   React.useEffect(() => {
     if (!initialListing) return;
-    setForm(() => {
-      const next = applyEmptyKnownDefaults(
-        formFromListing(initialListing),
-        knownCreateDefaultsFromStorage(),
-      ) as MarketplaceFormState;
-      return { ...next, locationMode: next.locationMode || inferListingLocationMode(next.cityId, next.mapsUrl) };
+    const fromAi = applyEmptyKnownDefaults(
+      formFromListing(initialListing),
+      knownCreateDefaultsFromStorage(),
+    ) as MarketplaceFormState;
+    const shaped = {
+      ...fromAi,
+      locationMode: fromAi.locationMode || inferListingLocationMode(fromAi.cityId, fromAi.mapsUrl),
+    };
+    if (isEdit) {
+      setForm(shaped);
+      setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
+      setImages([]);
+      return;
+    }
+    setForm((prev) => {
+      const merged = mergeCreateFormState(prev, shaped);
+      return {
+        ...merged,
+        locationMode: merged.locationMode || inferListingLocationMode(merged.cityId, merged.mapsUrl),
+      };
     });
-    setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
-    setImages([]);
-  }, [initialListing]);
+    setExistingImageUrls((prev) =>
+      mergeImageUrls(prev, (initialListing.imageUrls ?? []).filter(Boolean), MAX_MARKETPLACE_IMAGES),
+    );
+  }, [initialListing, isEdit]);
 
   // AI drafts sometimes only have cityName — map it to cityId once cities load.
   React.useEffect(() => {
@@ -280,6 +312,7 @@ export function MarketplaceListingForm({
           : await createMarketplaceListing(payload);
       if (result.error) { setSubmitError(result.error); return; }
       if (!isEdit) {
+        clearDraft();
         rememberLocation({ cityId: loc.cityId ?? '' });
       }
       if (!isEdit && result.id && (wantsPremium || boostKindRef.current === 'premium')) {
@@ -382,7 +415,6 @@ export function MarketplaceListingForm({
             required
             fullWidth
             placeholder="p.sh. 5000"
-            slotProps={{ input: { endAdornment: <InputAdornment position="end">/ copë</InputAdornment> } }}
           />
           <ListingTextField
             label="Çmimi i mëparshëm"

@@ -10,6 +10,7 @@ import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { BusinessOwnerReservations } from '@/components/businesses/business-owner-reservations';
 import { BusinessListingForm } from '@/components/businesses/business-listing-form';
 import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
+import { ListingFormSnapshotProvider } from '@/components/user/listing-form-snapshot-context';
 import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
 
@@ -38,7 +39,6 @@ const tabBtnSx = (active: boolean) => ({
 export default function UserBusinessesDashboardPage() {
   const [tab, setTab] = React.useState<Tab>('post');
   const [aiPrefill, setAiPrefill] = React.useState<Record<string, unknown> | null>(null);
-  const [aiFormKey, setAiFormKey] = React.useState(0);
 
   return (
     <Stack spacing={3}>
@@ -98,15 +98,14 @@ export default function UserBusinessesDashboardPage() {
         <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
           <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Stack spacing={2.25}>
+              <ListingFormSnapshotProvider>
               <PostListingAiAssist
                 category="businesses"
                 onApply={(initial) => {
                   setAiPrefill(initial);
-                  setAiFormKey((k) => k + 1);
                 }}
               />
               <BusinessListingForm
-                key={`biz-${aiFormKey}`}
                 aiPrefill={aiPrefill}
                 onSuccess={() => {
                   hardNavigate(paths.user.dashboard);
@@ -114,6 +113,7 @@ export default function UserBusinessesDashboardPage() {
                 backHref={paths.user.dashboard}
                 backLabel="Profili"
               />
+              </ListingFormSnapshotProvider>
             </Stack>
           </CardContent>
         </Card>

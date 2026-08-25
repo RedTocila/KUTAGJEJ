@@ -235,6 +235,7 @@ export async function importListingsFromLinks(input: {
   batchId?: string | null;
   batchSize?: number;
   feature?: 'build' | 'assist';
+  signal?: AbortSignal;
 }): Promise<{
   drafts: AiImportDraftResult[];
   error?: string;
@@ -242,6 +243,7 @@ export async function importListingsFromLinks(input: {
   status?: number;
   batchId?: string | null;
   boostCredits?: number;
+  aborted?: boolean;
 }> {
   const res = await clientFetch<{
     drafts?: AiImportDraftResult[];
@@ -263,7 +265,12 @@ export async function importListingsFromLinks(input: {
       ...(input.batchId ? { batchId: input.batchId } : {}),
       ...(input.batchSize ? { batchSize: input.batchSize } : {}),
     }),
+    signal: input.signal,
   });
+
+  if (res.aborted || input.signal?.aborted) {
+    return { drafts: [], aborted: true, status: 0 };
+  }
 
   if (!res.ok) {
     const code =

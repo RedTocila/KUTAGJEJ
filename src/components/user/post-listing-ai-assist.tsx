@@ -23,7 +23,9 @@ import { useCopy } from '@/hooks/use-copy';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 import { useUser } from '@/hooks/use-user';
 import { useVisualViewportBox } from '@/hooks/use-visual-viewport';
+import { useListingFormSnapshotRef } from '@/components/user/listing-form-snapshot-context';
 import { aiDraftToInitialListing, mergeAiIntoListing } from '@/lib/ai-draft-to-listing';
+import { listingFormHasUserProgress } from '@/lib/listing-form-draft';
 import {
   acceptAiCategoryCorrection,
   aiDailyLimitMessage,
@@ -106,6 +108,7 @@ export function PostListingAiAssist({
 }) {
   const t = useCopy();
   const { user, checkSession } = useUser();
+  const snapshotRef = useListingFormSnapshotRef();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const [text, setText] = React.useState('');
@@ -159,6 +162,9 @@ export function PostListingAiAssist({
   }, [files]);
 
   const isEdit = mode === 'edit';
+  const liveListing = currentListing ?? snapshotRef?.current ?? null;
+  const hasLiveProgress = listingFormHasUserProgress(liveListing);
+  const assistMode = isEdit || hasLiveProgress ? 'edit' : 'create';
   const placeholder = isEdit ? t.aiImport.editPlaceholder : t.aiImport.formPlaceholder;
   const appliedMsg = isEdit ? t.aiImport.editApplied : t.aiImport.formApplied;
   const buttonLabel = t.aiImport.editTitle;
@@ -245,9 +251,9 @@ export function PostListingAiAssist({
         category,
         profile: profileFromUser(user),
         images: imagePayload,
-        mode,
+        mode: assistMode,
         feature: 'assist',
-        currentListing: isEdit ? currentListing : null,
+        currentListing: assistMode === 'edit' ? liveListing : null,
       });
       if (res.error) {
         if (isAiDailyLimitError({ code: res.code, error: res.error, status: res.status })) {
@@ -327,8 +333,7 @@ export function PostListingAiAssist({
       }
 
       const shaped = aiDraftToInitialListing({ ...ready, imageUrls: hostedUrls });
-      const payload =
-        isEdit && currentListing ? mergeAiIntoListing(currentListing, shaped) : shaped;
+      const payload = liveListing ? mergeAiIntoListing(liveListing, shaped) : shaped;
 
       onApply(payload);
       setSuccess(appliedMsg);

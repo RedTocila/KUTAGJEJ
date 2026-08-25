@@ -59,10 +59,13 @@ import { uploadListingImages } from '@/lib/uploads-client';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
 import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
+import { useListingFormDraft } from '@/hooks/use-listing-form-draft';
+import { usePublishListingFormSnapshot } from '@/components/user/listing-form-snapshot-context';
 import {
   applyEmptyKnownDefaults,
   knownCreateDefaultsFromStorage,
 } from '@/lib/listing-form-defaults';
+import { mergeCreateFormState, mergeImageUrls } from '@/lib/listing-form-draft';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 const MAX_REAL_ESTATE_IMAGES = 8;
@@ -315,6 +318,23 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [loadingRefs, setLoadingRefs] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const formSnapshot = React.useMemo(
+    () => ({ ...form, imageUrls: existingImageUrls }) as Record<string, unknown>,
+    [form, existingImageUrls],
+  );
+  usePublishListingFormSnapshot(formSnapshot, !isEdit);
+  const { clearDraft } = useListingFormDraft({
+    category: 'real-estate',
+    enabled: !isEdit,
+    skipRestore: Boolean(initialListing),
+    form,
+    setForm,
+    existingImageUrls,
+    setExistingImageUrls,
+    images,
+    setImages,
+    maxImages: MAX_REAL_ESTATE_IMAGES,
+  });
 
   React.useEffect(() => {
     let cancelled = false;
@@ -338,15 +358,30 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
 
   React.useEffect(() => {
     if (!initialListing) return;
-    setForm(() => {
-      const next = applyEmptyKnownDefaults(formFromListing(initialListing), knownCreateDefaultsFromStorage(), {
-        withZone: true,
-      }) as FormState;
-      return { ...next, locationMode: next.locationMode || inferListingLocationMode(next.cityId, next.mapsUrl) };
+    const fromAi = applyEmptyKnownDefaults(formFromListing(initialListing), knownCreateDefaultsFromStorage(), {
+      withZone: true,
+    }) as FormState;
+    const shaped = {
+      ...fromAi,
+      locationMode: fromAi.locationMode || inferListingLocationMode(fromAi.cityId, fromAi.mapsUrl),
+    };
+    if (isEdit) {
+      setForm(shaped);
+      setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
+      setImages([]);
+      return;
+    }
+    setForm((prev) => {
+      const merged = mergeCreateFormState(prev, shaped);
+      return {
+        ...merged,
+        locationMode: merged.locationMode || inferListingLocationMode(merged.cityId, merged.mapsUrl),
+      };
     });
-    setExistingImageUrls((initialListing.imageUrls ?? []).filter(Boolean));
-    setImages([]);
-  }, [initialListing]);
+    setExistingImageUrls((prev) =>
+      mergeImageUrls(prev, (initialListing.imageUrls ?? []).filter(Boolean), MAX_REAL_ESTATE_IMAGES),
+    );
+  }, [initialListing, isEdit]);
 
   React.useEffect(() => {
     if (isEdit) return;
@@ -396,6 +431,7 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
         return;
       }
       if (!isEdit) {
+        clearDraft();
         if (form.locationMode === 'city') {
           rememberLocation({ cityId: form.cityId, zoneId: form.zoneId });
         }

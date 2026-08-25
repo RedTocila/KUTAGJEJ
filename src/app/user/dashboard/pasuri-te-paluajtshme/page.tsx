@@ -16,6 +16,7 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
+import { ListingFormSnapshotProvider } from '@/components/user/listing-form-snapshot-context';
 import {
   PostListingFormFieldsSkeleton,
   PostListingFormSurface,
@@ -199,7 +200,6 @@ export default function UserPostListingPage() {
   const aiReturnHref = paths.user.aiImport;
   const [aiInitial, setAiInitial] = React.useState<Record<string, unknown> | null>(null);
   const [aiReady, setAiReady] = React.useState(!wantsAi);
-  const [aiFormKey, setAiFormKey] = React.useState(0);
   const appliedCategoryRef = React.useRef<string | null>(categoryFromUrl);
   const aiConsumedRef = React.useRef(false);
 
@@ -318,7 +318,6 @@ export default function UserPostListingPage() {
 
   const handleAiApply = React.useCallback((initial: Record<string, unknown>) => {
     setAiInitial(initial);
-    setAiFormKey((k) => k + 1);
   }, []);
 
   const handleFormSuccess = React.useCallback(() => {
@@ -386,6 +385,7 @@ export default function UserPostListingPage() {
           />
 
           <PostListingFormSurface>
+            <ListingFormSnapshotProvider>
             {activeCategory ? (
               <PostListingAiAssist category={activeCategory} onApply={handleAiApply} />
             ) : null}
@@ -393,42 +393,36 @@ export default function UserPostListingPage() {
               <>
                 {phase === 'real-estate-form' ? (
                   <RealEstateListingForm
-                    key={`re-${aiFormKey}`}
                     initialListing={(aiInitial as RealEstateMineListing | null) ?? null}
                     onSuccess={handleFormSuccess}
                   />
                 ) : null}
                 {phase === 'cars-form' ? (
                   <CarListingForm
-                    key={`cars-${aiFormKey}`}
                     initialListing={(aiInitial as CarMineListing | null) ?? null}
                     onSuccess={handleFormSuccess}
                   />
                 ) : null}
                 {phase === 'jobs-form' ? (
                   <JobListingForm
-                    key={`jobs-${aiFormKey}`}
                     initialListing={(aiInitial as JobMineListing | null) ?? null}
                     onSuccess={handleFormSuccess}
                   />
                 ) : null}
                 {phase === 'businesses-form' ? (
                   <BusinessListingForm
-                    key={`biz-${aiFormKey}`}
                     aiPrefill={aiInitial}
                     onSuccess={handleFormSuccess}
                   />
                 ) : null}
                 {phase === 'professionals-form' ? (
                   <ProfessionalListingForm
-                    key={`pro-${aiFormKey}`}
                     aiPrefill={aiInitial}
                     onSuccess={handleFormSuccess}
                   />
                 ) : null}
                 {phase === 'marketplace-form' ? (
                   <MarketplaceListingForm
-                    key={`mkt-${aiFormKey}`}
                     initialListing={(aiInitial as MarketplaceMineListing | null) ?? null}
                     onSuccess={handleFormSuccess}
                   />
@@ -437,6 +431,7 @@ export default function UserPostListingPage() {
             ) : (
               <PostListingFormFieldsSkeleton />
             )}
+            </ListingFormSnapshotProvider>
           </PostListingFormSurface>
           </>
         </OkazionTheme>

@@ -96,6 +96,7 @@ export interface ClientFetchResult<T> {
   status: number;
   data?: T;
   error?: string;
+  aborted?: boolean;
 }
 
 const RETRYABLE_STATUSES = new Set([408, 425, 429, 502, 503, 504]);
@@ -114,6 +115,13 @@ function shouldRetryStatus(status: number, method: string): boolean {
   return status === 500 && (method === 'GET' || method === 'HEAD');
 }
 
+function isAbortError(error: unknown): boolean {
+  return (
+    (typeof DOMException !== 'undefined' && error instanceof DOMException && error.name === 'AbortError') ||
+    (error instanceof Error && error.name === 'AbortError')
+  );
+}
+
 /**
  * Browser fetch with short retries for cold starts / flaky mobile networks.
  * Does not retry typical 4xx (except timeout/rate-limit).
@@ -123,6 +131,11 @@ export async function apiFetch(input: string, init?: RequestInit, retries = 2): 
   const method = requestMethod(init);
   const attempts = Math.max(1, retries + 1);
   for (let attempt = 0; attempt < attempts; attempt++) {
+    if (init?.signal?.aborted) {
+      throw init.signal.reason instanceof Error
+        ? init.signal.reason
+        : new DOMException('Aborted', 'AbortError');
+    }
     try {
       const res = await fetch(input, init);
       if (shouldRetryStatus(res.status, method) && attempt < attempts - 1) {
@@ -132,6 +145,9 @@ export async function apiFetch(input: string, init?: RequestInit, retries = 2): 
       return res;
     } catch (error) {
       lastError = error;
+      if (isAbortError(error) || init?.signal?.aborted) {
+        throw error instanceof Error ? error : new DOMException('Aborted', 'AbortError');
+      }
       if (attempt < attempts - 1) {
         await sleep(400 * 2 ** attempt);
         continue;
@@ -182,7 +198,10 @@ export async function clientFetch<T = unknown>(
       return { ok: false, status: res.status, error: 'Kërkesa dështoi.', data };
     }
     return { ok: true, status: res.status, data };
-  } catch {
+  } catch (error) {
+    if (isAbortError(error) || init?.signal?.aborted) {
+      return { ok: false, status: 0, aborted: true };
+    }
     return { ok: false, status: 0, error: 'Nuk u arrit lidhja me serverin.' };
   }
 }

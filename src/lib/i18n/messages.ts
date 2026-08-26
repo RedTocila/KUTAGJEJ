@@ -639,7 +639,6 @@ const sq = {
       fail > 0
         ? `U postuan ${ok}, dështuan ${fail}. Kontrollo draftet e mbetura.`
         : `U postuan ${ok} njoftime.`,
-    draftsKeptHint: 'Ruhen këtu — i gjen përsëri pasi të kthehesh nga formulari.',
     placeholder:
       'Përshkruaj, ngjit linke (deri në 50) ose bashkëngjit foto — AI ndërton njoftimet…\nhttps://example.com/apartament\nhttps://www.instagram.com/p/...',
     analyze: 'Analizo me AI',
@@ -1431,7 +1430,6 @@ const en: AppMessages = {
       fail > 0
         ? `Posted ${ok}, failed ${fail}. Check remaining drafts.`
         : `Posted ${ok} listings.`,
-    draftsKeptHint: 'Saved here — you’ll find them again after you return from the form.',
     placeholder:
       'Describe, paste links (up to 50), or attach photos — AI builds the listings…\nhttps://example.com/apartment\nhttps://www.instagram.com/p/...',
     analyze: 'Analyze with AI',

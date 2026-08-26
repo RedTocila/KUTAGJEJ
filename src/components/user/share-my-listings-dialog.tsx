@@ -22,6 +22,7 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
 import { ListRowsSkeleton } from '@/components/core/content-skeletons';
+import { useBottomSheetDismiss } from '@/hooks/use-bottom-sheet-dismiss';
 import { useLanguage } from '@/hooks/use-language';
 import {
   listMyBusinessListings,
@@ -348,14 +349,18 @@ export function ShareMyListingsDialog({
     onShareComplete?.();
   };
 
+  const sheetDismiss = useBottomSheetDismiss(onClose, open);
+
   return (
     <>
       <Drawer
         anchor="bottom"
         open={open}
         onClose={onClose}
+        {...sheetDismiss.drawerProps}
         slotProps={{
           paper: {
+            ...sheetDismiss.paperSlotProps,
             sx: {
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
@@ -373,16 +378,7 @@ export function ShareMyListingsDialog({
             event.stopPropagation();
           }}
         >
-          <Box
-            sx={{
-              width: 36,
-              height: 4,
-              borderRadius: 999,
-              bgcolor: 'action.disabled',
-              mx: 'auto',
-              mb: 1.25,
-            }}
-          />
+          <Box {...sheetDismiss.handleBind} sx={sheetDismiss.handleSx} />
 
           <Stack direction="row" sx={{ alignItems: 'flex-start', justifyContent: 'space-between', mb: 1.25, gap: 1 }}>
             <Box sx={{ minWidth: 0 }}>

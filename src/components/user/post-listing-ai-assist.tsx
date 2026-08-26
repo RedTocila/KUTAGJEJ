@@ -20,6 +20,7 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-panel';
 import { useCopy } from '@/hooks/use-copy';
+import { useBottomSheetDismiss } from '@/hooks/use-bottom-sheet-dismiss';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 import { useUser } from '@/hooks/use-user';
 import { useVisualViewportBox } from '@/hooks/use-visual-viewport';
@@ -57,7 +58,7 @@ import { knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
 import { paths } from '@/paths';
 import { isOurStorageUrl, uploadListingImages } from '@/lib/uploads-client';
 import type { ListingCategoryKey } from '@/types/listing-category';
-import { MOTION, MOTION_DIALOG_MS } from '@/styles/motion';
+import { MOTION } from '@/styles/motion';
 import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 
 const MAX_AI_IMAGES = 6;
@@ -146,6 +147,8 @@ export function PostListingAiAssist({
     setError(null);
     setSuccess(null);
   }, []);
+
+  const sheetDismiss = useBottomSheetDismiss(closeDrawer, drawerOpen);
 
   React.useEffect(() => {
     const onOpen = () => openDrawer();
@@ -400,7 +403,7 @@ export function PostListingAiAssist({
         onClose={closeDrawer}
         disableAutoFocus
         disableScrollLock
-        transitionDuration={MOTION_DIALOG_MS}
+        {...sheetDismiss.drawerProps}
         slotProps={{
           backdrop: {
             sx: {
@@ -409,6 +412,7 @@ export function PostListingAiAssist({
             },
           },
           paper: {
+            ...sheetDismiss.paperSlotProps,
             sx: {
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
@@ -425,22 +429,14 @@ export function PostListingAiAssist({
                 : undefined,
               // MUI Slide's transform makes iOS pin this layer to the visual
               // viewport and double-offset it above the keyboard.
+              // Swipe-dismiss overrides this via inline `transform !important`.
               ...(drawerOpen ? { transform: 'none !important' } : null),
             },
           },
         }}
       >
         <Box sx={{ px: 2, pt: 1, pb: 1.5 }}>
-          <Box
-            sx={{
-              width: 36,
-              height: 4,
-              borderRadius: 999,
-              bgcolor: 'action.disabled',
-              mx: 'auto',
-              mb: 1.25,
-            }}
-          />
+          <Box {...sheetDismiss.handleBind} sx={sheetDismiss.handleSx} />
 
           <Stack
             direction="row"

@@ -25,6 +25,7 @@ import { MAIN_TAB_SLIDE_MS } from '@/lib/main-tab-pager';
 import { normalizeNavPath } from '@/lib/navigation-pending';
 import { isPublicBrowsePath } from '@/lib/public-browse-path';
 import { paths } from '@/paths';
+import { MOTION } from '@/styles/motion';
 
 function hrefPath(href: string): string {
   return href.split('?')[0] || href;
@@ -248,10 +249,13 @@ export function MobileBottomNav() {
                 opacity: hasActiveTab ? 1 : 0,
                 transform: `translate3d(${indicatorIndex * 100}%, 0, 0)`,
                 transition: transitionReady
-                  ? `transform ${MAIN_TAB_SLIDE_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease`
+                  ? `transform ${MAIN_TAB_SLIDE_MS}ms ${MOTION.ease}, opacity 180ms ease`
                   : 'none',
                 pointerEvents: 'none',
                 zIndex: 0,
+                '@media (prefers-reduced-motion: reduce)': {
+                  transition: 'none',
+                },
               }}
             />
 

@@ -131,6 +131,7 @@ function HomeTabSoftRefresh() {
 function MainTabPane({
   paneIndex,
   active,
+  layoutActive,
   fill,
   contentSx,
   onPaneRef,
@@ -138,6 +139,8 @@ function MainTabPane({
 }: {
   paneIndex: number;
   active: boolean;
+  /** Height/overflow target. Lagged until the slide settles so layout does not hitch mid-animation. */
+  layoutActive: boolean;
   fill?: boolean;
   contentSx?: SxProps<Theme>;
   onPaneRef: (paneIndex: number) => (node: unknown) => void;
@@ -156,6 +159,7 @@ function MainTabPane({
         flexDirection: 'column',
         overscrollBehaviorX: 'none',
         backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
         pointerEvents: active ? 'auto' : 'none',
         ...(fill
           ? {
@@ -164,7 +168,7 @@ function MainTabPane({
               overflowY: 'auto',
               WebkitOverflowScrolling: 'touch',
             }
-          : active
+          : layoutActive
             ? {
                 height: 'auto',
                 overflow: 'visible',
@@ -272,6 +276,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
   const draggingRef = React.useRef(false);
   const appliedIndexRef = React.useRef(index);
   const reduceMotionRef = React.useRef(false);
+  const [layoutIndex, setLayoutIndex] = React.useState(index);
   const startRef = React.useRef<{
     x: number;
     y: number;
@@ -284,7 +289,6 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
     const el = trackRef.current;
     if (!el) return;
     const animate = withTransition && !reduceMotionRef.current;
-    el.style.willChange = 'transform';
     el.style.transition = animate ? `transform ${MAIN_TAB_SLIDE_MS}ms ${MOTION.ease}` : 'none';
     el.style.transform = `translate3d(calc(${(-tabIndex * 100) / MAIN_TAB_COUNT}% + ${offsetPx}px), 0, 0)`;
     if (offsetPx === 0) appliedIndexRef.current = tabIndex;
@@ -377,6 +381,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
       if (appliedIndexRef.current === nextIndex && dragXRef.current === 0) return;
       dragXRef.current = 0;
       applyTransform(nextIndex, 0, animate);
+      if (!animate || reduceMotionRef.current) setLayoutIndex(nextIndex);
     });
     return () => {
       registerMainTabPagerPreview(null);
@@ -389,6 +394,18 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
     dragXRef.current = 0;
     applyTransform(index, 0, true);
   }, [applyTransform, hosted, index]);
+
+  React.useLayoutEffect(() => {
+    if (reduceMotionRef.current || !hosted) {
+      setLayoutIndex(index);
+    }
+  }, [hosted, index]);
+
+  React.useEffect(() => {
+    if (layoutIndex === index) return undefined;
+    const fallback = window.setTimeout(() => setLayoutIndex(index), MAIN_TAB_SLIDE_MS * 2);
+    return () => window.clearTimeout(fallback);
+  }, [index, layoutIndex]);
 
   React.useEffect(() => {
     if (!hosted) return;
@@ -453,7 +470,10 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
       draggingRef.current = false;
       dragXRef.current = 0;
       applyTransform(tabIndex, 0, true);
-      if (navigate && tabIndex !== indexRef.current) goToIndex(tabIndex);
+      if (navigate && tabIndex !== indexRef.current) {
+        // Let the first settle frames paint before route/React work.
+        window.requestAnimationFrame(() => goToIndex(tabIndex));
+      }
     };
 
     const onEnd = () => {
@@ -477,8 +497,8 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
 
     const onTransitionEnd = (event: TransitionEvent) => {
       if (event.target !== trackRef.current || event.propertyName !== 'transform') return;
-      const track = trackRef.current;
-      if (track && !draggingRef.current) track.style.willChange = 'auto';
+      if (draggingRef.current) return;
+      setLayoutIndex(appliedIndexRef.current);
     };
 
     el.addEventListener('touchstart', onStart, { passive: true });
@@ -553,11 +573,15 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               minHeight: threadOpen ? '100%' : '100dvh',
               height: threadOpen ? '100%' : 'auto',
               alignItems: 'flex-start',
+              willChange: 'transform',
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
             }}
           >
             <MainTabPane
               paneIndex={0}
               active={index === 0}
+              layoutActive={layoutIndex === 0}
               onPaneRef={setPaneRef}
             >
               <HomeTabSoftRefresh />
@@ -566,6 +590,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
             <MainTabPane
               paneIndex={1}
               active={index === 1}
+              layoutActive={layoutIndex === 1}
               contentSx={{ px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
               onPaneRef={setPaneRef}
             >
@@ -580,6 +605,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
             <MainTabPane
               paneIndex={2}
               active={index === 2}
+              layoutActive={layoutIndex === 2}
               fill
               contentSx={{ pb: threadOpen ? 0 : MOBILE_CONTENT_BOTTOM_PADDING }}
               onPaneRef={setPaneRef}
@@ -595,6 +621,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
             <MainTabPane
               paneIndex={3}
               active={index === 3}
+              layoutActive={layoutIndex === 3}
               contentSx={{ px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
               onPaneRef={setPaneRef}
             >

@@ -77,10 +77,15 @@ export function beginPendingNavigation(href: string): void {
     const fromIndex = mainTabIndexFromPath(window.location.pathname);
     const toIndex = mainTabIndexFromPath(next);
     if (toIndex != null && fromIndex != null) {
-      // Start the pager slide in this turn; skip flushSync so mounting the
-      // destination pane does not hitch the first animation frames.
+      // Start the pager slide in this turn. Defer the pending-path emit so
+      // mounting the destination pane does not hitch the first frames.
+      pendingPath = next;
       previewMainTabIndex(toIndex, true);
-      apply();
+      if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(emit);
+      } else {
+        apply();
+      }
       return;
     }
     // Paint skeleton/active chrome in the same click turn, before the route transition.

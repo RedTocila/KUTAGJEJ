@@ -43,9 +43,9 @@ import {
 } from '@/lib/listing-form-loaders';
 import { AI_SEARCH_BLUE, AI_SEARCH_BLUE_SOFT, OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
 import { beginPendingNavigation } from '@/lib/navigation-pending';
-import { MOTION_DIALOG_MS } from '@/styles/motion';
 import { paths } from '@/paths';
 import type { ListingCategory, ListingCategoryKey } from '@/types/listing-category';
+import { useBottomSheetDismiss } from '@/hooks/use-bottom-sheet-dismiss';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
@@ -337,13 +337,15 @@ export function AddListingPickerDialog({
 
   const sheetOpen = open && !leaving;
 
+  const sheetDismiss = useBottomSheetDismiss(onClose, sheetOpen);
+
   return (
     <Drawer
       anchor="bottom"
       open={sheetOpen}
       onClose={handleCloseRequest}
       disableScrollLock
-      transitionDuration={leaving ? 0 : MOTION_DIALOG_MS}
+      transitionDuration={leaving ? 0 : sheetDismiss.drawerProps.transitionDuration}
       slotProps={{
         backdrop: {
           sx: {
@@ -353,6 +355,7 @@ export function AddListingPickerDialog({
           },
         },
         paper: {
+          ...sheetDismiss.paperSlotProps,
           sx: {
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
@@ -368,16 +371,7 @@ export function AddListingPickerDialog({
       }}
     >
       <Box sx={{ px: 2, pt: 1, pb: 1.5 }}>
-        <Box
-          sx={{
-            width: 36,
-            height: 4,
-            borderRadius: 999,
-            bgcolor: 'action.disabled',
-            mx: 'auto',
-            mb: 1.25,
-          }}
-        />
+        <Box {...sheetDismiss.handleBind} sx={sheetDismiss.handleSx} />
 
         <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
           <Typography

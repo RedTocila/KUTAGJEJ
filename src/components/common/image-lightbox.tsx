@@ -9,9 +9,11 @@ import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
+import { useSwipeToDismiss } from '@/hooks/use-swipe-to-dismiss';
 import { storageImageOriginalUrl } from '@/lib/storage-image';
 
 const SWIPE_COMMIT_PX = 56;
+const DISMISS_COMMIT_PX = 110;
 const TAP_MAX_PX = 12;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
@@ -158,10 +160,27 @@ export function ImageLightbox({
   const [zoom, setZoom] = React.useState<Zoom>(IDENTITY);
   const [zoomSmooth, setZoomSmooth] = React.useState(false);
   const [isPanning, setIsPanning] = React.useState(false);
+  const [swipeClosing, setSwipeClosing] = React.useState(false);
   const [imageFrame, setImageFrame] = React.useState({ left: 0, top: 0, width: 0, height: 0 });
   const zoomRef = React.useRef(zoom);
   zoomRef.current = zoom;
   const isZoomed = zoom.scale > ZOOM_RESET_EPS;
+
+  const handleSwipeDismiss = React.useCallback(() => {
+    setSwipeClosing(true);
+    onClose();
+  }, [onClose]);
+
+  const dismiss = useSwipeToDismiss({
+    enabled: open && count > 0,
+    onDismiss: handleSwipeDismiss,
+    thresholdPx: DISMISS_COMMIT_PX,
+    fadeTarget: true,
+  });
+
+  React.useEffect(() => {
+    if (open) setSwipeClosing(false);
+  }, [open]);
 
   const goTo = React.useCallback(
     (next: number) => {
@@ -322,6 +341,10 @@ export function ImageLightbox({
   }, [applyZoomAt, open, src]);
 
   const finishGesture = (event: React.PointerEvent<HTMLElement>, commitSwipe: boolean) => {
+    const wasDismiss = dismiss.isDismissGesture();
+    if (commitSwipe) dismiss.handlers.onPointerUp(event);
+    else dismiss.handlers.onPointerCancel(event);
+
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -332,7 +355,7 @@ export function ImageLightbox({
     lastPinchRef.current = null;
     setIsPanning(false);
 
-    if (!start || didPinchRef.current) return;
+    if (!start || didPinchRef.current || wasDismiss) return;
 
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
@@ -354,6 +377,9 @@ export function ImageLightbox({
       didSwipeRef.current = false;
       didPinchRef.current = false;
       dragStartRef.current = { x: event.clientX, y: event.clientY };
+      if (zoomRef.current.scale <= ZOOM_RESET_EPS) {
+        dismiss.handlers.onPointerDown(event);
+      }
     }
 
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -363,6 +389,7 @@ export function ImageLightbox({
     if (pointers.size >= 2) {
       didPinchRef.current = true;
       lastPinchRef.current = pinchMetrics(pointers.values());
+      dismiss.cancelActive();
     }
   };
 
@@ -381,7 +408,13 @@ export function ImageLightbox({
       return;
     }
 
-    if (zoomRef.current.scale <= ZOOM_RESET_EPS) return;
+    if (zoomRef.current.scale <= ZOOM_RESET_EPS) {
+      dismiss.handlers.onPointerMove(event);
+      if (dismiss.isDismissGesture()) {
+        didSwipeRef.current = true;
+      }
+      return;
+    }
 
     const last = lastPointRef.current;
     lastPointRef.current = { x: event.clientX, y: event.clientY };
@@ -445,8 +478,10 @@ export function ImageLightbox({
       onClose={onClose}
       fullScreen
       disableScrollLock
+      transitionDuration={swipeClosing ? 0 : undefined}
       slotProps={{
         paper: {
+          ref: dismiss.paperRef,
           sx: {
             bgcolor: 'rgba(0,0,0,0.96)',
             backgroundImage: 'none',

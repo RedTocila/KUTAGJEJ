@@ -17,6 +17,7 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { MemberLeaveReviewButton } from '@/components/public/member-leave-review-button';
 import { ListRowsSkeleton } from '@/components/core/content-skeletons';
+import { useBottomSheetDismiss } from '@/hooks/use-bottom-sheet-dismiss';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 import { useUser } from '@/hooks/use-user';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -94,12 +95,15 @@ export function MemberReviewsDialog({
 
   const title = memberName?.trim() ? `Vlerësimet · ${memberName.trim()}` : 'Vlerësimet';
 
+  const sheetDismiss = useBottomSheetDismiss(onClose, open);
+
   return (
     <Drawer
       anchor="bottom"
       open={open}
       onClose={onClose}
       disableScrollLock
+      {...sheetDismiss.drawerProps}
       slotProps={{
         backdrop: {
           sx: {
@@ -108,6 +112,7 @@ export function MemberReviewsDialog({
           },
         },
         paper: {
+          ...sheetDismiss.paperSlotProps,
           sx: {
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
@@ -122,16 +127,7 @@ export function MemberReviewsDialog({
       }}
     >
       <Box sx={{ px: 2, pt: 1, pb: showLeaveReview ? 1.5 : 2 }}>
-        <Box
-          sx={{
-            width: 36,
-            height: 4,
-            borderRadius: 999,
-            bgcolor: 'action.disabled',
-            mx: 'auto',
-            mb: 1.25,
-          }}
-        />
+        <Box {...sheetDismiss.handleBind} sx={sheetDismiss.handleSx} />
 
         <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
           <Typography sx={{ fontWeight: 800, fontSize: '1rem', pr: 1 }} noWrap>

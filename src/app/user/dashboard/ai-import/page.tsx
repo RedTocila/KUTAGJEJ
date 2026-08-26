@@ -9,6 +9,7 @@ import {
   Chip,
   CircularProgress,
   IconButton,
+  LinearProgress,
   Stack,
   TextField,
   Typography,
@@ -416,20 +417,37 @@ function AiImportAnalyzingText({
   const total = progress?.total ?? 0;
   const done = progress?.done ?? 0;
   const current = total <= 0 ? 1 : Math.min(total, done + 1);
+  const determinate = total > 1;
+  const percent = total <= 0 ? 0 : Math.min(100, ((done + (done < total ? 0.25 : 0)) / total) * 100);
 
   return (
-    <Typography
-      aria-live="polite"
-      sx={{
-        fontWeight: 800,
-        fontSize: '0.8rem',
-        letterSpacing: '-0.01em',
-        color: 'text.primary',
-        ...analyzingTextFlashSx,
-      }}
-    >
-      {total > 0 ? t.aiImport.progressWorking(current, total) : t.aiImport.analyzing}
-    </Typography>
+    <Stack spacing={0.75} sx={{ pt: 1.25 }} aria-live="polite">
+      <Typography
+        sx={{
+          fontWeight: 800,
+          fontSize: '0.8rem',
+          letterSpacing: '-0.01em',
+          color: 'text.primary',
+          ...analyzingTextFlashSx,
+        }}
+      >
+        {total > 0 ? t.aiImport.progressWorking(current, total) : t.aiImport.analyzing}
+      </Typography>
+      <LinearProgress
+        variant={determinate ? 'determinate' : 'indeterminate'}
+        value={percent}
+        sx={{
+          height: 6,
+          borderRadius: 999,
+          bgcolor: (theme) =>
+            theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+          '& .MuiLinearProgress-bar': {
+            borderRadius: 999,
+            bgcolor: AI_SEARCH_BLUE,
+          },
+        }}
+      />
+    </Stack>
   );
 }
 
@@ -616,7 +634,15 @@ export default function AiImportListingsPage() {
       const units = urls.length > 0 ? urls.length : 1;
       setProgress({ done: 0, total: units });
 
+      const incomingUrlSet = new Set(urls);
+      const keptDrafts = urls.length
+        ? drafts.filter((d) => {
+            const src = String(d.sourceUrl || '').trim();
+            return !src || !incomingUrlSet.has(src);
+          })
+        : [...drafts];
       const collected: AiImportDraftResult[] = [];
+      const persistMerged = () => persistDrafts([...keptDrafts, ...collected]);
       let batchId: string | null = null;
       const profile = importProfile();
 
@@ -647,14 +673,14 @@ export default function AiImportListingsPage() {
           return;
         }
         collected.push(...res.drafts.map((d) => decorateImportedDraft(d, trimmed, uploadedUrls)));
-        persistDrafts(collected);
+        persistMerged();
         setProgress({ done: 1, total: 1 });
       } else {
         for (let i = 0; i < urls.length; i += 1) {
           if (wasStopped()) {
             setText(urls.slice(i).join('\n'));
             setStatusMessage(t.aiImport.stopped(collected.length, urls.length));
-            persistDrafts(collected);
+            persistMerged();
             break;
           }
           const res = await importListingsFromLinks({
@@ -671,7 +697,7 @@ export default function AiImportListingsPage() {
           if (res.aborted || wasStopped()) {
             setText(urls.slice(i).join('\n'));
             setStatusMessage(t.aiImport.stopped(collected.length, urls.length));
-            persistDrafts(collected);
+            persistMerged();
             break;
           }
           if (res.batchId) batchId = res.batchId;
@@ -681,7 +707,7 @@ export default function AiImportListingsPage() {
             } else {
               setError(res.error);
             }
-            if (collected.length) persistDrafts(collected);
+            persistMerged();
             return;
           }
           const chunk = (res.drafts.length
@@ -700,7 +726,7 @@ export default function AiImportListingsPage() {
               ]
           ).map((d) => decorateImportedDraft(d, trimmed, uploadedUrls));
           collected.push(...chunk);
-          persistDrafts(collected);
+          persistMerged();
           setProgress({ done: i + 1, total: urls.length });
         }
       }
@@ -1344,12 +1370,9 @@ export default function AiImportListingsPage() {
             spacing={1}
             sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 0.75 }}
           >
-            <Stack spacing={0.15} sx={{ minWidth: 0, flex: 1 }}>
-              <Typography sx={{ fontWeight: 800, fontSize: '0.92rem' }}>{t.aiImport.results}</Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                {t.aiImport.draftsKeptHint}
-              </Typography>
-            </Stack>
+            <Typography sx={{ fontWeight: 800, fontSize: '0.92rem', minWidth: 0, flex: 1 }}>
+              {t.aiImport.results}
+            </Typography>
             <Stack
               direction="row"
               spacing={0.75}

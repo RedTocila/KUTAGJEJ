@@ -190,7 +190,7 @@ export function useSwipeToDismiss({
     if (!enabledRef.current || settlingRef.current) return false;
     if (fromHandleRef.current || !requireScrollTopRef.current) return true;
     const el = scrollParentRef.current ?? targetRef.current;
-    return readScrollTop(el) <= 0;
+    return readScrollTop(el) <= 1;
   }, []);
 
   const begin = React.useCallback((event: React.PointerEvent<HTMLElement>, fromHandle: boolean) => {
@@ -352,6 +352,21 @@ export function useSwipeToDismiss({
   React.useEffect(() => {
     if (!enabled) resetVisual();
   }, [enabled, resetVisual]);
+
+  // Non-passive touchmove so pull-to-dismiss can preventDefault inside scrollable sheets (iOS).
+  React.useEffect(() => {
+    const el = targetRef.current;
+    if (!enabled || !el) return undefined;
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (modeRef.current === 'dismiss') {
+        event.preventDefault();
+      }
+    };
+
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => el.removeEventListener('touchmove', onTouchMove);
+  }, [enabled]);
 
   return {
     paperRef,

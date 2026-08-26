@@ -152,6 +152,7 @@ export function RealEstateListingGallery(props: {
   const dragAxisRef = React.useRef<'horizontal' | 'vertical' | null>(null);
   const activeRef = React.useRef(0);
   const thumbnailRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
+  const thumbnailStripRef = React.useRef<HTMLDivElement>(null);
 
   activeRef.current = active;
 
@@ -202,8 +203,23 @@ export function RealEstateListingGallery(props: {
   }, [active, applyTrackTransform, isDragging]);
 
   React.useEffect(() => {
+    const strip = thumbnailStripRef.current;
     const thumb = thumbnailRefs.current[active];
-    thumb?.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', inline: 'center', block: 'nearest' });
+    if (!strip || !thumb) return;
+
+    // Keep thumb centering inside the strip so we never scroll the page.
+    const stripRect = strip.getBoundingClientRect();
+    const thumbRect = thumb.getBoundingClientRect();
+    const thumbCenterInStrip =
+      thumbRect.left - stripRect.left + strip.scrollLeft + thumbRect.width / 2;
+    const nextLeft = thumbCenterInStrip - strip.clientWidth / 2;
+    const maxScroll = Math.max(0, strip.scrollWidth - strip.clientWidth);
+    const clamped = Math.max(0, Math.min(nextLeft, maxScroll));
+
+    strip.scrollTo({
+      left: clamped,
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+    });
   }, [active, prefersReducedMotion]);
 
   React.useEffect(() => {
@@ -772,6 +788,7 @@ export function RealEstateListingGallery(props: {
 
       {!showPlaceholder && urls.length > 1 ? (
         <Stack
+          ref={thumbnailStripRef}
           direction="row"
           spacing={1}
           sx={{

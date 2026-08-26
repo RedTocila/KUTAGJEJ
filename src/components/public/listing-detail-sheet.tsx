@@ -4,6 +4,7 @@ import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Box } from '@mui/material';
 
+import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 import { useSwipeToDismiss } from '@/hooks/use-swipe-to-dismiss';
 import { navigatePageBack } from '@/lib/navigate-back';
 import {
@@ -14,9 +15,21 @@ import { paths } from '@/paths';
 
 const MOBILE_SHEET_MQ = '(max-width: 899.95px)';
 
+function useIsMobileListingSheet(): boolean {
+  return React.useSyncExternalStore(
+    (onStoreChange) => {
+      const mq = window.matchMedia(MOBILE_SHEET_MQ);
+      mq.addEventListener('change', onStoreChange);
+      return () => mq.removeEventListener('change', onStoreChange);
+    },
+    () => window.matchMedia(MOBILE_SHEET_MQ).matches,
+    () => false,
+  );
+}
+
 /**
- * Mobile listing detail: slides up from the bottom on open, and pull-to-dismiss
- * when scrolled to the top (same gesture language as bottom sheets / lightbox).
+ * Mobile listing detail: fixed sheet that slides up from the bottom (page behind
+ * stays put). Pull-to-dismiss when the sheet is scrolled to the top.
  * Desktop keeps a soft fade. Non-listing routes pass through unchanged.
  */
 export function ListingDetailSheet({
@@ -30,23 +43,19 @@ export function ListingDetailSheet({
   const pathname = usePathname();
   const router = useRouter();
   const isListing = isPublicListingDetailPath(pathname);
-  const [isMobile, setIsMobile] = React.useState(false);
+  const isMobile = useIsMobileListingSheet();
+  const isMobileListing = isListing && isMobile;
   const [enterDone, setEnterDone] = React.useState(false);
+  const sheetElRef = React.useRef<HTMLElement | null>(null);
 
-  React.useEffect(() => {
-    const mq = window.matchMedia(MOBILE_SHEET_MQ);
-    const sync = () => setIsMobile(mq.matches);
-    sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
-  }, []);
+  useLockBodyScroll(isMobileListing);
 
   React.useEffect(() => {
     setEnterDone(false);
   }, [pathname]);
 
   const fallbackHref = listingBrowseRootFromPath(pathname) ?? paths.home;
-  const dismissEnabled = isListing && isMobile && enterDone;
+  const dismissEnabled = isMobileListing && enterDone;
 
   const onDismiss = React.useCallback(() => {
     navigatePageBack(router, fallbackHref);
@@ -62,25 +71,28 @@ export function ListingDetailSheet({
 
   const setSheetRef = React.useCallback(
     (node: HTMLElement | null) => {
+      sheetElRef.current = node;
       dismiss.setTarget(node);
-      dismiss.setScrollParent(node ? document.documentElement : null);
+      // Sheet owns its own scroll — not the document.
+      dismiss.setScrollParent(node);
     },
     [dismiss.setTarget, dismiss.setScrollParent],
   );
 
-  React.useEffect(() => {
-    if (!isListing || !isMobile) return;
-    const html = document.documentElement;
-    const prev = html.style.overscrollBehaviorY;
-    html.style.overscrollBehaviorY = 'none';
-    return () => {
-      html.style.overscrollBehaviorY = prev;
-    };
-  }, [isListing, isMobile]);
+  const pinSheetTop = React.useCallback(() => {
+    const el = sheetElRef.current;
+    if (el) el.scrollTop = 0;
+  }, []);
+
+  React.useLayoutEffect(() => {
+    if (!isMobileListing) return;
+    pinSheetTop();
+  }, [pathname, isMobileListing, pinSheetTop]);
 
   const markEnterDone = React.useCallback(() => {
     setEnterDone(true);
-  }, []);
+    pinSheetTop();
+  }, [pinSheetTop]);
 
   React.useEffect(() => {
     if (!isListing || enterDone) return;
@@ -101,6 +113,7 @@ export function ListingDetailSheet({
   return (
     <Box
       ref={setSheetRef}
+      data-scroll-lock-allow=""
       className={enterDone ? undefined : 'kutagjej-listing-sheet'}
       onAnimationEnd={(event) => {
         if (event.target !== event.currentTarget) return;
@@ -115,8 +128,19 @@ export function ListingDetailSheet({
       {...(isMobile ? dismiss.paperBind : {})}
       sx={{
         bgcolor: 'background.default',
-        minHeight: '100%',
         width: '100%',
+        minHeight: '100%',
+        // Fixed sheet via CSS so first paint already covers the viewport (no page scroll).
+        '@media (max-width: 899.95px)': {
+          position: 'fixed',
+          inset: 0,
+          zIndex: (theme) => theme.zIndex.modal,
+          minHeight: 0,
+          overflowX: 'hidden',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehaviorY: 'none',
+        },
       }}
     >
       {children}

@@ -10,21 +10,7 @@ type LinkProps = React.ComponentProps<typeof Link>;
 export function ListingCardLink({
   listingKind: _listingKind,
   listingId: _listingId,
-  onClick,
   ...props
 }: LinkProps & { listingKind: ListingMetricKind; listingId: string }) {
-  return (
-    <Link
-      {...props}
-      onClick={(event) => {
-        onClick?.(event);
-        if (!event.defaultPrevented) {
-          // Ensure detail pages open from the top (soft nav can keep browse scroll).
-          if (typeof window !== 'undefined') {
-            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-          }
-        }
-      }}
-    />
-  );
+  return <Link {...props} />;
 }

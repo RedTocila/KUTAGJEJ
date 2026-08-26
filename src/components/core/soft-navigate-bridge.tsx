@@ -10,6 +10,7 @@ import {
 } from '@/lib/hard-navigate';
 import { rememberFirstPageIfNeeded } from '@/lib/navigate-back';
 import { beginPendingNavigation, clearPendingNavigationIfMatches } from '@/lib/navigation-pending';
+import { isPublicListingDetailPath } from '@/lib/public-browse-path';
 
 function scrollWindowToTop() {
   if (typeof window === 'undefined') return;
@@ -22,11 +23,13 @@ function scrollWindowToTop() {
 /**
  * Registers App Router `push` / `refresh` for imperative helpers in `hard-navigate.ts`.
  * Keeps in-app clicks instant (no full document reload).
- * Also resets scroll to the top on every pathname change (e.g. opening a listing).
+ * Resets window scroll on pathname change, except listing sheet enter/leave
+ * (sheet scrolls itself; body-lock restores browse scroll on dismiss).
  */
 export function SoftNavigateBridge({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const prevPathnameRef = React.useRef(pathname);
 
   React.useEffect(() => {
     registerAppRouterNavigation(
@@ -48,8 +51,16 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
   }, [router]);
 
   React.useLayoutEffect(() => {
+    const prev = prevPathnameRef.current;
+    prevPathnameRef.current = pathname;
     rememberFirstPageIfNeeded();
-    scrollWindowToTop();
+
+    const enteringListing = isPublicListingDetailPath(pathname);
+    const leavingListing = isPublicListingDetailPath(prev) && !enteringListing;
+    if (!enteringListing && !leavingListing) {
+      scrollWindowToTop();
+    }
+
     clearPendingNavigationIfMatches(pathname);
   }, [pathname]);
 

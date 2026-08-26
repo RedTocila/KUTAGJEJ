@@ -28,3 +28,12 @@ export function isPublicListingDetailPath(pathname: string | null): boolean {
   if (!pathname) return false;
   return PUBLIC_BROWSE_ROOTS.some((base) => pathname.startsWith(`${base}/`));
 }
+
+/** Browse list href for a listing detail path (`/prona/foo` → `/prona`). */
+export function listingBrowseRootFromPath(pathname: string | null): string | null {
+  if (!pathname) return null;
+  for (const base of PUBLIC_BROWSE_ROOTS) {
+    if (pathname === base || pathname.startsWith(`${base}/`)) return base;
+  }
+  return null;
+}

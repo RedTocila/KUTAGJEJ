@@ -38,6 +38,15 @@ function findBackdrop(paper: HTMLElement | null): HTMLElement | null {
   return (modal?.querySelector('.MuiBackdrop-root') as HTMLElement | null) ?? null;
 }
 
+/** Window / document scrollTop (listing pages) or an overflow element's scrollTop. */
+function readScrollTop(el: HTMLElement | null): number {
+  if (typeof window === 'undefined') return 0;
+  if (!el || el === document.documentElement || el === document.body) {
+    return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+  }
+  return el.scrollTop;
+}
+
 /**
  * Vertical swipe-down to dismiss (lightbox / bottom sheets).
  * Updates transform + backdrop opacity on the DOM during the drag (no per-frame React renders).
@@ -181,8 +190,7 @@ export function useSwipeToDismiss({
     if (!enabledRef.current || settlingRef.current) return false;
     if (fromHandleRef.current || !requireScrollTopRef.current) return true;
     const el = scrollParentRef.current ?? targetRef.current;
-    if (!el) return true;
-    return el.scrollTop <= 0;
+    return readScrollTop(el) <= 0;
   }, []);
 
   const begin = React.useCallback((event: React.PointerEvent<HTMLElement>, fromHandle: boolean) => {

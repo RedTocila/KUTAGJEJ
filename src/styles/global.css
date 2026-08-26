@@ -180,6 +180,16 @@ html.dark .kutagjej-splash__progress-fill {
   }
 }
 
+/* Listing detail sheet — mobile opens from the bottom; desktop soft-fades. */
+@keyframes kutagjejListingSheetIn {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 .kutagjej-enter {
   animation: kutagjejEnter var(--motion-enter) var(--motion-ease) both;
 }
@@ -190,6 +200,19 @@ html.dark .kutagjej-splash__progress-fill {
 
 .kutagjej-card-enter {
   animation: kutagjejCardIn var(--motion-enter) var(--motion-ease) both;
+}
+
+@media (max-width: 899.95px) {
+  .kutagjej-listing-sheet {
+    animation: kutagjejListingSheetIn 320ms var(--motion-ease) both;
+    will-change: transform;
+  }
+}
+
+@media (min-width: 900px) {
+  .kutagjej-listing-sheet {
+    animation: kutagjejFadeIn var(--motion-base) var(--motion-ease) both;
+  }
 }
 
 /* Listing card media zoom — paired with `.listing-card-media-image` */
@@ -222,7 +245,8 @@ html.dark .kutagjej-splash__progress-fill {
 
   .kutagjej-enter,
   .kutagjej-fade,
-  .kutagjej-card-enter {
+  .kutagjej-card-enter,
+  .kutagjej-listing-sheet {
     animation: none;
   }
 

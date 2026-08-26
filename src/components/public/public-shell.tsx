@@ -3,12 +3,13 @@
 import * as React from 'react';
 import { Box } from '@mui/material';
 
+import { useMainTabsHosted } from '@/components/main-tabs/main-tabs-shell';
+import { ListingDetailSheet } from '@/components/public/listing-detail-sheet';
 import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { PublicFooter } from './public-footer';
 import { PublicHeader } from './public-header';
-import { useMainTabsHosted } from '@/components/main-tabs/main-tabs-shell';
 
 /**
  * Wraps a public page in the marketing chrome (header + footer) so individual
@@ -66,7 +67,9 @@ export function PublicShell({
         }}
       >
         {header}
-        <Box className={hostedTabs ? undefined : 'kutagjej-fade'}>{children}</Box>
+        <ListingDetailSheet fadeClassName={hostedTabs ? undefined : 'kutagjej-fade'}>
+          {children}
+        </ListingDetailSheet>
       </Box>
       {hideFooter ? null : <PublicFooter />}
       {hideMobileNav || hostedTabs ? null : <MobileBottomNav />}

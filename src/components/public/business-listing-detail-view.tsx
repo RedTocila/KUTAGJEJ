@@ -317,8 +317,8 @@ export function BusinessListingDetailView({
                   <Typography component="h1" sx={{ fontWeight: 800, fontSize: FONT_TITLE, lineHeight: 1.2 }}>
                     {listing.title}
                     <ListingDetailTitleBadges
-                      verified={Boolean(listing.seller?.verified)}
-                      trustBadge={Boolean(listing.seller?.trustBadge)}
+                      verified={Boolean(listing.seller?.verified ?? (listing as any).sellerVerified)}
+                      trustBadge={Boolean(listing.seller?.trustBadge ?? (listing as any).sellerTrustBadge)}
                       verifiedLabel="Biznes i verifikuar"
                     />
                   </Typography>

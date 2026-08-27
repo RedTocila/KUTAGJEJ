@@ -6,7 +6,7 @@ const { camelizeRow } = require('../../lib/profiles');
 const optionalAuth = require('../../middleware/optional-auth');
 const publicCache = require('../../middleware/public-cache');
 const { publicNoStore } = publicCache;
-const { loadPosterBrief } = require('../../lib/public-listings/load-poster-brief');
+const { loadPosterBrief, loadVerifiedPosterIdSet, loadTrustBadgePosterIdSet } = require('../../lib/public-listings/load-poster-brief');
 const {
   clampLimit,
   buildCityIndex,
@@ -284,6 +284,21 @@ router.get('/latest/:vertical', optionalAuth, async (req, res) => {
   }
 });
 
+async function resolvePosterAndBadges(posterId, verifiedContext, viewerId) {
+  const [seller, verifiedIds, trustIds] = await Promise.all([
+    loadPosterBrief(null, posterId, verifiedContext, viewerId),
+    loadVerifiedPosterIdSet(posterId ? [posterId] : []),
+    loadTrustBadgePosterIdSet(posterId ? [posterId] : []),
+  ]);
+  const isVerified = Boolean(posterId && verifiedIds.has(String(posterId))) || Boolean(seller?.verified);
+  const hasTrust = Boolean(posterId && trustIds.has(String(posterId))) || Boolean(seller?.trustBadge);
+  if (seller) {
+    seller.verified = isVerified;
+    seller.trustBadge = hasTrust;
+  }
+  return { seller, sellerVerified: isVerified, sellerTrustBadge: hasTrust };
+}
+
 /** Detail pages must never be CDN-stale (announcements, reviews, contact). */
 router.get('/real-estate/:id', publicNoStore(), optionalAuth, async (req, res) => {
   try {
@@ -293,9 +308,13 @@ router.get('/real-estate/:id', publicNoStore(), optionalAuth, async (req, res) =
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(null, doc.posterId, null, req.user?.id);
+    const { seller, sellerVerified, sellerTrustBadge } = await resolvePosterAndBadges(doc.posterId, null, req.user?.id);
     const cityById = await buildCityIndex([doc]);
-    const listing = await attachDetailMetrics(req, formatRealEstateDetail(doc, cityById, seller));
+    const listing = await attachDetailMetrics(req, {
+      ...formatRealEstateDetail(doc, cityById, seller),
+      sellerVerified,
+      sellerTrustBadge,
+    });
     res.json({ listing });
   } catch (err) {
     console.error('GET /public/listings/real-estate/:id:', err?.message || err);
@@ -311,9 +330,13 @@ router.get('/cars/:id', publicNoStore(), optionalAuth, async (req, res) => {
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(null, doc.posterId, null, req.user?.id);
+    const { seller, sellerVerified, sellerTrustBadge } = await resolvePosterAndBadges(doc.posterId, null, req.user?.id);
     const cityById = await buildCityIndex([doc]);
-    const listing = await attachDetailMetrics(req, formatCarDetail(doc, cityById, seller));
+    const listing = await attachDetailMetrics(req, {
+      ...formatCarDetail(doc, cityById, seller),
+      sellerVerified,
+      sellerTrustBadge,
+    });
     res.json({ listing });
   } catch (err) {
     console.error('GET /public/listings/cars/:id:', err?.message || err);
@@ -329,9 +352,13 @@ router.get('/jobs/:id', publicNoStore(), optionalAuth, async (req, res) => {
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(null, doc.posterId, null, req.user?.id);
+    const { seller, sellerVerified, sellerTrustBadge } = await resolvePosterAndBadges(doc.posterId, 'jobs', req.user?.id);
     const cityById = await buildCityIndex([doc]);
-    const listing = await attachDetailMetrics(req, formatJobDetail(doc, cityById, seller));
+    const listing = await attachDetailMetrics(req, {
+      ...formatJobDetail(doc, cityById, seller),
+      sellerVerified,
+      sellerTrustBadge,
+    });
     res.json({ listing });
   } catch (err) {
     console.error('GET /public/listings/jobs/:id:', err?.message || err);
@@ -347,9 +374,13 @@ router.get('/marketplace/:id', publicNoStore(), optionalAuth, async (req, res) =
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(null, doc.posterId, null, req.user?.id);
+    const { seller, sellerVerified, sellerTrustBadge } = await resolvePosterAndBadges(doc.posterId, null, req.user?.id);
     const cityById = await buildCityIndex([doc]);
-    const listing = await attachDetailMetrics(req, formatMarketplaceDetail(doc, cityById, seller));
+    const listing = await attachDetailMetrics(req, {
+      ...formatMarketplaceDetail(doc, cityById, seller),
+      sellerVerified,
+      sellerTrustBadge,
+    });
     res.json({ listing });
   } catch (err) {
     console.error('GET /public/listings/marketplace/:id:', err?.message || err);
@@ -368,10 +399,14 @@ router.get('/businesses/:id', publicNoStore(), optionalAuth, async (req, res) =>
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(null, doc.posterId, null, req.user?.id);
+    const { seller, sellerVerified, sellerTrustBadge } = await resolvePosterAndBadges(doc.posterId, null, req.user?.id);
     const cityById = await buildCityIndex([doc]);
     const reviewStats = await reviewStatsByListingIds([doc.id]);
-    const listing = await attachDetailMetrics(req, formatDirectoryDetail(doc, cityById, seller, reviewStats));
+    const listing = await attachDetailMetrics(req, {
+      ...formatDirectoryDetail(doc, cityById, seller, reviewStats),
+      sellerVerified,
+      sellerTrustBadge,
+    });
     res.json({ listing });
   } catch (err) {
     console.error('GET /public/listings/businesses/:id:', err?.message || err);
@@ -390,10 +425,14 @@ router.get('/professionals/:id', publicNoStore(), optionalAuth, async (req, res)
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(null, doc.posterId, 'professionals', req.user?.id);
+    const { seller, sellerVerified, sellerTrustBadge } = await resolvePosterAndBadges(doc.posterId, 'professionals', req.user?.id);
     const cityById = await buildCityIndex([doc]);
     const reviewStats = await professionalReviewStatsByListingIds([doc.id]);
-    const listing = await attachDetailMetrics(req, formatDirectoryDetail(doc, cityById, seller, reviewStats));
+    const listing = await attachDetailMetrics(req, {
+      ...formatDirectoryDetail(doc, cityById, seller, reviewStats),
+      sellerVerified,
+      sellerTrustBadge,
+    });
     res.json({ listing });
   } catch (err) {
     console.error('GET /public/listings/professionals/:id:', err?.message || err);

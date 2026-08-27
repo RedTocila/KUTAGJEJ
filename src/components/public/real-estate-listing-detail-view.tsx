@@ -542,8 +542,8 @@ export function RealEstateListingDetailView({
                   >
                     {listing.title}
                     <ListingDetailTitleBadges
-                      verified={Boolean(listing.seller?.verified)}
-                      trustBadge={Boolean(listing.seller?.trustBadge)}
+                      verified={Boolean(listing.seller?.verified ?? listing.sellerVerified)}
+                      trustBadge={Boolean(listing.seller?.trustBadge ?? listing.sellerTrustBadge)}
                     />
                   </Typography>
                 </OwnerEditableSpot>

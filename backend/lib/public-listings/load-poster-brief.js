@@ -91,7 +91,6 @@ async function loadPosterBrief(_posterModelHint, posterId, verifiedContext = nul
   try {
     const profile = await getProfileById(posterId);
     if (!profile) return null;
-    if (profile.accountType !== 'individual' && profile.accountType !== 'business') return null;
 
     if (profile.isPrivate) {
       const allowed = await hasContactRelationship(viewerId, profile.id);
@@ -127,7 +126,7 @@ async function loadPosterBrief(_posterModelHint, posterId, verifiedContext = nul
     const displayName = `${profile.firstName || ''} ${profile.lastName || ''}`.replace(/\s+/g, ' ').trim() || null;
     return withReviewStats({
       id: profile.id,
-      kind: 'individual',
+      kind: profile.accountType === 'admin' ? 'business' : 'individual',
       displayName,
       phone: profile.phone?.trim() || null,
       avatarUrl: profile.avatarUrl?.trim() || null,

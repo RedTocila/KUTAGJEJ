@@ -36,7 +36,7 @@ const overlayChipSx = {
     ml: 0.75,
     mr: -0.25,
   },
-  '& .MuiChip-label': { px: 1.15 },
+  '& .MuiChip-label': { px: 1.15, overflow: 'visible', whiteSpace: 'nowrap' },
 } as const;
 
 const compactOverlayChipSx = {
@@ -55,12 +55,22 @@ const compactOverlayChipSx = {
   bgcolor: OKAZION_ACCENT,
   borderColor: alpha('#fff', 0.28),
   flexShrink: 0,
+  width: 'auto',
+  minWidth: 'fit-content',
   '& .MuiChip-icon': {
     color: '#fff',
-    ml: 0.8,
-    mr: -0.3,
+    ml: '8px',
+    mr: '-2px',
+    flexShrink: 0,
   },
-  '& .MuiChip-label': { px: 0.95 },
+  '& .MuiChip-label': {
+    pl: '6px',
+    pr: '10px',
+    overflow: 'visible',
+    textOverflow: 'clip',
+    whiteSpace: 'nowrap',
+    display: 'inline-block',
+  },
 } as const;
 
 function formatCompactCountdown(expiresAt: string | Date, now: Date = new Date()): string {

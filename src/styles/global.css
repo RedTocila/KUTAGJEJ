@@ -25,7 +25,7 @@ html {
   height: auto;
   min-height: 100%;
   background-color: var(--mui-palette-background-default, #ffffff);
-  overflow-x: hidden;
+  overflow-x: clip;
   overflow-y: scroll;
   overscroll-behavior-x: none;
 }
@@ -36,7 +36,8 @@ body {
   margin: 0;
   background-color: var(--mui-palette-background-default, #ffffff);
   color: var(--mui-palette-text-primary, #141a11);
-  overflow: visible;
+  overflow-x: clip;
+  overflow-y: visible;
   overscroll-behavior-x: none;
 }
 

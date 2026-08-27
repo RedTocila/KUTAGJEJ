@@ -113,6 +113,10 @@ export function PublicCategoryHero({
             top: { xs: 0, md: 'auto' },
             left: { xs: 0, md: 'auto' },
             right: { xs: 0, md: 'auto' },
+            width: { xs: '100%', md: 'auto' },
+            maxWidth: '100vw',
+            overflowX: 'clip',
+            boxSizing: 'border-box',
             zIndex: { xs: theme.zIndex.appBar, md: 'auto' },
             pt: {
               xs: 'max(10px, env(safe-area-inset-top, 0px))',

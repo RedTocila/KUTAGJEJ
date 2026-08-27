@@ -61,6 +61,7 @@ export function ListingTitleWithVerified({
   component = 'h3',
   badgeSize = 16,
   trustBadgeSize,
+  maxLines = 2,
   typographySx,
   sx,
 }: {
@@ -71,6 +72,7 @@ export function ListingTitleWithVerified({
   component?: TypographyProps['component'];
   badgeSize?: number;
   trustBadgeSize?: number;
+  maxLines?: number;
   typographySx?: SxProps<Theme>;
   sx?: SxProps<Theme>;
 }) {
@@ -94,11 +96,12 @@ export function ListingTitleWithVerified({
           width: '100%',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          display: '-webkit-box',
-          WebkitLineClamp: MAX_LINES,
-          lineClamp: MAX_LINES,
-          WebkitBoxOrient: 'vertical',
-          wordBreak: 'break-word',
+          display: maxLines === 1 ? 'block' : '-webkit-box',
+          whiteSpace: maxLines === 1 ? 'nowrap' : 'normal',
+          WebkitLineClamp: maxLines > 1 ? maxLines : undefined,
+          lineClamp: maxLines > 1 ? maxLines : undefined,
+          WebkitBoxOrient: maxLines > 1 ? 'vertical' : undefined,
+          wordBreak: maxLines === 1 ? 'normal' : 'break-word',
         },
         ...typographySxList,
         ...sxList,

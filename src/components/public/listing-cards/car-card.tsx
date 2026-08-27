@@ -96,6 +96,8 @@ export function CarCard({
         premium={Boolean(listing.isPremium)}
         okazion={Boolean(listing.isOkazion)}
         okazionUntil={listing.okazionUntil}
+        sellerVerified={Boolean(listing.sellerVerified)}
+        sellerTrustBadge={Boolean(listing.sellerTrustBadge)}
         priority={imagePriority}
         sharePayload={{
           title,
@@ -121,17 +123,16 @@ export function CarCard({
         }}
       />
       {variant === 'compact' ? (
-        <Stack className="listing-card-body" spacing={{ xs: 0.6, sm: 0.85 }} sx={{ p: { xs: 1.25, sm: 1.5 } }}>
+        <Stack className="listing-card-body" spacing={{ xs: 0.5, sm: 0.7 }} sx={{ p: { xs: 1.1, sm: 1.35 } }}>
           <ListingTitleWithVerified
             title={title}
-            verified={Boolean(listing.sellerVerified)}
-            trustBadge={Boolean(listing.sellerTrustBadge)}
-            badgeSize={14}
+            maxLines={1}
+            verified={false}
+            trustBadge={false}
             typographySx={{
-              fontSize: { xs: '0.86rem', sm: '0.94rem' },
+              fontSize: { xs: '0.85rem', sm: '0.92rem' },
               fontWeight: 700,
               lineHeight: 1.3,
-              minHeight: { xs: '2.6em', sm: '2.6em' },
             }}
           />
 
@@ -141,23 +142,8 @@ export function CarCard({
             currency={listing.currency}
             isPremium={listing.isPremium}
             isOkazion={listing.isOkazion}
-            fontSize="1.02rem"
+            fontSize="1rem"
           />
-
-          {specsText ? (
-            <Typography
-              variant="caption"
-              noWrap
-              sx={{
-                color: 'text.secondary',
-                fontWeight: 600,
-                fontSize: { xs: '0.72rem', sm: '0.76rem' },
-                lineHeight: 1.2,
-              }}
-            >
-              {specsText}
-            </Typography>
-          ) : null}
 
           {cardRating ? (
             <ListingCardRating
@@ -174,7 +160,7 @@ export function CarCard({
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: 0.5,
-              pt: 0.25,
+              pt: 0.15,
             }}
           >
             {listing.cityName ? (

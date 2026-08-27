@@ -13,7 +13,14 @@ export interface UserContextValue {
   checkSession: () => Promise<void>;
 }
 
-export const UserContext = React.createContext<UserContextValue | undefined>(undefined);
+export const defaultUserContextValue: UserContextValue = {
+  user: null,
+  error: null,
+  isLoading: false,
+  checkSession: async () => {},
+};
+
+export const UserContext = React.createContext<UserContextValue>(defaultUserContextValue);
 
 export interface UserProviderProps {
   children: React.ReactNode;

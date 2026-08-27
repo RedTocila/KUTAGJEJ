@@ -40,17 +40,17 @@ const overlayChipSx = {
 } as const;
 
 const compactOverlayChipSx = {
-  height: 30,
+  height: 24,
   borderRadius: 999,
   fontFamily: 'inherit',
   fontVariantNumeric: 'tabular-nums',
   fontWeight: 800,
-  fontSize: '0.74rem',
-  letterSpacing: '0.02em',
+  fontSize: '0.69rem',
+  letterSpacing: '0.01em',
   border: '1px solid',
-  backdropFilter: 'blur(12px)',
-  WebkitBackdropFilter: 'blur(12px)',
-  boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
   color: '#fff',
   bgcolor: OKAZION_ACCENT,
   borderColor: alpha('#fff', 0.28),
@@ -59,13 +59,13 @@ const compactOverlayChipSx = {
   minWidth: 'fit-content',
   '& .MuiChip-icon': {
     color: '#fff',
-    ml: '8px',
-    mr: '-2px',
+    ml: '6px',
+    mr: '-3px',
     flexShrink: 0,
   },
   '& .MuiChip-label': {
-    pl: '6px',
-    pr: '10px',
+    pl: '5px',
+    pr: '8px',
     overflow: 'visible',
     textOverflow: 'clip',
     whiteSpace: 'nowrap',
@@ -92,7 +92,7 @@ function OkazionCountdownChip({
 }) {
   return (
     <Chip
-      icon={compact ? <SealPercentIcon size={15} weight="bold" /> : <TimerIcon size={14} weight="bold" />}
+      icon={compact ? <SealPercentIcon size={13} weight="bold" /> : <TimerIcon size={14} weight="bold" />}
       label={label}
       size="small"
       aria-live={live ? 'polite' : undefined}

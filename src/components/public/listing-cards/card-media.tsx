@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Box, Chip, IconButton, Stack } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
@@ -20,6 +21,8 @@ import { useListingSaveCount, useListingSavedState } from '@/hooks/use-listing-s
 import { useUser } from '@/hooks/use-user';
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { ListingPremiumBadge } from '@/components/public/listing-premium-badge';
+import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
+import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
 
 import { OkazionCountdownPlaceholder } from './okazion-countdown';
@@ -57,6 +60,10 @@ export interface CardMediaProps {
   okazion?: boolean;
   /** When OKAZION ends (ISO). Countdown falls back to 5 days if omitted. */
   okazionUntil?: string | null;
+  /** Seller verification status. Rendered at bottom-right of image on compact cards. */
+  sellerVerified?: boolean;
+  /** Seller package medal (Grow/Elite). Rendered at bottom-right of image on compact cards. */
+  sellerTrustBadge?: boolean;
   /** Rich data for the share sheet / Instagram story template. */
   sharePayload?: Omit<ListingSharePayload, 'listingKind' | 'listingId' | 'title'> & {
     title?: string;
@@ -85,6 +92,8 @@ export function CardMedia({
   premium = false,
   okazion = false,
   okazionUntil = null,
+  sellerVerified = false,
+  sellerTrustBadge = false,
   sharePayload,
   priority = false,
 }: CardMediaProps) {
@@ -228,60 +237,60 @@ export function CardMedia({
         </Stack>
       )}
 
-      {okazion || showPremiumBadge || topLeftOverlay || topLeftBadge ? (
-        <Stack
-          spacing={0.6}
-          sx={{
-            position: 'absolute',
-            top: compact ? 6 : 8,
-            left: compact ? 6 : 8,
-            zIndex: 3,
-            alignItems: 'flex-start',
-            maxWidth: compact ? 'calc(100% - 72px)' : 'calc(100% - 88px)',
-          }}
-        >
-          {okazion ? (
-            compact ? (
-              <OkazionCountdown expiresAt={okazionUntil} compact />
-            ) : (
-              <Chip
-                label="OKAZION"
-                size="small"
-                sx={{
-                  height: 28,
-                  fontSize: '0.72rem',
-                  fontWeight: 900,
-                  letterSpacing: 0.5,
-                  bgcolor: OKAZION_ACCENT,
-                  color: '#fff',
-                  flexShrink: 0,
-                  boxShadow: '0 2px 10px rgba(239, 68, 68, 0.55)',
-                  '& .MuiChip-label': { px: 1.1 },
-                }}
-              />
-            )
-          ) : showPremiumBadge ? (
-            <ListingPremiumBadge size={compact ? 22 : 28} aria-label="Premium" />
-          ) : topLeftOverlay ? (
-            <Box sx={{ lineHeight: 0 }}>{topLeftOverlay}</Box>
-          ) : topLeftBadge ? (
+    {okazion || showPremiumBadge || (!compact && (topLeftOverlay || topLeftBadge)) ? (
+      <Stack
+        spacing={0.6}
+        sx={{
+          position: 'absolute',
+          top: compact ? 6 : 8,
+          left: compact ? 6 : 8,
+          zIndex: 3,
+          alignItems: 'flex-start',
+          maxWidth: compact ? 'calc(100% - 72px)' : 'calc(100% - 88px)',
+        }}
+      >
+        {okazion ? (
+          compact ? (
+            <OkazionCountdown expiresAt={okazionUntil} compact />
+          ) : (
             <Chip
-              label={topLeftBadge}
+              label="OKAZION"
               size="small"
               sx={{
-                height: 22,
-                fontSize: '0.7rem',
-                fontWeight: 600,
-                bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.92)',
-                color: 'text.primary',
-                border: '1px solid',
-                borderColor: 'divider',
-                '& .MuiChip-label': { px: 1 },
+                height: 28,
+                fontSize: '0.72rem',
+                fontWeight: 900,
+                letterSpacing: 0.5,
+                bgcolor: OKAZION_ACCENT,
+                color: '#fff',
+                flexShrink: 0,
+                boxShadow: '0 2px 10px rgba(239, 68, 68, 0.55)',
+                '& .MuiChip-label': { px: 1.1 },
               }}
             />
-          ) : null}
-        </Stack>
-      ) : null}
+          )
+        ) : showPremiumBadge ? (
+          <ListingPremiumBadge size={compact ? 22 : 28} aria-label="Premium" />
+        ) : topLeftOverlay ? (
+          <Box sx={{ lineHeight: 0 }}>{topLeftOverlay}</Box>
+        ) : topLeftBadge ? (
+          <Chip
+            label={topLeftBadge}
+            size="small"
+            sx={{
+              height: 22,
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.92)',
+              color: 'text.primary',
+              border: '1px solid',
+              borderColor: 'divider',
+              '& .MuiChip-label': { px: 1 },
+            }}
+          />
+        ) : null}
+      </Stack>
+    ) : null}
 
       {topRightBadge ? (
         <Chip
@@ -330,6 +339,29 @@ export function CardMedia({
         >
           {okazion ? <OkazionCountdown expiresAt={okazionUntil} compact={compact} /> : bottomRightOverlay}
         </Box>
+      ) : compact && sellerVerified ? (
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: 6,
+            right: 6,
+            zIndex: 3,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: 0.5,
+            borderRadius: 999,
+            bgcolor: alpha('#000', 0.45),
+            border: '1px solid',
+            borderColor: alpha('#fff', 0.18),
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            lineHeight: 0,
+          }}
+        >
+          <ListingVerifiedBadge size={14} aria-label="Shitës i verifikuar" />
+        </Box>
       ) : null}
 
       {compact ? (
@@ -343,12 +375,12 @@ export function CardMedia({
             zIndex: 3,
             height: 30,
             borderRadius: 999,
-            bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.94)',
+            bgcolor: alpha('#000', 0.45),
             border: '1px solid',
-            borderColor: 'divider',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.22)',
+            borderColor: alpha('#fff', 0.18),
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
             px: 0.5,
           }}
         >
@@ -360,9 +392,9 @@ export function CardMedia({
               width: 28,
               height: 28,
               p: 0,
-              color: 'text.primary',
-              transition: 'color 0.15s ease, transform 0.1s ease',
-              '&:hover': { bgcolor: 'action.hover' },
+              color: '#fff',
+              transition: 'color 0.15s ease, transform 0.1s ease, background-color 0.15s ease',
+              '&:hover': { bgcolor: alpha('#fff', 0.14) },
               '&:active': { transform: 'scale(0.92)' },
             }}
           >
@@ -372,7 +404,7 @@ export function CardMedia({
             sx={{
               width: '1px',
               height: 14,
-              bgcolor: 'divider',
+              bgcolor: alpha('#fff', 0.22),
               mx: 0.35,
             }}
           />
@@ -384,9 +416,9 @@ export function CardMedia({
               width: 28,
               height: 28,
               p: 0,
-              color: saved ? 'primary.main' : 'text.primary',
-              transition: 'color 0.15s ease, transform 0.1s ease',
-              '&:hover': { bgcolor: 'action.hover' },
+              color: saved ? 'primary.main' : '#fff',
+              transition: 'color 0.15s ease, transform 0.1s ease, background-color 0.15s ease',
+              '&:hover': { bgcolor: alpha('#fff', 0.14) },
               '&:active': { transform: 'scale(0.92)' },
             }}
           >

@@ -56,11 +56,11 @@ function OkazionCard({ listing, imagePriority = false }: { listing: PublicOkazio
     case 'real-estate':
       return <RealEstateCard listing={listing} imagePriority={imagePriority} />;
     case 'car':
-      return <CarCard listing={listing} imagePriority={imagePriority} />;
+      return <CarCard listing={listing} imagePriority={imagePriority} variant="default" />;
     case 'job':
       return <JobCard listing={listing} imagePriority={imagePriority} />;
     case 'marketplace':
-      return <MarketplaceCard listing={listing} imagePriority={imagePriority} />;
+      return <MarketplaceCard listing={listing} imagePriority={imagePriority} variant="default" />;
     default:
       return null;
   }
@@ -71,11 +71,11 @@ function renderBrowseCard(verticalId: BrowseInfiniteVerticalId, listing: BrowseL
     case 'real-estate':
       return <RealEstateCard listing={listing as PublicRealEstateListing} imagePriority={imagePriority} />;
     case 'cars':
-      return <CarCard listing={listing as PublicCarListing} imagePriority={imagePriority} />;
+      return <CarCard listing={listing as PublicCarListing} imagePriority={imagePriority} variant="compact" />;
     case 'jobs':
       return <JobCard listing={listing as PublicJobListing} imagePriority={imagePriority} />;
     case 'marketplace':
-      return <MarketplaceCard listing={listing as PublicMarketplaceListing} imagePriority={imagePriority} />;
+      return <MarketplaceCard listing={listing as PublicMarketplaceListing} imagePriority={imagePriority} variant="compact" />;
     case 'businesses':
     case 'professionals':
       return <DirectoryListingCard listing={listing as PublicDirectoryListing} />;
@@ -284,6 +284,11 @@ export function BrowseInfiniteGrid({
     return () => observer.disconnect();
   }, [hasMore, loadMore, listings.length]);
 
+  const isTwoColumnMobile = verticalId === 'cars' || verticalId === 'marketplace';
+  const itemGridSize = isTwoColumnMobile
+    ? { xs: 6, sm: 6, md: 4, lg: 3 }
+    : { xs: 12, sm: 6, md: 4, lg: 3 };
+
   if (recovering && error && !loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
@@ -295,14 +300,14 @@ export function BrowseInfiniteGrid({
   }
 
   if (recovering) {
-    return <ListingCardsSkeleton count={8} />;
+    return <ListingCardsSkeleton count={8} columns={isTwoColumnMobile ? 2 : 1} />;
   }
 
   return (
     <Stack spacing={3}>
-      <Grid container spacing={{ xs: 2, md: 2.5 }}>
+      <Grid container spacing={isTwoColumnMobile ? { xs: 1.25, sm: 2, md: 2.5 } : { xs: 2, md: 2.5 }}>
         {listings.map((listing, index) => (
-          <Grid key={listingKey(listing)} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+          <Grid key={listingKey(listing)} size={itemGridSize}>
             {renderBrowseCard(verticalId, listing, index === 0)}
           </Grid>
         ))}
@@ -312,7 +317,7 @@ export function BrowseInfiniteGrid({
         <Box ref={sentinelRef} sx={{ display: 'flex', justifyContent: 'center', py: 1, minHeight: 48 }}>
           {loading ? (
             <Box sx={{ width: '100%' }}>
-              <ListingCardsSkeleton count={4} />
+              <ListingCardsSkeleton count={4} columns={isTwoColumnMobile ? 2 : 1} />
             </Box>
           ) : error ? (
             <Button variant="outlined" onClick={() => void loadMore()} sx={{ fontWeight: 700 }}>

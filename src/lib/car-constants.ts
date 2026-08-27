@@ -42,6 +42,25 @@ export const FUEL_TYPE_OPTIONS = [
   { value: 'other', label: 'Other fuel type' },
 ] as const;
 
+export function normalizeFuelType(raw: unknown): string {
+  if (raw === undefined || raw === null) return '';
+  const s = String(raw).trim().toLowerCase();
+  if (!s) return '';
+  if (FUEL_TYPE_OPTIONS.some((o) => o.value === s)) return s;
+  if (/naft|diesel|gazoil|dizel/i.test(s)) return 'diesel';
+  if (/benzin|petrol|gasoline/i.test(s)) return 'petrol';
+  if (/lpg|autogas|\bgaz\b/i.test(s)) return 'lpg';
+  if (/hybrid.*diesel|hibrid.*naft/i.test(s)) return 'hybrid-diesel';
+  if (/plugin|plug-in/i.test(s)) return 'plugin-hybrid';
+  if (/hybrid|hibrid/i.test(s)) return 'hybrid-petrol';
+  if (/elektrik|electric|\bev\b/i.test(s)) return 'electric';
+  if (/metan|natural.?gas|cng/i.test(s)) return 'natural-gas';
+  if (/hidrogjen|hydrogen/i.test(s)) return 'hydrogen';
+  if (/etanol|ethanol/i.test(s)) return 'ethanol';
+  if (/tjet|other/i.test(s)) return 'other';
+  return '';
+}
+
 export const CAR_COLOUR_OPTIONS = [
   { value: 'beige', label: 'Beige', hex: '#E8DCC8' },
   { value: 'blue', label: 'Blue', hex: '#2563EB' },

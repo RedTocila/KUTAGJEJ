@@ -56,7 +56,11 @@ export async function getAccessToken(): Promise<string | null> {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || typeof data.token !== 'string') {
-      persistTokens(null, null);
+      // Only wipe session if the server definitively rejected the token as invalid/unauthorized (401/403).
+      // On network errors, rate limits, or 5xx server issues, keep stored tokens so user is not logged out.
+      if (res.status === 401 || res.status === 403) {
+        persistTokens(null, null);
+      }
       return null;
     }
     const nextRefresh = typeof data.refreshToken === 'string' ? data.refreshToken : refresh;

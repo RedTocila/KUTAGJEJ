@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import { Suspense } from 'react';
-import { Box, Button, Container, Stack, Typography, useScrollTrigger } from '@mui/material';
+import { Box, Button, Container, IconButton, Stack, Typography, useScrollTrigger } from '@mui/material';
+import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 
 import {
   isHomeVerticalId,
@@ -10,6 +11,9 @@ import {
   localizeVertical,
   OKAZION_ACCENT,
   OKAZION_ACCENT_SOFT,
+  OKAZION_RED,
+  OKAZION_RED_DARK,
+  OKAZION_RED_ON,
   PROFILES_ACCENT,
   PROFILES_ACCENT_SOFT,
   type HomeVerticalId,
@@ -24,6 +28,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { useScrollRevealHidden } from '@/hooks/use-scroll-reveal-hidden';
 import { useUser } from '@/hooks/use-user';
 import { hardNavigate } from '@/lib/hard-navigate';
+import type { ListingCategoryKey } from '@/types/listing-category';
 
 import { CategoryBrowseControls } from './listing-filters/category-browse-controls';
 import { MembersBrowseControls } from './listing-filters/members-browse-controls';
@@ -35,6 +40,12 @@ import { HomeVerticalIcon } from './home-vertical-icon';
 
 /** Browse pages that share the quiet category hero (listing verticals + OKAZION + profiles). */
 export type BrowseCategoryId = HomeVerticalId | 'okazion' | 'profiles';
+
+function toListingCategoryKey(id: BrowseCategoryId): ListingCategoryKey | null {
+  if (id === 'okazion' || id === 'profiles') return null;
+  if (id === 'jobs') return 'job-listings';
+  return id;
+}
 
 /**
  * Quiet header used by every public browse page (Real Estate, Cars, Jobs,
@@ -67,6 +78,7 @@ export function PublicCategoryHero({
   const elevated = useScrollTrigger({ disableHysteresis: true, threshold: 8 });
   const chromeHidden = useScrollRevealHidden({ alwaysShowBelowY: 24 });
   const [mounted, setMounted] = React.useState(false);
+  const [pickerOpen, setPickerOpen] = React.useState(false);
   const barRef = React.useRef<HTMLDivElement>(null);
   const [barHeight, setBarHeight] = React.useState(0);
 
@@ -129,11 +141,11 @@ export function PublicCategoryHero({
         }}
       >
         <Container maxWidth="xl">
-          <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start', minWidth: 0 }}>
+          <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
             <ProductBackButton
               href={paths.home}
               aria-label={t.browse.backHomeAria}
-              sx={{ display: { xs: 'inline-flex', md: 'none' }, mt: 0.5 }}
+              sx={{ display: { xs: 'inline-flex', md: 'none' } }}
             />
             {accent && accentSoft ? (
               <Box
@@ -180,6 +192,36 @@ export function PublicCategoryHero({
                       : t.browse.noListingsYet}
               </Typography>
             </Stack>
+            <IconButton
+              onClick={() => setPickerOpen(true)}
+              aria-label={t.picker.title}
+              sx={{
+                width: 38,
+                height: 38,
+                borderRadius: '50%',
+                flexShrink: 0,
+                bgcolor: isOkazion ? OKAZION_RED : 'primary.main',
+                color: 'primary.contrastText',
+                boxShadow: (theme) =>
+                  isOkazion
+                    ? theme.palette.mode === 'dark'
+                      ? '0 2px 8px rgba(0, 0, 0, 0.4)'
+                      : '0 2px 8px rgba(247, 47, 53, 0.35)'
+                    : theme.palette.mode === 'dark'
+                      ? '0 2px 8px rgba(0, 0, 0, 0.4)'
+                      : '0 2px 8px rgba(118, 186, 27, 0.35)',
+                transition:
+                  'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1)',
+                '&:hover': {
+                  bgcolor: isOkazion ? OKAZION_RED_DARK : 'primary.dark',
+                  color: 'primary.contrastText',
+                  transform: 'scale(1.06)',
+                },
+                '&:active': { transform: 'scale(0.94)' },
+              }}
+            >
+              <PlusIcon size={20} weight="bold" />
+            </IconButton>
           </Stack>
 
           {isHomeVerticalId(verticalId) ? (
@@ -197,6 +239,13 @@ export function PublicCategoryHero({
           )}
         </Container>
       </Box>
+
+      <AddListingPickerDialog
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        category={toListingCategoryKey(verticalId)}
+        initialOkazion={verticalId === 'okazion'}
+      />
 
       {/* Spacer only while the chrome is `position: fixed` on mobile */}
       <Box
@@ -338,7 +387,14 @@ export function PublicCategoryEmptyState({
           </Stack>
         </Box>
       </Container>
-      {isProfiles ? null : <AddListingPickerDialog open={pickerOpen} onClose={() => setPickerOpen(false)} />}
+      {isProfiles ? null : (
+        <AddListingPickerDialog
+          open={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          category={toListingCategoryKey(verticalId)}
+          initialOkazion={isOkazion}
+        />
+      )}
     </>
   );
 }

@@ -57,7 +57,7 @@ export function HomeRecommendedFallback(): React.JSX.Element {
   if (mixed.length > 0) {
     return <HomepageRecommendedSection fallbackItems={mixed} />;
   }
-  return <HomeCarouselRowSkeleton compactTop />;
+  return <HomeCarouselRowSkeleton />;
 }
 
 /** Instant OKAZION row from session cache, otherwise a single skeleton. */
@@ -66,7 +66,7 @@ export function HomeOkazionFallback(): React.JSX.Element {
   if (stored?.okazion.length) {
     return <HomepageOkazionSection listings={stored.okazion} total={stored.okazionTotal} ssrOk />;
   }
-  return <HomeCarouselRowSkeleton />;
+  return <HomeCarouselRowSkeleton compactTop />;
 }
 
 export function HomeBelowFoldFallback(): React.JSX.Element {

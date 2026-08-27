@@ -22,9 +22,9 @@ export function HomepageCarousels({
 
   return (
     <>
-      <HomepageRecommendedSection fallbackItems={latestMixed} ssrOk={ssrOk} />
-
       <HomepageOkazionSection listings={bundle.okazion} total={bundle.okazionTotal} ssrOk={ssrOk} />
+
+      <HomepageRecommendedSection fallbackItems={latestMixed} ssrOk={ssrOk} />
 
       <HomepageBelowFold
         realEstate={bundle.realEstate}

@@ -829,9 +829,9 @@ function summarySpecsFor(l: AnyPublicListingDetail): SummarySpec[] {
         ...(l.kilometers != null
           ? [{ Icon: GaugeIcon, label: 'Kilometrazhi', value: formatKilometers(l.kilometers) }]
           : []),
-        { Icon: GearSixIcon, label: 'Transmision', value: findOptionLabel(TRANSMISSION_OPTIONS, l.transmission) },
-        { Icon: GasPumpIcon, label: 'Karburant', value: findOptionLabel(FUEL_TYPE_OPTIONS, l.fuelType) },
-        { Icon: PaletteIcon, label: 'Ngjyra', value: findOptionLabel(CAR_COLOUR_OPTIONS, l.color) },
+        ...(l.transmission ? [{ Icon: GearSixIcon, label: 'Transmision', value: findOptionLabel(TRANSMISSION_OPTIONS, l.transmission) }] : []),
+        ...(l.fuelType ? [{ Icon: GasPumpIcon, label: 'Karburant', value: findOptionLabel(FUEL_TYPE_OPTIONS, l.fuelType) }] : []),
+        ...(l.color ? [{ Icon: PaletteIcon, label: 'Ngjyra', value: findOptionLabel(CAR_COLOUR_OPTIONS, l.color) }] : []),
         ...(l.cityName ? [{ Icon: MapPinIcon, label: 'Qyteti', value: l.cityName }] : []),
       ];
     case 'job':

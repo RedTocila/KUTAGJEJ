@@ -28,6 +28,25 @@ const CURRENT_YEAR = new Date().getFullYear();
 
 const { isUuid } = require('./public-listings/query-helpers');
 
+function normalizeFuelType(raw) {
+  if (raw === undefined || raw === null) return null;
+  const s = String(raw).trim().toLowerCase();
+  if (!s) return null;
+  if (FUEL_TYPE_VALUES.includes(s)) return s;
+  if (/naft|diesel|gazoil|dizel/i.test(s)) return 'diesel';
+  if (/benzin|petrol|gasoline/i.test(s)) return 'petrol';
+  if (/lpg|autogas|\bgaz\b/i.test(s)) return 'lpg';
+  if (/hybrid.*diesel|hibrid.*naft/i.test(s)) return 'hybrid-diesel';
+  if (/plugin|plug-in/i.test(s)) return 'plugin-hybrid';
+  if (/hybrid|hibrid/i.test(s)) return 'hybrid-petrol';
+  if (/elektrik|electric|\bev\b/i.test(s)) return 'electric';
+  if (/metan|natural.?gas|cng/i.test(s)) return 'natural-gas';
+  if (/hidrogjen|hydrogen/i.test(s)) return 'hydrogen';
+  if (/etanol|ethanol/i.test(s)) return 'ethanol';
+  if (/tjet|other/i.test(s)) return 'other';
+  return null;
+}
+
 /**
  * Validates a car listing payload (fields already extracted from multipart or JSON).
  * Returns { ok: true } or { ok: false, message }.
@@ -77,11 +96,7 @@ function validateCarPayload(fields) {
   }
   fields.transmission = transmission || null;
 
-  const fuelType = String(fields.fuelType || '').trim().toLowerCase();
-  if (fuelType && !FUEL_TYPE_VALUES.includes(fuelType)) {
-    return { ok: false, message: 'Invalid fuel type.' };
-  }
-  fields.fuelType = fuelType || null;
+  fields.fuelType = normalizeFuelType(fields.fuelType);
 
   const price = Number(fields.price);
   if (!Number.isFinite(price) || price < 0) {
@@ -131,5 +146,6 @@ module.exports = {
   FUEL_TYPE_VALUES,
   COLOUR_VALUES,
   FINISH_VALUES,
+  normalizeFuelType,
   validateCarPayload,
 };

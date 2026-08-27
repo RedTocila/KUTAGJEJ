@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Alert,
   Box,
@@ -453,6 +453,8 @@ function AiImportAnalyzingText({
 
 export default function AiImportListingsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const categoryParam = searchParams?.get('category') ?? null;
   const { user, checkSession } = useUser();
   const { language } = useLanguage();
   const t = useCopy();
@@ -499,6 +501,22 @@ export default function AiImportListingsPage() {
     );
     setCategory(queued[0]?.category ?? null);
   }, []);
+
+  React.useEffect(() => {
+    if (!categoryParam) return;
+    const normalized =
+      categoryParam === 'jobs' ? 'job-listings' : (categoryParam as ListingCategoryKey);
+    if (
+      normalized === 'real-estate' ||
+      normalized === 'cars' ||
+      normalized === 'job-listings' ||
+      normalized === 'marketplace' ||
+      normalized === 'businesses' ||
+      normalized === 'professionals'
+    ) {
+      setCategory(normalized);
+    }
+  }, [categoryParam]);
 
   React.useEffect(() => {
     const urls = files.map((f) => URL.createObjectURL(f));
@@ -702,19 +720,33 @@ export default function AiImportListingsPage() {
           }
           if (res.batchId) batchId = res.batchId;
           if (res.error) {
+            // If the user is out of Boost Coins / quota, stop the whole batch.
             if (isAiDailyLimitError({ code: res.code, error: res.error, status: res.status })) {
               setError(aiDailyLimitMessage(t));
-            } else {
-              setError(res.error);
+              persistMerged();
+              return;
             }
+            // For single-link failures (Instagram scrape block, timeout, network error),
+            // record the failed draft card and continue with the remaining links.
+            collected.push({
+              id: `ai-miss-${Date.now()}-${i}`,
+              sourceUrl: urls[i],
+              category: null,
+              title: '',
+              summary: '',
+              imageUrls: [],
+              form: {},
+              error: res.error || t.aiImport.failed,
+            } satisfies AiImportDraftResult);
             persistMerged();
-            return;
+            setProgress({ done: i + 1, total: urls.length });
+            continue;
           }
           const chunk = (res.drafts.length
             ? res.drafts
             : [
                 {
-                  id: `ai-miss-${i}`,
+                  id: `ai-miss-${Date.now()}-${i}`,
                   sourceUrl: urls[i],
                   category: null,
                   title: '',
@@ -809,11 +841,22 @@ export default function AiImportListingsPage() {
         if (res.error) {
           if (isAiDailyLimitError({ code: res.code, error: res.error, status: res.status })) {
             setError(aiDailyLimitMessage(t));
-          } else {
-            setError(res.error);
+            persistDrafts([...kept, ...collected, ...failed.filter((d) => !collected.some((c) => c.sourceUrl === d.sourceUrl))]);
+            return;
           }
-          persistDrafts([...kept, ...collected, ...failed.filter((d) => !collected.some((c) => c.sourceUrl === d.sourceUrl))]);
-          return;
+          collected.push({
+            id: `ai-miss-${Date.now()}-${i}`,
+            sourceUrl: urls[i],
+            category: null,
+            title: '',
+            summary: '',
+            imageUrls: [],
+            form: {},
+            error: res.error || t.aiImport.failed,
+          } satisfies AiImportDraftResult);
+          persistDrafts([...kept, ...collected]);
+          setProgress({ done: i + 1, total: urls.length });
+          continue;
         }
         const chunk = (res.drafts.length ? res.drafts : []).map((d) =>
           decorateImportedDraft(d, lastPrompt, []),

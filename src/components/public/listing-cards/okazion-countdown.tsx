@@ -3,15 +3,18 @@
 import * as React from 'react';
 import { Chip } from '@mui/material';
 import { alpha } from '@mui/material/styles';
+import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { Timer as TimerIcon } from '@phosphor-icons/react/dist/ssr/Timer';
 
+import { OKAZION_ACCENT } from '@/lib/home-categories';
 import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
-import { formatJobListingCountdown } from '@/lib/job-listing-expiry';
+import { formatJobListingCountdown, getJobCountdownParts } from '@/lib/job-listing-expiry';
 
 /** OKAZION packs always last this many days. */
 export const OKAZION_COUNTDOWN_DAYS = 5;
 
 const PLACEHOLDER_LABEL = `${OKAZION_COUNTDOWN_DAYS}d 0h 00m 00s`;
+const COMPACT_PLACEHOLDER_LABEL = `${OKAZION_COUNTDOWN_DAYS}d`;
 
 const overlayChipSx = {
   height: 26,
@@ -36,28 +39,62 @@ const overlayChipSx = {
   '& .MuiChip-label': { px: 1.15 },
 } as const;
 
+const compactOverlayChipSx = {
+  height: 30,
+  borderRadius: 999,
+  fontFamily: 'inherit',
+  fontVariantNumeric: 'tabular-nums',
+  fontWeight: 800,
+  fontSize: '0.74rem',
+  letterSpacing: '0.02em',
+  border: '1px solid',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
+  boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+  color: '#fff',
+  bgcolor: OKAZION_ACCENT,
+  borderColor: alpha('#fff', 0.28),
+  flexShrink: 0,
+  '& .MuiChip-icon': {
+    color: '#fff',
+    ml: 0.8,
+    mr: -0.3,
+  },
+  '& .MuiChip-label': { px: 0.95 },
+} as const;
+
+function formatCompactCountdown(expiresAt: string | Date, now: Date = new Date()): string {
+  const parts = getJobCountdownParts(expiresAt, now);
+  if (parts.expired) return '0h';
+  if (parts.days > 0) return `${parts.days}d`;
+  if (parts.hours > 0) return `${parts.hours}h`;
+  return `${Math.max(1, parts.minutes)}m`;
+}
+
 function OkazionCountdownChip({
   label,
   live = false,
+  compact = false,
 }: {
   label: string;
   live?: boolean;
+  compact?: boolean;
 }) {
   return (
     <Chip
-      icon={<TimerIcon size={14} weight="bold" />}
+      icon={compact ? <SealPercentIcon size={15} weight="bold" /> : <TimerIcon size={14} weight="bold" />}
       label={label}
       size="small"
       aria-live={live ? 'polite' : undefined}
       aria-hidden={!live}
       suppressHydrationWarning
-      sx={overlayChipSx}
+      sx={compact ? compactOverlayChipSx : overlayChipSx}
     />
   );
 }
 
-export function OkazionCountdownPlaceholder() {
-  return <OkazionCountdownChip label={PLACEHOLDER_LABEL} />;
+export function OkazionCountdownPlaceholder({ compact = false }: { compact?: boolean }) {
+  return <OkazionCountdownChip label={compact ? COMPACT_PLACEHOLDER_LABEL : PLACEHOLDER_LABEL} compact={compact} />;
 }
 
 /**
@@ -65,7 +102,13 @@ export function OkazionCountdownPlaceholder() {
  * when `expiresAt` is missing, falls back to a fresh 5-day window.
  * Uses a shared 1Hz clock so many cards on the home feed don't each open a timer.
  */
-export function OkazionCountdown({ expiresAt }: { expiresAt?: string | null }) {
+export function OkazionCountdown({
+  expiresAt,
+  compact = false,
+}: {
+  expiresAt?: string | null;
+  compact?: boolean;
+}) {
   const [mounted, setMounted] = React.useState(false);
   const nowMs = useSharedSecondTick();
   const fallbackUntilRef = React.useRef<string | null>(null);
@@ -85,9 +128,12 @@ export function OkazionCountdown({ expiresAt }: { expiresAt?: string | null }) {
   }, [expiresAt]);
 
   if (!mounted || !nowMs) {
-    return <OkazionCountdownPlaceholder />;
+    return <OkazionCountdownPlaceholder compact={compact} />;
   }
 
-  const label = formatJobListingCountdown(until, new Date(nowMs));
-  return <OkazionCountdownChip label={label} live />;
+  const label = compact
+    ? formatCompactCountdown(until, new Date(nowMs))
+    : formatJobListingCountdown(until, new Date(nowMs));
+
+  return <OkazionCountdownChip label={label} live compact={compact} />;
 }

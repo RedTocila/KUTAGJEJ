@@ -76,180 +76,14 @@ export function ListingTitleWithVerified({
 }) {
   const stampSize = trustBadgeSize ?? badgeSize;
   const showBadges = verified || trustBadge;
-  const titleText = typeof title === 'string' ? title : null;
-
-  const rootRef = React.useRef<HTMLElement>(null);
-  const [visibleTitle, setVisibleTitle] = React.useState(titleText ?? '');
-  const [truncated, setTruncated] = React.useState(false);
-
-  React.useLayoutEffect(() => {
-    if (!showBadges || titleText == null) {
-      setVisibleTitle(titleText ?? '');
-      setTruncated(false);
-      return;
-    }
-
-    const root = rootRef.current;
-    if (!root) return;
-
-    const fit = () => {
-      const styles = getComputedStyle(root);
-      const lineHeight = parseFloat(styles.lineHeight) || root.offsetHeight || 20;
-      const maxHeight = lineHeight * MAX_LINES + 1;
-
-      // Start from full title; shrink until title + badges fit in 2 lines.
-      setVisibleTitle(titleText);
-      setTruncated(false);
-
-      // Force layout with full text first (sync after state would be too late —
-      // measure via a probe that mirrors the rendered structure instead).
-      const probe = document.createElement('div');
-      probe.style.cssText = [
-        'position:absolute',
-        'visibility:hidden',
-        'pointer-events:none',
-        'left:0',
-        'top:0',
-        `width:${root.clientWidth}px`,
-        'font-weight:700',
-        'font-size:0.95rem',
-        'line-height:1.4',
-        `font-family:${styles.fontFamily}`,
-        'word-break:break-word',
-        'white-space:normal',
-      ].join(';');
-
-      const textSpan = document.createElement('span');
-      const badgeProbe = document.createElement('span');
-      badgeProbe.style.cssText = [
-        'display:inline-flex',
-        'vertical-align:middle',
-        'flex-shrink:0',
-        `width:${(verified ? badgeSize : 0) + (trustBadge ? stampSize : 0) + (verified && trustBadge ? BADGE_GAP_PX : 0) + 4}px`,
-        `height:${Math.max(badgeSize, stampSize)}px`,
-        'margin-left:4px',
-      ].join(';');
-
-      probe.appendChild(textSpan);
-      probe.appendChild(badgeProbe);
-      root.appendChild(probe);
-
-      const fits = (text: string, withEllipsis: boolean) => {
-        textSpan.textContent = withEllipsis ? `${text}…` : text;
-        return probe.offsetHeight <= maxHeight;
-      };
-
-      if (fits(titleText, false)) {
-        root.removeChild(probe);
-        setVisibleTitle(titleText);
-        setTruncated(false);
-        return;
-      }
-
-      let lo = 0;
-      let hi = titleText.length;
-      let best = 0;
-      while (lo <= hi) {
-        const mid = (lo + hi) >> 1;
-        const candidate = titleText.slice(0, mid).trimEnd();
-        if (candidate.length === 0) {
-          hi = mid - 1;
-          continue;
-        }
-        if (fits(candidate, true)) {
-          best = mid;
-          lo = mid + 1;
-        } else {
-          hi = mid - 1;
-        }
-      }
-
-      let next = titleText.slice(0, best).trimEnd();
-      const space = next.lastIndexOf(' ');
-      if (space > next.length * 0.55) {
-        const atSpace = next.slice(0, space).trimEnd();
-        if (atSpace && fits(atSpace, true)) next = atSpace;
-      }
-
-      root.removeChild(probe);
-      setVisibleTitle(next.length > 0 ? next : titleText.slice(0, 12));
-      setTruncated(true);
-    };
-
-    fit();
-    const ro = new ResizeObserver(fit);
-    ro.observe(root);
-    return () => ro.disconnect();
-  }, [titleText, showBadges, verified, trustBadge, badgeSize, stampSize]);
-
-  const titleTooltip = titleText ?? undefined;
+  const titleTooltip = typeof title === 'string' ? title : undefined;
   const sxList = [...(Array.isArray(sx) ? sx : sx ? [sx] : [])];
   const typographySxList = [
     ...(Array.isArray(typographySx) ? typographySx : typographySx ? [typographySx] : []),
   ];
 
-  if (!showBadges) {
-    return (
-      <Typography
-        id={id}
-        component={component}
-        title={titleTooltip}
-        sx={[
-          {
-            ...TITLE_FONT,
-            minWidth: 0,
-            width: '100%',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            display: '-webkit-box',
-            WebkitLineClamp: MAX_LINES,
-            lineClamp: MAX_LINES,
-            WebkitBoxOrient: 'vertical',
-            wordBreak: 'break-word',
-          },
-          ...typographySxList,
-          ...sxList,
-        ]}
-      >
-        {title}
-      </Typography>
-    );
-  }
-
-  if (titleText == null) {
-    return (
-      <Typography
-        id={id}
-        component={component}
-        sx={[
-          {
-            ...TITLE_FONT,
-            minWidth: 0,
-            width: '100%',
-            overflow: 'hidden',
-            display: '-webkit-box',
-            WebkitLineClamp: MAX_LINES,
-            lineClamp: MAX_LINES,
-            WebkitBoxOrient: 'vertical',
-          },
-          ...typographySxList,
-          ...sxList,
-        ]}
-      >
-        {title}
-        <TitleBadges
-          verified={verified}
-          trustBadge={trustBadge}
-          badgeSize={badgeSize}
-          stampSize={stampSize}
-        />
-      </Typography>
-    );
-  }
-
   return (
     <Typography
-      ref={rootRef as React.RefObject<HTMLElement>}
       id={id}
       component={component}
       title={titleTooltip}
@@ -258,22 +92,27 @@ export function ListingTitleWithVerified({
           ...TITLE_FONT,
           minWidth: 0,
           width: '100%',
-          maxHeight: `${1.4 * MAX_LINES}em`,
           overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          display: '-webkit-box',
+          WebkitLineClamp: MAX_LINES,
+          lineClamp: MAX_LINES,
+          WebkitBoxOrient: 'vertical',
           wordBreak: 'break-word',
         },
         ...typographySxList,
         ...sxList,
       ]}
     >
-      {visibleTitle}
-      {truncated ? '…' : null}
-      <TitleBadges
-        verified={verified}
-        trustBadge={trustBadge}
-        badgeSize={badgeSize}
-        stampSize={stampSize}
-      />
+      {title}
+      {showBadges ? (
+        <TitleBadges
+          verified={verified}
+          trustBadge={trustBadge}
+          badgeSize={badgeSize}
+          stampSize={stampSize}
+        />
+      ) : null}
     </Typography>
   );
 }

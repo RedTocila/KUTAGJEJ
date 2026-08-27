@@ -22,6 +22,7 @@ export function ListingMediaActionButton({
   disabled = false,
   surface = 'card',
   accent = 'primary',
+  compact = false,
   onClick,
 }: {
   'aria-label': string;
@@ -33,6 +34,7 @@ export function ListingMediaActionButton({
   surface?: 'hero' | 'glass' | 'card';
   /** Accent for the active / emphasized state. Bookmark should stay `primary` (green). */
   accent?: 'primary' | 'warning' | 'error';
+  compact?: boolean;
   onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
   const accentToken = `${accent}.main` as const;
@@ -84,11 +86,11 @@ export function ListingMediaActionButton({
         display: 'inline-flex',
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 0.5,
+        gap: compact ? 0.35 : 0.5,
         minWidth: 0,
-        height: 32,
-        px: 1,
-        py: 0.5,
+        height: compact ? 26 : 32,
+        px: compact ? 0.75 : 1,
+        py: compact ? 0.25 : 0.5,
         borderRadius: 999,
         transition: `background-color ${MOTION.fast} ${MOTION.ease}, border-color ${MOTION.fast} ${MOTION.ease}, color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}`,
         '&:active': { transform: 'scale(0.92)', transitionDuration: MOTION.press },
@@ -102,7 +104,7 @@ export function ListingMediaActionButton({
         component="span"
         sx={{
           fontWeight: 700,
-          fontSize: '0.72rem',
+          fontSize: compact ? '0.66rem' : '0.72rem',
           lineHeight: 1,
           color: 'inherit',
           pointerEvents: 'none',

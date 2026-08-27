@@ -10,6 +10,7 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Fade,
   IconButton,
   Stack,
   TextField,
@@ -101,6 +102,8 @@ export default function UserProfilePage() {
   const [shareThemeColor, setShareThemeColor] = React.useState(DEFAULT_SHARE_THEME_COLOR);
   const [isPrivate, setIsPrivate] = React.useState(Boolean(user?.isPrivate));
   const [privacyBusy, setPrivacyBusy] = React.useState(false);
+  const [privacyMsg, setPrivacyMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const privacyTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [citiesLoading, setCitiesLoading] = React.useState(false);
   const [profileSaving, setProfileSaving] = React.useState(false);
@@ -153,18 +156,30 @@ export default function UserProfilePage() {
     user?.isPrivate,
   ]);
 
+  React.useEffect(() => {
+    return () => {
+      if (privacyTimerRef.current) {
+        clearTimeout(privacyTimerRef.current);
+      }
+    };
+  }, []);
+
   const onTogglePrivacy = async (checked: boolean) => {
     if (!user || privacyBusy) return;
     setIsPrivate(checked);
     setPrivacyBusy(true);
-    setProfileMsg(null);
+    if (privacyTimerRef.current) {
+      clearTimeout(privacyTimerRef.current);
+      privacyTimerRef.current = null;
+    }
+    setPrivacyMsg(null);
     try {
       const { error } = await authClient.updatePortalProfile({ isPrivate: checked });
       if (error) {
-        setProfileMsg({ type: 'error', text: error });
+        setPrivacyMsg({ type: 'error', text: error });
         setIsPrivate(!checked);
       } else {
-        setProfileMsg({
+        setPrivacyMsg({
           type: 'success',
           text: checked
             ? 'Profili u vendos privat (kartela fshihet nga njoftimet për publikun).'
@@ -174,71 +189,136 @@ export default function UserProfilePage() {
       }
     } catch {
       setIsPrivate(!checked);
-      setProfileMsg({ type: 'error', text: 'Nuk u arrit përditësimi i privatësisë.' });
+      setPrivacyMsg({ type: 'error', text: 'Nuk u arrit përditësimi i privatësisë.' });
     } finally {
       setPrivacyBusy(false);
+      privacyTimerRef.current = setTimeout(() => {
+        setPrivacyMsg(null);
+        privacyTimerRef.current = null;
+      }, 4000);
     }
   };
 
   useOwnerEditHeaderActions(
     () => (
-      <Tooltip
-        title={
-          isPrivate
-            ? 'Profili është Privat: Kartela e profilit fshihet nga kartat e njoftimeve dhe faqja e profilit është e fshehur për të tjerët derisa t’ju kontaktojnë.'
-            : 'Profili është Publik: Kartela e profilit dhe profili shfaqen publikisht.'
-        }
-        arrow
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: 'center',
+          position: 'relative',
+        }}
       >
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{
-            alignItems: 'center',
-            bgcolor: 'var(--mui-palette-background-paper, #18191b)',
-            border: '1px solid',
-            borderColor: isPrivate ? 'rgba(234, 179, 8, 0.4)' : 'rgba(255, 255, 255, 0.12)',
-            borderRadius: '20px',
-            py: 0.35,
-            px: { xs: 1, sm: 1.5 },
-            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-            userSelect: 'none',
-          }}
-        >
-          {isPrivate ? (
-            <LockIcon size={16} weight="fill" color="#eab308" />
-          ) : (
-            <GlobeIcon size={16} weight="bold" color="#22c55e" />
-          )}
-          <Typography
-            variant="caption"
+        <Fade in={Boolean(privacyMsg)} unmountOnExit>
+          <Box
             sx={{
-              fontWeight: 700,
-              fontSize: '0.78rem',
-              color: isPrivate ? '#eab308' : 'text.secondary',
-              letterSpacing: '0.01em',
+              position: { xs: 'absolute', sm: 'static' },
+              top: { xs: 'calc(100% + 8px)', sm: 'auto' },
+              right: { xs: 0, sm: 'auto' },
+              zIndex: 1200,
+              maxWidth: { xs: 'calc(100vw - 32px)', sm: 380, md: 440 },
+              minWidth: { sm: 260 },
             }}
           >
-            {isPrivate ? 'Privat' : 'Publik'}
-          </Typography>
-          <Switch
-            size="small"
-            checked={isPrivate}
-            disabled={privacyBusy}
-            onChange={(_, checked) => void onTogglePrivacy(checked)}
+            <Alert
+              severity={privacyMsg?.type || 'success'}
+              onClose={() => {
+                if (privacyTimerRef.current) {
+                  clearTimeout(privacyTimerRef.current);
+                  privacyTimerRef.current = null;
+                }
+                setPrivacyMsg(null);
+              }}
+              sx={{
+                py: 0.25,
+                px: 1.25,
+                borderRadius: 2,
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                alignItems: 'center',
+                boxShadow: (t) =>
+                  t.palette.mode === 'dark'
+                    ? '0 4px 16px rgba(0,0,0,0.5)'
+                    : '0 4px 16px rgba(0,0,0,0.1)',
+                '& .MuiAlert-icon': {
+                  fontSize: 18,
+                  mr: 1,
+                  py: 0,
+                },
+                '& .MuiAlert-message': {
+                  py: 0.25,
+                },
+                '& .MuiAlert-action': {
+                  p: 0,
+                  mr: -0.5,
+                  alignItems: 'center',
+                },
+              }}
+            >
+              {privacyMsg?.text}
+            </Alert>
+          </Box>
+        </Fade>
+
+        <Tooltip
+          title={
+            isPrivate
+              ? 'Profili është Privat: Kartela e profilit fshihet nga kartat e njoftimeve dhe faqja e profilit është e fshehur për të tjerët derisa t’ju kontaktojnë.'
+              : 'Profili është Publik: Kartela e profilit dhe profili shfaqen publikisht.'
+          }
+          arrow
+        >
+          <Stack
+            direction="row"
+            spacing={1}
             sx={{
-              '& .MuiSwitch-switchBase.Mui-checked': {
-                color: '#eab308',
-              },
-              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                backgroundColor: '#eab308',
-              },
+              alignItems: 'center',
+              bgcolor: 'var(--mui-palette-background-paper, #18191b)',
+              border: '1px solid',
+              borderColor: isPrivate ? 'rgba(234, 179, 8, 0.4)' : 'rgba(255, 255, 255, 0.12)',
+              borderRadius: '20px',
+              py: 0.35,
+              px: { xs: 1, sm: 1.5 },
+              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              userSelect: 'none',
+              flexShrink: 0,
             }}
-          />
-        </Stack>
-      </Tooltip>
+          >
+            {isPrivate ? (
+              <LockIcon size={16} weight="fill" color="#eab308" />
+            ) : (
+              <GlobeIcon size={16} weight="bold" color="#22c55e" />
+            )}
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                color: isPrivate ? '#eab308' : 'text.secondary',
+                letterSpacing: '0.01em',
+              }}
+            >
+              {isPrivate ? 'Privat' : 'Publik'}
+            </Typography>
+            <Switch
+              size="small"
+              checked={isPrivate}
+              disabled={privacyBusy}
+              onChange={(_, checked) => void onTogglePrivacy(checked)}
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': {
+                  color: '#eab308',
+                },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                  backgroundColor: '#eab308',
+                },
+              }}
+            />
+          </Stack>
+        </Tooltip>
+      </Stack>
     ),
-    [isPrivate, privacyBusy, user?.id]
+    [isPrivate, privacyBusy, user?.id, privacyMsg]
   );
 
   React.useEffect(() => {

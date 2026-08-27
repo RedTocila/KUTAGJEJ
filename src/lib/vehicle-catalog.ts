@@ -55,3 +55,97 @@ export function allVehicleMakes(): string[] {
   }
   return [...set].sort((a, b) => (a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b)));
 }
+
+export function findCatalogMakeInText(
+  text: string,
+  vehicleType?: VehicleType | '',
+): { make: string; vehicleType: VehicleType } | null {
+  const hay = String(text || '').toLowerCase();
+  if (!hay) return null;
+
+  const typesToCheck: VehicleType[] = vehicleType && isVehicleType(vehicleType)
+    ? [vehicleType]
+    : [...VEHICLE_TYPE_VALUES];
+
+  for (const vType of typesToCheck) {
+    const makes = makesForVehicleType(vType).filter((m) => m !== 'Other');
+    const sorted = [...makes].sort((a, b) => b.length - a.length);
+    for (const make of sorted) {
+      const key = make.toLowerCase();
+      const alt = key.replace(/[-_]/g, '[\\s-_]?');
+      const re = new RegExp(`(?:^|[^a-z0-9])${alt}(?:[^a-z0-9]|$)`, 'i');
+      if (re.test(hay)) {
+        return { make, vehicleType: vType };
+      }
+    }
+  }
+  return null;
+}
+
+export function findCatalogModelInText(
+  text: string,
+  vehicleType: VehicleType | '',
+  make: string,
+): string | null {
+  const hay = String(text || '').toLowerCase();
+  if (!hay || !vehicleType || !make) return null;
+  const hayLoose = hay.normalize('NFD').replace(/\p{M}/gu, '');
+  const models = modelsForMake(vehicleType, make).filter((m) => m !== 'Other');
+  const sorted = [...models].sort((a, b) => b.length - a.length);
+  for (const model of sorted) {
+    const key = model
+      .toLowerCase()
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\s+/g, '\\s*');
+    const loose = key.normalize('NFD').replace(/\p{M}/gu, '');
+    if (new RegExp(`(?:^|[^a-z0-9])${loose}(?:[^a-z0-9]|$)`, 'i').test(hayLoose)) {
+      return model;
+    }
+  }
+  if (make === 'Yamaha') {
+    if (/\bt[\s-]?max\b/i.test(hay) || /\btmax\b/i.test(hay)) return 'TMAX';
+    if (/\bt[eé]n[eé]r[eé]\b/i.test(hayLoose)) return 'Ténéré';
+  }
+  return null;
+}
+
+export function parseCarDetailsFromTitleOrText(
+  input: string,
+  hintVehicleType?: VehicleType | '',
+): { vehicleType?: VehicleType; make?: string; model?: string; variant?: string } {
+  const raw = String(input || '').trim();
+  if (!raw) return {};
+
+  const makeMatch = findCatalogMakeInText(raw, hintVehicleType);
+  if (!makeMatch) return {};
+
+  const vType = makeMatch.vehicleType;
+  const make = makeMatch.make;
+  const model = findCatalogModelInText(raw, vType, make);
+
+  let variant = '';
+  if (model) {
+    // Attempt to extract variant by taking text after the make/model in the title
+    const makeIdx = raw.toLowerCase().indexOf(make.toLowerCase().split(/[-\s]/)[0]);
+    if (makeIdx !== -1) {
+      const afterMake = raw.slice(makeIdx);
+      const modelIdx = afterMake.toLowerCase().indexOf(model.toLowerCase());
+      if (modelIdx !== -1) {
+        const afterModel = afterMake.slice(modelIdx + model.length).trim();
+        // Strip common prefixes or separators
+        const cleaned = afterModel.replace(/^[-–—,:/|]+/, '').trim();
+        if (cleaned && cleaned.length <= 50) {
+          variant = cleaned;
+        }
+      }
+    }
+  }
+
+  return {
+    vehicleType: vType,
+    make,
+    model: model || undefined,
+    variant: variant || undefined,
+  };
+}
+

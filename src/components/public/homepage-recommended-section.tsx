@@ -81,7 +81,6 @@ export function HomepageRecommendedSection({
       hideVerticalIcon
       hideSubcategoryPills
       hideBrowseAction
-      compactTop
     >
       {loading && items.length === 0 ? (
         <CarouselSkeleton />

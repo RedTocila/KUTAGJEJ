@@ -372,9 +372,9 @@ export function CarListingDetailView({
       ...(listing.kilometers != null
         ? [{ icon: 'gauge' as const, label: formatKilometers(listing.kilometers) }]
         : []),
-      { icon: 'gas' as const, label: fuel },
-      { icon: 'gear' as const, label: transmission },
-      ...(listing.color ? [{ icon: 'paint' as const, label: colour }] : []),
+      ...(fuel ? [{ icon: 'gas' as const, label: fuel }] : []),
+      ...(transmission ? [{ icon: 'gear' as const, label: transmission }] : []),
+      ...(listing.color && colour ? [{ icon: 'paint' as const, label: colour }] : []),
     ],
     createdAt: listing.createdAt,
     viewCount,
@@ -388,11 +388,11 @@ export function CarListingDetailView({
     { label: 'Markë', value: listing.make },
     { label: 'Model', value: listing.model },
     ...(listing.variant ? [{ label: 'Variant', value: listing.variant }] : []),
-    { label: 'Viti', value: String(listing.year) },
-    { label: 'Kilometrazhi', value: formatKilometers(listing.kilometers) },
-    { label: 'Transmision', value: transmission },
-    { label: 'Karburant', value: fuel },
-    { label: 'Ngjyra', value: colour },
+    ...(listing.year != null ? [{ label: 'Viti', value: String(listing.year) }] : []),
+    ...(listing.kilometers != null ? [{ label: 'Kilometrazhi', value: formatKilometers(listing.kilometers) }] : []),
+    ...(transmission ? [{ label: 'Transmision', value: transmission }] : []),
+    ...(fuel ? [{ label: 'Karburant', value: fuel }] : []),
+    ...(colour ? [{ label: 'Ngjyra', value: colour }] : []),
     ...(listing.cityName ? [{ label: 'Qyteti', value: listing.cityName }] : []),
   ];
 
@@ -683,8 +683,8 @@ export function CarListingDetailView({
                         secondary="Kilometra"
                       />
                       ) : null}
-                      <SpecIconBox Icon={GasPumpIcon} primary={fuel} secondary="Karburant" />
-                      <SpecIconBox Icon={GearSixIcon} primary={transmission} secondary="Transmision" />
+                      {fuel ? <SpecIconBox Icon={GasPumpIcon} primary={fuel} secondary="Karburant" /> : null}
+                      {transmission ? <SpecIconBox Icon={GearSixIcon} primary={transmission} secondary="Transmision" /> : null}
                     </Stack>
                   </Box>
                 )}

@@ -105,6 +105,7 @@ export function HomepageOkazionSection({
       titleKey="okazionListings"
       useMuiVerticalIcon
       hideSubcategoryPills
+      compactTop
     >
       {loading && listings.length === 0 ? (
         <CarouselSkeleton />

@@ -8,6 +8,7 @@ const {
   modelsForMake,
   isValidVehicleMake,
 } = require('./vehicle-catalog');
+const { normalizeFuelType } = require('./car-field-rules');
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -2153,6 +2154,20 @@ function inferVehicleTypeFromText(text) {
   return '';
 }
 
+function inferFuelTypeFromText(text) {
+  if (!text) return '';
+  const s = String(text).toLowerCase();
+  if (/\b(naft[eë]|diesel|gazoil|dizel)\b/i.test(s)) return 'diesel';
+  if (/\b(benzin[eë]|petrol|gasoline)\b/i.test(s)) return 'petrol';
+  if (/\b(lpg|autogas|\bgaz\b)\b/i.test(s)) return 'lpg';
+  if (/\b(hybrid.*diesel|hibrid.*naft)\b/i.test(s)) return 'hybrid-diesel';
+  if (/\b(plugin|plug-in)\b/i.test(s)) return 'plugin-hybrid';
+  if (/\b(hybrid|hibrid)\b/i.test(s)) return 'hybrid-petrol';
+  if (/\b(elektrik|electric|\bev\b)\b/i.test(s)) return 'electric';
+  if (/\b(metan|natural.?gas|cng)\b/i.test(s)) return 'natural-gas';
+  return '';
+}
+
 /**
  * Fill / correct cars form fields from caption + catalog after the model runs.
  */
@@ -2171,6 +2186,9 @@ function normalizeCarFormFields(form, snapshot, interpreted) {
   ]
     .filter(Boolean)
     .join('\n');
+
+  const normalizedFuel = normalizeFuelType(form.fuelType) || inferFuelTypeFromText(blob);
+  form.fuelType = normalizedFuel || '';
 
   let vehicleType =
     normalizeVehicleTypeValue(form.vehicleType) || inferVehicleTypeFromText(blob);
@@ -2217,6 +2235,25 @@ function normalizeCarFormFields(form, snapshot, interpreted) {
     else {
       const found = findCatalogModelInText(model, vehicleType, form.make);
       if (found) form.model = found;
+    }
+  }
+
+  // Also extract variant if not already set and model is known
+  if (vehicleType && form.make && form.model && !form.variant) {
+    const titleStr = String(interpreted?.title || form.title || '').trim();
+    if (titleStr) {
+      const makeIdx = titleStr.toLowerCase().indexOf(form.make.toLowerCase().split(/[-\s]/)[0]);
+      if (makeIdx !== -1) {
+        const afterMake = titleStr.slice(makeIdx);
+        const modelIdx = afterMake.toLowerCase().indexOf(form.model.toLowerCase());
+        if (modelIdx !== -1) {
+          const afterModel = afterMake.slice(modelIdx + form.model.length).trim();
+          const cleaned = afterModel.replace(/^[-–—,:/|]+/, '').trim();
+          if (cleaned && cleaned.length <= 50) {
+            form.variant = cleaned;
+          }
+        }
+      }
     }
   }
 

@@ -1,5 +1,13 @@
 import type { AiListingDraft } from '@/lib/ai-listing-draft';
+import { normalizeFuelType } from '@/lib/car-constants';
 import { applyEmptyKnownDefaults, knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
+import {
+  isVehicleType,
+  isValidVehicleMake,
+  isValidVehicleModel,
+  parseCarDetailsFromTitleOrText,
+  type VehicleType,
+} from '@/lib/vehicle-catalog';
 
 function num(value: unknown): number | null {
   if (value == null || value === '') return null;
@@ -52,19 +60,49 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
       }, true);
 
     case 'cars': {
-      const vehicleType = str(f.vehicleType);
+      let vehicleType = str(f.vehicleType);
+      let make = str(f.make);
+      let model = str(f.model);
+      let variant = str(f.variant);
+
+      // If make or model is missing/invalid, parse from title, summary, or description
+      const blob = [draft.title, draft.summary, str(f.description)].filter(Boolean).join(' ');
+      const parsed = parseCarDetailsFromTitleOrText(blob, isVehicleType(vehicleType) ? vehicleType : undefined);
+
+      if (!vehicleType && parsed.vehicleType) {
+        vehicleType = parsed.vehicleType;
+      }
+      if (!isVehicleType(vehicleType) && parsed.vehicleType) {
+        vehicleType = parsed.vehicleType;
+      }
+      const activeVType = (isVehicleType(vehicleType) ? vehicleType : 'car') as VehicleType;
+
+      if (!make || !isValidVehicleMake(activeVType, make)) {
+        if (parsed.make && isValidVehicleMake(activeVType, parsed.make)) {
+          make = parsed.make;
+        }
+      }
+      if (make && (!model || !isValidVehicleModel(activeVType, make, model))) {
+        if (parsed.model && isValidVehicleModel(activeVType, make, parsed.model)) {
+          model = parsed.model;
+        }
+      }
+      if (!variant && parsed.variant) {
+        variant = parsed.variant;
+      }
+
       return withKnownDefaults({
         id: draft.id,
-        // Prefer empty over wrong default "car" when AI left type unset.
-        vehicleType: vehicleType || '',
-        make: str(f.make),
-        model: str(f.model),
-        variant: str(f.variant),
+        // Prefer inferred/catalog type or leave empty for user selection
+        vehicleType: vehicleType || (make ? activeVType : ''),
+        make,
+        model,
+        variant,
         description: str(f.description),
         year: num(f.year),
         kilometers: num(f.kilometers),
         transmission: f.transmission === 'automatic' || f.transmission === 'manual' ? f.transmission : null,
-        fuelType: str(f.fuelType),
+        fuelType: normalizeFuelType(f.fuelType),
         price: num(f.price),
         currency: f.currency === 'LEK' ? 'LEK' : f.currency === 'EUR' ? 'EUR' : null,
         color: str(f.color),

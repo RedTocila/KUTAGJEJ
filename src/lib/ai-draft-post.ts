@@ -2,6 +2,7 @@
 
 import type { AiListingDraft } from '@/lib/ai-listing-draft';
 import { defaultWeeklyHours } from '@/lib/business-constants';
+import { normalizeFuelType } from '@/lib/car-constants';
 import {
   createBusinessListing,
   createProfessionalListing,
@@ -235,7 +236,10 @@ export async function postAiListingDraft(
           'transmission',
           f.transmission === 'automatic' || f.transmission === 'manual' ? String(f.transmission) : 'manual',
         );
-        fd.append('fuelType', str(f.fuelType) || 'petrol');
+        const fuelType = normalizeFuelType(f.fuelType);
+        if (fuelType) {
+          fd.append('fuelType', fuelType);
+        }
         fd.append('price', String(num(f.price) ?? 0));
         fd.append('currency', f.currency === 'LEK' ? 'LEK' : 'EUR');
         fd.append('color', color);

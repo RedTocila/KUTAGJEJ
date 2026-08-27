@@ -4,7 +4,7 @@ import * as React from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Box, Chip, Stack } from '@mui/material';
+import { Box, Chip, IconButton, Stack } from '@mui/material';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
@@ -40,7 +40,11 @@ export interface CardMediaProps {
   topLeftOverlay?: React.ReactNode;
   topRightBadge?: string;
   /** Media height — number or breakpoint map so desktop cards can match mobile proportions. */
-  height?: number | { xs?: number; sm?: number; md?: number; lg?: number };
+  height?: number | { xs?: number | string; sm?: number | string; md?: number | string; lg?: number | string } | string;
+  /** Explicit aspect ratio for the media container (e.g. '1 / 1' for square Instagram style). */
+  aspectRatio?: string | { xs?: string; sm?: string; md?: string; lg?: string };
+  /** Compact mode for 2-column mobile grids (smaller action buttons, mini okazion discount icon + short days timer). */
+  compact?: boolean;
   bottomOverlay?: React.ReactNode;
   /** Bottom-right chip (e.g. job expiry) — same slot as OKAZION countdown. */
   bottomRightOverlay?: React.ReactNode;
@@ -70,7 +74,9 @@ export function CardMedia({
   topLeftBadge,
   topLeftOverlay,
   topRightBadge,
-  height = { xs: 170, md: 186 },
+  height,
+  aspectRatio,
+  compact = false,
   bottomOverlay,
   bottomRightOverlay,
   shareCount: initialShareCount = 0,
@@ -174,13 +180,14 @@ export function CardMedia({
 
   // OKAZION badge wins when both are active (same priority as before for chrome).
   const showPremiumBadge = premium && !okazion;
-  const showBottomRight = Boolean(okazion || bottomRightOverlay);
+  // On compact cards, okazion timer is combined into the top-left badge.
+  const showBottomRight = Boolean((okazion && !compact) || bottomRightOverlay);
 
   return (
     <Box
       sx={{
         position: 'relative',
-        height,
+        ...(aspectRatio ? { aspectRatio, width: '100%' } : { height: height ?? { xs: 170, md: 186 } }),
         flexShrink: 0,
         borderBottom: '1px solid',
         borderColor: 'divider',
@@ -226,31 +233,35 @@ export function CardMedia({
           spacing={0.6}
           sx={{
             position: 'absolute',
-            top: 8,
-            left: 8,
+            top: compact ? 6 : 8,
+            left: compact ? 6 : 8,
             zIndex: 3,
             alignItems: 'flex-start',
-            maxWidth: 'calc(100% - 88px)',
+            maxWidth: compact ? 'calc(100% - 72px)' : 'calc(100% - 88px)',
           }}
         >
           {okazion ? (
-            <Chip
-              label="OKAZION"
-              size="small"
-              sx={{
-                height: 28,
-                fontSize: '0.72rem',
-                fontWeight: 900,
-                letterSpacing: 0.5,
-                bgcolor: OKAZION_ACCENT,
-                color: '#fff',
-                flexShrink: 0,
-                boxShadow: '0 2px 10px rgba(239, 68, 68, 0.55)',
-                '& .MuiChip-label': { px: 1.1 },
-              }}
-            />
+            compact ? (
+              <OkazionCountdown expiresAt={okazionUntil} compact />
+            ) : (
+              <Chip
+                label="OKAZION"
+                size="small"
+                sx={{
+                  height: 28,
+                  fontSize: '0.72rem',
+                  fontWeight: 900,
+                  letterSpacing: 0.5,
+                  bgcolor: OKAZION_ACCENT,
+                  color: '#fff',
+                  flexShrink: 0,
+                  boxShadow: '0 2px 10px rgba(239, 68, 68, 0.55)',
+                  '& .MuiChip-label': { px: 1.1 },
+                }}
+              />
+            )
           ) : showPremiumBadge ? (
-            <ListingPremiumBadge size={28} aria-label="Premium" />
+            <ListingPremiumBadge size={compact ? 22 : 28} aria-label="Premium" />
           ) : topLeftOverlay ? (
             <Box sx={{ lineHeight: 0 }}>{topLeftOverlay}</Box>
           ) : topLeftBadge ? (
@@ -310,37 +321,106 @@ export function CardMedia({
         <Box
           sx={{
             position: 'absolute',
-            bottom: 8,
-            right: 8,
+            bottom: compact ? 6 : 8,
+            right: compact ? 6 : 8,
             zIndex: 3,
-            maxWidth: 'calc(100% - 16px)',
+            maxWidth: 'calc(100% - 12px)',
             lineHeight: 0,
           }}
         >
-          {okazion ? <OkazionCountdown expiresAt={okazionUntil} /> : bottomRightOverlay}
+          {okazion ? <OkazionCountdown expiresAt={okazionUntil} compact={compact} /> : bottomRightOverlay}
         </Box>
       ) : null}
 
-      <Stack
-        direction="row"
-        spacing={0.75}
-        sx={{ position: 'absolute', top: 8, right: 8, alignItems: 'center', zIndex: 3 }}
-      >
-        <ListingMediaActionButton
-          aria-label="Ndaj njoftimin"
-          count={shareCount}
-          icon={<ShareNetworkIcon size={17} weight="regular" />}
-          onClick={handleShare}
-        />
-        <ListingMediaActionButton
-          aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
-          count={saveCount}
-          active={saved}
-          accent="primary"
-          icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} />}
-          onClick={handleSave}
-        />
-      </Stack>
+      {compact ? (
+        <Stack
+          direction="row"
+          sx={{
+            position: 'absolute',
+            top: 6,
+            right: 6,
+            alignItems: 'center',
+            zIndex: 3,
+            height: 30,
+            borderRadius: 999,
+            bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.94)',
+            border: '1px solid',
+            borderColor: 'divider',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.22)',
+            px: 0.5,
+          }}
+        >
+          <IconButton
+            aria-label="Ndaj njoftimin"
+            onClick={handleShare}
+            size="small"
+            sx={{
+              width: 28,
+              height: 28,
+              p: 0,
+              color: 'text.primary',
+              transition: 'color 0.15s ease, transform 0.1s ease',
+              '&:hover': { bgcolor: 'action.hover' },
+              '&:active': { transform: 'scale(0.92)' },
+            }}
+          >
+            <ShareNetworkIcon size={16} weight="regular" />
+          </IconButton>
+          <Box
+            sx={{
+              width: '1px',
+              height: 14,
+              bgcolor: 'divider',
+              mx: 0.35,
+            }}
+          />
+          <IconButton
+            aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
+            onClick={handleSave}
+            size="small"
+            sx={{
+              width: 28,
+              height: 28,
+              p: 0,
+              color: saved ? 'primary.main' : 'text.primary',
+              transition: 'color 0.15s ease, transform 0.1s ease',
+              '&:hover': { bgcolor: 'action.hover' },
+              '&:active': { transform: 'scale(0.92)' },
+            }}
+          >
+            <BookmarkSimpleIcon size={16} weight={saved ? 'fill' : 'regular'} />
+          </IconButton>
+        </Stack>
+      ) : (
+        <Stack
+          direction="row"
+          spacing={0.75}
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            alignItems: 'center',
+            zIndex: 3,
+          }}
+        >
+          <ListingMediaActionButton
+            aria-label="Ndaj njoftimin"
+            count={shareCount}
+            icon={<ShareNetworkIcon size={17} weight="regular" />}
+            onClick={handleShare}
+          />
+          <ListingMediaActionButton
+            aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
+            count={saveCount}
+            active={saved}
+            accent="primary"
+            icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} />}
+            onClick={handleSave}
+          />
+        </Stack>
+      )}
 
       {shareOpen ? (
         <ListingSharePage

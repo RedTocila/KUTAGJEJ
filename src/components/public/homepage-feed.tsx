@@ -14,16 +14,16 @@ import { fetchBrowseOkazion, fetchHomepageRecommended } from '@/lib/public-listi
 import { config } from '@/config';
 
 /**
- * Priority homepage: recommended streams first, OKAZION next, category rows on scroll.
+ * Priority homepage: OKAZION streams first, recommended next, category rows on scroll.
  */
 export function HomepageFeed(): React.JSX.Element {
   return (
     <>
-      <React.Suspense fallback={<HomeRecommendedFallback />}>
-        <HomepageRecommendedFeed />
-      </React.Suspense>
       <React.Suspense fallback={<HomeOkazionFallback />}>
         <HomepageOkazionFeed />
+      </React.Suspense>
+      <React.Suspense fallback={<HomeRecommendedFallback />}>
+        <HomepageRecommendedFeed />
       </React.Suspense>
       <HomepageBelowFold
         profilesSlot={

@@ -168,6 +168,7 @@ export function AddListingPickerDialog({
   onPick,
   initialOkazion = false,
   initialPremium = false,
+  category = null,
 }: {
   open: boolean;
   onClose: () => void;
@@ -177,6 +178,8 @@ export function AddListingPickerDialog({
   initialOkazion?: boolean;
   /** Deep-link: open already in “pick category for Premium” mode. */
   initialPremium?: boolean;
+  /** When set, scopes the dialog directly to that category (Free, AI Build, OKAZION, Premium). */
+  category?: ListingCategoryKey | null;
 }) {
   const t = useCopy();
   const router = useRouter();
@@ -257,6 +260,10 @@ export function AddListingPickerDialog({
         : [];
 
   const handleCloseRequest = () => {
+    if (category) {
+      onClose();
+      return;
+    }
     // Back out of category pick before dismissing the sheet.
     if (
       (pickingOkazion || pickingPremium || pickingAllListings) &&
@@ -277,23 +284,25 @@ export function AddListingPickerDialog({
     });
   };
 
-  const handlePick = (key: ListingCategoryKey) => {
-    if (pickingOkazion && !OKAZION_CATEGORY_KEYS.has(key)) return;
-    if (pickingPremium && !PREMIUM_CATEGORY_KEYS.has(key)) return;
+  const handlePick = (key: ListingCategoryKey, opts?: AddListingPickOptions) => {
+    const isOkazion = opts?.okazion ?? pickingOkazion;
+    const isPremium = opts?.premium ?? pickingPremium;
+    if (isOkazion && !OKAZION_CATEGORY_KEYS.has(key)) return;
+    if (isPremium && !PREMIUM_CATEGORY_KEYS.has(key)) return;
     if (!isCategoryQuotaAvailable(categoryQuotas, key)) return;
     if (isListingFormCategoryKey(key)) prefetchListingForm(key);
     if (onPick) {
       const q = new URLSearchParams({ category: key });
-      if (pickingOkazion) q.set('okazion', '1');
-      if (pickingPremium) q.set('premium', '1');
+      if (isOkazion) q.set('okazion', '1');
+      if (isPremium) q.set('premium', '1');
       dismissSheet();
       beginPendingNavigation(`${paths.user.realEstateListing}?${q.toString()}`);
-      onPick(key, pickingOkazion ? { okazion: true } : pickingPremium ? { premium: true } : undefined);
+      onPick(key, isOkazion ? { okazion: true } : isPremium ? { premium: true } : undefined);
       return;
     }
     const q = new URLSearchParams({ category: key });
-    if (pickingOkazion) q.set('okazion', '1');
-    if (pickingPremium) q.set('premium', '1');
+    if (isOkazion) q.set('okazion', '1');
+    if (isPremium) q.set('premium', '1');
     const formHref = `${paths.user.realEstateListing}?${q.toString()}`;
     dismissSheet();
     onClose();
@@ -312,6 +321,10 @@ export function AddListingPickerDialog({
   const handleAiImport = () => {
     dismissSheet();
     onClose();
+    if (category) {
+      hardNavigate(`${paths.user.aiImport}?category=${encodeURIComponent(category)}`);
+      return;
+    }
     hardNavigate(paths.user.aiImport);
   };
 
@@ -333,7 +346,13 @@ export function AddListingPickerDialog({
     setPickingPremium(false);
   };
 
-  const showRootActions = !pickingOkazion && !pickingPremium && !pickingAllListings;
+  const showRootActions = !category && !pickingOkazion && !pickingPremium && !pickingAllListings;
+  const isCategoryScoped = Boolean(category);
+  const scopedCategoryTitle = category ? (fallbackByKey[category]?.title ?? category) : '';
+  const scopedQuotaAvailable = category ? isCategoryQuotaAvailable(categoryQuotas, category) : true;
+  const scopedCanAddDirectory =
+    category === 'businesses' ? !hasBusinessListing : category === 'professionals' ? !hasProfessionalListing : true;
+  const scopedCanPost = scopedQuotaAvailable && scopedCanAddDirectory;
 
   const sheetOpen = open && !leaving;
 
@@ -381,13 +400,15 @@ export function AddListingPickerDialog({
               color: pickingOkazion ? OKAZION_ACCENT : 'text.primary',
             }}
           >
-            {pickingOkazion
-              ? t.picker.okazionTitle
-              : pickingPremium
-                ? t.picker.premiumTitle
-                : pickingAllListings
-                  ? t.picker.allListingsTitle
-                  : t.picker.title}
+            {isCategoryScoped
+              ? t.picker.categoryTitle(scopedCategoryTitle)
+              : pickingOkazion
+                ? t.picker.okazionTitle
+                : pickingPremium
+                  ? t.picker.premiumTitle
+                  : pickingAllListings
+                    ? t.picker.allListingsTitle
+                    : t.picker.title}
           </Typography>
           <IconButton aria-label={t.common.close} onClick={handleCloseRequest} size="small" edge="end">
             <XIcon size={18} weight="bold" />
@@ -402,6 +423,237 @@ export function AddListingPickerDialog({
         ) : null}
 
         <Stack spacing={0}>
+            {isCategoryScoped && category ? (
+              <>
+                <Box
+                  component="button"
+                  type="button"
+                  disabled={!scopedCanPost}
+                  aria-label={scopedCanPost ? t.picker.freeListing : `${t.picker.freeListing} — ${t.picker.quotaUnavailable}`}
+                  onPointerDown={() => {
+                    if (isListingFormCategoryKey(category)) prefetchListingForm(category);
+                  }}
+                  onClick={() => handlePick(category)}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.25,
+                    width: '100%',
+                    px: 0.5,
+                    py: 1.2,
+                    border: 0,
+                    borderRadius: 1.5,
+                    bgcolor: 'transparent',
+                    color: 'text.primary',
+                    cursor: scopedCanPost ? 'pointer' : 'not-allowed',
+                    opacity: scopedCanPost ? 1 : 0.5,
+                    font: 'inherit',
+                    textAlign: 'left',
+                    '&:hover': scopedCanPost ? { bgcolor: 'action.hover' } : undefined,
+                    '&:active': scopedCanPost ? { bgcolor: 'action.selected' } : undefined,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 1.5,
+                      display: 'grid',
+                      placeItems: 'center',
+                      flexShrink: 0,
+                      bgcolor: (theme) => `${theme.palette.primary.main}2E`,
+                      color: 'primary.main',
+                    }}
+                  >
+                    {React.createElement(category ? categoryIcon(category) : SquaresFourIcon, {
+                      size: 18,
+                      weight: 'duotone',
+                    })}
+                  </Box>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <PickerRowLabel
+                      title={t.picker.freeListing}
+                      hint={scopedCanPost ? (fallbackByKey[category]?.hint || t.picker.freeListingHint) : t.picker.quotaUnavailable}
+                      titleWeight={600}
+                    />
+                  </Box>
+                </Box>
+
+                <Box
+                  sx={{
+                    height: '1px',
+                    bgcolor: 'divider',
+                    opacity: 0.55,
+                    ml: 6.5,
+                    mr: 0.5,
+                  }}
+                />
+
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={handleAiImport}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.25,
+                    width: '100%',
+                    px: 0.5,
+                    py: 1.2,
+                    border: 0,
+                    borderRadius: 1.5,
+                    bgcolor: 'transparent',
+                    color: 'text.primary',
+                    cursor: 'pointer',
+                    font: 'inherit',
+                    textAlign: 'left',
+                    '&:hover': { bgcolor: 'action.hover' },
+                    '&:active': { bgcolor: 'action.selected' },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 1.5,
+                      display: 'grid',
+                      placeItems: 'center',
+                      flexShrink: 0,
+                      bgcolor: AI_SEARCH_BLUE_SOFT,
+                      color: AI_SEARCH_BLUE,
+                    }}
+                  >
+                    <SparkleIcon size={18} weight="duotone" />
+                  </Box>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <PickerRowLabel title={t.picker.aiImport} hint={t.picker.aiImportHint} titleColor={AI_SEARCH_BLUE} />
+                  </Box>
+                </Box>
+
+                {OKAZION_CATEGORY_KEYS.has(category) ? (
+                  <>
+                    <Box
+                      sx={{
+                        height: '1px',
+                        bgcolor: 'divider',
+                        opacity: 0.55,
+                        ml: 6.5,
+                        mr: 0.5,
+                      }}
+                    />
+
+                    <Box
+                      component="button"
+                      type="button"
+                      disabled={!scopedQuotaAvailable}
+                      aria-label={scopedQuotaAvailable ? t.picker.postAsOkazion : `${t.picker.postAsOkazion} — ${t.picker.quotaUnavailable}`}
+                      onPointerDown={() => {
+                        if (isListingFormCategoryKey(category)) prefetchListingForm(category);
+                      }}
+                      onClick={() => handlePick(category, { okazion: true })}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        width: '100%',
+                        px: 0.5,
+                        py: 1.2,
+                        border: 0,
+                        borderRadius: 1.5,
+                        bgcolor: 'transparent',
+                        color: 'text.primary',
+                        cursor: scopedQuotaAvailable ? 'pointer' : 'not-allowed',
+                        opacity: scopedQuotaAvailable ? 1 : 0.5,
+                        font: 'inherit',
+                        textAlign: 'left',
+                        '&:hover': scopedQuotaAvailable ? { bgcolor: 'action.hover' } : undefined,
+                        '&:active': scopedQuotaAvailable ? { bgcolor: 'action.selected' } : undefined,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 1.5,
+                          display: 'grid',
+                          placeItems: 'center',
+                          flexShrink: 0,
+                          bgcolor: OKAZION_ACCENT_SOFT,
+                          color: OKAZION_ACCENT,
+                        }}
+                      >
+                        <SealPercentIcon size={18} weight="regular" />
+                      </Box>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <PickerRowLabel title={t.picker.postAsOkazion} hint={scopedQuotaAvailable ? t.picker.okazionHint : t.picker.quotaUnavailable} titleColor={OKAZION_ACCENT} />
+                      </Box>
+                    </Box>
+                  </>
+                ) : null}
+
+                {PREMIUM_CATEGORY_KEYS.has(category) ? (
+                  <>
+                    <Box
+                      sx={{
+                        height: '1px',
+                        bgcolor: 'divider',
+                        opacity: 0.55,
+                        ml: 6.5,
+                        mr: 0.5,
+                      }}
+                    />
+
+                    <Box
+                      component="button"
+                      type="button"
+                      disabled={!scopedQuotaAvailable}
+                      aria-label={scopedQuotaAvailable ? t.picker.postAsPremium : `${t.picker.postAsPremium} — ${t.picker.quotaUnavailable}`}
+                      onPointerDown={() => {
+                        if (isListingFormCategoryKey(category)) prefetchListingForm(category);
+                      }}
+                      onClick={() => handlePick(category, { premium: true })}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        width: '100%',
+                        px: 0.5,
+                        py: 1.2,
+                        border: 0,
+                        borderRadius: 1.5,
+                        bgcolor: 'transparent',
+                        color: 'text.primary',
+                        cursor: scopedQuotaAvailable ? 'pointer' : 'not-allowed',
+                        opacity: scopedQuotaAvailable ? 1 : 0.5,
+                        font: 'inherit',
+                        textAlign: 'left',
+                        '&:hover': scopedQuotaAvailable ? { bgcolor: 'action.hover' } : undefined,
+                        '&:active': scopedQuotaAvailable ? { bgcolor: 'action.selected' } : undefined,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 1.5,
+                          display: 'grid',
+                          placeItems: 'center',
+                          flexShrink: 0,
+                          bgcolor: (theme) => `${theme.palette.warning.main}1f`,
+                          color: 'warning.main',
+                        }}
+                      >
+                        <CrownSimpleIcon size={18} weight="regular" />
+                      </Box>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <PickerRowLabel title={t.picker.postAsPremium} hint={scopedQuotaAvailable ? t.picker.premiumHint : t.picker.quotaUnavailable} titleColor="warning.main" />
+                      </Box>
+                    </Box>
+                  </>
+                ) : null}
+              </>
+            ) : null}
+
             {!showRootActions ? null : (
               <>
                 <Box

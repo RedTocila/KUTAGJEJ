@@ -36,17 +36,27 @@ export function MarketplaceCard({
   listing,
   sellerRating = null,
   imagePriority = false,
+  variant = 'default',
 }: {
   listing: PublicMarketplaceListing;
   sellerRating?: ListingCardRatingSummary | null;
   imagePriority?: boolean;
+  /** 'compact' is used on 2-column mobile category browse page. 'default' is classic full-detail card. */
+  variant?: 'default' | 'compact';
 }) {
   const viewCount = listing.viewCount ?? 0;
   const categoryLabel = findOptionLabel(MARKETPLACE_CATEGORY_OPTIONS, listing.category);
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
   const cardRating = resolveListingCardRating(null, sellerRating);
 
-  const specs: Spec[] = [
+  const specsText = React.useMemo(() => {
+    const items: string[] = [];
+    if (categoryLabel && categoryLabel !== '—') items.push(categoryLabel);
+    if (conditionLabel) items.push(conditionLabel);
+    return items.join(' · ');
+  }, [categoryLabel, conditionLabel]);
+
+  const fullSpecs: Spec[] = [
     { Icon: TagIcon, label: categoryLabel, title: 'Kategoria' },
     ...(conditionLabel ? [{ Icon: conditionIcon(listing.condition), label: conditionLabel, title: 'Gjendja' }] : []),
   ];
@@ -65,6 +75,9 @@ export function MarketplaceCard({
         imageUrl={listing.imageUrl}
         FallbackIcon={ShoppingBagIcon}
         alt={listing.title}
+        aspectRatio={variant === 'compact' ? '4 / 3' : undefined}
+        height={variant === 'default' ? { xs: 170, md: 186 } : undefined}
+        compact={variant === 'compact'}
         topLeftBadge={conditionLabel ?? undefined}
         shareCount={listing.shareCount}
         saveCount={listing.saveCount}
@@ -101,64 +114,148 @@ export function MarketplaceCard({
           url: listingMarketplacePublicHref(listing),
         }}
       />
-      <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
-        >
-          {categoryLabel}
-        </Typography>
-        <ListingTitleWithVerified
-          title={listing.title}
-          verified={Boolean(listing.sellerVerified)}
-          trustBadge={Boolean(listing.sellerTrustBadge)}
-        />
-        {cardRating ? (
-          <ListingCardRating
-            ratingAverage={cardRating.ratingAverage}
-            reviewCount={cardRating.reviewCount}
+      {variant === 'compact' ? (
+        <Stack className="listing-card-body" spacing={{ xs: 0.6, sm: 0.85 }} sx={{ p: { xs: 1.25, sm: 1.5 } }}>
+          <ListingTitleWithVerified
+            title={listing.title}
+            verified={Boolean(listing.sellerVerified)}
+            trustBadge={Boolean(listing.sellerTrustBadge)}
+            badgeSize={14}
+            typographySx={{
+              fontSize: { xs: '0.86rem', sm: '0.94rem' },
+              fontWeight: 700,
+              lineHeight: 1.3,
+              minHeight: { xs: '2.6em', sm: '2.6em' },
+            }}
           />
-        ) : null}
-        <ListingPrice
-          price={listing.price}
-          originalPrice={listing.originalPrice}
-          currency={listing.currency}
-          isPremium={listing.isPremium}
-          isOkazion={listing.isOkazion}
-        />
 
-        <CardDescription text={listing.description} />
+          <ListingPrice
+            price={listing.price}
+            originalPrice={listing.originalPrice}
+            currency={listing.currency}
+            isPremium={listing.isPremium}
+            isOkazion={listing.isOkazion}
+            fontSize="1.02rem"
+          />
 
-        <SpecRow specs={specs} />
-
-        {listing.cityName ? (
-          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
-            <MapPinIcon size={14} weight="regular" />
+          {specsText ? (
             <Typography
               variant="caption"
               noWrap
-              sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
+              sx={{
+                color: 'text.secondary',
+                fontWeight: 600,
+                fontSize: { xs: '0.72rem', sm: '0.76rem' },
+                lineHeight: 1.2,
+              }}
             >
-              {listing.cityName}
+              {specsText}
             </Typography>
-          </Stack>
-        ) : null}
+          ) : null}
 
-        <Box sx={{ flex: 1 }} />
+          {cardRating ? (
+            <ListingCardRating
+              ratingAverage={cardRating.ratingAverage}
+              reviewCount={cardRating.reviewCount}
+            />
+          ) : null}
 
-        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="caption" color="text.disabled">
-            {listingCardRelativeDate(listing)}
-          </Typography>
-          <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-            <EyeIcon size={14} weight="regular" />
-            <Typography variant="caption" color="text.disabled">
-              {new Intl.NumberFormat('en-GB').format(viewCount)}
-            </Typography>
+          <Box sx={{ flex: 1 }} />
+
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 0.5,
+              pt: 0.25,
+            }}
+          >
+            {listing.cityName ? (
+              <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0, flex: 1 }}>
+                <MapPinIcon size={12} weight="regular" style={{ flexShrink: 0 }} />
+                <Typography
+                  variant="caption"
+                  noWrap
+                  sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '0.7rem' }}
+                >
+                  {listing.cityName}
+                </Typography>
+              </Stack>
+            ) : (
+              <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.7rem' }}>
+                {listingCardRelativeDate(listing)}
+              </Typography>
+            )}
+
+            <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}>
+              <EyeIcon size={12} weight="regular" />
+              <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.7rem' }}>
+                {new Intl.NumberFormat('en-GB').format(viewCount)}
+              </Typography>
+            </Stack>
           </Stack>
         </Stack>
-      </Stack>
+      ) : (
+        <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
+          >
+            {categoryLabel}
+          </Typography>
+          <ListingTitleWithVerified
+            title={listing.title}
+            verified={Boolean(listing.sellerVerified)}
+            trustBadge={Boolean(listing.sellerTrustBadge)}
+          />
+          {cardRating ? (
+            <ListingCardRating
+              ratingAverage={cardRating.ratingAverage}
+              reviewCount={cardRating.reviewCount}
+            />
+          ) : null}
+          <ListingPrice
+            price={listing.price}
+            originalPrice={listing.originalPrice}
+            currency={listing.currency}
+            isPremium={listing.isPremium}
+            isOkazion={listing.isOkazion}
+          />
+
+          <CardDescription text={listing.description} />
+
+          <SpecRow specs={fullSpecs} />
+
+          {listing.cityName ? (
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
+              <MapPinIcon size={14} weight="regular" />
+              <Typography
+                variant="caption"
+                noWrap
+                sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
+              >
+                {listing.cityName}
+              </Typography>
+            </Stack>
+          ) : null}
+
+          <Box sx={{ flex: 1 }} />
+
+          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="caption" color="text.disabled">
+              {listingCardRelativeDate(listing)}
+            </Typography>
+            <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+              <EyeIcon size={14} weight="regular" />
+              <Typography variant="caption" color="text.disabled">
+                {new Intl.NumberFormat('en-GB').format(viewCount)}
+              </Typography>
+            </Stack>
+          </Stack>
+        </Stack>
+      )}
     </CardShell>
     </ListingCardLink>
   );

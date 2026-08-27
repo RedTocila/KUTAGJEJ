@@ -101,16 +101,23 @@ export function CheckoutSkeleton(): React.JSX.Element {
 }
 
 /** Listing card grid (browse load-more / search results). */
-export function ListingCardsSkeleton({ count = 4 }: { count?: number }): React.JSX.Element {
+export function ListingCardsSkeleton({
+  count = 4,
+  columns = 1,
+}: {
+  count?: number;
+  columns?: 1 | 2;
+}): React.JSX.Element {
+  const xsSize = columns === 2 ? 6 : 12;
   return (
-    <Grid container spacing={{ xs: 2, md: 2.5 }} aria-busy aria-label="Duke u ngarkuar">
+    <Grid container spacing={columns === 2 ? { xs: 1.25, sm: 2, md: 2.5 } : { xs: 2, md: 2.5 }} aria-busy aria-label="Duke u ngarkuar">
       {Array.from({ length: count }, (_, i) => (
-        <Grid key={i} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+        <Grid key={i} size={{ xs: xsSize, sm: 6, md: 4, lg: 3 }}>
           <Stack spacing={1.25}>
             <Skeleton
               variant="rounded"
               animation="wave"
-              sx={{ width: '100%', aspectRatio: '4 / 3', borderRadius: 2.5 }}
+              sx={{ width: '100%', aspectRatio: columns === 2 ? '4 / 3' : '16 / 10', borderRadius: 2 }}
             />
             <Skeleton variant="text" animation="wave" width="70%" />
             <Skeleton variant="text" animation="wave" width="45%" />

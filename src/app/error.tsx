@@ -17,10 +17,10 @@ export default function Error({
 
   return (
     <AppErrorPage
-      imageSrc="/assets/error-500.png"
-      imageAlt="Error"
-      title="500: Something went wrong!"
-      description="We apologize for the inconvenience. Please try again later or contact support if the problem persists."
+      statusCode="500"
+      title="Diçka shkoi keq"
+      description="Ndodhi një problem gjatë ngarkimit të faqes. Provoni ta rifreskoni për të vazhduar."
+      reloadLabel="Rifresko"
       onReload={reset}
     />
   );

@@ -1,14 +1,16 @@
 'use client';
 
+import * as React from 'react';
+
 import { AppErrorPage } from '@/components/common/app-error-page';
 
 export function NotFoundView() {
   return (
     <AppErrorPage
-      imageSrc="/assets/error-404.png"
-      imageAlt="Page not found"
-      title="404: The page you are looking for isn't here"
-      description="You either tried some shady route or you came here by mistake. Whichever it is, try using the navigation."
+      statusCode="404"
+      title="Faqja nuk u gjet"
+      description="Faqja që po kërkoni nuk ekziston ose mund të jetë zhvendosur."
+      reloadLabel="Rifresko"
       onReload={() => {
         window.location.reload();
       }}

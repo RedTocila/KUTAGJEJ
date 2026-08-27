@@ -1026,6 +1026,99 @@ router.post('/:id/messages', auth, requirePortalUser, async (req, res) => {
   }
 });
 
+/** POST /api/conversations/:id/messages/delete — delete own messages */
+router.post('/:id/messages/delete', auth, requirePortalUser, async (req, res) => {
+  try {
+    const userRef = portalUserRef(req.user);
+    const convId = String(req.params.id || '').trim();
+    if (!isUuid(convId)) return res.status(404).json({ message: 'Biseda nuk u gjet.' });
+
+    const rawIds = Array.isArray(req.body?.ids)
+      ? req.body.ids
+      : req.body?.id
+        ? [req.body.id]
+        : [];
+    const ids = [...new Set(rawIds.map((id) => String(id || '').trim()).filter((id) => isUuid(id)))];
+    if (ids.length === 0) {
+      return res.status(400).json({ message: 'Nuk u zgjodh asnjë mesazh për fshirje.' });
+    }
+
+    const sb = getSupabaseAdmin();
+    const { data: raw, error: findErr } = await sb
+      .from('conversations')
+      .select('*')
+      .eq('id', convId)
+      .maybeSingle();
+    if (findErr) throw findErr;
+    if (!raw) return res.status(404).json({ message: 'Biseda nuk u gjet.' });
+
+    const [conv] = await attachParticipantModels([raw]);
+    if (!userParticipatesInConversation(conv, userRef)) {
+      return res.status(404).json({ message: 'Biseda nuk u gjet.' });
+    }
+
+    // Only allow deleting messages authored by current user in this conversation
+    const { data: matchedRows, error: matchErr } = await sb
+      .from('messages')
+      .select('id')
+      .eq('conversation_id', conv.id)
+      .eq('sender_id', userRef.id)
+      .in('id', ids);
+    if (matchErr) throw matchErr;
+
+    const matchedIds = (matchedRows || []).map((m) => String(m.id));
+    if (matchedIds.length === 0) {
+      return res.status(404).json({ message: 'Mesazhet nuk u gjetën ose nuk mund të fshihen.' });
+    }
+
+    const { error: delErr } = await sb
+      .from('messages')
+      .delete()
+      .eq('conversation_id', conv.id)
+      .eq('sender_id', userRef.id)
+      .in('id', matchedIds);
+    if (delErr) throw delErr;
+
+    // Recalculate latest message for the conversation
+    const { data: latestRows, error: latestErr } = await sb
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', conv.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (latestErr) throw latestErr;
+
+    const latestMsg = latestRows?.[0] || null;
+    const convPatch = latestMsg
+      ? {
+          last_message_text: previewMessageText(latestMsg.body, latestMsg.image_url),
+          last_message_at: latestMsg.created_at,
+          last_message_sender_id: latestMsg.sender_id,
+          updated_at: new Date().toISOString(),
+        }
+      : {
+          last_message_text: '',
+          last_message_at: null,
+          last_message_sender_id: null,
+          updated_at: new Date().toISOString(),
+        };
+
+    let { error: updErr } = await sb.from('conversations').update(convPatch).eq('id', conv.id);
+    if (updErr && /last_message_sender_id/i.test(String(updErr.message || updErr))) {
+      delete convPatch.last_message_sender_id;
+      await sb.from('conversations').update(convPatch).eq('id', conv.id);
+    }
+
+    res.json({
+      ok: true,
+      deletedIds: matchedIds,
+    });
+  } catch (err) {
+    console.error('POST /conversations/:id/messages/delete:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 /** PATCH /api/conversations/:id/read — mark messages as read for current user */
 router.patch('/:id/read', auth, requirePortalUser, async (req, res) => {
   try {

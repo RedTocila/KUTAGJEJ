@@ -86,6 +86,8 @@ export interface PublicRealEstateListingSeller {
   reviewCount?: number;
   /** Stored on the seller profile; share/save chrome uses the viewer's color instead. */
   shareThemeColor?: string | null;
+  /** Whether the member profile is set to private. */
+  isPrivate?: boolean;
 }
 
 export interface JobListingBenefit {

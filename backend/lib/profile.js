@@ -57,6 +57,11 @@ function wrapProfile(row) {
   };
 
   // Only attach columns that exist on the row — later migrations may be missing after a reset.
+  if (Object.prototype.hasOwnProperty.call(row, 'is_private')) {
+    user.isPrivate = Boolean(row.is_private);
+  } else {
+    user.isPrivate = false;
+  }
   if (Object.prototype.hasOwnProperty.call(row, 'share_theme_color')) {
     user.shareThemeColor = row.share_theme_color || null;
   }
@@ -89,6 +94,7 @@ function profileUpdateFromCamel(fields) {
     businessCategory: 'business_category',
     basedCityId: 'based_city_id',
     basedCityName: 'based_city_name',
+    isPrivate: 'is_private',
     shareThemeColor: 'share_theme_color',
     createdBy: 'created_by',
     jobsEmployerVerifiedAt: 'jobs_employer_verified_at',

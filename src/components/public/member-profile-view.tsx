@@ -20,6 +20,7 @@ import { ProductBackButton, ProductTag, productBackButtonSx } from '@/components
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
+import { Lock as LockIcon } from '@phosphor-icons/react/dist/ssr/Lock';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { MemberReferralBadgesRow, MemberReferralBadgesSkeleton } from '@/components/public/member-referral-badges';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
@@ -329,6 +330,94 @@ export function MemberProfileView({
     isBusiness &&
     member.businessOwner?.trim() &&
     member.businessOwner.trim().toLowerCase() !== name.toLowerCase();
+
+  if (member.isPrivate && !isOwnProfile) {
+    return (
+      <Box
+        sx={{
+          bgcolor: 'background.default',
+          pb: { xs: 6, md: 8 },
+          minHeight: '60vh',
+        }}
+      >
+        <Box
+          sx={{
+            position: 'relative',
+            overflow: 'hidden',
+            borderRadius: { xs: '0 0 24px 24px', md: 4 },
+            border: '1px solid',
+            borderColor: 'divider',
+            borderTop: { xs: 'none', md: '1px solid' },
+            borderTopColor: { md: 'divider' },
+            bgcolor: 'background.paper',
+            mb: { xs: 3, md: 4 },
+            mt: { md: 3 },
+            mx: { md: 'auto' },
+            maxWidth: { md: 680 },
+            width: { md: 'calc(100% - 48px)' },
+          }}
+        >
+          <BrandCover sx={{ height: { xs: 120, sm: 150 } }}>
+            <ProductBackButton
+              href={paths.home}
+              aria-label="Kthehu"
+              sx={{
+                position: 'absolute',
+                top: { xs: 'max(10px, env(safe-area-inset-top, 0px))', sm: 14 },
+                left: { xs: 8, sm: 12 },
+                zIndex: 2,
+              }}
+            />
+          </BrandCover>
+
+          <Stack spacing={2.5} sx={{ alignItems: 'center', px: 3, py: 5, textAlign: 'center', mt: -4 }}>
+            <Box
+              sx={{
+                width: 72,
+                height: 72,
+                borderRadius: '50%',
+                bgcolor: 'background.paper',
+                border: '2px solid',
+                borderColor: 'divider',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
+              }}
+            >
+              <LockIcon size={34} weight="fill" color="#eab308" />
+            </Box>
+            <Typography variant="h5" sx={{ fontWeight: 800 }}>
+              Ky profil është privat
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 440, lineHeight: 1.6 }}>
+              Njoftimet dhe detajet e këtij anëtari janë të fshehura. Ato shfaqen automatikisht për përdoruesit që kanë qenë në kontakt me këtë llogari.
+            </Typography>
+            {memberId ? (
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<ChatsCircleIcon size={18} weight="bold" />}
+                onClick={async () => {
+                  if (!user) {
+                    router.push(paths.user.auth);
+                    return;
+                  }
+                  const res = await startConversationWithMember(memberId);
+                  if (res.conversation?.id) {
+                    router.push(`${paths.user.messages}?c=${encodeURIComponent(res.conversation.id)}`);
+                  }
+                }}
+                sx={{ mt: 1, borderRadius: 2, px: 3, py: 1 }}
+              >
+                Dërgo mesazh
+              </Button>
+            ) : null}
+          </Stack>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box

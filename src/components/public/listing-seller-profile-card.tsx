@@ -32,11 +32,13 @@ export function ListingSellerProfileCard({
   /** Optional overrides for the card Paper (e.g. borderless hero column). */
   cardSx?: SxProps<Theme>;
 }) {
-  const name = seller?.displayName?.trim() || 'Përdorues KuTaGjej';
-  const memberYear = seller?.memberSince ? new Date(seller.memberSince).getFullYear() : undefined;
-  const profileHref = seller?.id ? pathsPublicMemberProfile(seller.id) : null;
-  const reviewCount = seller?.reviewCount ?? 0;
-  const ratingLabel = formatRatingDisplay(seller?.ratingAverage);
+  if (!seller) return null;
+
+  const name = seller.displayName?.trim() || 'Përdorues KuTaGjej';
+  const memberYear = seller.memberSince ? new Date(seller.memberSince).getFullYear() : undefined;
+  const profileHref = seller.id ? pathsPublicMemberProfile(seller.id) : null;
+  const reviewCount = seller.reviewCount ?? 0;
+  const ratingLabel = formatRatingDisplay(seller.ratingAverage);
 
   return (
     <Stack spacing={1.5} component="section" aria-labelledby={headingId}>

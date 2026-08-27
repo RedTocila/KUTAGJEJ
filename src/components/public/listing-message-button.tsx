@@ -58,7 +58,11 @@ export function ListingMessageButton({
 
   const handleClick = async () => {
     setError(null);
-    if (isLoading) return;
+    if (loading) return;
+
+    if (isLoading) {
+      await checkSession();
+    }
 
     if (!user && !hasStoredSession()) {
       setGuestOpen(true);
@@ -95,10 +99,10 @@ export function ListingMessageButton({
         type="button"
         {...buttonProps}
         onClick={() => void handleClick()}
-        disabled={disabled || loading || isLoading}
+        disabled={disabled || loading}
         title={error && !buttonProps.fullWidth ? error : buttonProps.title}
         startIcon={
-          loading || isLoading ? (
+          loading ? (
             <CircularProgress size={18} color="inherit" />
           ) : (
             startIcon ?? (children ? undefined : <ChatsCircleIcon weight="regular" size={20} />)

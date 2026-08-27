@@ -57,6 +57,7 @@ function ResetPasswordInner() {
 
   const requestReset = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (busy) return;
     setMessage(null);
     setBusy(true);
     try {

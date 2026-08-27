@@ -40,10 +40,10 @@ function getFrontendBaseUrl() {
     const canonical = toCanonicalPublicUrl(url);
     if (canonical) return canonical;
   }
-  if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
-    return CANONICAL_FRONTEND_URL;
+  if (process.env.ALLOW_LOCAL_FRONTEND_URL === 'true') {
+    return 'http://localhost:3000';
   }
-  return 'http://localhost:3000';
+  return CANONICAL_FRONTEND_URL;
 }
 
 module.exports = {

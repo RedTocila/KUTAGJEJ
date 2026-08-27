@@ -4,7 +4,6 @@ import * as React from 'react';
 import { Box } from '@mui/material';
 
 import { useMainTabsHosted } from '@/components/main-tabs/main-tabs-shell';
-import { ListingDetailSheet } from '@/components/public/listing-detail-sheet';
 import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 
 import { MobileBottomNav } from './mobile-bottom-nav';
@@ -67,9 +66,7 @@ export function PublicShell({
         }}
       >
         {header}
-        <ListingDetailSheet fadeClassName={hostedTabs ? undefined : 'kutagjej-fade'}>
-          {children}
-        </ListingDetailSheet>
+        <Box className={hostedTabs ? undefined : 'kutagjej-fade'}>{children}</Box>
       </Box>
       {hideFooter ? null : <PublicFooter />}
       {hideMobileNav || hostedTabs ? null : <MobileBottomNav />}

@@ -331,6 +331,24 @@ export async function sendConversationMessage(
   return { message: res.data?.message };
 }
 
+export async function deleteConversationMessages(
+  conversationId: string,
+  messageIds: string[],
+): Promise<{ deletedIds?: string[]; error?: string }> {
+  const unique = [...new Set(messageIds.map((id) => String(id || '').trim()).filter(Boolean))];
+  if (unique.length === 0) return { deletedIds: [] };
+
+  const res = await clientFetch<{ ok: boolean; deletedIds: string[] }>(
+    `/conversations/${encodeURIComponent(conversationId)}/messages/delete`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ ids: unique }),
+    },
+  );
+  if (!res.ok) return { error: res.error ?? 'Mesazhet nuk u fshinë.' };
+  return { deletedIds: res.data?.deletedIds ?? unique };
+}
+
 export async function markConversationRead(conversationId: string): Promise<{ error?: string }> {
   const res = await clientFetch(`/conversations/${conversationId}/read`, { method: 'PATCH' });
   if (!res.ok) return { error: res.error ?? 'Nuk u përditësua statusi.' };

@@ -14,16 +14,20 @@ import {
   Stack,
   TextField,
   Typography,
+  Switch,
+  Tooltip,
 } from '@mui/material';
 import { ArrowSquareOut as ArrowSquareOutIcon } from '@phosphor-icons/react/dist/ssr/ArrowSquareOut';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Camera as CameraIcon } from '@phosphor-icons/react/dist/ssr/Camera';
 import { Envelope as EnvelopeIcon } from '@phosphor-icons/react/dist/ssr/Envelope';
+import { Globe as GlobeIcon } from '@phosphor-icons/react/dist/ssr/Globe';
 import { Lock as LockIcon } from '@phosphor-icons/react/dist/ssr/Lock';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 
+import { useOwnerEditHeaderActions } from '@/components/user/owner-edit-header-actions';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { MemberReferralBadgesRow, MemberReferralBadgesSkeleton } from '@/components/public/member-referral-badges';
@@ -95,6 +99,8 @@ export default function UserProfilePage() {
   const [phoneInput, setPhoneInput] = React.useState('');
   const [basedCityId, setBasedCityId] = React.useState('');
   const [shareThemeColor, setShareThemeColor] = React.useState(DEFAULT_SHARE_THEME_COLOR);
+  const [isPrivate, setIsPrivate] = React.useState(Boolean(user?.isPrivate));
+  const [privacyBusy, setPrivacyBusy] = React.useState(false);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [citiesLoading, setCitiesLoading] = React.useState(false);
   const [profileSaving, setProfileSaving] = React.useState(false);
@@ -132,6 +138,7 @@ export default function UserProfilePage() {
     setPhoneInput(typeof user.phone === 'string' ? user.phone : '');
     setBasedCityId(typeof user.basedCityId === 'string' ? user.basedCityId : '');
     setShareThemeColor(normalizeShareThemeColor(user.shareThemeColor));
+    setIsPrivate(Boolean(user.isPrivate));
   }, [
     user?.id,
     user?.firstName,
@@ -143,7 +150,96 @@ export default function UserProfilePage() {
     user?.phone,
     user?.basedCityId,
     user?.shareThemeColor,
+    user?.isPrivate,
   ]);
+
+  const onTogglePrivacy = async (checked: boolean) => {
+    if (!user || privacyBusy) return;
+    setIsPrivate(checked);
+    setPrivacyBusy(true);
+    setProfileMsg(null);
+    try {
+      const { error } = await authClient.updatePortalProfile({ isPrivate: checked });
+      if (error) {
+        setProfileMsg({ type: 'error', text: error });
+        setIsPrivate(!checked);
+      } else {
+        setProfileMsg({
+          type: 'success',
+          text: checked
+            ? 'Profili u vendos privat (kartela fshihet nga njoftimet për publikun).'
+            : 'Profili u vendos publik.',
+        });
+        await checkSession();
+      }
+    } catch {
+      setIsPrivate(!checked);
+      setProfileMsg({ type: 'error', text: 'Nuk u arrit përditësimi i privatësisë.' });
+    } finally {
+      setPrivacyBusy(false);
+    }
+  };
+
+  useOwnerEditHeaderActions(
+    () => (
+      <Tooltip
+        title={
+          isPrivate
+            ? 'Profili është Privat: Kartela e profilit fshihet nga kartat e njoftimeve dhe faqja e profilit është e fshehur për të tjerët derisa t’ju kontaktojnë.'
+            : 'Profili është Publik: Kartela e profilit dhe profili shfaqen publikisht.'
+        }
+        arrow
+      >
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+            bgcolor: 'var(--mui-palette-background-paper, #18191b)',
+            border: '1px solid',
+            borderColor: isPrivate ? 'rgba(234, 179, 8, 0.4)' : 'rgba(255, 255, 255, 0.12)',
+            borderRadius: '20px',
+            py: 0.35,
+            px: { xs: 1, sm: 1.5 },
+            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            userSelect: 'none',
+          }}
+        >
+          {isPrivate ? (
+            <LockIcon size={16} weight="fill" color="#eab308" />
+          ) : (
+            <GlobeIcon size={16} weight="bold" color="#22c55e" />
+          )}
+          <Typography
+            variant="caption"
+            sx={{
+              fontWeight: 700,
+              fontSize: '0.78rem',
+              color: isPrivate ? '#eab308' : 'text.secondary',
+              letterSpacing: '0.01em',
+            }}
+          >
+            {isPrivate ? 'Privat' : 'Publik'}
+          </Typography>
+          <Switch
+            size="small"
+            checked={isPrivate}
+            disabled={privacyBusy}
+            onChange={(_, checked) => void onTogglePrivacy(checked)}
+            sx={{
+              '& .MuiSwitch-switchBase.Mui-checked': {
+                color: '#eab308',
+              },
+              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                backgroundColor: '#eab308',
+              },
+            }}
+          />
+        </Stack>
+      </Tooltip>
+    ),
+    [isPrivate, privacyBusy, user?.id]
+  );
 
   React.useEffect(() => {
     let cancelled = false;

@@ -5,6 +5,26 @@ const { getFrontendBaseUrl } = require('../site-url');
 const { sendResendEmail, isResendConfigured } = require('./resend');
 const { renderAuthEmail } = require('./templates');
 
+const GENERATE_LINK_TIMEOUT_MS = 12_000;
+
+async function withTimeout(promise, ms, label) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          const err = new Error(`${label} timed out after ${ms}ms`);
+          err.code = 'TIMEOUT';
+          reject(err);
+        }, ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function frontendAuthUrl(path, tokenHash, type) {
   const params = new URLSearchParams();
   if (tokenHash) params.set('token_hash', tokenHash);
@@ -21,7 +41,11 @@ async function generateAuthLink(type, email, extra = {}) {
     redirectTo: extra.redirectTo || `${getFrontendBaseUrl()}/user/auth/confirm`,
   };
   if (extra.data) payload.options.data = extra.data;
-  const { data, error } = await sb.auth.admin.generateLink(payload);
+  const { data, error } = await withTimeout(
+    sb.auth.admin.generateLink(payload),
+    GENERATE_LINK_TIMEOUT_MS,
+    `generateLink(${type})`,
+  );
   if (error) throw error;
   return data;
 }

@@ -39,6 +39,33 @@ function persistAccessToken(token: string | null | undefined, refreshToken?: str
   persistTokens(token, refreshToken === undefined ? undefined : refreshToken);
 }
 
+async function postJson(
+  path: string,
+  body: unknown,
+  timeoutMs = 18_000,
+): Promise<{ res?: Response; data: Record<string, unknown>; error?: string }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(getApiUrl(path), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    return { res, data };
+  } catch (err) {
+    const aborted = err instanceof Error && err.name === 'AbortError';
+    return {
+      data: {},
+      error: aborted ? 'Dërgimi po vonon. Provo përsëri pas pak sekondash.' : 'Nuk u arrit lidhja me serverin.',
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Hydrate the browser Supabase client without a second password round-trip.
  * Never block redirect on a hung auth network call (same class of bug as sign-out). */
 async function syncBrowserSession(accessToken: string, refreshToken: string | null | undefined): Promise<void> {
@@ -269,6 +296,7 @@ class AuthClient {
     businessCategory?: string;
     basedCityId?: string | null;
     shareThemeColor?: string | null;
+    isPrivate?: boolean;
     /** Public profile photo URL; empty string clears it. */
     avatar?: string;
   }): Promise<{ admin?: User; error?: string }> {
@@ -377,33 +405,17 @@ class AuthClient {
   }
 
   async forgotPassword(email: string): Promise<{ error?: string; message?: string }> {
-    try {
-      const res = await fetch(getApiUrl('/auth/forgot-password'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Dërgimi dështoi.' };
-      return { message: typeof data.message === 'string' ? data.message : undefined };
-    } catch {
-      return { error: 'Nuk u arrit lidhja me serverin.' };
-    }
+    const { res, data, error } = await postJson('/auth/forgot-password', { email });
+    if (error) return { error };
+    if (!res?.ok) return { error: typeof data.message === 'string' ? data.message : 'Dërgimi dështoi.' };
+    return { message: typeof data.message === 'string' ? data.message : undefined };
   }
 
   async resendConfirmation(email: string): Promise<{ error?: string; message?: string }> {
-    try {
-      const res = await fetch(getApiUrl('/auth/resend-confirmation'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Dërgimi dështoi.' };
-      return { message: typeof data.message === 'string' ? data.message : undefined };
-    } catch {
-      return { error: 'Nuk u arrit lidhja me serverin.' };
-    }
+    const { res, data, error } = await postJson('/auth/resend-confirmation', { email });
+    if (error) return { error };
+    if (!res?.ok) return { error: typeof data.message === 'string' ? data.message : 'Dërgimi dështoi.' };
+    return { message: typeof data.message === 'string' ? data.message : undefined };
   }
 
   async confirmEmail(tokenHash: string, type: string): Promise<{ error?: string; user?: User }> {

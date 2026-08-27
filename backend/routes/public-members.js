@@ -2,8 +2,10 @@
 
 const express = require('express');
 const { getSupabaseAdmin } = require('../lib/supabase');
-const { camelizeRows } = require('../lib/profiles');
+const { camelizeRows, getProfileById } = require('../lib/profiles');
 const publicCache = require('../middleware/public-cache');
+const optionalAuth = require('../middleware/optional-auth');
+const { hasContactRelationship } = require('../lib/profile-privacy');
 const { loadPosterBrief, loadTrustBadgePosterIdSet, posterHasTrustBadge } = require('../lib/public-listings/load-poster-brief');
 const {
   activeJobCreatedAtFilter,
@@ -157,11 +159,12 @@ router.get('/', publicCache(15), async (req, res) => {
     let query = getSupabaseAdmin()
       .from('profiles')
       .select(
-        'id, account_type, first_name, last_name, business_name, business_owner, business_category, avatar_url, created_at, based_city_id, based_city_name, jobs_employer_verified_at, professionals_verified_at',
+        'id, account_type, first_name, last_name, business_name, business_owner, business_category, avatar_url, created_at, based_city_id, based_city_name, jobs_employer_verified_at, professionals_verified_at, is_private',
         { count: 'exact' },
       )
       .in('account_type', ['individual', 'business'])
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .neq('is_private', true);
 
     if (tokens.length) {
       const cities = await loadSearchCities();
@@ -238,10 +241,10 @@ async function attachPublicMetrics(listings) {
   });
 }
 
-async function loadMemberWithModel(id) {
-  const individual = await loadPosterBrief('IndividualUser', id, null);
+async function loadMemberWithModel(id, viewerId = null) {
+  const individual = await loadPosterBrief('IndividualUser', id, null, viewerId);
   if (individual) return { member: individual, posterModel: 'IndividualUser' };
-  const business = await loadPosterBrief('BusinessUser', id, null);
+  const business = await loadPosterBrief('BusinessUser', id, null, viewerId);
   if (business) return { member: business, posterModel: 'BusinessUser' };
   return null;
 }
@@ -364,13 +367,63 @@ async function loadMemberListings(posterId) {
 }
 
 /** GET /api/public/members/:id — public seller / member profile + active listings. */
-router.get('/:id', publicCache(15), async (req, res) => {
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const id = String(req.params.id || '').trim();
     if (!id || !isUuid(id)) {
       return res.status(404).json({ error: 'Profili nuk u gjet.' });
     }
-    const loaded = await loadMemberWithModel(id);
+
+    const profile = await getProfileById(id);
+    if (!profile || !profile.isActive || (profile.accountType !== 'individual' && profile.accountType !== 'business')) {
+      return res.status(404).json({ error: 'Profili nuk u gjet.' });
+    }
+
+    const viewerId = req.user?.id || null;
+    if (profile.isPrivate) {
+      const allowed = await hasContactRelationship(viewerId, profile.id);
+      if (!allowed) {
+        return res.json({
+          isPrivate: true,
+          member: {
+            id: profile.id,
+            kind: profile.accountType,
+            displayName: 'Profil privat',
+            isPrivate: true,
+            avatarUrl: null,
+            memberSince: profile.createdAt,
+            phone: null,
+            verified: false,
+            trustBadge: false,
+            businessOwner: null,
+            businessCategory: null,
+            cityName: null,
+            ratingAverage: null,
+            reviewCount: 0,
+          },
+          listings: {
+            realEstate: [],
+            cars: [],
+            jobs: [],
+            marketplace: [],
+            businesses: [],
+            professionals: [],
+            totals: {
+              realEstate: 0,
+              cars: 0,
+              jobs: 0,
+              marketplace: 0,
+              businesses: 0,
+              professionals: 0,
+              all: 0,
+            },
+          },
+          badges: [],
+        });
+      }
+    }
+
+    const loaded = await loadMemberWithModel(id, viewerId);
     if (!loaded) return res.status(404).json({ error: 'Profili nuk u gjet.' });
 
     const [listings, badges, reviewStats] = await Promise.all([

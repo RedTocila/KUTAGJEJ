@@ -27,6 +27,8 @@ export interface User {
   shareThemeColor?: string | null;
   /** Admin-approved account verification. */
   verified?: boolean;
+  /** Whether the account profile is private. */
+  isPrivate?: boolean;
 
   [key: string]: unknown;
 }

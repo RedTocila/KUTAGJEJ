@@ -47,6 +47,7 @@ function mapProfile(row) {
       businessCategory: this.businessCategory,
       basedCityId: this.basedCityId,
       basedCityName: this.basedCityName,
+      isPrivate: this.isPrivate,
       shareThemeColor: this.shareThemeColor,
       createdBy: this.createdBy,
       jobsEmployerVerifiedAt: this.jobsEmployerVerifiedAt,

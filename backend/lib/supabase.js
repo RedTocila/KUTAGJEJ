@@ -45,8 +45,36 @@ function isSupabaseConfigured() {
   );
 }
 
+/** Exact email match on auth.users (profiles.email can be missing/stale). */
+async function findAuthUserByEmail(email) {
+  const emailNorm = String(email || '').toLowerCase().trim();
+  if (!emailNorm || !isSupabaseConfigured()) return null;
+  const url = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
+  const key = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const res = await fetch(
+      `${url}/auth/v1/admin/users?page=1&per_page=50&email=${encodeURIComponent(emailNorm)}`,
+      {
+        headers: { Authorization: `Bearer ${key}`, apikey: key },
+        signal: controller.signal,
+      },
+    );
+    const data = await res.json().catch(() => ({}));
+    const users = Array.isArray(data?.users) ? data.users : [];
+    return users.find((u) => String(u.email || '').toLowerCase() === emailNorm) || null;
+  } catch (err) {
+    console.error('findAuthUserByEmail:', err?.message || err);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 module.exports = {
   getSupabaseAdmin,
   createAuthPasswordClient,
   isSupabaseConfigured,
+  findAuthUserByEmail,
 };

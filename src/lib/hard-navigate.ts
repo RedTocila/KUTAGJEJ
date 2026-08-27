@@ -6,7 +6,6 @@
  * load only before that bridge mounts.
  */
 
-import { isPublicListingDetailPath } from '@/lib/public-browse-path';
 import { runActiveTabRefresh } from '@/lib/tab-refresh';
 
 type NavigateFn = (href: string) => void;
@@ -32,13 +31,10 @@ export function hardNavigate(href: string, event?: { preventDefault(): void }): 
 
   if (softNavigateFn) {
     softNavigateFn(href);
-    // Listing detail is a fixed sheet — keep browse scroll for body-lock restore.
-    if (!isPublicListingDetailPath(href.split('?')[0] ?? href)) {
-      if ('scrollRestoration' in history) {
-        history.scrollRestoration = 'manual';
-      }
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
     }
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     return;
   }
 

@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const { getSupabaseAdmin, createAuthPasswordClient } = require('../lib/supabase');
+const { getSupabaseAdmin, createAuthPasswordClient, findAuthUserByEmail } = require('../lib/supabase');
 const {
   getProfileById,
   getProfileByEmail,
@@ -118,6 +118,7 @@ const formatUser = (user) => {
     firstName: user.firstName,
     lastName: user.lastName,
     role: user.role,
+    isPrivate: Boolean(user.isPrivate),
     createdAt: user.createdAt,
     lastLogin: user.lastLogin,
   };
@@ -189,6 +190,7 @@ async function queueAuthEmail(label, fn) {
       return;
     }
     await fn();
+    console.log(`auth email sent (${label})`);
   } catch (err) {
     console.error(`auth email (${label}):`, err?.message || err);
   }
@@ -587,6 +589,10 @@ router.put('/portal/update-profile', authMiddleware, requirePortalUser, async (r
       req.admin.shareThemeColor = color;
     }
 
+    if (body.isPrivate !== undefined) {
+      req.admin.isPrivate = Boolean(body.isPrivate);
+    }
+
     if (body.avatar !== undefined || body.avatarUrl !== undefined) {
       const raw = body.avatar !== undefined ? body.avatar : body.avatarUrl;
       const avatarUrl = sanitizeAvatarUrl(raw);
@@ -782,6 +788,10 @@ router.put('/portal/change-password', authMiddleware, requirePortalUser, async (
   }
 });
 
+function yieldEventLoop() {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
 router.post('/resend-confirmation', mailRateLimit, async (req, res) => {
   try {
     const emailNorm = String(req.body?.email || '').toLowerCase().trim();
@@ -794,17 +804,22 @@ router.post('/resend-confirmation', mailRateLimit, async (req, res) => {
       if (data?.user?.email_confirmed_at) {
         return res.json({ ok: true, message: 'Emaili është tashmë i konfirmuar. Mund të hysh.' });
       }
+    }
+    res.json({
+      ok: true,
+      message: 'Nëse llogaria ekziston, të dërguam një email konfirmimi.',
+    });
+    await yieldEventLoop();
+    if (profile) {
       await queueAuthEmail('resend-signup', () =>
         sendSignupConfirmation(emailNorm, { name: displayNameFromProfile(profile) }),
       );
     }
-    return res.json({
-      ok: true,
-      message: 'Nëse llogaria ekziston, të dërguam një email konfirmimi.',
-    });
   } catch (error) {
     console.error('POST /resend-confirmation:', error?.message || error);
-    res.status(500).json({ message: 'Gabim serveri.' });
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Gabim serveri.' });
+    }
   }
 });
 
@@ -815,18 +830,23 @@ router.post('/forgot-password', mailRateLimit, async (req, res) => {
       return res.status(400).json({ message: 'Emaili është i detyrueshëm.' });
     }
     const profile = await getProfileByEmail(emailNorm);
-    if (profile) {
+    const authUser = profile ? null : await findAuthUserByEmail(emailNorm);
+    res.json({
+      ok: true,
+      message:
+        'Nëse llogaria ekziston, të dërguam një link për rivendosjen e fjalëkalimit. Kontrollo kutinë dhe spam.',
+    });
+    await yieldEventLoop();
+    if (profile || authUser) {
       await queueAuthEmail('recovery', () =>
         sendPasswordReset(emailNorm, { name: displayNameFromProfile(profile) }),
       );
     }
-    return res.json({
-      ok: true,
-      message: 'Nëse llogaria ekziston, të dërguam një link për rivendosjen e fjalëkalimit.',
-    });
   } catch (error) {
     console.error('POST /forgot-password:', error?.message || error);
-    res.status(500).json({ message: 'Gabim serveri.' });
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Gabim serveri.' });
+    }
   }
 });
 
@@ -890,11 +910,17 @@ router.post('/hooks/send-email', async (req, res) => {
     if (!verifySendEmailHook(req)) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
-    await sendFromSupabaseHook(req.body || {});
-    return res.status(200).json({ ok: true });
+    const payload = req.body || {};
+    // ACK first: generateLink waits on this webhook. Awaiting Resend here can
+    // deadlock forgot-password on a single-concurrency instance.
+    res.status(200).json({ ok: true });
+    await yieldEventLoop();
+    await sendFromSupabaseHook(payload);
   } catch (error) {
     console.error('POST /hooks/send-email:', error?.message || error);
-    res.status(500).json({ message: error?.message || 'Gabim serveri.' });
+    if (!res.headersSent) {
+      res.status(500).json({ message: error?.message || 'Gabim serveri.' });
+    }
   }
 });
 

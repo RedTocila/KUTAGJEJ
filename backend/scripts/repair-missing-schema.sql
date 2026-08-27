@@ -670,3 +670,8 @@ values ('default')
 on conflict (id) do nothing;
 
 alter table public.ai_usage_prices enable row level security;
+
+-- Profile privacy (hide seller profile card and hide profile unless in contact)
+alter table public.profiles
+  add column if not exists is_private boolean not null default false;
+

@@ -3,6 +3,7 @@ const { getProfileById } = require('../profiles');
 const { isJobsEmployerVerified } = require('../job-employer-verification');
 const { isProfessionalVerified } = require('../professional-verification');
 const { getReceivedReviewStats } = require('../referrals');
+const { hasContactRelationship } = require('../profile-privacy');
 
 /** @param {'jobs'|'professionals'|null} verifiedContext — `null` = account verification (any). */
 function resolveVerified(profile, verifiedContext) {
@@ -84,12 +85,20 @@ async function withReviewStats(brief) {
  * @param {string|null} _posterModelHint unused — kept for call-site compatibility;
  *   the poster kind is derived from `profiles.account_type`.
  * @param {'jobs'|'professionals'|null} verifiedContext
+ * @param {string|null} viewerId — optional viewer user id to check private visibility / contact status
  */
-async function loadPosterBrief(_posterModelHint, posterId, verifiedContext = null) {
+async function loadPosterBrief(_posterModelHint, posterId, verifiedContext = null, viewerId = null) {
   try {
     const profile = await getProfileById(posterId);
     if (!profile) return null;
     if (profile.accountType !== 'individual' && profile.accountType !== 'business') return null;
+
+    if (profile.isPrivate) {
+      const allowed = await hasContactRelationship(viewerId, profile.id);
+      if (!allowed) {
+        return null;
+      }
+    }
 
     const trustBadge = await posterHasTrustBadge(profile.id);
 
@@ -111,6 +120,7 @@ async function loadPosterBrief(_posterModelHint, posterId, verifiedContext = nul
         businessOwner: profile.businessOwner?.trim() || null,
         businessCategory: profile.businessCategory?.trim() || null,
         shareThemeColor: profile.shareThemeColor || null,
+        isPrivate: Boolean(profile.isPrivate),
       });
     }
 
@@ -127,6 +137,7 @@ async function loadPosterBrief(_posterModelHint, posterId, verifiedContext = nul
       businessOwner: null,
       businessCategory: null,
       shareThemeColor: profile.shareThemeColor || null,
+      isPrivate: Boolean(profile.isPrivate),
     });
   } catch (e) {
     console.warn('loadPosterBrief:', e?.message || e);

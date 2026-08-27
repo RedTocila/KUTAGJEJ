@@ -22,16 +22,21 @@ export const listingContactCtaSx: SxProps<Theme> = {
   backgroundImage: 'none',
   boxShadow: 'none',
   px: 3.25,
-  transition: 'none',
+  transition: 'background-color 160ms ease, transform 160ms ease',
   '&:hover': {
-    bgcolor: 'primary.main',
+    bgcolor: 'primary.dark',
     color: 'primary.contrastText',
     boxShadow: 'none',
     filter: 'none',
   },
   '&:active': {
-    transform: 'none',
+    transform: 'scale(0.98)',
     filter: 'none',
+  },
+  '&.Mui-disabled': {
+    bgcolor: 'primary.main',
+    color: 'primary.contrastText',
+    opacity: 0.75,
   },
   '& .MuiButton-startIcon': { color: 'inherit', mr: 0.85 },
 };
@@ -127,7 +132,7 @@ export function StickyListingCtaSlot({
               position: 'fixed',
               left: 0,
               right: 0,
-              zIndex: theme.zIndex.modal - 10,
+              zIndex: theme.zIndex.appBar + 10,
               bottom: MOBILE_BOTTOM_NAV_OFFSET,
               px: 2,
               py: 1.25,

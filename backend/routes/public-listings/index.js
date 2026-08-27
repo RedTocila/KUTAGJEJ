@@ -293,7 +293,7 @@ router.get('/real-estate/:id', publicNoStore(), optionalAuth, async (req, res) =
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(null, doc.posterId);
+    const seller = await loadPosterBrief(null, doc.posterId, null, req.user?.id);
     const cityById = await buildCityIndex([doc]);
     const listing = await attachDetailMetrics(req, formatRealEstateDetail(doc, cityById, seller));
     res.json({ listing });
@@ -311,7 +311,7 @@ router.get('/cars/:id', publicNoStore(), optionalAuth, async (req, res) => {
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(null, doc.posterId);
+    const seller = await loadPosterBrief(null, doc.posterId, null, req.user?.id);
     const cityById = await buildCityIndex([doc]);
     const listing = await attachDetailMetrics(req, formatCarDetail(doc, cityById, seller));
     res.json({ listing });
@@ -329,7 +329,7 @@ router.get('/jobs/:id', publicNoStore(), optionalAuth, async (req, res) => {
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(null, doc.posterId);
+    const seller = await loadPosterBrief(null, doc.posterId, null, req.user?.id);
     const cityById = await buildCityIndex([doc]);
     const listing = await attachDetailMetrics(req, formatJobDetail(doc, cityById, seller));
     res.json({ listing });
@@ -347,7 +347,7 @@ router.get('/marketplace/:id', publicNoStore(), optionalAuth, async (req, res) =
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(null, doc.posterId);
+    const seller = await loadPosterBrief(null, doc.posterId, null, req.user?.id);
     const cityById = await buildCityIndex([doc]);
     const listing = await attachDetailMetrics(req, formatMarketplaceDetail(doc, cityById, seller));
     res.json({ listing });
@@ -368,7 +368,7 @@ router.get('/businesses/:id', publicNoStore(), optionalAuth, async (req, res) =>
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(null, doc.posterId, null);
+    const seller = await loadPosterBrief(null, doc.posterId, null, req.user?.id);
     const cityById = await buildCityIndex([doc]);
     const reviewStats = await reviewStatsByListingIds([doc.id]);
     const listing = await attachDetailMetrics(req, formatDirectoryDetail(doc, cityById, seller, reviewStats));
@@ -390,7 +390,7 @@ router.get('/professionals/:id', publicNoStore(), optionalAuth, async (req, res)
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = await loadPosterBrief(null, doc.posterId, 'professionals');
+    const seller = await loadPosterBrief(null, doc.posterId, 'professionals', req.user?.id);
     const cityById = await buildCityIndex([doc]);
     const reviewStats = await professionalReviewStatsByListingIds([doc.id]);
     const listing = await attachDetailMetrics(req, formatDirectoryDetail(doc, cityById, seller, reviewStats));

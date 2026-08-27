@@ -108,9 +108,17 @@ async function bootstrap() {
   await ensureAdminAiSchema();
   await ensureAiImportUsageSchema();
   await ensureAiUsagePricesSchema();
-  const restored = await backfillOrphanProfiles();
-  if (restored > 0) console.log(`✓ Restored ${restored} orphan profile(s) from auth`);
-  await backfillMissingReferralCodes();
+  void runDeferredBackfills();
+}
+
+async function runDeferredBackfills() {
+  try {
+    const restored = await backfillOrphanProfiles();
+    if (restored > 0) console.log(`✓ Restored ${restored} orphan profile(s) from auth`);
+    await backfillMissingReferralCodes();
+  } catch (err) {
+    console.error('deferred backfill:', err?.message || err);
+  }
 }
 
 function ensureBooted() {
@@ -121,6 +129,18 @@ function ensureBooted() {
     });
   }
   return bootPromise;
+}
+
+function isFastAuthPath(path) {
+  const p = String(path || '');
+  return (
+    p === '/api/auth/forgot-password' ||
+    p === '/api/auth/resend-confirmation' ||
+    p === '/api/auth/hooks/send-email' ||
+    p.endsWith('/auth/forgot-password') ||
+    p.endsWith('/auth/resend-confirmation') ||
+    p.endsWith('/auth/hooks/send-email')
+  );
 }
 
 /** On Vercel, boot before handling traffic so a missing env surfaces as 503 JSON. */
@@ -134,6 +154,14 @@ app.use(async (req, res, next) => {
     return next();
   }
   try {
+    if (isFastAuthPath(req.path)) {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (see backend/.env.example).');
+      }
+      getSupabaseAdmin();
+      void ensureBooted();
+      return next();
+    }
     await ensureBooted();
     next();
   } catch (err) {

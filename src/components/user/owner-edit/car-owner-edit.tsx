@@ -5,22 +5,7 @@ import { Box, Checkbox, FormControlLabel, FormGroup, Stack, TextField, Typograph
 import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
 import { SteeringWheel as SteeringWheelIcon } from '@phosphor-icons/react/dist/ssr/SteeringWheel';
 
-import { SearchableSelect } from '@/components/core/searchable-select';
-import { ListingImagePicker } from '@/components/common/listing-image-picker';
-import { VehicleTypePicker } from '@/components/cars/vehicle-type-picker';
-import {
-  exclusiveLocationPayload,
-  inferListingLocationMode,
-  ListingLocationChoice,
-  type ListingLocationMode,
-} from '@/components/listings/listing-location-choice';
-import { CarListingDetailView } from '@/components/public/car-listing-detail-view';
-import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
-import { ListingDescriptionField, ListingToggle } from '@/components/user/listing-form-ui';
-import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
-import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
-import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dialog';
-import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
+import { paths } from '@/paths';
 import {
   CAR_COLOUR_OPTIONS,
   CAR_EXTRAS,
@@ -31,14 +16,30 @@ import {
   type VehicleType,
 } from '@/lib/car-constants';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { isPersistableImageUrl } from '@/lib/image-url';
 import { carMineToPublic } from '@/lib/listing-mine-to-public';
 import { updateCarListing, type CarMineListing } from '@/lib/listings-client';
+import { commitListingPhotos } from '@/lib/owner-edit-photos';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
-import { isPersistableImageUrl } from '@/lib/image-url';
-import { commitListingPhotos } from '@/lib/owner-edit-photos';
 import { uploadListingImages } from '@/lib/uploads-client';
-import { paths } from '@/paths';
+import { VehicleTypePicker } from '@/components/cars/vehicle-type-picker';
+import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import { SearchableSelect } from '@/components/core/searchable-select';
+import {
+  exclusiveLocationPayload,
+  inferListingLocationMode,
+  ListingLocationChoice,
+  type ListingLocationMode,
+} from '@/components/listings/listing-location-choice';
+import { CarListingDetailView } from '@/components/public/car-listing-detail-view';
+import { ListingDescriptionField, ListingToggle } from '@/components/user/listing-form-ui';
+import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
+import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
+import { OwnerEditContactPhone } from '@/components/user/owner-edit-contact-phone';
+import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
+import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dialog';
+import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
 
 const MAX_IMAGES = 8;
 
@@ -120,7 +121,7 @@ export function CarOwnerEdit({
   const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
   const [locationMode, setLocationMode] = React.useState<ListingLocationMode | ''>(() =>
-    inferListingLocationMode(initial.cityId, initial.mapsUrl),
+    inferListingLocationMode(initial.cityId, initial.mapsUrl)
   );
 
   React.useEffect(() => {
@@ -165,10 +166,7 @@ export function CarOwnerEdit({
       let uploaded: string[] = [];
       const kept = existingUrls.filter(isPersistableImageUrl);
       if (newFiles.length) {
-        const up = await uploadListingImages(
-          newFiles.slice(0, Math.max(0, MAX_IMAGES - kept.length)),
-          'cars',
-        );
+        const up = await uploadListingImages(newFiles.slice(0, Math.max(0, MAX_IMAGES - kept.length)), 'cars');
         if (up.error) {
           setError(up.error);
           return;
@@ -319,6 +317,14 @@ export function CarOwnerEdit({
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
     ),
+    contactPhone: (
+      <OwnerEditContactPhone
+        value={draft.contactPhone ?? ''}
+        onChange={(value) => setDraft((d) => ({ ...d, contactPhone: value || null }))}
+        onDone={doneInline}
+        onCancel={cancelInline}
+      />
+    ),
     location: (
       <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
         <ListingLocationChoice
@@ -412,9 +418,7 @@ export function CarOwnerEdit({
           <TextField
             label="Km"
             value={String(draft.kilometers)}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, kilometers: Number(e.target.value) || d.kilometers }))
-            }
+            onChange={(e) => setDraft((d) => ({ ...d, kilometers: Number(e.target.value) || d.kilometers }))}
             fullWidth
             sx={fieldSx}
           />
@@ -489,9 +493,7 @@ export function CarOwnerEdit({
                     onChange={(e) => {
                       setDraft((d) => {
                         const current = d.extras ?? [];
-                        const extras = e.target.checked
-                          ? [...current, extra]
-                          : current.filter((x) => x !== extra);
+                        const extras = e.target.checked ? [...current, extra] : current.filter((x) => x !== extra);
                         return { ...d, extras };
                       });
                     }}
@@ -502,13 +504,6 @@ export function CarOwnerEdit({
             ))}
           </FormGroup>
         </Stack>
-        <TextField
-          label="Telefoni"
-          value={draft.contactPhone ?? ''}
-          onChange={(e) => setDraft((d) => ({ ...d, contactPhone: e.target.value || null }))}
-          fullWidth
-          sx={fieldSx}
-        />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
     ),
@@ -550,7 +545,7 @@ export function CarOwnerEdit({
               status: draft.status,
               imageUrls: Array.isArray(merged.imageUrls) ? merged.imageUrls : draft.imageUrls,
             });
-            setExistingUrls(Array.isArray(merged.imageUrls) ? merged.imageUrls : draft.imageUrls ?? []);
+            setExistingUrls(Array.isArray(merged.imageUrls) ? merged.imageUrls : (draft.imageUrls ?? []));
             setNewFiles([]);
           }}
         />

@@ -3,8 +3,17 @@
 import * as React from 'react';
 import { Stack, TextField } from '@mui/material';
 
-import { SearchableSelect } from '@/components/core/searchable-select';
+import { paths } from '@/paths';
+import { isPersistableImageUrl } from '@/lib/image-url';
+import { marketplaceMineToPublic } from '@/lib/listing-mine-to-public';
+import { updateMarketplaceListing, type MarketplaceMineListing } from '@/lib/listings-client';
+import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
+import { commitListingPhotos } from '@/lib/owner-edit-photos';
+import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
+import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { uploadListingImages } from '@/lib/uploads-client';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import { SearchableSelect } from '@/components/core/searchable-select';
 import {
   exclusiveLocationPayload,
   inferListingLocationMode,
@@ -15,18 +24,10 @@ import { VerticalListingDetailView } from '@/components/public/vertical-listing-
 import { ListingDescriptionField, ListingToggle } from '@/components/user/listing-form-ui';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
 import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
+import { OwnerEditContactPhone } from '@/components/user/owner-edit-contact-phone';
 import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
 import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dialog';
 import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
-import { marketplaceMineToPublic } from '@/lib/listing-mine-to-public';
-import { updateMarketplaceListing, type MarketplaceMineListing } from '@/lib/listings-client';
-import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
-import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
-import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
-import { isPersistableImageUrl } from '@/lib/image-url';
-import { commitListingPhotos } from '@/lib/owner-edit-photos';
-import { uploadListingImages } from '@/lib/uploads-client';
-import { paths } from '@/paths';
 
 const MAX_IMAGES = 8;
 
@@ -85,7 +86,7 @@ export function MarketplaceOwnerEdit({
   const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
   const [locationMode, setLocationMode] = React.useState<ListingLocationMode | ''>(() =>
-    inferListingLocationMode(initial.cityId, initial.mapsUrl),
+    inferListingLocationMode(initial.cityId, initial.mapsUrl)
   );
 
   React.useEffect(() => {
@@ -130,10 +131,7 @@ export function MarketplaceOwnerEdit({
       let uploaded: string[] = [];
       const kept = existingUrls.filter(isPersistableImageUrl);
       if (newFiles.length) {
-        const up = await uploadListingImages(
-          newFiles.slice(0, Math.max(0, MAX_IMAGES - kept.length)),
-          'marketplace',
-        );
+        const up = await uploadListingImages(newFiles.slice(0, Math.max(0, MAX_IMAGES - kept.length)), 'marketplace');
         if (up.error) {
           setError(up.error);
           return;
@@ -194,6 +192,14 @@ export function MarketplaceOwnerEdit({
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
     ),
+    contactPhone: (
+      <OwnerEditContactPhone
+        value={draft.contactPhone ?? ''}
+        onChange={(value) => setDraft((d) => ({ ...d, contactPhone: value || null }))}
+        onDone={doneInline}
+        onCancel={cancelInline}
+      />
+    ),
     price: (
       <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
         <Stack direction="row" spacing={1.25}>
@@ -226,9 +232,7 @@ export function MarketplaceOwnerEdit({
         <ListingToggle
           label="Monedha"
           value={draft.currency === 'EUR' || draft.currency === 'LEK' ? draft.currency : ''}
-          onChange={(v) =>
-            setDraft((d) => ({ ...d, currency: v === 'EUR' || v === 'LEK' ? v : null }))
-          }
+          onChange={(v) => setDraft((d) => ({ ...d, currency: v === 'EUR' || v === 'LEK' ? v : null }))}
           options={CURRENCY_OPTIONS}
           disabled={draft.price == null}
         />
@@ -282,13 +286,6 @@ export function MarketplaceOwnerEdit({
           options={MARKETPLACE_CONDITION_OPTIONS}
           emptyLabel="—"
         />
-        <TextField
-          label="Telefoni"
-          value={draft.contactPhone ?? ''}
-          onChange={(e) => setDraft((d) => ({ ...d, contactPhone: e.target.value || null }))}
-          fullWidth
-          sx={fieldSx}
-        />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
     ),
@@ -330,7 +327,7 @@ export function MarketplaceOwnerEdit({
               status: draft.status,
               imageUrls: Array.isArray(merged.imageUrls) ? merged.imageUrls : draft.imageUrls,
             });
-            setExistingUrls(Array.isArray(merged.imageUrls) ? merged.imageUrls : draft.imageUrls ?? []);
+            setExistingUrls(Array.isArray(merged.imageUrls) ? merged.imageUrls : (draft.imageUrls ?? []));
             setNewFiles([]);
           }}
         />

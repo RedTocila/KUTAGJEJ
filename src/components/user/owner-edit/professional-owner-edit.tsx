@@ -5,8 +5,19 @@ import { Button, IconButton, Stack, TextField } from '@mui/material';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
-import { SearchableSelect } from '@/components/core/searchable-select';
+import { paths } from '@/paths';
+import {
+  updateProfessionalListing,
+  type ProfessionalMineListing,
+  type ProfessionalPortfolioItem,
+} from '@/lib/directory-listings-client';
+import { isEphemeralImageUrl, isPersistableImageUrl } from '@/lib/image-url';
+import { professionalMineToPublic } from '@/lib/listing-mine-to-public';
+import { PROFESSIONAL_CATEGORY_OPTIONS } from '@/lib/professional-constants';
+import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { uploadListingImages } from '@/lib/uploads-client';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import { SearchableSelect } from '@/components/core/searchable-select';
 import {
   exclusiveLocationPayload,
   inferListingLocationMode,
@@ -18,20 +29,10 @@ import { ProfessionalListingDetailView } from '@/components/public/professional-
 import { ListingDescriptionField } from '@/components/user/listing-form-ui';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
 import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
+import { OwnerEditContactPhone } from '@/components/user/owner-edit-contact-phone';
 import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
 import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dialog';
 import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
-import {
-  updateProfessionalListing,
-  type ProfessionalMineListing,
-  type ProfessionalPortfolioItem,
-} from '@/lib/directory-listings-client';
-import { professionalMineToPublic } from '@/lib/listing-mine-to-public';
-import { PROFESSIONAL_CATEGORY_OPTIONS } from '@/lib/professional-constants';
-import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
-import { isEphemeralImageUrl, isPersistableImageUrl } from '@/lib/image-url';
-import { uploadListingImages } from '@/lib/uploads-client';
-import { paths } from '@/paths';
 
 function newId(): string {
   return typeof crypto !== 'undefined' && crypto.randomUUID
@@ -84,7 +85,7 @@ function snapFrom(d: ProfessionalMineListing): Snapshot {
 async function resolveUrl(
   existing: string | null,
   file: File | null,
-  opts?: { fallback?: string | null; strict?: boolean },
+  opts?: { fallback?: string | null; strict?: boolean }
 ): Promise<{ url: string | null; error?: string }> {
   if (file) {
     const up = await uploadListingImages([file], 'professionals');
@@ -140,7 +141,7 @@ export function ProfessionalOwnerEdit({
   const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
   const [locationMode, setLocationMode] = React.useState<ListingLocationMode | ''>(() =>
-    inferListingLocationMode(initial.cityId, initial.mapsUrl),
+    inferListingLocationMode(initial.cityId, initial.mapsUrl)
   );
 
   const [coverFile, setCoverFile] = React.useState<File[]>([]);
@@ -152,7 +153,7 @@ export function ProfessionalOwnerEdit({
       ...p,
       imageUrl: isPersistableImageUrl(p.imageUrl) ? p.imageUrl : '',
       imageFile: null,
-    })),
+    }))
   );
 
   React.useEffect(() => {
@@ -249,8 +250,7 @@ export function ProfessionalOwnerEdit({
       const durable = (draft.imageUrls ?? []).filter(isPersistableImageUrl);
       // If the picker cleared coverUrl while a File is pending, upload the File.
       // If both are empty, keep the last durable draft URL (photo dialog not applied).
-      const coverExisting =
-        coverUrl.trim() || (coverFile.length ? '' : durable[0] ?? '') || null;
+      const coverExisting = coverUrl.trim() || (coverFile.length ? '' : (durable[0] ?? '')) || null;
       const cover = await resolveUrl(coverExisting, coverFile[0] ?? null, {
         fallback: durable[0] ?? null,
         strict: false,
@@ -259,8 +259,7 @@ export function ProfessionalOwnerEdit({
         setError(cover.error);
         return;
       }
-      const avatarExisting =
-        avatarUrl.trim() || (avatarFile.length ? '' : durable[1] ?? '') || null;
+      const avatarExisting = avatarUrl.trim() || (avatarFile.length ? '' : (durable[1] ?? '')) || null;
       const avatar = await resolveUrl(avatarExisting, avatarFile[0] ?? null, {
         fallback: durable[1] ?? null,
         strict: false,
@@ -359,6 +358,14 @@ export function ProfessionalOwnerEdit({
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
     ),
+    contactPhone: (
+      <OwnerEditContactPhone
+        value={draft.contactPhone ?? ''}
+        onChange={(value) => setDraft((d) => ({ ...d, contactPhone: value || null }))}
+        onDone={doneInline}
+        onCancel={cancelInline}
+      />
+    ),
     category: (
       <Stack spacing={1.25} sx={{ width: '100%', maxWidth: 480 }}>
         <SearchableSelect
@@ -368,13 +375,6 @@ export function ProfessionalOwnerEdit({
           options={PROFESSIONAL_CATEGORY_OPTIONS}
           emptyLabel="Zgjidhni…"
           allowCustom
-        />
-        <TextField
-          label="Telefoni"
-          value={draft.contactPhone ?? ''}
-          onChange={(e) => setDraft((d) => ({ ...d, contactPhone: e.target.value || null }))}
-          fullWidth
-          sx={fieldSx}
         />
         <TextField
           label="Koha e përgjigjes (orë)"
@@ -521,8 +521,7 @@ export function ProfessionalOwnerEdit({
               const filesById = new Map(prev.map((p) => [p.id, p.imageFile] as const));
               return (draft.portfolioItems ?? []).map((p) => {
                 const imageFile = filesById.get(p.id) ?? null;
-                const imageUrl =
-                  isEphemeralImageUrl(p.imageUrl) && !imageFile ? '' : p.imageUrl;
+                const imageUrl = isEphemeralImageUrl(p.imageUrl) && !imageFile ? '' : p.imageUrl;
                 return { ...p, imageUrl, imageFile };
               });
             });
@@ -568,7 +567,15 @@ export function ProfessionalOwnerEdit({
             onClick={() =>
               setPortfolio((prev) => [
                 ...prev,
-                { id: newId(), title: '', description: '', imageUrl: '', location: null, sortOrder: prev.length, imageFile: null },
+                {
+                  id: newId(),
+                  title: '',
+                  description: '',
+                  imageUrl: '',
+                  location: null,
+                  sortOrder: prev.length,
+                  imageFile: null,
+                },
               ])
             }
             sx={{ textTransform: 'none', fontWeight: 700 }}
@@ -583,7 +590,11 @@ export function ProfessionalOwnerEdit({
             sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
           >
             <Stack direction="row" sx={{ justifyContent: 'flex-end' }}>
-              <IconButton size="small" color="error" onClick={() => setPortfolio((p) => p.filter((x) => x.id !== item.id))}>
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => setPortfolio((p) => p.filter((x) => x.id !== item.id))}
+              >
                 <TrashIcon size={16} />
               </IconButton>
             </Stack>

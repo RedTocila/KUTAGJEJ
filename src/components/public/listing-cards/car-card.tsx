@@ -81,8 +81,8 @@ export function CarCard({
         premium={Boolean(listing.isPremium)}
         okazion={Boolean(listing.isOkazion)}
         okazionUntil={listing.okazionUntil}
-        sellerVerified={Boolean(listing.sellerVerified)}
-        sellerTrustBadge={Boolean(listing.sellerTrustBadge)}
+        sellerVerified={variant === 'default' && Boolean(listing.sellerVerified)}
+        sellerTrustBadge={variant === 'default' && Boolean(listing.sellerTrustBadge)}
         priority={imagePriority}
         sharePayload={{
           title,
@@ -121,16 +121,23 @@ export function CarCard({
             }}
           />
 
-          <ListingPrice
-            price={listing.price}
-            originalPrice={listing.originalPrice}
-            currency={listing.currency}
-            isPremium={listing.isPremium}
-            isOkazion={listing.isOkazion}
-            priceColor="success.main"
-            fontSize="1rem"
-          />
-
+          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+            <ListingPrice
+              price={listing.price}
+              originalPrice={listing.originalPrice}
+              currency={listing.currency}
+              isPremium={listing.isPremium}
+              isOkazion={listing.isOkazion}
+              priceColor="success.main"
+              fontSize="1rem"
+            />
+            <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}>
+              <EyeIcon size={12} weight="regular" />
+              <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.7rem' }}>
+                {new Intl.NumberFormat('en-GB').format(viewCount)}
+              </Typography>
+            </Stack>
+          </Stack>
         </Stack>
       ) : (
         <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>

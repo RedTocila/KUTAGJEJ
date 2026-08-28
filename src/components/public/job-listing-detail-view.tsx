@@ -29,8 +29,8 @@ import {
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
-import type { ListingSharePayload } from '@/lib/listing-share';
 import { nextShareCount } from '@/lib/listing-metrics';
+import type { ListingSharePayload } from '@/lib/listing-share';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
@@ -45,6 +45,7 @@ import { ListingSharePage } from '@/components/public/listing-share/listing-shar
 import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
+import { OwnerContactPhone } from '@/components/public/owner-contact-phone';
 import { HistoryBackButton } from '@/components/public/product-browse-chrome';
 import { JobVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
@@ -463,7 +464,7 @@ export function JobListingDetailView({
                   </Typography>
                 </Stack>
               </Stack>
-
+              <OwnerContactPhone phone={listing.contactPhone ?? listing.seller?.phone} ownerEdit={ownerEdit} />
             </Stack>
 
             <Stack spacing={1} sx={{ width: '100%' }}>

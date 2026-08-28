@@ -38,7 +38,8 @@ function subscribe(listener: () => void) {
 }
 
 function getSnapshot() {
-  return nowMs || Date.now();
+  if (nowMs === 0) nowMs = Date.now();
+  return nowMs;
 }
 
 function getServerSnapshot() {

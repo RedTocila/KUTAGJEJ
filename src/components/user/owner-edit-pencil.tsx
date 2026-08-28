@@ -53,6 +53,7 @@ export function OwnerEditPencil({
 export type OwnerInlineField =
   | 'title'
   | 'price'
+  | 'contactPhone'
   | 'location'
   | 'description'
   | 'specs'

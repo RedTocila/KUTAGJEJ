@@ -3,42 +3,43 @@
 import * as React from 'react';
 import { Checkbox, FormControlLabel, Stack, TextField } from '@mui/material';
 
-import { SearchableSelect } from '@/components/core/searchable-select';
-import { ListingImagePicker } from '@/components/common/listing-image-picker';
-import {
-  exclusiveLocationPayload,
-  inferListingLocationMode,
-  ListingLocationChoice,
-  type ListingLocationMode,
-} from '@/components/listings/listing-location-choice';
-import { BusinessMobileCtaInlineEditor } from '@/components/businesses/business-mobile-cta-inline-editor';
-import { BusinessListingDetailView } from '@/components/public/business-listing-detail-view';
-import { ListingDescriptionField } from '@/components/user/listing-form-ui';
-import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
-import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
-import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
-import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dialog';
-import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
+import { paths } from '@/paths';
 import {
   BUSINESS_CATEGORY_OPTIONS,
   BUSINESS_DAY_LABELS,
   defaultWeeklyHours,
   type WeeklyHourRow,
 } from '@/lib/business-constants';
+import type { BusinessMobileCtaMode } from '@/lib/business-mobile-cta';
 import {
-  updateBusinessListing,
   resolveBusinessMapsUrl,
+  updateBusinessListing,
   type BusinessMineListing,
 } from '@/lib/directory-listings-client';
-import { hardNavigate } from '@/lib/hard-navigate';
 import { extractCoordsFromMapsUrl, extractPlaceQueryFromMapsUrl } from '@/lib/google-maps-location';
-import { businessMineToPublic } from '@/lib/listing-mine-to-public';
-import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { hardNavigate } from '@/lib/hard-navigate';
 import { isPersistableImageUrl } from '@/lib/image-url';
+import { businessMineToPublic } from '@/lib/listing-mine-to-public';
 import { commitListingPhotos } from '@/lib/owner-edit-photos';
+import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { uploadListingImages } from '@/lib/uploads-client';
-import { paths } from '@/paths';
-import type { BusinessMobileCtaMode } from '@/lib/business-mobile-cta';
+import { BusinessMobileCtaInlineEditor } from '@/components/businesses/business-mobile-cta-inline-editor';
+import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import { SearchableSelect } from '@/components/core/searchable-select';
+import {
+  exclusiveLocationPayload,
+  inferListingLocationMode,
+  ListingLocationChoice,
+  type ListingLocationMode,
+} from '@/components/listings/listing-location-choice';
+import { BusinessListingDetailView } from '@/components/public/business-listing-detail-view';
+import { ListingDescriptionField } from '@/components/user/listing-form-ui';
+import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
+import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
+import { OwnerEditContactPhone } from '@/components/user/owner-edit-contact-phone';
+import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
+import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dialog';
+import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
 
 const MAX_IMAGES = 8;
 
@@ -72,8 +73,7 @@ function snapFrom(d: BusinessMineListing): Snapshot {
     zoneId: d.zoneId ?? null,
     zoneName: d.zoneName ?? null,
     mapsUrl: d.mapsUrl ?? null,
-    mapsPlaceQuery:
-      d.mapsPlaceQuery ?? (d.mapsUrl ? extractPlaceQueryFromMapsUrl(d.mapsUrl) : null),
+    mapsPlaceQuery: d.mapsPlaceQuery ?? (d.mapsUrl ? extractPlaceQueryFromMapsUrl(d.mapsUrl) : null),
     locationAddress: d.locationAddress ?? null,
     locationLat: d.locationLat ?? null,
     locationLng: d.locationLng ?? null,
@@ -122,17 +122,15 @@ export function BusinessOwnerEdit({
 }) {
   const [draft, setDraft] = React.useState(() => {
     const mapsPlaceQuery =
-      initial.mapsPlaceQuery ??
-      (initial.mapsUrl ? extractPlaceQueryFromMapsUrl(initial.mapsUrl) : null);
+      initial.mapsPlaceQuery ?? (initial.mapsUrl ? extractPlaceQueryFromMapsUrl(initial.mapsUrl) : null);
     return { ...initial, mapsPlaceQuery };
   });
   const [baseline, setBaseline] = React.useState(() =>
     JSON.stringify({
       ...initial,
       mapsPlaceQuery:
-        initial.mapsPlaceQuery ??
-        (initial.mapsUrl ? extractPlaceQueryFromMapsUrl(initial.mapsUrl) : null),
-    }),
+        initial.mapsPlaceQuery ?? (initial.mapsUrl ? extractPlaceQueryFromMapsUrl(initial.mapsUrl) : null),
+    })
   );
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [saving, setSaving] = React.useState(false);
@@ -144,10 +142,10 @@ export function BusinessOwnerEdit({
   const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
   const [locationMode, setLocationMode] = React.useState<ListingLocationMode | ''>(() =>
-    inferListingLocationMode(initial.cityId, initial.mapsUrl),
+    inferListingLocationMode(initial.cityId, initial.mapsUrl)
   );
   const [weeklyHours, setWeeklyHours] = React.useState<WeeklyHourRow[]>(
-    initial.weeklyHours?.length ? initial.weeklyHours : defaultWeeklyHours(),
+    initial.weeklyHours?.length ? initial.weeklyHours : defaultWeeklyHours()
   );
 
   React.useEffect(() => {
@@ -158,10 +156,7 @@ export function BusinessOwnerEdit({
 
   const dirty = JSON.stringify(draft) !== baseline || newFiles.length > 0;
   const preview = React.useMemo(() => businessMineToPublic(draft), [draft]);
-  const zones = React.useMemo(
-    () => cities.find((c) => c.id === draft.cityId)?.zones ?? [],
-    [cities, draft.cityId],
-  );
+  const zones = React.useMemo(() => cities.find((c) => c.id === draft.cityId)?.zones ?? [], [cities, draft.cityId]);
 
   const startInline = (field: OwnerInlineField) => {
     setSnapshot(snapFrom(draft));
@@ -211,8 +206,7 @@ export function BusinessOwnerEdit({
     setDraft((d) => ({
       ...d,
       mapsUrl: resolvedUrl,
-      mapsPlaceQuery:
-        resolved.placeQuery ?? local.mapsPlaceQuery ?? null,
+      mapsPlaceQuery: resolved.placeQuery ?? local.mapsPlaceQuery ?? null,
       locationAddress: resolved.locationAddress ?? null,
       locationLat: resolved.locationLat ?? local.locationLat ?? null,
       locationLng: resolved.locationLng ?? local.locationLng ?? null,
@@ -263,7 +257,8 @@ export function BusinessOwnerEdit({
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
         weeklyHours: draft.weeklyHours?.length ? draft.weeklyHours : weeklyHours,
-        reservationsEnabled: (draft.mobileCtaMode ?? 'contact') === 'reserve' ? true : Boolean(draft.reservationsEnabled),
+        reservationsEnabled:
+          (draft.mobileCtaMode ?? 'contact') === 'reserve' ? true : Boolean(draft.reservationsEnabled),
         mobileCtaMode: draft.mobileCtaMode ?? 'contact',
         reservationUrl: null,
         reservationTimeSlots: [],
@@ -287,7 +282,7 @@ export function BusinessOwnerEdit({
         locationAddress:
           typeof saved?.locationAddress === 'string' && saved.locationAddress.trim()
             ? saved.locationAddress.trim()
-            : draft.locationAddress ?? null,
+            : (draft.locationAddress ?? null),
         locationLat:
           typeof saved?.locationLat === 'number' && Number.isFinite(saved.locationLat)
             ? saved.locationLat
@@ -326,6 +321,14 @@ export function BusinessOwnerEdit({
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
     ),
+    contactPhone: (
+      <OwnerEditContactPhone
+        value={draft.contactPhone ?? ''}
+        onChange={(value) => setDraft((d) => ({ ...d, contactPhone: value || null }))}
+        onDone={doneInline}
+        onCancel={cancelInline}
+      />
+    ),
     category: (
       <Stack spacing={1.25} sx={{ width: '100%', maxWidth: 480 }}>
         <SearchableSelect
@@ -340,13 +343,6 @@ export function BusinessOwnerEdit({
           label="Çfarë ofroni"
           value={draft.servicesHighlight ?? ''}
           onChange={(e) => setDraft((d) => ({ ...d, servicesHighlight: e.target.value || null }))}
-          fullWidth
-          sx={fieldSx}
-        />
-        <TextField
-          label="Telefoni"
-          value={draft.contactPhone ?? ''}
-          onChange={(e) => setDraft((d) => ({ ...d, contactPhone: e.target.value || null }))}
           fullWidth
           sx={fieldSx}
         />

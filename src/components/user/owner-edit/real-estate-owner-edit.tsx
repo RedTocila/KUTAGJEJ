@@ -2,12 +2,33 @@
 
 import * as React from 'react';
 import { Stack, TextField } from '@mui/material';
-
 import { HouseLine as HouseLineIcon } from '@phosphor-icons/react/dist/ssr/HouseLine';
 import { Key as KeyIcon } from '@phosphor-icons/react/dist/ssr/Key';
 
-import { SearchableSelect } from '@/components/core/searchable-select';
+import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
+import { paths } from '@/paths';
+import { isPersistableImageUrl } from '@/lib/image-url';
+import { realEstateMineToPublic } from '@/lib/listing-mine-to-public';
+import { updateRealEstateListing } from '@/lib/listings-client';
+import { commitListingPhotos } from '@/lib/owner-edit-photos';
+import {
+  CONDITION_OPTIONS,
+  CURRENCY_OPTIONS,
+  FURNISHING_OPTIONS,
+  needsBedroomsBathFurnishing,
+  needsCondition,
+  needsFloor,
+  needsParkingFloor,
+  needsTotalFloors,
+  needsYearBuilt,
+  REAL_ESTATE_PROPERTY_CATEGORIES,
+  TRANSACTION_OPTIONS,
+  type RealEstatePropertySlug,
+} from '@/lib/real-estate-constants';
+import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { uploadListingImages } from '@/lib/uploads-client';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import { SearchableSelect } from '@/components/core/searchable-select';
 import {
   exclusiveLocationPayload,
   inferListingLocationMode,
@@ -18,31 +39,10 @@ import { RealEstateListingDetailView } from '@/components/public/real-estate-lis
 import { ListingDescriptionField, ListingToggle } from '@/components/user/listing-form-ui';
 import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
 import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
+import { OwnerEditContactPhone } from '@/components/user/owner-edit-contact-phone';
 import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
 import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dialog';
 import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
-import { realEstateMineToPublic } from '@/lib/listing-mine-to-public';
-import { updateRealEstateListing } from '@/lib/listings-client';
-import {
-  CONDITION_OPTIONS,
-  CURRENCY_OPTIONS,
-  FURNISHING_OPTIONS,
-  REAL_ESTATE_PROPERTY_CATEGORIES,
-  TRANSACTION_OPTIONS,
-  needsBedroomsBathFurnishing,
-  needsCondition,
-  needsFloor,
-  needsParkingFloor,
-  needsTotalFloors,
-  needsYearBuilt,
-  type RealEstatePropertySlug,
-} from '@/lib/real-estate-constants';
-import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
-import { isPersistableImageUrl } from '@/lib/image-url';
-import { commitListingPhotos } from '@/lib/owner-edit-photos';
-import { uploadListingImages } from '@/lib/uploads-client';
-import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
-import { paths } from '@/paths';
 
 const MAX_IMAGES = 8;
 
@@ -141,7 +141,7 @@ export function RealEstateOwnerEdit({
   const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
   const [locationMode, setLocationMode] = React.useState<ListingLocationMode | ''>(() =>
-    inferListingLocationMode(initial.cityId, initial.mapsUrl),
+    inferListingLocationMode(initial.cityId, initial.mapsUrl)
   );
 
   React.useEffect(() => {
@@ -188,10 +188,7 @@ export function RealEstateOwnerEdit({
       let uploaded: string[] = [];
       const kept = existingUrls.filter(isPersistableImageUrl);
       if (newFiles.length) {
-        const up = await uploadListingImages(
-          newFiles.slice(0, Math.max(0, MAX_IMAGES - kept.length)),
-          'real-estate',
-        );
+        const up = await uploadListingImages(newFiles.slice(0, Math.max(0, MAX_IMAGES - kept.length)), 'real-estate');
         if (up.error) {
           setError(up.error);
           return;
@@ -221,7 +218,8 @@ export function RealEstateOwnerEdit({
         propertyCategory: draft.propertyCategory || undefined,
         title: draft.title.trim(),
         description: (draft.description ?? '').trim(),
-        transactionType: draft.transactionType === 'rent' || draft.transactionType === 'sale' ? draft.transactionType : null,
+        transactionType:
+          draft.transactionType === 'rent' || draft.transactionType === 'sale' ? draft.transactionType : null,
         price: draft.price,
         originalPrice: draft.originalPrice ?? null,
         currency: draft.currency || 'EUR',
@@ -274,6 +272,14 @@ export function RealEstateOwnerEdit({
         />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
+    ),
+    contactPhone: (
+      <OwnerEditContactPhone
+        value={draft.contactPhone ?? ''}
+        onChange={(value) => setDraft((d) => ({ ...d, contactPhone: value || null }))}
+        onDone={doneInline}
+        onCancel={cancelInline}
+      />
     ),
     price: (
       <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
@@ -372,9 +378,7 @@ export function RealEstateOwnerEdit({
         <TextField
           label="Sipërfaqja (m²)"
           value={draft.surfaceM2 != null ? String(draft.surfaceM2) : ''}
-          onChange={(e) =>
-            setDraft((d) => ({ ...d, surfaceM2: numOrNull(e.target.value) }))
-          }
+          onChange={(e) => setDraft((d) => ({ ...d, surfaceM2: numOrNull(e.target.value) }))}
           fullWidth
           autoFocus
           sx={fieldSx}
@@ -453,13 +457,6 @@ export function RealEstateOwnerEdit({
             sx={fieldSx}
           />
         ) : null}
-        <TextField
-          label="Telefoni"
-          value={draft.contactPhone ?? ''}
-          onChange={(e) => setDraft((d) => ({ ...d, contactPhone: e.target.value || null }))}
-          fullWidth
-          sx={fieldSx}
-        />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
     ),
@@ -501,7 +498,7 @@ export function RealEstateOwnerEdit({
               status: draft.status,
               imageUrls: Array.isArray(merged.imageUrls) ? merged.imageUrls : draft.imageUrls,
             });
-            setExistingUrls(Array.isArray(merged.imageUrls) ? merged.imageUrls : draft.imageUrls ?? []);
+            setExistingUrls(Array.isArray(merged.imageUrls) ? merged.imageUrls : (draft.imageUrls ?? []));
             setNewFiles([]);
           }}
         />

@@ -40,6 +40,7 @@ import { ListingMetricsTracker } from '@/components/public/listing-metrics-track
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
+import { OwnerContactPhone } from '@/components/public/owner-contact-phone';
 import { HistoryBackButton, ProductTag } from '@/components/public/product-browse-chrome';
 import { ProfessionalListingDetailDesktop } from '@/components/public/professional-listing-detail-desktop';
 import {
@@ -379,6 +380,7 @@ export function ProfessionalListingDetailView({
                     <Typography sx={{ fontSize: FONT_CAPTION, fontWeight: 600 }}>Shtoni qytetin</Typography>
                   </ButtonBase>
                 ) : null}
+                <OwnerContactPhone phone={listing.contactPhone ?? listing.seller?.phone} ownerEdit={ownerEdit} />
               </Stack>
             </Stack>
 

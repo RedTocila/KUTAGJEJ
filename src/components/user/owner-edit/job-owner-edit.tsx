@@ -3,21 +3,8 @@
 import * as React from 'react';
 import { Checkbox, FormControlLabel, FormGroup, Stack, TextField, Typography } from '@mui/material';
 
-import { SearchableSelect } from '@/components/core/searchable-select';
-import { ListingImagePicker } from '@/components/common/listing-image-picker';
-import {
-  exclusiveLocationPayload,
-  inferListingLocationMode,
-  ListingLocationChoice,
-  type ListingLocationMode,
-} from '@/components/listings/listing-location-choice';
-import { JobListingDetailView } from '@/components/public/job-listing-detail-view';
-import { ListingDescriptionField, ListingToggle } from '@/components/user/listing-form-ui';
-import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
-import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
-import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
-import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dialog';
-import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
+import { paths } from '@/paths';
+import { isPersistableImageUrl } from '@/lib/image-url';
 import {
   JOB_BENEFIT_PRESETS,
   JOB_EDUCATION_OPTIONS,
@@ -28,12 +15,26 @@ import {
 } from '@/lib/job-constants';
 import { jobMineToPublic } from '@/lib/listing-mine-to-public';
 import { updateJobListing, type JobMineListing } from '@/lib/listings-client';
+import { commitListingPhotos } from '@/lib/owner-edit-photos';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
-import { isPersistableImageUrl } from '@/lib/image-url';
-import { commitListingPhotos } from '@/lib/owner-edit-photos';
 import { uploadListingImages } from '@/lib/uploads-client';
-import { paths } from '@/paths';
+import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import { SearchableSelect } from '@/components/core/searchable-select';
+import {
+  exclusiveLocationPayload,
+  inferListingLocationMode,
+  ListingLocationChoice,
+  type ListingLocationMode,
+} from '@/components/listings/listing-location-choice';
+import { JobListingDetailView } from '@/components/public/job-listing-detail-view';
+import { ListingDescriptionField, ListingToggle } from '@/components/user/listing-form-ui';
+import { ListingOwnerEditShell } from '@/components/user/listing-owner-edit-shell';
+import { OwnerEditAiAssist } from '@/components/user/owner-edit-ai-assist';
+import { OwnerEditContactPhone } from '@/components/user/owner-edit-contact-phone';
+import type { OwnerInlineField } from '@/components/user/owner-edit-pencil';
+import { OwnerEditSectionDialog } from '@/components/user/owner-edit-section-dialog';
+import { OwnerInlineEditActions } from '@/components/user/owner-inline-edit';
 
 const MAX_IMAGES = 1;
 
@@ -127,14 +128,12 @@ export function JobOwnerEdit({
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
   const [photosOpen, setPhotosOpen] = React.useState(false);
-  const [existingUrls, setExistingUrls] = React.useState(
-    () => (initial.imageUrls ?? []).slice(0, MAX_IMAGES),
-  );
+  const [existingUrls, setExistingUrls] = React.useState(() => (initial.imageUrls ?? []).slice(0, MAX_IMAGES));
   const [newFiles, setNewFiles] = React.useState<File[]>([]);
   const [editingField, setEditingField] = React.useState<OwnerInlineField | null>(null);
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
   const [locationMode, setLocationMode] = React.useState<ListingLocationMode | ''>(() =>
-    inferListingLocationMode(initial.cityId, initial.mapsUrl),
+    inferListingLocationMode(initial.cityId, initial.mapsUrl)
   );
   const [benefitIds, setBenefitIds] = React.useState(() => benefitIdsFrom(initial.benefits));
   const [customBenefit, setCustomBenefit] = React.useState(() => customBenefitFrom(initial.benefits));
@@ -189,10 +188,7 @@ export function JobOwnerEdit({
       let uploaded: string[] = [];
       const kept = existingUrls.filter(isPersistableImageUrl);
       if (newFiles.length) {
-        const up = await uploadListingImages(
-          newFiles.slice(0, Math.max(0, MAX_IMAGES - kept.length)),
-          'jobs',
-        );
+        const up = await uploadListingImages(newFiles.slice(0, Math.max(0, MAX_IMAGES - kept.length)), 'jobs');
         if (up.error) {
           setError(up.error);
           return;
@@ -257,6 +253,14 @@ export function JobOwnerEdit({
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
     ),
+    contactPhone: (
+      <OwnerEditContactPhone
+        value={draft.contactPhone ?? ''}
+        onChange={(value) => setDraft((d) => ({ ...d, contactPhone: value || null }))}
+        onDone={doneInline}
+        onCancel={cancelInline}
+      />
+    ),
     price: (
       <Stack spacing={1} sx={{ width: '100%', maxWidth: 420 }}>
         <TextField
@@ -277,9 +281,7 @@ export function JobOwnerEdit({
         <ListingToggle
           label="Monedha"
           value={draft.currency === 'EUR' || draft.currency === 'LEK' ? draft.currency : ''}
-          onChange={(v) =>
-            setDraft((d) => ({ ...d, currency: v === 'EUR' || v === 'LEK' ? v : null }))
-          }
+          onChange={(v) => setDraft((d) => ({ ...d, currency: v === 'EUR' || v === 'LEK' ? v : null }))}
           options={CURRENCY_OPTIONS}
           disabled={draft.salary == null}
         />
@@ -407,13 +409,6 @@ export function JobOwnerEdit({
             sx={fieldSx}
           />
         </Stack>
-        <TextField
-          label="Telefoni"
-          value={draft.contactPhone ?? ''}
-          onChange={(e) => setDraft((d) => ({ ...d, contactPhone: e.target.value || null }))}
-          fullWidth
-          sx={fieldSx}
-        />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
     ),
@@ -455,7 +450,7 @@ export function JobOwnerEdit({
               status: draft.status,
               imageUrls: Array.isArray(merged.imageUrls) ? merged.imageUrls : draft.imageUrls,
             });
-            setExistingUrls(Array.isArray(merged.imageUrls) ? merged.imageUrls : draft.imageUrls ?? []);
+            setExistingUrls(Array.isArray(merged.imageUrls) ? merged.imageUrls : (draft.imageUrls ?? []));
             setNewFiles([]);
           }}
         />

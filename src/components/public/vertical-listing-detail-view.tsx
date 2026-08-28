@@ -57,6 +57,7 @@ import { ListingSellerProfileCard } from '@/components/public/listing-seller-pro
 import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
+import { OwnerContactPhone } from '@/components/public/owner-contact-phone';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
 import { StickyListingContact } from '@/components/public/sticky-listing-contact';
@@ -570,6 +571,7 @@ export function VerticalListingDetailView(props: {
                     <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)}</Typography>
                   </Stack>
                 </Stack>
+                <OwnerContactPhone phone={displayPhone} ownerEdit={ownerEdit} />
               </Stack>
             </Stack>
 
@@ -829,9 +831,15 @@ function summarySpecsFor(l: AnyPublicListingDetail): SummarySpec[] {
         ...(l.kilometers != null
           ? [{ Icon: GaugeIcon, label: 'Kilometrazhi', value: formatKilometers(l.kilometers) }]
           : []),
-        ...(l.transmission ? [{ Icon: GearSixIcon, label: 'Transmision', value: findOptionLabel(TRANSMISSION_OPTIONS, l.transmission) }] : []),
-        ...(l.fuelType ? [{ Icon: GasPumpIcon, label: 'Karburant', value: findOptionLabel(FUEL_TYPE_OPTIONS, l.fuelType) }] : []),
-        ...(l.color ? [{ Icon: PaletteIcon, label: 'Ngjyra', value: findOptionLabel(CAR_COLOUR_OPTIONS, l.color) }] : []),
+        ...(l.transmission
+          ? [{ Icon: GearSixIcon, label: 'Transmision', value: findOptionLabel(TRANSMISSION_OPTIONS, l.transmission) }]
+          : []),
+        ...(l.fuelType
+          ? [{ Icon: GasPumpIcon, label: 'Karburant', value: findOptionLabel(FUEL_TYPE_OPTIONS, l.fuelType) }]
+          : []),
+        ...(l.color
+          ? [{ Icon: PaletteIcon, label: 'Ngjyra', value: findOptionLabel(CAR_COLOUR_OPTIONS, l.color) }]
+          : []),
         ...(l.cityName ? [{ Icon: MapPinIcon, label: 'Qyteti', value: l.cityName }] : []),
       ];
     case 'job':

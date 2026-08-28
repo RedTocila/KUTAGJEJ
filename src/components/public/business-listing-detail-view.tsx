@@ -34,6 +34,7 @@ import { ListingDetailTitleBadges } from '@/components/public/listing-detail-tit
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
+import { OwnerContactPhone } from '@/components/public/owner-contact-phone';
 import { HistoryBackButton } from '@/components/public/product-browse-chrome';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
@@ -361,6 +362,7 @@ export function BusinessListingDetailView({
                     <Typography sx={{ fontSize: FONT_CAPTION }}>{locationLine}</Typography>
                   </ButtonBase>
                 ) : null}
+                <OwnerContactPhone phone={phone} ownerEdit={ownerEdit} />
 
                 <BusinessReviewSection
                   variant="summary"

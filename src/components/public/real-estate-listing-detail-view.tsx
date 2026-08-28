@@ -32,6 +32,7 @@ import { ListingSellerProfileCard } from '@/components/public/listing-seller-pro
 import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
+import { OwnerContactPhone } from '@/components/public/owner-contact-phone';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
 import { StickyListingContact } from '@/components/public/sticky-listing-contact';
@@ -160,21 +161,21 @@ function RealEstatePriceContactAside(props: {
           }
         />
         {transactionLabel ? (
-        <Paper
-          variant="outlined"
-          sx={{
-            alignSelf: 'flex-start',
-            borderColor: 'divider',
-            bgcolor: 'action.hover',
-            borderRadius: 999,
-            px: 1.25,
-            py: 0.35,
-          }}
-        >
-          <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main' }}>
-            {transactionLabel}
-          </Typography>
-        </Paper>
+          <Paper
+            variant="outlined"
+            sx={{
+              alignSelf: 'flex-start',
+              borderColor: 'divider',
+              bgcolor: 'action.hover',
+              borderRadius: 999,
+              px: 1.25,
+              py: 0.35,
+            }}
+          >
+            <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main' }}>
+              {transactionLabel}
+            </Typography>
+          </Paper>
         ) : null}
         {locationFull ? (
           <ButtonBase
@@ -577,20 +578,20 @@ export function RealEstateListingDetailView({
                         }
                       />
                       {transactionLabel ? (
-                      <Paper
-                        variant="outlined"
-                        sx={{
-                          borderColor: 'divider',
-                          bgcolor: 'action.hover',
-                          borderRadius: 999,
-                          px: 1.25,
-                          py: 0.35,
-                        }}
-                      >
-                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main' }}>
-                          {transactionLabel}
-                        </Typography>
-                      </Paper>
+                        <Paper
+                          variant="outlined"
+                          sx={{
+                            borderColor: 'divider',
+                            bgcolor: 'action.hover',
+                            borderRadius: 999,
+                            px: 1.25,
+                            py: 0.35,
+                          }}
+                        >
+                          <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main' }}>
+                            {transactionLabel}
+                          </Typography>
+                        </Paper>
                       ) : null}
                     </Stack>
                   </OwnerEditableSpot>
@@ -661,11 +662,10 @@ export function RealEstateListingDetailView({
                       sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}
                     >
                       <EyeIcon size={17} weight="regular" aria-hidden />
-                      <Typography variant="body2">
-                        {new Intl.NumberFormat('sq-AL').format(viewCount)}
-                      </Typography>
+                      <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)}</Typography>
                     </Stack>
                   </Stack>
+                  <OwnerContactPhone phone={displayPhone} ownerEdit={ownerEdit} />
                 </Stack>
               </Stack>
 

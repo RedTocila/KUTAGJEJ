@@ -34,6 +34,7 @@ import { ListingSellerProfileCard } from '@/components/public/listing-seller-pro
 import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
+import { OwnerContactPhone } from '@/components/public/owner-contact-phone';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
 import { StickyListingContact } from '@/components/public/sticky-listing-contact';
@@ -369,9 +370,7 @@ export function CarListingDetailView({
     location: locationFull || listing.cityName || undefined,
     specs: [
       ...(listing.year != null ? [{ icon: 'calendar' as const, label: String(listing.year) }] : []),
-      ...(listing.kilometers != null
-        ? [{ icon: 'gauge' as const, label: formatKilometers(listing.kilometers) }]
-        : []),
+      ...(listing.kilometers != null ? [{ icon: 'gauge' as const, label: formatKilometers(listing.kilometers) }] : []),
       ...(fuel ? [{ icon: 'gas' as const, label: fuel }] : []),
       ...(transmission ? [{ icon: 'gear' as const, label: transmission }] : []),
       ...(listing.color && colour ? [{ icon: 'paint' as const, label: colour }] : []),
@@ -617,11 +616,10 @@ export function CarListingDetailView({
                       sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}
                     >
                       <EyeIcon size={17} weight="regular" aria-hidden />
-                      <Typography variant="body2">
-                        {new Intl.NumberFormat('sq-AL').format(viewCount)}
-                      </Typography>
+                      <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)}</Typography>
                     </Stack>
                   </Stack>
+                  <OwnerContactPhone phone={displayPhone} ownerEdit={ownerEdit} />
                 </Stack>
               </Stack>
 
@@ -677,14 +675,16 @@ export function CarListingDetailView({
                         <SpecIconBox Icon={CalendarIcon} primary={String(listing.year)} secondary="Viti" />
                       ) : null}
                       {listing.kilometers != null ? (
-                      <SpecIconBox
-                        Icon={GaugeIcon}
-                        primary={formatKilometers(listing.kilometers).replace(' ', '\u00A0')}
-                        secondary="Kilometra"
-                      />
+                        <SpecIconBox
+                          Icon={GaugeIcon}
+                          primary={formatKilometers(listing.kilometers).replace(' ', '\u00A0')}
+                          secondary="Kilometra"
+                        />
                       ) : null}
                       {fuel ? <SpecIconBox Icon={GasPumpIcon} primary={fuel} secondary="Karburant" /> : null}
-                      {transmission ? <SpecIconBox Icon={GearSixIcon} primary={transmission} secondary="Transmision" /> : null}
+                      {transmission ? (
+                        <SpecIconBox Icon={GearSixIcon} primary={transmission} secondary="Transmision" />
+                      ) : null}
                     </Stack>
                   </Box>
                 )}

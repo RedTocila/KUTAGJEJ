@@ -199,10 +199,13 @@ html.dark .kutagjej-splash__progress-fill {
 @keyframes kutagjejTimerPulse {
   0%,
   100% {
+    color: inherit;
     filter: none;
   }
   50% {
-    filter: sepia(0.7) saturate(2.2) brightness(1.2);
+    color: #fde047;
+    filter: none;
+    text-shadow: 0 0 7px rgba(253, 224, 71, 0.72);
   }
 }
 
@@ -210,6 +213,7 @@ html.dark .kutagjej-splash__progress-fill {
 .listing-countdown-pulse-container .MuiChip-label,
 .listing-countdown-pulse-container .MuiChip-icon {
   animation: kutagjejTimerPulse 1.8s ease-in-out infinite;
+  will-change: color, text-shadow;
 }
 
 /* Snappier MUI ripples — default ~550ms feels late on tap */

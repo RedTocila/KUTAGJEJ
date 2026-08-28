@@ -41,6 +41,10 @@ export type BannerSlideCardProps = {
   eager?: boolean;
   title?: string | null;
   subtitle?: string | null;
+  /** Optional right-side metadata shown in place of the navigation arrow. */
+  bottomRightLabel?: string | null;
+  /** Maximum title lines. */
+  titleMaxLines?: number;
   /** Promo artwork already includes the message — hide the HTML title. */
   hideTitleWhenImage?: boolean;
   /** First visible slide only — homepage LCP. */
@@ -58,6 +62,8 @@ export function BannerSlideCard({
   eager = true,
   title,
   subtitle,
+  bottomRightLabel = null,
+  titleMaxLines = 2,
   hideTitleWhenImage = false,
   priority = false,
 }: BannerSlideCardProps) {
@@ -138,7 +144,7 @@ export function BannerSlideCard({
 
         <Stack
           direction="row"
-          spacing={1.5}
+          spacing={bottomRightLabel ? 0 : 1.5}
           sx={(theme) => ({
             position: 'absolute',
             inset: 0,
@@ -147,6 +153,13 @@ export function BannerSlideCard({
             p: { xs: 2.4, sm: 3, md: 3.5 },
             alignItems: 'flex-end',
             justifyContent: 'space-between',
+            ...(bottomRightLabel
+              ? {
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 36%)',
+                  columnGap: 1.5,
+                }
+              : null),
             // Light mode: no bottom vignette on image slides.
             background: 'none',
             ...theme.applyStyles('dark', {
@@ -156,7 +169,16 @@ export function BannerSlideCard({
             }),
           })}
         >
-          <Stack spacing={0.35} sx={{ maxWidth: '88%', flex: 1, minWidth: 0, alignItems: 'flex-start' }}>
+          <Stack
+            spacing={0.35}
+            sx={{
+              maxWidth: bottomRightLabel ? 'none' : '88%',
+              flex: '1 1 0',
+              minWidth: 0,
+              width: '100%',
+              alignItems: 'flex-start',
+            }}
+          >
             {showTitle ? (
               <Typography
                 component="h2"
@@ -168,15 +190,19 @@ export function BannerSlideCard({
                   textAlign: 'left',
                   textShadow: '0 1px 18px rgba(0,0,0,0.35)',
                   display: '-webkit-box',
-                  WebkitLineClamp: 2,
+                  WebkitLineClamp: titleMaxLines,
                   WebkitBoxOrient: 'vertical',
+                  width: '100%',
+                  minWidth: 0,
                   overflow: 'hidden',
+                  whiteSpace: titleMaxLines === 1 ? 'nowrap' : 'normal',
+                  textOverflow: titleMaxLines === 1 ? 'ellipsis' : undefined,
                 }}
               >
                 {title}
               </Typography>
             ) : null}
-            {subtitle ? (
+            {subtitle && !bottomRightLabel ? (
               <Typography
                 sx={{
                   fontWeight: 700,
@@ -191,7 +217,27 @@ export function BannerSlideCard({
             ) : null}
           </Stack>
 
-          {href ? (
+          {bottomRightLabel ? (
+            <Typography
+              sx={{
+                width: '100%',
+                maxWidth: 'none',
+                flex: 'none',
+                minWidth: 0,
+                fontWeight: 800,
+                fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                lineHeight: 1.2,
+                color: 'primary.main',
+                textAlign: 'right',
+                textShadow: '0 1px 12px rgba(0,0,0,0.35)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {bottomRightLabel}
+            </Typography>
+          ) : href ? (
             <Box
               aria-hidden
               sx={{

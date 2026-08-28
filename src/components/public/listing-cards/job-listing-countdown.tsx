@@ -140,9 +140,9 @@ export function JobListingCountdownPlaceholder({
   const label = condensed ? COMPACT_PLACEHOLDER_LABEL : PLACEHOLDER_LABEL;
   if (bare) {
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#fff' }}>
         {showClock ? (
-          <ClockIcon size={14} weight="bold" color="#fff" className="listing-countdown-pulse-glyph" />
+          <ClockIcon size={14} weight="bold" color="currentColor" className="listing-countdown-pulse-glyph" />
         ) : null}
         <Typography
           component="span"
@@ -220,9 +220,9 @@ export function JobListingCountdown({
 
   if (bare) {
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#fff' }}>
         {showClock ? (
-          <ClockIcon size={14} weight="bold" color="#fff" className="listing-countdown-pulse-glyph" />
+          <ClockIcon size={14} weight="bold" color="currentColor" className="listing-countdown-pulse-glyph" />
         ) : null}
         <Typography
           component="span"

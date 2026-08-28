@@ -209,7 +209,8 @@ export function CategoryTopViewedSlider({
                   fallbackBg={BANNER_SLIDE_VISUALS[i % BANNER_SLIDE_VISUALS.length].bg}
                   eager={eager}
                   title={slide.title}
-                  subtitle={slide.subtitle}
+                  bottomRightLabel={slide.subtitle}
+                  titleMaxLines={1}
                 />
               );
             })}

@@ -1,6 +1,4 @@
 'use client';
-
-import * as React from 'react';
 import { ListingCardLink } from '@/components/public/listing-card-link';
 import { Box, Stack, Typography } from '@mui/material';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
@@ -48,19 +46,6 @@ export function CarCard({
   const transmissionLabel = findOptionLabel(TRANSMISSION_OPTIONS, listing.transmission);
   const colourLabel = findOptionLabel(CAR_COLOUR_OPTIONS, listing.color);
   const cardRating = resolveListingCardRating(null, sellerRating);
-
-  const keySpecs = React.useMemo(() => {
-    const items: string[] = [];
-    if (listing.year != null) items.push(String(listing.year));
-    if (listing.kilometers != null && Number.isFinite(Number(listing.kilometers))) {
-      items.push(formatKilometers(listing.kilometers));
-    }
-    if (fuelLabel) items.push(fuelLabel);
-    if (transmissionLabel) items.push(transmissionLabel);
-    return items;
-  }, [listing.year, listing.kilometers, fuelLabel, transmissionLabel]);
-
-  const specsText = keySpecs.join(' · ');
 
   const fullSpecs: Spec[] = [
     ...(listing.year != null ? [{ Icon: CalendarIcon, label: String(listing.year), title: 'Viti' }] : []),
@@ -142,51 +127,10 @@ export function CarCard({
             currency={listing.currency}
             isPremium={listing.isPremium}
             isOkazion={listing.isOkazion}
+            priceColor="success.main"
             fontSize="1rem"
           />
 
-          {cardRating ? (
-            <ListingCardRating
-              ratingAverage={cardRating.ratingAverage}
-              reviewCount={cardRating.reviewCount}
-            />
-          ) : null}
-
-          <Box sx={{ flex: 1 }} />
-
-          <Stack
-            direction="row"
-            sx={{
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 0.5,
-              pt: 0.15,
-            }}
-          >
-            {listing.cityName ? (
-              <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0, flex: 1 }}>
-                <MapPinIcon size={12} weight="regular" style={{ flexShrink: 0 }} />
-                <Typography
-                  variant="caption"
-                  noWrap
-                  sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '0.7rem' }}
-                >
-                  {listing.cityName}
-                </Typography>
-              </Stack>
-            ) : (
-              <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.7rem' }}>
-                {listingCardRelativeDate(listing)}
-              </Typography>
-            )}
-
-            <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}>
-              <EyeIcon size={12} weight="regular" />
-              <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.7rem' }}>
-                {new Intl.NumberFormat('en-GB').format(viewCount)}
-              </Typography>
-            </Stack>
-          </Stack>
         </Stack>
       ) : (
         <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>

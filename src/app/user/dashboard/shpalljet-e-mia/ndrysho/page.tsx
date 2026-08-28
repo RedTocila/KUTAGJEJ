@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Alert, Box, Stack, Typography } from '@mui/material';
+import { Alert, Stack } from '@mui/material';
 
 import { ContentBlockSkeleton } from '@/components/core/content-skeletons';
 import { BusinessOwnerEdit } from '@/components/user/owner-edit/business-owner-edit';
@@ -134,15 +134,6 @@ export default function EditListingPage() {
 
   return (
     <Stack spacing={2}>
-      <Stack spacing={0.35}>
-        <Typography variant="h5" component="h1" sx={{ fontWeight: 800 }}>
-          Ndrysho njoftimin
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Shihni si duket njoftimi publikisht dhe ndryshoni fotot ose të dhënat.
-        </Typography>
-      </Stack>
-
       {loading ? (
         <ContentBlockSkeleton rows={5} rowHeight={120} />
       ) : error ? (

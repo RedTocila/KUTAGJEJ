@@ -5,6 +5,8 @@ import {
   Alert,
   Box,
   Button,
+  Stack,
+  Typography,
 } from '@mui/material';
 import { FloppyDisk as FloppyDiskIcon } from '@phosphor-icons/react/dist/ssr/FloppyDisk';
 
@@ -30,6 +32,16 @@ export function ListingOwnerEditShell({
   aiAssist?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const [visibleSuccess, setVisibleSuccess] = React.useState(success);
+
+  React.useEffect(() => {
+    setVisibleSuccess(success);
+    if (!success) return;
+
+    const timeoutId = window.setTimeout(() => setVisibleSuccess(null), 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [success]);
+
   useOwnerEditHeaderActions(
     () => (
       <Button
@@ -55,16 +67,30 @@ export function ListingOwnerEditShell({
 
   return (
     <Box sx={{ maxWidth: 920, mx: 'auto', width: '100%', pb: 10 }}>
-      {aiAssist ? <Box sx={{ mb: 2 }}>{aiAssist}</Box> : null}
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          mb: 2,
+          gap: 1,
+        }}
+      >
+        <Typography variant="h5" component="h1" sx={{ fontWeight: 800 }}>
+          Ndrysho njoftimin
+        </Typography>
+        {aiAssist ? <Box sx={{ flexShrink: 0 }}>{aiAssist}</Box> : null}
+      </Stack>
 
       {error ? (
         <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
           {error}
         </Alert>
       ) : null}
-      {success ? (
+      {visibleSuccess ? (
         <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
-          {success}
+          {visibleSuccess}
         </Alert>
       ) : null}
 

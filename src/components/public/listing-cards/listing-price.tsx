@@ -1,9 +1,16 @@
 'use client';
 
 import * as React from 'react';
-import { Stack, Typography, type SxProps, type Theme } from '@mui/material';
+import dynamic from 'next/dynamic';
+import { Box, Stack, Typography, type SxProps, type Theme } from '@mui/material';
 
 import { formatPrice, listingPriceAccentColor } from './format-helpers';
+import { OkazionCountdownPlaceholder } from './okazion-countdown';
+
+const OkazionCountdown = dynamic(() => import('./okazion-countdown').then((m) => m.OkazionCountdown), {
+  ssr: false,
+  loading: () => <OkazionCountdownPlaceholder />,
+});
 
 /** Current price with optional strikethrough “was” compare price. */
 export function ListingPrice({
@@ -12,6 +19,9 @@ export function ListingPrice({
   currency,
   isPremium = false,
   isOkazion = false,
+  okazionUntil = null,
+  showOkazionCountdown = false,
+  trailing,
   suffix,
   fontSize = '1.1rem',
   fontWeight = 800,
@@ -22,6 +32,10 @@ export function ListingPrice({
   currency: string | null | undefined;
   isPremium?: boolean | null;
   isOkazion?: boolean | null;
+  okazionUntil?: string | null;
+  showOkazionCountdown?: boolean;
+  /** Optional item rendered at the end of the price row. */
+  trailing?: React.ReactNode;
   /** e.g. ` / muaj` after the current price. */
   suffix?: React.ReactNode;
   fontSize?: string | number;
@@ -35,8 +49,11 @@ export function ListingPrice({
     Number.isFinite(price) &&
     originalPrice > price;
 
-  return (
-    <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', flexWrap: 'wrap', ...((sx as object) || {}) }}>
+  const priceAccessory =
+    trailing ?? (showOkazionCountdown ? <OkazionCountdown expiresAt={okazionUntil} compact={showWas} /> : null);
+
+  const priceContent = (
+    <>
       <Typography
         sx={{
           fontWeight,
@@ -62,6 +79,33 @@ export function ListingPrice({
           {formatPrice(originalPrice, currency)}
         </Typography>
       ) : null}
+    </>
+  );
+
+  if (!priceAccessory) {
+    return (
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', flexWrap: 'wrap', ...((sx as object) || {}) }}>
+        {priceContent}
+      </Stack>
+    );
+  }
+
+  return (
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{
+        alignItems: priceAccessory ? 'center' : 'baseline',
+        justifyContent: priceAccessory ? 'space-between' : undefined,
+        flexWrap: priceAccessory ? 'nowrap' : 'wrap',
+        minWidth: 0,
+        ...((sx as object) || {}),
+      }}
+    >
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', flexWrap: 'wrap', minWidth: 0 }}>
+        {priceContent}
+      </Stack>
+      {priceAccessory ? <Box sx={{ flexShrink: 0, lineHeight: 0 }}>{priceAccessory}</Box> : null}
     </Stack>
   );
 }

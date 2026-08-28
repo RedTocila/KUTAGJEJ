@@ -4,14 +4,16 @@ import * as React from 'react';
 import { Chip, type SxProps, type Theme } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 
-import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
 import {
   formatJobListingCountdown,
+  getJobCountdownParts,
   getJobListingCountdownUrgency,
   type JobListingCountdownUrgency,
 } from '@/lib/job-listing-expiry';
+import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
 
 const PLACEHOLDER_LABEL = '0d 0h 00m 00s';
+const COMPACT_PLACEHOLDER_LABEL = '0d';
 
 export type JobListingCountdownVariant = 'default' | 'overlay' | 'compact';
 
@@ -112,17 +114,27 @@ function tickState(expiresAt: string, now: Date) {
   };
 }
 
+function formatCompactCountdown(expiresAt: string, now: Date): string {
+  const parts = getJobCountdownParts(expiresAt, now);
+  if (parts.expired) return '0h';
+  if (parts.days > 0) return `${parts.days}d`;
+  if (parts.hours > 0) return `${parts.hours}h`;
+  return `${Math.max(1, parts.minutes)}m`;
+}
+
 export function JobListingCountdownPlaceholder({
   chipSx,
   variant = 'default',
+  condensed = false,
 }: {
   chipSx?: SxProps<Theme>;
   variant?: JobListingCountdownVariant;
+  condensed?: boolean;
 }) {
   const overlay = variant === 'overlay';
   return (
     <Chip
-      label={PLACEHOLDER_LABEL}
+      label={condensed ? COMPACT_PLACEHOLDER_LABEL : PLACEHOLDER_LABEL}
       size="small"
       aria-hidden
       sx={{
@@ -138,10 +150,12 @@ export function JobListingCountdown({
   expiresAt,
   chipSx,
   variant = 'default',
+  condensed = false,
 }: {
   expiresAt: string;
   chipSx?: SxProps<Theme>;
   variant?: JobListingCountdownVariant;
+  condensed?: boolean;
 }) {
   const overlay = variant === 'overlay';
   const [mounted, setMounted] = React.useState(false);
@@ -152,10 +166,12 @@ export function JobListingCountdown({
   }, []);
 
   if (!mounted) {
-    return <JobListingCountdownPlaceholder chipSx={chipSx} variant={variant} />;
+    return <JobListingCountdownPlaceholder chipSx={chipSx} variant={variant} condensed={condensed} />;
   }
 
-  const { label, urgency } = tickState(expiresAt, new Date(nowMs || Date.now()));
+  const now = new Date(nowMs ?? 0);
+  const { urgency } = tickState(expiresAt, now);
+  const label = condensed ? formatCompactCountdown(expiresAt, now) : formatJobListingCountdown(expiresAt, now);
 
   return (
     <Chip

@@ -1,36 +1,32 @@
 'use client';
 
 import * as React from 'react';
-import { ListingCardLink } from '@/components/public/listing-card-link';
 import { Box, Stack, Typography } from '@mui/material';
 import { Bathtub as BathtubIcon } from '@phosphor-icons/react/dist/ssr/Bathtub';
 import { Bed as BedIcon } from '@phosphor-icons/react/dist/ssr/Bed';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
 import { Couch as CouchIcon } from '@phosphor-icons/react/dist/ssr/Couch';
+import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
-import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Stairs as StairsIcon } from '@phosphor-icons/react/dist/ssr/Stairs';
 
-import { useCopy } from '@/hooks/use-copy';
-import { useLanguage } from '@/hooks/use-language';
+import { listingRealEstatePublicHref } from '@/paths';
 import type { PublicRealEstateListing } from '@/lib/public-listings-client';
 import { propertyCategoryLabel } from '@/lib/real-estate-constants';
-import { listingRealEstatePublicHref } from '@/paths';
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
+import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { CardDescription } from './card-description';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
 import { formatPrice, listingCardRelativeDate } from './format-helpers';
-import { ListingTitleWithVerified } from './listing-title-with-verified';
+import { ListingCardRating, resolveListingCardRating, type ListingCardRatingSummary } from './listing-card-rating';
 import { ListingPrice } from './listing-price';
-import {
-  ListingCardRating,
-  resolveListingCardRating,
-  type ListingCardRatingSummary,
-} from './listing-card-rating';
+import { ListingTitleWithVerified } from './listing-title-with-verified';
 import { SpecRow, type Spec } from './spec-row';
 
 export function RealEstateCard({
@@ -46,11 +42,7 @@ export function RealEstateCard({
   const { language } = useLanguage();
   const location = [listing.zoneName, listing.cityName].filter(Boolean).join(', ');
   const transactionLabel =
-    listing.transactionType === 'rent'
-      ? t.common.forRent
-      : listing.transactionType === 'sale'
-        ? t.common.forSale
-        : '';
+    listing.transactionType === 'rent' ? t.common.forRent : listing.transactionType === 'sale' ? t.common.forSale : '';
   const viewCount = listing.viewCount ?? 0;
   const cardRating = resolveListingCardRating(null, sellerRating);
   const categoryLabel = propertyCategoryLabel(listing.propertyCategory, language);
@@ -67,11 +59,15 @@ export function RealEstateCard({
 
   const specs: Spec[] = [
     ...(listing.bedrooms != null ? [{ Icon: BedIcon, label: `${listing.bedrooms}`, title: t.browse.bedrooms }] : []),
-    ...(listing.bathrooms != null ? [{ Icon: BathtubIcon, label: `${listing.bathrooms}`, title: t.browse.bathrooms }] : []),
+    ...(listing.bathrooms != null
+      ? [{ Icon: BathtubIcon, label: `${listing.bathrooms}`, title: t.browse.bathrooms }]
+      : []),
     ...(listing.surfaceM2 != null && Number(listing.surfaceM2) > 0
       ? [{ Icon: RulerIcon, label: `${listing.surfaceM2} m²`, title: t.browse.surface }]
       : []),
-    ...(listing.floor != null ? [{ Icon: StairsIcon, label: t.browse.floorN(listing.floor), title: t.browse.floorN(listing.floor) }] : []),
+    ...(listing.floor != null
+      ? [{ Icon: StairsIcon, label: t.browse.floorN(listing.floor), title: t.browse.floorN(listing.floor) }]
+      : []),
     ...(listing.yearBuilt != null
       ? [{ Icon: CalendarIcon, label: String(listing.yearBuilt), title: t.browse.yearBuilt }]
       : []),
@@ -91,9 +87,7 @@ export function RealEstateCard({
       : []),
     ...(listing.floor != null ? [{ icon: 'stairs' as const, label: t.browse.floorN(listing.floor) }] : []),
     ...(listing.yearBuilt != null ? [{ icon: 'calendar' as const, label: String(listing.yearBuilt) }] : []),
-    ...(listing.furnishing
-      ? [{ icon: 'couch' as const, label: furnishingLabel ?? listing.furnishing }]
-      : []),
+    ...(listing.furnishing ? [{ icon: 'couch' as const, label: furnishingLabel ?? listing.furnishing }] : []),
   ];
 
   return (
@@ -121,8 +115,9 @@ export function RealEstateCard({
           saveCount={listing.saveCount}
           saved={listing.saved}
           premium={Boolean(listing.isPremium)}
-        okazion={Boolean(listing.isOkazion)}
-        okazionUntil={listing.okazionUntil}
+          okazion={Boolean(listing.isOkazion)}
+          okazionUntil={listing.okazionUntil}
+          aspectRatio="4 / 3"
           priority={imagePriority}
           sharePayload={{
             title: listing.title,
@@ -140,70 +135,63 @@ export function RealEstateCard({
           }}
         />
         <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
-        >
-          {categoryLabel}
-        </Typography>
-        <ListingTitleWithVerified
-          id={`listing-card-title-${listing.id}`}
-          title={listing.title}
-          verified={Boolean(listing.sellerVerified)}
-          trustBadge={Boolean(listing.sellerTrustBadge)}
-        />
-        {cardRating ? (
-          <ListingCardRating
-            ratingAverage={cardRating.ratingAverage}
-            reviewCount={cardRating.reviewCount}
+          <ListingTitleWithVerified
+            id={`listing-card-title-${listing.id}`}
+            title={listing.title}
+            maxLines={1}
+            verified={false}
+            trustBadge={false}
           />
-        ) : null}
-        <ListingPrice
-          price={listing.price}
-          originalPrice={listing.originalPrice}
-          currency={listing.currency}
-          isPremium={listing.isPremium}
-          isOkazion={listing.isOkazion}
-          suffix={
-            listing.transactionType === 'rent' ? (
-              <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 500 }}>
-                {t.browse.perMonth}
+          {cardRating ? (
+            <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
+          ) : null}
+          <ListingPrice
+            price={listing.price}
+            originalPrice={listing.originalPrice}
+            currency={listing.currency}
+            isPremium={listing.isPremium}
+            isOkazion={listing.isOkazion}
+            okazionUntil={listing.okazionUntil}
+            showOkazionCountdown={Boolean(listing.isOkazion)}
+            suffix={
+              listing.transactionType === 'rent' ? (
+                <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 500 }}>
+                  {t.browse.perMonth}
+                </Typography>
+              ) : null
+            }
+          />
+
+          <CardDescription text={listing.description} />
+
+          <SpecRow specs={specs} />
+
+          {location ? (
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
+              <MapPinIcon size={14} weight="regular" />
+              <Typography
+                variant="caption"
+                noWrap
+                sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
+              >
+                {location}
               </Typography>
-            ) : null
-          }
-        />
+            </Stack>
+          ) : null}
 
-        <CardDescription text={listing.description} />
+          <Box sx={{ flex: 1 }} />
 
-        <SpecRow specs={specs} />
-
-        {location ? (
-          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
-            <MapPinIcon size={14} weight="regular" />
-            <Typography
-              variant="caption"
-              noWrap
-              sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
-            >
-              {location}
-            </Typography>
-          </Stack>
-        ) : null}
-
-        <Box sx={{ flex: 1 }} />
-
-        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="caption" color="text.disabled">
-            {listingCardRelativeDate(listing)}
-          </Typography>
-          <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-            <EyeIcon size={14} weight="regular" />
+          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="caption" color="text.disabled">
-              {new Intl.NumberFormat('en-GB').format(viewCount)}
+              {listingCardRelativeDate(listing)}
             </Typography>
+            <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+              <EyeIcon size={14} weight="regular" />
+              <Typography variant="caption" color="text.disabled">
+                {new Intl.NumberFormat('en-GB').format(viewCount)}
+              </Typography>
+            </Stack>
           </Stack>
-        </Stack>
         </Stack>
       </CardShell>
     </ListingCardLink>

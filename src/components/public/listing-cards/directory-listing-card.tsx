@@ -1,36 +1,32 @@
 'use client';
 
 import * as React from 'react';
-import { ListingCardLink } from '@/components/public/listing-card-link';
 import { Box, Stack, Typography } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { CalendarCheck as CalendarCheckIcon } from '@phosphor-icons/react/dist/ssr/CalendarCheck';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
+import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
-import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 
+import { listingBusinessPublicHref, listingProfessionalPublicHref } from '@/paths';
 import { MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import type { PublicDirectoryListing } from '@/lib/public-listings-client';
-import { listingBusinessPublicHref, listingProfessionalPublicHref } from '@/paths';
+import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { BusinessPromoBanner } from './business-promo-banner';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
-
 import {
   findOptionLabel,
   formatBusinessOpeningHoursForCard,
   listingCardRelativeDate,
   listingPriceAccentColor,
 } from './format-helpers';
-import { ListingCardRating,
-  resolveListingCardRating,
-  type ListingCardRatingSummary,
-} from './listing-card-rating';
+import { ListingCardRating, resolveListingCardRating, type ListingCardRatingSummary } from './listing-card-rating';
 import { ListingTitleWithVerified } from './listing-title-with-verified';
 import { SpecRow, type Spec } from './spec-row';
 
@@ -50,9 +46,7 @@ function BusinessVenueCardBody({
   const viewCount = listing.viewCount ?? 0;
   const cardRating = resolveListingCardRating(listing, sellerRating);
 
-  const openingHoursLabel = listing.openingHours
-    ? formatBusinessOpeningHoursForCard(listing.openingHours)
-    : null;
+  const openingHoursLabel = listing.openingHours ? formatBusinessOpeningHoursForCard(listing.openingHours) : null;
 
   const topBadge = listing.reservationsEnabled ? 'Rezervim' : undefined;
 
@@ -70,6 +64,7 @@ function BusinessVenueCardBody({
           imageUrl={listing.imageUrl}
           FallbackIcon={StorefrontIcon}
           alt={listing.title}
+          aspectRatio="4 / 3"
           topLeftBadge={topBadge}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
@@ -109,17 +104,11 @@ function BusinessVenueCardBody({
           }
         />
         <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
-          >
-            {listing.categoryLabel}
-          </Typography>
           <ListingTitleWithVerified
             title={listing.title}
-            verified={Boolean(listing.sellerVerified)}
-            trustBadge={Boolean(listing.sellerTrustBadge)}
+            maxLines={1}
+            verified={false}
+            trustBadge={false}
             typographySx={
               listing.isPremium || listing.isOkazion
                 ? { color: listingPriceAccentColor({ isPremium: listing.isPremium, isOkazion: listing.isOkazion }) }
@@ -128,10 +117,7 @@ function BusinessVenueCardBody({
           />
 
           {cardRating ? (
-            <ListingCardRating
-              ratingAverage={cardRating.ratingAverage}
-              reviewCount={cardRating.reviewCount}
-            />
+            <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
           ) : null}
 
           {listing.servicesHighlight ? (
@@ -236,9 +222,7 @@ function ProfessionalListingCardBody({
           {
             Icon: ClockIcon,
             label:
-              listing.responseTimeHours === 1
-                ? 'Përgjigje në 1 orë'
-                : `Përgjigje në ${listing.responseTimeHours} orë`,
+              listing.responseTimeHours === 1 ? 'Përgjigje në 1 orë' : `Përgjigje në ${listing.responseTimeHours} orë`,
             title: 'Koha e përgjigjes',
           },
         ]
@@ -259,6 +243,7 @@ function ProfessionalListingCardBody({
           imageUrl={listing.imageUrl}
           FallbackIcon={BriefcaseIcon}
           alt={listing.title}
+          aspectRatio="4 / 3"
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
@@ -318,17 +303,11 @@ function ProfessionalListingCardBody({
           }
         />
         <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}
-          >
-            {listing.categoryLabel}
-          </Typography>
           <ListingTitleWithVerified
             title={listing.title}
-            verified={Boolean(listing.sellerVerified)}
-            trustBadge={Boolean(listing.sellerTrustBadge)}
+            maxLines={1}
+            verified={false}
+            trustBadge={false}
             typographySx={
               listing.isPremium || listing.isOkazion
                 ? { color: listingPriceAccentColor({ isPremium: listing.isPremium, isOkazion: listing.isOkazion }) }
@@ -336,10 +315,7 @@ function ProfessionalListingCardBody({
             }
           />
           {cardRating ? (
-            <ListingCardRating
-              ratingAverage={cardRating.ratingAverage}
-              reviewCount={cardRating.reviewCount}
-            />
+            <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
           ) : null}
           <SpecRow specs={specs} />
 

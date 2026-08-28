@@ -22,6 +22,7 @@ import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { ImageLightbox } from '@/components/common/image-lightbox';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { HomeVerticalIcon } from '@/components/public/home-vertical-icon';
 import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-panel';
 import { PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
@@ -1466,11 +1467,7 @@ export default function AiImportListingsPage() {
 
           {loading ? <AiImportAnalyzingText progress={progress} t={t} /> : null}
 
-          {statusMessage ? (
-            <Alert severity="success" sx={{ borderRadius: 2.25 }}>
-              {statusMessage}
-            </Alert>
-          ) : null}
+          <TransientSuccessAlert message={statusMessage} onDismiss={() => setStatusMessage(null)} sx={{ borderRadius: 2.25 }} />
           {drafts.map((draft) => {
             const mismatch = isAiCategoryMismatch(draft);
             const restricted = isAiContentRestricted(draft);

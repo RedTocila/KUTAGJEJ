@@ -351,6 +351,7 @@ export function MarketplaceOwnerEdit({
       <OwnerEditSectionDialog
         open={photosOpen}
         title="Fotot"
+        reorderable
         onClose={() => setPhotosOpen(false)}
         onApply={async () => {
           const res = await commitListingPhotos({

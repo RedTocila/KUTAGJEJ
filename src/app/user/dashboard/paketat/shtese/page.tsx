@@ -4,11 +4,11 @@ import * as React from 'react';
 import { Stack } from '@mui/material';
 import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 
-import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
-import { BoostBalanceChip, ExtraPackagesPanel } from '@/components/user/packages/extra-packages-panel';
-import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
+import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
+import { UserPageHeader } from '@/components/user/layout/user-page-header';
+import { BoostBalanceChip, ExtraPackagesPanel } from '@/components/user/packages/extra-packages-panel';
 
 export default function ExtraPackagesPage() {
   const { user } = useUser();
@@ -22,7 +22,6 @@ export default function ExtraPackagesPage() {
       <UserPageHeader
         icon={<SquaresFourIcon size={20} weight="duotone" />}
         title={t.nav.packagesExtra}
-        description={t.packages.extraDescription}
         action={<BoostBalanceChip balance={balance} />}
       />
       <React.Suspense fallback={<PackageRowsSkeleton count={4} rowHeight={200} />}>

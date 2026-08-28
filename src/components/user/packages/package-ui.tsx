@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import { Box, Button, ButtonBase, Chip, Collapse, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import { alpha, type Theme } from '@mui/material/styles';
-import { Box, ButtonBase, Chip, Collapse, IconButton, Stack, Tooltip, Typography } from '@mui/material';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
 import { Check as CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
@@ -11,10 +12,9 @@ import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 import { Question as QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question';
 import { RocketLaunch as RocketLaunchIcon } from '@phosphor-icons/react/dist/ssr/RocketLaunch';
 import { Trophy as TrophyIcon } from '@phosphor-icons/react/dist/ssr/Trophy';
-import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
-import { OKAZION_RED } from '@/lib/home-categories';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { OKAZION_RED } from '@/lib/home-categories';
 import { applyLifetimeDiscount } from '@/hooks/use-lifetime-package-discount';
 
 /** Theme palette key or raw CSS color (hex / rgb). */
@@ -107,10 +107,7 @@ export function PackageEurPrice({
   const discounted = applyLifetimeDiscount(listPrice, p);
   if (p <= 0 || discounted >= listPrice) return <>{formatEur(listPrice)}</>;
   return (
-    <Box
-      component="span"
-      sx={{ display: 'inline-flex', alignItems: 'baseline', columnGap: 0.65, flexWrap: 'wrap' }}
-    >
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'baseline', columnGap: 0.65, flexWrap: 'wrap' }}>
       <Box
         component="span"
         sx={{
@@ -122,10 +119,7 @@ export function PackageEurPrice({
       >
         {formatEur(listPrice)}
       </Box>
-      <Box
-        component="span"
-        sx={onAccent ? { color: 'common.black', fontWeight: 900 } : undefined}
-      >
+      <Box component="span" sx={onAccent ? { color: 'common.black', fontWeight: 900 } : undefined}>
         {formatEur(discounted)}
       </Box>
     </Box>
@@ -173,9 +167,7 @@ export function PlanCard({
         p: compact ? { xs: 1.5, sm: 1.75 } : { xs: 2.25, sm: 2.5 },
         borderRadius: compact ? 2.5 : 3.5,
         border: '1px solid',
-        borderColor: highlighted
-          ? (t) => alpha(resolveAccent(t, accent), 0.55)
-          : 'divider',
+        borderColor: highlighted ? (t) => alpha(resolveAccent(t, accent), 0.55) : 'divider',
         bgcolor: 'background.paper',
         boxShadow: 'none',
         transition: 'transform 0.15s ease, border-color 0.15s ease',
@@ -416,6 +408,99 @@ export function FeatureList({
   );
 }
 
+export type PurchasedVoucher = {
+  id: string;
+  days: number;
+};
+
+/** Compactly groups identical purchased vouchers instead of repeating a full card for each one. */
+export function PurchasedVoucherStack<T extends PurchasedVoucher>({
+  vouchers,
+  accent = 'primary',
+  label,
+  actionLabel = 'Zgjidh njoftimin',
+  onSelect,
+}: {
+  vouchers: T[];
+  accent?: PlanAccent;
+  label: (days: number, count: number) => React.ReactNode;
+  actionLabel?: string;
+  onSelect: (voucher: T) => void;
+}) {
+  const groups = React.useMemo(() => {
+    const grouped = new Map<number, T[]>();
+    for (const voucher of vouchers) {
+      const current = grouped.get(voucher.days) ?? [];
+      current.push(voucher);
+      grouped.set(voucher.days, current);
+    }
+    return [...grouped.entries()].sort(([daysA], [daysB]) => daysA - daysB);
+  }, [vouchers]);
+
+  if (groups.length === 0) return null;
+
+  return (
+    <Stack spacing={0.75}>
+      {groups.map(([days, group]) => (
+        <Stack
+          key={days}
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+            p: 1,
+            borderRadius: 2,
+            border: '1px dashed',
+            borderColor: (theme) => alpha(resolveAccent(theme, accent), 0.6),
+            bgcolor: (theme) => alpha(resolveAccent(theme, accent), theme.palette.mode === 'dark' ? 0.12 : 0.06),
+          }}
+        >
+          <Box sx={{ position: 'relative', width: 30, height: 30, flexShrink: 0 }}>
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: '4px 0 0 4px',
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: (theme) => alpha(resolveAccent(theme, accent), 0.35),
+                bgcolor: 'background.paper',
+              }}
+            />
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: '1px 4px 3px 1px',
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: (theme) => resolveAccent(theme, accent),
+                bgcolor: 'background.paper',
+                display: 'grid',
+                placeItems: 'center',
+                color: (theme) => resolveAccent(theme, accent),
+                fontWeight: 900,
+                fontSize: '0.72rem',
+              }}
+            >
+              {group.length}
+            </Box>
+          </Box>
+          <Typography sx={{ minWidth: 0, flex: 1, fontWeight: 750, fontSize: '0.78rem', lineHeight: 1.25 }}>
+            {label(days, group.length)}
+          </Typography>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => onSelect(group[0])}
+            sx={{ ...accentButtonSx(accent, 'outlined'), flexShrink: 0, minHeight: 34, px: 1.25, fontSize: '0.72rem' }}
+          >
+            {actionLabel}
+          </Button>
+        </Stack>
+      ))}
+    </Stack>
+  );
+}
+
 /** Collapsed-by-default feature list — keeps package cards short. */
 export function FeatureDetailsDropdown({
   items,
@@ -578,9 +663,7 @@ export function PackageOfferRow({
                 </Typography>
               ) : null}
               {meta ? (
-                <Typography sx={{ fontWeight: 650, fontSize: '0.75rem', color: 'text.secondary' }}>
-                  · {meta}
-                </Typography>
+                <Typography sx={{ fontWeight: 650, fontSize: '0.75rem', color: 'text.secondary' }}>· {meta}</Typography>
               ) : null}
             </Stack>
           ) : null}
@@ -673,11 +756,7 @@ export function PackageCheckoutCard({
 
   const titleRow = (
     <Box sx={{ minWidth: 0, flex: 1 }}>
-      <Stack
-        direction="row"
-        spacing={0.75}
-        sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.55 }}
-      >
+      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.55 }}>
         <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', minWidth: 0 }}>
           <Typography
             sx={{
@@ -711,8 +790,7 @@ export function PackageCheckoutCard({
                     color: (t: Theme) => accentContrast(t, accent),
                   }
                 : {
-                    bgcolor: (t: Theme) =>
-                      alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.25 : 0.14),
+                    bgcolor: (t: Theme) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.25 : 0.14),
                     color: (t: Theme) => resolveAccent(t, accent),
                     border: '1px solid',
                     borderColor: (t: Theme) => alpha(resolveAccent(t, accent), 0.45),
@@ -729,9 +807,7 @@ export function PackageCheckoutCard({
   const interactiveSx = {
     borderColor: (t: Theme) => alpha(resolveAccent(t, accent), 0.55),
     bgcolor: (t: Theme) =>
-      t.palette.mode === 'dark'
-        ? alpha(resolveAccent(t, accent), 0.12)
-        : alpha(resolveAccent(t, accent), 0.06),
+      t.palette.mode === 'dark' ? alpha(resolveAccent(t, accent), 0.12) : alpha(resolveAccent(t, accent), 0.06),
   };
 
   const selectedSx = selected
@@ -739,9 +815,7 @@ export function PackageCheckoutCard({
         borderColor: (t: Theme) => resolveAccent(t, accent),
         borderWidth: '1.5px',
         bgcolor: (t: Theme) =>
-          t.palette.mode === 'dark'
-            ? alpha(resolveAccent(t, accent), 0.1)
-            : alpha(resolveAccent(t, accent), 0.05),
+          t.palette.mode === 'dark' ? alpha(resolveAccent(t, accent), 0.1) : alpha(resolveAccent(t, accent), 0.05),
       }
     : null;
 
@@ -760,9 +834,7 @@ export function PackageCheckoutCard({
         <Typography
           sx={{
             fontWeight: 900,
-            fontSize: compactPrice
-              ? { xs: '1.15rem', sm: '1.25rem' }
-              : { xs: '1.55rem', sm: '1.85rem' },
+            fontSize: compactPrice ? { xs: '1.15rem', sm: '1.25rem' } : { xs: '1.55rem', sm: '1.85rem' },
             lineHeight: 1,
             letterSpacing: compactPrice ? '-0.02em' : '-0.04em',
             color: 'text.primary',
@@ -923,7 +995,7 @@ export function PackageCheckoutCard({
                         : 0.12
                       : accent === 'warning'
                         ? 0.18
-                        : 0.08,
+                        : 0.08
                   ),
                 color: (t) => resolveAccent(t, accent),
               }}
@@ -1213,13 +1285,17 @@ export function ExtraPackageCard({
           {actions}
         </Stack>
         {footer ? (
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ display: 'block', mt: 1.15, lineHeight: 1.4, fontWeight: 550 }}
-          >
-            {footer}
-          </Typography>
+          typeof footer === 'string' ? (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: 'block', mt: 1.15, lineHeight: 1.4, fontWeight: 550 }}
+            >
+              {footer}
+            </Typography>
+          ) : (
+            <Box sx={{ mt: 1.15 }}>{footer}</Box>
+          )
         ) : null}
       </Box>
     </Box>
@@ -1253,7 +1329,9 @@ export function PackageGroupHeader({
       >
         {title}
       </Typography>
-      {chips ? <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, justifyContent: 'flex-end' }}>{chips}</Box> : null}
+      {chips ? (
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, justifyContent: 'flex-end' }}>{chips}</Box>
+      ) : null}
     </Stack>
   );
 }
@@ -1317,8 +1395,7 @@ export function SectionBlock({
         borderColor: 'divider',
         bgcolor: 'background.paper',
         overflow: 'hidden',
-        boxShadow: (t) =>
-          t.palette.mode === 'dark' ? 'none' : `0 1px 0 ${alpha(t.palette.common.black, 0.03)}`,
+        boxShadow: (t) => (t.palette.mode === 'dark' ? 'none' : `0 1px 0 ${alpha(t.palette.common.black, 0.03)}`),
       }}
     >
       <Box
@@ -1402,11 +1479,7 @@ export function SectionBlock({
               ) : null}
             </Stack>
             {description ? (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mt: 0.35, fontSize: '0.8rem', lineHeight: 1.4 }}
-              >
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35, fontSize: '0.8rem', lineHeight: 1.4 }}>
                 {description}
               </Typography>
             ) : null}

@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import {
   exclusiveLocationPayload,
   inferListingLocationMode,
@@ -443,11 +444,7 @@ export function BusinessListingForm({
   return (
     <Box component="form" ref={formRef} onSubmit={(e) => void handleSubmit(e)}>
       <Stack spacing={2.25}>
-        {saveNotice ? (
-          <Alert severity="success" sx={{ borderRadius: 2 }} onClose={() => setSaveNotice(null)}>
-            {saveNotice}
-          </Alert>
-        ) : null}
+        <TransientSuccessAlert message={saveNotice} onDismiss={() => setSaveNotice(null)} sx={{ borderRadius: 2 }} />
         {createdPending ? <ListingSubmittedPendingAlert /> : null}
         {existingId && !createdPending ? (
           <Alert severity="info" sx={{ borderRadius: 2 }}>

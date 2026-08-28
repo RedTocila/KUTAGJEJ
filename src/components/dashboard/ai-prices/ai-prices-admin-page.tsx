@@ -5,6 +5,7 @@ import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material'
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 
 import { ContentBlockSkeleton } from '@/components/core/content-skeletons';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { usePlatformAdminGuard } from '@/hooks/use-platform-admin';
 import { fetchAdminAiPrices, saveAdminAiPrices, type AdminAiPrices } from '@/lib/admin-ai-prices-client';
@@ -95,11 +96,7 @@ export function AiPricesAdminPage() {
           {error}
         </Alert>
       ) : null}
-      {saved ? (
-        <Alert severity="success" sx={{ borderRadius: 2 }} onClose={() => setSaved(false)}>
-          Çmimet u ruajtën.
-        </Alert>
-      ) : null}
+      <TransientSuccessAlert message={saved ? 'Çmimet u ruajtën.' : null} onDismiss={() => setSaved(false)} sx={{ borderRadius: 2 }} />
 
       <Box sx={{ ...productPanelSx, p: 2.5, maxWidth: 560 }}>
         {loading ? (

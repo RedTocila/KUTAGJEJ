@@ -19,6 +19,7 @@ import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-panel';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { useCopy } from '@/hooks/use-copy';
 import { useBottomSheetDismiss } from '@/hooks/use-bottom-sheet-dismiss';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
@@ -642,11 +643,7 @@ export function PostListingAiAssist({
                 {error}
               </Alert>
             ) : null}
-            {success ? (
-              <Alert severity="success" sx={{ borderRadius: 2.5, py: 0 }}>
-                {success}
-              </Alert>
-            ) : null}
+            <TransientSuccessAlert message={success} sx={{ borderRadius: 2.5, py: 0 }} />
           </Stack>
         </Box>
       </Drawer>

@@ -23,6 +23,7 @@ import {
 } from '@/components/core/product-dialog';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { ContentBlockSkeleton } from '@/components/core/content-skeletons';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { PortalIconBox, PortalSectionCard, portalToggleGroupSx } from '@/components/user/portal-cards';
 import { useCopy } from '@/hooks/use-copy';
@@ -206,11 +207,11 @@ export default function MyPaymentsPage() {
         </Alert>
       ) : null}
 
-      {cancelSuccess ? (
-        <Alert severity="success" sx={{ borderRadius: 2.5 }} onClose={() => setCancelSuccess(null)}>
-          {cancelSuccess}
-        </Alert>
-      ) : null}
+      <TransientSuccessAlert
+        message={cancelSuccess}
+        onDismiss={() => setCancelSuccess(null)}
+        sx={{ borderRadius: 2.5 }}
+      />
 
       {loading ? (
         <ContentBlockSkeleton rows={5} rowHeight={96} />

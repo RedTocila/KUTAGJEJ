@@ -256,12 +256,6 @@ export function BusinessMenuEditor({
   }, [listing]);
 
   React.useEffect(() => {
-    if (!success) return;
-    const t = window.setTimeout(() => setSuccess(null), 4000);
-    return () => window.clearTimeout(t);
-  }, [success]);
-
-  React.useEffect(() => {
     if (!aiBusy) return;
     const onLeave = (e: BeforeUnloadEvent) => {
       e.preventDefault();

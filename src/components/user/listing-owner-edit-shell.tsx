@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { FloppyDisk as FloppyDiskIcon } from '@phosphor-icons/react/dist/ssr/FloppyDisk';
 
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { useOwnerEditHeaderActions } from '@/components/user/owner-edit-header-actions';
 
 export function ListingOwnerEditShell({
@@ -32,16 +33,6 @@ export function ListingOwnerEditShell({
   aiAssist?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const [visibleSuccess, setVisibleSuccess] = React.useState(success);
-
-  React.useEffect(() => {
-    setVisibleSuccess(success);
-    if (!success) return;
-
-    const timeoutId = window.setTimeout(() => setVisibleSuccess(null), 4000);
-    return () => window.clearTimeout(timeoutId);
-  }, [success]);
-
   useOwnerEditHeaderActions(
     () => (
       <Button
@@ -88,11 +79,7 @@ export function ListingOwnerEditShell({
           {error}
         </Alert>
       ) : null}
-      {visibleSuccess ? (
-        <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
-          {visibleSuccess}
-        </Alert>
-      ) : null}
+      <TransientSuccessAlert message={success} sx={{ mb: 2, borderRadius: 2 }} />
 
       {children}
     </Box>

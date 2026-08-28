@@ -2,14 +2,11 @@
 
 import { OKAZION_ACCENT } from '@/lib/home-categories';
 
-/** Price/salary color: OKAZION red, else Premium amber, else primary. */
-export function listingPriceAccentColor(flags: {
-  isPremium?: boolean | null;
-  isOkazion?: boolean | null;
-}): string {
+/** Price/salary color: OKAZION red, else Premium amber, else platform green. */
+export function listingPriceAccentColor(flags: { isPremium?: boolean | null; isOkazion?: boolean | null }): string {
   if (flags.isOkazion) return OKAZION_ACCENT;
-  if (flags.isPremium) return 'warning.main';
-  return 'primary.main';
+  if (flags.isPremium) return 'var(--mui-palette-warning-main)';
+  return 'var(--mui-palette-primary-main)';
 }
 
 export function formatPrice(value: number | null | undefined, currency: string | null | undefined): string {
@@ -41,10 +38,7 @@ export function relativeAlbanianDate(iso: string): string {
 }
 
 /** Card footer time: prefer last bump/reorder, else publish date. */
-export function listingCardRelativeDate(listing: {
-  bumpedAt?: string | null;
-  createdAt: string;
-}): string {
+export function listingCardRelativeDate(listing: { bumpedAt?: string | null; createdAt: string }): string {
   return relativeAlbanianDate(listing.bumpedAt || listing.createdAt);
 }
 
@@ -61,7 +55,7 @@ export function postedLabelSq(iso: string): string {
 
 export function findOptionLabel<T extends { value: string; label: string }>(
   options: readonly T[],
-  value: string | null | undefined,
+  value: string | null | undefined
 ): string {
   if (!value) return '—';
   return options.find((option) => option.value === value)?.label ?? value;
@@ -71,7 +65,10 @@ export function findOptionLabel<T extends { value: string; label: string }>(
  * Minimal opening hours for business cards — primary schedule only, one short line.
  */
 export function formatBusinessOpeningHoursForCard(raw: string): string {
-  const normalized = raw.replace(/\s+/g, ' ').trim().replace(/\bDiele\b/gi, 'Dielë');
+  const normalized = raw
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\bDiele\b/gi, 'Dielë');
   const primary = normalized.split('·')[0]?.trim() ?? normalized;
   return primary.replace(/,\s*.*/, '').trim();
 }

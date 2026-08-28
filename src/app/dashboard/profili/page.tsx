@@ -14,6 +14,7 @@ import {
 import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGear';
 
 import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { authClient } from '@/lib/auth/client';
 import { useUser } from '@/hooks/use-user';
 import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
@@ -155,8 +156,10 @@ export default function AdminProfilePage() {
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
                 Të dhënat
               </Typography>
-              {profileMsg ? (
-                <Alert severity={profileMsg.type} sx={{ mb: 2 }}>
+              {profileMsg?.type === 'success' ? (
+                <TransientSuccessAlert message={profileMsg.text} onDismiss={() => setProfileMsg(null)} sx={{ mb: 2 }} />
+              ) : profileMsg ? (
+                <Alert severity="error" sx={{ mb: 2 }}>
                   {profileMsg.text}
                 </Alert>
               ) : null}
@@ -202,8 +205,10 @@ export default function AdminProfilePage() {
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
                 Fjalëkalimi
               </Typography>
-              {passwordMsg ? (
-                <Alert severity={passwordMsg.type} sx={{ mb: 2 }}>
+              {passwordMsg?.type === 'success' ? (
+                <TransientSuccessAlert message={passwordMsg.text} onDismiss={() => setPasswordMsg(null)} sx={{ mb: 2 }} />
+              ) : passwordMsg ? (
+                <Alert severity="error" sx={{ mb: 2 }}>
                   {passwordMsg.text}
                 </Alert>
               ) : null}

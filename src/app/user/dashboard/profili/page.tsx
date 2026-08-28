@@ -29,6 +29,7 @@ import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 
 import { useOwnerEditHeaderActions } from '@/components/user/owner-edit-header-actions';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { MemberReferralBadgesRow, MemberReferralBadgesSkeleton } from '@/components/public/member-referral-badges';
@@ -168,6 +169,7 @@ export default function UserProfilePage() {
     if (!user || privacyBusy) return;
     setIsPrivate(checked);
     setPrivacyBusy(true);
+    let succeeded = false;
     if (privacyTimerRef.current) {
       clearTimeout(privacyTimerRef.current);
       privacyTimerRef.current = null;
@@ -185,6 +187,7 @@ export default function UserProfilePage() {
             ? 'Profili u vendos privat (kartela fshihet nga njoftimet për publikun).'
             : 'Profili u vendos publik.',
         });
+        succeeded = true;
         await checkSession();
       }
     } catch {
@@ -192,10 +195,12 @@ export default function UserProfilePage() {
       setPrivacyMsg({ type: 'error', text: 'Nuk u arrit përditësimi i privatësisë.' });
     } finally {
       setPrivacyBusy(false);
-      privacyTimerRef.current = setTimeout(() => {
-        setPrivacyMsg(null);
-        privacyTimerRef.current = null;
-      }, 4000);
+      if (succeeded) {
+        privacyTimerRef.current = setTimeout(() => {
+          setPrivacyMsg(null);
+          privacyTimerRef.current = null;
+        }, 4000);
+      }
     }
   };
 
@@ -743,9 +748,17 @@ export default function UserProfilePage() {
           </Stack>
 
           {avatarMsg ? (
-            <Alert severity={avatarMsg.type} sx={{ width: '100%', textAlign: 'left' }}>
-              {avatarMsg.text}
-            </Alert>
+            avatarMsg.type === 'success' ? (
+              <TransientSuccessAlert
+                message={avatarMsg.text}
+                onDismiss={() => setAvatarMsg(null)}
+                sx={{ width: '100%', textAlign: 'left' }}
+              />
+            ) : (
+              <Alert severity="error" sx={{ width: '100%', textAlign: 'left' }}>
+                {avatarMsg.text}
+              </Alert>
+            )
           ) : null}
 
           <Stack
@@ -797,7 +810,11 @@ export default function UserProfilePage() {
         >
           <Box component="form" onSubmit={(e) => void onSaveProfile(e)}>
             <Stack spacing={2}>
-              {profileMsg ? <Alert severity={profileMsg.type}>{profileMsg.text}</Alert> : null}
+              {profileMsg?.type === 'success' ? (
+                <TransientSuccessAlert message={profileMsg.text} onDismiss={() => setProfileMsg(null)} />
+              ) : profileMsg ? (
+                <Alert severity="error">{profileMsg.text}</Alert>
+              ) : null}
 
               {isBusiness ? (
                 <>
@@ -916,7 +933,11 @@ export default function UserProfilePage() {
                     Plotësoni fushat më poshtë për të krijuar llogarinë e biznesit.
                   </Alert>
                 ) : null}
-                {convertMsg ? <Alert severity={convertMsg.type}>{convertMsg.text}</Alert> : null}
+                {convertMsg?.type === 'success' ? (
+                  <TransientSuccessAlert message={convertMsg.text} onDismiss={() => setConvertMsg(null)} />
+                ) : convertMsg ? (
+                  <Alert severity="error">{convertMsg.text}</Alert>
+                ) : null}
                 <TextField
                   label="NIPT"
                   value={niptInput}
@@ -977,7 +998,11 @@ export default function UserProfilePage() {
       >
         <Box component="form" onSubmit={(e) => void onChangePassword(e)}>
           <Stack spacing={2} sx={{ maxWidth: 440 }}>
-            {passwordMsg ? <Alert severity={passwordMsg.type}>{passwordMsg.text}</Alert> : null}
+            {passwordMsg?.type === 'success' ? (
+              <TransientSuccessAlert message={passwordMsg.text} onDismiss={() => setPasswordMsg(null)} />
+            ) : passwordMsg ? (
+              <Alert severity="error">{passwordMsg.text}</Alert>
+            ) : null}
             <TextField
               label="Fjalëkalimi aktual"
               type="password"

@@ -5,6 +5,7 @@ import { Alert, Box, Stack, Switch, Typography } from '@mui/material';
 import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
 
 import { PortalSectionCard } from '@/components/user/portal-cards';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { useCopy } from '@/hooks/use-copy';
 import { useGrowOrEliteEntitlement } from '@/hooks/use-grow-or-elite-entitlement';
 import { LEAD_NOTIFICATION_TAGS } from '@/lib/notification-tags';
@@ -91,7 +92,11 @@ export function NotificationPreferencesCard() {
       icon={React.createElement(GearSixIcon, { size: 22, weight: 'duotone' })}
     >
       <Stack spacing={1.25}>
-        {msg ? <Alert severity={msg.type}>{msg.text}</Alert> : null}
+        {msg?.type === 'success' ? (
+          <TransientSuccessAlert message={msg.text} onDismiss={() => setMsg(null)} />
+        ) : msg ? (
+          <Alert severity="error">{msg.text}</Alert>
+        ) : null}
         {PREF_ORDER.map((key) => {
           const locked = GROW_ELITE_PREF_KEYS.has(key) && growEliteEntitled !== true;
           return (

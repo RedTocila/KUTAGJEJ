@@ -27,6 +27,7 @@ import {
   postedLabelSq,
 } from '@/components/public/listing-cards/format-helpers';
 import { ListingPrice } from '@/components/public/listing-cards/listing-price';
+import { OkazionCountdown } from '@/components/public/listing-cards/okazion-countdown';
 import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
@@ -205,6 +206,7 @@ function CarPriceContactAside(props: {
           fontSize="1.9rem"
           fontWeight={950}
         />
+        {listing.isOkazion ? <OkazionCountdown expiresAt={listing.okazionUntil} /> : null}
         <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
           {[listing.make, listing.model, listing.variant].filter(Boolean).join(' ')}
         </Typography>
@@ -548,6 +550,7 @@ export function CarListingDetailView({
                       fontSize="1.85rem"
                       fontWeight={900}
                     />
+                    {listing.isOkazion ? <OkazionCountdown expiresAt={listing.okazionUntil} /> : null}
                   </OwnerEditableSpot>
                 </Box>
 

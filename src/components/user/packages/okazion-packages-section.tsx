@@ -16,16 +16,30 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
-import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { Minus as MinusIcon } from '@phosphor-icons/react/dist/ssr/Minus';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
+import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
-import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
+import type { OkazionPackage, OkazionVoucher } from '@/types/payment';
+import { paths } from '@/paths';
+import { OKAZION_ACCENT } from '@/lib/home-categories';
+import type { ListingMetricKind } from '@/lib/listing-metrics';
+import { listMyListings } from '@/lib/listings-client';
+import {
+  applyOkazionVoucher,
+  buyOkazionWithCredits,
+  listOkazionPackages,
+  listOkazionVouchers,
+} from '@/lib/payments-client';
+import { useCopy } from '@/hooks/use-copy';
+import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
+import { useUser } from '@/hooks/use-user';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { ListRowsSkeleton } from '@/components/core/content-skeletons';
 import {
@@ -34,28 +48,9 @@ import {
   ProductDialogContent,
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
-import { useCopy } from '@/hooks/use-copy';
-import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
-import { useUser } from '@/hooks/use-user';
-import {
-  listMyListings,
-} from '@/lib/listings-client';
-import type { ListingMetricKind } from '@/lib/listing-metrics';
-import { OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
-import {
-  applyOkazionVoucher,
-  buyOkazionWithCredits,
-  listOkazionPackages,
-  listOkazionVouchers,
-} from '@/lib/payments-client';
-import { paths } from '@/paths';
-import type { OkazionPackage, OkazionVoucher } from '@/types/payment';
-import {
-  ExtraPackageCard,
-  PackageEurPrice,
-  dualPayButtonSx,
-  formatBc,
-} from './package-ui';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
+
+import { dualPayButtonSx, ExtraPackageCard, formatBc, PackageEurPrice, PurchasedVoucherStack } from './package-ui';
 
 const FALLBACK_OKAZION_PACKAGES: OkazionPackage[] = [
   {
@@ -232,8 +227,7 @@ export function OkazionPackagesSection() {
     const q = pickerQuery.trim().toLowerCase();
     if (!q) return pickerListings;
     return pickerListings.filter(
-      (item) =>
-        item.title.toLowerCase().includes(q) || item.categoryLabel.toLowerCase().includes(q),
+      (item) => item.title.toLowerCase().includes(q) || item.categoryLabel.toLowerCase().includes(q)
     );
   }, [pickerListings, pickerQuery]);
 
@@ -307,50 +301,14 @@ export function OkazionPackagesSection() {
           {error}
         </Alert>
       ) : null}
-      {success ? (
-        <Alert severity="success" sx={{ borderRadius: 2 }} onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      ) : null}
-
-      {unused.length > 0 ? (
-        <Stack spacing={1}>
-          {unused.map((v) => (
-            <Stack
-              key={v.id}
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={1}
-              sx={{
-                alignItems: { sm: 'center' },
-                justifyContent: 'space-between',
-                p: 1.5,
-                borderRadius: 2.5,
-                border: '1px dashed',
-                borderColor: OKAZION_ACCENT,
-                bgcolor: OKAZION_ACCENT_SOFT,
-              }}
-            >
-              <Typography variant="body2" sx={{ fontWeight: 750 }}>
-                {v.days} ditë OKAZION · e papërdorur
-              </Typography>
-              <Button
-                size="small"
-                variant="contained"
-                color="error"
-                onClick={() => openAssign(v)}
-                sx={{ fontWeight: 800 }}
-              >
-                Zgjidh njoftimin
-              </Button>
-            </Stack>
-          ))}
-        </Stack>
-      ) : null}
+      <TransientSuccessAlert message={success} onDismiss={() => setSuccess(null)} sx={{ borderRadius: 2 }} />
 
       <ExtraPackageCard
         icon={SealPercentIcon}
         category="OKAZION"
-        title={quantity > 1 ? `${t.packages.okazionCardTitle(pkg.days)} ×${quantity}` : t.packages.okazionCardTitle(pkg.days)}
+        title={
+          quantity > 1 ? `${t.packages.okazionCardTitle(pkg.days)} ×${quantity}` : t.packages.okazionCardTitle(pkg.days)
+        }
         subtitle={t.packages.okazionSubtitle}
         accent="error"
         highlighted
@@ -359,7 +317,18 @@ export function OkazionPackagesSection() {
           t.packages.okazionFeatureViews,
           t.packages.okazionFeatureStandOut,
         ]}
-        footer={t.packages.okazionGrowEliteNote}
+        footer={
+          unused.length > 0 ? (
+            <PurchasedVoucherStack
+              vouchers={unused}
+              accent="error"
+              label={(days, count) =>
+                count === 1 ? `${days} ditë OKAZION · e papërdorur` : `${count} × ${days} ditë OKAZION · të papërdorura`
+              }
+              onSelect={openAssign}
+            />
+          ) : undefined
+        }
         meta={
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
@@ -373,8 +342,7 @@ export function OkazionPackagesSection() {
                 borderRadius: 999,
                 border: '1px solid',
                 borderColor: `${OKAZION_ACCENT}55`,
-                bgcolor: (theme) =>
-                  theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
                 overflow: 'hidden',
               }}
             >
@@ -455,9 +423,7 @@ export function OkazionPackagesSection() {
         <ProductDialogTitle
           onClose={closeAssign}
           subtitle={
-            activeVoucher
-              ? `${activeVoucher.days} ditë OKAZION do të aplikohen në njoftimin e zgjedhur`
-              : undefined
+            activeVoucher ? `${activeVoucher.days} ditë OKAZION do të aplikohen në njoftimin e zgjedhur` : undefined
           }
         >
           Zgjidh njoftimin OKAZION
@@ -527,13 +493,7 @@ export function OkazionPackagesSection() {
                       }}
                     >
                       {item.imageUrl ? (
-                        <Image
-                          src={item.imageUrl}
-                          alt=""
-                          fill
-                          sizes="48px"
-                          style={{ objectFit: 'cover' }}
-                        />
+                        <Image src={item.imageUrl} alt="" fill sizes="48px" style={{ objectFit: 'cover' }} />
                       ) : (
                         <KindIcon size={22} weight="duotone" />
                       )}

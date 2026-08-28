@@ -465,6 +465,7 @@ export function BusinessOwnerEdit({
       <OwnerEditSectionDialog
         open={dialog === 'photos'}
         title="Fotot e biznesit"
+        reorderable
         onClose={() => setDialog(null)}
         onApply={async () => {
           const res = await commitListingPhotos({

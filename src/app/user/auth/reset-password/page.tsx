@@ -17,6 +17,7 @@ import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { EyeSlash as EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlash';
 
 import { AuthScreenShell } from '@/components/user/auth-screen-shell';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { useCopy } from '@/hooks/use-copy';
 import { authClient } from '@/lib/auth/client';
 import { passwordInputDisableSuggestions } from '@/lib/auth/password-input';
@@ -105,7 +106,11 @@ function ResetPasswordInner() {
       <AuthScreenShell title={t.auth.resetPasswordTitle} subtitle={t.auth.newPassword}>
         <Box component="form" onSubmit={(e) => void savePassword(e)} noValidate>
           <Stack spacing={2}>
-            {message ? <Alert severity={message.type}>{message.text}</Alert> : null}
+            {message?.type === 'success' ? (
+              <TransientSuccessAlert message={message.text} onDismiss={() => setMessage(null)} />
+            ) : message ? (
+              <Alert severity="error">{message.text}</Alert>
+            ) : null}
             <FormControl fullWidth>
               <Typography component="label" variant="caption" sx={{ mb: 1, fontWeight: 600 }}>
                 {t.auth.newPassword}
@@ -154,7 +159,11 @@ function ResetPasswordInner() {
     <AuthScreenShell title={t.auth.resetPasswordTitle} subtitle={t.auth.resetPasswordHint}>
       <Box component="form" onSubmit={(e) => void requestReset(e)} noValidate>
         <Stack spacing={2}>
-          {message ? <Alert severity={message.type}>{message.text}</Alert> : null}
+          {message?.type === 'success' ? (
+            <TransientSuccessAlert message={message.text} onDismiss={() => setMessage(null)} />
+          ) : message ? (
+            <Alert severity="error">{message.text}</Alert>
+          ) : null}
           <FormControl fullWidth>
             <Typography component="label" variant="caption" sx={{ mb: 1, fontWeight: 600 }}>
               {t.auth.email}

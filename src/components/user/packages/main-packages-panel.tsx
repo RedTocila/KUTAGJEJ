@@ -17,6 +17,7 @@ import {
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
 import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { PackageLeadsFeatureLabel } from '@/components/user/leads-how-it-works';
 import { useCopy } from '@/hooks/use-copy';
@@ -447,11 +448,11 @@ export function MainPackagesPanel() {
         </Alert>
       ) : null}
 
-      {cancelSuccess ? (
-        <Alert severity="success" sx={{ borderRadius: 2 }} onClose={() => setCancelSuccess(null)}>
-          {cancelSuccess}
-        </Alert>
-      ) : null}
+      <TransientSuccessAlert
+        message={cancelSuccess}
+        onDismiss={() => setCancelSuccess(null)}
+        sx={{ borderRadius: 2 }}
+      />
 
       {!loading && !error && plans.length === 0 ? (
         <Alert severity="info" sx={{ borderRadius: 2 }}>

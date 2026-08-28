@@ -20,6 +20,7 @@ import {
   Typography,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { ArrowClockwise as ArrowClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowClockwise';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist/ssr/BuildingOffice';
@@ -31,29 +32,17 @@ import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/S
 import { StarFour as StarFourIcon } from '@phosphor-icons/react/dist/ssr/StarFour';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
-import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
-import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
-import { ListRowsSkeleton, PackageRowsSkeleton } from '@/components/core/content-skeletons';
-import {
-  ProductDialog,
-  ProductDialogActions,
-  ProductDialogContent,
-  ProductDialogTitle,
-} from '@/components/core/product-dialog';
-
-import { useCopy } from '@/hooks/use-copy';
-import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
-import { useUser } from '@/hooks/use-user';
+import type { AutoRefreshPackage, PremiumPackage, PremiumVoucher } from '@/types/payment';
+import { paths } from '@/paths';
+import type { ListingMetricKind } from '@/lib/listing-metrics';
 import {
   convertListingQuotas,
   fetchConvertibleQuotas,
   type QuotaCounts,
   type QuotaKind,
 } from '@/lib/listing-quota-convert-client';
-import {
-  listMyListings,
-} from '@/lib/listings-client';
+import { listMyListings } from '@/lib/listings-client';
 import {
   applyPremiumVoucher,
   buyAutoRefreshWithCredits,
@@ -62,18 +51,29 @@ import {
   listPremiumPackages,
   listPremiumVouchers,
 } from '@/lib/payments-client';
-import { paths } from '@/paths';
-import type { AutoRefreshPackage, PremiumPackage, PremiumVoucher } from '@/types/payment';
-import type { ListingMetricKind } from '@/lib/listing-metrics';
+import { useCopy } from '@/hooks/use-copy';
+import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
+import { useUser } from '@/hooks/use-user';
+import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
+import { ListRowsSkeleton, PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import {
-  ExtraPackageCard,
-  PackageEurPrice,
-  ReferralDiscountNote,
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
+
+import { OkazionPackagesSection } from './okazion-packages-section';
+import {
   dualPayButtonSx,
+  ExtraPackageCard,
   formatBc,
   packageAccentSurfaceSx,
+  PackageEurPrice,
+  PurchasedVoucherStack,
+  ReferralDiscountNote,
 } from './package-ui';
-import { OkazionPackagesSection } from './okazion-packages-section';
 
 const FALLBACK_AUTO_PACKAGES: AutoRefreshPackage[] = [
   {
@@ -290,7 +290,7 @@ function AutoRefreshSection() {
                 priceBc: Number(p.priceBc) || fallback?.priceBc || 0,
                 labelEn: p.labelEn || fallback?.labelEn,
               };
-            }),
+            })
           );
         }
       }
@@ -348,11 +348,7 @@ function AutoRefreshSection() {
           {error}
         </Alert>
       ) : null}
-      {success ? (
-        <Alert severity="success" sx={{ borderRadius: 2 }} onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      ) : null}
+      <TransientSuccessAlert message={success} onDismiss={() => setSuccess(null)} sx={{ borderRadius: 2 }} />
 
       {loading ? (
         <PackageRowsSkeleton count={2} rowHeight={200} />
@@ -393,9 +389,7 @@ function AutoRefreshSection() {
                       variant="outlined"
                       disabled={busy || !canAfford}
                       onClick={() => void onBuyBc(pkg)}
-                      startIcon={
-                        busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={16} />
-                      }
+                      startIcon={busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={16} />}
                       sx={dualPayButtonSx('primary', 'outlined')}
                     >
                       {formatBc(priceBc)} BC
@@ -443,10 +437,7 @@ function PremiumListingSection() {
   React.useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [{ packages: pkgs }, vouchers] = await Promise.all([
-        listPremiumPackages(),
-        reloadVouchers(),
-      ]);
+      const [{ packages: pkgs }, vouchers] = await Promise.all([listPremiumPackages(), reloadVouchers()]);
       if (cancelled) return;
       if (pkgs?.length) setPackages(pkgs);
       if (searchParams.get('assignPremium') === '1' && vouchers.length > 0) {
@@ -484,8 +475,7 @@ function PremiumListingSection() {
     const q = pickerQuery.trim().toLowerCase();
     if (!q) return pickerListings;
     return pickerListings.filter(
-      (item) =>
-        item.title.toLowerCase().includes(q) || item.categoryLabel.toLowerCase().includes(q),
+      (item) => item.title.toLowerCase().includes(q) || item.categoryLabel.toLowerCase().includes(q)
     );
   }, [pickerListings, pickerQuery]);
 
@@ -553,45 +543,15 @@ function PremiumListingSection() {
           {error}
         </Alert>
       ) : null}
-      {success ? (
-        <Alert severity="success" sx={{ borderRadius: 2 }} onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      ) : null}
-
-      {unused.length > 0 ? (
-        <Stack spacing={1}>
-          {unused.map((v) => (
-            <Stack
-              key={v.id}
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={1}
-              sx={{
-                alignItems: { sm: 'center' },
-                justifyContent: 'space-between',
-                p: 1.5,
-                borderRadius: 2.5,
-                border: '1px dashed',
-                borderColor: 'warning.main',
-                bgcolor: (t) => `${t.palette.warning.main}10`,
-              }}
-            >
-              <Typography variant="body2" sx={{ fontWeight: 750 }}>
-                {t.packages.unusedPremiumDays(v.days)}
-              </Typography>
-              <Button size="small" variant="contained" color="warning" onClick={() => openAssign(v)} sx={{ fontWeight: 800 }}>
-                {t.packages.selectListing}
-              </Button>
-            </Stack>
-          ))}
-        </Stack>
-      ) : null}
+      <TransientSuccessAlert message={success} onDismiss={() => setSuccess(null)} sx={{ borderRadius: 2 }} />
 
       <Stack spacing={1.75}>
-        {packages.map((pkg, index) => {
+        {packages.map((pkg) => {
           const busy = busyId === pkg.id;
           const canAfford = balance >= pkg.priceBc;
           const highlighted = pkg.days === 15;
+          const packageVouchers = unused.filter((voucher) => voucher.days === pkg.days);
+          const hasFooter = packageVouchers.length > 0;
           return (
             <ExtraPackageCard
               key={pkg.id}
@@ -607,7 +567,21 @@ function PremiumListingSection() {
                 t.packages.premiumFeatureClicks,
                 t.packages.premiumFeatureDays(pkg.days),
               ]}
-              footer={index === packages.length - 1 ? t.packages.premiumGrowEliteNote : undefined}
+              footer={
+                hasFooter ? (
+                  <PurchasedVoucherStack
+                    vouchers={packageVouchers}
+                    accent="warning"
+                    label={(days, count) =>
+                      count === 1
+                        ? t.packages.unusedPremiumDays(days)
+                        : `${count} × ${days} ditë Premium · të papërdorura`
+                    }
+                    actionLabel={t.packages.selectListing}
+                    onSelect={openAssign}
+                  />
+                ) : undefined
+              }
               actions={
                 <>
                   <Button
@@ -626,9 +600,7 @@ function PremiumListingSection() {
                     color="warning"
                     disabled={busy || !canAfford}
                     onClick={() => void onBuyBc(pkg)}
-                    startIcon={
-                      busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={16} />
-                    }
+                    startIcon={busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={16} />}
                     sx={dualPayButtonSx('warning', 'outlined')}
                   >
                     {formatBc(pkg.priceBc)} BC
@@ -643,9 +615,7 @@ function PremiumListingSection() {
       <ProductDialog open={assignOpen} onClose={closeAssign} fullWidth maxWidth="sm">
         <ProductDialogTitle
           onClose={closeAssign}
-          subtitle={
-            activeVoucher ? t.packages.applyDaysToListing(activeVoucher.days) : undefined
-          }
+          subtitle={activeVoucher ? t.packages.applyDaysToListing(activeVoucher.days) : undefined}
         >
           {t.packages.selectPremiumListing}
         </ProductDialogTitle>
@@ -714,13 +684,7 @@ function PremiumListingSection() {
                       }}
                     >
                       {item.imageUrl ? (
-                        <Image
-                          src={item.imageUrl}
-                          alt=""
-                          fill
-                          sizes="48px"
-                          style={{ objectFit: 'cover' }}
-                        />
+                        <Image src={item.imageUrl} alt="" fill sizes="48px" style={{ objectFit: 'cover' }} />
                       ) : (
                         <KindIcon size={22} weight="duotone" />
                       )}
@@ -907,11 +871,7 @@ function ConvertListingSection() {
           {error}
         </Alert>
       ) : null}
-      {success ? (
-        <Alert severity="success" sx={{ mt: 1.5, borderRadius: 1.5 }} onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      ) : null}
+      <TransientSuccessAlert message={success} onDismiss={() => setSuccess(null)} sx={{ mt: 1.5, borderRadius: 1.5 }} />
 
       {loading ? (
         <Box sx={{ mt: 1.5 }}>

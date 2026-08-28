@@ -12,7 +12,6 @@ export function ListingPrice({
   currency,
   isPremium = false,
   isOkazion = false,
-  priceColor,
   suffix,
   fontSize = '1.1rem',
   fontWeight = 800,
@@ -23,7 +22,6 @@ export function ListingPrice({
   currency: string | null | undefined;
   isPremium?: boolean | null;
   isOkazion?: boolean | null;
-  priceColor?: string;
   /** e.g. ` / muaj` after the current price. */
   suffix?: React.ReactNode;
   fontSize?: string | number;
@@ -43,7 +41,7 @@ export function ListingPrice({
         sx={{
           fontWeight,
           fontSize,
-          color: priceColor ?? listingPriceAccentColor({ isPremium, isOkazion }),
+          color: listingPriceAccentColor({ isPremium, isOkazion }),
           lineHeight: 1.2,
         }}
       >

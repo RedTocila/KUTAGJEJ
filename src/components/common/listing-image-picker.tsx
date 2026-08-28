@@ -2,12 +2,11 @@
 
 import * as React from 'react';
 import { Box, IconButton, Stack, Typography } from '@mui/material';
-import { ArrowDown as ArrowDownIcon } from '@phosphor-icons/react/dist/ssr/ArrowDown';
-import { ArrowUp as ArrowUpIcon } from '@phosphor-icons/react/dist/ssr/ArrowUp';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { ImageLightbox, useObjectUrls } from '@/components/common/image-lightbox';
+import { useOwnerEditReorderMode } from '@/components/user/owner-edit-section-dialog';
 
 const GRID_THUMB_SX = {
   position: 'relative',
@@ -113,75 +112,11 @@ function RemoveImageButton({ label, onRemove, cover }: { label: string; onRemove
   );
 }
 
-function MoveImageButtons({
-  index,
-  count,
-  onMove,
-}: {
-  index: number;
-  count: number;
-  onMove: (from: number, to: number) => void;
-}) {
-  if (count < 2) return null;
-
-  const buttonSx = {
-    bgcolor: 'rgba(0,0,0,0.62)',
-    color: '#fff',
-    p: 0,
-    width: 26,
-    height: 26,
-    '&:hover': { bgcolor: 'rgba(0,0,0,0.82)' },
-  } as const;
-
-  return (
-    <Stack
-      direction="row"
-      spacing={0.25}
-      sx={{
-        position: 'absolute',
-        zIndex: 2,
-        left: 4,
-        bottom: 4,
-      }}
-    >
-      <IconButton
-        size="small"
-        type="button"
-        disabled={index === 0}
-        aria-label={`Zhvendos foton ${index + 1} lart`}
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          onMove(index, index - 1);
-        }}
-        sx={buttonSx}
-      >
-        <ArrowUpIcon size={14} weight="bold" />
-      </IconButton>
-      <IconButton
-        size="small"
-        type="button"
-        disabled={index === count - 1}
-        aria-label={`Zhvendos foton ${index + 1} poshtë`}
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          onMove(index, index + 1);
-        }}
-        sx={buttonSx}
-      >
-        <ArrowDownIcon size={14} weight="bold" />
-      </IconButton>
-    </Stack>
-  );
-}
-
 function ThumbPreview({
   src,
   alt,
   onRemove,
   onPreview,
-  move,
   dragHandlers,
   dropActive = false,
   sx = GRID_THUMB_SX,
@@ -190,11 +125,6 @@ function ThumbPreview({
   alt?: string;
   onRemove: () => void;
   onPreview: () => void;
-  move?: {
-    index: number;
-    count: number;
-    onMove: (from: number, to: number) => void;
-  };
   dragHandlers?: React.HTMLAttributes<HTMLDivElement>;
   dropActive?: boolean;
   sx?: ThumbSx;
@@ -236,7 +166,6 @@ function ThumbPreview({
         ) : null}
       </Box>
       <RemoveImageButton label="Hiq foton" onRemove={onRemove} />
-      {move ? <MoveImageButtons {...move} /> : null}
     </Box>
   );
 }
@@ -323,6 +252,7 @@ export function ListingImagePicker({
   const isAvatar = variant === 'avatar';
   const isGallery = variant === 'gallery' || (variant === 'grid' && max > 1);
   const thumbSx: ThumbSx = isAvatar ? AVATAR_THUMB_SX : isHero ? HERO_THUMB_SX : GRID_THUMB_SX;
+  const reorderMode = useOwnerEditReorderMode();
   const fileUrls = useObjectUrls(value);
   const previewUrls = React.useMemo(() => [...existingUrls, ...fileUrls], [existingUrls, fileUrls]);
   const [previewIndex, setPreviewIndex] = React.useState<number | null>(null);
@@ -387,9 +317,9 @@ export function ListingImagePicker({
   };
 
   const existingDragHandlers = (index: number) => ({
-    draggable: !disabled && Boolean(onExistingUrlsChange) && existingUrls.length > 1,
+    draggable: reorderMode && !disabled && Boolean(onExistingUrlsChange) && existingUrls.length > 1,
     onDragStart: (event: React.DragEvent<HTMLDivElement>) => {
-      if (disabled || !onExistingUrlsChange || existingUrls.length < 2) return;
+      if (!reorderMode || disabled || !onExistingUrlsChange || existingUrls.length < 2) return;
       setDraggedExistingIndex(index);
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.setData('text/plain', String(index));
@@ -450,7 +380,7 @@ export function ListingImagePicker({
   const reorderHint =
     existingUrls.length > 1 ? (
       <Typography variant="caption" color="text.secondary">
-        Tërhiqni fotot për t’i riorganizuar.
+        {reorderMode ? 'Tërhiqni fotot për t’i riorganizuar.' : 'Klikoni “Riorganizo” për të ndryshuar rendin.'}
       </Typography>
     ) : null;
 
@@ -521,7 +451,6 @@ export function ListingImagePicker({
               />
             </Box>
             <RemoveImageButton cover label="Hiq foton e kopertinës" onRemove={() => removeAt(0)} />
-            <MoveImageButtons index={0} count={existingUrls.length} onMove={reorderExisting} />
           </Box>
         )}
 
@@ -586,7 +515,6 @@ export function ListingImagePicker({
                     />
                   </Box>
                   <RemoveImageButton label={`Hiq foton ${idx + 1}`} onRemove={() => removeAt(idx)} />
-                  <MoveImageButtons index={idx} count={existingUrls.length} onMove={reorderExisting} />
                 </Box>
               );
             })}
@@ -623,11 +551,6 @@ export function ListingImagePicker({
             sx={thumbSx}
             dragHandlers={existingDragHandlers(idx)}
             dropActive={dragOverExistingIndex === idx}
-            move={{
-              index: idx,
-              count: existingUrls.length,
-              onMove: reorderExisting,
-            }}
             onPreview={() => setPreviewIndex(idx)}
             onRemove={() => {
               removeExisting(idx);

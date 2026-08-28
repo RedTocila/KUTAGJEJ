@@ -2,6 +2,7 @@
 
 import { Alert } from '@mui/material';
 
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import {
   listingModerationStatusMessage,
   LISTING_SUBMITTED_LIVE_MESSAGE,
@@ -26,8 +27,6 @@ export function ListingModerationNotice({
 
 export function ListingSubmittedPendingAlert() {
   return (
-    <Alert severity="success" sx={{ borderRadius: 1.5 }}>
-      {LISTING_SUBMITTED_LIVE_MESSAGE}
-    </Alert>
+    <TransientSuccessAlert message={LISTING_SUBMITTED_LIVE_MESSAGE} sx={{ borderRadius: 1.5 }} />
   );
 }

@@ -4,27 +4,27 @@ import * as React from 'react';
 import RouterLink from 'next/link';
 import { Box, Chip, Stack, Typography } from '@mui/material';
 import { alpha, type Theme } from '@mui/material/styles';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { ArrowClockwise as ArrowClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowClockwise';
 import { ArrowsLeftRight as ArrowsLeftRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowsLeftRight';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { StarFour as StarFourIcon } from '@phosphor-icons/react/dist/ssr/StarFour';
-import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
+import { paths } from '@/paths';
+import { listMySubscriptions } from '@/lib/payments-client';
+import { useCopy } from '@/hooks/use-copy';
+import { useUser } from '@/hooks/use-user';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import {
+  packageAccentSurfaceSx,
   planAccentForCode,
   resolveAccent,
   type PlanAccent,
-  packageAccentSurfaceSx,
 } from '@/components/user/packages/package-ui';
 import { portalCardSx } from '@/components/user/portal-cards';
-import { useCopy } from '@/hooks/use-copy';
-import { useUser } from '@/hooks/use-user';
-import { listMySubscriptions } from '@/lib/payments-client';
-import { paths } from '@/paths';
 
 function categoryCardSx(accent: PlanAccent = 'primary') {
   return {
@@ -54,13 +54,7 @@ function categoryCardSx(accent: PlanAccent = 'primary') {
   } as const;
 }
 
-function VisualPanel({
-  accent,
-  children,
-}: {
-  accent: PlanAccent;
-  children: React.ReactNode;
-}) {
+function VisualPanel({ accent, children }: { accent: PlanAccent; children: React.ReactNode }) {
   return (
     <Box
       sx={{
@@ -83,13 +77,7 @@ function VisualPanel({
   );
 }
 
-function ClusterIcon({
-  icon: Icon,
-  accent,
-}: {
-  icon: PhosphorIcon;
-  accent: PlanAccent;
-}) {
+function ClusterIcon({ icon: Icon, accent }: { icon: PhosphorIcon; accent: PlanAccent }) {
   return (
     <Box
       sx={{
@@ -173,8 +161,7 @@ function CategoryCard({
                       color: badgeColor,
                     }
                   : {
-                      bgcolor: (t) =>
-                        t.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                      bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)'),
                       color: 'text.primary',
                     }),
               }}
@@ -236,8 +223,7 @@ export default function UserPackagesPage() {
     let cancelled = false;
     void listMySubscriptions().then((res) => {
       if (cancelled) return;
-      const active =
-        (res.subscriptions ?? []).find((s) => s.status === 'active' && Number(s.priceEur) > 0) ?? null;
+      const active = (res.subscriptions ?? []).find((s) => s.status === 'active' && Number(s.priceEur) > 0) ?? null;
       setActivePlanLabel(active?.contractTitle || active?.planCode?.toUpperCase() || 'FREE');
       setActivePlanBadgeColor(String(planAccentForCode(active?.planCode ?? 'free')));
     });
@@ -258,16 +244,8 @@ export default function UserPackagesPage() {
         overflow: { xs: 'visible', md: 'hidden' },
       }}
     >
-      <UserPageHeader
-        icon={<PackageIcon size={20} weight="duotone" />}
-        title={t.nav.packages}
-        description={t.packages.hubDescription}
-        sx={{ flexShrink: 0 }}
-      />
-      <Stack
-        spacing={1.35}
-        sx={{ flex: 1, minHeight: 0, overflow: { xs: 'visible', md: 'hidden' } }}
-      >
+      <UserPageHeader icon={<PackageIcon size={20} weight="duotone" />} title={t.nav.packages} sx={{ flexShrink: 0 }} />
+      <Stack spacing={1.35} sx={{ flex: 1, minHeight: 0, overflow: { xs: 'visible', md: 'hidden' } }}>
         <CategoryCard
           href={paths.user.packagesMain}
           accent="primary"

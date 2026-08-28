@@ -4,23 +4,20 @@ import * as React from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Box, Container, GlobalStyles, Stack } from '@mui/material';
 
+import { paths } from '@/paths';
+import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
+import { isPostListingPath } from '@/lib/post-listing-path';
+import { MessagesThreadChromeProvider } from '@/contexts/messages-thread-chrome-context';
 import { AuthGuard } from '@/components/auth/auth-guard';
+import { useMainTabsHosted } from '@/components/main-tabs/main-tabs-shell';
 import { MobileBottomNav } from '@/components/public/mobile-bottom-nav';
 import { AddListingPickerProvider, useOptionalAddListingPicker } from '@/components/user/add-listing-picker-context';
-import {
-  UserDashboardBackLink,
-  UserDashboardCloseButton,
-} from '@/components/user/layout/user-dashboard-back-link';
+import { UserDashboardBackLink, UserDashboardCloseButton } from '@/components/user/layout/user-dashboard-back-link';
 import { UserSideNav } from '@/components/user/layout/user-side-nav';
 import {
   OwnerEditHeaderActionsProvider,
   useOwnerEditHeaderActionsSlot,
 } from '@/components/user/owner-edit-header-actions';
-import { MessagesThreadChromeProvider } from '@/contexts/messages-thread-chrome-context';
-import { useMainTabsHosted } from '@/components/main-tabs/main-tabs-shell';
-import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
-import { isPostListingPath } from '@/lib/post-listing-path';
-import { paths } from '@/paths';
 
 function pathMatches(pathname: string | null, base: string): boolean {
   return pathname === base || Boolean(pathname?.startsWith(`${base}/`));
@@ -48,16 +45,14 @@ function DashboardHeaderRow({
         justifyContent: 'space-between',
         gap: 1,
         mb: isMessages ? { xs: 1.5, md: 2 } : 2,
-        px: isMessages ? { xs: 2, md: 0 } : 0,
+        px: isMessages ? { xs: 2, md: 0 } : { xs: 1, sm: 2, md: 0 },
+        py: { xs: 0.75, md: 0 },
         pt: isMessages ? { xs: 1.5, md: 0 } : 0,
         minHeight: 36,
       }}
     >
       {showBackLink ? (
-        <UserDashboardBackLink
-          href={backHref}
-          sx={{ mb: 0, alignSelf: 'center' }}
-        />
+        <UserDashboardBackLink href={backHref} sx={{ mb: 0, alignSelf: 'center' }} />
       ) : (
         <Box sx={{ flex: 1 }} />
       )}
@@ -89,9 +84,7 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
   const isPackagesHub = pathname === paths.user.packages;
   const isSavedListings = pathMatches(pathname, paths.user.savedListings);
   const isPostListing = isPostListingPath(pathname);
-  const showFrameClose =
-    pathname === paths.user.businessesListing ||
-    pathname === paths.user.professionalsListing;
+  const showFrameClose = pathname === paths.user.businessesListing || pathname === paths.user.professionalsListing;
   const [urlThreadOpen, setUrlThreadOpen] = React.useState(false);
   /** Optimistic override from the messages view (back / open) before URL catches up. */
   const [threadUiOpen, setThreadUiOpen] = React.useState<boolean | null>(null);
@@ -159,110 +152,96 @@ function UserDashboardFrameInner({
 
   return (
     <>
-          <GlobalStyles
-            styles={{
-              body: {
-                '--MainNav-height': '56px',
-                '--MainNav-zIndex': 1000,
-                '--SideNav-width': '280px',
-                '--SideNav-zIndex': 1100,
-                '--MobileNav-width': '320px',
-                '--MobileNav-zIndex': 1100,
-              },
-            }}
-          />
-          <Box
-            sx={{
-              bgcolor: 'var(--mui-palette-background-default)',
-              display: 'flex',
-              flexDirection: 'column',
-              position: 'relative',
-              minHeight: '100dvh',
-              ...(isPackagesHub
-                ? {
-                    minHeight: '100dvh',
-                    height: { xs: 'auto', md: '100dvh' },
-                    overflow: { xs: 'visible', md: 'hidden' },
-                  }
-                : isMessages
-                  ? {
-                      height: { xs: '100dvh', md: 'auto' },
-                      overflow: { xs: 'hidden', md: 'visible' },
-                    }
-                  : null),
-              ...(hideChromeForPicker ? { pointerEvents: 'none', userSelect: 'none' } : null),
-            }}
-          >
-            <UserSideNav />
-            <Box
+      <GlobalStyles
+        styles={{
+          body: {
+            '--MainNav-height': '56px',
+            '--MainNav-zIndex': 1000,
+            '--SideNav-width': '280px',
+            '--SideNav-zIndex': 1100,
+            '--MobileNav-width': '320px',
+            '--MobileNav-zIndex': 1100,
+          },
+        }}
+      />
+      <Box
+        sx={{
+          bgcolor: 'var(--mui-palette-background-default)',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+          minHeight: '100dvh',
+          ...(isPackagesHub
+            ? {
+                minHeight: '100dvh',
+                height: { xs: 'auto', md: '100dvh' },
+                overflow: { xs: 'visible', md: 'hidden' },
+              }
+            : isMessages
+              ? {
+                  height: { xs: '100dvh', md: 'auto' },
+                  overflow: { xs: 'hidden', md: 'visible' },
+                }
+              : null),
+          ...(hideChromeForPicker ? { pointerEvents: 'none', userSelect: 'none' } : null),
+        }}
+      >
+        <UserSideNav />
+        <Box
+          sx={{
+            display: 'flex',
+            flex: '1 1 auto',
+            flexDirection: 'column',
+            pl: { lg: 'var(--SideNav-width)' },
+            minHeight: 0,
+            ...(isPackagesHub
+              ? { height: { xs: 'auto', md: '100%' } }
+              : isMessages
+                ? { height: { xs: '100%', md: 'auto' } }
+                : null),
+          }}
+        >
+          <main style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 }}>
+            <Container
+              maxWidth="xl"
+              disableGutters={isMessages}
               sx={{
-                display: 'flex',
-                flex: '1 1 auto',
-                flexDirection: 'column',
-                pl: { lg: 'var(--SideNav-width)' },
+                py: isMessages ? { xs: 0, md: 4 } : { xs: 3, md: 4 },
+                px: isMessages ? { xs: 0, md: 3 } : undefined,
+                flex: isPackagesHub ? '1 1 auto' : isMessages ? { xs: '1 1 auto', md: '0 1 auto' } : undefined,
                 minHeight: 0,
-                ...(isPackagesHub
-                  ? { height: { xs: 'auto', md: '100%' } }
-                  : isMessages
-                    ? { height: { xs: '100%', md: 'auto' } }
-                    : null),
+                display: fillViewport ? 'flex' : undefined,
+                flexDirection: 'column',
+                pb: showMobileBottomNav
+                  ? {
+                      xs: MOBILE_CONTENT_BOTTOM_PADDING,
+                      md: MOBILE_CONTENT_BOTTOM_PADDING,
+                      lg: 4,
+                    }
+                  : { md: isMessages ? 4 : undefined },
               }}
             >
-              <main
-                style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 }}
+              {showFrameClose ? (
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0, mb: 1 }}>
+                  <UserDashboardCloseButton href={paths.home} />
+                </Box>
+              ) : null}
+              <DashboardHeaderRow showBackLink={showBackLink} backHref={backHref} isMessages={isMessages} />
+              <Box
+                sx={{
+                  flex: isPackagesHub ? '1 1 auto' : isMessages ? { xs: '1 1 auto', md: '0 1 auto' } : undefined,
+                  minHeight: 0,
+                  display: fillViewport ? 'flex' : undefined,
+                  flexDirection: 'column',
+                }}
               >
-                <Container
-                  maxWidth="xl"
-                  disableGutters={isMessages}
-                  sx={{
-                    py: isMessages ? { xs: 0, md: 4 } : { xs: 3, md: 4 },
-                    px: isMessages ? { xs: 0, md: 3 } : undefined,
-                    flex: isPackagesHub
-                      ? '1 1 auto'
-                      : isMessages
-                        ? { xs: '1 1 auto', md: '0 1 auto' }
-                        : undefined,
-                    minHeight: 0,
-                    display: fillViewport ? 'flex' : undefined,
-                    flexDirection: 'column',
-                    pb: showMobileBottomNav
-                      ? {
-                          xs: MOBILE_CONTENT_BOTTOM_PADDING,
-                          md: MOBILE_CONTENT_BOTTOM_PADDING,
-                          lg: 4,
-                        }
-                      : { md: isMessages ? 4 : undefined },
-                  }}
-                >
-                  {showFrameClose ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0, mb: 1 }}>
-                      <UserDashboardCloseButton href={paths.home} />
-                    </Box>
-                  ) : null}
-                  <DashboardHeaderRow
-                    showBackLink={showBackLink}
-                    backHref={backHref}
-                    isMessages={isMessages}
-                  />
-                  <Box
-                    sx={{
-                      flex: isPackagesHub
-                        ? '1 1 auto'
-                        : isMessages
-                          ? { xs: '1 1 auto', md: '0 1 auto' }
-                          : undefined,
-                      minHeight: 0,
-                      display: fillViewport ? 'flex' : undefined,
-                      flexDirection: 'column',
-                    }}
-                  >
-                    {children}
-                  </Box>
-                </Container>
-              </main>
-            </Box>
-            {showMobileBottomNav && !hideChromeForPicker ? <MobileBottomNav /> : null}
-          </Box>
+                {children}
+              </Box>
+            </Container>
+          </main>
+        </Box>
+        {showMobileBottomNav && !hideChromeForPicker ? <MobileBottomNav /> : null}
+      </Box>
     </>
   );
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { alpha, Box, Button, ButtonBase, Container, Divider, Paper, Stack, Typography } from '@mui/material';
 import { Bathtub as BathtubIcon } from '@phosphor-icons/react/dist/ssr/Bathtub';
 import { Bed as BedIcon } from '@phosphor-icons/react/dist/ssr/Bed';
@@ -24,6 +23,7 @@ import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { useListingViewCount } from '@/hooks/use-listing-view-count';
 import { formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
 import { ListingPrice } from '@/components/public/listing-cards/listing-price';
+import { OkazionCountdown } from '@/components/public/listing-cards/okazion-countdown';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
@@ -160,6 +160,7 @@ function RealEstatePriceContactAside(props: {
             ) : null
           }
         />
+        {listing.isOkazion ? <OkazionCountdown expiresAt={listing.okazionUntil} /> : null}
         {transactionLabel ? (
           <Paper
             variant="outlined"
@@ -577,6 +578,7 @@ export function RealEstateListingDetailView({
                           ) : null
                         }
                       />
+                      {listing.isOkazion ? <OkazionCountdown expiresAt={listing.okazionUntil} /> : null}
                       {transactionLabel ? (
                         <Paper
                           variant="outlined"

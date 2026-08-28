@@ -24,6 +24,7 @@ import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { CATEGORY_VISUAL } from '@/components/dashboard/categories/category-config';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import type { ListingCategory } from '@/types/listing-category';
 import { updateCategory } from '@/lib/admin-categories-client';
 import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
@@ -142,7 +143,6 @@ export function CategoryEditor(props: {
       if (next) {
         onSaved(next);
         setSaveSuccess(true);
-        window.setTimeout(() => setSaveSuccess(false), 5000);
       }
     } finally {
       setPending(false);
@@ -247,11 +247,11 @@ export function CategoryEditor(props: {
             {saveError}
           </Alert>
         ) : null}
-        {saveSuccess ? (
-          <Alert severity="success" sx={{ borderRadius: 1.5 }} onClose={() => setSaveSuccess(false)}>
-            Ndryshimet u ruajtën.
-          </Alert>
-        ) : null}
+        <TransientSuccessAlert
+          message={saveSuccess ? 'Ndryshimet u ruajtën.' : null}
+          onDismiss={() => setSaveSuccess(false)}
+          sx={{ borderRadius: 1.5 }}
+        />
 
         <Box sx={productFieldSx}>
           <Box

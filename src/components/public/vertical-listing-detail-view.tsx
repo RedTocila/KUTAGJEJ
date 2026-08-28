@@ -41,15 +41,11 @@ import type { AnyPublicListingDetail, PublicCarListing, PublicMarketplaceListing
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { useListingViewCount } from '@/hooks/use-listing-view-count';
 import { CarCard } from '@/components/public/listing-cards/car-card';
-import {
-  findOptionLabel,
-  formatKilometers,
-  formatPrice,
-  postedLabelSq,
-} from '@/components/public/listing-cards/format-helpers';
+import { findOptionLabel, formatKilometers, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
 import { JobListingCountdown } from '@/components/public/listing-cards/job-listing-countdown';
 import { ListingPrice } from '@/components/public/listing-cards/listing-price';
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
+import { OkazionCountdown } from '@/components/public/listing-cards/okazion-countdown';
 import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
@@ -189,6 +185,7 @@ function ListingContactAside(props: {
     <Stack spacing={2}>
       <Stack spacing={0.75}>
         <Box sx={{ width: '100%' }}>{sidebarPrice(listing)}</Box>
+        {listing.isOkazion ? <OkazionCountdown expiresAt={listing.okazionUntil} /> : null}
         {asideLoc ? (
           <ButtonBase
             component="a"
@@ -463,6 +460,7 @@ export function VerticalListingDetailView(props: {
                   legacyOnClick={onEditPrice}
                 >
                   {primaryPriceRow(listing)}
+                  {listing.isOkazion ? <OkazionCountdown expiresAt={listing.okazionUntil} /> : null}
                 </OwnerEditableSpot>
               </Box>
 

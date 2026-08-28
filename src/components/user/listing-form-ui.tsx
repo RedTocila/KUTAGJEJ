@@ -44,14 +44,19 @@ function ListingFormActionAlert({
   severity: 'error' | 'success';
 }) {
   const ref = React.useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = React.useState(Boolean(message));
 
   React.useEffect(() => {
+    setVisible(Boolean(message));
     if (message) {
       ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-  }, [message]);
+    if (!message || severity !== 'success') return;
+    const timeoutId = window.setTimeout(() => setVisible(false), 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [message, severity]);
 
-  if (!message) return null;
+  if (!message || !visible) return null;
 
   return (
     <Alert
@@ -59,6 +64,7 @@ function ListingFormActionAlert({
       severity={severity}
       sx={{ borderRadius: 1.5 }}
       role={severity === 'error' ? 'alert' : 'status'}
+      onClose={severity === 'success' ? () => setVisible(false) : undefined}
     >
       {message}
     </Alert>

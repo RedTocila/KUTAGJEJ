@@ -128,7 +128,6 @@ export function MarketplaceCard({
               currency={listing.currency}
               isPremium={listing.isPremium}
               isOkazion={listing.isOkazion}
-              priceColor="success.main"
               fontSize="1rem"
             />
             <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}>

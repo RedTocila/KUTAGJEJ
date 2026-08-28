@@ -16,6 +16,7 @@ import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/C
 import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
 
 import { ReservationDateField } from '@/components/core/reservation-date-field';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
 const FONT_BODY = '0.875rem';
@@ -140,11 +141,13 @@ function BusinessReservationFormFields({
           />
         </Stack>
       ) : null}
-      {reserveFeedback ? (
-        <Alert
-          severity={reserveFeedback.includes('dërgua') ? 'success' : 'warning'}
+      {reserveFeedback?.includes('dërgua') ? (
+        <TransientSuccessAlert
+          message={reserveFeedback}
           sx={{ py: 0.5, borderRadius: 2, alignItems: 'center' }}
-        >
+        />
+      ) : reserveFeedback ? (
+        <Alert severity="warning" sx={{ py: 0.5, borderRadius: 2, alignItems: 'center' }}>
           {reserveFeedback}
         </Alert>
       ) : null}

@@ -16,6 +16,7 @@ import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/S
 import { IdDocumentScannerDialog } from '@/components/user/id-document-scanner-dialog';
 import { IdentityFieldHelpAdornment } from '@/components/user/identity-field-help';
 import { LockedIdentityField } from '@/components/user/locked-identity-field';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { useUser } from '@/hooks/use-user';
 import {
   fetchProfessionalVerificationStatus,
@@ -182,7 +183,7 @@ export function AccountVerificationCard() {
       </Typography>
 
       {error ? <Alert severity="error">{error}</Alert> : null}
-      {success ? <Alert severity="success">{success}</Alert> : null}
+      <TransientSuccessAlert message={success} onDismiss={() => setSuccess(null)} />
 
       {status.verified ? (
         <Chip

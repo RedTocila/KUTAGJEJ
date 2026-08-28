@@ -648,6 +648,16 @@ const sq = {
     postAll: 'Posto të gjitha',
     deleteAll: 'Fshi të gjitha',
     posting: 'Duke postuar…',
+    postingWorking: (current: number, total: number) =>
+      `Duke postuar ${current} nga ${total}…`,
+    postingEta: (seconds: number) => {
+      if (seconds < 8) return 'Gati gati…';
+      if (seconds < 60) return `Rreth ${seconds} sek të mbetura`;
+      const min = Math.floor(seconds / 60);
+      const sec = seconds % 60;
+      if (sec === 0) return min === 1 ? 'Rreth 1 min e mbetur' : `Rreth ${min} min të mbetura`;
+      return `Rreth ${min} min ${sec} sek të mbetura`;
+    },
     postOk: 'U postua.',
     postAllDone: (ok: number, fail: number) =>
       fail > 0
@@ -1453,6 +1463,16 @@ const en: AppMessages = {
     postAll: 'Post all',
     deleteAll: 'Delete all',
     posting: 'Posting…',
+    postingWorking: (current: number, total: number) =>
+      `Posting ${current} of ${total}…`,
+    postingEta: (seconds: number) => {
+      if (seconds < 8) return 'Almost done…';
+      if (seconds < 60) return `About ${seconds} sec left`;
+      const min = Math.floor(seconds / 60);
+      const sec = seconds % 60;
+      if (sec === 0) return min === 1 ? 'About 1 min left' : `About ${min} min left`;
+      return `About ${min} min ${sec} sec left`;
+    },
     postOk: 'Posted.',
     postAllDone: (ok: number, fail: number) =>
       fail > 0

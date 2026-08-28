@@ -20,7 +20,7 @@ import { productPanelSx } from '@/styles/product-sx';
 
 const FONT_CAPTION = '0.75rem';
 const FONT_BODY = '0.875rem';
-const VERIFIED_SHIELD_COLOR = 'var(--mui-palette-success-main)';
+const VERIFIED_SHIELD_COLOR = 'var(--mui-palette-primary-main)';
 
 /** Material-style 5-point star — stays sharp at 13–16px (Phosphor fill blobs at that size). */
 const RATING_STAR_PATH =

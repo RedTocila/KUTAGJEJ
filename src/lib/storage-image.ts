@@ -56,9 +56,9 @@ function sizedOrOriginal(url: string | null | undefined, opts: StorageImageOpts)
   return storageImageUrl(raw, opts) ?? raw;
 }
 
-/** Card / grid covers (~2× a mobile column). Falls back to original if not Supabase. */
+/** Card / grid thumbnails (~2× a mobile column), filling the square card media. */
 export function listingCardImageUrl(url: string | null | undefined): string | null {
-  return sizedOrOriginal(url, { width: 640, height: 400, resize: 'cover', quality: 68 });
+  return sizedOrOriginal(url, { width: 640, height: 640, resize: 'cover', quality: 68 });
 }
 
 /** Homepage hero banner (LCP). */

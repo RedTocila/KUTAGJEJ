@@ -50,11 +50,9 @@ export function MembersBrowseControls() {
   const applyKeyword = React.useCallback(
     (nextQ: string) => {
       const trimmed = nextQ.trim();
-      if (!trimmed) return;
-      if (keywords.some((item) => item.toLowerCase() === trimmed.toLowerCase())) return;
-      applyKeywords([...keywords, trimmed]);
+      applyKeywords(trimmed ? [trimmed] : []);
     },
-    [applyKeywords, keywords],
+    [applyKeywords],
   );
 
   const removeKeyword = (key: string) => {
@@ -79,6 +77,7 @@ export function MembersBrowseControls() {
             onChange={applyKeyword}
             accent={PROFILES_SEARCH_ACCENT}
             commitToChip
+            live
           />
         </Box>
       </Box>

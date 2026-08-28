@@ -4,7 +4,6 @@ import * as React from 'react';
 import { Box, Typography, type SxProps, type Theme, type TypographyProps } from '@mui/material';
 
 import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
-import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 
 const TITLE_FONT = {
   fontWeight: 700,
@@ -14,18 +13,13 @@ const TITLE_FONT = {
 } as const;
 
 const BADGE_GAP_PX = 3;
-const MAX_LINES = 2;
 
 function TitleBadges({
   verified,
-  trustBadge,
   badgeSize,
-  stampSize,
 }: {
   verified: boolean;
-  trustBadge: boolean;
   badgeSize: number;
-  stampSize: number;
 }) {
   return (
     <Box
@@ -43,7 +37,6 @@ function TitleBadges({
       {verified ? (
         <ListingVerifiedBadge size={badgeSize} aria-label="Shitës i verifikuar" />
       ) : null}
-      {trustBadge ? <ListingTrustBadge size={stampSize} /> : null}
     </Box>
   );
 }
@@ -56,28 +49,23 @@ function TitleBadges({
 export function ListingTitleWithVerified({
   title,
   verified = false,
-  trustBadge = false,
   id,
   component = 'h3',
   badgeSize = 16,
-  trustBadgeSize,
   maxLines = 2,
   typographySx,
   sx,
 }: {
   title: React.ReactNode;
   verified?: boolean;
-  trustBadge?: boolean;
   id?: string;
   component?: TypographyProps['component'];
   badgeSize?: number;
-  trustBadgeSize?: number;
   maxLines?: number;
   typographySx?: SxProps<Theme>;
   sx?: SxProps<Theme>;
 }) {
-  const stampSize = trustBadgeSize ?? badgeSize;
-  const showBadges = verified || trustBadge;
+  const showBadges = verified;
   const titleTooltip = typeof title === 'string' ? title : undefined;
   const sxList = [...(Array.isArray(sx) ? sx : sx ? [sx] : [])];
   const typographySxList = [
@@ -111,9 +99,7 @@ export function ListingTitleWithVerified({
       {showBadges ? (
         <TitleBadges
           verified={verified}
-          trustBadge={trustBadge}
           badgeSize={badgeSize}
-          stampSize={stampSize}
         />
       ) : null}
     </Typography>

@@ -72,6 +72,7 @@ function BusinessVenueCardBody({
           premium={Boolean(listing.isPremium)}
           okazion={Boolean(listing.isOkazion)}
           okazionUntil={listing.okazionUntil}
+          sellerVerified={Boolean(listing.sellerVerified)}
           sharePayload={{
             title: listing.title,
             category: listing.categoryLabel,
@@ -108,7 +109,6 @@ function BusinessVenueCardBody({
             title={listing.title}
             maxLines={1}
             verified={false}
-            trustBadge={false}
             typographySx={
               listing.isPremium || listing.isOkazion
                 ? { color: listingPriceAccentColor({ isPremium: listing.isPremium, isOkazion: listing.isOkazion }) }
@@ -250,6 +250,7 @@ function ProfessionalListingCardBody({
           premium={Boolean(listing.isPremium)}
           okazion={Boolean(listing.isOkazion)}
           okazionUntil={listing.okazionUntil}
+          sellerVerified={Boolean(listing.sellerVerified)}
           sharePayload={{
             title: listing.title,
             category: listing.categoryLabel,
@@ -307,7 +308,6 @@ function ProfessionalListingCardBody({
             title={listing.title}
             maxLines={1}
             verified={false}
-            trustBadge={false}
             typographySx={
               listing.isPremium || listing.isOkazion
                 ? { color: listingPriceAccentColor({ isPremium: listing.isPremium, isOkazion: listing.isOkazion }) }

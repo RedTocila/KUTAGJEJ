@@ -1,16 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import dynamic from 'next/dynamic';
 import { Box, Stack, Typography, type SxProps, type Theme } from '@mui/material';
 
 import { formatPrice, listingPriceAccentColor } from './format-helpers';
-import { OkazionCountdownPlaceholder } from './okazion-countdown';
-
-const OkazionCountdown = dynamic(() => import('./okazion-countdown').then((m) => m.OkazionCountdown), {
-  ssr: false,
-  loading: () => <OkazionCountdownPlaceholder />,
-});
 
 /** Current price with optional strikethrough “was” compare price. */
 export function ListingPrice({
@@ -19,8 +12,6 @@ export function ListingPrice({
   currency,
   isPremium = false,
   isOkazion = false,
-  okazionUntil = null,
-  showOkazionCountdown = false,
   trailing,
   suffix,
   fontSize = '1.1rem',
@@ -32,8 +23,6 @@ export function ListingPrice({
   currency: string | null | undefined;
   isPremium?: boolean | null;
   isOkazion?: boolean | null;
-  okazionUntil?: string | null;
-  showOkazionCountdown?: boolean;
   /** Optional item rendered at the end of the price row. */
   trailing?: React.ReactNode;
   /** e.g. ` / muaj` after the current price. */
@@ -49,8 +38,7 @@ export function ListingPrice({
     Number.isFinite(price) &&
     originalPrice > price;
 
-  const priceAccessory =
-    trailing ?? (showOkazionCountdown ? <OkazionCountdown expiresAt={okazionUntil} compact={showWas} /> : null);
+  const priceAccessory = trailing ?? null;
 
   const priceContent = (
     <>

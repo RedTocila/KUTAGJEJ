@@ -379,7 +379,6 @@ export function JobListingDetailView({
                   {listing.title}
                   <ListingDetailTitleBadges
                     verified={Boolean(listing.seller?.verified ?? listing.sellerVerified)}
-                    trustBadge={Boolean(listing.seller?.trustBadge ?? listing.sellerTrustBadge)}
                     verifiedLabel="Punë e verifikuar"
                     size={18}
                   />

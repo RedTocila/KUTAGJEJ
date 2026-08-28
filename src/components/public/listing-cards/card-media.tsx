@@ -12,7 +12,6 @@ import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr
 
 import { paths } from '@/paths';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { OKAZION_ACCENT } from '@/lib/home-categories';
 import { nextSaveCount, nextShareCount, toggleListingSave, type ListingMetricKind } from '@/lib/listing-metrics';
 import type { ListingSharePayload } from '@/lib/listing-share';
 import { listingCardImageUrl, storageImageOriginalUrl } from '@/lib/storage-image';
@@ -22,7 +21,6 @@ import { useUser } from '@/hooks/use-user';
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { ListingPremiumBadge } from '@/components/public/listing-premium-badge';
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
-import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 
 import { OkazionCountdownPlaceholder } from './okazion-countdown';
@@ -62,8 +60,6 @@ export interface CardMediaProps {
   okazionUntil?: string | null;
   /** Seller verification status. Rendered at bottom-right of the image. */
   sellerVerified?: boolean;
-  /** Seller package medal (Grow/Elite). Rendered at bottom-right of the image. */
-  sellerTrustBadge?: boolean;
   /** Rich data for the share sheet / Instagram story template. */
   sharePayload?: Omit<ListingSharePayload, 'listingKind' | 'listingId' | 'title'> & {
     title?: string;
@@ -93,7 +89,6 @@ export function CardMedia({
   okazion = false,
   okazionUntil = null,
   sellerVerified = false,
-  sellerTrustBadge = false,
   sharePayload,
   priority = false,
 }: CardMediaProps) {
@@ -189,10 +184,10 @@ export function CardMedia({
 
   // OKAZION badge wins when both are active (same priority as before for chrome).
   const showPremiumBadge = premium && !okazion;
-  // Compact cards keep the okazion timer in the media badge; full cards render
-  // it alongside the price instead.
+  // Keep the OKAZION countdown in the media badge so it remains visible without
+  // competing with the listing price.
   const showBottomRight = Boolean(bottomRightOverlay);
-  const showSellerBadges = sellerVerified || sellerTrustBadge;
+  const showSellerBadges = sellerVerified;
 
   return (
     <Box
@@ -200,8 +195,9 @@ export function CardMedia({
         position: 'relative',
         ...(aspectRatio ? { aspectRatio, width: '100%' } : { height: height ?? { xs: 170, md: 186 } }),
         flexShrink: 0,
-        borderBottom: '1px solid',
-        borderColor: 'divider',
+        borderBottom: compact ? 'none' : '1px solid',
+        borderColor: compact ? 'transparent' : 'divider',
+        borderRadius: compact ? 1.25 : 0,
         bgcolor: primaryMainAlpha(0.06),
         overflow: 'hidden',
       }}
@@ -211,7 +207,11 @@ export function CardMedia({
           src={displaySrc!}
           alt={alt}
           fill
-          sizes="(max-width: 600px) 92vw, (max-width: 900px) 45vw, 320px"
+          sizes={
+            compact
+              ? '(max-width: 600px) 50vw, (max-width: 900px) 45vw, 320px'
+              : '(max-width: 600px) 92vw, (max-width: 900px) 45vw, 320px'
+          }
           priority={priority}
           className="listing-card-media-image"
           style={{ objectFit: 'cover' }}
@@ -252,25 +252,7 @@ export function CardMedia({
           }}
         >
           {okazion ? (
-            compact ? (
-              <OkazionCountdown expiresAt={okazionUntil} compact />
-            ) : (
-              <Chip
-                label="OKAZION"
-                size="small"
-                sx={{
-                  height: 28,
-                  fontSize: '0.72rem',
-                  fontWeight: 900,
-                  letterSpacing: 0.5,
-                  bgcolor: OKAZION_ACCENT,
-                  color: '#fff',
-                  flexShrink: 0,
-                  boxShadow: '0 2px 10px rgba(239, 68, 68, 0.55)',
-                  '& .MuiChip-label': { px: 1.1 },
-                }}
-              />
-            )
+            <OkazionCountdown expiresAt={okazionUntil} compact />
           ) : showPremiumBadge ? (
             <ListingPremiumBadge size={compact ? 22 : 28} aria-label="Premium" />
           ) : topLeftOverlay ? (
@@ -347,14 +329,15 @@ export function CardMedia({
           spacing={0.35}
           sx={{
             position: 'absolute',
-            bottom: 6,
+            bottom: bottomOverlay ? 28 : 6,
             right: 6,
             zIndex: 3,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            p: 0.5,
-            borderRadius: 1.5,
+            width: compact ? 28 : 32,
+            height: compact ? 28 : 32,
+            borderRadius: '50%',
             bgcolor: alpha('#000', 0.45),
             border: '1px solid',
             borderColor: alpha('#fff', 0.18),
@@ -365,7 +348,6 @@ export function CardMedia({
           }}
         >
           {sellerVerified ? <ListingVerifiedBadge size={compact ? 14 : 18} aria-label="Shitës i verifikuar" /> : null}
-          {sellerTrustBadge ? <ListingTrustBadge size={compact ? 14 : 18} /> : null}
         </Stack>
       ) : null}
 

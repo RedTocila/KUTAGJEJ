@@ -28,6 +28,7 @@ import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-
 import { PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
+import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
 import { useUser } from '@/hooks/use-user';
 import {
   acceptAiCategoryCorrection,
@@ -104,6 +105,28 @@ const analyzingTextFlashSx = {
   },
 };
 
+/** Rough first-pass estimate until real post timings come in. */
+const POST_MS_BASE = 4000;
+const POST_MS_PER_IMAGE = 1200;
+
+function estimatePostBatchMs(drafts: AiListingDraft[]): number {
+  return drafts.reduce((sum, draft) => {
+    const images = Array.isArray(draft.imageUrls) ? draft.imageUrls.length : 0;
+    return sum + POST_MS_BASE + images * POST_MS_PER_IMAGE;
+  }, 0);
+}
+
+const aiProgressBarSx = {
+  height: 6,
+  borderRadius: 999,
+  bgcolor: (theme: { palette: { mode: string } }) =>
+    theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+  '& .MuiLinearProgress-bar': {
+    borderRadius: 999,
+    bgcolor: AI_SEARCH_BLUE,
+  },
+};
+
 function formatCategoryMismatch(
   t: ReturnType<typeof useCopy>,
   draft: Pick<AiImportDraftResult, 'detectedCategory' | 'error'>,
@@ -125,6 +148,19 @@ const UPLOAD_FOLDER: Record<ListingCategoryKey, string> = {
 
 function toListingCategory(id: HomeVerticalId): ListingCategoryKey {
   return id === 'jobs' ? 'job-listings' : id;
+}
+
+function promptContextWithoutLinks(prompt: string): string {
+  return prompt
+    .split(/\r?\n/)
+    .map((line) =>
+      line
+        .replace(/https?:\/\/[^\s<>"']+/gi, '')
+        .replace(/^\s*(?:www\.)?[^\s/]+\.[^\s/]+(?:\/\S*)?\s*$/i, ''),
+    )
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n');
 }
 
 function isDisplayableImageUrl(url: unknown): url is string {
@@ -349,7 +385,6 @@ function DraftImageThumb({
           bgcolor: 'action.hover',
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}
           alt=""
@@ -437,17 +472,69 @@ function AiImportAnalyzingText({
       <LinearProgress
         variant={determinate ? 'determinate' : 'indeterminate'}
         value={percent}
-        sx={{
-          height: 6,
-          borderRadius: 999,
-          bgcolor: (theme) =>
-            theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-          '& .MuiLinearProgress-bar': {
-            borderRadius: 999,
-            bgcolor: AI_SEARCH_BLUE,
-          },
-        }}
+        sx={aiProgressBarSx}
       />
+    </Stack>
+  );
+}
+
+type PostAllProgressState = {
+  done: number;
+  total: number;
+  startedAt: number;
+  itemStartedAt: number;
+  estimatedTotalMs: number;
+};
+
+function AiImportPostingProgress({
+  progress,
+  t,
+}: {
+  progress: PostAllProgressState;
+  t: ReturnType<typeof useCopy>;
+}) {
+  const now = useSharedSecondTick() || Date.now();
+  const { done, total, startedAt, itemStartedAt, estimatedTotalMs } = progress;
+  const current = total <= 0 ? 1 : Math.min(total, done + 1);
+  const avgMs =
+    done > 0
+      ? Math.max(1500, (itemStartedAt - startedAt) / done)
+      : Math.max(1500, estimatedTotalMs / Math.max(1, total));
+  const currentElapsed = Math.max(0, now - itemStartedAt);
+  const remainingAfterCurrent = Math.max(0, total - done - (done < total ? 1 : 0));
+  const currentRemaining = done < total ? Math.max(avgMs * 0.2, avgMs - currentElapsed) : 0;
+  const remainingMs = currentRemaining + remainingAfterCurrent * avgMs;
+  const rawSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+  const remainingSeconds =
+    rawSeconds <= 15 ? rawSeconds : Math.max(8, Math.round(rawSeconds / 5) * 5);
+  const fractionInItem = done < total ? Math.min(0.92, currentElapsed / avgMs) : 0;
+  const percent = total <= 0 ? 0 : Math.min(100, ((done + fractionInItem) / total) * 100);
+
+  return (
+    <Stack spacing={0.6} sx={{ width: '100%' }} aria-live="polite">
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}>
+        <Typography
+          noWrap
+          sx={{
+            fontWeight: 800,
+            fontSize: '0.78rem',
+            letterSpacing: '-0.01em',
+            color: 'text.primary',
+            minWidth: 0,
+            flex: 1,
+            ...analyzingTextFlashSx,
+          }}
+        >
+          {t.aiImport.postingWorking(current, total)}
+        </Typography>
+        <Typography
+          variant="caption"
+          sx={{ fontWeight: 700, fontSize: '0.72rem', color: 'text.secondary', flexShrink: 0 }}
+        >
+          {t.aiImport.postingEta(remainingSeconds)}
+        </Typography>
+      </Stack>
+      <LinearProgress variant="determinate" value={percent} sx={aiProgressBarSx} />
     </Stack>
   );
 }
@@ -472,6 +559,7 @@ export default function AiImportListingsPage() {
   const [postingId, setPostingId] = React.useState<string | null>(null);
   const [openingId, setOpeningId] = React.useState<string | null>(null);
   const [postingAll, setPostingAll] = React.useState(false);
+  const [postAllProgress, setPostAllProgress] = React.useState<PostAllProgressState | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [pendingImageUrls, setPendingImageUrls] = React.useState<string[]>([]);
   const [lastPrompt, setLastPrompt] = React.useState('');
@@ -650,6 +738,7 @@ export default function AiImportListingsPage() {
       setPendingImageUrls(uploadedUrls);
 
       const urls = extractImportUrls(trimmed);
+      const sharedPrompt = promptContextWithoutLinks(trimmed);
       const units = urls.length > 0 ? urls.length : 1;
       setProgress({ done: 0, total: units });
 
@@ -703,7 +792,10 @@ export default function AiImportListingsPage() {
             break;
           }
           const res = await importListingsFromLinks({
-            text: i === 0 ? trimmed : '',
+            // Each request already carries one explicit URL. Do not send the
+            // complete multi-link paste to the first model call; it can make
+            // the model mix fields from different listings.
+            text: sharedPrompt,
             urls: [urls[i]],
             category,
             images: i === 0 ? imagePayload : undefined,
@@ -1055,11 +1147,36 @@ export default function AiImportListingsPage() {
 
   const postAll = async () => {
     if (!readyDrafts.length) return;
+    const startedAt = Date.now();
     setPostingAll(true);
+    setPostAllProgress({
+      done: 0,
+      total: readyDrafts.length,
+      startedAt,
+      itemStartedAt: startedAt,
+      estimatedTotalMs: estimatePostBatchMs(readyDrafts),
+    });
     setError(null);
     setStatusMessage(null);
     try {
-      const results = await postAiListingDrafts(readyDrafts, { phoneFallback: user?.phone });
+      const results = await postAiListingDrafts(readyDrafts, {
+        phoneFallback: user?.phone,
+        onProgress: ({ done, total, currentId }) => {
+          const now = Date.now();
+          if (currentId) setPostingId(currentId);
+          setPostAllProgress((prev) => {
+            const startedAt = prev?.startedAt ?? now;
+            const sameItem = prev != null && prev.done === done;
+            return {
+              done,
+              total,
+              startedAt,
+              itemStartedAt: sameItem || !currentId ? (prev?.itemStartedAt ?? now) : now,
+              estimatedTotalMs: prev?.estimatedTotalMs ?? estimatePostBatchMs(readyDrafts),
+            };
+          });
+        },
+      });
       const ok = results.filter((r) => r.ok).length;
       const fail = results.length - ok;
       const next = drafts
@@ -1076,6 +1193,7 @@ export default function AiImportListingsPage() {
     } finally {
       setPostingAll(false);
       setPostingId(null);
+      setPostAllProgress(null);
     }
   };
 
@@ -1464,6 +1582,10 @@ export default function AiImportListingsPage() {
               </IconButton>
             </Stack>
           </Stack>
+
+          {postingAll && postAllProgress ? (
+            <AiImportPostingProgress progress={postAllProgress} t={t} />
+          ) : null}
 
           {loading ? <AiImportAnalyzingText progress={progress} t={t} /> : null}
 

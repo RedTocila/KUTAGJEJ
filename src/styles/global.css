@@ -49,9 +49,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background:
-    radial-gradient(ellipse 80% 50% at 50% 38%, rgba(118, 186, 27, 0.16), transparent 68%),
-    #ffffff;
+  background: #ffffff;
   opacity: 1;
   transition: opacity 0.18s ease;
   pointer-events: auto;
@@ -198,6 +196,22 @@ html.dark .kutagjej-splash__progress-fill {
   transition: transform var(--motion-enter) var(--motion-ease);
 }
 
+@keyframes kutagjejTimerPulse {
+  0%,
+  100% {
+    filter: none;
+  }
+  50% {
+    filter: sepia(0.7) saturate(2.2) brightness(1.2);
+  }
+}
+
+.listing-countdown-pulse-glyph,
+.listing-countdown-pulse-container .MuiChip-label,
+.listing-countdown-pulse-container .MuiChip-icon {
+  animation: kutagjejTimerPulse 1.8s ease-in-out infinite;
+}
+
 /* Snappier MUI ripples — default ~550ms feels late on tap */
 .MuiTouchRipple-rippleVisible {
   animation-duration: 220ms !important;
@@ -229,6 +243,12 @@ html.dark .kutagjej-splash__progress-fill {
 
   .listing-card-media-image {
     transition: none;
+  }
+
+  .listing-countdown-pulse-glyph,
+  .listing-countdown-pulse-container .MuiChip-label,
+  .listing-countdown-pulse-container .MuiChip-icon {
+    animation: none;
   }
 
   .MuiTouchRipple-rippleVisible,

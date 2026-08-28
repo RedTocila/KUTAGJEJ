@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { Chip, type SxProps, type Theme } from '@mui/material';
+import { Chip, Typography, type SxProps, type Theme } from '@mui/material';
 import { alpha } from '@mui/material/styles';
+import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
 
 import {
   formatJobListingCountdown,
@@ -126,17 +127,49 @@ export function JobListingCountdownPlaceholder({
   chipSx,
   variant = 'default',
   condensed = false,
+  bare = false,
+  showClock = false,
 }: {
   chipSx?: SxProps<Theme>;
   variant?: JobListingCountdownVariant;
   condensed?: boolean;
+  bare?: boolean;
+  showClock?: boolean;
 }) {
   const overlay = variant === 'overlay';
+  const label = condensed ? COMPACT_PLACEHOLDER_LABEL : PLACEHOLDER_LABEL;
+  if (bare) {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        {showClock ? (
+          <ClockIcon size={14} weight="bold" color="#fff" className="listing-countdown-pulse-glyph" />
+        ) : null}
+        <Typography
+          component="span"
+          aria-hidden
+          className="listing-countdown-pulse-glyph"
+          sx={{
+            color: '#fff',
+            fontFamily: 'monospace',
+            fontVariantNumeric: 'tabular-nums',
+            fontWeight: 700,
+            fontSize: '0.72rem',
+            letterSpacing: '0.02em',
+            lineHeight: 1.2,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {label}
+        </Typography>
+      </span>
+    );
+  }
   return (
     <Chip
-      label={condensed ? COMPACT_PLACEHOLDER_LABEL : PLACEHOLDER_LABEL}
+      label={label}
       size="small"
       aria-hidden
+      className="listing-countdown-pulse-container"
       sx={{
         ...(chipSizeSx(variant) as object),
         ...chipUrgencySx('normal', overlay),
@@ -151,11 +184,15 @@ export function JobListingCountdown({
   chipSx,
   variant = 'default',
   condensed = false,
+  bare = false,
+  showClock = false,
 }: {
   expiresAt: string;
   chipSx?: SxProps<Theme>;
   variant?: JobListingCountdownVariant;
   condensed?: boolean;
+  bare?: boolean;
+  showClock?: boolean;
 }) {
   const overlay = variant === 'overlay';
   const [mounted, setMounted] = React.useState(false);
@@ -166,12 +203,48 @@ export function JobListingCountdown({
   }, []);
 
   if (!mounted) {
-    return <JobListingCountdownPlaceholder chipSx={chipSx} variant={variant} condensed={condensed} />;
+    return (
+      <JobListingCountdownPlaceholder
+        chipSx={chipSx}
+        variant={variant}
+        condensed={condensed}
+        bare={bare}
+        showClock={showClock}
+      />
+    );
   }
 
   const now = new Date(nowMs ?? 0);
   const { urgency } = tickState(expiresAt, now);
   const label = condensed ? formatCompactCountdown(expiresAt, now) : formatJobListingCountdown(expiresAt, now);
+
+  if (bare) {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        {showClock ? (
+          <ClockIcon size={14} weight="bold" color="#fff" className="listing-countdown-pulse-glyph" />
+        ) : null}
+        <Typography
+          component="span"
+          aria-live="polite"
+          suppressHydrationWarning
+          className="listing-countdown-pulse-glyph"
+          sx={{
+            color: '#fff',
+            fontFamily: 'monospace',
+            fontVariantNumeric: 'tabular-nums',
+            fontWeight: 700,
+            fontSize: '0.72rem',
+            letterSpacing: '0.02em',
+            lineHeight: 1.2,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {label}
+        </Typography>
+      </span>
+    );
+  }
 
   return (
     <Chip
@@ -179,6 +252,7 @@ export function JobListingCountdown({
       size="small"
       aria-live="polite"
       suppressHydrationWarning
+      className="listing-countdown-pulse-container"
       sx={{
         ...(chipSizeSx(variant) as object),
         ...chipUrgencySx(urgency, overlay),

@@ -358,14 +358,29 @@ export async function postAiListingDraft(
   }
 }
 
+export type AiDraftPostProgress = {
+  done: number;
+  total: number;
+  currentId: string | null;
+};
+
 export async function postAiListingDrafts(
   drafts: AiListingDraft[],
-  opts?: { phoneFallback?: string | null },
+  opts?: {
+    phoneFallback?: string | null;
+    onProgress?: (info: AiDraftPostProgress) => void;
+  },
 ): Promise<AiDraftPostResult[]> {
   const results: AiDraftPostResult[] = [];
-  for (const draft of drafts) {
+  const total = drafts.length;
+  for (let i = 0; i < drafts.length; i += 1) {
+    const draft = drafts[i];
+    opts?.onProgress?.({ done: i, total, currentId: draft.id });
     // Sequential to avoid quota/rate spikes.
     results.push(await postAiListingDraft(draft, opts));
+  }
+  if (total > 0) {
+    opts?.onProgress?.({ done: total, total, currentId: null });
   }
   return results;
 }

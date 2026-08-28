@@ -446,7 +446,6 @@ export function VerticalListingDetailView(props: {
                   {'seller' in listing || 'sellerVerified' in listing ? (
                     <ListingDetailTitleBadges
                       verified={Boolean(listing.seller?.verified ?? (listing as any).sellerVerified)}
-                      trustBadge={Boolean(listing.seller?.trustBadge ?? (listing as any).sellerTrustBadge)}
                     />
                   ) : null}
                 </Typography>

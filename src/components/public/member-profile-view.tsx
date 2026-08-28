@@ -21,7 +21,6 @@ import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Build
 import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { Lock as LockIcon } from '@phosphor-icons/react/dist/ssr/Lock';
-import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { MemberReferralBadgesRow, MemberReferralBadgesSkeleton } from '@/components/public/member-referral-badges';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
@@ -554,14 +553,6 @@ export function MemberProfileView({
                         sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
                       >
                         <ListingVerifiedBadge size={22} aria-label="Profil i verifikuar" />
-                      </Box>
-                    ) : null}
-                    {member.trustBadge ? (
-                      <Box
-                        component="span"
-                        sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
-                      >
-                        <ListingTrustBadge size={22} />
                       </Box>
                     ) : null}
                   </Typography>

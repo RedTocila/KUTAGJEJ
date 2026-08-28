@@ -80,7 +80,7 @@ export function BannerSlideCard({
       })}
     >
       <Box
-        sx={{
+        sx={(theme) => ({
           position: 'relative',
           width: '100%',
           minHeight: { xs: 240, sm: 260 },
@@ -89,7 +89,7 @@ export function BannerSlideCard({
           height: { md: 'auto' },
           overflow: 'hidden',
           backgroundColor: 'background.paper',
-          backgroundImage: imageSrc ? 'none' : fallbackBg,
+          backgroundImage: theme.palette.mode === 'dark' && !imageSrc ? fallbackBg : 'none',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           contentVisibility: eager ? 'visible' : 'auto',
@@ -105,7 +105,7 @@ export function BannerSlideCard({
                 '&:active': { transform: 'scale(0.992)' },
               }
             : null),
-        }}
+        })}
       >
         {imageSrc ? (
           <Image

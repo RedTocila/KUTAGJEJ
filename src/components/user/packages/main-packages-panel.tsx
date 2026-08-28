@@ -18,8 +18,6 @@ import {
 } from '@/components/core/product-dialog';
 import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
-import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
-import { PackageLeadsFeatureLabel } from '@/components/user/leads-how-it-works';
 import { useCopy } from '@/hooks/use-copy';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
@@ -65,10 +63,6 @@ function planFeatureLines(t: AppMessages, plan: PublicContract): FeatureListItem
   }
   if (plan.refreshEveryHours != null) {
     lines.push(t.packages.refreshAfterHours(plan.refreshEveryHours));
-  }
-  if (plan.glowBadgeEnabled) {
-    lines.push(t.packages.premiumBadge);
-    lines.push({ id: 'save-leads', label: <PackageLeadsFeatureLabel /> });
   }
   return lines;
 }
@@ -396,7 +390,7 @@ export function MainPackagesPanel() {
     return availableBillingMonths[0] ?? 1;
   }, [pickedMonths, availableBillingMonths]);
 
-  const firstPaidTarget = React.useMemo(() => {
+  const firstPaidTarget = (() => {
     for (const plan of plans) {
       const match = plan.priceOptions.find((o) => o.price > 0 && o.months === selectedMonths);
       if (match) return { contractId: plan.id, months: match.months };
@@ -410,7 +404,7 @@ export function MainPackagesPanel() {
       return { contractId: plan.id, months: target.months };
     }
     return null;
-  }, [plans, selectedMonths]);
+  })();
 
   if (!user) return null;
 
@@ -482,10 +476,6 @@ export function MainPackagesPanel() {
             const accent = MAIN_PACKAGES_ACCENT;
             const monthlyPrice = plan.price1Month ?? paidOptions.find((o) => o.months === 1)?.price ?? null;
             const details = planFeatureLines(t, plan);
-            const titleAdornment = plan.glowBadgeEnabled ? (
-              <ListingTrustBadge size={20} />
-            ) : undefined;
-
             const PlanIcon = planIconForCode(plan.planCode);
 
             if (isFree) {
@@ -495,7 +485,6 @@ export function MainPackagesPanel() {
                   icon={PlanIcon}
                   title={plan.title}
                   badge={titleBadge(t, isPlanCurrent)}
-                  titleAdornment={titleAdornment}
                   price="€0"
                   priceSuffix={t.packages.perMonth}
                   accent={accent}
@@ -525,7 +514,6 @@ export function MainPackagesPanel() {
                 icon={PlanIcon}
                 title={plan.title}
                 badge={titleBadge(t, isCurrent)}
-                titleAdornment={titleAdornment}
                 price={<PackageEurPrice listPrice={opt.price} percent={lifetimePercent} />}
                 priceSuffix={priceSuffixForMonths(t, opt.months)}
                 priceHint={equivalentMonthlyHint(t, opt.months, opt.price)}

@@ -60,7 +60,11 @@ export function CarCard({
       href={listingCarPublicHref(listing)}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
+      <CardShell
+        compact={variant === 'compact'}
+        premium={Boolean(listing.isPremium)}
+        okazion={Boolean(listing.isOkazion)}
+      >
         <CardMedia
           listingKind="car"
           listingId={listing.id}
@@ -76,8 +80,7 @@ export function CarCard({
           premium={Boolean(listing.isPremium)}
           okazion={Boolean(listing.isOkazion)}
           okazionUntil={listing.okazionUntil}
-          sellerVerified={variant === 'default' && Boolean(listing.sellerVerified)}
-          sellerTrustBadge={variant === 'default' && Boolean(listing.sellerTrustBadge)}
+          sellerVerified={Boolean(listing.sellerVerified)}
           priority={imagePriority}
           sharePayload={{
             title,
@@ -103,16 +106,19 @@ export function CarCard({
           }}
         />
         {variant === 'compact' ? (
-          <Stack className="listing-card-body" spacing={{ xs: 0.5, sm: 0.7 }} sx={{ p: { xs: 1.1, sm: 1.35 } }}>
+          <Stack
+            className="listing-card-body"
+            spacing={{ xs: 0.25, sm: 0.4 }}
+            sx={{ pt: { xs: 0.65, sm: 0.8 }, px: { xs: 0.25, sm: 0.4 }, pb: { xs: 0.8, sm: 1 } }}
+          >
             <ListingTitleWithVerified
               title={title}
               maxLines={1}
               verified={false}
-              trustBadge={false}
               typographySx={{
-                fontSize: { xs: '0.85rem', sm: '0.92rem' },
-                fontWeight: 700,
-                lineHeight: 1.3,
+                fontSize: { xs: '0.76rem', sm: '0.82rem' },
+                fontWeight: 650,
+                lineHeight: 1.25,
               }}
             />
 
@@ -123,7 +129,8 @@ export function CarCard({
                 currency={listing.currency}
                 isPremium={listing.isPremium}
                 isOkazion={listing.isOkazion}
-                fontSize="1rem"
+                fontSize="0.9rem"
+                fontWeight={800}
               />
               <Stack
                 direction="row"
@@ -139,7 +146,7 @@ export function CarCard({
           </Stack>
         ) : (
           <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
-            <ListingTitleWithVerified title={title} maxLines={1} verified={false} trustBadge={false} />
+            <ListingTitleWithVerified title={title} maxLines={1} verified={false} />
             {cardRating ? (
               <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
             ) : null}
@@ -149,8 +156,6 @@ export function CarCard({
               currency={listing.currency}
               isPremium={listing.isPremium}
               isOkazion={listing.isOkazion}
-              okazionUntil={listing.okazionUntil}
-              showOkazionCountdown={Boolean(listing.isOkazion)}
             />
 
             <CardDescription text={listing.description} />

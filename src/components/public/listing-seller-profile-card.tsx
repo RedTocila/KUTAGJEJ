@@ -9,7 +9,6 @@ import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import type { PublicRealEstateListingSeller } from '@/lib/public-listings-client';
 import { avatarImageUrl } from '@/lib/storage-image';
-import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { ListingVerifiedBadge, ProfessionalRatingSummary, ProfileVerifiedNotice } from '@/components/public/professional-listing-detail-ui';
 
 function sellerInitials(name: string): string {
@@ -88,14 +87,6 @@ export function ListingSellerProfileCard({
                     sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.45, lineHeight: 0 }}
                   >
                     <ListingVerifiedBadge size={18} aria-label="Profil i verifikuar" />
-                  </Box>
-                ) : null}
-                {seller?.trustBadge ? (
-                  <Box
-                    component="span"
-                    sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.45, lineHeight: 0 }}
-                  >
-                    <ListingTrustBadge size={18} />
                   </Box>
                 ) : null}
               </Typography>

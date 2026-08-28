@@ -10,7 +10,6 @@ import {
   type SearchHitVariant,
 } from '@/components/public/listing-cards/search-hit-card';
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
-import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import {
   ListingVerifiedBadge,
   ProfessionalRatingSummary,
@@ -89,14 +88,6 @@ export function MemberProfileCard({
                     sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.45, lineHeight: 0 }}
                   >
                     <ListingVerifiedBadge size={18} aria-label={t.search.verifiedNotice} />
-                  </Box>
-                ) : null}
-                {member.trustBadge ? (
-                  <Box
-                    component="span"
-                    sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.45, lineHeight: 0 }}
-                  >
-                    <ListingTrustBadge size={18} />
                   </Box>
                 ) : null}
               </Typography>

@@ -16,7 +16,6 @@ import {
   searchHitListTextSx,
   type SearchHitVariant,
 } from '@/components/public/listing-cards/search-hit-card';
-import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import {
   ListingVerifiedBadge,
   ProfessionalRatingSummary,
@@ -81,7 +80,6 @@ function SearchListingBody({
   imageUrl,
   FallbackIcon,
   verified,
-  trustBadge,
   price,
   originalPrice,
   currency,
@@ -100,7 +98,6 @@ function SearchListingBody({
   imageUrl: string | null;
   FallbackIcon: PhosphorIcon;
   verified?: boolean;
-  trustBadge?: boolean;
   price?: number | null;
   originalPrice?: number | null;
   currency?: string | null;
@@ -151,14 +148,6 @@ function SearchListingBody({
                 sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.45, lineHeight: 0 }}
               >
                 <ListingVerifiedBadge size={18} />
-              </Box>
-            ) : null}
-            {trustBadge ? (
-              <Box
-                component="span"
-                sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.45, lineHeight: 0 }}
-              >
-                <ListingTrustBadge size={18} />
               </Box>
             ) : null}
           </Typography>
@@ -231,7 +220,6 @@ export function SearchListingCard({
           imageUrl={listing.imageUrl}
           FallbackIcon={BuildingsIcon}
           verified={Boolean(listing.sellerVerified)}
-          trustBadge={Boolean(listing.sellerTrustBadge)}
           price={listing.price}
           originalPrice={listing.originalPrice}
           currency={listing.currency}
@@ -253,7 +241,6 @@ export function SearchListingCard({
           imageUrl={listing.imageUrl}
           FallbackIcon={CarIcon}
           verified={Boolean(listing.sellerVerified)}
-          trustBadge={Boolean(listing.sellerTrustBadge)}
           price={listing.price}
           originalPrice={listing.originalPrice}
           currency={listing.currency}
@@ -277,7 +264,6 @@ export function SearchListingCard({
           imageUrl={listing.imageUrl}
           FallbackIcon={BriefcaseIcon}
           verified={Boolean(listing.sellerVerified)}
-          trustBadge={Boolean(listing.sellerTrustBadge)}
           price={listing.salary}
           currency={listing.currency}
           isPremium={Boolean(listing.isPremium)}
@@ -299,7 +285,6 @@ export function SearchListingCard({
           imageUrl={listing.imageUrl}
           FallbackIcon={ShoppingBagIcon}
           verified={Boolean(listing.sellerVerified)}
-          trustBadge={Boolean(listing.sellerTrustBadge)}
           price={listing.price}
           originalPrice={listing.originalPrice}
           currency={listing.currency}
@@ -325,7 +310,6 @@ export function SearchListingCard({
           imageUrl={listing.imageUrl}
           FallbackIcon={item.kind === 'businesses' ? StorefrontIcon : HandshakeIcon}
           verified={Boolean(listing.sellerVerified)}
-          trustBadge={Boolean(listing.sellerTrustBadge)}
           ratingAverage={listing.ratingAverage}
           reviewCount={listing.reviewCount}
           {...row}

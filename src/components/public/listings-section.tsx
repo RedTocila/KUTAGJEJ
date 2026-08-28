@@ -106,7 +106,7 @@ export function ListingsSection({
     <Box
       component="section"
       aria-labelledby={`section-${verticalId}`}
-      sx={compactTop ? { pt: 0, pb: { xs: 3, md: 4 } } : { py: { xs: 3, md: 4 } }}
+      sx={compactTop ? { pt: 0, pb: { xs: 1.5, md: 2 } } : { py: { xs: 1.5, md: 2 } }}
     >
       <Container maxWidth="xl" sx={{ px: { xs: 2, md: 3, lg: 4 } }}>
         <Stack

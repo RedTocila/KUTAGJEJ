@@ -12,6 +12,9 @@ const { normalizeFuelType } = require('./car-field-rules');
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+/** Leave enough room for the complete JSON form, especially descriptions with bullets. */
+const OPENAI_INITIAL_MAX_TOKENS = 2600;
+const OPENAI_RETRY_MAX_TOKENS = 3400;
 /** Max listing/source links processed in one import request. */
 const MAX_IMPORT_URLS = 50;
 /** Max images kept on a car listing draft (matches create-form / API). */
@@ -2325,6 +2328,102 @@ function parseBooleanFlag(value) {
   return null;
 }
 
+/**
+ * Models occasionally use a familiar alias instead of the exact form key from
+ * the prompt. Normalize those aliases before the draft reaches the frontend.
+ */
+function normalizeModelFormFields(parsed, categoryOverride = null) {
+  if (!parsed || typeof parsed !== 'object') return parsed;
+  const form =
+    parsed.form && typeof parsed.form === 'object' && !Array.isArray(parsed.form)
+      ? parsed.form
+      : {};
+  parsed.form = form;
+
+  const copyAlias = (target, aliases) => {
+    if (form[target] != null && String(form[target]).trim() !== '') return;
+    const alias = aliases.find(
+      (key) =>
+        (form[key] != null && String(form[key]).trim() !== '') ||
+        (parsed[key] != null && String(parsed[key]).trim() !== ''),
+    );
+    if (alias) form[target] = form[alias] ?? parsed[alias];
+  };
+
+  const copyTopLevel = (key) => {
+    if (form[key] != null && String(form[key]).trim() !== '') return;
+    if (parsed[key] != null && String(parsed[key]).trim() !== '') form[key] = parsed[key];
+  };
+  [
+    'title',
+    'description',
+    'contactPhone',
+    'cityName',
+    'zoneName',
+    'price',
+    'currency',
+    'condition',
+    'servicesHighlight',
+  ].forEach(copyTopLevel);
+
+  copyAlias('title', ['listingTitle', 'name']);
+  copyAlias('description', ['details', 'content', 'text']);
+  copyAlias('contactPhone', ['phone', 'telephone', 'tel', 'whatsapp']);
+  copyAlias('cityName', ['city', 'locationCity']);
+  copyAlias('zoneName', ['neighborhood', 'neighbourhood', 'areaName']);
+
+  const category = CATEGORIES.includes(categoryOverride)
+    ? categoryOverride
+    : CATEGORIES.includes(parsed.category)
+    ? parsed.category
+    : CATEGORIES.includes(parsed.detectedCategory)
+      ? parsed.detectedCategory
+      : null;
+  if (category === 'cars') {
+    ['vehicleType', 'make', 'model', 'variant', 'year', 'kilometers', 'transmission', 'fuelType', 'color'].forEach(
+      copyTopLevel,
+    );
+    copyAlias('make', ['brand', 'vehicleMake']);
+    copyAlias('model', ['vehicleModel']);
+    copyAlias('vehicleType', ['vehicleCategory']);
+    copyAlias('kilometers', ['km', 'mileage', 'mileageKm']);
+    copyAlias('fuelType', ['fuel']);
+    copyAlias('transmission', ['gearbox']);
+  } else if (category === 'real-estate') {
+    [
+      'propertyCategory',
+      'transactionType',
+      'surfaceM2',
+      'floor',
+      'totalFloors',
+      'bedrooms',
+      'bathrooms',
+      'furnishing',
+      'yearBuilt',
+    ].forEach(copyTopLevel);
+    copyAlias('propertyCategory', ['propertyType']);
+    copyAlias('surfaceM2', ['surface', 'area', 'size', 'sqm', 'squareMeters']);
+    copyAlias('transactionType', ['listingType']);
+  } else if (category === 'job-listings') {
+    [
+      'industry',
+      'education',
+      'experience',
+      'jobType',
+      'workLocation',
+      'salary',
+      'responsibilities',
+      'requirements',
+    ].forEach(copyTopLevel);
+    copyAlias('jobType', ['employmentType']);
+    copyAlias('workLocation', ['locationType']);
+    copyAlias('responsibilities', ['duties']);
+    copyAlias('requirements', ['qualifications']);
+  }
+
+  return parsed;
+}
+
 function buildCategoryMismatchResult(parsed, { forcedCategory, detectedCategory, fallbackImageUrls }) {
   const form = parsed.form && typeof parsed.form === 'object' ? parsed.form : {};
   const modelImageUrls = Array.isArray(parsed.imageUrls)
@@ -2466,6 +2565,10 @@ function parseAiListingResponse(raw, { forcedCategory, fallbackImageUrls = [] })
   } catch {
     parsed = {};
   }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) parsed = {};
+  normalizeModelFormFields(parsed, forcedCategory);
+  if (!parsed.form.title && parsed.title) parsed.form.title = parsed.title;
+  if (!parsed.form.description && parsed.summary) parsed.form.description = parsed.summary;
 
   const restrictedReasons = normalizeRestrictedReasons(parsed.restrictedReasons);
   const contentAllowedFlag = parseBooleanFlag(parsed.contentAllowed);
@@ -2564,26 +2667,28 @@ async function callListingModel({
   }
 
   const forcedCategory = CATEGORIES.includes(preferredCategory) ? preferredCategory : null;
-  const body = JSON.stringify({
-    model: OPENAI_MODEL,
-    temperature: mode === 'edit' ? 0.15 : 0.25,
-    max_tokens: 1800,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: buildSystemPrompt(forcedCategory, { mode }) },
-      {
-        role: 'user',
-        content: buildVisionUserContent({
-          payload: userPayload,
-          attachedImages,
-        }),
-      },
-    ],
-  });
 
   const maxAttempts = 6;
   let lastError = null;
+  let incompleteDraftRetries = 0;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const body = JSON.stringify({
+      model: OPENAI_MODEL,
+      temperature: mode === 'edit' ? 0.15 : 0.25,
+      max_tokens:
+        incompleteDraftRetries > 0 ? OPENAI_RETRY_MAX_TOKENS : OPENAI_INITIAL_MAX_TOKENS,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: buildSystemPrompt(forcedCategory, { mode }) },
+        {
+          role: 'user',
+          content: buildVisionUserContent({
+            payload: userPayload,
+            attachedImages,
+          }),
+        },
+      ],
+    });
     const res = await fetch(OPENAI_URL, {
       method: 'POST',
       headers: {
@@ -2596,7 +2701,8 @@ async function callListingModel({
     const payload = await res.json().catch(() => ({}));
     if (res.ok) {
       const raw = payload?.choices?.[0]?.message?.content;
-      return parseAiListingResponse(raw, {
+      const wasTruncated = payload?.choices?.[0]?.finish_reason === 'length';
+      const parsed = parseAiListingResponse(raw, {
         forcedCategory,
         fallbackImageUrls: Array.isArray(userPayload.snapshotImageUrls)
           ? userPayload.snapshotImageUrls
@@ -2604,6 +2710,33 @@ async function callListingModel({
             ? userPayload.imageUrls
             : [],
       });
+      const form = parsed.form && typeof parsed.form === 'object' ? parsed.form : {};
+      const title = String(parsed.title || form.title || '').trim();
+      const description = String(form.description || parsed.summary || '').trim();
+      const isRestricted = parsed.error === CONTENT_RESTRICTED_CODE;
+      const isMismatch =
+        parsed.error === CATEGORY_MISMATCH_CODE || parsed.categoryMatch === false;
+      const hasCategory = CATEGORIES.includes(parsed.category) || isRestricted;
+      const hasCompleteDraft =
+        isRestricted ||
+        (hasCategory &&
+          Boolean(title) &&
+          Boolean(description) &&
+          Object.keys(form).length > 0 &&
+          (!isMismatch || Boolean(parsed.detectedCategory)));
+      if (hasCompleteDraft && !wasTruncated) return parsed;
+
+      lastError = new Error(
+        wasTruncated
+          ? 'AI response was truncated before the listing draft was complete'
+          : 'AI returned an incomplete listing draft',
+      );
+      lastError.status = 502;
+      if (incompleteDraftRetries < 1) {
+        incompleteDraftRetries += 1;
+        continue;
+      }
+      break;
     }
 
     const message = payload?.error?.message || `OpenAI request failed (${res.status})`;

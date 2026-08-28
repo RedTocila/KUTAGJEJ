@@ -24,27 +24,32 @@ export function ListingKeywordSearchInput({
   onChange,
   accent,
   commitToChip = false,
+  live = false,
 }: {
   value: string;
   placeholder: string;
   onChange: (next: string) => void;
   /** Optional accent (e.g. OKAZION red) for icon + active/focus chrome. */
   accent?: ProductSearchAccent;
-  /** Applied keyword is a chip — this field is only for composing a new query. */
+  /** Applied keyword is shown as a chip when this field is not live. */
   commitToChip?: boolean;
+  /** Apply the current query while typing instead of waiting for Enter. */
+  live?: boolean;
 }) {
   const t = useCopy();
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const [query, setQuery] = React.useState(commitToChip ? '' : value);
+  const typingRef = React.useRef(false);
+  const [query, setQuery] = React.useState(commitToChip && !live ? '' : value);
   const [focused, setFocused] = React.useState(false);
 
   React.useEffect(() => {
-    if (commitToChip) return;
+    if (commitToChip && !live) return;
+    if (live && typingRef.current) return;
     setQuery(value);
-  }, [value, commitToChip]);
+  }, [value, commitToChip, live]);
 
   React.useEffect(() => {
-    if (commitToChip) return;
+    if (commitToChip && !live) return;
     const trimmed = query.trim();
     const applied = value.trim();
     if (trimmed === applied) return;
@@ -54,7 +59,7 @@ export function ListingKeywordSearchInput({
     }, DEBOUNCE_MS);
 
     return () => window.clearTimeout(handle);
-  }, [query, value, onChange, commitToChip]);
+  }, [query, value, onChange, commitToChip, live]);
 
   const commitDraft = (next: string) => {
     const trimmed = next.trim();
@@ -64,7 +69,7 @@ export function ListingKeywordSearchInput({
         return;
       }
       onChange(trimmed);
-      setQuery('');
+      if (!live) setQuery('');
       return;
     }
     onChange(trimmed);
@@ -72,7 +77,7 @@ export function ListingKeywordSearchInput({
 
   const clear = () => {
     setQuery('');
-    if (!commitToChip) onChange('');
+    if (!commitToChip || live) onChange('');
     inputRef.current?.focus();
   };
 
@@ -103,11 +108,15 @@ export function ListingKeywordSearchInput({
         value={query}
         placeholder={placeholder}
         aria-label={placeholder}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => {
+          typingRef.current = true;
+          setQuery(e.target.value);
+        }}
         onFocus={() => setFocused(true)}
         onBlur={() => {
           setFocused(false);
-          if (commitToChip && query.trim()) commitDraft(query);
+          typingRef.current = false;
+          if (commitToChip && !live && query.trim()) commitDraft(query);
         }}
         slotProps={{
           input: {

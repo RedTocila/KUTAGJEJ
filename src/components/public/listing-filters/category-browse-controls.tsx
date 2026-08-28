@@ -12,7 +12,6 @@ import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import { localizeVertical, type HomeVerticalId } from '@/lib/home-categories';
 import {
-  addBrowseKeyword,
   buildBrowseUrlQuery,
   countActiveBrowseFilters,
   formatBrowseKeywords,
@@ -148,7 +147,11 @@ export function CategoryBrowseControls({
 
   const applyKeyword = React.useCallback(
     (nextQ: string) => {
-      const next = addBrowseKeyword(applied, nextQ);
+      const trimmed = nextQ.trim();
+      const next = {
+        ...applied,
+        q: trimmed ? [trimmed] : undefined,
+      } as BrowseFilters;
       setDraft(next);
       React.startTransition(() => {
         router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
@@ -186,6 +189,7 @@ export function CategoryBrowseControls({
               placeholder={vertical.searchPlaceholder}
               onChange={applyKeyword}
               commitToChip
+              live
             />
           </Box>
 

@@ -225,6 +225,13 @@ export function ProfessionalListingForm({
   }, []);
 
   React.useEffect(() => {
+    if (aiPrefill) {
+      // AI import is a new prefilled draft. Do not let the existing-listing
+      // lookup finish later and overwrite the fields AI just supplied.
+      setExistingId(null);
+      setCheckingExisting(false);
+      return;
+    }
     void listRealEstateLocationsPublic().then((res) => {
       if (res.cities) setCities(res.cities);
     });
@@ -240,7 +247,7 @@ export function ProfessionalListingForm({
     return () => {
       cancelled = true;
     };
-  }, [applyExistingListing, user?.email]);
+  }, [aiPrefill, applyExistingListing, user?.email]);
 
   // Prefill empty create fields from signup/profile / last listing (never overwrite AI or typed input).
   React.useEffect(() => {

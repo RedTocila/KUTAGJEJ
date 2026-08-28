@@ -90,7 +90,6 @@ export function ContractFormDialog(props: {
   const [subscriberKind, setSubscriberKind] = React.useState<'agent' | 'company'>('agent');
   const [planCode, setPlanCode] = React.useState<ContractPlanCode>('starter');
   const [refreshEveryHours, setRefreshEveryHours] = React.useState('48');
-  const [glowBadgeEnabled, setGlowBadgeEnabled] = React.useState(false);
   const [boostCredits, setBoostCredits] = React.useState('0');
   const [dailyBoostAccess, setDailyBoostAccess] = React.useState(false);
   const [maxListAllCategories, setMaxListAllCategories] = React.useState('1');
@@ -117,7 +116,6 @@ export function ContractFormDialog(props: {
       setSubscriberKind(kind);
       setPlanCode((props.contract.planCode as ContractPlanCode) || 'starter');
       setRefreshEveryHours(String(props.contract.refreshEveryHours ?? 48));
-      setGlowBadgeEnabled(Boolean(props.contract.glowBadgeEnabled));
       setBoostCredits(String(props.contract.boostCredits ?? 0));
       setDailyBoostAccess(Boolean(props.contract.dailyBoostAccess));
       setMaxListAllCategories(String(props.contract.maxListAllCategories ?? 0));
@@ -142,7 +140,6 @@ export function ContractFormDialog(props: {
       setSubscriberKind('agent');
       setPlanCode('starter');
       setRefreshEveryHours('48');
-      setGlowBadgeEnabled(false);
       setBoostCredits('0');
       setDailyBoostAccess(false);
       setMaxListAllCategories('1');
@@ -257,7 +254,7 @@ export function ContractFormDialog(props: {
       planCode,
       sortOrder: PLAN_OPTIONS.findIndex((p) => p.value === planCode),
       refreshEveryHours: refreshH,
-      glowBadgeEnabled,
+      glowBadgeEnabled: false,
       boostCredits: boost,
       dailyBoostAccess,
       maxListAllCategories: qAll,
@@ -478,16 +475,6 @@ export function ContractFormDialog(props: {
             </Grid>
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={glowBadgeEnabled}
-                    onChange={(ev) => setGlowBadgeEnabled(ev.target.checked)}
-                    color="primary"
-                  />
-                }
-                label="Badge Premium"
-              />
               <FormControlLabel
                 control={
                   <Switch

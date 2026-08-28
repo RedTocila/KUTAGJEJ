@@ -107,6 +107,7 @@ export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps)
         data-no-tab-swipe
         sx={{
           display: 'flex',
+          alignItems: 'stretch',
           gap: { xs: 1.25, md: 1.75 },
           width: '100%',
           maxWidth: '100%',

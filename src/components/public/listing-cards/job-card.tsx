@@ -33,22 +33,38 @@ import { JobListingCountdownPlaceholder } from './job-listing-countdown';
 import { ListingCardRating, resolveListingCardRating, type ListingCardRatingSummary } from './listing-card-rating';
 import { ListingPrice } from './listing-price';
 import { ListingTitleWithVerified } from './listing-title-with-verified';
-import { OkazionCountdownPlaceholder } from './okazion-countdown';
 import { SpecRow, type Spec } from './spec-row';
 
 const JobListingCountdown = dynamic(() => import('./job-listing-countdown').then((m) => m.JobListingCountdown), {
   ssr: false,
-  loading: () => <JobListingCountdownPlaceholder variant="overlay" />,
+  loading: () => <JobListingCountdownPlaceholder variant="overlay" bare />,
 });
-const OkazionCountdown = dynamic(() => import('./okazion-countdown').then((m) => m.OkazionCountdown), {
-  ssr: false,
-  loading: () => <OkazionCountdownPlaceholder />,
-});
-
 function workLocationIcon(value: string) {
   if (value === 'remote') return HouseIcon;
   if (value === 'hybrid') return PathIcon;
   return BuildingsIcon;
+}
+
+function JobExpiryAnnouncementBar({ expiresAt }: { expiresAt: string }) {
+  return (
+    <Stack
+      direction="row"
+      spacing={0.75}
+      sx={{
+        width: '100%',
+        boxSizing: 'border-box',
+        alignItems: 'center',
+        justifyContent: 'center',
+        px: 1.1,
+        py: 0.65,
+        bgcolor: 'rgba(0,0,0,0.72)',
+        borderTop: '1px solid rgba(255,255,255,0.16)',
+        backdropFilter: 'blur(8px)',
+      }}
+    >
+      <JobListingCountdown expiresAt={expiresAt} variant="overlay" bare showClock />
+    </Stack>
+  );
 }
 
 export function JobCard({
@@ -104,6 +120,10 @@ export function JobCard({
           premium={Boolean(listing.isPremium)}
           okazion={Boolean(listing.isOkazion)}
           okazionUntil={listing.okazionUntil}
+          sellerVerified={Boolean(listing.sellerVerified)}
+          bottomOverlay={
+            !listing.isOkazion ? <JobExpiryAnnouncementBar expiresAt={expiresAt} /> : undefined
+          }
           priority={imagePriority}
           sharePayload={{
             title: listing.title,
@@ -136,7 +156,7 @@ export function JobCard({
           }}
         />
         <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
-          <ListingTitleWithVerified title={listing.title} maxLines={1} verified={false} trustBadge={false} />
+          <ListingTitleWithVerified title={listing.title} maxLines={1} verified={false} />
           {cardRating ? (
             <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
           ) : null}
@@ -146,11 +166,6 @@ export function JobCard({
               currency={listing.currency}
               isPremium={listing.isPremium}
               isOkazion={listing.isOkazion}
-              okazionUntil={listing.okazionUntil}
-              showOkazionCountdown={Boolean(listing.isOkazion)}
-              trailing={
-                !listing.isOkazion ? <JobListingCountdown expiresAt={expiresAt} variant="default" /> : undefined
-              }
               fontSize="1rem"
               suffix={
                 <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 500 }}>
@@ -159,7 +174,7 @@ export function JobCard({
               }
             />
           ) : (
-            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+            <Stack direction="row" sx={{ alignItems: 'center' }}>
               <Typography
                 sx={{
                   fontWeight: 800,
@@ -170,13 +185,6 @@ export function JobCard({
               >
                 Pagë e diskutueshme
               </Typography>
-              <Box sx={{ flexShrink: 0, lineHeight: 0 }}>
-                {listing.isOkazion ? (
-                  <OkazionCountdown expiresAt={listing.okazionUntil} />
-                ) : (
-                  <JobListingCountdown expiresAt={expiresAt} variant="default" />
-                )}
-              </Box>
             </Stack>
           )}
 

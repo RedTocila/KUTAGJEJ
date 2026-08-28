@@ -77,6 +77,7 @@ export function HomepageRecommendedSection({
       isEmpty={!loading && items.length === 0}
       titleKey="recommendedListings"
       useMuiVerticalIcon
+      compactTop
       hideTotal
       hideVerticalIcon
       hideSubcategoryPills

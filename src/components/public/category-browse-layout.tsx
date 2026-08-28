@@ -90,7 +90,8 @@ export function CategoryBrowseLayout({
     setPhase('loading');
   }, []);
 
-  const showTopViewed = isHomeVerticalId(verticalId) && topViewed.length > 0 && phase !== 'loading';
+  const showTopViewed =
+    isHomeVerticalId(verticalId) && topViewed.length > 0 && !hasFilters && phase !== 'loading';
   const pending = phase === 'loading';
 
   return (

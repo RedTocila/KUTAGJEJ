@@ -319,7 +319,6 @@ export function BusinessListingDetailView({
                     {listing.title}
                     <ListingDetailTitleBadges
                       verified={Boolean(listing.seller?.verified ?? (listing as any).sellerVerified)}
-                      trustBadge={Boolean(listing.seller?.trustBadge ?? (listing as any).sellerTrustBadge)}
                       verifiedLabel="Biznes i verifikuar"
                     />
                   </Typography>

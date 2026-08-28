@@ -9,7 +9,7 @@ import SchoolOutlined from '@mui/icons-material/SchoolOutlined';
 import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import TrendingUpOutlined from '@mui/icons-material/TrendingUpOutlined';
 import WorkOutlineOutlined from '@mui/icons-material/WorkOutlineOutlined';
-import { Avatar, Box, ButtonBase, Chip, Container, Grid, IconButton, Stack, Typography } from '@mui/material';
+import { Avatar, Box, ButtonBase, Chip, Container, Grid, Stack, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
@@ -36,7 +36,6 @@ import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
-import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
@@ -276,15 +275,7 @@ export function JobListingDetailDesktop({
                       component="span"
                       sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
                     >
-                      <JobVerifiedBadge size={22} color="#fff" />
-                    </Box>
-                  ) : null}
-                  {listing.seller?.trustBadge ? (
-                    <Box
-                      component="span"
-                      sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
-                    >
-                      <ListingTrustBadge size={22} />
+                      <JobVerifiedBadge size={22} />
                     </Box>
                   ) : null}
                 </Typography>

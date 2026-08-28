@@ -117,6 +117,7 @@ export function RealEstateCard({
           premium={Boolean(listing.isPremium)}
           okazion={Boolean(listing.isOkazion)}
           okazionUntil={listing.okazionUntil}
+          sellerVerified={Boolean(listing.sellerVerified)}
           aspectRatio="4 / 3"
           priority={imagePriority}
           sharePayload={{
@@ -140,7 +141,6 @@ export function RealEstateCard({
             title={listing.title}
             maxLines={1}
             verified={false}
-            trustBadge={false}
           />
           {cardRating ? (
             <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
@@ -151,8 +151,6 @@ export function RealEstateCard({
             currency={listing.currency}
             isPremium={listing.isPremium}
             isOkazion={listing.isOkazion}
-            okazionUntil={listing.okazionUntil}
-            showOkazionCountdown={Boolean(listing.isOkazion)}
             suffix={
               listing.transactionType === 'rent' ? (
                 <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 500 }}>

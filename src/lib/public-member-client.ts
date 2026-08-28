@@ -288,7 +288,6 @@ export interface PublicMemberSearchHit {
   avatarUrl: string | null;
   memberSince: string;
   verified: boolean;
-  trustBadge: boolean;
   businessOwner: string | null;
   businessCategory: string | null;
   cityName: string | null;

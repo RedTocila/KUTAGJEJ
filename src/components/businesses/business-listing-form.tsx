@@ -95,7 +95,7 @@ export function BusinessListingForm({
   const canPostBusiness = isBusinessPortalAccount(user);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [error, setError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState(false);
+  const [, setSuccess] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [checkingExisting, setCheckingExisting] = React.useState(true);
   const [existingId, setExistingId] = React.useState<string | null>(null);
@@ -185,6 +185,13 @@ export function BusinessListingForm({
       setCheckingExisting(false);
       return;
     }
+    if (aiPrefill) {
+      // AI import is a new prefilled draft. Do not let the existing-listing
+      // lookup finish later and overwrite the fields AI just supplied.
+      setExistingId(null);
+      setCheckingExisting(false);
+      return;
+    }
     void listRealEstateLocationsPublic().then((res) => {
       if (res.cities) setCities(res.cities);
     });
@@ -208,7 +215,7 @@ export function BusinessListingForm({
     return () => {
       cancelled = true;
     };
-  }, [canPostBusiness, applyExistingListing, user?.email]);
+  }, [canPostBusiness, applyExistingListing, user?.email, aiPrefill]);
 
   // Prefill empty create fields from signup/profile / last listing location.
   React.useEffect(() => {

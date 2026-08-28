@@ -35,7 +35,6 @@ import {
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
-import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { HistoryBackButton } from '@/components/public/product-browse-chrome';
@@ -242,14 +241,6 @@ export function ProfessionalListingDetailDesktop({
                                 sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
                               >
                                 <ProfessionalVerifiedBadge />
-                              </Box>
-                            ) : null}
-                            {listing.seller?.trustBadge ? (
-                              <Box
-                                component="span"
-                                sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
-                              >
-                                <ListingTrustBadge size={22} />
                               </Box>
                             ) : null}
                           </Typography>

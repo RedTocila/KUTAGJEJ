@@ -77,14 +77,17 @@ export function PublicFooter() {
     >
       <Box
         aria-hidden
-        sx={{
+        sx={(theme) => ({
           position: 'absolute',
           inset: 0,
-          background: `radial-gradient(circle at 0% 0%, ${primaryMainAlpha(0.08)}, transparent 45%), radial-gradient(circle at 100% 100%, ${secondaryMainAlpha(
-            0.06,
-          )}, transparent 45%)`,
+          background: 'none',
           pointerEvents: 'none',
-        }}
+          ...theme.applyStyles('dark', {
+            background: `radial-gradient(circle at 0% 0%, ${primaryMainAlpha(0.08)}, transparent 45%), radial-gradient(circle at 100% 100%, ${secondaryMainAlpha(
+              0.06,
+            )}, transparent 45%)`,
+          }),
+        })}
       />
       <Container maxWidth="xl" sx={{ position: 'relative' }}>
         <Stack spacing={{ xs: 2.75, md: 4 }}>

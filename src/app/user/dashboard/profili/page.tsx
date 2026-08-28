@@ -31,7 +31,6 @@ import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 import { useOwnerEditHeaderActions } from '@/components/user/owner-edit-header-actions';
 import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { SearchableSelect } from '@/components/core/searchable-select';
-import { ListingTrustBadge } from '@/components/public/listing-trust-badge';
 import { MemberReferralBadgesRow, MemberReferralBadgesSkeleton } from '@/components/public/member-referral-badges';
 import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { AccountVerificationCard } from '@/components/user/account-verification-card';
@@ -44,7 +43,6 @@ import { authClient } from '@/lib/auth/client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { rememberListingLocation } from '@/lib/listing-form-defaults';
 import { DEFAULT_SHARE_THEME_COLOR, normalizeShareThemeColor } from '@/lib/share-theme-color';
-import { listMySubscriptions } from '@/lib/payments-client';
 import {
   memberInitials,
   mergeMemberReferralBadges,
@@ -116,8 +114,6 @@ export default function UserProfilePage() {
   const [avatarMsg, setAvatarMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  /** Grow / Elite Premium Badge — same gate as public profile & listing titles. */
-  const [showPremiumBadge, setShowPremiumBadge] = React.useState(false);
   const [referralBadges, setReferralBadges] = React.useState<PublicMemberReferralBadge[]>([]);
   const [referralBadgesLoading, setReferralBadgesLoading] = React.useState(true);
 
@@ -144,6 +140,7 @@ export default function UserProfilePage() {
     setShareThemeColor(normalizeShareThemeColor(user.shareThemeColor));
     setIsPrivate(Boolean(user.isPrivate));
   }, [
+    user,
     user?.id,
     user?.firstName,
     user?.lastName,
@@ -338,30 +335,6 @@ export default function UserProfilePage() {
       cancelled = true;
     };
   }, []);
-
-  React.useEffect(() => {
-    if (!user?.id) {
-      setShowPremiumBadge(false);
-      return;
-    }
-    let cancelled = false;
-    void listMySubscriptions().then((res) => {
-      if (cancelled) return;
-      const now = Date.now();
-      const hasGrowOrElite = (res.subscriptions || []).some((sub) => {
-        const plan = String(sub.planCode || '').toLowerCase();
-        if (plan !== 'grow' && plan !== 'elite') return false;
-        if (sub.status !== 'active') return false;
-        if ((sub.priceEur ?? 0) <= 0) return false;
-        if (sub.expiresAt && new Date(sub.expiresAt).getTime() < now) return false;
-        return true;
-      });
-      setShowPremiumBadge(hasGrowOrElite);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
 
   React.useEffect(() => {
     if (!user?.id) {
@@ -663,14 +636,6 @@ export default function UserProfilePage() {
                     sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
                   >
                     <ListingVerifiedBadge size={22} aria-label="Llogaria e verifikuar" />
-                  </Box>
-                ) : null}
-                {showPremiumBadge ? (
-                  <Box
-                    component="span"
-                    sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, lineHeight: 0 }}
-                  >
-                    <ListingTrustBadge size={22} />
                   </Box>
                 ) : null}
               </Typography>

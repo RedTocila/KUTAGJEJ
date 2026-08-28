@@ -14,7 +14,7 @@ import { formatJobListingCountdown, getJobCountdownParts } from '@/lib/job-listi
 export const OKAZION_COUNTDOWN_DAYS = 5;
 
 const PLACEHOLDER_LABEL = `${OKAZION_COUNTDOWN_DAYS}d 0h 00m 00s`;
-const COMPACT_PLACEHOLDER_LABEL = `${OKAZION_COUNTDOWN_DAYS}d`;
+const COMPACT_PLACEHOLDER_LABEL = `${OKAZION_COUNTDOWN_DAYS}d 0h`;
 
 const overlayChipSx = {
   height: 26,
@@ -75,10 +75,8 @@ const compactOverlayChipSx = {
 
 function formatCompactCountdown(expiresAt: string | Date, now: Date = new Date()): string {
   const parts = getJobCountdownParts(expiresAt, now);
-  if (parts.expired) return '0h';
-  if (parts.days > 0) return `${parts.days}d`;
-  if (parts.hours > 0) return `${parts.hours}h`;
-  return `${Math.max(1, parts.minutes)}m`;
+  if (parts.expired) return '0d 0h';
+  return `${parts.days}d ${parts.hours}h`;
 }
 
 function OkazionCountdownChip({
@@ -95,6 +93,7 @@ function OkazionCountdownChip({
       icon={compact ? <SealPercentIcon size={13} weight="bold" /> : <TimerIcon size={14} weight="bold" />}
       label={label}
       size="small"
+      className="listing-countdown-pulse-container"
       aria-live={live ? 'polite' : undefined}
       aria-hidden={!live}
       suppressHydrationWarning
@@ -125,19 +124,18 @@ export function OkazionCountdown({
 
   React.useEffect(() => {
     setMounted(true);
-  }, []);
-
-  const until = React.useMemo(() => {
-    if (expiresAt) return expiresAt;
-    if (!fallbackUntilRef.current) {
+    if (expiresAt) {
+      fallbackUntilRef.current = null;
+    } else if (!fallbackUntilRef.current) {
       fallbackUntilRef.current = new Date(
         Date.now() + OKAZION_COUNTDOWN_DAYS * 24 * 60 * 60 * 1000,
       ).toISOString();
     }
-    return fallbackUntilRef.current;
   }, [expiresAt]);
 
-  if (!mounted || !nowMs) {
+  const until = expiresAt ?? fallbackUntilRef.current;
+
+  if (!mounted || !nowMs || !until) {
     return <OkazionCountdownPlaceholder compact={compact} />;
   }
 

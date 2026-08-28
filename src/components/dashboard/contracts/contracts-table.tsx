@@ -245,9 +245,6 @@ export function ContractsTable({ contracts, loading, onCreate, onEdit, onDelete 
                     <Typography variant="body2" sx={{ fontWeight: 700 }}>
                       {row.boostCredits != null ? row.boostCredits : '—'} BC
                     </Typography>
-                    {row.glowBadgeEnabled ? (
-                      <Chip size="small" label="Badge" sx={{ mt: 0.5, height: 20, fontSize: '0.65rem' }} />
-                    ) : null}
                   </TableCell>
                   <TableCell sx={{ py: 2 }}>
                     {getActiveContractPriceOptions(row).length === 0 ? (

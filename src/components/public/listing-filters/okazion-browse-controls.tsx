@@ -18,7 +18,6 @@ import {
   type HomeVerticalId,
 } from '@/lib/home-categories';
 import {
-  addBrowseKeyword,
   buildBrowseUrlQuery,
   formatBrowseKeywords,
   normalizeBrowseKeywords,
@@ -87,7 +86,11 @@ export function OkazionBrowseControls() {
 
   const applyKeyword = React.useCallback(
     (nextQ: string) => {
-      const next = addBrowseKeyword(applied, nextQ);
+      const trimmed = nextQ.trim();
+      const next: BrowseOkazionFilters = {
+        ...applied,
+        q: trimmed ? [trimmed] : undefined,
+      };
       React.startTransition(() => {
         router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
       });
@@ -131,6 +134,7 @@ export function OkazionBrowseControls() {
             onChange={applyKeyword}
             accent={OKAZION_SEARCH_ACCENT}
             commitToChip
+            live
           />
         </Box>
       </Box>

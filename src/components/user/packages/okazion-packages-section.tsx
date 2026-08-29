@@ -50,6 +50,7 @@ import {
 } from '@/components/core/product-dialog';
 import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 
+import { BcPurchaseDialog } from './bc-purchase-dialog';
 import { dualPayButtonSx, ExtraPackageCard, formatBc, PackageEurPrice, PurchasedVoucherStack } from './package-ui';
 
 const FALLBACK_OKAZION_PACKAGES: OkazionPackage[] = [
@@ -168,6 +169,7 @@ export function OkazionPackagesSection() {
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
+  const [confirmPackage, setConfirmPackage] = React.useState<OkazionPackage | null>(null);
 
   const [assignOpen, setAssignOpen] = React.useState(false);
   const [activeVoucher, setActiveVoucher] = React.useState<OkazionVoucher | null>(null);
@@ -249,7 +251,7 @@ export function OkazionPackagesSection() {
     router.push(checkoutOkazionHref(pkg.id, quantity));
   };
 
-  const onBuyBc = async (pkg: OkazionPackage) => {
+  const onBuyBc = async (pkg: OkazionPackage): Promise<boolean> => {
     setBusyId(pkg.id);
     setError(null);
     setSuccess(null);
@@ -257,14 +259,16 @@ export function OkazionPackagesSection() {
     setBusyId(null);
     if (result.error) {
       setError(result.error);
-      return;
+      return false;
     }
     await checkSession();
+    setConfirmPackage(null);
     setSuccess(result.message || 'OKAZION u blë me Boost Coins.');
     await reloadVouchers();
     if (result.voucher && quantity === 1) {
       openAssign(result.voucher);
     }
+    return true;
   };
 
   const onApply = async () => {
@@ -409,7 +413,7 @@ export function OkazionPackagesSection() {
               variant="outlined"
               color="error"
               disabled={busy || !canAfford}
-              onClick={() => void onBuyBc(pkg)}
+              onClick={() => setConfirmPackage(pkg)}
               startIcon={busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={16} />}
               sx={dualPayButtonSx('error', 'outlined')}
             >
@@ -417,6 +421,22 @@ export function OkazionPackagesSection() {
             </Button>
           </>
         }
+      />
+
+      <BcPurchaseDialog
+        open={Boolean(confirmPackage)}
+        packageLabel={
+          confirmPackage
+            ? `${t.packages.okazionCardTitle(confirmPackage.days)}${quantity > 1 ? ` ×${quantity}` : ''}`
+            : ''
+        }
+        priceBc={confirmPackage ? confirmPackage.priceBc * quantity : 0}
+        busy={Boolean(confirmPackage && busyId === confirmPackage.id)}
+        onClose={() => setConfirmPackage(null)}
+        onConfirm={() => {
+          if (!confirmPackage) return;
+          void onBuyBc(confirmPackage);
+        }}
       />
 
       <ProductDialog open={assignOpen} onClose={closeAssign} fullWidth maxWidth="sm">

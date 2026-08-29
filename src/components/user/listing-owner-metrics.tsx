@@ -35,7 +35,7 @@ import type { BusinessAnnouncement } from '@/lib/listing-announcement-client';
 import { ANNOUNCE_COST_BC } from '@/lib/listing-announcement-client';
 import type { ListingMetricKind, ListingMetrics } from '@/lib/listing-metrics';
 import { refreshListingBoost, setListingAutoRefresh } from '@/lib/listing-refresh-client';
-import { refreshCostBc, refreshCostButtonLabel, bumpButtonAriaLabelSq, refreshCostTooltipSq } from '@/lib/listing-refresh-cost';
+import { refreshCostBc, bumpButtonAriaLabelSq, refreshCostTooltipSq } from '@/lib/listing-refresh-cost';
 import { applyOkazionFromPlan, applyPremiumFromPlan } from '@/lib/payments-client';
 import {
   errorMainAlpha,
@@ -132,25 +132,39 @@ export function ListingOwnerStats({
 }
 
 /** Compact labeled action chip used on owner listing cards. */
-const ACTION_RADIUS_PX = '12px';
-const ACTION_CONTAINER_RADIUS_PX = '16px';
+const ACTION_RADIUS_PX = '999px';
 
 const labeledBtnSx = {
   minWidth: 0,
-  height: 26,
-  px: 0.85,
+  height: 32,
+  px: 0.5,
   py: 0,
   borderRadius: ACTION_RADIUS_PX,
   textTransform: 'none' as const,
   fontWeight: 800,
-  fontSize: '0.65rem',
+  fontSize: '0.68rem',
   letterSpacing: '0.01em',
   lineHeight: 1,
   gap: 0.35,
   boxShadow: 'none',
-  border: 'none',
+  border: '1px solid currentColor',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
   '&:hover': { boxShadow: 'none' },
   '& .MuiButton-startIcon': { mr: 0.35, ml: 0 },
+};
+
+const imageEditSx = {
+  bgcolor: 'rgba(15, 23, 42, 0.72)',
+  color: '#fff',
+  borderColor: 'rgba(255,255,255,0.28)',
+  backdropFilter: 'blur(8px)',
+  WebkitBackdropFilter: 'blur(8px)',
+  '&:hover': {
+    bgcolor: 'rgba(15, 23, 42, 0.86)',
+    borderColor: 'rgba(255,255,255,0.42)',
+  },
 };
 
 function fadedToneSx(
@@ -169,22 +183,38 @@ function fadedToneSx(
   };
 }
 
+function iconActionToneSx(color: string): Record<string, unknown> {
+  return {
+    bgcolor: (theme: { palette: { mode: string } }) =>
+      theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(15,23,42,0.08)',
+    color,
+    borderColor: 'rgba(255,255,255,0.28)',
+    boxShadow: 'none',
+    '&:hover': {
+      bgcolor: (theme: { palette: { mode: string } }) =>
+        theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.13)' : 'rgba(15,23,42,0.14)',
+      boxShadow: 'none',
+    },
+  };
+}
+
 const fadedPrimarySx = fadedToneSx(primaryMainAlpha(0.28), primaryMainAlpha(0.42), 'primary.main');
 const fadedWarningSx = fadedToneSx(warningMainAlpha(0.28), warningMainAlpha(0.42), 'warning.main');
 const fadedErrorSx = fadedToneSx(errorMainAlpha(0.28), errorMainAlpha(0.42), 'error.main');
-const fadedPrimaryStrongSx = fadedToneSx(primaryMainAlpha(0.45), primaryMainAlpha(0.58), 'primary.main');
-const fadedWarningStrongSx = fadedToneSx(warningMainAlpha(0.45), warningMainAlpha(0.58), 'warning.main');
-const fadedErrorStrongSx = fadedToneSx(errorMainAlpha(0.45), errorMainAlpha(0.58), 'error.main');
+const iconPrimarySx = iconActionToneSx('primary.main');
+const iconWarningSx = iconActionToneSx('warning.main');
+const iconErrorSx = iconActionToneSx('error.main');
 
 function editHrefFor(listingId: string, kind: ListingMetricKind) {
   return `${paths.user.editListing}?kind=${encodeURIComponent(kind)}&id=${encodeURIComponent(listingId)}`;
 }
 
 function formatCountdown(ms: number): string {
-  const totalMinutes = Math.max(0, Math.ceil(ms / (60 * 1000)));
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor(totalSeconds / 60) % 60;
+  const seconds = totalSeconds % 60;
+  return [hours, minutes, seconds].map((part) => String(part).padStart(2, '0')).join(':');
 }
 
 /**
@@ -194,6 +224,9 @@ function formatCountdown(ms: number): string {
 export function ListingOwnerTopActions({
   listingId,
   kind,
+  placement = 'all',
+  showEdit = true,
+  showDelete = true,
   canAnnounce = false,
   announcement = null,
   onAnnouncementSaved,
@@ -201,6 +234,9 @@ export function ListingOwnerTopActions({
 }: {
   listingId: string;
   kind: ListingMetricKind;
+  placement?: 'all' | 'image' | 'secondary';
+  showEdit?: boolean;
+  showDelete?: boolean;
   canAnnounce?: boolean;
   announcement?: BusinessAnnouncement | null;
   onAnnouncementSaved?: (result: {
@@ -214,6 +250,9 @@ export function ListingOwnerTopActions({
   const [announceOpen, setAnnounceOpen] = React.useState(false);
   const showMenu = kind === 'businesses';
   const showAnnounce = kind === 'businesses' || kind === 'professionals';
+  const showEditAction = placement !== 'secondary' && showEdit;
+  const showDeleteAction = placement !== 'secondary' && showDelete;
+  const showSecondaryActions = placement !== 'image';
 
   return (
     <>
@@ -222,16 +261,11 @@ export function ListingOwnerTopActions({
         spacing={0.5}
         sx={{
           alignItems: 'center',
-          p: 0.45,
-          borderRadius: ACTION_CONTAINER_RADIUS_PX,
-          bgcolor: 'rgba(0,0,0,0.35)',
-          border: '1px solid rgba(255,255,255,0.22)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+          flexWrap: placement === 'image' ? 'nowrap' : 'wrap',
+          maxWidth: '100%',
         }}
       >
-        {showMenu ? (
+        {showSecondaryActions && showMenu ? (
           <Tooltip title="Ndrysho menunë">
             <Button
               size="small"
@@ -247,7 +281,7 @@ export function ListingOwnerTopActions({
             </Button>
           </Tooltip>
         ) : null}
-        {showAnnounce ? (
+        {showSecondaryActions && showAnnounce ? (
           <Tooltip
             title={
               announcement?.title
@@ -271,7 +305,8 @@ export function ListingOwnerTopActions({
             </span>
           </Tooltip>
         ) : null}
-        <Tooltip title="Ndrysho njoftimin">
+        {showEditAction ? (
+          <Tooltip title="Ndrysho njoftimin">
           <Button
             size="small"
             variant="contained"
@@ -279,30 +314,49 @@ export function ListingOwnerTopActions({
             aria-label="Ndrysho"
             component={RouterLink}
             href={editHrefFor(listingId, kind)}
-            startIcon={<EditIcon size={12} weight="bold" />}
-            sx={{ ...labeledBtnSx, ...fadedPrimarySx }}
+            startIcon={<EditIcon size={18} weight="bold" />}
+            sx={{
+              ...labeledBtnSx,
+              ...(placement === 'image' ? imageEditSx : fadedPrimarySx),
+              ...(placement === 'image'
+                ? {
+                    width: 34,
+                    minWidth: 34,
+                    height: 34,
+                    p: 0,
+                    fontSize: 0,
+                    '& .MuiButton-startIcon': { m: 0 },
+                  }
+                : {}),
+            }}
           >
             Ndrysho
           </Button>
-        </Tooltip>
-        {onDeleteRequest ? (
+          </Tooltip>
+        ) : null}
+        {showDeleteAction && onDeleteRequest ? (
           <Tooltip title="Fshi njoftimin">
-            <Button
-              size="small"
-              variant="contained"
-              color="error"
-              aria-label="Fshi"
-              onClick={() => onDeleteRequest(listingId, kind)}
-              sx={{
-                ...labeledBtnSx,
-                ...fadedErrorSx,
-                width: 26,
-                px: 0,
-                minWidth: 26,
-              }}
-            >
-              <TrashIcon size={12} weight="bold" />
-            </Button>
+              <Button
+                size="small"
+                variant="contained"
+                color="error"
+                aria-label="Fshi"
+                onClick={() => onDeleteRequest(listingId, kind)}
+                sx={{
+                  ...labeledBtnSx,
+                  bgcolor: 'transparent',
+                  color: 'error.light',
+                  border: 'none',
+                  width: 32,
+                  height: 32,
+                  px: 0,
+                  minWidth: 32,
+                  '& > svg': { flexShrink: 0 },
+                  '&:hover': { bgcolor: 'rgba(0,0,0,0.28)', color: 'error.light' },
+                }}
+              >
+                <TrashIcon size={18} weight="bold" />
+              </Button>
           </Tooltip>
         ) : null}
       </Stack>
@@ -420,7 +474,6 @@ export function ListingOwnerMetrics({
     [okazionSupported, okazionOn, isOkazion, premiumOn, isPremium],
   );
   const refreshCost = refreshCostBc(refreshTierFlags);
-  const bumpButtonLabel = refreshCostButtonLabel(refreshTierFlags);
   const bumpButtonAriaLabel = bumpButtonAriaLabelSq(refreshTierFlags);
   const refreshTooltip = refreshCostTooltipSq(refreshTierFlags);
 
@@ -558,45 +611,57 @@ export function ListingOwnerMetrics({
   const anyBusy = busy || autoBusy || premiumBusy || okazionBusy;
   const refreshButtonDisabled = anyBusy || refreshLocked;
   const refreshTimer = formatCountdown(remainingRefreshMs);
+  const refreshStatusText = autoRefreshEnabled
+    ? `Rifreskohet automatikisht pas ${refreshTimer}`
+    : `Rifreskohet pas ${refreshTimer}`;
   const premiumDisabled = anyBusy || premiumOn || okazionOn;
   const okazionDisabled = anyBusy || okazionOn || premiumOn;
 
   return (
-    <Stack spacing={0.75} sx={{ pt: 0.5, mt: 0.35 }}>
+    <Stack spacing={0.5} sx={{ pt: 0.25, mt: 0 }}>
       {!hideStats ? (
         <ListingOwnerStats metrics={metrics} sx={{ pb: 0.4 }} onSavesClick={onSavesClick} />
       ) : null}
 
-      <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 0.8 }}>
+      <Box sx={{ pt: 0.5 }}>
         {listingId && kind && canRefresh ? (
-          <Stack
-            direction="row"
-            sx={{
-              width: '100%',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 0.5,
-              '& > *': { flex: 1, minWidth: 0 },
-              '& .MuiButton-root': { width: '100%', justifyContent: 'center' },
-            }}
-          >
-            <Tooltip title={refreshTooltip}>
+          <Stack spacing={0.35}>
+            {refreshLocked ? (
+              <Typography
+                variant="caption"
+                sx={{ color: 'text.disabled', fontSize: '0.64rem', fontWeight: 700, textAlign: 'left' }}
+              >
+                {refreshStatusText}
+              </Typography>
+            ) : null}
+            <Stack
+              sx={{
+                width: '100%',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                gap: 0.5,
+                '& > *': { minWidth: 0 },
+                '& .MuiButton-root': { width: '100%', justifyContent: 'center' },
+                '& .MuiButton-startIcon': { m: 0 },
+                '& .MuiButton-endIcon': { m: 0 },
+              }}
+            >
+            <Tooltip title={refreshLocked ? refreshStatusText : refreshTooltip}>
               <span>
                 <Button
                   size="small"
                   variant="contained"
                   color="primary"
-                  aria-label={bumpButtonAriaLabel}
+                  aria-label={refreshLocked ? `${bumpButtonAriaLabel} · ${refreshTimer}` : bumpButtonAriaLabel}
                   disabled={refreshButtonDisabled}
                   onClick={() => {
                     void handleRefresh();
                   }}
                   startIcon={
-                    busy ? <CircularProgress size={11} color="inherit" /> : <RefreshIcon size={12} weight="bold" />
+                    busy ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon size={18} weight="bold" />
                   }
                   sx={{
                     ...labeledBtnSx,
-                    whiteSpace: 'nowrap',
                     ...(refreshLocked
                       ? {
                           bgcolor: 'action.hover',
@@ -609,10 +674,9 @@ export function ListingOwnerMetrics({
                             opacity: 1,
                           },
                         }
-                      : fadedPrimarySx),
+                      : iconPrimarySx),
                   }}
                 >
-                  {refreshLocked ? refreshTimer : bumpButtonLabel}
                 </Button>
               </span>
             </Tooltip>
@@ -637,19 +701,17 @@ export function ListingOwnerMetrics({
                     autoBusy ? (
                       <CircularProgress size={11} color="inherit" />
                     ) : (
-                      <TimerIcon size={12} weight="bold" />
+                      <TimerIcon size={18} weight="bold" />
                     )
                   }
                   endIcon={
-                    !autoBusy && autoRefreshEnabled ? <CheckCircleIcon size={11} weight="fill" /> : undefined
+                    !autoBusy && autoRefreshEnabled ? <CheckCircleIcon size={15} weight="fill" /> : undefined
                   }
                   sx={{
                     ...labeledBtnSx,
-                    ...(autoRefreshEnabled ? fadedPrimaryStrongSx : fadedPrimarySx),
+                    ...iconPrimarySx,
                   }}
-                >
-                  Auto
-                </Button>
+                />
               </span>
             </Tooltip>
             <Tooltip
@@ -678,16 +740,14 @@ export function ListingOwnerMetrics({
                     premiumBusy ? (
                       <CircularProgress size={11} color="inherit" />
                     ) : (
-                      <SparkleIcon size={12} weight="bold" />
+                      <SparkleIcon size={18} weight="bold" />
                     )
                   }
                   sx={{
                     ...labeledBtnSx,
-                    ...(premiumOn ? fadedWarningStrongSx : fadedWarningSx),
+                    ...iconWarningSx,
                   }}
-                >
-                  Premium
-                </Button>
+                />
               </span>
             </Tooltip>
             {okazionSupported ? (
@@ -717,19 +777,18 @@ export function ListingOwnerMetrics({
                     okazionBusy ? (
                       <CircularProgress size={11} color="inherit" />
                     ) : (
-                      <SealPercentIcon size={12} weight="bold" />
+                      <SealPercentIcon size={18} weight="bold" />
                     )
                   }
                   sx={{
                     ...labeledBtnSx,
-                    ...(okazionOn ? fadedErrorStrongSx : fadedErrorSx),
+                    ...iconErrorSx,
                   }}
-                >
-                  OKAZION
-                </Button>
+                />
               </span>
             </Tooltip>
             ) : null}
+          </Stack>
           </Stack>
         ) : (
           <Box />

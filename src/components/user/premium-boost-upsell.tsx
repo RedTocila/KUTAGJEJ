@@ -18,6 +18,7 @@ import {
 import { california } from '@/styles/theme/colors';
 import { productButtonSx } from '@/styles/product-sx';
 import { paths } from '@/paths';
+import { BcPurchaseDialog } from '@/components/user/packages/bc-purchase-dialog';
 
 /** Entry buy package — matches Grow/Elite plan Premium duration (30 days). */
 export const PREMIUM_PACKAGE_ID = 'premium-30';
@@ -59,6 +60,7 @@ export function PremiumPostActions({
   const balance = Number(user?.boostCredits) || 0;
   const canBc = balance >= PREMIUM_PRICE_BC;
   const [planRemaining, setPlanRemaining] = React.useState<number | null>(null);
+  const [confirmBc, setConfirmBc] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -152,7 +154,7 @@ export function PremiumPostActions({
             type="button"
             variant="outlined"
             disabled={disabled || submitting || !canBc}
-            onClick={() => onPost('buy-bc')}
+            onClick={() => setConfirmBc(true)}
             startIcon={<BoostCoinIcon size={18} />}
             sx={{
               ...submitBtnSx,
@@ -170,6 +172,17 @@ export function PremiumPostActions({
           </Button>
         </Stack>
       )}
+      <BcPurchaseDialog
+        open={confirmBc}
+        packageLabel={t.packages.premiumBoostTitle(PREMIUM_DAYS)}
+        priceBc={PREMIUM_PRICE_BC}
+        busy={submitting}
+        onClose={() => setConfirmBc(false)}
+        onConfirm={() => {
+          setConfirmBc(false);
+          onPost('buy-bc');
+        }}
+      />
     </Stack>
   );
 }

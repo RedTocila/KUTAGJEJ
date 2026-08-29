@@ -34,6 +34,7 @@ import {
 } from '@/lib/payments-client';
 import { productButtonSx } from '@/styles/product-sx';
 import { paths } from '@/paths';
+import { BcPurchaseDialog } from '@/components/user/packages/bc-purchase-dialog';
 
 export const OKAZION_PACKAGE_ID = 'okazion-5';
 export const OKAZION_PRICE_EUR = 19;
@@ -157,6 +158,7 @@ export function OkazionPostActions({
   const balance = Number(user?.boostCredits) || 0;
   const canBc = balance >= OKAZION_PRICE_BC;
   const [planRemaining, setPlanRemaining] = React.useState<number | null>(null);
+  const [confirmBc, setConfirmBc] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -250,7 +252,7 @@ export function OkazionPostActions({
             type="button"
             variant="outlined"
             disabled={disabled || submitting || !canBc}
-            onClick={() => onPost('buy-bc')}
+            onClick={() => setConfirmBc(true)}
             startIcon={<BoostCoinIcon size={18} />}
             sx={{
               ...submitBtnSx,
@@ -268,6 +270,17 @@ export function OkazionPostActions({
           </Button>
         </Stack>
       )}
+      <BcPurchaseDialog
+        open={confirmBc}
+        packageLabel={t.packages.okazionCardTitle(7)}
+        priceBc={OKAZION_PRICE_BC}
+        busy={submitting}
+        onClose={() => setConfirmBc(false)}
+        onConfirm={() => {
+          setConfirmBc(false);
+          onPost('buy-bc');
+        }}
+      />
     </Stack>
   );
 }

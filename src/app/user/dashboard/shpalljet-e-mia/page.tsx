@@ -13,7 +13,6 @@ import {
   Chip,
   CircularProgress,
   DialogContentText,
-  Grid,
   IconButton,
   InputAdornment,
   Skeleton,
@@ -29,13 +28,10 @@ import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/C
 import { Circle as CircleIcon } from '@phosphor-icons/react/dist/ssr/Circle';
 import { ListBullets as ListBulletsIcon } from '@phosphor-icons/react/dist/ssr/ListBullets';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
-import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
-import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
-import { Speedometer as SpeedometerIcon } from '@phosphor-icons/react/dist/ssr/Speedometer';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
@@ -72,10 +68,8 @@ import {
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import {
   ListingOwnerMetrics,
-  ListingOwnerStats,
   ListingOwnerTopActions,
 } from '@/components/user/listing-owner-metrics';
-import { ListingSavesLeadsDialog } from '@/components/user/listing-saves-leads-dialog';
 import { ListingModerationStatusChip } from '@/components/user/listing-moderation-status-chip';
 import { ListingModerationNotice, ListingSubmittedPendingAlert } from '@/components/user/listing-moderation-notice';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
@@ -138,8 +132,6 @@ function findLabel<T extends { value: string; label: string }>(options: readonly
   return options.find((o) => o.value === value)?.label ?? value;
 }
 
-const chipSx = { fontWeight: 600, height: 20, fontSize: '0.68rem', '& .MuiChip-label': { px: 0.85 } } as const;
-
 function Row({ icon: Icon, children }: { icon: PhosphorIcon; children: React.ReactNode }) {
   return (
     <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', py: 0.15 }}>
@@ -160,6 +152,8 @@ function CardImageHeader({
   status,
   isPremium = false,
   isOkazion = false,
+  horizontal = false,
+  createdAt,
   bottomOverlay,
   topRightActions,
   selectionMode = false,
@@ -171,6 +165,8 @@ function CardImageHeader({
   status: ReturnType<typeof normalizeListingModerationStatus>;
   isPremium?: boolean;
   isOkazion?: boolean;
+  horizontal?: boolean;
+  createdAt?: string;
   bottomOverlay?: React.ReactNode;
   topRightActions?: React.ReactNode;
   selectionMode?: boolean;
@@ -218,11 +214,13 @@ function CardImageHeader({
     <Box
       sx={{
         position: 'relative',
-        width: '100%',
-        aspectRatio: '16 / 10',
-        minHeight: 160,
+        width: horizontal ? '35%' : '100%',
+        ...(horizontal
+          ? { minHeight: 0, alignSelf: 'stretch' }
+          : { aspectRatio: '16 / 10', minHeight: 160 }),
         flexShrink: 0,
-        borderBottom: '1px solid',
+        borderBottom: horizontal ? 'none' : '1px solid',
+        borderRight: horizontal ? '1px solid' : 'none',
         borderColor: 'divider',
         bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'),
         overflow: 'hidden',
@@ -295,9 +293,54 @@ function CardImageHeader({
           )}
         </Box>
       ) : null}
-      {topLeftLabel ? <Box sx={{ position: 'absolute', top: 10, left: 10, zIndex: 2 }}>{topLeftLabel}</Box> : null}
-      {!selectionMode && topRightActions ? (
-        <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 2 }}>{topRightActions}</Box>
+      {!selectionMode && (topRightActions || topLeftLabel) ? (
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{
+            position: 'absolute',
+            top: 10,
+            left: 10,
+            zIndex: 2,
+            alignItems: 'center',
+            maxWidth: 'calc(100% - 20px)',
+          }}
+        >
+          {topRightActions}
+          {topLeftLabel}
+        </Stack>
+      ) : null}
+      {createdAt ? (
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: bottomOverlay ? 46 : 10,
+            left: 10,
+            zIndex: 2,
+            isolation: 'isolate',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              inset: -10,
+              zIndex: -1,
+              borderRadius: '50%',
+              background: 'radial-gradient(ellipse, rgba(0,0,0,0.46) 0%, rgba(0,0,0,0.18) 48%, transparent 76%)',
+              filter: 'blur(3px)',
+            },
+          }}
+        >
+          <Typography
+            variant="caption"
+            sx={{
+              color: '#fff',
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+            }}
+          >
+            {format(new Date(createdAt), 'd MMM yyyy')}
+          </Typography>
+        </Box>
       ) : null}
       {bottomOverlay ? (
         <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 2 }}>{bottomOverlay}</Box>
@@ -308,7 +351,6 @@ function CardImageHeader({
 
 function BaseCard({
   title,
-  chips,
   children,
   createdAt,
   metrics,
@@ -333,8 +375,7 @@ function BaseCard({
   lastRefreshedAt,
 }: {
   title: string;
-  chips?: React.ReactNode;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   createdAt: string;
   metrics?: Partial<ListingMetrics>;
   status?: string | null;
@@ -367,13 +408,29 @@ function BaseCard({
   const selectionKey = listingId && kind ? listingSelectionKey(kind, listingId) : null;
   const selectionMode = Boolean(selection?.selectionMode && selectionKey);
   const selected = Boolean(selectionKey && selection?.isSelected(selectionKey));
-  const [savesOpen, setSavesOpen] = React.useState(false);
-  const openSaves =
-    listingId && kind && !selectionMode
-      ? () => {
-          setSavesOpen(true);
-        }
-      : undefined;
+  const renderOwnerActions = (
+    placement: 'image' | 'secondary',
+    options?: { showEdit?: boolean; showDelete?: boolean },
+  ) =>
+    listingId && kind && !selectionMode ? (
+      <ListingOwnerTopActions
+        listingId={listingId}
+        kind={kind}
+        placement={placement}
+        showEdit={options?.showEdit}
+        showDelete={options?.showDelete}
+        canAnnounce={isPublic}
+        announcement={announcement}
+        onAnnouncementSaved={onAnnouncementSaved}
+        onDeleteRequest={(id, deleteKind) => {
+          selection?.requestDelete([{ kind: deleteKind, id }]);
+        }}
+      />
+    ) : undefined;
+  const ownerImageActions = renderOwnerActions('image', { showDelete: false });
+  const ownerDeleteAction = renderOwnerActions('image', { showEdit: false });
+  const ownerSecondaryActions =
+    kind === 'businesses' || kind === 'professionals' ? renderOwnerActions('secondary') : undefined;
 
   return (
     <Card
@@ -388,8 +445,10 @@ function BaseCard({
       }
       sx={{
         height: '100%',
+        minHeight: { xs: 184, sm: 200, md: 215 },
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
+        minWidth: 0,
         border: '1px solid',
         borderColor: selected ? 'primary.main' : 'divider',
         borderRadius: 2.5,
@@ -419,77 +478,51 @@ function BaseCard({
         status={moderationStatus}
         isPremium={isPremium}
         isOkazion={isOkazion}
+        horizontal
+        createdAt={createdAt}
         bottomOverlay={mediaBottomOverlay}
+        topRightActions={ownerImageActions}
         selectionMode={selectionMode}
         selected={selected}
-        topRightActions={
-          listingId && kind ? (
-            <ListingOwnerTopActions
-              listingId={listingId}
-              kind={kind}
-              canAnnounce={isPublic}
-              announcement={announcement}
-              onAnnouncementSaved={onAnnouncementSaved}
-              onDeleteRequest={(id, deleteKind) => {
-                selection?.requestDelete([{ kind: deleteKind, id }]);
-              }}
-            />
-          ) : undefined
-        }
       />
       <CardContent
         sx={{
-          p: 1.6,
-          '&:last-child': { pb: 1.6 },
+          p: 1.25,
+          pt: { xs: 1.5, sm: 1.6 },
+          '&:last-child': { pb: 1.25 },
           display: 'flex',
           flexDirection: 'column',
-          gap: 0.75,
+          gap: 0.5,
           flex: 1,
           minWidth: 0,
         }}
       >
-        <Stack direction="row" sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
-          <Typography
-            component="h2"
-            sx={{
-              fontWeight: 700,
-              fontSize: '0.95rem',
-              lineHeight: 1.3,
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-              minWidth: 0,
-            }}
-          >
-            {title}
-          </Typography>
-          <Typography
-            variant="caption"
-            color="text.disabled"
-            sx={{ fontSize: '0.68rem', flexShrink: 0, pt: 0.2, whiteSpace: 'nowrap' }}
-          >
-            {format(new Date(createdAt), 'd MMM yyyy')}
-          </Typography>
-        </Stack>
-        {chips ? <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>{chips}</Stack> : null}
-        {!isPublic ? <ListingModerationNotice status={moderationStatus} /> : null}
         <Stack
           direction="row"
-          spacing={1}
-          sx={{ alignItems: 'flex-end', justifyContent: 'space-between', minWidth: 0 }}
+          sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}
         >
-          <Stack spacing={0.15} sx={{ minWidth: 0, flex: 1 }}>
-            {children}
+          <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+            <Typography
+              component="h2"
+              sx={{
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                lineHeight: 1.3,
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                minWidth: 0,
+              }}
+            >
+              {title}
+            </Typography>
+            {!isPublic ? <ListingModerationNotice status={moderationStatus} /> : null}
+            {ownerSecondaryActions ? <Box sx={{ alignSelf: 'flex-start' }}>{ownerSecondaryActions}</Box> : null}
           </Stack>
-          {metrics ? (
-            <ListingOwnerStats
-              metrics={metrics}
-              sx={{ flexShrink: 0, pb: 0.1, maxWidth: '45%', justifyContent: 'flex-end' }}
-              onSavesClick={openSaves}
-            />
-          ) : null}
+          {ownerDeleteAction ? <Box sx={{ flexShrink: 0 }}>{ownerDeleteAction}</Box> : null}
         </Stack>
+        {children ? <Box sx={{ minWidth: 0 }}>{children}</Box> : null}
         <Box sx={{ flex: 1 }} />
         {metrics && !selectionMode ? (
           <ListingOwnerMetrics
@@ -509,19 +542,9 @@ function BaseCard({
             lastRefreshedAt={lastRefreshedAt}
             refreshEveryHours={refreshEveryHours}
             hideStats
-            onSavesClick={openSaves}
           />
         ) : null}
       </CardContent>
-      {listingId && kind ? (
-        <ListingSavesLeadsDialog
-          open={savesOpen}
-          onClose={() => setSavesOpen(false)}
-          listingKind={kind}
-          listingId={listingId}
-          listingTitle={title}
-        />
-      ) : null}
     </Card>
   );
 }
@@ -609,7 +632,6 @@ function RealEstateCard({
   refreshEveryHours?: number;
   lastRefreshedAt?: string | null;
 }) {
-  const location = [l.cityName, l.zoneName].filter(Boolean).join(' · ') || '—';
   return (
     <BaseCard
       title={l.title}
@@ -631,22 +653,8 @@ function RealEstateCard({
       onRefreshed={onRefreshed}
       lastRefreshedAt={lastRefreshedAt}
       refreshEveryHours={refreshEveryHours}
-      chips={<>
-        {l.transactionType === 'rent' || l.transactionType === 'sale' ? (
-          <Chip size="small" label={l.transactionType === 'rent' ? 'Qera' : 'Shitje'} color={l.transactionType === 'rent' ? 'info' : 'secondary'} variant="outlined" sx={chipSx} />
-        ) : null}
-        {l.propertyCategory ? (
-          <Chip size="small" label={propertyCategoryLabel(l.propertyCategory)} variant="outlined" sx={chipSx} />
-        ) : null}
-      </>}
     >
       <Row icon={TagIcon}><strong>{formatPrice(l.price, l.currency)}</strong></Row>
-      {l.surfaceM2 != null && Number(l.surfaceM2) > 0 ? (
-        <Row icon={RulerIcon}><strong>{l.surfaceM2}</strong> m²{l.bedrooms != null ? ` · ${l.bedrooms} dhoma · ${l.bathrooms ?? 0} banjo` : ''}</Row>
-      ) : l.bedrooms != null ? (
-        <Row icon={RulerIcon}>{l.bedrooms} dhoma · {l.bathrooms ?? 0} banjo</Row>
-      ) : null}
-      <Row icon={MapPinIcon}>{location}</Row>
     </BaseCard>
   );
 }
@@ -696,20 +704,8 @@ function CarCard({
       onRefreshed={onRefreshed}
       lastRefreshedAt={lastRefreshedAt}
       refreshEveryHours={refreshEveryHours}
-      chips={<>
-        {l.year != null ? <Chip size="small" label={l.year} variant="outlined" sx={chipSx} /> : null}
-        {l.transmission ? <Chip size="small" label={l.transmission} variant="outlined" sx={chipSx} /> : null}
-      </>}
     >
       <Row icon={TagIcon}><strong>{formatPrice(l.price, l.currency)}</strong></Row>
-      {l.kilometers != null || l.fuelType ? (
-        <Row icon={SpeedometerIcon}>
-          {l.kilometers != null ? <><strong>{new Intl.NumberFormat('en-GB').format(l.kilometers)}</strong> km</> : null}
-          {l.kilometers != null && l.fuelType ? ' · ' : null}
-          {l.fuelType || null}
-        </Row>
-      ) : null}
-      {l.cityName ? <Row icon={MapPinIcon}>{l.cityName}</Row> : null}
     </BaseCard>
   );
 }
@@ -737,9 +733,6 @@ function JobCard({
   refreshEveryHours?: number;
   lastRefreshedAt?: string | null;
 }) {
-  const industryLabel = findLabel(JOB_INDUSTRY_OPTIONS, l.industry);
-  const jobTypeLabel = findLabel(JOB_TYPE_OPTIONS, l.jobType);
-  const workLocLabel = findLabel(WORK_LOCATION_OPTIONS, l.workLocation);
   return (
     <BaseCard
       title={l.title}
@@ -761,14 +754,8 @@ function JobCard({
       onRefreshed={onRefreshed}
       lastRefreshedAt={lastRefreshedAt}
       refreshEveryHours={refreshEveryHours}
-      chips={<>
-        <Chip size="small" label={jobTypeLabel} variant="outlined" sx={chipSx} />
-        <Chip size="small" label={workLocLabel} variant="outlined" color="info" sx={chipSx} />
-      </>}
     >
-      <Row icon={BriefcaseIcon}>{industryLabel}</Row>
       {l.salary != null ? <Row icon={TagIcon}><strong>{formatPrice(l.salary, l.currency)}</strong> / muaj</Row> : null}
-      {l.cityName ? <Row icon={MapPinIcon}>{l.cityName}</Row> : null}
     </BaseCard>
   );
 }
@@ -796,8 +783,6 @@ function MarketplaceCard({
   refreshEveryHours?: number;
   lastRefreshedAt?: string | null;
 }) {
-  const categoryLabel = findLabel(MARKETPLACE_CATEGORY_OPTIONS, l.category);
-  const conditionLabel = findLabel(MARKETPLACE_CONDITION_OPTIONS, l.condition);
   return (
     <BaseCard
       title={l.title}
@@ -819,13 +804,8 @@ function MarketplaceCard({
       onRefreshed={onRefreshed}
       lastRefreshedAt={lastRefreshedAt}
       refreshEveryHours={refreshEveryHours}
-      chips={<>
-        <Chip size="small" label={categoryLabel} variant="outlined" sx={chipSx} />
-        {l.condition ? <Chip size="small" label={conditionLabel} variant="outlined" color="success" sx={chipSx} /> : null}
-      </>}
     >
       {l.price != null ? <Row icon={TagIcon}><strong>{formatPrice(l.price, l.currency)}</strong></Row> : <Row icon={TagIcon}>Çmimi me marrëveshje</Row>}
-      {l.cityName ? <Row icon={MapPinIcon}>{l.cityName}</Row> : null}
     </BaseCard>
   );
 }
@@ -853,7 +833,6 @@ function BusinessCard({
   refreshEveryHours?: number;
   lastRefreshedAt?: string | null;
 }) {
-  const categoryLabel = findLabel(BUSINESS_CATEGORY_OPTIONS, l.category);
   const announcement: BusinessAnnouncement | null = l.announcementTitle?.trim()
     ? {
         title: l.announcementTitle,
@@ -894,15 +873,7 @@ function BusinessCard({
           />
         ) : undefined
       }
-      chips={
-        <>
-          <Chip size="small" label="Biznes" color="primary" variant="outlined" sx={chipSx} />
-          <Chip size="small" label={categoryLabel} variant="outlined" sx={chipSx} />
-        </>
-      }
     >
-      {l.cityName ? <Row icon={MapPinIcon}>{l.cityName}</Row> : null}
-      {l.servicesHighlight ? <Row icon={TagIcon}>{l.servicesHighlight}</Row> : null}
     </BaseCard>
   );
 }
@@ -930,7 +901,6 @@ function ProfessionalCard({
   refreshEveryHours?: number;
   lastRefreshedAt?: string | null;
 }) {
-  const categoryLabel = findLabel(PROFESSIONAL_CATEGORY_OPTIONS, l.category);
   const announcement: BusinessAnnouncement | null = l.announcementTitle?.trim()
     ? {
         title: l.announcementTitle,
@@ -971,15 +941,7 @@ function ProfessionalCard({
           />
         ) : undefined
       }
-      chips={
-        <>
-          <Chip size="small" label="Profesionist" color="secondary" variant="outlined" sx={chipSx} />
-          <Chip size="small" label={categoryLabel} variant="outlined" sx={chipSx} />
-        </>
-      }
     >
-      {l.cityName ? <Row icon={MapPinIcon}>{l.cityName}</Row> : null}
-      {l.servicesHighlight ? <Row icon={TagIcon}>{l.servicesHighlight}</Row> : null}
     </BaseCard>
   );
 }
@@ -1023,13 +985,15 @@ function TabGrid<T>({ loading, error, items, renderCard, emptyLabel, getKey }: {
 
   if (loading) {
     return (
-      <Grid container spacing={2}>
+      <Stack spacing={1.5}>
         {[0, 1, 2, 3].map((k) => (
-          <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={k}>
-            <Skeleton variant="rounded" height={220} sx={{ borderRadius: 2.5 }} />
-          </Grid>
+          <Skeleton
+            key={k}
+            variant="rounded"
+            sx={{ width: '100%', height: { xs: 190, sm: 220, md: 240 }, borderRadius: 2.5 }}
+          />
         ))}
-      </Grid>
+      </Stack>
     );
   }
   if (error) {
@@ -1077,16 +1041,15 @@ function TabGrid<T>({ loading, error, items, renderCard, emptyLabel, getKey }: {
 
   return (
     <Stack spacing={2}>
-      <Grid container spacing={2}>
+      <Stack spacing={1.5}>
         {visible.map((item, idx) => (
-          <Grid
-            size={{ xs: 12, sm: 6, lg: 4 }}
+          <Box
             key={getKey?.(item, idx) ?? (item as { id?: string }).id ?? idx}
           >
             {renderCard(item)}
-          </Grid>
+          </Box>
         ))}
-      </Grid>
+      </Stack>
       {visibleCount < items.length ? (
         <Box ref={sentinelRef} sx={{ height: 1 }} aria-hidden />
       ) : null}
@@ -1896,11 +1859,11 @@ export default function UserMyListingsPage() {
         }}
       >
         <Stack direction="row" spacing={1} sx={{ width: 'max-content', pr: { xs: 1, md: 0 } }}>
-          {tabs.map((t, i) => {
+          {tabs.map((tabItem, i) => {
             const active = tab === i;
             return (
               <Box
-                key={t.key}
+                key={tabItem.key}
                 component="button"
                 type="button"
                 role="tab"
@@ -1932,10 +1895,10 @@ export default function UserMyListingsPage() {
                 }}
               >
                 <Box component="span" sx={{ display: 'inline-flex', color: 'inherit' }}>
-                  {t.icon}
+                  {tabItem.icon}
                 </Box>
-                {t.label}
-                {!loading && t.count > 0 ? (
+                {tabItem.label}
+                {!loading && tabItem.count > 0 ? (
                   <Box
                     component="span"
                     sx={{
@@ -1952,10 +1915,10 @@ export default function UserMyListingsPage() {
                       color: active ? 'primary.main' : 'text.secondary',
                     }}
                   >
-                    {t.count}
+                    {tabItem.count}
                   </Box>
                 ) : null}
-                {!loading && t.pending > 0 && t.key !== 'all' ? (
+                {!loading && tabItem.pending > 0 && tabItem.key !== 'all' ? (
                   <Box
                     component="span"
                     sx={{
@@ -1971,7 +1934,7 @@ export default function UserMyListingsPage() {
                       color: 'warning.main',
                     }}
                   >
-                    {t.pending} në pritje
+                    {tabItem.pending} në pritje
                   </Box>
                 ) : null}
               </Box>

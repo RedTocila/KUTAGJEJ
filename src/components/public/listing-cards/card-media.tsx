@@ -253,7 +253,7 @@ export function CardMedia({
           }}
         >
           {okazion ? (
-            <OkazionCountdown expiresAt={okazionUntil} compact />
+            <OkazionCountdown expiresAt={okazionUntil} compact={compact} />
           ) : showPremiumBadge ? (
             <ListingPremiumBadge size={compact ? 22 : 28} aria-label="Premium" />
           ) : topLeftOverlay ? (

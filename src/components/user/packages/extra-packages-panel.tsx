@@ -64,6 +64,7 @@ import {
 } from '@/components/core/product-dialog';
 import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 
+import { BcPurchaseDialog } from './bc-purchase-dialog';
 import { OkazionPackagesSection } from './okazion-packages-section';
 import {
   dualPayButtonSx,
@@ -270,6 +271,7 @@ function AutoRefreshSection() {
   const [slots, setSlots] = React.useState(0);
   const [used, setUsed] = React.useState(0);
   const [packages, setPackages] = React.useState<AutoRefreshPackage[]>(FALLBACK_AUTO_PACKAGES);
+  const [confirmPackage, setConfirmPackage] = React.useState<AutoRefreshPackage | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -305,7 +307,7 @@ function AutoRefreshSection() {
     router.push(checkoutAutoRefreshHref(pkg.id));
   };
 
-  const onBuyBc = async (pkg: AutoRefreshPackage) => {
+  const onBuyBc = async (pkg: AutoRefreshPackage): Promise<boolean> => {
     setBusyId(pkg.id);
     setError(null);
     setSuccess(null);
@@ -313,12 +315,14 @@ function AutoRefreshSection() {
     setBusyId(null);
     if (result.error) {
       setError(result.error);
-      return;
+      return false;
     }
     if (typeof result.autoRefreshSlots === 'number') setSlots(result.autoRefreshSlots);
     if (typeof result.used === 'number') setUsed(result.used);
+    setConfirmPackage(null);
     setSuccess(result.message || `U shtuan ${result.slots ?? pkg.slots} vende Auto-Refresh.`);
     await checkSession();
+    return true;
   };
 
   return (
@@ -364,7 +368,7 @@ function AutoRefreshSection() {
                 key={pkg.id}
                 icon={ArrowClockwiseIcon}
                 category="Auto-refresh"
-                title={t.packages.autoRefreshTitle}
+                title={t.packages.autoRefreshPackageTitle(pkg.slots)}
                 subtitle={t.packages.autoRefreshSubtitle}
                 badge={best ? t.packages.bestValue : null}
                 highlighted={best}
@@ -388,7 +392,7 @@ function AutoRefreshSection() {
                       size="small"
                       variant="outlined"
                       disabled={busy || !canAfford}
-                      onClick={() => void onBuyBc(pkg)}
+                      onClick={() => setConfirmPackage(pkg)}
                       startIcon={busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={16} />}
                       sx={dualPayButtonSx('primary', 'outlined')}
                     >
@@ -401,6 +405,17 @@ function AutoRefreshSection() {
           })}
         </Stack>
       )}
+      <BcPurchaseDialog
+        open={Boolean(confirmPackage)}
+        packageLabel={confirmPackage?.labelSq || ''}
+        priceBc={confirmPackage?.priceBc || 0}
+        busy={Boolean(confirmPackage && busyId === confirmPackage.id)}
+        onClose={() => setConfirmPackage(null)}
+        onConfirm={() => {
+          if (!confirmPackage) return;
+          void onBuyBc(confirmPackage);
+        }}
+      />
     </Stack>
   );
 }
@@ -418,6 +433,7 @@ function PremiumListingSection() {
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
+  const [confirmPackage, setConfirmPackage] = React.useState<PremiumPackage | null>(null);
 
   const [assignOpen, setAssignOpen] = React.useState(false);
   const [activeVoucher, setActiveVoucher] = React.useState<PremiumVoucher | null>(null);
@@ -497,7 +513,7 @@ function PremiumListingSection() {
     router.push(checkoutPremiumHref(pkg.id));
   };
 
-  const onBuyBc = async (pkg: PremiumPackage) => {
+  const onBuyBc = async (pkg: PremiumPackage): Promise<boolean> => {
     setBusyId(pkg.id);
     setError(null);
     setSuccess(null);
@@ -505,14 +521,16 @@ function PremiumListingSection() {
     setBusyId(null);
     if (result.error) {
       setError(result.error);
-      return;
+      return false;
     }
     await checkSession();
+    setConfirmPackage(null);
     setSuccess(result.message || 'Premium u blë me Boost Coins.');
     if (result.voucher) {
       await reloadVouchers();
       openAssign(result.voucher);
     }
+    return true;
   };
 
   const onApply = async () => {
@@ -599,7 +617,7 @@ function PremiumListingSection() {
                     variant="outlined"
                     color="warning"
                     disabled={busy || !canAfford}
-                    onClick={() => void onBuyBc(pkg)}
+                    onClick={() => setConfirmPackage(pkg)}
                     startIcon={busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={16} />}
                     sx={dualPayButtonSx('warning', 'outlined')}
                   >
@@ -611,6 +629,18 @@ function PremiumListingSection() {
           );
         })}
       </Stack>
+
+      <BcPurchaseDialog
+        open={Boolean(confirmPackage)}
+        packageLabel={confirmPackage ? t.packages.premiumBoostTitle(confirmPackage.days) : ''}
+        priceBc={confirmPackage?.priceBc || 0}
+        busy={Boolean(confirmPackage && busyId === confirmPackage.id)}
+        onClose={() => setConfirmPackage(null)}
+        onConfirm={() => {
+          if (!confirmPackage) return;
+          void onBuyBc(confirmPackage);
+        }}
+      />
 
       <ProductDialog open={assignOpen} onClose={closeAssign} fullWidth maxWidth="sm">
         <ProductDialogTitle

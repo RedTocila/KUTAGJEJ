@@ -4,16 +4,15 @@ import * as React from 'react';
 import { Chip } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
-import { Timer as TimerIcon } from '@phosphor-icons/react/dist/ssr/Timer';
 
 import { OKAZION_ACCENT } from '@/lib/home-categories';
 import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
-import { formatJobListingCountdown, getJobCountdownParts } from '@/lib/job-listing-expiry';
+import { getJobCountdownParts } from '@/lib/job-listing-expiry';
 
 /** OKAZION packs always last this many days. */
 export const OKAZION_COUNTDOWN_DAYS = 7;
 
-const PLACEHOLDER_LABEL = `${OKAZION_COUNTDOWN_DAYS}d 0h 00m 00s`;
+const PLACEHOLDER_LABEL = `${OKAZION_COUNTDOWN_DAYS}d 0h 00m`;
 const COMPACT_PLACEHOLDER_LABEL = `${OKAZION_COUNTDOWN_DAYS}d 0h`;
 
 const overlayChipSx = {
@@ -29,13 +28,13 @@ const overlayChipSx = {
   WebkitBackdropFilter: 'blur(12px)',
   boxShadow: '0 2px 12px rgba(0,0,0,0.28)',
   color: '#fff',
-  bgcolor: alpha('#dc2626', 0.52),
-  borderColor: alpha('#fff', 0.18),
+  bgcolor: '#F72F35',
+  borderColor: alpha('#fff', 0.3),
   '& .MuiChip-icon': {
     color: '#fff',
     ml: 0.75,
     mr: -0.25,
-    fontSize: 16,
+    fontSize: 17,
   },
   '& .MuiChip-label': { px: 1.1, overflow: 'visible', whiteSpace: 'nowrap' },
 } as const;
@@ -80,6 +79,12 @@ function formatCompactCountdown(expiresAt: string | Date, now: Date = new Date()
   return `${parts.days}d ${parts.hours}h`;
 }
 
+function formatCountdown(expiresAt: string | Date, now: Date = new Date()): string {
+  const parts = getJobCountdownParts(expiresAt, now);
+  if (parts.expired) return 'Skaduar';
+  return `${parts.days}d ${parts.hours}h ${String(parts.minutes).padStart(2, '0')}m`;
+}
+
 function OkazionCountdownChip({
   label,
   live = false,
@@ -91,7 +96,7 @@ function OkazionCountdownChip({
 }) {
   return (
     <Chip
-      icon={compact ? <SealPercentIcon size={13} weight="bold" /> : <TimerIcon size={14} weight="bold" />}
+      icon={<SealPercentIcon size={compact ? 13 : 17} weight="bold" />}
       label={label}
       size="small"
       className="listing-countdown-pulse-container"
@@ -140,9 +145,7 @@ export function OkazionCountdown({
     return <OkazionCountdownPlaceholder compact={compact} />;
   }
 
-  const label = compact
-    ? formatCompactCountdown(until, new Date(nowMs))
-    : formatJobListingCountdown(until, new Date(nowMs));
+  const label = compact ? formatCompactCountdown(until, new Date(nowMs)) : formatCountdown(until, new Date(nowMs));
 
   return <OkazionCountdownChip label={label} live compact={compact} />;
 }

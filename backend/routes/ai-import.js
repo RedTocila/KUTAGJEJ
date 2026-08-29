@@ -23,6 +23,17 @@ const { createAiImportBatch } = require('../lib/ai-import-batch');
 
 const router = express.Router();
 
+function createAbortError() {
+  const error = new Error('AI import was stopped');
+  error.name = 'AbortError';
+  error.status = 499;
+  return error;
+}
+
+function isAbortError(error) {
+  return error?.name === 'AbortError';
+}
+
 function firstUrlLabel(urls) {
   const list = Array.isArray(urls) ? urls : [];
   const first = list.find((u) => typeof u === 'string' && u.trim());
@@ -62,6 +73,29 @@ router.get('/import-quota', authMiddleware, requirePortalUser, async (req, res) 
 
 /** POST /api/ai/import-listings — turn website/Instagram links into listing drafts. */
 router.post('/import-listings', authMiddleware, requirePortalUser, async (req, res) => {
+  const requestController = new AbortController();
+  let responseFinished = false;
+  let charged = null;
+  let chargeRefunded = false;
+  const abortRequest = () => {
+    if (!requestController.signal.aborted) requestController.abort(createAbortError());
+  };
+  req.once('aborted', abortRequest);
+  res.once('close', () => {
+    if (!responseFinished) abortRequest();
+  });
+
+  const refundCharge = async () => {
+    if (!charged?.ok || chargeRefunded) return;
+    chargeRefunded = true;
+    await refundAiUsage({
+      userId: req.user.id,
+      eventId: charged.eventId,
+      cost: charged.cost,
+      fallback: charged.fallback,
+    });
+  };
+
   try {
     if (!isOpenAiConfigured()) {
       res.status(503).json({ message: 'AI import is not configured' });
@@ -92,7 +126,7 @@ router.post('/import-listings', authMiddleware, requirePortalUser, async (req, r
       feature,
       urlCount: urls.length,
     });
-    const charged = await chargeAiUsage({
+    charged = await chargeAiUsage({
       userId: req.user.id,
       kind: chargePlan.kind,
       units: chargePlan.units,
@@ -108,6 +142,8 @@ router.post('/import-listings', authMiddleware, requirePortalUser, async (req, r
       });
       return;
     }
+
+    if (requestController.signal.aborted) throw createAbortError();
 
     const batchId =
       incomingBatchId ||
@@ -125,7 +161,10 @@ router.post('/import-listings', authMiddleware, requirePortalUser, async (req, r
         images,
         mode,
         currentListing,
+        signal: requestController.signal,
       });
+      if (requestController.signal.aborted) throw createAbortError();
+      responseFinished = true;
       res.json({
         ok: true,
         drafts: result.drafts,
@@ -138,15 +177,18 @@ router.post('/import-listings', authMiddleware, requirePortalUser, async (req, r
         batchId,
       });
     } catch (err) {
-      await refundAiUsage({
-        userId: req.user.id,
-        eventId: charged.eventId,
-        cost: charged.cost,
-        fallback: charged.fallback,
-      });
+      await refundCharge();
       throw err;
     }
   } catch (err) {
+    await refundCharge();
+    if (isAbortError(err) || requestController.signal.aborted) {
+      if (!res.headersSent && !res.writableEnded) {
+        responseFinished = true;
+        res.status(499).json({ message: 'AI import stopped', code: 'aborted' });
+      }
+      return;
+    }
     console.error('POST /ai/import-listings:', err?.message || err);
     const status = Number.isFinite(err?.status) ? err.status : 500;
     res.status(status).json({ message: err?.message || 'AI import failed' });

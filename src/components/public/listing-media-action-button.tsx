@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Box, IconButton, Typography } from '@mui/material';
-import { alpha } from '@mui/material/styles';
+import { alpha, type SxProps, type Theme } from '@mui/material/styles';
 
 import { MOTION } from '@/styles/motion';
 
@@ -38,7 +38,7 @@ export function ListingMediaActionButton({
   onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
   const accentToken = `${accent}.main` as const;
-  const surfaceStyles =
+  const surfaceStyles: SxProps<Theme> =
     surface === 'hero'
       ? {
           bgcolor: alpha('#000', 0.45),
@@ -68,12 +68,14 @@ export function ListingMediaActionButton({
             },
           }
         : {
-            bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.92)',
-            color: active || accent === 'warning' ? accentToken : 'text.primary',
+            bgcolor: alpha('#000', 0.42),
+            color: active || accent === 'warning' ? accentToken : '#fff',
+            backdropFilter: 'blur(10px)',
             border: '1px solid',
-            borderColor: active || accent === 'warning' ? accentToken : 'divider',
+            borderColor: alpha('#fff', 0.18),
+            textShadow: '0 1px 5px rgba(0, 0, 0, 0.65)',
             '&:hover': {
-              bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.98)',
+              bgcolor: alpha('#000', 0.56),
             },
           };
 

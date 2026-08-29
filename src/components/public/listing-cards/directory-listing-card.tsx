@@ -35,7 +35,7 @@ function conditionIcon(condition: string | null) {
   return CheckCircleIcon;
 }
 
-export type DirectoryListingCardVariant = 'default' | 'cover';
+export type DirectoryListingCardVariant = 'default' | 'cover' | 'compact';
 
 /** Biznese = venues (eat, drink, reserve) — minimal card layout. */
 function BusinessVenueCardBody({
@@ -62,7 +62,11 @@ function BusinessVenueCardBody({
       href={listingBusinessPublicHref(listing)}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
+      <CardShell
+        compact={variant === 'compact'}
+        premium={Boolean(listing.isPremium)}
+        okazion={Boolean(listing.isOkazion)}
+      >
         <CardMedia
           listingKind="businesses"
           listingId={listing.id}
@@ -70,7 +74,8 @@ function BusinessVenueCardBody({
           FallbackIcon={StorefrontIcon}
           alt={listing.title}
           height={{ xs: 185, md: 200 }}
-          aspectRatio={variant === 'cover' ? '1 / 1' : undefined}
+          aspectRatio={variant === 'cover' || variant === 'compact' ? '1 / 1' : undefined}
+          compact={variant === 'compact'}
           topLeftBadge={topBadge}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
@@ -110,95 +115,128 @@ function BusinessVenueCardBody({
             ) : undefined
           }
         />
-        <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
-          <ListingTitleWithVerified
-            title={listing.title}
-            maxLines={1}
-            verified={false}
-            typographySx={
-              listing.isPremium || listing.isOkazion
-                ? { color: listingPriceAccentColor({ isPremium: listing.isPremium, isOkazion: listing.isOkazion }) }
-                : undefined
-            }
-          />
-
-          {listing.servicesHighlight ? (
-            <Typography
-              variant="body2"
-              noWrap
-              sx={{ color: 'primary.main', fontWeight: 600, lineHeight: 1.35, minWidth: 0 }}
-            >
-              {listing.servicesHighlight}
-            </Typography>
-          ) : null}
-
-          {openingHoursLabel || cardRating ? (
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0 }}>
-              {openingHoursLabel ? (
-                <>
-                  <ClockIcon size={14} weight="regular" color="var(--mui-palette-text-disabled)" />
-                  <Typography
-                    variant="caption"
-                    noWrap
-                    sx={{
-                      color: 'text.disabled',
-                      fontWeight: 500,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      minWidth: 0,
-                      flex: 1,
-                    }}
-                  >
-                    {openingHoursLabel}
-                  </Typography>
-                </>
-              ) : (
-                <Box sx={{ flex: 1 }} />
-              )}
+        {variant === 'compact' ? (
+          <Stack
+            className="listing-card-body"
+            spacing={{ xs: 0.25, sm: 0.4 }}
+            sx={{ pt: { xs: 0.65, sm: 0.8 }, px: { xs: 0.25, sm: 0.4 }, pb: { xs: 0.8, sm: 1 } }}
+          >
+            <ListingTitleWithVerified
+              title={listing.title}
+              maxLines={1}
+              verified={false}
+              typographySx={{
+                fontSize: { xs: '0.76rem', sm: '0.82rem' },
+                fontWeight: 650,
+                lineHeight: 1.25,
+              }}
+            />
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+              <Typography
+                variant="caption"
+                noWrap
+                sx={{ color: 'text.secondary', fontWeight: 600, minWidth: 0, flex: 1 }}
+              >
+                {listing.categoryLabel}
+              </Typography>
               {cardRating ? (
-                <Box sx={{ flexShrink: 0, ml: 'auto' }}>
+                <Box sx={{ flexShrink: 0 }}>
                   <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
                 </Box>
               ) : null}
             </Stack>
-          ) : null}
+          </Stack>
+        ) : (
+          <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
+            <ListingTitleWithVerified
+              title={listing.title}
+              maxLines={1}
+              verified={false}
+              typographySx={
+                listing.isPremium || listing.isOkazion
+                  ? { color: listingPriceAccentColor({ isPremium: listing.isPremium, isOkazion: listing.isOkazion }) }
+                  : undefined
+              }
+            />
 
-          {listing.reservationsEnabled ? (
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-              <CalendarCheckIcon size={14} weight="bold" />
-              <Typography variant="caption" sx={{ fontWeight: 600, color: 'success.main' }}>
-                {listing.reservationUrl ? 'Rezervim online' : 'Rezervim me telefon'}
-              </Typography>
-            </Stack>
-          ) : null}
-
-          {listing.cityName ? (
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
-              <MapPinIcon size={14} weight="regular" />
+            {listing.servicesHighlight ? (
               <Typography
-                variant="caption"
+                variant="body2"
                 noWrap
-                sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
+                sx={{ color: 'primary.main', fontWeight: 600, lineHeight: 1.35, minWidth: 0 }}
               >
-                {listing.cityName}
+                {listing.servicesHighlight}
               </Typography>
-            </Stack>
-          ) : null}
+            ) : null}
 
-          <Box sx={{ flex: 1 }} />
+            {openingHoursLabel || cardRating ? (
+              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+                {openingHoursLabel ? (
+                  <>
+                    <ClockIcon size={14} weight="regular" color="var(--mui-palette-text-disabled)" />
+                    <Typography
+                      variant="caption"
+                      noWrap
+                      sx={{
+                        color: 'text.disabled',
+                        fontWeight: 500,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        minWidth: 0,
+                        flex: 1,
+                      }}
+                    >
+                      {openingHoursLabel}
+                    </Typography>
+                  </>
+                ) : (
+                  <Box sx={{ flex: 1 }} />
+                )}
+                {cardRating ? (
+                  <Box sx={{ flexShrink: 0, ml: 'auto' }}>
+                    <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
+                  </Box>
+                ) : null}
+              </Stack>
+            ) : null}
 
-          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="caption" color="text.disabled">
-              {listingCardRelativeDate(listing)}
-            </Typography>
-            <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-              <EyeIcon size={14} weight="regular" />
+            {listing.reservationsEnabled ? (
+              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                <CalendarCheckIcon size={14} weight="bold" />
+                <Typography variant="caption" sx={{ fontWeight: 600, color: 'success.main' }}>
+                  {listing.reservationUrl ? 'Rezervim online' : 'Rezervim me telefon'}
+                </Typography>
+              </Stack>
+            ) : null}
+
+            {listing.cityName ? (
+              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
+                <MapPinIcon size={14} weight="regular" />
+                <Typography
+                  variant="caption"
+                  noWrap
+                  sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
+                >
+                  {listing.cityName}
+                </Typography>
+              </Stack>
+            ) : null}
+
+            <Box sx={{ flex: 1 }} />
+
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
               <Typography variant="caption" color="text.disabled">
-                {new Intl.NumberFormat('en-GB').format(viewCount)}
+                {listingCardRelativeDate(listing)}
               </Typography>
+              <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+                <EyeIcon size={14} weight="regular" />
+                <Typography variant="caption" color="text.disabled">
+                  {new Intl.NumberFormat('en-GB').format(viewCount)}
+                </Typography>
+              </Stack>
             </Stack>
           </Stack>
-        </Stack>
+        )}
       </CardShell>
     </ListingCardLink>
   );
@@ -251,7 +289,11 @@ function ProfessionalListingCardBody({
       href={listingProfessionalPublicHref(listing)}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
+      <CardShell
+        compact={variant === 'compact'}
+        premium={Boolean(listing.isPremium)}
+        okazion={Boolean(listing.isOkazion)}
+      >
         <CardMedia
           listingKind="professionals"
           listingId={listing.id}
@@ -259,7 +301,8 @@ function ProfessionalListingCardBody({
           FallbackIcon={BriefcaseIcon}
           alt={listing.title}
           height={{ xs: 185, md: 200 }}
-          aspectRatio={variant === 'cover' ? '1 / 1' : undefined}
+          aspectRatio={variant === 'cover' || variant === 'compact' ? '1 / 1' : undefined}
+          compact={variant === 'compact'}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
@@ -319,49 +362,82 @@ function ProfessionalListingCardBody({
             ) : undefined
           }
         />
-        <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
-          <ListingTitleWithVerified
-            title={listing.title}
-            maxLines={1}
-            verified={false}
-            typographySx={
-              listing.isPremium || listing.isOkazion
-                ? { color: listingPriceAccentColor({ isPremium: listing.isPremium, isOkazion: listing.isOkazion }) }
-                : undefined
-            }
-          />
-          {cardRating ? (
-            <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
-          ) : null}
-          <SpecRow specs={specs} />
-
-          {listing.cityName ? (
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
-              <MapPinIcon size={14} weight="regular" />
+        {variant === 'compact' ? (
+          <Stack
+            className="listing-card-body"
+            spacing={{ xs: 0.25, sm: 0.4 }}
+            sx={{ pt: { xs: 0.65, sm: 0.8 }, px: { xs: 0.25, sm: 0.4 }, pb: { xs: 0.8, sm: 1 } }}
+          >
+            <ListingTitleWithVerified
+              title={listing.title}
+              maxLines={1}
+              verified={false}
+              typographySx={{
+                fontSize: { xs: '0.76rem', sm: '0.82rem' },
+                fontWeight: 650,
+                lineHeight: 1.25,
+              }}
+            />
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
               <Typography
                 variant="caption"
                 noWrap
-                sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
+                sx={{ color: 'text.secondary', fontWeight: 600, minWidth: 0, flex: 1 }}
               >
-                {listing.cityName}
+                {listing.categoryLabel}
               </Typography>
-            </Stack>
-          ) : null}
-
-          <Box sx={{ flex: 1 }} />
-
-          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="caption" color="text.disabled">
-              {listingCardRelativeDate(listing)}
-            </Typography>
-            <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-              <EyeIcon size={14} weight="regular" />
-              <Typography variant="caption" color="text.disabled">
-                {new Intl.NumberFormat('en-GB').format(viewCount)}
-              </Typography>
+              {cardRating ? (
+                <Box sx={{ flexShrink: 0 }}>
+                  <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
+                </Box>
+              ) : null}
             </Stack>
           </Stack>
-        </Stack>
+        ) : (
+          <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
+            <ListingTitleWithVerified
+              title={listing.title}
+              maxLines={1}
+              verified={false}
+              typographySx={
+                listing.isPremium || listing.isOkazion
+                  ? { color: listingPriceAccentColor({ isPremium: listing.isPremium, isOkazion: listing.isOkazion }) }
+                  : undefined
+              }
+            />
+            {cardRating ? (
+              <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
+            ) : null}
+            <SpecRow specs={specs} />
+
+            {listing.cityName ? (
+              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
+                <MapPinIcon size={14} weight="regular" />
+                <Typography
+                  variant="caption"
+                  noWrap
+                  sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
+                >
+                  {listing.cityName}
+                </Typography>
+              </Stack>
+            ) : null}
+
+            <Box sx={{ flex: 1 }} />
+
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="caption" color="text.disabled">
+                {listingCardRelativeDate(listing)}
+              </Typography>
+              <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+                <EyeIcon size={14} weight="regular" />
+                <Typography variant="caption" color="text.disabled">
+                  {new Intl.NumberFormat('en-GB').format(viewCount)}
+                </Typography>
+              </Stack>
+            </Stack>
+          </Stack>
+        )}
       </CardShell>
     </ListingCardLink>
   );

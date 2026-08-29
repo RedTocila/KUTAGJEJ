@@ -197,7 +197,7 @@ export function CategoryTopViewedSlider({
                   fallbackBg={BANNER_SLIDE_VISUALS[i % BANNER_SLIDE_VISUALS.length].bg}
                   eager={eager}
                   title={slide.title}
-                  bottomRightLabel={slide.subtitle}
+                  bottomLeftLabel={slide.subtitle}
                   contentPlacement="below"
                   titleMaxLines={1}
                 />

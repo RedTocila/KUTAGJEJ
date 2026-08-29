@@ -105,8 +105,23 @@ export interface ClientFetchResult<T> {
 
 const RETRYABLE_STATUSES = new Set([408, 425, 429, 502, 503, 504]);
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  if (!signal) return new Promise((resolve) => setTimeout(resolve, ms));
+  const abortSignal = signal;
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(done, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      abortSignal.removeEventListener('abort', onAbort);
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    function done() {
+      abortSignal.removeEventListener('abort', onAbort);
+      resolve();
+    }
+    if (abortSignal.aborted) onAbort();
+    else abortSignal.addEventListener('abort', onAbort, { once: true });
+  });
 }
 
 function requestMethod(init?: RequestInit): string {
@@ -143,7 +158,7 @@ export async function apiFetch(input: string, init?: RequestInit, retries = 2): 
     try {
       const res = await fetch(input, init);
       if (shouldRetryStatus(res.status, method) && attempt < attempts - 1) {
-        await sleep(400 * 2 ** attempt);
+        await sleep(400 * 2 ** attempt, init?.signal ?? undefined);
         continue;
       }
       return res;

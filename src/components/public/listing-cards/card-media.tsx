@@ -8,7 +8,7 @@ import { Box, Chip, IconButton, Stack } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
-import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
+import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 
 import { paths } from '@/paths';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -386,7 +386,7 @@ export function CardMedia({
                 inset: -5,
                 borderRadius: '50%',
                 background:
-                  'radial-gradient(circle, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.05) 38%, rgba(0,0,0,0) 70%)',
+                  'radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.14) 38%, rgba(0,0,0,0) 70%)',
                 pointerEvents: 'none',
               },
               '& > svg': { position: 'relative', zIndex: 1 },
@@ -395,7 +395,7 @@ export function CardMedia({
               '&:active': { transform: 'scale(0.92)' },
             }}
           >
-            <ShareNetworkIcon size={17} weight="bold" />
+            <PaperPlaneTiltIcon size={17} weight="bold" />
           </IconButton>
           <IconButton
             aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
@@ -414,7 +414,7 @@ export function CardMedia({
                 inset: -5,
                 borderRadius: '50%',
                 background:
-                  'radial-gradient(circle, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.05) 38%, rgba(0,0,0,0) 70%)',
+                  'radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.14) 38%, rgba(0,0,0,0) 70%)',
                 pointerEvents: 'none',
               },
               '& > svg': { position: 'relative', zIndex: 1 },
@@ -441,7 +441,7 @@ export function CardMedia({
           <ListingMediaActionButton
             aria-label="Ndaj njoftimin"
             count={shareCount}
-            icon={<ShareNetworkIcon size={17} weight="regular" />}
+            icon={<PaperPlaneTiltIcon size={17} weight="bold" />}
             onClick={handleShare}
           />
           <ListingMediaActionButton
@@ -449,7 +449,7 @@ export function CardMedia({
             count={saveCount}
             active={saved}
             accent="primary"
-            icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} />}
+            icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'bold'} />}
             onClick={handleSave}
           />
         </Stack>

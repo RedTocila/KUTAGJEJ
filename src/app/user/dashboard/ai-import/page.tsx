@@ -493,7 +493,8 @@ function AiImportPostingProgress({
   progress: PostAllProgressState;
   t: ReturnType<typeof useCopy>;
 }) {
-  const now = useSharedSecondTick() || Date.now();
+  const tick = useSharedSecondTick();
+  const now = tick || progress.itemStartedAt;
   const { done, total, startedAt, itemStartedAt, estimatedTotalMs } = progress;
   const current = total <= 0 ? 1 : Math.min(total, done + 1);
   const avgMs =
@@ -712,8 +713,8 @@ export default function AiImportListingsPage() {
     try {
       let uploadedUrls: string[] = [...pendingImageUrls];
       if (files.length > 0) {
-        const up = await uploadListingImages(files, UPLOAD_FOLDER[category]);
-        if (wasStopped()) {
+        const up = await uploadListingImages(files, UPLOAD_FOLDER[category], controller.signal);
+        if (up.aborted || wasStopped()) {
           setStatusMessage(t.aiImport.stopped(0, 1));
           return;
         }
@@ -1165,12 +1166,12 @@ export default function AiImportListingsPage() {
           const now = Date.now();
           if (currentId) setPostingId(currentId);
           setPostAllProgress((prev) => {
-            const startedAt = prev?.startedAt ?? now;
+            const batchStartedAt = prev?.startedAt ?? now;
             const sameItem = prev != null && prev.done === done;
             return {
               done,
               total,
-              startedAt,
+              startedAt: batchStartedAt,
               itemStartedAt: sameItem || !currentId ? (prev?.itemStartedAt ?? now) : now,
               estimatedTotalMs: prev?.estimatedTotalMs ?? estimatePostBatchMs(readyDrafts),
             };
@@ -1409,7 +1410,6 @@ export default function AiImportListingsPage() {
                       <IconButton
                         type="button"
                         aria-label={t.aiImport.stop}
-                        onPointerDown={handleStop}
                         onClick={handleStop}
                         sx={{
                           width: 36,

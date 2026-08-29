@@ -15,7 +15,7 @@ import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
-import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
+import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 
 import { paths } from '@/paths';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -201,7 +201,7 @@ export function JobListingDetailDesktop({
                         aria-label="Ndaj njoftimin"
                         count={shareCount}
                         surface="glass"
-                        icon={<ShareNetworkIcon size={17} weight="regular" />}
+                        icon={<PaperPlaneTiltIcon size={17} weight="bold" />}
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
@@ -215,7 +215,7 @@ export function JobListingDetailDesktop({
                         count={saveCount}
                         surface="glass"
                         active={saved}
-                        icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'regular'} />}
+                        icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'bold'} />}
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();

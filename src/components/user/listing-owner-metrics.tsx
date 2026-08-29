@@ -16,7 +16,7 @@ import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
 import { PencilSimple as EditIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { ForkKnife as ForkKnifeIcon } from '@phosphor-icons/react/dist/ssr/ForkKnife';
-import { ShareNetwork as ShareIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
+import { PaperPlaneTilt as ShareIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Timer as TimerIcon } from '@phosphor-icons/react/dist/ssr/Timer';
@@ -120,7 +120,7 @@ export function ListingOwnerStats({
       }}
     >
       <Stat icon={<EyeIcon size={13} />} label="shikime" value={viewCount} />
-      <Stat icon={<ShareIcon size={13} />} label="ndarje" value={shareCount} />
+      <Stat icon={<ShareIcon size={13} weight="bold" />} label="ndarje" value={shareCount} />
       <Stat
         icon={<BookmarkIcon size={13} />}
         label={onSavesClick ? 'ruajtje · shiko interesuarit' : 'ruajtje'}

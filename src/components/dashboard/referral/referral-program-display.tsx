@@ -6,7 +6,7 @@ import { Box, Chip, LinearProgress, Stack, Typography, useTheme } from '@mui/mat
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { Circle as CircleIcon } from '@phosphor-icons/react/dist/ssr/Circle';
 import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
-import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
+import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import { UserPlus as UserPlusIcon } from '@phosphor-icons/react/dist/ssr/UserPlus';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
@@ -509,7 +509,7 @@ export function ProgramDisplay({
               color: 'primary.main',
             }}
           >
-            <ShareNetworkIcon size={18} weight="duotone" />
+            <PaperPlaneTiltIcon size={18} weight="bold" />
           </Box>
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Chip

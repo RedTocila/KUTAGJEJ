@@ -20,6 +20,7 @@ import { SteeringWheel as SteeringWheelIcon } from '@phosphor-icons/react/dist/s
 import {
   CAR_COLOUR_OPTIONS,
   CAR_EXTRAS,
+  CAR_MIN_YEAR,
   FUEL_TYPE_OPTIONS,
   carYearOptions,
   makesForVehicleType,
@@ -167,8 +168,8 @@ function validateForm(f: CarFormState): FieldErrors {
   if (f.year.trim()) {
     const year = parsePositiveInt(f.year);
     const currentYear = new Date().getFullYear();
-    if (year === null || year < 1970 || year > currentYear + 1) {
-      errors.year = `Year must be between 1970 and ${currentYear + 1}.`;
+    if (year === null || year < CAR_MIN_YEAR || year > currentYear + 1) {
+      errors.year = `Year must be between ${CAR_MIN_YEAR} and ${currentYear + 1}.`;
     }
   }
 

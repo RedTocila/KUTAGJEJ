@@ -139,11 +139,13 @@ export const CAR_EXTRAS = [
 
 export type CarExtra = (typeof CAR_EXTRAS)[number];
 
-/** Generate a sorted list of years from 1970 to current year. */
+export const CAR_MIN_YEAR = 1925;
+
+/** Generate a sorted list of years from the current year to 1925. */
 export function carYearOptions(): number[] {
   const currentYear = new Date().getFullYear();
   const years: number[] = [];
-  for (let y = currentYear; y >= 1970; y--) {
+  for (let y = currentYear; y >= CAR_MIN_YEAR; y--) {
     years.push(y);
   }
   return years;

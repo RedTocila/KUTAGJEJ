@@ -13,7 +13,7 @@ import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { CaretLeft as CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
-import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
+import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 import { ShoppingBag as ShoppingBagIcon } from '@phosphor-icons/react/dist/ssr/ShoppingBag';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle';
@@ -689,7 +689,7 @@ export function RealEstateListingGallery(props: {
                       aria-label="Ndaj njoftimin"
                       count={shareCount}
                       surface={mediaActionSurface}
-                      icon={<ShareNetworkIcon size={17} weight="regular" />}
+                      icon={<PaperPlaneTiltIcon size={17} weight="bold" />}
                       onClick={handleShare}
                     />
                   </Box>
@@ -706,7 +706,7 @@ export function RealEstateListingGallery(props: {
                       surface={mediaActionSurface}
                       active={bookmark?.saved}
                       disabled={!bookmark}
-                      icon={<BookmarkSimpleIcon size={17} weight={bookmark?.saved ? 'fill' : 'regular'} />}
+                      icon={<BookmarkSimpleIcon size={17} weight={bookmark?.saved ? 'fill' : 'bold'} />}
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();

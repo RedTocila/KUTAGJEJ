@@ -2,12 +2,7 @@
 
 const { getSupabaseAdmin } = require('./supabase');
 const { compressImageBuffer } = require('./compress-image');
-const {
-  VEHICLE_TYPE_VALUES,
-  makesForVehicleType,
-  modelsForMake,
-  isValidVehicleMake,
-} = require('./vehicle-catalog');
+const { VEHICLE_TYPE_VALUES, makesForVehicleType, modelsForMake, isValidVehicleMake } = require('./vehicle-catalog');
 const { normalizeFuelType } = require('./car-field-rules');
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
@@ -22,14 +17,7 @@ const MAX_CAR_LISTING_IMAGES = 8;
 /** Max remote snapshot photos sent to vision (OpenAI). Compressed first. */
 const MAX_SNAPSHOT_VISION_IMAGES = 2;
 
-const CATEGORIES = [
-  'real-estate',
-  'cars',
-  'job-listings',
-  'marketplace',
-  'businesses',
-  'professionals',
-];
+const CATEGORIES = ['real-estate', 'cars', 'job-listings', 'marketplace', 'businesses', 'professionals'];
 
 const CATEGORY_LABELS = {
   'real-estate': 'Prona (real estate)',
@@ -82,8 +70,49 @@ function isOpenAiConfigured() {
   return Boolean(String(process.env.OPENAI_API_KEY || '').trim());
 }
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function createAbortError() {
+  const error = new Error('AI import was stopped');
+  error.name = 'AbortError';
+  return error;
+}
+
+function throwIfAborted(signal) {
+  if (signal?.aborted) throw signal.reason?.name === 'AbortError' ? signal.reason : createAbortError();
+}
+
+function sleep(ms, signal) {
+  if (!signal) return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(done, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', onAbort);
+      reject(createAbortError());
+    };
+    function done() {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }
+    if (signal.aborted) onAbort();
+    else signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+function timeoutSignal(parentSignal, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const onParentAbort = () => controller.abort(parentSignal?.reason);
+  if (parentSignal) {
+    if (parentSignal.aborted) onParentAbort();
+    else parentSignal.addEventListener('abort', onParentAbort, { once: true });
+  }
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      clearTimeout(timeout);
+      parentSignal?.removeEventListener('abort', onParentAbort);
+    },
+  };
 }
 
 function isOpenAiRateLimitError(status, message) {
@@ -128,18 +157,14 @@ function normalizeRestrictedReasons(raw) {
       .toLowerCase()
       .replace(/\s+/g, '_');
     const mapped =
-      RESTRICTED_REASON_CODES.find((c) => c === code) ||
-      RESTRICTED_REASON_CODES.find((c) => code.includes(c)) ||
-      null;
+      RESTRICTED_REASON_CODES.find((c) => c === code) || RESTRICTED_REASON_CODES.find((c) => code.includes(c)) || null;
     if (mapped && !out.includes(mapped)) out.push(mapped);
   }
   return out;
 }
 
 function contentRestrictedMessage(reasons) {
-  const labels = normalizeRestrictedReasons(reasons).map(
-    (r) => RESTRICTED_REASON_LABELS[r] || r,
-  );
+  const labels = normalizeRestrictedReasons(reasons).map((r) => RESTRICTED_REASON_LABELS[r] || r);
   if (labels.length === 0) {
     return 'This listing was blocked because it appears to contain restricted or prohibited content.';
   }
@@ -215,14 +240,8 @@ function stripHtml(html) {
 
 function extractMeta(html, attr, key) {
   const patterns = [
-    new RegExp(
-      `<meta[^>]+${attr}=["']${key}["'][^>]+content=["']([^"']+)["'][^>]*>`,
-      'i',
-    ),
-    new RegExp(
-      `<meta[^>]+content=["']([^"']+)["'][^>]+${attr}=["']${key}["'][^>]*>`,
-      'i',
-    ),
+    new RegExp(`<meta[^>]+${attr}=["']${key}["'][^>]+content=["']([^"']+)["'][^>]*>`, 'i'),
+    new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+${attr}=["']${key}["'][^>]*>`, 'i'),
   ];
   for (const re of patterns) {
     const m = html.match(re);
@@ -234,8 +253,7 @@ function extractMeta(html, attr, key) {
 const BROWSER_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 /** Many product / listing SPAs only emit og:image + title for social crawlers. */
-const CRAWLER_UA =
-  'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
+const CRAWLER_UA = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
 const IG_WEB_APP_ID = '936619743392459';
 /**
  * PolarisPostRootQuery — returns v1/iPhone-shaped media (carousel_media).
@@ -267,11 +285,11 @@ function isLikelyJunkImageUrl(url) {
     lower.startsWith('data:') ||
     /\.svg(\?|$)/i.test(lower) ||
     /sprite|icon|logo|favicon|pixel|tracking|1x1|blank\.|placeholder|avatar-default|spinner|loading\.gif|rsrc\.php/i.test(
-      lower,
+      lower
     ) ||
     // Analytics / ad beacons often appear as <img> tags (e.g. Facebook noscript pixel).
     /facebook\.com\/(?:tr|tr\/)\b|connect\.facebook\.net\/.*\/fbevents|google-analytics\.com|googletagmanager\.com|googleadservices\.com|doubleclick\.net|bat\.bing\.com|adservice\.google|scorecardresearch\.com|hotjar\.com/i.test(
-      lower,
+      lower
     ) ||
     /[?&]ev=pageview\b/i.test(lower) ||
     // Amazon share/composite banners (not product gallery shots)
@@ -293,7 +311,7 @@ function extractAllMeta(html, attr, key) {
   const out = [];
   const re = new RegExp(
     `<meta[^>]+(?:${attr}=["']${key}["'][^>]+content=["']([^"']+)["']|content=["']([^"']+)["'][^>]+${attr}=["']${key}["'])[^>]*>`,
-    'gi',
+    'gi'
   );
   let match;
   while ((match = re.exec(html))) {
@@ -305,10 +323,7 @@ function extractAllMeta(html, attr, key) {
 
 function extractJsonLdImages(html) {
   const out = [];
-  const blocks =
-    html.match(
-      /<script[^>]+type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi,
-    ) || [];
+  const blocks = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi) || [];
   for (const block of blocks) {
     const raw = block.replace(/^<script[^>]*>/i, '').replace(/<\/script>$/i, '');
     let parsed;
@@ -388,10 +403,7 @@ function preferLargerImageUrl(url) {
     const host = parsed.hostname.toLowerCase();
     // Remax / Gryphtech preview → Large
     if (/remax\.azureedge\.net|cdn\.gryphtech\.com/i.test(host)) {
-      parsed.pathname = parsed.pathname.replace(
-        /\/userimages\/(\d+)\/(?!Large(?:WM)?\/)/i,
-        '/userimages/$1/Large/',
-      );
+      parsed.pathname = parsed.pathname.replace(/\/userimages\/(\d+)\/(?!Large(?:WM)?\/)/i, '/userimages/$1/Large/');
       return parsed.toString();
     }
     // Amazon size transforms → larger SL1500 when possible
@@ -411,9 +423,7 @@ function extractImageCandidates(html, baseUrl) {
   const push = (raw) => {
     if (!raw) return;
     try {
-      const absolute = preferLargerImageUrl(
-        new URL(decodeHtmlEntities(String(raw).trim()), baseUrl).toString(),
-      );
+      const absolute = preferLargerImageUrl(new URL(decodeHtmlEntities(String(raw).trim()), baseUrl).toString());
       if (seen.has(absolute)) return;
       if (!/^https?:\/\//i.test(absolute)) return;
       if (isLikelyJunkImageUrl(absolute)) return;
@@ -443,8 +453,7 @@ function extractImageCandidates(html, baseUrl) {
   }
 
   if (urls.length < MAX_SNAPSHOT_IMAGES) {
-    const embedded =
-      html.match(/https?:\/\/[^"'\\\s<>]+?\.(?:jpe?g|png|webp)(?:\?[^"'\\\s<>]*)?/gi) || [];
+    const embedded = html.match(/https?:\/\/[^"'\\\s<>]+?\.(?:jpe?g|png|webp)(?:\?[^"'\\\s<>]*)?/gi) || [];
     for (const match of embedded) {
       push(match);
       if (urls.length >= MAX_SNAPSHOT_IMAGES) break;
@@ -495,7 +504,7 @@ function mergeImageUrlLists(...lists) {
 }
 
 /** Remax Albania listing pages are empty SPA shells — optional gallery API boost (no-op for other sites). */
-async function enrichRemaxAlbaniaImages(pageUrl) {
+async function enrichRemaxAlbaniaImages(pageUrl, parentSignal) {
   let parsed;
   try {
     parsed = new URL(pageUrl);
@@ -509,13 +518,12 @@ async function enrichRemaxAlbaniaImages(pageUrl) {
   if (!mlsId) return [];
 
   const endpoint = `${parsed.origin}/search/listing-search/docs/search`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const request = timeoutSignal(parentSignal, 10000);
   try {
     const res = await fetch(endpoint, {
       method: 'POST',
       redirect: 'follow',
-      signal: controller.signal,
+      signal: request.signal,
       headers: {
         'User-Agent': BROWSER_UA,
         Accept: 'application/json',
@@ -539,9 +547,7 @@ async function enrichRemaxAlbaniaImages(pageUrl) {
     const images = Array.isArray(content.ListingImages) ? content.ListingImages : [];
     if (!regionId || !images.length) return [];
 
-    const ordered = [...images].sort(
-      (a, b) => Number(a?.Order || 0) - Number(b?.Order || 0),
-    );
+    const ordered = [...images].sort((a, b) => Number(a?.Order || 0) - Number(b?.Order || 0));
     const urls = [];
     for (const image of ordered) {
       const fileName = String(image?.FileName || '').trim();
@@ -550,15 +556,16 @@ async function enrichRemaxAlbaniaImages(pageUrl) {
       urls.push(
         useLarge
           ? `https://remax.azureedge.net/userimages/${regionId}/Large/${fileName}`
-          : `https://remax.azureedge.net/userimages/${regionId}/${fileName}`,
+          : `https://remax.azureedge.net/userimages/${regionId}/${fileName}`
       );
       if (urls.length >= MAX_SNAPSHOT_IMAGES) break;
     }
     return urls;
-  } catch {
+  } catch (error) {
+    if (parentSignal?.aborted) throw error;
     return [];
   } finally {
-    clearTimeout(timeout);
+    request.cleanup();
   }
 }
 
@@ -637,9 +644,7 @@ function normalizeNameKey(value) {
 function isProfileLikeTitle(title, { authorName, businessName, fullName } = {}) {
   const key = normalizeNameKey(title);
   if (!key || key.length < 2) return false;
-  const suspects = [authorName, businessName, fullName]
-    .map(normalizeNameKey)
-    .filter(Boolean);
+  const suspects = [authorName, businessName, fullName].map(normalizeNameKey).filter(Boolean);
   if (suspects.some((s) => key === s || key === `@${s}`)) return true;
   // Instagram oEmbed often returns display name; GraphQL returns username — both bad as titles.
   return false;
@@ -667,11 +672,7 @@ function extractInstagramShortcode(url) {
 /** Instagram anonymous GraphQL requires an X-CSRFToken (cookie alone is rejected). */
 async function fetchInstagramCsrfSession(signal) {
   const now = Date.now();
-  if (
-    igCsrfCache.token &&
-    igCsrfCache.cookie &&
-    now - igCsrfCache.fetchedAt < IG_CSRF_TTL_MS
-  ) {
+  if (igCsrfCache.token && igCsrfCache.cookie && now - igCsrfCache.fetchedAt < IG_CSRF_TTL_MS) {
     return igCsrfCache;
   }
   try {
@@ -691,7 +692,9 @@ async function fetchInstagramCsrfSession(signal) {
     let token = null;
     const cookieParts = [];
     for (const raw of setCookies) {
-      const first = String(raw || '').split(';')[0].trim();
+      const first = String(raw || '')
+        .split(';')[0]
+        .trim();
       if (first) cookieParts.push(first);
       const match = String(raw || '').match(/(?:^|,\s*)csrftoken=([^;,\s]+)/i);
       if (match?.[1]) token = match[1];
@@ -703,7 +706,8 @@ async function fetchInstagramCsrfSession(signal) {
       fetchedAt: now,
     };
     return igCsrfCache;
-  } catch {
+  } catch (error) {
+    if (signal?.aborted) throw error;
     return igCsrfCache.token ? igCsrfCache : { token: null, cookie: null, fetchedAt: 0 };
   }
 }
@@ -714,9 +718,7 @@ function instagramAuthHeaders(csrfSession, shortcode) {
     Accept: '*/*',
     'Content-Type': 'application/x-www-form-urlencoded',
     'X-IG-App-ID': IG_WEB_APP_ID,
-    Referer: shortcode
-      ? `https://www.instagram.com/p/${shortcode}/`
-      : 'https://www.instagram.com/',
+    Referer: shortcode ? `https://www.instagram.com/p/${shortcode}/` : 'https://www.instagram.com/',
   };
   if (csrfSession?.token) {
     headers['X-CSRFToken'] = csrfSession.token;
@@ -726,15 +728,14 @@ function instagramAuthHeaders(csrfSession, shortcode) {
 }
 
 /** Instagram HTML is often a login shell; oEmbed returns the real post caption. */
-async function fetchInstagramOEmbed(url) {
+async function fetchInstagramOEmbed(url, parentSignal) {
   const endpoint = `https://www.instagram.com/api/v1/oembed/?omitscript=true&url=${encodeURIComponent(url)}`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const request = timeoutSignal(parentSignal, 10000);
   try {
     const res = await fetch(endpoint, {
       method: 'GET',
       redirect: 'follow',
-      signal: controller.signal,
+      signal: request.signal,
       headers: {
         'User-Agent': BROWSER_UA,
         Accept: 'application/json',
@@ -752,10 +753,11 @@ async function fetchInstagramOEmbed(url) {
       authorUrl: String(data.author_url || '').trim() || null,
       thumbnailUrl: /^https?:\/\//i.test(thumbnail) ? thumbnail : null,
     };
-  } catch {
+  } catch (error) {
+    if (parentSignal?.aborted) throw error;
     return null;
   } finally {
-    clearTimeout(timeout);
+    request.cleanup();
   }
 }
 
@@ -764,8 +766,7 @@ function bestInstagramImageVersionUrl(mediaNode) {
   const candidates = mediaNode?.image_versions2?.candidates;
   if (Array.isArray(candidates) && candidates.length) {
     const sorted = [...candidates].sort(
-      (a, b) => (Number(b?.width) || 0) * (Number(b?.height) || 0) -
-        (Number(a?.width) || 0) * (Number(a?.height) || 0),
+      (a, b) => (Number(b?.width) || 0) * (Number(b?.height) || 0) - (Number(a?.width) || 0) * (Number(a?.height) || 0)
     );
     const url = String(sorted[0]?.url || '').trim();
     if (/^https?:\/\//i.test(url)) return url;
@@ -819,11 +820,7 @@ function collectInstagramMediaImages(mediaNode) {
 
   // Single photo/reel: keep ONE image. Do not also push thumbnail_src —
   // that doubles the same frame with a different CDN URL.
-  push(
-    mediaNode.display_url ||
-      bestInstagramImageVersionUrl(mediaNode) ||
-      mediaNode.thumbnail_src,
-  );
+  push(mediaNode.display_url || bestInstagramImageVersionUrl(mediaNode) || mediaNode.thumbnail_src);
   if (!urls.length) push(mediaNode.thumbnail_src);
   return {
     urls: urls.slice(0, 1),
@@ -859,9 +856,7 @@ function parseInstagramShortcodePayload(data) {
   if (!media || typeof media !== 'object') return null;
   const captionEdges = media.edge_media_to_caption?.edges;
   const caption =
-    Array.isArray(captionEdges) && captionEdges[0]?.node?.text
-      ? String(captionEdges[0].node.text).trim()
-      : null;
+    Array.isArray(captionEdges) && captionEdges[0]?.node?.text ? String(captionEdges[0].node.text).trim() : null;
   const collected = collectInstagramMediaImages(media);
   return {
     caption,
@@ -872,12 +867,11 @@ function parseInstagramShortcodePayload(data) {
 }
 
 /** Public Instagram shortcode media (includes carousel children when available). */
-async function fetchInstagramShortcodeMedia(shortcode) {
+async function fetchInstagramShortcodeMedia(shortcode, parentSignal) {
   if (!shortcode) return null;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 14000);
+  const request = timeoutSignal(parentSignal, 14000);
   try {
-    const csrfSession = await fetchInstagramCsrfSession(controller.signal);
+    const csrfSession = await fetchInstagramCsrfSession(request.signal);
     if (!csrfSession?.token) return null;
 
     const attempts = [
@@ -908,7 +902,7 @@ async function fetchInstagramShortcodeMedia(shortcode) {
       const res = await fetch('https://www.instagram.com/graphql/query', {
         method: 'POST',
         redirect: 'follow',
-        signal: controller.signal,
+        signal: request.signal,
         headers: instagramAuthHeaders(csrfSession, shortcode),
         body,
       });
@@ -920,31 +914,31 @@ async function fetchInstagramShortcodeMedia(shortcode) {
       }
     }
     return null;
-  } catch {
+  } catch (error) {
+    if (parentSignal?.aborted) throw error;
     return null;
   } finally {
-    clearTimeout(timeout);
+    request.cleanup();
   }
 }
 
 /**
  * Fallback: look up author's recent posts and match shortcode (includes carousel).
  */
-async function fetchInstagramCarouselViaProfile(shortcode, authorName) {
+async function fetchInstagramCarouselViaProfile(shortcode, authorName, parentSignal) {
   const username = String(authorName || '')
     .replace(/^@/, '')
     .trim();
   if (!shortcode || !username) return [];
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12000);
+  const request = timeoutSignal(parentSignal, 12000);
   try {
-    const csrfSession = await fetchInstagramCsrfSession(controller.signal);
+    const csrfSession = await fetchInstagramCsrfSession(request.signal);
     const res = await fetch(
       `https://www.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`,
       {
         method: 'GET',
         redirect: 'follow',
-        signal: controller.signal,
+        signal: request.signal,
         headers: {
           'User-Agent': BROWSER_UA,
           Accept: '*/*',
@@ -957,7 +951,7 @@ async function fetchInstagramCarouselViaProfile(shortcode, authorName) {
               }
             : {}),
         },
-      },
+      }
     );
     if (!res.ok) return [];
     const data = await res.json().catch(() => null);
@@ -965,35 +959,32 @@ async function fetchInstagramCarouselViaProfile(shortcode, authorName) {
     if (!Array.isArray(edges)) return [];
     const match = edges.find((edge) => edge?.node?.shortcode === shortcode)?.node;
     return collectInstagramMediaImages(match).urls;
-  } catch {
+  } catch (error) {
+    if (parentSignal?.aborted) throw error;
     return [];
   } finally {
-    clearTimeout(timeout);
+    request.cleanup();
   }
 }
 
-async function enrichInstagramSnapshot(url) {
+async function enrichInstagramSnapshot(url, parentSignal) {
   const shortcode = extractInstagramShortcode(url);
-  const crawlerController = new AbortController();
-  const crawlerTimeout = setTimeout(() => crawlerController.abort(), 12000);
+  const crawlerRequest = timeoutSignal(parentSignal, 12000);
 
   const [oembed, graphql, crawlerResult] = await Promise.all([
-    fetchInstagramOEmbed(url),
-    shortcode ? fetchInstagramShortcodeMedia(shortcode) : Promise.resolve(null),
-    fetchHtmlDocument(url, CRAWLER_UA, crawlerController.signal).catch(() => ({
-      res: null,
-      html: '',
-    })),
-  ]).finally(() => clearTimeout(crawlerTimeout));
+    fetchInstagramOEmbed(url, parentSignal),
+    shortcode ? fetchInstagramShortcodeMedia(shortcode, parentSignal) : Promise.resolve(null),
+    fetchHtmlDocument(url, CRAWLER_UA, crawlerRequest.signal).catch((error) => {
+      if (parentSignal?.aborted) throw error;
+      return { res: null, html: '' };
+    }),
+  ]).finally(() => crawlerRequest.cleanup());
 
   const crawlerHtml = crawlerResult?.html || '';
 
   // Prefer the post's own media only. HTML extraction pulls profile grid / ads /
   // unrelated frames ("random screenshots").
-  let imageUrls = mergeImageUrlLists(
-    graphql?.imageUrls,
-    oembed?.thumbnailUrl ? [oembed.thumbnailUrl] : [],
-  );
+  let imageUrls = mergeImageUrlLists(graphql?.imageUrls, oembed?.thumbnailUrl ? [oembed.thumbnailUrl] : []);
   let isCarousel = Boolean(graphql?.isCarousel);
 
   // Profile timeline fallback: recover carousel children when GraphQL returned
@@ -1002,6 +993,7 @@ async function enrichInstagramSnapshot(url) {
     const fromProfile = await fetchInstagramCarouselViaProfile(
       shortcode,
       graphql?.authorName || oembed?.authorName,
+      parentSignal,
     );
     if (fromProfile.length > imageUrls.length) {
       imageUrls = mergeImageUrlLists(fromProfile, imageUrls);
@@ -1011,10 +1003,7 @@ async function enrichInstagramSnapshot(url) {
 
   // Last resort only: og:image from HTML when GraphQL/oEmbed returned nothing.
   if (!imageUrls.length) {
-    imageUrls = mergeImageUrlLists(
-      imageUrls,
-      extractImageCandidates(crawlerHtml, url).slice(0, 1),
-    );
+    imageUrls = mergeImageUrlLists(imageUrls, extractImageCandidates(crawlerHtml, url).slice(0, 1));
   }
 
   // Single-frame posts must stay at 1 photo (no thumbnail duplicates / HTML noise).
@@ -1022,20 +1011,14 @@ async function enrichInstagramSnapshot(url) {
     imageUrls = imageUrls.slice(0, 1);
   }
 
-  const caption =
-    graphql?.caption ||
-    oembed?.caption ||
-    extractMeta(crawlerHtml, 'property', 'og:description') ||
-    null;
+  const caption = graphql?.caption || oembed?.caption || extractMeta(crawlerHtml, 'property', 'og:description') || null;
   // Prefer oEmbed display name for "author" context, but never use it as listing title.
   const authorName = oembed?.authorName || graphql?.authorName || null;
   const title = titleHintFromCaption(caption);
 
   const textParts = [];
   if (authorName) {
-    textParts.push(
-      `Instagram author (profile only — NOT the listing title): ${authorName}`,
-    );
+    textParts.push(`Instagram author (profile only — NOT the listing title): ${authorName}`);
   }
   if (caption) textParts.push(`Post caption / description:\n${caption}`);
 
@@ -1060,17 +1043,15 @@ function buildSnapshotFromHtml({ url, pageResult, extraImageUrls = [], social = 
   const res = pageResult?.res || null;
   const ogTitle =
     extractMeta(html, 'property', 'og:title') ||
-    html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g, ' ').trim() ||
+    html
+      .match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]
+      ?.replace(/\s+/g, ' ')
+      .trim() ||
     null;
   const ogDescription =
-    extractMeta(html, 'property', 'og:description') ||
-    extractMeta(html, 'name', 'description') ||
-    null;
+    extractMeta(html, 'property', 'og:description') || extractMeta(html, 'name', 'description') || null;
 
-  const imageUrls = mergeImageUrlLists(
-    extraImageUrls,
-    extractImageCandidates(html, url),
-  );
+  const imageUrls = mergeImageUrlLists(extraImageUrls, extractImageCandidates(html, url));
 
   const textParts = [];
   if (ogTitle || ogDescription) {
@@ -1093,21 +1074,19 @@ function buildSnapshotFromHtml({ url, pageResult, extraImageUrls = [], social = 
     text: textParts.filter(Boolean).join('\n\n').slice(0, 6000),
     imageUrls,
     social,
-    fetchError:
-      imageUrls.length || ogTitle || ogDescription
-        ? null
-        : pageResult?.fetchError || null,
+    fetchError: imageUrls.length || ogTitle || ogDescription ? null : pageResult?.fetchError || null,
   };
 }
 
-async function fetchPageSnapshot(url) {
+async function fetchPageSnapshot(url, parentSignal) {
   const social = isSocialMediaUrl(url);
   const instagram = isInstagramUrl(url);
 
   if (instagram) {
     try {
-      return await enrichInstagramSnapshot(url);
+      return await enrichInstagramSnapshot(url, parentSignal);
     } catch (err) {
+      if (parentSignal?.aborted) throw err;
       return {
         ok: false,
         status: 0,
@@ -1124,22 +1103,24 @@ async function fetchPageSnapshot(url) {
     }
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 14000);
+  const request = timeoutSignal(parentSignal, 14000);
   try {
     // Same path for every website: browser HTML + crawler HTML (og tags / galleries),
     // then merge title, description, and images.
     const [browserResult, crawlerResult, remaxImages] = await Promise.all([
-      fetchHtmlDocument(url, BROWSER_UA, controller.signal).catch((err) => ({
-        res: null,
-        html: '',
-        fetchError: err?.message || 'Failed to fetch page',
-      })),
-      fetchHtmlDocument(url, CRAWLER_UA, controller.signal).catch(() => ({
-        res: null,
-        html: '',
-      })),
-      enrichRemaxAlbaniaImages(url),
+      fetchHtmlDocument(url, BROWSER_UA, request.signal).catch((err) => {
+        if (parentSignal?.aborted) throw err;
+        return {
+          res: null,
+          html: '',
+          fetchError: err?.message || 'Failed to fetch page',
+        };
+      }),
+      fetchHtmlDocument(url, CRAWLER_UA, request.signal).catch((err) => {
+        if (parentSignal?.aborted) throw err;
+        return { res: null, html: '' };
+      }),
+      enrichRemaxAlbaniaImages(url, parentSignal),
     ]);
 
     const browserScore = htmlRichnessScore(browserResult.html);
@@ -1152,7 +1133,7 @@ async function fetchPageSnapshot(url) {
     const mergedImages = mergeImageUrlLists(
       remaxImages,
       extractImageCandidates(crawlerResult.html || '', url),
-      extractImageCandidates(browserResult.html || '', url),
+      extractImageCandidates(browserResult.html || '', url)
     );
 
     if (!pageResult.res && !mergedImages.length) {
@@ -1180,6 +1161,7 @@ async function fetchPageSnapshot(url) {
     snapshot.imageUrls = mergeImageUrlLists(mergedImages, snapshot.imageUrls);
     return snapshot;
   } catch (err) {
+    if (parentSignal?.aborted) throw err;
     return {
       ok: false,
       status: 0,
@@ -1194,7 +1176,7 @@ async function fetchPageSnapshot(url) {
       fetchError: err?.message || 'Failed to fetch page',
     };
   } finally {
-    clearTimeout(timeout);
+    request.cleanup();
   }
 }
 
@@ -1254,7 +1236,9 @@ function resolveZoneIdByName(cityRow, zoneName) {
 
 function parseSurfaceM2(value) {
   if (value == null || value === '') return null;
-  const s = String(value).replace(',', '.').replace(/[^\d.]/g, '');
+  const s = String(value)
+    .replace(',', '.')
+    .replace(/[^\d.]/g, '');
   if (!s) return null;
   const n = Number(s);
   return Number.isFinite(n) && n > 0 ? n : null;
@@ -1390,6 +1374,7 @@ cars: vehicleType (car|suv|van|truck|motorcycle|boat), make, model, variant, des
   - LOOK at photos: scooters, bikes, motorcycles, dirt bikes → vehicleType "motorcycle" (NOT "car"/Vetura). Cars/sedans → "car". SUVs → "suv".
   - make/model MUST match common catalog spellings when visible or named (Yamaha, Honda, BMW, Mercedes-Benz, Volkswagen, …). Example: Yamaha Ténéré / TMAX → vehicleType motorcycle, make "Yamaha", model "Ténéré" or "TMAX".
   - Scooter / maxi-scooter / TMAX → motorcycle.
+  - Do NOT classify a vehicle as motorcycle from the word "motor" alone; "motor boat" / "motorboat" is a boat, and car engine text (e.g. "motor 2.0") is not a vehicle type.
 job-listings: title, description, industry, education, experience, jobType (full-time|part-time|remote|internship|freelance), workLocation (onsite|hybrid|remote), salary, currency, contactPhone, responsibilities (string[]), requirements (string[])
   - Job flyers/posters: OCR employer name, ALL open roles (e.g. Kamarier + Banakier → title like "Kamarier / Banakier"), street address + landmark → description "• Adresa: …", phone → contactPhone, shifts/hours → description + jobType/workLocation (night/evening shift → usually part-time or full-time + workLocation onsite). Infer cityName from street/neighborhood when obvious (Rruga e Kavajës → Tiranë).
 marketplace: transactionType (always "shes"), title, description, category (elektronike|mobilje-shtepi|veshje-aksesore|libra-shkolla|sport-hobi|lodra|automjete-pjese|ushqime-bujqesi|sherbime|te-tjera), condition (i-ri|si-i-ri|shume-mire|mire|me-defekte), price, currency, contactPhone
@@ -1472,10 +1457,7 @@ function normalizeAttachedImages(raw) {
     if (typeof item === 'string') {
       const value = item.trim();
       if (!value || value.length > MAX_IMAGE_CHARS) continue;
-      if (
-        /^data:image\/(jpeg|jpg|png|webp|gif);base64,/i.test(value) ||
-        /^https?:\/\//i.test(value)
-      ) {
+      if (/^data:image\/(jpeg|jpg|png|webp|gif);base64,/i.test(value) || /^https?:\/\//i.test(value)) {
         out.push({ url: value, hint: '' });
       }
       continue;
@@ -1483,15 +1465,14 @@ function normalizeAttachedImages(raw) {
     if (!item || typeof item !== 'object') continue;
     const url = String(item.url || item.dataUrl || item.src || '').trim();
     if (!url || url.length > MAX_IMAGE_CHARS) continue;
-    if (
-      !/^data:image\/(jpeg|jpg|png|webp|gif);base64,/i.test(url) &&
-      !/^https?:\/\//i.test(url)
-    ) {
+    if (!/^data:image\/(jpeg|jpg|png|webp|gif);base64,/i.test(url) && !/^https?:\/\//i.test(url)) {
       continue;
     }
     out.push({
       url,
-      hint: String(item.hint || item.role || item.caption || '').trim().slice(0, 120),
+      hint: String(item.hint || item.role || item.caption || '')
+        .trim()
+        .slice(0, 120),
     });
   }
   return out;
@@ -1542,9 +1523,7 @@ function scorePhoneCandidate(raw, { labeled = false } = {}) {
   if (!isLikelyListingPhone(digits)) return 0;
   let score = labeled ? 100 : 20;
   if (digits.startsWith('355') || /^\+355/.test(String(raw).trim())) score += 25;
-  const national = digits.startsWith('355')
-    ? digits.slice(3).replace(/^0/, '')
-    : digits.replace(/^0/, '');
+  const national = digits.startsWith('355') ? digits.slice(3).replace(/^0/, '') : digits.replace(/^0/, '');
   if (/^6[6-9]\d{7}$/.test(national)) score += 15;
   return score;
 }
@@ -1575,10 +1554,7 @@ function extractContactPhoneFromText(text) {
   if (!src.trim()) return null;
   const found = [];
 
-  const labeledRe = new RegExp(
-    `${PHONE_LABEL_RE.source}(\\+?\\d[\\d\\s()./-]{6,22}\\d)`,
-    'gi',
-  );
+  const labeledRe = new RegExp(`${PHONE_LABEL_RE.source}(\\+?\\d[\\d\\s()./-]{6,22}\\d)`, 'gi');
   let labeledMatch;
   while ((labeledMatch = labeledRe.exec(src))) {
     pushPhoneCandidate(found, labeledMatch[1], true);
@@ -1602,13 +1578,7 @@ function extractContactPhoneFromText(text) {
 }
 
 function extractContactPhoneFromListingSources({ snapshot, sourcePrompt, form } = {}) {
-  const chunks = [
-    snapshot?.caption,
-    snapshot?.description,
-    snapshot?.text,
-    sourcePrompt,
-    form?.description,
-  ];
+  const chunks = [snapshot?.caption, snapshot?.description, snapshot?.text, sourcePrompt, form?.description];
   for (const chunk of chunks) {
     const phone = extractContactPhoneFromText(chunk);
     if (phone) return phone;
@@ -1628,22 +1598,53 @@ function applyListingContactPhone(form, snapshot, sourcePrompt) {
 
 function sanitizeProfile(raw) {
   if (!raw || typeof raw !== 'object') return null;
-  const firstName = String(raw.firstName || '').trim().slice(0, 80);
-  const lastName = String(raw.lastName || '').trim().slice(0, 80);
+  const firstName = String(raw.firstName || '')
+    .trim()
+    .slice(0, 80);
+  const lastName = String(raw.lastName || '')
+    .trim()
+    .slice(0, 80);
   const fullName = [firstName, lastName].filter(Boolean).join(' ');
   return {
-    accountType: String(raw.accountType || '').trim().slice(0, 40) || null,
+    accountType:
+      String(raw.accountType || '')
+        .trim()
+        .slice(0, 40) || null,
     firstName: firstName || null,
     lastName: lastName || null,
     fullName: fullName || null,
-    phone: String(raw.phone || '').trim().slice(0, 40) || null,
-    email: String(raw.email || '').trim().slice(0, 120) || null,
-    businessName: String(raw.businessName || '').trim().slice(0, 120) || null,
-    businessOwner: String(raw.businessOwner || '').trim().slice(0, 120) || null,
-    businessCategory: String(raw.businessCategory || '').trim().slice(0, 80) || null,
-    nipt: String(raw.nipt || '').trim().slice(0, 40) || null,
-    preferredCityId: String(raw.preferredCityId || '').trim().slice(0, 80) || null,
-    preferredCityName: String(raw.preferredCityName || '').trim().slice(0, 80) || null,
+    phone:
+      String(raw.phone || '')
+        .trim()
+        .slice(0, 40) || null,
+    email:
+      String(raw.email || '')
+        .trim()
+        .slice(0, 120) || null,
+    businessName:
+      String(raw.businessName || '')
+        .trim()
+        .slice(0, 120) || null,
+    businessOwner:
+      String(raw.businessOwner || '')
+        .trim()
+        .slice(0, 120) || null,
+    businessCategory:
+      String(raw.businessCategory || '')
+        .trim()
+        .slice(0, 80) || null,
+    nipt:
+      String(raw.nipt || '')
+        .trim()
+        .slice(0, 40) || null,
+    preferredCityId:
+      String(raw.preferredCityId || '')
+        .trim()
+        .slice(0, 80) || null,
+    preferredCityName:
+      String(raw.preferredCityName || '')
+        .trim()
+        .slice(0, 80) || null,
   };
 }
 
@@ -1712,9 +1713,7 @@ function applyCaptionFallbacks(interpreted, snapshot, profile) {
     Boolean(captionNorm) &&
     (description === caption ||
       description === captionNorm ||
-      (captionNorm.length > 40 &&
-        description.length > 40 &&
-        description.slice(0, 80) === captionNorm.slice(0, 80)));
+      (captionNorm.length > 40 && description.length > 40 && description.slice(0, 80) === captionNorm.slice(0, 80)));
 
   if ((!description || descIsRawCaption) && caption) {
     form.description = refineCaptionToSeoDescription(caption, seoMeta);
@@ -1751,7 +1750,9 @@ function listingSeoMetaFromForm(form = {}, interpreted = {}) {
 }
 
 function vehicleTypeLabelSq(vehicleType) {
-  const v = String(vehicleType || '').trim().toLowerCase();
+  const v = String(vehicleType || '')
+    .trim()
+    .toLowerCase();
   if (v === 'motorcycle') return 'Motor / scooter';
   if (v === 'car') return 'Veturë';
   if (v === 'suv') return 'SUV';
@@ -1779,7 +1780,10 @@ function descriptionLooksListed(desc) {
   const d = String(desc || '').trim();
   if (!d) return false;
   if (/^[•\-\*]\s+/m.test(d) || /\n\s*[•\-\*]\s+/.test(d)) return true;
-  const lines = d.split(/\n/).map((l) => l.trim()).filter(Boolean);
+  const lines = d
+    .split(/\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
   return lines.length >= 3;
 }
 
@@ -1825,14 +1829,8 @@ function buildSeoDescriptionBullets(meta = {}) {
 function buildSeoDescriptionOpener(meta = {}) {
   const vehicleLabel = vehicleTypeLabelSq(meta.vehicleType);
   const product =
-    meta.make && meta.model
-      ? `${meta.make} ${meta.model}`
-      : meta.make || meta.model || String(meta.title || '').trim();
-  const bits = [
-    product || null,
-    vehicleLabel || null,
-    meta.cityName ? `në ${meta.cityName}` : null,
-  ].filter(Boolean);
+    meta.make && meta.model ? `${meta.make} ${meta.model}` : meta.make || meta.model || String(meta.title || '').trim();
+  const bits = [product || null, vehicleLabel || null, meta.cityName ? `në ${meta.cityName}` : null].filter(Boolean);
   if (bits.length) return `Ofrohet ${bits.join(', ')}.`;
   return 'Ofrohet për shitje.';
 }
@@ -1887,10 +1885,7 @@ function formatBuyerDetailBullet(raw) {
     text = `Garanci: ${text}`;
   } else if (/\b(financ|k[eë]ste)\b/i.test(text) && !/^financ/i.test(text)) {
     text = `Financim: ${text}`;
-  } else if (
-    /\b(adresa|rruga|sheshi|pran[eë]|street|avenue|blvd)\b/i.test(text) &&
-    !/^adresa\s*:/i.test(text)
-  ) {
+  } else if (/\b(adresa|rruga|sheshi|pran[eë]|street|avenue|blvd)\b/i.test(text) && !/^adresa\s*:/i.test(text)) {
     text = text.replace(/^(info|informacion)\s*:?\s*/i, '');
     text = `Adresa: ${text}`;
   }
@@ -1917,16 +1912,15 @@ function extractBuyerDetailFacts(caption, { max = 8 } = {}) {
       return;
     }
     // Prefer one transport / one warranty / one financing / one address bullet.
-    const topic =
-      /\b(roro|transport|shipping|delivery|d[eë]rges)\b/i.test(formatted)
-        ? 'transport'
-        : /\b(garanci|warranty)\b/i.test(formatted)
-          ? 'garanci'
-          : /\b(financ|k[eë]ste)\b/i.test(formatted)
-            ? 'financim'
-            : /\b(adresa|rruga|sheshi|pran[eë]|street|avenue|blvd)\b/i.test(formatted)
-              ? 'adresa'
-              : null;
+    const topic = /\b(roro|transport|shipping|delivery|d[eë]rges)\b/i.test(formatted)
+      ? 'transport'
+      : /\b(garanci|warranty)\b/i.test(formatted)
+        ? 'garanci'
+        : /\b(financ|k[eë]ste)\b/i.test(formatted)
+          ? 'financim'
+          : /\b(adresa|rruga|sheshi|pran[eë]|street|avenue|blvd)\b/i.test(formatted)
+            ? 'adresa'
+            : null;
     if (topic && candidates.some((c) => c.topic === topic)) return;
     candidates.push({ text: formatted, key, priority, topic });
   };
@@ -1969,10 +1963,7 @@ function descriptionAlreadyCoversFact(description, fact) {
   if (!tokens.length) return descKey.includes(factKey);
   // Distinctive tokens: require most of them (transport + roro + dite, etc.).
   const distinctive = tokens.filter(
-    (t) =>
-      !/^(me|per|nga|dhe|the|and|with|from|for|nese|vetem|cdo|dite|days|euro|eur|lek)$/i.test(
-        t,
-      ),
+    (t) => !/^(me|per|nga|dhe|the|and|with|from|for|nese|vetem|cdo|dite|days|euro|eur|lek)$/i.test(t)
   );
   const check = distinctive.length ? distinctive : tokens;
   const hit = check.filter((t) => descKey.includes(t)).length;
@@ -1992,10 +1983,7 @@ function mergeMissingCaptionDetails(description, caption) {
 
   const bullets = missing.map((fact) => (fact.startsWith('•') ? fact : `• ${fact}`));
   if (!desc) {
-    return [...bullets, '', 'Kontaktoni për më shumë detaje.']
-      .join('\n')
-      .trim()
-      .slice(0, SEO_DESCRIPTION_MAX_CHARS);
+    return [...bullets, '', 'Kontaktoni për më shumë detaje.'].join('\n').trim().slice(0, SEO_DESCRIPTION_MAX_CHARS);
   }
 
   const ctaRe = /\n+Kontaktoni[^\n]*$/i;
@@ -2027,9 +2015,7 @@ function refineCaptionToSeoDescription(caption, meta = {}) {
 
   const opener = buildSeoDescriptionOpener(meta);
   const bullets = buildSeoDescriptionBullets(meta);
-  const extras = splitUsefulDetailLines(raw, { max: 6 }).map((line) =>
-    line.startsWith('•') ? line : `• ${line}`,
-  );
+  const extras = splitUsefulDetailLines(raw, { max: 6 }).map((line) => (line.startsWith('•') ? line : `• ${line}`));
 
   const parts = [opener];
   if (bullets.length || extras.length) {
@@ -2040,8 +2026,12 @@ function refineCaptionToSeoDescription(caption, meta = {}) {
   parts.push('', 'Kontaktoni për më shumë detaje.');
 
   return mergeMissingCaptionDetails(
-    parts.join('\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, SEO_DESCRIPTION_MAX_CHARS),
-    raw,
+    parts
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+      .slice(0, SEO_DESCRIPTION_MAX_CHARS),
+    raw
   );
 }
 
@@ -2060,9 +2050,7 @@ function ensureListedSeoDescription(description, meta = {}) {
   } else {
     const opener = buildSeoDescriptionOpener(meta);
     const bullets = buildSeoDescriptionBullets(meta);
-    const extras = splitUsefulDetailLines(desc, { max: 6 }).map((line) =>
-      line.startsWith('•') ? line : `• ${line}`,
-    );
+    const extras = splitUsefulDetailLines(desc, { max: 6 }).map((line) => (line.startsWith('•') ? line : `• ${line}`));
     const parts = [opener];
     if (bullets.length || extras.length) {
       parts.push('', ...bullets, ...extras);
@@ -2072,7 +2060,11 @@ function ensureListedSeoDescription(description, meta = {}) {
     if (!/kontaktoni/i.test(desc)) {
       parts.push('', 'Kontaktoni për më shumë detaje.');
     }
-    next = parts.join('\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, SEO_DESCRIPTION_MAX_CHARS);
+    next = parts
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+      .slice(0, SEO_DESCRIPTION_MAX_CHARS);
   }
 
   return caption ? mergeMissingCaptionDetails(next, caption) : next;
@@ -2082,12 +2074,19 @@ function normalizeVehicleTypeValue(raw) {
   const v = String(raw || '')
     .trim()
     .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
     .replace(/[_-]+/g, ' ');
   if (!v) return '';
   if (VEHICLE_TYPE_VALUES.includes(v)) return v;
+
+  // Check boats first: "motor boat" must never become a motorcycle.
+  if (/\b(?:motor\s*boat|speed\s+boat|boat|varke|skaf|jaht|yacht)\b/.test(v)) {
+    return 'boat';
+  }
   if (
-    /motor|moto|scooter|scuter|motorçiklet|motociklet|bike(?!car)|tmax|tenere|ténéré|vespa|enduro|cross/.test(
-      v,
+    /\b(?:motorcycle|motorbike|motorciklet\w*|motociklet\w*|moto|scooter|scuter|bike|tmax|tenere|vespa|enduro|cross)\b/.test(
+      v
     )
   ) {
     return 'motorcycle';
@@ -2095,8 +2094,7 @@ function normalizeVehicleTypeValue(raw) {
   if (/suv|crossover|jeep/.test(v)) return 'suv';
   if (/furgon|van|minivan/.test(v)) return 'van';
   if (/kamion|truck|camion/.test(v)) return 'truck';
-  if (/boat|vark|jaht|yacht/.test(v)) return 'boat';
-  if (/car|vetur|sedan|makin/.test(v)) return 'car';
+  if (/\b(?:car|vetur|sedan|makin)\b/.test(v)) return 'car';
   return '';
 }
 
@@ -2111,6 +2109,25 @@ function findCatalogMakeInText(text, vehicleType) {
     const alt = key.replace(/-/g, '[\\s-]?');
     const re = new RegExp(`(?:^|[^a-z0-9])${alt}(?:[^a-z0-9]|$)`, 'i');
     if (re.test(hay)) return make;
+  }
+  return null;
+}
+
+function findVehicleTypeExclusiveMakeInText(text, vehicleType) {
+  const hay = String(text || '').toLowerCase();
+  if (!hay || !vehicleType) return null;
+  const makes = makesForVehicleType(vehicleType)
+    .filter((make) => make !== 'Other')
+    .sort((a, b) => b.length - a.length);
+  for (const make of makes) {
+    const key = make.toLowerCase();
+    const alt = key.replace(/-/g, '[\\s-]?');
+    const re = new RegExp(`(?:^|[^a-z0-9])${alt}(?:[^a-z0-9]|$)`, 'i');
+    if (!re.test(hay)) continue;
+    const alsoInAnotherType = VEHICLE_TYPE_VALUES.some(
+      (otherType) => otherType !== vehicleType && isValidVehicleMake(otherType, make)
+    );
+    if (!alsoInAnotherType) return make;
   }
   return null;
 }
@@ -2140,12 +2157,40 @@ function findCatalogModelInText(text, vehicleType, make) {
   return null;
 }
 
+function findCatalogVehicleTypeForMakeModel(make, model) {
+  const makeValue = String(make || '')
+    .trim()
+    .toLowerCase();
+  const modelValue = String(model || '')
+    .trim()
+    .toLowerCase();
+  if (!makeValue || !modelValue) return '';
+
+  const matches = VEHICLE_TYPE_VALUES.filter((vehicleType) => {
+    const canonicalMake = makesForVehicleType(vehicleType).find((candidate) => candidate.toLowerCase() === makeValue);
+    if (!canonicalMake) return false;
+    return modelsForMake(vehicleType, canonicalMake).some(
+      (candidate) => candidate !== 'Other' && candidate.toLowerCase() === modelValue
+    );
+  });
+
+  return matches.length === 1 ? matches[0] : '';
+}
+
 function inferVehicleTypeFromText(text) {
-  const hay = String(text || '').toLowerCase();
+  const hay = String(text || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '');
   if (!hay) return '';
+
+  // A boat caption often contains "motor"; boat evidence must win first.
+  if (/\b(?:motor\s*boat|speed\s*boat|boat|varke|skaf|jaht|yacht|waverunner|jet\s*ski)\b/.test(hay)) {
+    return 'boat';
+  }
   if (
-    /motorçiklet|motociklet|\bmotor\b|\bmoto\b|scooter|scuter|tmax|t-max|ténéré|tenere|vespa|enduro|\bcbr\b|\bmt-0|\byzf\b/.test(
-      hay,
+    /\b(?:motorcycle|motorbike|motorciklet\w*|motociklet\w*|moto|scooter|scuter|tmax|tenere|vespa|enduro|cbr|mt[\s-]?0|yzf|nmax|pcx|x[\s-]?adv)\b/.test(
+      hay
     )
   ) {
     return 'motorcycle';
@@ -2153,7 +2198,6 @@ function inferVehicleTypeFromText(text) {
   if (/\bsuv\b|crossover/.test(hay)) return 'suv';
   if (/\bfurgon\b|\bvan\b/.test(hay)) return 'van';
   if (/\bkamion\b|\btruck\b/.test(hay)) return 'truck';
-  if (/\bvark|\bboat\b|\byacht\b/.test(hay)) return 'boat';
   return '';
 }
 
@@ -2193,15 +2237,26 @@ function normalizeCarFormFields(form, snapshot, interpreted) {
   const normalizedFuel = normalizeFuelType(form.fuelType) || inferFuelTypeFromText(blob);
   form.fuelType = normalizedFuel || '';
 
-  let vehicleType =
-    normalizeVehicleTypeValue(form.vehicleType) || inferVehicleTypeFromText(blob);
+  const normalizedVehicleType = normalizeVehicleTypeValue(form.vehicleType);
+  const inferredVehicleType = inferVehicleTypeFromText(blob);
+  let vehicleType = normalizedVehicleType || inferredVehicleType;
+  if (
+    inferredVehicleType === 'boat' ||
+    (inferredVehicleType === 'motorcycle' && normalizedVehicleType === 'car')
+  ) {
+    vehicleType = inferredVehicleType;
+  }
   if (!vehicleType && VEHICLE_TYPE_VALUES.includes(String(form.vehicleType || '').trim())) {
     vehicleType = String(form.vehicleType).trim();
   }
 
-  // If make is a motorcycle-only brand, force motorcycle.
+  // An exact catalog make/model pair is stronger than an ambiguous model guess.
+  const catalogVehicleType = findCatalogVehicleTypeForMakeModel(form.make, form.model);
+  if (catalogVehicleType) vehicleType = catalogVehicleType;
+
+  // Only a make exclusive to motorcycles may promote an otherwise generic car.
   if (!vehicleType || vehicleType === 'car') {
-    const motoMake = findCatalogMakeInText(blob, 'motorcycle');
+    const motoMake = findVehicleTypeExclusiveMakeInText(blob, 'motorcycle');
     if (motoMake) vehicleType = 'motorcycle';
   }
 
@@ -2210,9 +2265,7 @@ function normalizeCarFormFields(form, snapshot, interpreted) {
   let make = String(form.make || '').trim();
   if (vehicleType) {
     if (make && !isValidVehicleMake(vehicleType, make)) {
-      const matched = makesForVehicleType(vehicleType).find(
-        (m) => m.toLowerCase() === make.toLowerCase(),
-      );
+      const matched = makesForVehicleType(vehicleType).find((m) => m.toLowerCase() === make.toLowerCase());
       make = matched || findCatalogMakeInText(make, vehicleType) || make;
     }
     if (!make || !isValidVehicleMake(vehicleType, make)) {
@@ -2334,10 +2387,7 @@ function parseBooleanFlag(value) {
  */
 function normalizeModelFormFields(parsed, categoryOverride = null) {
   if (!parsed || typeof parsed !== 'object') return parsed;
-  const form =
-    parsed.form && typeof parsed.form === 'object' && !Array.isArray(parsed.form)
-      ? parsed.form
-      : {};
+  const form = parsed.form && typeof parsed.form === 'object' && !Array.isArray(parsed.form) ? parsed.form : {};
   parsed.form = form;
 
   const copyAlias = (target, aliases) => {
@@ -2345,7 +2395,7 @@ function normalizeModelFormFields(parsed, categoryOverride = null) {
     const alias = aliases.find(
       (key) =>
         (form[key] != null && String(form[key]).trim() !== '') ||
-        (parsed[key] != null && String(parsed[key]).trim() !== ''),
+        (parsed[key] != null && String(parsed[key]).trim() !== '')
     );
     if (alias) form[target] = form[alias] ?? parsed[alias];
   };
@@ -2375,13 +2425,13 @@ function normalizeModelFormFields(parsed, categoryOverride = null) {
   const category = CATEGORIES.includes(categoryOverride)
     ? categoryOverride
     : CATEGORIES.includes(parsed.category)
-    ? parsed.category
-    : CATEGORIES.includes(parsed.detectedCategory)
-      ? parsed.detectedCategory
-      : null;
+      ? parsed.category
+      : CATEGORIES.includes(parsed.detectedCategory)
+        ? parsed.detectedCategory
+        : null;
   if (category === 'cars') {
     ['vehicleType', 'make', 'model', 'variant', 'year', 'kilometers', 'transmission', 'fuelType', 'color'].forEach(
-      copyTopLevel,
+      copyTopLevel
     );
     copyAlias('make', ['brand', 'vehicleMake']);
     copyAlias('model', ['vehicleModel']);
@@ -2431,7 +2481,11 @@ function buildCategoryMismatchResult(parsed, { forcedCategory, detectedCategory,
     : [];
   const imageRoles = Array.isArray(parsed.imageRoles)
     ? parsed.imageRoles
-        .map((r) => String(r || '').trim().toLowerCase())
+        .map((r) =>
+          String(r || '')
+            .trim()
+            .toLowerCase()
+        )
         .map((r) => {
           if (r === 'cover' || r === 'main') return 'cover';
           if (r === 'profile' || r === 'avatar') return 'profile';
@@ -2440,8 +2494,7 @@ function buildCategoryMismatchResult(parsed, { forcedCategory, detectedCategory,
         })
         .slice(0, MAX_ATTACHED_IMAGES)
     : [];
-  const usableCategory =
-    detectedCategory && CATEGORIES.includes(detectedCategory) ? detectedCategory : null;
+  const usableCategory = detectedCategory && CATEGORIES.includes(detectedCategory) ? detectedCategory : null;
 
   return {
     // Keep a ready draft for the true category; UI must confirm before post.
@@ -2480,10 +2533,7 @@ function resolveCategorySignals(parsed, forcedCategory) {
       // True subject differs from the user-selected category — never force-post.
       categoryMismatch = true;
       detectedCategory = detectedFromModel;
-    } else if (
-      CATEGORIES.includes(parsed.category) &&
-      parsed.category !== forcedCategory
-    ) {
+    } else if (CATEGORIES.includes(parsed.category) && parsed.category !== forcedCategory) {
       categoryMismatch = true;
       detectedCategory = parsed.category;
     } else if (inferredFromForm && inferredFromForm !== forcedCategory) {
@@ -2510,13 +2560,7 @@ function inferCategoryFromForm(form) {
     return String(value).trim() !== '';
   };
 
-  if (
-    filled('vehicleType') ||
-    filled('make') ||
-    filled('kilometers') ||
-    filled('fuelType') ||
-    filled('transmission')
-  ) {
+  if (filled('vehicleType') || filled('make') || filled('kilometers') || filled('fuelType') || filled('transmission')) {
     return 'cars';
   }
   if (
@@ -2572,9 +2616,7 @@ function parseAiListingResponse(raw, { forcedCategory, fallbackImageUrls = [] })
 
   const restrictedReasons = normalizeRestrictedReasons(parsed.restrictedReasons);
   const contentAllowedFlag = parseBooleanFlag(parsed.contentAllowed);
-  const contentBlocked =
-    contentAllowedFlag === false ||
-    (contentAllowedFlag == null && restrictedReasons.length > 0);
+  const contentBlocked = contentAllowedFlag === false || (contentAllowedFlag == null && restrictedReasons.length > 0);
 
   const { categoryMismatch, detectedCategory } = resolveCategorySignals(parsed, forcedCategory);
 
@@ -2616,16 +2658,18 @@ function parseAiListingResponse(raw, { forcedCategory, fallbackImageUrls = [] })
     });
   }
 
-  const category =
-    forcedCategory ||
-    (CATEGORIES.includes(parsed.category) ? parsed.category : 'marketplace');
+  const category = forcedCategory || (CATEGORIES.includes(parsed.category) ? parsed.category : 'marketplace');
   const form = parsed.form && typeof parsed.form === 'object' ? parsed.form : {};
   const modelImageUrls = Array.isArray(parsed.imageUrls)
     ? parsed.imageUrls.filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u))
     : [];
   const imageRoles = Array.isArray(parsed.imageRoles)
     ? parsed.imageRoles
-        .map((r) => String(r || '').trim().toLowerCase())
+        .map((r) =>
+          String(r || '')
+            .trim()
+            .toLowerCase()
+        )
         .map((r) => {
           if (r === 'cover' || r === 'main') return 'cover';
           if (r === 'profile' || r === 'avatar') return 'profile';
@@ -2653,12 +2697,7 @@ function parseAiListingResponse(raw, { forcedCategory, fallbackImageUrls = [] })
   };
 }
 
-async function callListingModel({
-  preferredCategory,
-  mode,
-  userPayload,
-  attachedImages,
-}) {
+async function callListingModel({ preferredCategory, mode, userPayload, attachedImages, signal }) {
   const apiKey = String(process.env.OPENAI_API_KEY || '').trim();
   if (!apiKey) {
     const err = new Error('OPENAI_API_KEY is not configured');
@@ -2672,11 +2711,11 @@ async function callListingModel({
   let lastError = null;
   let incompleteDraftRetries = 0;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    throwIfAborted(signal);
     const body = JSON.stringify({
       model: OPENAI_MODEL,
       temperature: mode === 'edit' ? 0.15 : 0.25,
-      max_tokens:
-        incompleteDraftRetries > 0 ? OPENAI_RETRY_MAX_TOKENS : OPENAI_INITIAL_MAX_TOKENS,
+      max_tokens: incompleteDraftRetries > 0 ? OPENAI_RETRY_MAX_TOKENS : OPENAI_INITIAL_MAX_TOKENS,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: buildSystemPrompt(forcedCategory, { mode }) },
@@ -2696,9 +2735,11 @@ async function callListingModel({
         'Content-Type': 'application/json',
       },
       body,
+      signal,
     });
 
     const payload = await res.json().catch(() => ({}));
+    throwIfAborted(signal);
     if (res.ok) {
       const raw = payload?.choices?.[0]?.message?.content;
       const wasTruncated = payload?.choices?.[0]?.finish_reason === 'length';
@@ -2714,8 +2755,7 @@ async function callListingModel({
       const title = String(parsed.title || form.title || '').trim();
       const description = String(form.description || parsed.summary || '').trim();
       const isRestricted = parsed.error === CONTENT_RESTRICTED_CODE;
-      const isMismatch =
-        parsed.error === CATEGORY_MISMATCH_CODE || parsed.categoryMatch === false;
+      const isMismatch = parsed.error === CATEGORY_MISMATCH_CODE || parsed.categoryMatch === false;
       const hasCategory = CATEGORIES.includes(parsed.category) || isRestricted;
       const hasCompleteDraft =
         isRestricted ||
@@ -2729,7 +2769,7 @@ async function callListingModel({
       lastError = new Error(
         wasTruncated
           ? 'AI response was truncated before the listing draft was complete'
-          : 'AI returned an incomplete listing draft',
+          : 'AI returned an incomplete listing draft'
       );
       lastError.status = 502;
       if (incompleteDraftRetries < 1) {
@@ -2748,17 +2788,16 @@ async function callListingModel({
     if (!retryable || attempt === maxAttempts) break;
 
     const waitMs = parseOpenAiRetryMs(message, res.headers.get('retry-after'));
-    await sleep(waitMs);
+    await sleep(waitMs, signal);
   }
 
   throw lastError || new Error('OpenAI request failed');
 }
 
-async function fetchImageAsDataUrl(url) {
+async function fetchImageAsDataUrl(url, parentSignal) {
   const raw = String(url || '').trim();
   if (!/^https?:\/\//i.test(raw)) return null;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12000);
+  const request = timeoutSignal(parentSignal, 12000);
   try {
     let host = '';
     try {
@@ -2767,18 +2806,14 @@ async function fetchImageAsDataUrl(url) {
       host = '';
     }
     const isInstagramCdn =
-      host.includes('cdninstagram.com') ||
-      host.includes('fbcdn.net') ||
-      host.includes('instagram.com');
+      host.includes('cdninstagram.com') || host.includes('fbcdn.net') || host.includes('instagram.com');
     const res = await fetch(raw, {
-      signal: controller.signal,
+      signal: request.signal,
       redirect: 'follow',
       headers: {
         Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
         'User-Agent': BROWSER_UA,
-        ...(isInstagramCdn
-          ? { Referer: 'https://www.instagram.com/', Origin: 'https://www.instagram.com' }
-          : {}),
+        ...(isInstagramCdn ? { Referer: 'https://www.instagram.com/', Origin: 'https://www.instagram.com' } : {}),
       },
     });
     if (!res.ok) return null;
@@ -2790,19 +2825,20 @@ async function fetchImageAsDataUrl(url) {
     const dataUrl = `data:${compressed.mimetype};base64,${compressed.buffer.toString('base64')}`;
     if (dataUrl.length > MAX_IMAGE_CHARS) return null;
     return dataUrl;
-  } catch {
+  } catch (error) {
+    if (parentSignal?.aborted) throw error;
     return null;
   } finally {
-    clearTimeout(timeout);
+    request.cleanup();
   }
 }
 
-async function compressAttachedVisionImage(img) {
+async function compressAttachedVisionImage(img, parentSignal) {
   if (!img || typeof img !== 'object') return img;
   const raw = String(img.url || '').trim();
   if (!raw) return img;
   if (/^https?:\/\//i.test(raw)) {
-    const dataUrl = await fetchImageAsDataUrl(raw);
+    const dataUrl = await fetchImageAsDataUrl(raw, parentSignal);
     return dataUrl ? { ...img, url: dataUrl } : img;
   }
   const match = /^data:image\/[a-zA-Z0-9.+-]+;base64,([A-Za-z0-9+/=\s]+)$/i.exec(raw);
@@ -2820,13 +2856,18 @@ async function compressAttachedVisionImage(img) {
 }
 
 /** Download a few scraped post photos so the model can visually identify vehicle type/make. */
-async function prepareSnapshotVisionImages(snapshotImageUrls, maxImages = MAX_SNAPSHOT_VISION_IMAGES) {
+async function prepareSnapshotVisionImages(
+  snapshotImageUrls,
+  maxImages = MAX_SNAPSHOT_VISION_IMAGES,
+  signal,
+) {
   const cap = Math.max(0, Math.min(MAX_SNAPSHOT_VISION_IMAGES, Number(maxImages) || 0));
   const urls = Array.isArray(snapshotImageUrls) ? snapshotImageUrls : [];
   const out = [];
   for (const url of urls) {
+    throwIfAborted(signal);
     if (out.length >= cap) break;
-    const dataUrl = await fetchImageAsDataUrl(url);
+    const dataUrl = await fetchImageAsDataUrl(url, signal);
     if (dataUrl) {
       out.push({
         url: dataUrl,
@@ -2848,24 +2889,32 @@ async function interpretListing({
   prompt,
   currentListing,
   maxSnapshotVisionImages = MAX_SNAPSHOT_VISION_IMAGES,
+  signal,
 }) {
   const userAttached = attachedImages || [];
   // When the user didn't attach photos, analyze the scraped post images with vision.
   let visionImages = userAttached;
   if (!visionImages.length && Array.isArray(snapshot?.imageUrls) && snapshot.imageUrls.length) {
-    visionImages = await prepareSnapshotVisionImages(snapshot.imageUrls, maxSnapshotVisionImages);
+    visionImages = await prepareSnapshotVisionImages(
+      snapshot.imageUrls,
+      maxSnapshotVisionImages,
+      signal,
+    );
   } else if (visionImages.length) {
     visionImages = (
-      await Promise.all(visionImages.map((img) => compressAttachedVisionImage(img)))
+      await Promise.all(visionImages.map((img) => compressAttachedVisionImage(img, signal)))
     ).filter(Boolean);
   }
 
-  const motorcycleMakes = makesForVehicleType('motorcycle').filter((m) => m !== 'Other').slice(0, 40);
+  const motorcycleMakes = makesForVehicleType('motorcycle')
+    .filter((m) => m !== 'Other')
+    .slice(0, 40);
 
   return callListingModel({
     preferredCategory,
     mode: mode === 'edit' ? 'edit' : 'create',
     attachedImages: visionImages,
+    signal,
     userPayload: {
       source: url ? 'link' : 'prompt',
       url: url || null,
@@ -2890,8 +2939,7 @@ async function interpretListing({
           ? {
               vehicleTypes: VEHICLE_TYPE_VALUES,
               motorcycleMakes,
-              note:
-                'If photos/caption show a motorcycle/scooter, set vehicleType=motorcycle and pick make from motorcycleMakes when possible.',
+              note: 'If photos/caption show a motorcycle/scooter, set vehicleType=motorcycle and pick make from motorcycleMakes when possible.',
             }
           : null,
       attachedImageCount: visionImages.length,
@@ -2916,11 +2964,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
   if (interpreted?.error === CATEGORY_MISMATCH_CODE || interpreted?.categoryMatch === false) {
     applyCaptionFallbacks(interpreted, snapshot, profile);
     const errorMessage =
-      interpreted.errorMessage ||
-      categoryMismatchMessage(
-        interpreted.preferredCategory,
-        interpreted.detectedCategory,
-      );
+      interpreted.errorMessage || categoryMismatchMessage(interpreted.preferredCategory, interpreted.detectedCategory);
     let form = stringifyFormValues(interpreted.form);
     const detected = interpreted.detectedCategory || interpreted.category || null;
     if (detected === 'cars') {
@@ -2931,9 +2975,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
     applyProfileDefaultsToForm(form, profile, { allowProfileTitle });
 
     const imageCap = maxImagesForCategory(detected);
-    let imageUrls = Array.isArray(interpreted.imageUrls)
-      ? interpreted.imageUrls.slice(0, imageCap)
-      : [];
+    let imageUrls = Array.isArray(interpreted.imageUrls) ? interpreted.imageUrls.slice(0, imageCap) : [];
     if (snapshot?.social && snapshot?.isCarousel === false) {
       imageUrls = imageUrls.slice(0, 1);
     }
@@ -2960,8 +3002,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
 
   if (interpreted?.error === CONTENT_RESTRICTED_CODE || interpreted?.contentAllowed === false) {
     const reasons = normalizeRestrictedReasons(interpreted.restrictedReasons);
-    const errorMessage =
-      interpreted.errorMessage || contentRestrictedMessage(reasons.length ? reasons : ['other']);
+    const errorMessage = interpreted.errorMessage || contentRestrictedMessage(reasons.length ? reasons : ['other']);
     return {
       id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       sourceUrl: sourceUrl || '',
@@ -3036,12 +3077,9 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
   }
 
   const imageCap = maxImagesForCategory(category);
-  const imageUrls = Array.isArray(interpreted.imageUrls)
-    ? interpreted.imageUrls.slice(0, imageCap)
-    : [];
+  const imageUrls = Array.isArray(interpreted.imageUrls) ? interpreted.imageUrls.slice(0, imageCap) : [];
   // Single-frame Instagram posts: never keep more than one photo.
-  const cappedImages =
-    snapshot?.social && snapshot?.isCarousel === false ? imageUrls.slice(0, 1) : imageUrls;
+  const cappedImages = snapshot?.social && snapshot?.isCarousel === false ? imageUrls.slice(0, 1) : imageUrls;
 
   return {
     id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -3095,7 +3133,9 @@ async function importListingsFromLinks({
   images,
   mode: rawMode,
   currentListing: rawCurrent,
+  signal,
 }) {
+  throwIfAborted(signal);
   const prompt = String(text || '').trim();
   const urls = extractUrls(rawUrls?.length ? rawUrls : prompt);
   const attachedImages = normalizeAttachedImages(images);
@@ -3120,6 +3160,7 @@ async function importListingsFromLinks({
 
   if (!urls.length) {
     try {
+      throwIfAborted(signal);
       const interpreted = await interpretListing({
         url: null,
         snapshot: null,
@@ -3129,17 +3170,19 @@ async function importListingsFromLinks({
         mode,
         prompt,
         currentListing,
+        signal,
       });
-      drafts.push(
-        await finalizeDraft({
-          interpreted,
-          sourceUrl: '',
-          warning: null,
-          profile,
-          sourcePrompt: prompt,
-        }),
-      );
+      const draft = await finalizeDraft({
+        interpreted,
+        sourceUrl: '',
+        warning: null,
+        profile,
+        sourcePrompt: prompt,
+      });
+      throwIfAborted(signal);
+      drafts.push(draft);
     } catch (err) {
+      if (signal?.aborted || err?.name === 'AbortError') throw err;
       const rateLimited = isOpenAiRateLimitError(err?.status, err?.message);
       drafts.push({
         id: `ai-${Date.now()}`,
@@ -3163,7 +3206,8 @@ async function importListingsFromLinks({
   for (let i = 0; i < urls.length; i += 1) {
     const url = urls[i];
     try {
-      const snapshot = await fetchPageSnapshot(url);
+      throwIfAborted(signal);
+      const snapshot = await fetchPageSnapshot(url, signal);
       const interpreted = await interpretListing({
         url,
         snapshot,
@@ -3174,24 +3218,22 @@ async function importListingsFromLinks({
         prompt,
         currentListing,
         maxSnapshotVisionImages,
+        signal,
       });
-      interpreted.imageUrls = mergeImageUrlLists(
-        snapshot.imageUrls,
-        interpreted.imageUrls,
-      );
-      drafts.push(
-        await finalizeDraft({
-          interpreted,
-          sourceUrl: url,
-          warning: snapshot.ok
-            ? null
-            : friendlyFetchWarning(snapshot.fetchError),
-          profile,
-          sourcePrompt: prompt,
-          snapshot,
-        }),
-      );
+      throwIfAborted(signal);
+      interpreted.imageUrls = mergeImageUrlLists(snapshot.imageUrls, interpreted.imageUrls);
+      const draft = await finalizeDraft({
+        interpreted,
+        sourceUrl: url,
+        warning: snapshot.ok ? null : friendlyFetchWarning(snapshot.fetchError),
+        profile,
+        sourcePrompt: prompt,
+        snapshot,
+      });
+      throwIfAborted(signal);
+      drafts.push(draft);
     } catch (err) {
+      if (signal?.aborted || err?.name === 'AbortError') throw err;
       const rateLimited = isOpenAiRateLimitError(err?.status, err?.message);
       drafts.push({
         id: `ai-${Date.now()}-${drafts.length}`,
@@ -3207,7 +3249,7 @@ async function importListingsFromLinks({
         errorCode: rateLimited ? OPENAI_RATE_LIMIT_CODE : null,
       });
       if (rateLimited && i < urls.length - 1) {
-        await sleep(parseOpenAiRetryMs(err?.message));
+        await sleep(parseOpenAiRetryMs(err?.message), signal);
       }
     }
   }
@@ -3221,6 +3263,9 @@ module.exports = {
   importListingsFromLinks,
   parseAiListingResponse,
   extractContactPhoneFromText,
+  normalizeVehicleTypeValue,
+  inferVehicleTypeFromText,
+  normalizeCarFormFields,
   MAX_IMPORT_URLS,
   CATEGORIES,
   CATEGORY_MISMATCH_CODE,

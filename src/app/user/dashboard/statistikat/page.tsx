@@ -18,7 +18,7 @@ import { ChartLineUp as ChartLineUpIcon } from '@phosphor-icons/react/dist/ssr/C
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { Image as ImageIcon } from '@phosphor-icons/react/dist/ssr/Image';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
-import { ShareNetwork as ShareIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
+import { PaperPlaneTilt as ShareIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { StatsPageSkeleton } from '@/components/core/content-skeletons';
@@ -328,7 +328,7 @@ export default function UserStatisticsPage() {
             </Grid>
             <Grid size={4}>
               <TotalCard
-                icon={<ShareIcon size={20} weight="duotone" />}
+                icon={<ShareIcon size={20} weight="bold" />}
                 label="Ndarje"
                 value={totals.shares}
                 tone="#7ac943"
@@ -483,7 +483,7 @@ export default function UserStatisticsPage() {
                         </Typography>
                       </Stack>
                       <Stack direction="row" spacing={0.4} sx={{ alignItems: 'center' }} title="Ndarje">
-                        <ShareIcon size={15} />
+                        <ShareIcon size={15} weight="bold" />
                         <Typography variant="caption" sx={{ fontWeight: 800 }}>
                           {formatNum(row.shareCount)}
                         </Typography>

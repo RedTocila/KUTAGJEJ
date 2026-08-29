@@ -6,6 +6,7 @@ import { getApiUrl } from '@/lib/api-config';
 export interface UploadImagesResult {
   urls: string[];
   error?: string;
+  aborted?: boolean;
 }
 
 /**
@@ -110,7 +111,12 @@ export async function prepareAvatarForUpload(file: File): Promise<File> {
   });
 }
 
-async function uploadOneImage(file: File, folder: string, token: string | null): Promise<UploadImagesResult> {
+async function uploadOneImage(
+  file: File,
+  folder: string,
+  token: string | null,
+  signal?: AbortSignal,
+): Promise<UploadImagesResult> {
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -118,38 +124,46 @@ async function uploadOneImage(file: File, folder: string, token: string | null):
   fd.append('images', file, file.name);
   fd.append('folder', folder);
 
-  const res = await fetch(getApiUrl('/uploads/images'), {
-    method: 'POST',
-    headers,
-    body: fd,
-  });
-
-  const raw = await res.text();
-  let data: { message?: unknown; urls?: unknown } = {};
   try {
-    data = raw ? (JSON.parse(raw) as typeof data) : {};
-  } catch {
-    data = {};
-  }
+    const res = await fetch(getApiUrl('/uploads/images'), {
+      method: 'POST',
+      headers,
+      body: fd,
+      signal,
+    });
 
-  if (!res.ok) {
-    if (typeof data.message === 'string' && data.message.trim()) {
-      return { urls: [], error: data.message };
+    const raw = await res.text();
+    let data: { message?: unknown; urls?: unknown } = {};
+    try {
+      data = raw ? (JSON.parse(raw) as typeof data) : {};
+    } catch {
+      data = {};
     }
-    if (res.status === 413 || res.status === 431) {
-      return { urls: [], error: 'Fotoja është shumë e madhe. Provo një foto më të vogël.' };
-    }
-    if (res.status === 401 || res.status === 403) {
-      return { urls: [], error: 'Duhet të jeni të identifikuar për të ngarkuar foto.' };
-    }
-    return { urls: [], error: 'Nuk u arrit ngarkimi i fotove.' };
-  }
 
-  const urls = Array.isArray(data.urls) ? (data.urls as string[]) : [];
-  if (!urls.length) {
-    return { urls: [], error: 'Nuk u arrit ngarkimi i fotove.' };
+    if (!res.ok) {
+      if (typeof data.message === 'string' && data.message.trim()) {
+        return { urls: [], error: data.message };
+      }
+      if (res.status === 413 || res.status === 431) {
+        return { urls: [], error: 'Fotoja është shumë e madhe. Provo një foto më të vogël.' };
+      }
+      if (res.status === 401 || res.status === 403) {
+        return { urls: [], error: 'Duhet të jeni të identifikuar për të ngarkuar foto.' };
+    }
+      return { urls: [], error: 'Nuk u arrit ngarkimi i fotove.' };
+    }
+
+    const urls = Array.isArray(data.urls) ? (data.urls as string[]) : [];
+    if (!urls.length) {
+      return { urls: [], error: 'Nuk u arrit ngarkimi i fotove.' };
+    }
+    return { urls };
+  } catch (error) {
+    if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+      return { urls: [], aborted: true };
+    }
+    throw error;
   }
-  return { urls };
 }
 
 /**
@@ -163,6 +177,7 @@ async function uploadOneImage(file: File, folder: string, token: string | null):
 export async function uploadListingImages(
   files: File[],
   folder = 'listings',
+  signal?: AbortSignal,
 ): Promise<UploadImagesResult> {
   if (!files.length) return { urls: [] };
   try {
@@ -170,12 +185,14 @@ export async function uploadListingImages(
     const prepared: File[] = [];
     const isAvatar = String(folder).toLowerCase() === 'avatars';
     for (const file of files) {
+      if (signal?.aborted) return { urls: [], aborted: true };
       if (!file.type.startsWith('image/') && file.type !== '' && file.type !== 'application/octet-stream') {
         continue;
       }
       prepared.push(
         isAvatar ? await prepareAvatarForUpload(file) : await prepareImageForUpload(file),
       );
+      if (signal?.aborted) return { urls: [], aborted: true };
     }
     if (!prepared.length) {
       return { urls: [], error: 'Lejohen vetëm foto JPEG, PNG, WEBP dhe GIF.' };
@@ -183,7 +200,9 @@ export async function uploadListingImages(
 
     const urls: string[] = [];
     for (const file of prepared) {
-      const up = await uploadOneImage(file, folder, token);
+      if (signal?.aborted) return { urls, aborted: true };
+      const up = await uploadOneImage(file, folder, token, signal);
+      if (up.aborted || signal?.aborted) return { urls, aborted: true };
       if (up.error) {
         return { urls, error: up.error };
       }
@@ -191,6 +210,7 @@ export async function uploadListingImages(
     }
     return { urls };
   } catch {
+    if (signal?.aborted) return { urls: [], aborted: true };
     return { urls: [], error: 'Nuk u arrit lidhja me serverin.' };
   }
 }

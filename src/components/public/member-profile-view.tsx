@@ -14,50 +14,41 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { ListingKeywordSearchInput } from '@/components/public/listing-filters/listing-keyword-search-input';
-import { MemberLeaveReviewButton } from '@/components/public/member-leave-review-button';
-import { ProductBackButton, ProductTag, productBackButtonSx } from '@/components/public/product-browse-chrome';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { Lock as LockIcon } from '@phosphor-icons/react/dist/ssr/Lock';
-import { MemberReferralBadgesRow, MemberReferralBadgesSkeleton } from '@/components/public/member-referral-badges';
+import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
-import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 
-import {
-  HomepageMixedListingCard,
-  mixedListingKey,
-} from '@/components/public/homepage-mixed-listing-card';
-import {
-  MemberReviewsDialog,
-  MemberSeeReviewsButton,
-} from '@/components/public/member-reviews-dialog';
-import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
-import { BrandCover } from '@/components/brand/brand-cover';
-import {
-  ListingVerifiedBadge,
-  ProfessionalRatingSummary,
-} from '@/components/public/professional-listing-detail-ui';
+import { paths, pathsPublicMemberProfile } from '@/paths';
+import { clientFetch } from '@/lib/api-client';
+import { hasStoredAccessToken } from '@/lib/auth/storage';
+import { startConversationWithMember } from '@/lib/conversations-client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import type { HomepageMixedListing } from '@/lib/homepage-latest-listings';
-import { startConversationWithMember } from '@/lib/conversations-client';
-import { clientFetch } from '@/lib/api-client';
-import { hasStoredAccessToken } from '@/lib/auth/storage';
 import { listMemberReviews } from '@/lib/member-reviews-client';
+import type { PublicRealEstateListingSeller } from '@/lib/public-listings-client';
 import {
   memberInitials,
   mergeMemberReferralBadges,
   type PublicMemberListingsBundle,
   type PublicMemberReferralBadge,
 } from '@/lib/public-member-client';
-import type { PublicRealEstateListingSeller } from '@/lib/public-listings-client';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
-import { paths, pathsPublicMemberProfile } from '@/paths';
+import { BrandCover } from '@/components/brand/brand-cover';
+import { HomepageMixedListingCard, mixedListingKey } from '@/components/public/homepage-mixed-listing-card';
+import { ListingKeywordSearchInput } from '@/components/public/listing-filters/listing-keyword-search-input';
+import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
+import { MemberLeaveReviewButton } from '@/components/public/member-leave-review-button';
+import { MemberReferralBadgesRow, MemberReferralBadgesSkeleton } from '@/components/public/member-referral-badges';
+import { MemberReviewsDialog, MemberSeeReviewsButton } from '@/components/public/member-reviews-dialog';
+import { ProductBackButton, productBackButtonSx, ProductTag } from '@/components/public/product-browse-chrome';
+import { ListingVerifiedBadge, ProfessionalRatingSummary } from '@/components/public/professional-listing-detail-ui';
 
 type FilterKey = 'all' | HomepageMixedListing['kind'];
 
@@ -67,9 +58,7 @@ function normalizeSearch(value: string): string {
 
 function matchesSearch(query: string, parts: Array<string | number | null | undefined>): boolean {
   if (!query) return true;
-  const haystack = normalizeSearch(
-    parts.filter((p) => p != null && String(p).trim() !== '').join(' '),
-  );
+  const haystack = normalizeSearch(parts.filter((p) => p != null && String(p).trim() !== '').join(' '));
   return haystack.includes(query);
 }
 
@@ -157,13 +146,7 @@ function memberSinceParts(iso: string | undefined): { year: number; monthYear: s
   };
 }
 
-function MemberContactButton({
-  memberId,
-  pill = false,
-}: {
-  memberId: string;
-  pill?: boolean;
-}) {
+function MemberContactButton({ memberId, pill = false }: { memberId: string; pill?: boolean }) {
   const router = useRouter();
   const { user, isLoading, checkSession } = useUser();
   const [loading, setLoading] = React.useState(false);
@@ -232,7 +215,11 @@ function MemberContactButton({
         Kontakto
       </Button>
       {error ? (
-        <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.75, fontWeight: 600, textAlign: 'center' }}>
+        <Typography
+          variant="caption"
+          color="error"
+          sx={{ display: 'block', mt: 0.75, fontWeight: 600, textAlign: 'center' }}
+        >
           {error}
         </Typography>
       ) : null}
@@ -271,10 +258,7 @@ export function MemberProfileView({
   const reviewCount = member.reviewCount ?? 0;
   const isOwnProfile = Boolean(user?.id && memberId && String(user.id) === String(memberId));
   const showLeaveReview = Boolean(memberId) && !isOwnProfile && !viewerHasReviewed;
-  const displayBadges = React.useMemo(
-    () => mergeMemberReferralBadges(liveBadges ?? badges),
-    [liveBadges, badges],
-  );
+  const displayBadges = React.useMemo(() => mergeMemberReferralBadges(liveBadges ?? badges), [liveBadges, badges]);
 
   React.useEffect(() => {
     if (!memberId) {
@@ -283,15 +267,15 @@ export function MemberProfileView({
     }
     let cancelled = false;
     setBadgesLoading(true);
-    void clientFetch<{ badges?: PublicMemberReferralBadge[] }>(
-      `/public/members/${encodeURIComponent(memberId)}`,
-    ).then((res) => {
-      if (cancelled) return;
-      if (res.ok) {
-        setLiveBadges(Array.isArray(res.data?.badges) ? res.data.badges : []);
+    void clientFetch<{ badges?: PublicMemberReferralBadge[] }>(`/public/members/${encodeURIComponent(memberId)}`).then(
+      (res) => {
+        if (cancelled) return;
+        if (res.ok) {
+          setLiveBadges(Array.isArray(res.data?.badges) ? res.data.badges : []);
+        }
+        setBadgesLoading(false);
       }
-      setBadgesLoading(false);
-    });
+    );
     return () => {
       cancelled = true;
     };
@@ -326,9 +310,7 @@ export function MemberProfileView({
   }, [mixed, filter, searchQuery]);
 
   const showOwner =
-    isBusiness &&
-    member.businessOwner?.trim() &&
-    member.businessOwner.trim().toLowerCase() !== name.toLowerCase();
+    isBusiness && member.businessOwner?.trim() && member.businessOwner.trim().toLowerCase() !== name.toLowerCase();
 
   if (member.isPrivate && !isOwnProfile) {
     return (
@@ -390,7 +372,8 @@ export function MemberProfileView({
               Ky profil është privat
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 440, lineHeight: 1.6 }}>
-              Njoftimet dhe detajet e këtij anëtari janë të fshehura. Ato shfaqen automatikisht për përdoruesit që kanë qenë në kontakt me këtë llogari.
+              Njoftimet dhe detajet e këtij anëtari janë të fshehura. Ato shfaqen automatikisht për përdoruesit që kanë
+              qenë në kontakt me këtë llogari.
             </Typography>
             {memberId ? (
               <Button
@@ -468,7 +451,7 @@ export function MemberProfileView({
               },
             ]}
           >
-            <ShareNetworkIcon size={18} weight="bold" />
+            <PaperPlaneTiltIcon size={18} weight="bold" />
           </IconButton>
         </BrandCover>
 
@@ -480,30 +463,30 @@ export function MemberProfileView({
             mt: { xs: -5, sm: -6 },
           }}
         >
-            <Box sx={{ position: 'relative' }}>
-              <ButtonBase
-                onClick={() => setReviewsOpen(true)}
-                aria-label={`Shiko vlerësimet (${reviewCount})`}
-                sx={(theme) => ({
-                  position: 'absolute',
-                  top: {
-                    xs: `calc(${theme.spacing(5)} + 4px)`,
-                    sm: `calc(${theme.spacing(6)} + 4px)`,
-                  },
-                  right: 0,
-                  zIndex: 1,
-                  borderRadius: 999,
-                  px: 0.5,
-                  py: 0.25,
-                  '&:hover': { bgcolor: 'action.hover' },
-                })}
-              >
-                <ProfessionalRatingSummary
-                  rating={formatRatingDisplay(member.ratingAverage)}
-                  reviewCount={reviewCount}
-                  starSize={18}
-                />
-              </ButtonBase>
+          <Box sx={{ position: 'relative' }}>
+            <ButtonBase
+              onClick={() => setReviewsOpen(true)}
+              aria-label={`Shiko vlerësimet (${reviewCount})`}
+              sx={(theme) => ({
+                position: 'absolute',
+                top: {
+                  xs: `calc(${theme.spacing(5)} + 4px)`,
+                  sm: `calc(${theme.spacing(6)} + 4px)`,
+                },
+                right: 0,
+                zIndex: 1,
+                borderRadius: 999,
+                px: 0.5,
+                py: 0.25,
+                '&:hover': { bgcolor: 'action.hover' },
+              })}
+            >
+              <ProfessionalRatingSummary
+                rating={formatRatingDisplay(member.ratingAverage)}
+                reviewCount={reviewCount}
+                starSize={18}
+              />
+            </ButtonBase>
 
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
@@ -523,20 +506,14 @@ export function MemberProfileView({
                   border: '3px solid',
                   borderColor: 'background.paper',
                   boxShadow: (theme) =>
-                    theme.palette.mode === 'dark'
-                      ? '0 8px 24px rgba(0,0,0,0.45)'
-                      : '0 8px 24px rgba(0,0,0,0.08)',
+                    theme.palette.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.45)' : '0 8px 24px rgba(0,0,0,0.08)',
                 }}
               >
                 {initials}
               </Avatar>
 
               <Stack spacing={1} sx={{ flex: '1 1 auto', minWidth: 0, pb: { sm: 0.5 }, pr: { sm: 12 } }}>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.75 }}
-                >
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.75 }}>
                   <Typography
                     component="h1"
                     sx={{
@@ -559,39 +536,33 @@ export function MemberProfileView({
                 </Stack>
 
                 <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 0.75, minWidth: 0 }}>
+                  <Chip
+                    size="small"
+                    icon={isBusiness ? <BuildingsIcon size={14} weight="fill" /> : <UserIcon size={14} weight="fill" />}
+                    label={isBusiness ? 'Biznes' : 'Individ'}
+                    sx={{
+                      fontWeight: 700,
+                      bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.14 : 0.1),
+                      color: 'primary.main',
+                      border: 'none',
+                      '& .MuiChip-icon': { color: 'inherit', ml: 0.75 },
+                    }}
+                  />
+                  {member.verified ? (
                     <Chip
                       size="small"
-                      icon={
-                        isBusiness ? (
-                          <BuildingsIcon size={14} weight="fill" />
-                        ) : (
-                          <UserIcon size={14} weight="fill" />
-                        )
-                      }
-                      label={isBusiness ? 'Biznes' : 'Individ'}
+                      icon={<ShieldCheckIcon size={14} weight="fill" />}
+                      label="Ky profil është i verifikuar"
                       sx={{
                         fontWeight: 700,
-                        bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.14 : 0.1),
-                        color: 'primary.main',
-                        border: 'none',
-                        '& .MuiChip-icon': { color: 'inherit', ml: 0.75 },
+                        bgcolor: 'rgba(var(--mui-palette-success-mainChannel) / 0.14)',
+                        border: '1px solid',
+                        borderColor: 'rgba(var(--mui-palette-success-mainChannel) / 0.45)',
+                        color: 'success.main',
+                        '& .MuiChip-icon': { color: 'success.main', ml: 0.75 },
                       }}
                     />
-                    {member.verified ? (
-                      <Chip
-                        size="small"
-                        icon={<ShieldCheckIcon size={14} weight="fill" />}
-                        label="Ky profil është i verifikuar"
-                        sx={{
-                          fontWeight: 700,
-                          bgcolor: 'rgba(var(--mui-palette-success-mainChannel) / 0.14)',
-                          border: '1px solid',
-                          borderColor: 'rgba(var(--mui-palette-success-mainChannel) / 0.45)',
-                          color: 'success.main',
-                          '& .MuiChip-icon': { color: 'success.main', ml: 0.75 },
-                        }}
-                      />
-                    ) : null}
+                  ) : null}
                 </Stack>
 
                 <Stack spacing={1.25}>
@@ -638,105 +609,101 @@ export function MemberProfileView({
                     >
                       Badges
                     </Typography>
-                    <MemberReferralBadgesRow
-                      badges={displayBadges}
-                      selfView={isOwnProfile}
-                      layout="grid"
-                      columns={5}
-                    />
+                    <MemberReferralBadgesRow badges={displayBadges} selfView={isOwnProfile} layout="grid" columns={5} />
                   </Box>
                 ) : null}
               </Stack>
             </Stack>
-            </Box>
+          </Box>
 
-            <Box
+          <Box
+            sx={{
+              borderRadius: 2.5,
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+              px: 2,
+              py: 1.5,
+              textAlign: 'center',
+            }}
+          >
+            <Typography
               sx={{
-                borderRadius: 2.5,
-                border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: (theme) =>
-                  theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                px: 2,
-                py: 1.5,
-                textAlign: 'center',
+                fontWeight: 850,
+                fontSize: '1.35rem',
+                color: 'primary.main',
+                lineHeight: 1.2,
               }}
             >
-              <Typography
-                sx={{
-                  fontWeight: 850,
-                  fontSize: '1.35rem',
-                  color: 'primary.main',
-                  lineHeight: 1.2,
-                }}
-              >
-                {totalActive}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                Njoftime aktive
-              </Typography>
-            </Box>
-
-            {memberId ? (
-              <Stack spacing={1}>
-                <MemberContactButton memberId={memberId} pill />
-                <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                  {showLeaveReview ? (
-                    <Box sx={{ flex: '1 1 0', minWidth: 0 }}>
-                      <MemberLeaveReviewButton
-                        memberId={memberId}
-                        memberName={name}
-                        pill
-                        hasReviewed={viewerHasReviewed}
-                        onSubmitted={() => {
-                          setViewerHasReviewed(true);
-                          router.refresh();
-                        }}
-                      />
-                    </Box>
-                  ) : null}
-                  <Box sx={{ flex: showLeaveReview ? '1 1 0' : '1 1 auto', minWidth: 0, width: showLeaveReview ? undefined : '100%' }}>
-                    <MemberSeeReviewsButton
-                      onClick={() => setReviewsOpen(true)}
-                      pill
-                    />
-                  </Box>
-                </Stack>
-              </Stack>
-            ) : null}
-          </Stack>
+              {totalActive}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+              Njoftime aktive
+            </Typography>
+          </Box>
 
           {memberId ? (
-            <MemberReviewsDialog
-              memberId={memberId}
-              memberName={name}
-              open={reviewsOpen}
-              onClose={() => setReviewsOpen(false)}
-              ratingAverage={member.ratingAverage}
-              reviewCount={reviewCount}
-              onReviewSubmitted={() => {
-                setViewerHasReviewed(true);
-                router.refresh();
-              }}
-            />
+            <Stack spacing={1}>
+              <MemberContactButton memberId={memberId} pill />
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                {showLeaveReview ? (
+                  <Box sx={{ flex: '1 1 0', minWidth: 0 }}>
+                    <MemberLeaveReviewButton
+                      memberId={memberId}
+                      memberName={name}
+                      pill
+                      hasReviewed={viewerHasReviewed}
+                      onSubmitted={() => {
+                        setViewerHasReviewed(true);
+                        router.refresh();
+                      }}
+                    />
+                  </Box>
+                ) : null}
+                <Box
+                  sx={{
+                    flex: showLeaveReview ? '1 1 0' : '1 1 auto',
+                    minWidth: 0,
+                    width: showLeaveReview ? undefined : '100%',
+                  }}
+                >
+                  <MemberSeeReviewsButton onClick={() => setReviewsOpen(true)} pill />
+                </Box>
+              </Stack>
+            </Stack>
           ) : null}
-          {shareOpen ? (
-            <ListingSharePage
-              open={shareOpen}
-              onClose={() => setShareOpen(false)}
-              payload={{
-                listingId: memberId || undefined,
-                title: name,
-                category:
-                  member.businessCategory?.trim() ||
-                  (isBusiness ? t.search.kindBusiness : t.search.kindIndividual),
-                imageUrl: member.avatarUrl,
-                ratingAverage: member.ratingAverage,
-                reviewCount,
-                url: memberId ? pathsPublicMemberProfile(memberId) : undefined,
-              }}
-            />
-          ) : null}
+        </Stack>
+
+        {memberId ? (
+          <MemberReviewsDialog
+            memberId={memberId}
+            memberName={name}
+            open={reviewsOpen}
+            onClose={() => setReviewsOpen(false)}
+            ratingAverage={member.ratingAverage}
+            reviewCount={reviewCount}
+            onReviewSubmitted={() => {
+              setViewerHasReviewed(true);
+              router.refresh();
+            }}
+          />
+        ) : null}
+        {shareOpen ? (
+          <ListingSharePage
+            open={shareOpen}
+            onClose={() => setShareOpen(false)}
+            payload={{
+              listingId: memberId || undefined,
+              title: name,
+              category:
+                member.businessCategory?.trim() || (isBusiness ? t.search.kindBusiness : t.search.kindIndividual),
+              imageUrl: member.avatarUrl,
+              ratingAverage: member.ratingAverage,
+              reviewCount,
+              url: memberId ? pathsPublicMemberProfile(memberId) : undefined,
+            }}
+          />
+        ) : null}
       </Box>
 
       <Container maxWidth="md">
@@ -782,11 +749,7 @@ export function MemberProfileView({
             </Box>
           ) : (
             <>
-              <ListingKeywordSearchInput
-                value={search}
-                onChange={setSearch}
-                placeholder="Kërko njoftimet…"
-              />
+              <ListingKeywordSearchInput value={search} onChange={setSearch} placeholder="Kërko njoftimet…" />
 
               {visibleFilters.length > 2 ? (
                 <Stack
@@ -802,8 +765,7 @@ export function MemberProfileView({
                   }}
                 >
                   {visibleFilters.map((f) => {
-                    const count =
-                      f.key === 'all' ? totalActive : f.totalKey ? listings.totals[f.totalKey] : 0;
+                    const count = f.key === 'all' ? totalActive : f.totalKey ? listings.totals[f.totalKey] : 0;
                     const selected = filter === f.key;
                     return (
                       <ProductTag
@@ -830,9 +792,7 @@ export function MemberProfileView({
                   }}
                 >
                   <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                    {searchQuery
-                      ? 'Nuk u gjet asnjë njoftim për këtë kërkim.'
-                      : 'Nuk ka njoftime në këtë kategori.'}
+                    {searchQuery ? 'Nuk u gjet asnjë njoftim për këtë kërkim.' : 'Nuk ka njoftime në këtë kategori.'}
                   </Typography>
                 </Box>
               ) : (
@@ -841,8 +801,8 @@ export function MemberProfileView({
                     display: 'grid',
                     gap: { xs: 1.75, sm: 2 },
                     gridTemplateColumns: {
-                      xs: '1fr',
-                      sm: 'repeat(2, minmax(0, 1fr))',
+                      xs: 'repeat(2, minmax(0, 1fr))',
+                      sm: 'repeat(3, minmax(0, 1fr))',
                     },
                   }}
                 >
@@ -854,6 +814,7 @@ export function MemberProfileView({
                         ratingAverage: member.ratingAverage ?? null,
                         reviewCount: member.reviewCount ?? 0,
                       }}
+                      compact
                     />
                   ))}
                 </Box>

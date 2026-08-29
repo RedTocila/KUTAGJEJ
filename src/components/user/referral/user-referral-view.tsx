@@ -20,7 +20,7 @@ import { Check as CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { Copy as CopyIcon } from '@phosphor-icons/react/dist/ssr/Copy';
 import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
 import { LinkSimple as LinkSimpleIcon } from '@phosphor-icons/react/dist/ssr/LinkSimple';
-import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
+import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 import { UsersThree as UsersThreeIcon } from '@phosphor-icons/react/dist/ssr/UsersThree';
 
 import { ProgramDisplay } from '@/components/dashboard/referral/referral-program-display';
@@ -251,7 +251,7 @@ export function UserReferralView() {
                     onClick={() => void handleShare()}
                     sx={{ ...productButtonSx, minWidth: 52, px: 1.5, borderRadius: 2.5 }}
                   >
-                    <ShareNetworkIcon size={18} weight="bold" />
+                    <PaperPlaneTiltIcon size={18} weight="bold" />
                   </Button>
                 ) : null}
               </Stack>

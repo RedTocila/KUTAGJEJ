@@ -43,6 +43,8 @@ export type BannerSlideCardProps = {
   subtitle?: string | null;
   /** Optional right-side metadata shown in place of the navigation arrow. */
   bottomRightLabel?: string | null;
+  /** Optional label shown in a contained badge at the image's bottom-left. */
+  bottomLeftLabel?: string | null;
   /** Maximum title lines. */
   titleMaxLines?: number;
   /** Promo artwork already includes the message — hide the HTML title. */
@@ -65,6 +67,7 @@ export function BannerSlideCard({
   title,
   subtitle,
   bottomRightLabel = null,
+  bottomLeftLabel = null,
   titleMaxLines = 2,
   hideTitleWhenImage = false,
   contentPlacement = 'overlay',
@@ -301,6 +304,41 @@ export function BannerSlideCard({
             }}
           >
             <ArrowUpRightIcon size={18} weight="bold" />
+          </Box>
+        ) : null}
+        {contentBelowImage && bottomLeftLabel ? (
+          <Box
+            sx={(theme) => ({
+              position: 'absolute',
+              left: { xs: 10, sm: 14, md: 18 },
+              bottom: { xs: 10, sm: 14, md: 18 },
+              zIndex: 2,
+              maxWidth: 'calc(100% - 68px)',
+              px: { xs: 1.25, sm: 1.5 },
+              py: { xs: 0.75, sm: 0.85 },
+              borderRadius: 1.5,
+              bgcolor: 'rgba(0, 0, 0, 0.68)',
+              border: '1px solid transparent',
+              boxShadow: 'none',
+              textShadow: '0 1px 8px rgba(0, 0, 0, 0.65)',
+              ...theme.applyStyles('dark', {
+                bgcolor: 'rgba(0, 0, 0, 0.68)',
+              }),
+            })}
+          >
+            <Typography
+              sx={{
+                color: 'primary.main',
+                fontWeight: 800,
+                fontSize: { xs: '0.95rem', sm: '1rem' },
+                lineHeight: 1.15,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {bottomLeftLabel}
+            </Typography>
           </Box>
         ) : null}
       </Box>

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Avatar, Box, IconButton, Stack, Typography } from '@mui/material';
-import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
+import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 
 import {
   SearchHitCard,
@@ -103,7 +103,7 @@ export function MemberProfileCard({
                   '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
                 }}
               >
-                <ShareNetworkIcon size={18} weight="regular" />
+                <PaperPlaneTiltIcon size={18} weight="bold" />
               </IconButton>
             </Stack>
             <Typography

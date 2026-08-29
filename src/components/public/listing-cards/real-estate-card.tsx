@@ -33,10 +33,12 @@ export function RealEstateCard({
   listing,
   sellerRating = null,
   imagePriority = false,
+  variant = 'default',
 }: {
   listing: PublicRealEstateListing;
   sellerRating?: ListingCardRatingSummary | null;
   imagePriority?: boolean;
+  variant?: 'default' | 'compact';
 }) {
   const t = useCopy();
   const { language } = useLanguage();
@@ -103,7 +105,11 @@ export function RealEstateCard({
       }}
       aria-labelledby={`listing-card-title-${listing.id}`}
     >
-      <CardShell premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
+      <CardShell
+        compact={variant === 'compact'}
+        premium={Boolean(listing.isPremium)}
+        okazion={Boolean(listing.isOkazion)}
+      >
         <CardMedia
           listingKind="real-estate"
           listingId={listing.id}
@@ -111,6 +117,8 @@ export function RealEstateCard({
           FallbackIcon={listing.propertyCategory === 'villa' ? HouseIcon : BuildingsIcon}
           alt={listing.title}
           height={{ xs: 185, md: 200 }}
+          aspectRatio={variant === 'compact' ? '1 / 1' : undefined}
+          compact={variant === 'compact'}
           topLeftBadge={transactionLabel || undefined}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
@@ -135,62 +143,119 @@ export function RealEstateCard({
             url: listingRealEstatePublicHref(listing),
           }}
         />
-        <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
-          <ListingTitleWithVerified
-            id={`listing-card-title-${listing.id}`}
-            title={listing.title}
-            maxLines={1}
-            verified={false}
-          />
-          {cardRating ? (
-            <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
-          ) : null}
-          <ListingPrice
-            price={listing.price}
-            originalPrice={listing.originalPrice}
-            currency={listing.currency}
-            isPremium={listing.isPremium}
-            isOkazion={listing.isOkazion}
-            suffix={
-              listing.transactionType === 'rent' ? (
-                <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 500 }}>
-                  {t.browse.perMonth}
-                </Typography>
-              ) : null
-            }
-          />
-
-          <CardDescription text={listing.description} />
-
-          <SpecRow specs={specs} />
-
-          {location ? (
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
-              <MapPinIcon size={14} weight="regular" />
-              <Typography
-                variant="caption"
-                noWrap
-                sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
+        {variant === 'compact' ? (
+          <Stack
+            className="listing-card-body"
+            spacing={{ xs: 0.25, sm: 0.4 }}
+            sx={{ pt: { xs: 0.65, sm: 0.8 }, px: { xs: 0.25, sm: 0.4 }, pb: { xs: 0.8, sm: 1 } }}
+          >
+            <ListingTitleWithVerified
+              title={listing.title}
+              maxLines={1}
+              verified={false}
+              typographySx={{
+                fontSize: { xs: '0.76rem', sm: '0.82rem' },
+                fontWeight: 650,
+                lineHeight: 1.25,
+              }}
+            />
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+              <ListingPrice
+                price={listing.price}
+                originalPrice={listing.originalPrice}
+                currency={listing.currency}
+                isPremium={listing.isPremium}
+                isOkazion={listing.isOkazion}
+                fontSize="0.9rem"
+                fontWeight={800}
+                suffix={
+                  listing.transactionType === 'rent' ? (
+                    <Typography
+                      component="span"
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ ml: 0.35, fontWeight: 500 }}
+                    >
+                      {t.browse.perMonth}
+                    </Typography>
+                  ) : null
+                }
+              />
+              <Stack
+                direction="row"
+                spacing={0.35}
+                sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}
               >
-                {location}
-              </Typography>
-            </Stack>
-          ) : null}
-
-          <Box sx={{ flex: 1 }} />
-
-          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="caption" color="text.disabled">
-              {listingCardRelativeDate(listing)}
-            </Typography>
-            <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-              <EyeIcon size={14} weight="regular" />
-              <Typography variant="caption" color="text.disabled">
-                {new Intl.NumberFormat('en-GB').format(viewCount)}
-              </Typography>
+                <EyeIcon size={12} weight="regular" />
+                <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.7rem' }}>
+                  {new Intl.NumberFormat('en-GB').format(viewCount)}
+                </Typography>
+              </Stack>
             </Stack>
           </Stack>
-        </Stack>
+        ) : (
+          <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
+            <ListingTitleWithVerified
+              id={`listing-card-title-${listing.id}`}
+              title={listing.title}
+              maxLines={1}
+              verified={false}
+            />
+            {cardRating ? (
+              <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
+            ) : null}
+            <ListingPrice
+              price={listing.price}
+              originalPrice={listing.originalPrice}
+              currency={listing.currency}
+              isPremium={listing.isPremium}
+              isOkazion={listing.isOkazion}
+              suffix={
+                listing.transactionType === 'rent' ? (
+                  <Typography
+                    component="span"
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ ml: 0.5, fontWeight: 500 }}
+                  >
+                    {t.browse.perMonth}
+                  </Typography>
+                ) : null
+              }
+            />
+
+            <CardDescription text={listing.description} />
+
+            <SpecRow specs={specs} />
+
+            {location ? (
+              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
+                <MapPinIcon size={14} weight="regular" />
+                <Typography
+                  variant="caption"
+                  noWrap
+                  sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
+                >
+                  {location}
+                </Typography>
+              </Stack>
+            ) : null}
+
+            <Box sx={{ flex: 1 }} />
+
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="caption" color="text.disabled">
+                {listingCardRelativeDate(listing)}
+              </Typography>
+              <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+                <EyeIcon size={14} weight="regular" />
+                <Typography variant="caption" color="text.disabled">
+                  {new Intl.NumberFormat('en-GB').format(viewCount)}
+                </Typography>
+              </Stack>
+            </Stack>
+          </Stack>
+        )}
       </CardShell>
     </ListingCardLink>
   );

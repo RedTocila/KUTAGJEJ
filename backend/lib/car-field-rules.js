@@ -24,6 +24,7 @@ const FINISH_VALUES = ['matte', 'metallic'];
 
 const CURRENCY_VALUES = ['EUR', 'LEK'];
 
+const MIN_YEAR = 1925;
 const CURRENT_YEAR = new Date().getFullYear();
 
 const { isUuid } = require('./public-listings/query-helpers');
@@ -72,8 +73,8 @@ function validateCarPayload(fields) {
 
   if (fields.year !== undefined && fields.year !== null && String(fields.year).trim() !== '') {
     const year = Number(fields.year);
-    if (!Number.isInteger(year) || year < 1970 || year > CURRENT_YEAR + 1) {
-      return { ok: false, message: `Year must be between 1970 and ${CURRENT_YEAR + 1}.` };
+    if (!Number.isInteger(year) || year < MIN_YEAR || year > CURRENT_YEAR + 1) {
+      return { ok: false, message: `Year must be between ${MIN_YEAR} and ${CURRENT_YEAR + 1}.` };
     }
     fields.year = year;
   } else {

@@ -22,7 +22,7 @@ import { PaintBucket as PaintBucketIcon } from '@phosphor-icons/react/dist/ssr/P
 import { Path as PathIcon } from '@phosphor-icons/react/dist/ssr/Path';
 import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
-import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
+import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Stairs as StairsIcon } from '@phosphor-icons/react/dist/ssr/Stairs';
@@ -756,7 +756,7 @@ function StoryDashboardCard({ payload }: { payload: ListingSharePayload }) {
           badge={payload.badge}
           topRight={
             <Stack direction="row" spacing={0.75 * S} sx={{ alignItems: 'center' }}>
-              <MediaActionChip icon={<ShareNetworkIcon size={17 * S} weight="regular" />} count={0} />
+              <MediaActionChip icon={<PaperPlaneTiltIcon size={17 * S} weight="bold" />} count={0} />
               <MediaActionChip
                 icon={<BookmarkSimpleIcon size={17 * S} weight="fill" />}
                 count={saveCount}

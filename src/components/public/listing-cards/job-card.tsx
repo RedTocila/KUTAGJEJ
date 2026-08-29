@@ -77,7 +77,7 @@ export function JobCard({
   sellerRating?: ListingCardRatingSummary | null;
   imagePriority?: boolean;
   /** `'cover'` is the square crop used on the jobs browse page. Homepage stays `'default'`. */
-  variant?: 'default' | 'cover';
+  variant?: 'default' | 'cover' | 'compact';
 }) {
   const viewCount = listing.viewCount ?? 0;
   const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
@@ -94,9 +94,7 @@ export function JobCard({
 
   const specs: Spec[] = [
     ...(listing.jobType ? [{ Icon: ClockIcon, label: jobTypeLabel, title: 'Tipi i punës' }] : []),
-    ...(listing.workLocation
-      ? [{ Icon: WorkLocationIcon, label: workLocationLabel, title: 'Vendi i punës' }]
-      : []),
+    ...(listing.workLocation ? [{ Icon: WorkLocationIcon, label: workLocationLabel, title: 'Vendi i punës' }] : []),
     ...(listing.experience ? [{ Icon: StarIcon, label: experienceLabel, title: 'Eksperienca' }] : []),
     ...(listing.education && listing.education !== 'no-requirement'
       ? [{ Icon: GraduationCapIcon, label: educationLabel, title: 'Arsimi' }]
@@ -110,7 +108,11 @@ export function JobCard({
       href={listingJobPublicHref(listing)}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
+      <CardShell
+        compact={variant === 'compact'}
+        premium={Boolean(listing.isPremium)}
+        okazion={Boolean(listing.isOkazion)}
+      >
         <CardMedia
           listingKind="job"
           listingId={listing.id}
@@ -118,7 +120,8 @@ export function JobCard({
           FallbackIcon={BriefcaseIcon}
           alt={listing.title}
           height={{ xs: 185, md: 200 }}
-          aspectRatio={variant === 'cover' ? '1 / 1' : undefined}
+          aspectRatio={variant === 'cover' || variant === 'compact' ? '1 / 1' : undefined}
+          compact={variant === 'compact'}
           topLeftBadge={jobTypeLabel || undefined}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
@@ -128,7 +131,7 @@ export function JobCard({
           okazionUntil={listing.okazionUntil}
           sellerVerified={Boolean(listing.sellerVerified)}
           bottomOverlay={
-            !listing.isOkazion ? <JobExpiryAnnouncementBar expiresAt={expiresAt} /> : undefined
+            variant !== 'compact' && !listing.isOkazion ? <JobExpiryAnnouncementBar expiresAt={expiresAt} /> : undefined
           }
           priority={imagePriority}
           sharePayload={{
@@ -165,75 +168,135 @@ export function JobCard({
             url: listingJobPublicHref(listing),
           }}
         />
-        <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
-          <ListingTitleWithVerified title={listing.title} maxLines={1} verified={false} />
-          {cardRating ? (
-            <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
-          ) : null}
-          {listing.salary != null ? (
-            <ListingPrice
-              price={listing.salary}
-              currency={listing.currency}
-              isPremium={listing.isPremium}
-              isOkazion={listing.isOkazion}
-              fontSize="1rem"
-              suffix={
-                <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 500 }}>
-                  / muaj
-                </Typography>
-              }
+        {variant === 'compact' ? (
+          <Stack
+            className="listing-card-body"
+            spacing={{ xs: 0.25, sm: 0.4 }}
+            sx={{ pt: { xs: 0.65, sm: 0.8 }, px: { xs: 0.25, sm: 0.4 }, pb: { xs: 0.8, sm: 1 } }}
+          >
+            <ListingTitleWithVerified
+              title={listing.title}
+              maxLines={1}
+              verified={false}
+              typographySx={{
+                fontSize: { xs: '0.76rem', sm: '0.82rem' },
+                fontWeight: 650,
+                lineHeight: 1.25,
+              }}
             />
-          ) : (
-            <Stack direction="row" sx={{ alignItems: 'center' }}>
-              <Typography
-                sx={{
-                  fontWeight: 800,
-                  fontSize: '1rem',
-                  color: 'primary.main',
-                  lineHeight: 1.2,
-                }}
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+              {listing.salary != null ? (
+                <ListingPrice
+                  price={listing.salary}
+                  currency={listing.currency}
+                  isPremium={listing.isPremium}
+                  isOkazion={listing.isOkazion}
+                  fontSize="0.9rem"
+                  fontWeight={800}
+                  suffix={
+                    <Typography
+                      component="span"
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ ml: 0.35, fontWeight: 500 }}
+                    >
+                      / muaj
+                    </Typography>
+                  }
+                />
+              ) : (
+                <Typography sx={{ color: 'primary.main', fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2 }}>
+                  Pagë e diskutueshme
+                </Typography>
+              )}
+              <Stack
+                direction="row"
+                spacing={0.35}
+                sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}
               >
-                Pagë e diskutueshme
-              </Typography>
-            </Stack>
-          )}
-
-          <CardDescription text={listing.description} />
-
-          <SpecRow specs={specs} />
-
-          {listing.cityName ? (
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
-              <MapPinIcon size={14} weight="regular" />
-              <Typography
-                variant="caption"
-                noWrap
-                sx={{
-                  color: 'text.secondary',
-                  fontWeight: 500,
-                  minWidth: 0,
-                  flex: 1,
-                }}
-              >
-                {listing.cityName}
-              </Typography>
-            </Stack>
-          ) : null}
-
-          <Box sx={{ flex: 1 }} />
-
-          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="caption" color="text.disabled">
-              {listingCardRelativeDate(listing)}
-            </Typography>
-            <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-              <EyeIcon size={14} weight="regular" />
-              <Typography variant="caption" color="text.disabled">
-                {new Intl.NumberFormat('en-GB').format(viewCount)}
-              </Typography>
+                <EyeIcon size={12} weight="regular" />
+                <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.7rem' }}>
+                  {new Intl.NumberFormat('en-GB').format(viewCount)}
+                </Typography>
+              </Stack>
             </Stack>
           </Stack>
-        </Stack>
+        ) : (
+          <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
+            <ListingTitleWithVerified title={listing.title} maxLines={1} verified={false} />
+            {cardRating ? (
+              <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
+            ) : null}
+            {listing.salary != null ? (
+              <ListingPrice
+                price={listing.salary}
+                currency={listing.currency}
+                isPremium={listing.isPremium}
+                isOkazion={listing.isOkazion}
+                fontSize="1rem"
+                suffix={
+                  <Typography
+                    component="span"
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ ml: 0.5, fontWeight: 500 }}
+                  >
+                    / muaj
+                  </Typography>
+                }
+              />
+            ) : (
+              <Stack direction="row" sx={{ alignItems: 'center' }}>
+                <Typography
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: '1rem',
+                    color: 'primary.main',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  Pagë e diskutueshme
+                </Typography>
+              </Stack>
+            )}
+
+            <CardDescription text={listing.description} />
+
+            <SpecRow specs={specs} />
+
+            {listing.cityName ? (
+              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
+                <MapPinIcon size={14} weight="regular" />
+                <Typography
+                  variant="caption"
+                  noWrap
+                  sx={{
+                    color: 'text.secondary',
+                    fontWeight: 500,
+                    minWidth: 0,
+                    flex: 1,
+                  }}
+                >
+                  {listing.cityName}
+                </Typography>
+              </Stack>
+            ) : null}
+
+            <Box sx={{ flex: 1 }} />
+
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="caption" color="text.disabled">
+                {listingCardRelativeDate(listing)}
+              </Typography>
+              <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
+                <EyeIcon size={14} weight="regular" />
+                <Typography variant="caption" color="text.disabled">
+                  {new Intl.NumberFormat('en-GB').format(viewCount)}
+                </Typography>
+              </Stack>
+            </Stack>
+          </Stack>
+        )}
       </CardShell>
     </ListingCardLink>
   );

@@ -7,7 +7,7 @@ import { ChatCircle as ChatCircleIcon } from '@phosphor-icons/react/dist/ssr/Cha
 import { Fire as FireIcon } from '@phosphor-icons/react/dist/ssr/Fire';
 import { ListBullets as ListBulletsIcon } from '@phosphor-icons/react/dist/ssr/ListBullets';
 import { SealCheck as SealCheckIcon } from '@phosphor-icons/react/dist/ssr/SealCheck';
-import { ShareNetwork as ShareNetworkIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
+import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import { UsersThree as UsersThreeIcon } from '@phosphor-icons/react/dist/ssr/UsersThree';
 
@@ -26,7 +26,7 @@ const FILTER_ICONS: Record<string, PhosphorIcon> = {
   all: ListBulletsIcon,
   messages: ChatCircleIcon,
   listing_saved: BookmarkSimpleIcon,
-  listing_shared: ShareNetworkIcon,
+  listing_shared: PaperPlaneTiltIcon,
   listing_hot_lead: FireIcon,
   listing_status: SealCheckIcon,
   reviews: StarIcon,

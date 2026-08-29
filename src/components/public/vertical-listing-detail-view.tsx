@@ -385,6 +385,10 @@ export function VerticalListingDetailView(props: {
                           url: canonicalUrl,
                         }
                   }
+                  heroOverlay={
+                    listing.isOkazion ? <OkazionCountdown expiresAt={listing.okazionUntil} /> : null
+                  }
+                  heroOverlayPosition="left"
                   onEditPhotos={ownerEdit?.onEditPhotos}
                 />
               </Box>
@@ -565,11 +569,6 @@ export function VerticalListingDetailView(props: {
                     <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)}</Typography>
                   </Stack>
                 </Stack>
-                {listing.isOkazion ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-                    <OkazionCountdown expiresAt={listing.okazionUntil} plain />
-                  </Box>
-                ) : null}
                 <OwnerContactPhone phone={displayPhone} ownerEdit={ownerEdit} />
               </Stack>
             </Stack>

@@ -40,29 +40,6 @@ const overlayChipSx = {
   '& .MuiChip-label': { px: 1.5, overflow: 'visible', whiteSpace: 'nowrap' },
 } as const;
 
-const plainChipSx = {
-  height: 'auto',
-  minHeight: 24,
-  fontFamily: '"DSEG7 Classic", monospace',
-  fontVariantNumeric: 'tabular-nums',
-  fontWeight: 400,
-  letterSpacing: '0.02em',
-  border: 0,
-  borderRadius: 0,
-  bgcolor: 'transparent',
-  boxShadow: 'none',
-  backdropFilter: 'none',
-  WebkitBackdropFilter: 'none',
-  color: '#fff',
-  '& .MuiChip-icon': {
-    color: '#fff',
-    ml: 0,
-    mr: 0.5,
-    fontSize: 20,
-  },
-  '& .MuiChip-label': { px: 0, overflow: 'visible', whiteSpace: 'nowrap' },
-} as const;
-
 const compactOverlayChipSx = {
   height: 24,
   borderRadius: 999,
@@ -107,12 +84,10 @@ function OkazionCountdownChip({
   label,
   live = false,
   compact = false,
-  plain = false,
 }: {
   label: string;
   live?: boolean;
   compact?: boolean;
-  plain?: boolean;
 }) {
   return (
     <Chip
@@ -123,25 +98,13 @@ function OkazionCountdownChip({
       aria-live={live ? 'polite' : undefined}
       aria-hidden={!live}
       suppressHydrationWarning
-      sx={plain ? plainChipSx : compact ? compactOverlayChipSx : overlayChipSx}
+      sx={compact ? compactOverlayChipSx : overlayChipSx}
     />
   );
 }
 
-export function OkazionCountdownPlaceholder({
-  compact = false,
-  plain = false,
-}: {
-  compact?: boolean;
-  plain?: boolean;
-}) {
-  return (
-    <OkazionCountdownChip
-      label={compact ? COMPACT_PLACEHOLDER_LABEL : PLACEHOLDER_LABEL}
-      compact={compact}
-      plain={plain}
-    />
-  );
+export function OkazionCountdownPlaceholder({ compact = false }: { compact?: boolean }) {
+  return <OkazionCountdownChip label={compact ? COMPACT_PLACEHOLDER_LABEL : PLACEHOLDER_LABEL} compact={compact} />;
 }
 
 /**
@@ -152,11 +115,9 @@ export function OkazionCountdownPlaceholder({
 export function OkazionCountdown({
   expiresAt,
   compact = false,
-  plain = false,
 }: {
   expiresAt?: string | null;
   compact?: boolean;
-  plain?: boolean;
 }) {
   const [mounted, setMounted] = React.useState(false);
   const nowMs = useSharedSecondTick();
@@ -176,12 +137,12 @@ export function OkazionCountdown({
   const until = expiresAt ?? fallbackUntilRef.current;
 
   if (!mounted || !nowMs || !until) {
-    return <OkazionCountdownPlaceholder compact={compact} plain={plain} />;
+    return <OkazionCountdownPlaceholder compact={compact} />;
   }
 
   const label = compact
     ? formatCompactCountdown(until, new Date(nowMs))
     : formatJobListingCountdown(until, new Date(nowMs));
 
-  return <OkazionCountdownChip label={label} live compact={compact} plain={plain} />;
+  return <OkazionCountdownChip label={label} live compact={compact} />;
 }

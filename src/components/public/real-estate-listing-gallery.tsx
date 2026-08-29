@@ -94,8 +94,10 @@ export function RealEstateListingGallery(props: {
   };
   /** Owner-edit mode: pencil on the gallery to change photos. */
   onEditPhotos?: () => void;
-  /** Rendered inside the hero photo, bottom-right (e.g. reviews chip). */
+  /** Rendered inside the hero photo (e.g. reviews or countdown chip). */
   heroOverlay?: React.ReactNode;
+  /** Position for the hero overlay. */
+  heroOverlayPosition?: 'left' | 'right';
 }) {
   const {
     title,
@@ -114,6 +116,7 @@ export function RealEstateListingGallery(props: {
     sharePayload,
     onEditPhotos,
     heroOverlay,
+    heroOverlayPosition = 'right',
   } = props;
   const urls = urlsRaw.filter((u) => {
     const s = String(u || '').trim();
@@ -795,7 +798,8 @@ export function RealEstateListingGallery(props: {
             data-gallery-control
             sx={{
               position: 'absolute',
-              right: 10,
+              left: heroOverlayPosition === 'left' ? 10 : undefined,
+              right: heroOverlayPosition === 'right' ? 10 : undefined,
               bottom: 8,
               zIndex: 5,
             }}

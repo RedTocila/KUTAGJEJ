@@ -465,6 +465,10 @@ export function RealEstateListingDetailView({
                     saveCount={ownerPreview ? undefined : saveCount}
                     bookmark={ownerPreview ? undefined : { saved, onToggle: () => void toggleSave() }}
                     sharePayload={ownerPreview ? undefined : sharePayload}
+                    heroOverlay={
+                      listing.isOkazion ? <OkazionCountdown expiresAt={listing.okazionUntil} /> : null
+                    }
+                    heroOverlayPosition="left"
                     onEditPhotos={ownerEdit?.onEditPhotos}
                   />
                 </Box>
@@ -644,11 +648,6 @@ export function RealEstateListingDetailView({
                       <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)}</Typography>
                     </Stack>
                   </Stack>
-                  {listing.isOkazion ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-                      <OkazionCountdown expiresAt={listing.okazionUntil} plain />
-                    </Box>
-                  ) : null}
                   <OwnerContactPhone phone={displayPhone} ownerEdit={ownerEdit} />
                 </Stack>
               </Stack>

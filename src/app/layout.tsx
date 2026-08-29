@@ -4,6 +4,7 @@ import Script from 'next/script';
 
 import { brandLogoSrc, config } from '@/config';
 import { DEFAULT_COLOR_SCHEME } from '@/lib/color-scheme';
+import { SplashScreen } from '@/components/core/splash-screen';
 
 import { AppProviders } from './app-providers';
 
@@ -57,6 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="sq-AL" className={`${DEFAULT_COLOR_SCHEME} ${brandWordmarkFont.variable}`} suppressHydrationWarning>
       <body suppressHydrationWarning>
         <Script src="/theme-color-boot.js" strategy="beforeInteractive" />
+        <SplashScreen />
         <AppProviders initialColorScheme={DEFAULT_COLOR_SCHEME}>{children}</AppProviders>
       </body>
     </html>

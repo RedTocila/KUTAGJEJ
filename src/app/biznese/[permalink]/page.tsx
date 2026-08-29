@@ -93,7 +93,7 @@ export default async function BusinessListingPage({ params }: PageProps): Promis
   return (
     <>
       <script type="application/ld+json" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: jsonLdHtml }} />
-      <PublicShell hideHeaderBelowMd>
+      <PublicShell hideHeaderBelowMd hideMobileNav>
         <PublicListingContextLinks listing={listing} title="Biznese" />
         <BusinessListingDetailView
           listing={listing}

@@ -17,7 +17,6 @@ import { setPendingBusinessReservation, submitBusinessReservationToMessages } fr
 import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
-import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { useListingViewCount } from '@/hooks/use-listing-view-count';
@@ -269,7 +268,7 @@ export function BusinessListingDetailView({
           display: ownerPreview ? 'block' : { xs: 'block', md: 'none' },
           bgcolor: 'background.default',
           minHeight: ownerPreview ? 'auto' : '100vh',
-          pb: ownerPreview ? 3 : `calc(80px + ${MOBILE_BOTTOM_NAV_OFFSET})`,
+          pb: ownerPreview ? 3 : 'calc(80px + env(safe-area-inset-bottom, 0px))',
         }}
       >
         <Box sx={{ maxWidth: { md: CONTENT_MAX + 32 }, mx: 'auto', width: '100%' }}>

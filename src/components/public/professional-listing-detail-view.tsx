@@ -15,7 +15,6 @@ import { paths } from '@/paths';
 import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-layout';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
-import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import {
   professionalAvatarUrl,
   professionalCoverImageUrls,
@@ -115,7 +114,7 @@ export function ProfessionalListingDetailView({
 
   const stickyFooterHeight = '80px';
   const scrollPadBottom = {
-    xs: `calc(${stickyFooterHeight} + ${MOBILE_BOTTOM_NAV_OFFSET})`,
+    xs: `calc(${stickyFooterHeight} + env(safe-area-inset-bottom, 0px))`,
     md: 0,
   };
 

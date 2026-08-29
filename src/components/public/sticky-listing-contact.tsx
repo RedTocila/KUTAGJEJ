@@ -6,7 +6,7 @@ import { Box, type SxProps, type Theme } from '@mui/material';
 
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { type ConversationListingKind } from '@/lib/conversations-client';
-import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
+import { MOBILE_BOTTOM_NAV_FLOAT_INSET_PX, MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 
 /** Shared “Kontakto” CTA — full width across listing detail surfaces. */
 export const listingContactCtaSx: SxProps<Theme> = {
@@ -58,13 +58,16 @@ export interface StickyListingCtaSlotProps {
   showOnDesktop?: boolean;
   /** Min height for the in-flow slot while unpinned. Default: pill button height. */
   slotMinHeight?: number | string;
+  /** Keep the CTA floating at the bottom instead of waiting for its slot to scroll away. */
+  alwaysFloating?: boolean;
 }
 
-/** Shared sticky slot — pins children above the mobile nav after scroll. */
+/** Shared sticky slot — pins children above the mobile nav after scroll, or always floats when requested. */
 export function StickyListingCtaSlot({
   children,
   showOnDesktop = false,
   slotMinHeight = LISTING_CTA_SLOT_HEIGHT_PX,
+  alwaysFloating = false,
 }: StickyListingCtaSlotProps) {
   const slotRef = React.useRef<HTMLDivElement>(null);
   const [stuck, setStuck] = React.useState(false);
@@ -92,10 +95,12 @@ export function StickyListingCtaSlot({
     return () => observer.disconnect();
   }, []);
 
+  const shouldPin = alwaysFloating || stuck;
+
   React.useEffect(() => {
     const reduce = prefersReducedMotion();
 
-    if (stuck) {
+    if (shouldPin) {
       setPinned(true);
       if (reduce) {
         setEntered(true);
@@ -118,10 +123,10 @@ export function StickyListingCtaSlot({
     }
     const timeout = window.setTimeout(() => setPinned(false), CTA_PIN_MS);
     return () => window.clearTimeout(timeout);
-  }, [stuck]);
+  }, [shouldPin]);
 
   const displaySx = showOnDesktop ? 'flex' : { xs: 'flex', md: 'none' };
-  const inPortal = pinned;
+  const inPortal = alwaysFloating || pinned;
 
   const fixedBar =
     inPortal && host
@@ -133,7 +138,9 @@ export function StickyListingCtaSlot({
               left: 0,
               right: 0,
               zIndex: theme.zIndex.appBar + 10,
-              bottom: MOBILE_BOTTOM_NAV_OFFSET,
+              bottom: alwaysFloating
+                ? `calc(env(safe-area-inset-bottom, 0px) + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px)`
+                : MOBILE_BOTTOM_NAV_OFFSET,
               px: 2,
               py: 1.25,
               justifyContent: 'stretch',
@@ -173,19 +180,21 @@ export function StickyListingCtaSlot({
 
   return (
     <>
-      <Box
-        ref={slotRef}
-        sx={{
-          display: displaySx,
-          flexDirection: 'column',
-          width: '100%',
-          minHeight: slotMinHeight,
-          alignItems: 'stretch',
-          '& > *': { width: '100%', maxWidth: '100%' },
-        }}
-      >
-        {inPortal ? null : children}
-      </Box>
+      {alwaysFloating ? null : (
+        <Box
+          ref={slotRef}
+          sx={{
+            display: displaySx,
+            flexDirection: 'column',
+            width: '100%',
+            minHeight: slotMinHeight,
+            alignItems: 'stretch',
+            '& > *': { width: '100%', maxWidth: '100%' },
+          }}
+        >
+          {inPortal ? null : children}
+        </Box>
+      )}
       {fixedBar}
     </>
   );
@@ -207,9 +216,7 @@ export interface StickyListingContactProps {
 }
 
 /**
- * In-flow “Kontakto” CTA that pins to the bottom of the screen (above the mobile
- * nav) once its natural position scrolls past the top of the viewport.
- * The pinned bar slides up from the nav and slides back down when you return.
+ * “Kontakto” CTA that floats at the bottom of the screen on mobile.
  */
 export function StickyListingContact({
   listingKind,
@@ -236,5 +243,9 @@ export function StickyListingContact({
     />
   );
 
-  return <StickyListingCtaSlot showOnDesktop={showOnDesktop}>{renderButton()}</StickyListingCtaSlot>;
+  return (
+    <StickyListingCtaSlot showOnDesktop={showOnDesktop} alwaysFloating>
+      {renderButton()}
+    </StickyListingCtaSlot>
+  );
 }

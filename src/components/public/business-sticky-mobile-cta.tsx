@@ -65,7 +65,7 @@ export function BusinessStickyMobileCta({
   );
 
   return (
-    <StickyListingCtaSlot slotMinHeight="auto">
+    <StickyListingCtaSlot slotMinHeight="auto" alwaysFloating>
       {reserveAccordion}
     </StickyListingCtaSlot>
   );

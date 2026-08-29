@@ -31,7 +31,6 @@ import { LISTING_DETAIL_MOBILE_HEADING_FONT_SIZE } from '@/lib/listing-detail-la
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import { nextShareCount } from '@/lib/listing-metrics';
 import type { ListingSharePayload } from '@/lib/listing-share';
-import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { useListingViewCount } from '@/hooks/use-listing-view-count';
@@ -194,7 +193,7 @@ export function JobListingDetailView({
 
   const stickyFooterHeight = '80px';
   const scrollPadBottom = {
-    xs: `calc(${stickyFooterHeight} + ${MOBILE_BOTTOM_NAV_OFFSET})`,
+    xs: `calc(${stickyFooterHeight} + env(safe-area-inset-bottom, 0px))`,
     md: `calc(${stickyFooterHeight} + env(safe-area-inset-bottom, 0px))`,
   };
 

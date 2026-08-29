@@ -407,7 +407,7 @@ export function CardMedia({
               '&:active': { transform: 'scale(0.92)' },
             }}
           >
-            <ShareNetworkIcon size={16} weight="regular" />
+            <ShareNetworkIcon size={17} weight="bold" />
           </IconButton>
           <IconButton
             aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
@@ -435,7 +435,7 @@ export function CardMedia({
               '&:active': { transform: 'scale(0.92)' },
             }}
           >
-            <BookmarkSimpleIcon size={16} weight={saved ? 'fill' : 'regular'} />
+            <BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'bold'} />
           </IconButton>
         </Stack>
       ) : (

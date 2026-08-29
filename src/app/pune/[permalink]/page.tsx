@@ -92,7 +92,7 @@ export default async function JobListingPage({ params }: PageProps): Promise<Rea
   return (
     <>
       <script type="application/ld+json" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: jsonLdHtml }} />
-      <PublicShell hideHeaderBelowMd>
+      <PublicShell hideHeaderBelowMd hideMobileNav>
         <PublicListingContextLinks listing={listing} title="Punë" />
         <JobListingDetailView
           listing={listing}

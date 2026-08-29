@@ -193,7 +193,9 @@ export function LazyHomeSection({
         {!loaded && listings.length === 0 ? (
           <CarouselSkeleton />
         ) : (
-          <ListingsCarousel>{listings.map((listing) => renderListingCard(verticalId, listing))}</ListingsCarousel>
+          <ListingsCarousel equalMediaHeight>
+            {listings.map((listing) => renderListingCard(verticalId, listing))}
+          </ListingsCarousel>
         )}
       </ListingsSection>
     </Box>

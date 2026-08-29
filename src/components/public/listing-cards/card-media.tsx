@@ -191,12 +191,13 @@ export function CardMedia({
 
   return (
     <Box
+      className="listing-card-media"
       sx={{
         position: 'relative',
         ...(aspectRatio ? { aspectRatio, width: '100%' } : { height: height ?? { xs: 170, md: 186 } }),
         flexShrink: 0,
-        borderBottom: compact ? 'none' : '1px solid',
-        borderColor: compact ? 'transparent' : 'divider',
+        borderBottom: 'none',
+        borderColor: 'transparent',
         borderRadius: compact ? 1.25 : 0,
         bgcolor: primaryMainAlpha(0.06),
         overflow: 'hidden',
@@ -344,8 +345,8 @@ export function CardMedia({
               inset: compact ? -4 : -8,
               borderRadius: '50%',
               background: compact
-                ? 'radial-gradient(circle, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.06) 42%, rgba(0,0,0,0) 72%)'
-                : 'radial-gradient(circle, rgba(0,0,0,0.46) 0%, rgba(0,0,0,0.2) 42%, rgba(0,0,0,0) 72%)',
+                ? 'radial-gradient(circle, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.03) 42%, rgba(0,0,0,0) 72%)'
+                : 'radial-gradient(circle, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.1) 42%, rgba(0,0,0,0) 72%)',
               pointerEvents: 'none',
             },
             '& > *': { position: 'relative', zIndex: 1 },
@@ -385,7 +386,7 @@ export function CardMedia({
                 inset: -5,
                 borderRadius: '50%',
                 background:
-                  'radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.14) 38%, rgba(0,0,0,0) 70%)',
+                  'radial-gradient(circle, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.05) 38%, rgba(0,0,0,0) 70%)',
                 pointerEvents: 'none',
               },
               '& > svg': { position: 'relative', zIndex: 1 },
@@ -413,7 +414,7 @@ export function CardMedia({
                 inset: -5,
                 borderRadius: '50%',
                 background:
-                  'radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.14) 38%, rgba(0,0,0,0) 70%)',
+                  'radial-gradient(circle, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.05) 38%, rgba(0,0,0,0) 70%)',
                 pointerEvents: 'none',
               },
               '& > svg': { position: 'relative', zIndex: 1 },

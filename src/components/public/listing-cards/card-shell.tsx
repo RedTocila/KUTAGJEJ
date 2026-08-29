@@ -27,17 +27,25 @@ export function CardShell({
   return (
     <Box
       className="kutagjej-card-enter"
-      sx={{
+      sx={(theme) => ({
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
         borderRadius: compact ? 0 : 2,
         overflow: compact ? 'visible' : 'hidden',
-        bgcolor: compact ? 'transparent' : 'background.paper',
-        border: compact ? 'none' : '2px solid',
+        backgroundColor: compact ? 'transparent' : 'background.paper',
+        ...theme.applyStyles('dark', {
+          backgroundColor: compact ? 'transparent' : 'var(--mui-palette-background-paper)',
+        }),
+        border: compact ? 'none' : '1px solid',
         borderColor: compact ? 'transparent' : 'divider',
-        boxShadow: 'none',
+        boxShadow: compact
+          ? 'none'
+          : (theme) =>
+              theme.palette.mode === 'dark'
+                ? '0 14px 32px rgba(0, 0, 0, 0.42)'
+                : 'none',
         transition: `border-color ${MOTION.base} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}, box-shadow ${MOTION.base} ${MOTION.ease}`,
         '@media (hover: hover) and (pointer: fine)': {
           '&:hover': {
@@ -47,8 +55,8 @@ export function CardShell({
               ? 'none'
               : (theme) =>
                   theme.palette.mode === 'dark'
-                    ? '0 12px 28px rgba(0, 0, 0, 0.35)'
-                    : '0 12px 28px rgba(15, 23, 10, 0.1)',
+                    ? '0 18px 38px rgba(0, 0, 0, 0.5)'
+                    : 'none',
             '& .listing-card-media-image': {
               transform: compact ? 'none' : 'scale(1.045)',
             },
@@ -67,7 +75,7 @@ export function CardShell({
           '&:hover .listing-card-media-image': { transform: 'none' },
         },
         '& > .listing-card-body': { flex: 1, minHeight: 0 },
-      }}
+      })}
     >
       {mediaSlot}
       {children}

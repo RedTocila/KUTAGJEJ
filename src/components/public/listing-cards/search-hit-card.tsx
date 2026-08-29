@@ -74,20 +74,26 @@ export function SearchHitCard({
     <Paper
       component={Link}
       href={href}
-      variant="outlined"
       onClick={scrollTop}
-      sx={{
+      sx={(theme) => ({
         height: '100%',
         borderRadius: 2.5,
-        border: '2px solid',
+        border: '1px solid',
         borderColor: 'divider',
-        bgcolor: 'background.paper',
+        backgroundColor: 'background.paper',
+        ...theme.applyStyles('dark', {
+          backgroundColor: 'var(--mui-palette-background-paper)',
+        }),
         p: { xs: 2, sm: 2.5 },
         display: 'flex',
         flexDirection: 'column',
         textDecoration: 'none',
         color: 'inherit',
         cursor: 'pointer',
+        boxShadow: (theme) =>
+          theme.palette.mode === 'dark'
+            ? '0 14px 32px rgba(0, 0, 0, 0.42)'
+            : 'none',
         transition: `border-color ${MOTION.base} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}, box-shadow ${MOTION.base} ${MOTION.ease}`,
         '@media (hover: hover) and (pointer: fine)': {
           '&:hover': {
@@ -95,8 +101,8 @@ export function SearchHitCard({
             transform: 'translateY(-3px)',
             boxShadow: (theme) =>
               theme.palette.mode === 'dark'
-                ? '0 12px 28px rgba(0, 0, 0, 0.35)'
-                : '0 12px 28px rgba(15, 23, 10, 0.1)',
+                ? '0 18px 38px rgba(0, 0, 0, 0.5)'
+                : 'none',
           },
         },
         '&:active': {
@@ -109,7 +115,7 @@ export function SearchHitCard({
           '&:hover': { transform: 'none', boxShadow: 'none' },
           '&:active': { transform: 'none' },
         },
-      }}
+      })}
     >
       {children}
     </Paper>

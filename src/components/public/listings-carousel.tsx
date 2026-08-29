@@ -22,6 +22,8 @@ const DEFAULT_SLOT_WIDTH = { xs: 260, sm: 280, md: 300 } as const;
 export interface ListingsCarouselProps {
   /** Pre-rendered listing cards (one per slide). */
   children: React.ReactNode;
+  /** Keep listing media aligned across mixed categories on homepage rows. */
+  equalMediaHeight?: boolean;
   /**
    * Slot width in pixels per breakpoint. Tuned so 4 cards fit on a 1280px
    * desktop and ~1.2 cards peek on a 360px phone (encouraging swipe).
@@ -30,7 +32,7 @@ export interface ListingsCarouselProps {
   slotWidth?: Partial<Record<keyof typeof DEFAULT_SLOT_WIDTH, number>>;
 }
 
-export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps) {
+export function ListingsCarousel({ children, slotWidth, equalMediaHeight = false }: ListingsCarouselProps) {
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const [canScrollPrev, setCanScrollPrev] = React.useState(false);
   const [canScrollNext, setCanScrollNext] = React.useState(false);
@@ -127,6 +129,15 @@ export function ListingsCarousel({ children, slotWidth }: ListingsCarouselProps)
           // Soft fade on the edge that has more content to discover.
           maskImage,
           transition: `mask-image ${MOTION.fast} linear`,
+          ...(equalMediaHeight
+            ? {
+                '& .listing-card-media': {
+                  height: { xs: 185, md: 200 },
+                  minHeight: 0,
+                  aspectRatio: 'auto',
+                },
+              }
+            : null),
         }}
       >
         {childArray.map((child, index) => (

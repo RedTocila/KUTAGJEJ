@@ -93,9 +93,11 @@ export function JobCard({
   const WorkLocationIcon = workLocationIcon(listing.workLocation);
 
   const specs: Spec[] = [
-    { Icon: ClockIcon, label: jobTypeLabel, title: 'Tipi i punës' },
-    { Icon: WorkLocationIcon, label: workLocationLabel, title: 'Vendi i punës' },
-    { Icon: StarIcon, label: experienceLabel, title: 'Eksperienca' },
+    ...(listing.jobType ? [{ Icon: ClockIcon, label: jobTypeLabel, title: 'Tipi i punës' }] : []),
+    ...(listing.workLocation
+      ? [{ Icon: WorkLocationIcon, label: workLocationLabel, title: 'Vendi i punës' }]
+      : []),
+    ...(listing.experience ? [{ Icon: StarIcon, label: experienceLabel, title: 'Eksperienca' }] : []),
     ...(listing.education && listing.education !== 'no-requirement'
       ? [{ Icon: GraduationCapIcon, label: educationLabel, title: 'Arsimi' }]
       : []),
@@ -117,7 +119,7 @@ export function JobCard({
           alt={listing.title}
           height={{ xs: 185, md: 200 }}
           aspectRatio={variant === 'cover' ? '1 / 1' : undefined}
-          topLeftBadge={jobTypeLabel}
+          topLeftBadge={jobTypeLabel || undefined}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
@@ -137,17 +139,21 @@ export function JobCard({
             imageUrl: listing.imageUrl,
             location: listing.cityName || undefined,
             specs: [
-              { icon: 'clock', label: jobTypeLabel },
-              {
-                icon:
-                  listing.workLocation === 'remote'
-                    ? 'house'
-                    : listing.workLocation === 'hybrid'
-                      ? 'path'
-                      : 'buildings',
-                label: workLocationLabel,
-              },
-              { icon: 'star', label: experienceLabel },
+              ...(listing.jobType ? [{ icon: 'clock' as const, label: jobTypeLabel }] : []),
+              ...(listing.workLocation
+                ? [
+                    {
+                      icon:
+                        listing.workLocation === 'remote'
+                          ? ('house' as const)
+                          : listing.workLocation === 'hybrid'
+                            ? ('path' as const)
+                            : ('buildings' as const),
+                      label: workLocationLabel,
+                    },
+                  ]
+                : []),
+              ...(listing.experience ? [{ icon: 'star' as const, label: experienceLabel }] : []),
               ...(listing.education && listing.education !== 'no-requirement'
                 ? [{ icon: 'graduation' as const, label: educationLabel }]
                 : []),

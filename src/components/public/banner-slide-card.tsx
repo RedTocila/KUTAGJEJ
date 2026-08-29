@@ -78,15 +78,16 @@ export function BannerSlideCard({
   const content = (
     <Box
       sx={(theme) => ({
-        borderRadius: contentBelowImage ? 0 : 4,
+        borderRadius: contentBelowImage ? 2.5 : 4,
         overflow: contentBelowImage ? 'visible' : 'hidden',
-        border: contentBelowImage ? 'none' : '1px solid',
-        borderColor: contentBelowImage ? undefined : 'divider',
-        bgcolor: contentBelowImage ? undefined : 'background.paper',
+        border: 'none',
+        borderColor: 'transparent',
+        backgroundColor: contentBelowImage ? 'transparent' : '#e5efdc',
         // Flat in light mode; keep soft lift in dark.
         boxShadow: 'none',
         ...theme.applyStyles('dark', {
-          boxShadow: '0 10px 28px rgba(0,0,0,0.18)',
+          backgroundColor: contentBelowImage ? 'transparent' : 'var(--mui-palette-background-paper)',
+          boxShadow: contentBelowImage ? 'none' : '0 10px 28px rgba(0,0,0,0.18)',
         }),
       })}
     >
@@ -96,13 +97,15 @@ export function BannerSlideCard({
           width: '100%',
           ...(contentBelowImage
             ? {
-                minHeight: 0,
-                aspectRatio: { xs: '16 / 9', sm: '2.4 / 1', md: '3 / 1' },
-                maxHeight: 'none',
-                height: 'auto',
+                // Keep the original full-height category image proportions;
+                // the title and price remain on the separate surface below.
+                minHeight: { xs: 240, sm: 260 },
+                aspectRatio: { md: '4 / 3' },
+                maxHeight: { md: 'min(58vh, 560px)' },
+                height: { md: 'auto' },
                 borderRadius: 2.5,
-                border: '1px solid',
-                borderColor: 'divider',
+                border: 'none',
+                borderColor: 'transparent',
                 boxSizing: 'border-box',
               }
             : {
@@ -112,7 +115,7 @@ export function BannerSlideCard({
                 height: { md: 'auto' },
               }),
           overflow: 'hidden',
-          backgroundColor: 'background.paper',
+          backgroundColor: contentBelowImage ? 'transparent' : 'background.paper',
           backgroundImage: theme.palette.mode === 'dark' && !imageSrc ? fallbackBg : 'none',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
@@ -277,6 +280,28 @@ export function BannerSlideCard({
               </Box>
             ) : null}
           </Stack>
+        ) : null}
+        {contentBelowImage && href ? (
+          <Box
+            aria-hidden
+            sx={{
+              position: 'absolute',
+              right: { xs: 10, sm: 14, md: 18 },
+              bottom: { xs: 10, sm: 14, md: 18 },
+              zIndex: 2,
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: 'rgba(255,255,255,0.18)',
+              border: '1px solid rgba(255,255,255,0.28)',
+              backdropFilter: 'blur(8px)',
+              color: '#fff',
+            }}
+          >
+            <ArrowUpRightIcon size={18} weight="bold" />
+          </Box>
         ) : null}
       </Box>
       {contentBelowImage ? (

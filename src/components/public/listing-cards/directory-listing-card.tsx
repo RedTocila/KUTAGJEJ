@@ -122,10 +122,6 @@ function BusinessVenueCardBody({
             }
           />
 
-          {cardRating ? (
-            <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
-          ) : null}
-
           {listing.servicesHighlight ? (
             <Typography
               variant="body2"
@@ -136,23 +132,34 @@ function BusinessVenueCardBody({
             </Typography>
           ) : null}
 
-          {openingHoursLabel ? (
+          {openingHoursLabel || cardRating ? (
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0 }}>
-              <ClockIcon size={14} weight="regular" color="var(--mui-palette-text-disabled)" />
-              <Typography
-                variant="caption"
-                noWrap
-                sx={{
-                  color: 'text.disabled',
-                  fontWeight: 500,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  minWidth: 0,
-                  flex: 1,
-                }}
-              >
-                {openingHoursLabel}
-              </Typography>
+              {openingHoursLabel ? (
+                <>
+                  <ClockIcon size={14} weight="regular" color="var(--mui-palette-text-disabled)" />
+                  <Typography
+                    variant="caption"
+                    noWrap
+                    sx={{
+                      color: 'text.disabled',
+                      fontWeight: 500,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      minWidth: 0,
+                      flex: 1,
+                    }}
+                  >
+                    {openingHoursLabel}
+                  </Typography>
+                </>
+              ) : (
+                <Box sx={{ flex: 1 }} />
+              )}
+              {cardRating ? (
+                <Box sx={{ flexShrink: 0, ml: 'auto' }}>
+                  <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
+                </Box>
+              ) : null}
             </Stack>
           ) : null}
 

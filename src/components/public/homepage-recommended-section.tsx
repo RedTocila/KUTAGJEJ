@@ -86,7 +86,7 @@ export function HomepageRecommendedSection({
       {loading && items.length === 0 ? (
         <CarouselSkeleton />
       ) : (
-        <ListingsCarousel>
+        <ListingsCarousel equalMediaHeight>
           {items.map((item, index) => (
             <HomepageMixedListingCard
               key={mixedListingKey(item)}

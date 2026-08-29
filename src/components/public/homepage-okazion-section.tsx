@@ -110,7 +110,7 @@ export function HomepageOkazionSection({
       {loading && listings.length === 0 ? (
         <CarouselSkeleton />
       ) : (
-        <ListingsCarousel>
+        <ListingsCarousel equalMediaHeight>
           {listings.map((listing) => (
             <OkazionCard key={`${listing.kind}:${listing.id}`} listing={listing} />
           ))}

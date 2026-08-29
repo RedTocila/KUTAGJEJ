@@ -11,7 +11,6 @@ import { PublicShell } from '@/components/public/public-shell';
 import { similarListingsSlot } from '@/components/public/similar-listings-section';
 import { VerticalListingDetailView } from '@/components/public/vertical-listing-detail-view';
 import { renderSeoLandingPage } from '@/components/public/seo-landing-page';
-import { PublicListingContextLinks } from '@/components/public/public-listing-context-links';
 import { loadSeoLandingRoute, seoLandingMetadata } from '@/lib/public-seo';
 import { publicListingJsonLd } from '@/lib/public-listing-jsonld';
 
@@ -94,7 +93,6 @@ export default async function MarketplaceListingPage({ params }: PageProps): Pro
     <>
       <script type="application/ld+json" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: jsonLdHtml }} />
       <PublicShell hideHeaderBelowMd hideMobileNav>
-        <PublicListingContextLinks listing={listing} title="Tregu" />
         <VerticalListingDetailView
           listing={listing}
           canonicalUrl={canonicalUrl}

@@ -3,15 +3,13 @@
 import * as React from 'react';
 import { Box, Stack, Typography, type SxProps, type Theme } from '@mui/material';
 
-import { formatPrice, listingPriceAccentColor } from './format-helpers';
+import { formatPrice } from './format-helpers';
 
 /** Current price with optional strikethrough “was” compare price. */
 export function ListingPrice({
   price,
   originalPrice = null,
   currency,
-  isPremium = false,
-  isOkazion = false,
   trailing,
   suffix,
   fontSize = '1.1rem',
@@ -46,7 +44,7 @@ export function ListingPrice({
         sx={{
           fontWeight,
           fontSize,
-          color: listingPriceAccentColor({ isPremium, isOkazion }),
+          color: 'var(--mui-palette-primary-main)',
           lineHeight: 1.2,
         }}
       >

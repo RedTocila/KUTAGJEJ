@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Box, Stack, Typography } from '@mui/material';
 
@@ -251,7 +250,7 @@ export function HeroCategoryCircles({
         return (
           <Stack
             key={v.id}
-            component={RouterLink}
+            component="a"
             href={v.href}
             spacing={{ xs: 0.4, md: 0 }}
             onClick={(event) => {

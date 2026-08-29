@@ -115,6 +115,7 @@ export function JobCard({
           imageUrl={listing.imageUrl}
           FallbackIcon={BriefcaseIcon}
           alt={listing.title}
+          height={{ xs: 185, md: 200 }}
           aspectRatio={variant === 'cover' ? '1 / 1' : undefined}
           topLeftBadge={jobTypeLabel}
           shareCount={listing.shareCount}

@@ -110,6 +110,7 @@ export function RealEstateCard({
           imageUrl={listing.imageUrl}
           FallbackIcon={listing.propertyCategory === 'villa' ? HouseIcon : BuildingsIcon}
           alt={listing.title}
+          height={{ xs: 185, md: 200 }}
           topLeftBadge={transactionLabel || undefined}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}

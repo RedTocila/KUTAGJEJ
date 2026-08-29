@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, CircularProgress, Typography, type ButtonProps } from '@mui/material';
-import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
+import { ChatCircle as ChatCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatCircle';
 
 import { GuestListingContactDialog } from '@/components/public/guest-listing-contact-dialog';
 import { useUser } from '@/hooks/use-user';
@@ -105,7 +105,7 @@ export function ListingMessageButton({
           loading ? (
             <CircularProgress size={18} color="inherit" />
           ) : (
-            startIcon ?? (children ? undefined : <ChatsCircleIcon weight="regular" size={20} />)
+            startIcon ?? (children ? undefined : <ChatCircleIcon weight="regular" size={20} />)
           )
         }
         data-listing-contact=""

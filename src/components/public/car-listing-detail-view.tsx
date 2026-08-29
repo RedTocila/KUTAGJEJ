@@ -32,7 +32,6 @@ import { ListingDetailTitleBadges } from '@/components/public/listing-detail-tit
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { ListingSellerProfileCard } from '@/components/public/listing-seller-profile-card';
-import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { OwnerContactPhone } from '@/components/public/owner-contact-phone';
@@ -206,7 +205,6 @@ function CarPriceContactAside(props: {
           fontSize="1.9rem"
           fontWeight={950}
         />
-        {listing.isOkazion ? <OkazionCountdown expiresAt={listing.okazionUntil} /> : null}
         <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
           {[listing.make, listing.model, listing.variant].filter(Boolean).join(' ')}
         </Typography>
@@ -549,7 +547,6 @@ export function CarListingDetailView({
                       fontSize="1.85rem"
                       fontWeight={900}
                     />
-                    {listing.isOkazion ? <OkazionCountdown expiresAt={listing.okazionUntil} /> : null}
                   </OwnerEditableSpot>
                 </Box>
 
@@ -621,22 +618,24 @@ export function CarListingDetailView({
                       <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)}</Typography>
                     </Stack>
                   </Stack>
+                  {listing.isOkazion ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                      <OkazionCountdown expiresAt={listing.okazionUntil} plain />
+                    </Box>
+                  ) : null}
                   <OwnerContactPhone phone={displayPhone} ownerEdit={ownerEdit} />
                 </Stack>
               </Stack>
 
-              <Stack spacing={1} sx={{ width: '100%' }}>
-                {ownerPreview ? null : (
-                  <StickyListingContact
-                    listingKind="cars"
-                    listingId={listing.id}
-                    contactPhone={displayPhone}
-                    listingTitle={listing.title}
-                    listingUrl={canonicalUrl}
-                  />
-                )}
-                <ListingVerifiedNotice verified={Boolean(listing.seller?.verified)} />
-              </Stack>
+              {ownerPreview ? null : (
+                <StickyListingContact
+                  listingKind="cars"
+                  listingId={listing.id}
+                  contactPhone={displayPhone}
+                  listingTitle={listing.title}
+                  listingUrl={canonicalUrl}
+                />
+              )}
 
               <Stack spacing={1.25}>
                 <OwnerEditableSpot

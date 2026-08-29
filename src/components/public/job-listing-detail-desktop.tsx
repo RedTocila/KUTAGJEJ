@@ -36,7 +36,6 @@ import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
-import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { HistoryBackButton, ProductBackButton } from '@/components/public/product-browse-chrome';
@@ -355,12 +354,6 @@ export function JobListingDetailDesktop({
                     </Typography>
                   </Stack>
                 </Stack>
-                <ListingVerifiedNotice
-                  verified={Boolean(listing.seller?.verified)}
-                  label="Kjo punë është e verifikuar dhe e sigurt"
-                  color="rgba(255,255,255,0.55)"
-                  align="flex-start"
-                />
               </Stack>
             </Box>
 

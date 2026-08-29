@@ -54,7 +54,7 @@ export function HomeCategoriesStrip() {
             return (
             <Grid key={v.id} size={{ xs: 12, sm: 6, md: 4, lg: 'grow' }}>
               <Stack
-                component={RouterLink}
+                component="a"
                 href={v.href}
                 spacing={1.75}
                 direction="row"

@@ -45,6 +45,7 @@ const TAP_MAX_PX = 12;
 /** Full-height side hit zones for prev/next; middle stays preview. */
 const SIDE_NAV_WIDTH = '8%';
 const AXIS_LOCK_PX = 10;
+const HERO_NAV_HIDE_DELAY_MS = 4000;
 
 function usePrefersReducedMotion(): boolean {
   const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(false);
@@ -143,6 +144,7 @@ export function RealEstateListingGallery(props: {
   const [active, setActive] = React.useState(0);
   const [isDragging, setIsDragging] = React.useState(false);
   const [viewportWidth, setViewportWidth] = React.useState(0);
+  const [heroNavVisible, setHeroNavVisible] = React.useState(true);
 
   const viewportRef = React.useRef<HTMLDivElement>(null);
   const trackRef = React.useRef<HTMLDivElement>(null);
@@ -184,6 +186,11 @@ export function RealEstateListingGallery(props: {
     dragAxisRef.current = null;
     applyTrackTransform(0, 0, false);
   }, [urls.join('|'), applyTrackTransform]);
+
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => setHeroNavVisible(false), HERO_NAV_HIDE_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   React.useLayoutEffect(() => {
     const node = viewportRef.current;
@@ -721,7 +728,13 @@ export function RealEstateListingGallery(props: {
                   stopGalleryControlEvent(event);
                   goToPrevious();
                 }}
-                sx={{ ...heroNavZoneSx, left: 0 }}
+                sx={{
+                  ...heroNavZoneSx,
+                  left: 0,
+                  opacity: heroNavVisible ? 1 : 0,
+                  pointerEvents: heroNavVisible ? 'auto' : 'none',
+                  transition: 'opacity 220ms ease',
+                }}
               >
                 <Box component="span" sx={heroNavIconSx} aria-hidden>
                   <CaretLeftIcon size={22} weight="bold" />
@@ -737,7 +750,13 @@ export function RealEstateListingGallery(props: {
                   stopGalleryControlEvent(event);
                   goToNext();
                 }}
-                sx={{ ...heroNavZoneSx, right: 0 }}
+                sx={{
+                  ...heroNavZoneSx,
+                  right: 0,
+                  opacity: heroNavVisible ? 1 : 0,
+                  pointerEvents: heroNavVisible ? 'auto' : 'none',
+                  transition: 'opacity 220ms ease',
+                }}
               >
                 <Box component="span" sx={heroNavIconSx} aria-hidden>
                   <CaretRightIcon size={22} weight="bold" />

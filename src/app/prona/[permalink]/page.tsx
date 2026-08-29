@@ -9,7 +9,6 @@ import { buildRealEstateListingMetadata, realEstateListingJsonLd } from '@/lib/r
 import { mongoIdFromPronaDynamicSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { PublicShell } from '@/components/public/public-shell';
 import { RealEstateListingDetailView } from '@/components/public/real-estate-listing-detail-view';
-import { PublicListingContextLinks } from '@/components/public/public-listing-context-links';
 import { similarListingsSlot } from '@/components/public/similar-listings-section';
 import { renderSeoLandingPage } from '@/components/public/seo-landing-page';
 import { loadSeoLandingRoute, seoLandingMetadata } from '@/lib/public-seo';
@@ -88,7 +87,6 @@ export default async function RealEstateListingPage({ params }: PageProps): Prom
     <>
       <script type="application/ld+json" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: jsonLdHtml }} />
       <PublicShell hideHeaderBelowMd hideMobileNav>
-        <PublicListingContextLinks listing={listing} title="Prona" />
         <RealEstateListingDetailView
           listing={listing}
           canonicalUrl={canonicalUrl}

@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
 import { Box, Grid, IconButton, Stack, Typography } from '@mui/material';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 
@@ -32,7 +31,7 @@ export function CategoryTiles({ totals }: CategoryTilesProps) {
           return (
             <Grid key={vertical.id} size={{ xs: 6, md: 3 }}>
               <Box
-                component={RouterLink}
+                component="a"
                 href={vertical.href}
                 sx={{
                   display: 'flex',

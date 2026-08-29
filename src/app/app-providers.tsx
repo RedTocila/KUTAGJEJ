@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 
+import '@fontsource/dseg7-classic/400.css';
 import '@/styles/global.css';
 
 import { LanguageProvider } from '@/contexts/language-context';

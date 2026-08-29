@@ -41,7 +41,6 @@ import { JobCard } from '@/components/public/listing-cards/job-card';
 import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
-import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { OwnerContactPhone } from '@/components/public/owner-contact-phone';
@@ -475,10 +474,6 @@ export function JobListingDetailView({
                   listingUrl={canonicalUrl}
                 />
               )}
-              <ListingVerifiedNotice
-                verified={Boolean(listing.seller?.verified)}
-                label="Kjo punë është e verifikuar dhe e sigurt"
-              />
             </Stack>
 
             <Stack spacing={1}>

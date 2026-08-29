@@ -50,7 +50,6 @@ import { ListingDetailTitleBadges } from '@/components/public/listing-detail-tit
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
 import { ListingSellerProfileCard } from '@/components/public/listing-seller-profile-card';
-import { ListingVerifiedNotice } from '@/components/public/listing-verified-notice';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { OwnerContactPhone } from '@/components/public/owner-contact-phone';
@@ -185,7 +184,6 @@ function ListingContactAside(props: {
     <Stack spacing={2}>
       <Stack spacing={0.75}>
         <Box sx={{ width: '100%' }}>{sidebarPrice(listing)}</Box>
-        {listing.isOkazion ? <OkazionCountdown expiresAt={listing.okazionUntil} /> : null}
         {asideLoc ? (
           <ButtonBase
             component="a"
@@ -459,7 +457,6 @@ export function VerticalListingDetailView(props: {
                   legacyOnClick={onEditPrice}
                 >
                   {primaryPriceRow(listing)}
-                  {listing.isOkazion ? <OkazionCountdown expiresAt={listing.okazionUntil} /> : null}
                 </OwnerEditableSpot>
               </Box>
 
@@ -568,22 +565,24 @@ export function VerticalListingDetailView(props: {
                     <Typography variant="body2">{new Intl.NumberFormat('sq-AL').format(viewCount)}</Typography>
                   </Stack>
                 </Stack>
+                {listing.isOkazion ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                    <OkazionCountdown expiresAt={listing.okazionUntil} plain />
+                  </Box>
+                ) : null}
                 <OwnerContactPhone phone={displayPhone} ownerEdit={ownerEdit} />
               </Stack>
             </Stack>
 
-            <Stack spacing={1} sx={{ width: '100%' }}>
-              {ownerPreview ? null : (
-                <StickyListingContact
-                  listingKind={metricKindToConversationKind(metricKind)}
-                  listingId={listing.id}
-                  contactPhone={displayPhone}
-                  listingTitle={listingTitle(listing)}
-                  listingUrl={canonicalUrl}
-                />
-              )}
-              <ListingVerifiedNotice verified={Boolean(listing.seller?.verified)} />
-            </Stack>
+            {ownerPreview ? null : (
+              <StickyListingContact
+                listingKind={metricKindToConversationKind(metricKind)}
+                listingId={listing.id}
+                contactPhone={displayPhone}
+                listingTitle={listingTitle(listing)}
+                listingUrl={canonicalUrl}
+              />
+            )}
 
             <Stack spacing={1.5} component="section" aria-labelledby="vertical-summary-heading">
               <OwnerEditableSpot

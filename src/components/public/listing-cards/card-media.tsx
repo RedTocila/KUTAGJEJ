@@ -329,12 +329,14 @@ export function CardMedia({
           spacing={0.35}
           sx={{
             position: 'absolute',
-            bottom: bottomOverlay ? 28 : 6,
+            bottom: bottomOverlay ? 34 : 6,
             right: 6,
             zIndex: 3,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
+            p: compact ? 0.2 : 0.3,
+            borderRadius: 0.75,
             lineHeight: 0,
             '&::before': {
               content: '""',

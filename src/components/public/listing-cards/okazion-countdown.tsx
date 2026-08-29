@@ -17,12 +17,12 @@ const PLACEHOLDER_LABEL = `${OKAZION_COUNTDOWN_DAYS}d 0h 00m 00s`;
 const COMPACT_PLACEHOLDER_LABEL = `${OKAZION_COUNTDOWN_DAYS}d 0h`;
 
 const overlayChipSx = {
-  height: 44,
-  borderRadius: 999,
+  height: 32,
+  borderRadius: 8,
   fontFamily: 'monospace',
   fontVariantNumeric: 'tabular-nums',
   fontWeight: 700,
-  fontSize: '0.95rem',
+  fontSize: '0.78rem',
   letterSpacing: '0.02em',
   border: '1px solid',
   backdropFilter: 'blur(12px)',
@@ -33,11 +33,11 @@ const overlayChipSx = {
   borderColor: alpha('#fff', 0.18),
   '& .MuiChip-icon': {
     color: '#fff',
-    ml: 1.25,
+    ml: 0.75,
     mr: -0.25,
-    fontSize: 20,
+    fontSize: 16,
   },
-  '& .MuiChip-label': { px: 1.5, overflow: 'visible', whiteSpace: 'nowrap' },
+  '& .MuiChip-label': { px: 1.1, overflow: 'visible', whiteSpace: 'nowrap' },
 } as const;
 
 const compactOverlayChipSx = {

@@ -105,7 +105,7 @@ export function ListingMessageButton({
           loading ? (
             <CircularProgress size={18} color="inherit" />
           ) : (
-            startIcon ?? (children ? undefined : <ChatCircleIcon weight="regular" size={20} />)
+            startIcon ?? (children ? undefined : <ChatCircleIcon weight="bold" size={20} />)
           )
         }
         data-listing-contact=""

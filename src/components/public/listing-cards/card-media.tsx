@@ -335,33 +335,18 @@ export function CardMedia({
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: compact ? 'auto' : 32,
-            height: compact ? 'auto' : 32,
-            borderRadius: '50%',
-            ...(compact
-              ? {
-                  bgcolor: 'transparent',
-                  border: 'none',
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    inset: -5,
-                    borderRadius: '50%',
-                    background:
-                      'radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.14) 38%, rgba(0,0,0,0) 70%)',
-                    pointerEvents: 'none',
-                  },
-                  '& > *': { position: 'relative', zIndex: 1 },
-                }
-              : {
-                  bgcolor: alpha('#000', 0.45),
-                  border: '1px solid',
-                  borderColor: alpha('#fff', 0.18),
-                  backdropFilter: 'blur(10px)',
-                  WebkitBackdropFilter: 'blur(10px)',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                }),
             lineHeight: 0,
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              inset: compact ? -4 : -8,
+              borderRadius: '50%',
+              background: compact
+                ? 'radial-gradient(circle, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.06) 42%, rgba(0,0,0,0) 72%)'
+                : 'radial-gradient(circle, rgba(0,0,0,0.46) 0%, rgba(0,0,0,0.2) 42%, rgba(0,0,0,0) 72%)',
+              pointerEvents: 'none',
+            },
+            '& > *': { position: 'relative', zIndex: 1 },
           }}
         >
           {sellerVerified ? <ListingVerifiedBadge size={compact ? 14 : 18} aria-label="Shitës i verifikuar" /> : null}

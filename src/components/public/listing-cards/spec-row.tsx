@@ -4,8 +4,6 @@ import * as React from 'react';
 import { Box, Typography } from '@mui/material';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
-
 export interface Spec {
   /** Pre-bound Phosphor icon component (the SSR variant). */
   Icon: PhosphorIcon;
@@ -73,16 +71,10 @@ export function SpecRow({ specs }: { specs: Spec[] }) {
             gap: 0.5,
             flexShrink: 0,
             visibility: visibleCount === null || index < visibleCount ? 'visible' : 'hidden',
-            px: 0.9,
-            py: 0.45,
-            borderRadius: 1,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.12 : 0.07),
-            color: 'primary.main',
+            color: 'text.primary',
           }}
         >
-          <Box component="span" aria-hidden sx={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
+          <Box component="span" aria-hidden sx={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0, color: 'primary.main' }}>
             <Icon size={14} weight="bold" />
           </Box>
           <Typography

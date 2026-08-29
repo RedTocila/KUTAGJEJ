@@ -71,10 +71,13 @@ export function JobCard({
   listing,
   sellerRating = null,
   imagePriority = false,
+  variant = 'default',
 }: {
   listing: PublicJobListing;
   sellerRating?: ListingCardRatingSummary | null;
   imagePriority?: boolean;
+  /** `'cover'` is the square crop used on the jobs browse page. Homepage stays `'default'`. */
+  variant?: 'default' | 'cover';
 }) {
   const viewCount = listing.viewCount ?? 0;
   const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
@@ -112,7 +115,7 @@ export function JobCard({
           imageUrl={listing.imageUrl}
           FallbackIcon={BriefcaseIcon}
           alt={listing.title}
-          aspectRatio="4 / 3"
+          aspectRatio={variant === 'cover' ? '1 / 1' : '4 / 3'}
           topLeftBadge={jobTypeLabel}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}

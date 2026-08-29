@@ -5,7 +5,12 @@ import { Box, Container, Grid, Skeleton, Stack } from '@mui/material';
  * Instant route placeholder for public category browse pages.
  * Shown via `loading.tsx` as soon as the user navigates (before RSC data resolves).
  */
-export function CategoryBrowseSkeleton(): React.JSX.Element {
+export function CategoryBrowseSkeleton({
+  cardAspectRatio = '4 / 3',
+}: {
+  /** Match listing-card media on this vertical (square cover on jobs / business / professionals). */
+  cardAspectRatio?: string;
+}): React.JSX.Element {
   return (
     <Box sx={{ bgcolor: 'background.default' }} aria-busy aria-label="Duke u ngarkuar">
       <Box sx={{ px: { xs: 2, md: 3 }, pt: { xs: 2, md: 3 }, pb: 2 }}>
@@ -32,7 +37,7 @@ export function CategoryBrowseSkeleton(): React.JSX.Element {
                   <Skeleton
                     variant="rounded"
                     animation="wave"
-                    sx={{ width: '100%', aspectRatio: '4 / 3', borderRadius: 2.5 }}
+                    sx={{ width: '100%', aspectRatio: cardAspectRatio, borderRadius: 2.5 }}
                   />
                   <Skeleton variant="text" animation="wave" width="70%" />
                   <Skeleton variant="text" animation="wave" width="45%" />

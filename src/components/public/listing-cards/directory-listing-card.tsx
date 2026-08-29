@@ -35,13 +35,18 @@ function conditionIcon(condition: string | null) {
   return CheckCircleIcon;
 }
 
+export type DirectoryListingCardVariant = 'default' | 'cover';
+
 /** Biznese = venues (eat, drink, reserve) — minimal card layout. */
 function BusinessVenueCardBody({
   listing,
   sellerRating = null,
+  variant = 'default',
 }: {
   listing: PublicDirectoryListing;
   sellerRating?: ListingCardRatingSummary | null;
+  /** `'cover'` is the square crop used on category browse pages. Homepage stays `'default'`. */
+  variant?: DirectoryListingCardVariant;
 }) {
   const viewCount = listing.viewCount ?? 0;
   const cardRating = resolveListingCardRating(listing, sellerRating);
@@ -64,7 +69,7 @@ function BusinessVenueCardBody({
           imageUrl={listing.imageUrl}
           FallbackIcon={StorefrontIcon}
           alt={listing.title}
-          aspectRatio="4 / 3"
+          aspectRatio={variant === 'cover' ? '1 / 1' : '4 / 3'}
           topLeftBadge={topBadge}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
@@ -195,9 +200,11 @@ function BusinessVenueCardBody({
 function ProfessionalListingCardBody({
   listing,
   sellerRating = null,
+  variant = 'default',
 }: {
   listing: PublicDirectoryListing;
   sellerRating?: ListingCardRatingSummary | null;
+  variant?: DirectoryListingCardVariant;
 }) {
   const viewCount = listing.viewCount ?? 0;
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
@@ -243,7 +250,7 @@ function ProfessionalListingCardBody({
           imageUrl={listing.imageUrl}
           FallbackIcon={BriefcaseIcon}
           alt={listing.title}
-          aspectRatio="4 / 3"
+          aspectRatio={variant === 'cover' ? '1 / 1' : '4 / 3'}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
@@ -354,12 +361,15 @@ function ProfessionalListingCardBody({
 export function DirectoryListingCard({
   listing,
   sellerRating = null,
+  variant = 'default',
 }: {
   listing: PublicDirectoryListing;
   sellerRating?: ListingCardRatingSummary | null;
+  /** `'cover'` is the square crop used on category browse pages. Homepage stays `'default'`. */
+  variant?: DirectoryListingCardVariant;
 }) {
   if (listing.kind === 'businesses') {
-    return <BusinessVenueCardBody listing={listing} sellerRating={sellerRating} />;
+    return <BusinessVenueCardBody listing={listing} sellerRating={sellerRating} variant={variant} />;
   }
-  return <ProfessionalListingCardBody listing={listing} sellerRating={sellerRating} />;
+  return <ProfessionalListingCardBody listing={listing} sellerRating={sellerRating} variant={variant} />;
 }

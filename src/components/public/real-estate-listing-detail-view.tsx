@@ -162,21 +162,9 @@ function RealEstatePriceContactAside(props: {
         />
         {listing.isOkazion ? <OkazionCountdown expiresAt={listing.okazionUntil} /> : null}
         {transactionLabel ? (
-          <Paper
-            variant="outlined"
-            sx={{
-              alignSelf: 'flex-start',
-              borderColor: 'divider',
-              bgcolor: 'action.hover',
-              borderRadius: 999,
-              px: 1.25,
-              py: 0.35,
-            }}
-          >
-            <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main' }}>
-              {transactionLabel}
-            </Typography>
-          </Paper>
+          <Typography variant="body2" sx={{ alignSelf: 'flex-start', fontWeight: 700, color: 'primary.main' }}>
+            {transactionLabel}
+          </Typography>
         ) : null}
         {locationFull ? (
           <ButtonBase
@@ -579,20 +567,9 @@ export function RealEstateListingDetailView({
                       />
                       {listing.isOkazion ? <OkazionCountdown expiresAt={listing.okazionUntil} /> : null}
                       {transactionLabel ? (
-                        <Paper
-                          variant="outlined"
-                          sx={{
-                            borderColor: 'divider',
-                            bgcolor: 'action.hover',
-                            borderRadius: 999,
-                            px: 1.25,
-                            py: 0.35,
-                          }}
-                        >
-                          <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main' }}>
-                            {transactionLabel}
-                          </Typography>
-                        </Paper>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                          {transactionLabel}
+                        </Typography>
                       ) : null}
                     </Stack>
                   </OwnerEditableSpot>
@@ -796,26 +773,19 @@ export function RealEstateListingDetailView({
                   {sectionTitle('Veçoritë kryesore', 're-amen-heading')}
                   <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
                     {featureChips.map((label) => (
-                      <Paper
+                      <Stack
                         key={label}
-                        variant="outlined"
-                        sx={{
-                          borderRadius: 15,
-                          px: 1.5,
-                          py: 0.85,
-                          bgcolor: 'action.hover',
-                          borderColor: 'divider',
-                        }}
+                        direction="row"
+                        spacing={0.5}
+                        sx={{ alignItems: 'center', color: 'text.primary' }}
                       >
-                        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-                          <Box sx={{ color: 'primary.main', display: 'inline-flex', lineHeight: 0 }}>
-                            <LightningIcon size={14} weight="regular" color="currentColor" aria-hidden />
-                          </Box>
-                          <Typography variant="body2" sx={{ fontWeight: 650, fontSize: '0.8125rem' }}>
-                            {label}
-                          </Typography>
-                        </Stack>
-                      </Paper>
+                        <Box sx={{ color: 'primary.main', display: 'inline-flex', lineHeight: 0 }}>
+                          <LightningIcon size={14} weight="regular" color="currentColor" aria-hidden />
+                        </Box>
+                        <Typography variant="body2" sx={{ fontWeight: 650, fontSize: '0.8125rem' }}>
+                          {label}
+                        </Typography>
+                      </Stack>
                     ))}
                   </Stack>
                 </Stack>

@@ -118,7 +118,6 @@ export function RealEstateCard({
           okazion={Boolean(listing.isOkazion)}
           okazionUntil={listing.okazionUntil}
           sellerVerified={Boolean(listing.sellerVerified)}
-          aspectRatio="4 / 3"
           priority={imagePriority}
           sharePayload={{
             title: listing.title,

@@ -69,7 +69,7 @@ function BusinessVenueCardBody({
           imageUrl={listing.imageUrl}
           FallbackIcon={StorefrontIcon}
           alt={listing.title}
-          aspectRatio={variant === 'cover' ? '1 / 1' : '4 / 3'}
+          aspectRatio={variant === 'cover' ? '1 / 1' : undefined}
           topLeftBadge={topBadge}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
@@ -250,7 +250,7 @@ function ProfessionalListingCardBody({
           imageUrl={listing.imageUrl}
           FallbackIcon={BriefcaseIcon}
           alt={listing.title}
-          aspectRatio={variant === 'cover' ? '1 / 1' : '4 / 3'}
+          aspectRatio={variant === 'cover' ? '1 / 1' : undefined}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}

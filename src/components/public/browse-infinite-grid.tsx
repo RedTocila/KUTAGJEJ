@@ -73,12 +73,12 @@ function renderBrowseCard(verticalId: BrowseInfiniteVerticalId, listing: BrowseL
     case 'cars':
       return <CarCard listing={listing as PublicCarListing} imagePriority={imagePriority} variant="compact" />;
     case 'jobs':
-      return <JobCard listing={listing as PublicJobListing} imagePriority={imagePriority} variant="cover" />;
+      return <JobCard listing={listing as PublicJobListing} imagePriority={imagePriority} />;
     case 'marketplace':
       return <MarketplaceCard listing={listing as PublicMarketplaceListing} imagePriority={imagePriority} variant="compact" />;
     case 'businesses':
     case 'professionals':
-      return <DirectoryListingCard listing={listing as PublicDirectoryListing} variant="cover" />;
+      return <DirectoryListingCard listing={listing as PublicDirectoryListing} />;
     case 'okazion':
       return <OkazionCard listing={listing as PublicOkazionListing} imagePriority={imagePriority} />;
     default:

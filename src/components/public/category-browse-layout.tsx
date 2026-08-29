@@ -33,6 +33,9 @@ interface CategoryBrowseLayoutProps {
   enableInfiniteScroll?: boolean;
   /** False when the SSR listing request failed (empty is not trustworthy). */
   ssrOk?: boolean;
+  /** Optional SEO landing heading and human-readable introduction. */
+  heading?: string;
+  intro?: string;
   children: React.ReactNode;
 }
 
@@ -56,6 +59,8 @@ export function CategoryBrowseLayout({
   topViewed = [],
   enableInfiniteScroll = false,
   ssrOk = true,
+  heading,
+  intro,
   children,
 }: CategoryBrowseLayoutProps) {
   const isOkazion = verticalId === 'okazion';
@@ -103,6 +108,8 @@ export function CategoryBrowseLayout({
             total={liveTotal}
             cities={cities}
             pending={pending}
+            heading={heading}
+            intro={intro}
           />
           {showTopViewed ? (
             <CategoryTopViewedSlider verticalId={verticalId} listings={topViewed} />

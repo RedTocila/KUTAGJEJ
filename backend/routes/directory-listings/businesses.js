@@ -11,6 +11,7 @@ const { hasUnlimitedDirectoryListings } = require('../../lib/directory-listing-l
 const { notifyAdminsListingSubmitted } = require('../../lib/listing-moderation');
 const { isUuid } = require('../../lib/public-listings/query-helpers');
 const { requireListingPhotos } = require('../../lib/image-upload');
+const { slugifyTitle } = require('../../lib/real-estate-permalink');
 const { formatMineBusiness, formatMineBusinessFull, loadMineKind, loadMineListingById } = require('../../lib/mine-listings');
 const { parseGoogleMapsLocation } = require('../../lib/google-maps-location');
 
@@ -131,6 +132,7 @@ router.post('/businesses', authMiddleware, requirePortalUser, async (req, res) =
       vertical: 'businesses',
       poster_id: req.user.id,
       title: String(body.title).trim(),
+      permalink_slug: slugifyTitle(body.title),
       description: String(body.description).trim(),
       category: body.category,
       city_id: cityId,

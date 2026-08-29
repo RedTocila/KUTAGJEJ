@@ -142,7 +142,7 @@ export function JobListingDetailDesktop({
                 <Box
                   component="img"
                   src={listingHeroImageUrl(heroImage) ?? heroImage}
-                  alt=""
+                  alt={listing.title}
                   decoding="async"
                   fetchPriority="high"
                   sx={{

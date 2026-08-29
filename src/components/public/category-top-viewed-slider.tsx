@@ -3,12 +3,14 @@
 import * as React from 'react';
 import { Box, Container, Stack, Typography } from '@mui/material';
 
-import { BannerSlideCard, BANNER_SLIDE_VISUALS } from '@/components/public/banner-slide-card';
-import { BannerSliderPager } from '@/components/public/banner-slider-pager';
-import { BannerSliderViewport } from '@/components/public/banner-slider-viewport';
-import { formatPrice } from '@/components/public/listing-cards/format-helpers';
-import { useBannerSlider } from '@/hooks/use-banner-slider';
-import { useCopy } from '@/hooks/use-copy';
+import {
+  listingBusinessPublicHref,
+  listingCarPublicHref,
+  listingJobPublicHref,
+  listingMarketplacePublicHref,
+  listingProfessionalPublicHref,
+  listingRealEstatePublicHref,
+} from '@/paths';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import type { HomeVerticalId } from '@/lib/home-categories';
 import type {
@@ -19,14 +21,12 @@ import type {
   PublicRealEstateListing,
   TopViewedListing,
 } from '@/lib/public-listings-client';
-import {
-  listingBusinessPublicHref,
-  listingCarPublicHref,
-  listingJobPublicHref,
-  listingMarketplacePublicHref,
-  listingProfessionalPublicHref,
-  listingRealEstatePublicHref,
-} from '@/paths';
+import { useBannerSlider } from '@/hooks/use-banner-slider';
+import { useCopy } from '@/hooks/use-copy';
+import { BANNER_SLIDE_VISUALS, BannerSlideCard } from '@/components/public/banner-slide-card';
+import { BannerSliderPager } from '@/components/public/banner-slider-pager';
+import { BannerSliderViewport } from '@/components/public/banner-slider-viewport';
+import { formatPrice } from '@/components/public/listing-cards/format-helpers';
 
 const SLIDE_MS = 320;
 
@@ -138,25 +138,13 @@ export function CategoryTopViewedSlider({
 }) {
   const t = useCopy();
   const byRating = isRatingFeaturedVertical(verticalId);
-  const slides = React.useMemo(
-    () => listings.map((listing) => toSlide(verticalId, listing)),
-    [listings, verticalId],
-  );
+  const slides = React.useMemo(() => listings.map((listing) => toSlide(verticalId, listing)), [listings, verticalId]);
 
-  const {
-    idx,
-    slideBasis,
-    trackRef,
-    suppressNavRef,
-    goToSlide,
-    autoplay,
-    toggleAutoplay,
-    touchHandlers,
-    trackSx,
-  } = useBannerSlider({
-    slideCount: slides.length,
-    slideMs: SLIDE_MS,
-  });
+  const { idx, slideBasis, trackRef, suppressNavRef, goToSlide, autoplay, toggleAutoplay, touchHandlers, trackSx } =
+    useBannerSlider({
+      slideCount: slides.length,
+      slideMs: SLIDE_MS,
+    });
 
   if (slides.length === 0) return null;
 
@@ -210,6 +198,7 @@ export function CategoryTopViewedSlider({
                   eager={eager}
                   title={slide.title}
                   bottomRightLabel={slide.subtitle}
+                  contentPlacement="below"
                   titleMaxLines={1}
                 />
               );

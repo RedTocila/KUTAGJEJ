@@ -17,7 +17,7 @@ const { buildAlbaniaCities } = require('../lib/albania-cities');
 
 const PHONE = '+355 69 400 1000';
 const SEED_TAG = '[seed-okazion]';
-const OKAZION_DAYS = 5;
+const OKAZION_DAYS = 7;
 
 const IMG = {
   apt: [
@@ -174,7 +174,7 @@ async function seedOkazionListings(sb, posterId, cities) {
         poster_id: posterId,
         property_category: 'apartment',
         title: 'OKAZION — Apartament 2+1 te Blloku',
-        description: `${SEED_TAG} Çmim i ulur për 5 ditë. Apartament i ndriçuar, i mobiluar pjesërisht. Ideal për banim ose investim.`,
+        description: `${SEED_TAG} Çmim i ulur për 7 ditë. Apartament i ndriçuar, i mobiluar pjesërisht. Ideal për banim ose investim.`,
         transaction_type: 'sale',
         price: 119000,
         currency: 'EUR',
@@ -204,7 +204,7 @@ async function seedOkazionListings(sb, posterId, cities) {
         make: 'Audi',
         model: 'A4',
         variant: 'S line',
-        description: `${SEED_TAG} OKAZION 5-ditor. Makina e mirëmbajtur, e rregjistruar në Shqipëri. Shërbime të dokumentuara.`,
+        description: `${SEED_TAG} OKAZION 7-ditor. Makina e mirëmbajtur, e rregjistruar në Shqipëri. Shërbime të dokumentuara.`,
         year: 2019,
         kilometers: 82000,
         transmission: 'automatic',
@@ -260,7 +260,7 @@ async function seedOkazionListings(sb, posterId, cities) {
         poster_id: posterId,
         transaction_type: 'shes',
         title: 'OKAZION — iPhone 14 Pro 256GB',
-        description: `${SEED_TAG} Çmim i ulur për 5 ditë. Telefon në gjendje shumë të mirë, me kuti dhe faturë.`,
+        description: `${SEED_TAG} Çmim i ulur për 7 ditë. Telefon në gjendje shumë të mirë, me kuti dhe faturë.`,
         category: 'elektronike',
         condition: 'si-i-ri',
         price: 690,

@@ -920,7 +920,7 @@ router.post('/okazion/apply', async (req, res) => {
       voucher: result.voucher,
       okazionUntil: result.okazionUntil,
       refreshedAt: result.refreshedAt,
-      message: 'Njoftimi u bë OKAZION për 5 ditë.',
+      message: 'Njoftimi u bë OKAZION për 7 ditë.',
     });
   } catch (error) {
     console.error('POST /payments/okazion/apply:', error?.message || error);
@@ -949,7 +949,7 @@ router.post('/okazion/apply-from-plan', async (req, res) => {
       quota: result.quota,
       message: result.alreadyActive
         ? 'Ky njoftim është tashmë OKAZION.'
-        : 'Njoftimi u bë OKAZION për 5 ditë nga paketa.',
+        : 'Njoftimi u bë OKAZION për 7 ditë nga paketa.',
     });
   } catch (error) {
     console.error('POST /payments/okazion/apply-from-plan:', error?.message || error);

@@ -71,7 +71,7 @@ export function CarCard({
           imageUrl={listing.imageUrl}
           FallbackIcon={CarIcon}
           alt={title}
-          aspectRatio="4 / 3"
+          aspectRatio={variant === 'compact' ? '1 / 1' : '4 / 3'}
           compact={variant === 'compact'}
           topLeftBadge={`${listing.year}`}
           shareCount={listing.shareCount}

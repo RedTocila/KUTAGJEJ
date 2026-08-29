@@ -67,7 +67,7 @@ export function MarketplaceCard({
           imageUrl={listing.imageUrl}
           FallbackIcon={ShoppingBagIcon}
           alt={listing.title}
-          aspectRatio="4 / 3"
+          aspectRatio={variant === 'compact' ? '1 / 1' : '4 / 3'}
           compact={variant === 'compact'}
           topLeftBadge={conditionLabel ?? undefined}
           shareCount={listing.shareCount}

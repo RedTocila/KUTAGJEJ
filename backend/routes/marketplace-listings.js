@@ -8,6 +8,7 @@ const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls, requireListingPhotos } = require('../lib/image-upload');
 const { isUuid } = require('../lib/public-listings/query-helpers');
 const { resolveOptionalCityId } = require('../lib/listing-city');
+const { slugifyTitle } = require('../lib/real-estate-permalink');
 const { parseComparePrice } = require('../lib/listing-compare-price');
 const { formatMineMarketplace, formatMineMarketplaceFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
 const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
@@ -129,6 +130,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       poster_id: req.user.id,
       transaction_type: body.transactionType,
       title: String(body.title).trim(),
+      permalink_slug: slugifyTitle(body.title),
       description: String(body.description || '').trim(),
       category: body.category || null,
       condition: body.condition || null,

@@ -23,5 +23,7 @@ export function listingDetailGalleryPlaceholder(listing: AnyPublicListingDetail)
       return 'storefront';
     case 'professionals':
       return 'professional';
+    default:
+      return 'house';
   }
 }

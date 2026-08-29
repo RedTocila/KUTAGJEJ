@@ -5,6 +5,7 @@ const { getSupabaseAdmin } = require('../../lib/supabase');
 const { camelizeRow } = require('../../lib/profiles');
 const optionalAuth = require('../../middleware/optional-auth');
 const publicCache = require('../../middleware/public-cache');
+
 const { publicNoStore } = publicCache;
 const { loadPosterBrief, loadVerifiedPosterIdSet, loadTrustBadgePosterIdSet } = require('../../lib/public-listings/load-poster-brief');
 const {
@@ -56,6 +57,7 @@ const { reviewStatsByListingIds } = require('../../lib/business-review-stats');
 const { professionalReviewStatsByListingIds } = require('../../lib/professional-review-stats');
 const { saverFromUser, enrichListingsSaverState } = require('../../lib/listing-metrics');
 const { getCached, setCached } = require('../../lib/public-listings-cache');
+const { buildPublicSeoIndex } = require('../../lib/public-seo-index');
 
 const router = express.Router();
 
@@ -84,6 +86,22 @@ async function loadApprovedById(table, id, extraEq = {}) {
 
 // ~1 min CDN TTL — new ads show quickly without refetching every homepage paint.
 router.use(publicCache(60));
+
+/** GET /api/public/listings/seo-index — canonical active URLs for SEO metadata routes. */
+router.get('/seo-index', async (_req, res) => {
+  try {
+    const cacheKey = 'public-seo-index';
+    let payload = getCached(cacheKey);
+    if (!payload) {
+      payload = await buildPublicSeoIndex();
+      setCached(cacheKey, payload);
+    }
+    res.json(payload);
+  } catch (err) {
+    console.error('GET /public/listings/seo-index:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 /** GET /api/public/listings/top-viewed?vertical=cars&limit=10 — most-viewed (or highest-rated for businesses/professionals). */
 router.get('/top-viewed', optionalAuth, async (req, res) => {

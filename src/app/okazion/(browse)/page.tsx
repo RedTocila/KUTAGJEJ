@@ -15,15 +15,21 @@ import { paths } from '@/paths';
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
-  title: 'OKAZION | KuTaGjej',
-  description: 'Oferta të shpejta — njoftime OKAZION për 5 ditë: prona, makina, punë dhe tregu.',
-  alternates: { canonical: paths.public.okazion },
-};
-
 type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const sp = (await searchParams) ?? {};
+  const filters = parseOkazionBrowseParams(sp);
+  const page = parseBrowsePage(sp);
+  return {
+    title: 'OKAZION | KuTaGjej',
+    description: 'Oferta të shpejta — njoftime OKAZION për 7 ditë: prona, makina, punë dhe tregu.',
+    alternates: { canonical: paths.public.okazion },
+    robots: { index: !hasActiveBrowseFilters(filters) && page === 1, follow: true },
+  };
+}
 
 export default async function OkazionBrowsePage({ searchParams }: PageProps) {
   const sp = (await searchParams) ?? {};

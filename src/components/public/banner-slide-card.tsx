@@ -47,6 +47,8 @@ export type BannerSlideCardProps = {
   titleMaxLines?: number;
   /** Promo artwork already includes the message — hide the HTML title. */
   hideTitleWhenImage?: boolean;
+  /** Category listing slides keep copy on a readable surface below the image. */
+  contentPlacement?: 'overlay' | 'below';
   /** First visible slide only — homepage LCP. */
   priority?: boolean;
 };
@@ -65,19 +67,22 @@ export function BannerSlideCard({
   bottomRightLabel = null,
   titleMaxLines = 2,
   hideTitleWhenImage = false,
+  contentPlacement = 'overlay',
   priority = false,
 }: BannerSlideCardProps) {
   const rawImage = imageUrl && /^https?:\/\//i.test(imageUrl) ? imageUrl : null;
   const imageSrc = rawImage ? (homeBannerImageUrl(rawImage) ?? rawImage) : null;
   const showTitle = Boolean(title) && (!hideTitleWhenImage || !imageSrc);
+  const contentBelowImage = contentPlacement === 'below';
 
   const content = (
     <Box
       sx={(theme) => ({
-        borderRadius: 4,
-        overflow: 'hidden',
-        border: '1px solid',
-        borderColor: 'divider',
+        borderRadius: contentBelowImage ? 0 : 4,
+        overflow: contentBelowImage ? 'visible' : 'hidden',
+        border: contentBelowImage ? 'none' : '1px solid',
+        borderColor: contentBelowImage ? undefined : 'divider',
+        bgcolor: contentBelowImage ? undefined : 'background.paper',
         // Flat in light mode; keep soft lift in dark.
         boxShadow: 'none',
         ...theme.applyStyles('dark', {
@@ -89,10 +94,23 @@ export function BannerSlideCard({
         sx={(theme) => ({
           position: 'relative',
           width: '100%',
-          minHeight: { xs: 240, sm: 260 },
-          aspectRatio: { md: '4 / 3' },
-          maxHeight: { md: 'min(58vh, 560px)' },
-          height: { md: 'auto' },
+          ...(contentBelowImage
+            ? {
+                minHeight: 0,
+                aspectRatio: { xs: '16 / 9', sm: '2.4 / 1', md: '3 / 1' },
+                maxHeight: 'none',
+                height: 'auto',
+                borderRadius: 2.5,
+                border: '1px solid',
+                borderColor: 'divider',
+                boxSizing: 'border-box',
+              }
+            : {
+                minHeight: { xs: 240, sm: 260 },
+                aspectRatio: { md: '4 / 3' },
+                maxHeight: { md: 'min(58vh, 560px)' },
+                height: { md: 'auto' },
+              }),
           overflow: 'hidden',
           backgroundColor: 'background.paper',
           backgroundImage: theme.palette.mode === 'dark' && !imageSrc ? fallbackBg : 'none',
@@ -142,94 +160,167 @@ export function BannerSlideCard({
           />
         ) : null}
 
-        <Stack
-          direction="row"
-          spacing={bottomRightLabel ? 0 : 1.5}
-          sx={(theme) => ({
-            position: 'absolute',
-            inset: 0,
-            zIndex: 1,
-            color: 'common.white',
-            p: { xs: 2.4, sm: 3, md: 3.5 },
-            alignItems: 'flex-end',
-            justifyContent: 'space-between',
-            ...(bottomRightLabel
-              ? {
-                  display: 'grid',
-                  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 36%)',
-                  columnGap: 1.5,
-                }
-              : null),
-            // Light mode: no bottom vignette on image slides.
-            background: 'none',
-            ...theme.applyStyles('dark', {
-              background: imageSrc
-                ? 'linear-gradient(to top, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.12) 42%, transparent 70%)'
-                : 'none',
-            }),
-          })}
-        >
+        {!contentBelowImage ? (
           <Stack
-            spacing={0.35}
-            sx={{
-              maxWidth: bottomRightLabel ? 'none' : '88%',
-              flex: '1 1 0',
-              minWidth: 0,
-              width: '100%',
-              alignItems: 'flex-start',
-            }}
+            direction="row"
+            spacing={bottomRightLabel ? 0 : 1.5}
+            sx={(theme) => ({
+              position: 'absolute',
+              inset: 0,
+              zIndex: 1,
+              color: 'common.white',
+              p: { xs: 2.4, sm: 3, md: 3.5 },
+              alignItems: 'flex-end',
+              justifyContent: 'space-between',
+              ...(bottomRightLabel
+                ? {
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 36%)',
+                    columnGap: 1.5,
+                  }
+                : null),
+              // Light mode: no bottom vignette on image slides.
+              background: 'none',
+              ...theme.applyStyles('dark', {
+                background: imageSrc
+                  ? 'linear-gradient(to top, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.12) 42%, transparent 70%)'
+                  : 'none',
+              }),
+            })}
           >
-            {showTitle ? (
+            <Stack
+              spacing={0.35}
+              sx={{
+                maxWidth: bottomRightLabel ? 'none' : '88%',
+                flex: '1 1 0',
+                minWidth: 0,
+                width: '100%',
+                alignItems: 'flex-start',
+              }}
+            >
+              {showTitle ? (
+                <Typography
+                  component="h2"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: { xs: '1.2rem', sm: '1.35rem', md: '1.6rem' },
+                    lineHeight: 1.15,
+                    letterSpacing: '-0.02em',
+                    textAlign: 'left',
+                    textShadow: '0 1px 18px rgba(0,0,0,0.35)',
+                    display: '-webkit-box',
+                    WebkitLineClamp: titleMaxLines,
+                    WebkitBoxOrient: 'vertical',
+                    width: '100%',
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    whiteSpace: titleMaxLines === 1 ? 'nowrap' : 'normal',
+                    textOverflow: titleMaxLines === 1 ? 'ellipsis' : undefined,
+                  }}
+                >
+                  {title}
+                </Typography>
+              ) : null}
+              {subtitle && !bottomRightLabel ? (
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                    lineHeight: 1.2,
+                    color: 'primary.main',
+                    textShadow: '0 1px 12px rgba(0,0,0,0.35)',
+                  }}
+                >
+                  {subtitle}
+                </Typography>
+              ) : null}
+            </Stack>
+
+            {bottomRightLabel ? (
               <Typography
-                component="h2"
                 sx={{
-                  fontWeight: 800,
-                  fontSize: { xs: '1.2rem', sm: '1.35rem', md: '1.6rem' },
-                  lineHeight: 1.15,
-                  letterSpacing: '-0.02em',
-                  textAlign: 'left',
-                  textShadow: '0 1px 18px rgba(0,0,0,0.35)',
-                  display: '-webkit-box',
-                  WebkitLineClamp: titleMaxLines,
-                  WebkitBoxOrient: 'vertical',
                   width: '100%',
+                  maxWidth: 'none',
+                  flex: 'none',
                   minWidth: 0,
-                  overflow: 'hidden',
-                  whiteSpace: titleMaxLines === 1 ? 'nowrap' : 'normal',
-                  textOverflow: titleMaxLines === 1 ? 'ellipsis' : undefined,
-                }}
-              >
-                {title}
-              </Typography>
-            ) : null}
-            {subtitle && !bottomRightLabel ? (
-              <Typography
-                sx={{
-                  fontWeight: 700,
+                  fontWeight: 800,
                   fontSize: { xs: '0.95rem', sm: '1.05rem' },
                   lineHeight: 1.2,
                   color: 'primary.main',
+                  textAlign: 'right',
                   textShadow: '0 1px 12px rgba(0,0,0,0.35)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                {subtitle}
+                {bottomRightLabel}
               </Typography>
+            ) : href ? (
+              <Box
+                aria-hidden
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '50%',
+                  flexShrink: 0,
+                  display: 'grid',
+                  placeItems: 'center',
+                  bgcolor: 'rgba(255,255,255,0.18)',
+                  border: '1px solid rgba(255,255,255,0.28)',
+                  backdropFilter: 'blur(8px)',
+                  color: '#fff',
+                  mb: 0.25,
+                }}
+              >
+                <ArrowUpRightIcon size={18} weight="bold" />
+              </Box>
             ) : null}
           </Stack>
-
+        ) : null}
+      </Box>
+      {contentBelowImage ? (
+        <Stack
+          direction="row"
+          spacing={1.25}
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            minWidth: 0,
+            px: { xs: 0.35, sm: 0.5 },
+            py: { xs: 0.85, sm: 1 },
+          }}
+        >
+          <Typography
+            component="h2"
+            sx={{
+              minWidth: 0,
+              flex: 1,
+              color: 'text.primary',
+              fontWeight: 750,
+              fontSize: { xs: '0.98rem', sm: '1.05rem' },
+              lineHeight: 1.2,
+              letterSpacing: '-0.015em',
+              display: '-webkit-box',
+              WebkitLineClamp: titleMaxLines,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              whiteSpace: titleMaxLines === 1 ? 'nowrap' : 'normal',
+              textOverflow: titleMaxLines === 1 ? 'ellipsis' : undefined,
+            }}
+          >
+            {title}
+          </Typography>
           {bottomRightLabel ? (
             <Typography
               sx={{
-                width: '100%',
-                maxWidth: 'none',
-                flex: 'none',
-                minWidth: 0,
-                fontWeight: 800,
-                fontSize: { xs: '0.95rem', sm: '1.05rem' },
-                lineHeight: 1.2,
+                flexShrink: 0,
+                maxWidth: '42%',
                 color: 'primary.main',
+                fontWeight: 800,
+                fontSize: { xs: '0.98rem', sm: '1.05rem' },
+                lineHeight: 1.2,
                 textAlign: 'right',
-                textShadow: '0 1px 12px rgba(0,0,0,0.35)',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -237,28 +328,9 @@ export function BannerSlideCard({
             >
               {bottomRightLabel}
             </Typography>
-          ) : href ? (
-            <Box
-              aria-hidden
-              sx={{
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                flexShrink: 0,
-                display: 'grid',
-                placeItems: 'center',
-                bgcolor: 'rgba(255,255,255,0.18)',
-                border: '1px solid rgba(255,255,255,0.28)',
-                backdropFilter: 'blur(8px)',
-                color: '#fff',
-                mb: 0.25,
-              }}
-            >
-              <ArrowUpRightIcon size={18} weight="bold" />
-            </Box>
           ) : null}
         </Stack>
-      </Box>
+      ) : null}
     </Box>
   );
 

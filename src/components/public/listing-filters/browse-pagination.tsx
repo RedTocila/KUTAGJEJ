@@ -57,6 +57,8 @@ export function BrowsePagination({
               <PaginationItem
                 page={item.page}
                 type="page"
+                component="a"
+                href={hrefForPage(item.page)}
                 selected={item.selected}
                 disabled={item.disabled}
                 onClick={(event) => {
@@ -76,6 +78,8 @@ export function BrowsePagination({
             return (
               <PaginationItem
                 {...item}
+                component="a"
+                href={hrefForPage(item.page)}
                 onClick={(event) => {
                   event.preventDefault();
                   if (item.page != null && item.page !== page) goToPage(item.page);

@@ -17,6 +17,7 @@ const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls, requireListingPhotos } = require('../lib/image-upload');
 const { isUuid } = require('../lib/public-listings/query-helpers');
 const { parseComparePrice } = require('../lib/listing-compare-price');
+const { slugifyTitle } = require('../lib/real-estate-permalink');
 const {
   formatMineRealEstate,
   formatMineRealEstateFull,
@@ -167,6 +168,7 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
       poster_id: req.user.id,
       property_category: propertyCategory,
       title: String(req.body.title).trim(),
+      permalink_slug: slugifyTitle(req.body.title),
       description: String(req.body.description || '').trim(),
       transaction_type: req.body.transactionType || null,
       price,

@@ -36,8 +36,8 @@ import { productButtonSx } from '@/styles/product-sx';
 import { paths } from '@/paths';
 
 export const OKAZION_PACKAGE_ID = 'okazion-5';
-export const OKAZION_PRICE_EUR = 12;
-export const OKAZION_PRICE_BC = 200;
+export const OKAZION_PRICE_EUR = 19;
+export const OKAZION_PRICE_BC = 250;
 
 export type OkazionBoostMode = 'off' | 'plan' | 'voucher' | 'buy-bc' | 'buy-card';
 export type OkazionPayMode = 'plan' | 'buy-bc' | 'buy-card';
@@ -95,7 +95,7 @@ export function OkazionBoostUpsell({
     >
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
         <SealPercentIcon size={22} weight="regular" color={OKAZION_ACCENT} />
-        <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT }}>{t.packages.okazion5Days}</Typography>
+        <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT }}>{t.packages.okazion7Days}</Typography>
       </Stack>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
         {t.packages.okazionUpsellBody(OKAZION_PRICE_EUR, OKAZION_PRICE_BC)}
@@ -187,12 +187,12 @@ export function OkazionPostActions({
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5 }}>
           <SealPercentIcon size={18} weight="regular" color={OKAZION_ACCENT} />
           <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT, fontSize: '0.95rem' }}>
-            {t.packages.okazion5Days}
+            {t.packages.okazion7Days}
           </Typography>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, lineHeight: 1.4 }}>
           {hasPlanSlot
-            ? t.packages.premiumWithPlan(planRemaining ?? 0, 5)
+            ? t.packages.premiumWithPlan(planRemaining ?? 0, 7)
             : t.packages.okazionPaySubtitle}
         </Typography>
       </Box>

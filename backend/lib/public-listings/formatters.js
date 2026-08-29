@@ -1,5 +1,5 @@
 const { realEstatePermalink } = require('../real-estate-permalink');
-const { listingPermalinkFromSlugSource } = require('../listing-permalink');
+const { listingPermalinkFromDoc } = require('../listing-permalink');
 const { computeOpenStatus, formatWeeklyHoursLine } = require('../business-hours');
 const { BUSINESS_CATEGORY_LABELS, PROFESSIONAL_CATEGORY_LABELS } = require('./constants');
 const { jobListingExpiresAt, isPremiumActive, isOkazionActive } = require('./query-helpers');
@@ -146,7 +146,7 @@ function formatCar(doc, cityById) {
     imageUrl: pickImage(doc),
     imageUrls: coverImageUrls(doc),
     ...bumpTimeFields(doc),
-    permalinkPath: listingPermalinkFromSlugSource(carSlugSource(doc), doc.id),
+    permalinkPath: listingPermalinkFromDoc(doc, carSlugSource(doc)),
     ...featuredCardFields(doc),
   };
 }
@@ -172,7 +172,7 @@ function formatJob(doc, cityById) {
     imageUrls: coverImageUrls(doc),
     ...times,
     expiresAt: jobListingExpiresAt(times.createdAt),
-    permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
+    permalinkPath: listingPermalinkFromDoc(doc, doc.title),
     responsibilities: Array.isArray(doc.responsibilities) ? doc.responsibilities.filter(Boolean) : [],
     requirements: Array.isArray(doc.requirements) ? doc.requirements.filter(Boolean) : [],
     benefits: Array.isArray(doc.benefits)
@@ -200,7 +200,7 @@ function formatMarketplace(doc, cityById) {
     imageUrl: pickImage(doc),
     imageUrls: coverImageUrls(doc),
     ...bumpTimeFields(doc),
-    permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
+    permalinkPath: listingPermalinkFromDoc(doc, doc.title),
     ...featuredCardFields(doc),
   };
 }
@@ -272,7 +272,7 @@ function formatDirectory(doc, cityById, reviewStats) {
     imageUrl: pickImage(doc),
     imageUrls: coverImageUrls(doc),
     ...bumpTimeFields(doc),
-    permalinkPath: listingPermalinkFromSlugSource(doc.title, doc.id),
+    permalinkPath: listingPermalinkFromDoc(doc, doc.title),
     // Directory profiles support Premium only — OKAZION is for sellable ads.
     ...premiumCardFields(doc),
   };

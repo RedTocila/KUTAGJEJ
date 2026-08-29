@@ -12,6 +12,7 @@ const { resolveOptionalCityId } = require('../lib/listing-city');
 const { sanitizeImageUrls, requireListingPhotos } = require('../lib/image-upload');
 const { uploadBuffersToSupabase } = require('../lib/storage-uploads');
 const { parseComparePrice } = require('../lib/listing-compare-price');
+const { slugifyTitle } = require('../lib/real-estate-permalink');
 const { formatMineCar, formatMineCarFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
 const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
 const {
@@ -131,6 +132,9 @@ router.post(
 
       const row = {
         poster_id: req.user.id,
+        permalink_slug: slugifyTitle(
+          [fields.make, fields.model, fields.variant].filter(Boolean).join(' '),
+        ),
         vehicle_type: String(fields.vehicleType).trim().toLowerCase(),
         make: String(fields.make).trim(),
         model: String(fields.model).trim(),

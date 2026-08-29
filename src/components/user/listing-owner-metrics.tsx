@@ -699,7 +699,7 @@ export function ListingOwnerMetrics({
                     : 'OKAZION aktiv'
                   : premiumOn
                     ? 'Nuk mund të aktivizoni OKAZION kur Premium është aktiv.'
-                  : 'Bëje OKAZION me vendin nga paketa (Grow/Elite · 5 ditë)'
+                  : 'Bëje OKAZION me vendin nga paketa (Grow/Elite · 7 ditë)'
               }
             >
               <span>

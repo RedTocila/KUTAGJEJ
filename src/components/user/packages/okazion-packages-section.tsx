@@ -55,11 +55,11 @@ import { dualPayButtonSx, ExtraPackageCard, formatBc, PackageEurPrice, Purchased
 const FALLBACK_OKAZION_PACKAGES: OkazionPackage[] = [
   {
     id: 'okazion-5',
-    days: 5,
-    priceBc: 200,
-    priceEur: 12,
-    labelSq: '5 ditë OKAZION',
-    labelEn: '5 Days OKAZION Listing',
+    days: 7,
+    priceBc: 250,
+    priceEur: 19,
+    labelSq: '7 ditë OKAZION',
+    labelEn: '7 Days OKAZION Listing',
   },
 ];
 

@@ -472,7 +472,7 @@ export async function fetchOkazionPlanQuota(): Promise<{
         max: Number(data.max) || 0,
         used: Number(data.used) || 0,
         remaining: Number(data.remaining) || 0,
-        days: Number(data.days) || 5,
+        days: Number(data.days) || 7,
       },
     };
   } catch {
@@ -538,7 +538,7 @@ export async function applyOkazionFromPlan(params: {
             max: Number(data.quota.max) || 0,
             used: Number(data.quota.used) || 0,
             remaining: Number(data.quota.remaining) || 0,
-            days: Number(data.quota.days) || 5,
+            days: Number(data.quota.days) || 7,
           }
         : undefined,
       message: typeof data.message === 'string' ? data.message : undefined,

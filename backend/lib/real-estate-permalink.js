@@ -14,7 +14,10 @@ function slugifyTitle(title) {
 
 function realEstatePermalink(doc) {
   const id = doc?.id != null ? String(doc.id) : doc?._id != null ? String(doc._id) : '';
-  const segment = `${slugifyTitle(doc.title)}-${id}.html`;
+  const storedSlug = String(doc?.permalinkSlug ?? doc?.permalink_slug ?? '').trim();
+  const segment = storedSlug
+    ? `${storedSlug.replace(/\.html$/i, '')}-${id}.html`
+    : `${slugifyTitle(doc.title)}-${id}.html`;
   // Match browser URL normalization (matches UTF-8 path segments reliably).
   return typeof segment.normalize === 'function' ? segment.normalize('NFC') : segment;
 }

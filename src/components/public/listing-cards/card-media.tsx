@@ -56,7 +56,7 @@ export interface CardMediaProps {
   premium?: boolean;
   /** OKAZION listing — red badge / countdown (bookmark stays primary green). */
   okazion?: boolean;
-  /** When OKAZION ends (ISO). Countdown falls back to 5 days if omitted. */
+  /** When OKAZION ends (ISO). Countdown falls back to 7 days if omitted. */
   okazionUntil?: string | null;
   /** Seller verification status. Rendered at bottom-right of the image. */
   sellerVerified?: boolean;
@@ -335,15 +335,32 @@ export function CardMedia({
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: compact ? 28 : 32,
-            height: compact ? 28 : 32,
+            width: compact ? 'auto' : 32,
+            height: compact ? 'auto' : 32,
             borderRadius: '50%',
-            bgcolor: alpha('#000', 0.45),
-            border: '1px solid',
-            borderColor: alpha('#fff', 0.18),
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            ...(compact
+              ? {
+                  bgcolor: 'transparent',
+                  border: 'none',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    inset: -5,
+                    borderRadius: '50%',
+                    background:
+                      'radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.14) 38%, rgba(0,0,0,0) 70%)',
+                    pointerEvents: 'none',
+                  },
+                  '& > *': { position: 'relative', zIndex: 1 },
+                }
+              : {
+                  bgcolor: alpha('#000', 0.45),
+                  border: '1px solid',
+                  borderColor: alpha('#fff', 0.18),
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                }),
             lineHeight: 0,
           }}
         >
@@ -360,15 +377,8 @@ export function CardMedia({
             right: 6,
             alignItems: 'center',
             zIndex: 3,
-            height: 30,
-            borderRadius: 999,
-            bgcolor: alpha('#000', 0.45),
-            border: '1px solid',
-            borderColor: alpha('#fff', 0.18),
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
-            px: 0.5,
+            height: 'auto',
+            gap: 0.25,
           }}
         >
           <IconButton
@@ -380,6 +390,18 @@ export function CardMedia({
               height: 28,
               p: 0,
               color: '#fff',
+              position: 'relative',
+              overflow: 'visible',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                inset: -5,
+                borderRadius: '50%',
+                background:
+                  'radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.14) 38%, rgba(0,0,0,0) 70%)',
+                pointerEvents: 'none',
+              },
+              '& > svg': { position: 'relative', zIndex: 1 },
               transition: 'color 0.15s ease, transform 0.1s ease, background-color 0.15s ease',
               '&:hover': { bgcolor: alpha('#fff', 0.14) },
               '&:active': { transform: 'scale(0.92)' },
@@ -387,14 +409,6 @@ export function CardMedia({
           >
             <ShareNetworkIcon size={16} weight="regular" />
           </IconButton>
-          <Box
-            sx={{
-              width: '1px',
-              height: 14,
-              bgcolor: alpha('#fff', 0.22),
-              mx: 0.35,
-            }}
-          />
           <IconButton
             aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
             onClick={handleSave}
@@ -404,6 +418,18 @@ export function CardMedia({
               height: 28,
               p: 0,
               color: saved ? 'primary.main' : '#fff',
+              position: 'relative',
+              overflow: 'visible',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                inset: -5,
+                borderRadius: '50%',
+                background:
+                  'radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.14) 38%, rgba(0,0,0,0) 70%)',
+                pointerEvents: 'none',
+              },
+              '& > svg': { position: 'relative', zIndex: 1 },
               transition: 'color 0.15s ease, transform 0.1s ease, background-color 0.15s ease',
               '&:hover': { bgcolor: alpha('#fff', 0.14) },
               '&:active': { transform: 'scale(0.92)' },

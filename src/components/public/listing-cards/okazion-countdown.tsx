@@ -11,7 +11,7 @@ import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
 import { formatJobListingCountdown, getJobCountdownParts } from '@/lib/job-listing-expiry';
 
 /** OKAZION packs always last this many days. */
-export const OKAZION_COUNTDOWN_DAYS = 5;
+export const OKAZION_COUNTDOWN_DAYS = 7;
 
 const PLACEHOLDER_LABEL = `${OKAZION_COUNTDOWN_DAYS}d 0h 00m 00s`;
 const COMPACT_PLACEHOLDER_LABEL = `${OKAZION_COUNTDOWN_DAYS}d 0h`;
@@ -107,8 +107,8 @@ export function OkazionCountdownPlaceholder({ compact = false }: { compact?: boo
 }
 
 /**
- * Live countdown until OKAZION expires. Packs are always 5 days —
- * when `expiresAt` is missing, falls back to a fresh 5-day window.
+ * Live countdown until OKAZION expires. Packs are always 7 days —
+ * when `expiresAt` is missing, falls back to a fresh 7-day window.
  * Uses a shared 1Hz clock so many cards on the home feed don't each open a timer.
  */
 export function OkazionCountdown({

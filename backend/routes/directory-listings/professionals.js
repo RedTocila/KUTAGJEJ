@@ -11,6 +11,7 @@ const { notifyAdminsListingSubmitted } = require('../../lib/listing-moderation')
 const { isUuid } = require('../../lib/public-listings/query-helpers');
 const { resolveOptionalCityId } = require('../../lib/listing-city');
 const { requireListingPhotos } = require('../../lib/image-upload');
+const { slugifyTitle } = require('../../lib/real-estate-permalink');
 const { formatMineProfessional, formatMineProfessionalFull, loadMineKind, loadMineListingById } = require('../../lib/mine-listings');
 const {
   parseMapsFieldsFromBody,
@@ -92,6 +93,7 @@ router.post('/professionals', authMiddleware, requirePortalUser, async (req, res
       vertical: 'professionals',
       poster_id: req.user.id,
       title: String(body.title).trim(),
+      permalink_slug: slugifyTitle(body.title),
       description: String(body.description).trim(),
       category: body.category,
       city_id: cityId,

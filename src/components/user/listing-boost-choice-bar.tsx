@@ -320,7 +320,7 @@ export function ListingBoostChoiceBar({
               }}
             >
               <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT }}>
-                {t.packages.daysPrice(5, OKAZION_PRICE_EUR, OKAZION_PRICE_BC)}
+                {t.packages.daysPrice(7, OKAZION_PRICE_EUR, OKAZION_PRICE_BC)}
               </Typography>
             </Box>
             <Stack direction="row" spacing={1}>

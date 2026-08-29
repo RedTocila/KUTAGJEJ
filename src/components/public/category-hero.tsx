@@ -13,7 +13,6 @@ import {
   OKAZION_ACCENT_SOFT,
   OKAZION_RED,
   OKAZION_RED_DARK,
-  OKAZION_RED_ON,
   PROFILES_ACCENT,
   PROFILES_ACCENT_SOFT,
   type HomeVerticalId,
@@ -59,12 +58,17 @@ export function PublicCategoryHero({
   total,
   cities,
   pending = false,
+  heading,
+  intro,
 }: {
   verticalId: BrowseCategoryId;
   total: number;
   cities: RealEstateCityDto[];
   /** Listings are still loading — never show “no listings yet”. */
   pending?: boolean;
+  /** Optional SEO landing heading/intro; the default browse chrome is unchanged. */
+  heading?: string;
+  intro?: string;
 }) {
   const { language } = useLanguage();
   const t = useCopy();
@@ -182,7 +186,7 @@ export function PublicCategoryHero({
                   minWidth: 0,
                 }}
               >
-                {label}
+                {heading || label}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.45 }}>
                 {pending
@@ -195,6 +199,11 @@ export function PublicCategoryHero({
                       ? t.browse.noProfilesYet
                       : t.browse.noListingsYet}
               </Typography>
+              {intro ? (
+                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 760, mt: 0.5 }}>
+                  {intro}
+                </Typography>
+              ) : null}
             </Stack>
             <IconButton
               onClick={() => setPickerOpen(true)}

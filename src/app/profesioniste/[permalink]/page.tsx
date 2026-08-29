@@ -8,45 +8,51 @@ import { loadPublicProfessionalListingById } from '@/lib/public-listings-client'
 import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
 import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { ProfessionalListingDetailView } from '@/components/public/professional-listing-detail-view';
-import { PublicLoadErrorView } from '@/components/public/public-load-error-view';
 import { PublicShell } from '@/components/public/public-shell';
 import { similarListingsSlot } from '@/components/public/similar-listings-section';
+import { renderSeoLandingPage } from '@/components/public/seo-landing-page';
+import { PublicListingContextLinks } from '@/components/public/public-listing-context-links';
+import { loadSeoLandingRoute, seoLandingMetadata } from '@/lib/public-seo';
+import { publicListingJsonLd } from '@/lib/public-listing-jsonld';
 
 export const revalidate = 0;
 
-type PageProps = { params: Promise<{ permalink: string }> };
+type PageProps = {
+  params: Promise<{ permalink: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
 function descSnippet(text: string): string {
   return text.replace(/\s+/g, ' ').trim().slice(0, 158);
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { permalink } = await params;
   const id = mongoIdFromPublicListingSegment(permalink);
   if (!id) {
-    return {
-      title: 'Njoftim i padisponueshëm',
-      description: 'Ky adresë nuk përmban një njoftime të vlefshme.',
-      robots: { index: false, follow: true },
-    };
+    const landing = await loadSeoLandingRoute('professionals', [permalink]);
+    if (!landing.config) notFound();
+    return seoLandingMetadata(
+      landing.config,
+      landing.result?.total ?? 0,
+      Boolean(Object.keys((await searchParams) ?? {}).length === 0 && landing.result?.ok && (landing.result?.total ?? 0) >= 3),
+    );
   }
   const { data: listing, unavailable } = await loadPublicProfessionalListingById(id);
   if (unavailable) {
-    return { title: 'Duke ngarkuar njoftimin', robots: { index: false, follow: true } };
+    notFound();
   }
   if (!listing) {
-    return {
-      title: 'Njoftim i padisponueshëm',
-      description: 'Ky profesionist nuk është më i listuar.',
-      robots: { index: false, follow: true },
-    };
+    notFound();
   }
   const pathHref = listing.permalinkPath?.trim()
     ? pathsPublicVerticalListingDetail(paths.public.professionals, listing.permalinkPath.trim())
     : pathsPublicVerticalListingDetail(paths.public.professionals, listing.id);
   return buildVerticalListingDetailMetadata({
-    title: listing.title,
-    descriptionSnippet: descSnippet(listing.description) || listing.title,
+    title: `${listing.title}${listing.cityName ? ` në ${listing.cityName}` : ''}`,
+    descriptionSnippet:
+      descSnippet(`${listing.description} ${listing.category}${listing.cityName ? ` në ${listing.cityName}` : ''}`) ||
+      listing.title,
     pathHref,
     imageUrls: listing.imageUrls,
     imageUrl: listing.imageUrl,
@@ -56,15 +62,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ProfessionalListingPage({ params }: PageProps): Promise<React.ReactNode> {
   const { permalink } = await params;
   const id = mongoIdFromPublicListingSegment(permalink);
-  if (!id) notFound();
+  if (!id) {
+    const landing = await loadSeoLandingRoute('professionals', [permalink]);
+    if (!landing.config) notFound();
+    return renderSeoLandingPage(landing.config, landing.cities);
+  }
 
   const loaded = await loadPublicProfessionalListingById(id);
   if (loaded.unavailable) {
-    return (
-      <PublicShell hideHeaderBelowMd>
-        <PublicLoadErrorView title="Njoftimi nuk u ngarkua" />
-      </PublicShell>
-    );
+    notFound();
   }
   const listing = loaded.data;
   if (!listing) notFound();
@@ -82,14 +88,19 @@ export default async function ProfessionalListingPage({ params }: PageProps): Pr
     ? pathsPublicVerticalListingDetail(paths.public.professionals, canonRaw)
     : pathsPublicVerticalListingDetail(paths.public.professionals, listing.id);
   const canonicalUrl = `${config.site.url.replace(/\/$/, '')}${pathHref}`;
+  const jsonLdHtml = JSON.stringify(publicListingJsonLd(listing, canonicalUrl)).replace(/</g, '\\u003c');
   return (
-    <PublicShell hideHeaderBelowMd>
-      <ProfessionalListingDetailView
-        listing={listing}
-        canonicalUrl={canonicalUrl}
-        similarSlot={similarListingsSlot('professionals', listing.id, 'Profesionistë të ngjashëm')}
-        similarSlotDesktop={similarListingsSlot('professionals', listing.id, 'Profesionistë të ngjashëm')}
-      />
-    </PublicShell>
+    <>
+      <script type="application/ld+json" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: jsonLdHtml }} />
+      <PublicShell hideHeaderBelowMd>
+        <PublicListingContextLinks listing={listing} title="Profesionistë" />
+        <ProfessionalListingDetailView
+          listing={listing}
+          canonicalUrl={canonicalUrl}
+          similarSlot={similarListingsSlot('professionals', listing.id, 'Profesionistë të ngjashëm')}
+          similarSlotDesktop={similarListingsSlot('professionals', listing.id, 'Profesionistë të ngjashëm')}
+        />
+      </PublicShell>
+    </>
   );
 }

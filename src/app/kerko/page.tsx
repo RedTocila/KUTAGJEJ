@@ -11,6 +11,8 @@ import { config } from '@/config';
 export const metadata: Metadata = {
   title: `Kërko | ${config.site.name}`,
   description: 'Kërko njoftime në KuTaGjej — zgjidh kategorinë, shkruaj dhe shiko rezultatet.',
+  alternates: { canonical: '/kerko' },
+  robots: { index: false, follow: true },
 };
 
 function SearchFallback() {

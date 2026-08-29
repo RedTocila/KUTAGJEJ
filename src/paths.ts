@@ -141,6 +141,20 @@ export function pathsPublicVerticalListingDetail(
   return `${base}/${encodeURIComponent(seg)}`;
 }
 
+/** Canonical city/category landing path without query filters. */
+export function pathsPublicLocationLanding(
+  basePublicPath: string,
+  citySlug: string,
+  categorySlug?: string,
+  transactionSlug?: string,
+): string {
+  const base = basePublicPath.replace(/\/$/, '');
+  const segments = [citySlug, categorySlug, transactionSlug]
+    .filter((segment): segment is string => Boolean(String(segment ?? '').trim()))
+    .map((segment) => encodeURIComponent(String(segment).trim()));
+  return `${base}/${segments.join('/')}`;
+}
+
 /**
  * Prefer server `permalinkPath`; fall back to legacy bare id (handled by `[permalink]` resolver).
  */

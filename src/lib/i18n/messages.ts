@@ -15,7 +15,7 @@ const verticalsSq: Record<SearchCategoryId, VerticalCopy> = {
   },
   okazion: {
     label: 'OKAZION',
-    tagline: 'Oferta të shpejta — 5 ditë nga të gjitha kategoritë',
+    tagline: 'Oferta të shpejta — 7 ditë nga të gjitha kategoritë',
     searchPlaceholder: 'Kërko oferta OKAZION…',
   },
   'real-estate': {
@@ -63,7 +63,7 @@ const verticalsEn: Record<SearchCategoryId, VerticalCopy> = {
   },
   okazion: {
     label: 'OKAZION',
-    tagline: 'Flash deals — 5 days across all categories',
+    tagline: 'Flash deals — 7 days across all categories',
     searchPlaceholder: 'Search OKAZION deals…',
   },
   'real-estate': {
@@ -396,7 +396,7 @@ const sq = {
     premiumConfirmAction: 'Aktivizo Premium',
     okazionConfirmTitle: 'Aktivizo OKAZION?',
     okazionConfirmBody:
-      'Njoftimi do të shfaqet me prioritet në OKAZION për 5 ditë. Do të përdoret 1 vend OKAZION nga paketa juaj (Grow/Elite). Doni të vazhdoni?',
+      'Njoftimi do të shfaqet me prioritet në OKAZION për 7 ditë. Do të përdoret 1 vend OKAZION nga paketa juaj (Grow/Elite). Doni të vazhdoni?',
     okazionConfirmAction: 'Aktivizo OKAZION',
   },
   messages: {
@@ -507,10 +507,10 @@ const sq = {
     postOkazion: 'Posto OKAZION',
     premiumPaySubtitle:
       'Njoftimi shfaqet me prioritet në krye. Zgjidhni kohëzgjatjen dhe mënyrën e pagesës.',
-    okazionPaySubtitle: 'Njoftimi shfaqet me temë të kuqe në OKAZION për 5 ditë.',
+    okazionPaySubtitle: 'Njoftimi shfaqet me temë të kuqe në OKAZION për 7 ditë.',
     daysShort: (n: number) => `${n} ditë`,
     daysPrice: (days: number, eur: number, bc: number) => `${days} ditë · ${eur}€ / ${bc} BC`,
-    okazion5Days: 'OKAZION · 5 ditë',
+    okazion7Days: 'OKAZION · 7 ditë',
     premiumDaysTitle: (days: number) => `Premium · ${days} ditë`,
     okazionUpsellBody: (eur: number, bc: number) =>
       `Shfaqe njoftimin me temë të kuqe në OKAZION. ${eur}€ ose ${bc} BC — ose përdor vendin nga Grow/Elite.`,
@@ -527,7 +527,7 @@ const sq = {
     decrease: 'Zvogëlo',
     increase: 'Rrit',
     okazionInfo:
-      'Shitje të shpejta — njoftimi shfaqet me temë të kuqe në OKAZION për 5 ditë. Vlen për prona, makina, pune dhe tregun.',
+      'Shitje të shpejta — njoftimi shfaqet me temë të kuqe në OKAZION për 7 ditë. Vlen për prona, makina, pune dhe tregun.',
     autoRefreshInfo:
       'Njoftimet tuaja ngrihen automatikisht në krye sipas intervalit të planit · 1–10 BC për çdo ngjitje (sipas OKAZION / Premium / falas).',
     autoRefreshTitle: 'Auto-refresh',
@@ -614,7 +614,7 @@ const sq = {
     freeListingHint: 'Posto njoftim standard pa pagesë',
     allListings: 'Njoftime FALAS',
     allListingsHint: 'Prona, makina, pune, biznese, profesionistë, tregu',
-    okazionHint: '5 ditë · 12€ ose 200 BC · prona, makina, pune, tregu',
+    okazionHint: '7 ditë · 19€ ose 250 BC · prona, makina, pune, tregu',
     premiumHint: '15/30 ditë · prioritet · prona, makina, pune, tregu',
     aiImport: 'AI Build listing',
     aiImportHint: 'Ngjit linke ose Instagram — AI ndërton njoftimet',
@@ -1213,7 +1213,7 @@ const en: AppMessages = {
     premiumConfirmAction: 'Activate Premium',
     okazionConfirmTitle: 'Activate OKAZION?',
     okazionConfirmBody:
-      'This listing will appear with priority on OKAZION for 5 days. 1 OKAZION slot from your plan (Grow/Elite) will be used. Do you want to continue?',
+      'This listing will appear with priority on OKAZION for 7 days. 1 OKAZION slot from your plan (Grow/Elite) will be used. Do you want to continue?',
     okazionConfirmAction: 'Activate OKAZION',
   },
   messages: {
@@ -1323,10 +1323,10 @@ const en: AppMessages = {
     postPremium: 'Post Premium',
     postOkazion: 'Post OKAZION',
     premiumPaySubtitle: 'Your listing gets top priority. Choose duration and payment method.',
-    okazionPaySubtitle: 'Your listing appears with a red theme in OKAZION for 5 days.',
+    okazionPaySubtitle: 'Your listing appears with a red theme in OKAZION for 7 days.',
     daysShort: (n: number) => `${n} days`,
     daysPrice: (days: number, eur: number, bc: number) => `${days} days · ${eur}€ / ${bc} BC`,
-    okazion5Days: 'OKAZION · 5 days',
+    okazion7Days: 'OKAZION · 7 days',
     premiumDaysTitle: (days: number) => `Premium · ${days} days`,
     okazionUpsellBody: (eur: number, bc: number) =>
       `Show your listing with a red OKAZION theme. ${eur}€ or ${bc} BC — or use a Grow/Elite slot.`,
@@ -1341,7 +1341,7 @@ const en: AppMessages = {
     decrease: 'Decrease',
     increase: 'Increase',
     okazionInfo:
-      'Fast sales — your listing appears with a red OKAZION theme for 5 days. Applies to property, cars, jobs, and marketplace.',
+      'Fast sales — your listing appears with a red OKAZION theme for 7 days. Applies to property, cars, jobs, and marketplace.',
     autoRefreshInfo:
       'Your listings rise automatically to the top on your plan’s interval · 1–10 BC per bump (OKAZION / Premium / free).',
     autoRefreshTitle: 'Auto-refresh',
@@ -1428,7 +1428,7 @@ const en: AppMessages = {
     freeListingHint: 'Post a standard listing for free',
     allListings: 'FREE Listings',
     allListingsHint: 'Property, cars, jobs, business, professional, marketplace',
-    okazionHint: '5 days · €12 or 200 BC · properties, cars, jobs, marketplace',
+    okazionHint: '7 days · €19 or 250 BC · properties, cars, jobs, marketplace',
     premiumHint: '15/30 days · priority · properties, cars, jobs, marketplace',
     aiImport: 'AI Build listing',
     aiImportHint: 'Paste website or Instagram links — AI builds listings',

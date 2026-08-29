@@ -6,9 +6,9 @@ const { isValidKind, TABLE_BY_KIND } = require('./listing-refresh');
 const { getOkazionPackage } = require('./okazion-packages');
 const { applyListingBump } = require('./listing-bump');
 
-/** OKAZION slots included with Grow / Elite stay featured for 5 days. */
+/** OKAZION slots included with Grow / Elite stay featured for 7 days. */
 const PLAN_OKAZION_PACKAGE_ID = 'plan-okazion';
-const PLAN_OKAZION_DAYS = 5;
+const PLAN_OKAZION_DAYS = 7;
 
 function isOkazionActive(doc) {
   if (!doc) return false;
@@ -473,7 +473,7 @@ async function applyOkazionVoucher({ userId, voucherId, kind, listingId }) {
 }
 
 /**
- * Spend one Grow/Elite OKAZION slot: feature the post for 5 days.
+ * Spend one Grow/Elite OKAZION slot: feature the post for 7 days.
  */
 async function applyOkazionFromPlan({ userId, kind, listingId }) {
   if (!userId || !isUuid(String(userId))) {

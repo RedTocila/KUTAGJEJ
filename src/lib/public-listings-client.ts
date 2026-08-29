@@ -13,7 +13,7 @@ export type ListingMetricsFields = ListingMetrics & {
   /** Active Premium boost window — listing floats to the top of public feeds. */
   isPremium?: boolean;
   premiumUntil?: string | null;
-  /** Active OKAZION window — red-themed short deal (5 days). */
+  /** Active OKAZION window — red-themed short deal (7 days). */
   isOkazion?: boolean;
   okazionUntil?: string | null;
   /** Last refresh / premium / okazion / announce bump — drives “newest” + card footer time. */

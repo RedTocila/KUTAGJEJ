@@ -9,6 +9,7 @@ const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls, requireListingPhotos } = require('../lib/image-upload');
 const { isUuid } = require('../lib/public-listings/query-helpers');
 const { resolveOptionalCityId } = require('../lib/listing-city');
+const { slugifyTitle } = require('../lib/real-estate-permalink');
 const { formatMineJob, formatMineJobFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
 const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
 const {
@@ -85,6 +86,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     const row = {
       poster_id: req.user.id,
       title: String(body.title).trim(),
+      permalink_slug: slugifyTitle(body.title),
       description: String(body.description).trim(),
       industry: body.industry,
       city_id: cityId,

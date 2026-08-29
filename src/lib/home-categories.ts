@@ -151,7 +151,7 @@ export const OKAZION_RED_ON = '#ffffff';
 export const OKAZION_SEARCH_CATEGORY: SearchCategory = {
   id: 'okazion',
   label: 'OKAZION',
-  tagline: 'Oferta të shpejta — 5 ditë · prona, makina, punë, tregu',
+  tagline: 'Oferta të shpejta — 7 ditë · prona, makina, punë, tregu',
   gradient: [OKAZION_ACCENT, OKAZION_ACCENT_DARK] as const,
   iconKey: 'seal-percent',
   href: paths.public.okazion,

@@ -67,7 +67,7 @@ const KIND_META: Record<
   },
   okazion: {
     title: 'OKAZION',
-    blurb: 'Oferta të shkurtra OKAZION (zakonisht 5 ditë).',
+    blurb: 'Oferta të shkurtra OKAZION (zakonisht 7 ditë).',
     accent: OKAZION_ACCENT,
     Icon: SealPercentIcon,
   },
@@ -90,10 +90,10 @@ function emptyForm(kind: AddonKind): AddonPackageInput {
   if (kind === 'okazion') {
     return {
       kind,
-      days: 5,
+      days: 7,
       slots: null,
-      priceEur: 12,
-      priceBc: 200,
+      priceEur: 19,
+      priceBc: 250,
       labelSq: '',
       labelEn: '',
       active: true,
@@ -211,7 +211,7 @@ function AddonDialog({
               kind === 'auto-refresh'
                 ? 'p.sh. 10 njoftime Auto-Refresh'
                 : kind === 'okazion'
-                  ? 'p.sh. 5 ditë OKAZION'
+                  ? 'p.sh. 7 ditë OKAZION'
                   : 'p.sh. 15 ditë Premium'
             }
             sx={productFieldSx}

@@ -30,12 +30,12 @@ const DEFAULT_ADDON_PACKAGES = [
   {
     id: 'okazion-5',
     kind: 'okazion',
-    days: 5,
+    days: 7,
     slots: null,
-    priceEur: 12,
-    priceBc: 200,
-    labelSq: '5 ditë OKAZION',
-    labelEn: '5 Days OKAZION Listing',
+    priceEur: 19,
+    priceBc: 250,
+    labelSq: '7 ditë OKAZION',
+    labelEn: '7 Days OKAZION Listing',
     sortOrder: 0,
   },
   {

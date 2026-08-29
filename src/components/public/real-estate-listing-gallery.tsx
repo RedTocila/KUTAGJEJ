@@ -829,7 +829,7 @@ export function RealEstateListingGallery(props: {
               <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
                 <Image
                   src={listingThumbImageUrl(url) ?? url}
-                  alt=""
+                  alt={`${title} - fotoja ${idx + 1}`}
                   fill
                   sizes="120px"
                   style={{ objectFit: 'cover' }}

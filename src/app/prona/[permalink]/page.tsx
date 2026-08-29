@@ -7,41 +7,43 @@ import { pathsPublicRealEstateListingDetail } from '@/paths';
 import { loadPublicRealEstateListingById } from '@/lib/public-listings-client';
 import { buildRealEstateListingMetadata, realEstateListingJsonLd } from '@/lib/real-estate-listing-seo';
 import { mongoIdFromPronaDynamicSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
-import { PublicLoadErrorView } from '@/components/public/public-load-error-view';
 import { PublicShell } from '@/components/public/public-shell';
 import { RealEstateListingDetailView } from '@/components/public/real-estate-listing-detail-view';
+import { PublicListingContextLinks } from '@/components/public/public-listing-context-links';
 import { similarListingsSlot } from '@/components/public/similar-listings-section';
+import { renderSeoLandingPage } from '@/components/public/seo-landing-page';
+import { loadSeoLandingRoute, seoLandingMetadata } from '@/lib/public-seo';
 
 export const revalidate = 60;
 
 type PageProps = {
   params: Promise<{ permalink: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { permalink } = await params;
   const id = mongoIdFromPronaDynamicSegment(permalink);
   if (!id) {
-    return {
-      title: 'Njoftim i padisponueshëm',
-      description: 'Ky adresë nuk përmban një njoftime të vlefshme.',
-      robots: { index: false, follow: true },
-    };
+    const landing = await loadSeoLandingRoute('real-estate', [permalink]);
+    if (!landing.config) notFound();
+    return seoLandingMetadata(
+      landing.config,
+      landing.result?.total ?? 0,
+      Boolean(
+        Object.keys((await searchParams) ?? {}).length === 0 &&
+          landing.result?.ok &&
+          (landing.result?.total ?? 0) >= 3,
+      ),
+    );
   }
 
   const { data: listing, unavailable } = await loadPublicRealEstateListingById(id);
   if (unavailable) {
-    return {
-      title: 'Duke ngarkuar njoftimin',
-      robots: { index: false, follow: true },
-    };
+    notFound();
   }
   if (!listing) {
-    return {
-      title: 'Njoftim i padisponueshëm',
-      description: 'Ky njoftime për pronë nuk është më i disponueshëm.',
-      robots: { index: false, follow: true },
-    };
+    notFound();
   }
 
   return buildRealEstateListingMetadata(listing);
@@ -51,16 +53,16 @@ export default async function RealEstateListingPage({ params }: PageProps): Prom
   const { permalink } = await params;
 
   const id = mongoIdFromPronaDynamicSegment(permalink);
-  if (!id) notFound();
+  if (!id) {
+    const landing = await loadSeoLandingRoute('real-estate', [permalink]);
+    if (!landing.config) notFound();
+    return renderSeoLandingPage(landing.config, landing.cities);
+  }
 
   const loaded = await loadPublicRealEstateListingById(id);
 
   if (loaded.unavailable) {
-    return (
-      <PublicShell hideHeaderBelowMd>
-        <PublicLoadErrorView title="Njoftimi nuk u ngarkua" />
-      </PublicShell>
-    );
+    notFound();
   }
 
   const listing = loaded.data;
@@ -86,6 +88,7 @@ export default async function RealEstateListingPage({ params }: PageProps): Prom
     <>
       <script type="application/ld+json" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: jsonLdHtml }} />
       <PublicShell hideHeaderBelowMd>
+        <PublicListingContextLinks listing={listing} title="Prona" />
         <RealEstateListingDetailView
           listing={listing}
           canonicalUrl={canonicalUrl}

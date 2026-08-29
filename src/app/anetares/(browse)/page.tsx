@@ -11,15 +11,21 @@ import { paths } from '@/paths';
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
-  title: `Profile | ${config.site.name}`,
-  description: 'Shfleto profilet publike të anëtarëve dhe bizneseve në KuTaGjej.',
-  alternates: { canonical: paths.public.profiles },
-};
-
 type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const sp = (await searchParams) ?? {};
+  const query = formatBrowseKeywords(sp.q);
+  const page = parseBrowsePage(sp);
+  return {
+    title: `Profile | ${config.site.name}`,
+    description: 'Shfleto profilet publike të anëtarëve dhe bizneseve në KuTaGjej.',
+    alternates: { canonical: paths.public.profiles },
+    robots: { index: Object.keys(sp).length === 0 && !query && page === 1, follow: true },
+  };
+}
 
 export default async function MembersBrowsePage({ searchParams }: PageProps): Promise<React.JSX.Element> {
   const sp = (await searchParams) ?? {};

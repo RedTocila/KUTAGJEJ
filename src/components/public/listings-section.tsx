@@ -117,25 +117,7 @@ export function ListingsSection({
           <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
             {!hideVerticalIcon ? (
               usePhosphorIcon ? (
-                <Box
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 1.5,
-                    display: 'grid',
-                    placeItems: 'center',
-                    flexShrink: 0,
-                    color: meta.accent ?? 'primary.main',
-                    bgcolor: (theme) =>
-                      meta.accentSoft
-                        ? meta.accentSoft
-                        : theme.palette.mode === 'dark'
-                          ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
-                          : 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
-                  }}
-                >
-                  <HomeVerticalIcon verticalId={verticalId} size={24} />
-                </Box>
+                <HomeVerticalIcon verticalId={verticalId} size={28} />
               ) : (
                 <VerticalIcon verticalId={verticalId as HomeVerticalId} size={42} decorative />
               )

@@ -4,21 +4,21 @@ import * as React from 'react';
 import { usePathname } from 'next/navigation';
 import { Box, Stack, Typography } from '@mui/material';
 
-import { useCopy } from '@/hooks/use-copy';
-import { useDisplayPathname } from '@/hooks/use-navigation-pending';
-import { useLanguage } from '@/hooks/use-language';
+import { paths } from '@/paths';
+import { hardNavigate, hardRefreshToTop } from '@/lib/hard-navigate';
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_SOFT,
+  localizeHomeBrowseCategories,
+  localizeSearchCategories,
   OKAZION_ACCENT,
   OKAZION_ACCENT_SOFT,
   PROFILES_ACCENT,
   PROFILES_ACCENT_SOFT,
-  localizeHomeBrowseCategories,
-  localizeSearchCategories,
 } from '@/lib/home-categories';
-import { hardNavigate, hardRefreshToTop } from '@/lib/hard-navigate';
-import { paths } from '@/paths';
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
+import { useDisplayPathname } from '@/hooks/use-navigation-pending';
 import { MOTION } from '@/styles/motion';
 
 import { HomeVerticalIcon } from './home-vertical-icon';
@@ -60,6 +60,13 @@ function accentModeFor(id: string): AccentMode {
   return 'default';
 }
 
+function heroCategoryLabel(id: string, fallback: string): string {
+  if (id === 'marketplace') return 'Market';
+  if (id === 'businesses') return 'Business';
+  if (id === 'professionals') return 'Profession';
+  return fallback;
+}
+
 export function HeroCategoryCircles({
   variant = 'links',
   selectedIndex: selectedIndexProp,
@@ -72,7 +79,7 @@ export function HeroCategoryCircles({
   const t = useCopy();
   const heroVerticals = React.useMemo(
     () => (includeAi ? localizeSearchCategories(language) : localizeHomeBrowseCategories(language)),
-    [includeAi, language],
+    [includeAi, language]
   );
 
   const selectedFromPath = React.useMemo(() => {
@@ -89,8 +96,7 @@ export function HeroCategoryCircles({
     return idx >= 0 ? idx : -1;
   }, [heroVerticals, displayPathname]);
 
-  const selectedIndex =
-    variant === 'tabs' && selectedIndexProp != null ? selectedIndexProp : selectedFromPath;
+  const selectedIndex = variant === 'tabs' && selectedIndexProp != null ? selectedIndexProp : selectedFromPath;
 
   /** Soft tint on hover; selected never goes solid-fill. */
   const itemSx = (mode: AccentMode) => {
@@ -139,7 +145,7 @@ export function HeroCategoryCircles({
         display: 'flex',
         flexDirection: 'row',
         flexWrap: 'nowrap',
-        gap: { xs: 1.25, sm: 2, md: 1.5 },
+        gap: { xs: 0.75, sm: 1.25, md: 1.5 },
         justifyContent: { xs: 'flex-start', md: 'stretch' },
         overflowX: { xs: 'auto', md: 'visible' },
         overflowY: 'hidden',
@@ -160,9 +166,10 @@ export function HeroCategoryCircles({
         const mode = accentModeFor(v.id);
         const accent = accentColor(mode);
         const soft = accentSoft(mode);
+        const label = heroCategoryLabel(v.id, v.label);
         const body = (
           <>
-            {/* Mobile: circle. Desktop: 4:3 tile matching the banner, filled with larger icon. */}
+            {/* Mobile: rounded square. Desktop: 4:3 tile matching the banner. */}
             <Box
               className="hero-cat-tile"
               sx={{
@@ -214,7 +221,7 @@ export function HeroCategoryCircles({
                   transition: 'color 140ms ease',
                 }}
               >
-                {v.label}
+                {label}
               </Typography>
             </Box>
             <Typography
@@ -229,19 +236,14 @@ export function HeroCategoryCircles({
                 transition: 'color 140ms ease',
               }}
             >
-              {v.label}
+              {label}
             </Typography>
           </>
         );
 
         if (variant === 'tabs') {
           return (
-            <Stack
-              key={v.id}
-              spacing={{ xs: 0.4, md: 0 }}
-              onClick={() => onSelect?.(i)}
-              sx={itemSx(mode)}
-            >
+            <Stack key={v.id} spacing={{ xs: 0.15, md: 0 }} onClick={() => onSelect?.(i)} sx={itemSx(mode)}>
               {body}
             </Stack>
           );
@@ -252,7 +254,7 @@ export function HeroCategoryCircles({
             key={v.id}
             component="a"
             href={v.href}
-            spacing={{ xs: 0.4, md: 0 }}
+            spacing={{ xs: 0.15, md: 0 }}
             onClick={(event) => {
               if (!selected) return;
               const base = v.href.split('?')[0];

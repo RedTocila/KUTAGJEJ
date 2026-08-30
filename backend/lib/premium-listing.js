@@ -1,14 +1,16 @@
 'use strict';
 
 const { getSupabaseAdmin } = require('./supabase');
-const { isUuid, isPremiumActive } = require('./public-listings/query-helpers');
+const { isUuid, isJobListingActive, isPremiumActive } = require('./public-listings/query-helpers');
 const { isValidKind, TABLE_BY_KIND } = require('./listing-refresh');
 const { getPremiumPackage } = require('./premium-packages');
 const { applyListingBump } = require('./listing-bump');
+const { hasBumpedAtColumn } = require('./ensure-bumped-at-schema');
+const { assertCanReactivateJobListing } = require('./listing-category-quota');
 
-/** Premium slots included with Grow / Elite stay featured for 30 days. */
+/** Premium slots included with Grow / Elite stay featured for 15 days. */
 const PLAN_PREMIUM_PACKAGE_ID = 'plan-premium';
-const PLAN_PREMIUM_DAYS = 30;
+const PLAN_PREMIUM_DAYS = 15;
 
 function premiumFieldsFromDoc(doc) {
   const until = doc?.premiumUntil ?? doc?.premium_until ?? null;
@@ -180,10 +182,7 @@ async function purchasePremiumWithBoostCoins({ userId, packageId }) {
       cost,
     };
   } catch (err) {
-    await sb
-      .from('profiles')
-      .update({ boost_credits: balance, updated_at: new Date().toISOString() })
-      .eq('id', userId);
+    await sb.from('profiles').update({ boost_credits: balance, updated_at: new Date().toISOString() }).eq('id', userId);
     throw err;
   }
 }
@@ -193,9 +192,13 @@ async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
   // directory_listings no longer has okazion_until (OKAZION is sellable-only).
   const isDirectory = kind === 'businesses' || kind === 'professionals';
   const selectCols = isDirectory
-    ? 'id, poster_id, status, premium_until'
-    : 'id, poster_id, status, premium_until, okazion_until';
-  let listingQ = sb.from(table).select(selectCols).eq('id', listingId);
+    ? ['id', 'poster_id', 'status', 'premium_until']
+    : ['id', 'poster_id', 'status', 'premium_until', 'okazion_until'];
+  if (kind === 'job') {
+    selectCols.push('created_at');
+    if (hasBumpedAtColumn() === true) selectCols.push('bumped_at');
+  }
+  let listingQ = sb.from(table).select(selectCols.join(', ')).eq('id', listingId);
   if (isDirectory) {
     listingQ = listingQ.eq('vertical', kind);
   }
@@ -223,11 +226,8 @@ async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
       message: 'Vetëm njoftimet e aprovuara mund të bëhen Premium.',
     };
   }
-  if (
-    !isDirectory &&
-    listing.okazion_until &&
-    new Date(listing.okazion_until) > new Date()
-  ) {
+  const jobActive = kind !== 'job' || isJobListingActive(listing);
+  if (!isDirectory && jobActive && listing.okazion_until && new Date(listing.okazion_until) > new Date()) {
     return {
       ok: false,
       status: 400,
@@ -237,10 +237,10 @@ async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
   return { ok: true, listing, table };
 }
 
-function computePremiumUntil(listing, days) {
+function computePremiumUntil(listing, days, restartJob = false) {
   const now = new Date();
   const base =
-    listing.premium_until && new Date(listing.premium_until) > now
+    !restartJob && listing.premium_until && new Date(listing.premium_until) > now
       ? new Date(listing.premium_until)
       : now;
   const until = new Date(base);
@@ -248,13 +248,16 @@ function computePremiumUntil(listing, days) {
   return { now, until };
 }
 
-async function bumpListingPremium(sb, table, listingId, until, now) {
+async function bumpListingPremium(sb, table, listingId, until, now, resetOkazion = false) {
   await applyListingBump(
     sb,
     table,
     listingId,
-    { premium_until: until.toISOString() },
-    now.toISOString(),
+    {
+      premium_until: until.toISOString(),
+      ...(resetOkazion ? { okazion_until: null } : {}),
+    },
+    now.toISOString()
   );
 }
 
@@ -281,7 +284,7 @@ async function markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt }) {
         last_refreshed_at: refreshedAt,
         updated_at: refreshedAt,
       },
-      { onConflict: 'user_id,listing_kind,listing_id' },
+      { onConflict: 'user_id,listing_kind,listing_id' }
     );
   } catch (error) {
     if (!String(error?.message || '').includes('listing_auto_refresh')) throw error;
@@ -299,10 +302,7 @@ async function getActiveSubscriptionPremiumMax(userId) {
     .limit(30);
   if (error) throw error;
   const active = (data || []).find(
-    (s) =>
-      s.status === 'active' &&
-      Number(s.price_eur) > 0 &&
-      (!s.expires_at || new Date(s.expires_at) >= now),
+    (s) => s.status === 'active' && Number(s.price_eur) > 0 && (!s.expires_at || new Date(s.expires_at) >= now)
   );
   return Number(active?.max_premium_listings) || 0;
 }
@@ -350,10 +350,7 @@ async function countActivePlanPremiumSlots(userId) {
 }
 
 async function getPremiumQuotaSnapshot(userId) {
-  const [max, used] = await Promise.all([
-    getActiveSubscriptionPremiumMax(userId),
-    countActivePlanPremiumSlots(userId),
-  ]);
+  const [max, used] = await Promise.all([getActiveSubscriptionPremiumMax(userId), countActivePlanPremiumSlots(userId)]);
   return {
     max,
     used,
@@ -405,10 +402,15 @@ async function applyPremiumVoucher({ userId, voucherId, kind, listingId }) {
 
   const loaded = await loadOwnedApprovedListing(sb, { userId, kind, listingId });
   if (!loaded.ok) return loaded;
+  if (kind === 'job') {
+    const quota = await assertCanReactivateJobListing(userId, loaded.listing);
+    if (!quota.ok) return quota;
+  }
 
   const days = Number(voucher.days) || 0;
-  const { now, until } = computePremiumUntil(loaded.listing, days);
-  await bumpListingPremium(sb, loaded.table, listingId, until, now);
+  const restartJob = kind === 'job' && !isJobListingActive(loaded.listing);
+  const { now, until } = computePremiumUntil(loaded.listing, days, restartJob);
+  await bumpListingPremium(sb, loaded.table, listingId, until, now, restartJob);
   await markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt: now.toISOString() });
 
   const { data: applied, error: applyErr } = await sb
@@ -438,7 +440,7 @@ async function applyPremiumVoucher({ userId, voucherId, kind, listingId }) {
 }
 
 /**
- * Spend one Grow/Elite Premium Listing slot: feature the post for 30 days.
+ * Spend one Grow/Elite Premium Listing slot: feature the post for 15 days.
  */
 async function applyPremiumFromPlan({ userId, kind, listingId }) {
   if (!userId || !isUuid(String(userId))) {
@@ -451,9 +453,14 @@ async function applyPremiumFromPlan({ userId, kind, listingId }) {
   const sb = getSupabaseAdmin();
   const loaded = await loadOwnedApprovedListing(sb, { userId, kind, listingId });
   if (!loaded.ok) return loaded;
+  if (kind === 'job') {
+    const quota = await assertCanReactivateJobListing(userId, loaded.listing);
+    if (!quota.ok) return quota;
+  }
 
   const existing = await findActivePlanPremiumVoucher(sb, userId, kind, listingId);
-  if (existing && isPremiumActive(loaded.listing)) {
+  const restartJob = kind === 'job' && !isJobListingActive(loaded.listing);
+  if (existing && !restartJob && isPremiumActive(loaded.listing)) {
     return {
       ok: true,
       alreadyActive: true,
@@ -468,8 +475,7 @@ async function applyPremiumFromPlan({ userId, kind, listingId }) {
     return {
       ok: false,
       status: 400,
-      message:
-        'Paketa juaj nuk përfshin Premium Listing. Upgrade në Grow/Elite ose blini një paketë ekstra.',
+      message: 'Paketa juaj nuk përfshin Premium Listing. Upgrade në Grow/Elite ose blini një paketë ekstra.',
     };
   }
   if (quota.remaining <= 0) {
@@ -480,8 +486,8 @@ async function applyPremiumFromPlan({ userId, kind, listingId }) {
     };
   }
 
-  const { now, until } = computePremiumUntil(loaded.listing, PLAN_PREMIUM_DAYS);
-  await bumpListingPremium(sb, loaded.table, listingId, until, now);
+  const { now, until } = computePremiumUntil(loaded.listing, PLAN_PREMIUM_DAYS, restartJob);
+  await bumpListingPremium(sb, loaded.table, listingId, until, now, restartJob);
   await markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt: now.toISOString() });
 
   const { data: voucherRow, error: insErr } = await sb

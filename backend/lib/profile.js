@@ -48,6 +48,10 @@ function wrapProfile(row) {
     autoRefreshSlots: row.auto_refresh_slots ?? 0,
     referralTiersClaimed: row.referral_tiers_claimed || [],
     avatarUrl: row.avatar_url || '',
+    instagramUrl: row.instagram_url || '',
+    tiktokUrl: row.tiktok_url || '',
+    linkedinUrl: row.linkedin_url || '',
+    websiteUrl: row.website_url || '',
     lastLogin: row.last_login || null,
     lastActive: row.last_active || null,
     createdAt: row.created_at || null,
@@ -108,6 +112,10 @@ function profileUpdateFromCamel(fields) {
     loginStreakDays: 'login_streak_days',
     loginStreakLastDay: 'login_streak_last_day',
     avatarUrl: 'avatar_url',
+    instagramUrl: 'instagram_url',
+    tiktokUrl: 'tiktok_url',
+    linkedinUrl: 'linkedin_url',
+    websiteUrl: 'website_url',
     lastLogin: 'last_login',
     lastActive: 'last_active',
     accountType: 'account_type',
@@ -123,6 +131,9 @@ function profileUpdateFromCamel(fields) {
   if (out.based_city_id === '') out.based_city_id = null;
   if (out.based_city_name === '') out.based_city_name = null;
   if (out.share_theme_color === '') out.share_theme_color = null;
+  for (const key of ['instagram_url', 'tiktok_url', 'linkedin_url', 'website_url']) {
+    if (out[key] === '') out[key] = null;
+  }
   return out;
 }
 

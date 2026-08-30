@@ -72,8 +72,13 @@ function applyTextSearch(spec, query, fields) {
   const keywords = parseQueryKeywords(query);
   const groups = keywords.map((q) => buildIlikeOrFilter(fields, q)).filter(Boolean);
   if (!groups.length) return;
-  if (groups.length === 1) spec.or = groups[0];
-  else spec.andOr = groups;
+  if (Array.isArray(spec.andOr) && spec.andOr.length) {
+    spec.andOr.push(...groups);
+  } else if (groups.length === 1) {
+    spec.or = groups[0];
+  } else {
+    spec.andOr = groups;
+  }
 }
 
 /** Keyword search → relevance only (no OKAZION / Premium pin to the top). */

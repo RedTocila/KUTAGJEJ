@@ -61,6 +61,10 @@ function mapProfile(row) {
       loginStreakDays: this.loginStreakDays,
       loginStreakLastDay: this.loginStreakLastDay,
       avatarUrl: this.avatarUrl,
+      instagramUrl: this.instagramUrl,
+      tiktokUrl: this.tiktokUrl,
+      linkedinUrl: this.linkedinUrl,
+      websiteUrl: this.websiteUrl,
       lastLogin: this.lastLogin,
       lastActive: this.lastActive,
       accountType: this.accountType,
@@ -89,13 +93,11 @@ async function getProfileById(id) {
 }
 
 async function getProfileByEmail(email) {
-  const emailNorm = String(email || '').toLowerCase().trim();
+  const emailNorm = String(email || '')
+    .toLowerCase()
+    .trim();
   if (!emailNorm) return null;
-  const { data, error } = await getSupabaseAdmin()
-    .from('profiles')
-    .select('*')
-    .eq('email', emailNorm)
-    .maybeSingle();
+  const { data, error } = await getSupabaseAdmin().from('profiles').select('*').eq('email', emailNorm).maybeSingle();
   if (error) throw error;
   return mapProfile(data);
 }
@@ -122,7 +124,9 @@ async function ensureProfileForAuthUser(authUser) {
     .trim();
   if (!email) return null;
 
-  let accountType = String(meta.account_type || '').toLowerCase().trim();
+  let accountType = String(meta.account_type || '')
+    .toLowerCase()
+    .trim();
   if (!['admin', 'managed', 'individual', 'business'].includes(accountType)) {
     accountType = meta.business_name || meta.nipt ? 'business' : 'individual';
   }
@@ -133,7 +137,9 @@ async function ensureProfileForAuthUser(authUser) {
   const businessOwner = String(meta.business_owner || meta.businessOwner || '').trim();
   const businessCategory = String(meta.business_category || meta.businessCategory || '').trim();
   const nipt = String(meta.nipt || '').trim() || null;
-  const phone = String(meta.phone || '').trim().slice(0, 40);
+  const phone = String(meta.phone || '')
+    .trim()
+    .slice(0, 40);
 
   const row = {
     id: authUser.id,

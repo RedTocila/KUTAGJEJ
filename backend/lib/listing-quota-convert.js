@@ -1,6 +1,7 @@
 'use strict';
 
 const { getSupabaseAdmin } = require('./supabase');
+const { activeJobCreatedAtFilter, applyFilterSpec } = require('./public-listings/query-helpers');
 
 /** Boost coins earned per unused listing slot converted. */
 const CONVERT_RATES = {
@@ -40,6 +41,7 @@ async function countPosterListings(userId, kind) {
     .select('id', { count: 'exact', head: true })
     .eq('poster_id', userId);
   if (cfg.vertical) q = q.eq('vertical', cfg.vertical);
+  if (kind === 'job') q = applyFilterSpec(q, activeJobCreatedAtFilter());
   const { count, error } = await q;
   if (error) throw error;
   return count || 0;

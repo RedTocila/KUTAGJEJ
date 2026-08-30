@@ -11,19 +11,28 @@ function isUuid(value) {
   return typeof value === 'string' && UUID_RE.test(value);
 }
 
-function jobListingExpiresAt(createdAt) {
+function jobListingExpiresAt(createdAt, bumpedAt = null) {
   const posted = createdAt instanceof Date ? createdAt : new Date(createdAt);
-  return new Date(posted.getTime() + JOB_LISTING_VISIBLE_DAYS * MS_PER_DAY);
+  const postedMs = posted.getTime();
+  const bumpedMs = bumpedAt ? new Date(bumpedAt).getTime() : NaN;
+  const startsAt = Number.isFinite(bumpedMs) ? Math.max(postedMs, bumpedMs) : postedMs;
+  return new Date(startsAt + JOB_LISTING_VISIBLE_DAYS * MS_PER_DAY);
 }
 
 function isJobListingActive(doc) {
-  return Date.now() < jobListingExpiresAt(doc.createdAt).getTime();
+  const now = Date.now();
+  const createdAt = doc.createdAt ?? doc.created_at;
+  const bumpedAt = doc.bumpedAt ?? doc.bumped_at ?? null;
+  return now < jobListingExpiresAt(createdAt, bumpedAt).getTime();
 }
 
 /** FilterSpec fragment restricting job listings to the still-visible window. */
 function activeJobCreatedAtFilter() {
-  const cutoff = new Date(Date.now() - JOB_LISTING_VISIBLE_DAYS * MS_PER_DAY).toISOString();
-  return { gte: { created_at: cutoff } };
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - JOB_LISTING_VISIBLE_DAYS * MS_PER_DAY).toISOString();
+  const visibilityClauses = [`created_at.gte.${cutoff}`];
+  if (hasBumpedAtColumn() !== false) visibilityClauses.push(`bumped_at.gte.${cutoff}`);
+  return { andOr: [visibilityClauses.join(',')] };
 }
 
 function clampLimit(value) {
@@ -146,7 +155,9 @@ function rankListingIdsByReviews(rows) {
 }
 
 function parseSort(value) {
-  const raw = String(value ?? '').trim().toLowerCase();
+  const raw = String(value ?? '')
+    .trim()
+    .toLowerCase();
   return SORT_VALUES.has(raw) ? raw : 'newest';
 }
 
@@ -190,16 +201,33 @@ function buildDirectorySort(sort, { includePremium = true } = {}) {
 
 /** Strip featured-until columns from a sort spec (fallback when not migrated yet). */
 function withoutPremiumSort(sortSpec = []) {
-  return (sortSpec || []).filter(
-    (s) => s.column !== 'premium_until' && s.column !== 'okazion_until',
-  );
+  return (sortSpec || []).filter((s) => s.column !== 'premium_until' && s.column !== 'okazion_until');
 }
 
 /** Replace bumped_at sort keys with created_at when the column is missing. */
 function withoutBumpedAtSort(sortSpec = []) {
-  return (sortSpec || []).map((s) =>
-    s.column === 'bumped_at' ? { ...s, column: 'created_at' } : s,
-  );
+  return (sortSpec || []).map((s) => (s.column === 'bumped_at' ? { ...s, column: 'created_at' } : s));
+}
+
+function withoutBumpedAtFilter(filterSpec = {}) {
+  const next = { ...filterSpec };
+  if (filterSpec.or) {
+    next.or = filterSpec.or
+      .split(',')
+      .filter((clause) => !clause.startsWith('bumped_at.'))
+      .join(',');
+  }
+  if (Array.isArray(filterSpec.andOr)) {
+    next.andOr = filterSpec.andOr
+      .map((group) =>
+        group
+          .split(',')
+          .filter((clause) => !clause.startsWith('bumped_at.'))
+          .join(',')
+      )
+      .filter(Boolean);
+  }
+  return next;
 }
 
 function isPremiumActive(doc) {
@@ -247,11 +275,7 @@ function prioritizeActivePremium(docs, { sortRestByBump = false } = {}) {
     else rest.push(doc);
   }
   if (sortRestByBump) {
-    return [
-      ...sortDocsByBumpDesc(okazion),
-      ...sortDocsByBumpDesc(premium),
-      ...sortDocsByBumpDesc(rest),
-    ];
+    return [...sortDocsByBumpDesc(okazion), ...sortDocsByBumpDesc(premium), ...sortDocsByBumpDesc(rest)];
   }
   return [...okazion, ...premium, ...rest];
 }
@@ -320,9 +344,7 @@ async function locationOrForNeedle(q) {
   const needle = normalizeSearchText(q);
   if (!needle || needle.length < 2) return null;
 
-  const { data, error } = await getSupabaseAdmin()
-    .from('real_estate_cities')
-    .select('id, name, zones');
+  const { data, error } = await getSupabaseAdmin().from('real_estate_cities').select('id, name, zones');
   if (error) throw error;
   if (!data?.length) return null;
 
@@ -401,6 +423,7 @@ module.exports = {
   buildDirectorySort,
   withoutPremiumSort,
   withoutBumpedAtSort,
+  withoutBumpedAtFilter,
   newestTimestampColumn,
   isPremiumActive,
   isOkazionActive,

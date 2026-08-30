@@ -15,13 +15,41 @@ function pad2(value: number): string {
   return String(value).padStart(2, '0');
 }
 
-export function getJobListingExpiresAt(createdAt: string | Date): Date {
+export function getJobListingExpiresAt(createdAt: string | Date, bumpedAt?: string | Date | null): Date {
   const posted = createdAt instanceof Date ? createdAt : new Date(createdAt);
-  return new Date(posted.getTime() + JOB_LISTING_VISIBLE_DAYS * MS_PER_DAY);
+  const bumped = bumpedAt ? (bumpedAt instanceof Date ? bumpedAt : new Date(bumpedAt)) : null;
+  const postedMs = posted.getTime();
+  const bumpedMs = bumped?.getTime() ?? Number.NaN;
+  const startsAt = Number.isFinite(bumpedMs) ? Math.max(postedMs, bumpedMs) : postedMs;
+  return new Date(startsAt + JOB_LISTING_VISIBLE_DAYS * MS_PER_DAY);
 }
 
-export function isJobListingActive(createdAt: string | Date, now: Date = new Date()): boolean {
-  return now.getTime() < getJobListingExpiresAt(createdAt).getTime();
+export function isJobListingActive(
+  createdAt: string | Date,
+  now: Date = new Date(),
+  bumpedAt?: string | Date | null
+): boolean {
+  return now.getTime() < getJobListingExpiresAt(createdAt, bumpedAt).getTime();
+}
+
+/** Whether a public job remains visible in its current 15-day post/bump window. */
+export function isJobListingVisible(
+  createdAt: string | Date,
+  fields: {
+    expiresAt?: string | null;
+    bumpedAt?: string | null;
+    premiumUntil?: string | null;
+    okazionUntil?: string | null;
+  },
+  now: Date = new Date()
+): boolean {
+  const baseExpiresAt = getJobListingExpiresAt(createdAt, fields.bumpedAt);
+  const reportedExpiresAt = fields.expiresAt ? new Date(fields.expiresAt) : null;
+  const nowMs = now.getTime();
+  const timestamps = [baseExpiresAt, reportedExpiresAt].map((value) =>
+    value instanceof Date ? value.getTime() : value ? new Date(value).getTime() : Number.NaN
+  );
+  return timestamps.some((expiresMs) => Number.isFinite(expiresMs) && expiresMs > nowMs);
 }
 
 /** Time remaining until the listing is hidden (`Dd Hh Mm Ss`). */
@@ -64,7 +92,7 @@ export function getJobCountdownParts(expiresAt: string | Date, now: Date = new D
 
 export function getJobListingCountdownUrgency(
   expiresAt: string | Date,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): JobListingCountdownUrgency {
   const remainingMs = (expiresAt instanceof Date ? expiresAt : new Date(expiresAt)).getTime() - now.getTime();
 

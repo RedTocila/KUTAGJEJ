@@ -5,6 +5,7 @@ import Image from 'next/image';
 import RouterLink from 'next/link';
 import { Box, Stack, Typography } from '@mui/material';
 import { ArrowUpRight as ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
+import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 
 import { homeBannerImageUrl } from '@/lib/storage-image';
 import { MOTION } from '@/styles/motion';
@@ -41,8 +42,12 @@ export type BannerSlideCardProps = {
   eager?: boolean;
   title?: string | null;
   subtitle?: string | null;
+  /** Draw the card frame around this slide. */
+  bordered?: boolean;
   /** Optional right-side metadata shown in place of the navigation arrow. */
   bottomRightLabel?: string | null;
+  /** Optional view count shown as an uncontained overlay in the image's top-right. */
+  topRightLabel?: string | null;
   /** Optional label shown in a contained badge at the image's bottom-left. */
   bottomLeftLabel?: string | null;
   /** Maximum title lines. */
@@ -66,7 +71,9 @@ export function BannerSlideCard({
   eager = true,
   title,
   subtitle,
+  bordered = false,
   bottomRightLabel = null,
+  topRightLabel = null,
   bottomLeftLabel = null,
   titleMaxLines = 2,
   hideTitleWhenImage = false,
@@ -83,8 +90,8 @@ export function BannerSlideCard({
       sx={(theme) => ({
         borderRadius: contentBelowImage ? 2.5 : 4,
         overflow: contentBelowImage ? 'visible' : 'hidden',
-        border: 'none',
-        borderColor: 'transparent',
+        border: bordered ? '1px solid' : 'none',
+        borderColor: bordered ? 'divider' : 'transparent',
         backgroundColor: contentBelowImage ? 'transparent' : '#e5efdc',
         // Flat in light mode; keep soft lift in dark.
         boxShadow: 'none',
@@ -147,6 +154,30 @@ export function BannerSlideCard({
             loading={priority ? undefined : eager ? 'eager' : 'lazy'}
             style={{ objectFit: 'cover' }}
           />
+        ) : null}
+        {topRightLabel ? (
+          <Stack
+            direction="row"
+            spacing={0.55}
+            aria-label={`${topRightLabel} views`}
+            sx={{
+              position: 'absolute',
+              top: { xs: 12, sm: 16, md: 20 },
+              right: { xs: 12, sm: 16, md: 20 },
+              zIndex: 2,
+              alignItems: 'center',
+              color: '#fff',
+              filter: 'drop-shadow(0 1px 5px rgba(0,0,0,0.68))',
+            }}
+          >
+            <EyeIcon size={20} weight="regular" />
+            <Typography
+              component="span"
+              sx={{ fontWeight: 750, fontSize: { xs: '0.9rem', sm: '0.98rem' }, lineHeight: 1 }}
+            >
+              {topRightLabel}
+            </Typography>
+          </Stack>
         ) : null}
         {!imageSrc ? (
           <Box
@@ -315,14 +346,15 @@ export function BannerSlideCard({
               zIndex: 2,
               maxWidth: 'calc(100% - 68px)',
               px: { xs: 1.25, sm: 1.5 },
-              py: { xs: 0.75, sm: 0.85 },
-              borderRadius: 1.5,
-              bgcolor: 'rgba(0, 0, 0, 0.68)',
-              border: '1px solid transparent',
-              boxShadow: 'none',
-              textShadow: '0 1px 8px rgba(0, 0, 0, 0.65)',
+              py: { xs: 0.9, sm: 1 },
+              borderRadius: 999,
+              bgcolor: 'rgba(255,255,255,0.18)',
+              border: '1px solid rgba(255,255,255,0.28)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              textShadow: '0 1px 10px rgba(0, 0, 0, 0.5)',
               ...theme.applyStyles('dark', {
-                bgcolor: 'rgba(0, 0, 0, 0.68)',
+                bgcolor: 'rgba(255,255,255,0.18)',
               }),
             })}
           >
@@ -330,7 +362,7 @@ export function BannerSlideCard({
               sx={{
                 color: 'primary.main',
                 fontWeight: 800,
-                fontSize: { xs: '0.95rem', sm: '1rem' },
+                fontSize: { xs: '1.2rem', sm: '1.35rem', md: '1.45rem' },
                 lineHeight: 1.15,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',

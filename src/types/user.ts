@@ -25,6 +25,11 @@ export interface User {
   basedCityName?: string | null;
   /** Viewer's accent on shared / saved listing images (not shown to other users). */
   shareThemeColor?: string | null;
+  /** Optional public social profile links shown on the member profile banner. */
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
+  linkedinUrl?: string | null;
+  websiteUrl?: string | null;
   /** Admin-approved account verification. */
   verified?: boolean;
   /** Whether the account profile is private. */

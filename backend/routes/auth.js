@@ -2,12 +2,7 @@
 
 const express = require('express');
 const { getSupabaseAdmin, createAuthPasswordClient, findAuthUserByEmail } = require('../lib/supabase');
-const {
-  getProfileById,
-  getProfileByEmail,
-  insertProfile,
-  ensureProfileForAuthUser,
-} = require('../lib/profiles');
+const { getProfileById, getProfileByEmail, insertProfile, ensureProfileForAuthUser } = require('../lib/profiles');
 const authMiddleware = require('../middleware/auth');
 const {
   allocateUniqueReferralCode,
@@ -38,7 +33,9 @@ const mailRateLimit = rateLimit({ windowMs: 60_000, max: 5 });
 const ACCOUNT_PHONE_RE = /^[\d+\s().-]{6,40}$/;
 
 function parseRequiredPhone(raw) {
-  const phone = String(raw || '').trim().slice(0, 40);
+  const phone = String(raw || '')
+    .trim()
+    .slice(0, 40);
   if (phone.length < 6) {
     return { ok: false, message: 'Numri i telefonit është i detyrueshëm.' };
   }
@@ -80,6 +77,15 @@ function portalShareThemeFields(user) {
   };
 }
 
+function portalSocialFields(user) {
+  return {
+    instagramUrl: user.instagramUrl || null,
+    tiktokUrl: user.tiktokUrl || null,
+    linkedinUrl: user.linkedinUrl || null,
+    websiteUrl: user.websiteUrl || null,
+  };
+}
+
 async function uploadAvatarBuffer(file) {
   const urls = await uploadBuffersToSupabase(
     [
@@ -89,7 +95,7 @@ async function uploadAvatarBuffer(file) {
         mimetype: file.mimetype || 'image/jpeg',
       },
     ],
-    'avatars',
+    'avatars'
   );
   if (!urls[0]) throw new Error('Avatar upload returned no URL');
   return urls[0];
@@ -135,6 +141,7 @@ const formatUser = (user) => {
       verified: Boolean(user.professionalsVerifiedAt || user.jobsEmployerVerifiedAt),
       ...portalBasedCityFields(user),
       ...portalShareThemeFields(user),
+      ...portalSocialFields(user),
       ...referralFieldsForUser(user),
     };
   }
@@ -153,6 +160,7 @@ const formatUser = (user) => {
       verified: Boolean(user.professionalsVerifiedAt || user.jobsEmployerVerifiedAt),
       ...portalBasedCityFields(user),
       ...portalShareThemeFields(user),
+      ...portalSocialFields(user),
       ...referralFieldsForUser(user),
     };
   }
@@ -214,9 +222,7 @@ async function verifyEmailOtp(tokenHash, type) {
   }
   const sb = createAuthPasswordClient();
   const candidates = [
-    ...new Set(
-      [requested, 'magiclink', 'signup', 'email', 'recovery', 'invite', 'email_change'].filter(Boolean),
-    ),
+    ...new Set([requested, 'magiclink', 'signup', 'email', 'recovery', 'invite', 'email_change'].filter(Boolean)),
   ];
   let lastError = null;
   for (const otpType of candidates) {
@@ -274,10 +280,7 @@ router.post('/login', authRateLimit, async (req, res) => {
     if (!profile) {
       return res.status(401).json({ message: 'Profili nuk u gjet. Kontaktoni mbështetjen.' });
     }
-    if (
-      profile.constructor.modelName === 'IndividualUser' ||
-      profile.constructor.modelName === 'BusinessUser'
-    ) {
+    if (profile.constructor.modelName === 'IndividualUser' || profile.constructor.modelName === 'BusinessUser') {
       try {
         await ensureUserReferralCode(profile);
       } catch (refErr) {
@@ -286,8 +289,7 @@ router.post('/login', authRateLimit, async (req, res) => {
     }
 
     if (
-      (profile.constructor.modelName === 'ManagedUser' ||
-        profile.constructor.modelName === 'IndividualUser') &&
+      (profile.constructor.modelName === 'ManagedUser' || profile.constructor.modelName === 'IndividualUser') &&
       profile.isActive === false
     ) {
       return res.status(401).json({ message: 'Llogaria është çaktivizuar.' });
@@ -399,9 +401,7 @@ router.post('/register', authRateLimit, async (req, res) => {
       if (refRaw) await processReferralOnSignup(doc, refRaw);
       await ensureUserReferralCode(doc);
 
-      await queueAuthEmail('signup', () =>
-        sendSignupConfirmation(emailNorm, { name: displayNameFromProfile(doc) }),
-      );
+      await queueAuthEmail('signup', () => sendSignupConfirmation(emailNorm, { name: displayNameFromProfile(doc) }));
       return res.status(201).json({
         needsEmailConfirmation: true,
         email: emailNorm,
@@ -466,9 +466,7 @@ router.post('/register', authRateLimit, async (req, res) => {
       if (refRaw) await processReferralOnSignup(doc, refRaw);
       await ensureUserReferralCode(doc);
 
-      await queueAuthEmail('signup', () =>
-        sendSignupConfirmation(emailNorm, { name: displayNameFromProfile(doc) }),
-      );
+      await queueAuthEmail('signup', () => sendSignupConfirmation(emailNorm, { name: displayNameFromProfile(doc) }));
       return res.status(201).json({
         needsEmailConfirmation: true,
         email: emailNorm,
@@ -544,7 +542,7 @@ router.put('/admin/change-password', authMiddleware, requireAdminRole, async (re
     });
     if (error) throw error;
     await queueAuthEmail('password-changed', () =>
-      sendPasswordChangedNotice(req.admin.email, { name: displayNameFromProfile(req.admin) }),
+      sendPasswordChangedNotice(req.admin.email, { name: displayNameFromProfile(req.admin) })
     );
     res.json({ message: 'Fjalëkalimi u ndryshua.' });
   } catch (error) {
@@ -553,10 +551,27 @@ router.put('/admin/change-password', authMiddleware, requireAdminRole, async (re
 });
 
 function sanitizeAvatarUrl(value) {
-  const url = String(value ?? '').trim().slice(0, 2000);
+  const url = String(value ?? '')
+    .trim()
+    .slice(0, 2000);
   if (!url) return '';
   if (!/^https?:\/\//i.test(url)) return null;
   return url;
+}
+
+function sanitizeSocialUrl(value) {
+  const raw = String(value ?? '')
+    .trim()
+    .slice(0, 500);
+  if (!raw) return '';
+  const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const url = new URL(candidate);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
 }
 
 router.put('/portal/update-profile', authMiddleware, requirePortalUser, async (req, res) => {
@@ -571,9 +586,7 @@ router.put('/portal/update-profile', authMiddleware, requirePortalUser, async (r
     }
 
     if (body.basedCityId !== undefined || body.cityId !== undefined) {
-      const based = await resolveBasedCity(
-        body.basedCityId !== undefined ? body.basedCityId : body.cityId,
-      );
+      const based = await resolveBasedCity(body.basedCityId !== undefined ? body.basedCityId : body.cityId);
       if (!based.ok) return res.status(400).json({ message: based.message });
       if (!based.skipped) {
         req.admin.basedCityId = based.id;
@@ -602,14 +615,32 @@ router.put('/portal/update-profile', authMiddleware, requirePortalUser, async (r
       req.admin.avatarUrl = avatarUrl;
     }
 
+    for (const [field, label] of [
+      ['instagramUrl', 'Instagram'],
+      ['tiktokUrl', 'TikTok'],
+      ['linkedinUrl', 'LinkedIn'],
+      ['websiteUrl', 'Website'],
+    ]) {
+      if (body[field] === undefined) continue;
+      const socialUrl = sanitizeSocialUrl(body[field]);
+      if (socialUrl === null) {
+        return res.status(400).json({ message: `Linku i ${label} nuk është i vlefshëm.` });
+      }
+      req.admin[field] = socialUrl;
+    }
+
     if (model === 'IndividualUser') {
       if (body.firstName !== undefined) {
-        const firstName = String(body.firstName ?? '').trim().slice(0, 80);
+        const firstName = String(body.firstName ?? '')
+          .trim()
+          .slice(0, 80);
         if (!firstName) return res.status(400).json({ message: 'Emri është i detyrueshëm.' });
         req.admin.firstName = firstName;
       }
       if (body.lastName !== undefined) {
-        const lastName = String(body.lastName ?? '').trim().slice(0, 80);
+        const lastName = String(body.lastName ?? '')
+          .trim()
+          .slice(0, 80);
         if (!lastName) return res.status(400).json({ message: 'Mbiemri është i detyrueshëm.' });
         req.admin.lastName = lastName;
       }
@@ -617,15 +648,21 @@ router.put('/portal/update-profile', authMiddleware, requirePortalUser, async (r
 
     if (model === 'BusinessUser') {
       if (body.businessName !== undefined) {
-        const businessName = String(body.businessName ?? '').trim().slice(0, 120);
+        const businessName = String(body.businessName ?? '')
+          .trim()
+          .slice(0, 120);
         if (!businessName) return res.status(400).json({ message: 'Emri i biznesit është i detyrueshëm.' });
         req.admin.businessName = businessName;
       }
       if (body.businessOwner !== undefined) {
-        req.admin.businessOwner = String(body.businessOwner ?? '').trim().slice(0, 120);
+        req.admin.businessOwner = String(body.businessOwner ?? '')
+          .trim()
+          .slice(0, 120);
       }
       if (body.businessCategory !== undefined) {
-        req.admin.businessCategory = String(body.businessCategory ?? '').trim().slice(0, 80);
+        req.admin.businessCategory = String(body.businessCategory ?? '')
+          .trim()
+          .slice(0, 80);
       }
     }
 
@@ -645,10 +682,18 @@ router.post('/portal/convert-to-business', authMiddleware, requirePortalUser, as
     }
 
     const body = req.body || {};
-    const nipt = String(body.nipt || '').trim().slice(0, 40);
-    const businessName = String(body.businessName || '').trim().slice(0, 120);
-    const businessOwner = String(body.businessOwner || '').trim().slice(0, 120);
-    const businessCategory = String(body.businessCategory || '').trim().slice(0, 80);
+    const nipt = String(body.nipt || '')
+      .trim()
+      .slice(0, 40);
+    const businessName = String(body.businessName || '')
+      .trim()
+      .slice(0, 120);
+    const businessOwner = String(body.businessOwner || '')
+      .trim()
+      .slice(0, 120);
+    const businessCategory = String(body.businessCategory || '')
+      .trim()
+      .slice(0, 80);
 
     if (!nipt || !businessName || !businessOwner || !businessCategory) {
       return res.status(400).json({
@@ -727,26 +772,20 @@ function parseAvatar(req, res, next) {
 }
 
 /** POST /api/auth/portal/avatar — upload + persist profile photo in one step. */
-router.post(
-  '/portal/avatar',
-  authMiddleware,
-  requirePortalUser,
-  parseAvatar,
-  async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: 'Nuk u zgjodh asnjë foto.' });
-      }
-      const avatarUrl = await uploadAvatarBuffer(req.file);
-      req.admin.avatarUrl = avatarUrl;
-      await req.admin.save();
-      return res.json({ message: 'Foto e profilit u përditësua.', admin: formatUser(req.admin), avatarUrl });
-    } catch (err) {
-      console.error('POST /portal/avatar:', err?.message || err);
-      return res.status(500).json({ message: 'Gabim serveri.' });
+router.post('/portal/avatar', authMiddleware, requirePortalUser, parseAvatar, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Nuk u zgjodh asnjë foto.' });
     }
-  },
-);
+    const avatarUrl = await uploadAvatarBuffer(req.file);
+    req.admin.avatarUrl = avatarUrl;
+    await req.admin.save();
+    return res.json({ message: 'Foto e profilit u përditësua.', admin: formatUser(req.admin), avatarUrl });
+  } catch (err) {
+    console.error('POST /portal/avatar:', err?.message || err);
+    return res.status(500).json({ message: 'Gabim serveri.' });
+  }
+});
 
 /** DELETE /api/auth/portal/avatar — clear profile photo. */
 router.delete('/portal/avatar', authMiddleware, requirePortalUser, async (req, res) => {
@@ -780,7 +819,7 @@ router.put('/portal/change-password', authMiddleware, requirePortalUser, async (
     });
     if (error) throw error;
     await queueAuthEmail('password-changed', () =>
-      sendPasswordChangedNotice(req.admin.email, { name: displayNameFromProfile(req.admin) }),
+      sendPasswordChangedNotice(req.admin.email, { name: displayNameFromProfile(req.admin) })
     );
     res.json({ message: 'Fjalëkalimi u ndryshua.' });
   } catch (error) {
@@ -794,7 +833,9 @@ function yieldEventLoop() {
 
 router.post('/resend-confirmation', mailRateLimit, async (req, res) => {
   try {
-    const emailNorm = String(req.body?.email || '').toLowerCase().trim();
+    const emailNorm = String(req.body?.email || '')
+      .toLowerCase()
+      .trim();
     if (!emailNorm) {
       return res.status(400).json({ message: 'Emaili është i detyrueshëm.' });
     }
@@ -812,7 +853,7 @@ router.post('/resend-confirmation', mailRateLimit, async (req, res) => {
     await yieldEventLoop();
     if (profile) {
       await queueAuthEmail('resend-signup', () =>
-        sendSignupConfirmation(emailNorm, { name: displayNameFromProfile(profile) }),
+        sendSignupConfirmation(emailNorm, { name: displayNameFromProfile(profile) })
       );
     }
   } catch (error) {
@@ -825,7 +866,9 @@ router.post('/resend-confirmation', mailRateLimit, async (req, res) => {
 
 router.post('/forgot-password', mailRateLimit, async (req, res) => {
   try {
-    const emailNorm = String(req.body?.email || '').toLowerCase().trim();
+    const emailNorm = String(req.body?.email || '')
+      .toLowerCase()
+      .trim();
     if (!emailNorm) {
       return res.status(400).json({ message: 'Emaili është i detyrueshëm.' });
     }
@@ -833,14 +876,11 @@ router.post('/forgot-password', mailRateLimit, async (req, res) => {
     const authUser = profile ? null : await findAuthUserByEmail(emailNorm);
     res.json({
       ok: true,
-      message:
-        'Nëse llogaria ekziston, të dërguam një link për rivendosjen e fjalëkalimit. Kontrollo kutinë dhe spam.',
+      message: 'Nëse llogaria ekziston, të dërguam një link për rivendosjen e fjalëkalimit. Kontrollo kutinë dhe spam.',
     });
     await yieldEventLoop();
     if (profile || authUser) {
-      await queueAuthEmail('recovery', () =>
-        sendPasswordReset(emailNorm, { name: displayNameFromProfile(profile) }),
-      );
+      await queueAuthEmail('recovery', () => sendPasswordReset(emailNorm, { name: displayNameFromProfile(profile) }));
     }
   } catch (error) {
     console.error('POST /forgot-password:', error?.message || error);
@@ -889,7 +929,7 @@ router.post('/reset-password', authRateLimit, async (req, res) => {
       return res.status(401).json({ message: 'Profili nuk u gjet. Kontaktoni mbështetjen.' });
     }
     await queueAuthEmail('password-changed', () =>
-      sendPasswordChangedNotice(profile.email, { name: displayNameFromProfile(profile) }),
+      sendPasswordChangedNotice(profile.email, { name: displayNameFromProfile(profile) })
     );
     return res.json({
       ...sessionPayload(verified.session, profile),

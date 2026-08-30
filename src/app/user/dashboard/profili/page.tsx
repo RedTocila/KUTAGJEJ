@@ -13,46 +13,42 @@ import {
   Fade,
   IconButton,
   Stack,
-  TextField,
-  Typography,
   Switch,
+  TextField,
   Tooltip,
+  Typography,
 } from '@mui/material';
 import { ArrowSquareOut as ArrowSquareOutIcon } from '@phosphor-icons/react/dist/ssr/ArrowSquareOut';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Camera as CameraIcon } from '@phosphor-icons/react/dist/ssr/Camera';
 import { Envelope as EnvelopeIcon } from '@phosphor-icons/react/dist/ssr/Envelope';
 import { Globe as GlobeIcon } from '@phosphor-icons/react/dist/ssr/Globe';
+import { InstagramLogo as InstagramLogoIcon } from '@phosphor-icons/react/dist/ssr/InstagramLogo';
+import { LinkedinLogo as LinkedinLogoIcon } from '@phosphor-icons/react/dist/ssr/LinkedinLogo';
 import { Lock as LockIcon } from '@phosphor-icons/react/dist/ssr/Lock';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
+import { TiktokLogo as TiktokLogoIcon } from '@phosphor-icons/react/dist/ssr/TiktokLogo';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 
-import { useOwnerEditHeaderActions } from '@/components/user/owner-edit-header-actions';
-import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
-import { SearchableSelect } from '@/components/core/searchable-select';
-import { MemberReferralBadgesRow, MemberReferralBadgesSkeleton } from '@/components/public/member-referral-badges';
-import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
-import { AccountVerificationCard } from '@/components/user/account-verification-card';
-import { LockedIdentityField } from '@/components/user/locked-identity-field';
-import { PortalSectionCard, PortalSurface } from '@/components/user/portal-cards';
-import { ShareThemeColorPicker } from '@/components/user/share-theme-color-picker';
-import { useUser } from '@/hooks/use-user';
+import { pathsPublicMemberProfile } from '@/paths';
 import { clientFetch } from '@/lib/api-client';
 import { authClient } from '@/lib/auth/client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { rememberListingLocation } from '@/lib/listing-form-defaults';
+import { memberInitials, mergeMemberReferralBadges, type PublicMemberReferralBadge } from '@/lib/public-member-client';
+import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { DEFAULT_SHARE_THEME_COLOR, normalizeShareThemeColor } from '@/lib/share-theme-color';
-import {
-  memberInitials,
-  mergeMemberReferralBadges,
-  type PublicMemberReferralBadge,
-} from '@/lib/public-member-client';
-import {
-  listRealEstateLocationsPublic,
-  type RealEstateCityDto,
-} from '@/lib/real-estate-locations-client';
-import { pathsPublicMemberProfile } from '@/paths';
+import { useUser } from '@/hooks/use-user';
+import { SearchableSelect } from '@/components/core/searchable-select';
+import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
+import { MemberReferralBadgesRow, MemberReferralBadgesSkeleton } from '@/components/public/member-referral-badges';
+import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
+import { AccountVerificationCard } from '@/components/user/account-verification-card';
+import { LockedIdentityField } from '@/components/user/locked-identity-field';
+import { useOwnerEditHeaderActions } from '@/components/user/owner-edit-header-actions';
+import { PortalSectionCard, PortalSurface } from '@/components/user/portal-cards';
+import { ShareThemeColorPicker } from '@/components/user/share-theme-color-picker';
 
 const AVATAR_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif';
 const AVATAR_MAX_BYTES = 8 * 1024 * 1024;
@@ -86,9 +82,7 @@ export default function UserProfilePage() {
   const isBusiness = Boolean(user && (user.accountType === 'business' || user.role === 'business-user'));
   const canEdit =
     Boolean(user) &&
-    (user?.accountType === 'individual' ||
-      user?.accountType === 'business' ||
-      user?.role === 'business-user');
+    (user?.accountType === 'individual' || user?.accountType === 'business' || user?.role === 'business-user');
 
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
@@ -99,6 +93,10 @@ export default function UserProfilePage() {
   const [phoneInput, setPhoneInput] = React.useState('');
   const [basedCityId, setBasedCityId] = React.useState('');
   const [shareThemeColor, setShareThemeColor] = React.useState(DEFAULT_SHARE_THEME_COLOR);
+  const [instagramUrl, setInstagramUrl] = React.useState('');
+  const [tiktokUrl, setTiktokUrl] = React.useState('');
+  const [linkedinUrl, setLinkedinUrl] = React.useState('');
+  const [websiteUrl, setWebsiteUrl] = React.useState('');
   const [isPrivate, setIsPrivate] = React.useState(Boolean(user?.isPrivate));
   const [privacyBusy, setPrivacyBusy] = React.useState(false);
   const [privacyMsg, setPrivacyMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -131,13 +129,17 @@ export default function UserProfilePage() {
     setBusinessOwner(
       typeof user.businessOwner === 'string' && user.businessOwner.trim()
         ? user.businessOwner
-        : [user.firstName, user.lastName].filter(Boolean).join(' ').trim(),
+        : [user.firstName, user.lastName].filter(Boolean).join(' ').trim()
     );
     setBusinessCategory(typeof user.businessCategory === 'string' ? user.businessCategory : '');
     setNiptInput(typeof user.nipt === 'string' ? user.nipt : '');
     setPhoneInput(typeof user.phone === 'string' ? user.phone : '');
     setBasedCityId(typeof user.basedCityId === 'string' ? user.basedCityId : '');
     setShareThemeColor(normalizeShareThemeColor(user.shareThemeColor));
+    setInstagramUrl(typeof user.instagramUrl === 'string' ? user.instagramUrl : '');
+    setTiktokUrl(typeof user.tiktokUrl === 'string' ? user.tiktokUrl : '');
+    setLinkedinUrl(typeof user.linkedinUrl === 'string' ? user.linkedinUrl : '');
+    setWebsiteUrl(typeof user.websiteUrl === 'string' ? user.websiteUrl : '');
     setIsPrivate(Boolean(user.isPrivate));
   }, [
     user,
@@ -151,6 +153,10 @@ export default function UserProfilePage() {
     user?.phone,
     user?.basedCityId,
     user?.shareThemeColor,
+    user?.instagramUrl,
+    user?.tiktokUrl,
+    user?.linkedinUrl,
+    user?.websiteUrl,
     user?.isPrivate,
   ]);
 
@@ -239,9 +245,7 @@ export default function UserProfilePage() {
                 fontWeight: 600,
                 alignItems: 'center',
                 boxShadow: (t) =>
-                  t.palette.mode === 'dark'
-                    ? '0 4px 16px rgba(0,0,0,0.5)'
-                    : '0 4px 16px rgba(0,0,0,0.1)',
+                  t.palette.mode === 'dark' ? '0 4px 16px rgba(0,0,0,0.5)' : '0 4px 16px rgba(0,0,0,0.1)',
                 '& .MuiAlert-icon': {
                   fontSize: 18,
                   mr: 1,
@@ -344,13 +348,13 @@ export default function UserProfilePage() {
     }
     let cancelled = false;
     setReferralBadgesLoading(true);
-    void clientFetch<{ badges?: PublicMemberReferralBadge[] }>(
-      `/public/members/${encodeURIComponent(user.id)}`,
-    ).then((res) => {
-      if (cancelled) return;
-      setReferralBadges(mergeMemberReferralBadges(res.ok ? res.data?.badges : null));
-      setReferralBadgesLoading(false);
-    });
+    void clientFetch<{ badges?: PublicMemberReferralBadge[] }>(`/public/members/${encodeURIComponent(user.id)}`).then(
+      (res) => {
+        if (cancelled) return;
+        setReferralBadges(mergeMemberReferralBadges(res.ok ? res.data?.badges : null));
+        setReferralBadgesLoading(false);
+      }
+    );
     return () => {
       cancelled = true;
     };
@@ -383,6 +387,10 @@ export default function UserProfilePage() {
             phone,
             basedCityId: basedCityId || null,
             shareThemeColor,
+            instagramUrl,
+            tiktokUrl,
+            linkedinUrl,
+            websiteUrl,
           }
         : {
             firstName: firstName.trim(),
@@ -390,6 +398,10 @@ export default function UserProfilePage() {
             phone,
             basedCityId: basedCityId || null,
             shareThemeColor,
+            instagramUrl,
+            tiktokUrl,
+            linkedinUrl,
+            websiteUrl,
           };
       const { error, admin } = await authClient.updatePortalProfile(body);
       if (error) {
@@ -529,8 +541,7 @@ export default function UserProfilePage() {
   const initials = memberInitials(displayName);
   const publicHref = user.id ? pathsPublicMemberProfile(user.id) : null;
   const avatarSrc =
-    avatarPreview ||
-    (typeof user.avatar === 'string' && user.avatar.trim() ? user.avatar.trim() : undefined);
+    avatarPreview || (typeof user.avatar === 'string' && user.avatar.trim() ? user.avatar.trim() : undefined);
   const businessCategoryLabel = isBusiness ? String(user.businessCategory || '').trim() : '';
 
   return (
@@ -604,11 +615,7 @@ export default function UserProfilePage() {
                     },
                   }}
                 >
-                  {avatarBusy ? (
-                    <CircularProgress size={13} color="inherit" />
-                  ) : (
-                    <CameraIcon size={15} weight="bold" />
-                  )}
+                  {avatarBusy ? <CircularProgress size={13} color="inherit" /> : <CameraIcon size={15} weight="bold" />}
                 </IconButton>
               </>
             ) : null}
@@ -648,13 +655,7 @@ export default function UserProfilePage() {
             >
               <Chip
                 size="small"
-                icon={
-                  isBusiness ? (
-                    <BuildingsIcon size={13} weight="fill" />
-                  ) : (
-                    <UserIcon size={13} weight="fill" />
-                  )
-                }
+                icon={isBusiness ? <BuildingsIcon size={13} weight="fill" /> : <UserIcon size={13} weight="fill" />}
                 label={isBusiness ? 'Biznes' : 'Individ'}
                 sx={{
                   height: 26,
@@ -701,13 +702,7 @@ export default function UserProfilePage() {
                 >
                   Badges
                 </Typography>
-                <MemberReferralBadgesRow
-                  badges={referralBadges}
-                  dense
-                  layout="grid"
-                  columns={5}
-                  selfView
-                />
+                <MemberReferralBadgesRow badges={referralBadges} dense layout="grid" columns={5} selfView />
               </Box>
             ) : null}
           </Stack>
@@ -869,6 +864,93 @@ export default function UserProfilePage() {
               />
 
               <ShareThemeColorPicker value={shareThemeColor} onChange={setShareThemeColor} />
+
+              <Box
+                sx={{
+                  pt: 1,
+                  borderTop: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <Stack spacing={1.5}>
+                  <Stack spacing={0.25}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                      Rrjetet sociale
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Shtoni lidhjet që dëshironi të shfaqni në banner-in e profilit publik.
+                    </Typography>
+                  </Stack>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <TextField
+                      label="Instagram"
+                      placeholder="https://instagram.com/…"
+                      value={instagramUrl}
+                      onChange={(ev) => setInstagramUrl(ev.target.value)}
+                      fullWidth
+                      slotProps={{
+                        input: {
+                          startAdornment: (
+                            <Box sx={{ mr: 1, display: 'flex', color: '#e1306c' }}>
+                              <InstagramLogoIcon size={18} weight="fill" />
+                            </Box>
+                          ),
+                        },
+                      }}
+                    />
+                    <TextField
+                      label="TikTok"
+                      placeholder="https://tiktok.com/@…"
+                      value={tiktokUrl}
+                      onChange={(ev) => setTiktokUrl(ev.target.value)}
+                      fullWidth
+                      slotProps={{
+                        input: {
+                          startAdornment: (
+                            <Box sx={{ mr: 1, display: 'flex', color: 'text.primary' }}>
+                              <TiktokLogoIcon size={18} weight="fill" />
+                            </Box>
+                          ),
+                        },
+                      }}
+                    />
+                  </Stack>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <TextField
+                      label="LinkedIn"
+                      placeholder="https://linkedin.com/in/…"
+                      value={linkedinUrl}
+                      onChange={(ev) => setLinkedinUrl(ev.target.value)}
+                      fullWidth
+                      slotProps={{
+                        input: {
+                          startAdornment: (
+                            <Box sx={{ mr: 1, display: 'flex', color: '#0a66c2' }}>
+                              <LinkedinLogoIcon size={18} weight="fill" />
+                            </Box>
+                          ),
+                        },
+                      }}
+                    />
+                    <TextField
+                      label="Website"
+                      placeholder="https://shembull.al"
+                      value={websiteUrl}
+                      onChange={(ev) => setWebsiteUrl(ev.target.value)}
+                      fullWidth
+                      slotProps={{
+                        input: {
+                          startAdornment: (
+                            <Box sx={{ mr: 1, display: 'flex', color: 'primary.main' }}>
+                              <GlobeIcon size={18} weight="bold" />
+                            </Box>
+                          ),
+                        },
+                      }}
+                    />
+                  </Stack>
+                </Stack>
+              </Box>
 
               <Button
                 type="submit"

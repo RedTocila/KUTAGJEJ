@@ -119,6 +119,10 @@ async function loadPosterBrief(_posterModelHint, posterId, verifiedContext = nul
         businessOwner: profile.businessOwner?.trim() || null,
         businessCategory: profile.businessCategory?.trim() || null,
         shareThemeColor: profile.shareThemeColor || null,
+        instagramUrl: profile.instagramUrl?.trim() || null,
+        tiktokUrl: profile.tiktokUrl?.trim() || null,
+        linkedinUrl: profile.linkedinUrl?.trim() || null,
+        websiteUrl: profile.websiteUrl?.trim() || null,
         isPrivate: Boolean(profile.isPrivate),
       });
     }
@@ -136,6 +140,10 @@ async function loadPosterBrief(_posterModelHint, posterId, verifiedContext = nul
       businessOwner: null,
       businessCategory: null,
       shareThemeColor: profile.shareThemeColor || null,
+      instagramUrl: profile.instagramUrl?.trim() || null,
+      tiktokUrl: profile.tiktokUrl?.trim() || null,
+      linkedinUrl: profile.linkedinUrl?.trim() || null,
+      websiteUrl: profile.websiteUrl?.trim() || null,
       isPrivate: Boolean(profile.isPrivate),
     });
   } catch (e) {

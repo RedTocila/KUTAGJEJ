@@ -21,6 +21,7 @@ const {
   prioritizeActivePremium,
   withoutPremiumSort,
   withoutBumpedAtSort,
+  withoutBumpedAtFilter,
   newestTimestampColumn,
 } = require('./query-helpers');
 const { mergePublicFilter } = require('../listing-moderation');
@@ -217,10 +218,10 @@ async function runListingQuery(table, filterSpec, sortSpec, limit, skip = 0) {
   const sb = getSupabaseAdmin();
   const effectiveSort = sortSpec && sortSpec.length ? sortSpec : buildSort('newest');
 
-  const run = async (spec, selectOverride) => {
+  const run = async (spec, selectOverride, filterOverride = filterSpec) => {
     let q = applyFilterSpec(
       sb.from(table).select(selectOverride || listSelectForTable(table)),
-      filterSpec,
+      filterOverride,
     );
     q = applySort(q, spec);
     if (limit > 0) q = q.range(skip, skip + limit - 1);
@@ -244,6 +245,7 @@ async function runListingQuery(table, filterSpec, sortSpec, limit, skip = 0) {
     ({ data, error } = await run(
       withoutBumpedAtSort(withoutPremiumSort(effectiveSort)),
       selectWithoutBump,
+      withoutBumpedAtFilter(filterSpec),
     ));
   }
   if (error) throw error;

@@ -59,6 +59,7 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
                 priority={i === 0}
                 title={slide.title}
                 hideTitleWhenImage
+                bordered
               />
             );
           })}

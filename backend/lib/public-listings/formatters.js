@@ -171,7 +171,7 @@ function formatJob(doc, cityById) {
     imageUrl: pickImage(doc),
     imageUrls: coverImageUrls(doc),
     ...times,
-    expiresAt: jobListingExpiresAt(times.createdAt),
+    expiresAt: jobListingExpiresAt(times.createdAt, times.bumpedAt),
     permalinkPath: listingPermalinkFromDoc(doc, doc.title),
     responsibilities: Array.isArray(doc.responsibilities) ? doc.responsibilities.filter(Boolean) : [],
     requirements: Array.isArray(doc.requirements) ? doc.requirements.filter(Boolean) : [],

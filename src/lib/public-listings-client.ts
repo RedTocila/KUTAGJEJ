@@ -82,6 +82,11 @@ export interface PublicRealEstateListingSeller {
   reviewCount?: number;
   /** Stored on the seller profile; share/save chrome uses the viewer's color instead. */
   shareThemeColor?: string | null;
+  /** Optional public social links shown on the member profile banner. */
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
+  linkedinUrl?: string | null;
+  websiteUrl?: string | null;
   /** Whether the member profile is set to private. */
   isPrivate?: boolean;
 }
@@ -382,10 +387,9 @@ export async function fetchHomepageListings(limit = 8): Promise<PublicListingsBu
 export const fetchHomepageRecommended = cache(async function fetchHomepageRecommended(
   limit = 8
 ): Promise<PublicListingsBundle & { ok: boolean }> {
-  const data = await safeJson<Pick<
-    PublicListingsBundle,
-    'realEstate' | 'cars' | 'jobs' | 'marketplace' | 'businesses' | 'professionals'
-  >>(`/public/listings/recommended?limit=${limit}`);
+  const data = await safeJson<
+    Pick<PublicListingsBundle, 'realEstate' | 'cars' | 'jobs' | 'marketplace' | 'businesses' | 'professionals'>
+  >(`/public/listings/recommended?limit=${limit}`);
   if (!data) return { ...EMPTY_BUNDLE, ok: false };
   return {
     realEstate: data.realEstate ?? [],

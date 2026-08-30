@@ -1,3 +1,4 @@
+import type { HomepageMixedListing } from '@/lib/homepage-latest-listings';
 import type {
   PublicCarListing,
   PublicDirectoryListing,
@@ -7,7 +8,6 @@ import type {
   PublicRealEstateListingSeller,
 } from '@/lib/public-listings-client';
 import { loadPublicEntity, safeServerJson, type PublicEntityLoadResult } from '@/lib/server-fetch';
-import type { HomepageMixedListing } from '@/lib/homepage-latest-listings';
 
 export interface PublicMemberListingsBundle {
   realEstate: PublicRealEstateListing[];
@@ -36,11 +36,7 @@ export type PublicMemberReferralBadgeKind =
   | 'trusted-reviewer'
   | 'platform-dominator';
 
-export type PublicMemberReferralBadgeMetric =
-  | 'free-referrals'
-  | 'paid-referrals'
-  | 'reviews'
-  | 'combo';
+export type PublicMemberReferralBadgeMetric = 'free-referrals' | 'paid-referrals' | 'reviews' | 'combo';
 
 export interface PublicMemberReferralBadge {
   id: string;
@@ -229,18 +225,14 @@ export const DEFAULT_MEMBER_REFERRAL_BADGES: PublicMemberReferralBadge[] = [
 
 function normalizeMemberReferralBadge(
   badge: PublicMemberReferralBadge,
-  fallback?: PublicMemberReferralBadge,
+  fallback?: PublicMemberReferralBadge
 ): PublicMemberReferralBadge {
   return {
     ...(fallback || {}),
     ...badge,
     earned: Boolean(badge.earned),
-    threshold:
-      typeof badge.threshold === 'number'
-        ? badge.threshold
-        : fallback?.threshold,
-    progress:
-      typeof badge.progress === 'number' ? badge.progress : fallback?.progress,
+    threshold: typeof badge.threshold === 'number' ? badge.threshold : fallback?.threshold,
+    progress: typeof badge.progress === 'number' ? badge.progress : fallback?.progress,
     metric: badge.metric ?? fallback?.metric,
   };
 }
@@ -250,7 +242,7 @@ function normalizeMemberReferralBadge(
  * (and any other omitted badges) still appear as locked placeholders.
  */
 export function mergeMemberReferralBadges(
-  fromApi: PublicMemberReferralBadge[] | undefined | null,
+  fromApi: PublicMemberReferralBadge[] | undefined | null
 ): PublicMemberReferralBadge[] {
   const apiList = Array.isArray(fromApi) ? fromApi : [];
   if (apiList.length === 0) {
@@ -358,10 +350,13 @@ function mapMemberProfilePayload(payload: unknown): PublicMemberProfile | null {
   };
 }
 
-export async function loadPublicMemberProfile(
-  id: string,
-): Promise<PublicEntityLoadResult<PublicMemberProfile>> {
-  return loadPublicEntity(`/public/members/${encodeURIComponent(id)}`, mapMemberProfilePayload);
+export async function loadPublicMemberProfile(id: string): Promise<PublicEntityLoadResult<PublicMemberProfile>> {
+  // Profile details can change immediately after the owner saves social links.
+  // Avoid serving a stale server-rendered response when navigating back to the
+  // public profile.
+  return loadPublicEntity(`/public/members/${encodeURIComponent(id)}`, mapMemberProfilePayload, {
+    cache: 'no-store',
+  });
 }
 
 export async function fetchPublicMemberProfile(id: string): Promise<PublicMemberProfile | null> {
@@ -373,11 +368,7 @@ export async function fetchLatestPublicMembers(limit = 8): Promise<PublicMemberS
   return fetchPublicMemberSearch('', limit, 1);
 }
 
-export async function fetchPublicMemberSearch(
-  query: string,
-  limit = 24,
-  page = 1,
-): Promise<PublicMemberSearchResult> {
+export async function fetchPublicMemberSearch(query: string, limit = 24, page = 1): Promise<PublicMemberSearchResult> {
   const params = new URLSearchParams();
   const trimmed = query.trim();
   if (trimmed) params.set('q', trimmed);

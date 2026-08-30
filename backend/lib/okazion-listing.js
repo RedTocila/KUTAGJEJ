@@ -1,10 +1,12 @@
 'use strict';
 
 const { getSupabaseAdmin } = require('./supabase');
-const { isUuid, isPremiumActive } = require('./public-listings/query-helpers');
+const { isJobListingActive, isPremiumActive, isUuid } = require('./public-listings/query-helpers');
 const { isValidKind, TABLE_BY_KIND } = require('./listing-refresh');
 const { getOkazionPackage } = require('./okazion-packages');
 const { applyListingBump } = require('./listing-bump');
+const { hasBumpedAtColumn } = require('./ensure-bumped-at-schema');
+const { assertCanReactivateJobListing } = require('./listing-category-quota');
 
 /** OKAZION slots included with Grow / Elite stay featured for 7 days. */
 const PLAN_OKAZION_PACKAGE_ID = 'plan-okazion';
@@ -213,10 +215,7 @@ async function purchaseOkazionWithBoostCoins({ userId, packageId, quantity = 1 }
         /* best-effort rollback */
       }
     }
-    await sb
-      .from('profiles')
-      .update({ boost_credits: balance, updated_at: new Date().toISOString() })
-      .eq('id', userId);
+    await sb.from('profiles').update({ boost_credits: balance, updated_at: new Date().toISOString() }).eq('id', userId);
     throw err;
   }
 }
@@ -230,10 +229,12 @@ async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
     };
   }
   const table = TABLE_BY_KIND[kind];
-  let listingQ = sb
-    .from(table)
-    .select('id, poster_id, status, okazion_until, premium_until')
-    .eq('id', listingId);
+  const selectCols = ['id', 'poster_id', 'status', 'okazion_until', 'premium_until'];
+  if (kind === 'job') {
+    selectCols.push('created_at');
+    if (hasBumpedAtColumn() === true) selectCols.push('bumped_at');
+  }
+  let listingQ = sb.from(table).select(selectCols.join(', ')).eq('id', listingId);
   const { data: listing, error: listingErr } = await listingQ.maybeSingle();
   if (listingErr) {
     if (String(listingErr.message || '').includes('okazion_until')) {
@@ -258,20 +259,25 @@ async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
       message: 'Vetëm njoftimet e aprovuara mund të bëhen OKAZION.',
     };
   }
-  if (isPremiumActive(listing)) {
+  const jobActive = kind !== 'job' || isJobListingActive(listing);
+  if (jobActive && isPremiumActive(listing)) {
     return {
       ok: false,
       status: 400,
       message: 'Ky njoftim është Premium aktiv. Nuk mund të bëhet OKAZION derisa të mbarojë Premium.',
     };
   }
+  if (kind === 'job') {
+    const quota = await assertCanReactivateJobListing(userId, listing);
+    if (!quota.ok) return quota;
+  }
   return { ok: true, listing, table };
 }
 
-function computeOkazionUntil(listing, days) {
+function computeOkazionUntil(listing, days, restartJob = false) {
   const now = new Date();
   const base =
-    listing.okazion_until && new Date(listing.okazion_until) > now
+    !restartJob && listing.okazion_until && new Date(listing.okazion_until) > now
       ? new Date(listing.okazion_until)
       : now;
   const until = new Date(base);
@@ -279,13 +285,16 @@ function computeOkazionUntil(listing, days) {
   return { now, until };
 }
 
-async function bumpListingOkazion(sb, table, listingId, until, now) {
+async function bumpListingOkazion(sb, table, listingId, until, now, resetPremium = false) {
   await applyListingBump(
     sb,
     table,
     listingId,
-    { okazion_until: until.toISOString() },
-    now.toISOString(),
+    {
+      okazion_until: until.toISOString(),
+      ...(resetPremium ? { premium_until: null } : {}),
+    },
+    now.toISOString()
   );
 }
 
@@ -312,7 +321,7 @@ async function markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt }) {
         last_refreshed_at: refreshedAt,
         updated_at: refreshedAt,
       },
-      { onConflict: 'user_id,listing_kind,listing_id' },
+      { onConflict: 'user_id,listing_kind,listing_id' }
     );
   } catch (error) {
     if (!String(error?.message || '').includes('listing_auto_refresh')) throw error;
@@ -333,10 +342,7 @@ async function getActiveSubscriptionOkazionMax(userId) {
     throw error;
   }
   const active = (data || []).find(
-    (s) =>
-      s.status === 'active' &&
-      Number(s.price_eur) > 0 &&
-      (!s.expires_at || new Date(s.expires_at) >= now),
+    (s) => s.status === 'active' && Number(s.price_eur) > 0 && (!s.expires_at || new Date(s.expires_at) >= now)
   );
   return Number(active?.max_okazion_listings) || 0;
 }
@@ -382,10 +388,7 @@ async function countActivePlanOkazionSlots(userId) {
 }
 
 async function getOkazionQuotaSnapshot(userId) {
-  const [max, used] = await Promise.all([
-    getActiveSubscriptionOkazionMax(userId),
-    countActivePlanOkazionSlots(userId),
-  ]);
+  const [max, used] = await Promise.all([getActiveSubscriptionOkazionMax(userId), countActivePlanOkazionSlots(userId)]);
   return {
     max,
     used,
@@ -442,8 +445,9 @@ async function applyOkazionVoucher({ userId, voucherId, kind, listingId }) {
   if (!loaded.ok) return loaded;
 
   const days = Number(voucher.days) || 0;
-  const { now, until } = computeOkazionUntil(loaded.listing, days);
-  await bumpListingOkazion(sb, loaded.table, listingId, until, now);
+  const restartJob = kind === 'job' && !isJobListingActive(loaded.listing);
+  const { now, until } = computeOkazionUntil(loaded.listing, days, restartJob);
+  await bumpListingOkazion(sb, loaded.table, listingId, until, now, restartJob);
   await markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt: now.toISOString() });
 
   const { data: applied, error: applyErr } = await sb
@@ -503,8 +507,7 @@ async function applyOkazionFromPlan({ userId, kind, listingId }) {
     return {
       ok: false,
       status: 400,
-      message:
-        'Paketa juaj nuk përfshin OKAZION. Upgrade në Grow/Elite ose blini një paketë ekstra.',
+      message: 'Paketa juaj nuk përfshin OKAZION. Upgrade në Grow/Elite ose blini një paketë ekstra.',
     };
   }
   if (quota.remaining <= 0) {
@@ -515,8 +518,9 @@ async function applyOkazionFromPlan({ userId, kind, listingId }) {
     };
   }
 
-  const { now, until } = computeOkazionUntil(loaded.listing, PLAN_OKAZION_DAYS);
-  await bumpListingOkazion(sb, loaded.table, listingId, until, now);
+  const restartJob = kind === 'job' && !isJobListingActive(loaded.listing);
+  const { now, until } = computeOkazionUntil(loaded.listing, PLAN_OKAZION_DAYS, restartJob);
+  await bumpListingOkazion(sb, loaded.table, listingId, until, now, restartJob);
   await markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt: now.toISOString() });
 
   const { data: voucherRow, error: insErr } = await sb

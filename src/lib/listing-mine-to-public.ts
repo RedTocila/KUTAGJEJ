@@ -1,6 +1,7 @@
 import { findOptionLabel } from '@/components/public/listing-cards/format-helpers';
 import { BUSINESS_CATEGORY_OPTIONS } from '@/lib/business-constants';
 import { extractPlaceQueryFromMapsUrl } from '@/lib/google-maps-location';
+import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import type {
   BusinessMineListing,
   ProfessionalMineListing,
@@ -199,8 +200,7 @@ export function carMineToPublic(mine: CarMineListing): PublicCarListingDetail {
 }
 
 export function jobMineToPublic(mine: JobMineListing): PublicJobListingDetail {
-  const created = new Date(mine.createdAt);
-  const expires = new Date(created.getTime() + 15 * 24 * 60 * 60 * 1000);
+  const expires = getJobListingExpiresAt(mine.createdAt, mine.bumpedAt);
   const workLocation =
     mine.workLocation === 'hybrid' || mine.workLocation === 'remote' || mine.workLocation === 'onsite'
       ? mine.workLocation

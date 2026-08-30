@@ -17,10 +17,14 @@ import {
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { CalendarBlank as CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
+import { Globe as GlobeIcon } from '@phosphor-icons/react/dist/ssr/Globe';
+import { InstagramLogo as InstagramLogoIcon } from '@phosphor-icons/react/dist/ssr/InstagramLogo';
+import { LinkedinLogo as LinkedinLogoIcon } from '@phosphor-icons/react/dist/ssr/LinkedinLogo';
 import { Lock as LockIcon } from '@phosphor-icons/react/dist/ssr/Lock';
 import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
+import { TiktokLogo as TiktokLogoIcon } from '@phosphor-icons/react/dist/ssr/TiktokLogo';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 
 import { paths, pathsPublicMemberProfile } from '@/paths';
@@ -144,6 +148,112 @@ function memberSinceParts(iso: string | undefined): { year: number; monthYear: s
     year: date.getFullYear(),
     monthYear: date.toLocaleDateString('sq-AL', { month: 'long', year: 'numeric' }),
   };
+}
+
+const PROFILE_SOCIALS = [
+  { field: 'instagramUrl', label: 'Instagram', Icon: InstagramLogoIcon, color: '#ff4f91' },
+  { field: 'tiktokUrl', label: 'TikTok', Icon: TiktokLogoIcon, color: '#fff' },
+  { field: 'linkedinUrl', label: 'LinkedIn', Icon: LinkedinLogoIcon, color: '#70b7ff' },
+  { field: 'websiteUrl', label: 'Website', Icon: GlobeIcon, color: '#d7ff6b' },
+] as const;
+
+function safeSocialHref(value: string | null | undefined): string | null {
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function MemberSocialLinks({
+  member,
+  placement = 'cover',
+}: {
+  member: PublicRealEstateListingSeller;
+  placement?: 'cover' | 'under-rating';
+}) {
+  const underRating = placement === 'under-rating';
+  const links = PROFILE_SOCIALS.map(({ field, label, Icon, color }) => {
+    const href = safeSocialHref(member[field]);
+    return href ? { field, label, Icon, color, href } : null;
+  }).filter((link): link is NonNullable<typeof link> => Boolean(link));
+
+  if (links.length === 0) return null;
+
+  return (
+    <Stack
+      direction="row"
+      spacing={0.5}
+      aria-label="Rrjetet sociale"
+      sx={{
+        position: 'absolute',
+        right: underRating ? 0 : { xs: 12, sm: 16 },
+        ...(underRating ? { top: { xs: 74, sm: 78 } } : { bottom: { xs: 12, sm: 16 } }),
+        zIndex: 3,
+        alignItems: 'center',
+        pointerEvents: 'none',
+      }}
+    >
+      {links.map(({ field, label, Icon, color, href }) => (
+        <Box
+          key={field}
+          component="a"
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          aria-label={label}
+          sx={{
+            width: { xs: 40, sm: 42 },
+            height: { xs: 40, sm: 42 },
+            pointerEvents: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            position: 'relative',
+            zIndex: 3,
+            cursor: 'pointer',
+            touchAction: 'manipulation',
+            textDecoration: 'none',
+            '&:focus-visible': {
+              outline: '2px solid',
+              outlineColor: color,
+              outlineOffset: 2,
+              borderRadius: '50%',
+            },
+            '&:hover': {
+              '& .profile-social-surface': {
+                bgcolor: 'rgba(255,255,255,0.18)',
+              },
+            },
+          }}
+        >
+          <Box
+            component="span"
+            className="profile-social-surface"
+            sx={{
+              width: { xs: 30, sm: 34 },
+              height: { xs: 30, sm: 34 },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color,
+              bgcolor: 'rgba(0,0,0,0.28)',
+              border: '1px solid rgba(255,255,255,0.28)',
+              borderRadius: '50%',
+              backdropFilter: 'blur(7px)',
+              WebkitBackdropFilter: 'blur(7px)',
+            }}
+          >
+            <Icon size={17} weight="fill" />
+          </Box>
+        </Box>
+      ))}
+    </Stack>
+  );
 }
 
 function MemberContactButton({ memberId, pill = false }: { memberId: string; pill?: boolean }) {
@@ -487,6 +597,7 @@ export function MemberProfileView({
                 starSize={18}
               />
             </ButtonBase>
+            <MemberSocialLinks member={member} placement="under-rating" />
 
             <Stack
               direction={{ xs: 'column', sm: 'row' }}

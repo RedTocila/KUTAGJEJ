@@ -5,6 +5,7 @@ const {
   countPosterListings,
   loadActivePaidSubscription,
 } = require('./listing-quota-convert');
+const { isJobListingActive } = require('./public-listings/query-helpers');
 
 /** Matches seeded FREE plan when contracts row is missing. */
 const FREE_FALLBACK_MAX = {
@@ -133,6 +134,31 @@ async function assertCanCreateCategoryListing(userId, kind) {
   return { ok: true, snapshot };
 }
 
+/**
+ * Expired jobs do not occupy a package slot until a boost brings them back.
+ * The active-job count then includes the reactivated listing as one used slot.
+ */
+async function assertCanReactivateJobListing(userId, listing) {
+  if (!listing || isJobListingActive(listing)) return { ok: true };
+
+  const snapshot = await getPostingQuotaSnapshot(userId);
+  if (snapshot.max.job <= 0) {
+    return {
+      ok: false,
+      status: 403,
+      message: 'Kuota për «Vende pune» nuk është e disponueshme në paketën tuaj.',
+    };
+  }
+  if (snapshot.available.job <= 0) {
+    return {
+      ok: false,
+      status: 403,
+      message: 'Keni përdorur të gjitha vendet e punës të paketës suaj.',
+    };
+  }
+  return { ok: true, snapshot };
+}
+
 module.exports = {
   KIND_LABELS,
   CATEGORY_KEY_TO_KIND,
@@ -141,4 +167,5 @@ module.exports = {
   kindFromCategoryKey,
   getPostingQuotaSnapshot,
   assertCanCreateCategoryListing,
+  assertCanReactivateJobListing,
 };

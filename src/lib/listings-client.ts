@@ -137,6 +137,7 @@ export interface JobMineListing extends ListingMetrics {
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
   updatedAt?: string;
+  bumpedAt?: string | null;
   isPremium?: boolean;
   premiumUntil?: string | null;
   isOkazion?: boolean;

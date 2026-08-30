@@ -1,13 +1,11 @@
 'use strict';
 
 const { getSupabaseAdmin } = require('./supabase');
-const {
-  isUuid,
-  isPremiumActive,
-  isOkazionActive,
-} = require('./public-listings/query-helpers');
+const { isUuid, isJobListingActive, isPremiumActive, isOkazionActive } = require('./public-listings/query-helpers');
 const { refreshHoursForPlanCode } = require('./auto-refresh-packages');
 const { applyListingBump } = require('./listing-bump');
+const { hasBumpedAtColumn } = require('./ensure-bumped-at-schema');
+const { assertCanReactivateJobListing } = require('./listing-category-quota');
 
 const REFRESH_COST_FREE = 1;
 const REFRESH_COST_PREMIUM = 5;
@@ -40,7 +38,9 @@ function isValidKind(kind) {
 
 function resolvePlanCode(sub) {
   if (!sub) return 'free';
-  const code = String(sub.plan_code || '').trim().toLowerCase();
+  const code = String(sub.plan_code || '')
+    .trim()
+    .toLowerCase();
   if (code && code !== 'free') return code;
   const title = String(sub.contract_title || '').toLowerCase();
   if (title.includes('elite')) return 'elite';
@@ -61,10 +61,7 @@ async function getRefreshWindowHours(sb, userId) {
   if (error) throw error;
   const active =
     (data || []).find(
-      (s) =>
-        s.status === 'active' &&
-        Number(s.price_eur) > 0 &&
-        (!s.expires_at || new Date(s.expires_at) >= now),
+      (s) => s.status === 'active' && Number(s.price_eur) > 0 && (!s.expires_at || new Date(s.expires_at) >= now)
     ) || null;
 
   if (active?.refresh_every_hours != null && Number(active.refresh_every_hours) > 0) {
@@ -95,6 +92,7 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
   if (kind !== 'businesses' && kind !== 'professionals') {
     selectCols.push('okazion_until');
   }
+  if (kind === 'job' && hasBumpedAtColumn() === true) selectCols.push('bumped_at');
 
   let listingQ = sb.from(table).select(selectCols.join(', ')).eq('id', listingId);
   if (kind === 'businesses' || kind === 'professionals') {
@@ -115,6 +113,10 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
       message: 'Vetëm njoftimet e aprovuara mund të ngrihen në krye.',
     };
   }
+  if (kind === 'job') {
+    const quota = await assertCanReactivateJobListing(userId, listing);
+    if (!quota.ok) return quota;
+  }
 
   const refreshEveryHours = await getRefreshWindowHours(sb, userId);
   const { data: refreshMeta, error: refreshMetaErr } = await sb
@@ -129,9 +131,7 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
       throw refreshMetaErr;
     }
   }
-  const lastRefreshMs = refreshMeta?.last_refreshed_at
-    ? new Date(refreshMeta.last_refreshed_at).getTime()
-    : NaN;
+  const lastRefreshMs = refreshMeta?.last_refreshed_at ? new Date(refreshMeta.last_refreshed_at).getTime() : NaN;
   if (Number.isFinite(lastRefreshMs) && refreshEveryHours > 0) {
     const nowMs = Date.now();
     const elapsedMs = nowMs - lastRefreshMs;
@@ -143,9 +143,7 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
       return {
         ok: false,
         status: 400,
-        message: `Mund ta ngreni në krye pas ${remainingHours} ore${
-          remainingHours === 1 ? '' : 'sh'
-        }.`,
+        message: `Mund ta ngreni në krye pas ${remainingHours} ore${remainingHours === 1 ? '' : 'sh'}.`,
       };
     }
   }
@@ -160,7 +158,8 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
     return { ok: false, status: 401, message: 'Profili nuk u gjet.' };
   }
 
-  const refreshCost = refreshCostForListing(listing);
+  const expiredJob = kind === 'job' && !isJobListingActive(listing);
+  const refreshCost = expiredJob ? REFRESH_COST_FREE : refreshCostForListing(listing);
   const balance = Number(profile.boost_credits) || 0;
   if (balance < refreshCost) {
     return {
@@ -188,16 +187,14 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
   }
 
   // Bump public “newest” sort only via bumped_at. Leave created_at (publish /
-  // job expiry) and updated_at (My listings order) alone. Never touch
-  // listing_engagements, saved_listings, or reviews.
+  // job expiry) and updated_at (My listings order) alone. Expired jobs also
+  // clear stale paid boosts before their new 15-day window starts.
+  // Never touch listing_engagements, saved_listings, or reviews.
   try {
-    await applyListingBump(sb, table, listingId, {}, now);
+    await applyListingBump(sb, table, listingId, expiredJob ? { premium_until: null, okazion_until: null } : {}, now);
   } catch (bumpErr) {
     // Best-effort refund if bump fails after debit.
-    await sb
-      .from('profiles')
-      .update({ boost_credits: balance, updated_at: new Date().toISOString() })
-      .eq('id', userId);
+    await sb.from('profiles').update({ boost_credits: balance, updated_at: new Date().toISOString() }).eq('id', userId);
     throw bumpErr;
   }
 
@@ -212,7 +209,7 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
         last_refreshed_at: now,
         updated_at: now,
       },
-      { onConflict: 'user_id,listing_kind,listing_id' },
+      { onConflict: 'user_id,listing_kind,listing_id' }
     );
   } catch (metaErr) {
     if (!String(metaErr?.message || '').includes('listing_auto_refresh')) {

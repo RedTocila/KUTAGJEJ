@@ -74,6 +74,11 @@ alter table public.profiles
   add column if not exists based_city_name text;
 alter table public.profiles
   add column if not exists share_theme_color text;
+alter table public.profiles
+  add column if not exists instagram_url text,
+  add column if not exists tiktok_url text,
+  add column if not exists linkedin_url text,
+  add column if not exists website_url text;
 
 -- New accounts start with 100 Boost Coins (existing rows unchanged).
 alter table public.profiles

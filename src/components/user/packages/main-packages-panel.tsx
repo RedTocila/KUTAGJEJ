@@ -53,7 +53,7 @@ function planFeatureLines(t: AppMessages, plan: PublicContract): FeatureListItem
     t.packages.productListings(plan.maxProductListings),
   ];
   if (plan.maxPremiumListings > 0) {
-    lines.push(t.packages.premiumListingDays(plan.maxPremiumListings, 30));
+    lines.push(t.packages.premiumListingDays(plan.maxPremiumListings, 15));
   }
   if (plan.maxOkazionListings > 0) {
     lines.push(t.packages.okazionListingDays(plan.maxOkazionListings, 5));

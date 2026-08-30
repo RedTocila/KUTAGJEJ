@@ -3,7 +3,7 @@
 const { getSupabaseAdmin } = require('./supabase');
 const { camelizeRows } = require('./profiles');
 const { attachOwnerMetrics } = require('./listing-metrics');
-const { buildCityIndex } = require('./public-listings/query-helpers');
+const { buildCityIndex, isJobListingActive } = require('./public-listings/query-helpers');
 const { pickImage } = require('./public-listings/text-helpers');
 const { premiumFieldsFromDoc } = require('./premium-listing');
 const { okazionFieldsFromDoc } = require('./okazion-listing');
@@ -89,6 +89,7 @@ const MINE_SELECT = {
     'status',
     'created_at',
     'updated_at',
+    'bumped_at',
     'premium_until',
     'okazion_until',
     'maps_url',
@@ -221,6 +222,7 @@ function formatMineCar(doc, cityById) {
 
 function formatMineJob(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
+  const jobActive = isJobListingActive(doc);
   return {
     id: listingId(doc),
     title: doc.title,
@@ -237,8 +239,10 @@ function formatMineJob(doc, cityById) {
     status: doc.status || 'pending',
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
-    ...premiumFieldsFromDoc(doc),
-    ...okazionFieldsFromDoc(doc),
+    bumpedAt: doc.bumpedAt ?? null,
+    ...(jobActive
+      ? { ...premiumFieldsFromDoc(doc), ...okazionFieldsFromDoc(doc) }
+      : { isPremium: false, premiumUntil: null, isOkazion: false, okazionUntil: null }),
     ...mapsJsonFromDoc(doc),
   };
 }
@@ -270,17 +274,9 @@ function formatMineBusiness(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
   const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   const lat =
-    typeof doc.locationLat === 'number'
-      ? doc.locationLat
-      : doc.locationLat != null
-        ? Number(doc.locationLat)
-        : null;
+    typeof doc.locationLat === 'number' ? doc.locationLat : doc.locationLat != null ? Number(doc.locationLat) : null;
   const lng =
-    typeof doc.locationLng === 'number'
-      ? doc.locationLng
-      : doc.locationLng != null
-        ? Number(doc.locationLng)
-        : null;
+    typeof doc.locationLng === 'number' ? doc.locationLng : doc.locationLng != null ? Number(doc.locationLng) : null;
   return {
     id: listingId(doc),
     vertical: doc.vertical,
@@ -474,12 +470,14 @@ function formatMineBusinessFull(doc, cityById) {
     mapsUrl: doc.mapsUrl?.trim() || null,
     mapsPlaceQuery: doc.mapsUrl ? extractPlaceQueryFromMapsUrl(doc.mapsUrl) : null,
     locationAddress: doc.locationAddress?.trim() || null,
-    locationLat: typeof doc.locationLat === 'number' ? doc.locationLat : doc.locationLat != null ? Number(doc.locationLat) : null,
-    locationLng: typeof doc.locationLng === 'number' ? doc.locationLng : doc.locationLng != null ? Number(doc.locationLng) : null,
+    locationLat:
+      typeof doc.locationLat === 'number' ? doc.locationLat : doc.locationLat != null ? Number(doc.locationLat) : null,
+    locationLng:
+      typeof doc.locationLng === 'number' ? doc.locationLng : doc.locationLng != null ? Number(doc.locationLng) : null,
     contactPhone: doc.contactPhone ?? null,
     imageUrls: Array.isArray(doc.imageUrls) ? doc.imageUrls.filter(Boolean) : [],
     openingHours: doc.openingHours ?? null,
-    weeklyHours: Array.isArray(doc.weeklyHours) ? doc.weeklyHours : doc.weeklyHours ?? [],
+    weeklyHours: Array.isArray(doc.weeklyHours) ? doc.weeklyHours : (doc.weeklyHours ?? []),
     menuCategories: doc.menuCategories ?? [],
     menuItems: doc.menuItems ?? [],
     reservationsEnabled: Boolean(doc.reservationsEnabled),
@@ -564,14 +562,10 @@ async function queryMineRows(table, posterId, { limit, extraEq } = {}) {
   return camelizeRows(data);
 }
 
-async function loadMineKind(posterId, {
-  table,
-  metricKind,
-  format,
-  limit = DEFAULT_LIMIT_PER_KIND,
-  extraEq,
-  withMetrics = true,
-}) {
+async function loadMineKind(
+  posterId,
+  { table, metricKind, format, limit = DEFAULT_LIMIT_PER_KIND, extraEq, withMetrics = true }
+) {
   const docs = await queryMineRows(table, posterId, { limit, extraEq });
   const cityById = await buildCityIndex(docs);
   const listings = docs.map((d) => format(d, cityById));
@@ -580,18 +574,8 @@ async function loadMineKind(posterId, {
 }
 
 /** Full single listing for owner edit (select * + fat formatter). */
-async function loadMineListingById(posterId, {
-  table,
-  listingId: id,
-  metricKind,
-  format,
-  extraEq,
-}) {
-  let q = getSupabaseAdmin()
-    .from(table)
-    .select('*')
-    .eq('poster_id', posterId)
-    .eq('id', id);
+async function loadMineListingById(posterId, { table, listingId: id, metricKind, format, extraEq }) {
+  let q = getSupabaseAdmin().from(table).select('*').eq('poster_id', posterId).eq('id', id);
   if (extraEq) {
     for (const [col, val] of Object.entries(extraEq)) {
       q = q.eq(col, val);
@@ -677,9 +661,7 @@ async function loadMineListingsForPoster(posterId, { limitPerKind = DEFAULT_LIMI
     { kind: 'businesses', listings: businesses },
     { kind: 'professionals', listings: professionals },
   ];
-  const refs = kindBuckets.flatMap(({ kind, listings }) =>
-    listings.map((l) => ({ kind, listingId: l.id })),
-  );
+  const refs = kindBuckets.flatMap(({ kind, listings }) => listings.map((l) => ({ kind, listingId: l.id })));
   const map = await fetchMetricsMap(refs);
   for (const { kind, listings } of kindBuckets) {
     for (const listing of listings) {

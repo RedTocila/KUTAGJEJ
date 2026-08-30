@@ -2,7 +2,8 @@
 
 import Cookies from 'js-cookie';
 
-import { authHeaders, persistTokens, getAccessToken, AUTH_TOKEN_KEY, AUTH_REFRESH_KEY } from '@/lib/api-client';
+import type { User } from '@/types/user';
+import { AUTH_REFRESH_KEY, AUTH_TOKEN_KEY, authHeaders, getAccessToken, persistTokens } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
 import { getPostSignOutPath } from '@/lib/auth/post-login-path';
 import {
@@ -15,7 +16,6 @@ import {
 } from '@/lib/auth/storage';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { prepareAvatarForUpload } from '@/lib/uploads-client';
-import type { User } from '@/types/user';
 
 export { AUTH_TOKEN_KEY, AUTH_REFRESH_KEY };
 
@@ -42,7 +42,7 @@ function persistAccessToken(token: string | null | undefined, refreshToken?: str
 async function postJson(
   path: string,
   body: unknown,
-  timeoutMs = 18_000,
+  timeoutMs = 18_000
 ): Promise<{ res?: Response; data: Record<string, unknown>; error?: string }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -280,7 +280,8 @@ class AuthClient {
         body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Ndryshimi i fjalëkalimit dështoi.' };
+      if (!res.ok)
+        return { error: typeof data.message === 'string' ? data.message : 'Ndryshimi i fjalëkalimit dështoi.' };
       return { ok: true };
     } catch {
       return { error: 'Nuk u arrit lidhja me serverin.' };
@@ -296,6 +297,10 @@ class AuthClient {
     businessCategory?: string;
     basedCityId?: string | null;
     shareThemeColor?: string | null;
+    instagramUrl?: string | null;
+    tiktokUrl?: string | null;
+    linkedinUrl?: string | null;
+    websiteUrl?: string | null;
     isPrivate?: boolean;
     /** Public profile photo URL; empty string clears it. */
     avatar?: string;
@@ -397,7 +402,8 @@ class AuthClient {
         body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Ndryshimi i fjalëkalimit dështoi.' };
+      if (!res.ok)
+        return { error: typeof data.message === 'string' ? data.message : 'Ndryshimi i fjalëkalimit dështoi.' };
       return { ok: true };
     } catch {
       return { error: 'Nuk u arrit lidhja me serverin.' };

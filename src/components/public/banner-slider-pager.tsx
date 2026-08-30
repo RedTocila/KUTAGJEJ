@@ -127,20 +127,20 @@ export function BannerSliderPager({
           sx={{
             width: 32,
             height: 32,
+            p: 0,
             color: (theme) => (theme.palette.mode === 'dark' ? '#fff' : 'primary.main'),
-            bgcolor: (theme) =>
-              theme.palette.mode === 'dark' ? 'rgba(20, 24, 48, 0.92)' : 'background.paper',
-            border: (theme) => (theme.palette.mode === 'dark' ? 0 : '1px solid'),
-            borderColor: 'divider',
+            bgcolor: 'transparent',
+            border: 0,
+            borderRadius: 0,
             animation: playBurst ? `bannerPlayPop 320ms ${MOTION.ease}` : 'none',
             '@keyframes bannerPlayPop': {
-              '0%': { transform: 'scale(0.82)', bgcolor: 'primary.main', color: 'primary.contrastText' },
-              '55%': { transform: 'scale(1.12)', bgcolor: 'primary.main', color: 'primary.contrastText' },
+              '0%': { transform: 'scale(0.82)' },
+              '55%': { transform: 'scale(1.12)' },
               '100%': { transform: 'scale(1)' },
             },
             '&:hover': {
-              bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? 'rgba(28, 34, 64, 1)' : 'background.level2',
+              bgcolor: 'transparent',
+              color: (theme) => (theme.palette.mode === 'dark' ? 'primary.main' : 'primary.dark'),
             },
             '&:active': {
               transform: 'scale(0.92)',

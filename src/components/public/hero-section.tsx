@@ -12,7 +12,7 @@ export function HeroSection({ children }: { children?: React.ReactNode }) {
       <Box
         sx={{
           pt: { xs: 1.5, md: 3 },
-          pb: { xs: 3, md: 3.5 },
+          pb: 0,
           bgcolor: 'background.default',
         }}
       >

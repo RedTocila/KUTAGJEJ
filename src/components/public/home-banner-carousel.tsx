@@ -34,7 +34,7 @@ export function HomeBannerCarousel({ banners = [] }: HomeBannerCarouselProps) {
 
   return (
     <Box component="section" aria-label="Banner kryesor" sx={{ width: '100%' }}>
-      <Stack spacing={1.35} sx={{ width: '100%' }}>
+      <Stack spacing={0.25} sx={{ width: '100%', pb: 0.5 }}>
         <BannerSliderViewport
           idx={idx}
           slideCount={slides.length}

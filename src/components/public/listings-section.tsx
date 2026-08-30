@@ -2,11 +2,10 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import ArrowForward from '@mui/icons-material/ArrowForward';
 import { Box, Button, Container, Stack, Typography } from '@mui/material';
 
-import { useCopy } from '@/hooks/use-copy';
-import { useLanguage } from '@/hooks/use-language';
+import { paths } from '@/paths';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import {
   isHomeVerticalId,
   localizeSearchCategory,
@@ -19,10 +18,11 @@ import {
   type SearchCategoryId,
 } from '@/lib/home-categories';
 import type { AppLanguage } from '@/lib/language';
-import { paths } from '@/paths';
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
 
-import { SubcategoryPills } from './subcategory-pills';
 import { HomeVerticalIcon } from './home-vertical-icon';
+import { SubcategoryPills } from './subcategory-pills';
 import { VerticalIcon } from './vertical-icon';
 
 /** Homepage / browse section ids — listing verticals plus OKAZION / profiles. */
@@ -112,16 +112,16 @@ export function ListingsSection({
         <Stack
           direction="row"
           spacing={2}
-          sx={{ alignItems: 'center', justifyContent: 'space-between', mb: { xs: 1.5, md: 2 } }}
+          sx={{ alignItems: 'center', justifyContent: 'space-between', mb: { xs: 0, md: 0.5 } }}
         >
           <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
             {!hideVerticalIcon ? (
               usePhosphorIcon ? (
                 <Box
                   sx={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 2,
+                    width: 36,
+                    height: 36,
+                    borderRadius: 1.5,
                     display: 'grid',
                     placeItems: 'center',
                     flexShrink: 0,
@@ -134,7 +134,7 @@ export function ListingsSection({
                           : 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
                   }}
                 >
-                  <HomeVerticalIcon verticalId={verticalId} size={26} />
+                  <HomeVerticalIcon verticalId={verticalId} size={24} />
                 </Box>
               ) : (
                 <VerticalIcon verticalId={verticalId as HomeVerticalId} size={42} decorative />
@@ -145,7 +145,7 @@ export function ListingsSection({
                 id={`section-${verticalId}`}
                 component="h2"
                 sx={{
-                  fontWeight: 700,
+                  fontWeight: 800,
                   fontSize: { xs: '1.1rem', md: '1.25rem' },
                   lineHeight: 1.3,
                   letterSpacing: '-0.01em',
@@ -166,13 +166,25 @@ export function ListingsSection({
               component={RouterLink}
               href={meta.href}
               size="small"
-              endIcon={<ArrowForward sx={{ fontSize: 18 }} />}
               sx={{
                 textTransform: 'none',
-                fontWeight: 600,
+                fontWeight: 800,
                 color: 'primary.main',
                 flexShrink: 0,
-                px: 1,
+                minWidth: 0,
+                height: 30,
+                minHeight: 30,
+                paddingTop: '2px !important',
+                paddingBottom: '2px !important',
+                paddingLeft: '12px !important',
+                paddingRight: '12px !important',
+                borderRadius: '12px',
+                bgcolor: primaryMainAlpha(0.16),
+                boxShadow: 'none',
+                '&:hover': {
+                  bgcolor: primaryMainAlpha(0.24),
+                  boxShadow: 'none',
+                },
               }}
             >
               {t.common.browseAll}

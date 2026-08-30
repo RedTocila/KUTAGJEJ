@@ -3,8 +3,10 @@
 import * as React from 'react';
 import { Box, Container, Grid, Skeleton, Stack } from '@mui/material';
 
+import { isHomeVerticalId } from '@/lib/home-categories';
+import type { TopViewedListing } from '@/lib/public-listings-client';
+import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { BrowseLoadProvider, type BrowseResolvedMeta } from '@/components/public/browse-load-context';
-import { BrowsePagination } from '@/components/public/listing-filters/browse-pagination';
 import {
   BrowseListingsCountCaption,
   PublicCategoryEmptyState,
@@ -12,11 +14,9 @@ import {
   type BrowseCategoryId,
 } from '@/components/public/category-hero';
 import { CategoryTopViewedSlider } from '@/components/public/category-top-viewed-slider';
+import { BrowsePagination } from '@/components/public/listing-filters/browse-pagination';
 import { PublicShell } from '@/components/public/public-shell';
 import { OkazionTheme } from '@/components/user/okazion-theme';
-import { isHomeVerticalId } from '@/lib/home-categories';
-import type { TopViewedListing } from '@/lib/public-listings-client';
-import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 
 interface CategoryBrowseLayoutProps {
   verticalId: BrowseCategoryId;
@@ -95,8 +95,7 @@ export function CategoryBrowseLayout({
     setPhase('loading');
   }, []);
 
-  const showTopViewed =
-    isHomeVerticalId(verticalId) && topViewed.length > 0 && !hasFilters && phase !== 'loading';
+  const showTopViewed = isHomeVerticalId(verticalId) && topViewed.length > 0 && !hasFilters && phase !== 'loading';
   const pending = phase === 'loading';
 
   return (
@@ -111,21 +110,19 @@ export function CategoryBrowseLayout({
             heading={heading}
             intro={intro}
           />
-          {showTopViewed ? (
-            <CategoryTopViewedSlider verticalId={verticalId} listings={topViewed} />
-          ) : null}
+          {showTopViewed ? <CategoryTopViewedSlider verticalId={verticalId} listings={topViewed} /> : null}
           {phase === 'empty' ? (
             <PublicCategoryEmptyState verticalId={verticalId} hasFilters={hasFilters} />
           ) : (
             <Container
               maxWidth="xl"
               sx={{
-                pt: showTopViewed ? { xs: 1, md: 1.5 } : isOkazion ? { xs: 1.5, md: 3 } : { xs: 4, md: 6 },
+                pt: showTopViewed ? 0 : isOkazion ? { xs: 1.5, md: 3 } : { xs: 4, md: 6 },
                 pb: { xs: 4, md: 6 },
                 position: 'relative',
               }}
             >
-              <Stack spacing={3}>
+              <Stack spacing={showTopViewed ? { xs: 1, md: 1.5 } : 3}>
                 {pending ? (
                   <Skeleton variant="text" animation="wave" width={168} />
                 ) : (
@@ -138,6 +135,7 @@ export function CategoryBrowseLayout({
                     hasFilters={hasFilters}
                     enableInfiniteScroll={enableInfiniteScroll}
                     countKind={verticalId === 'profiles' ? 'profiles' : 'listings'}
+                    emphasized={showTopViewed}
                   />
                 )}
                 {children}

@@ -4,10 +4,10 @@ import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Box, Stack } from '@mui/material';
 
+import type { HomeVerticalId } from '@/lib/home-categories';
+import { localizeSubcategories } from '@/lib/home-subcategories';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
-import { localizeSubcategories } from '@/lib/home-subcategories';
-import type { HomeVerticalId } from '@/lib/home-categories';
 import { ProductTag } from '@/components/public/product-browse-chrome';
 
 const SUBCATEGORY_PARAM: Partial<Record<HomeVerticalId, string>> = {
@@ -23,7 +23,7 @@ function mergeSubcategoryHref(
   pathname: string,
   current: URLSearchParams,
   href: string,
-  verticalId: HomeVerticalId,
+  verticalId: HomeVerticalId
 ): string {
   const [hrefPath, hrefQuery = ''] = href.split('?');
   if (hrefPath !== pathname) return href;
@@ -74,16 +74,10 @@ function SubcategoryPillsWithParams({ verticalId }: { verticalId: HomeVerticalId
       }
       return true;
     },
-    [searchParams, verticalId],
+    [searchParams, verticalId]
   );
 
-  return (
-    <SubcategoryPillsList
-      verticalId={verticalId}
-      isPillActive={isPillActive}
-      searchParams={searchParams}
-    />
-  );
+  return <SubcategoryPillsList verticalId={verticalId} isPillActive={isPillActive} searchParams={searchParams} />;
 }
 
 function SubcategoryPillsList({
@@ -106,9 +100,7 @@ function SubcategoryPillsList({
     const [hrefPath] = href.split('?');
     if (hrefPath !== pathname) return;
     event.preventDefault();
-    const nextHref = searchParams
-      ? mergeSubcategoryHref(pathname, searchParams, href, verticalId)
-      : href;
+    const nextHref = searchParams ? mergeSubcategoryHref(pathname, searchParams, href, verticalId) : href;
     React.startTransition(() => {
       router.replace(nextHref, { scroll: false });
     });
@@ -143,6 +135,7 @@ function SubcategoryPillsList({
             href={item.href}
             label={item.label}
             icon={item.Icon}
+            bareIcon
             active={isPillActive(item.href)}
             onClick={onPillClick(item.href)}
           />

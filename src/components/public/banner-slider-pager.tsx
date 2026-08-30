@@ -49,8 +49,8 @@ export function BannerSliderPager({
       sx={{
         position: 'relative',
         width: '100%',
-        minHeight: 32,
-        pt: 0.35,
+        minHeight: 28,
+        pt: 0,
       }}
     >
       <Stack
@@ -125,8 +125,8 @@ export function BannerSliderPager({
           aria-label={autoplay ? pauseLabel : playLabel}
           aria-pressed={!autoplay}
           sx={{
-            width: 32,
-            height: 32,
+            width: 28,
+            height: 28,
             p: 0,
             color: (theme) => (theme.palette.mode === 'dark' ? '#fff' : 'primary.main'),
             bgcolor: 'transparent',

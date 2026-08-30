@@ -153,8 +153,8 @@ export function CategoryTopViewedSlider({
       component="section"
       aria-label={byRating ? t.browse.highestRatedAria : t.browse.mostViewedAria}
       sx={{
-        pt: { xs: 2, md: 2.5 },
-        pb: { xs: 0.25, md: 0.5 },
+        pt: 0,
+        pb: 0,
         width: '100%',
         maxWidth: '100%',
         minWidth: 0,
@@ -168,13 +168,13 @@ export function CategoryTopViewedSlider({
             fontWeight: 700,
             fontSize: { xs: '0.95rem', md: '1.05rem' },
             letterSpacing: '-0.01em',
-            mb: { xs: 1, md: 1.25 },
+            mb: { xs: 0.5, md: 0.75 },
           }}
         >
           {byRating ? t.browse.highestRated : t.browse.mostViewed}
         </Typography>
 
-        <Stack spacing={1.35} sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
+        <Stack spacing={0.25} sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
           <BannerSliderViewport
             idx={idx}
             slideCount={slides.length}
@@ -197,8 +197,10 @@ export function CategoryTopViewedSlider({
                   fallbackBg={BANNER_SLIDE_VISUALS[i % BANNER_SLIDE_VISUALS.length].bg}
                   eager={eager}
                   title={slide.title}
+                  topRightLabel={(listings[i]?.viewCount ?? 0).toLocaleString('en-GB')}
                   bottomLeftLabel={slide.subtitle}
                   contentPlacement="below"
+                  hideTitleBelowImage
                   titleMaxLines={1}
                 />
               );

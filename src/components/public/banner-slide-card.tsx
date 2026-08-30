@@ -56,6 +56,8 @@ export type BannerSlideCardProps = {
   hideTitleWhenImage?: boolean;
   /** Category listing slides keep copy on a readable surface below the image. */
   contentPlacement?: 'overlay' | 'below';
+  /** Hide the listing title below image while keeping it available as image alt text. */
+  hideTitleBelowImage?: boolean;
   /** First visible slide only — homepage LCP. */
   priority?: boolean;
 };
@@ -78,17 +80,19 @@ export function BannerSlideCard({
   titleMaxLines = 2,
   hideTitleWhenImage = false,
   contentPlacement = 'overlay',
+  hideTitleBelowImage = false,
   priority = false,
 }: BannerSlideCardProps) {
   const rawImage = imageUrl && /^https?:\/\//i.test(imageUrl) ? imageUrl : null;
   const imageSrc = rawImage ? (homeBannerImageUrl(rawImage) ?? rawImage) : null;
   const showTitle = Boolean(title) && (!hideTitleWhenImage || !imageSrc);
   const contentBelowImage = contentPlacement === 'below';
+  const showTitleBelowImage = showTitle && !hideTitleBelowImage;
 
   const content = (
     <Box
       sx={(theme) => ({
-        borderRadius: contentBelowImage ? 2.5 : 4,
+        borderRadius: 2,
         overflow: contentBelowImage ? 'visible' : 'hidden',
         border: bordered ? '1px solid' : 'none',
         borderColor: bordered ? 'divider' : 'transparent',
@@ -113,7 +117,7 @@ export function BannerSlideCard({
                 aspectRatio: { md: '4 / 3' },
                 maxHeight: { md: 'min(58vh, 560px)' },
                 height: { md: 'auto' },
-                borderRadius: 2.5,
+                borderRadius: 2,
                 border: 'none',
                 borderColor: 'transparent',
                 boxSizing: 'border-box',
@@ -374,7 +378,7 @@ export function BannerSlideCard({
           </Box>
         ) : null}
       </Box>
-      {contentBelowImage ? (
+      {contentBelowImage && (showTitleBelowImage || bottomRightLabel) ? (
         <Stack
           direction="row"
           spacing={1.25}
@@ -386,26 +390,28 @@ export function BannerSlideCard({
             py: { xs: 0.85, sm: 1 },
           }}
         >
-          <Typography
-            component="h2"
-            sx={{
-              minWidth: 0,
-              flex: 1,
-              color: 'text.primary',
-              fontWeight: 750,
-              fontSize: { xs: '0.98rem', sm: '1.05rem' },
-              lineHeight: 1.2,
-              letterSpacing: '-0.015em',
-              display: '-webkit-box',
-              WebkitLineClamp: titleMaxLines,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-              whiteSpace: titleMaxLines === 1 ? 'nowrap' : 'normal',
-              textOverflow: titleMaxLines === 1 ? 'ellipsis' : undefined,
-            }}
-          >
-            {title}
-          </Typography>
+          {showTitleBelowImage ? (
+            <Typography
+              component="h2"
+              sx={{
+                minWidth: 0,
+                flex: 1,
+                color: 'text.primary',
+                fontWeight: 750,
+                fontSize: { xs: '0.98rem', sm: '1.05rem' },
+                lineHeight: 1.2,
+                letterSpacing: '-0.015em',
+                display: '-webkit-box',
+                WebkitLineClamp: titleMaxLines,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                whiteSpace: titleMaxLines === 1 ? 'nowrap' : 'normal',
+                textOverflow: titleMaxLines === 1 ? 'ellipsis' : undefined,
+              }}
+            >
+              {title}
+            </Typography>
+          ) : null}
           {bottomRightLabel ? (
             <Typography
               sx={{

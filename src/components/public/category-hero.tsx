@@ -5,6 +5,9 @@ import { Suspense } from 'react';
 import { Box, Button, Container, IconButton, Stack, Typography, useScrollTrigger } from '@mui/material';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 
+import type { ListingCategoryKey } from '@/types/listing-category';
+import { paths } from '@/paths';
+import { hardNavigate } from '@/lib/hard-navigate';
 import {
   isHomeVerticalId,
   localizeSearchCategory,
@@ -18,24 +21,18 @@ import {
   type HomeVerticalId,
 } from '@/lib/home-categories';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
-import { paths } from '@/paths';
-import { ProductBackButton } from '@/components/public/product-browse-chrome';
-import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
-import { PortalIconBox } from '@/components/user/portal-cards';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import { useScrollRevealHidden } from '@/hooks/use-scroll-reveal-hidden';
 import { useUser } from '@/hooks/use-user';
-import { hardNavigate } from '@/lib/hard-navigate';
-import type { ListingCategoryKey } from '@/types/listing-category';
+import { ProductBackButton } from '@/components/public/product-browse-chrome';
+import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
+import { PortalIconBox } from '@/components/user/portal-cards';
 
+import { HomeVerticalIcon } from './home-vertical-icon';
 import { CategoryBrowseControls } from './listing-filters/category-browse-controls';
 import { MembersBrowseControls } from './listing-filters/members-browse-controls';
-import {
-  OkazionBrowseControls,
-  OkazionBrowseControlsFallback,
-} from './listing-filters/okazion-browse-controls';
-import { HomeVerticalIcon } from './home-vertical-icon';
+import { OkazionBrowseControls, OkazionBrowseControlsFallback } from './listing-filters/okazion-browse-controls';
 
 /** Browse pages that share the quiet category hero (listing verticals + OKAZION + profiles). */
 export type BrowseCategoryId = HomeVerticalId | 'okazion' | 'profiles';
@@ -285,6 +282,7 @@ export function BrowseListingsCountCaption({
   hasFilters,
   enableInfiniteScroll,
   countKind = 'listings',
+  emphasized = false,
 }: {
   total: number;
   shownCount: number;
@@ -294,6 +292,7 @@ export function BrowseListingsCountCaption({
   hasFilters: boolean;
   enableInfiniteScroll: boolean;
   countKind?: 'listings' | 'profiles';
+  emphasized?: boolean;
 }) {
   const t = useCopy();
   const rangeStart = shownCount === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -310,7 +309,7 @@ export function BrowseListingsCountCaption({
           : t.browse.listingsCount(total);
 
   return (
-    <Typography variant="body2" color="text.secondary">
+    <Typography variant="body2" color="text.secondary" sx={emphasized ? { fontWeight: 700 } : undefined}>
       {text}
     </Typography>
   );

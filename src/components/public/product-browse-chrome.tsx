@@ -2,24 +2,16 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import {
-  Box,
-  Button,
-  IconButton,
-  Typography,
-  type IconButtonProps,
-  type SxProps,
-  type Theme,
-} from '@mui/material';
+import { Box, Button, IconButton, Typography, type IconButtonProps, type SxProps, type Theme } from '@mui/material';
 import type { SystemStyleObject } from '@mui/system';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
-import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
-import { useHistoryBackProps } from '@/hooks/use-navigate-back';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { paths } from '@/paths';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { useHistoryBackProps } from '@/hooks/use-navigate-back';
 
 /** Shared height for browse search bars, filter buttons, and back buttons. */
 export const PRODUCT_BROWSE_CONTROL_HEIGHT = 36;
@@ -34,7 +26,8 @@ export const productBackButtonSx = {
   borderColor: 'divider',
   bgcolor: 'background.paper',
   borderRadius: '50%',
-  transition: 'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
+  transition:
+    'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': { bgcolor: 'action.hover', borderColor: 'primary.main' },
   '&:active': { transform: 'scale(0.94)' },
 } as const;
@@ -187,6 +180,7 @@ export function productTagIconWrapSx(accent?: ProductTagAccent): SxProps<Theme> 
 export function ProductTag({
   label,
   icon: Icon,
+  bareIcon = false,
   active = false,
   accent,
   href,
@@ -197,6 +191,7 @@ export function ProductTag({
 }: {
   label: React.ReactNode;
   icon?: PhosphorIcon;
+  bareIcon?: boolean;
   active?: boolean;
   accent?: ProductTagAccent;
   href?: string;
@@ -217,9 +212,15 @@ export function ProductTag({
       sx={[productTagSx(active, accent), ...(Array.isArray(sx) ? sx : sx ? [sx] : [])]}
     >
       {Icon ? (
-        <Box sx={productTagIconWrapSx(accent)}>
-          <Icon size={13} weight="duotone" />
-        </Box>
+        bareIcon ? (
+          <Box component="span" sx={{ display: 'inline-flex', color: accent?.color ?? 'primary.main' }}>
+            <Icon size={16} weight="duotone" />
+          </Box>
+        ) : (
+          <Box sx={productTagIconWrapSx(accent)}>
+            <Icon size={13} weight="duotone" />
+          </Box>
+        )
       ) : null}
       <Typography component="span" sx={{ fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 'inherit' }}>
         {label}
@@ -265,10 +266,7 @@ export type ProductSearchAccent = {
 };
 
 /** Pill search bar shell — keyword search, mobile header search. */
-export function productSearchBarSx(
-  active = false,
-  accent?: ProductSearchAccent,
-): SystemStyleObject<Theme> {
+export function productSearchBarSx(active = false, accent?: ProductSearchAccent): SystemStyleObject<Theme> {
   const accentColor = accent?.color ?? 'primary.main';
   const accentSoft = accent?.soft ?? primaryMainAlpha(0.08);
   return {
@@ -305,13 +303,7 @@ export const productSearchFieldSx = {
 } as const;
 
 export function ProductSearchIcon({ color }: { color?: string } = {}) {
-  return (
-    <MagnifyingGlassIcon
-      size={14}
-      color={color ?? 'var(--mui-palette-primary-main)'}
-      style={{ flexShrink: 0 }}
-    />
-  );
+  return <MagnifyingGlassIcon size={14} color={color ?? 'var(--mui-palette-primary-main)'} style={{ flexShrink: 0 }} />;
 }
 
 /** Circular filter trigger beside the search bar. */

@@ -151,7 +151,7 @@ function formatSearchMember(row, extras) {
  * With `q` (min 2 chars): name/city/category search. Without `q`: latest members.
  * Never returns email, phone, or admin/managed accounts.
  */
-router.get('/', publicCache(15), async (req, res) => {
+router.get('/', publicCache(120), async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
     const tokens = memberSearchTokens(req.query.q);

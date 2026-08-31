@@ -1,6 +1,8 @@
 'use strict';
 
-const TTL_MS = 30 * 1000;
+// Public listing payloads are safe to reuse briefly and expensive to rebuild.
+// Keep detail routes on their explicit no-store path.
+const TTL_MS = 120 * 1000;
 
 /** @type {Map<string, { at: number, json: string }>} */
 const store = new Map();

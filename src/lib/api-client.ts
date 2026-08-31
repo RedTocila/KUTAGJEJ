@@ -129,6 +129,7 @@ function requestMethod(init?: RequestInit): string {
 }
 
 function shouldRetryStatus(status: number, method: string): boolean {
+  if (method !== 'GET' && method !== 'HEAD') return false;
   if (RETRYABLE_STATUSES.has(status)) return true;
   // Next proxy returns 500 when Express is restarting (ECONNREFUSED).
   return status === 500 && (method === 'GET' || method === 'HEAD');
@@ -167,7 +168,7 @@ export async function apiFetch(input: string, init?: RequestInit, retries = 2): 
       if (isAbortError(error) || init?.signal?.aborted) {
         throw error instanceof Error ? error : new DOMException('Aborted', 'AbortError');
       }
-      if (attempt < attempts - 1) {
+      if (attempt < attempts - 1 && (method === 'GET' || method === 'HEAD')) {
         await sleep(400 * 2 ** attempt);
         continue;
       }

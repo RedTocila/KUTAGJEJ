@@ -136,6 +136,7 @@ async function ensureEngagement(kind, listingId) {
     return {
       viewCount: existing.view_count ?? 0,
       shareCount: existing.share_count ?? 0,
+      saveCount: existing.save_count,
     };
   }
 
@@ -162,6 +163,7 @@ async function ensureEngagement(kind, listingId) {
       return {
         viewCount: again?.view_count ?? 0,
         shareCount: again?.share_count ?? 0,
+        saveCount: again?.save_count,
       };
     }
     throw insErr;
@@ -169,15 +171,20 @@ async function ensureEngagement(kind, listingId) {
   return {
     viewCount: created.view_count ?? 0,
     shareCount: created.share_count ?? 0,
+    saveCount: created.save_count,
   };
 }
 
 function metricsFromEngagementRow(row) {
   if (!row) return null;
-  return {
+  const metrics = {
     viewCount: row.view_count ?? row.viewCount ?? 0,
     shareCount: row.share_count ?? row.shareCount ?? 0,
   };
+  if (Object.prototype.hasOwnProperty.call(row, 'save_count')) {
+    metrics.saveCount = row.save_count ?? 0;
+  }
+  return metrics;
 }
 
 async function incrementEngagementFallback(kind, listingId, event) {
@@ -236,25 +243,61 @@ async function countSaves(kind, listingId) {
   return (data || []).length;
 }
 
-const SAVE_ROWS_PAGE = 1000;
+async function adjustStoredSaveCount(sb, kind, listingId, delta) {
+  const { data, error } = await sb.rpc('increment_listing_save_count', {
+    p_listing_kind: kind,
+    p_listing_id: listingId,
+    p_delta: delta,
+  });
+  if (!error) {
+    const row = Array.isArray(data) ? data[0] : data;
+    return Number.isFinite(Number(row?.save_count)) ? Number(row.save_count) : 0;
+  }
+
+  // Compatibility fallback while the counter migration is being deployed.
+  if (/increment_listing_save_count|save_count/i.test(String(error.message || ''))) {
+    return null;
+  }
+  throw error;
+}
 
 async function fetchSaveCounts(sb, orFilter) {
+  // Compatibility fallback for databases that have not applied the stored
+  // save-count migration yet. One filtered query is much cheaper than
+  // repeatedly paging through the same saved-listing relation.
+  const { data, error } = await sb
+    .from('saved_listings')
+    .select('listing_kind, listing_id')
+    .or(orFilter);
+  if (error) throw error;
+
   const savesByKey = new Map();
-  for (let from = 0; from <= 40_000; from += SAVE_ROWS_PAGE) {
-    const { data, error } = await sb
-      .from('saved_listings')
-      .select('listing_kind, listing_id')
-      .or(orFilter)
-      .range(from, from + SAVE_ROWS_PAGE - 1);
-    if (error) throw error;
-    const rows = data || [];
-    for (const row of rows) {
-      const key = metricsKey(row.listing_kind, row.listing_id);
-      savesByKey.set(key, (savesByKey.get(key) || 0) + 1);
-    }
-    if (rows.length < SAVE_ROWS_PAGE) break;
+  for (const row of data || []) {
+    const key = metricsKey(row.listing_kind, row.listing_id);
+    savesByKey.set(key, (savesByKey.get(key) || 0) + 1);
   }
   return savesByKey;
+}
+
+async function fetchEngagementRows(sb, orFilter) {
+  const withSaveCount = await sb
+    .from('listing_engagements')
+    .select('listing_kind, listing_id, view_count, share_count, save_count')
+    .or(orFilter);
+  if (!withSaveCount.error) {
+    return { data: withSaveCount.data || [], hasSaveCount: true };
+  }
+
+  // Keep older deployments working until the counter migration is applied.
+  if (!/save_count/i.test(String(withSaveCount.error.message || ''))) {
+    throw withSaveCount.error;
+  }
+  const legacy = await sb
+    .from('listing_engagements')
+    .select('listing_kind, listing_id, view_count, share_count')
+    .or(orFilter);
+  if (legacy.error) throw legacy.error;
+  return { data: legacy.data || [], hasSaveCount: false };
 }
 
 async function getSavedSet(saver, refs) {
@@ -285,15 +328,21 @@ async function fetchMetricsMap(refs, saver = null) {
     .map((r) => `and(listing_kind.eq."${r.kind}",listing_id.eq."${r.listingId}")`)
     .join(',');
 
-  const [engagementRes, savesByKey, savedSet] = await Promise.all([
-    sb.from('listing_engagements').select('*').or(orFilter),
-    fetchSaveCounts(sb, orFilter),
+  const [engagementResult, savedSet] = await Promise.all([
+    fetchEngagementRows(sb, orFilter),
     getSavedSet(saver, valid),
   ]);
-  if (engagementRes.error) throw engagementRes.error;
+  let savesByKey = new Map();
+  if (engagementResult.hasSaveCount) {
+    for (const row of engagementResult.data) {
+      savesByKey.set(metricsKey(row.listing_kind, row.listing_id), row.save_count ?? 0);
+    }
+  } else {
+    savesByKey = await fetchSaveCounts(sb, orFilter);
+  }
 
   const engagementByKey = new Map(
-    (engagementRes.data || []).map((e) => [
+    engagementResult.data.map((e) => [
       metricsKey(e.listing_kind, e.listing_id),
       {
         viewCount: e.view_count ?? 0,
@@ -421,10 +470,13 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null 
     }
   }
 
-  const counted = await countSaves(kind, listingId);
   if (!engagement) {
     engagement = await ensureEngagement(kind, listingId);
   }
+  const counted =
+    typeof engagement.saveCount === 'number'
+      ? engagement.saveCount
+      : await countSaves(kind, listingId);
   const saver = saverFromUser(req.user);
   let saved = false;
   if (saver) {
@@ -470,10 +522,12 @@ async function toggleSavedListing(req, { kind, listingId }) {
   if (selErr) throw selErr;
 
   let saved;
+  let storedSaveCount = null;
   if (existing) {
     const { error } = await sb.from('saved_listings').delete().eq('id', existing.id);
     if (error) throw error;
     saved = false;
+    storedSaveCount = await adjustStoredSaveCount(sb, kind, listingId, -1);
   } else {
     const { error } = await sb.from('saved_listings').insert({
       saver_id: saver.saverId,
@@ -482,6 +536,7 @@ async function toggleSavedListing(req, { kind, listingId }) {
     });
     if (error) throw error;
     saved = true;
+    storedSaveCount = await adjustStoredSaveCount(sb, kind, listingId, 1);
     try {
       const { notifyListingSaved } = require('./user-notifications');
       await notifyListingSaved({
@@ -494,7 +549,10 @@ async function toggleSavedListing(req, { kind, listingId }) {
     }
   }
 
-  const saveCount = reportedSaveCount(await countSaves(kind, listingId), saved);
+  const saveCount = reportedSaveCount(
+    storedSaveCount ?? (await countSaves(kind, listingId)),
+    saved,
+  );
   const engagement = await ensureEngagement(kind, listingId);
   return {
     ok: true,

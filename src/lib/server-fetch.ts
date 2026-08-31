@@ -1,6 +1,7 @@
 import { getApiUrl } from '@/lib/api-config';
 
 const DEFAULT_TIMEOUT_MS = 8000;
+const DEFAULT_REVALIDATE_SECONDS = 120;
 const DETAIL_TIMEOUT_MS = 8_000;
 
 export type SafeJsonResult<T> =
@@ -23,7 +24,7 @@ export async function safeServerJsonResult<T>(
   try {
     const skipCache = restInit.cache === 'no-store';
     const res = await fetch(getApiUrl(path), {
-      ...(skipCache ? {} : { next: { revalidate: 60 } }),
+      ...(skipCache ? {} : { next: { revalidate: DEFAULT_REVALIDATE_SECONDS } }),
       ...restInit,
       signal: controller?.signal ?? restInit.signal,
     });

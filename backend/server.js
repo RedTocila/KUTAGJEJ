@@ -30,6 +30,9 @@ const AUTO_REFRESH_TICK_MS = Math.max(
   60_000,
   Number(process.env.AUTO_REFRESH_TICK_MS) || 5 * 60 * 1000,
 );
+// Maintenance backfills should be run deliberately, not on every serverless
+// cold start. Set this only for a one-off repair deployment.
+const RUN_STARTUP_BACKFILLS = process.env.RUN_STARTUP_BACKFILLS === 'true';
 
 let autoRefreshTimer = null;
 let autoRefreshRunning = false;
@@ -108,7 +111,7 @@ async function bootstrap() {
   await ensureAdminAiSchema();
   await ensureAiImportUsageSchema();
   await ensureAiUsagePricesSchema();
-  void runDeferredBackfills();
+  if (RUN_STARTUP_BACKFILLS) void runDeferredBackfills();
 }
 
 async function runDeferredBackfills() {

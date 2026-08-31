@@ -84,8 +84,8 @@ async function loadApprovedById(table, id, extraEq = {}) {
   return data ? camelizeRow(data) : null;
 }
 
-// ~1 min CDN TTL — new ads show quickly without refetching every homepage paint.
-router.use(publicCache(60));
+// Short shared cache keeps public reads fast without making new ads stale for long.
+router.use(publicCache(120));
 
 /** GET /api/public/listings/seo-index — canonical active URLs for SEO metadata routes. */
 router.get('/seo-index', async (_req, res) => {

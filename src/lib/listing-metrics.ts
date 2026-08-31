@@ -26,6 +26,8 @@ export const EMPTY_LISTING_METRICS: ListingMetrics = {
 };
 
 const VISITOR_KEY = 'kutagjej-visitor-id';
+const VIEW_METRIC_PREFIX = 'kutagjej-view-metric:';
+const VIEW_METRIC_TTL_MS = 30 * 60 * 1000;
 
 export function getVisitorId(): string {
   if (typeof window === 'undefined') return '';
@@ -42,6 +44,34 @@ export function getVisitorId(): string {
 
 function metricHeaders(): HeadersInit {
   return authHeaders({ 'X-Visitor-Id': getVisitorId() });
+}
+
+function claimViewMetric(key: string): string | null {
+  if (typeof window === 'undefined') return null;
+  const storageKey = `${VIEW_METRIC_PREFIX}${key}`;
+  const now = String(Date.now());
+  try {
+    const previous = Number(localStorage.getItem(storageKey));
+    if (Number.isFinite(previous) && Date.now() - previous < VIEW_METRIC_TTL_MS) {
+      return null;
+    }
+    localStorage.setItem(storageKey, now);
+    return now;
+  } catch {
+    return now;
+  }
+}
+
+function releaseViewMetric(key: string, claim: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const storageKey = `${VIEW_METRIC_PREFIX}${key}`;
+    if (localStorage.getItem(storageKey) === claim) {
+      localStorage.removeItem(storageKey);
+    }
+  } catch {
+    /* ignore storage failures */
+  }
 }
 
 export function metricsFromListing(
@@ -362,6 +392,9 @@ export async function recordListingMetricEvent(
 ): Promise<ListingMetrics | null> {
   const url = getApiUrl('/listing-metrics/event');
   const body = JSON.stringify({ listingKind, listingId, event });
+  const viewKey = event === 'view' ? listingMetricsKey(listingKind, listingId) : null;
+  const viewClaim = viewKey ? claimViewMetric(viewKey) : null;
+  if (event === 'view' && !viewClaim) return Promise.resolve(null);
   const pageHidden =
     event === 'share' && typeof document !== 'undefined' && document.visibilityState === 'hidden';
 
@@ -378,7 +411,10 @@ export async function recordListingMetricEvent(
       headers: metricHeaders(),
       body,
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (viewKey && viewClaim) releaseViewMetric(viewKey, viewClaim);
+      return null;
+    }
     try {
       const data = (await res.json()) as ListingMetrics;
       return metricsFromListing(data);
@@ -387,6 +423,7 @@ export async function recordListingMetricEvent(
       return null;
     }
   } catch {
+    if (viewKey && viewClaim) releaseViewMetric(viewKey, viewClaim);
     if (event === 'share') beaconListingMetric(url, body);
     return null;
   }

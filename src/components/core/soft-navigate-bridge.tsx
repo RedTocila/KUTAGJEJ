@@ -9,7 +9,11 @@ import {
   unregisterAppRouterNavigation,
 } from '@/lib/hard-navigate';
 import { rememberFirstPageIfNeeded } from '@/lib/navigate-back';
-import { beginPendingNavigation, clearPendingNavigationIfMatches } from '@/lib/navigation-pending';
+import {
+  beginPendingNavigation,
+  clearPendingNavigation,
+  clearPendingNavigationIfMatches,
+} from '@/lib/navigation-pending';
 
 const SCROLL_ENTRY_KEY = '__kutagjejScrollEntryKey';
 const SCROLL_STORAGE_PREFIX = 'kutagjej:scroll:';
@@ -133,6 +137,7 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
     history.scrollRestoration = 'manual';
 
     const handlePopState = () => {
+      clearPendingNavigation();
       pendingPopNavigationRef.current = true;
     };
     const saveCurrentPosition = () => {

@@ -177,7 +177,7 @@ export function CategoryTopViewedSlider({
           {byRating ? t.browse.highestRated : t.browse.mostViewed}
         </Typography>
 
-        <Stack spacing={0.25} sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
+        <Stack spacing={0.5} sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
           <BannerSliderViewport
             idx={idx}
             slideCount={slides.length}

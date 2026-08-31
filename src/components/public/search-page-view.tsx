@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { createPortal } from 'react-dom';
 import RouterLink from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -22,30 +21,11 @@ import {
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
+import { createPortal } from 'react-dom';
 
-import { MemberProfileCard } from '@/components/public/listing-cards/member-profile-card';
-import {
-  SearchListingCard,
-  type SearchListingItem,
-} from '@/components/public/listing-cards/search-listing-card';
-import { HeroCategoryCircles } from '@/components/public/hero-category-circles';
-import {
-  ProductSearchIcon,
-  productSearchBarSx,
-} from '@/components/public/product-browse-chrome';
-import { useCopy } from '@/hooks/use-copy';
-import { useLanguage } from '@/hooks/use-language';
-import { useHistoryBackProps } from '@/hooks/use-navigate-back';
-import { useScrollRevealHidden } from '@/hooks/use-scroll-reveal-hidden';
+import { paths } from '@/paths';
 import { fetchAiSearch, type AiSearchResult } from '@/lib/ai-search-client';
 import { hardRefreshToTop } from '@/lib/hard-navigate';
-import {
-  MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
-  MOBILE_BOTTOM_NAV_FLOAT_INSET_PX,
-  MOBILE_SEARCH_BAR_PADDING,
-  MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX,
-  MOBILE_SEARCH_DOCK_PADDING,
-} from '@/lib/mobile-layout';
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
@@ -60,6 +40,13 @@ import {
 } from '@/lib/home-categories';
 import { buildBrowseUrlQuery, type BrowseFilters } from '@/lib/listing-filters';
 import {
+  MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
+  MOBILE_BOTTOM_NAV_FLOAT_INSET_PX,
+  MOBILE_SEARCH_BAR_PADDING,
+  MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX,
+  MOBILE_SEARCH_DOCK_PADDING,
+} from '@/lib/mobile-layout';
+import {
   fetchBrowseBusinesses,
   fetchBrowseCars,
   fetchBrowseJobs,
@@ -68,7 +55,15 @@ import {
   fetchBrowseRealEstate,
 } from '@/lib/public-listings-client';
 import { fetchPublicMemberSearch, type PublicMemberSearchHit } from '@/lib/public-member-client';
-import { paths } from '@/paths';
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
+import { useHistoryBackProps } from '@/hooks/use-navigate-back';
+import { useScrollRevealHidden } from '@/hooks/use-scroll-reveal-hidden';
+import { TransientNotification } from '@/components/core/transient-success-alert';
+import { HeroCategoryCircles } from '@/components/public/hero-category-circles';
+import { MemberProfileCard } from '@/components/public/listing-cards/member-profile-card';
+import { SearchListingCard, type SearchListingItem } from '@/components/public/listing-cards/search-listing-card';
+import { productSearchBarSx, ProductSearchIcon } from '@/components/public/product-browse-chrome';
 import { MOTION } from '@/styles/motion';
 
 const PAGE_SIZE = 24;
@@ -97,16 +92,14 @@ function buildAiBrowseHref(intent: AiSearchResult['intent']): string | null {
   return `${vertical.href}${qs}`;
 }
 
-function isLiveSearchCategory(
-  value: string | null | undefined,
-): value is 'profiles' | HomeVerticalId {
+function isLiveSearchCategory(value: string | null | undefined): value is 'profiles' | HomeVerticalId {
   return isProfilesSearchCategory(value) || isHomeVerticalId(value);
 }
 
 async function fetchVerticalResults(
   verticalId: HomeVerticalId,
   query: string,
-  page = 1,
+  page = 1
 ): Promise<{ items: SearchItem[]; total: number }> {
   const filters = { q: query.trim() ? [query.trim()] : undefined };
   switch (verticalId) {
@@ -158,13 +151,7 @@ async function fetchVerticalResults(
 }
 
 /** Pins the /kerko dock to `document.body` on mobile so listing cards cannot paint over it. */
-function SearchDockLayer({
-  children,
-  portaled = true,
-}: {
-  children: React.ReactNode;
-  portaled?: boolean;
-}) {
+function SearchDockLayer({ children, portaled = true }: { children: React.ReactNode; portaled?: boolean }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
   const [host, setHost] = React.useState<HTMLElement | null>(null);
@@ -177,27 +164,11 @@ function SearchDockLayer({
   return children;
 }
 
-function SearchHitsSkeleton({
-  count = 8,
-  circular = false,
-}: {
-  count?: number;
-  circular?: boolean;
-}) {
+function SearchHitsSkeleton({ count = 8, circular = false }: { count?: number; circular?: boolean }) {
   return (
-    <Stack
-      spacing={0}
-      aria-busy
-      aria-label="Duke u ngarkuar"
-      sx={{ mx: { xs: -2, sm: -3 } }}
-    >
+    <Stack spacing={0} aria-busy aria-label="Duke u ngarkuar" sx={{ mx: { xs: -2, sm: -3 } }}>
       {Array.from({ length: count }, (_, i) => (
-        <Stack
-          key={i}
-          direction="row"
-          spacing={1.5}
-          sx={{ alignItems: 'center', px: { xs: 2, sm: 3 } }}
-        >
+        <Stack key={i} direction="row" spacing={1.5} sx={{ alignItems: 'center', px: { xs: 2, sm: 3 } }}>
           <Skeleton
             variant={circular ? 'circular' : 'rounded'}
             width={64}
@@ -252,18 +223,15 @@ export function SearchPageView({
 
   const urlCat = searchParams.get('cat');
   const urlQ = searchParams.get('q') ?? '';
-  const initialCategory =
-    urlCat && urlCat !== 'okazion' && isSearchCategoryId(urlCat) ? urlCat : null;
+  const initialCategory = urlCat && urlCat !== 'okazion' && isSearchCategoryId(urlCat) ? urlCat : null;
 
   const [categoryId, setCategoryId] = React.useState<SearchCategoryId | null>(initialCategory);
   const [query, setQuery] = React.useState(urlQ);
   const [submittedQuery, setSubmittedQuery] = React.useState(urlQ);
   const [hasSearched, setHasSearched] = React.useState(
-    Boolean(initialCategory && isLiveSearchCategory(initialCategory)),
+    Boolean(initialCategory && isLiveSearchCategory(initialCategory))
   );
-  const [loading, setLoading] = React.useState(() =>
-    Boolean(initialCategory && isLiveSearchCategory(initialCategory)),
-  );
+  const [loading, setLoading] = React.useState(() => Boolean(initialCategory && isLiveSearchCategory(initialCategory)));
   const [error, setError] = React.useState<string | null>(null);
   const [items, setItems] = React.useState<SearchItem[]>([]);
   const [total, setTotal] = React.useState(0);
@@ -275,12 +243,8 @@ export function SearchPageView({
   const skipFirstLive = React.useRef(isLiveSearchCategory(initialCategory));
   const searchGeneration = React.useRef(0);
 
-  const selectedIndex = categoryId
-    ? localizedCategories.findIndex((v) => v.id === categoryId)
-    : -1;
-  const activeCategory = categoryId
-    ? (localizedCategories.find((v) => v.id === categoryId) ?? null)
-    : null;
+  const selectedIndex = categoryId ? localizedCategories.findIndex((v) => v.id === categoryId) : -1;
+  const activeCategory = categoryId ? (localizedCategories.find((v) => v.id === categoryId) ?? null) : null;
   const isAi = categoryId === 'ai';
   const isProfiles = categoryId === 'profiles';
 
@@ -328,7 +292,7 @@ export function SearchPageView({
       }
       router.push(href);
     },
-    [isOverlay, onNavigate, router],
+    [isOverlay, onNavigate, router]
   );
 
   const syncUrl = React.useCallback(
@@ -341,7 +305,7 @@ export function SearchPageView({
       const qs = params.toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [isOverlay, pathname, router],
+    [isOverlay, pathname, router]
   );
 
   const runVerticalSearch = React.useCallback(
@@ -373,7 +337,7 @@ export function SearchPageView({
         if (generation === searchGeneration.current) setLoading(false);
       }
     },
-    [t.search.failed],
+    [t.search.failed]
   );
 
   const runProfileSearch = React.useCallback(
@@ -399,9 +363,9 @@ export function SearchPageView({
         setItems((prev) => {
           if (!append) return nextItems;
           const seen = new Set(
-            prev.filter((item): item is Extract<SearchItem, { kind: 'profile' }> => item.kind === 'profile').map(
-              (item) => item.member.id,
-            ),
+            prev
+              .filter((item): item is Extract<SearchItem, { kind: 'profile' }> => item.kind === 'profile')
+              .map((item) => item.member.id)
           );
           return [...prev, ...nextItems.filter((item) => !seen.has(item.member.id))];
         });
@@ -418,7 +382,7 @@ export function SearchPageView({
         if (generation === searchGeneration.current) setLoading(false);
       }
     },
-    [t.search.failed],
+    [t.search.failed]
   );
 
   const runAiNavigate = React.useCallback(
@@ -451,7 +415,7 @@ export function SearchPageView({
         setLoading(false);
       }
     },
-    [goTo, language, syncUrl, t.search.failed],
+    [goTo, language, syncUrl, t.search.failed]
   );
 
   React.useEffect(() => {
@@ -489,14 +453,17 @@ export function SearchPageView({
     }
     const trimmed = query.trim();
     setLoading(true);
-    const handle = window.setTimeout(() => {
-      syncUrl(categoryId, trimmed);
-      if (isProfilesSearchCategory(categoryId)) {
-        void runProfileSearch(trimmed);
-        return;
-      }
-      void runVerticalSearch(categoryId, trimmed);
-    }, trimmed ? 280 : 80);
+    const handle = window.setTimeout(
+      () => {
+        syncUrl(categoryId, trimmed);
+        if (isProfilesSearchCategory(categoryId)) {
+          void runProfileSearch(trimmed);
+          return;
+        }
+        void runVerticalSearch(categoryId, trimmed);
+      },
+      trimmed ? 280 : 80
+    );
 
     return () => window.clearTimeout(handle);
   }, [query, categoryId, runProfileSearch, runVerticalSearch, syncUrl]);
@@ -559,9 +526,7 @@ export function SearchPageView({
           {t.search.title}
         </Typography>
         <IconButton
-          {...(onClose
-            ? { onClick: onClose }
-            : { component: RouterLink, ...historyBack })}
+          {...(onClose ? { onClick: onClose } : { component: RouterLink, ...historyBack })}
           aria-label={t.common.close}
           edge="end"
           size="small"
@@ -571,255 +536,251 @@ export function SearchPageView({
       </Stack>
 
       <SearchDockLayer portaled={!isOverlay}>
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: { xs: categoriesHidden ? 0 : 1.5, lg: 2 },
-          mt: { xs: 0, lg: 2 },
-          width: { xs: '100%', lg: 'auto' },
-          position: { xs: 'fixed', lg: 'static' },
-          left: { xs: 0, lg: 'auto' },
-          right: { xs: 0, lg: 'auto' },
-          bottom: {
-            xs: 0,
-            lg: 'auto',
-          },
-          zIndex: { xs: 4000, lg: 'auto' },
-          isolation: { xs: 'isolate', lg: 'auto' },
-          px: { xs: 2, sm: 3, lg: 0 },
-          pt: { xs: categoriesHidden ? 0 : 1.25, lg: 0 },
-          pb: {
-            xs: `calc(${MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + env(safe-area-inset-bottom, 0px))`,
-            lg: 0,
-          },
-          alignItems: { xs: 'center', lg: 'stretch' },
-          bgcolor: { xs: 'background.default', lg: 'transparent' },
-          transform: {
-            xs: entered ? 'translate3d(0, 0, 0)' : 'translate3d(0, 100%, 0)',
-            lg: 'none',
-          },
-          transition: {
-            xs: `transform ${MOTION.enter} ${MOTION.ease}, gap ${MOTION.base} ${MOTION.ease}, padding-top ${MOTION.base} ${MOTION.ease}`,
-            lg: 'none',
-          },
-          willChange: { xs: 'transform', lg: 'auto' },
-          '@media (prefers-reduced-motion: reduce)': {
-            transform: 'none',
-            transition: 'none',
-          },
-        }}
-      >
         <Box
           sx={{
-            width: '100%',
-            display: { xs: 'grid', lg: 'block' },
-            gridTemplateRows: { xs: categoriesHidden ? '0fr' : '1fr', lg: 'none' },
-            opacity: { xs: categoriesHidden ? 0 : 1, lg: 1 },
-            pointerEvents: { xs: categoriesHidden ? 'none' : 'auto', lg: 'auto' },
-            transition: `grid-template-rows ${MOTION.base} ${MOTION.ease}, opacity ${MOTION.fast} ${MOTION.ease}`,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: { xs: categoriesHidden ? 0 : 1.5, lg: 2 },
+            mt: { xs: 0, lg: 2 },
+            width: { xs: '100%', lg: 'auto' },
+            position: { xs: 'fixed', lg: 'static' },
+            left: { xs: 0, lg: 'auto' },
+            right: { xs: 0, lg: 'auto' },
+            bottom: {
+              xs: 0,
+              lg: 'auto',
+            },
+            zIndex: { xs: 4000, lg: 'auto' },
+            isolation: { xs: 'isolate', lg: 'auto' },
+            px: { xs: 2, sm: 3, lg: 0 },
+            pt: { xs: categoriesHidden ? 0 : 1.25, lg: 0 },
+            pb: {
+              xs: `calc(${MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + env(safe-area-inset-bottom, 0px))`,
+              lg: 0,
+            },
+            alignItems: { xs: 'center', lg: 'stretch' },
+            bgcolor: { xs: 'background.default', lg: 'transparent' },
+            transform: {
+              xs: entered ? 'translate3d(0, 0, 0)' : 'translate3d(0, 100%, 0)',
+              lg: 'none',
+            },
+            transition: {
+              xs: `transform ${MOTION.enter} ${MOTION.ease}, gap ${MOTION.base} ${MOTION.ease}, padding-top ${MOTION.base} ${MOTION.ease}`,
+              lg: 'none',
+            },
+            willChange: { xs: 'transform', lg: 'auto' },
             '@media (prefers-reduced-motion: reduce)': {
+              transform: 'none',
               transition: 'none',
             },
           }}
         >
           <Box
             sx={{
-              minHeight: 0,
-              overflow: 'hidden',
-              transform: {
-                xs: categoriesHidden ? 'translate3d(0, 16px, 0)' : 'translate3d(0, 0, 0)',
-                lg: 'none',
-              },
-              transition: `transform ${MOTION.base} ${MOTION.ease}`,
+              width: '100%',
+              display: { xs: 'grid', lg: 'block' },
+              gridTemplateRows: { xs: categoriesHidden ? '0fr' : '1fr', lg: 'none' },
+              opacity: { xs: categoriesHidden ? 0 : 1, lg: 1 },
+              pointerEvents: { xs: categoriesHidden ? 'none' : 'auto', lg: 'auto' },
+              transition: `grid-template-rows ${MOTION.base} ${MOTION.ease}, opacity ${MOTION.fast} ${MOTION.ease}`,
               '@media (prefers-reduced-motion: reduce)': {
-                transform: 'none',
                 transition: 'none',
               },
             }}
           >
-            <HeroCategoryCircles variant="tabs" selectedIndex={selectedIndex} onSelect={handleSelectCategory} />
-          </Box>
-        </Box>
-
-        <Box
-          component="form"
-          onSubmit={handleSubmit}
-          aria-disabled={!categoryId}
-          sx={(theme) => ({
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: inputExpanded ? 'flex-end' : 'center',
-            width: '100%',
-            maxWidth: { xs: 420, lg: 'none' },
-            [theme.breakpoints.up('lg')]: {
-              ...productSearchBarSx(Boolean(categoryId && query.trim()), searchAccent),
-              gap: 1,
-              p: 1,
-              height: 'auto',
-              minHeight: 40,
-              borderRadius: inputExpanded ? 2.5 : 999,
-              ...(!categoryId
-                ? {
-                    opacity: 0.48,
-                    cursor: 'not-allowed',
-                    bgcolor: 'action.hover',
-                  }
-                : null),
-            },
-            [theme.breakpoints.down('lg')]: {
-              gap: 1.25,
-              p: 0,
-              bgcolor: 'transparent',
-              border: 'none',
-              overflow: 'visible',
-              height: 'auto',
-              minHeight: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
-            },
-          })}
-        >
-          <Box
-            sx={(theme) => ({
-              flex: 1,
-              minWidth: 0,
-              display: 'flex',
-              alignItems: inputExpanded ? 'flex-end' : 'center',
-              [theme.breakpoints.down('lg')]: {
-                ...productSearchBarSx(Boolean(categoryId && query.trim()), searchAccent),
-                height: inputExpanded ? 'auto' : MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
-                minHeight: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
-                px: 1.5,
-                py: 0.5,
+            <Box
+              sx={{
+                minHeight: 0,
                 overflow: 'hidden',
-                opacity: categoryId ? 1 : 0.55,
+                transform: {
+                  xs: categoriesHidden ? 'translate3d(0, 16px, 0)' : 'translate3d(0, 0, 0)',
+                  lg: 'none',
+                },
+                transition: `transform ${MOTION.base} ${MOTION.ease}`,
+                '@media (prefers-reduced-motion: reduce)': {
+                  transform: 'none',
+                  transition: 'none',
+                },
+              }}
+            >
+              <HeroCategoryCircles variant="tabs" selectedIndex={selectedIndex} onSelect={handleSelectCategory} />
+            </Box>
+          </Box>
+
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            aria-disabled={!categoryId}
+            sx={(theme) => ({
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: inputExpanded ? 'flex-end' : 'center',
+              width: '100%',
+              maxWidth: { xs: 420, lg: 'none' },
+              [theme.breakpoints.up('lg')]: {
+                ...productSearchBarSx(Boolean(categoryId && query.trim()), searchAccent),
+                gap: 1,
+                p: 1,
+                height: 'auto',
+                minHeight: 40,
+                borderRadius: inputExpanded ? 2.5 : 999,
+                ...(!categoryId
+                  ? {
+                      opacity: 0.48,
+                      cursor: 'not-allowed',
+                      bgcolor: 'action.hover',
+                    }
+                  : null),
+              },
+              [theme.breakpoints.down('lg')]: {
+                gap: 1.25,
+                p: 0,
+                bgcolor: 'transparent',
+                border: 'none',
+                overflow: 'visible',
+                height: 'auto',
+                minHeight: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
               },
             })}
           >
-            <TextField
-              fullWidth
-              size="small"
-              autoComplete="off"
-              disabled={!categoryId}
-              inputRef={inputRef}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (!categoryId) {
-                  event.preventDefault();
-                  return;
-                }
-                if (event.key === 'Enter' && !event.shiftKey) {
-                  event.preventDefault();
-                  handleSubmit();
-                }
-              }}
-              placeholder={activeCategory?.searchPlaceholder ?? t.search.genericPlaceholder}
-              multiline
-              minRows={1}
-              maxRows={4}
-              slotProps={{
-                input: {
-                  readOnly: !categoryId,
-                  startAdornment: (
-                    <InputAdornment
-                      position="start"
-                      sx={{
-                        alignSelf: inputExpanded ? 'flex-start' : 'center',
-                        mt: inputExpanded ? 0.75 : 0,
-                      }}
-                    >
-                      {isAi ? (
-                        <SparkleIcon size={18} color={AI_SEARCH_BLUE} />
-                      ) : (
-                        <ProductSearchIcon />
-                      )}
-                    </InputAdornment>
-                  ),
-                  endAdornment: query ? (
-                    <InputAdornment
-                      position="end"
-                      sx={{ alignSelf: inputExpanded ? 'flex-start' : 'center', mt: inputExpanded ? 0.5 : 0 }}
-                    >
-                      <IconButton
-                        size="small"
-                        aria-label={t.search.clear}
-                        onClick={() => setQuery('')}
-                        edge="end"
-                        disabled={!categoryId}
+            <Box
+              sx={(theme) => ({
+                flex: 1,
+                minWidth: 0,
+                display: 'flex',
+                alignItems: inputExpanded ? 'flex-end' : 'center',
+                [theme.breakpoints.down('lg')]: {
+                  ...productSearchBarSx(Boolean(categoryId && query.trim()), searchAccent),
+                  height: inputExpanded ? 'auto' : MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
+                  minHeight: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
+                  px: 1.5,
+                  py: 0.5,
+                  overflow: 'hidden',
+                  opacity: categoryId ? 1 : 0.55,
+                },
+              })}
+            >
+              <TextField
+                fullWidth
+                size="small"
+                autoComplete="off"
+                disabled={!categoryId}
+                inputRef={inputRef}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (!categoryId) {
+                    event.preventDefault();
+                    return;
+                  }
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    handleSubmit();
+                  }
+                }}
+                placeholder={activeCategory?.searchPlaceholder ?? t.search.genericPlaceholder}
+                multiline
+                minRows={1}
+                maxRows={4}
+                slotProps={{
+                  input: {
+                    readOnly: !categoryId,
+                    startAdornment: (
+                      <InputAdornment
+                        position="start"
+                        sx={{
+                          alignSelf: inputExpanded ? 'flex-start' : 'center',
+                          mt: inputExpanded ? 0.75 : 0,
+                        }}
                       >
-                        <XIcon size={14} weight="bold" />
-                      </IconButton>
-                    </InputAdornment>
-                  ) : null,
-                },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: 'transparent',
-                  alignItems: inputExpanded ? 'flex-start' : 'center',
-                  py: 0.25,
-                  cursor: categoryId ? 'text' : 'not-allowed',
-                  '& fieldset': { border: 'none' },
-                  '&.Mui-disabled': {
-                    bgcolor: 'transparent',
-                    '& textarea': { WebkitTextFillColor: 'inherit', color: 'text.disabled' },
+                        {isAi ? <SparkleIcon size={18} color={AI_SEARCH_BLUE} /> : <ProductSearchIcon />}
+                      </InputAdornment>
+                    ),
+                    endAdornment: query ? (
+                      <InputAdornment
+                        position="end"
+                        sx={{ alignSelf: inputExpanded ? 'flex-start' : 'center', mt: inputExpanded ? 0.5 : 0 }}
+                      >
+                        <IconButton
+                          size="small"
+                          aria-label={t.search.clear}
+                          onClick={() => setQuery('')}
+                          edge="end"
+                          disabled={!categoryId}
+                        >
+                          <XIcon size={14} weight="bold" />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : null,
                   },
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'transparent',
+                    alignItems: inputExpanded ? 'flex-start' : 'center',
+                    py: 0.25,
+                    cursor: categoryId ? 'text' : 'not-allowed',
+                    '& fieldset': { border: 'none' },
+                    '&.Mui-disabled': {
+                      bgcolor: 'transparent',
+                      '& textarea': { WebkitTextFillColor: 'inherit', color: 'text.disabled' },
+                    },
+                  },
+                  '& textarea': {
+                    resize: 'none',
+                    lineHeight: 1.4,
+                    ...(!query
+                      ? {
+                          whiteSpace: 'nowrap',
+                          textOverflow: 'ellipsis',
+                          overflow: 'hidden !important',
+                        }
+                      : null),
+                  },
+                }}
+              />
+            </Box>
+            <IconButton
+              type="submit"
+              aria-label={t.search.title}
+              disabled={!categoryId || (loading && isAi)}
+              sx={{
+                flexShrink: 0,
+                alignSelf: inputExpanded ? 'flex-end' : 'center',
+                p: 0,
+                width: { xs: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX, lg: 36 },
+                height: { xs: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX, lg: 36 },
+                borderRadius: '50%',
+                border: { xs: 'none', lg: '1px solid' },
+                color: isAi ? '#fff' : 'primary.contrastText',
+                bgcolor: isAi ? AI_SEARCH_BLUE : 'primary.main',
+                borderColor: {
+                  lg: isAi ? AI_SEARCH_BLUE : categoryId ? 'primary.main' : 'divider',
                 },
-                '& textarea': {
-                  resize: 'none',
-                  lineHeight: 1.4,
-                  ...(!query
-                    ? {
-                        whiteSpace: 'nowrap',
-                        textOverflow: 'ellipsis',
-                        overflow: 'hidden !important',
-                      }
-                    : null),
+                boxShadow: 'none',
+                opacity: categoryId ? 1 : 0.72,
+                transition: 'background-color 160ms ease, transform 160ms ease, opacity 160ms ease',
+                '&:hover': {
+                  bgcolor: isAi ? AI_SEARCH_BLUE_HOVER : 'primary.dark',
+                },
+                '&:active': { transform: 'scale(0.96)' },
+                '&.Mui-disabled': {
+                  bgcolor: isAi ? AI_SEARCH_BLUE : 'primary.main',
+                  color: isAi ? '#fff' : 'primary.contrastText',
+                  opacity: 0.72,
                 },
               }}
-            />
+            >
+              {loading && isAi ? (
+                <CircularProgress size={18} sx={{ color: 'inherit' }} />
+              ) : isAi ? (
+                <SparkleIcon size={24} weight="bold" />
+              ) : (
+                <MagnifyingGlassIcon size={24} weight="bold" />
+              )}
+            </IconButton>
           </Box>
-          <IconButton
-            type="submit"
-            aria-label={t.search.title}
-            disabled={!categoryId || (loading && isAi)}
-            sx={{
-              flexShrink: 0,
-              alignSelf: inputExpanded ? 'flex-end' : 'center',
-              p: 0,
-              width: { xs: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX, lg: 36 },
-              height: { xs: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX, lg: 36 },
-              borderRadius: '50%',
-              border: { xs: 'none', lg: '1px solid' },
-              color: isAi ? '#fff' : 'primary.contrastText',
-              bgcolor: isAi ? AI_SEARCH_BLUE : 'primary.main',
-              borderColor: {
-                lg: isAi ? AI_SEARCH_BLUE : categoryId ? 'primary.main' : 'divider',
-              },
-              boxShadow: 'none',
-              opacity: categoryId ? 1 : 0.72,
-              transition: 'background-color 160ms ease, transform 160ms ease, opacity 160ms ease',
-              '&:hover': {
-                bgcolor: isAi ? AI_SEARCH_BLUE_HOVER : 'primary.dark',
-              },
-              '&:active': { transform: 'scale(0.96)' },
-              '&.Mui-disabled': {
-                bgcolor: isAi ? AI_SEARCH_BLUE : 'primary.main',
-                color: isAi ? '#fff' : 'primary.contrastText',
-                opacity: 0.72,
-              },
-            }}
-          >
-            {loading && isAi ? (
-              <CircularProgress size={18} sx={{ color: 'inherit' }} />
-            ) : isAi ? (
-              <SparkleIcon size={24} weight="bold" />
-            ) : (
-              <MagnifyingGlassIcon size={24} weight="bold" />
-            )}
-          </IconButton>
         </Box>
-      </Box>
       </SearchDockLayer>
 
       <Box
@@ -867,9 +828,12 @@ export function SearchPageView({
         ) : null}
 
         {error ? (
-          <Alert severity="error" sx={{ borderRadius: 2 }}>
-            {error}
-          </Alert>
+          <TransientNotification
+            severity="error"
+            message={error}
+            onDismiss={() => setError(null)}
+            sx={{ borderRadius: 2 }}
+          />
         ) : null}
 
         {!hasSearched || isAi ? (
@@ -899,11 +863,7 @@ export function SearchPageView({
             </Typography>
             <Box sx={{ mx: { xs: -2, sm: -3 } }}>
               {items.map((item, index) => (
-                <ResultCard
-                  key={searchItemKey(item)}
-                  item={item}
-                  divider={index < items.length - 1}
-                />
+                <ResultCard key={searchItemKey(item)} item={item} divider={index < items.length - 1} />
               ))}
             </Box>
             {total > items.length && isLiveSearchCategory(categoryId) ? (

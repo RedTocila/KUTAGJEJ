@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import {
-  Alert,
   alpha,
   Box,
   Button,
@@ -23,10 +22,10 @@ import {
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
-import { CATEGORY_VISUAL } from '@/components/dashboard/categories/category-config';
-import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import type { ListingCategory } from '@/types/listing-category';
 import { updateCategory } from '@/lib/admin-categories-client';
+import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
+import { CATEGORY_VISUAL } from '@/components/dashboard/categories/category-config';
 import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
 export function CategoryEditor(props: {
@@ -41,27 +40,25 @@ export function CategoryEditor(props: {
 
   const listingTypesSig = React.useMemo(
     () => JSON.stringify(category.listingTypes.map((t) => ({ slug: t.slug, label: t.label }))),
-    [category.listingTypes],
+    [category.listingTypes]
   );
 
   const apartmentTypesSig = React.useMemo(
     () => JSON.stringify((category.apartmentTypes ?? []).map((t) => ({ slug: t.slug, label: t.label }))),
-    [category.apartmentTypes],
+    [category.apartmentTypes]
   );
 
   const categorySyncSig = React.useMemo(
     () =>
       `${category.title}|${category.slug}|${listingTypesSig}|${apartmentTypesSig}|${String(category.updatedAt ?? '')}`,
-    [category.title, category.slug, category.updatedAt, listingTypesSig, apartmentTypesSig],
+    [category.title, category.slug, category.updatedAt, listingTypesSig, apartmentTypesSig]
   );
 
   const [title, setTitle] = React.useState(category.title);
   const [slug, setSlug] = React.useState(category.slug);
-  const [rows, setRows] = React.useState(() =>
-    category.listingTypes.map((t) => ({ slug: t.slug, label: t.label })),
-  );
+  const [rows, setRows] = React.useState(() => category.listingTypes.map((t) => ({ slug: t.slug, label: t.label })));
   const [apartmentRows, setApartmentRows] = React.useState(() =>
-    (category.apartmentTypes ?? []).map((t) => ({ slug: t.slug, label: t.label })),
+    (category.apartmentTypes ?? []).map((t) => ({ slug: t.slug, label: t.label }))
   );
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = React.useState(false);
@@ -150,11 +147,7 @@ export function CategoryEditor(props: {
   };
 
   return (
-    <Box
-      component="form"
-      onSubmit={(ev) => void save(ev)}
-      sx={productPanelSx}
-    >
+    <Box component="form" onSubmit={(ev) => void save(ev)} sx={productPanelSx}>
       <Box
         sx={{
           px: { xs: 2, sm: 3 },
@@ -243,9 +236,12 @@ export function CategoryEditor(props: {
         </Box>
 
         {saveError ? (
-          <Alert severity="error" sx={{ borderRadius: 1.5 }}>
-            {saveError}
-          </Alert>
+          <TransientNotification
+            severity="error"
+            message={saveError}
+            onDismiss={() => setSaveError(null)}
+            sx={{ borderRadius: 1.5 }}
+          />
         ) : null}
         <TransientSuccessAlert
           message={saveSuccess ? 'Ndryshimet u ruajtën.' : null}
@@ -285,7 +281,12 @@ export function CategoryEditor(props: {
                 <TableRow
                   sx={{
                     bgcolor: 'action.hover',
-                    '& th': { fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em' },
+                    '& th': {
+                      fontWeight: 700,
+                      fontSize: '0.75rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                    },
                   }}
                 >
                   <TableCell>Etiketa</TableCell>
@@ -389,10 +390,10 @@ export function CategoryEditor(props: {
               </Stack>
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-              Kjo tabelë është <strong>e veçantë</strong> nga «Llojet e listimit» më sipër. Formulari i pasurisë (kategoria
-              «Apartment» në anglisht) lexon <strong>këtë</strong> listë; nëse mbetet bosh, platforma përdor përkohësisht
-              llojet e listimit. Për Studio / Two-bedroom etj., shtoni rreshta këtu ose përdorni «Kopjo nga llojet e
-              listimit» pastaj Ruaj.
+              Kjo tabelë është <strong>e veçantë</strong> nga «Llojet e listimit» më sipër. Formulari i pasurisë
+              (kategoria «Apartment» në anglisht) lexon <strong>këtë</strong> listë; nëse mbetet bosh, platforma përdor
+              përkohësisht llojet e listimit. Për Studio / Two-bedroom etj., shtoni rreshta këtu ose përdorni «Kopjo nga
+              llojet e listimit» pastaj Ruaj.
             </Typography>
             <TableContainer sx={productPanelSx}>
               <Table size="small">
@@ -400,7 +401,12 @@ export function CategoryEditor(props: {
                   <TableRow
                     sx={{
                       bgcolor: 'action.hover',
-                      '& th': { fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em' },
+                      '& th': {
+                        fontWeight: 700,
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                      },
                     }}
                   >
                     <TableCell>Etiketa</TableCell>
@@ -469,7 +475,13 @@ export function CategoryEditor(props: {
         <Divider />
 
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button type="submit" variant="contained" size="large" disabled={pending} sx={{ ...productButtonSx, minWidth: 200 }}>
+          <Button
+            type="submit"
+            variant="contained"
+            size="large"
+            disabled={pending}
+            sx={{ ...productButtonSx, minWidth: 200 }}
+          >
             {pending ? 'Duke u ruajtur…' : 'Ruaj ndryshimet'}
           </Button>
         </Box>

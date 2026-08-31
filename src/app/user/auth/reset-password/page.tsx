@@ -2,27 +2,17 @@
 
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
-import {
-  Alert,
-  Box,
-  Button,
-  FormControl,
-  IconButton,
-  InputAdornment,
-  OutlinedInput,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Box, Button, FormControl, IconButton, InputAdornment, OutlinedInput, Stack, Typography } from '@mui/material';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { EyeSlash as EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlash';
 
-import { AuthScreenShell } from '@/components/user/auth-screen-shell';
-import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
-import { useCopy } from '@/hooks/use-copy';
 import { authClient } from '@/lib/auth/client';
 import { passwordInputDisableSuggestions } from '@/lib/auth/password-input';
 import { getDefaultAuthenticatedPath } from '@/lib/auth/post-login-path';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { useCopy } from '@/hooks/use-copy';
+import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
+import { AuthScreenShell } from '@/components/user/auth-screen-shell';
 import { productButtonSx } from '@/styles/product-sx';
 
 const outlinedFieldSx = {
@@ -109,7 +99,7 @@ function ResetPasswordInner() {
             {message?.type === 'success' ? (
               <TransientSuccessAlert message={message.text} onDismiss={() => setMessage(null)} />
             ) : message ? (
-              <Alert severity="error">{message.text}</Alert>
+              <TransientNotification severity="error" message={message.text} onDismiss={() => setMessage(null)} />
             ) : null}
             <FormControl fullWidth>
               <Typography component="label" variant="caption" sx={{ mb: 1, fontWeight: 600 }}>
@@ -162,7 +152,7 @@ function ResetPasswordInner() {
           {message?.type === 'success' ? (
             <TransientSuccessAlert message={message.text} onDismiss={() => setMessage(null)} />
           ) : message ? (
-            <Alert severity="error">{message.text}</Alert>
+            <TransientNotification severity="error" message={message.text} onDismiss={() => setMessage(null)} />
           ) : null}
           <FormControl fullWidth>
             <Typography component="label" variant="caption" sx={{ mb: 1, fontWeight: 600 }}>
@@ -177,7 +167,13 @@ function ResetPasswordInner() {
               sx={outlinedFieldSx}
             />
           </FormControl>
-          <Button type="submit" variant="contained" disabled={busy || !email.trim()} fullWidth sx={{ ...productButtonSx, py: 1.5 }}>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={busy || !email.trim()}
+            fullWidth
+            sx={{ ...productButtonSx, py: 1.5 }}
+          >
             {busy ? t.auth.submitting : t.auth.resetPasswordSubmit}
           </Button>
         </Stack>

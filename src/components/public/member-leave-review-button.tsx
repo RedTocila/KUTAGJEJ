@@ -2,26 +2,19 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Alert,
-  Box,
-  Button,
-  Rating,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Box, Button, Rating, Stack, TextField, Typography } from '@mui/material';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 
+import { paths, pathsPublicMemberProfile } from '@/paths';
+import { listMemberReviews, submitMemberReview } from '@/lib/member-reviews-client';
+import { useUser } from '@/hooks/use-user';
 import {
   ProductDialog,
   ProductDialogActions,
   ProductDialogContent,
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
-import { listMemberReviews, submitMemberReview } from '@/lib/member-reviews-client';
-import { useUser } from '@/hooks/use-user';
-import { paths, pathsPublicMemberProfile } from '@/paths';
+import { TransientNotification } from '@/components/core/transient-success-alert';
 import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 
 const DIALOG_Z_INDEX = 1400;
@@ -74,8 +67,7 @@ export function MemberLeaveReviewButton({
     if (isLoading) return;
 
     if (!user) {
-      const redirect =
-        typeof window !== 'undefined' ? window.location.pathname : pathsPublicMemberProfile(memberId);
+      const redirect = typeof window !== 'undefined' ? window.location.pathname : pathsPublicMemberProfile(memberId);
       router.push(`${paths.user.auth}?redirect=${encodeURIComponent(redirect)}`);
       return;
     }
@@ -156,16 +148,15 @@ export function MemberLeaveReviewButton({
         <ProductDialogContent>
           <Stack spacing={2.25}>
             {error ? (
-              <Alert severity="error" sx={{ borderRadius: 2 }}>
-                {error}
-              </Alert>
+              <TransientNotification
+                severity="error"
+                message={error}
+                onDismiss={() => setError(null)}
+                sx={{ borderRadius: 2 }}
+              />
             ) : null}
             <Box>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 1, fontWeight: 600, fontSize: '0.8125rem' }}
-              >
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600, fontSize: '0.8125rem' }}>
                 Sa yje i jepni?
               </Typography>
               <Rating value={rating} onChange={(_, v) => setRating(v)} size="large" />

@@ -1,23 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, Chip, Stack, TextField, Typography } from '@mui/material';
 import { IdentificationCard as IdCardIcon } from '@phosphor-icons/react/dist/ssr/IdentificationCard';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 
-import { IdDocumentScannerDialog } from '@/components/user/id-document-scanner-dialog';
-import { IdentityFieldHelpAdornment } from '@/components/user/identity-field-help';
-import { LockedIdentityField } from '@/components/user/locked-identity-field';
-import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
-import { useUser } from '@/hooks/use-user';
 import {
   fetchProfessionalVerificationStatus,
   submitProfessionalVerificationRequest,
@@ -25,6 +12,11 @@ import {
   type ProfessionalVerificationStatus,
 } from '@/lib/professional-verification-client';
 import { uploadListingImages } from '@/lib/uploads-client';
+import { useUser } from '@/hooks/use-user';
+import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
+import { IdDocumentScannerDialog } from '@/components/user/id-document-scanner-dialog';
+import { IdentityFieldHelpAdornment } from '@/components/user/identity-field-help';
+import { LockedIdentityField } from '@/components/user/locked-identity-field';
 
 const EMPTY_STATUS: ProfessionalVerificationStatus = {
   verified: false,
@@ -177,12 +169,12 @@ export function AccountVerificationCard() {
   return (
     <Stack spacing={2}>
       <Typography variant="body2" color="text.secondary">
-        Pas aprovimit, shenja e verifikuar shfaqet në profilin tuaj publik. Dërgoni numrin e ID-së, numrin
-        e telefonit dhe skanoni pjesën e përparme të kartës
+        Pas aprovimit, shenja e verifikuar shfaqet në profilin tuaj publik. Dërgoni numrin e ID-së, numrin e telefonit
+        dhe skanoni pjesën e përparme të kartës
         {isBusiness ? ', si dhe NIPT për llogaritë e biznesit' : ''}.
       </Typography>
 
-      {error ? <Alert severity="error">{error}</Alert> : null}
+      {error ? <TransientNotification severity="error" message={error} onDismiss={() => setError(null)} /> : null}
       <TransientSuccessAlert message={success} onDismiss={() => setSuccess(null)} />
 
       {status.verified ? (
@@ -197,10 +189,8 @@ export function AccountVerificationCard() {
       {statusReady && latest?.status === 'pending' ? (
         <Alert severity="info">
           Kërkesa juaj është në pritje
-          {latest.createdAt
-            ? ` (e dërguar ${new Date(latest.createdAt).toLocaleDateString('sq-AL')})`
-            : ''}
-          . Administratori do ta shqyrtojë së shpejti.
+          {latest.createdAt ? ` (e dërguar ${new Date(latest.createdAt).toLocaleDateString('sq-AL')})` : ''}.
+          Administratori do ta shqyrtojë së shpejti.
         </Alert>
       ) : null}
 
@@ -212,12 +202,7 @@ export function AccountVerificationCard() {
       ) : null}
 
       {showSubmittedId ? (
-        <LockedIdentityField
-          label="Numri i ID-së"
-          value={submittedIdNumber}
-          fieldKind="id"
-          userEmail={user?.email}
-        />
+        <LockedIdentityField label="Numri i ID-së" value={submittedIdNumber} fieldKind="id" userEmail={user?.email} />
       ) : null}
 
       {showForm ? (
@@ -234,11 +219,7 @@ export function AccountVerificationCard() {
               htmlInput: { maxLength: 40 },
               input: {
                 endAdornment: (
-                  <IdentityFieldHelpAdornment
-                    fieldKind="id"
-                    currentValue={idNumber}
-                    userEmail={user?.email}
-                  />
+                  <IdentityFieldHelpAdornment fieldKind="id" currentValue={idNumber} userEmail={user?.email} />
                 ),
               },
             }}
@@ -259,12 +240,7 @@ export function AccountVerificationCard() {
 
           {isBusiness ? (
             profileNiptLocked ? (
-              <LockedIdentityField
-                label="NIPT"
-                value={nipt}
-                fieldKind="nipt"
-                userEmail={user?.email}
-              />
+              <LockedIdentityField label="NIPT" value={nipt} fieldKind="nipt" userEmail={user?.email} />
             ) : (
               <TextField
                 label="NIPT"
@@ -278,11 +254,7 @@ export function AccountVerificationCard() {
                   htmlInput: { maxLength: 40 },
                   input: {
                     endAdornment: (
-                      <IdentityFieldHelpAdornment
-                        fieldKind="nipt"
-                        currentValue={nipt}
-                        userEmail={user?.email}
-                      />
+                      <IdentityFieldHelpAdornment fieldKind="nipt" currentValue={nipt} userEmail={user?.email} />
                     ),
                   },
                 }}
@@ -359,11 +331,7 @@ export function AccountVerificationCard() {
         </>
       ) : null}
 
-      <IdDocumentScannerDialog
-        open={scannerOpen}
-        onClose={handleScannerClose}
-        onCapture={handleScanCapture}
-      />
+      <IdDocumentScannerDialog open={scannerOpen} onClose={handleScannerClose} onCapture={handleScanCapture} />
     </Stack>
   );
 }

@@ -49,7 +49,9 @@ export type BannerSlideCardProps = {
   /** Optional view count shown as an uncontained overlay in the image's top-right. */
   topRightLabel?: string | null;
   /** Optional label shown in a contained badge at the image's bottom-left. */
-  bottomLeftLabel?: string | null;
+  bottomLeftLabel?: React.ReactNode;
+  /** Show the circular navigation affordance on linked slides. */
+  showNavigationArrow?: boolean;
   /** Maximum title lines. */
   titleMaxLines?: number;
   /** Promo artwork already includes the message — hide the HTML title. */
@@ -77,6 +79,7 @@ export function BannerSlideCard({
   bottomRightLabel = null,
   topRightLabel = null,
   bottomLeftLabel = null,
+  showNavigationArrow = true,
   titleMaxLines = 2,
   hideTitleWhenImage = false,
   contentPlacement = 'overlay',
@@ -319,7 +322,7 @@ export function BannerSlideCard({
             ) : null}
           </Stack>
         ) : null}
-        {contentBelowImage && href ? (
+        {contentBelowImage && href && showNavigationArrow ? (
           <Box
             aria-hidden
             sx={{
@@ -343,24 +346,22 @@ export function BannerSlideCard({
         ) : null}
         {contentBelowImage && bottomLeftLabel ? (
           <Box
-            sx={(theme) => ({
+            sx={{
               position: 'absolute',
               left: { xs: 10, sm: 14, md: 18 },
               bottom: { xs: 10, sm: 14, md: 18 },
               zIndex: 2,
-              maxWidth: 'calc(100% - 68px)',
+              maxWidth: showNavigationArrow ? 'calc(100% - 68px)' : 'calc(100% - 20px)',
               px: { xs: 1.25, sm: 1.5 },
               py: { xs: 0.9, sm: 1 },
-              borderRadius: 999,
-              bgcolor: 'rgba(255,255,255,0.18)',
-              border: '1px solid rgba(255,255,255,0.28)',
+              borderRadius: 2,
+              bgcolor: 'rgba(0,0,0,0.72)',
+              border: '1px solid rgba(255,255,255,0.08)',
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.24)',
               textShadow: '0 1px 10px rgba(0, 0, 0, 0.5)',
-              ...theme.applyStyles('dark', {
-                bgcolor: 'rgba(255,255,255,0.18)',
-              }),
-            })}
+            }}
           >
             <Typography
               sx={{

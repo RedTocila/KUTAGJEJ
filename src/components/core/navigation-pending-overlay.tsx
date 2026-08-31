@@ -6,7 +6,7 @@ import { Box, Container, Grid, Skeleton, Stack } from '@mui/material';
 
 import { paths } from '@/paths';
 import { mainTabFromPath } from '@/lib/main-tabs';
-import { canPageNavigateBack, HISTORY_BACK_ATTR, isModifiedClick } from '@/lib/navigate-back';
+import { HISTORY_BACK_ATTR, isModifiedClick } from '@/lib/navigate-back';
 import {
   beginPendingNavigation,
   clearPendingNavigation,
@@ -143,7 +143,12 @@ export function NavigationPendingOverlay(): React.JSX.Element | null {
       if (nestedInteractive && nestedInteractive !== anchor) return;
       const nextPath = isInternalAnchorNavigation(anchor);
       if (!nextPath) return;
-      if (anchor.hasAttribute(HISTORY_BACK_ATTR) && canPageNavigateBack()) return;
+      if (anchor.hasAttribute(HISTORY_BACK_ATTR)) {
+        // Back navigation should reveal the previous page immediately instead
+        // of covering it with the destination skeleton.
+        clearPendingNavigation();
+        return;
+      }
 
       beginPendingNavigation(nextPath);
     };

@@ -4,7 +4,6 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
-  Alert,
   Avatar,
   Box,
   Button,
@@ -21,13 +20,6 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ProductBackButton } from '@/components/public/product-browse-chrome';
-import {
-  ProductDialog,
-  ProductDialogActions,
-  ProductDialogContent,
-  ProductDialogTitle,
-} from '@/components/core/product-dialog';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { Check as CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
@@ -40,18 +32,21 @@ import { PushPin as PushPinIcon } from '@phosphor-icons/react/dist/ssr/PushPin';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
-import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import {
-  productFilterButtonSx,
-  productSearchBarSx,
-} from '@/components/public/product-browse-chrome';
-import { ChatCallIcon, ChatWhatsappIcon } from '@/components/user/messages/chat-contact-icons';
-import { ListingInquiryCard } from '@/components/user/messages/listing-inquiry-card';
-import { useMessagesThreadChrome } from '@/contexts/messages-thread-chrome-context';
-import { useCopy } from '@/hooks/use-copy';
-import { useLanguage } from '@/hooks/use-language';
-import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
-import { useUser } from '@/hooks/use-user';
+  listingBusinessPublicHref,
+  listingCarPublicHref,
+  listingJobPublicHref,
+  listingMarketplacePublicHref,
+  listingProfessionalPublicHref,
+  listingRealEstatePublicHref,
+  paths,
+  pathsPublicMemberProfile,
+} from '@/paths';
+import {
+  consumePendingBusinessReservation,
+  isReservationConversation,
+  submitBusinessReservationToMessages,
+} from '@/lib/business-reservation-message';
 import {
   consumePendingListingChat,
   deleteConversationMessages,
@@ -70,12 +65,9 @@ import {
   type ConversationMessage,
   type ConversationSummary,
 } from '@/lib/conversations-client';
-import { setCachedUnreadMessagesCount } from '@/hooks/use-unread-messages-count';
-import {
-  consumePendingBusinessReservation,
-  isReservationConversation,
-  submitBusinessReservationToMessages,
-} from '@/lib/business-reservation-message';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { languageHtmlLang } from '@/lib/language';
+import { toAbsoluteSiteUrl, whatsappInquireHref } from '@/lib/listing-contact';
 import {
   decodeListingInquiryParam,
   fetchListingInquiryDraft,
@@ -85,23 +77,31 @@ import {
   parseListingInquiryMessage,
   type ListingInquiryCardData,
 } from '@/lib/listing-inquiry-message';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { ListRowsSkeleton } from '@/components/core/content-skeletons';
-import { isBusinessPortalAccount } from '@/lib/user-portal-account-label';
-import { languageHtmlLang } from '@/lib/language';
-import { toAbsoluteSiteUrl, whatsappInquireHref } from '@/lib/listing-contact';
-import { uploadListingImages } from '@/lib/uploads-client';
-import {
-  listingBusinessPublicHref,
-  listingCarPublicHref,
-  listingJobPublicHref,
-  listingMarketplacePublicHref,
-  listingProfessionalPublicHref,
-  listingRealEstatePublicHref,
-  paths,
-  pathsPublicMemberProfile,
-} from '@/paths';
 import { prefetchStorageImages, storageImageUrl } from '@/lib/storage-image';
+import { uploadListingImages } from '@/lib/uploads-client';
+import { isBusinessPortalAccount } from '@/lib/user-portal-account-label';
+import { useMessagesThreadChrome } from '@/contexts/messages-thread-chrome-context';
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
+import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
+import { setCachedUnreadMessagesCount } from '@/hooks/use-unread-messages-count';
+import { useUser } from '@/hooks/use-user';
+import { ListRowsSkeleton } from '@/components/core/content-skeletons';
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
+import { TransientNotification } from '@/components/core/transient-success-alert';
+import {
+  ProductBackButton,
+  productFilterButtonSx,
+  productSearchBarSx,
+} from '@/components/public/product-browse-chrome';
+import { UserPageHeader } from '@/components/user/layout/user-page-header';
+import { ChatCallIcon, ChatWhatsappIcon } from '@/components/user/messages/chat-contact-icons';
+import { ListingInquiryCard } from '@/components/user/messages/listing-inquiry-card';
 import { logoGreen } from '@/styles/theme/colors';
 
 const CHAT_AVATAR_THUMB = 96;
@@ -122,7 +122,7 @@ function conversationContactPhone(conv: ConversationSummary): string | null {
 
 function listingPublicHref(
   kind: ConversationSummary['listingKind'],
-  listingId: ConversationSummary['listingId'],
+  listingId: ConversationSummary['listingId']
 ): string | null {
   if (!kind || !listingId) return null;
   const entry = { id: listingId, permalinkPath: null as string | null };
@@ -211,8 +211,7 @@ function dedupeConversationsByParticipant(items: ConversationSummary[]): Convers
       byOther.set(key, item);
       continue;
     }
-    const winner =
-      conversationActivityAt(item) >= conversationActivityAt(existing) ? item : existing;
+    const winner = conversationActivityAt(item) >= conversationActivityAt(existing) ? item : existing;
     const loser = winner === item ? existing : item;
     byOther.set(key, {
       ...winner,
@@ -229,7 +228,7 @@ function sortConversationsByRecent(items: ConversationSummary[]): ConversationSu
     [...items].sort((a, b) => {
       if (Boolean(a.pinned) !== Boolean(b.pinned)) return a.pinned ? -1 : 1;
       return conversationActivityAt(b) - conversationActivityAt(a);
-    }),
+    })
   );
 }
 
@@ -257,7 +256,7 @@ function patchConversationInList(
   prev: ConversationSummary[],
   conversationId: string,
   patch: Partial<ConversationSummary>,
-  fallback: ConversationSummary | null,
+  fallback: ConversationSummary | null
 ): ConversationSummary[] {
   const idx = prev.findIndex((c) => c.id === conversationId);
   if (idx >= 0) {
@@ -272,7 +271,7 @@ function patchConversationInList(
 /** Last N of my messages are still unread by the other party → delivered; older → read. */
 function deliveryStatusByMessageId(
   messages: ConversationMessage[],
-  otherUnreadCount: number,
+  otherUnreadCount: number
 ): Map<string, 'delivered' | 'read'> {
   const map = new Map<string, 'delivered' | 'read'>();
   let remaining = Math.max(0, otherUnreadCount);
@@ -339,7 +338,7 @@ function ChatAvatar({
       if (node.complete && node.naturalWidth > 0) markLoaded();
       else if (node.complete && node.naturalWidth === 0) handleImgError();
     },
-    [handleImgError, markLoaded],
+    [handleImgError, markLoaded]
   );
 
   const radius = borderRadius ?? (variant === 'rounded' ? 1.5 : '50%');
@@ -367,10 +366,7 @@ function ChatAvatar({
           fontSize: size > 44 ? '1rem' : '0.95rem',
           ...(displaySrc
             ? {
-                bgcolor: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? 'rgba(255,255,255,0.08)'
-                    : 'rgba(0,0,0,0.06)',
+                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
                 color: 'text.secondary',
               }
             : {
@@ -391,16 +387,11 @@ function ChatAvatar({
             borderRadius: radius,
             display: 'grid',
             placeItems: 'center',
-            bgcolor: (theme) =>
-              theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.45)',
+            bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.45)'),
             pointerEvents: 'none',
           }}
         >
-          <CircularProgress
-            size={Math.max(14, Math.round(size * 0.38))}
-            thickness={5}
-            sx={{ color: CHAT_ACCENT }}
-          />
+          <CircularProgress size={Math.max(14, Math.round(size * 0.38))} thickness={5} sx={{ color: CHAT_ACCENT }} />
         </Box>
       ) : null}
     </Box>
@@ -460,23 +451,16 @@ function ConversationListItem({
       ? 'delivered'
       : 'read'
     : null;
-  const timeLabel = formatConversationListTime(
-    item.lastMessageAt || item.updatedAt,
-    locale,
-    t.messages.yesterday,
-  );
+  const timeLabel = formatConversationListTime(item.lastMessageAt || item.updatedAt, locale, t.messages.yesterday);
   const participantName = item.otherParticipantName?.trim() || t.messages.userFallback;
   const listingLabel = item.listingTitle?.trim() || '';
   const title = participantName;
   const avatarUrl = item.otherParticipantAvatarUrl;
   const listingThumbUrl = item.listingImageUrl?.trim() || '';
   const showListingSubtitle = Boolean(
-    listingLabel && listingLabel.localeCompare(participantName, undefined, { sensitivity: 'accent' }) !== 0,
+    listingLabel && listingLabel.localeCompare(participantName, undefined, { sensitivity: 'accent' }) !== 0
   );
-  const preview =
-    listingInquiryPreviewText(item.lastMessageText) ||
-    item.lastMessageText ||
-    t.messages.noMessagesYet;
+  const preview = listingInquiryPreviewText(item.lastMessageText) || item.lastMessageText || t.messages.noMessagesYet;
   const longPressTimer = React.useRef<number | null>(null);
   const suppressClick = React.useRef(false);
   const touchOrigin = React.useRef<{ x: number; y: number } | null>(null);
@@ -587,8 +571,7 @@ function ConversationListItem({
           },
         },
         '&:active': {
-          bgcolor: (theme) =>
-            theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
+          bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)'),
         },
       }}
     >
@@ -613,13 +596,7 @@ function ConversationListItem({
       ) : null}
 
       <Box sx={{ position: 'relative', flexShrink: 0, my: 1.15 }}>
-        <ChatAvatar
-          src={avatarUrl}
-          alt={title}
-          variant="circular"
-          size={49}
-          borderRadius="50%"
-        />
+        <ChatAvatar src={avatarUrl} alt={title} variant="circular" size={49} borderRadius="50%" />
         {listingThumbUrl ? (
           <Box
             aria-hidden
@@ -677,8 +654,7 @@ function ConversationListItem({
           minWidth: 0,
           py: 1.35,
           borderBottom: isLast ? 'none' : '1px solid',
-          borderColor: (theme) =>
-            theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+          borderColor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'),
         }}
       >
         <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}>
@@ -723,26 +699,22 @@ function ConversationListItem({
           ) : null}
         </Stack>
 
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', minHeight: 22 }}>
-          <Stack
-            direction="row"
-            spacing={0.5}
-            sx={{ flex: 1, minWidth: 0, alignItems: 'center' }}
-          >
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ alignItems: 'center', justifyContent: 'space-between', minHeight: 22 }}
+        >
+          <Stack direction="row" spacing={0.5} sx={{ flex: 1, minWidth: 0, alignItems: 'center' }}>
             {lastDeliveryStatus ? (
               <Box
                 component="span"
-                aria-label={
-                  lastDeliveryStatus === 'read' ? t.messages.read : t.messages.delivered
-                }
+                aria-label={lastDeliveryStatus === 'read' ? t.messages.read : t.messages.delivered}
                 sx={{
                   display: 'inline-flex',
                   flexShrink: 0,
                   lineHeight: 0,
                   color:
-                    lastDeliveryStatus === 'read'
-                      ? '#53bdeb'
-                      : 'rgba(var(--mui-palette-text-primaryChannel) / 0.45)',
+                    lastDeliveryStatus === 'read' ? '#53bdeb' : 'rgba(var(--mui-palette-text-primaryChannel) / 0.45)',
                 }}
               >
                 <ChecksIcon size={16} weight="bold" />
@@ -958,11 +930,7 @@ function MessageBubble({
   selectionMode?: boolean;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
-  onOpenActions?: (
-    message: ConversationMessage,
-    el: HTMLElement,
-    pos?: { left: number; top: number },
-  ) => void;
+  onOpenActions?: (message: ConversationMessage, el: HTMLElement, pos?: { left: number; top: number }) => void;
 }) {
   const t = useCopy();
   const { language } = useLanguage();
@@ -1039,12 +1007,7 @@ function MessageBubble({
 
   // Concentric with bubble; caption images also round the bottom edge.
   const imageRadius = body
-    ? [
-        Math.max(8, bubbleRadius[0] - CHAT_IMAGE_INSET),
-        Math.max(8, bubbleRadius[1] - CHAT_IMAGE_INSET),
-        8,
-        8,
-      ]
+    ? [Math.max(8, bubbleRadius[0] - CHAT_IMAGE_INSET), Math.max(8, bubbleRadius[1] - CHAT_IMAGE_INSET), 8, 8]
         .map((r) => `${r}px`)
         .join(' ')
     : bubbleRadius.map((r) => `${Math.max(0, r - CHAT_IMAGE_INSET)}px`).join(' ');
@@ -1070,7 +1033,7 @@ function MessageBubble({
         handleImageError();
       }
     },
-    [handleImageError, handleImageLoad],
+    [handleImageError, handleImageLoad]
   );
 
   const meta = (
@@ -1103,11 +1066,7 @@ function MessageBubble({
           fontWeight: 600,
           lineHeight: 1.1,
           whiteSpace: 'nowrap',
-          color: imageOnly
-            ? 'rgba(255,255,255,0.75)'
-            : mine
-              ? 'rgba(13, 34, 1, 0.55)'
-              : 'text.secondary',
+          color: imageOnly ? 'rgba(255,255,255,0.75)' : mine ? 'rgba(13, 34, 1, 0.55)' : 'text.secondary',
           ...theme.applyStyles('dark', {
             color: imageOnly
               ? 'rgba(255,255,255,0.75)'
@@ -1137,336 +1096,332 @@ function MessageBubble({
 
   return (
     <>
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: mine ? 'flex-end' : 'flex-start',
-        px: { xs: 1.5, md: 2 },
-        py: 0.35,
-        gap: 1,
-        ...(selectionMode && selected && mine
-          ? {
-              bgcolor: 'rgba(0, 200, 83, 0.08)',
-            }
-          : null),
-        transition: 'background-color 0.15s ease',
-      }}
-    >
-      {selectionMode && mine ? (
-        <IconButton
-          type="button"
-          size="small"
-          onClick={() => onToggleSelect?.(message.id)}
-          aria-label={t.messages.select}
-          sx={{
-            p: 0.25,
-            color: selected ? CHAT_ACCENT : 'text.disabled',
-            flexShrink: 0,
-            order: mine ? 2 : -1,
-          }}
-        >
-          {selected ? (
-            <CheckCircleIcon size={22} weight="fill" />
-          ) : (
-            <CircleIcon size={22} />
-          )}
-        </IconButton>
-      ) : null}
       <Box
-        ref={bubbleRef}
-        onClick={() => {
-          if (suppressClick.current) {
-            suppressClick.current = false;
-            return;
-          }
-          if (selectionMode && mine) {
-            onToggleSelect?.(message.id);
-          }
-        }}
-        onContextMenu={(e) => {
-          if (!mine) return;
-          e.preventDefault();
-          if (selectionMode) {
-            onToggleSelect?.(message.id);
-          } else {
-            onOpenActions?.(message, e.currentTarget, { left: e.clientX, top: e.clientY });
-          }
-        }}
-        onTouchStart={(e) => {
-          if (!mine || selectionMode) return;
-          const touch = e.touches[0];
-          if (touch) startLongPress(touch.clientX, touch.clientY);
-        }}
-        onTouchMove={(e) => {
-          const touch = e.touches[0];
-          if (!touch || !touchOrigin.current) return;
-          const dx = Math.abs(touch.clientX - touchOrigin.current.x);
-          const dy = Math.abs(touch.clientY - touchOrigin.current.y);
-          if (dx > 8 || dy > 8) clearLongPress();
-        }}
-        onTouchEnd={clearLongPress}
-        onTouchCancel={clearLongPress}
-        sx={(theme) => ({
+        sx={{
           display: 'flex',
-          flexDirection: 'column',
-          width: imageUrl ? 'min(82%, 280px)' : 'auto',
-          maxWidth: '82%',
-          overflow: 'hidden',
-          cursor: selectionMode && mine ? 'pointer' : mine ? 'pointer' : 'default',
-          userSelect: selectionMode ? 'none' : 'text',
-          WebkitUserSelect: selectionMode ? 'none' : 'text',
-          bgcolor: mine ? CHAT_BUBBLE_MINE_LIGHT : CHAT_BUBBLE_THEIRS_LIGHT,
-          color: mine ? CHAT_BUBBLE_MINE_INK : 'text.primary',
-          borderRadius: bubbleRadius.map((r) => `${r}px`).join(' '),
-          outline: selectionMode && selected && mine ? `2px solid ${CHAT_ACCENT}` : 'none',
-          outlineOffset: 1,
-          opacity: selectionMode && !mine ? 0.6 : 1,
-          transition: 'opacity 0.2s ease, outline 0.15s ease',
-          ...theme.applyStyles('dark', {
-            bgcolor: mine ? CHAT_BUBBLE_MINE_DARK : CHAT_BUBBLE_THEIRS_DARK,
-            color: mine ? CHAT_BUBBLE_MINE_INK : 'var(--mui-palette-text-primary)',
-          }),
-        })}
+          alignItems: 'center',
+          justifyContent: mine ? 'flex-end' : 'flex-start',
+          px: { xs: 1.5, md: 2 },
+          py: 0.35,
+          gap: 1,
+          ...(selectionMode && selected && mine
+            ? {
+                bgcolor: 'rgba(0, 200, 83, 0.08)',
+              }
+            : null),
+          transition: 'background-color 0.15s ease',
+        }}
       >
-        {imageUrl ? (
-          <Box
+        {selectionMode && mine ? (
+          <IconButton
+            type="button"
+            size="small"
+            onClick={() => onToggleSelect?.(message.id)}
+            aria-label={t.messages.select}
             sx={{
-              position: 'relative',
-              lineHeight: 0,
-              m: `${CHAT_IMAGE_INSET}px`,
-              borderRadius: imageRadius,
-              overflow: 'hidden',
-              // Neutral slot so green bubbles don’t look “empty” while the photo loads.
-              bgcolor: mine ? 'rgba(0,0,0,0.28)' : 'rgba(0,0,0,0.12)',
-              minHeight: 160,
-              aspectRatio: '4 / 3',
+              p: 0.25,
+              color: selected ? CHAT_ACCENT : 'text.disabled',
+              flexShrink: 0,
+              order: mine ? 2 : -1,
             }}
           >
-            {!imageLoaded && !imageFailed ? (
-              <Box
-                aria-busy
-                aria-label={t.messages.imageLoadingAria}
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  zIndex: 1,
-                  display: 'grid',
-                  placeItems: 'center',
-                  pointerEvents: 'none',
-                }}
-              >
-                <ChatImageProgressBadge value={loadProgress} />
-              </Box>
-            ) : null}
-            {imageFailed ? (
-              <Box
-                sx={{
-                  display: 'grid',
-                  placeItems: 'center',
-                  width: '100%',
-                  minHeight: 160,
-                  aspectRatio: '4 / 3',
-                  px: 2,
-                }}
-              >
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 650, textAlign: 'center' }}>
-                  {t.messages.imageLoadFailed}
-                </Typography>
-              </Box>
-            ) : bubbleDownload.src ? (
-              <Box
-                component="img"
-                ref={imgRef}
-                src={bubbleDownload.src}
-                alt=""
-                loading="eager"
-                decoding="async"
-                role="button"
-                tabIndex={0}
-                aria-label={t.messages.imagePreviewAria}
-                onClick={() => {
-                  if (selectionMode) {
-                    if (mine) onToggleSelect?.(message.id);
-                    return;
-                  }
-                  if (!imageLoaded) return;
-                  setPreviewOpen(true);
-                }}
-                onKeyDown={(e) => {
-                  if (selectionMode) {
+            {selected ? <CheckCircleIcon size={22} weight="fill" /> : <CircleIcon size={22} />}
+          </IconButton>
+        ) : null}
+        <Box
+          ref={bubbleRef}
+          onClick={() => {
+            if (suppressClick.current) {
+              suppressClick.current = false;
+              return;
+            }
+            if (selectionMode && mine) {
+              onToggleSelect?.(message.id);
+            }
+          }}
+          onContextMenu={(e) => {
+            if (!mine) return;
+            e.preventDefault();
+            if (selectionMode) {
+              onToggleSelect?.(message.id);
+            } else {
+              onOpenActions?.(message, e.currentTarget, { left: e.clientX, top: e.clientY });
+            }
+          }}
+          onTouchStart={(e) => {
+            if (!mine || selectionMode) return;
+            const touch = e.touches[0];
+            if (touch) startLongPress(touch.clientX, touch.clientY);
+          }}
+          onTouchMove={(e) => {
+            const touch = e.touches[0];
+            if (!touch || !touchOrigin.current) return;
+            const dx = Math.abs(touch.clientX - touchOrigin.current.x);
+            const dy = Math.abs(touch.clientY - touchOrigin.current.y);
+            if (dx > 8 || dy > 8) clearLongPress();
+          }}
+          onTouchEnd={clearLongPress}
+          onTouchCancel={clearLongPress}
+          sx={(theme) => ({
+            display: 'flex',
+            flexDirection: 'column',
+            width: imageUrl ? 'min(82%, 280px)' : 'auto',
+            maxWidth: '82%',
+            overflow: 'hidden',
+            cursor: selectionMode && mine ? 'pointer' : mine ? 'pointer' : 'default',
+            userSelect: selectionMode ? 'none' : 'text',
+            WebkitUserSelect: selectionMode ? 'none' : 'text',
+            bgcolor: mine ? CHAT_BUBBLE_MINE_LIGHT : CHAT_BUBBLE_THEIRS_LIGHT,
+            color: mine ? CHAT_BUBBLE_MINE_INK : 'text.primary',
+            borderRadius: bubbleRadius.map((r) => `${r}px`).join(' '),
+            outline: selectionMode && selected && mine ? `2px solid ${CHAT_ACCENT}` : 'none',
+            outlineOffset: 1,
+            opacity: selectionMode && !mine ? 0.6 : 1,
+            transition: 'opacity 0.2s ease, outline 0.15s ease',
+            ...theme.applyStyles('dark', {
+              bgcolor: mine ? CHAT_BUBBLE_MINE_DARK : CHAT_BUBBLE_THEIRS_DARK,
+              color: mine ? CHAT_BUBBLE_MINE_INK : 'var(--mui-palette-text-primary)',
+            }),
+          })}
+        >
+          {imageUrl ? (
+            <Box
+              sx={{
+                position: 'relative',
+                lineHeight: 0,
+                m: `${CHAT_IMAGE_INSET}px`,
+                borderRadius: imageRadius,
+                overflow: 'hidden',
+                // Neutral slot so green bubbles don’t look “empty” while the photo loads.
+                bgcolor: mine ? 'rgba(0,0,0,0.28)' : 'rgba(0,0,0,0.12)',
+                minHeight: 160,
+                aspectRatio: '4 / 3',
+              }}
+            >
+              {!imageLoaded && !imageFailed ? (
+                <Box
+                  aria-busy
+                  aria-label={t.messages.imageLoadingAria}
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    zIndex: 1,
+                    display: 'grid',
+                    placeItems: 'center',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <ChatImageProgressBadge value={loadProgress} />
+                </Box>
+              ) : null}
+              {imageFailed ? (
+                <Box
+                  sx={{
+                    display: 'grid',
+                    placeItems: 'center',
+                    width: '100%',
+                    minHeight: 160,
+                    aspectRatio: '4 / 3',
+                    px: 2,
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 650, textAlign: 'center' }}>
+                    {t.messages.imageLoadFailed}
+                  </Typography>
+                </Box>
+              ) : bubbleDownload.src ? (
+                <Box
+                  component="img"
+                  ref={imgRef}
+                  src={bubbleDownload.src}
+                  alt=""
+                  loading="eager"
+                  decoding="async"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={t.messages.imagePreviewAria}
+                  onClick={() => {
+                    if (selectionMode) {
+                      if (mine) onToggleSelect?.(message.id);
+                      return;
+                    }
+                    if (!imageLoaded) return;
+                    setPreviewOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (selectionMode) {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (mine) onToggleSelect?.(message.id);
+                      }
+                      return;
+                    }
+                    if (!imageLoaded) return;
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      if (mine) onToggleSelect?.(message.id);
+                      setPreviewOpen(true);
                     }
-                    return;
-                  }
-                  if (!imageLoaded) return;
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setPreviewOpen(true);
-                  }
+                  }}
+                  onLoad={handleImageLoad}
+                  onError={() => {
+                    if (imageUrl && bubbleSrc !== imageUrl) {
+                      setBubbleSrc(imageUrl);
+                      return;
+                    }
+                    handleImageError();
+                  }}
+                  sx={{
+                    display: 'block',
+                    width: '100%',
+                    height: '100%',
+                    minHeight: 160,
+                    maxHeight: 360,
+                    aspectRatio: '4 / 3',
+                    objectFit: 'cover',
+                    cursor: imageLoaded ? 'pointer' : 'default',
+                    opacity: imageLoaded ? 1 : 0,
+                    transition: 'opacity 0.2s ease',
+                  }}
+                />
+              ) : null}
+              {imageOnly ? meta : null}
+            </Box>
+          ) : null}
+          {!imageOnly ? (
+            <Box
+              sx={{
+                position: 'relative',
+                px: 1.35,
+                pt: 0.75,
+                pb: 0.75,
+                minWidth: body ? undefined : metaWidth + 16,
+              }}
+            >
+              {body ? (
+                <Typography
+                  component="div"
+                  variant="body2"
+                  sx={{
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    fontSize: '0.9375rem',
+                    fontWeight: 500,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {body}
+                  <Box
+                    component="span"
+                    aria-hidden
+                    sx={{
+                      display: 'inline-block',
+                      width: metaWidth,
+                      height: '1.15em',
+                      verticalAlign: 'bottom',
+                    }}
+                  />
+                </Typography>
+              ) : null}
+              {meta}
+            </Box>
+          ) : null}
+        </Box>
+      </Box>
+
+      {imageUrl ? (
+        <Dialog
+          open={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+          fullScreen
+          slotProps={{
+            paper: {
+              sx: {
+                bgcolor: 'rgba(0,0,0,0.96)',
+                backgroundImage: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+              },
+            },
+          }}
+        >
+          <IconButton
+            type="button"
+            onClick={() => setPreviewOpen(false)}
+            aria-label={t.messages.closePreviewAria}
+            sx={{
+              position: 'fixed',
+              top: { xs: 'max(12px, env(safe-area-inset-top))', md: 16 },
+              right: { xs: 'max(12px, env(safe-area-inset-right))', md: 16 },
+              zIndex: 1,
+              width: 44,
+              height: 44,
+              color: '#fff',
+              bgcolor: 'rgba(255,255,255,0.12)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.22)', color: '#fff' },
+            }}
+          >
+            <XIcon size={22} weight="bold" />
+          </IconButton>
+          <Box
+            onClick={() => setPreviewOpen(false)}
+            sx={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              height: '100%',
+              p: { xs: 1.5, md: 3 },
+              cursor: 'zoom-out',
+              position: 'relative',
+            }}
+          >
+            {!previewLoaded && !previewFailed ? (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  display: 'grid',
+                  placeItems: 'center',
                 }}
-                onLoad={handleImageLoad}
+              >
+                <ChatImageProgressBadge value={previewProgress} size={64} />
+              </Box>
+            ) : null}
+            {previewFailed ? (
+              <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 650 }}>
+                {t.messages.imageLoadFailed}
+              </Typography>
+            ) : previewDownload.src ? (
+              <Box
+                component="img"
+                src={previewDownload.src}
+                alt=""
+                onLoad={() => {
+                  setPreviewLoaded(true);
+                  setPreviewFailed(false);
+                }}
                 onError={() => {
-                  if (imageUrl && bubbleSrc !== imageUrl) {
-                    setBubbleSrc(imageUrl);
-                    return;
-                  }
-                  handleImageError();
+                  setPreviewLoaded(true);
+                  setPreviewFailed(true);
                 }}
+                onClick={(e) => e.stopPropagation()}
                 sx={{
                   display: 'block',
-                  width: '100%',
-                  height: '100%',
-                  minHeight: 160,
-                  maxHeight: 360,
-                  aspectRatio: '4 / 3',
-                  objectFit: 'cover',
-                  cursor: imageLoaded ? 'pointer' : 'default',
-                  opacity: imageLoaded ? 1 : 0,
-                  transition: 'opacity 0.2s ease',
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  width: 'auto',
+                  height: 'auto',
+                  objectFit: 'contain',
+                  borderRadius: 1,
+                  userSelect: 'none',
+                  opacity: previewLoaded ? 1 : 0,
+                  transition: 'opacity 0.15s ease',
                 }}
               />
             ) : null}
-            {imageOnly ? meta : null}
           </Box>
-        ) : null}
-        {!imageOnly ? (
-          <Box
-            sx={{
-              position: 'relative',
-              px: 1.35,
-              pt: 0.75,
-              pb: 0.75,
-              minWidth: body ? undefined : metaWidth + 16,
-            }}
-          >
-            {body ? (
-              <Typography
-                component="div"
-                variant="body2"
-                sx={{
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  fontSize: '0.9375rem',
-                  fontWeight: 500,
-                  lineHeight: 1.4,
-                }}
-              >
-                {body}
-                <Box
-                  component="span"
-                  aria-hidden
-                  sx={{
-                    display: 'inline-block',
-                    width: metaWidth,
-                    height: '1.15em',
-                    verticalAlign: 'bottom',
-                  }}
-                />
-              </Typography>
-            ) : null}
-            {meta}
-          </Box>
-        ) : null}
-      </Box>
-    </Box>
-
-    {imageUrl ? (
-      <Dialog
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        fullScreen
-        slotProps={{
-          paper: {
-            sx: {
-              bgcolor: 'rgba(0,0,0,0.96)',
-              backgroundImage: 'none',
-              display: 'flex',
-              flexDirection: 'column',
-            },
-          },
-        }}
-      >
-        <IconButton
-          type="button"
-          onClick={() => setPreviewOpen(false)}
-          aria-label={t.messages.closePreviewAria}
-          sx={{
-            position: 'fixed',
-            top: { xs: 'max(12px, env(safe-area-inset-top))', md: 16 },
-            right: { xs: 'max(12px, env(safe-area-inset-right))', md: 16 },
-            zIndex: 1,
-            width: 44,
-            height: 44,
-            color: '#fff',
-            bgcolor: 'rgba(255,255,255,0.12)',
-            '&:hover': { bgcolor: 'rgba(255,255,255,0.22)', color: '#fff' },
-          }}
-        >
-          <XIcon size={22} weight="bold" />
-        </IconButton>
-        <Box
-          onClick={() => setPreviewOpen(false)}
-          sx={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '100%',
-            height: '100%',
-            p: { xs: 1.5, md: 3 },
-            cursor: 'zoom-out',
-            position: 'relative',
-          }}
-        >
-          {!previewLoaded && !previewFailed ? (
-            <Box
-              sx={{
-                position: 'absolute',
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
-              <ChatImageProgressBadge value={previewProgress} size={64} />
-            </Box>
-          ) : null}
-          {previewFailed ? (
-            <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 650 }}>
-              {t.messages.imageLoadFailed}
-            </Typography>
-          ) : previewDownload.src ? (
-            <Box
-              component="img"
-              src={previewDownload.src}
-              alt=""
-              onLoad={() => {
-                setPreviewLoaded(true);
-                setPreviewFailed(false);
-              }}
-              onError={() => {
-                setPreviewLoaded(true);
-                setPreviewFailed(true);
-              }}
-              onClick={(e) => e.stopPropagation()}
-              sx={{
-                display: 'block',
-                maxWidth: '100%',
-                maxHeight: '100%',
-                width: 'auto',
-                height: 'auto',
-                objectFit: 'contain',
-                borderRadius: 1,
-                userSelect: 'none',
-                opacity: previewLoaded ? 1 : 0,
-                transition: 'opacity 0.15s ease',
-              }}
-            />
-          ) : null}
-        </Box>
-      </Dialog>
-    ) : null}
+        </Dialog>
+      ) : null}
     </>
   );
 }
@@ -1489,9 +1444,7 @@ function MessageComposer({
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const inputRef = React.useRef<HTMLTextAreaElement | null>(null);
   const canSend = draft.trim().length > 0 || Boolean(attachment) || Boolean(listingInquiry);
-  const listingInquiryKey = listingInquiry
-    ? `${listingInquiry.listingKind}:${listingInquiry.listingId}`
-    : '';
+  const listingInquiryKey = listingInquiry ? `${listingInquiry.listingKind}:${listingInquiry.listingId}` : '';
 
   React.useEffect(() => {
     if (!listingInquiry) return;
@@ -1764,11 +1717,11 @@ export function UserMessagesView() {
     reservations: t.messages.reservations,
   };
 
-  const [conversations, setConversations] = React.useState<ConversationSummary[]>(
-    () => inboxConversations(getCachedConversations() ?? []),
+  const [conversations, setConversations] = React.useState<ConversationSummary[]>(() =>
+    inboxConversations(getCachedConversations() ?? [])
   );
   const [messages, setMessages] = React.useState<ConversationMessage[]>(() =>
-    urlSelectedId ? (getCachedThread(urlSelectedId)?.messages ?? []) : [],
+    urlSelectedId ? (getCachedThread(urlSelectedId)?.messages ?? []) : []
   );
   const [activeConversation, setActiveConversation] = React.useState<ConversationSummary | null>(() => {
     if (!urlSelectedId) return null;
@@ -1780,8 +1733,8 @@ export function UserMessagesView() {
   });
   const [inboxFilter, setInboxFilter] = React.useState<InboxFilter>('all');
   const [listLoading, setListLoading] = React.useState(() => !getCachedConversations());
-  const [threadLoading, setThreadLoading] = React.useState(() =>
-    Boolean(urlSelectedId) && !getCachedThread(urlSelectedId!),
+  const [threadLoading, setThreadLoading] = React.useState(
+    () => Boolean(urlSelectedId) && !getCachedThread(urlSelectedId!)
   );
   const [markingAllRead, setMarkingAllRead] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -1851,19 +1804,16 @@ export function UserMessagesView() {
     }
   }, [urlSelectedId, instantSelectedId]);
 
-  const unreadConversations = React.useMemo(
-    () => conversations.filter((c) => c.unreadCount > 0),
-    [conversations],
-  );
+  const unreadConversations = React.useMemo(() => conversations.filter((c) => c.unreadCount > 0), [conversations]);
   const unreadTotal = unreadConversations.length;
   const reservationConversations = React.useMemo(
     () => conversations.filter(isReservationConversation),
-    [conversations],
+    [conversations]
   );
   const reservationsTotal = reservationConversations.length;
   const filteredConversations = React.useMemo(
     () => filterConversations(conversations, inboxFilter),
-    [conversations, inboxFilter],
+    [conversations, inboxFilter]
   );
   React.useEffect(() => {
     if (!isBusinessAccount && inboxFilter === 'reservations') {
@@ -1883,7 +1833,7 @@ export function UserMessagesView() {
   }, [conversations.length, isBusinessAccount, reservationsTotal, unreadTotal]);
   const actionConversation = React.useMemo(
     () => conversations.find((c) => c.id === actionConversationId) ?? null,
-    [conversations, actionConversationId],
+    [conversations, actionConversationId]
   );
   const selectedCount = selectedIds.size;
 
@@ -1920,9 +1870,7 @@ export function UserMessagesView() {
     if (cached) {
       setConversations(sortConversationsByRecent(inboxConversations(cached)));
       setListLoading(false);
-      prefetchStorageImages(
-        cached.flatMap((c) => [c.otherParticipantAvatarUrl, c.listingImageUrl]),
-      );
+      prefetchStorageImages(cached.flatMap((c) => [c.otherParticipantAvatarUrl, c.listingImageUrl]));
     } else {
       setListLoading(true);
     }
@@ -1934,71 +1882,70 @@ export function UserMessagesView() {
       const next = sortConversationsByRecent(inboxConversations(res.conversations ?? []));
       setCachedConversations(next);
       setConversations(next);
-      prefetchStorageImages(
-        next.flatMap((c) => [c.otherParticipantAvatarUrl, c.listingImageUrl]),
-      );
+      prefetchStorageImages(next.flatMap((c) => [c.otherParticipantAvatarUrl, c.listingImageUrl]));
     }
     setListLoading(false);
   }, []);
 
-  const loadThread = React.useCallback(async (conversationId: string) => {
-    hydrateThreadLocally(conversationId);
-    setError(null);
-    const res = await fetchConversationMessages(conversationId);
-    if (selectedIdRef.current !== conversationId) return;
+  const loadThread = React.useCallback(
+    async (conversationId: string) => {
+      hydrateThreadLocally(conversationId);
+      setError(null);
+      const res = await fetchConversationMessages(conversationId);
+      if (selectedIdRef.current !== conversationId) return;
 
-    if (res.error) {
-      setError(res.error);
-      if (!getCachedThread(conversationId)) {
-        setMessages([]);
-        setActiveConversation(null);
+      if (res.error) {
+        setError(res.error);
+        if (!getCachedThread(conversationId)) {
+          setMessages([]);
+          setActiveConversation(null);
+        }
+        setThreadLoading(false);
+        return;
       }
+
+      const nextMessages = res.messages ?? [];
+      const nextConversation = res.conversation ?? null;
+      const draft = listingInquiryDraftRef.current;
+      const merged =
+        nextConversation && draft ? { ...nextConversation, ...listingContextPatch(draft) } : nextConversation;
+      if (merged) {
+        setCachedThread(conversationId, nextMessages, merged);
+        setActiveConversation(merged);
+      }
+      setMessages(nextMessages);
       setThreadLoading(false);
-      return;
-    }
 
-    const nextMessages = res.messages ?? [];
-    const nextConversation = res.conversation ?? null;
-    const draft = listingInquiryDraftRef.current;
-    const merged =
-      nextConversation && draft
-        ? { ...nextConversation, ...listingContextPatch(draft) }
-        : nextConversation;
-    if (merged) {
-      setCachedThread(conversationId, nextMessages, merged);
-      setActiveConversation(merged);
-    }
-    setMessages(nextMessages);
-    setThreadLoading(false);
-
-    setConversations((prev) => {
-      const source = merged ?? nextConversation;
-      const cleared = prev.map((c) => {
-        if (c.id !== conversationId) return c;
-        return {
-          ...c,
-          unreadCount: 0,
-          ...(source
-            ? {
-                listingKind: source.listingKind,
-                listingId: source.listingId,
-                listingTitle: source.listingTitle,
-                listingImageUrl: source.listingImageUrl,
-                listingContactPhone: source.listingContactPhone,
-                otherParticipantPhone: source.otherParticipantPhone,
-                startedBy: source.startedBy,
-              }
-            : null),
-        };
+      setConversations((prev) => {
+        const source = merged ?? nextConversation;
+        const cleared = prev.map((c) => {
+          if (c.id !== conversationId) return c;
+          return {
+            ...c,
+            unreadCount: 0,
+            ...(source
+              ? {
+                  listingKind: source.listingKind,
+                  listingId: source.listingId,
+                  listingTitle: source.listingTitle,
+                  listingImageUrl: source.listingImageUrl,
+                  listingContactPhone: source.listingContactPhone,
+                  otherParticipantPhone: source.otherParticipantPhone,
+                  startedBy: source.startedBy,
+                }
+              : null),
+          };
+        });
+        setCachedConversations(cleared);
+        return cleared;
       });
-      setCachedConversations(cleared);
-      return cleared;
-    });
-    setCachedUnreadMessagesCount(
-      (getCachedConversations() ?? []).reduce((sum, c) => sum + Math.max(0, c.unreadCount || 0), 0),
-    );
-    void markConversationRead(conversationId);
-  }, [hydrateThreadLocally]);
+      setCachedUnreadMessagesCount(
+        (getCachedConversations() ?? []).reduce((sum, c) => sum + Math.max(0, c.unreadCount || 0), 0)
+      );
+      void markConversationRead(conversationId);
+    },
+    [hydrateThreadLocally]
+  );
 
   React.useEffect(() => {
     void loadInbox();
@@ -2039,9 +1986,7 @@ export function UserMessagesView() {
         const inquiry = pending.withInquiry
           ? `&inquiry=${encodeURIComponent(`${pending.listingKind}:${pending.listingId}`)}`
           : '';
-        router.replace(
-          `${paths.user.messages}?c=${encodeURIComponent(res.conversation.id)}${inquiry}`,
-        );
+        router.replace(`${paths.user.messages}?c=${encodeURIComponent(res.conversation.id)}${inquiry}`);
         await loadInbox();
       }
     })();
@@ -2062,9 +2007,7 @@ export function UserMessagesView() {
   React.useEffect(() => {
     if (!selectedId || !listingInquiryDraft) return;
     const patch = listingContextPatch(listingInquiryDraft);
-    setActiveConversation((prev) =>
-      prev && prev.id === selectedId ? { ...prev, ...patch } : prev,
-    );
+    setActiveConversation((prev) => (prev && prev.id === selectedId ? { ...prev, ...patch } : prev));
     setConversations((prev) => {
       const next = patchConversationInList(prev, selectedId, patch, null);
       setCachedConversations(next);
@@ -2163,11 +2106,7 @@ export function UserMessagesView() {
     setActionMessage(null);
   };
 
-  const openMessageActions = (
-    message: ConversationMessage,
-    el: HTMLElement,
-    point?: { left: number; top: number },
-  ) => {
+  const openMessageActions = (message: ConversationMessage, el: HTMLElement, point?: { left: number; top: number }) => {
     setActionMessage(message);
     setActionMessageMenuAnchor({
       el,
@@ -2239,8 +2178,7 @@ export function UserMessagesView() {
     setPendingDeleteMessageIds(null);
     const leavingId = selectedIdRef.current;
     const leaving =
-      (leavingId && conversationsRef.current.find((c) => c.id === leavingId)) ||
-      activeConversationRef.current;
+      (leavingId && conversationsRef.current.find((c) => c.id === leavingId)) || activeConversationRef.current;
     discardEmptyConversation(leavingId, leaving);
     // Show inbox + bottom nav immediately; URL sync can take a tick on mobile.
     setMobileThreadDismissed(true);
@@ -2254,11 +2192,7 @@ export function UserMessagesView() {
     setActionConversationId(null);
   };
 
-  const openActionMenu = (
-    id: string,
-    el: HTMLElement,
-    point?: { left: number; top: number },
-  ) => {
+  const openActionMenu = (id: string, el: HTMLElement, point?: { left: number; top: number }) => {
     setActionConversationId(id);
     setActionMenuAnchor({
       el,
@@ -2316,11 +2250,7 @@ export function UserMessagesView() {
     }
     setConversations((prev) => {
       const next = sortConversationsByRecent(
-        prev.map((c) =>
-          c.id === actionConversation.id
-            ? { ...c, pinned: res.conversation?.pinned ?? nextPinned }
-            : c,
-        ),
+        prev.map((c) => (c.id === actionConversation.id ? { ...c, pinned: res.conversation?.pinned ?? nextPinned } : c))
       );
       setCachedConversations(next);
       return next;
@@ -2359,7 +2289,7 @@ export function UserMessagesView() {
 
     const newLatest = remainingMessages[remainingMessages.length - 1] || null;
     const newLastText = newLatest
-      ? (listingInquiryPreviewText(newLatest.body) || (newLatest.imageUrl ? t.messages.photoPreview : newLatest.body))
+      ? listingInquiryPreviewText(newLatest.body) || (newLatest.imageUrl ? t.messages.photoPreview : newLatest.body)
       : '';
     const newLastAt = newLatest?.createdAt || '';
     const newLastIsMine = newLatest?.isMine ?? false;
@@ -2373,7 +2303,7 @@ export function UserMessagesView() {
           lastMessageAt: newLastAt,
           lastMessageIsMine: newLastIsMine,
         },
-        activeConversationRef.current,
+        activeConversationRef.current
       );
       setCachedConversations(next);
       return next;
@@ -2388,7 +2318,7 @@ export function UserMessagesView() {
               lastMessageAt: newLastAt,
               lastMessageIsMine: newLastIsMine,
             }
-          : prev,
+          : prev
       );
       setCachedThread(selectedId, remainingMessages, {
         ...activeConversationRef.current,
@@ -2436,10 +2366,7 @@ export function UserMessagesView() {
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const createdAt = new Date().toISOString();
     const localPreviewUrl = file ? URL.createObjectURL(file) : null;
-    const preview =
-      listingInquiryPreviewText(outboundBody) ||
-      intro ||
-      (file ? t.messages.photoPreview : outboundBody);
+    const preview = listingInquiryPreviewText(outboundBody) || intro || (file ? t.messages.photoPreview : outboundBody);
     const wasInInbox = conversationsRef.current.some((c) => c.id === conversationId);
     const listingPatch = inquiryDraft ? listingContextPatch(inquiryDraft) : {};
     const baseOtherUnread =
@@ -2472,7 +2399,7 @@ export function UserMessagesView() {
       return next;
     });
     setActiveConversation((prev) =>
-      prev ? { ...prev, otherUnreadCount: baseOtherUnread + 1, ...listingPatch } : prev,
+      prev ? { ...prev, otherUnreadCount: baseOtherUnread + 1, ...listingPatch } : prev
     );
     setConversations((prev) => {
       const next = sortConversationsByRecent(
@@ -2486,8 +2413,8 @@ export function UserMessagesView() {
             otherUnreadCount: baseOtherUnread + 1,
             ...listingPatch,
           },
-          activeConversationRef.current,
-        ),
+          activeConversationRef.current
+        )
       );
       setCachedConversations(next);
       return next;
@@ -2495,18 +2422,14 @@ export function UserMessagesView() {
 
     const rollback = () => {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      setActiveConversation((prev) =>
-        prev ? { ...prev, otherUnreadCount: baseOtherUnread } : prev,
-      );
+      setActiveConversation((prev) => (prev ? { ...prev, otherUnreadCount: baseOtherUnread } : prev));
       setConversations((prev) => {
         if (!wasInInbox) {
           const next = prev.filter((c) => c.id !== conversationId);
           setCachedConversations(next);
           return next;
         }
-        const next = prev.map((c) =>
-          c.id === conversationId ? { ...c, otherUnreadCount: baseOtherUnread } : c,
-        );
+        const next = prev.map((c) => (c.id === conversationId ? { ...c, otherUnreadCount: baseOtherUnread } : c));
         setCachedConversations(next);
         return next;
       });
@@ -2555,8 +2478,8 @@ export function UserMessagesView() {
             lastMessageIsMine: true,
             ...listingPatch,
           },
-          activeConversationRef.current,
-        ),
+          activeConversationRef.current
+        )
       );
       setCachedConversations(next);
       return next;
@@ -2566,12 +2489,10 @@ export function UserMessagesView() {
 
   const showThreadOnMobile = Boolean(selectedId);
   const contactPhone = activeConversation ? conversationContactPhone(activeConversation) : null;
-  const threadHeaderName =
-    activeConversation?.otherParticipantName?.trim() || t.messages.userFallback;
+  const threadHeaderName = activeConversation?.otherParticipantName?.trim() || t.messages.userFallback;
   const threadListingLabel = activeConversation?.listingTitle?.trim() || '';
   const showListingInThreadHeader = Boolean(
-    threadListingLabel &&
-      threadListingLabel.localeCompare(threadHeaderName, undefined, { sensitivity: 'accent' }) !== 0,
+    threadListingLabel && threadListingLabel.localeCompare(threadHeaderName, undefined, { sensitivity: 'accent' }) !== 0
   );
   const activeListingHref =
     activeConversation?.listingKind && activeConversation?.listingId
@@ -2581,8 +2502,8 @@ export function UserMessagesView() {
     contactPhone,
     t.messages.whatsappIntro(
       activeConversation?.listingTitle?.trim() || threadHeaderName,
-      toAbsoluteSiteUrl(activeListingHref),
-    ),
+      toAbsoluteSiteUrl(activeListingHref)
+    )
   );
   const threadHeaderAvatar = activeConversation?.otherParticipantAvatarUrl;
   const threadListingImageUrl = activeConversation?.listingImageUrl?.trim() || '';
@@ -2591,7 +2512,7 @@ export function UserMessagesView() {
     : null;
   const deliveryStatuses = React.useMemo(
     () => deliveryStatusByMessageId(messages, activeConversation?.otherUnreadCount ?? 0),
-    [messages, activeConversation?.otherUnreadCount],
+    [messages, activeConversation?.otherUnreadCount]
   );
 
   return (
@@ -2624,9 +2545,12 @@ export function UserMessagesView() {
       />
 
       {error && !showThreadOnMobile ? (
-        <Alert severity="error" sx={{ mx: { xs: 2, md: 0 }, mb: { xs: 1.5, md: 0 } }}>
-          {error}
-        </Alert>
+        <TransientNotification
+          severity="error"
+          message={error}
+          onDismiss={() => setError(null)}
+          sx={{ mx: { xs: 2, md: 0 }, mb: { xs: 1.5, md: 0 } }}
+        />
       ) : null}
 
       <Card
@@ -2753,80 +2677,85 @@ export function UserMessagesView() {
                   </Stack>
                 </Stack>
               ) : (
-              <Stack
-                direction="row"
-                spacing={1}
-                role="tablist"
-                aria-label={t.messages.filterAria}
-                sx={{ overflowX: 'auto', pb: 0.25, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}
-              >
-                {inboxTabs.map((tab) => {
-                  const selected = inboxFilter === tab.id;
-                  return (
-                    <Box
-                      key={tab.id}
-                      component="button"
-                      type="button"
-                      role="tab"
-                      aria-selected={selected}
-                      onClick={() => setInboxFilter(tab.id)}
-                      sx={{
-                        m: 0,
-                        flexShrink: 0,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 0.5,
-                        px: 1.5,
-                        py: 0.55,
-                        border: '1px solid',
-                        borderColor: selected
-                          ? 'primary.main'
-                          : (theme) =>
-                              theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)',
-                        borderRadius: 999,
-                        cursor: 'pointer',
-                        font: 'inherit',
-                        WebkitTapHighlightColor: 'transparent',
-                        bgcolor: selected ? primaryMainAlpha(0.18) : 'transparent',
-                        color: selected ? 'primary.main' : 'text.secondary',
-                        transition: 'background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease',
-                        '&:hover': {
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  role="tablist"
+                  aria-label={t.messages.filterAria}
+                  sx={{
+                    overflowX: 'auto',
+                    pb: 0.25,
+                    scrollbarWidth: 'none',
+                    '&::-webkit-scrollbar': { display: 'none' },
+                  }}
+                >
+                  {inboxTabs.map((tab) => {
+                    const selected = inboxFilter === tab.id;
+                    return (
+                      <Box
+                        key={tab.id}
+                        component="button"
+                        type="button"
+                        role="tab"
+                        aria-selected={selected}
+                        onClick={() => setInboxFilter(tab.id)}
+                        sx={{
+                          m: 0,
+                          flexShrink: 0,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                          px: 1.5,
+                          py: 0.55,
+                          border: '1px solid',
                           borderColor: selected
                             ? 'primary.main'
                             : (theme) =>
-                                theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.28)',
-                          color: selected ? 'primary.main' : 'text.primary',
-                        },
-                      }}
-                    >
-                      <Typography
-                        component="span"
-                        sx={{
-                          fontWeight: selected ? 700 : 500,
-                          fontSize: '0.8125rem',
-                          lineHeight: 1.2,
-                          whiteSpace: 'nowrap',
+                                theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)',
+                          borderRadius: 999,
+                          cursor: 'pointer',
+                          font: 'inherit',
+                          WebkitTapHighlightColor: 'transparent',
+                          bgcolor: selected ? primaryMainAlpha(0.18) : 'transparent',
+                          color: selected ? 'primary.main' : 'text.secondary',
+                          transition: 'background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease',
+                          '&:hover': {
+                            borderColor: selected
+                              ? 'primary.main'
+                              : (theme) =>
+                                  theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.28)',
+                            color: selected ? 'primary.main' : 'text.primary',
+                          },
                         }}
                       >
-                        {inboxFilterLabels[tab.id]}
-                      </Typography>
-                      {tab.count > 0 ? (
                         <Typography
                           component="span"
                           sx={{
-                            fontSize: '0.8125rem',
                             fontWeight: selected ? 700 : 500,
-                            lineHeight: 1,
-                            opacity: 0.9,
+                            fontSize: '0.8125rem',
+                            lineHeight: 1.2,
+                            whiteSpace: 'nowrap',
                           }}
                         >
-                          {tab.count > 99 ? '99+' : tab.count}
+                          {inboxFilterLabels[tab.id]}
                         </Typography>
-                      ) : null}
-                    </Box>
-                  );
-                })}
-              </Stack>
+                        {tab.count > 0 ? (
+                          <Typography
+                            component="span"
+                            sx={{
+                              fontSize: '0.8125rem',
+                              fontWeight: selected ? 700 : 500,
+                              lineHeight: 1,
+                              opacity: 0.9,
+                            }}
+                          >
+                            {tab.count > 99 ? '99+' : tab.count}
+                          </Typography>
+                        ) : null}
+                      </Box>
+                    );
+                  })}
+                </Stack>
               )
             ) : null}
           </Stack>
@@ -2942,9 +2871,12 @@ export function UserMessagesView() {
           ) : activeConversation ? (
             <>
               {error ? (
-                <Alert severity="error" sx={{ borderRadius: 0 }}>
-                  {error}
-                </Alert>
+                <TransientNotification
+                  severity="error"
+                  message={error}
+                  onDismiss={() => setError(null)}
+                  sx={{ borderRadius: 0 }}
+                />
               ) : null}
               {messageSelectionMode ? (
                 <Stack
@@ -3102,9 +3034,7 @@ export function UserMessagesView() {
                           color: activeListingHref ? CHAT_ACCENT : 'text.secondary',
                           textDecoration: 'none',
                           lineHeight: 1.2,
-                          ...(activeListingHref
-                            ? { '&:hover': { textDecoration: 'underline' } }
-                            : null),
+                          ...(activeListingHref ? { '&:hover': { textDecoration: 'underline' } } : null),
                         }}
                         noWrap
                       >
@@ -3138,7 +3068,6 @@ export function UserMessagesView() {
                   ) : null}
                 </Stack>
               )}
-
               <Box
                 sx={{
                   position: 'relative',
@@ -3213,7 +3142,8 @@ export function UserMessagesView() {
                     onClearListingInquiry={clearListingInquiryDraft}
                   />
                 ) : null}
-              </Box>            </>
+              </Box>{' '}
+            </>
           ) : null}
         </Box>
       </Card>
@@ -3290,9 +3220,7 @@ export function UserMessagesView() {
         </ProductDialogTitle>
         <ProductDialogContent>
           <DialogContentText sx={{ m: 0, color: 'text.secondary' }}>
-            {(pendingDeleteIds?.length ?? 0) > 1
-              ? t.messages.deleteConfirmManyBody
-              : t.messages.deleteConfirmBody}
+            {(pendingDeleteIds?.length ?? 0) > 1 ? t.messages.deleteConfirmManyBody : t.messages.deleteConfirmBody}
           </DialogContentText>
         </ProductDialogContent>
         <ProductDialogActions>
@@ -3402,10 +3330,10 @@ export function UserMessagesView() {
           >
             {deletingMessages ? (
               <CircularProgress size={18} color="inherit" />
+            ) : (pendingDeleteMessageIds?.length ?? 0) > 1 ? (
+              t.messages.deleteMessages(pendingDeleteMessageIds!.length)
             ) : (
-              (pendingDeleteMessageIds?.length ?? 0) > 1
-                ? t.messages.deleteMessages(pendingDeleteMessageIds!.length)
-                : t.messages.deleteMessage
+              t.messages.deleteMessage
             )}
           </Button>
         </ProductDialogActions>

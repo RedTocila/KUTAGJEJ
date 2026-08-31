@@ -1,16 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Box, Button, Stack, Typography } from '@mui/material';
 import { FloppyDisk as FloppyDiskIcon } from '@phosphor-icons/react/dist/ssr/FloppyDisk';
 
-import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
+import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { useOwnerEditHeaderActions } from '@/components/user/owner-edit-header-actions';
 
 export function ListingOwnerEditShell({
@@ -53,7 +47,7 @@ export function ListingOwnerEditShell({
         {saving ? 'Duke ruajtur…' : 'Ruaj'}
       </Button>
     ),
-    [dirty, saving, onSave],
+    [dirty, saving, onSave]
   );
 
   return (
@@ -74,11 +68,7 @@ export function ListingOwnerEditShell({
         {aiAssist ? <Box sx={{ flexShrink: 0 }}>{aiAssist}</Box> : null}
       </Stack>
 
-      {error ? (
-        <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
-          {error}
-        </Alert>
-      ) : null}
+      {error ? <TransientNotification severity="error" message={error} sx={{ mb: 2, borderRadius: 2 }} /> : null}
       <TransientSuccessAlert message={success} sx={{ mb: 2, borderRadius: 2 }} />
 
       {children}

@@ -2,38 +2,30 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Alert,
-  Avatar,
-  Box,
-  Button,
-  Rating,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Avatar, Box, Button, Rating, Stack, TextField, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 
+import { paths } from '@/paths';
+import { formatRatingDisplay } from '@/lib/format-rating';
+import { mapApiReviewToView } from '@/lib/professional-listing-detail-content';
+import {
+  listProfessionalReviews,
+  submitProfessionalReview,
+  type ProfessionalReview,
+} from '@/lib/professional-reviews-client';
+import { useUser } from '@/hooks/use-user';
 import {
   ProductDialog,
   ProductDialogActions,
   ProductDialogContent,
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
+import { TransientNotification } from '@/components/core/transient-success-alert';
 import {
   ProfessionalFiveStarRating,
   ProfessionalReviewsSectionHeader,
 } from '@/components/public/professional-listing-detail-ui';
-import {
-  listProfessionalReviews,
-  submitProfessionalReview,
-  type ProfessionalReview,
-} from '@/lib/professional-reviews-client';
-import { mapApiReviewToView } from '@/lib/professional-listing-detail-content';
-import { formatRatingDisplay } from '@/lib/format-rating';
 import { productButtonSx, productFieldSx } from '@/styles/product-sx';
-import { useUser } from '@/hooks/use-user';
-import { paths } from '@/paths';
 
 const surfaceSx = {
   p: 1.5,
@@ -69,15 +61,7 @@ export const ProfessionalReviewSection = React.forwardRef<
   ProfessionalReviewSectionHandle,
   ProfessionalReviewSectionProps
 >(function ProfessionalReviewSection(
-  {
-    listingId,
-    ratingAverage,
-    reviewCount,
-    onReviewSubmitted,
-    onStatsChange,
-    ownerId,
-    onLeaveReviewAvailableChange,
-  },
+  { listingId, ratingAverage, reviewCount, onReviewSubmitted, onStatsChange, ownerId, onLeaveReviewAvailableChange },
   ref
 ) {
   const router = useRouter();
@@ -107,8 +91,7 @@ export const ProfessionalReviewSection = React.forwardRef<
   React.useEffect(() => {
     if (!reviewsLoaded || !onStatsChange) return;
     const nextCount = reviews.length;
-    const nextAvg =
-      nextCount > 0 ? reviews.reduce((sum, row) => sum + row.rating, 0) / nextCount : null;
+    const nextAvg = nextCount > 0 ? reviews.reduce((sum, row) => sum + row.rating, 0) / nextCount : null;
     onStatsChange({ ratingAverage: nextAvg, reviewCount: nextCount });
   }, [onStatsChange, reviews, reviewsLoaded]);
 
@@ -117,7 +100,7 @@ export const ProfessionalReviewSection = React.forwardRef<
   const openDialog = React.useCallback(() => {
     if (!user) {
       router.push(
-        `${paths.user.auth}?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : paths.public.professionals)}`,
+        `${paths.user.auth}?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : paths.public.professionals)}`
       );
       return;
     }
@@ -147,9 +130,7 @@ export const ProfessionalReviewSection = React.forwardRef<
   };
 
   const liveAvg =
-    reviewsLoaded && reviews.length > 0
-      ? reviews.reduce((sum, row) => sum + row.rating, 0) / reviews.length
-      : null;
+    reviewsLoaded && reviews.length > 0 ? reviews.reduce((sum, row) => sum + row.rating, 0) / reviews.length : null;
   const count = reviewsLoaded ? reviews.length : (reviewCount ?? 0);
   const avg =
     liveAvg != null
@@ -227,9 +208,12 @@ export const ProfessionalReviewSection = React.forwardRef<
           <ProductDialogContent>
             <Stack spacing={2.25}>
               {error ? (
-                <Alert severity="error" sx={{ borderRadius: 2 }}>
-                  {error}
-                </Alert>
+                <TransientNotification
+                  severity="error"
+                  message={error}
+                  onDismiss={() => setError(null)}
+                  sx={{ borderRadius: 2 }}
+                />
               ) : null}
               <Box>
                 <Typography

@@ -51,14 +51,14 @@ function directoryRatingSubtitle(listing: PublicDirectoryListing): string | null
   return listing.categoryLabel || listing.cityName || null;
 }
 
-function toSlide(verticalId: HomeVerticalId, listing: TopViewedListing): SlideModel {
+function toSlide(verticalId: HomeVerticalId, listing: TopViewedListing, perMonthLabel: string): SlideModel {
   switch (verticalId) {
     case 'real-estate': {
       const l = listing as PublicRealEstateListing;
       return {
         id: l.id,
         title: l.title,
-        subtitle: formatPrice(l.price, l.currency),
+        subtitle: formatPrice(l.price, l.currency) + (l.transactionType === 'rent' ? ` ${perMonthLabel}` : ''),
         imageUrl: l.imageUrl,
         href: listingRealEstatePublicHref(l),
       };
@@ -138,7 +138,10 @@ export function CategoryTopViewedSlider({
 }) {
   const t = useCopy();
   const byRating = isRatingFeaturedVertical(verticalId);
-  const slides = React.useMemo(() => listings.map((listing) => toSlide(verticalId, listing)), [listings, verticalId]);
+  const slides = React.useMemo(
+    () => listings.map((listing) => toSlide(verticalId, listing, t.browse.perMonth)),
+    [listings, t.browse.perMonth, verticalId]
+  );
 
   const { idx, slideBasis, trackRef, suppressNavRef, goToSlide, autoplay, toggleAutoplay, touchHandlers, trackSx } =
     useBannerSlider({
@@ -198,7 +201,21 @@ export function CategoryTopViewedSlider({
                   eager={eager}
                   title={slide.title}
                   topRightLabel={(listings[i]?.viewCount ?? 0).toLocaleString('en-GB')}
-                  bottomLeftLabel={slide.subtitle}
+                  bottomLeftLabel={
+                    byRating && slide.subtitle?.endsWith('★') ? (
+                      <>
+                        <Box component="span" sx={{ color: 'common.white' }}>
+                          {slide.subtitle.replace(/\s*★$/, '')}
+                        </Box>
+                        <Box component="span" sx={{ color: 'warning.main', ml: 0.35 }}>
+                          ★
+                        </Box>
+                      </>
+                    ) : (
+                      slide.subtitle
+                    )
+                  }
+                  showNavigationArrow={false}
                   contentPlacement="below"
                   hideTitleBelowImage
                   titleMaxLines={1}

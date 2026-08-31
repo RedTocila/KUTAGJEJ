@@ -76,6 +76,7 @@ import {
   ProductDialogContent,
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
+import { TransientNotification } from '@/components/core/transient-success-alert';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
@@ -1812,9 +1813,12 @@ export default function UserMyListingsPage() {
         {showSubmittedAlert ? <ListingSubmittedPendingAlert /> : null}
 
         {actionError ? (
-          <Alert severity="error" sx={{ borderRadius: 2 }} onClose={() => setActionError(null)}>
-            {actionError}
-          </Alert>
+          <TransientNotification
+            severity="error"
+            message={actionError}
+            onDismiss={() => setActionError(null)}
+            sx={{ borderRadius: 2 }}
+          />
         ) : null}
 
         {!loading && pendingCount > 0 ? (

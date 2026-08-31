@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { Box, Stack, Typography } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
-import { CalendarCheck as CalendarCheckIcon } from '@phosphor-icons/react/dist/ssr/CalendarCheck';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
@@ -16,6 +15,7 @@ import { listingBusinessPublicHref, listingProfessionalPublicHref } from '@/path
 import { MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import type { PublicDirectoryListing } from '@/lib/public-listings-client';
 import { ListingCardLink } from '@/components/public/listing-card-link';
+import { BusinessOpenStatusLine } from '@/components/public/business-open-status-line';
 
 import { BusinessPromoBanner } from './business-promo-banner';
 import { CardMedia } from './card-media';
@@ -51,7 +51,9 @@ function BusinessVenueCardBody({
   const viewCount = listing.viewCount ?? 0;
   const cardRating = resolveListingCardRating(listing, sellerRating);
 
-  const openingHoursLabel = listing.openingHours ? formatBusinessOpeningHoursForCard(listing.openingHours) : null;
+  const openingHoursLabel =
+    listing.openStatusLine?.trim() ||
+    (listing.openingHours ? formatBusinessOpeningHoursForCard(listing.openingHours) : null);
 
   const topBadge = listing.reservationsEnabled ? 'Rezervim' : undefined;
 
@@ -121,16 +123,27 @@ function BusinessVenueCardBody({
             spacing={{ xs: 0.25, sm: 0.4 }}
             sx={{ pt: { xs: 0.65, sm: 0.8 }, px: { xs: 0.25, sm: 0.4 }, pb: { xs: 0.8, sm: 1 } }}
           >
-            <ListingTitleWithVerified
-              title={listing.title}
-              maxLines={1}
-              verified={false}
-              typographySx={{
-                fontSize: { xs: '0.76rem', sm: '0.82rem' },
-                fontWeight: 650,
-                lineHeight: 1.25,
-              }}
-            />
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <ListingTitleWithVerified
+                  title={listing.title}
+                  maxLines={1}
+                  verified={false}
+                  typographySx={{
+                    fontSize: { xs: '0.76rem', sm: '0.82rem' },
+                    fontWeight: 650,
+                    lineHeight: 1.25,
+                  }}
+                />
+              </Box>
+              {cardRating ? (
+                <ListingCardRating
+                  ratingAverage={cardRating.ratingAverage}
+                  reviewCount={cardRating.reviewCount}
+                  singleStar
+                />
+              ) : null}
+            </Stack>
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
               <Typography
                 variant="caption"
@@ -139,25 +152,36 @@ function BusinessVenueCardBody({
               >
                 {listing.categoryLabel}
               </Typography>
-              {cardRating ? (
-                <Box sx={{ flexShrink: 0 }}>
-                  <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
-                </Box>
-              ) : null}
             </Stack>
           </Stack>
         ) : (
           <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
-            <ListingTitleWithVerified
-              title={listing.title}
-              maxLines={1}
-              verified={false}
-              typographySx={
-                listing.isPremium || listing.isOkazion
-                  ? { color: listingPriceAccentColor({ isPremium: listing.isPremium, isOkazion: listing.isOkazion }) }
-                  : undefined
-              }
-            />
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <ListingTitleWithVerified
+                  title={listing.title}
+                  maxLines={1}
+                  verified={false}
+                  typographySx={
+                    listing.isPremium || listing.isOkazion
+                      ? {
+                          color: listingPriceAccentColor({
+                            isPremium: listing.isPremium,
+                            isOkazion: listing.isOkazion,
+                          }),
+                        }
+                      : undefined
+                  }
+                />
+              </Box>
+              {cardRating ? (
+                <ListingCardRating
+                  ratingAverage={cardRating.ratingAverage}
+                  reviewCount={cardRating.reviewCount}
+                  singleStar
+                />
+              ) : null}
+            </Stack>
 
             {listing.servicesHighlight ? (
               <Typography
@@ -169,43 +193,11 @@ function BusinessVenueCardBody({
               </Typography>
             ) : null}
 
-            {openingHoursLabel || cardRating ? (
+            {openingHoursLabel ? (
               <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0 }}>
-                {openingHoursLabel ? (
-                  <>
-                    <ClockIcon size={14} weight="regular" color="var(--mui-palette-text-disabled)" />
-                    <Typography
-                      variant="caption"
-                      noWrap
-                      sx={{
-                        color: 'text.disabled',
-                        fontWeight: 500,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        minWidth: 0,
-                        flex: 1,
-                      }}
-                    >
-                      {openingHoursLabel}
-                    </Typography>
-                  </>
-                ) : (
-                  <Box sx={{ flex: 1 }} />
-                )}
-                {cardRating ? (
-                  <Box sx={{ flexShrink: 0, ml: 'auto' }}>
-                    <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
-                  </Box>
-                ) : null}
-              </Stack>
-            ) : null}
-
-            {listing.reservationsEnabled ? (
-              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                <CalendarCheckIcon size={14} weight="bold" />
-                <Typography variant="caption" sx={{ fontWeight: 600, color: 'success.main' }}>
-                  {listing.reservationUrl ? 'Rezervim online' : 'Rezervim me telefon'}
-                </Typography>
+                <Box sx={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                  <BusinessOpenStatusLine statusLine={openingHoursLabel} fontSize="0.75rem" />
+                </Box>
               </Stack>
             ) : null}
 
@@ -368,16 +360,27 @@ function ProfessionalListingCardBody({
             spacing={{ xs: 0.25, sm: 0.4 }}
             sx={{ pt: { xs: 0.65, sm: 0.8 }, px: { xs: 0.25, sm: 0.4 }, pb: { xs: 0.8, sm: 1 } }}
           >
-            <ListingTitleWithVerified
-              title={listing.title}
-              maxLines={1}
-              verified={false}
-              typographySx={{
-                fontSize: { xs: '0.76rem', sm: '0.82rem' },
-                fontWeight: 650,
-                lineHeight: 1.25,
-              }}
-            />
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <ListingTitleWithVerified
+                  title={listing.title}
+                  maxLines={1}
+                  verified={false}
+                  typographySx={{
+                    fontSize: { xs: '0.76rem', sm: '0.82rem' },
+                    fontWeight: 650,
+                    lineHeight: 1.25,
+                  }}
+                />
+              </Box>
+              {cardRating ? (
+                <ListingCardRating
+                  ratingAverage={cardRating.ratingAverage}
+                  reviewCount={cardRating.reviewCount}
+                  singleStar
+                />
+              ) : null}
+            </Stack>
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
               <Typography
                 variant="caption"
@@ -386,28 +389,36 @@ function ProfessionalListingCardBody({
               >
                 {listing.categoryLabel}
               </Typography>
-              {cardRating ? (
-                <Box sx={{ flexShrink: 0 }}>
-                  <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
-                </Box>
-              ) : null}
             </Stack>
           </Stack>
         ) : (
           <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
-            <ListingTitleWithVerified
-              title={listing.title}
-              maxLines={1}
-              verified={false}
-              typographySx={
-                listing.isPremium || listing.isOkazion
-                  ? { color: listingPriceAccentColor({ isPremium: listing.isPremium, isOkazion: listing.isOkazion }) }
-                  : undefined
-              }
-            />
-            {cardRating ? (
-              <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
-            ) : null}
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <ListingTitleWithVerified
+                  title={listing.title}
+                  maxLines={1}
+                  verified={false}
+                  typographySx={
+                    listing.isPremium || listing.isOkazion
+                      ? {
+                          color: listingPriceAccentColor({
+                            isPremium: listing.isPremium,
+                            isOkazion: listing.isOkazion,
+                          }),
+                        }
+                      : undefined
+                  }
+                />
+              </Box>
+              {cardRating ? (
+                <ListingCardRating
+                  ratingAverage={cardRating.ratingAverage}
+                  reviewCount={cardRating.reviewCount}
+                  singleStar
+                />
+              ) : null}
+            </Stack>
             <SpecRow specs={specs} />
 
             {listing.cityName ? (

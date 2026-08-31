@@ -41,7 +41,7 @@ import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/rea
 import { DEFAULT_SHARE_THEME_COLOR, normalizeShareThemeColor } from '@/lib/share-theme-color';
 import { useUser } from '@/hooks/use-user';
 import { SearchableSelect } from '@/components/core/searchable-select';
-import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
+import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { MemberReferralBadgesRow, MemberReferralBadgesSkeleton } from '@/components/public/member-referral-badges';
 import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { AccountVerificationCard } from '@/components/user/account-verification-card';
@@ -715,9 +715,12 @@ export default function UserProfilePage() {
                 sx={{ width: '100%', textAlign: 'left' }}
               />
             ) : (
-              <Alert severity="error" sx={{ width: '100%', textAlign: 'left' }}>
-                {avatarMsg.text}
-              </Alert>
+              <TransientNotification
+                severity="error"
+                message={avatarMsg.text}
+                onDismiss={() => setAvatarMsg(null)}
+                sx={{ width: '100%', textAlign: 'left' }}
+              />
             )
           ) : null}
 
@@ -773,7 +776,11 @@ export default function UserProfilePage() {
               {profileMsg?.type === 'success' ? (
                 <TransientSuccessAlert message={profileMsg.text} onDismiss={() => setProfileMsg(null)} />
               ) : profileMsg ? (
-                <Alert severity="error">{profileMsg.text}</Alert>
+                <TransientNotification
+                  severity="error"
+                  message={profileMsg.text}
+                  onDismiss={() => setProfileMsg(null)}
+                />
               ) : null}
 
               {isBusiness ? (
@@ -983,7 +990,11 @@ export default function UserProfilePage() {
                 {convertMsg?.type === 'success' ? (
                   <TransientSuccessAlert message={convertMsg.text} onDismiss={() => setConvertMsg(null)} />
                 ) : convertMsg ? (
-                  <Alert severity="error">{convertMsg.text}</Alert>
+                  <TransientNotification
+                    severity="error"
+                    message={convertMsg.text}
+                    onDismiss={() => setConvertMsg(null)}
+                  />
                 ) : null}
                 <TextField
                   label="NIPT"
@@ -1048,7 +1059,11 @@ export default function UserProfilePage() {
             {passwordMsg?.type === 'success' ? (
               <TransientSuccessAlert message={passwordMsg.text} onDismiss={() => setPasswordMsg(null)} />
             ) : passwordMsg ? (
-              <Alert severity="error">{passwordMsg.text}</Alert>
+              <TransientNotification
+                severity="error"
+                message={passwordMsg.text}
+                onDismiss={() => setPasswordMsg(null)}
+              />
             ) : null}
             <TextField
               label="Fjalëkalimi aktual"

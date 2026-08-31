@@ -2,30 +2,11 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  Divider,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, Chip, Divider, Stack, Typography } from '@mui/material';
 import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
 import { UsersThree as UsersThreeIcon } from '@phosphor-icons/react/dist/ssr/UsersThree';
 
-import { ProductTag } from '@/components/public/product-browse-chrome';
-import { FilterChipSkeletonRow, NotificationRowsSkeleton } from '@/components/user/inbox-skeletons';
-import { UserPageHeader } from '@/components/user/layout/user-page-header';
-import { LeadsHelpButton } from '@/components/user/leads-how-it-works';
-import { useOwnerEditHeaderActions } from '@/components/user/owner-edit-header-actions';
-import { UserNotificationRow } from '@/components/user/user-notification-row';
-import {
-  SavedListingPreviewDialog,
-  type SavedListingPreviewTarget,
-} from '@/components/user/saved-listing-preview-dialog';
-import { useCopy } from '@/hooks/use-copy';
-import { useGrowOrEliteEntitlement } from '@/hooks/use-grow-or-elite-entitlement';
+import { paths } from '@/paths';
 import { groupUserNotifications } from '@/lib/notification-display';
 import { notificationFilterIcon } from '@/lib/notification-filter-tags';
 import {
@@ -39,7 +20,19 @@ import {
   markUserNotificationsRead,
   type UserNotification,
 } from '@/lib/user-notifications-client';
-import { paths } from '@/paths';
+import { useCopy } from '@/hooks/use-copy';
+import { useGrowOrEliteEntitlement } from '@/hooks/use-grow-or-elite-entitlement';
+import { TransientNotification } from '@/components/core/transient-success-alert';
+import { ProductTag } from '@/components/public/product-browse-chrome';
+import { FilterChipSkeletonRow, NotificationRowsSkeleton } from '@/components/user/inbox-skeletons';
+import { UserPageHeader } from '@/components/user/layout/user-page-header';
+import { LeadsHelpButton } from '@/components/user/leads-how-it-works';
+import { useOwnerEditHeaderActions } from '@/components/user/owner-edit-header-actions';
+import {
+  SavedListingPreviewDialog,
+  type SavedListingPreviewTarget,
+} from '@/components/user/saved-listing-preview-dialog';
+import { UserNotificationRow } from '@/components/user/user-notification-row';
 
 type LeadFilterTag = 'all' | 'listing_saved' | 'listing_shared' | 'listing_hot_lead';
 
@@ -98,10 +91,7 @@ export default function UserLeadsPage() {
     return map;
   }, [items]);
 
-  const unreadLeadIds = React.useMemo(
-    () => items.filter((n) => !n.readAt).map((n) => n.id),
-    [items],
-  );
+  const unreadLeadIds = React.useMemo(() => items.filter((n) => !n.readAt).map((n) => n.id), [items]);
 
   const showInitialSkeleton = entitled === null || (entitled && loading && items.length === 0);
 
@@ -155,7 +145,7 @@ export default function UserLeadsPage() {
       {showInitialSkeleton ? (
         <>
           <FilterChipSkeletonRow count={4} />
-          {error ? <Alert severity="error">{error}</Alert> : null}
+          {error ? <TransientNotification severity="error" message={error} onDismiss={() => setError(null)} /> : null}
           <NotificationRowsSkeleton count={5} />
         </>
       ) : (
@@ -183,7 +173,7 @@ export default function UserLeadsPage() {
             </Stack>
           ) : null}
 
-          {error ? <Alert severity="error">{error}</Alert> : null}
+          {error ? <TransientNotification severity="error" message={error} onDismiss={() => setError(null)} /> : null}
 
           {entitled === false ? null : groups.length === 0 ? (
             <Typography color="text.secondary" variant="body2" sx={{ py: 1 }}>
@@ -204,8 +194,7 @@ export default function UserLeadsPage() {
                     {index > 0 ? (
                       <Divider
                         sx={(theme) => ({
-                          borderColor:
-                            theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
+                          borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'divider',
                         })}
                       />
                     ) : null}

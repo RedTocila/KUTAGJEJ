@@ -1,19 +1,19 @@
 'use client';
 
 import * as React from 'react';
-import { Alert, Box, Stack, Switch, Typography } from '@mui/material';
+import { Box, Stack, Switch, Typography } from '@mui/material';
 import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
 
-import { PortalSectionCard } from '@/components/user/portal-cards';
-import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
-import { useCopy } from '@/hooks/use-copy';
-import { useGrowOrEliteEntitlement } from '@/hooks/use-grow-or-elite-entitlement';
 import { LEAD_NOTIFICATION_TAGS } from '@/lib/notification-tags';
 import {
   fetchNotificationPreferences,
   updateNotificationPreferences,
   type NotificationPreferences,
 } from '@/lib/user-notifications-client';
+import { useCopy } from '@/hooks/use-copy';
+import { useGrowOrEliteEntitlement } from '@/hooks/use-grow-or-elite-entitlement';
+import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
+import { PortalSectionCard } from '@/components/user/portal-cards';
 
 const PREF_ORDER: (keyof NotificationPreferences)[] = [
   'messages',
@@ -95,7 +95,7 @@ export function NotificationPreferencesCard() {
         {msg?.type === 'success' ? (
           <TransientSuccessAlert message={msg.text} onDismiss={() => setMsg(null)} />
         ) : msg ? (
-          <Alert severity="error">{msg.text}</Alert>
+          <TransientNotification severity="error" message={msg.text} onDismiss={() => setMsg(null)} />
         ) : null}
         {PREF_ORDER.map((key) => {
           const locked = GROW_ELITE_PREF_KEYS.has(key) && growEliteEntitled !== true;
@@ -109,8 +109,7 @@ export function NotificationPreferencesCard() {
                 px: 1.5,
                 py: 1.15,
                 borderRadius: 2,
-                bgcolor: (theme) =>
-                  theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
                 opacity: locked ? 0.45 : 1,
                 pointerEvents: locked ? 'none' : 'auto',
               }}

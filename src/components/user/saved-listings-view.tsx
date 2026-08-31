@@ -2,28 +2,10 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Grid,
-  Skeleton,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Box, Button, Card, CardContent, Grid, Skeleton, Stack, Typography } from '@mui/material';
 import { BookmarkSimple as BookmarkIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 
-import { CarCard } from '@/components/public/listing-cards/car-card';
-import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
-import { JobCard } from '@/components/public/listing-cards/job-card';
-import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
-import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
-import { UserPageHeader } from '@/components/user/layout/user-page-header';
-import { useSavedListings } from '@/contexts/saved-listings-context';
-import { useCopy } from '@/hooks/use-copy';
-import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
+import { paths } from '@/paths';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import {
   fetchSavedListings,
@@ -39,8 +21,17 @@ import type {
   PublicMarketplaceListing,
   PublicRealEstateListing,
 } from '@/lib/public-listings-client';
-import { paths } from '@/paths';
+import { useSavedListings } from '@/contexts/saved-listings-context';
+import { useCopy } from '@/hooks/use-copy';
+import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
 import { useUser } from '@/hooks/use-user';
+import { TransientNotification } from '@/components/core/transient-success-alert';
+import { CarCard } from '@/components/public/listing-cards/car-card';
+import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
+import { JobCard } from '@/components/public/listing-cards/job-card';
+import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
+import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
+import { UserPageHeader } from '@/components/user/layout/user-page-header';
 
 const SAVED_PAGE_SIZE = 24;
 
@@ -96,9 +87,7 @@ export function SavedListingsView() {
 
   const canView =
     Boolean(user) &&
-    (user?.accountType === 'individual' ||
-      user?.accountType === 'business' ||
-      user?.role === 'business-user');
+    (user?.accountType === 'individual' || user?.accountType === 'business' || user?.role === 'business-user');
 
   const loadPage = React.useCallback(
     async (nextPage: number, append: boolean) => {
@@ -124,7 +113,7 @@ export function SavedListingsView() {
       setLoading(false);
       setLoadingMore(false);
     },
-    [hydrateKeys],
+    [hydrateKeys]
   );
 
   React.useEffect(() => {
@@ -143,19 +132,14 @@ export function SavedListingsView() {
 
   const activeKind = kindTabs[tab]?.value ?? 'all';
   const visibleItems = items.filter((item) => keys.has(listingMetricsKey(item.kind, item.listingId)));
-  const filtered =
-    activeKind === 'all' ? visibleItems : visibleItems.filter((item) => item.kind === activeKind);
+  const filtered = activeKind === 'all' ? visibleItems : visibleItems.filter((item) => item.kind === activeKind);
 
   const counts = kindTabs.map((kindTab) =>
-    kindTab.value === 'all' ? visibleItems.length : visibleItems.filter((i) => i.kind === kindTab.value).length,
+    kindTab.value === 'all' ? visibleItems.length : visibleItems.filter((i) => i.kind === kindTab.value).length
   );
 
   const emptyMessage =
-    items.length === 0
-      ? t.saved.emptyNone
-      : visibleItems.length === 0
-        ? t.saved.emptyInactive
-        : t.saved.emptyCategory;
+    items.length === 0 ? t.saved.emptyNone : visibleItems.length === 0 ? t.saved.emptyInactive : t.saved.emptyCategory;
 
   const canLoadMore = page < totalPages;
 
@@ -176,7 +160,7 @@ export function SavedListingsView() {
         }}
       />
 
-      {error ? <Alert severity="error">{error}</Alert> : null}
+      {error ? <TransientNotification severity="error" message={error} onDismiss={() => setError(null)} /> : null}
 
       <Box
         role="tablist"
@@ -308,11 +292,7 @@ export function SavedListingsView() {
           </Grid>
           {canLoadMore ? (
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-              <Button
-                variant="outlined"
-                disabled={loadingMore}
-                onClick={() => void loadPage(page + 1, true)}
-              >
+              <Button variant="outlined" disabled={loadingMore} onClick={() => void loadPage(page + 1, true)}>
                 {loadingMore ? '…' : 'Shfaq më shumë'}
               </Button>
             </Box>

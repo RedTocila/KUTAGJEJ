@@ -1,22 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Grid,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
-
+import { Alert, Box, Button, Grid, Stack, TextField, Typography } from '@mui/material';
 import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGear';
 
-import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
-import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { authClient } from '@/lib/auth/client';
 import { useUser } from '@/hooks/use-user';
+import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
+import { AdminPageHeader } from '@/components/dashboard/layout/admin-page-header';
 import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
 export default function AdminProfilePage() {
@@ -117,25 +108,23 @@ export default function AdminProfilePage() {
         </Alert>
         <Box sx={{ ...productPanelSx, p: 3 }}>
           <Stack spacing={1}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Email
-              </Typography>
-              <Typography variant="body1">{user.email}</Typography>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
-                Roli
-              </Typography>
-              <Typography variant="body1">{user.role}</Typography>
-              {(user.firstName || user.lastName) ? (
-                <>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
-                    Emri
-                  </Typography>
-                  <Typography variant="body1">
-                    {[user.firstName, user.lastName].filter(Boolean).join(' ')}
-                  </Typography>
-                </>
-              ) : null}
-            </Stack>
+            <Typography variant="subtitle2" color="text.secondary">
+              Email
+            </Typography>
+            <Typography variant="body1">{user.email}</Typography>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
+              Roli
+            </Typography>
+            <Typography variant="body1">{user.role}</Typography>
+            {user.firstName || user.lastName ? (
+              <>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
+                  Emri
+                </Typography>
+                <Typography variant="body1">{[user.firstName, user.lastName].filter(Boolean).join(' ')}</Typography>
+              </>
+            ) : null}
+          </Stack>
         </Box>
       </Stack>
     );
@@ -153,100 +142,117 @@ export default function AdminProfilePage() {
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>
           <Box component="form" onSubmit={onSaveProfile} sx={{ ...productPanelSx, p: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-                Të dhënat
-              </Typography>
-              {profileMsg?.type === 'success' ? (
-                <TransientSuccessAlert message={profileMsg.text} onDismiss={() => setProfileMsg(null)} sx={{ mb: 2 }} />
-              ) : profileMsg ? (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {profileMsg.text}
-                </Alert>
-              ) : null}
-              <Stack spacing={2} sx={productFieldSx}>
-                <TextField
-                  label="Emri"
-                  value={firstName}
-                  onChange={(ev) => {
-                    setFirstName(ev.target.value);
-                  }}
-                  fullWidth
-                  autoComplete="given-name"
-                />
-                <TextField
-                  label="Mbiemri"
-                  value={lastName}
-                  onChange={(ev) => {
-                    setLastName(ev.target.value);
-                  }}
-                  fullWidth
-                  autoComplete="family-name"
-                />
-                <TextField
-                  label="Email"
-                  type="email"
-                  value={email}
-                  onChange={(ev) => {
-                    setEmail(ev.target.value);
-                  }}
-                  fullWidth
-                  required
-                  autoComplete="email"
-                />
-                <Button type="submit" variant="contained" disabled={savingProfile} sx={{ ...productButtonSx, alignSelf: 'flex-start' }}>
-                  {savingProfile ? 'Duke u ruajtur…' : 'Ruaj ndryshimet'}
-                </Button>
-              </Stack>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+              Të dhënat
+            </Typography>
+            {profileMsg?.type === 'success' ? (
+              <TransientSuccessAlert message={profileMsg.text} onDismiss={() => setProfileMsg(null)} sx={{ mb: 2 }} />
+            ) : profileMsg ? (
+              <TransientNotification
+                severity="error"
+                message={profileMsg.text}
+                onDismiss={() => setProfileMsg(null)}
+                sx={{ mb: 2 }}
+              />
+            ) : null}
+            <Stack spacing={2} sx={productFieldSx}>
+              <TextField
+                label="Emri"
+                value={firstName}
+                onChange={(ev) => {
+                  setFirstName(ev.target.value);
+                }}
+                fullWidth
+                autoComplete="given-name"
+              />
+              <TextField
+                label="Mbiemri"
+                value={lastName}
+                onChange={(ev) => {
+                  setLastName(ev.target.value);
+                }}
+                fullWidth
+                autoComplete="family-name"
+              />
+              <TextField
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(ev) => {
+                  setEmail(ev.target.value);
+                }}
+                fullWidth
+                required
+                autoComplete="email"
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={savingProfile}
+                sx={{ ...productButtonSx, alignSelf: 'flex-start' }}
+              >
+                {savingProfile ? 'Duke u ruajtur…' : 'Ruaj ndryshimet'}
+              </Button>
+            </Stack>
           </Box>
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
           <Box component="form" onSubmit={onChangePassword} sx={{ ...productPanelSx, p: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-                Fjalëkalimi
-              </Typography>
-              {passwordMsg?.type === 'success' ? (
-                <TransientSuccessAlert message={passwordMsg.text} onDismiss={() => setPasswordMsg(null)} sx={{ mb: 2 }} />
-              ) : passwordMsg ? (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {passwordMsg.text}
-                </Alert>
-              ) : null}
-              <Stack spacing={2} sx={productFieldSx}>
-                <TextField
-                  label="Fjalëkalimi aktual"
-                  type="password"
-                  value={currentPassword}
-                  onChange={(ev) => {
-                    setCurrentPassword(ev.target.value);
-                  }}
-                  fullWidth
-                  autoComplete="current-password"
-                />
-                <TextField
-                  label="Fjalëkalimi i ri"
-                  type="password"
-                  value={newPassword}
-                  onChange={(ev) => {
-                    setNewPassword(ev.target.value);
-                  }}
-                  fullWidth
-                  autoComplete="new-password"
-                />
-                <TextField
-                  label="Përsërit fjalëkalimin e ri"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(ev) => {
-                    setConfirmPassword(ev.target.value);
-                  }}
-                  fullWidth
-                  autoComplete="new-password"
-                />
-                <Button type="submit" variant="contained" color="secondary" disabled={savingPassword} sx={{ ...productButtonSx, alignSelf: 'flex-start' }}>
-                  {savingPassword ? 'Duke u përditësuar…' : 'Ndrysho fjalëkalimin'}
-                </Button>
-              </Stack>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+              Fjalëkalimi
+            </Typography>
+            {passwordMsg?.type === 'success' ? (
+              <TransientSuccessAlert message={passwordMsg.text} onDismiss={() => setPasswordMsg(null)} sx={{ mb: 2 }} />
+            ) : passwordMsg ? (
+              <TransientNotification
+                severity="error"
+                message={passwordMsg.text}
+                onDismiss={() => setPasswordMsg(null)}
+                sx={{ mb: 2 }}
+              />
+            ) : null}
+            <Stack spacing={2} sx={productFieldSx}>
+              <TextField
+                label="Fjalëkalimi aktual"
+                type="password"
+                value={currentPassword}
+                onChange={(ev) => {
+                  setCurrentPassword(ev.target.value);
+                }}
+                fullWidth
+                autoComplete="current-password"
+              />
+              <TextField
+                label="Fjalëkalimi i ri"
+                type="password"
+                value={newPassword}
+                onChange={(ev) => {
+                  setNewPassword(ev.target.value);
+                }}
+                fullWidth
+                autoComplete="new-password"
+              />
+              <TextField
+                label="Përsërit fjalëkalimin e ri"
+                type="password"
+                value={confirmPassword}
+                onChange={(ev) => {
+                  setConfirmPassword(ev.target.value);
+                }}
+                fullWidth
+                autoComplete="new-password"
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                color="secondary"
+                disabled={savingPassword}
+                sx={{ ...productButtonSx, alignSelf: 'flex-start' }}
+              >
+                {savingPassword ? 'Duke u përditësuar…' : 'Ndrysho fjalëkalimin'}
+              </Button>
+            </Stack>
           </Box>
         </Grid>
       </Grid>

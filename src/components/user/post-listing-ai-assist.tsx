@@ -1,9 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { flushSync } from 'react-dom';
 import {
-  Alert,
   Box,
   Button,
   CircularProgress,
@@ -17,17 +15,12 @@ import {
 import { Paperclip as PaperclipIcon } from '@phosphor-icons/react/dist/ssr/Paperclip';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
+import { flushSync } from 'react-dom';
 
-import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-panel';
-import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
-import { useCopy } from '@/hooks/use-copy';
-import { useBottomSheetDismiss } from '@/hooks/use-bottom-sheet-dismiss';
-import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
-import { useUser } from '@/hooks/use-user';
-import { useVisualViewportBox } from '@/hooks/use-visual-viewport';
-import { useListingFormSnapshotRef } from '@/components/user/listing-form-snapshot-context';
+import type { ListingCategoryKey } from '@/types/listing-category';
+import { paths } from '@/paths';
+import { hostAiDraftImages } from '@/lib/ai-draft-post';
 import { aiDraftToInitialListing, mergeAiIntoListing } from '@/lib/ai-draft-to-listing';
-import { listingFormHasUserProgress } from '@/lib/listing-form-draft';
 import {
   acceptAiCategoryCorrection,
   aiDailyLimitMessage,
@@ -41,7 +34,7 @@ import {
   type AiImportDraftResult,
 } from '@/lib/ai-import-client';
 import { saveAiListingDraft } from '@/lib/ai-listing-draft';
-import { hostAiDraftImages } from '@/lib/ai-draft-post';
+import { hardNavigate } from '@/lib/hard-navigate';
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
@@ -49,16 +42,22 @@ import {
   AI_SEARCH_BLUE_ON,
   AI_SEARCH_BLUE_SOFT,
 } from '@/lib/home-categories';
+import { knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
+import { listingFormHasUserProgress } from '@/lib/listing-form-draft';
 import {
   POST_LISTING_AI_BAR_ID,
   POST_LISTING_AI_INPUT_ID,
   POST_LISTING_AI_OPEN_EVENT,
 } from '@/lib/post-listing-ai-focus';
-import { hardNavigate } from '@/lib/hard-navigate';
-import { knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
-import { paths } from '@/paths';
 import { isOurStorageUrl, uploadListingImages } from '@/lib/uploads-client';
-import type { ListingCategoryKey } from '@/types/listing-category';
+import { useBottomSheetDismiss } from '@/hooks/use-bottom-sheet-dismiss';
+import { useCopy } from '@/hooks/use-copy';
+import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
+import { useUser } from '@/hooks/use-user';
+import { useVisualViewportBox } from '@/hooks/use-visual-viewport';
+import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
+import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-panel';
+import { useListingFormSnapshotRef } from '@/components/user/listing-form-snapshot-context';
 import { MOTION } from '@/styles/motion';
 import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 
@@ -244,9 +243,7 @@ export function PostListingAiAssist({
       }
 
       const imagePayload =
-        uploadedUrls.length > 0
-          ? uploadedUrls.map((url) => ({ url }))
-          : await filesToAiImagePayload(files);
+        uploadedUrls.length > 0 ? uploadedUrls.map((url) => ({ url })) : await filesToAiImagePayload(files);
 
       setPendingImageUrls(uploadedUrls);
 
@@ -292,7 +289,7 @@ export function PostListingAiAssist({
                     roles: mismatch.imageRoles,
                     max: (mismatch.detectedCategory || category) === 'professionals' ? 2 : 8,
                   })
-                : mismatch.imageUrls ?? [],
+                : (mismatch.imageUrls ?? []),
           });
           return;
         }
@@ -327,7 +324,7 @@ export function PostListingAiAssist({
               roles: ready.imageRoles,
               max: category === 'professionals' ? 2 : 8,
             })
-          : ready.imageUrls ?? [];
+          : (ready.imageUrls ?? []);
 
       let hostedUrls = imageUrls;
       const needsHost = imageUrls.some((u) => /^https?:\/\//i.test(u) && !isOurStorageUrl(u));
@@ -417,17 +414,14 @@ export function PostListingAiAssist({
             sx: {
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
-              maxHeight:
-                viewport.height > 0 ? `${Math.round(viewport.height * 0.85)}px` : '85dvh',
+              maxHeight: viewport.height > 0 ? `${Math.round(viewport.height * 0.85)}px` : '85dvh',
               overflowY: 'auto',
               overscrollBehavior: 'contain',
               backgroundImage: 'none',
               // Sit on the visual viewport (keyboard), not the layout viewport.
               bottom: `${viewport.insetBottom}px`,
               pb: keyboardOpen ? 0 : 'env(safe-area-inset-bottom, 0px)',
-              transition: drawerOpen
-                ? `bottom ${MOTION.fast} linear, max-height ${MOTION.fast} linear`
-                : undefined,
+              transition: drawerOpen ? `bottom ${MOTION.fast} linear, max-height ${MOTION.fast} linear` : undefined,
               // MUI Slide's transform makes iOS pin this layer to the visual
               // viewport and double-offset it above the keyboard.
               // Swipe-dismiss overrides this via inline `transform !important`.
@@ -439,14 +433,9 @@ export function PostListingAiAssist({
         <Box sx={{ px: 2, pt: 1, pb: 1.5 }}>
           <Box {...sheetDismiss.handleBind} sx={sheetDismiss.handleSx} />
 
-          <Stack
-            direction="row"
-            sx={{ alignItems: 'flex-start', justifyContent: 'space-between', mb: 1.25, gap: 1 }}
-          >
+          <Stack direction="row" sx={{ alignItems: 'flex-start', justifyContent: 'space-between', mb: 1.25, gap: 1 }}>
             <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.25 }}>
-                {drawerTitle}
-              </Typography>
+              <Typography sx={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.25 }}>{drawerTitle}</Typography>
               <Typography
                 variant="caption"
                 color="text.secondary"
@@ -601,12 +590,7 @@ export function PostListingAiAssist({
                       borderColor: 'divider',
                     }}
                   >
-                    <Box
-                      component="img"
-                      src={src}
-                      alt=""
-                      sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
+                    <Box component="img" src={src} alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <IconButton
                       size="small"
                       aria-label={t.aiImport.removeImage}
@@ -639,9 +623,12 @@ export function PostListingAiAssist({
             ) : null}
 
             {error ? (
-              <Alert severity="error" sx={{ borderRadius: 2.5, py: 0 }}>
-                {error}
-              </Alert>
+              <TransientNotification
+                severity="error"
+                message={error}
+                onDismiss={() => setError(null)}
+                sx={{ borderRadius: 2.5, py: 0 }}
+              />
             ) : null}
             <TransientSuccessAlert message={success} sx={{ borderRadius: 2.5, py: 0 }} />
           </Stack>

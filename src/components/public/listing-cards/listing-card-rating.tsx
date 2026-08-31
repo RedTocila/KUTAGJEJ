@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Box } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
+import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 
 import { ProfessionalRatingSummary } from '@/components/public/professional-listing-detail-ui';
 import { formatRatingDisplay } from '@/lib/format-rating';
@@ -16,7 +17,8 @@ export function ListingCardRating({
   ratingAverage,
   reviewCount,
   showWhenEmpty = false,
-}: ListingCardRatingSummary & { showWhenEmpty?: boolean }) {
+  singleStar = false,
+}: ListingCardRatingSummary & { showWhenEmpty?: boolean; singleStar?: boolean }) {
   const count = reviewCount ?? 0;
   if (
     !showWhenEmpty &&
@@ -30,6 +32,15 @@ export function ListingCardRating({
     count > 0 && ratingAverage != null && Number.isFinite(ratingAverage)
       ? formatRatingDisplay(ratingAverage)
       : formatRatingDisplay(0);
+
+  if (singleStar) {
+    return (
+      <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', flexShrink: 0 }}>
+        <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, lineHeight: 1.25 }}>{rating}</Typography>
+        <StarIcon size={18} weight="fill" color="var(--mui-palette-warning-main)" aria-hidden />
+      </Stack>
+    );
+  }
 
   return (
     <Box sx={{ minWidth: 0 }}>

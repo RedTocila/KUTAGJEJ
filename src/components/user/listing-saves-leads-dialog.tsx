@@ -2,34 +2,23 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Alert,
-  Avatar,
-  Box,
-  Button,
-  CircularProgress,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Alert, Avatar, Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
 import { ChatsCircle as ChatsIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { Crown as CrownIcon } from '@phosphor-icons/react/dist/ssr/Crown';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 
+import { paths, pathsPublicMemberProfile } from '@/paths';
+import { metricKindToConversationKind, startConversationWithMember } from '@/lib/conversations-client';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { fetchListingSavers, type ListingMetricKind, type ListingSaverLead } from '@/lib/listing-metrics';
+import { ListRowsSkeleton } from '@/components/core/content-skeletons';
 import {
   ProductDialog,
   ProductDialogActions,
   ProductDialogContent,
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
-import { ListRowsSkeleton } from '@/components/core/content-skeletons';
-import { metricKindToConversationKind, startConversationWithMember } from '@/lib/conversations-client';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import {
-  fetchListingSavers,
-  type ListingMetricKind,
-  type ListingSaverLead,
-} from '@/lib/listing-metrics';
-import { paths, pathsPublicMemberProfile } from '@/paths';
+import { TransientNotification } from '@/components/core/transient-success-alert';
 import { productButtonSx } from '@/styles/product-sx';
 
 function formatSavedAt(iso: string): string {
@@ -121,9 +110,7 @@ export function ListingSavesLeadsDialog({
 
   return (
     <ProductDialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <ProductDialogTitle onClose={onClose}>
-        Interesuarit · ruajtje
-      </ProductDialogTitle>
+      <ProductDialogTitle onClose={onClose}>Interesuarit · ruajtje</ProductDialogTitle>
       <ProductDialogContent>
         {listingTitle ? (
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 650 }}>
@@ -160,12 +147,9 @@ export function ListingSavesLeadsDialog({
                   <CrownIcon size={22} weight="duotone" />
                 </Box>
                 <Box>
-                  <Typography sx={{ fontWeight: 800, mb: 0.5 }}>
-                    Vetëm me Grow ose Elite
-                  </Typography>
+                  <Typography sx={{ fontWeight: 800, mb: 0.5 }}>Vetëm me Grow ose Elite</Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 550 }}>
-                    Shiko kush e ka ruajtur njoftimin dhe kontaktoi si lead — i disponueshëm me
-                    paketën Grow ose Elite.
+                    Shiko kush e ka ruajtur njoftimin dhe kontaktoi si lead — i disponueshëm me paketën Grow ose Elite.
                   </Typography>
                 </Box>
               </Stack>
@@ -192,9 +176,12 @@ export function ListingSavesLeadsDialog({
               {total} {total === 1 ? 'person i interesuar' : 'persona të interesuar'}
             </Typography>
             {contactError ? (
-              <Alert severity="error" sx={{ borderRadius: 2 }} onClose={() => setContactError(null)}>
-                {contactError}
-              </Alert>
+              <TransientNotification
+                severity="error"
+                message={contactError}
+                onDismiss={() => setContactError(null)}
+                sx={{ borderRadius: 2 }}
+              />
             ) : null}
             {savers.map((saver) => (
               <Stack

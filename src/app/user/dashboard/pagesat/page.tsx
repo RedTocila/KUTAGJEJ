@@ -1,32 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  Stack,
-  ToggleButton,
-  ToggleButtonGroup,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, Chip, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
 import { CurrencyEur as CurrencyEurIcon } from '@phosphor-icons/react/dist/ssr/CurrencyEur';
 import { Receipt as ReceiptIcon } from '@phosphor-icons/react/dist/ssr/Receipt';
 
-import {
-  ProductDialog,
-  ProductDialogActions,
-  ProductDialogContent,
-  ProductDialogTitle,
-} from '@/components/core/product-dialog';
-import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
-import { ContentBlockSkeleton } from '@/components/core/content-skeletons';
-import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
-import { UserPageHeader } from '@/components/user/layout/user-page-header';
-import { PortalIconBox, PortalSectionCard, portalToggleGroupSx } from '@/components/user/portal-cards';
-import { useCopy } from '@/hooks/use-copy';
+import type { Payment, PaymentStatus, PaymentType, UserSubscriptionSummary } from '@/types/payment';
 import {
   cancelMySubscription,
   listMyPayments,
@@ -34,7 +14,18 @@ import {
   listOkazionVouchers,
   listPremiumVouchers,
 } from '@/lib/payments-client';
-import type { Payment, PaymentStatus, PaymentType, UserSubscriptionSummary } from '@/types/payment';
+import { useCopy } from '@/hooks/use-copy';
+import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
+import { ContentBlockSkeleton } from '@/components/core/content-skeletons';
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
+import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
+import { UserPageHeader } from '@/components/user/layout/user-page-header';
+import { PortalIconBox, PortalSectionCard, portalToggleGroupSx } from '@/components/user/portal-cards';
 import { productButtonSx } from '@/styles/product-sx';
 
 type SpendCategory = 'money' | 'boost';
@@ -187,7 +178,7 @@ export default function MyPaymentsPage() {
       return;
     }
     setSubscriptions((prev) =>
-      prev.map((sub) => (sub.id === res.subscription!.id ? { ...sub, ...res.subscription! } : sub)),
+      prev.map((sub) => (sub.id === res.subscription!.id ? { ...sub, ...res.subscription! } : sub))
     );
     setCancelSuccess(t.myPayments.cancelSuccess);
     setCancelTarget(null);
@@ -483,17 +474,16 @@ export default function MyPaymentsPage() {
               : t.myPayments.cancelConfirmBody}
           </Typography>
           {cancelError ? (
-            <Alert severity="error" sx={{ mt: 1.5, borderRadius: 2 }}>
-              {cancelError}
-            </Alert>
+            <TransientNotification
+              severity="error"
+              message={cancelError}
+              onDismiss={() => setCancelError(null)}
+              sx={{ mt: 1.5, borderRadius: 2 }}
+            />
           ) : null}
         </ProductDialogContent>
         <ProductDialogActions>
-          <Button
-            onClick={() => setCancelTarget(null)}
-            disabled={canceling}
-            sx={productButtonSx}
-          >
+          <Button onClick={() => setCancelTarget(null)} disabled={canceling} sx={productButtonSx}>
             {t.myPayments.keepSubscription}
           </Button>
           <Button

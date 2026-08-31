@@ -1,24 +1,27 @@
 'use client';
 
 import * as React from 'react';
-import { Alert, Box, Slide, type AlertProps } from '@mui/material';
+import { Alert, Box, Slide, type AlertColor, type AlertProps } from '@mui/material';
 import { createPortal } from 'react-dom';
 
 const DEFAULT_DURATION_MS = 4000;
 
-export function TransientSuccessAlert({
-  message,
-  duration = DEFAULT_DURATION_MS,
-  onDismiss,
-  ...props
-}: Omit<AlertProps, 'children' | 'severity'> & {
+export type TransientNotificationProps = Omit<AlertProps, 'children'> & {
   message?: React.ReactNode;
   duration?: number;
   onDismiss?: () => void;
-}) {
+};
+
+export function TransientNotification({
+  message,
+  duration = DEFAULT_DURATION_MS,
+  onDismiss,
+  severity = 'success',
+  ...props
+}: TransientNotificationProps & { severity?: AlertColor }) {
   const [visible, setVisible] = React.useState(Boolean(message));
   const onDismissRef = React.useRef(onDismiss);
-  const touchStartX = React.useRef<number | null>(null);
+  const touchStartY = React.useRef<number | null>(null);
 
   React.useEffect(() => {
     onDismissRef.current = onDismiss;
@@ -30,17 +33,13 @@ export function TransientSuccessAlert({
 
     const timeoutId = window.setTimeout(() => {
       setVisible(false);
-      onDismissRef.current?.();
     }, duration);
     return () => window.clearTimeout(timeoutId);
   }, [duration, message]);
 
-  if (!message || !visible) return null;
+  if (!message) return null;
 
-  const dismiss = () => {
-    setVisible(false);
-    onDismissRef.current?.();
-  };
+  const dismiss = () => setVisible(false);
 
   const alert = (
     <Box
@@ -56,28 +55,36 @@ export function TransientSuccessAlert({
         pointerEvents: 'none',
       }}
     >
-      <Slide direction="down" in={visible} mountOnEnter unmountOnExit>
+      <Slide
+        direction={visible ? 'down' : 'up'}
+        in={visible}
+        mountOnEnter
+        unmountOnExit
+        onExited={() => onDismissRef.current?.()}
+      >
         <Alert
           {...props}
-          severity="success"
+          severity={severity}
           onClose={(event) => {
             dismiss();
             props.onClose?.(event);
           }}
           onTouchStart={(event) => {
-            touchStartX.current = event.changedTouches[0]?.clientX ?? null;
+            touchStartY.current = event.changedTouches[0]?.clientY ?? null;
+            props.onTouchStart?.(event);
           }}
           onTouchEnd={(event) => {
-            const startX = touchStartX.current;
-            touchStartX.current = null;
-            const endX = event.changedTouches[0]?.clientX;
-            if (startX != null && endX != null && Math.abs(endX - startX) >= 56) dismiss();
+            const startY = touchStartY.current;
+            touchStartY.current = null;
+            const endY = event.changedTouches[0]?.clientY;
+            if (startY != null && endY != null && startY - endY >= 56) dismiss();
+            props.onTouchEnd?.(event);
           }}
           sx={[
             {
               boxShadow: 6,
               cursor: 'pointer',
-              touchAction: 'pan-y',
+              touchAction: 'none',
               pointerEvents: 'auto',
             },
             ...(Array.isArray(props.sx) ? props.sx : props.sx ? [props.sx] : []),
@@ -90,4 +97,8 @@ export function TransientSuccessAlert({
   );
 
   return typeof document === 'undefined' ? null : createPortal(alert, document.body);
+}
+
+export function TransientSuccessAlert(props: Omit<TransientNotificationProps, 'severity'>) {
+  return <TransientNotification {...props} severity="success" />;
 }

@@ -21,21 +21,15 @@ import { Stop as StopIcon } from '@phosphor-icons/react/dist/ssr/Stop';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
-import { ImageLightbox } from '@/components/common/image-lightbox';
-import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
-import { HomeVerticalIcon } from '@/components/public/home-vertical-icon';
-import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-panel';
-import { PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
-import { useCopy } from '@/hooks/use-copy';
-import { useLanguage } from '@/hooks/use-language';
-import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
-import { useUser } from '@/hooks/use-user';
+import type { ListingCategoryKey } from '@/types/listing-category';
+import { paths } from '@/paths';
+import { hostAiDraftImages, postAiListingDraft, postAiListingDrafts } from '@/lib/ai-draft-post';
 import {
   acceptAiCategoryCorrection,
   aiDailyLimitMessage,
+  extractImportUrls,
   filesToAiImagePayload,
   importListingsFromLinks,
-  extractImportUrls,
   isAiCategoryMismatch,
   isAiContentRestricted,
   isAiDailyLimitError,
@@ -44,17 +38,6 @@ import {
   toAiListingDraft,
   type AiImportDraftResult,
 } from '@/lib/ai-import-client';
-import { knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
-import {
-  AI_SEARCH_BLUE,
-  AI_SEARCH_BLUE_HOVER,
-  AI_SEARCH_BLUE_ON,
-  AI_SEARCH_BLUE_SOFT,
-  localizeHomeVerticals,
-  type HomeVerticalId,
-} from '@/lib/home-categories';
-import { MOTION } from '@/styles/motion';
-import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 import {
   categoryLabel,
   clearAiListingDraftQueue,
@@ -64,11 +47,28 @@ import {
   saveAiListingDraftQueue,
   type AiListingDraft,
 } from '@/lib/ai-listing-draft';
-import { postAiListingDraft, postAiListingDrafts, hostAiDraftImages } from '@/lib/ai-draft-post';
 import { hardNavigate } from '@/lib/hard-navigate';
+import {
+  AI_SEARCH_BLUE,
+  AI_SEARCH_BLUE_HOVER,
+  AI_SEARCH_BLUE_ON,
+  AI_SEARCH_BLUE_SOFT,
+  localizeHomeVerticals,
+  type HomeVerticalId,
+} from '@/lib/home-categories';
+import { knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
 import { isOurStorageUrl, uploadListingImages } from '@/lib/uploads-client';
-import { paths } from '@/paths';
-import type { ListingCategoryKey } from '@/types/listing-category';
+import { useCopy } from '@/hooks/use-copy';
+import { useLanguage } from '@/hooks/use-language';
+import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
+import { useUser } from '@/hooks/use-user';
+import { ImageLightbox } from '@/components/common/image-lightbox';
+import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
+import { HomeVerticalIcon } from '@/components/public/home-vertical-icon';
+import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-panel';
+import { PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
+import { MOTION } from '@/styles/motion';
+import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 
 const MAX_AI_IMAGES = 6;
 
@@ -129,7 +129,7 @@ const aiProgressBarSx = {
 
 function formatCategoryMismatch(
   t: ReturnType<typeof useCopy>,
-  draft: Pick<AiImportDraftResult, 'detectedCategory' | 'error'>,
+  draft: Pick<AiImportDraftResult, 'detectedCategory' | 'error'>
 ): string {
   if (draft.detectedCategory) {
     return t.aiImport.categoryMismatch(categoryLabel(draft.detectedCategory));
@@ -154,9 +154,7 @@ function promptContextWithoutLinks(prompt: string): string {
   return prompt
     .split(/\r?\n/)
     .map((line) =>
-      line
-        .replace(/https?:\/\/[^\s<>"']+/gi, '')
-        .replace(/^\s*(?:www\.)?[^\s/]+\.[^\s/]+(?:\/\S*)?\s*$/i, ''),
+      line.replace(/https?:\/\/[^\s<>"']+/gi, '').replace(/^\s*(?:www\.)?[^\s/]+\.[^\s/]+(?:\/\S*)?\s*$/i, '')
     )
     .map((line) => line.trim())
     .filter(Boolean)
@@ -168,11 +166,7 @@ function isDisplayableImageUrl(url: unknown): url is string {
   const lower = url.toLowerCase();
   // Drop analytics beacons that scrape sometimes picks up as <img> sources.
   if (/facebook\.com\/(?:tr|tr\/)\b|[?&]ev=pageview\b/i.test(lower)) return false;
-  if (
-    /google-analytics\.com|googletagmanager\.com|doubleclick\.net|bat\.bing\.com|adservice\.google/i.test(
-      lower,
-    )
-  ) {
+  if (/google-analytics\.com|googletagmanager\.com|doubleclick\.net|bat\.bing\.com|adservice\.google/i.test(lower)) {
     return false;
   }
   return true;
@@ -437,7 +431,7 @@ function isRetryableFailedDraft(draft: AiImportDraftResult): boolean {
 
 function formatAiDraftError(
   t: ReturnType<typeof useCopy>,
-  draft: Pick<AiImportDraftResult, 'error' | 'errorCode'>,
+  draft: Pick<AiImportDraftResult, 'error' | 'errorCode'>
 ): string {
   if (isAiRateLimitError(draft)) return t.aiImport.rateLimited;
   return draft.error || t.aiImport.failed;
@@ -469,11 +463,7 @@ function AiImportAnalyzingText({
       >
         {total > 0 ? t.aiImport.progressWorking(current, total) : t.aiImport.analyzing}
       </Typography>
-      <LinearProgress
-        variant={determinate ? 'determinate' : 'indeterminate'}
-        value={percent}
-        sx={aiProgressBarSx}
-      />
+      <LinearProgress variant={determinate ? 'determinate' : 'indeterminate'} value={percent} sx={aiProgressBarSx} />
     </Stack>
   );
 }
@@ -486,13 +476,7 @@ type PostAllProgressState = {
   estimatedTotalMs: number;
 };
 
-function AiImportPostingProgress({
-  progress,
-  t,
-}: {
-  progress: PostAllProgressState;
-  t: ReturnType<typeof useCopy>;
-}) {
+function AiImportPostingProgress({ progress, t }: { progress: PostAllProgressState; t: ReturnType<typeof useCopy> }) {
   const tick = useSharedSecondTick();
   const now = tick || progress.itemStartedAt;
   const { done, total, startedAt, itemStartedAt, estimatedTotalMs } = progress;
@@ -506,8 +490,7 @@ function AiImportPostingProgress({
   const currentRemaining = done < total ? Math.max(avgMs * 0.2, avgMs - currentElapsed) : 0;
   const remainingMs = currentRemaining + remainingAfterCurrent * avgMs;
   const rawSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
-  const remainingSeconds =
-    rawSeconds <= 15 ? rawSeconds : Math.max(8, Math.round(rawSeconds / 5) * 5);
+  const remainingSeconds = rawSeconds <= 15 ? rawSeconds : Math.max(8, Math.round(rawSeconds / 5) * 5);
   const fractionInItem = done < total ? Math.min(0.92, currentElapsed / avgMs) : 0;
   const percent = total <= 0 ? 0 : Math.min(100, ((done + fractionInItem) / total) * 100);
 
@@ -571,9 +554,7 @@ export default function AiImportListingsPage() {
 
   const canPublish =
     Boolean(user) &&
-    (user?.accountType === 'individual' ||
-      user?.accountType === 'business' ||
-      user?.role === 'business-user');
+    (user?.accountType === 'individual' || user?.accountType === 'business' || user?.role === 'business-user');
 
   React.useEffect(() => {
     if (!user) return;
@@ -587,15 +568,14 @@ export default function AiImportListingsPage() {
       queued.map((draft) => ({
         ...draft,
         category: draft.category,
-      })),
+      }))
     );
     setCategory(queued[0]?.category ?? null);
   }, []);
 
   React.useEffect(() => {
     if (!categoryParam) return;
-    const normalized =
-      categoryParam === 'jobs' ? 'job-listings' : (categoryParam as ListingCategoryKey);
+    const normalized = categoryParam === 'jobs' ? 'job-listings' : (categoryParam as ListingCategoryKey);
     if (
       normalized === 'real-estate' ||
       normalized === 'cars' ||
@@ -625,17 +605,11 @@ export default function AiImportListingsPage() {
   };
 
   const readyDrafts = React.useMemo(
-    () =>
-      drafts
-        .map((draft) => toAiListingDraft(draft))
-        .filter((draft): draft is AiListingDraft => Boolean(draft)),
-    [drafts],
+    () => drafts.map((draft) => toAiListingDraft(draft)).filter((draft): draft is AiListingDraft => Boolean(draft)),
+    [drafts]
   );
 
-  const retryableFailedDrafts = React.useMemo(
-    () => drafts.filter(isRetryableFailedDraft),
-    [drafts],
-  );
+  const retryableFailedDrafts = React.useMemo(() => drafts.filter(isRetryableFailedDraft), [drafts]);
 
   const handleFilesPicked = (list: FileList | null) => {
     if (!list?.length) return;
@@ -680,14 +654,11 @@ export default function AiImportListingsPage() {
             remoteUrls: draft.imageUrls ?? [],
             uploadedUrls,
             roles: draft.imageRoles,
-            max:
-              draft.category === 'professionals' || draft.detectedCategory === 'professionals'
-                ? 2
-                : 8,
+            max: draft.category === 'professionals' || draft.detectedCategory === 'professionals' ? 2 : 8,
           })
         : draft.imageUrls,
     }),
-    [],
+    []
   );
 
   const handleAnalyze = async (event?: React.FormEvent) => {
@@ -726,9 +697,7 @@ export default function AiImportListingsPage() {
       }
 
       const imagePayload =
-        uploadedUrls.length > 0
-          ? uploadedUrls.map((url) => ({ url }))
-          : await filesToAiImagePayload(files);
+        uploadedUrls.length > 0 ? uploadedUrls.map((url) => ({ url })) : await filesToAiImagePayload(files);
 
       if (wasStopped()) {
         setStatusMessage(t.aiImport.stopped(0, 1));
@@ -836,20 +805,21 @@ export default function AiImportListingsPage() {
             setProgress({ done: i + 1, total: urls.length });
             continue;
           }
-          const chunk = (res.drafts.length
-            ? res.drafts
-            : [
-                {
-                  id: `ai-miss-${Date.now()}-${i}`,
-                  sourceUrl: urls[i],
-                  category: null,
-                  title: '',
-                  summary: '',
-                  imageUrls: [],
-                  form: {},
-                  error: t.aiImport.failed,
-                } satisfies AiImportDraftResult,
-              ]
+          const chunk = (
+            res.drafts.length
+              ? res.drafts
+              : [
+                  {
+                    id: `ai-miss-${Date.now()}-${i}`,
+                    sourceUrl: urls[i],
+                    category: null,
+                    title: '',
+                    summary: '',
+                    imageUrls: [],
+                    form: {},
+                    error: t.aiImport.failed,
+                  } satisfies AiImportDraftResult,
+                ]
           ).map((d) => decorateImportedDraft(d, trimmed, uploadedUrls));
           collected.push(...chunk);
           persistMerged();
@@ -907,9 +877,7 @@ export default function AiImportListingsPage() {
 
       for (let i = 0; i < urls.length; i += 1) {
         if (wasStopped()) {
-          const leftover = failed.filter(
-            (d) => !collected.some((c) => c.sourceUrl === d.sourceUrl),
-          );
+          const leftover = failed.filter((d) => !collected.some((c) => c.sourceUrl === d.sourceUrl));
           persistDrafts([...kept, ...collected, ...leftover]);
           setStatusMessage(t.aiImport.stopped(collected.length, urls.length));
           break;
@@ -924,9 +892,7 @@ export default function AiImportListingsPage() {
           signal: controller.signal,
         });
         if (res.aborted || wasStopped()) {
-          const leftover = failed.filter(
-            (d) => !collected.some((c) => c.sourceUrl === d.sourceUrl),
-          );
+          const leftover = failed.filter((d) => !collected.some((c) => c.sourceUrl === d.sourceUrl));
           persistDrafts([...kept, ...collected, ...leftover]);
           setStatusMessage(t.aiImport.stopped(collected.length, urls.length));
           break;
@@ -935,7 +901,11 @@ export default function AiImportListingsPage() {
         if (res.error) {
           if (isAiDailyLimitError({ code: res.code, error: res.error, status: res.status })) {
             setError(aiDailyLimitMessage(t));
-            persistDrafts([...kept, ...collected, ...failed.filter((d) => !collected.some((c) => c.sourceUrl === d.sourceUrl))]);
+            persistDrafts([
+              ...kept,
+              ...collected,
+              ...failed.filter((d) => !collected.some((c) => c.sourceUrl === d.sourceUrl)),
+            ]);
             return;
           }
           collected.push({
@@ -952,9 +922,7 @@ export default function AiImportListingsPage() {
           setProgress({ done: i + 1, total: urls.length });
           continue;
         }
-        const chunk = (res.drafts.length ? res.drafts : []).map((d) =>
-          decorateImportedDraft(d, lastPrompt, []),
-        );
+        const chunk = (res.drafts.length ? res.drafts : []).map((d) => decorateImportedDraft(d, lastPrompt, []));
         collected.push(...chunk);
         persistDrafts([...kept, ...collected]);
         setProgress({ done: i + 1, total: urls.length });
@@ -1028,9 +996,7 @@ export default function AiImportListingsPage() {
       // Copy Instagram/CDN photos onto our storage so the listing form can show them
       // (hotlink protection blocks raw cdninstagram URLs without referrerPolicy, and
       // submit paths for some categories need hosted URLs).
-      const remote = (ready.imageUrls || []).filter(
-        (u) => /^https?:\/\//i.test(u) && !isOurStorageUrl(u),
-      );
+      const remote = (ready.imageUrls || []).filter((u) => /^https?:\/\//i.test(u) && !isOurStorageUrl(u));
       let imageUrls = ready.imageUrls || [];
       if (remote.length) {
         const folder = ready.category ? UPLOAD_FOLDER[ready.category] : 'listings';
@@ -1042,9 +1008,7 @@ export default function AiImportListingsPage() {
       const withImages = { ...ready, imageUrls };
       saveAiListingDraft(withImages);
       // Keep draft queue in sync so returning to this page still shows hosted URLs.
-      persistDrafts(
-        drafts.map((d) => (d.id === draft.id ? { ...d, imageUrls } : d)),
-      );
+      persistDrafts(drafts.map((d) => (d.id === draft.id ? { ...d, imageUrls } : d)));
       const href = `${paths.user.realEstateListing}?category=${encodeURIComponent(withImages.category)}&ai=1&draftId=${encodeURIComponent(withImages.id)}`;
       hardNavigate(href);
     } catch {
@@ -1086,17 +1050,12 @@ export default function AiImportListingsPage() {
     }
 
     persistDrafts(
-      drafts.map((d) =>
-        d.id === draftId
-          ? { ...d, imageUrls: nextUrls, imageRoles: nextRoles, form: nextForm }
-          : d,
-      ),
+      drafts.map((d) => (d.id === draftId ? { ...d, imageUrls: nextUrls, imageRoles: nextRoles, form: nextForm } : d))
     );
 
     setPreview((current) => {
       if (!current) return null;
-      const sameDraft =
-        current.urls.length === images.length && current.urls.every((url, i) => url === images[i]);
+      const sameDraft = current.urls.length === images.length && current.urls.every((url, i) => url === images[i]);
       if (!sameDraft) return current;
       const nextPreview = images.filter((_, i) => i !== displayIndex);
       if (!nextPreview.length) return null;
@@ -1226,9 +1185,7 @@ export default function AiImportListingsPage() {
           }}
         >
           <Stack spacing={1.15}>
-            <Typography sx={{ fontWeight: 800, fontSize: '0.82rem' }}>
-              {t.aiImport.chooseCategory}
-            </Typography>
+            <Typography sx={{ fontWeight: 800, fontSize: '0.82rem' }}>{t.aiImport.chooseCategory}</Typography>
             <Box
               role="listbox"
               aria-label={t.aiImport.chooseCategory}
@@ -1345,8 +1302,7 @@ export default function AiImportListingsPage() {
                       pointerEvents: loading ? 'none' : undefined,
                       '& .MuiOutlinedInput-root': {
                         borderRadius: 2.5,
-                        bgcolor: (theme) =>
-                          theme.palette.mode === 'dark' ? 'action.hover' : 'background.default',
+                        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'action.hover' : 'background.default'),
                         pb: 5,
                         '& fieldset': { borderWidth: 1.5, borderColor: 'divider' },
                         '&:hover fieldset': { borderColor: 'text.secondary' },
@@ -1389,19 +1345,14 @@ export default function AiImportListingsPage() {
                           theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
                         '&:hover': {
                           bgcolor: (theme) =>
-                            theme.palette.mode === 'dark'
-                              ? 'rgba(255,255,255,0.12)'
-                              : 'rgba(0,0,0,0.08)',
+                            theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
                         },
                       }}
                     >
                       <PaperclipIcon size={18} weight="bold" />
                     </IconButton>
                     {files.length > 0 ? (
-                      <Typography
-                        variant="caption"
-                        sx={{ fontWeight: 700, color: AI_SEARCH_BLUE, fontSize: '0.7rem' }}
-                      >
+                      <Typography variant="caption" sx={{ fontWeight: 700, color: AI_SEARCH_BLUE, fontSize: '0.7rem' }}>
                         {files.length}
                       </Typography>
                     ) : null}
@@ -1453,10 +1404,7 @@ export default function AiImportListingsPage() {
                 {previews.length > 0 ? (
                   <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', gap: 0.75 }}>
                     {previews.map((src, index) => (
-                      <Box
-                        key={`${src}-${index}`}
-                        sx={{ position: 'relative', width: 56, height: 56, flexShrink: 0 }}
-                      >
+                      <Box key={`${src}-${index}`} sx={{ position: 'relative', width: 56, height: 56, flexShrink: 0 }}>
                         <Box
                           sx={{
                             width: '100%',
@@ -1507,17 +1455,16 @@ export default function AiImportListingsPage() {
                 ) : null}
 
                 {error ? (
-                  <Alert severity="error" sx={{ borderRadius: 2, py: 0.25 }}>
-                    {error}
-                  </Alert>
+                  <TransientNotification
+                    severity="error"
+                    message={error}
+                    onDismiss={() => setError(null)}
+                    sx={{ borderRadius: 2, py: 0.25 }}
+                  />
                 ) : null}
               </>
             ) : (
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ textAlign: 'center', py: 0.5 }}
-              >
+              <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', py: 0.5 }}>
                 {t.aiImport.chooseCategoryToContinue}
               </Typography>
             )}
@@ -1544,9 +1491,7 @@ export default function AiImportListingsPage() {
                 variant="contained"
                 disabled={loading || postingAll || postingId != null || openingId != null || readyDrafts.length === 0}
                 onClick={() => void postAll()}
-                startIcon={
-                  postingAll ? <CircularProgress size={14} color="inherit" /> : undefined
-                }
+                startIcon={postingAll ? <CircularProgress size={14} color="inherit" /> : undefined}
                 sx={{ ...aiButtonSx, flex: { xs: 1, sm: 'none' } }}
               >
                 {postingAll ? t.aiImport.posting : t.aiImport.postAll}
@@ -1556,9 +1501,7 @@ export default function AiImportListingsPage() {
                   variant="outlined"
                   disabled={loading || postingAll || postingId != null || openingId != null}
                   onClick={() => void handleRetryFailed()}
-                  startIcon={
-                    loading ? <CircularProgress size={14} color="inherit" /> : undefined
-                  }
+                  startIcon={loading ? <CircularProgress size={14} color="inherit" /> : undefined}
                   sx={{ ...aiOutlinedButtonSx, flex: { xs: 1, sm: 'none' } }}
                 >
                   {loading ? t.aiImport.retryingFailed : t.aiImport.retryFailed}
@@ -1583,13 +1526,15 @@ export default function AiImportListingsPage() {
             </Stack>
           </Stack>
 
-          {postingAll && postAllProgress ? (
-            <AiImportPostingProgress progress={postAllProgress} t={t} />
-          ) : null}
+          {postingAll && postAllProgress ? <AiImportPostingProgress progress={postAllProgress} t={t} /> : null}
 
           {loading ? <AiImportAnalyzingText progress={progress} t={t} /> : null}
 
-          <TransientSuccessAlert message={statusMessage} onDismiss={() => setStatusMessage(null)} sx={{ borderRadius: 2.25 }} />
+          <TransientSuccessAlert
+            message={statusMessage}
+            onDismiss={() => setStatusMessage(null)}
+            sx={{ borderRadius: 2.25 }}
+          />
           {drafts.map((draft) => {
             const mismatch = isAiCategoryMismatch(draft);
             const restricted = isAiContentRestricted(draft);
@@ -1783,11 +1728,7 @@ export default function AiImportListingsPage() {
                         size="small"
                         disabled={postingAll || postingId != null || openingId != null}
                         onClick={() => void openDraft(draft)}
-                        startIcon={
-                          openingId === draft.id ? (
-                            <CircularProgress size={12} color="inherit" />
-                          ) : undefined
-                        }
+                        startIcon={openingId === draft.id ? <CircularProgress size={12} color="inherit" /> : undefined}
                         sx={aiOutlinedButtonSx}
                       >
                         {openingId === draft.id ? t.aiImport.openingForm : t.aiImport.openForm}
@@ -1806,9 +1747,7 @@ export default function AiImportListingsPage() {
         urls={preview?.urls ?? []}
         index={preview?.index ?? 0}
         onClose={() => setPreview(null)}
-        onIndexChange={(index) =>
-          setPreview((current) => (current ? { ...current, index } : current))
-        }
+        onIndexChange={(index) => setPreview((current) => (current ? { ...current, index } : current))}
       />
     </Stack>
   );

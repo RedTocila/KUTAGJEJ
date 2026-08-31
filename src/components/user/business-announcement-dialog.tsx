@@ -16,13 +16,6 @@ import {
 import { Image as ImageIcon } from '@phosphor-icons/react/dist/ssr/Image';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
-import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
-import {
-  ProductDialog,
-  ProductDialogActions,
-  ProductDialogContent,
-  ProductDialogTitle,
-} from '@/components/core/product-dialog';
 import {
   ANNOUNCE_COST_BC,
   clearBusinessAnnouncement,
@@ -31,6 +24,14 @@ import {
 } from '@/lib/listing-announcement-client';
 import { uploadListingImages } from '@/lib/uploads-client';
 import { useUser } from '@/hooks/use-user';
+import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
+import {
+  ProductDialog,
+  ProductDialogActions,
+  ProductDialogContent,
+  ProductDialogTitle,
+} from '@/components/core/product-dialog';
+import { TransientNotification } from '@/components/core/transient-success-alert';
 import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 
 export type BusinessAnnouncementDialogProps = {
@@ -148,9 +149,12 @@ export function BusinessAnnouncementDialog({
       <ProductDialogContent>
         <Stack spacing={2.25}>
           {error ? (
-            <Alert severity="error" sx={{ borderRadius: 2 }}>
-              {error}
-            </Alert>
+            <TransientNotification
+              severity="error"
+              message={error}
+              onDismiss={() => setError(null)}
+              sx={{ borderRadius: 2 }}
+            />
           ) : null}
 
           <Typography
@@ -220,11 +224,7 @@ export function BusinessAnnouncementDialog({
                   alt=""
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
-                <Stack
-                  direction="row"
-                  spacing={0.75}
-                  sx={{ position: 'absolute', top: 8, right: 8 }}
-                >
+                <Stack direction="row" spacing={0.75} sx={{ position: 'absolute', top: 8, right: 8 }}>
                   <IconButton
                     size="small"
                     disabled={busy}
@@ -288,20 +288,14 @@ export function BusinessAnnouncementDialog({
                         borderColor: 'primary.main',
                         color: 'primary.main',
                         bgcolor: (t) =>
-                          t.palette.mode === 'dark'
-                            ? 'rgba(130, 201, 30, 0.08)'
-                            : 'rgba(118, 186, 27, 0.06)',
+                          t.palette.mode === 'dark' ? 'rgba(130, 201, 30, 0.08)' : 'rgba(118, 186, 27, 0.06)',
                       },
                   '&.Mui-disabled, &:disabled': {
                     opacity: 0.6,
                   },
                 }}
               >
-                {uploading ? (
-                  <CircularProgress size={22} color="inherit" />
-                ) : (
-                  <ImageIcon size={26} weight="duotone" />
-                )}
+                {uploading ? <CircularProgress size={22} color="inherit" /> : <ImageIcon size={26} weight="duotone" />}
                 <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.8125rem' }}>
                   {uploading ? 'Duke ngarkuar…' : 'Ngarko banner'}
                 </Typography>

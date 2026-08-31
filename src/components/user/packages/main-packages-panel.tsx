@@ -2,44 +2,39 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Alert,
-  Box,
-  Button,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, Stack, Typography } from '@mui/material';
 
+import type { PublicContract } from '@/types/contract';
+import type { UserSubscriptionSummary } from '@/types/payment';
+import { paths } from '@/paths';
+import {
+  isMainPackageBillingMonths,
+  MAIN_PACKAGE_BILLING_MONTHS,
+  type MainPackageBillingMonths,
+} from '@/lib/contract-pricing';
+import type { AppMessages } from '@/lib/i18n/messages';
+import { cancelMySubscription, listMySubscriptions } from '@/lib/payments-client';
+import { listPublicContracts } from '@/lib/public-contracts-client';
+import { useCopy } from '@/hooks/use-copy';
+import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
+import { useUser } from '@/hooks/use-user';
+import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import {
   ProductDialog,
   ProductDialogActions,
   ProductDialogContent,
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
-import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
-import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
-import { useCopy } from '@/hooks/use-copy';
-import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
-import { useUser } from '@/hooks/use-user';
-import type { AppMessages } from '@/lib/i18n/messages';
-import { cancelMySubscription, listMySubscriptions } from '@/lib/payments-client';
-import { listPublicContracts } from '@/lib/public-contracts-client';
-import {
-  isMainPackageBillingMonths,
-  MAIN_PACKAGE_BILLING_MONTHS,
-  type MainPackageBillingMonths,
-} from '@/lib/contract-pricing';
-import { paths } from '@/paths';
+import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { MOTION } from '@/styles/motion';
 import { productButtonSx } from '@/styles/product-sx';
-import type { PublicContract } from '@/types/contract';
-import type { UserSubscriptionSummary } from '@/types/payment';
+
 import {
   formatEur,
   PackageCheckoutCard,
   PackageEurPrice,
-  ReferralDiscountNote,
   planIconForCode,
+  ReferralDiscountNote,
   type FeatureListItem,
   type PlanAccent,
 } from './package-ui';
@@ -91,11 +86,7 @@ function billingLabel(t: AppMessages, months: MainPackageBillingMonths): string 
   return t.packages.months12;
 }
 
-function equivalentMonthlyHint(
-  t: AppMessages,
-  months: number,
-  price: number,
-): string | null {
+function equivalentMonthlyHint(t: AppMessages, months: number, price: number): string | null {
   if (months <= 1 || price <= 0) return null;
   return t.packages.equivPerMonth(formatEur(price / months));
 }
@@ -112,11 +103,7 @@ function savingsBadge(t: AppMessages, monthlyPrice: number | null, months: numbe
   return pct >= 5 ? t.packages.savePct(pct) : null;
 }
 
-function durationSaveLabel(
-  t: AppMessages,
-  plans: PublicContract[],
-  months: MainPackageBillingMonths,
-): string | null {
+function durationSaveLabel(t: AppMessages, plans: PublicContract[], months: MainPackageBillingMonths): string | null {
   if (months <= 1) return null;
   for (const plan of plans) {
     const monthly = plan.priceOptions.find((o) => o.months === 1 && o.price > 0);
@@ -195,9 +182,7 @@ function BillingPeriodPillBar({
             borderRadius: 999,
             bgcolor: 'primary.main',
             transform: `translate3d(${indicatorIndex * 100}%, 0, 0)`,
-            transition: transitionReady
-              ? `transform ${PILL_SLIDE_MS}ms ${MOTION.ease}, opacity 180ms ease`
-              : 'none',
+            transition: transitionReady ? `transform ${PILL_SLIDE_MS}ms ${MOTION.ease}, opacity 180ms ease` : 'none',
             pointerEvents: 'none',
             zIndex: 0,
             '@media (prefers-reduced-motion: reduce)': {
@@ -247,11 +232,7 @@ function BillingPeriodPillBar({
                   border: 'none',
                   borderRadius: 999,
                   bgcolor: 'transparent',
-                  color: disabled
-                    ? 'text.disabled'
-                    : selected
-                      ? 'primary.contrastText'
-                      : 'text.secondary',
+                  color: disabled ? 'text.disabled' : selected ? 'primary.contrastText' : 'text.secondary',
                   cursor: disabled ? 'default' : 'pointer',
                   transition: `color 200ms ${MOTION.ease}, transform 160ms ${MOTION.ease}`,
                   '&:active': disabled
@@ -306,8 +287,7 @@ export function MainPackagesPanel() {
   const router = useRouter();
   const t = useCopy();
   const { user } = useUser();
-  const subscriberKindFilter =
-    user?.accountType === 'business' || user?.role === 'business-user' ? 'company' : 'agent';
+  const subscriberKindFilter = user?.accountType === 'business' || user?.role === 'business-user' ? 'company' : 'agent';
 
   const [plans, setPlans] = React.useState<PublicContract[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -321,9 +301,7 @@ export function MainPackagesPanel() {
   const lifetimePercent = useLifetimePackageDiscount();
 
   const activeContractId = activeSubscription?.contractId ?? null;
-  const activePlanCode = activeSubscription?.planCode
-    ? String(activeSubscription.planCode).toLowerCase()
-    : null;
+  const activePlanCode = activeSubscription?.planCode ? String(activeSubscription.planCode).toLowerCase() : null;
   const activeMonths = activeSubscription?.months ?? null;
 
   const reload = React.useCallback(async () => {
@@ -338,8 +316,7 @@ export function MainPackagesPanel() {
       setError(null);
       setPlans(contracts ?? []);
     }
-    const active =
-      (subsRes.subscriptions ?? []).find((s) => s.status === 'active' && Number(s.priceEur) > 0) ?? null;
+    const active = (subsRes.subscriptions ?? []).find((s) => s.status === 'active' && Number(s.priceEur) > 0) ?? null;
     setActiveSubscription(active);
   }, [subscriberKindFilter]);
 
@@ -408,29 +385,28 @@ export function MainPackagesPanel() {
 
   if (!user) return null;
 
-  const cancelFooter =
-    activeSubscription ? (
-      <Button
-        size="medium"
-        color="error"
-        variant="outlined"
-        fullWidth
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          setCancelError(null);
-          setCancelOpen(true);
-        }}
-        sx={{
-          ...productButtonSx,
-          fontWeight: 750,
-          borderRadius: 2,
-          py: 1,
-        }}
-      >
-        {t.myPayments.cancelSubscription}
-      </Button>
-    ) : null;
+  const cancelFooter = activeSubscription ? (
+    <Button
+      size="medium"
+      color="error"
+      variant="outlined"
+      fullWidth
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setCancelError(null);
+        setCancelOpen(true);
+      }}
+      sx={{
+        ...productButtonSx,
+        fontWeight: 750,
+        borderRadius: 2,
+        py: 1,
+      }}
+    >
+      {t.myPayments.cancelSubscription}
+    </Button>
+  ) : null;
 
   return (
     <Stack spacing={2.5}>
@@ -492,10 +468,7 @@ export function MainPackagesPanel() {
                   details={details}
                   onClick={
                     firstPaidTarget
-                      ? () =>
-                          router.push(
-                            checkoutSubscriptionHref(firstPaidTarget.contractId, firstPaidTarget.months),
-                          )
+                      ? () => router.push(checkoutSubscriptionHref(firstPaidTarget.contractId, firstPaidTarget.months))
                       : undefined
                   }
                 />,
@@ -522,11 +495,7 @@ export function MainPackagesPanel() {
                 selected={isCurrent}
                 details={details}
                 footer={isCurrent ? cancelFooter : undefined}
-                onClick={
-                  isCurrent
-                    ? undefined
-                    : () => router.push(checkoutSubscriptionHref(plan.id, opt.months))
-                }
+                onClick={isCurrent ? undefined : () => router.push(checkoutSubscriptionHref(plan.id, opt.months))}
               />,
             ];
           })}
@@ -555,9 +524,12 @@ export function MainPackagesPanel() {
               : t.myPayments.cancelConfirmBody}
           </Typography>
           {cancelError ? (
-            <Alert severity="error" sx={{ mt: 1.5, borderRadius: 2 }}>
-              {cancelError}
-            </Alert>
+            <TransientNotification
+              severity="error"
+              message={cancelError}
+              onDismiss={() => setCancelError(null)}
+              sx={{ mt: 1.5, borderRadius: 2 }}
+            />
           ) : null}
         </ProductDialogContent>
         <ProductDialogActions>

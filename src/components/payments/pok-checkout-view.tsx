@@ -1,28 +1,22 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  GlobalStyles,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Box, Button, GlobalStyles, Stack, Typography } from '@mui/material';
 import { useColorScheme } from '@mui/material/styles';
+import type { PaymentErrorResponse } from '@nebula-ltd/pok-payments-js';
+import { GuestCheckoutForm } from '@nebula-ltd/pok-payments-js/react';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { LockSimple as LockSimpleIcon } from '@phosphor-icons/react/dist/ssr/LockSimple';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
-import { GuestCheckoutForm } from '@nebula-ltd/pok-payments-js/react';
-import type { PaymentErrorResponse } from '@nebula-ltd/pok-payments-js';
 
 import '@nebula-ltd/pok-payments-js/style.css';
 
-import { CheckoutSkeleton } from '@/components/core/content-skeletons';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { CreatedOrder, Payment } from '@/types/payment';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { verifyPayment } from '@/lib/payments-client';
 import { useUser } from '@/hooks/use-user';
+import { CheckoutSkeleton } from '@/components/core/content-skeletons';
+import { TransientNotification } from '@/components/core/transient-success-alert';
 
 type Phase = 'idle' | 'creating' | 'ready' | 'verifying' | 'done' | 'error';
 
@@ -140,12 +134,11 @@ function PokFormThemeStyles({ dark, hideEmail }: { dark: boolean; hideEmail: boo
           {
             color: `${t.textSubtle} !important`,
           },
-        '#pok-payment-container .pok-payment-input:focus, #pok-payment-container .pok-payment-modal-trigger:focus':
-          {
-            borderColor: `${t.primary} !important`,
-            boxShadow: `0 0 0 3px ${t.primaryRing} !important`,
-            outline: 'none',
-          },
+        '#pok-payment-container .pok-payment-input:focus, #pok-payment-container .pok-payment-modal-trigger:focus': {
+          borderColor: `${t.primary} !important`,
+          boxShadow: `0 0 0 3px ${t.primaryRing} !important`,
+          outline: 'none',
+        },
         '#pok-payment-container .pok-payment-input-icon, #pok-payment-container .pok-payment-clear': {
           position: 'absolute !important',
           top: '1px !important',
@@ -285,10 +278,7 @@ export function PokCheckoutView({ title, summary, createOrder, onPaid, onDone }:
       setPhase('done');
       onPaid?.(payment);
     } else {
-      setErrorMsg(
-        error ||
-          'Pagesa u dërgua, por nuk u konfirmua ende. Kontrolloni "Pagesat e mia" pas pak minutash.',
-      );
+      setErrorMsg(error || 'Pagesa u dërgua, por nuk u konfirmua ende. Kontrolloni "Pagesat e mia" pas pak minutash.');
       setPhase('error');
     }
   }, [order, onPaid]);
@@ -347,11 +337,7 @@ export function PokCheckoutView({ title, summary, createOrder, onPaid, onDone }:
           <ShieldCheckIcon size={20} weight="duotone" />
         </Box>
         <Stack spacing={0.35} sx={{ minWidth: 0, pt: 0.15 }}>
-          <Typography
-            variant="h5"
-            component="h1"
-            sx={{ fontWeight: 700, lineHeight: 1.2, letterSpacing: '-0.01em' }}
-          >
+          <Typography variant="h5" component="h1" sx={{ fontWeight: 700, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
             {title}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.45 }}>
@@ -384,9 +370,12 @@ export function PokCheckoutView({ title, summary, createOrder, onPaid, onDone }:
         }}
       >
         {errorMsg ? (
-          <Alert severity="error" sx={{ mb: 2, borderRadius: 1.5 }}>
-            {errorMsg}
-          </Alert>
+          <TransientNotification
+            severity="error"
+            message={errorMsg}
+            onDismiss={() => setErrorMsg(null)}
+            sx={{ mb: 2, borderRadius: 1.5 }}
+          />
         ) : null}
 
         {showCentered ? (
@@ -423,10 +412,7 @@ export function PokCheckoutView({ title, summary, createOrder, onPaid, onDone }:
         ) : null}
 
         {showForm && order ? (
-          <Box
-            className={hideEmail ? 'pok-checkout-known-email' : undefined}
-            sx={{ width: '100%' }}
-          >
+          <Box className={hideEmail ? 'pok-checkout-known-email' : undefined} sx={{ width: '100%' }}>
             <GuestCheckoutForm
               key={`${order.orderId}:${payerEmail}`}
               orderId={order.orderId}
